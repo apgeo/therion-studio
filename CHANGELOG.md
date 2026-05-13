@@ -32,7 +32,9 @@ This file records implementation progress in the repository so status does not l
 - Added `MapBackgroundPlacementTest` regression coverage for clopy-style fallback anchoring, area-adjust size-match behavior, and offset anchor placement.
 - Extracted TH2 metadata parsing into `src/core/TherionBackgroundMetadata.*` so `xth_me_image_insert` and `xth_me_area_adjust` behavior is reusable and independently testable.
 - Added `TherionBackgroundMetadataTest` coverage for raster metadata parsing, `.xvi` root-station parsing, area-adjust normalization, and malformed metadata rejection.
-- Verified the full `cmake --build build` target set succeeds and `TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, and `TherionBackgroundMetadataTest` pass after metadata parser extraction.
+- Extracted `.xvi` parsing into `src/core/TherionXviParser.*` so background vector parsing is no longer embedded in `MapEditorBackgroundLayers.cpp`.
+- Added `TherionXviParserTest` coverage for valid grid/station/shot/sketch parsing, file-based parsing, and invalid-content rejection.
+- Verified the full `cmake --build build` target set succeeds and `TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, and `TherionXviParserTest` pass after parser extraction.
 
 ### 2026-05-13
 

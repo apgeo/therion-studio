@@ -3,7 +3,6 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QFile>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsScene>
 #include <QImage>
@@ -14,7 +13,6 @@
 #include <QLineF>
 #include <QPainter>
 #include <QPixmap>
-#include <QRegularExpression>
 #include <QSet>
 #include <QtMath>
 
@@ -26,26 +24,14 @@
 #include "../core/SessionStore.h"
 #include "../core/TherionBackgroundMetadata.h"
 #include "../core/TherionDocumentParser.h"
+#include "../core/TherionXviParser.h"
 
 namespace TherionStudio
 {
 namespace
 {
 using XtherionBackgroundReference = TherionBackgroundReference;
-
-struct XviDocument
-{
-    QPointF gridOrigin;
-    bool hasGridOrigin = false;
-    QPointF gridVectorX;
-    QPointF gridVectorY;
-    int gridCountX = 0;
-    int gridCountY = 0;
-    bool hasGridDefinition = false;
-    QHash<QString, QPointF> stations;
-    QVector<QLineF> shots;
-    QVector<QVector<QPointF>> sketchLines;
-};
+using XviDocument = TherionXviDocument;
 
 using XtherionAreaAdjust = TherionAreaAdjust;
 
@@ -67,209 +53,6 @@ QString normalizedPathKey(const QString &path)
     return QDir::cleanPath(resolvedPath)
         .normalized(QString::NormalizationForm_C)
         .toCaseFolded();
-}
-
-QStringList tokenizeWhitespace(const QString &text)
-{
-    return text.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
-}
-
-bool tryParseLeadingNumber(QString token, qreal *value)
-{
-    if (value == nullptr) {
-        return false;
-    }
-
-    token = token.trimmed();
-    while (!token.isEmpty()) {
-        const QChar character = token.front();
-        if (character.isDigit() || character == QLatin1Char('+') || character == QLatin1Char('-') || character == QLatin1Char('.')) {
-            break;
-        }
-        token.remove(0, 1);
-    }
-
-    while (!token.isEmpty()) {
-        const QChar character = token.back();
-        if (character.isDigit() || character == QLatin1Char('.')) {
-            break;
-        }
-        token.chop(1);
-    }
-
-    if (token.isEmpty()) {
-        return false;
-    }
-
-    bool ok = false;
-    const qreal parsed = token.toDouble(&ok);
-    if (!ok) {
-        return false;
-    }
-
-    *value = parsed;
-    return true;
-}
-
-QString normalizeStationToken(const QString &token)
-{
-    QString normalized = token.trimmed();
-    while (normalized.startsWith(QLatin1Char('{')) || normalized.startsWith(QLatin1Char('}'))) {
-        normalized.remove(0, 1);
-    }
-    while (normalized.endsWith(QLatin1Char('}')) || normalized.endsWith(QLatin1Char('{'))) {
-        normalized.chop(1);
-    }
-    return normalized.trimmed();
-}
-
-QVector<QPointF> parsePointPairs(const QStringList &tokens, int startIndex)
-{
-    QVector<QPointF> points;
-    QVector<qreal> numbers;
-    for (int index = qMax(0, startIndex); index < tokens.size(); ++index) {
-        qreal value = 0.0;
-        if (tryParseLeadingNumber(tokens.at(index), &value)) {
-            numbers.append(value);
-        }
-    }
-
-    for (int index = 0; index + 1 < numbers.size(); index += 2) {
-        points.append(QPointF(numbers.at(index), numbers.at(index + 1)));
-    }
-    return points;
-}
-
-bool parseXviDocument(const QString &xviPath, XviDocument *document)
-{
-    if (document == nullptr) {
-        return false;
-    }
-
-    QFile file(xviPath);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return false;
-    }
-
-    QString content = QString::fromUtf8(file.readAll());
-    const QStringList lines = content.split(QLatin1Char('\n'));
-    enum class Block
-    {
-        None,
-        Stations,
-        Shots,
-        SketchLines
-    };
-    Block block = Block::None;
-
-    for (QString line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-
-        const QString trimmed = line.trimmed();
-        if (trimmed.isEmpty()) {
-            continue;
-        }
-
-        if (trimmed.startsWith(QStringLiteral("set XVIstations"))) {
-            block = Block::Stations;
-            continue;
-        }
-        if (trimmed.startsWith(QStringLiteral("set XVIshots"))) {
-            block = Block::Shots;
-            continue;
-        }
-        if (trimmed.startsWith(QStringLiteral("set XVIsketchlines"))) {
-            block = Block::SketchLines;
-            continue;
-        }
-        if (trimmed.startsWith(QStringLiteral("set XVIgrid"))) {
-            const int open = trimmed.indexOf(QLatin1Char('{'));
-            const int close = trimmed.lastIndexOf(QLatin1Char('}'));
-            if (open >= 0 && close > open) {
-                const QString payload = trimmed.mid(open + 1, close - open - 1);
-                const QStringList tokens = tokenizeWhitespace(payload);
-                if (tokens.size() >= 2) {
-                    qreal x = 0.0;
-                    qreal y = 0.0;
-                    if (tryParseLeadingNumber(tokens.at(0), &x) && tryParseLeadingNumber(tokens.at(1), &y)) {
-                        document->gridOrigin = QPointF(x, y);
-                        document->hasGridOrigin = true;
-                    }
-                }
-
-                QVector<qreal> numbers;
-                numbers.reserve(tokens.size());
-                for (const QString &token : tokens) {
-                    qreal value = 0.0;
-                    if (tryParseLeadingNumber(token, &value)) {
-                        numbers.append(value);
-                    }
-                }
-                if (numbers.size() >= 8) {
-                    document->gridVectorX = QPointF(numbers.at(2), numbers.at(3));
-                    document->gridVectorY = QPointF(numbers.at(4), numbers.at(5));
-                    document->gridCountX = qMax(0, qRound(numbers.at(6)));
-                    document->gridCountY = qMax(0, qRound(numbers.at(7)));
-                    document->hasGridDefinition = document->gridCountX > 0 && document->gridCountY > 0;
-                }
-            }
-            block = Block::None;
-            continue;
-        }
-
-        if (trimmed == QStringLiteral("}")) {
-            block = Block::None;
-            continue;
-        }
-
-        const int open = trimmed.indexOf(QLatin1Char('{'));
-        const int close = trimmed.lastIndexOf(QLatin1Char('}'));
-        if (open < 0 || close <= open) {
-            continue;
-        }
-
-        const QString payload = trimmed.mid(open + 1, close - open - 1).trimmed();
-        const QStringList tokens = tokenizeWhitespace(payload);
-        if (tokens.isEmpty()) {
-            continue;
-        }
-
-        if (block == Block::Stations) {
-            if (tokens.size() < 3) {
-                continue;
-            }
-            qreal x = 0.0;
-            qreal y = 0.0;
-            if (!tryParseLeadingNumber(tokens.at(0), &x) || !tryParseLeadingNumber(tokens.at(1), &y)) {
-                continue;
-            }
-            const QString stationName = normalizeStationToken(tokens.last());
-            if (!stationName.isEmpty()) {
-                document->stations.insert(stationName, QPointF(x, y));
-            }
-            continue;
-        }
-
-        if (block == Block::Shots) {
-            const QVector<QPointF> points = parsePointPairs(tokens, 0);
-            if (points.size() >= 2) {
-                document->shots.append(QLineF(points.at(0), points.at(1)));
-            }
-            continue;
-        }
-
-        if (block == Block::SketchLines) {
-            const QVector<QPointF> points = parsePointPairs(tokens, 1);
-            if (points.size() >= 2) {
-                document->sketchLines.append(points);
-            }
-            continue;
-        }
-    }
-
-    return document->hasGridOrigin && (!document->shots.isEmpty() || !document->sketchLines.isEmpty() || !document->stations.isEmpty());
 }
 
 QVector<XtherionBackgroundReference> parseXtherionBackgroundReferences(const QString &documentText, const QString &documentPath)
@@ -975,7 +758,7 @@ void MapEditorTab::loadBackgroundLayersFromSession()
                 ? metadataReference->basePosition
                 : QPointF(0.0, 0.0);
             const QString rootStationName = hasMetadata ? metadataReference->rootStationName : QString();
-            if (!parseXviDocument(layerPath, &xviDocument)
+            if (!parseTherionXviDocumentFile(layerPath, &xviDocument)
                 || !buildXviLayerPixmap(xviDocument, basePosition, rootStationName, sourceBounds, previewBounds, &pixmap, &topLeft)) {
                 continue;
             }
@@ -1092,7 +875,7 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
 
         if (reference.xviReference) {
             XviDocument xviDocument;
-            if (!parseXviDocument(referencePath, &xviDocument)) {
+            if (!parseTherionXviDocumentFile(referencePath, &xviDocument)) {
                 continue;
             }
 

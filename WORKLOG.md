@@ -72,8 +72,8 @@ Legend:
 - Goal: safe source rewrites for point/line/area geometry and draft insertion with robust token handling.
 - Status: In progress (advanced hardening implemented; corpus-level round-trip still pending).
 - Implemented highlights:
-- `appendScrapBlock`, `appendDraftGeometry`, `rewritePointCoordinates`, `rewriteLineAreaVertex`.
-- Extensive token-selection hardening: quoted tokens, option-led continuation lines, mixed metadata, CRLF preservation, scientific notation.
+- ~~`appendScrapBlock`, `appendDraftGeometry`, `rewritePointCoordinates`, `rewriteLineAreaVertex`.~~
+- ~~Extensive token-selection hardening: quoted tokens, option-led continuation lines, mixed metadata, CRLF preservation, scientific notation.~~
 - Verification:
 - `./build/TherionDocumentEditorTest`
 - `./build/TherionProjectStructureIndexTest`
@@ -85,10 +85,10 @@ Legend:
 - Goal: split/text/map workspace, geometry rendering/editing, background-layer management, fit/pan/zoom semantics.
 - Status: In progress (core implemented; feature parity refinement continues).
 - Implemented highlights:
-- Embedded map workspace modes and map help panel.
-- Point and line/area vertex drag-to-source writeback.
-- Undo/redo command integration with merge semantics and obsolete-command handling for failures.
-- Raster and `.xvi` background parsing/placement/alignment; multi-layer controls and session restore.
+- ~~Embedded map workspace modes and map help panel.~~
+- ~~Point and line/area vertex drag-to-source writeback.~~
+- ~~Undo/redo command integration with merge semantics and obsolete-command handling for failures.~~
+- ~~Raster and `.xvi` background parsing/placement/alignment; multi-layer controls and session restore.~~
 - Verification:
 - `./build/MapBackgroundPlacementTest`
 - `./build/TherionBackgroundMetadataTest`

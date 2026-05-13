@@ -28,7 +28,9 @@ This file records implementation progress in the repository so status does not l
 - Reapplied metadata anchoring to already-loaded raster layers during background sync so stale saved pixel positions no longer override TH2 metadata placement.
 - Removed the metadata-sync early exit for non-empty background sets so session-restored layers are still reconciled against current TH2 metadata on load.
 - Preserved exact placed image dimensions when opacity/gamma refreshes rebuild the pixmap.
-- Verified the full `cmake --build build` target set succeeds and both `TherionDocumentEditorTest` and `TherionProjectStructureIndexTest` pass after the PNG alignment update.
+- Extracted raster model-rect resolution into `src/core/MapBackgroundPlacement.*` so metadata placement semantics are shared and unit-testable outside the UI layer.
+- Added `MapBackgroundPlacementTest` regression coverage for clopy-style fallback anchoring, area-adjust size-match behavior, and offset anchor placement.
+- Verified the full `cmake --build build` target set succeeds and `TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, and `MapBackgroundPlacementTest` pass after the PNG alignment update.
 
 ### 2026-05-13
 

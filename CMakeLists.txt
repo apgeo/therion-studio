@@ -34,6 +34,8 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/TextEditorTab.h
     src/core/DocumentFile.cpp
     src/core/DocumentFile.h
+    src/core/MapBackgroundPlacement.cpp
+    src/core/MapBackgroundPlacement.h
     src/core/TherionDocumentEditor.cpp
     src/core/TherionDocumentEditor.h
     src/core/ProjectStructureIndex.cpp
@@ -85,3 +87,10 @@ qt_add_executable(TherionProjectStructureIndexTest
     src/core/TherionDocumentParser.h)
 
 target_link_libraries(TherionProjectStructureIndexTest PRIVATE Qt6::Widgets)
+
+qt_add_executable(MapBackgroundPlacementTest
+    tests/MapBackgroundPlacementTest.cpp
+    src/core/MapBackgroundPlacement.cpp
+    src/core/MapBackgroundPlacement.h)
+
+target_link_libraries(MapBackgroundPlacementTest PRIVATE Qt6::Widgets)

@@ -22,6 +22,7 @@
 
 #include "MapEditorSceneSupport.h"
 #include "TextEditorTab.h"
+#include "../core/MapBackgroundPlacement.h"
 #include "../core/SessionStore.h"
 #include "../core/TherionDocumentParser.h"
 
@@ -540,18 +541,6 @@ QSizeF rasterModelSize(const QString &layerPath, qreal imageScale)
     return QSizeF(imageSize.width(), imageSize.height());
 }
 
-bool sizesNearlyEqual(const QSizeF &a, const QSizeF &b)
-{
-    if (!a.isValid() || !b.isValid()) {
-        return false;
-    }
-
-    const qreal widthTolerance = qMax<qreal>(1.0, qMax(a.width(), b.width()) * 0.02);
-    const qreal heightTolerance = qMax<qreal>(1.0, qMax(a.height(), b.height()) * 0.02);
-    return qAbs(a.width() - b.width()) <= widthTolerance
-        && qAbs(a.height() - b.height()) <= heightTolerance;
-}
-
 bool placeRasterLayerByModelRect(QGraphicsPixmapItem *item,
                                  const QRectF &modelRect,
                                  const QRectF &modelBounds,
@@ -592,13 +581,6 @@ bool placeRasterLayerByModelRect(QGraphicsPixmapItem *item,
     return true;
 }
 
-bool placeRasterLayerByModelAnchor(QGraphicsPixmapItem *item,
-                                   const QPointF &basePosition,
-                                   bool topEdgeAnchor,
-                                   qreal imageScale,
-                                   const QRectF &modelBounds,
-                                   const QRectF &previewBounds);
-
 bool placeRasterLayerFromMetadata(QGraphicsPixmapItem *item,
                                   const XtherionBackgroundReference &reference,
                                   const XtherionAreaAdjust &areaAdjust,
@@ -611,16 +593,21 @@ bool placeRasterLayerFromMetadata(QGraphicsPixmapItem *item,
 
     const QString layerPath = item->data(0).toString();
     const QSizeF modelSize = rasterModelSize(layerPath, reference.hasImageScale ? reference.imageScale : 1.0);
-    if (areaAdjust.valid && sizesNearlyEqual(modelSize, areaAdjust.modelRect.size())) {
-        return placeRasterLayerByModelRect(item, areaAdjust.modelRect, modelBounds, previewBounds);
+    RasterPlacementMetadata placement{};
+    placement.basePosition = reference.basePosition;
+    placement.hasBasePosition = reference.hasBasePosition;
+    placement.topEdgeAnchor = reference.metadataTopEdgeAnchor;
+
+    AreaAdjustMetadata areaMetadata{};
+    areaMetadata.modelRect = areaAdjust.modelRect;
+    areaMetadata.valid = areaAdjust.valid;
+
+    const QRectF modelRect = resolveRasterModelRect(modelSize, placement, areaMetadata);
+    if (!modelRect.isValid()) {
+        return false;
     }
 
-    return placeRasterLayerByModelAnchor(item,
-                                         reference.basePosition,
-                                         reference.metadataTopEdgeAnchor,
-                                         reference.hasImageScale ? reference.imageScale : 1.0,
-                                         modelBounds,
-                                         previewBounds);
+    return placeRasterLayerByModelRect(item, modelRect, modelBounds, previewBounds);
 }
 
 const XtherionBackgroundReference *findMetadataReferenceForPath(
@@ -652,54 +639,6 @@ const XtherionBackgroundReference *findMetadataReferenceForPath(
     }
 
     return nullptr;
-}
-
-bool placeRasterLayerByModelAnchor(QGraphicsPixmapItem *item,
-                                   const QPointF &basePosition,
-                                   bool topEdgeAnchor,
-                                   qreal imageScale,
-                                   const QRectF &modelBounds,
-                                   const QRectF &previewBounds)
-{
-    if (item == nullptr || !modelBounds.isValid() || !previewBounds.isValid()) {
-        return false;
-    }
-
-    const QString layerPath = item->data(0).toString();
-    if (layerPath.isEmpty()) {
-        return false;
-    }
-
-    QImageReader imageReader(layerPath);
-    imageReader.setAutoTransform(true);
-    const QImage sourceImage = imageReader.read();
-    if (sourceImage.isNull()) {
-        return false;
-    }
-
-    Q_UNUSED(imageScale);
-
-    const QSizeF modelSize(sourceImage.width(), sourceImage.height());
-    const QPointF modelTopLeft(basePosition.x(),
-                               topEdgeAnchor ? (basePosition.y() - modelSize.height()) : basePosition.y());
-    const QPointF modelBottomRight(modelTopLeft.x() + modelSize.width(),
-                                   modelTopLeft.y() + modelSize.height());
-
-    const QPointF viewA = modelToPreviewPoint(modelTopLeft, modelBounds, previewBounds);
-    const QPointF viewB = modelToPreviewPoint(modelBottomRight, modelBounds, previewBounds);
-    const QRectF viewRect(QPointF(qMin(viewA.x(), viewB.x()), qMin(viewA.y(), viewB.y())),
-                          QPointF(qMax(viewA.x(), viewB.x()), qMax(viewA.y(), viewB.y())));
-    if (!viewRect.isValid() || viewRect.width() < 1.0 || viewRect.height() < 1.0) {
-        return false;
-    }
-
-    QImage scaled = sourceImage.scaled(qMax(2, qRound(viewRect.width())),
-                                       qMax(2, qRound(viewRect.height())),
-                                       Qt::IgnoreAspectRatio,
-                                       Qt::SmoothTransformation);
-    item->setPixmap(QPixmap::fromImage(scaled));
-    item->setPos(viewRect.topLeft());
-    return true;
 }
 
 bool buildXviLayerPixmap(const XviDocument &xvi,

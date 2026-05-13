@@ -460,6 +460,34 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
 
+    contents = QStringLiteral("line wall\n"
+                              "  10 20 30 40 -subtype 100 200\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(70.0, 80.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\n"
+                                           "  10 20 70.0 80.0 -subtype 100 200\n"
+                                           "endline\n"),
+                "rewriteLineAreaVertex should stop vertex selection at trailing metadata tokens on the same line.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall -id line-1 10 20 -subtype 100 200\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(-3.0, 9.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall -id line-1 -3.0 9.0 -subtype 100 200\n"
+                                           "endline\n"),
+                "rewriteLineAreaVertex should allow metadata/options before coordinates and still ignore trailing metadata payload.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("area water\n"
                               "  1 2 3 4\n"
                               "  5 6 # keep area note\n"

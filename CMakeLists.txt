@@ -112,3 +112,14 @@ qt_add_executable(TherionXviParserTest
     src/core/TherionXviParser.h)
 
 target_link_libraries(TherionXviParserTest PRIVATE Qt6::Widgets)
+
+qt_add_executable(MapGeometryFeatureParsingTest
+    tests/MapGeometryFeatureParsingTest.cpp
+    src/app/MapEditorSceneItems.cpp
+    src/app/MapEditorSceneInternals.h
+    src/app/MapEditorSceneRenderer.cpp
+    src/app/MapEditorSceneSupport.h
+    src/core/TherionDocumentParser.cpp
+    src/core/TherionDocumentParser.h)
+
+target_link_libraries(MapGeometryFeatureParsingTest PRIVATE Qt6::Widgets)

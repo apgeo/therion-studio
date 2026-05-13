@@ -47,6 +47,19 @@ struct MapGeometryFeature
         Line,
         Area
     };
+    struct LineSegment
+    {
+        enum class Type
+        {
+            Linear,
+            Cubic
+        };
+
+        Type type = Type::Linear;
+        int endVertexIndex = -1;
+        int control1VertexIndex = -1;
+        int control2VertexIndex = -1;
+    };
 
     Kind kind = Kind::Point;
     int lineNumber = 0;
@@ -64,6 +77,7 @@ struct MapGeometryFeature
     bool hasCoordinateTransform = false;
     QTransform sourceToMapTransform;
     QTransform mapToSourceTransform;
+    QVector<LineSegment> lineSegments;
 };
 
 class MapCardItem final : public QGraphicsRectItem

@@ -160,11 +160,16 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Added gesture-suppression guardrails so wheel/pinch/touchpan viewport gestures are ignored while a primary pointer interaction is active, reducing accidental pan/zoom during direct geometry edits.~~
 - ~~Added select-mode-only two-touch threshold pan handling in the map view event filter to support touchpad touch-tracking panning without interfering with draw/edit modes.~~
 - ~~Expanded zoom clamping and normalization to `0.1 .. 50.0` with viewport-anchored zoom application so toolbar zoom actions and gesture zoom use the same bounded semantics.~~
+- ~~Implemented line-feature segment parsing for TH2 map preview so `line ... endline` coordinate data is interpreted as linear (`x y`) and cubic Bezier (`c1x c1y c2x c2y x y`) segments instead of a forced polyline.~~
+- ~~Updated map-canvas line rendering to draw parsed cubic arcs via `QPainterPath::cubicTo`, preserving straight segments where appropriate and keeping existing vertex-handle editing.~~
+- ~~Stopped treating line-block metadata continuations (for example `smooth off` and option-led lines) as drawable geometry coordinates in map feature extraction.~~
+- ~~Added `MapGeometryFeatureParsingTest` coverage for Bezier segment extraction and metadata-line exclusion, and wired the new test target into CMake.~~
 - ~~Added a corpus-style `TherionDocumentEditorTest` fixture that performs coordinated point/line/area rewrites within a realistic TH2 scrap block containing metadata, comments, and CRLF line endings.~~
 - ~~Verified rewrite stability in the fixture across option-led continuation lines (`-subtype`), inline metadata (`-id`), `%` comments, and mixed-precision coordinate tokens.~~
 - ~~Added negative corpus-style fixture checks that assert rewrite failures (missing `endline`, incomplete area coordinate tuple) return errors and leave source text unchanged.~~
 - ~~Verified `TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, and `TherionXviParserTest`.~~
 - ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest TherionProjectStructureIndexTest MapBackgroundPlacementTest TherionBackgroundMetadataTest TherionXviParserTest` plus execution of all five regression binaries after map input-control changes.~~
+- ~~Verified `cmake --build build --target TherionStudio MapGeometryFeatureParsingTest TherionDocumentEditorTest TherionProjectStructureIndexTest MapBackgroundPlacementTest TherionBackgroundMetadataTest TherionXviParserTest` plus execution of all six regression binaries.~~
 - ~~Closed Phase 4 (`MVP`) and moved additional corpus-scale rewrite expansion into the Post-MVP backlog.~~
 
 ### 2026-05-13

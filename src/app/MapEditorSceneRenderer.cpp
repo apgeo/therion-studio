@@ -4,10 +4,196 @@
 #include <QFont>
 #include <QGraphicsScene>
 #include <QPainterPath>
+#include <QRegularExpression>
 
 #include "../core/TherionDocumentParser.h"
 
 namespace TherionStudio {
+namespace {
+
+bool tokenLooksNumeric(const QString &token)
+{
+    if (token.isEmpty()) {
+        return false;
+    }
+
+    static const QRegularExpression numericPattern(
+        QStringLiteral(R"(^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$)"));
+    return numericPattern.match(token).hasMatch();
+}
+
+QVector<QPointF> coordinatePointsFromLine(const TherionParsedLine &parsedLine, int startTokenIndex)
+{
+    QVector<QPointF> points;
+    QVector<int> numericIndices;
+    numericIndices.reserve(parsedLine.tokens.size());
+
+    const int firstTokenIndex = qMax(0, startTokenIndex);
+    if (firstTokenIndex == 0) {
+        int firstNonQuotedIndex = -1;
+        for (int index = firstTokenIndex; index < parsedLine.tokens.size(); ++index) {
+            if (index < parsedLine.tokenSpans.size()
+                && parsedLine.tokenSpans.at(index).type == TherionTokenType::QuotedString) {
+                continue;
+            }
+            firstNonQuotedIndex = index;
+            break;
+        }
+
+        if (firstNonQuotedIndex >= 0 && !tokenLooksNumeric(parsedLine.tokens.at(firstNonQuotedIndex))) {
+            return points;
+        }
+    }
+
+    if (firstTokenIndex < parsedLine.tokens.size()) {
+        const QString firstToken = parsedLine.tokens.at(firstTokenIndex);
+        if (firstTokenIndex == 0
+            && firstToken.startsWith(QLatin1Char('-'))
+            && !tokenLooksNumeric(firstToken)) {
+            return points;
+        }
+    }
+
+    bool sawCoordinateToken = false;
+    bool skipOptionValueToken = false;
+    for (int index = firstTokenIndex; index < parsedLine.tokens.size(); ++index) {
+        if (skipOptionValueToken && !sawCoordinateToken) {
+            skipOptionValueToken = false;
+            continue;
+        }
+
+        const QString token = parsedLine.tokens.at(index);
+        if (!sawCoordinateToken
+            && firstTokenIndex > 0
+            && token.startsWith(QLatin1Char('-'))
+            && !tokenLooksNumeric(token)) {
+            if (index + 1 < parsedLine.tokens.size()) {
+                const QString nextToken = parsedLine.tokens.at(index + 1);
+                if (!nextToken.startsWith(QLatin1Char('-')) || tokenLooksNumeric(nextToken)) {
+                    skipOptionValueToken = true;
+                }
+            }
+            continue;
+        }
+
+        const bool numeric = tokenLooksNumeric(token);
+        if (!numeric) {
+            if (sawCoordinateToken) {
+                break;
+            }
+            continue;
+        }
+
+        if (index < parsedLine.tokenSpans.size()
+            && parsedLine.tokenSpans.at(index).type == TherionTokenType::QuotedString) {
+            continue;
+        }
+
+        numericIndices.append(index);
+        sawCoordinateToken = true;
+    }
+
+    for (int index = 0; index + 1 < numericIndices.size(); index += 2) {
+        bool okX = false;
+        bool okY = false;
+        const qreal x = parsedLine.tokens.at(numericIndices.at(index)).toDouble(&okX);
+        const qreal y = parsedLine.tokens.at(numericIndices.at(index + 1)).toDouble(&okY);
+        if (okX && okY) {
+            points.append(QPointF(x, y));
+        }
+    }
+
+    return points;
+}
+
+void appendLineDataPoints(MapGeometryFeature *feature, const QVector<QPointF> &linePoints)
+{
+    if (feature == nullptr || linePoints.isEmpty()) {
+        return;
+    }
+
+    int pointIndex = 0;
+    if (feature->vertices.isEmpty()) {
+        feature->vertices.append(linePoints.first());
+        pointIndex = 1;
+    }
+
+    while (pointIndex < linePoints.size()) {
+        const int remaining = linePoints.size() - pointIndex;
+        if (remaining >= 3) {
+            const int control1Index = feature->vertices.size();
+            feature->vertices.append(linePoints.at(pointIndex));
+            const int control2Index = feature->vertices.size();
+            feature->vertices.append(linePoints.at(pointIndex + 1));
+            const int endIndex = feature->vertices.size();
+            feature->vertices.append(linePoints.at(pointIndex + 2));
+
+            MapGeometryFeature::LineSegment segment;
+            segment.type = MapGeometryFeature::LineSegment::Type::Cubic;
+            segment.endVertexIndex = endIndex;
+            segment.control1VertexIndex = control1Index;
+            segment.control2VertexIndex = control2Index;
+            feature->lineSegments.append(segment);
+            pointIndex += 3;
+            continue;
+        }
+
+        const int endIndex = feature->vertices.size();
+        feature->vertices.append(linePoints.at(pointIndex));
+        MapGeometryFeature::LineSegment segment;
+        segment.type = MapGeometryFeature::LineSegment::Type::Linear;
+        segment.endVertexIndex = endIndex;
+        feature->lineSegments.append(segment);
+        ++pointIndex;
+    }
+}
+
+QPainterPath linePathForFeature(const MapGeometryFeature &feature, const QRectF &sourceBounds, const QRectF &previewBounds)
+{
+    QPainterPath path;
+    if (feature.vertices.isEmpty()) {
+        return path;
+    }
+
+    auto toPreview = [&](int index) {
+        if (index < 0 || index >= feature.vertices.size()) {
+            return QPointF();
+        }
+        return mapGeometryPointToPreview(feature.vertices.at(index), sourceBounds, previewBounds);
+    };
+
+    path.moveTo(toPreview(0));
+    int currentAnchorIndex = 0;
+    for (const MapGeometryFeature::LineSegment &segment : feature.lineSegments) {
+        if (segment.endVertexIndex < 0 || segment.endVertexIndex >= feature.vertices.size()) {
+            continue;
+        }
+
+        if (segment.type == MapGeometryFeature::LineSegment::Type::Cubic
+            && segment.control1VertexIndex >= 0
+            && segment.control2VertexIndex >= 0
+            && segment.control1VertexIndex < feature.vertices.size()
+            && segment.control2VertexIndex < feature.vertices.size()) {
+            path.cubicTo(toPreview(segment.control1VertexIndex),
+                         toPreview(segment.control2VertexIndex),
+                         toPreview(segment.endVertexIndex));
+        } else {
+            path.lineTo(toPreview(segment.endVertexIndex));
+        }
+
+        currentAnchorIndex = segment.endVertexIndex;
+    }
+
+    if (currentAnchorIndex == 0) {
+        for (int index = 1; index < feature.vertices.size(); ++index) {
+            path.lineTo(toPreview(index));
+        }
+    }
+
+    return path;
+}
+
+} // namespace
 
 QString mapWorkspaceHelpHtml()
 {
@@ -256,12 +442,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     break;
                 }
 
-                QPainterPath path;
-                const QPointF firstPoint = mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds);
-                path.moveTo(firstPoint);
-                for (int vertexIndex = 1; vertexIndex < feature.vertices.size(); ++vertexIndex) {
-                    path.lineTo(mapGeometryPointToPreview(feature.vertices.at(vertexIndex), sourceBounds, previewBounds));
-                }
+                const QPainterPath path = linePathForFeature(feature, sourceBounds, previewBounds);
 
                 auto *lineItem = scene->addPath(path, QPen(QColor(QStringLiteral("#222222")), thickLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
                 lineItem->setZValue(2.5);
@@ -460,7 +641,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.label = mapEntryTitleForLine(parsedLine);
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
-            currentFeature.vertices.append(pointsFromTokens(parsedLine.tokens.mid(1)));
+            appendLineDataPoints(&currentFeature, coordinatePointsFromLine(parsedLine, 1));
             inLineBlock = true;
             continue;
         }
@@ -479,7 +660,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
         }
 
         if (inLineBlock) {
-            currentFeature.vertices.append(pointsFromTokens(parsedLine.tokens));
+            appendLineDataPoints(&currentFeature, coordinatePointsFromLine(parsedLine, 0));
             continue;
         }
 

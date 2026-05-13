@@ -143,6 +143,12 @@ Automated tests currently in-tree and used as regression baseline:
 
 ## Recent Completed (Latest Slice)
 
+### 2026-05-14
+
+- ~~Added a corpus-style `TherionDocumentEditorTest` fixture that performs coordinated point/line/area rewrites within a realistic TH2 scrap block containing metadata, comments, and CRLF line endings.~~
+- ~~Verified rewrite stability in the fixture across option-led continuation lines (`-subtype`), inline metadata (`-id`), `%` comments, and mixed-precision coordinate tokens.~~
+- ~~Verified `TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, and `TherionXviParserTest`.~~
+
 ### 2026-05-13
 
 - ~~Added `File -> Close` and `File -> Close All Tabs` commands with unsaved-change prompts.~~

@@ -748,6 +748,73 @@ int runRewriteLineAreaVertexTest()
 
     return 0;
 }
+
+int runCorpusStyleRewriteFixtureTest()
+{
+    QString errorMessage;
+    QString contents = QStringLiteral(
+        "encoding utf-8\r\n"
+        "##XTHERION## xth_me_area_adjust -128 -1152 851 128\r\n"
+        "scrap clopy01 -projection plan -author 1985.04.29 \"Hugo Havel\" -scale [-128 -1152 851 -1152 0.0 0.0 24.8666 0.0 m]\r\n"
+        "  point 397.5 -969.5 station -name 0@hp\r\n"
+        "  point 378.5 -908.0 station -name 1@hp\r\n"
+        "  line wall -id line-8\r\n"
+        "    445 -796.5 435 -800.5 432 -776.5\r\n"
+        "    smooth off\r\n"
+        "    413.25 -624.25 422.8 -574.1 420.5 -562\r\n"
+        "    -subtype temporary 100 200\r\n"
+        "  endline\r\n"
+        "  area water -id area-1\r\n"
+        "    404.0 -958.5 395.5 -959.5 394.0 -945.5\r\n"
+        "    smooth off 999 888\r\n"
+        "    384.53 -909.37 388.05 -914.52 397.5 -913.5 % anchor note\r\n"
+        "  endarea\r\n"
+        "endscrap\r\n");
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 4, QPointF(400.0, -970.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 6, QStringLiteral("line"), 3, QPointF(421.0, -573.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 12, QStringLiteral("area"), 5, QPointF(398.0, -912.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
+    const QString expected = QStringLiteral(
+        "encoding utf-8\r\n"
+        "##XTHERION## xth_me_area_adjust -128 -1152 851 128\r\n"
+        "scrap clopy01 -projection plan -author 1985.04.29 \"Hugo Havel\" -scale [-128 -1152 851 -1152 0.0 0.0 24.8666 0.0 m]\r\n"
+        "  point 400.0 -970.0 station -name 0@hp\r\n"
+        "  point 378.5 -908.0 station -name 1@hp\r\n"
+        "  line wall -id line-8\r\n"
+        "    445 -796.5 435 -800.5 432 -776.5\r\n"
+        "    smooth off\r\n"
+        "    413.25 -624.25 421.0 -573.0 420.5 -562\r\n"
+        "    -subtype temporary 100 200\r\n"
+        "  endline\r\n"
+        "  area water -id area-1\r\n"
+        "    404.0 -958.5 395.5 -959.5 394.0 -945.5\r\n"
+        "    smooth off 999 888\r\n"
+        "    384.53 -909.37 388.05 -914.52 398.0 -912.0 % anchor note\r\n"
+        "  endarea\r\n"
+        "endscrap\r\n");
+
+    if (!expect(contents == expected,
+                "Corpus-style rewrite fixture should update only targeted vertices while preserving comments, metadata, and CRLF formatting.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -772,5 +839,10 @@ int main()
         return rewritePointResult;
     }
 
-    return runRewriteLineAreaVertexTest();
+    const int rewriteLineAreaResult = runRewriteLineAreaVertexTest();
+    if (rewriteLineAreaResult != 0) {
+        return rewriteLineAreaResult;
+    }
+
+    return runCorpusStyleRewriteFixtureTest();
 }

@@ -3,6 +3,7 @@
 #include "MainWindowDocumentHelpers.h"
 
 #include <QAbstractItemView>
+#include <QApplication>
 #include <QDockWidget>
 #include <QDesktopServices>
 #include <QDir>
@@ -17,6 +18,7 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QMenu>
+#include <QPainter>
 #include <QSplitter>
 #include <QStackedWidget>
 #include <QStatusBar>
@@ -33,6 +35,42 @@
 namespace
 {
 bool isTherionProjectFilePath(const QString &filePath);
+
+QIcon therionBadgedFileIcon(const QIcon &baseIcon)
+{
+    QIcon composed = baseIcon;
+    const QList<int> iconSizes = {16, 18, 20, 22, 24, 32};
+    for (const int size : iconSizes) {
+        QPixmap pixmap = baseIcon.pixmap(size, size);
+        if (pixmap.isNull()) {
+            pixmap = QPixmap(size, size);
+            pixmap.fill(Qt::transparent);
+        }
+
+        QPainter painter(&pixmap);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+
+        const int badgeWidth = qMax(9, (size / 2) + 2);
+        const int badgeHeight = qMax(8, (size / 2) + 1);
+        const QRect badgeRect(size - badgeWidth, size - badgeHeight, badgeWidth, badgeHeight);
+
+        painter.setPen(QPen(QColor(255, 255, 255, 180), 1.0));
+        painter.setBrush(QColor(QStringLiteral("#0b7ac8")));
+        painter.drawRoundedRect(badgeRect.adjusted(0, 0, -1, -1), 3.0, 3.0);
+
+        QFont badgeFont = painter.font();
+        badgeFont.setBold(true);
+        badgeFont.setPointSizeF(qMax(5.0, badgeHeight * 0.52));
+        painter.setFont(badgeFont);
+        painter.setPen(Qt::white);
+        painter.drawText(badgeRect, Qt::AlignCenter, QStringLiteral("TH"));
+        painter.end();
+
+        composed.addPixmap(pixmap, QIcon::Normal, QIcon::Off);
+    }
+
+    return composed;
+}
 
 class DockTitleBarWidget final : public QWidget
 {
@@ -130,18 +168,30 @@ protected:
             return;
         }
 
-        const QStyle *style = option->widget != nullptr ? option->widget->style() : nullptr;
-        const QIcon genericFileIcon = style != nullptr ? style->standardIcon(QStyle::SP_FileIcon) : QIcon();
-        const QIcon therionFileIcon = QIcon::fromTheme(
-            QStringLiteral("text-x-script"),
-            QIcon::fromTheme(QStringLiteral("application-x-therion"),
-                             style != nullptr ? style->standardIcon(QStyle::SP_FileLinkIcon) : genericFileIcon));
+        if (!isTherionProjectFilePath(filePath)) {
+            return;
+        }
 
-        option->icon = isTherionProjectFilePath(filePath) ? therionFileIcon : genericFileIcon;
+        ensureTherionIcon(option->widget);
+        option->icon = therionFileIcon_;
     }
 
 private:
+    void ensureTherionIcon(const QWidget *widget) const
+    {
+        if (therionIconInitialized_) {
+            return;
+        }
+
+        const QStyle *style = widget != nullptr ? widget->style() : QApplication::style();
+        const QIcon baseFileIcon = style != nullptr ? style->standardIcon(QStyle::SP_FileIcon) : QIcon();
+        therionFileIcon_ = therionBadgedFileIcon(baseFileIcon);
+        therionIconInitialized_ = true;
+    }
+
     const QFileSystemModel *model_ = nullptr;
+    mutable bool therionIconInitialized_ = false;
+    mutable QIcon therionFileIcon_;
 };
 
 constexpr int SidebarCollapsedRailWidth = 56;
@@ -153,12 +203,15 @@ bool isTherionProjectFilePath(const QString &filePath)
         return false;
     }
 
-    if (info.fileName().compare(QStringLiteral("thconfig"), Qt::CaseInsensitive) == 0) {
+    const QString fileName = info.fileName();
+    if (fileName.compare(QStringLiteral("thconfig"), Qt::CaseInsensitive) == 0) {
         return true;
     }
 
     const QString suffix = info.suffix().toLower();
-    return suffix == QStringLiteral("th") || suffix == QStringLiteral("th2");
+    return suffix == QStringLiteral("th")
+        || suffix == QStringLiteral("th2")
+        || suffix == QStringLiteral("thconfig");
 }
 
 QString duplicateFilePath(const QString &sourcePath)

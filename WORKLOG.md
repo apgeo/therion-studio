@@ -157,4 +157,6 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Added safety guardrails for destructive file/folder operations by blocking rename/delete when affected documents are currently open in editor tabs.~~
 - ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest` plus current regression binaries (`TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`).~~
 - ~~Added project-tree icon differentiation so supported Therion files (`.th`, `.th2`, `thconfig`) use a distinct Therion-document icon while unsupported files use the generic document icon.~~
+- ~~Refined project-tree icon handling so non-Therion files keep their native filetype icons while Therion files get a guaranteed `TH`-badged icon (fix for "all icons look the same").~~
+- ~~Extended Therion icon classification to include all `*.thconfig` files (plus `thconfig`, `.th`, and `.th2`).~~
 - ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest` plus current regression binaries (`TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`).~~

@@ -430,6 +430,17 @@ int runRewritePointCoordinatesTest()
         return 1;
     }
 
+    contents = QStringLiteral("point station 10 20 station -name a4 % keep\r\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(-7.0, 8.5), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point station -7.0 8.5 station -name a4 % keep\r\n"),
+                "rewritePointCoordinates should preserve CRLF and percent-comments while rewriting coordinates.")) {
+        return 1;
+    }
+
     return 0;
 }
 
@@ -696,6 +707,42 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
     if (!expect(!errorMessage.isEmpty(), "rewriteLineAreaVertex should report missing block terminator errors.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall -id line-2 1 2 3 4 % keep line note\n"
+                              "  -subtype \"temp 1\" 900 800\n"
+                              "  50 60\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(-15.0, 16.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall -id line-2 1 2 3 4 % keep line note\n"
+                                           "  -subtype \"temp 1\" 900 800\n"
+                                           "  -15.0 16.0\n"
+                                           "endline\n"),
+                "rewriteLineAreaVertex should ignore option-led continuation payload, keep percent-comments, and rewrite the correct vertex.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall\r\n"
+                              "  10 20\r\n"
+                              "  \"30\" \"40\"\r\n"
+                              "  50 60 % keep last vertex\r\n"
+                              "endline\r\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(99.0, -42.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\r\n"
+                                           "  10 20\r\n"
+                                           "  \"30\" \"40\"\r\n"
+                                           "  99.0 -42.0 % keep last vertex\r\n"
+                                           "endline\r\n"),
+                "rewriteLineAreaVertex should preserve CRLF, ignore quoted numeric noise, and keep percent-comments.")) {
         return 1;
     }
 

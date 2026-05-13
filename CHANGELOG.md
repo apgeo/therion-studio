@@ -22,6 +22,10 @@ This file records implementation progress in the repository so status does not l
 
 ### 2026-05-13
 
+- Hardened coordinate writeback token targeting so quoted numeric strings are excluded from `point` and `line`/`area` vertex rewrites; only unquoted numeric coordinate tokens are rewritten.
+- Added `TherionDocumentEditorTest` regression coverage to ensure quoted numeric payloads remain unchanged while editable geometry coordinates are updated.
+- Reduced map-drag jitter/no-op undo noise by adding a small movement threshold before committing point/vertex map edits back to source or recording undoable operations.
+- Verified `cmake --build build --target TherionDocumentEditorTest TherionStudio` succeeds and the current regression binaries (`TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`) all pass.
 - Fixed metadata-loaded PNG sizing by treating raster pixel dimensions as TH2 image units; the third `xth_me_image_insert` numeric value is preserved as metadata and is not used to resize the raster layer.
 - Corrected raster metadata placement to keep `xth_me_area_adjust` as editor padding/viewport metadata unless it exactly matches the raster dimensions, preventing `{0,0}` anchors from shifting scanned sketches away from TH2 geometry.
 - Hardened metadata matching for background layers by normalizing canonical/absolute paths (including Unicode composition differences on macOS) and adding a unique filename fallback when restoring from session.

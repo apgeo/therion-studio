@@ -408,6 +408,17 @@ int runRewritePointCoordinatesTest()
         return 1;
     }
 
+    contents = QStringLiteral("point station \"10\" \"20\" 30 40 station -name a2\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(1.5, -2.5), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point station \"10\" \"20\" 1.5 -2.5 station -name a2\n"),
+                "rewritePointCoordinates should ignore quoted numeric tokens and rewrite the first unquoted coordinate pair.")) {
+        return 1;
+    }
+
     return 0;
 }
 
@@ -473,6 +484,21 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
     if (!expect(!errorMessage.isEmpty(), "rewriteLineAreaVertex should report out-of-range vertex errors.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall\n"
+                              "  \"10\" \"20\" 30 40\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(8.0, 9.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\n"
+                                           "  \"10\" \"20\" 8.0 9.0\n"
+                                           "endline\n"),
+                "rewriteLineAreaVertex should ignore quoted numeric tokens when selecting writable vertices.")) {
         return 1;
     }
 

@@ -40,6 +40,11 @@ QRectF fittedPreviewBoundsForSource(const QRectF &sourceBounds, const QRectF &pr
     const qreal top = previewBounds.top() + ((previewHeight - fittedHeight) / 2.0);
     return QRectF(left, top, fittedWidth, fittedHeight);
 }
+
+bool mapSourcePointsDiffer(const QPointF &a, const QPointF &b)
+{
+    return (a - b).manhattanLength() > 0.01;
+}
 }
 
 void MapEditorTab::buildMapScene()
@@ -586,7 +591,7 @@ void MapEditorTab::recordCardVisibility(int lineNumber, bool oldVisible, bool ne
 
 void MapEditorTab::recordPointGeometryMove(int lineNumber, const QPointF &oldPoint, const QPointF &newPoint)
 {
-    if (lineNumber <= 0 || oldPoint == newPoint || textEditor_ == nullptr) {
+    if (lineNumber <= 0 || !mapSourcePointsDiffer(oldPoint, newPoint) || textEditor_ == nullptr) {
         return;
     }
 
@@ -609,7 +614,7 @@ void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
                                             const QPointF &oldPoint,
                                             const QPointF &newPoint)
 {
-    if (lineNumber <= 0 || vertexIndex < 0 || oldPoint == newPoint || textEditor_ == nullptr) {
+    if (lineNumber <= 0 || vertexIndex < 0 || !mapSourcePointsDiffer(oldPoint, newPoint) || textEditor_ == nullptr) {
         return;
     }
 

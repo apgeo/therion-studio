@@ -233,6 +233,11 @@ QPair<int, int> coordinateTokenPair(const TherionParsedLine &parsedLine)
             continue;
         }
 
+        if (index < parsedLine.tokenSpans.size()
+            && parsedLine.tokenSpans.at(index).type == TherionTokenType::QuotedString) {
+            continue;
+        }
+
         if (firstIndex < 0) {
             firstIndex = index;
             continue;
@@ -254,6 +259,11 @@ QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &pa
     const int firstTokenIndex = qMax(0, startTokenIndex);
     for (int index = firstTokenIndex; index < parsedLine.tokens.size(); ++index) {
         if (!tokenLooksNumeric(parsedLine.tokens.at(index))) {
+            continue;
+        }
+
+        if (index < parsedLine.tokenSpans.size()
+            && parsedLine.tokenSpans.at(index).type == TherionTokenType::QuotedString) {
             continue;
         }
 

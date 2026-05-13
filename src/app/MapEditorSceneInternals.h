@@ -13,6 +13,11 @@
 
 namespace TherionStudio {
 
+inline bool mapSourcePointsDiffer(const QPointF &a, const QPointF &b)
+{
+    return (a - b).manhattanLength() > 0.01;
+}
+
 struct CoordinateTransform
 {
     bool valid = false;
@@ -71,7 +76,7 @@ protected:
         QGraphicsEllipseItem::mouseReleaseEvent(event);
 
         const QPointF releasedSourcePoint = mapDisplayToSource(previewToSource(pos()));
-        if (moveCommittedCallback_ != nullptr && pressSourcePoint_ != releasedSourcePoint) {
+        if (moveCommittedCallback_ != nullptr && mapSourcePointsDiffer(pressSourcePoint_, releasedSourcePoint)) {
             moveCommittedCallback_(lineNumber_, pressSourcePoint_, releasedSourcePoint);
         }
     }
@@ -160,7 +165,7 @@ protected:
         QGraphicsEllipseItem::mouseReleaseEvent(event);
 
         const QPointF releasedSourcePoint = mapDisplayToSource(previewToSource(pos()));
-        if (moveCommittedCallback_ != nullptr && pressSourcePoint_ != releasedSourcePoint) {
+        if (moveCommittedCallback_ != nullptr && mapSourcePointsDiffer(pressSourcePoint_, releasedSourcePoint)) {
             moveCommittedCallback_(lineNumber_, geometryKind_, vertexIndex_, pressSourcePoint_, releasedSourcePoint);
         }
     }

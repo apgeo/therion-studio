@@ -11,6 +11,8 @@
 #include <QSplitterHandle>
 #include <QTextBrowser>
 #include <QToolButton>
+#include <QPointer>
+#include <QUndoCommand>
 #include <QUndoStack>
 #include <QVBoxLayout>
 #include <QFont>
@@ -45,6 +47,132 @@ bool mapSourcePointsDiffer(const QPointF &a, const QPointF &b)
 {
     return (a - b).manhattanLength() > 0.01;
 }
+
+class MapPointGeometryMoveCommand final : public QUndoCommand
+{
+public:
+    MapPointGeometryMoveCommand(TextEditorTab *textEditor,
+                                int lineNumber,
+                                const QPointF &oldPoint,
+                                const QPointF &newPoint,
+                                std::function<void(const QString &)> statusCallback)
+        : textEditor_(textEditor)
+        , lineNumber_(lineNumber)
+        , oldPoint_(oldPoint)
+        , newPoint_(newPoint)
+        , statusCallback_(std::move(statusCallback))
+    {
+    }
+
+    void undo() override
+    {
+        applyPoint(oldPoint_, QStringLiteral("Reverted point geometry at source line %1.").arg(lineNumber_));
+    }
+
+    void redo() override
+    {
+        applyPoint(newPoint_, QStringLiteral("Updated point geometry at source line %1.").arg(lineNumber_));
+    }
+
+private:
+    bool applyPoint(const QPointF &point, const QString &successMessage)
+    {
+        if (textEditor_ == nullptr) {
+            return false;
+        }
+
+        QString errorMessage;
+        if (!textEditor_->rewritePointCoordinates(lineNumber_, point, &errorMessage)) {
+            if (statusCallback_ != nullptr) {
+                statusCallback_(errorMessage.isEmpty()
+                                    ? QStringLiteral("Point move failed.")
+                                    : QStringLiteral("Point move failed: %1").arg(errorMessage));
+            }
+            return false;
+        }
+
+        if (statusCallback_ != nullptr) {
+            statusCallback_(successMessage);
+        }
+        return true;
+    }
+
+    QPointer<TextEditorTab> textEditor_;
+    int lineNumber_ = 0;
+    QPointF oldPoint_;
+    QPointF newPoint_;
+    std::function<void(const QString &)> statusCallback_;
+};
+
+class MapLineAreaVertexMoveCommand final : public QUndoCommand
+{
+public:
+    MapLineAreaVertexMoveCommand(TextEditorTab *textEditor,
+                                 int lineNumber,
+                                 QString kind,
+                                 int vertexIndex,
+                                 const QPointF &oldPoint,
+                                 const QPointF &newPoint,
+                                 std::function<void(const QString &)> statusCallback)
+        : textEditor_(textEditor)
+        , lineNumber_(lineNumber)
+        , kind_(std::move(kind))
+        , vertexIndex_(vertexIndex)
+        , oldPoint_(oldPoint)
+        , newPoint_(newPoint)
+        , statusCallback_(std::move(statusCallback))
+    {
+    }
+
+    void undo() override
+    {
+        applyVertex(oldPoint_,
+                    QStringLiteral("Reverted %1 vertex %2 at source line %3.")
+                        .arg(kind_)
+                        .arg(vertexIndex_ + 1)
+                        .arg(lineNumber_));
+    }
+
+    void redo() override
+    {
+        applyVertex(newPoint_,
+                    QStringLiteral("Updated %1 vertex %2 at source line %3.")
+                        .arg(kind_)
+                        .arg(vertexIndex_ + 1)
+                        .arg(lineNumber_));
+    }
+
+private:
+    bool applyVertex(const QPointF &point, const QString &successMessage)
+    {
+        if (textEditor_ == nullptr) {
+            return false;
+        }
+
+        QString errorMessage;
+        if (!textEditor_->rewriteLineAreaVertex(lineNumber_, kind_, vertexIndex_, point, &errorMessage)) {
+            if (statusCallback_ != nullptr) {
+                statusCallback_(errorMessage.isEmpty()
+                                    ? QStringLiteral("%1 vertex move failed.").arg(kind_)
+                                    : QStringLiteral("%1 vertex move failed: %2").arg(kind_, errorMessage));
+            }
+            return false;
+        }
+
+        if (statusCallback_ != nullptr) {
+            statusCallback_(successMessage);
+        }
+        return true;
+    }
+
+    QPointer<TextEditorTab> textEditor_;
+    int lineNumber_ = 0;
+    QString kind_;
+    int vertexIndex_ = -1;
+    QPointF oldPoint_;
+    QPointF newPoint_;
+    std::function<void(const QString &)> statusCallback_;
+};
 }
 
 void MapEditorTab::buildMapScene()
@@ -595,17 +723,22 @@ void MapEditorTab::recordPointGeometryMove(int lineNumber, const QPointF &oldPoi
         return;
     }
 
-    QString errorMessage;
-    if (!textEditor_->rewritePointCoordinates(lineNumber, newPoint, &errorMessage)) {
-        toolbarStatusNote_ = errorMessage.isEmpty()
-            ? tr("Point move failed.")
-            : tr("Point move failed: %1").arg(errorMessage);
+    auto statusCallback = [this](const QString &statusMessage) {
+        toolbarStatusNote_ = statusMessage;
         refreshToolbarSummary();
+    };
+
+    if (undoStack_ != nullptr) {
+        undoStack_->push(new MapPointGeometryMoveCommand(textEditor_,
+                                                         lineNumber,
+                                                         oldPoint,
+                                                         newPoint,
+                                                         statusCallback));
         return;
     }
 
-    toolbarStatusNote_ = tr("Updated point geometry at source line %1.").arg(lineNumber);
-    refreshToolbarSummary();
+    MapPointGeometryMoveCommand directCommand(textEditor_, lineNumber, oldPoint, newPoint, statusCallback);
+    directCommand.redo();
 }
 
 void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
@@ -618,20 +751,30 @@ void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
         return;
     }
 
-    QString errorMessage;
-    if (!textEditor_->rewriteLineAreaVertex(lineNumber, kind, vertexIndex, newPoint, &errorMessage)) {
-        toolbarStatusNote_ = errorMessage.isEmpty()
-            ? tr("%1 vertex move failed.").arg(kind)
-            : tr("%1 vertex move failed: %2").arg(kind, errorMessage);
+    auto statusCallback = [this](const QString &statusMessage) {
+        toolbarStatusNote_ = statusMessage;
         refreshToolbarSummary();
+    };
+
+    if (undoStack_ != nullptr) {
+        undoStack_->push(new MapLineAreaVertexMoveCommand(textEditor_,
+                                                          lineNumber,
+                                                          kind,
+                                                          vertexIndex,
+                                                          oldPoint,
+                                                          newPoint,
+                                                          statusCallback));
         return;
     }
 
-    toolbarStatusNote_ = tr("Updated %1 vertex %2 at source line %3.")
-                             .arg(kind)
-                             .arg(vertexIndex + 1)
-                             .arg(lineNumber);
-    refreshToolbarSummary();
+    MapLineAreaVertexMoveCommand directCommand(textEditor_,
+                                               lineNumber,
+                                               kind,
+                                               vertexIndex,
+                                               oldPoint,
+                                               newPoint,
+                                               statusCallback);
+    directCommand.redo();
 }
 
 QGraphicsRectItem *MapEditorTab::selectedDraftGeometryItem() const

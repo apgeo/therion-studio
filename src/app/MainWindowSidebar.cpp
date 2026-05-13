@@ -5,9 +5,13 @@
 #include <QAbstractItemView>
 #include <QDockWidget>
 #include <QDesktopServices>
+#include <QDir>
+#include <QFile>
 #include <QFileSystemModel>
+#include <QFileInfo>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QInputDialog>
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QMessageBox>
@@ -15,6 +19,7 @@
 #include <QMenu>
 #include <QSplitter>
 #include <QStackedWidget>
+#include <QStatusBar>
 #include <QStandardItemModel>
 #include <QStyle>
 #include <QTimer>
@@ -111,6 +116,42 @@ bool isTherionProjectFilePath(const QString &filePath)
     const QString suffix = info.suffix().toLower();
     return suffix == QStringLiteral("th") || suffix == QStringLiteral("th2");
 }
+
+QString duplicateFilePath(const QString &sourcePath)
+{
+    const QFileInfo sourceInfo(sourcePath);
+    const QString directoryPath = sourceInfo.dir().absolutePath();
+    const QString baseName = sourceInfo.completeBaseName();
+    const QString suffix = sourceInfo.suffix();
+    const QString extension = suffix.isEmpty() ? QString() : QStringLiteral(".") + suffix;
+
+    for (int counter = 1; counter < 1000; ++counter) {
+        const QString candidateName = counter == 1
+            ? QStringLiteral("%1 copy%2").arg(baseName, extension)
+            : QStringLiteral("%1 copy %2%3").arg(baseName).arg(counter).arg(extension);
+        const QString candidatePath = QDir(directoryPath).absoluteFilePath(candidateName);
+        if (!QFileInfo::exists(candidatePath)) {
+            return candidatePath;
+        }
+    }
+
+    return QString();
+}
+
+QString ensureSuffix(const QString &name, const QString &suffix)
+{
+    QString normalized = name.trimmed();
+    if (normalized.isEmpty()) {
+        return normalized;
+    }
+
+    const QString dotSuffix = QStringLiteral(".") + suffix.toLower();
+    if (!normalized.toLower().endsWith(dotSuffix)) {
+        normalized += dotSuffix;
+    }
+
+    return normalized;
+}
 }
 
 void MainWindow::buildProjectBrowser()
@@ -156,43 +197,328 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
     }
 
     const QModelIndex index = projectTree_->indexAt(position);
-    if (!index.isValid()) {
-        return;
-    }
+    const QString itemPath = index.isValid() ? projectModel_->filePath(index) : QString();
+    const QFileInfo itemInfo(itemPath);
+    const bool hasItem = index.isValid() && !itemPath.isEmpty() && itemInfo.exists();
 
-    const QString filePath = projectModel_->filePath(index);
-    if (filePath.isEmpty()) {
-        return;
+    QString creationDirectory = projectRootPath_;
+    if (creationDirectory.isEmpty() && hasItem) {
+        creationDirectory = itemInfo.isDir() ? itemInfo.absoluteFilePath() : itemInfo.absolutePath();
+    } else if (hasItem) {
+        creationDirectory = itemInfo.isDir() ? itemInfo.absoluteFilePath() : itemInfo.absolutePath();
     }
-
-    const QFileInfo info(filePath);
-    if (!info.exists()) {
-        return;
+    if (creationDirectory.isEmpty() || !QDir(creationDirectory).exists()) {
+        creationDirectory = projectRootPath_;
     }
 
     QMenu menu(projectTree_);
 
-    if (info.isFile()) {
+    auto openTabsForPathPrefix = [this](const QString &pathPrefix) {
+        QVector<int> indices;
+        if (pathPrefix.isEmpty()) {
+            return indices;
+        }
+
+        const QString canonicalPrefix = QFileInfo(pathPrefix).canonicalFilePath().isEmpty()
+            ? QFileInfo(pathPrefix).absoluteFilePath()
+            : QFileInfo(pathPrefix).canonicalFilePath();
+        const QString normalizedPrefix = canonicalPrefix.endsWith(QLatin1Char('/'))
+            ? canonicalPrefix
+            : canonicalPrefix + QLatin1Char('/');
+
+        for (int tabIndex = 0; tabIndex < editorTabs_->count(); ++tabIndex) {
+            QWidget *tabWidget = editorTabs_->widget(tabIndex);
+            const QString documentPath = documentPathForWidget(tabWidget);
+            if (documentPath.isEmpty()) {
+                continue;
+            }
+
+            const QString canonicalDocumentPath = QFileInfo(documentPath).canonicalFilePath().isEmpty()
+                ? QFileInfo(documentPath).absoluteFilePath()
+                : QFileInfo(documentPath).canonicalFilePath();
+            if (canonicalDocumentPath == canonicalPrefix || canonicalDocumentPath.startsWith(normalizedPrefix)) {
+                indices.append(tabIndex);
+            }
+        }
+
+        return indices;
+    };
+
+    auto warnOpenTabs = [this, &openTabsForPathPrefix](const QString &path) {
+        const QVector<int> openTabs = openTabsForPathPrefix(path);
+        if (openTabs.isEmpty()) {
+            return false;
+        }
+
+        QMessageBox::information(this,
+                                 tr("Project Browser"),
+                                 tr("Close open tabs for the selected path before renaming or deleting it."));
+        return true;
+    };
+
+    auto createFileAction = [this, creationDirectory, &menu](const QString &label,
+                                                              const QString &prompt,
+                                                              const QString &defaultName,
+                                                              const QString &suffix) {
+        if (creationDirectory.isEmpty()) {
+            return;
+        }
+
+        menu.addAction(label, this, [this, creationDirectory, prompt, defaultName, suffix]() {
+            bool ok = false;
+            QString enteredName = QInputDialog::getText(this,
+                                                        tr("Create File"),
+                                                        prompt,
+                                                        QLineEdit::Normal,
+                                                        defaultName,
+                                                        &ok).trimmed();
+            if (!ok) {
+                return;
+            }
+            if (enteredName.isEmpty()) {
+                QMessageBox::warning(this, tr("Create File"), tr("File name cannot be empty."));
+                return;
+            }
+
+            if (!suffix.isEmpty()) {
+                enteredName = ensureSuffix(enteredName, suffix);
+            }
+
+            const QString filePath = QDir(creationDirectory).absoluteFilePath(enteredName);
+            if (QFileInfo::exists(filePath)) {
+                QMessageBox::warning(this, tr("Create File"), tr("File already exists: %1").arg(QDir::toNativeSeparators(filePath)));
+                return;
+            }
+
+            QFile file(filePath);
+            if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                QMessageBox::warning(this,
+                                     tr("Create File"),
+                                     tr("Failed to create file: %1").arg(QDir::toNativeSeparators(filePath)));
+                return;
+            }
+            file.close();
+
+            statusBar()->showMessage(tr("Created %1").arg(QDir::toNativeSeparators(filePath)), 3000);
+            appendConsoleLine(tr("Created %1").arg(filePath));
+        });
+    };
+
+    if (hasItem && itemInfo.isFile()) {
         menu.addAction(tr("Open"), this, [this, index]() {
             handleProjectTreeActivated(index);
         });
 
-        if (info.suffix().compare(QStringLiteral("th2"), Qt::CaseInsensitive) == 0) {
-            menu.addAction(tr("Open in Map Editor"), this, [this, filePath]() {
-                openMapEditorTab(filePath);
+        if (itemInfo.suffix().compare(QStringLiteral("th2"), Qt::CaseInsensitive) == 0) {
+            menu.addAction(tr("Open in Map Editor"), this, [this, itemPath]() {
+                openMapEditorTab(itemPath);
             });
         }
 
-        if (!isTherionProjectFilePath(filePath)) {
-            menu.addAction(tr("Open Externally"), this, [this, filePath]() {
-                if (!QDesktopServices::openUrl(QUrl::fromLocalFile(filePath))) {
+        if (!isTherionProjectFilePath(itemPath)) {
+            menu.addAction(tr("Open Externally"), this, [this, itemPath]() {
+                if (!QDesktopServices::openUrl(QUrl::fromLocalFile(itemPath))) {
                     QMessageBox::warning(this,
                                          tr("Open Externally"),
-                                         tr("Failed to open %1 with the system default application.")
-                                             .arg(QDir::toNativeSeparators(filePath)));
+                                             tr("Failed to open %1 with the system default application.")
+                                             .arg(QDir::toNativeSeparators(itemPath)));
                 }
             });
         }
+
+        menu.addSeparator();
+        menu.addAction(tr("Duplicate"), this, [this, itemPath]() {
+            const QString targetPath = duplicateFilePath(itemPath);
+            if (targetPath.isEmpty()) {
+                QMessageBox::warning(this, tr("Duplicate"), tr("Could not resolve a duplicate file name."));
+                return;
+            }
+
+            if (!QFile::copy(itemPath, targetPath)) {
+                QMessageBox::warning(this,
+                                     tr("Duplicate"),
+                                     tr("Failed to duplicate file to %1.").arg(QDir::toNativeSeparators(targetPath)));
+                return;
+            }
+
+            statusBar()->showMessage(tr("Duplicated %1").arg(QDir::toNativeSeparators(itemPath)), 3000);
+            appendConsoleLine(tr("Duplicated %1 -> %2").arg(itemPath, targetPath));
+        });
+
+        menu.addAction(tr("Rename"), this, [this, itemPath, &warnOpenTabs]() {
+            if (warnOpenTabs(itemPath)) {
+                return;
+            }
+
+            const QFileInfo currentInfo(itemPath);
+            bool ok = false;
+            const QString newName = QInputDialog::getText(this,
+                                                          tr("Rename"),
+                                                          tr("New name:"),
+                                                          QLineEdit::Normal,
+                                                          currentInfo.fileName(),
+                                                          &ok).trimmed();
+            if (!ok) {
+                return;
+            }
+            if (newName.isEmpty()) {
+                QMessageBox::warning(this, tr("Rename"), tr("Name cannot be empty."));
+                return;
+            }
+            if (newName == currentInfo.fileName()) {
+                return;
+            }
+
+            const QString renamedPath = currentInfo.dir().absoluteFilePath(newName);
+            if (QFileInfo::exists(renamedPath)) {
+                QMessageBox::warning(this, tr("Rename"), tr("Target already exists: %1").arg(QDir::toNativeSeparators(renamedPath)));
+                return;
+            }
+
+            if (!QFile::rename(itemPath, renamedPath)) {
+                QMessageBox::warning(this, tr("Rename"), tr("Failed to rename file."));
+                return;
+            }
+
+            statusBar()->showMessage(tr("Renamed to %1").arg(QDir::toNativeSeparators(renamedPath)), 3000);
+            appendConsoleLine(tr("Renamed %1 -> %2").arg(itemPath, renamedPath));
+            rebuildStructureSidebar();
+            rebuildMapObjectsTree();
+        });
+
+        menu.addAction(tr("Delete"), this, [this, itemPath, &warnOpenTabs]() {
+            if (warnOpenTabs(itemPath)) {
+                return;
+            }
+
+            const auto answer = QMessageBox::question(this,
+                                                      tr("Delete File"),
+                                                      tr("Delete %1?").arg(QDir::toNativeSeparators(itemPath)),
+                                                      QMessageBox::Yes | QMessageBox::No,
+                                                      QMessageBox::No);
+            if (answer != QMessageBox::Yes) {
+                return;
+            }
+
+            if (!QFile::remove(itemPath)) {
+                QMessageBox::warning(this, tr("Delete File"), tr("Failed to delete file."));
+                return;
+            }
+
+            statusBar()->showMessage(tr("Deleted %1").arg(QDir::toNativeSeparators(itemPath)), 3000);
+            appendConsoleLine(tr("Deleted %1").arg(itemPath));
+            rebuildStructureSidebar();
+            rebuildMapObjectsTree();
+        });
+    } else if (hasItem && itemInfo.isDir()) {
+        menu.addAction(tr("Rename Folder"), this, [this, itemPath, &warnOpenTabs]() {
+            if (warnOpenTabs(itemPath)) {
+                return;
+            }
+
+            const QFileInfo currentInfo(itemPath);
+            bool ok = false;
+            const QString newName = QInputDialog::getText(this,
+                                                          tr("Rename Folder"),
+                                                          tr("New folder name:"),
+                                                          QLineEdit::Normal,
+                                                          currentInfo.fileName(),
+                                                          &ok).trimmed();
+            if (!ok) {
+                return;
+            }
+            if (newName.isEmpty()) {
+                QMessageBox::warning(this, tr("Rename Folder"), tr("Folder name cannot be empty."));
+                return;
+            }
+            if (newName == currentInfo.fileName()) {
+                return;
+            }
+
+            const QString renamedPath = currentInfo.dir().absoluteFilePath(newName);
+            if (QFileInfo::exists(renamedPath)) {
+                QMessageBox::warning(this, tr("Rename Folder"), tr("Target already exists: %1").arg(QDir::toNativeSeparators(renamedPath)));
+                return;
+            }
+
+            if (!QDir().rename(itemPath, renamedPath)) {
+                QMessageBox::warning(this, tr("Rename Folder"), tr("Failed to rename folder."));
+                return;
+            }
+
+            statusBar()->showMessage(tr("Renamed folder to %1").arg(QDir::toNativeSeparators(renamedPath)), 3000);
+            appendConsoleLine(tr("Renamed folder %1 -> %2").arg(itemPath, renamedPath));
+            rebuildStructureSidebar();
+            rebuildMapObjectsTree();
+        });
+
+        menu.addAction(tr("Delete Folder"), this, [this, itemPath, &warnOpenTabs]() {
+            if (warnOpenTabs(itemPath)) {
+                return;
+            }
+
+            const auto answer = QMessageBox::question(this,
+                                                      tr("Delete Folder"),
+                                                      tr("Delete folder %1 and all its contents?")
+                                                          .arg(QDir::toNativeSeparators(itemPath)),
+                                                      QMessageBox::Yes | QMessageBox::No,
+                                                      QMessageBox::No);
+            if (answer != QMessageBox::Yes) {
+                return;
+            }
+
+            QDir directory(itemPath);
+            if (!directory.removeRecursively()) {
+                QMessageBox::warning(this, tr("Delete Folder"), tr("Failed to delete folder."));
+                return;
+            }
+
+            statusBar()->showMessage(tr("Deleted folder %1").arg(QDir::toNativeSeparators(itemPath)), 3000);
+            appendConsoleLine(tr("Deleted folder %1").arg(itemPath));
+            rebuildStructureSidebar();
+            rebuildMapObjectsTree();
+        });
+    }
+
+    if (!creationDirectory.isEmpty() && QDir(creationDirectory).exists()) {
+        if (!menu.isEmpty()) {
+            menu.addSeparator();
+        }
+
+        menu.addAction(tr("New Folder"), this, [this, creationDirectory]() {
+            bool ok = false;
+            const QString folderName = QInputDialog::getText(this,
+                                                             tr("Create Folder"),
+                                                             tr("Folder name:"),
+                                                             QLineEdit::Normal,
+                                                             tr("New Folder"),
+                                                             &ok).trimmed();
+            if (!ok) {
+                return;
+            }
+            if (folderName.isEmpty()) {
+                QMessageBox::warning(this, tr("Create Folder"), tr("Folder name cannot be empty."));
+                return;
+            }
+
+            const QString folderPath = QDir(creationDirectory).absoluteFilePath(folderName);
+            if (QFileInfo::exists(folderPath)) {
+                QMessageBox::warning(this, tr("Create Folder"), tr("Folder already exists: %1").arg(QDir::toNativeSeparators(folderPath)));
+                return;
+            }
+
+            if (!QDir().mkpath(folderPath)) {
+                QMessageBox::warning(this, tr("Create Folder"), tr("Failed to create folder."));
+                return;
+            }
+
+            statusBar()->showMessage(tr("Created folder %1").arg(QDir::toNativeSeparators(folderPath)), 3000);
+            appendConsoleLine(tr("Created folder %1").arg(folderPath));
+        });
+
+        createFileAction(tr("New .th File"), tr("File name:"), tr("new-file.th"), QStringLiteral("th"));
+        createFileAction(tr("New .th2 File"), tr("File name:"), tr("new-map.th2"), QStringLiteral("th2"));
+        createFileAction(tr("New thconfig"), tr("File name:"), tr("thconfig"), QString());
     }
 
     if (menu.isEmpty()) {

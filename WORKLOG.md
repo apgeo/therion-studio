@@ -152,3 +152,7 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Added project-tree context menu actions for file rows: `Open`, `Open in Map Editor` (for `.th2`), and `Open Externally` for unsupported file types.~~
 - ~~Wired `Open Externally` through platform default-app launch with actionable failure feedback.~~
 - ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest` plus current regression binaries (`TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`).~~
+- ~~Extended project-tree context menus with file/folder management actions: `Duplicate`, `Rename`, `Delete`, `Rename Folder`, and `Delete Folder`.~~
+- ~~Added project-tree creation actions in directory/root context: `New Folder`, `New .th File`, `New .th2 File`, and `New thconfig`.~~
+- ~~Added safety guardrails for destructive file/folder operations by blocking rename/delete when affected documents are currently open in editor tabs.~~
+- ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest` plus current regression binaries (`TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`).~~

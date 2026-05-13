@@ -465,6 +465,7 @@ MapCardItem::MapCardItem(const MapSceneEntry &entry, const QColor &accent)
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setFlag(QGraphicsItem::ItemIsMovable, true);
     setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
+    setAcceptHoverEvents(true);
     setCursor(Qt::PointingHandCursor);
 }
 
@@ -509,15 +510,16 @@ void MapCardItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *optio
     Q_UNUSED(widget);
 
     const bool selected = option->state & QStyle::State_Selected;
-    const QColor backgroundColor = selected ? accent_.lighter(170) : QColor(QStringLiteral("#2a2f3a"));
-    const QColor borderColor = selected ? accent_.lighter(120) : accent_.darker(160);
+    const bool hovered = option->state & QStyle::State_MouseOver;
+    const QColor backgroundColor = selected ? accent_.lighter(170) : (hovered ? QColor(QStringLiteral("#313747")) : QColor(QStringLiteral("#2a2f3a")));
+    const QColor borderColor = selected ? accent_.lighter(120) : (hovered ? accent_.lighter(110) : accent_.darker(160));
     const QColor titleColor = selected ? QColor(QStringLiteral("#f8fbff")) : QColor(QStringLiteral("#e8edf4"));
     const QColor bodyColor = selected ? QColor(QStringLiteral("#f0f4fb")) : QColor(QStringLiteral("#bac5d3"));
-    const QColor badgeColor = selected ? accent_.lighter(150) : accent_;
+    const QColor badgeColor = selected ? accent_.lighter(150) : (hovered ? accent_.lighter(115) : accent_);
     const QColor visibilityColor = objectVisible_ ? QColor(QStringLiteral("#6ed8a8")) : QColor(QStringLiteral("#f08a7f"));
 
     painter->setRenderHint(QPainter::Antialiasing, true);
-    painter->setPen(QPen(borderColor, selected ? 2.5 : 1.4));
+    painter->setPen(QPen(borderColor, selected ? 2.5 : (hovered ? 1.9 : 1.4)));
     painter->setBrush(backgroundColor);
     painter->drawRoundedRect(rect().adjusted(1, 1, -1, -1), 10, 10);
 
@@ -631,6 +633,7 @@ MapDraftGeometryItem::MapDraftGeometryItem(int draftId, DraftGeometryKind kind)
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setFlag(QGraphicsItem::ItemIsMovable, true);
     setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
+    setAcceptHoverEvents(true);
     setCursor(Qt::PointingHandCursor);
 }
 
@@ -690,14 +693,15 @@ void MapDraftGeometryItem::paint(QPainter *painter, const QStyleOptionGraphicsIt
     Q_UNUSED(widget);
 
     const bool selected = option->state & QStyle::State_Selected;
-    const QColor borderColor = selected ? accent_.lighter(120) : accent_.darker(150);
-    const QColor fillColor = draftComplete_ ? accent_.lighter(150) : QColor(QStringLiteral("#2b2f38"));
+    const bool hovered = option->state & QStyle::State_MouseOver;
+    const QColor borderColor = selected ? accent_.lighter(120) : (hovered ? accent_.lighter(110) : accent_.darker(150));
+    const QColor fillColor = draftComplete_ ? accent_.lighter(150) : (hovered ? QColor(QStringLiteral("#343a45")) : QColor(QStringLiteral("#2b2f38")));
     const QColor titleColor = selected ? QColor(QStringLiteral("#ffffff")) : QColor(QStringLiteral("#edf3fb"));
     const QColor bodyColor = selected ? QColor(QStringLiteral("#eef5ff")) : QColor(QStringLiteral("#b9c4d3"));
     const QColor completionColor = draftComplete_ ? QColor(QStringLiteral("#6ed8a8")) : QColor(QStringLiteral("#f2c65f"));
 
     painter->setRenderHint(QPainter::Antialiasing, true);
-    painter->setPen(QPen(borderColor, selected ? 2.2 : 1.4, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter->setPen(QPen(borderColor, selected ? 2.2 : (hovered ? 1.9 : 1.4), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     painter->setBrush(fillColor);
     painter->drawRoundedRect(rect().adjusted(1, 1, -1, -1), 12, 12);
 

@@ -196,10 +196,10 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     const QRectF previewBounds = geometryCanvas.adjusted(24.0, 64.0, -24.0, -24.0);
     const QRectF sourceBounds = geometryBoundsForFeatures(geometryFeatures);
     const qreal mapScale = sceneCoordsScaleFactor(sourceBounds, previewBounds);
-    const qreal pointRadius = qBound(1.1, 2.2 * mapScale, 2.0);
-    const qreal vertexRadius = qBound(0.6, 1.4 * mapScale, 1.2);
-    const qreal thickLineWidth = qBound(0.7, 1.5 * mapScale, 1.6);
-    const qreal detailLineWidth = qBound(0.4, 0.8 * mapScale, 0.8);
+    const qreal pointRadius = qBound(3.2, 4.8 * mapScale, 6.2);
+    const qreal vertexRadius = qBound(2.4, 3.8 * mapScale, 4.8);
+    const qreal thickLineWidth = qBound(1.3, 2.2 * mapScale, 2.9);
+    const qreal detailLineWidth = qBound(0.8, 1.4 * mapScale, 1.8);
     const bool compactLabels = geometryFeatures.size() > 24;
 
     for (int index = 0; index < 6; ++index) {
@@ -226,8 +226,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 const QPointF previewPoint = mapGeometryPointToPreview(feature.anchor, sourceBounds, previewBounds);
                 auto *pointItem = new MapEditablePointItem(feature.lineNumber, feature.anchor, sourceBounds, previewBounds);
                 pointItem->setRect(QRectF(-pointRadius, -pointRadius, pointRadius * 2.0, pointRadius * 2.0));
-                pointItem->setPen(QPen(QColor(16, 16, 16, 170), 0.7));
-                pointItem->setBrush(QBrush(QColor(16, 16, 16, 140)));
+                pointItem->setPen(QPen(QColor(14, 14, 14, 220), 1.1));
+                pointItem->setBrush(QBrush(QColor(20, 20, 20, 180)));
                 pointItem->setMoveCommittedCallback(recordPointGeometryMove);
                 scene->addItem(pointItem);
                 pointItem->setZValue(3.0);
@@ -278,8 +278,12 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                                          sourceBounds,
                                                                          previewBounds);
                     vertexItem->setRect(QRectF(-vertexRadius, -vertexRadius, vertexRadius * 2.0, vertexRadius * 2.0));
-                    vertexItem->setPen(QPen(QColor(16, 16, 16, 140), 0.6));
-                    vertexItem->setBrush(QBrush(QColor(16, 16, 16, 90)));
+                    QColor vertexFill = feature.accent;
+                    vertexFill.setAlpha(185);
+                    QColor vertexOutline = feature.accent.darker(220);
+                    vertexOutline.setAlpha(220);
+                    vertexItem->setPen(QPen(vertexOutline, 1.0));
+                    vertexItem->setBrush(QBrush(vertexFill));
                     vertexItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                     scene->addItem(vertexItem);
                     vertexItem->setZValue(4.0);
@@ -330,8 +334,12 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                                          sourceBounds,
                                                                          previewBounds);
                     vertexItem->setRect(QRectF(-vertexRadius, -vertexRadius, vertexRadius * 2.0, vertexRadius * 2.0));
-                    vertexItem->setPen(QPen(QColor(16, 16, 16, 140), 0.6));
-                    vertexItem->setBrush(QBrush(QColor(16, 16, 16, 90)));
+                    QColor vertexFill = feature.accent;
+                    vertexFill.setAlpha(185);
+                    QColor vertexOutline = feature.accent.darker(220);
+                    vertexOutline.setAlpha(220);
+                    vertexItem->setPen(QPen(vertexOutline, 1.0));
+                    vertexItem->setBrush(QBrush(vertexFill));
                     vertexItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                     scene->addItem(vertexItem);
                     vertexItem->setZValue(4.0);

@@ -149,6 +149,9 @@ Automated tests currently in-tree and used as regression baseline:
 
 ### 2026-05-14
 
+- ~~Improved map-canvas interaction affordance for editable geometry handles: added hover/selected/drag visual states, stronger contrast, and per-handle tooltips (point and line/area vertices).~~
+- ~~Increased map preview handle and stroke readability (larger point/vertex radii and thicker preview line strokes) to improve selection/drag usability at normal fit scale.~~
+- ~~Added hover-state visual feedback to map cards and draft-geometry cards for clearer active-target discovery.~~
 - ~~Added a corpus-style `TherionDocumentEditorTest` fixture that performs coordinated point/line/area rewrites within a realistic TH2 scrap block containing metadata, comments, and CRLF line endings.~~
 - ~~Verified rewrite stability in the fixture across option-led continuation lines (`-subtype`), inline metadata (`-id`), `%` comments, and mixed-precision coordinate tokens.~~
 - ~~Added negative corpus-style fixture checks that assert rewrite failures (missing `endline`, incomplete area coordinate tuple) return errors and leave source text unchanged.~~

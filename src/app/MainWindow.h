@@ -3,6 +3,7 @@
 #include <QMainWindow>
 #include <QPersistentModelIndex>
 #include <QProcess>
+#include <QPoint>
 
 class QLabel;
 class QFileSystemModel;
@@ -47,6 +48,7 @@ private slots:
     void openProject();
     void closeProject();
     void handleProjectTreeActivated(const QModelIndex &index);
+    void handleProjectTreeContextMenuRequested(const QPoint &position);
     void handleTextEditorCurrentLineChanged(const QString &filePath, int lineNumber);
     void openCurrentDocumentInMapEditor();
     void handleTabCloseRequested(int index);

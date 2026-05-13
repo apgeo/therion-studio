@@ -149,3 +149,6 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Added `Command/Ctrl+Shift+W` shortcut for `Close All Tabs`.~~
 - ~~Persisted open-document session state immediately after tab-close operations.~~
 - ~~Verified build and full current regression baseline.~~
+- ~~Added project-tree context menu actions for file rows: `Open`, `Open in Map Editor` (for `.th2`), and `Open Externally` for unsupported file types.~~
+- ~~Wired `Open Externally` through platform default-app launch with actionable failure feedback.~~
+- ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest` plus current regression binaries (`TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`).~~

@@ -4,12 +4,15 @@
 
 #include <QAbstractItemView>
 #include <QDockWidget>
+#include <QDesktopServices>
 #include <QFileSystemModel>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QItemSelectionModel>
 #include <QLabel>
+#include <QMessageBox>
 #include <QMouseEvent>
+#include <QMenu>
 #include <QSplitter>
 #include <QStackedWidget>
 #include <QStandardItemModel>
@@ -17,6 +20,7 @@
 #include <QTimer>
 #include <QToolButton>
 #include <QTreeView>
+#include <QUrl>
 #include <QVBoxLayout>
 
 namespace
@@ -92,6 +96,21 @@ private:
 };
 
 constexpr int SidebarCollapsedRailWidth = 56;
+
+bool isTherionProjectFilePath(const QString &filePath)
+{
+    const QFileInfo info(filePath);
+    if (!info.isFile()) {
+        return false;
+    }
+
+    if (info.fileName().compare(QStringLiteral("thconfig"), Qt::CaseInsensitive) == 0) {
+        return true;
+    }
+
+    const QString suffix = info.suffix().toLower();
+    return suffix == QStringLiteral("th") || suffix == QStringLiteral("th2");
+}
 }
 
 void MainWindow::buildProjectBrowser()
@@ -116,16 +135,71 @@ void MainWindow::buildProjectBrowser()
     projectTree_->setSelectionBehavior(QAbstractItemView::SelectRows);
     projectTree_->setSelectionMode(QAbstractItemView::SingleSelection);
     projectTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    projectTree_->setContextMenuPolicy(Qt::CustomContextMenu);
     projectTree_->setAlternatingRowColors(true);
     projectTree_->hideColumn(1);
     projectTree_->hideColumn(2);
     projectTree_->hideColumn(3);
     connect(projectTree_, &QTreeView::activated, this, &MainWindow::handleProjectTreeActivated);
+    connect(projectTree_, &QTreeView::customContextMenuRequested, this, &MainWindow::handleProjectTreeContextMenuRequested);
 
     projectLayout->addWidget(projectTree_, 1);
     sidebarPages_->addWidget(projectPage);
 
     resetProjectBrowser();
+}
+
+void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
+{
+    if (projectTree_ == nullptr || projectModel_ == nullptr) {
+        return;
+    }
+
+    const QModelIndex index = projectTree_->indexAt(position);
+    if (!index.isValid()) {
+        return;
+    }
+
+    const QString filePath = projectModel_->filePath(index);
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    const QFileInfo info(filePath);
+    if (!info.exists()) {
+        return;
+    }
+
+    QMenu menu(projectTree_);
+
+    if (info.isFile()) {
+        menu.addAction(tr("Open"), this, [this, index]() {
+            handleProjectTreeActivated(index);
+        });
+
+        if (info.suffix().compare(QStringLiteral("th2"), Qt::CaseInsensitive) == 0) {
+            menu.addAction(tr("Open in Map Editor"), this, [this, filePath]() {
+                openMapEditorTab(filePath);
+            });
+        }
+
+        if (!isTherionProjectFilePath(filePath)) {
+            menu.addAction(tr("Open Externally"), this, [this, filePath]() {
+                if (!QDesktopServices::openUrl(QUrl::fromLocalFile(filePath))) {
+                    QMessageBox::warning(this,
+                                         tr("Open Externally"),
+                                         tr("Failed to open %1 with the system default application.")
+                                             .arg(QDir::toNativeSeparators(filePath)));
+                }
+            });
+        }
+    }
+
+    if (menu.isEmpty()) {
+        return;
+    }
+
+    menu.exec(projectTree_->viewport()->mapToGlobal(position));
 }
 
 void MainWindow::buildStructureSidebar()

@@ -476,6 +476,61 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
 
+    contents = QStringLiteral("line wall\r\n"
+                              "  10 20\r\n"
+                              "  30 40\r\n"
+                              "endline\r\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(7.0, 8.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\r\n"
+                                           "  10 20\r\n"
+                                           "  7.0 8.0\r\n"
+                                           "endline\r\n"),
+                "rewriteLineAreaVertex should preserve CRLF line endings.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall 10 20 30 40 -id line-1\n"
+                              "  50 60\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(-11.0, 12.5), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall 10 20 30 40 -id line-1\n"
+                                           "  -11.0 12.5\n"
+                                           "endline\n"),
+                "rewriteLineAreaVertex should support rewriting vertices that continue on following lines.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("area water\n"
+                              "  1 2 3\n"
+                              "endarea\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("area"), 1, QPointF(9.0, 9.0), &errorMessage),
+                "rewriteLineAreaVertex should reject incomplete odd coordinate tuples.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "rewriteLineAreaVertex should report an error when requested vertex pair is not available.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall\n"
+                              "  1 2\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(5.0, 6.0), &errorMessage),
+                "rewriteLineAreaVertex should reject line blocks missing endline.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "rewriteLineAreaVertex should report missing block terminator errors.")) {
+        return 1;
+    }
+
     return 0;
 }
 }

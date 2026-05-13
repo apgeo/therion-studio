@@ -35,6 +35,8 @@ This file records implementation progress in the repository so status does not l
 - Extracted `.xvi` parsing into `src/core/TherionXviParser.*` so background vector parsing is no longer embedded in `MapEditorBackgroundLayers.cpp`.
 - Added `TherionXviParserTest` coverage for valid grid/station/shot/sketch parsing, file-based parsing, and invalid-content rejection.
 - Verified the full `cmake --build build` target set succeeds and `TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, and `TherionXviParserTest` pass after parser extraction.
+- Expanded `TherionDocumentEditorTest` coverage for `rewriteLineAreaVertex(...)` with CRLF-preservation, mixed inline/multiline vertex indexing, missing `endline` rejection, and odd-coordinate-pair rejection scenarios.
+- Verified the updated `TherionDocumentEditorTest` target build succeeds and all current test binaries (`TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`) pass.
 
 ### 2026-05-13
 

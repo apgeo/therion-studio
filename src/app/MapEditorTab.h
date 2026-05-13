@@ -4,8 +4,10 @@
 #include <QString>
 #include <QWidget>
 #include <QHash>
+#include <QPoint>
 #include <QPointF>
 #include <QRectF>
+#include <QDateTime>
 #include <QVector>
 
 class QLabel;
@@ -89,6 +91,9 @@ signals:
     void documentTextChanged();
     void backgroundLayersChanged();
 
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 private slots:
     void handleWorkspaceModeChanged(int index);
     void handleTextEditorCurrentLineChanged(int lineNumber);
@@ -121,6 +126,8 @@ private:
     void restoreBackgroundImageItems();
     void selectMapLine(int lineNumber);
     void fitMapToView(bool includeBackgroundImages = false);
+    void syncZoomFactorFromView();
+    void applyZoomAtViewportPosition(qreal factor, const QPointF &viewportPosition);
     void refreshToolbarSummary();
     void adjustMapZoom(qreal factor);
     QRectF mapGeometryFitBounds() const;
@@ -207,8 +214,18 @@ private:
     QString toolbarStatusNote_;
     bool updatingSelection_ = false;
     bool updatingBackgroundLayerControls_ = false;
+    bool autoFitEnabled_ = true;
     qreal zoomFactor_ = 1.0;
     bool fitBackgroundRequested_ = false;
+    bool mapPanActive_ = false;
+    QPoint mapPanLastPosition_;
+    bool primaryPointerInteractionActive_ = false;
+    bool selectModeActive_ = true;
+    bool touchPanCandidate_ = false;
+    bool touchPanActive_ = false;
+    QPointF touchPanStartPosition_;
+    QPointF touchPanLastPosition_;
+    QDateTime lastTabletInteractionUtc_;
     bool helpCollapsed_ = false;
     int helpPanelHeight_ = 180;
     int selectedBackgroundLayerIndex_ = -1;

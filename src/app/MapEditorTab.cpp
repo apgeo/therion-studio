@@ -1,21 +1,31 @@
 #include "MapEditorTab.h"
 
 #include <QFrame>
+#include <QEvent>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineF>
+#include <QMouseEvent>
+#include <QNativeGestureEvent>
 #include <QPushButton>
+#include <QScrollBar>
 #include <QSplitterHandle>
+#include <QTabletEvent>
 #include <QTextBrowser>
 #include <QToolButton>
 #include <QPointer>
 #include <QUndoCommand>
 #include <QUndoStack>
 #include <QVBoxLayout>
+#include <QWheelEvent>
+#include <QTouchEvent>
 #include <QFont>
+
+#include <cmath>
 
 #include "MapEditorSceneSupport.h"
 #include "TextEditorTab.h"
@@ -46,6 +56,19 @@ QRectF fittedPreviewBoundsForSource(const QRectF &sourceBounds, const QRectF &pr
 bool mapSourcePointsDiffer(const QPointF &a, const QPointF &b)
 {
     return (a - b).manhattanLength() > 0.01;
+}
+
+bool wheelEventHasPreciseScrollingDeltas(const QWheelEvent *event)
+{
+    if (event == nullptr) {
+        return false;
+    }
+
+    if (!event->pixelDelta().isNull()) {
+        return true;
+    }
+
+    return event->phase() != Qt::NoScrollPhase;
 }
 
 class MapPointGeometryMoveCommand final : public QUndoCommand
@@ -225,6 +248,225 @@ private:
 };
 }
 
+bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
+{
+    if (mapView_ == nullptr || event == nullptr) {
+        return QWidget::eventFilter(watched, event);
+    }
+
+    QWidget *viewport = mapView_->viewport();
+    if (watched == viewport) {
+        switch (event->type()) {
+        case QEvent::TabletPress:
+        case QEvent::TabletMove:
+        case QEvent::TabletRelease:
+            lastTabletInteractionUtc_ = QDateTime::currentDateTimeUtc();
+            break;
+        case QEvent::MouseButtonPress: {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (mouseEvent->button() == Qt::LeftButton) {
+                primaryPointerInteractionActive_ = true;
+            }
+
+            if (mouseEvent->button() == Qt::RightButton) {
+                mapPanActive_ = true;
+                mapPanLastPosition_ = mouseEvent->pos();
+                viewport->setCursor(Qt::ClosedHandCursor);
+                event->accept();
+                return true;
+            }
+            break;
+        }
+        case QEvent::MouseMove: {
+            if (!mapPanActive_) {
+                break;
+            }
+
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            const QPoint delta = mouseEvent->pos() - mapPanLastPosition_;
+            mapPanLastPosition_ = mouseEvent->pos();
+            if (mapView_->horizontalScrollBar() != nullptr) {
+                mapView_->horizontalScrollBar()->setValue(mapView_->horizontalScrollBar()->value() - delta.x());
+            }
+            if (mapView_->verticalScrollBar() != nullptr) {
+                mapView_->verticalScrollBar()->setValue(mapView_->verticalScrollBar()->value() - delta.y());
+            }
+
+            autoFitEnabled_ = false;
+            syncZoomFactorFromView();
+            updateCommandSurfaceState();
+            event->accept();
+            return true;
+        }
+        case QEvent::MouseButtonRelease: {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (mouseEvent->button() == Qt::LeftButton && mouseEvent->buttons() == Qt::NoButton) {
+                primaryPointerInteractionActive_ = false;
+            }
+
+            if (mapPanActive_ && mouseEvent->button() == Qt::RightButton) {
+                mapPanActive_ = false;
+                viewport->unsetCursor();
+                event->accept();
+                return true;
+            }
+            break;
+        }
+        case QEvent::Wheel: {
+            auto *wheelEvent = static_cast<QWheelEvent *>(event);
+            if (primaryPointerInteractionActive_) {
+                event->accept();
+                return true;
+            }
+
+            const Qt::KeyboardModifiers modifiers = wheelEvent->modifiers();
+            const bool cmdModifier = modifiers.testFlag(Qt::ControlModifier) || modifiers.testFlag(Qt::MetaModifier);
+            const bool preciseScroll = wheelEventHasPreciseScrollingDeltas(wheelEvent);
+
+            const bool shouldZoom = cmdModifier || !preciseScroll;
+            if (shouldZoom) {
+                const QPoint pixelDelta = wheelEvent->pixelDelta();
+                const QPoint angleDelta = wheelEvent->angleDelta();
+                qreal delta = !pixelDelta.isNull()
+                    ? static_cast<qreal>(pixelDelta.y())
+                    : static_cast<qreal>(angleDelta.y());
+                if (qFuzzyIsNull(delta) && !angleDelta.isNull()) {
+                    delta = static_cast<qreal>(angleDelta.x());
+                }
+
+                if (!qFuzzyIsNull(delta)) {
+                    const qreal factor = std::pow(1.0015, delta);
+                    applyZoomAtViewportPosition(factor, wheelEvent->position());
+                }
+
+                event->accept();
+                return true;
+            }
+
+            QPoint panDelta = wheelEvent->pixelDelta();
+            if (panDelta.isNull()) {
+                const QPoint angleDelta = wheelEvent->angleDelta();
+                panDelta = QPoint(qRound(angleDelta.x() / 4.0), qRound(angleDelta.y() / 4.0));
+            }
+
+            if (!panDelta.isNull()) {
+                if (mapView_->horizontalScrollBar() != nullptr) {
+                    mapView_->horizontalScrollBar()->setValue(mapView_->horizontalScrollBar()->value() - panDelta.x());
+                }
+                if (mapView_->verticalScrollBar() != nullptr) {
+                    mapView_->verticalScrollBar()->setValue(mapView_->verticalScrollBar()->value() - panDelta.y());
+                }
+
+                autoFitEnabled_ = false;
+                syncZoomFactorFromView();
+                updateCommandSurfaceState();
+            }
+
+            event->accept();
+            return true;
+        }
+        case QEvent::NativeGesture: {
+            auto *gestureEvent = static_cast<QNativeGestureEvent *>(event);
+            if (primaryPointerInteractionActive_) {
+                event->accept();
+                return true;
+            }
+
+            if (gestureEvent->gestureType() == Qt::ZoomNativeGesture) {
+                const qreal factor = 1.0 + gestureEvent->value();
+                if (factor > 0.0) {
+                    applyZoomAtViewportPosition(factor, gestureEvent->position());
+                }
+                event->accept();
+                return true;
+            }
+            break;
+        }
+        case QEvent::TouchBegin: {
+            if (!selectModeActive_ || primaryPointerInteractionActive_) {
+                event->accept();
+                return true;
+            }
+
+            auto *touchEvent = static_cast<QTouchEvent *>(event);
+            if (touchEvent->points().size() == 2) {
+                const QPointF centroid = (touchEvent->points().at(0).position() + touchEvent->points().at(1).position()) / 2.0;
+                touchPanCandidate_ = true;
+                touchPanActive_ = false;
+                touchPanStartPosition_ = centroid;
+                touchPanLastPosition_ = centroid;
+            }
+            break;
+        }
+        case QEvent::TouchUpdate: {
+            if (!touchPanCandidate_ || primaryPointerInteractionActive_) {
+                event->accept();
+                return true;
+            }
+
+            auto *touchEvent = static_cast<QTouchEvent *>(event);
+            if (touchEvent->points().size() != 2) {
+                touchPanCandidate_ = false;
+                touchPanActive_ = false;
+                break;
+            }
+
+            const QPointF centroid = (touchEvent->points().at(0).position() + touchEvent->points().at(1).position()) / 2.0;
+            if (!touchPanActive_) {
+                const qreal threshold = 8.0;
+                if (QLineF(touchPanStartPosition_, centroid).length() < threshold) {
+                    event->accept();
+                    return true;
+                }
+                touchPanActive_ = true;
+            }
+
+            const QPointF delta = centroid - touchPanLastPosition_;
+            touchPanLastPosition_ = centroid;
+            if (mapView_->horizontalScrollBar() != nullptr) {
+                mapView_->horizontalScrollBar()->setValue(mapView_->horizontalScrollBar()->value() - qRound(delta.x()));
+            }
+            if (mapView_->verticalScrollBar() != nullptr) {
+                mapView_->verticalScrollBar()->setValue(mapView_->verticalScrollBar()->value() - qRound(delta.y()));
+            }
+
+            autoFitEnabled_ = false;
+            syncZoomFactorFromView();
+            updateCommandSurfaceState();
+            event->accept();
+            return true;
+        }
+        case QEvent::TouchEnd:
+        case QEvent::TouchCancel:
+            touchPanCandidate_ = false;
+            touchPanActive_ = false;
+            break;
+        case QEvent::Leave:
+            if (mapPanActive_) {
+                mapPanActive_ = false;
+                viewport->unsetCursor();
+            }
+            primaryPointerInteractionActive_ = false;
+            touchPanCandidate_ = false;
+            touchPanActive_ = false;
+            break;
+        case QEvent::Resize:
+            if (autoFitEnabled_ && mapView_->isVisible()) {
+                fitMapToView(fitBackgroundRequested_);
+            }
+            break;
+        default:
+            break;
+        }
+    } else if (watched == mapView_ && event->type() == QEvent::Resize) {
+        if (autoFitEnabled_ && mapView_->isVisible()) {
+            fitMapToView(fitBackgroundRequested_);
+        }
+    }
+
+    return QWidget::eventFilter(watched, event);
+}
+
 void MapEditorTab::buildMapScene()
 {
     mapScene_ = new QGraphicsScene(this);
@@ -337,6 +579,11 @@ void MapEditorTab::refreshMapScene()
     restoreBackgroundImageItems();
     restoreDraftGeometryItems();
     selectMapLine(textEditor_->currentLineNumber());
+    if (autoFitEnabled_) {
+        fitMapToView(fitBackgroundRequested_);
+    } else {
+        syncZoomFactorFromView();
+    }
     refreshStatus();
     updateCommandSurfaceState();
     updateHelpPanel();
@@ -372,6 +619,7 @@ void MapEditorTab::handleMapSceneSelectionChanged()
 
 void MapEditorTab::handleAddPointTriggered()
 {
+    selectModeActive_ = false;
     toolbarStatusNote_ = tr("Point mode: click Point again to add another draft point.");
     addDraftGeometryItem(createDraftGeometryItem(DraftGeometryKind::Point), mapView_ != nullptr ? mapView_->mapToScene(mapView_->viewport()->rect().center()) : QPointF(160.0, 160.0));
     refreshToolbarSummary();
@@ -379,6 +627,7 @@ void MapEditorTab::handleAddPointTriggered()
 
 void MapEditorTab::handleAddLineTriggered()
 {
+    selectModeActive_ = false;
     toolbarStatusNote_ = tr("Line mode: each action inserts one draft line card.");
     addDraftGeometryItem(createDraftGeometryItem(DraftGeometryKind::Line), mapView_ != nullptr ? mapView_->mapToScene(mapView_->viewport()->rect().center()) : QPointF(180.0, 180.0));
     refreshToolbarSummary();
@@ -386,6 +635,7 @@ void MapEditorTab::handleAddLineTriggered()
 
 void MapEditorTab::handleAddFreehandLineTriggered()
 {
+    selectModeActive_ = false;
     toolbarStatusNote_ = tr("Freehand mode: inserted a draft line. Complete Draft commits one undo step.");
     addDraftGeometryItem(createDraftGeometryItem(DraftGeometryKind::Line), mapView_ != nullptr ? mapView_->mapToScene(mapView_->viewport()->rect().center()) : QPointF(185.0, 185.0));
     refreshToolbarSummary();
@@ -393,6 +643,7 @@ void MapEditorTab::handleAddFreehandLineTriggered()
 
 void MapEditorTab::handleAddSmartTraceLineTriggered()
 {
+    selectModeActive_ = false;
     toolbarStatusNote_ = tr("Smart Trace mode: inserted a trace-ready draft line. Complete Draft commits one undo step.");
     addDraftGeometryItem(createDraftGeometryItem(DraftGeometryKind::Line), mapView_ != nullptr ? mapView_->mapToScene(mapView_->viewport()->rect().center()) : QPointF(190.0, 190.0));
     refreshToolbarSummary();
@@ -400,6 +651,7 @@ void MapEditorTab::handleAddSmartTraceLineTriggered()
 
 void MapEditorTab::handleAddAreaTriggered()
 {
+    selectModeActive_ = false;
     toolbarStatusNote_ = tr("Area mode: each action inserts one draft area card.");
     addDraftGeometryItem(createDraftGeometryItem(DraftGeometryKind::Area), mapView_ != nullptr ? mapView_->mapToScene(mapView_->viewport()->rect().center()) : QPointF(200.0, 200.0));
     refreshToolbarSummary();
@@ -407,6 +659,7 @@ void MapEditorTab::handleAddAreaTriggered()
 
 void MapEditorTab::handleSelectModeTriggered()
 {
+    selectModeActive_ = true;
     toolbarStatusNote_ = tr("Selection mode: select map cards or draft objects.");
     if (mapView_ != nullptr) {
         mapView_->setDragMode(QGraphicsView::NoDrag);
@@ -678,9 +931,47 @@ void MapEditorTab::fitMapToView(bool includeBackgroundImages)
         fitBounds = mapScene_->itemsBoundingRect();
     }
 
-    zoomFactor_ = 1.0;
     mapView_->resetTransform();
     mapView_->fitInView(fitBounds.adjusted(-24, -24, 24, 24), Qt::KeepAspectRatio);
+    autoFitEnabled_ = true;
+    syncZoomFactorFromView();
+    updateCommandSurfaceState();
+}
+
+void MapEditorTab::syncZoomFactorFromView()
+{
+    if (mapView_ == nullptr) {
+        zoomFactor_ = 1.0;
+        return;
+    }
+
+    const QTransform viewTransform = mapView_->transform();
+    const qreal scaleX = std::hypot(viewTransform.m11(), viewTransform.m21());
+    zoomFactor_ = scaleX > 0.0 ? scaleX : 1.0;
+}
+
+void MapEditorTab::applyZoomAtViewportPosition(qreal factor, const QPointF &viewportPosition)
+{
+    if (mapView_ == nullptr || factor <= 0.0) {
+        return;
+    }
+
+    syncZoomFactorFromView();
+    const qreal targetZoomFactor = qBound(0.1, zoomFactor_ * factor, 50.0);
+    if (qFuzzyCompare(targetZoomFactor, zoomFactor_)) {
+        return;
+    }
+
+    const qreal appliedFactor = targetZoomFactor / zoomFactor_;
+    const QPoint viewportPoint = viewportPosition.toPoint();
+    const QPointF scenePointBefore = mapView_->mapToScene(viewportPoint);
+    mapView_->scale(appliedFactor, appliedFactor);
+    const QPointF scenePointAfter = mapView_->mapToScene(viewportPoint);
+    const QPointF sceneDelta = scenePointAfter - scenePointBefore;
+    mapView_->translate(sceneDelta.x(), sceneDelta.y());
+
+    autoFitEnabled_ = false;
+    syncZoomFactorFromView();
     updateCommandSurfaceState();
 }
 
@@ -732,11 +1023,7 @@ void MapEditorTab::adjustMapZoom(qreal factor)
         return;
     }
 
-    const qreal nextZoomFactor = qBound(0.25, zoomFactor_ * factor, 4.0);
-    const qreal appliedFactor = nextZoomFactor / zoomFactor_;
-    zoomFactor_ = nextZoomFactor;
-    mapView_->scale(appliedFactor, appliedFactor);
-    updateCommandSurfaceState();
+    applyZoomAtViewportPosition(factor, mapView_->viewport()->rect().center());
 }
 
 void MapEditorTab::recordCardMove(int lineNumber, const QPointF &oldPosition, const QPointF &newPosition)
@@ -986,7 +1273,9 @@ void MapEditorTab::selectMapLine(int lineNumber)
     auto selectedItemIt = mapItemsByLine_.find(lineNumber);
     if (selectedItemIt != mapItemsByLine_.end() && selectedItemIt.value() != nullptr) {
         selectedItemIt.value()->setSelected(true);
-        mapView_->centerOn(selectedItemIt.value());
+        if (!autoFitEnabled_) {
+            mapView_->centerOn(selectedItemIt.value());
+        }
     }
 
     updatingSelection_ = false;

@@ -144,9 +144,14 @@ void MapEditorTab::buildUi()
     mapView_ = new QGraphicsView(mapHelpSplitter_);
     mapView_->setFrameShape(QFrame::NoFrame);
     mapView_->setDragMode(QGraphicsView::NoDrag);
-    mapView_->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+    mapView_->setTransformationAnchor(QGraphicsView::AnchorViewCenter);
+    mapView_->setResizeAnchor(QGraphicsView::AnchorViewCenter);
     mapView_->setRenderHint(QPainter::Antialiasing, true);
     mapView_->setBackgroundBrush(QColor(QStringLiteral("#1e1f24")));
+    mapView_->installEventFilter(this);
+    if (mapView_->viewport() != nullptr) {
+        mapView_->viewport()->installEventFilter(this);
+    }
 
     buildMapScene();
     buildHelpPanel();

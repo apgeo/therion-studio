@@ -25,7 +25,9 @@ This file records implementation progress in the repository so status does not l
 - Hardened coordinate writeback token targeting so quoted numeric strings are excluded from `point` and `line`/`area` vertex rewrites; only unquoted numeric coordinate tokens are rewritten.
 - Added `TherionDocumentEditorTest` regression coverage to ensure quoted numeric payloads remain unchanged while editable geometry coordinates are updated.
 - Hardened `line`/`area` vertex-token selection so metadata/options are tolerated before coordinates and trailing same-line metadata numeric payloads are no longer interpreted as writable geometry vertices.
+- Hardened `line`/`area` vertex-token selection to ignore option-led continuation lines (tokens beginning with option flags) even when those lines contain numeric payload values.
 - Added `TherionDocumentEditorTest` regression coverage for geometry lines that include metadata both before coordinates and trailing numeric metadata payloads after the real coordinate list.
+- Added `TherionDocumentEditorTest` regression coverage ensuring option-led continuation payload lines are excluded from writable-vertex indexing.
 - Reduced map-drag jitter/no-op undo noise by adding a small movement threshold before committing point/vertex map edits back to source or recording undoable operations.
 - Routed map point and line/area vertex drag writebacks through explicit map `QUndoCommand` entries so the map `Undo/Redo` buttons now revert and reapply source-coordinate edits deterministically.
 - Added undo-command merge behavior for repeated drags on the same point or line/area vertex so micro-adjustment sequences collapse into a single undo/redo step.

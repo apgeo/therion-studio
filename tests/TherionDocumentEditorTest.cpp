@@ -488,6 +488,33 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
 
+    contents = QStringLiteral("line wall\n"
+                              "  10 20 30 40\n"
+                              "  -subtype temporary 100 200\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(1.0, 2.0), &errorMessage),
+                "rewriteLineAreaVertex should ignore option-led continuation lines even when they contain numeric payload tokens.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(),
+                "rewriteLineAreaVertex should report out-of-range when only option-led continuation numeric payload exists after real coordinates.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(77.0, -88.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\n"
+                                           "  10 20 77.0 -88.0\n"
+                                           "  -subtype temporary 100 200\n"
+                                           "endline\n"),
+                "rewriteLineAreaVertex should keep option-led continuation payload unchanged while rewriting real geometry vertices.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("area water\n"
                               "  1 2 3 4\n"
                               "  5 6 # keep area note\n"

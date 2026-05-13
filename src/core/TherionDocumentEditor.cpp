@@ -257,6 +257,15 @@ QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &pa
     numericIndices.reserve(parsedLine.tokens.size());
 
     const int firstTokenIndex = qMax(0, startTokenIndex);
+    if (firstTokenIndex < parsedLine.tokens.size()) {
+        const QString firstToken = parsedLine.tokens.at(firstTokenIndex);
+        if (firstTokenIndex == 0
+            && firstToken.startsWith(QLatin1Char('-'))
+            && !tokenLooksNumeric(firstToken)) {
+            return pairs;
+        }
+    }
+
     bool sawCoordinateToken = false;
     for (int index = firstTokenIndex; index < parsedLine.tokens.size(); ++index) {
         const QString token = parsedLine.tokens.at(index);

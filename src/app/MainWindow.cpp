@@ -24,6 +24,7 @@
 #include <QStatusBar>
 #include <QTabWidget>
 #include <QTreeView>
+#include <QKeySequence>
 #include <QWidget>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -173,6 +174,11 @@ void MainWindow::buildMenus()
     fileMenu->addSeparator();
     fileMenu->addAction(tr("&Save"), this, &MainWindow::saveActiveDocument, QKeySequence::Save);
     fileMenu->addAction(tr("Save &All"), this, &MainWindow::saveAllDocuments, QKeySequence::SaveAs);
+    fileMenu->addAction(tr("&Close"), this, &MainWindow::closeActiveTab);
+    fileMenu->addAction(tr("Close All Tabs"),
+                        this,
+                        &MainWindow::closeAllTabs,
+                        QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_W));
     fileMenu->addSeparator();
     fileMenu->addAction(tr("E&xit"), this, &QWidget::close, QKeySequence::Quit);
 
@@ -421,6 +427,50 @@ void MainWindow::handleTabCloseRequested(int index)
 
     if (editorTabs_->count() == 0) {
         addWelcomeTab();
+    }
+
+    persistOpenDocuments();
+}
+
+void MainWindow::closeActiveTab()
+{
+    const int currentIndex = editorTabs_->currentIndex();
+    if (currentIndex < 0) {
+        return;
+    }
+
+    handleTabCloseRequested(currentIndex);
+}
+
+void MainWindow::closeAllTabs()
+{
+    bool closedAny = false;
+    for (int index = editorTabs_->count() - 1; index >= 0; --index) {
+        QWidget *tabWidget = editorTabs_->widget(index);
+        if (tabWidget == nullptr) {
+            continue;
+        }
+
+        if (documentPathForWidget(tabWidget).isEmpty()) {
+            continue;
+        }
+
+        if (!confirmCloseTab(index)) {
+            break;
+        }
+
+        editorTabs_->removeTab(index);
+        tabWidget->deleteLater();
+        closedAny = true;
+    }
+
+    if (editorTabs_->count() == 0) {
+        addWelcomeTab();
+    }
+
+    persistOpenDocuments();
+    if (closedAny) {
+        statusBar()->showMessage(tr("Closed all open document tabs"), 2000);
     }
 }
 

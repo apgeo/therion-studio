@@ -50,6 +50,8 @@ private slots:
     void handleTextEditorCurrentLineChanged(const QString &filePath, int lineNumber);
     void openCurrentDocumentInMapEditor();
     void handleTabCloseRequested(int index);
+    void closeActiveTab();
+    void closeAllTabs();
     void saveActiveDocument();
     void saveAllDocuments();
     void runTherion();

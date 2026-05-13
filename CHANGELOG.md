@@ -38,6 +38,8 @@ This file records implementation progress in the repository so status does not l
 - Routed map point and line/area vertex drag writebacks through explicit map `QUndoCommand` entries so the map `Undo/Redo` buttons now revert and reapply source-coordinate edits deterministically.
 - Added undo-command merge behavior for repeated drags on the same point or line/area vertex so micro-adjustment sequences collapse into a single undo/redo step.
 - Hardened map geometry drag undo commands to mark failed rewrite operations obsolete so invalid/failing drag commits do not leave empty no-op entries in undo history.
+- Added `File -> Close` and `File -> Close All Tabs` commands with unsaved-change prompts and the documented `Command/Ctrl+Shift+W` shortcut for closing all open document tabs.
+- Persisted open-document session state immediately after tab-close operations so manual close/close-all actions are reflected in restored sessions.
 - Verified `cmake --build build --target TherionDocumentEditorTest TherionStudio` succeeds and the current regression binaries (`TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`) all pass.
 - Fixed metadata-loaded PNG sizing by treating raster pixel dimensions as TH2 image units; the third `xth_me_image_insert` numeric value is preserved as metadata and is not used to resize the raster layer.
 - Corrected raster metadata placement to keep `xth_me_area_adjust` as editor padding/viewport metadata unless it exactly matches the raster dimensions, preventing `{0,0}` anchors from shifting scanned sketches away from TH2 geometry.

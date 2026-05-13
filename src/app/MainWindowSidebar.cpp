@@ -22,6 +22,8 @@
 #include <QStatusBar>
 #include <QStandardItemModel>
 #include <QStyle>
+#include <QStyledItemDelegate>
+#include <QStyleOptionViewItem>
 #include <QTimer>
 #include <QToolButton>
 #include <QTreeView>
@@ -30,6 +32,8 @@
 
 namespace
 {
+bool isTherionProjectFilePath(const QString &filePath);
+
 class DockTitleBarWidget final : public QWidget
 {
 public:
@@ -98,6 +102,46 @@ private:
     QHBoxLayout *layout_ = nullptr;
     QLabel *titleLabel_ = nullptr;
     QToolButton *toggleButton_ = nullptr;
+};
+
+class ProjectTreeItemDelegate final : public QStyledItemDelegate
+{
+public:
+    explicit ProjectTreeItemDelegate(const QFileSystemModel *model, QObject *parent = nullptr)
+        : QStyledItemDelegate(parent)
+        , model_(model)
+    {
+    }
+
+protected:
+    void initStyleOption(QStyleOptionViewItem *option, const QModelIndex &index) const override
+    {
+        QStyledItemDelegate::initStyleOption(option, index);
+        if (model_ == nullptr || option == nullptr || index.column() != 0) {
+            return;
+        }
+
+        if (model_->isDir(index)) {
+            return;
+        }
+
+        const QString filePath = model_->filePath(index);
+        if (filePath.isEmpty()) {
+            return;
+        }
+
+        const QStyle *style = option->widget != nullptr ? option->widget->style() : nullptr;
+        const QIcon genericFileIcon = style != nullptr ? style->standardIcon(QStyle::SP_FileIcon) : QIcon();
+        const QIcon therionFileIcon = QIcon::fromTheme(
+            QStringLiteral("text-x-script"),
+            QIcon::fromTheme(QStringLiteral("application-x-therion"),
+                             style != nullptr ? style->standardIcon(QStyle::SP_FileLinkIcon) : genericFileIcon));
+
+        option->icon = isTherionProjectFilePath(filePath) ? therionFileIcon : genericFileIcon;
+    }
+
+private:
+    const QFileSystemModel *model_ = nullptr;
 };
 
 constexpr int SidebarCollapsedRailWidth = 56;
@@ -181,6 +225,7 @@ void MainWindow::buildProjectBrowser()
     projectTree_->hideColumn(1);
     projectTree_->hideColumn(2);
     projectTree_->hideColumn(3);
+    projectTree_->setItemDelegateForColumn(0, new ProjectTreeItemDelegate(projectModel_, projectTree_));
     connect(projectTree_, &QTreeView::activated, this, &MainWindow::handleProjectTreeActivated);
     connect(projectTree_, &QTreeView::customContextMenuRequested, this, &MainWindow::handleProjectTreeContextMenuRequested);
 

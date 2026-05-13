@@ -86,12 +86,16 @@ public:
 
     void undo() override
     {
-        applyPoint(oldPoint_, QStringLiteral("Reverted point geometry at source line %1.").arg(lineNumber_));
+        if (!applyPoint(oldPoint_, QStringLiteral("Reverted point geometry at source line %1.").arg(lineNumber_))) {
+            setObsolete(true);
+        }
     }
 
     void redo() override
     {
-        applyPoint(newPoint_, QStringLiteral("Updated point geometry at source line %1.").arg(lineNumber_));
+        if (!applyPoint(newPoint_, QStringLiteral("Updated point geometry at source line %1.").arg(lineNumber_))) {
+            setObsolete(true);
+        }
     }
 
 private:
@@ -168,20 +172,24 @@ public:
 
     void undo() override
     {
-        applyVertex(oldPoint_,
-                    QStringLiteral("Reverted %1 vertex %2 at source line %3.")
-                        .arg(kind_)
-                        .arg(vertexIndex_ + 1)
-                        .arg(lineNumber_));
+        if (!applyVertex(oldPoint_,
+                         QStringLiteral("Reverted %1 vertex %2 at source line %3.")
+                             .arg(kind_)
+                             .arg(vertexIndex_ + 1)
+                             .arg(lineNumber_))) {
+            setObsolete(true);
+        }
     }
 
     void redo() override
     {
-        applyVertex(newPoint_,
-                    QStringLiteral("Updated %1 vertex %2 at source line %3.")
-                        .arg(kind_)
-                        .arg(vertexIndex_ + 1)
-                        .arg(lineNumber_));
+        if (!applyVertex(newPoint_,
+                         QStringLiteral("Updated %1 vertex %2 at source line %3.")
+                             .arg(kind_)
+                             .arg(vertexIndex_ + 1)
+                             .arg(lineNumber_))) {
+            setObsolete(true);
+        }
     }
 
 private:

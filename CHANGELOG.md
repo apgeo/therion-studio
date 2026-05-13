@@ -28,6 +28,7 @@ This file records implementation progress in the repository so status does not l
 - Added `TherionDocumentEditorTest` regression coverage for geometry lines that include metadata both before coordinates and trailing numeric metadata payloads after the real coordinate list.
 - Reduced map-drag jitter/no-op undo noise by adding a small movement threshold before committing point/vertex map edits back to source or recording undoable operations.
 - Routed map point and line/area vertex drag writebacks through explicit map `QUndoCommand` entries so the map `Undo/Redo` buttons now revert and reapply source-coordinate edits deterministically.
+- Added undo-command merge behavior for repeated drags on the same point or line/area vertex so micro-adjustment sequences collapse into a single undo/redo step.
 - Verified `cmake --build build --target TherionDocumentEditorTest TherionStudio` succeeds and the current regression binaries (`TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`) all pass.
 - Fixed metadata-loaded PNG sizing by treating raster pixel dimensions as TH2 image units; the third `xth_me_image_insert` numeric value is preserved as metadata and is not used to resize the raster layer.
 - Corrected raster metadata placement to keep `xth_me_area_adjust` as editor padding/viewport metadata unless it exactly matches the raster dimensions, preventing `{0,0}` anchors from shifting scanned sketches away from TH2 geometry.

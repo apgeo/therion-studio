@@ -51,6 +51,8 @@ bool mapSourcePointsDiffer(const QPointF &a, const QPointF &b)
 class MapPointGeometryMoveCommand final : public QUndoCommand
 {
 public:
+    static constexpr int kCommandId = 0x4d50474d; // MPGM
+
     MapPointGeometryMoveCommand(TextEditorTab *textEditor,
                                 int lineNumber,
                                 const QPointF &oldPoint,
@@ -62,6 +64,24 @@ public:
         , newPoint_(newPoint)
         , statusCallback_(std::move(statusCallback))
     {
+    }
+
+    int id() const override
+    {
+        return kCommandId;
+    }
+
+    bool mergeWith(const QUndoCommand *other) override
+    {
+        const auto *otherCommand = dynamic_cast<const MapPointGeometryMoveCommand *>(other);
+        if (otherCommand == nullptr
+            || textEditor_ != otherCommand->textEditor_
+            || lineNumber_ != otherCommand->lineNumber_) {
+            return false;
+        }
+
+        newPoint_ = otherCommand->newPoint_;
+        return true;
     }
 
     void undo() override
@@ -107,6 +127,8 @@ private:
 class MapLineAreaVertexMoveCommand final : public QUndoCommand
 {
 public:
+    static constexpr int kCommandId = 0x4d4c564d; // MLVM
+
     MapLineAreaVertexMoveCommand(TextEditorTab *textEditor,
                                  int lineNumber,
                                  QString kind,
@@ -122,6 +144,26 @@ public:
         , newPoint_(newPoint)
         , statusCallback_(std::move(statusCallback))
     {
+    }
+
+    int id() const override
+    {
+        return kCommandId;
+    }
+
+    bool mergeWith(const QUndoCommand *other) override
+    {
+        const auto *otherCommand = dynamic_cast<const MapLineAreaVertexMoveCommand *>(other);
+        if (otherCommand == nullptr
+            || textEditor_ != otherCommand->textEditor_
+            || lineNumber_ != otherCommand->lineNumber_
+            || kind_ != otherCommand->kind_
+            || vertexIndex_ != otherCommand->vertexIndex_) {
+            return false;
+        }
+
+        newPoint_ = otherCommand->newPoint_;
+        return true;
     }
 
     void undo() override

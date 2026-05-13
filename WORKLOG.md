@@ -8,13 +8,12 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 
 ### In progress
 
-- Phase 4: TH2 map geometry edit robustness, source writeback hardening, and undo/redo transaction semantics.
 - Phase 5: map editor interaction parity and command-surface completion.
 
 ### Next up
 
-- Finish Phase 4 round-trip safety coverage for complex `line`/`area` edit patterns.
 - Start Phase 6 non-UTF-8 loading/conversion workflow and encoding persistence.
+- Continue Phase 5 map-editor parity polish and interaction refinement.
 
 ### Risks / blockers
 
@@ -66,18 +65,22 @@ Legend:
 - ~~`cmake --build build`~~
 - ~~Manual workflows: selection sync, inspector rename/apply, Therion run/copy output.~~
 
-### Phase 4 - TH2 Source Editing Engine and Data Integrity (`MVP`)
+### ~~Phase 4 - TH2 Source Editing Engine and Data Integrity (`MVP`)~~
 
-- Spec scope: 4, 4.1, 3.11, 3.11.1.
-- Goal: safe source rewrites for point/line/area geometry and draft insertion with robust token handling.
-- Status: In progress (advanced hardening implemented; corpus-level round-trip still pending).
-- Implemented highlights:
+- ~~Spec scope: 4, 4.1, 3.11, 3.11.1.~~
+- ~~Goal: safe source rewrites for point/line/area geometry and draft insertion with robust token handling.~~
+- ~~Status: Completed (`MVP` acceptance scope).~~
+- ~~Implemented highlights:~~
 - ~~`appendScrapBlock`, `appendDraftGeometry`, `rewritePointCoordinates`, `rewriteLineAreaVertex`.~~
 - ~~Extensive token-selection hardening: quoted tokens, option-led continuation lines, mixed metadata, CRLF preservation, scientific notation.~~
-- Verification:
-- `./build/TherionDocumentEditorTest`
-- `./build/TherionProjectStructureIndexTest`
-- `cmake --build build --target TherionDocumentEditorTest TherionStudio`
+- ~~Corpus-style positive/negative rewrite fixtures: targeted coordinate rewrites, malformed block failures, and no-mutation guarantees on failure paths.~~
+- ~~Verification:~~
+- ~~`./build/TherionDocumentEditorTest`~~
+- ~~`./build/TherionProjectStructureIndexTest`~~
+- ~~`./build/MapBackgroundPlacementTest`~~
+- ~~`./build/TherionBackgroundMetadataTest`~~
+- ~~`./build/TherionXviParserTest`~~
+- ~~`cmake --build build --target TherionDocumentEditorTest TherionStudio`~~
 
 ### Phase 5 - TH2 Map Workspace and Background Alignment (`MVP` core, `Post-MVP` parity polish)
 
@@ -129,6 +132,7 @@ Legend:
 
 - Phase 3/7: broader GUI automation for structure/inspector/runner/map workflows.
 - Phase 5: map-editor parity polish beyond MVP command/interaction coverage.
+- Phase 4: expand rewrite corpus/regression coverage beyond MVP fixture set for higher corpus-level confidence.
 - Phase 8: extended performance benchmarking and packaging convenience improvements beyond baseline release criteria.
 
 ## Test Inventory (Current)
@@ -149,6 +153,7 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Verified rewrite stability in the fixture across option-led continuation lines (`-subtype`), inline metadata (`-id`), `%` comments, and mixed-precision coordinate tokens.~~
 - ~~Added negative corpus-style fixture checks that assert rewrite failures (missing `endline`, incomplete area coordinate tuple) return errors and leave source text unchanged.~~
 - ~~Verified `TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, and `TherionXviParserTest`.~~
+- ~~Closed Phase 4 (`MVP`) and moved additional corpus-scale rewrite expansion into the Post-MVP backlog.~~
 
 ### 2026-05-13
 

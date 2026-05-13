@@ -11,7 +11,7 @@ This file records implementation progress in the repository so status does not l
 
 ## Next up
 
-- Add `.xvi` vector background rendering for metadata/session-loaded sketch references so vector layers behave like raster backgrounds in the map workspace.
+- Expand map-editor source-writeback workflows and validation for complex `line`/`area` editing scenarios.
 
 ## Risks / blockers
 
@@ -30,7 +30,9 @@ This file records implementation progress in the repository so status does not l
 - Preserved exact placed image dimensions when opacity/gamma refreshes rebuild the pixmap.
 - Extracted raster model-rect resolution into `src/core/MapBackgroundPlacement.*` so metadata placement semantics are shared and unit-testable outside the UI layer.
 - Added `MapBackgroundPlacementTest` regression coverage for clopy-style fallback anchoring, area-adjust size-match behavior, and offset anchor placement.
-- Verified the full `cmake --build build` target set succeeds and `TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, and `MapBackgroundPlacementTest` pass after the PNG alignment update.
+- Extracted TH2 metadata parsing into `src/core/TherionBackgroundMetadata.*` so `xth_me_image_insert` and `xth_me_area_adjust` behavior is reusable and independently testable.
+- Added `TherionBackgroundMetadataTest` coverage for raster metadata parsing, `.xvi` root-station parsing, area-adjust normalization, and malformed metadata rejection.
+- Verified the full `cmake --build build` target set succeeds and `TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, and `TherionBackgroundMetadataTest` pass after metadata parser extraction.
 
 ### 2026-05-13
 

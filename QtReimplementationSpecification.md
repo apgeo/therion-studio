@@ -264,6 +264,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The structure sidebar shall present a navigable project hierarchy of surveys, maps, scraps, stations, and related items.
 - Selection in the structure sidebar shall change the active document context.
 - The structure sidebar shall remain synchronized with the open project and the currently selected content when possible.
+- The structure sidebar shall provide explicit user controls to collapse and re-expand the panel.
 
 #### 3.8.7 Therion Runner and Console Behavior
 
@@ -277,6 +278,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Failures shall be shown as actionable messages rather than raw process noise alone.
 - After a successful run, the application may offer opening the working directory or output folder in the platform file manager.
 - The user shall be able to rerun Therion from the current project context.
+- The console surface shall provide explicit user controls to collapse and re-expand the panel.
 
 #### 3.8.8 Session Restore Behavior
 
@@ -722,6 +724,7 @@ The criteria below are intended for implementation verification and QA.
 - The structure sidebar shows surveys, maps, scraps, stations, and related hierarchy items.
 - Sidebar selection changes the active document context.
 - The sidebar remains synchronized with the open project when the underlying structure changes.
+- The sidebar can be collapsed and re-expanded through explicit UI controls.
 
 #### 8.1.6 Therion Runner / Console
 
@@ -734,6 +737,7 @@ The criteria below are intended for implementation verification and QA.
 - Therion runs can be cancelled by the user.
 - If a run is already active, the application shall define a deterministic policy: reject parallel runs, queue them, or replace the active run.
 - Command-line argument and path quoting shall be platform-correct on macOS, Windows, and Linux.
+- The console panel can be collapsed and re-expanded through explicit UI controls.
 
 #### 8.1.7 Session Restore
 

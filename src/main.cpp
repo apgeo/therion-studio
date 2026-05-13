@@ -10,7 +10,7 @@ QString preferredPlatformStyle()
 #if defined(Q_OS_MACOS)
     return QStringLiteral("fusion");
 #elif defined(Q_OS_WIN)
-    return QStringLiteral("windowsvista");
+    return QStringLiteral("fusion");
 #elif defined(Q_OS_LINUX)
     return QStringLiteral("fusion");
 #else

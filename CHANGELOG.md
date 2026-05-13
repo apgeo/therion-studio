@@ -11,7 +11,7 @@ This file records implementation progress in the repository so status does not l
 
 ## Next up
 
-- Remove the temporary `#if 0` compatibility fence in `MainWindow.cpp` now that the extracted translation units are linked.
+- Extend direct map-to-source editing from point geometry into in-place line/area rewrites (editing existing parsed geometry blocks in source).
 
 ## Risks / blockers
 
@@ -19,6 +19,41 @@ This file records implementation progress in the repository so status does not l
 - The current text path only handles UTF-8 plain text; non-UTF-8 encodings and syntax-aware editing are not implemented yet.
 
 ## Completed
+
+### 2026-05-13
+
+- Added automatic background-layer discovery from TH2 metadata by parsing `##XTHERION## xth_me_image_insert` lines when a map document has no restored background session state.
+- Resolved metadata-referenced image paths relative to the active TH2 document and auto-loaded matching raster files into the map workspace.
+- Applied metadata anchor coordinates to initial background placement in the preview when geometry bounds are available.
+- Updated map help text to document metadata-driven background auto-loading behavior.
+- Verified the full `cmake --build build` target set succeeds after metadata background auto-load integration.
+
+### 2026-05-13
+
+- Added TH2 scrap `-scale` transform support in map-geometry extraction so parsed point/line/area coordinates render in mapped workspace coordinates instead of raw local scrap coordinates.
+- Preserved direct point-drag source rewrites under transformed rendering by applying inverse scrap transform before committing coordinate edits back to source.
+- Verified the full `cmake --build build` target set succeeds after scrap-scale transform integration.
+
+### 2026-05-13
+
+- Reduced TH2 preview clutter by switching geometry rendering to scale-aware stroke/marker widths instead of fixed heavy line/dot sizes.
+- Limited map preview labels in dense scenes (station-priority labeling with compact mode for large feature sets) to keep geometry readable.
+- Updated Map Help text to match current behavior (point-handle source rewrite and draft-object focus) and removed stale references to map cards.
+- Verified the full `cmake --build build` target set succeeds after the preview readability refinements.
+
+### 2026-05-13
+
+- Fixed window scaling pressure by making the TH2 map toolbar horizontally scrollable instead of forcing all controls into a fixed-width row.
+- Relaxed minimum-width constraints in map and console status labels (`Ignored` horizontal size policy + wrapping where appropriate) so long paths/status text no longer force oversized windows.
+- Updated the Therion console form layout to wrap long rows on narrow widths.
+- Verified the full `cmake --build build` target set succeeds after the window-scaling layout fixes.
+
+### 2026-05-13
+
+- Fixed TH2 map preview deformation by switching geometry projection from independent X/Y scaling to a uniform aspect-fit transform.
+- Applied the same aspect-fit projection to editable point drag/write-back and draft geometry preview-to-source mapping so edits stay aligned with rendering.
+- Removed in-canvas map object card rendering from the map scene so the temporary large card boxes no longer appear in the preview area.
+- Verified the update builds successfully and both test binaries run successfully in this environment.
 
 ### 2026-05-13
 
@@ -215,3 +250,128 @@ This file records implementation progress in the repository so status does not l
 - Verified the `TherionStudio` app target links successfully after the source split recovery.
 - Split the MainWindow sidebar, structure tree, and inspector logic into a dedicated `MainWindowSidebar.cpp` translation unit.
 - Kept the main window source focused on app orchestration and document/tab workflow.
+- Moved sidebar UI-construction methods (`buildProjectBrowser`, `buildStructureSidebar`, `buildInspector`, `setSidebarPane`) from `MainWindow.cpp` into `MainWindowSidebar.cpp`.
+- Removed the stale `#if 0` compatibility block from `MainWindow.cpp` now that equivalent logic lives in compiled split units.
+- Verified the full `cmake --build build` target set succeeds after the additional split.
+- Split `MapEditorTab` workspace/document-shell behavior into a new `MapEditorTabWorkspace.cpp` translation unit.
+- Moved constructor, UI bootstrap, workspace-mode persistence, tab/document wrappers, and status updates out of `MapEditorTab.cpp`.
+- Kept `MapEditorTab.cpp` focused on map scene rendering, selection interaction, draft geometry commands, and geometry preview helpers.
+- Verified the full `cmake --build build` target set succeeds after the `MapEditorTab` split.
+- Added a `Copy Output` action to the Therion console command row so full console output can be copied in one click.
+- Added clipboard handling and empty-output feedback for the Therion console copy flow.
+- Verified the full `cmake --build build` target set succeeds after the console copy-output update.
+- Added explicit Therion console fields for active config name and resolved config path.
+- Added config-path resolution from `--config`/`-c` Therion arguments with fallback to `thconfig` in the active working context.
+- Made config display refresh live when project root, working directory, or Therion arguments change.
+- Verified the full `cmake --build build` target set succeeds after the console config-surface update.
+- Extended auto-detection to treat the active `.thconfig` editor tab as the Therion config context when no explicit `--config` argument is provided.
+- Auto-synced the Therion working directory to the resolved auto-detected config directory when the current working directory is still auto-managed (empty, project root, or previously auto-resolved).
+- Kept explicit `--config` argument workflows non-destructive by skipping automatic working-directory overrides in that mode.
+- Added Therion executable preflight resolution before process start (absolute path, working-directory relative path, or `PATH` lookup via Qt).
+- Added an actionable runner warning when the executable is missing or non-executable instead of only surfacing the later `execve` failure.
+- Added Homebrew-aware Therion binary discovery using `HOMEBREW_PREFIX`, `/opt/homebrew/bin/therion`, and `/usr/local/bin/therion`.
+- Made the console executable field default to detected Homebrew Therion when no persisted executable path exists.
+- Added a Homebrew fallback in runner preflight resolution for the default `therion` executable name.
+- Added a `Browse...` button next to the Therion executable field for selecting custom executable paths.
+- Validated browse selections as executable files before applying them.
+- Reused existing session persistence so the selected executable path is saved and restored via app config.
+- Added an explicit Therion run-policy field in the console surface: reject parallel runs while a process is active.
+- Added clear status/console messaging when a run is requested while Therion is already running.
+- Logged the run-policy rule in console startup output for deterministic behavior visibility.
+- Added a dedicated `Map` menu and moved the "Open Current Document in Map Editor" command there.
+- Assigned the documented map command shortcut (`Command/Ctrl+Option/Alt+Shift+G`) to "Open Current Document in Map Editor".
+- Added an explicit collapse control to the Therion console panel header and restored the last expanded console height when re-shown.
+- Made panel expand controls explicit in the View menu with `Show Sidebar` and `Show Console` toggle actions.
+- Updated the specification and acceptance criteria to require explicit collapse/re-expand controls for both sidebar and console panels.
+- Verified the full `cmake --build build` target set succeeds after the panel-collapse/expand update.
+- Replaced in-panel collapse buttons with triangle collapse/expand toggles in the sidebar and console dock title bars (window handle area).
+- Changed panel collapse behavior from hide-only to in-place collapse/expand, so the same triangle control can uncollapse the panel.
+- Kept View menu toggles (`Show Sidebar`, `Show Console`) as an additional explicit show/hide path.
+- Verified the full `cmake --build build` target set succeeds after the dock-title-bar triangle collapse update.
+- Tightened collapsed sidebar/console rails to compact icon-only state by hiding title text when collapsed.
+- Reduced collapsed rail footprint to a small fixed size so the editor keeps more usable width/height.
+- Verified the full `cmake --build build` target set succeeds after the compact collapsed-rail refinement.
+- Split map-scene support types out of `MapEditorTab.cpp` into `MapEditorSceneSupport` companion files.
+- Moved map-card and draft-geometry graphics item classes, draft/card undo commands, and geometry parsing helpers into `MapEditorSceneSupport.cpp`.
+- Added multi-background image support in the TH2 map editor via multi-select image import.
+- Added per-layer background controls for ordering, visibility toggle, and opacity adjustment in the map toolbar.
+- Persisted background layer stacks (path, visibility, opacity, order) per TH2 document in session settings and restored them on reopen.
+- Added explicit `Freehand` and `Smart Trace` actions to the TH2 map toolbar to satisfy command-surface coverage requirements.
+- Wired `Freehand` and `Smart Trace` to the current draft-line workflow so each action inserts a line draft that can be completed through `Complete Draft`.
+- Verified the current tree builds successfully with `cmake --build build`.
+- Verified regression smoke tests by running `./build/TherionDocumentEditorTest` and `./build/TherionProjectStructureIndexTest`.
+- Rewired `MapEditorTab.cpp` to use scene-support command factories and shared geometry helpers without changing user-facing behavior.
+- Verified the full `cmake --build build` target set succeeds after the `MapEditorTab` scene-support split.
+- Moved the Map Help panel under the map canvas inside the map-side workspace pane.
+- Changed the map side to a vertical splitter so map canvas and Map Help are resizable and can collapse/expand independently.
+- Kept TextEditor contextual help behavior unchanged, so in Split mode both help panes now sit side by side and each can be shown/hidden from its own header control.
+- Verified the full `cmake --build build` target set succeeds after the map-help workspace layout update.
+- Aligned the `Map Help` panel chrome to match the `Contextual Help` panel structure (header row plus shared browser body style).
+- Replaced the map-tab footer label with a single shared status bar below the full split workspace that shows document path and encoding.
+- Hid the nested `TextEditorTab` inline status row when embedded in the map workspace so status is no longer duplicated.
+- Verified the full `cmake --build build` target set succeeds after the help-panel and shared-status-bar alignment update.
+- Added a styled frame border around the `Contextual Help` panel so it visually matches `Map Help`.
+- Verified the full `cmake --build build` target set succeeds after the contextual-help border alignment update.
+- Moved help collapse controls from in-panel `Hide` buttons to small triangle toggles on the help-pane splitter borders for both text and map workspaces.
+- Made both help panes collapse/expand directly from the border toggle by driving splitter sizes to and from zero-height help-pane states.
+- Verified the full `cmake --build build` target set succeeds after the help-border toggle migration.
+- Extracted TH2 scene-entry collection and the full map workspace render pass out of `MapEditorTab::refreshMapScene()` into `MapEditorSceneSupport` helpers.
+- Kept `MapEditorTab` focused on orchestration by delegating geometry/card rendering to shared scene-support functions while preserving current visuals and interactions.
+- Verified the full `cmake --build build` target set succeeds after the map-scene rendering split.
+- Added `Select`, `Insert Scrap`, and `Fit + BG` actions to the TH2 map toolbar as explicit command-surface parity placeholders.
+- Wired deterministic placeholder messaging in the toolbar summary/help so unfinished actions are visible without failing silently.
+- Extended Map Help metadata to document the new placeholder actions and current fallback behavior.
+- Verified the full `cmake --build build` target set succeeds after the map-toolbar parity placeholder update.
+- Implemented real `Insert Scrap` behavior so the toolbar action appends a unique `scrap ... endscrap` block into the active TH2 source.
+- Added `TherionDocumentEditor::appendScrapBlock` with name sanitization, uniqueness suffixing, CRLF-preserving append, and inserted-line reporting.
+- Added focused regression coverage for `appendScrapBlock` (null guard, default insertion, unique naming, sanitization, line-number reporting).
+- Fixed station-name rewrite targeting for `point station ...` lines so station identifier edits no longer replace the `station` type token.
+- Verified `./build/TherionDocumentEditorTest` passes after the rewrite-target fix and scrap-append tests.
+- Verified the full `cmake --build build` target set succeeds after the map scrap-insertion implementation.
+- Added multi-image background support in the TH2 map workspace via `Add BG` and `Clear BG` toolbar actions.
+- Made the map scene preserve loaded background layers across source reparses while clearing them when switching to a different TH2 file.
+- Implemented real `Fit + BG` behavior that fits the viewport to geometry plus all loaded background layer bounds.
+- Updated toolbar summary and map help text to report active background-layer count and the new background workflow.
+- Verified `./build/TherionDocumentEditorTest` and the full `cmake --build build` target set succeed after multi-background support.
+- Moved background image management out of the map toolbar into a dedicated `Background Images` panel in the Map sidebar.
+- Added sidebar controls for layer add/remove/reorder/visibility plus per-layer `X`/`Y` position editing and nudge arrows.
+- Added sidebar slider controls for per-layer opacity and gamma adjustments with reset actions.
+- Extended background-layer session persistence to include per-layer position and gamma alongside path, visibility, opacity, and stack order.
+- Updated map help text to point background-layer workflows to the Map sidebar panel.
+- Verified `./build/TherionDocumentEditorTest` and the full `cmake --build build` target set succeed after the Map-sidebar background-management move.
+- Replaced the top sidebar mode tabs with a persistent left activity rail (`Files`, `Structure`, `Map`, `Console`) that remains visible while panes switch.
+- Changed sidebar layout so the selected pane opens to the right of the activity rail, matching the requested VS Code-style interaction model.
+- Added a dedicated Console pane to the sidebar page stack and moved the Therion runner surface into that pane.
+- Updated sidebar collapse behavior to hide only pane content while keeping the activity rail visible for quick re-entry.
+- Kept the View menu `Show Console` action by remapping it to switch the sidebar into the Console pane.
+- Verified `./build/TherionDocumentEditorTest` and the full `cmake --build build` target set succeed after the activity-rail sidebar update.
+- Removed per-component sidebar/background-panel stylesheet overrides so the new activity rail and map background panel inherit the shared app theme defined in `main.cpp`.
+- Verified the full `cmake --build build` target set succeeds after removing local component styling overrides.
+- Removed the sidebar title-bar collapse/expand button to keep sidebar control centralized in the activity rail.
+- Implemented activity-rail click toggling: clicking the active rail item collapses the sidebar content area, and clicking any rail item while collapsed expands the sidebar and opens that pane.
+- Verified the full `cmake --build build` target set succeeds after the sidebar toggle-control update.
+- Removed the sidebar dock header row so the `Sidebar` title is no longer shown above the activity rail.
+- Verified the full `cmake --build build` target set succeeds after removing the sidebar header.
+- Implemented source-write flow for map draft completion by appending TH2 geometry directives into scrap context.
+- Added `TherionDocumentEditor::appendDraftGeometry` with fallback scrap creation, CRLF-preserving insertion, and per-kind validation for point/line/area minimum vertex counts.
+- Wired `MapEditorTab::Complete Draft` to convert scene draft geometry into source coordinates and commit via `TextEditorTab` into the active TH2 document.
+- Added regression coverage for draft-geometry append behavior, including null guard, insertion into existing scrap, CRLF fallback scrap creation, and validation failures.
+- Verified `cmake --build build`, `./build/TherionDocumentEditorTest`, and `./build/TherionProjectStructureIndexTest` succeed after draft-to-source integration.
+- Added `TherionDocumentEditor::rewritePointCoordinates` for in-place coordinate rewrites on existing `point` / `station` source lines.
+- Wired parsed point markers in the map preview as draggable geometry handles that commit coordinate updates back to TH2 source on release.
+- Added `TextEditorTab::rewritePointCoordinates` and map-tab callback plumbing so point drags mark documents dirty and trigger scene reparse/sync.
+- Added regression coverage for point-coordinate rewrite behavior (null guard, non-point rejection, point/station rewrite success).
+- Verified `cmake --build build`, `./build/TherionDocumentEditorTest`, and `./build/TherionProjectStructureIndexTest` succeed after in-place point-edit integration.
+
+### 2026-05-13
+
+- Split all translation units exceeding 1000 lines by responsibility so no source file exceeds the project line-count guideline.
+- Extracted inspector logic (`buildInspector`, `updateInspectorFromStructureItem`, name-edit handlers, source-open navigation) into `MainWindowInspector.cpp`.
+- Extracted structure-browser and map-object-tree logic into `MainWindowStructureBrowser.cpp` with a shared `MainWindowStructureRoles.h` header for role constants.
+- Extracted map background-panel UI construction and refresh logic into `MainWindowMapBackground.cpp`.
+- Extracted Therion runner logic (console build, process management, config resolution, Homebrew detection) into `MainWindowTherionRunner.cpp`.
+- Extracted background-layer management (session persistence, Xtherion metadata parsing, layer controls) from `MapEditorTab.cpp` into `MapEditorBackgroundLayers.cpp`.
+- Split `MapEditorSceneSupport.cpp` into `MapEditorSceneItems.cpp` (item classes, undo commands, coordinate helpers, factory functions) and `MapEditorSceneRenderer.cpp` (entry categorization, workspace renderer, geometry feature collection).
+- Introduced `MapEditorSceneInternals.h` as a shared internal header to expose coordinate helpers and `MapEditablePointItem` across the two scene translation units without polluting the public API.
+- Removed dead code: `DockTitleBarWidget` and four `consoleDock_` methods that were unreachable because `consoleDock_` was never assigned.
+- Updated `CMakeLists.txt` to reference all new translation units and internal headers.

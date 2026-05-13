@@ -123,4 +123,15 @@ void SessionStore::setTherionMapWorkspaceMode(const QString &mode)
     QSettings settings;
     settings.setValue(QStringLiteral("session/therionMapWorkspaceMode"), mode);
 }
+
+QString SessionStore::therionMapBackgroundLayers()
+{
+    return makeSettings().value(QStringLiteral("session/therionMapBackgroundLayers")).toString();
+}
+
+void SessionStore::setTherionMapBackgroundLayers(const QString &json)
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("session/therionMapBackgroundLayers"), json);
+}
 }

@@ -3,6 +3,8 @@
 #include "TherionDocumentParser.h"
 
 #include <QFileInfo>
+#include <QPair>
+#include <QSet>
 #include <QRegularExpression>
 
 namespace TherionStudio
@@ -85,6 +87,14 @@ int nameTokenIndexForCategory(const QString &category, const TherionParsedLine &
 
             const int pointTypeIndex = pointTypeTokenIndex(parsedLine);
             if (pointTypeIndex >= 0 && parsedLine.tokens.value(pointTypeIndex).toLower() == QStringLiteral("station")) {
+                const int stationIdentifierIndex = pointTypeIndex + 1;
+                if (stationIdentifierIndex < parsedLine.tokens.size()) {
+                    const QString token = parsedLine.tokens.at(stationIdentifierIndex);
+                    if (!token.startsWith(QLatin1Char('-'))) {
+                        return stationIdentifierIndex;
+                    }
+                }
+
                 return pointTypeIndex;
             }
         }
@@ -151,6 +161,125 @@ QString replacementTokenForLine(const QString &newName, const QString &lineText,
         ? QLatin1Char('\'')
         : QLatin1Char('"');
     return quoteToken(trimmedName, quoteCharacter);
+}
+
+QString sanitizeScrapName(const QString &preferredName)
+{
+    QString source = preferredName.trimmed().toLower();
+    if (source.isEmpty()) {
+        source = QStringLiteral("new-scrap");
+    }
+
+    QString normalized;
+    normalized.reserve(source.size());
+    bool previousDash = false;
+    for (const QChar character : source) {
+        const bool allowed = character.isLetterOrNumber()
+            || character == QLatin1Char('-')
+            || character == QLatin1Char('_')
+            || character == QLatin1Char('.');
+
+        if (allowed) {
+            normalized.append(character);
+            previousDash = false;
+            continue;
+        }
+
+        if (!previousDash) {
+            normalized.append(QLatin1Char('-'));
+            previousDash = true;
+        }
+    }
+
+    while (normalized.startsWith(QLatin1Char('-'))) {
+        normalized.remove(0, 1);
+    }
+    while (normalized.endsWith(QLatin1Char('-'))) {
+        normalized.chop(1);
+    }
+
+    if (normalized.isEmpty()) {
+        return QStringLiteral("new-scrap");
+    }
+
+    return normalized;
+}
+
+int lineCountForText(const QString &text)
+{
+    if (text.isEmpty()) {
+        return 0;
+    }
+
+    int lineCount = text.count(QLatin1Char('\n'));
+    if (!text.endsWith(QLatin1Char('\n'))) {
+        ++lineCount;
+    }
+
+    return qMax(1, lineCount);
+}
+
+QString formatCoordinate(qreal value)
+{
+    return QString::number(value, 'f', 1);
+}
+
+QPair<int, int> coordinateTokenPair(const TherionParsedLine &parsedLine)
+{
+    int firstIndex = -1;
+    int secondIndex = -1;
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        if (!tokenLooksNumeric(parsedLine.tokens.at(index))) {
+            continue;
+        }
+
+        if (firstIndex < 0) {
+            firstIndex = index;
+            continue;
+        }
+
+        secondIndex = index;
+        break;
+    }
+
+    return qMakePair(firstIndex, secondIndex);
+}
+
+QString formatVerticesInline(const QVector<QPointF> &vertices)
+{
+    QStringList tokens;
+    tokens.reserve(vertices.size() * 2);
+    for (const QPointF &vertex : vertices) {
+        tokens.append(formatCoordinate(vertex.x()));
+        tokens.append(formatCoordinate(vertex.y()));
+    }
+
+    return tokens.join(QLatin1Char(' '));
+}
+
+int lastEndscrapLineIndex(const QStringList &lines)
+{
+    int foundIndex = -1;
+    for (int index = 0; index < lines.size(); ++index) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(index), index + 1);
+        if (parsedLine.directive == QStringLiteral("endscrap")) {
+            foundIndex = index;
+        }
+    }
+
+    return foundIndex;
+}
+
+QStringList splitLinesNormalized(const QString &contents)
+{
+    QStringList lines = contents.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    for (QString &line : lines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+
+    return lines;
 }
 }
 
@@ -223,6 +352,217 @@ bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
 
     const QString replacementToken = replacementTokenForLine(trimmedName, lineText, tokenSpan);
     lineText.replace(tokenSpan.start, tokenSpan.length, replacementToken);
+    lines[lineNumber - 1] = lineText;
+    *contents = lines.join(lineEnding);
+    return true;
+}
+
+bool TherionDocumentEditor::appendScrapBlock(QString *contents,
+                                             const QString &preferredName,
+                                             int *insertedLineNumber,
+                                             QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+
+    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(*contents);
+
+    QSet<QString> existingNames;
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        if (parsedLine.directive != QStringLiteral("scrap")) {
+            continue;
+        }
+        if (parsedLine.tokens.size() < 2) {
+            continue;
+        }
+
+        existingNames.insert(parsedLine.tokens.at(1).trimmed().toLower());
+    }
+
+    const QString baseName = sanitizeScrapName(preferredName);
+    QString resolvedName = baseName;
+    int suffix = 2;
+    while (existingNames.contains(resolvedName.toLower())) {
+        resolvedName = QStringLiteral("%1-%2").arg(baseName).arg(suffix++);
+    }
+
+    QString updated = *contents;
+    if (!updated.isEmpty() && !updated.endsWith(QLatin1Char('\n'))) {
+        updated += lineEnding;
+    }
+    if (!updated.isEmpty()) {
+        updated += lineEnding;
+    }
+
+    const int scrapLineNumber = lineCountForText(updated) + 1;
+    updated += QStringLiteral("scrap %1").arg(resolvedName);
+    updated += lineEnding;
+    updated += QStringLiteral("endscrap");
+    updated += lineEnding;
+
+    *contents = updated;
+    if (insertedLineNumber != nullptr) {
+        *insertedLineNumber = scrapLineNumber;
+    }
+
+    return true;
+}
+
+bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
+                                                const QString &kind,
+                                                const QVector<QPointF> &vertices,
+                                                int *insertedLineNumber,
+                                                QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+
+    const QString normalizedKind = kind.trimmed().toLower();
+    if (normalizedKind != QStringLiteral("point")
+        && normalizedKind != QStringLiteral("line")
+        && normalizedKind != QStringLiteral("area")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Unsupported draft geometry kind.");
+        }
+        return false;
+    }
+
+    const int minimumVertices = normalizedKind == QStringLiteral("point")
+        ? 1
+        : (normalizedKind == QStringLiteral("line") ? 2 : 3);
+    if (vertices.size() < minimumVertices) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Draft geometry does not contain enough vertices.");
+        }
+        return false;
+    }
+
+    QString updated = *contents;
+    const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = splitLinesNormalized(updated);
+    int insertionIndex = lastEndscrapLineIndex(lines);
+
+    if (insertionIndex < 0) {
+        if (!appendScrapBlock(&updated, QStringLiteral("map-draft"), nullptr, errorMessage)) {
+            return false;
+        }
+
+        lines = splitLinesNormalized(updated);
+        insertionIndex = lastEndscrapLineIndex(lines);
+        if (insertionIndex < 0) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QStringLiteral("Unable to resolve a scrap insertion target.");
+            }
+            return false;
+        }
+    }
+
+    QStringList geometryLines;
+    if (normalizedKind == QStringLiteral("point")) {
+        const QPointF anchor = vertices.first();
+        geometryLines.append(QStringLiteral("  point %1 %2 station -name draft-point")
+                                 .arg(formatCoordinate(anchor.x()), formatCoordinate(anchor.y())));
+    } else if (normalizedKind == QStringLiteral("line")) {
+        geometryLines.append(QStringLiteral("  line wall"));
+        geometryLines.append(QStringLiteral("    %1").arg(formatVerticesInline(vertices.mid(0, 2))));
+        geometryLines.append(QStringLiteral("  endline"));
+    } else {
+        geometryLines.append(QStringLiteral("  area water"));
+        geometryLines.append(QStringLiteral("    %1").arg(formatVerticesInline(vertices.mid(0, 3))));
+        geometryLines.append(QStringLiteral("  endarea"));
+    }
+
+    int nextInsertionIndex = insertionIndex;
+    for (const QString &line : geometryLines) {
+        lines.insert(nextInsertionIndex, line);
+        ++nextInsertionIndex;
+    }
+
+    *contents = lines.join(lineEnding);
+    if (!contents->endsWith(QLatin1Char('\n'))) {
+        *contents += lineEnding;
+    }
+
+    if (insertedLineNumber != nullptr) {
+        *insertedLineNumber = insertionIndex + 1;
+    }
+
+    return true;
+}
+
+bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
+                                                    int lineNumber,
+                                                    const QPointF &point,
+                                                    QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+
+    if (lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line number is invalid.");
+        }
+        return false;
+    }
+
+    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = contents->split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    for (QString &line : lines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+
+    if (lineNumber > lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line no longer exists.");
+        }
+        return false;
+    }
+
+    QString lineText = lines.at(lineNumber - 1);
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    if (parsedLine.directive != QStringLiteral("point") && parsedLine.directive != QStringLiteral("station")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line is not a writable point geometry.");
+        }
+        return false;
+    }
+
+    const QPair<int, int> tokenPair = coordinateTokenPair(parsedLine);
+    if (tokenPair.first < 0 || tokenPair.second < 0
+        || tokenPair.first >= parsedLine.tokenSpans.size()
+        || tokenPair.second >= parsedLine.tokenSpans.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected point line does not contain writable coordinates.");
+        }
+        return false;
+    }
+
+    const TherionParsedToken secondToken = parsedLine.tokenSpans.at(tokenPair.second);
+    const TherionParsedToken firstToken = parsedLine.tokenSpans.at(tokenPair.first);
+    if (firstToken.start < 0 || secondToken.start < 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected point coordinates could not be rewritten.");
+        }
+        return false;
+    }
+
+    lineText.replace(secondToken.start, secondToken.length, formatCoordinate(point.y()));
+    lineText.replace(firstToken.start, firstToken.length, formatCoordinate(point.x()));
     lines[lineNumber - 1] = lineText;
     *contents = lines.join(lineEnding);
     return true;

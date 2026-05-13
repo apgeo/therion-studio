@@ -38,5 +38,8 @@ public:
 
     static QString therionMapWorkspaceMode();
     static void setTherionMapWorkspaceMode(const QString &mode);
+
+    static QString therionMapBackgroundLayers();
+    static void setTherionMapBackgroundLayers(const QString &json);
 };
 }

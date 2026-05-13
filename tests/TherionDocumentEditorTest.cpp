@@ -246,9 +246,188 @@ int runRewritePreservesOtherContentTest()
 
     return 0;
 }
+
+int runAppendScrapBlockTest()
+{
+    QString errorMessage;
+
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::appendScrapBlock(nullptr, QStringLiteral("new-scrap"), nullptr, &errorMessage), "appendScrapBlock should reject null contents.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "appendScrapBlock should provide an error for null contents.")) {
+        return 1;
+    }
+
+    QString contents;
+    int lineNumber = 0;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::appendScrapBlock(&contents, QString(), &lineNumber, &errorMessage), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap new-scrap\nendscrap\n"), "appendScrapBlock should create the default block in an empty document.")) {
+        return 1;
+    }
+    if (!expect(lineNumber == 1, "appendScrapBlock should report line 1 for an empty-document insertion.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("survey demo\r\nscrap new-scrap\r\nendscrap\r\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::appendScrapBlock(&contents, QStringLiteral("new-scrap"), &lineNumber, &errorMessage), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("survey demo\r\nscrap new-scrap\r\nendscrap\r\n\r\nscrap new-scrap-2\r\nendscrap\r\n"),
+                "appendScrapBlock should preserve CRLF and generate a unique scrap name.")) {
+        return 1;
+    }
+    if (!expect(lineNumber == 5, "appendScrapBlock should report the inserted scrap start line in CRLF content.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("survey cave\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::appendScrapBlock(&contents, QStringLiteral("  My New Scrap 2026  "), &lineNumber, &errorMessage), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("survey cave\n\nscrap my-new-scrap-2026\nendscrap\n"),
+                "appendScrapBlock should sanitize preferred names into stable identifiers.")) {
+        return 1;
+    }
+    if (!expect(lineNumber == 3, "appendScrapBlock should report insertion line after a separated block append.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runAppendDraftGeometryTest()
+{
+    QString errorMessage;
+
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::appendDraftGeometry(nullptr, QStringLiteral("point"), {QPointF(10.0, 20.0)}, nullptr, &errorMessage),
+                "appendDraftGeometry should reject null contents.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "appendDraftGeometry should provide an error for null contents.")) {
+        return 1;
+    }
+
+    QString contents = QStringLiteral("scrap main\nendscrap\n");
+    int lineNumber = 0;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents, QStringLiteral("point"), {QPointF(123.4, 567.8)}, &lineNumber, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap main\n  point 123.4 567.8 station -name draft-point\nendscrap\n"),
+                "appendDraftGeometry should insert point geometry before endscrap.")) {
+        return 1;
+    }
+    if (!expect(lineNumber == 2, "appendDraftGeometry should report the inserted point line number.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("survey demo\r\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
+                                                           QStringLiteral("line"),
+                                                           {QPointF(10.0, 20.0), QPointF(30.0, 40.0)},
+                                                           &lineNumber,
+                                                           &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("survey demo\r\n\r\nscrap map-draft\r\n  line wall\r\n    10.0 20.0 30.0 40.0\r\n  endline\r\nendscrap\r\n"),
+                "appendDraftGeometry should create fallback scrap context and preserve CRLF.")) {
+        return 1;
+    }
+    if (!expect(lineNumber == 4, "appendDraftGeometry should report line number for inserted line geometry.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap a\nendscrap\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::appendDraftGeometry(&contents, QStringLiteral("area"), {QPointF(1.0, 2.0), QPointF(3.0, 4.0)}, nullptr, &errorMessage),
+                "appendDraftGeometry should reject area geometry with too few vertices.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "appendDraftGeometry should report a validation error for insufficient vertices.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runRewritePointCoordinatesTest()
+{
+    QString errorMessage;
+
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewritePointCoordinates(nullptr, 1, QPointF(1.0, 2.0), &errorMessage),
+                "rewritePointCoordinates should reject null contents.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "rewritePointCoordinates should report null-content error.")) {
+        return 1;
+    }
+
+    QString contents = QStringLiteral("line wall\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(100.1, 200.2), &errorMessage),
+                "rewritePointCoordinates should reject non-point directives.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "rewritePointCoordinates should report a non-point directive error.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("point station 10 20 station -name a1 # keep\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(345.6, 789.1), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point station 345.6 789.1 station -name a1 # keep\n"),
+                "rewritePointCoordinates should rewrite first numeric pair on point line and preserve trailing tokens/comment.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("station st-a 1 2\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(-10.0, 55.5), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("station st-a -10.0 55.5\n"),
+                "rewritePointCoordinates should rewrite station directive coordinates.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
 {
-    return runRewritePreservesOtherContentTest();
+    const int rewriteResult = runRewritePreservesOtherContentTest();
+    if (rewriteResult != 0) {
+        return rewriteResult;
+    }
+
+    const int appendScrapResult = runAppendScrapBlockTest();
+    if (appendScrapResult != 0) {
+        return appendScrapResult;
+    }
+
+    const int appendDraftResult = runAppendDraftGeometryTest();
+    if (appendDraftResult != 0) {
+        return appendDraftResult;
+    }
+
+    return runRewritePointCoordinatesTest();
 }

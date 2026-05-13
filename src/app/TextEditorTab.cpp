@@ -12,6 +12,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSplitter>
+#include <QSplitterHandle>
 #include <QTextBrowser>
 #include <QTextCursor>
 #include <QToolButton>
@@ -55,10 +56,6 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
-
-    pathLabel_ = new QLabel(tr("No file open"), this);
-    pathLabel_->setMargin(8);
-    pathLabel_->setObjectName(QStringLiteral("DocumentPathLabel"));
 
     searchBar_ = new QFrame(this);
     searchBar_->setFrameShape(QFrame::StyledPanel);
@@ -133,14 +130,14 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     highlighter_ = new TherionSyntaxHighlighter(editor_->document());
     loadHelpMetadata();
 
-    auto *statusRow = new QWidget(this);
-    auto *statusLayout = new QHBoxLayout(statusRow);
+    statusRow_ = new QWidget(this);
+    auto *statusLayout = new QHBoxLayout(statusRow_);
     statusLayout->setContentsMargins(8, 0, 8, 8);
     statusLayout->setSpacing(12);
 
-    pathLabel_ = new QLabel(tr("No file open"), statusRow);
+    pathLabel_ = new QLabel(tr("No file open"), statusRow_);
     pathLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    encodingLabel_ = new QLabel(tr("Encoding: UTF-8"), statusRow);
+    encodingLabel_ = new QLabel(tr("Encoding: UTF-8"), statusRow_);
     encodingLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
     statusLayout->addWidget(pathLabel_, 1);
@@ -148,7 +145,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 
     editorHelpSplitter_ = new QSplitter(Qt::Vertical, this);
     editorHelpSplitter_->setChildrenCollapsible(false);
-    editorHelpSplitter_->setHandleWidth(6);
+    editorHelpSplitter_->setHandleWidth(12);
     editorHelpSplitter_->addWidget(editor_);
 
     buildHelpPanel();
@@ -156,10 +153,11 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     editorHelpSplitter_->setStretchFactor(0, 1);
     editorHelpSplitter_->setStretchFactor(1, 0);
     editorHelpSplitter_->setCollapsible(1, true);
+    installHelpBorderToggle();
 
     layout->addWidget(searchBar_);
     layout->addWidget(editorHelpSplitter_, 1);
-    layout->addWidget(statusRow);
+    layout->addWidget(statusRow_);
 
     connect(editor_, &QPlainTextEdit::textChanged, this, &TextEditorTab::handleTextChanged);
     connect(editor_, &QPlainTextEdit::cursorPositionChanged, this, &TextEditorTab::handleCursorPositionChanged);
@@ -349,6 +347,125 @@ bool TextEditorTab::rewriteStructureEntryName(int lineNumber, const QString &cat
     return true;
 }
 
+bool TextEditorTab::insertScrapBlock(const QString &preferredName,
+                                     int *insertedLineNumber,
+                                     QString *errorMessage)
+{
+    QString contents = editor_->toPlainText();
+    int resolvedLineNumber = 0;
+    if (!TherionDocumentEditor::appendScrapBlock(&contents, preferredName, &resolvedLineNumber, errorMessage)) {
+        return false;
+    }
+
+    loading_ = true;
+    editor_->setPlainText(contents);
+
+    if (resolvedLineNumber > 0) {
+        const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(resolvedLineNumber - 1);
+        if (targetBlock.isValid()) {
+            QTextCursor cursor(targetBlock);
+            cursor.movePosition(QTextCursor::StartOfBlock);
+            cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+            editor_->setTextCursor(cursor);
+            editor_->centerCursor();
+        }
+    }
+
+    loading_ = false;
+    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
+    editor_->document()->setModified(true);
+    dirty_ = true;
+    refreshTitle();
+    emit dirtyStateChanged(true);
+    emit documentTextChanged();
+    updateContextHelp();
+
+    if (insertedLineNumber != nullptr) {
+        *insertedLineNumber = resolvedLineNumber;
+    }
+
+    return true;
+}
+
+bool TextEditorTab::insertDraftGeometry(const QString &kind,
+                                        const QVector<QPointF> &vertices,
+                                        int *insertedLineNumber,
+                                        QString *errorMessage)
+{
+    QString contents = editor_->toPlainText();
+    int resolvedLineNumber = 0;
+    if (!TherionDocumentEditor::appendDraftGeometry(&contents, kind, vertices, &resolvedLineNumber, errorMessage)) {
+        return false;
+    }
+
+    loading_ = true;
+    editor_->setPlainText(contents);
+
+    if (resolvedLineNumber > 0) {
+        const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(resolvedLineNumber - 1);
+        if (targetBlock.isValid()) {
+            QTextCursor cursor(targetBlock);
+            cursor.movePosition(QTextCursor::StartOfBlock);
+            cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+            editor_->setTextCursor(cursor);
+            editor_->centerCursor();
+        }
+    }
+
+    loading_ = false;
+    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
+    editor_->document()->setModified(true);
+    dirty_ = true;
+    refreshTitle();
+    emit dirtyStateChanged(true);
+    emit documentTextChanged();
+    updateContextHelp();
+
+    if (insertedLineNumber != nullptr) {
+        *insertedLineNumber = resolvedLineNumber;
+    }
+
+    return true;
+}
+
+bool TextEditorTab::rewritePointCoordinates(int lineNumber,
+                                            const QPointF &point,
+                                            QString *errorMessage)
+{
+    QString contents = editor_->toPlainText();
+    if (!TherionDocumentEditor::rewritePointCoordinates(&contents, lineNumber, point, errorMessage)) {
+        return false;
+    }
+
+    const QTextCursor previousCursor = editor_->textCursor();
+    const int previousLine = previousCursor.blockNumber();
+    const int previousColumn = previousCursor.positionInBlock();
+
+    loading_ = true;
+    editor_->setPlainText(contents);
+
+    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
+    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
+    if (targetBlock.isValid()) {
+        QTextCursor restoredCursor(targetBlock);
+        restoredCursor.movePosition(QTextCursor::StartOfBlock);
+        restoredCursor.movePosition(QTextCursor::Right,
+                                    QTextCursor::MoveAnchor,
+                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
+        editor_->setTextCursor(restoredCursor);
+    }
+
+    loading_ = false;
+    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
+    editor_->document()->setModified(true);
+    dirty_ = true;
+    refreshTitle();
+    emit dirtyStateChanged(true);
+    emit documentTextChanged();
+    updateContextHelp();
+    return true;
+}
+
 QString TextEditorTab::filePath() const
 {
     return filePath_;
@@ -385,6 +502,23 @@ int TextEditorTab::currentLineNumber() const
 QString TextEditorTab::text() const
 {
     return editor_->toPlainText();
+}
+
+QString TextEditorTab::statusPathText() const
+{
+    return displayPath();
+}
+
+QString TextEditorTab::statusEncodingText() const
+{
+    return tr("UTF-8");
+}
+
+void TextEditorTab::setInlineStatusVisible(bool visible)
+{
+    if (statusRow_ != nullptr) {
+        statusRow_->setVisible(visible);
+    }
 }
 
 void TextEditorTab::handleTextChanged()
@@ -469,11 +603,6 @@ void TextEditorTab::handleCursorPositionChanged()
     updateContextHelp();
 }
 
-void TextEditorTab::handleHelpToggleTriggered(bool checked)
-{
-    setHelpCollapsed(!checked);
-}
-
 void TextEditorTab::refreshTitle()
 {
     refreshStatus();
@@ -493,7 +622,9 @@ void TextEditorTab::refreshStatus()
 
 void TextEditorTab::buildHelpPanel()
 {
-    helpPanel_ = new QWidget(this);
+    auto *framedHelpPanel = new QFrame(this);
+    framedHelpPanel->setFrameShape(QFrame::StyledPanel);
+    helpPanel_ = framedHelpPanel;
     auto *panelLayout = new QVBoxLayout(helpPanel_);
     panelLayout->setContentsMargins(8, 8, 8, 8);
     panelLayout->setSpacing(6);
@@ -506,17 +637,8 @@ void TextEditorTab::buildHelpPanel()
     headerFont.setBold(true);
     headerLabel->setFont(headerFont);
 
-    helpToggleButton_ = new QToolButton(helpPanel_);
-    helpToggleButton_->setCheckable(true);
-    helpToggleButton_->setChecked(true);
-    helpToggleButton_->setText(tr("Hide"));
-    helpToggleButton_->setToolButtonStyle(Qt::ToolButtonTextOnly);
-    helpToggleButton_->setAutoRaise(true);
-    connect(helpToggleButton_, &QToolButton::toggled, this, &TextEditorTab::handleHelpToggleTriggered);
-
     headerRow->addWidget(headerLabel);
     headerRow->addStretch(1);
-    headerRow->addWidget(helpToggleButton_);
 
     helpBrowser_ = new QTextBrowser(helpPanel_);
     helpBrowser_->setFrameShape(QFrame::NoFrame);
@@ -527,6 +649,44 @@ void TextEditorTab::buildHelpPanel()
 
     panelLayout->addLayout(headerRow);
     panelLayout->addWidget(helpBrowser_, 1);
+}
+
+void TextEditorTab::installHelpBorderToggle()
+{
+    if (editorHelpSplitter_ == nullptr || helpBorderToggleButton_ != nullptr) {
+        return;
+    }
+
+    auto *handle = editorHelpSplitter_->handle(1);
+    if (handle == nullptr) {
+        return;
+    }
+
+    auto *handleLayout = new QHBoxLayout(handle);
+    handleLayout->setContentsMargins(0, 0, 4, 0);
+    handleLayout->setSpacing(0);
+    handleLayout->addStretch(1);
+
+    helpBorderToggleButton_ = new QToolButton(handle);
+    helpBorderToggleButton_->setAutoRaise(true);
+    helpBorderToggleButton_->setFocusPolicy(Qt::NoFocus);
+    helpBorderToggleButton_->setFixedSize(12, 12);
+    helpBorderToggleButton_->setToolTip(tr("Collapse or expand help pane"));
+    connect(helpBorderToggleButton_, &QToolButton::clicked, this, [this]() {
+        setHelpCollapsed(!helpCollapsed_);
+    });
+
+    handleLayout->addWidget(helpBorderToggleButton_);
+    refreshHelpBorderToggle();
+}
+
+void TextEditorTab::refreshHelpBorderToggle()
+{
+    if (helpBorderToggleButton_ == nullptr) {
+        return;
+    }
+
+    helpBorderToggleButton_->setArrowType(helpCollapsed_ ? Qt::RightArrow : Qt::DownArrow);
 }
 
 void TextEditorTab::loadHelpMetadata()
@@ -642,15 +802,20 @@ void TextEditorTab::updateContextHelp()
 void TextEditorTab::setHelpCollapsed(bool collapsed)
 {
     helpCollapsed_ = collapsed;
-    helpBrowser_->setVisible(!collapsed);
-    helpToggleButton_->setText(collapsed ? tr("Show") : tr("Hide"));
-    if (!collapsed && helpPanelHeight_ > 0) {
-        const QList<int> sizes = editorHelpSplitter_->sizes();
-        editorHelpSplitter_->setSizes(QList<int>{sizes.value(0, 1), helpPanelHeight_});
-    } else if (collapsed) {
-        const QList<int> sizes = editorHelpSplitter_->sizes();
-        if (sizes.size() >= 2) {
-            helpPanelHeight_ = qMax(sizes.at(1), helpPanel_->minimumSizeHint().height());
+    if (helpBrowser_ != nullptr) {
+        helpBrowser_->setVisible(!collapsed);
+    }
+    refreshHelpBorderToggle();
+    if (editorHelpSplitter_ != nullptr) {
+        if (!collapsed && helpPanelHeight_ > 0) {
+            const QList<int> sizes = editorHelpSplitter_->sizes();
+            editorHelpSplitter_->setSizes(QList<int>{sizes.value(0, 1), helpPanelHeight_});
+        } else if (collapsed) {
+            const QList<int> sizes = editorHelpSplitter_->sizes();
+            if (sizes.size() >= 2) {
+                helpPanelHeight_ = qMax(sizes.at(1), helpPanel_->minimumSizeHint().height());
+            }
+            editorHelpSplitter_->setSizes(QList<int>{1, 0});
         }
     }
 }

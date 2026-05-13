@@ -16,8 +16,19 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/MainWindow.h
     src/app/MainWindowDocumentHelpers.cpp
     src/app/MainWindowDocumentHelpers.h
+    src/app/MainWindowInspector.cpp
+    src/app/MainWindowMapBackground.cpp
     src/app/MainWindowSidebar.cpp
+    src/app/MainWindowStructureBrowser.cpp
+    src/app/MainWindowStructureRoles.h
+    src/app/MainWindowTherionRunner.cpp
+    src/app/MapEditorBackgroundLayers.cpp
+    src/app/MapEditorSceneInternals.h
+    src/app/MapEditorSceneItems.cpp
+    src/app/MapEditorSceneRenderer.cpp
+    src/app/MapEditorSceneSupport.h
     src/app/MapEditorTab.cpp
+    src/app/MapEditorTabWorkspace.cpp
     src/app/MapEditorTab.h
     src/app/TextEditorTab.cpp
     src/app/TextEditorTab.h

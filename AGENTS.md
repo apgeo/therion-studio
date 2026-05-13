@@ -33,7 +33,7 @@ These instructions apply to the whole repository.
   - widgets, views, and scene items should not own file I/O or document parsing
   - services own external interactions such as file access, process execution, and metadata loading
 - Favor straightforward, testable designs over speculative abstractions.
-- Keep files and translation units focused and reasonably sized. There is no hard line limit, but once a file starts mixing multiple responsibilities or becomes difficult to scan in one pass, split it by responsibility.
+- Keep files and translation units focused and reasonably sized. There is no hard line limit, but once a file starts mixing multiple responsibilities or becomes difficult to scan in one pass, split it by responsibility. Try to avoid files with >1000 lines if possible.
 - Prefer splitting large features into focused types or files such as model, parser, serializer, widget, controller, scene item, or service components rather than accumulating unrelated behavior in one class.
 - Avoid generic catch-all modules or class names such as Helpers, Utils, Misc, or Manager unless the code is genuinely cohesive.
 - Do not introduce dependencies outside Qt and the standard library without explicit justification.
@@ -77,4 +77,4 @@ These instructions apply to the whole repository.
 - Surface ambiguities instead of silently choosing a product behavior that could ripple through the spec.
 - When code is added later, prefer file and module names that reflect responsibility clearly.
 - Document progress in the repository itself, not only in chat. Update [CHANGELOG.md](CHANGELOG.md) after every change so the current implementation state stays visible in the repo.
-- Keep [CHANGELOG.md](CHANGELOG.md) structured with clear `Completed`, `In progress`, `Next up`, and `Risks / blockers` sections when practical.
+- Keep [CHANGELOG.md](CHANGELOG.md) structured with clear `In progress`, `Next up`, `Risks / blockers` and `Completed` sections when practical.

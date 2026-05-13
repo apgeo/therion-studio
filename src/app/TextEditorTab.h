@@ -5,6 +5,8 @@
 #include <QTextDocument>
 #include <QWidget>
 #include <QHash>
+#include <QPointF>
+#include <QVector>
 
 class QLabel;
 class QCheckBox;
@@ -13,6 +15,7 @@ class QLineEdit;
 class QPushButton;
 class QPlainTextEdit;
 class QSplitter;
+class QSplitterHandle;
 class QTextBrowser;
 class QToolButton;
 
@@ -48,12 +51,25 @@ public:
     bool replaceCurrent();
     int replaceAll();
     bool rewriteStructureEntryName(int lineNumber, const QString &category, const QString &newName, QString *errorMessage = nullptr);
+    bool insertScrapBlock(const QString &preferredName = QString(),
+                          int *insertedLineNumber = nullptr,
+                          QString *errorMessage = nullptr);
+    bool insertDraftGeometry(const QString &kind,
+                             const QVector<QPointF> &vertices,
+                             int *insertedLineNumber = nullptr,
+                             QString *errorMessage = nullptr);
+    bool rewritePointCoordinates(int lineNumber,
+                                 const QPointF &point,
+                                 QString *errorMessage = nullptr);
 
     QString filePath() const;
     QString displayName() const;
     bool isDirty() const;
     int currentLineNumber() const;
     QString text() const;
+    QString statusPathText() const;
+    QString statusEncodingText() const;
+    void setInlineStatusVisible(bool visible);
 
 signals:
     void titleChanged();
@@ -72,7 +88,6 @@ private slots:
     void handleReplaceAllTriggered();
     void handleCloseSearchTriggered();
     void handleCursorPositionChanged();
-    void handleHelpToggleTriggered(bool checked);
 
 private:
     void refreshTitle();
@@ -83,6 +98,8 @@ private:
     void updateContextHelp();
     QStringList helpCandidateTokens() const;
     QString currentHelpTokenForCursor() const;
+    void installHelpBorderToggle();
+    void refreshHelpBorderToggle();
     void setHelpCollapsed(bool collapsed);
     QString renderHelpHtml(const QString &token, const TherionHelpEntry &entry) const;
     void updateSearchResults(const QString &message, bool error = false);
@@ -94,11 +111,12 @@ private:
 
     QLabel *pathLabel_ = nullptr;
     QLabel *encodingLabel_ = nullptr;
+    QWidget *statusRow_ = nullptr;
     QFrame *searchBar_ = nullptr;
     QSplitter *editorHelpSplitter_ = nullptr;
     QWidget *helpPanel_ = nullptr;
     QTextBrowser *helpBrowser_ = nullptr;
-    QToolButton *helpToggleButton_ = nullptr;
+    QToolButton *helpBorderToggleButton_ = nullptr;
     QWidget *replaceRow_ = nullptr;
     QLineEdit *findEdit_ = nullptr;
     QLineEdit *replaceEdit_ = nullptr;

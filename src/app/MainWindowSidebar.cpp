@@ -3,615 +3,385 @@
 #include "MainWindowDocumentHelpers.h"
 
 #include <QAbstractItemView>
-#include <QAbstractItemModel>
 #include <QDockWidget>
-#include <QDir>
-#include <QFileInfo>
-#include <QHash>
+#include <QFileSystemModel>
+#include <QFrame>
+#include <QHBoxLayout>
 #include <QItemSelectionModel>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QLabel>
-#include <QMessageBox>
-#include <QLineEdit>
-#include <QStandardItem>
+#include <QMouseEvent>
+#include <QSplitter>
+#include <QStackedWidget>
 #include <QStandardItemModel>
-#include <QSignalBlocker>
-#include <QTabWidget>
+#include <QStyle>
 #include <QTimer>
-#include <QPushButton>
+#include <QToolButton>
 #include <QTreeView>
-
-#include <functional>
-
-#include "TextEditorTab.h"
-#include "MapEditorTab.h"
-#include "../core/DocumentFile.h"
-#include "../core/ProjectStructureIndex.h"
-#include "../core/SessionStore.h"
-#include "../core/TherionDocumentEditor.h"
+#include <QVBoxLayout>
 
 namespace
 {
-constexpr int SourceFileRole = Qt::UserRole + 1;
-constexpr int LineNumberRole = Qt::UserRole + 2;
-constexpr int CategoryRole = Qt::UserRole + 3;
-constexpr int NameRole = Qt::UserRole + 4;
-
-QString formatProjectStructureSummary(const QHash<QString, int> &categoryCounts, int totalItems, int rootSurveyCount)
+class DockTitleBarWidget final : public QWidget
 {
-    const int surveyCount = categoryCounts.value(QStringLiteral("Surveys"));
-    const int centrelineCount = categoryCounts.value(QStringLiteral("Centrelines"));
-    const int mapCount = categoryCounts.value(QStringLiteral("Maps"));
-    const int scrapCount = categoryCounts.value(QStringLiteral("Scraps"));
-    const int stationCount = categoryCounts.value(QStringLiteral("Stations"));
-    const int pointCount = categoryCounts.value(QStringLiteral("Points"));
-    const int lineCount = categoryCounts.value(QStringLiteral("Lines"));
-    const int areaCount = categoryCounts.value(QStringLiteral("Areas"));
+public:
+    explicit DockTitleBarWidget(const QString &title, QWidget *parent = nullptr)
+        : QWidget(parent)
+        , titleLabel_(new QLabel(title, this))
+        , toggleButton_(new QToolButton(this))
+    {
+        layout_ = new QHBoxLayout(this);
+        layout_->setContentsMargins(8, 4, 4, 4);
+        layout_->setSpacing(4);
+        layout_->addWidget(titleLabel_);
+        layout_->addStretch(1);
+        toggleButton_->setAutoRaise(true);
+        toggleButton_->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        layout_->addWidget(toggleButton_);
+    }
 
-    return QObject::tr("%1 structure item(s) across %2 survey root(s): %3 survey, %4 centreline, %5 map, %6 scrap, %7 station, %8 point, %9 line, %10 area")
-        .arg(totalItems)
-        .arg(rootSurveyCount)
-        .arg(surveyCount)
-        .arg(centrelineCount)
-        .arg(mapCount)
-        .arg(scrapCount)
-        .arg(stationCount)
-        .arg(pointCount)
-        .arg(lineCount)
-        .arg(areaCount);
+    void setCollapsedVisual(bool collapsed)
+    {
+        titleLabel_->setVisible(!collapsed);
+        layout_->setContentsMargins(collapsed ? 2 : 8, 2, 2, 2);
+        layout_->setSpacing(collapsed ? 0 : 4);
+        updateGeometry();
+    }
+
+    QToolButton *toggleButton() const
+    {
+        return toggleButton_;
+    }
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override
+    {
+        event->ignore();
+    }
+
+    void mouseMoveEvent(QMouseEvent *event) override
+    {
+        event->ignore();
+    }
+
+    void mouseDoubleClickEvent(QMouseEvent *event) override
+    {
+        event->ignore();
+    }
+
+    QSize minimumSizeHint() const override
+    {
+        const QSize buttonSize = toggleButton_->sizeHint();
+        const bool titleVisible = titleLabel_->isVisible();
+        const int left = titleVisible ? 8 : 2;
+        const int right = 2;
+        const int topBottom = 4;
+        const int titleWidth = titleVisible ? titleLabel_->sizeHint().width() + 4 : 0;
+        return QSize(left + titleWidth + buttonSize.width() + right,
+                     qMax(buttonSize.height(), titleLabel_->sizeHint().height()) + topBottom);
+    }
+
+    QSize sizeHint() const override
+    {
+        return minimumSizeHint();
+    }
+
+private:
+    QHBoxLayout *layout_ = nullptr;
+    QLabel *titleLabel_ = nullptr;
+    QToolButton *toggleButton_ = nullptr;
+};
+
+constexpr int SidebarCollapsedRailWidth = 56;
 }
 
-QString inspectorObjectKindLabel(const QString &category)
+void MainWindow::buildProjectBrowser()
 {
-    if (category == QStringLiteral("Stations")) {
-        return QObject::tr("Station Point");
-    }
-    if (category == QStringLiteral("Points")) {
-        return QObject::tr("Point");
-    }
-    if (category == QStringLiteral("Lines")) {
-        return QObject::tr("Line");
-    }
-    if (category == QStringLiteral("Areas")) {
-        return QObject::tr("Area");
-    }
-    if (category == QStringLiteral("Scraps")) {
-        return QObject::tr("Scrap");
-    }
-    if (category == QStringLiteral("Maps")) {
-        return QObject::tr("Map");
-    }
-    if (category == QStringLiteral("Surveys")) {
-        return QObject::tr("Survey");
-    }
-    if (category == QStringLiteral("Centrelines")) {
-        return QObject::tr("Centreline");
-    }
-
-    return category;
-}
-
-QString inspectorNameLabelForCategory(const QString &category)
-{
-    if (category == QStringLiteral("Stations")) {
-        return QObject::tr("Station Name");
-    }
-    if (category == QStringLiteral("Points")) {
-        return QObject::tr("Point Name");
-    }
-    if (category == QStringLiteral("Lines")) {
-        return QObject::tr("Line Name");
-    }
-    if (category == QStringLiteral("Areas")) {
-        return QObject::tr("Area Name");
-    }
-    if (category == QStringLiteral("Scraps")) {
-        return QObject::tr("Scrap Name");
-    }
-    if (category == QStringLiteral("Maps")) {
-        return QObject::tr("Map Name");
-    }
-    if (category == QStringLiteral("Surveys")) {
-        return QObject::tr("Survey Name");
-    }
-
-    return QObject::tr("Name");
-}
-
-QStandardItem *createIndexedItem(const QString &text, const QString &sourceFile, int lineNumber, const QString &category, const QString &name)
-{
-    auto *item = new QStandardItem(text);
-    item->setEditable(false);
-    item->setData(sourceFile, SourceFileRole);
-    item->setData(lineNumber, LineNumberRole);
-    item->setData(category, CategoryRole);
-    item->setData(name, NameRole);
-    return item;
-}
-
-QString structureBrowserItemText(const TherionStudio::ProjectStructureEntry &entry)
-{
-    if (entry.category == QStringLiteral("Surveys") && !entry.createsNamespace) {
-        return QObject::tr("%1 (namespace off)").arg(entry.name);
-    }
-
-    return entry.name;
-}
-
-QString mapObjectItemText(const TherionStudio::ProjectStructureEntry &entry)
-{
-    if (entry.category == QStringLiteral("Scraps")) {
-        return entry.name;
-    }
-
-    return QStringLiteral("%1: %2").arg(inspectorObjectKindLabel(entry.category), entry.name);
-}
-}
-
-void MainWindow::rebuildStructureSidebar()
-{
-    structureModel_->clear();
-    structureModel_->setHorizontalHeaderLabels({tr("Structure")});
-
-    if (projectRootPath_.isEmpty() || !QDir(projectRootPath_).exists()) {
-        auto *rootItem = new QStandardItem(tr("Open a project to populate the survey hierarchy"));
-        rootItem->setEditable(false);
-        structureModel_->appendRow(rootItem);
-        projectStructureSummary_ = tr("Open a project to view its survey hierarchy summary.");
-        inspectorSummary_->setText(projectStructureSummary_);
-        structureTree_->expandAll();
+    if (sidebarPages_ == nullptr || projectModel_ == nullptr) {
         return;
     }
 
-    QString errorMessage;
-    const QVector<TherionStudio::ProjectStructureEntry> entries = TherionStudio::ProjectStructureIndex::scanProject(projectRootPath_, &errorMessage);
-    if (!errorMessage.isEmpty()) {
-        appendConsoleLine(errorMessage);
-    }
+    auto *projectPage = new QWidget(sidebarPages_);
+    auto *projectLayout = new QVBoxLayout(projectPage);
+    projectLayout->setContentsMargins(12, 12, 12, 12);
+    projectLayout->setSpacing(8);
 
-    QHash<QString, int> categoryCounts;
-    int totalItems = 0;
-    int rootSurveyCount = 0;
-    for (const TherionStudio::ProjectStructureEntry &entry : entries) {
-        categoryCounts[entry.category] += 1;
-        ++totalItems;
-        if (entry.category == QStringLiteral("Surveys") && entry.depth == 0) {
-            ++rootSurveyCount;
-        }
-    }
+    auto *projectDescription = new QLabel(tr("Browse the files in the current project."), projectPage);
+    projectDescription->setWordWrap(true);
+    projectLayout->addWidget(projectDescription);
 
-    projectStructureSummary_ = tr("Project structure summary: %1")
-                                   .arg(formatProjectStructureSummary(categoryCounts, totalItems, rootSurveyCount));
+    projectTree_ = new QTreeView(projectPage);
+    projectTree_->setModel(projectModel_);
+    projectTree_->setRootIsDecorated(true);
+    projectTree_->setAnimated(true);
+    projectTree_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    projectTree_->setSelectionMode(QAbstractItemView::SingleSelection);
+    projectTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    projectTree_->setAlternatingRowColors(true);
+    projectTree_->hideColumn(1);
+    projectTree_->hideColumn(2);
+    projectTree_->hideColumn(3);
+    connect(projectTree_, &QTreeView::activated, this, &MainWindow::handleProjectTreeActivated);
 
-    auto *projectItem = new QStandardItem(QFileInfo(projectRootPath_).fileName().isEmpty()
-                                              ? projectRootPath_
-                                              : QFileInfo(projectRootPath_).fileName());
-    projectItem->setEditable(false);
-    projectItem->setData(projectRootPath_, SourceFileRole);
-    projectItem->setData(0, LineNumberRole);
-    projectItem->setData(QStringLiteral("Project"), CategoryRole);
-    projectItem->setData(projectItem->text(), NameRole);
-    structureModel_->appendRow(projectItem);
+    projectLayout->addWidget(projectTree_, 1);
+    sidebarPages_->addWidget(projectPage);
 
-    auto *summaryItem = new QStandardItem(projectStructureSummary_);
-    summaryItem->setEditable(false);
-    projectItem->appendRow(summaryItem);
+    resetProjectBrowser();
+}
 
-    if (entries.isEmpty()) {
-        auto *emptyItem = new QStandardItem(tr("No survey hierarchy was found in the selected project"));
-        emptyItem->setEditable(false);
-        projectItem->appendRow(emptyItem);
-        inspectorSummary_->setText(projectStructureSummary_);
-    } else {
-        QVector<QStandardItem *> parentStack;
-        for (const TherionStudio::ProjectStructureEntry &entry : entries) {
-            while (parentStack.size() > entry.depth) {
-                parentStack.removeLast();
+void MainWindow::buildStructureSidebar()
+{
+    structureDock_ = new QDockWidget(tr("Sidebar"), this);
+    structureDock_->setObjectName(QStringLiteral("SidebarDock"));
+    structureDock_->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    auto *titleBar = new QWidget(structureDock_);
+    titleBar->setFixedHeight(0);
+    titleBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    sidebarCollapseButton_ = nullptr;
+    structureDock_->setTitleBarWidget(titleBar);
+    connect(structureDock_, &QDockWidget::dockLocationChanged, this, [this](Qt::DockWidgetArea) {
+        updateSidebarCollapseButton();
+    });
+    connect(structureDock_, &QDockWidget::visibilityChanged, this, [this](bool visible) {
+        if (!visible) {
+            if (!sidebarCollapsed_) {
+                rememberSidebarWidth();
             }
+            return;
+        }
 
-            QString entryName = entry.name;
-            if (entry.lineNumber > 0 && entry.category != QStringLiteral("File")) {
-                const QString overrideKey = structureOverrideKey(entry.sourceFile, entry.lineNumber);
-                entryName = structureNameOverrides_.value(overrideKey, entry.name);
+        if (sidebarCollapsed_) {
+            if (sidebarContentContainer_ != nullptr) {
+                sidebarContentContainer_->setVisible(false);
             }
+            QTimer::singleShot(0, this, [this]() {
+                if (structureDock_ == nullptr || !structureDock_->isVisible()) {
+                    return;
+                }
 
-            TherionStudio::ProjectStructureEntry displayEntry = entry;
-            displayEntry.name = entryName;
-
-            auto *entryItem = createIndexedItem(structureBrowserItemText(displayEntry),
-                                                entry.sourceFile,
-                                                entry.lineNumber,
-                                                entry.category,
-                                                entryName);
-
-            if (entry.lineNumber > 0 && entry.category != QStringLiteral("File")) {
-                const QString overrideKey = structureOverrideKey(entry.sourceFile, entry.lineNumber);
-                entryItem->setData(overrideKey, Qt::UserRole + 5);
-            }
-
-            QStandardItem *parentItem = parentStack.isEmpty() ? projectItem : parentStack.last();
-            parentItem->appendRow(entryItem);
-            parentStack.append(entryItem);
-        }
-
-        inspectorSummary_->setText(projectStructureSummary_);
-    }
-
-    structureTree_->expandAll();
-}
-
-void MainWindow::rebuildMapObjectsTree()
-{
-    if (mapObjectsModel_ == nullptr) {
-        return;
-    }
-
-    mapObjectsModel_->clear();
-    mapObjectsModel_->setHorizontalHeaderLabels({tr("Objects")});
-
-    QWidget *tabWidget = currentDocumentWidget();
-    const QString filePath = tabWidget != nullptr ? documentPathForWidget(tabWidget) : QString();
-    if (tabWidget == nullptr || !filePath.endsWith(QStringLiteral(".th2"), Qt::CaseInsensitive)) {
-        auto *placeholderItem = new QStandardItem(tr("Open a TH2 document to browse its objects by scrap"));
-        placeholderItem->setEditable(false);
-        mapObjectsModel_->appendRow(placeholderItem);
-        return;
-    }
-
-    QString text;
-    if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget)) {
-        text = textTab->text();
-    } else if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(tabWidget)) {
-        text = mapTab->text();
-    }
-
-    const QVector<TherionStudio::ProjectStructureEntry> entries = TherionStudio::ProjectStructureIndex::scanTh2Objects(filePath, text);
-    if (entries.isEmpty()) {
-        auto *placeholderItem = new QStandardItem(tr("No TH2 scraps, points, lines, or areas were found in the current document"));
-        placeholderItem->setEditable(false);
-        mapObjectsModel_->appendRow(placeholderItem);
-        return;
-    }
-
-    QVector<QStandardItem *> parentStack;
-    for (const TherionStudio::ProjectStructureEntry &entry : entries) {
-        while (parentStack.size() > entry.depth) {
-            parentStack.removeLast();
-        }
-
-        auto *entryItem = createIndexedItem(mapObjectItemText(entry), entry.sourceFile, entry.lineNumber, entry.category, entry.name);
-        QStandardItem *parentItem = parentStack.isEmpty() ? mapObjectsModel_->invisibleRootItem() : parentStack.last();
-        parentItem->appendRow(entryItem);
-        parentStack.append(entryItem);
-    }
-
-    mapObjectsTree_->expandAll();
-    updateMapObjectSelectionFromEditorLocation(filePath, documentCurrentLineNumberForWidget(tabWidget));
-}
-
-void MainWindow::handleStructureSelectionChanged(const QModelIndex &current, const QModelIndex &, QTreeView *)
-{
-    updateInspectorFromStructureItem(current);
-
-    if (!current.isValid()) {
-        return;
-    }
-
-    if (isStructureContainerIndex(current)) {
-        return;
-    }
-
-    const QString sourceFile = current.data(SourceFileRole).toString();
-    const int lineNumber = current.data(LineNumberRole).toInt();
-    if (sourceFile.isEmpty()) {
-        return;
-    }
-
-    QWidget *tabWidget = QFileInfo(sourceFile).suffix().toLower() == QStringLiteral("th2")
-        ? static_cast<QWidget *>(openMapEditorTab(sourceFile))
-        : static_cast<QWidget *>(openTextTab(sourceFile));
-    if (tabWidget != nullptr && lineNumber > 0) {
-        documentGoToLineForWidget(tabWidget, lineNumber);
-    }
-}
-
-void MainWindow::handleStructureItemActivated(const QModelIndex &index, QTreeView *sourceTree)
-{
-    QTreeView *tree = sourceTree != nullptr ? sourceTree : structureTree_;
-    if (!index.isValid()) {
-        return;
-    }
-
-    if (isStructureContainerIndex(index)) {
-        if (tree != nullptr && tree->isExpanded(index)) {
-            tree->collapse(index);
-        } else {
-            if (tree != nullptr) {
-                tree->expand(index);
-            }
-        }
-
-        const QModelIndex sourceIndex = firstStructureSourceIndex(index);
-        if (sourceIndex.isValid()) {
-            if (tree != nullptr) {
-                tree->setCurrentIndex(sourceIndex);
-            }
-        }
-        return;
-    }
-
-    handleStructureSelectionChanged(index, QModelIndex(), tree);
-}
-
-void MainWindow::updateInspectorFromStructureItem(const QModelIndex &index)
-{
-    if (!index.isValid()) {
-        inspectorSummary_->setText(projectStructureSummary_.isEmpty() ? tr("Open a project to view structure details.") : projectStructureSummary_);
-        inspectorCategoryLabel_->setText(tr("Category"));
-        inspectorNameLabel_->setText(tr("Name"));
-        inspectorCategoryValue_->setText(tr("-"));
-        inspectorNameEdit_->setText(QString());
-        inspectorNameEdit_->setEnabled(false);
-        inspectorProjectValue_->setText(tr("-"));
-        inspectorRelativePathValue_->setText(tr("-"));
-        inspectorObjectKindValue_->setText(tr("-"));
-        inspectorEditabilityValue_->setText(tr("-"));
-        inspectorSourceValue_->setText(tr("-"));
-        inspectorLineValue_->setText(tr("-"));
-        inspectorValidationLabel_->setText(tr("Select a structure item to edit its metadata."));
-        inspectorApplyButton_->setEnabled(false);
-        inspectorOpenSourceButton_->setEnabled(false);
-        selectedStructureIndex_ = QPersistentModelIndex();
-        selectedStructureSourceFile_.clear();
-        selectedStructureName_.clear();
-        selectedStructureLine_ = 0;
-        return;
-    }
-
-    const QString category = index.data(CategoryRole).toString();
-    const QString name = index.data(NameRole).toString();
-    const QString sourceFile = index.data(SourceFileRole).toString();
-    const int lineNumber = index.data(LineNumberRole).toInt();
-
-    const bool isProjectNode = category == QStringLiteral("Project");
-    const bool isContainerNode = sourceFile.isEmpty() || lineNumber <= 0 || isProjectNode;
-
-    if (isProjectNode) {
-        selectedStructureIndex_ = QPersistentModelIndex(index);
-        inspectorSummary_->setText(projectStructureSummary_);
-        inspectorCategoryLabel_->setText(tr("Node Type"));
-        inspectorNameLabel_->setText(tr("Project"));
-        inspectorCategoryValue_->setText(tr("Project"));
-        inspectorNameEdit_->setEnabled(false);
-        inspectorNameEdit_->setText(name);
-        inspectorSourceValue_->setText(QDir(projectRootPath_).absolutePath());
-        inspectorLineValue_->setText(tr("-"));
-        inspectorValidationLabel_->setText(tr("Project nodes summarize the current project and are not directly editable."));
-        inspectorApplyButton_->setEnabled(false);
-        inspectorOpenSourceButton_->setText(tr("Open First Item"));
-        inspectorOpenSourceButton_->setEnabled(selectedStructureIndex_.isValid() ? firstStructureSourceIndex(selectedStructureIndex_).isValid() : false);
-        return;
-    }
-
-    if (category.isEmpty() || name.isEmpty()) {
-        inspectorSummary_->setText(projectStructureSummary_.isEmpty() ? tr("Open a project to view structure details.") : projectStructureSummary_);
-        inspectorCategoryLabel_->setText(tr("Category"));
-        inspectorNameLabel_->setText(tr("Name"));
-        inspectorCategoryValue_->setText(tr("-"));
-        inspectorNameEdit_->setText(QString());
-        inspectorNameEdit_->setEnabled(false);
-        inspectorProjectValue_->setText(tr("-"));
-        inspectorRelativePathValue_->setText(tr("-"));
-        inspectorObjectKindValue_->setText(tr("-"));
-        inspectorEditabilityValue_->setText(tr("-"));
-        inspectorSourceValue_->setText(tr("-"));
-        inspectorLineValue_->setText(tr("-"));
-        inspectorValidationLabel_->setText(tr("The selected row is not a structure object that can be edited."));
-        inspectorApplyButton_->setEnabled(false);
-        inspectorOpenSourceButton_->setText(tr("Open Source"));
-        inspectorOpenSourceButton_->setEnabled(false);
-        selectedStructureIndex_ = QPersistentModelIndex();
-        selectedStructureSourceFile_.clear();
-        selectedStructureName_.clear();
-        selectedStructureLine_ = 0;
-        return;
-    }
-
-    selectedStructureIndex_ = QPersistentModelIndex(index);
-    selectedStructureSourceFile_ = sourceFile;
-    selectedStructureName_ = name;
-    selectedStructureLine_ = lineNumber;
-
-    const QString objectKind = inspectorObjectKindLabel(category);
-    const QString nameLabel = inspectorNameLabelForCategory(category);
-    const QString relativePath = QDir(projectRootPath_).relativeFilePath(sourceFile);
-    const QString projectName = QFileInfo(projectRootPath_).fileName().isEmpty() ? projectRootPath_ : QFileInfo(projectRootPath_).fileName();
-
-    inspectorSummary_->setText(tr("%1: %2\nSource: %3:%4")
-                                   .arg(objectKind)
-                                   .arg(name)
-                                   .arg(relativePath)
-                                   .arg(lineNumber));
-    inspectorCategoryLabel_->setText(tr("Object Kind"));
-    inspectorNameLabel_->setText(nameLabel);
-    inspectorCategoryValue_->setText(category);
-    inspectorNameEdit_->setEnabled(!isContainerNode);
-    inspectorNameEdit_->setText(name);
-    inspectorProjectValue_->setText(projectName);
-    inspectorRelativePathValue_->setText(relativePath);
-    inspectorObjectKindValue_->setText(objectKind);
-    inspectorEditabilityValue_->setText(isContainerNode ? tr("Container") : tr("Editable in-memory"));
-    inspectorSourceValue_->setText(sourceFile);
-    inspectorLineValue_->setText(lineNumber > 0 ? QString::number(lineNumber) : tr("-"));
-    inspectorOpenSourceButton_->setText(isContainerNode ? tr("Open First Item") : tr("Open Source"));
-    inspectorOpenSourceButton_->setEnabled(isContainerNode ? firstStructureSourceIndex(index).isValid() : true);
-    inspectorValidationLabel_->setText(isContainerNode
-                                           ? tr("This row groups child objects; use Open First Item or double-click to drill down.")
-                                           : tr("Editing is currently in-memory for the selected structure entry."));
-    inspectorApplyButton_->setEnabled(false);
-}
-
-void MainWindow::handleInspectorNameEdited(const QString &text)
-{
-    const bool canApply = selectedStructureIndex_.isValid() && !text.trimmed().isEmpty() && text.trimmed() != selectedStructureName_;
-    if (!text.trimmed().isEmpty()) {
-        inspectorValidationLabel_->setText(tr("Editing is currently in-memory for the selected structure entry."));
-    } else {
-        inspectorValidationLabel_->setText(tr("Name is required."));
-    }
-    inspectorApplyButton_->setEnabled(canApply);
-}
-
-void MainWindow::handleInspectorApplyTriggered()
-{
-    if (!selectedStructureIndex_.isValid()) {
-        return;
-    }
-
-    const QString newName = inspectorNameEdit_->text().trimmed();
-    if (newName.isEmpty()) {
-        inspectorValidationLabel_->setText(tr("Name is required."));
-        inspectorApplyButton_->setEnabled(false);
-        return;
-    }
-
-    if (newName == selectedStructureName_) {
-        inspectorValidationLabel_->setText(tr("No changes to apply."));
-        inspectorApplyButton_->setEnabled(false);
-        return;
-    }
-
-    const QString category = selectedStructureIndex_.data(CategoryRole).toString();
-    const QString sourceFile = selectedStructureIndex_.data(SourceFileRole).toString();
-    const int lineNumber = selectedStructureIndex_.data(LineNumberRole).toInt();
-    if (category.isEmpty() || sourceFile.isEmpty()) {
-        inspectorValidationLabel_->setText(tr("The selected structure item cannot be updated."));
-        inspectorApplyButton_->setEnabled(false);
-        return;
-    }
-
-    QString errorMessage;
-    QWidget *tabWidget = documentWidgetForFilePath(sourceFile);
-    if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget)) {
-        if (!textTab->rewriteStructureEntryName(lineNumber, category, newName, &errorMessage)) {
-            inspectorValidationLabel_->setText(errorMessage);
-            inspectorApplyButton_->setEnabled(false);
+                resizeDocks({structureDock_}, {SidebarCollapsedRailWidth}, Qt::Horizontal);
+            });
+            updateSidebarCollapseButton();
             return;
         }
 
-        if (!textTab->save(&errorMessage)) {
-            inspectorValidationLabel_->setText(errorMessage);
-            inspectorApplyButton_->setEnabled(false);
-            return;
-        }
-    } else if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(tabWidget)) {
-        if (!mapTab->rewriteStructureEntryName(lineNumber, category, newName, &errorMessage)) {
-            inspectorValidationLabel_->setText(errorMessage);
-            inspectorApplyButton_->setEnabled(false);
-            return;
-        }
+        restoreSidebarWidth();
+        updateSidebarCollapseButton();
+    });
 
-        if (!mapTab->save(&errorMessage)) {
-            inspectorValidationLabel_->setText(errorMessage);
-            inspectorApplyButton_->setEnabled(false);
-            return;
-        }
-    } else {
-        QString contents;
-        if (!TherionStudio::DocumentFile::readUtf8TextFile(sourceFile, &contents, &errorMessage)) {
-            inspectorValidationLabel_->setText(errorMessage);
-            inspectorApplyButton_->setEnabled(false);
-            return;
-        }
+    auto *container = new QWidget(structureDock_);
+    auto *containerLayout = new QHBoxLayout(container);
+    containerLayout->setContentsMargins(0, 0, 0, 0);
+    containerLayout->setSpacing(0);
 
-        if (!TherionStudio::TherionDocumentEditor::rewriteStructureEntryName(&contents, lineNumber, category, newName, &errorMessage)) {
-            inspectorValidationLabel_->setText(errorMessage);
-            inspectorApplyButton_->setEnabled(false);
+    auto *activityBar = new QFrame(container);
+    activityBar->setFrameShape(QFrame::StyledPanel);
+    auto *activityLayout = new QVBoxLayout(activityBar);
+    activityLayout->setContentsMargins(6, 8, 6, 8);
+    activityLayout->setSpacing(6);
+
+    const QIcon filesIcon = style()->standardIcon(QStyle::SP_DirIcon);
+    const QIcon structureIcon = style()->standardIcon(QStyle::SP_FileDialogDetailedView);
+    const QIcon mapIcon = style()->standardIcon(QStyle::SP_FileIcon);
+    const QIcon consoleIcon = style()->standardIcon(QStyle::SP_ComputerIcon);
+
+    sidebarFilesButton_ = new QToolButton(activityBar);
+    sidebarFilesButton_->setIcon(filesIcon);
+    sidebarFilesButton_->setToolTip(tr("Files"));
+    sidebarFilesButton_->setCheckable(true);
+    connect(sidebarFilesButton_, &QToolButton::clicked, this, [this]() {
+        if (sidebarCollapsed_) {
+            setSidebarCollapsed(false);
+            setSidebarPane(SidebarPane::FileBrowser);
             return;
         }
-
-        if (!TherionStudio::DocumentFile::writeUtf8TextFile(sourceFile, contents, &errorMessage)) {
-            inspectorValidationLabel_->setText(errorMessage);
-            inspectorApplyButton_->setEnabled(false);
+        if (activeSidebarPane_ == SidebarPane::FileBrowser) {
+            setSidebarCollapsed(true);
             return;
         }
-    }
+        setSidebarPane(SidebarPane::FileBrowser);
+    });
+    activityLayout->addWidget(sidebarFilesButton_);
 
-    const QString overrideKey = structureOverrideKey(sourceFile, lineNumber);
-    structureNameOverrides_.remove(overrideKey);
-    saveStructureNameOverrides();
-    rebuildStructureSidebar();
-    rebuildMapObjectsTree();
-    updateStructureSelectionFromEditorLocation(sourceFile, lineNumber);
-    updateMapObjectSelectionFromEditorLocation(sourceFile, lineNumber);
-    inspectorSummary_->setText(tr("%1: %2\nSource: %3:%4")
-                                   .arg(inspectorObjectKindLabel(category))
-                                   .arg(newName)
-                                   .arg(QDir(projectRootPath_).relativeFilePath(sourceFile))
-                                   .arg(lineNumber));
-    inspectorValidationLabel_->setText(tr("Updated the selected structure item in the source document."));
-    inspectorApplyButton_->setEnabled(false);
+    sidebarStructureButton_ = new QToolButton(activityBar);
+    sidebarStructureButton_->setIcon(structureIcon);
+    sidebarStructureButton_->setToolTip(tr("Structure"));
+    sidebarStructureButton_->setCheckable(true);
+    connect(sidebarStructureButton_, &QToolButton::clicked, this, [this]() {
+        if (sidebarCollapsed_) {
+            setSidebarCollapsed(false);
+            setSidebarPane(SidebarPane::StructureBrowser);
+            return;
+        }
+        if (activeSidebarPane_ == SidebarPane::StructureBrowser) {
+            setSidebarCollapsed(true);
+            return;
+        }
+        setSidebarPane(SidebarPane::StructureBrowser);
+    });
+    activityLayout->addWidget(sidebarStructureButton_);
+
+    sidebarMapButton_ = new QToolButton(activityBar);
+    sidebarMapButton_->setIcon(mapIcon);
+    sidebarMapButton_->setToolTip(tr("Map"));
+    sidebarMapButton_->setCheckable(true);
+    connect(sidebarMapButton_, &QToolButton::clicked, this, [this]() {
+        if (sidebarCollapsed_) {
+            setSidebarCollapsed(false);
+            setSidebarPane(SidebarPane::MapEditor);
+            return;
+        }
+        if (activeSidebarPane_ == SidebarPane::MapEditor) {
+            setSidebarCollapsed(true);
+            return;
+        }
+        setSidebarPane(SidebarPane::MapEditor);
+    });
+    activityLayout->addWidget(sidebarMapButton_);
+
+    sidebarConsoleButton_ = new QToolButton(activityBar);
+    sidebarConsoleButton_->setIcon(consoleIcon);
+    sidebarConsoleButton_->setToolTip(tr("Console"));
+    sidebarConsoleButton_->setCheckable(true);
+    connect(sidebarConsoleButton_, &QToolButton::clicked, this, [this]() {
+        if (sidebarCollapsed_) {
+            setSidebarCollapsed(false);
+            setSidebarPane(SidebarPane::Console);
+            return;
+        }
+        if (activeSidebarPane_ == SidebarPane::Console) {
+            setSidebarCollapsed(true);
+            return;
+        }
+        setSidebarPane(SidebarPane::Console);
+    });
+    activityLayout->addWidget(sidebarConsoleButton_);
+    activityLayout->addStretch(1);
+
+    sidebarContentContainer_ = new QWidget(container);
+    auto *sidebarContentLayout = new QVBoxLayout(sidebarContentContainer_);
+    sidebarContentLayout->setContentsMargins(0, 0, 0, 0);
+    sidebarContentLayout->setSpacing(0);
+
+    sidebarPages_ = new QStackedWidget(sidebarContentContainer_);
+    sidebarContentLayout->addWidget(sidebarPages_, 1);
+
+    containerLayout->addWidget(activityBar, 0);
+    containerLayout->addWidget(sidebarContentContainer_, 1);
+
+    buildProjectBrowser();
+
+    auto *structurePage = new QWidget(sidebarPages_);
+    auto *structureLayout = new QVBoxLayout(structurePage);
+    structureLayout->setContentsMargins(12, 12, 12, 12);
+    structureLayout->setSpacing(8);
+
+    mapEditorSidebarSplitter_ = new QSplitter(Qt::Vertical, structurePage);
+    mapEditorSidebarSplitter_->setChildrenCollapsible(false);
+
+    structureTree_ = new QTreeView(mapEditorSidebarSplitter_);
+    structureTree_->setModel(structureModel_);
+    structureTree_->setRootIsDecorated(true);
+    structureTree_->setAnimated(true);
+    structureTree_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    structureTree_->setSelectionMode(QAbstractItemView::SingleSelection);
+    structureTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    structureTree_->setAlternatingRowColors(true);
+    connect(structureTree_->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex &current, const QModelIndex &previous) {
+        handleStructureSelectionChanged(current, previous, structureTree_);
+    });
+    connect(structureTree_, &QTreeView::activated, this, [this](const QModelIndex &index) {
+        handleStructureItemActivated(index, structureTree_);
+    });
+
+    mapEditorSidebarSplitter_->addWidget(structureTree_);
+    structureLayout->addWidget(mapEditorSidebarSplitter_, 1);
+    sidebarPages_->addWidget(structurePage);
+
+    buildInspector();
+
+    auto *mapObjectsPage = new QWidget(sidebarPages_);
+    auto *mapObjectsLayout = new QVBoxLayout(mapObjectsPage);
+    mapObjectsLayout->setContentsMargins(12, 12, 12, 12);
+    mapObjectsLayout->setSpacing(8);
+
+    auto *mapObjectsDescription = new QLabel(tr("Objects in the active TH2 file are grouped by scrap."), mapObjectsPage);
+    mapObjectsDescription->setWordWrap(true);
+    mapObjectsLayout->addWidget(mapObjectsDescription);
+
+    mapObjectsTree_ = new QTreeView(mapObjectsPage);
+    mapObjectsTree_->setModel(mapObjectsModel_);
+    mapObjectsTree_->setRootIsDecorated(true);
+    mapObjectsTree_->setAnimated(true);
+    mapObjectsTree_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    mapObjectsTree_->setSelectionMode(QAbstractItemView::SingleSelection);
+    mapObjectsTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    mapObjectsTree_->setAlternatingRowColors(true);
+    connect(mapObjectsTree_->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex &current, const QModelIndex &previous) {
+        handleStructureSelectionChanged(current, previous, mapObjectsTree_);
+    });
+    connect(mapObjectsTree_, &QTreeView::activated, this, [this](const QModelIndex &index) {
+        handleStructureItemActivated(index, mapObjectsTree_);
+    });
+
+    auto *mapPageSplitter = new QSplitter(Qt::Vertical, mapObjectsPage);
+    mapPageSplitter->setChildrenCollapsible(false);
+    mapPageSplitter->addWidget(mapObjectsTree_);
+
+    auto *backgroundContainer = new QWidget(mapPageSplitter);
+    auto *backgroundContainerLayout = new QVBoxLayout(backgroundContainer);
+    backgroundContainerLayout->setContentsMargins(0, 0, 0, 0);
+    backgroundContainerLayout->setSpacing(0);
+    buildMapBackgroundPanel(backgroundContainer, backgroundContainerLayout);
+
+    mapPageSplitter->addWidget(backgroundContainer);
+    mapPageSplitter->setStretchFactor(0, 3);
+    mapPageSplitter->setStretchFactor(1, 2);
+    mapPageSplitter->setCollapsible(1, true);
+
+    mapObjectsLayout->addWidget(mapPageSplitter, 1);
+    sidebarPages_->addWidget(mapObjectsPage);
+
+    consoleSidebarPage_ = new QWidget(sidebarPages_);
+    consoleSidebarPageLayout_ = new QVBoxLayout(consoleSidebarPage_);
+    consoleSidebarPageLayout_->setContentsMargins(12, 12, 12, 12);
+    consoleSidebarPageLayout_->setSpacing(8);
+    sidebarPages_->addWidget(consoleSidebarPage_);
+
+    structureDock_->setWidget(container);
+    addDockWidget(Qt::LeftDockWidgetArea, structureDock_);
+    updateSidebarCollapseButton();
+    setSidebarPane(activeSidebarPane_);
+    refreshMapBackgroundPanel();
 }
 
-void MainWindow::openSelectedStructureSource()
+void MainWindow::setSidebarPane(SidebarPane pane)
 {
-    if (!selectedStructureIndex_.isValid()) {
+    if (sidebarPages_ == nullptr) {
         return;
     }
 
-    QModelIndex sourceIndex = selectedStructureIndex_;
-    if (isStructureContainerIndex(sourceIndex)) {
-        sourceIndex = firstStructureSourceIndex(sourceIndex);
+    if (pane == SidebarPane::MapEditor && !currentDocumentSupportsMapPane()) {
+        pane = lastNonMapSidebarPane_;
     }
 
-    if (!sourceIndex.isValid()) {
-        return;
+    activeSidebarPane_ = pane;
+    if (pane != SidebarPane::MapEditor) {
+        lastNonMapSidebarPane_ = pane;
     }
 
-    const QString sourceFile = sourceIndex.data(SourceFileRole).toString();
-    const int lineNumber = sourceIndex.data(LineNumberRole).toInt();
-    if (sourceFile.isEmpty()) {
-        return;
+    sidebarPages_->setCurrentIndex(static_cast<int>(pane));
+    if (sidebarFilesButton_ != nullptr) {
+        sidebarFilesButton_->setChecked(pane == SidebarPane::FileBrowser);
     }
-
-    QWidget *tabWidget = nullptr;
-    if (QFileInfo(sourceFile).suffix().toLower() == QStringLiteral("th2")) {
-        tabWidget = openMapEditorTab(sourceFile);
-    } else {
-        tabWidget = openTextTab(sourceFile);
+    if (sidebarStructureButton_ != nullptr) {
+        sidebarStructureButton_->setChecked(pane == SidebarPane::StructureBrowser);
     }
-
-    if (tabWidget != nullptr && lineNumber > 0) {
-        documentGoToLineForWidget(tabWidget, lineNumber);
+    if (sidebarMapButton_ != nullptr) {
+        sidebarMapButton_->setChecked(pane == SidebarPane::MapEditor);
     }
-}
-
-void MainWindow::updateMapEditorActionState()
-{
-    const bool hasTh2Document = currentDocumentSupportsMapPane();
-
-    if (openMapEditorAction_ != nullptr) {
-        openMapEditorAction_->setEnabled(hasTh2Document);
+    if (sidebarConsoleButton_ != nullptr) {
+        sidebarConsoleButton_->setChecked(pane == SidebarPane::Console);
     }
-
-    if (sidebarModeTabs_ != nullptr) {
-        const int mapPaneIndex = static_cast<int>(SidebarPane::MapEditor);
-        sidebarModeTabs_->setTabEnabled(mapPaneIndex, hasTh2Document);
-
-        if (!hasTh2Document && activeSidebarPane_ == SidebarPane::MapEditor) {
-            setSidebarPane(lastNonMapSidebarPane_);
-            return;
-        }
-
-        updateSidebarModeTabIcons(sidebarModeTabs_, static_cast<int>(activeSidebarPane_));
-    }
-}
-
-bool MainWindow::currentDocumentSupportsMapPane() const
-{
-    QWidget *tabWidget = currentDocumentWidget();
-    return tabWidget != nullptr && documentPathForWidget(tabWidget).endsWith(QStringLiteral(".th2"), Qt::CaseInsensitive);
 }
 
 void MainWindow::rememberSidebarWidth()
@@ -638,156 +408,60 @@ void MainWindow::restoreSidebarWidth()
     });
 }
 
-QModelIndex MainWindow::firstStructureSourceIndex(const QModelIndex &index) const
+void MainWindow::setSidebarCollapsed(bool collapsed)
 {
-    if (!index.isValid() || index.model() == nullptr) {
-        return QModelIndex();
-    }
-
-    if (!index.data(SourceFileRole).toString().isEmpty() && index.data(LineNumberRole).toInt() > 0) {
-        return index;
-    }
-
-    const QAbstractItemModel *model = index.model();
-    const int rowCount = model->rowCount(index);
-    for (int row = 0; row < rowCount; ++row) {
-        const QModelIndex childIndex = model->index(row, 0, index);
-        const QModelIndex sourceIndex = firstStructureSourceIndex(childIndex);
-        if (sourceIndex.isValid()) {
-            return sourceIndex;
-        }
-    }
-
-    return QModelIndex();
-}
-
-bool MainWindow::isStructureContainerIndex(const QModelIndex &index) const
-{
-    if (!index.isValid()) {
-        return false;
-    }
-
-    const QString category = index.data(CategoryRole).toString();
-    const QString sourceFile = index.data(SourceFileRole).toString();
-    const int lineNumber = index.data(LineNumberRole).toInt();
-    return category == QStringLiteral("Project") || sourceFile.isEmpty() || lineNumber <= 0;
-}
-
-QModelIndex MainWindow::findStructureIndexForSourceLocation(const QString &filePath, int lineNumber) const
-{
-    if (structureModel_ == nullptr || filePath.isEmpty() || lineNumber <= 0) {
-        return QModelIndex();
-    }
-
-    const QString canonicalPath = QFileInfo(filePath).canonicalFilePath().isEmpty()
-                                      ? QFileInfo(filePath).absoluteFilePath()
-                                      : QFileInfo(filePath).canonicalFilePath();
-
-    QModelIndex bestIndex;
-    int bestLineNumber = -1;
-
-    std::function<void(const QModelIndex &)> visitNode = [&](const QModelIndex &parentIndex) {
-        const int rowCount = structureModel_->rowCount(parentIndex);
-        for (int row = 0; row < rowCount; ++row) {
-            const QModelIndex childIndex = structureModel_->index(row, 0, parentIndex);
-            if (!childIndex.isValid()) {
-                continue;
-            }
-
-            const QString childSourceFile = childIndex.data(SourceFileRole).toString();
-            const QString candidateSourceFile = QFileInfo(childSourceFile).canonicalFilePath().isEmpty()
-                                                    ? QFileInfo(childSourceFile).absoluteFilePath()
-                                                    : QFileInfo(childSourceFile).canonicalFilePath();
-            const int candidateLineNumber = childIndex.data(LineNumberRole).toInt();
-
-            if (candidateSourceFile == canonicalPath && candidateLineNumber > 0 && candidateLineNumber <= lineNumber && candidateLineNumber >= bestLineNumber) {
-                bestIndex = childIndex;
-                bestLineNumber = candidateLineNumber;
-            }
-
-            visitNode(childIndex);
-        }
-    };
-
-    visitNode(QModelIndex());
-    return bestIndex;
-}
-
-void MainWindow::updateStructureSelectionFromEditorLocation(const QString &filePath, int lineNumber)
-{
-    const QModelIndex targetIndex = findStructureIndexForSourceLocation(filePath, lineNumber);
-    if (!targetIndex.isValid() || targetIndex == structureTree_->currentIndex()) {
+    if (structureDock_ == nullptr) {
         return;
     }
 
-    if (structureTree_->selectionModel() != nullptr) {
-        QSignalBlocker blocker(structureTree_->selectionModel());
-        structureTree_->setCurrentIndex(targetIndex);
+    if (collapsed == sidebarCollapsed_) {
+        updateSidebarCollapseButton();
+        return;
+    }
+
+    sidebarCollapsed_ = collapsed;
+    QWidget *contentWidget = sidebarContentContainer_;
+    if (collapsed) {
+        rememberSidebarWidth();
+        if (contentWidget != nullptr) {
+            contentWidget->setVisible(false);
+        }
+
+        QTimer::singleShot(0, this, [this]() {
+            if (structureDock_ == nullptr || !structureDock_->isVisible()) {
+                return;
+            }
+
+            resizeDocks({structureDock_}, {SidebarCollapsedRailWidth}, Qt::Horizontal);
+        });
     } else {
-        structureTree_->setCurrentIndex(targetIndex);
-    }
-
-    structureTree_->scrollTo(targetIndex, QAbstractItemView::PositionAtCenter);
-}
-
-QModelIndex MainWindow::findMapObjectIndexForSourceLocation(const QString &filePath, int lineNumber) const
-{
-    if (mapObjectsModel_ == nullptr || filePath.isEmpty() || lineNumber <= 0) {
-        return QModelIndex();
-    }
-
-    const QString canonicalPath = QFileInfo(filePath).canonicalFilePath().isEmpty()
-                                      ? QFileInfo(filePath).absoluteFilePath()
-                                      : QFileInfo(filePath).canonicalFilePath();
-
-    QModelIndex bestIndex;
-    int bestLineNumber = -1;
-
-    std::function<void(const QModelIndex &)> visitNode = [&](const QModelIndex &parentIndex) {
-        const int rowCount = mapObjectsModel_->rowCount(parentIndex);
-        for (int row = 0; row < rowCount; ++row) {
-            const QModelIndex childIndex = mapObjectsModel_->index(row, 0, parentIndex);
-            if (!childIndex.isValid()) {
-                continue;
-            }
-
-            const QString childSourceFile = childIndex.data(SourceFileRole).toString();
-            const QString candidateSourceFile = QFileInfo(childSourceFile).canonicalFilePath().isEmpty()
-                                                    ? QFileInfo(childSourceFile).absoluteFilePath()
-                                                    : QFileInfo(childSourceFile).canonicalFilePath();
-            const int candidateLineNumber = childIndex.data(LineNumberRole).toInt();
-
-            if (candidateSourceFile == canonicalPath && candidateLineNumber > 0 && candidateLineNumber <= lineNumber && candidateLineNumber >= bestLineNumber) {
-                bestIndex = childIndex;
-                bestLineNumber = candidateLineNumber;
-            }
-
-            visitNode(childIndex);
+        if (contentWidget != nullptr) {
+            contentWidget->setVisible(true);
         }
-    };
+        restoreSidebarWidth();
+    }
 
-    visitNode(QModelIndex());
-    return bestIndex;
+    updateSidebarCollapseButton();
 }
 
-void MainWindow::updateMapObjectSelectionFromEditorLocation(const QString &filePath, int lineNumber)
+void MainWindow::updateSidebarCollapseButton()
 {
-    if (mapObjectsTree_ == nullptr) {
+    if (sidebarCollapseButton_ == nullptr || structureDock_ == nullptr) {
         return;
     }
 
-    const QModelIndex targetIndex = findMapObjectIndexForSourceLocation(filePath, lineNumber);
-    if (!targetIndex.isValid() || targetIndex == mapObjectsTree_->currentIndex()) {
-        return;
+    if (auto *titleBar = dynamic_cast<DockTitleBarWidget *>(structureDock_->titleBarWidget())) {
+        titleBar->setCollapsedVisual(sidebarCollapsed_);
     }
 
-    if (mapObjectsTree_->selectionModel() != nullptr) {
-        QSignalBlocker blocker(mapObjectsTree_->selectionModel());
-        mapObjectsTree_->setCurrentIndex(targetIndex);
+    const Qt::DockWidgetArea area = dockWidgetArea(structureDock_);
+    Qt::ArrowType arrowType = Qt::LeftArrow;
+    if (sidebarCollapsed_) {
+        arrowType = area == Qt::RightDockWidgetArea ? Qt::LeftArrow : Qt::RightArrow;
     } else {
-        mapObjectsTree_->setCurrentIndex(targetIndex);
+        arrowType = area == Qt::RightDockWidgetArea ? Qt::RightArrow : Qt::LeftArrow;
     }
 
-    mapObjectsTree_->scrollTo(targetIndex, QAbstractItemView::PositionAtCenter);
-    updateInspectorFromStructureItem(targetIndex);
+    sidebarCollapseButton_->setArrowType(arrowType);
+    sidebarCollapseButton_->setToolTip(sidebarCollapsed_ ? tr("Expand sidebar") : tr("Collapse sidebar"));
 }

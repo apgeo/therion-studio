@@ -1,0 +1,530 @@
+#include "MapEditorSceneSupport.h"
+#include "MapEditorSceneInternals.h"
+
+#include <QFont>
+#include <QGraphicsScene>
+#include <QPainterPath>
+
+#include "../core/TherionDocumentParser.h"
+
+namespace TherionStudio {
+
+QString mapWorkspaceHelpHtml()
+{
+    return QStringLiteral(
+        "<h3>Map Workspace</h3>"
+        "<p>The map canvas renders parsed TH2 geometry and supports direct point-handle edits where source coordinates are available.</p>"
+        "<h4>Toolbar</h4>"
+        "<ul>"
+        "<li><strong>Select</strong> keeps focus on selecting and moving draft objects.</li>"
+        "<li><strong>Point</strong>, <strong>Line</strong>, and <strong>Area</strong> create draft geometry in the scene.</li>"
+        "<li><strong>Insert Scrap</strong> appends a new scrap block to the source document and reparses the scene.</li>"
+        "<li><strong>Complete Draft</strong> marks the selected draft geometry as finished.</li>"
+        "<li><strong>Undo</strong> and <strong>Redo</strong> follow the same command stack as source edits.</li>"
+        "<li><strong>Fit</strong> recenters the geometry preview.</li>"
+        "<li><strong>Fit + BG</strong> fits the viewport to geometry plus all loaded background image layers.</li>"
+        "</ul>"
+        "<p>Background image layers are managed from the Map sidebar, including layer order, visibility, position, opacity, and gamma.</p>"
+        "<p>When present, <code>##XTHERION## xth_me_image_insert</code> metadata is used to auto-load referenced background images.</p>"
+        "<p>Drag a parsed point handle to rewrite source coordinates. Select a draft item to move or toggle it.</p>");
+}
+
+QString mapEntryCategoryForLine(const TherionParsedLine &parsedLine)
+{
+    if (parsedLine.tokens.isEmpty()) {
+        return QString();
+    }
+
+    const QString directive = parsedLine.tokens.first().toLower();
+    const QString secondToken = parsedLine.tokens.value(1).toLower();
+
+    if (directive == QStringLiteral("survey")) {
+        return QObject::tr("Survey");
+    }
+    if (directive == QStringLiteral("map")) {
+        return QObject::tr("Map");
+    }
+    if (directive == QStringLiteral("scrap")) {
+        return QObject::tr("Scrap");
+    }
+    if (directive == QStringLiteral("line")) {
+        return QObject::tr("Line");
+    }
+    if (directive == QStringLiteral("area")) {
+        return QObject::tr("Area");
+    }
+    if (directive == QStringLiteral("station")) {
+        return QObject::tr("Station");
+    }
+    if (directive == QStringLiteral("point") && secondToken == QStringLiteral("station")) {
+        return QObject::tr("Station");
+    }
+    if (directive == QStringLiteral("point")) {
+        return QObject::tr("Point");
+    }
+
+    return QString();
+}
+
+QString mapEntryTitleForLine(const TherionParsedLine &parsedLine)
+{
+    if (parsedLine.tokens.isEmpty()) {
+        return QString();
+    }
+
+    const QString directive = parsedLine.tokens.first().toLower();
+    if (directive == QStringLiteral("point") && parsedLine.tokens.size() >= 3 && parsedLine.tokens.value(1).toLower() == QStringLiteral("station")) {
+        return parsedLine.tokens.value(2);
+    }
+
+    if (parsedLine.tokens.size() > 1) {
+        return parsedLine.tokens.value(1);
+    }
+
+    return parsedLine.tokens.first();
+}
+
+QString mapEntrySubtitleForLine(const TherionParsedLine &parsedLine)
+{
+    if (parsedLine.tokens.size() <= 1) {
+        return parsedLine.rawText.trimmed();
+    }
+
+    QStringList remainder = parsedLine.tokens.mid(1);
+    if (parsedLine.tokens.first().toLower() == QStringLiteral("point") && parsedLine.tokens.value(1).toLower() == QStringLiteral("station") && parsedLine.tokens.size() > 2) {
+        remainder = parsedLine.tokens.mid(2);
+    }
+
+    return remainder.join(QStringLiteral(" "));
+}
+
+QColor mapEntryAccentForCategory(const QString &category)
+{
+    if (category == QObject::tr("Survey")) {
+        return QColor(QStringLiteral("#5aa9ff"));
+    }
+    if (category == QObject::tr("Map")) {
+        return QColor(QStringLiteral("#8f8bff"));
+    }
+    if (category == QObject::tr("Scrap")) {
+        return QColor(QStringLiteral("#4dd6a8"));
+    }
+    if (category == QObject::tr("Line")) {
+        return QColor(QStringLiteral("#ffb15a"));
+    }
+    if (category == QObject::tr("Area")) {
+        return QColor(QStringLiteral("#ff7f8f"));
+    }
+    if (category == QObject::tr("Station")) {
+        return QColor(QStringLiteral("#ffd86b"));
+    }
+    if (category == QObject::tr("Point")) {
+        return QColor(QStringLiteral("#7ed0ff"));
+    }
+
+    return QColor(QStringLiteral("#7f8ca3"));
+}
+
+QVector<MapSceneEntry> collectMapSceneEntries(const QVector<TherionParsedLine> &parsedLines)
+{
+    QVector<MapSceneEntry> entries;
+    entries.reserve(parsedLines.size());
+
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        const QString category = mapEntryCategoryForLine(parsedLine);
+        if (category.isEmpty()) {
+            continue;
+        }
+
+        MapSceneEntry entry;
+        entry.lineNumber = parsedLine.lineNumber;
+        entry.category = category;
+        entry.title = mapEntryTitleForLine(parsedLine);
+        entry.subtitle = mapEntrySubtitleForLine(parsedLine);
+        entries.append(entry);
+    }
+
+    return entries;
+}
+
+void renderMapWorkspaceScene(QGraphicsScene *scene,
+                             const QString &documentPath,
+                             const QVector<MapSceneEntry> &entries,
+                             const QVector<MapGeometryFeature> &geometryFeatures,
+                             QHash<int, QGraphicsRectItem *> *mapItemsByLine,
+                             const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,
+                             const std::function<void(int, bool, bool)> &recordCardVisibility,
+                             const std::function<void(int, const QPointF &, const QPointF &)> &recordPointGeometryMove)
+{
+    Q_UNUSED(documentPath);
+    Q_UNUSED(recordCardMove);
+    Q_UNUSED(recordCardVisibility);
+
+    if (scene == nullptr) {
+        return;
+    }
+
+    if (mapItemsByLine != nullptr) {
+        mapItemsByLine->clear();
+    }
+
+    const QRectF sceneFrame(0, 0, 980, 760);
+    scene->setSceneRect(sceneFrame);
+    scene->addRect(QRectF(32, 32, sceneFrame.width() - 64, sceneFrame.height() - 64), QPen(QColor(QStringLiteral("#596477")), 1.5), QBrush(QColor(QStringLiteral("#232833"))));
+
+    QFont headerFont(QStringLiteral("Georgia"), 18, QFont::Bold);
+    auto *titleItem = scene->addText(QObject::tr("TH2 Map Workspace"), headerFont);
+    titleItem->setDefaultTextColor(QColor(QStringLiteral("#e2e9f3")));
+    titleItem->setPos(56, 48);
+
+    auto *summaryItem = scene->addText(QObject::tr("%1 map object(s) and %2 geometry feature(s) parsed from the current TH2 source.").arg(entries.size()).arg(geometryFeatures.size()), QFont(QStringLiteral("Menlo"), 11));
+    summaryItem->setDefaultTextColor(QColor(QStringLiteral("#b4bfd0")));
+    summaryItem->setPos(56, 84);
+
+    const QRectF geometryCanvas(56.0, 132.0, sceneFrame.width() - 112.0, 260.0);
+    scene->addRect(geometryCanvas, QPen(QColor(QStringLiteral("#d8dde5")), 1.2), QBrush(QColor(QStringLiteral("#ffffff"))));
+
+    auto *geometryTitle = scene->addText(QObject::tr("Rendered TH2 geometry preview"), QFont(QStringLiteral("Menlo"), 12, QFont::Bold));
+    geometryTitle->setDefaultTextColor(QColor(QStringLiteral("#111418")));
+    geometryTitle->setPos(geometryCanvas.left() + 16.0, geometryCanvas.top() + 12.0);
+
+    auto *geometrySubtitle = scene->addText(QObject::tr("Points, lines, and areas are drawn from parsed source geometry when available."), QFont(QStringLiteral("Menlo"), 10));
+    geometrySubtitle->setDefaultTextColor(QColor(QStringLiteral("#7b8392")));
+    geometrySubtitle->setPos(geometryCanvas.left() + 16.0, geometryCanvas.top() + 36.0);
+
+    const QRectF previewBounds = geometryCanvas.adjusted(24.0, 64.0, -24.0, -24.0);
+    const QRectF sourceBounds = geometryBoundsForFeatures(geometryFeatures);
+    const qreal mapScale = sceneCoordsScaleFactor(sourceBounds, previewBounds);
+    const qreal pointRadius = qBound(2.0, 4.6 * mapScale, 4.6);
+    const qreal vertexRadius = qBound(1.4, 3.0 * mapScale, 3.0);
+    const qreal thickLineWidth = qBound(1.2, 3.0 * mapScale, 3.4);
+    const qreal detailLineWidth = qBound(0.8, 1.2 * mapScale, 1.3);
+    const bool compactLabels = geometryFeatures.size() > 24;
+
+    for (int index = 0; index < 6; ++index) {
+        const qreal y = previewBounds.top() + (index * previewBounds.height() / 5.0);
+        scene->addLine(previewBounds.left(), y, previewBounds.right(), y, QPen(QColor(QStringLiteral("#edf0f4")), 1.0, Qt::SolidLine));
+    }
+    for (int index = 0; index < 8; ++index) {
+        const qreal x = previewBounds.left() + (index * previewBounds.width() / 7.0);
+        scene->addLine(x, previewBounds.top(), x, previewBounds.bottom(), QPen(QColor(QStringLiteral("#edf0f4")), 1.0, Qt::SolidLine));
+    }
+
+    if (geometryFeatures.isEmpty()) {
+        auto *emptyGeometryItem = scene->addText(QObject::tr("No parseable point, line, or area geometry was found in this document yet."), QFont(QStringLiteral("Menlo"), 11));
+        emptyGeometryItem->setDefaultTextColor(QColor(QStringLiteral("#92a1b4")));
+        emptyGeometryItem->setPos(previewBounds.left() + 16.0, previewBounds.top() + 16.0);
+    } else {
+        for (const MapGeometryFeature &feature : geometryFeatures) {
+            switch (feature.kind) {
+            case MapGeometryFeature::Kind::Point: {
+                if (!feature.hasAnchor) {
+                    break;
+                }
+
+                const QPointF previewPoint = mapGeometryPointToPreview(feature.anchor, sourceBounds, previewBounds);
+                auto *pointItem = new MapEditablePointItem(feature.lineNumber, feature.anchor, sourceBounds, previewBounds);
+                pointItem->setRect(QRectF(-pointRadius, -pointRadius, pointRadius * 2.0, pointRadius * 2.0));
+                pointItem->setPen(QPen(QColor(QStringLiteral("#101010")), 1.0));
+                pointItem->setBrush(QBrush(QColor(QStringLiteral("#101010"))));
+                if (feature.hasCoordinateTransform) {
+                    const QTransform mapToSource = feature.mapToSourceTransform;
+                    pointItem->setDisplayToSourceMapper([mapToSource](const QPointF &displayPoint) {
+                        return mapToSource.map(displayPoint);
+                    });
+                }
+                pointItem->setMoveCommittedCallback(recordPointGeometryMove);
+                scene->addItem(pointItem);
+                pointItem->setZValue(3.0);
+
+                if (feature.stationPoint) {
+                    QPainterPath markerPath;
+                    markerPath.moveTo(previewPoint + QPointF(0.0, -12.0));
+                    markerPath.lineTo(previewPoint + QPointF(10.0, 6.0));
+                    markerPath.lineTo(previewPoint + QPointF(-10.0, 6.0));
+                    markerPath.closeSubpath();
+
+                    auto *triangle = scene->addPath(markerPath, QPen(QColor(QStringLiteral("#ff4f3d")), 1.2), QBrush(QColor(QStringLiteral("#ff4f3d"))));
+                    triangle->setZValue(3.5);
+                }
+
+                if (feature.stationPoint || !compactLabels) {
+                    auto *label = scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold));
+                    label->setDefaultTextColor(QColor(QStringLiteral("#9d9d9d")));
+                    label->setPos(previewPoint + QPointF(10.0, -18.0));
+                    label->setZValue(4.0);
+                }
+                break;
+            }
+            case MapGeometryFeature::Kind::Line: {
+                if (feature.vertices.size() < 2) {
+                    break;
+                }
+
+                QPainterPath path;
+                const QPointF firstPoint = mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds);
+                path.moveTo(firstPoint);
+                for (int vertexIndex = 1; vertexIndex < feature.vertices.size(); ++vertexIndex) {
+                    path.lineTo(mapGeometryPointToPreview(feature.vertices.at(vertexIndex), sourceBounds, previewBounds));
+                }
+
+                auto *lineItem = scene->addPath(path, QPen(QColor(QStringLiteral("#222222")), thickLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                lineItem->setZValue(2.5);
+                auto *detailItem = scene->addPath(path, QPen(QColor(QStringLiteral("#2b2b2b")), detailLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                detailItem->setZValue(3.0);
+
+                for (const QPointF &vertex : feature.vertices) {
+                    const QPointF previewPoint = mapGeometryPointToPreview(vertex, sourceBounds, previewBounds);
+                    auto *vertexItem = scene->addEllipse(QRectF(previewPoint.x() - vertexRadius,
+                                                                previewPoint.y() - vertexRadius,
+                                                                vertexRadius * 2.0,
+                                                                vertexRadius * 2.0),
+                                                         QPen(QColor(QStringLiteral("#101010")), 0.8),
+                                                         QBrush(QColor(QStringLiteral("#101010"))));
+                    vertexItem->setZValue(4.0);
+                }
+
+                if (feature.stationPoint) {
+                    const QPointF headPoint = mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds);
+                    QPainterPath markerPath;
+                    markerPath.moveTo(headPoint + QPointF(0.0, -12.0));
+                    markerPath.lineTo(headPoint + QPointF(10.0, 6.0));
+                    markerPath.lineTo(headPoint + QPointF(-10.0, 6.0));
+                    markerPath.closeSubpath();
+
+                    auto *triangle = scene->addPath(markerPath, QPen(QColor(QStringLiteral("#ff4f3d")), 1.2), QBrush(QColor(QStringLiteral("#ff4f3d"))));
+                    triangle->setZValue(3.5);
+                }
+
+                if (!compactLabels) {
+                    auto *label = scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold));
+                    label->setDefaultTextColor(QColor(QStringLiteral("#9d9d9d")));
+                    label->setPos(mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds) + QPointF(10.0, -18.0));
+                    label->setZValue(4.0);
+                }
+                break;
+            }
+            case MapGeometryFeature::Kind::Area: {
+                if (feature.vertices.size() < 3) {
+                    break;
+                }
+
+                QPainterPath path;
+                const QPointF firstPoint = mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds);
+                path.moveTo(firstPoint);
+                for (int vertexIndex = 1; vertexIndex < feature.vertices.size(); ++vertexIndex) {
+                    path.lineTo(mapGeometryPointToPreview(feature.vertices.at(vertexIndex), sourceBounds, previewBounds));
+                }
+                path.closeSubpath();
+
+                auto *fillItem = scene->addPath(path, QPen(QColor(QStringLiteral("#222222")), qBound(1.0, 2.0 * mapScale, 2.4), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), QBrush(QColor(0, 0, 0, 18)));
+                fillItem->setZValue(2.0);
+
+                if (!compactLabels) {
+                    auto *label = scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold));
+                    label->setDefaultTextColor(QColor(QStringLiteral("#9d9d9d")));
+                    label->setPos(mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds) + QPointF(10.0, -18.0));
+                    label->setZValue(4.0);
+                }
+                break;
+            }
+            }
+        }
+    }
+
+    if (entries.isEmpty()) {
+        auto *emptyItem = scene->addText(QObject::tr("No Therion map objects were detected in this document."), QFont(QStringLiteral("Menlo"), 12));
+        emptyItem->setDefaultTextColor(QColor(QStringLiteral("#9ca7b6")));
+        emptyItem->setPos(56, geometryCanvas.bottom() + 28.0);
+    }
+}
+
+QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedLine> &parsedLines)
+{
+    QVector<MapGeometryFeature> features;
+    MapGeometryFeature currentFeature;
+    bool inLineBlock = false;
+    bool inAreaBlock = false;
+    QVector<CoordinateTransform> scrapTransformStack;
+    CoordinateTransform activeBlockTransform;
+
+    auto activeTransform = [&]() -> CoordinateTransform {
+        if (scrapTransformStack.isEmpty()) {
+            return CoordinateTransform{};
+        }
+        return scrapTransformStack.last();
+    };
+
+    auto mapFromSource = [](const QPointF &sourcePoint, const CoordinateTransform &transform) -> QPointF {
+        if (!transform.valid) {
+            return sourcePoint;
+        }
+        return transform.sourceToMap.map(sourcePoint);
+    };
+
+    auto mapVerticesFromSource = [&](const QVector<QPointF> &sourceVertices, const CoordinateTransform &transform) -> QVector<QPointF> {
+        if (!transform.valid) {
+            return sourceVertices;
+        }
+
+        QVector<QPointF> mappedVertices;
+        mappedVertices.reserve(sourceVertices.size());
+        for (const QPointF &sourceVertex : sourceVertices) {
+            mappedVertices.append(transform.sourceToMap.map(sourceVertex));
+        }
+        return mappedVertices;
+    };
+
+    auto flushCurrentFeature = [&]() {
+        if (currentFeature.kind == MapGeometryFeature::Kind::Point) {
+            if (currentFeature.hasAnchor) {
+                features.append(currentFeature);
+            }
+        } else if (currentFeature.kind == MapGeometryFeature::Kind::Line) {
+            if (currentFeature.vertices.size() >= 2) {
+                features.append(currentFeature);
+            }
+        } else if (currentFeature.kind == MapGeometryFeature::Kind::Area) {
+            if (currentFeature.vertices.size() >= 3) {
+                features.append(currentFeature);
+            }
+        }
+
+        currentFeature = MapGeometryFeature{};
+        inLineBlock = false;
+        inAreaBlock = false;
+        activeBlockTransform = CoordinateTransform{};
+    };
+
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        const QString directive = parsedLine.directive;
+
+        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("scrap")) {
+            scrapTransformStack.append(coordinateTransformFromScrapScale(parsedLine.tokens));
+            continue;
+        }
+
+        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("endscrap")) {
+            if (!scrapTransformStack.isEmpty()) {
+                scrapTransformStack.removeLast();
+            }
+            continue;
+        }
+
+        if (directive == QStringLiteral("endline")) {
+            if (inLineBlock) {
+                flushCurrentFeature();
+            }
+            continue;
+        }
+
+        if (directive == QStringLiteral("endarea")) {
+            if (inAreaBlock) {
+                flushCurrentFeature();
+            }
+            continue;
+        }
+
+        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("point")) {
+            const QVector<QPointF> pointTokens = pointsFromTokens(parsedLine.tokens.mid(1));
+            if (pointTokens.isEmpty()) {
+                continue;
+            }
+
+            MapGeometryFeature feature;
+            feature.kind = MapGeometryFeature::Kind::Point;
+            feature.lineNumber = parsedLine.lineNumber;
+            feature.category = mapEntryCategoryForLine(parsedLine);
+            feature.label = mapEntryTitleForLine(parsedLine);
+            feature.subtitle = mapEntrySubtitleForLine(parsedLine);
+            feature.accent = mapEntryAccentForCategory(feature.category);
+            const CoordinateTransform transform = activeTransform();
+            feature.sourceAnchor = pointTokens.first();
+            feature.anchor = mapFromSource(feature.sourceAnchor, transform);
+            feature.hasAnchor = true;
+            feature.hasSourceAnchor = true;
+            feature.stationPoint = false;
+            feature.hasCoordinateTransform = transform.valid;
+            if (transform.valid) {
+                feature.sourceToMapTransform = transform.sourceToMap;
+                feature.mapToSourceTransform = transform.mapToSource;
+            }
+            features.append(feature);
+            continue;
+        }
+
+        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("station")) {
+            const QVector<QPointF> pointTokens = pointsFromTokens(parsedLine.tokens.mid(1));
+            if (pointTokens.isEmpty()) {
+                continue;
+            }
+
+            MapGeometryFeature feature;
+            feature.kind = MapGeometryFeature::Kind::Point;
+            feature.lineNumber = parsedLine.lineNumber;
+            feature.category = mapEntryCategoryForLine(parsedLine);
+            feature.label = mapEntryTitleForLine(parsedLine);
+            feature.subtitle = mapEntrySubtitleForLine(parsedLine);
+            feature.accent = mapEntryAccentForCategory(feature.category);
+            const CoordinateTransform transform = activeTransform();
+            feature.sourceAnchor = pointTokens.first();
+            feature.anchor = mapFromSource(feature.sourceAnchor, transform);
+            feature.hasAnchor = true;
+            feature.hasSourceAnchor = true;
+            feature.stationPoint = true;
+            feature.hasCoordinateTransform = transform.valid;
+            if (transform.valid) {
+                feature.sourceToMapTransform = transform.sourceToMap;
+                feature.mapToSourceTransform = transform.mapToSource;
+            }
+            features.append(feature);
+            continue;
+        }
+
+        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("line")) {
+            flushCurrentFeature();
+            currentFeature.kind = MapGeometryFeature::Kind::Line;
+            currentFeature.lineNumber = parsedLine.lineNumber;
+            currentFeature.category = mapEntryCategoryForLine(parsedLine);
+            currentFeature.label = mapEntryTitleForLine(parsedLine);
+            currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
+            currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
+            activeBlockTransform = activeTransform();
+            currentFeature.vertices.append(mapVerticesFromSource(pointsFromTokens(parsedLine.tokens.mid(1)), activeBlockTransform));
+            inLineBlock = true;
+            continue;
+        }
+
+        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("area")) {
+            flushCurrentFeature();
+            currentFeature.kind = MapGeometryFeature::Kind::Area;
+            currentFeature.lineNumber = parsedLine.lineNumber;
+            currentFeature.category = mapEntryCategoryForLine(parsedLine);
+            currentFeature.label = mapEntryTitleForLine(parsedLine);
+            currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
+            currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
+            activeBlockTransform = activeTransform();
+            currentFeature.vertices.append(mapVerticesFromSource(pointsFromTokens(parsedLine.tokens.mid(1)), activeBlockTransform));
+            inAreaBlock = true;
+            continue;
+        }
+
+        if (inLineBlock) {
+            currentFeature.vertices.append(mapVerticesFromSource(pointsFromTokens(parsedLine.tokens), activeBlockTransform));
+            continue;
+        }
+
+        if (inAreaBlock) {
+            currentFeature.vertices.append(mapVerticesFromSource(pointsFromTokens(parsedLine.tokens), activeBlockTransform));
+            continue;
+        }
+    }
+
+    if (inLineBlock || inAreaBlock) {
+        flushCurrentFeature();
+    }
+
+    return features;
+}
+
+} // namespace TherionStudio

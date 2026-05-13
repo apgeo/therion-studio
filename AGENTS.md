@@ -76,5 +76,6 @@ These instructions apply to the whole repository.
 - Update documentation when behavior, architecture, packaging, or verification expectations change.
 - Surface ambiguities instead of silently choosing a product behavior that could ripple through the spec.
 - When code is added later, prefer file and module names that reflect responsibility clearly.
-- Document progress in the repository itself, not only in chat. Update [CHANGELOG.md](CHANGELOG.md) after every change so the current implementation state stays visible in the repo.
-- Keep [CHANGELOG.md](CHANGELOG.md) structured with clear `In progress`, `Next up`, `Risks / blockers` and `Completed` sections when practical.
+- Document progress in the repository itself, not only in chat. Update [WORKLOG.md](WORKLOG.md) after every change so the current implementation state stays visible in the repo.
+- Keep [WORKLOG.md](WORKLOG.md) structured with clear `In progress`, `Next up`, `Risks / blockers` and `Completed` sections when practical.
+- In [WORKLOG.md](WORKLOG.md), cross out completed items using Markdown strikethrough (for example, `~~completed item~~`) instead of deleting them.

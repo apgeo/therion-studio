@@ -1,0 +1,35 @@
+{
+  "styles": {
+    "baseText": {
+      "foreground": "#D4D4D4"
+    },
+    "keyword": {
+      "foreground": "#569CD6",
+      "bold": true
+    },
+    "string": {
+      "foreground": "#CE9178"
+    },
+    "number": {
+      "foreground": "#B5CEA8"
+    },
+    "comment": {
+      "foreground": "#6A9955",
+      "italic": true
+    }
+  },
+  "keywords": [
+    "area",
+    "declare",
+    "end",
+    "equate",
+    "include",
+    "line",
+    "map",
+    "point",
+    "scrap",
+    "survey",
+    "th2",
+    "thconfig"
+  ]
+}

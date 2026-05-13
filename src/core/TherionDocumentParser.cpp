@@ -1,0 +1,229 @@
+#include "TherionDocumentParser.h"
+
+namespace TherionStudio
+{
+namespace
+{
+bool isNumericToken(const QString &token)
+{
+    if (token.isEmpty()) {
+        return false;
+    }
+
+    int index = 0;
+    if (token.at(index) == QLatin1Char('+') || token.at(index) == QLatin1Char('-')) {
+        ++index;
+    }
+
+    bool sawDigit = false;
+    bool sawDecimalPoint = false;
+    for (; index < token.size(); ++index) {
+        const QChar character = token.at(index);
+        if (character.isDigit()) {
+            sawDigit = true;
+            continue;
+        }
+
+        if (character == QLatin1Char('.') && !sawDecimalPoint) {
+            sawDecimalPoint = true;
+            continue;
+        }
+
+        return false;
+    }
+
+    return sawDigit;
+}
+}
+
+TherionParsedLine TherionDocumentParser::parseLine(const QString &line, int lineNumber)
+{
+    TherionParsedLine parsedLine;
+    parsedLine.lineNumber = lineNumber;
+    parsedLine.rawText = line;
+
+    QString currentToken;
+    int currentTokenStart = -1;
+    QString quotedToken;
+    int quotedTokenStart = -1;
+    bool inSingleQuotes = false;
+    bool inDoubleQuotes = false;
+    bool escaped = false;
+
+    auto flushToken = [&parsedLine, &currentToken, &currentTokenStart]() {
+        if (currentToken.isEmpty()) {
+            currentTokenStart = -1;
+            return;
+        }
+
+        parsedLine.tokens.append(currentToken);
+        TherionParsedToken tokenSpan;
+        tokenSpan.start = currentTokenStart;
+        tokenSpan.length = currentToken.length();
+        tokenSpan.text = currentToken;
+        parsedLine.tokenSpans.append(tokenSpan);
+        currentToken.clear();
+        currentTokenStart = -1;
+    };
+
+    auto flushQuotedToken = [&parsedLine, &quotedToken, &quotedTokenStart](int endIndex) {
+        if (quotedTokenStart < 0) {
+            return;
+        }
+
+        parsedLine.tokens.append(quotedToken);
+        TherionParsedToken tokenSpan;
+        tokenSpan.start = quotedTokenStart;
+        tokenSpan.length = qMax(endIndex - quotedTokenStart, 0);
+        tokenSpan.text = quotedToken;
+        tokenSpan.type = TherionTokenType::QuotedString;
+        parsedLine.tokenSpans.append(tokenSpan);
+        quotedToken.clear();
+        quotedTokenStart = -1;
+    };
+
+    for (int index = 0; index < line.length(); ++index) {
+        const QChar character = line.at(index);
+
+        if (escaped) {
+            if (inSingleQuotes || inDoubleQuotes) {
+                quotedToken.append(character);
+            } else {
+                if (currentTokenStart < 0) {
+                    currentTokenStart = index - 1;
+                }
+                currentToken.append(character);
+            }
+
+            escaped = false;
+            continue;
+        }
+
+        if (character == QLatin1Char('\\')) {
+            escaped = true;
+            continue;
+        }
+
+        if (!inSingleQuotes && !inDoubleQuotes && (character == QLatin1Char('#') || character == QLatin1Char('%'))) {
+            flushQuotedToken(index);
+            flushToken();
+
+            parsedLine.commentStart = index;
+            parsedLine.commentText = line.mid(index + 1);
+
+            TherionParsedToken commentSpan;
+            commentSpan.start = index;
+            commentSpan.length = line.length() - index;
+            commentSpan.text = line.mid(index);
+            commentSpan.type = TherionTokenType::Comment;
+            parsedLine.tokenSpans.append(commentSpan);
+            break;
+        }
+
+        if (!inDoubleQuotes && character == QLatin1Char('\'')) {
+            if (inSingleQuotes) {
+                flushQuotedToken(index + 1);
+                inSingleQuotes = false;
+            } else {
+                flushToken();
+                inSingleQuotes = true;
+                quotedTokenStart = index;
+            }
+            continue;
+        }
+
+        if (!inSingleQuotes && character == QLatin1Char('"')) {
+            if (inDoubleQuotes) {
+                flushQuotedToken(index + 1);
+                inDoubleQuotes = false;
+            } else {
+                flushToken();
+                inDoubleQuotes = true;
+                quotedTokenStart = index;
+            }
+            continue;
+        }
+
+        if (inSingleQuotes || inDoubleQuotes) {
+            quotedToken.append(character);
+            continue;
+        }
+
+        if (character.isSpace()) {
+            flushToken();
+            continue;
+        }
+
+        if (currentTokenStart < 0) {
+            currentTokenStart = index;
+        }
+        currentToken.append(character);
+    }
+
+    if (escaped) {
+        if (inSingleQuotes || inDoubleQuotes) {
+            quotedToken.append(QLatin1Char('\\'));
+        } else {
+            if (currentTokenStart < 0) {
+                currentTokenStart = line.length() - 1;
+            }
+            currentToken.append(QLatin1Char('\\'));
+        }
+    }
+
+    flushQuotedToken(line.length());
+    flushToken();
+
+    if (!parsedLine.tokens.isEmpty()) {
+        parsedLine.directive = parsedLine.tokens.first().toLower();
+    }
+
+    if (!parsedLine.tokenSpans.isEmpty()) {
+        for (int index = 0; index < parsedLine.tokenSpans.size(); ++index) {
+            TherionParsedToken &tokenSpan = parsedLine.tokenSpans[index];
+            if (tokenSpan.type == TherionTokenType::QuotedString || tokenSpan.type == TherionTokenType::Comment) {
+                continue;
+            }
+
+            if (index == 0) {
+                tokenSpan.type = TherionTokenType::Other;
+                continue;
+            }
+
+            if (isNumericToken(tokenSpan.text)) {
+                tokenSpan.type = TherionTokenType::Other;
+            }
+        }
+    }
+
+    return parsedLine;
+}
+
+QVector<TherionParsedLine> TherionDocumentParser::parseText(const QString &text)
+{
+    QVector<TherionParsedLine> parsedLines;
+    const QStringList lines = text.split(QLatin1Char('\n'));
+
+    int lineNumber = 0;
+    for (QString line : lines) {
+        ++lineNumber;
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+
+        const TherionParsedLine parsedLine = parseLine(line, lineNumber);
+        if (parsedLine.tokens.isEmpty()) {
+            continue;
+        }
+
+        parsedLines.append(parsedLine);
+    }
+
+    return parsedLines;
+}
+
+QStringList TherionDocumentParser::tokenizeLine(const QString &line)
+{
+    return parseLine(line).tokens;
+}
+}

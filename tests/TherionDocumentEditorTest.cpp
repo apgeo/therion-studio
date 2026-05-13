@@ -419,6 +419,17 @@ int runRewritePointCoordinatesTest()
         return 1;
     }
 
+    contents = QStringLiteral("point station 1e2 -2.5E-1 station -name a3\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(12.3, -45.6), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point station 12.3 -45.6 station -name a3\n"),
+                "rewritePointCoordinates should treat scientific-notation tokens as writable numeric coordinates.")) {
+        return 1;
+    }
+
     return 0;
 }
 
@@ -457,6 +468,21 @@ int runRewriteLineAreaVertexTest()
                                            "  10 20 -5.5 77.7 # keep\n"
                                            "endline\n"),
                 "rewriteLineAreaVertex should rewrite the selected line vertex and preserve trailing comments.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall\n"
+                              "  1e2 -2E1 3.5e+1 4.0\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(55.0, -66.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\n"
+                                           "  1e2 -2E1 55.0 -66.0\n"
+                                           "endline\n"),
+                "rewriteLineAreaVertex should treat scientific-notation tokens as writable numeric vertices.")) {
         return 1;
     }
 

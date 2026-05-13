@@ -17,29 +17,9 @@ bool tokenLooksNumeric(const QString &token)
         return false;
     }
 
-    int index = 0;
-    if (token.at(index) == QLatin1Char('+') || token.at(index) == QLatin1Char('-')) {
-        ++index;
-    }
-
-    bool sawDigit = false;
-    bool sawDecimalPoint = false;
-    for (; index < token.size(); ++index) {
-        const QChar character = token.at(index);
-        if (character.isDigit()) {
-            sawDigit = true;
-            continue;
-        }
-
-        if (character == QLatin1Char('.') && !sawDecimalPoint) {
-            sawDecimalPoint = true;
-            continue;
-        }
-
-        return false;
-    }
-
-    return sawDigit;
+    static const QRegularExpression numericPattern(
+        QStringLiteral(R"(^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$)"));
+    return numericPattern.match(token).hasMatch();
 }
 
 int optionValueTokenIndex(const TherionParsedLine &parsedLine, const QString &option)

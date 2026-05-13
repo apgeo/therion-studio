@@ -28,10 +28,12 @@ This file records implementation progress in the repository so status does not l
 - Hardened `line`/`area` vertex-token selection to ignore option-led continuation lines (tokens beginning with option flags) even when those lines contain numeric payload values.
 - Hardened geometry numeric-token detection to treat scientific-notation values (for example `1e2`, `-2.5E-1`) as writable coordinate tokens in point and line/area rewrite paths.
 - Hardened `line`/`area` vertex-token selection to ignore non-coordinate continuation metadata lines (for example `smooth off ...`) even when they include numeric payload tokens.
+- Hardened `line`/`area` start-line vertex-token selection to skip option-value payload tokens (including numeric values) before geometry coordinates, preventing numeric option payloads from being treated as editable vertices.
 - Added `TherionDocumentEditorTest` regression coverage for geometry lines that include metadata both before coordinates and trailing numeric metadata payloads after the real coordinate list.
 - Added `TherionDocumentEditorTest` regression coverage ensuring option-led continuation payload lines are excluded from writable-vertex indexing.
 - Added `TherionDocumentEditorTest` regression coverage for scientific-notation coordinate rewrite behavior in both `rewritePointCoordinates(...)` and `rewriteLineAreaVertex(...)`.
 - Added `TherionDocumentEditorTest` regression coverage ensuring non-coordinate continuation metadata lines with numeric payload are excluded from writable-vertex indexing.
+- Added `TherionDocumentEditorTest` regression coverage ensuring numeric option payloads on `line` start lines are excluded from writable-vertex indexing before real coordinates.
 - Reduced map-drag jitter/no-op undo noise by adding a small movement threshold before committing point/vertex map edits back to source or recording undoable operations.
 - Routed map point and line/area vertex drag writebacks through explicit map `QUndoCommand` entries so the map `Undo/Redo` buttons now revert and reapply source-coordinate edits deterministically.
 - Added undo-command merge behavior for repeated drags on the same point or line/area vertex so micro-adjustment sequences collapse into a single undo/redo step.

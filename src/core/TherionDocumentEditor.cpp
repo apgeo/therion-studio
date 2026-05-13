@@ -263,8 +263,28 @@ QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &pa
     }
 
     bool sawCoordinateToken = false;
+    bool skipOptionValueToken = false;
     for (int index = firstTokenIndex; index < parsedLine.tokens.size(); ++index) {
+        if (skipOptionValueToken && !sawCoordinateToken) {
+            skipOptionValueToken = false;
+            continue;
+        }
+
         const QString token = parsedLine.tokens.at(index);
+
+        if (!sawCoordinateToken
+            && firstTokenIndex > 0
+            && token.startsWith(QLatin1Char('-'))
+            && !tokenLooksNumeric(token)) {
+            if (index + 1 < parsedLine.tokens.size()) {
+                const QString nextToken = parsedLine.tokens.at(index + 1);
+                if (!nextToken.startsWith(QLatin1Char('-')) || tokenLooksNumeric(nextToken)) {
+                    skipOptionValueToken = true;
+                }
+            }
+            continue;
+        }
+
         const bool numeric = tokenLooksNumeric(token);
         if (!numeric) {
             if (sawCoordinateToken) {

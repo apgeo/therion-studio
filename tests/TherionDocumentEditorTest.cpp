@@ -514,6 +514,19 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
 
+    contents = QStringLiteral("line wall -id line-1 -subtype temp 100 200 10 20\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(1.0, 2.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall -id line-1 -subtype temp 100 200 1.0 2.0\n"
+                                           "endline\n"),
+                "rewriteLineAreaVertex should skip numeric option payloads before geometry coordinates on the block start line.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("line wall\n"
                               "  10 20 30 40\n"
                               "  -subtype temporary 100 200\n"

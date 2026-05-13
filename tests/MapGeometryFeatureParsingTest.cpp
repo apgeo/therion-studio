@@ -43,7 +43,7 @@ int runBezierSegmentParsingTest()
         return 1;
     }
 
-    if (!expect(line->vertices.size() == 7, "Expected Bezier parsing to keep anchor and control/end points.")) {
+    if (!expect(line->lineVertices.size() == 3, "Expected three anchor vertices for two Bezier segments.")) {
         return 1;
     }
     if (!expect(line->lineSegments.size() == 2, "Expected two parsed line segments.")) {
@@ -59,14 +59,25 @@ int runBezierSegmentParsingTest()
     }
     if (!expect(line->lineSegments.at(0).control1VertexIndex == 1
                 && line->lineSegments.at(0).control2VertexIndex == 2
-                && line->lineSegments.at(0).endVertexIndex == 3,
+                && line->lineSegments.at(0).endVertexIndex == 1,
                 "Expected first cubic segment indices to map to first control/control/end triplet.")) {
         return 1;
     }
     if (!expect(line->lineSegments.at(1).control1VertexIndex == 4
                 && line->lineSegments.at(1).control2VertexIndex == 5
-                && line->lineSegments.at(1).endVertexIndex == 6,
+                && line->lineSegments.at(1).endVertexIndex == 2,
                 "Expected second cubic segment indices to map to second control/control/end triplet.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.at(1).isSmooth == false,
+                "Expected smooth off to mark the current/last parsed line vertex as non-smooth.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.at(0).outgoingControl.has_value()
+                && line->lineVertices.at(1).incomingControl.has_value()
+                && line->lineVertices.at(1).outgoingControl.has_value()
+                && line->lineVertices.at(2).incomingControl.has_value(),
+                "Expected parsed Bezier controls to be attached to adjacent vertices.")) {
         return 1;
     }
 
@@ -90,7 +101,7 @@ int runSmoothAndOptionMetadataIgnoredTest()
         return 1;
     }
 
-    if (!expect(line->vertices.size() == 3,
+    if (!expect(line->lineVertices.size() == 3,
                 "Expected only coordinate data lines to contribute vertices (smooth/subtype metadata ignored).")) {
         return 1;
     }
@@ -106,6 +117,32 @@ int runSmoothAndOptionMetadataIgnoredTest()
 
     return 0;
 }
+
+int runAnchorEquivalentControlNormalizationTest()
+{
+    const QString text =
+        QStringLiteral("line wall\n"
+                       "  0 0\n"
+                       "  0 0 10 0 10 0\n"
+                       "endline\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    const MapGeometryFeature *line = firstLineFeature(features);
+    if (!expect(line != nullptr, "Expected one parsed line feature for control normalization test.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.size() == 2, "Expected two anchors in normalization test.")) {
+        return 1;
+    }
+    if (!expect(!line->lineVertices.at(0).outgoingControl.has_value()
+                && !line->lineVertices.at(1).incomingControl.has_value(),
+                "Expected controls equal to anchor coordinates to normalize back to nil handles in memory.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -114,6 +151,9 @@ int main()
         return rc;
     }
     if (const int rc = runSmoothAndOptionMetadataIgnoredTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runAnchorEquivalentControlNormalizationTest(); rc != 0) {
         return rc;
     }
 

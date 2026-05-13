@@ -164,6 +164,11 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Updated map-canvas line rendering to draw parsed cubic arcs via `QPainterPath::cubicTo`, preserving straight segments where appropriate and keeping existing vertex-handle editing.~~
 - ~~Stopped treating line-block metadata continuations (for example `smooth off` and option-led lines) as drawable geometry coordinates in map feature extraction.~~
 - ~~Added `MapGeometryFeatureParsingTest` coverage for Bezier segment extraction and metadata-line exclusion, and wired the new test target into CMake.~~
+- ~~Introduced an explicit TH2 line-vertex model in map geometry features (`anchor`, optional `incomingControl`/`outgoingControl`, `isSmooth`, and source-vertex index mapping) to align map parsing/rendering with Therion curve semantics.~~
+- ~~Updated TH2 line parsing so `smooth off` marks the current/last parsed line vertex as non-smooth, and cubic control points equal to anchor coordinates are normalized back to nil handles in memory.~~
+- ~~Switched map-canvas line rendering to the line-vertex handle rule: segment is straight when both handles are absent, cubic when either adjacent handle exists (`QPainterPath::cubicTo` with anchor fallback).~~
+- ~~Added editable control-handle visualization for parsed line curves (incoming/outgoing control points plus anchor-to-handle guide lines), wired to existing coordinate rewrite callbacks through source vertex indices.~~
+- ~~Expanded `MapGeometryFeatureParsingTest` with smooth-state and anchor-equivalent handle-normalization assertions for TH2 curve parsing behavior.~~
 - ~~Added a corpus-style `TherionDocumentEditorTest` fixture that performs coordinated point/line/area rewrites within a realistic TH2 scrap block containing metadata, comments, and CRLF line endings.~~
 - ~~Verified rewrite stability in the fixture across option-led continuation lines (`-subtype`), inline metadata (`-id`), `%` comments, and mixed-precision coordinate tokens.~~
 - ~~Added negative corpus-style fixture checks that assert rewrite failures (missing `endline`, incomplete area coordinate tuple) return errors and leave source text unchanged.~~

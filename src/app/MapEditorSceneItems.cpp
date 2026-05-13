@@ -795,6 +795,16 @@ QRectF geometryBoundsForFeatures(const QVector<MapGeometryFeature> &features)
         for (const QPointF &vertex : feature.vertices) {
             includePoint(vertex);
         }
+
+        for (const MapGeometryFeature::TH2LineVertex &lineVertex : feature.lineVertices) {
+            includePoint(lineVertex.anchor);
+            if (lineVertex.incomingControl.has_value()) {
+                includePoint(lineVertex.incomingControl.value());
+            }
+            if (lineVertex.outgoingControl.has_value()) {
+                includePoint(lineVertex.outgoingControl.value());
+            }
+        }
     }
 
     if (!hasBounds) {

@@ -106,87 +106,144 @@ QVector<QPointF> coordinatePointsFromLine(const TherionParsedLine &parsedLine, i
     return points;
 }
 
-void appendLineDataPoints(MapGeometryFeature *feature, const QVector<QPointF> &linePoints)
+struct SourceCoordinatePoint
+{
+    QPointF point;
+    int sourceVertexIndex = -1;
+};
+
+QVector<SourceCoordinatePoint> sourceCoordinatePointsFromLine(const TherionParsedLine &parsedLine,
+                                                              int startTokenIndex,
+                                                              int *nextSourceVertexIndex)
+{
+    QVector<SourceCoordinatePoint> points;
+    if (nextSourceVertexIndex == nullptr) {
+        return points;
+    }
+
+    const QVector<QPointF> rowPoints = coordinatePointsFromLine(parsedLine, startTokenIndex);
+    points.reserve(rowPoints.size());
+    for (const QPointF &point : rowPoints) {
+        SourceCoordinatePoint coordinatePoint;
+        coordinatePoint.point = point;
+        coordinatePoint.sourceVertexIndex = *nextSourceVertexIndex;
+        ++(*nextSourceVertexIndex);
+        points.append(coordinatePoint);
+    }
+
+    return points;
+}
+
+void appendLineDataPoints(MapGeometryFeature *feature, const QVector<SourceCoordinatePoint> &linePoints)
 {
     if (feature == nullptr || linePoints.isEmpty()) {
         return;
     }
 
     int pointIndex = 0;
-    if (feature->vertices.isEmpty()) {
-        feature->vertices.append(linePoints.first());
+    if (feature->lineVertices.isEmpty()) {
+        MapGeometryFeature::TH2LineVertex firstVertex;
+        firstVertex.anchor = linePoints.first().point;
+        firstVertex.anchorSourceVertexIndex = linePoints.first().sourceVertexIndex;
+        feature->lineVertices.append(firstVertex);
+        feature->vertices.append(firstVertex.anchor);
         pointIndex = 1;
     }
 
     while (pointIndex < linePoints.size()) {
         const int remaining = linePoints.size() - pointIndex;
-        if (remaining >= 3) {
-            const int control1Index = feature->vertices.size();
-            feature->vertices.append(linePoints.at(pointIndex));
-            const int control2Index = feature->vertices.size();
-            feature->vertices.append(linePoints.at(pointIndex + 1));
-            const int endIndex = feature->vertices.size();
-            feature->vertices.append(linePoints.at(pointIndex + 2));
+        if (remaining == 1) {
+            const SourceCoordinatePoint anchorPoint = linePoints.at(pointIndex);
+            MapGeometryFeature::TH2LineVertex nextVertex;
+            nextVertex.anchor = anchorPoint.point;
+            nextVertex.anchorSourceVertexIndex = anchorPoint.sourceVertexIndex;
+            feature->lineVertices.append(nextVertex);
+            feature->vertices.append(nextVertex.anchor);
 
             MapGeometryFeature::LineSegment segment;
-            segment.type = MapGeometryFeature::LineSegment::Type::Cubic;
-            segment.endVertexIndex = endIndex;
-            segment.control1VertexIndex = control1Index;
-            segment.control2VertexIndex = control2Index;
+            segment.type = MapGeometryFeature::LineSegment::Type::Linear;
+            segment.endVertexIndex = feature->lineVertices.size() - 1;
             feature->lineSegments.append(segment);
-            pointIndex += 3;
+            ++pointIndex;
             continue;
         }
 
-        const int endIndex = feature->vertices.size();
-        feature->vertices.append(linePoints.at(pointIndex));
+        if (remaining < 3) {
+            const SourceCoordinatePoint anchorPoint = linePoints.at(pointIndex);
+            MapGeometryFeature::TH2LineVertex nextVertex;
+            nextVertex.anchor = anchorPoint.point;
+            nextVertex.anchorSourceVertexIndex = anchorPoint.sourceVertexIndex;
+            feature->lineVertices.append(nextVertex);
+            feature->vertices.append(nextVertex.anchor);
+
+            MapGeometryFeature::LineSegment segment;
+            segment.type = MapGeometryFeature::LineSegment::Type::Linear;
+            segment.endVertexIndex = feature->lineVertices.size() - 1;
+            feature->lineSegments.append(segment);
+            ++pointIndex;
+            continue;
+        }
+
+        const SourceCoordinatePoint outControlPoint = linePoints.at(pointIndex);
+        const SourceCoordinatePoint inControlPoint = linePoints.at(pointIndex + 1);
+        const SourceCoordinatePoint anchorPoint = linePoints.at(pointIndex + 2);
+
+        MapGeometryFeature::TH2LineVertex &previousVertex = feature->lineVertices.last();
+        previousVertex.outgoingSourceVertexIndex = outControlPoint.sourceVertexIndex;
+        if (mapSourcePointsDiffer(outControlPoint.point, previousVertex.anchor)) {
+            previousVertex.outgoingControl = outControlPoint.point;
+        } else {
+            previousVertex.outgoingControl.reset();
+        }
+        const bool previousHasOutgoingControl = previousVertex.outgoingControl.has_value();
+        const int previousOutgoingSourceIndex = previousVertex.outgoingSourceVertexIndex;
+
+        MapGeometryFeature::TH2LineVertex nextVertex;
+        nextVertex.anchor = anchorPoint.point;
+        nextVertex.anchorSourceVertexIndex = anchorPoint.sourceVertexIndex;
+        nextVertex.incomingSourceVertexIndex = inControlPoint.sourceVertexIndex;
+        if (mapSourcePointsDiffer(inControlPoint.point, nextVertex.anchor)) {
+            nextVertex.incomingControl = inControlPoint.point;
+        } else {
+            nextVertex.incomingControl.reset();
+        }
+        feature->lineVertices.append(nextVertex);
+        feature->vertices.append(nextVertex.anchor);
+
         MapGeometryFeature::LineSegment segment;
-        segment.type = MapGeometryFeature::LineSegment::Type::Linear;
-        segment.endVertexIndex = endIndex;
+        segment.type = (previousHasOutgoingControl || nextVertex.incomingControl.has_value())
+            ? MapGeometryFeature::LineSegment::Type::Cubic
+            : MapGeometryFeature::LineSegment::Type::Linear;
+        segment.endVertexIndex = feature->lineVertices.size() - 1;
+        segment.control1VertexIndex = previousOutgoingSourceIndex;
+        segment.control2VertexIndex = nextVertex.incomingSourceVertexIndex;
         feature->lineSegments.append(segment);
-        ++pointIndex;
+        pointIndex += 3;
     }
 }
 
 QPainterPath linePathForFeature(const MapGeometryFeature &feature, const QRectF &sourceBounds, const QRectF &previewBounds)
 {
     QPainterPath path;
-    if (feature.vertices.isEmpty()) {
+    if (feature.lineVertices.size() < 2) {
         return path;
     }
 
-    auto toPreview = [&](int index) {
-        if (index < 0 || index >= feature.vertices.size()) {
-            return QPointF();
-        }
-        return mapGeometryPointToPreview(feature.vertices.at(index), sourceBounds, previewBounds);
+    auto toPreview = [&](const QPointF &point) {
+        return mapGeometryPointToPreview(point, sourceBounds, previewBounds);
     };
 
-    path.moveTo(toPreview(0));
-    int currentAnchorIndex = 0;
-    for (const MapGeometryFeature::LineSegment &segment : feature.lineSegments) {
-        if (segment.endVertexIndex < 0 || segment.endVertexIndex >= feature.vertices.size()) {
-            continue;
-        }
-
-        if (segment.type == MapGeometryFeature::LineSegment::Type::Cubic
-            && segment.control1VertexIndex >= 0
-            && segment.control2VertexIndex >= 0
-            && segment.control1VertexIndex < feature.vertices.size()
-            && segment.control2VertexIndex < feature.vertices.size()) {
-            path.cubicTo(toPreview(segment.control1VertexIndex),
-                         toPreview(segment.control2VertexIndex),
-                         toPreview(segment.endVertexIndex));
+    path.moveTo(toPreview(feature.lineVertices.first().anchor));
+    for (int index = 1; index < feature.lineVertices.size(); ++index) {
+        const MapGeometryFeature::TH2LineVertex &previousVertex = feature.lineVertices.at(index - 1);
+        const MapGeometryFeature::TH2LineVertex &currentVertex = feature.lineVertices.at(index);
+        const QPointF cp1 = previousVertex.outgoingControl.value_or(previousVertex.anchor);
+        const QPointF cp2 = currentVertex.incomingControl.value_or(currentVertex.anchor);
+        const bool hasCurveHandle = previousVertex.outgoingControl.has_value() || currentVertex.incomingControl.has_value();
+        if (hasCurveHandle) {
+            path.cubicTo(toPreview(cp1), toPreview(cp2), toPreview(currentVertex.anchor));
         } else {
-            path.lineTo(toPreview(segment.endVertexIndex));
-        }
-
-        currentAnchorIndex = segment.endVertexIndex;
-    }
-
-    if (currentAnchorIndex == 0) {
-        for (int index = 1; index < feature.vertices.size(); ++index) {
-            path.lineTo(toPreview(index));
+            path.lineTo(toPreview(currentVertex.anchor));
         }
     }
 
@@ -438,7 +495,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 break;
             }
             case MapGeometryFeature::Kind::Line: {
-                if (feature.vertices.size() < 2) {
+                if (feature.lineVertices.size() < 2) {
                     break;
                 }
 
@@ -449,13 +506,12 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 auto *detailItem = scene->addPath(path, QPen(QColor(QStringLiteral("#2b2b2b")), detailLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
                 detailItem->setZValue(3.0);
 
-                for (int vertexIndex = 0; vertexIndex < feature.vertices.size(); ++vertexIndex) {
-                    const QPointF vertex = feature.vertices.at(vertexIndex);
-                    const QPointF previewPoint = mapGeometryPointToPreview(vertex, sourceBounds, previewBounds);
+                for (int vertexIndex = 0; vertexIndex < feature.lineVertices.size(); ++vertexIndex) {
+                    const MapGeometryFeature::TH2LineVertex &vertex = feature.lineVertices.at(vertexIndex);
                     auto *vertexItem = new MapEditableGeometryVertexItem(feature.lineNumber,
                                                                          QStringLiteral("line"),
-                                                                         vertexIndex,
-                                                                         vertex,
+                                                                         vertex.anchorSourceVertexIndex >= 0 ? vertex.anchorSourceVertexIndex : vertexIndex,
+                                                                         vertex.anchor,
                                                                          sourceBounds,
                                                                          previewBounds);
                     vertexItem->setRect(QRectF(-vertexRadius, -vertexRadius, vertexRadius * 2.0, vertexRadius * 2.0));
@@ -470,8 +526,56 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     vertexItem->setZValue(4.0);
                 }
 
+                const qreal controlRadius = qBound(1.8, 3.0 * mapScale, 4.0);
+                for (int segmentIndex = 1; segmentIndex < feature.lineVertices.size(); ++segmentIndex) {
+                    const MapGeometryFeature::TH2LineVertex &previousVertex = feature.lineVertices.at(segmentIndex - 1);
+                    const MapGeometryFeature::TH2LineVertex &currentVertex = feature.lineVertices.at(segmentIndex);
+
+                    if (previousVertex.outgoingControl.has_value() && previousVertex.outgoingSourceVertexIndex >= 0) {
+                        const QPointF anchorPreview = mapGeometryPointToPreview(previousVertex.anchor, sourceBounds, previewBounds);
+                        const QPointF controlPreview = mapGeometryPointToPreview(previousVertex.outgoingControl.value(), sourceBounds, previewBounds);
+                        auto *connector = scene->addLine(QLineF(anchorPreview, controlPreview),
+                                                         QPen(QColor(48, 128, 220, 160), qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
+                        connector->setZValue(3.2);
+
+                        auto *controlItem = new MapEditableGeometryVertexItem(feature.lineNumber,
+                                                                              QStringLiteral("line control"),
+                                                                              previousVertex.outgoingSourceVertexIndex,
+                                                                              previousVertex.outgoingControl.value(),
+                                                                              sourceBounds,
+                                                                              previewBounds);
+                        controlItem->setRect(QRectF(-controlRadius, -controlRadius, controlRadius * 2.0, controlRadius * 2.0));
+                        controlItem->setPen(QPen(QColor(28, 94, 182, 220), 1.0));
+                        controlItem->setBrush(QBrush(QColor(104, 188, 255, 205)));
+                        controlItem->setMoveCommittedCallback(recordLineAreaVertexMove);
+                        scene->addItem(controlItem);
+                        controlItem->setZValue(4.2);
+                    }
+
+                    if (currentVertex.incomingControl.has_value() && currentVertex.incomingSourceVertexIndex >= 0) {
+                        const QPointF anchorPreview = mapGeometryPointToPreview(currentVertex.anchor, sourceBounds, previewBounds);
+                        const QPointF controlPreview = mapGeometryPointToPreview(currentVertex.incomingControl.value(), sourceBounds, previewBounds);
+                        auto *connector = scene->addLine(QLineF(anchorPreview, controlPreview),
+                                                         QPen(QColor(48, 128, 220, 160), qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
+                        connector->setZValue(3.2);
+
+                        auto *controlItem = new MapEditableGeometryVertexItem(feature.lineNumber,
+                                                                              QStringLiteral("line control"),
+                                                                              currentVertex.incomingSourceVertexIndex,
+                                                                              currentVertex.incomingControl.value(),
+                                                                              sourceBounds,
+                                                                              previewBounds);
+                        controlItem->setRect(QRectF(-controlRadius, -controlRadius, controlRadius * 2.0, controlRadius * 2.0));
+                        controlItem->setPen(QPen(QColor(28, 94, 182, 220), 1.0));
+                        controlItem->setBrush(QBrush(QColor(104, 188, 255, 205)));
+                        controlItem->setMoveCommittedCallback(recordLineAreaVertexMove);
+                        scene->addItem(controlItem);
+                        controlItem->setZValue(4.2);
+                    }
+                }
+
                 if (feature.stationPoint) {
-                    const QPointF headPoint = mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds);
+                    const QPointF headPoint = mapGeometryPointToPreview(feature.lineVertices.first().anchor, sourceBounds, previewBounds);
                     QPainterPath markerPath;
                     markerPath.moveTo(headPoint + QPointF(0.0, -12.0));
                     markerPath.lineTo(headPoint + QPointF(10.0, 6.0));
@@ -485,7 +589,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 if (!compactLabels) {
                     auto *label = scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold));
                     label->setDefaultTextColor(QColor(QStringLiteral("#9d9d9d")));
-                    label->setPos(mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds) + QPointF(10.0, -18.0));
+                    label->setPos(mapGeometryPointToPreview(feature.lineVertices.first().anchor, sourceBounds, previewBounds) + QPointF(10.0, -18.0));
                     label->setZValue(4.0);
                 }
                 break;
@@ -551,6 +655,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
     MapGeometryFeature currentFeature;
     bool inLineBlock = false;
     bool inAreaBlock = false;
+    int lineSourceVertexIndex = 0;
 
     auto flushCurrentFeature = [&]() {
         if (currentFeature.kind == MapGeometryFeature::Kind::Point) {
@@ -570,6 +675,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
         currentFeature = MapGeometryFeature{};
         inLineBlock = false;
         inAreaBlock = false;
+        lineSourceVertexIndex = 0;
     };
 
     for (const TherionParsedLine &parsedLine : parsedLines) {
@@ -641,7 +747,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.label = mapEntryTitleForLine(parsedLine);
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
-            appendLineDataPoints(&currentFeature, coordinatePointsFromLine(parsedLine, 1));
+            appendLineDataPoints(&currentFeature, sourceCoordinatePointsFromLine(parsedLine, 1, &lineSourceVertexIndex));
             inLineBlock = true;
             continue;
         }
@@ -660,7 +766,16 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
         }
 
         if (inLineBlock) {
-            appendLineDataPoints(&currentFeature, coordinatePointsFromLine(parsedLine, 0));
+            if (directive == QStringLiteral("smooth")
+                && parsedLine.tokens.size() >= 2
+                && parsedLine.tokens.at(1).compare(QStringLiteral("off"), Qt::CaseInsensitive) == 0) {
+                if (!currentFeature.lineVertices.isEmpty()) {
+                    currentFeature.lineVertices.last().isSmooth = false;
+                }
+                continue;
+            }
+
+            appendLineDataPoints(&currentFeature, sourceCoordinatePointsFromLine(parsedLine, 0, &lineSourceVertexIndex));
             continue;
         }
 

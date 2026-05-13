@@ -12,6 +12,7 @@
 #include <QVector>
 
 #include <functional>
+#include <optional>
 
 class QGraphicsScene;
 class QGraphicsSceneMouseEvent;
@@ -60,6 +61,16 @@ struct MapGeometryFeature
         int control1VertexIndex = -1;
         int control2VertexIndex = -1;
     };
+    struct TH2LineVertex
+    {
+        QPointF anchor;
+        std::optional<QPointF> incomingControl;
+        std::optional<QPointF> outgoingControl;
+        bool isSmooth = true;
+        int anchorSourceVertexIndex = -1;
+        int incomingSourceVertexIndex = -1;
+        int outgoingSourceVertexIndex = -1;
+    };
 
     Kind kind = Kind::Point;
     int lineNumber = 0;
@@ -78,6 +89,7 @@ struct MapGeometryFeature
     QTransform sourceToMapTransform;
     QTransform mapToSourceTransform;
     QVector<LineSegment> lineSegments;
+    QVector<TH2LineVertex> lineVertices;
 };
 
 class MapCardItem final : public QGraphicsRectItem

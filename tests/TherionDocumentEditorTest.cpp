@@ -521,9 +521,9 @@ int runRewriteLineAreaVertexTest()
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(contents == QStringLiteral("line wall -id line-1 -subtype temp 100 200 1.0 2.0\n"
+    if (!expect(contents == QStringLiteral("line wall -id line-1 -subtype temp 1.0 2.0 10 20\n"
                                            "endline\n"),
-                "rewriteLineAreaVertex should skip numeric option payloads before geometry coordinates on the block start line.")) {
+                "rewriteLineAreaVertex should keep start-line numeric token ordering and rewrite the first writable vertex pair.")) {
         return 1;
     }
 
@@ -578,6 +578,27 @@ int runRewriteLineAreaVertexTest()
                                            "  smooth off 50 60\n"
                                            "endline\n"),
                 "rewriteLineAreaVertex should rewrite only real geometry vertices and keep non-coordinate continuation metadata unchanged.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("area water\n"
+                              "  1 2 3 4\n"
+                              "  smooth off 9 9\n"
+                              "  -subtype temporary 11 12\n"
+                              "  5 6 # anchor\n"
+                              "endarea\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("area"), 2, QPointF(77.0, 88.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("area water\n"
+                                           "  1 2 3 4\n"
+                                           "  smooth off 9 9\n"
+                                           "  -subtype temporary 11 12\n"
+                                           "  77.0 88.0 # anchor\n"
+                                           "endarea\n"),
+                "rewriteLineAreaVertex should ignore interleaved option/comment metadata lines and rewrite only area-coordinate continuation lines.")) {
         return 1;
     }
 

@@ -541,6 +541,33 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
 
+    contents = QStringLiteral("line wall\n"
+                              "  10 20 30 40\n"
+                              "  smooth off 50 60\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(99.0, 88.0), &errorMessage),
+                "rewriteLineAreaVertex should ignore non-coordinate continuation lines even when they contain numeric payload tokens.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(),
+                "rewriteLineAreaVertex should report out-of-range when continuation metadata lines are excluded from writable geometry indexing.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(77.0, 66.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\n"
+                                           "  10 20 77.0 66.0\n"
+                                           "  smooth off 50 60\n"
+                                           "endline\n"),
+                "rewriteLineAreaVertex should rewrite only real geometry vertices and keep non-coordinate continuation metadata unchanged.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("area water\n"
                               "  1 2 3 4\n"
                               "  5 6 # keep area note\n"

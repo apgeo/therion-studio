@@ -1,5 +1,6 @@
 #include "../src/core/TherionDocumentEditor.h"
 
+#include <functional>
 #include <iostream>
 
 using namespace TherionStudio;
@@ -778,7 +779,7 @@ int runCorpusStyleRewriteFixtureTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 6, QStringLiteral("line"), 3, QPointF(421.0, -573.0), &errorMessage),
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 6, QStringLiteral("line"), 4, QPointF(421.0, -573.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -810,6 +811,73 @@ int runCorpusStyleRewriteFixtureTest()
 
     if (!expect(contents == expected,
                 "Corpus-style rewrite fixture should update only targeted vertices while preserving comments, metadata, and CRLF formatting.")) {
+        return 1;
+    }
+
+    const auto expectRewriteFailureWithoutMutation = [&](const QString &label,
+                                                         const QString &originalContents,
+                                                         const std::function<bool(QString *, QString *)> &rewrite) {
+        QString candidate = originalContents;
+        QString candidateError;
+        if (rewrite(&candidate, &candidateError)) {
+            std::cerr << label.toUtf8().constData() << '\n';
+            return false;
+        }
+
+        if (candidate != originalContents) {
+            std::cerr << "Corpus-style failure path mutated document contents unexpectedly.\n";
+            return false;
+        }
+
+        if (candidateError.trimmed().isEmpty()) {
+            std::cerr << "Corpus-style failure path did not provide an error message.\n";
+            return false;
+        }
+
+        return true;
+    };
+
+    const QString malformedLineBlock = QStringLiteral(
+        "encoding utf-8\r\n"
+        "scrap broken -projection plan\r\n"
+        "  line wall -id line-bad\r\n"
+        "    1 2 3 4\r\n"
+        "    smooth off 9 9\r\n"
+        "endscrap\r\n");
+    if (!expect(expectRewriteFailureWithoutMutation(
+                    QStringLiteral("rewriteLineAreaVertex should fail when corpus-like line blocks are missing endline."),
+                    malformedLineBlock,
+                    [](QString *candidate, QString *candidateError) {
+                        return TherionDocumentEditor::rewriteLineAreaVertex(candidate,
+                                                                            3,
+                                                                            QStringLiteral("line"),
+                                                                            1,
+                                                                            QPointF(10.0, 20.0),
+                                                                            candidateError);
+                    }),
+                "rewriteLineAreaVertex should fail without mutating malformed corpus-like line blocks.")) {
+        return 1;
+    }
+
+    const QString malformedAreaTuple = QStringLiteral(
+        "encoding utf-8\r\n"
+        "scrap broken -projection plan\r\n"
+        "  area water -id area-bad\r\n"
+        "    1 2 3\r\n"
+        "  endarea\r\n"
+        "endscrap\r\n");
+    if (!expect(expectRewriteFailureWithoutMutation(
+                    QStringLiteral("rewriteLineAreaVertex should fail when area coordinate tuples are incomplete."),
+                    malformedAreaTuple,
+                    [](QString *candidate, QString *candidateError) {
+                        return TherionDocumentEditor::rewriteLineAreaVertex(candidate,
+                                                                            3,
+                                                                            QStringLiteral("area"),
+                                                                            1,
+                                                                            QPointF(8.0, 9.0),
+                                                                            candidateError);
+                    }),
+                "rewriteLineAreaVertex should fail without mutating malformed corpus-like area tuples.")) {
         return 1;
     }
 

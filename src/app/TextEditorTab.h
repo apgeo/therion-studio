@@ -61,6 +61,11 @@ public:
     bool rewritePointCoordinates(int lineNumber,
                                  const QPointF &point,
                                  QString *errorMessage = nullptr);
+    bool rewriteLineAreaVertex(int lineNumber,
+                               const QString &kind,
+                               int vertexIndex,
+                               const QPointF &point,
+                               QString *errorMessage = nullptr);
 
     QString filePath() const;
     QString displayName() const;

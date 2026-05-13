@@ -146,6 +146,9 @@ void MapEditorTab::refreshMapScene()
                             },
                             [this](int lineNumber, const QPointF &oldPoint, const QPointF &newPoint) {
                                 recordPointGeometryMove(lineNumber, oldPoint, newPoint);
+                            },
+                            [this](int lineNumber, const QString &kind, int vertexIndex, const QPointF &oldPoint, const QPointF &newPoint) {
+                                recordLineAreaVertexMove(lineNumber, kind, vertexIndex, oldPoint, newPoint);
                             });
 
     restoreBackgroundImageItems();
@@ -600,6 +603,32 @@ void MapEditorTab::recordPointGeometryMove(int lineNumber, const QPointF &oldPoi
     refreshToolbarSummary();
 }
 
+void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
+                                            const QString &kind,
+                                            int vertexIndex,
+                                            const QPointF &oldPoint,
+                                            const QPointF &newPoint)
+{
+    if (lineNumber <= 0 || vertexIndex < 0 || oldPoint == newPoint || textEditor_ == nullptr) {
+        return;
+    }
+
+    QString errorMessage;
+    if (!textEditor_->rewriteLineAreaVertex(lineNumber, kind, vertexIndex, newPoint, &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("%1 vertex move failed.").arg(kind)
+            : tr("%1 vertex move failed: %2").arg(kind, errorMessage);
+        refreshToolbarSummary();
+        return;
+    }
+
+    toolbarStatusNote_ = tr("Updated %1 vertex %2 at source line %3.")
+                             .arg(kind)
+                             .arg(vertexIndex + 1)
+                             .arg(lineNumber);
+    refreshToolbarSummary();
+}
+
 QGraphicsRectItem *MapEditorTab::selectedDraftGeometryItem() const
 {
     if (mapScene_ == nullptr) {
@@ -718,8 +747,10 @@ QPointF MapEditorTab::previewToSourcePoint(const QPointF &previewPoint, const QR
     }
 
     const QRectF fittedBounds = fittedPreviewBoundsForSource(sourceBounds, previewBounds);
-    const qreal normalizedX = qBound(0.0, (previewPoint.x() - fittedBounds.left()) / qMax(1.0, fittedBounds.width()), 1.0);
-    const qreal normalizedY = qBound(0.0, (previewPoint.y() - fittedBounds.top()) / qMax(1.0, fittedBounds.height()), 1.0);
+    const qreal clampedX = qBound(fittedBounds.left(), previewPoint.x(), fittedBounds.right());
+    const qreal clampedY = qBound(fittedBounds.top(), previewPoint.y(), fittedBounds.bottom());
+    const qreal normalizedX = qBound(0.0, (clampedX - fittedBounds.left()) / qMax(1.0, fittedBounds.width()), 1.0);
+    const qreal normalizedY = qBound(0.0, (fittedBounds.bottom() - clampedY) / qMax(1.0, fittedBounds.height()), 1.0);
 
     return QPointF(sourceBounds.left() + (normalizedX * sourceBounds.width()),
                    sourceBounds.top() + (normalizedY * sourceBounds.height()));

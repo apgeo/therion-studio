@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QString>
 #include <QWidget>
 #include <QHash>
 #include <QPointF>
@@ -143,6 +144,11 @@ private:
     void recordCardMove(int lineNumber, const QPointF &oldPosition, const QPointF &newPosition);
     void recordCardVisibility(int lineNumber, bool oldVisible, bool newVisible);
     void recordPointGeometryMove(int lineNumber, const QPointF &oldPoint, const QPointF &newPoint);
+    void recordLineAreaVertexMove(int lineNumber,
+                                  const QString &kind,
+                                  int vertexIndex,
+                                  const QPointF &oldPoint,
+                                  const QPointF &newPoint);
     void recordDraftMove(QGraphicsRectItem *item, const QPointF &oldPosition, const QPointF &newPosition);
     void recordDraftVisibility(QGraphicsRectItem *item, bool oldVisible, bool newVisible);
     QGraphicsRectItem *selectedDraftGeometryItem() const;

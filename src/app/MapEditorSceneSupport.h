@@ -156,7 +156,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                              QHash<int, QGraphicsRectItem *> *mapItemsByLine,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,
                              const std::function<void(int, bool, bool)> &recordCardVisibility,
-                             const std::function<void(int, const QPointF &, const QPointF &)> &recordPointGeometryMove);
+                             const std::function<void(int, const QPointF &, const QPointF &)> &recordPointGeometryMove,
+                             const std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> &recordLineAreaVertexMove);
 
 QUndoCommand *createMapCardMoveCommand(MapCardItem *item, const QPointF &oldPosition, const QPointF &newPosition);
 QUndoCommand *createMapCardVisibilityCommand(MapCardItem *item, bool oldVisible, bool newVisible);

@@ -245,6 +245,28 @@ QPair<int, int> coordinateTokenPair(const TherionParsedLine &parsedLine)
     return qMakePair(firstIndex, secondIndex);
 }
 
+QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &parsedLine, int startTokenIndex)
+{
+    QVector<QPair<int, int>> pairs;
+    QVector<int> numericIndices;
+    numericIndices.reserve(parsedLine.tokens.size());
+
+    const int firstTokenIndex = qMax(0, startTokenIndex);
+    for (int index = firstTokenIndex; index < parsedLine.tokens.size(); ++index) {
+        if (!tokenLooksNumeric(parsedLine.tokens.at(index))) {
+            continue;
+        }
+
+        numericIndices.append(index);
+    }
+
+    for (int index = 0; index + 1 < numericIndices.size(); index += 2) {
+        pairs.append(qMakePair(numericIndices.at(index), numericIndices.at(index + 1)));
+    }
+
+    return pairs;
+}
+
 QString formatVerticesInline(const QVector<QPointF> &vertices)
 {
     QStringList tokens;
@@ -564,6 +586,141 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
     lineText.replace(secondToken.start, secondToken.length, formatCoordinate(point.y()));
     lineText.replace(firstToken.start, firstToken.length, formatCoordinate(point.x()));
     lines[lineNumber - 1] = lineText;
+    *contents = lines.join(lineEnding);
+    return true;
+}
+
+bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
+                                                  int lineNumber,
+                                                  const QString &kind,
+                                                  int vertexIndex,
+                                                  const QPointF &point,
+                                                  QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+
+    if (lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line number is invalid.");
+        }
+        return false;
+    }
+
+    if (vertexIndex < 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected vertex index is invalid.");
+        }
+        return false;
+    }
+
+    const QString normalizedKind = kind.trimmed().toLower();
+    if (normalizedKind != QStringLiteral("line") && normalizedKind != QStringLiteral("area")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected geometry kind is not writable.");
+        }
+        return false;
+    }
+
+    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = splitLinesNormalized(*contents);
+    if (lineNumber > lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line no longer exists.");
+        }
+        return false;
+    }
+
+    const int blockStartLineIndex = lineNumber - 1;
+    const TherionParsedLine startLine = TherionDocumentParser::parseLine(lines.at(blockStartLineIndex), lineNumber);
+    if (startLine.directive != normalizedKind) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line is not a writable %1 geometry block.").arg(normalizedKind);
+        }
+        return false;
+    }
+
+    const QString blockEndDirective = normalizedKind == QStringLiteral("line")
+        ? QStringLiteral("endline")
+        : QStringLiteral("endarea");
+    int blockEndLineIndex = -1;
+    for (int candidateIndex = blockStartLineIndex + 1; candidateIndex < lines.size(); ++candidateIndex) {
+        const TherionParsedLine candidateLine = TherionDocumentParser::parseLine(lines.at(candidateIndex), candidateIndex + 1);
+        if (candidateLine.directive == blockEndDirective) {
+            blockEndLineIndex = candidateIndex;
+            break;
+        }
+    }
+
+    if (blockEndLineIndex < 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected %1 block is missing %2.").arg(normalizedKind, blockEndDirective);
+        }
+        return false;
+    }
+
+    struct CoordinateTokenReference
+    {
+        int lineIndex = -1;
+        TherionParsedToken xToken;
+        TherionParsedToken yToken;
+    };
+
+    QVector<CoordinateTokenReference> references;
+    for (int lineIndex = blockStartLineIndex; lineIndex < blockEndLineIndex; ++lineIndex) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineIndex), lineIndex + 1);
+        const int startTokenIndex = lineIndex == blockStartLineIndex ? 1 : 0;
+        const QVector<QPair<int, int>> pairs = coordinateTokenPairsForLine(parsedLine, startTokenIndex);
+        for (const QPair<int, int> &pair : pairs) {
+            if (pair.first < 0 || pair.second < 0
+                || pair.first >= parsedLine.tokenSpans.size()
+                || pair.second >= parsedLine.tokenSpans.size()) {
+                continue;
+            }
+
+            CoordinateTokenReference reference;
+            reference.lineIndex = lineIndex;
+            reference.xToken = parsedLine.tokenSpans.at(pair.first);
+            reference.yToken = parsedLine.tokenSpans.at(pair.second);
+            references.append(reference);
+        }
+    }
+
+    if (vertexIndex >= references.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected %1 block does not contain a writable vertex at index %2.")
+                                .arg(normalizedKind)
+                                .arg(vertexIndex);
+        }
+        return false;
+    }
+
+    const CoordinateTokenReference reference = references.at(vertexIndex);
+    if (reference.lineIndex < 0 || reference.lineIndex >= lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected %1 vertex could not be rewritten.").arg(normalizedKind);
+        }
+        return false;
+    }
+
+    QString lineText = lines.at(reference.lineIndex);
+    if (reference.xToken.start < 0 || reference.yToken.start < 0
+        || reference.xToken.length < 0 || reference.yToken.length < 0
+        || reference.xToken.start + reference.xToken.length > lineText.size()
+        || reference.yToken.start + reference.yToken.length > lineText.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected %1 vertex coordinates could not be rewritten.").arg(normalizedKind);
+        }
+        return false;
+    }
+
+    lineText.replace(reference.yToken.start, reference.yToken.length, formatCoordinate(point.y()));
+    lineText.replace(reference.xToken.start, reference.xToken.length, formatCoordinate(point.x()));
+    lines[reference.lineIndex] = lineText;
     *contents = lines.join(lineEnding);
     return true;
 }

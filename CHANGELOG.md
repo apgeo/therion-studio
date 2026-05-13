@@ -11,7 +11,7 @@ This file records implementation progress in the repository so status does not l
 
 ## Next up
 
-- Extend direct map-to-source editing from point geometry into in-place line/area rewrites (editing existing parsed geometry blocks in source).
+- Add `.xvi` vector background rendering for metadata/session-loaded sketch references so vector layers behave like raster backgrounds in the map workspace.
 
 ## Risks / blockers
 
@@ -19,6 +19,53 @@ This file records implementation progress in the repository so status does not l
 - The current text path only handles UTF-8 plain text; non-UTF-8 encodings and syntax-aware editing are not implemented yet.
 
 ## Completed
+
+### 2026-05-13
+
+- Fixed metadata-loaded PNG sizing by treating raster pixel dimensions as TH2 image units; the third `xth_me_image_insert` numeric value is preserved as metadata and is not used to resize the raster layer.
+- Corrected raster metadata placement to keep `xth_me_area_adjust` as editor padding/viewport metadata unless it exactly matches the raster dimensions, preventing `{0,0}` anchors from shifting scanned sketches away from TH2 geometry.
+- Hardened metadata matching for background layers by normalizing canonical/absolute paths (including Unicode composition differences on macOS) and adding a unique filename fallback when restoring from session.
+- Reapplied metadata anchoring to already-loaded raster layers during background sync so stale saved pixel positions no longer override TH2 metadata placement.
+- Removed the metadata-sync early exit for non-empty background sets so session-restored layers are still reconciled against current TH2 metadata on load.
+- Preserved exact placed image dimensions when opacity/gamma refreshes rebuild the pixmap.
+- Verified the full `cmake --build build` target set succeeds and both `TherionDocumentEditorTest` and `TherionProjectStructureIndexTest` pass after the PNG alignment update.
+
+### 2026-05-13
+
+- Removed the extra `scrap -scale` transform from TH2 map preview geometry so parsed points, lines, and areas render in the same global model coordinate space as PNG background layers.
+- Kept map drag writeback in raw TH2 model coordinates, matching the background alignment model where scraps provide ownership/grouping rather than spatial transforms.
+- Verified the full `cmake --build build` target set succeeds and both `TherionDocumentEditorTest` and `TherionProjectStructureIndexTest` pass after removing the scrap transform from preview geometry.
+
+### 2026-05-13
+
+- Fixed `.xvi` background cropping/alignment drift by deriving the rendered layer bounds from full `XVIgrid` extents (origin + grid basis vectors + node counts) instead of only shot/sketch polyline extents.
+- Improved `Fit` behavior for vector backgrounds because full grid-area bounds now participate in background layer sizing.
+- Verified the full `cmake --build build` target set succeeds and both `TherionDocumentEditorTest` and `TherionProjectStructureIndexTest` pass after the `.xvi` grid-bounds fix.
+
+### 2026-05-13
+
+- Fixed persistent misalignment from older session state by reapplying `xth_me_image_insert` metadata anchoring when restoring background layers from session (instead of trusting stale saved pixel positions).
+- Restored `.xvi` session layers using metadata base position/root station when available so vector overlays and scrap geometry share the same model-space anchoring rules after reopen.
+- Improved map readability by reducing point/vertex handle radii, line thickness, and overlay alpha so dense geometry no longer obscures background sketches.
+- Verified the full `cmake --build build` target set succeeds and both `TherionDocumentEditorTest` and `TherionProjectStructureIndexTest` pass after the alignment/readability adjustments.
+
+### 2026-05-13
+
+- Reworked map preview coordinate projection to use explicit model-space pan/zoom semantics with inverted Y (`viewX = modelX * zoom + panX`, `viewY = panY - modelY * zoom`) for scene mapping and source rewrite conversion.
+- Fixed `xth_me_image_insert` metadata parsing to resolve base position from the two payload groups and keep optional root-station metadata for `.xvi` references.
+- Fixed raster metadata background placement to use model-space anchoring with top-edge behavior (`topLeft = (x, y - imageHeight)`) instead of center anchoring.
+- Added `.xvi` background rendering support by parsing `XVIgrid`, `XVIstations`, `XVIshots`, and `XVIsketchlines`, applying offset alignment (`offset = anchoredPosition - gridOrigin`), and drawing vector overlays as map background layers.
+- Implemented optional `.xvi` root-station anchoring so provided station names shift the anchored base position before applying the global offset.
+- Extended session restore to rebuild `.xvi` background layers in addition to raster image layers.
+- Verified the full `cmake --build build` target set succeeds and both `TherionDocumentEditorTest` and `TherionProjectStructureIndexTest` pass after background-alignment fixes.
+
+### 2026-05-13
+
+- Extended direct map-to-source geometry editing from points to parsed `line` and `area` vertices by adding draggable vertex handles in the map preview.
+- Added transform-aware source rewrite routing for line/area vertex moves so edits stay correct when scrap `-scale` mappings are active.
+- Added `TherionDocumentEditor::rewriteLineAreaVertex(...)` with token-span replacement across multi-line `line`/`area` blocks, preserving surrounding text and comments.
+- Added focused regression coverage for line/area vertex rewrite success/failure paths in `TherionDocumentEditorTest`.
+- Verified the full `cmake --build build` target set succeeds and both `TherionDocumentEditorTest` and `TherionProjectStructureIndexTest` pass after the line/area rewrite integration.
 
 ### 2026-05-13
 

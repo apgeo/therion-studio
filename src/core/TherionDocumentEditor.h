@@ -27,5 +27,11 @@ public:
                                         int lineNumber,
                                         const QPointF &point,
                                         QString *errorMessage = nullptr);
+    static bool rewriteLineAreaVertex(QString *contents,
+                                      int lineNumber,
+                                      const QString &kind,
+                                      int vertexIndex,
+                                      const QPointF &point,
+                                      QString *errorMessage = nullptr);
 };
 }

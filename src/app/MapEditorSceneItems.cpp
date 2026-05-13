@@ -331,23 +331,25 @@ QRectF sceneCoordsPreviewBounds(const QRectF &sourceBounds, const QRectF &target
 QPointF sceneCoordsSourceToPreview(const QPointF &source, const QRectF &sourceBounds, const QRectF &previewBounds)
 {
     const QRectF fitted = sceneCoordsPreviewBounds(sourceBounds, previewBounds);
-    const qreal sourceWidth = qMax(1.0, sourceBounds.width());
-    const qreal sourceHeight = qMax(1.0, sourceBounds.height());
-    const qreal normalizedX = (source.x() - sourceBounds.left()) / sourceWidth;
-    const qreal normalizedY = (source.y() - sourceBounds.top()) / sourceHeight;
-    return QPointF(fitted.left() + (normalizedX * fitted.width()),
-                   fitted.top() + (normalizedY * fitted.height()));
+    const qreal zoom = qMin(fitted.width() / qMax(1.0, sourceBounds.width()),
+                            fitted.height() / qMax(1.0, sourceBounds.height()));
+    const qreal panX = fitted.left() - (sourceBounds.left() * zoom);
+    const qreal panY = fitted.top() + (sourceBounds.bottom() * zoom);
+    return QPointF((source.x() * zoom) + panX,
+                   panY - (source.y() * zoom));
 }
 
 QPointF sceneCoordsPreviewToSource(const QPointF &preview, const QRectF &sourceBounds, const QRectF &previewBounds)
 {
     const QRectF fitted = sceneCoordsPreviewBounds(sourceBounds, previewBounds);
-    const qreal fittedWidth = qMax(1.0, fitted.width());
-    const qreal fittedHeight = qMax(1.0, fitted.height());
-    const qreal normalizedX = qBound(0.0, (preview.x() - fitted.left()) / fittedWidth, 1.0);
-    const qreal normalizedY = qBound(0.0, (preview.y() - fitted.top()) / fittedHeight, 1.0);
-    return QPointF(sourceBounds.left() + (normalizedX * sourceBounds.width()),
-                   sourceBounds.top() + (normalizedY * sourceBounds.height()));
+    const qreal zoom = qMin(fitted.width() / qMax(1.0, sourceBounds.width()),
+                            fitted.height() / qMax(1.0, sourceBounds.height()));
+    const qreal panX = fitted.left() - (sourceBounds.left() * zoom);
+    const qreal panY = fitted.top() + (sourceBounds.bottom() * zoom);
+    const qreal clampedX = qBound(fitted.left(), preview.x(), fitted.right());
+    const qreal clampedY = qBound(fitted.top(), preview.y(), fitted.bottom());
+    return QPointF((clampedX - panX) / qMax(1e-6, zoom),
+                   (panY - clampedY) / qMax(1e-6, zoom));
 }
 
 qreal sceneCoordsScaleFactor(const QRectF &sourceBounds, const QRectF &previewBounds)

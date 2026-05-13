@@ -13,7 +13,7 @@ QString mapWorkspaceHelpHtml()
 {
     return QStringLiteral(
         "<h3>Map Workspace</h3>"
-        "<p>The map canvas renders parsed TH2 geometry and supports direct point-handle edits where source coordinates are available.</p>"
+        "<p>The map canvas renders parsed TH2 geometry and supports direct point, line, and area vertex edits where source coordinates are available.</p>"
         "<h4>Toolbar</h4>"
         "<ul>"
         "<li><strong>Select</strong> keeps focus on selecting and moving draft objects.</li>"
@@ -26,7 +26,7 @@ QString mapWorkspaceHelpHtml()
         "</ul>"
         "<p>Background image layers are managed from the Map sidebar, including layer order, visibility, position, opacity, and gamma.</p>"
         "<p>When present, <code>##XTHERION## xth_me_image_insert</code> metadata is used to auto-load referenced background images.</p>"
-        "<p>Drag a parsed point handle to rewrite source coordinates. Select a draft item to move or toggle it.</p>");
+        "<p>Drag parsed geometry handles to rewrite source coordinates. Select a draft item to move or toggle it.</p>");
 }
 
 QString mapEntryCategoryForLine(const TherionParsedLine &parsedLine)
@@ -154,7 +154,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                              QHash<int, QGraphicsRectItem *> *mapItemsByLine,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,
                              const std::function<void(int, bool, bool)> &recordCardVisibility,
-                             const std::function<void(int, const QPointF &, const QPointF &)> &recordPointGeometryMove)
+                             const std::function<void(int, const QPointF &, const QPointF &)> &recordPointGeometryMove,
+                             const std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> &recordLineAreaVertexMove)
 {
     Q_UNUSED(documentPath);
     Q_UNUSED(recordCardMove);
@@ -195,10 +196,10 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     const QRectF previewBounds = geometryCanvas.adjusted(24.0, 64.0, -24.0, -24.0);
     const QRectF sourceBounds = geometryBoundsForFeatures(geometryFeatures);
     const qreal mapScale = sceneCoordsScaleFactor(sourceBounds, previewBounds);
-    const qreal pointRadius = qBound(2.0, 4.6 * mapScale, 4.6);
-    const qreal vertexRadius = qBound(1.4, 3.0 * mapScale, 3.0);
-    const qreal thickLineWidth = qBound(1.2, 3.0 * mapScale, 3.4);
-    const qreal detailLineWidth = qBound(0.8, 1.2 * mapScale, 1.3);
+    const qreal pointRadius = qBound(1.1, 2.2 * mapScale, 2.0);
+    const qreal vertexRadius = qBound(0.6, 1.4 * mapScale, 1.2);
+    const qreal thickLineWidth = qBound(0.7, 1.5 * mapScale, 1.6);
+    const qreal detailLineWidth = qBound(0.4, 0.8 * mapScale, 0.8);
     const bool compactLabels = geometryFeatures.size() > 24;
 
     for (int index = 0; index < 6; ++index) {
@@ -225,14 +226,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 const QPointF previewPoint = mapGeometryPointToPreview(feature.anchor, sourceBounds, previewBounds);
                 auto *pointItem = new MapEditablePointItem(feature.lineNumber, feature.anchor, sourceBounds, previewBounds);
                 pointItem->setRect(QRectF(-pointRadius, -pointRadius, pointRadius * 2.0, pointRadius * 2.0));
-                pointItem->setPen(QPen(QColor(QStringLiteral("#101010")), 1.0));
-                pointItem->setBrush(QBrush(QColor(QStringLiteral("#101010"))));
-                if (feature.hasCoordinateTransform) {
-                    const QTransform mapToSource = feature.mapToSourceTransform;
-                    pointItem->setDisplayToSourceMapper([mapToSource](const QPointF &displayPoint) {
-                        return mapToSource.map(displayPoint);
-                    });
-                }
+                pointItem->setPen(QPen(QColor(16, 16, 16, 170), 0.7));
+                pointItem->setBrush(QBrush(QColor(16, 16, 16, 140)));
                 pointItem->setMoveCommittedCallback(recordPointGeometryMove);
                 scene->addItem(pointItem);
                 pointItem->setZValue(3.0);
@@ -273,14 +268,20 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 auto *detailItem = scene->addPath(path, QPen(QColor(QStringLiteral("#2b2b2b")), detailLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
                 detailItem->setZValue(3.0);
 
-                for (const QPointF &vertex : feature.vertices) {
+                for (int vertexIndex = 0; vertexIndex < feature.vertices.size(); ++vertexIndex) {
+                    const QPointF vertex = feature.vertices.at(vertexIndex);
                     const QPointF previewPoint = mapGeometryPointToPreview(vertex, sourceBounds, previewBounds);
-                    auto *vertexItem = scene->addEllipse(QRectF(previewPoint.x() - vertexRadius,
-                                                                previewPoint.y() - vertexRadius,
-                                                                vertexRadius * 2.0,
-                                                                vertexRadius * 2.0),
-                                                         QPen(QColor(QStringLiteral("#101010")), 0.8),
-                                                         QBrush(QColor(QStringLiteral("#101010"))));
+                    auto *vertexItem = new MapEditableGeometryVertexItem(feature.lineNumber,
+                                                                         QStringLiteral("line"),
+                                                                         vertexIndex,
+                                                                         vertex,
+                                                                         sourceBounds,
+                                                                         previewBounds);
+                    vertexItem->setRect(QRectF(-vertexRadius, -vertexRadius, vertexRadius * 2.0, vertexRadius * 2.0));
+                    vertexItem->setPen(QPen(QColor(16, 16, 16, 140), 0.6));
+                    vertexItem->setBrush(QBrush(QColor(16, 16, 16, 90)));
+                    vertexItem->setMoveCommittedCallback(recordLineAreaVertexMove);
+                    scene->addItem(vertexItem);
                     vertexItem->setZValue(4.0);
                 }
 
@@ -320,6 +321,22 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 auto *fillItem = scene->addPath(path, QPen(QColor(QStringLiteral("#222222")), qBound(1.0, 2.0 * mapScale, 2.4), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), QBrush(QColor(0, 0, 0, 18)));
                 fillItem->setZValue(2.0);
 
+                for (int vertexIndex = 0; vertexIndex < feature.vertices.size(); ++vertexIndex) {
+                    const QPointF vertex = feature.vertices.at(vertexIndex);
+                    auto *vertexItem = new MapEditableGeometryVertexItem(feature.lineNumber,
+                                                                         QStringLiteral("area"),
+                                                                         vertexIndex,
+                                                                         vertex,
+                                                                         sourceBounds,
+                                                                         previewBounds);
+                    vertexItem->setRect(QRectF(-vertexRadius, -vertexRadius, vertexRadius * 2.0, vertexRadius * 2.0));
+                    vertexItem->setPen(QPen(QColor(16, 16, 16, 140), 0.6));
+                    vertexItem->setBrush(QBrush(QColor(16, 16, 16, 90)));
+                    vertexItem->setMoveCommittedCallback(recordLineAreaVertexMove);
+                    scene->addItem(vertexItem);
+                    vertexItem->setZValue(4.0);
+                }
+
                 if (!compactLabels) {
                     auto *label = scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold));
                     label->setDefaultTextColor(QColor(QStringLiteral("#9d9d9d")));
@@ -345,35 +362,6 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
     MapGeometryFeature currentFeature;
     bool inLineBlock = false;
     bool inAreaBlock = false;
-    QVector<CoordinateTransform> scrapTransformStack;
-    CoordinateTransform activeBlockTransform;
-
-    auto activeTransform = [&]() -> CoordinateTransform {
-        if (scrapTransformStack.isEmpty()) {
-            return CoordinateTransform{};
-        }
-        return scrapTransformStack.last();
-    };
-
-    auto mapFromSource = [](const QPointF &sourcePoint, const CoordinateTransform &transform) -> QPointF {
-        if (!transform.valid) {
-            return sourcePoint;
-        }
-        return transform.sourceToMap.map(sourcePoint);
-    };
-
-    auto mapVerticesFromSource = [&](const QVector<QPointF> &sourceVertices, const CoordinateTransform &transform) -> QVector<QPointF> {
-        if (!transform.valid) {
-            return sourceVertices;
-        }
-
-        QVector<QPointF> mappedVertices;
-        mappedVertices.reserve(sourceVertices.size());
-        for (const QPointF &sourceVertex : sourceVertices) {
-            mappedVertices.append(transform.sourceToMap.map(sourceVertex));
-        }
-        return mappedVertices;
-    };
 
     auto flushCurrentFeature = [&]() {
         if (currentFeature.kind == MapGeometryFeature::Kind::Point) {
@@ -393,23 +381,10 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
         currentFeature = MapGeometryFeature{};
         inLineBlock = false;
         inAreaBlock = false;
-        activeBlockTransform = CoordinateTransform{};
     };
 
     for (const TherionParsedLine &parsedLine : parsedLines) {
         const QString directive = parsedLine.directive;
-
-        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("scrap")) {
-            scrapTransformStack.append(coordinateTransformFromScrapScale(parsedLine.tokens));
-            continue;
-        }
-
-        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("endscrap")) {
-            if (!scrapTransformStack.isEmpty()) {
-                scrapTransformStack.removeLast();
-            }
-            continue;
-        }
 
         if (directive == QStringLiteral("endline")) {
             if (inLineBlock) {
@@ -438,17 +413,11 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             feature.label = mapEntryTitleForLine(parsedLine);
             feature.subtitle = mapEntrySubtitleForLine(parsedLine);
             feature.accent = mapEntryAccentForCategory(feature.category);
-            const CoordinateTransform transform = activeTransform();
             feature.sourceAnchor = pointTokens.first();
-            feature.anchor = mapFromSource(feature.sourceAnchor, transform);
+            feature.anchor = feature.sourceAnchor;
             feature.hasAnchor = true;
             feature.hasSourceAnchor = true;
             feature.stationPoint = false;
-            feature.hasCoordinateTransform = transform.valid;
-            if (transform.valid) {
-                feature.sourceToMapTransform = transform.sourceToMap;
-                feature.mapToSourceTransform = transform.mapToSource;
-            }
             features.append(feature);
             continue;
         }
@@ -466,17 +435,11 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             feature.label = mapEntryTitleForLine(parsedLine);
             feature.subtitle = mapEntrySubtitleForLine(parsedLine);
             feature.accent = mapEntryAccentForCategory(feature.category);
-            const CoordinateTransform transform = activeTransform();
             feature.sourceAnchor = pointTokens.first();
-            feature.anchor = mapFromSource(feature.sourceAnchor, transform);
+            feature.anchor = feature.sourceAnchor;
             feature.hasAnchor = true;
             feature.hasSourceAnchor = true;
             feature.stationPoint = true;
-            feature.hasCoordinateTransform = transform.valid;
-            if (transform.valid) {
-                feature.sourceToMapTransform = transform.sourceToMap;
-                feature.mapToSourceTransform = transform.mapToSource;
-            }
             features.append(feature);
             continue;
         }
@@ -489,8 +452,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.label = mapEntryTitleForLine(parsedLine);
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
-            activeBlockTransform = activeTransform();
-            currentFeature.vertices.append(mapVerticesFromSource(pointsFromTokens(parsedLine.tokens.mid(1)), activeBlockTransform));
+            currentFeature.vertices.append(pointsFromTokens(parsedLine.tokens.mid(1)));
             inLineBlock = true;
             continue;
         }
@@ -503,19 +465,18 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.label = mapEntryTitleForLine(parsedLine);
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
-            activeBlockTransform = activeTransform();
-            currentFeature.vertices.append(mapVerticesFromSource(pointsFromTokens(parsedLine.tokens.mid(1)), activeBlockTransform));
+            currentFeature.vertices.append(pointsFromTokens(parsedLine.tokens.mid(1)));
             inAreaBlock = true;
             continue;
         }
 
         if (inLineBlock) {
-            currentFeature.vertices.append(mapVerticesFromSource(pointsFromTokens(parsedLine.tokens), activeBlockTransform));
+            currentFeature.vertices.append(pointsFromTokens(parsedLine.tokens));
             continue;
         }
 
         if (inAreaBlock) {
-            currentFeature.vertices.append(mapVerticesFromSource(pointsFromTokens(parsedLine.tokens), activeBlockTransform));
+            currentFeature.vertices.append(pointsFromTokens(parsedLine.tokens));
             continue;
         }
     }

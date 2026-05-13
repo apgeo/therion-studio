@@ -410,6 +410,74 @@ int runRewritePointCoordinatesTest()
 
     return 0;
 }
+
+int runRewriteLineAreaVertexTest()
+{
+    QString errorMessage;
+
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(nullptr, 1, QStringLiteral("line"), 0, QPointF(1.0, 2.0), &errorMessage),
+                "rewriteLineAreaVertex should reject null contents.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "rewriteLineAreaVertex should report null-content error.")) {
+        return 1;
+    }
+
+    QString contents = QStringLiteral("point station 1 2 station -name a1\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(100.0, 200.0), &errorMessage),
+                "rewriteLineAreaVertex should reject non-line and non-area directives.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "rewriteLineAreaVertex should report non-writable-line error.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall\n"
+                              "  10 20 30 40 # keep\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(-5.5, 77.7), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\n"
+                                           "  10 20 -5.5 77.7 # keep\n"
+                                           "endline\n"),
+                "rewriteLineAreaVertex should rewrite the selected line vertex and preserve trailing comments.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("area water\n"
+                              "  1 2 3 4\n"
+                              "  5 6 # keep area note\n"
+                              "endarea\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("area"), 2, QPointF(42.0, -9.5), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("area water\n"
+                                           "  1 2 3 4\n"
+                                           "  42.0 -9.5 # keep area note\n"
+                                           "endarea\n"),
+                "rewriteLineAreaVertex should support multi-line area vertex rewrites.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall\n  10 20\nendline\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(1.0, 2.0), &errorMessage),
+                "rewriteLineAreaVertex should reject out-of-range vertex indices.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "rewriteLineAreaVertex should report out-of-range vertex errors.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -429,5 +497,10 @@ int main()
         return appendDraftResult;
     }
 
-    return runRewritePointCoordinatesTest();
+    const int rewritePointResult = runRewritePointCoordinatesTest();
+    if (rewritePointResult != 0) {
+        return rewritePointResult;
+    }
+
+    return runRewriteLineAreaVertexTest();
 }

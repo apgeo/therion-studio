@@ -93,6 +93,13 @@ struct MapGeometryFeature
     QVector<TH2LineVertex> lineVertices;
 };
 
+struct MapLineSecondaryMove
+{
+    int sourceVertexIndex = -1;
+    QPointF oldPoint;
+    QPointF newPoint;
+};
+
 class MapCardItem final : public QGraphicsRectItem
 {
 public:
@@ -175,6 +182,7 @@ QVector<MapSceneEntry> collectMapSceneEntries(const QVector<TherionParsedLine> &
 
 QRectF geometryBoundsForFeatures(const QVector<MapGeometryFeature> &features);
 QPointF mapGeometryPointToPreview(const QPointF &point, const QRectF &sourceBounds, const QRectF &targetBounds);
+QPointF mapGeometryPreviewToSource(const QPointF &point, const QRectF &sourceBounds, const QRectF &targetBounds);
 QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedLine> &parsedLines);
 bool insertLineVertexByDeCasteljau(QVector<MapGeometryFeature::TH2LineVertex> *lineVertices,
                                    int segmentStartIndex,
@@ -185,6 +193,10 @@ bool removeLineVertexWithReconnect(QVector<MapGeometryFeature::TH2LineVertex> *l
 std::optional<QPointF> mirroredSmoothControlPoint(const QPointF &anchor,
                                                   const QPointF &movedControlPoint,
                                                   const std::optional<QPointF> &oppositeControlPoint);
+QVector<MapLineSecondaryMove> collectLineSecondaryMovesForVertexDrag(const MapGeometryFeature &lineFeature,
+                                                                     int sourceVertexIndex,
+                                                                     const QPointF &oldPoint,
+                                                                     const QPointF &newPoint);
 void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const QString &documentPath,
                              const QVector<MapSceneEntry> &entries,

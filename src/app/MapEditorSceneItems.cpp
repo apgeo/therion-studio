@@ -68,6 +68,14 @@ bool tokenLooksNumeric(const QString &token)
     return numericPattern.match(token).hasMatch();
 }
 
+enum class LineVertexRole
+{
+    None,
+    Anchor,
+    IncomingControl,
+    OutgoingControl
+};
+
 class MapCardMoveCommand final : public QUndoCommand
 {
 public:
@@ -817,6 +825,11 @@ QPointF mapGeometryPointToPreview(const QPointF &point, const QRectF &sourceBoun
     return sceneCoordsSourceToPreview(point, sourceBounds, targetBounds);
 }
 
+QPointF mapGeometryPreviewToSource(const QPointF &point, const QRectF &sourceBounds, const QRectF &targetBounds)
+{
+    return sceneCoordsPreviewToSource(point, sourceBounds, targetBounds);
+}
+
 std::optional<QPointF> mirroredSmoothControlPoint(const QPointF &anchor,
                                                   const QPointF &movedControlPoint,
                                                   const std::optional<QPointF> &oppositeControlPoint)
@@ -835,6 +848,85 @@ std::optional<QPointF> mirroredSmoothControlPoint(const QPointF &anchor,
         : vectorLength;
     return QPointF(anchor.x() - (direction.x() * oppositeLength),
                    anchor.y() - (direction.y() * oppositeLength));
+}
+
+QVector<MapLineSecondaryMove> collectLineSecondaryMovesForVertexDrag(const MapGeometryFeature &lineFeature,
+                                                                     int sourceVertexIndex,
+                                                                     const QPointF &oldPoint,
+                                                                     const QPointF &newPoint)
+{
+    QVector<MapLineSecondaryMove> moves;
+    if (sourceVertexIndex < 0 || lineFeature.lineVertices.isEmpty()) {
+        return moves;
+    }
+
+    auto appendMove = [&moves](int moveSourceVertexIndex, const QPointF &from, const QPointF &to) {
+        if (moveSourceVertexIndex < 0 || !mapSourcePointsDiffer(from, to)) {
+            return;
+        }
+
+        MapLineSecondaryMove move;
+        move.sourceVertexIndex = moveSourceVertexIndex;
+        move.oldPoint = from;
+        move.newPoint = to;
+        moves.append(move);
+    };
+
+    for (const MapGeometryFeature::TH2LineVertex &vertex : lineFeature.lineVertices) {
+        if (vertex.anchorSourceVertexIndex == sourceVertexIndex) {
+            const QPointF delta = newPoint - oldPoint;
+            if (!delta.isNull()) {
+                if (vertex.incomingSourceVertexIndex >= 0) {
+                    const QPointF oldIncoming = vertex.incomingControl.value_or(vertex.anchor);
+                    appendMove(vertex.incomingSourceVertexIndex, oldIncoming, oldIncoming + delta);
+                }
+                if (vertex.outgoingSourceVertexIndex >= 0) {
+                    const QPointF oldOutgoing = vertex.outgoingControl.value_or(vertex.anchor);
+                    appendMove(vertex.outgoingSourceVertexIndex, oldOutgoing, oldOutgoing + delta);
+                }
+            }
+            return moves;
+        }
+
+        LineVertexRole role = LineVertexRole::None;
+        if (vertex.incomingSourceVertexIndex == sourceVertexIndex) {
+            role = LineVertexRole::IncomingControl;
+        } else if (vertex.outgoingSourceVertexIndex == sourceVertexIndex) {
+            role = LineVertexRole::OutgoingControl;
+        }
+        if (role == LineVertexRole::None || !vertex.isSmooth) {
+            continue;
+        }
+
+        const QPointF anchor = vertex.anchor;
+        if (role == LineVertexRole::IncomingControl) {
+            if (vertex.outgoingSourceVertexIndex < 0) {
+                return moves;
+            }
+
+            const QPointF oldOpposite = vertex.outgoingControl.value_or(anchor);
+            const std::optional<QPointF> newOpposite = mirroredSmoothControlPoint(anchor, newPoint, vertex.outgoingControl);
+            if (newOpposite.has_value()) {
+                appendMove(vertex.outgoingSourceVertexIndex, oldOpposite, newOpposite.value());
+            }
+            return moves;
+        }
+
+        if (role == LineVertexRole::OutgoingControl) {
+            if (vertex.incomingSourceVertexIndex < 0) {
+                return moves;
+            }
+
+            const QPointF oldOpposite = vertex.incomingControl.value_or(anchor);
+            const std::optional<QPointF> newOpposite = mirroredSmoothControlPoint(anchor, newPoint, vertex.incomingControl);
+            if (newOpposite.has_value()) {
+                appendMove(vertex.incomingSourceVertexIndex, oldOpposite, newOpposite.value());
+            }
+            return moves;
+        }
+    }
+
+    return moves;
 }
 
 bool insertLineVertexByDeCasteljau(QVector<MapGeometryFeature::TH2LineVertex> *lineVertices,

@@ -324,6 +324,82 @@ int runSmoothMirrorHelperTest()
 
     return 0;
 }
+
+int runPreviewToSourceUnclampedTest()
+{
+    const QRectF sourceBounds(0.0, -50.0, 100.0, 50.0);
+    const QRectF previewBounds(0.0, 0.0, 200.0, 200.0);
+
+    // This point is below the fitted preview rect for source bounds.
+    const QPointF previewPoint(100.0, 190.0);
+    const QPointF sourcePoint = mapGeometryPreviewToSource(previewPoint, sourceBounds, previewBounds);
+    if (!expect(sourcePoint.y() < sourceBounds.top(),
+                "Expected preview-to-source conversion to stay unclamped beyond fitted bounds (y below source top).")) {
+        return 1;
+    }
+
+    // This point is above the fitted preview rect for source bounds.
+    const QPointF previewPointAbove(100.0, 10.0);
+    const QPointF sourcePointAbove = mapGeometryPreviewToSource(previewPointAbove, sourceBounds, previewBounds);
+    if (!expect(sourcePointAbove.y() > sourceBounds.bottom(),
+                "Expected preview-to-source conversion to stay unclamped beyond fitted bounds (y above source bottom).")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runLineAnchorSecondaryMoveCouplingTest()
+{
+    MapGeometryFeature lineFeature;
+    lineFeature.kind = MapGeometryFeature::Kind::Line;
+
+    MapGeometryFeature::TH2LineVertex vertex;
+    vertex.anchor = QPointF(100.0, 200.0);
+    vertex.anchorSourceVertexIndex = 10;
+    vertex.incomingControl = QPointF(90.0, 190.0);
+    vertex.incomingSourceVertexIndex = 11;
+    vertex.outgoingControl = QPointF(110.0, 210.0);
+    vertex.outgoingSourceVertexIndex = 12;
+    lineFeature.lineVertices.append(vertex);
+
+    const QPointF oldAnchor(100.0, 200.0);
+    const QPointF newAnchor(104.0, 197.0);
+    const QPointF delta = newAnchor - oldAnchor;
+
+    const QVector<MapLineSecondaryMove> secondaryMoves = collectLineSecondaryMovesForVertexDrag(lineFeature,
+                                                                                                  10,
+                                                                                                  oldAnchor,
+                                                                                                  newAnchor);
+    if (!expect(secondaryMoves.size() == 2,
+                "Expected anchor drag to produce two secondary moves (incoming + outgoing control).")) {
+        return 1;
+    }
+
+    bool incomingVerified = false;
+    bool outgoingVerified = false;
+    for (const MapLineSecondaryMove &move : secondaryMoves) {
+        if (move.sourceVertexIndex == 11) {
+            incomingVerified = (move.oldPoint == QPointF(90.0, 190.0))
+                && (move.newPoint == QPointF(90.0, 190.0) + delta);
+        }
+        if (move.sourceVertexIndex == 12) {
+            outgoingVerified = (move.oldPoint == QPointF(110.0, 210.0))
+                && (move.newPoint == QPointF(110.0, 210.0) + delta);
+        }
+    }
+
+    if (!expect(incomingVerified,
+                "Expected incoming control secondary move to translate by anchor drag delta.")) {
+        return 1;
+    }
+    if (!expect(outgoingVerified,
+                "Expected outgoing control secondary move to translate by anchor drag delta.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -347,6 +423,12 @@ int main()
         return rc;
     }
     if (const int rc = runSmoothMirrorHelperTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runPreviewToSourceUnclampedTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runLineAnchorSecondaryMoveCouplingTest(); rc != 0) {
         return rc;
     }
 

@@ -339,14 +339,6 @@ private:
     std::optional<QString> afterTextSnapshot_;
 };
 
-enum class LineVertexRole
-{
-    None,
-    Anchor,
-    IncomingControl,
-    OutgoingControl
-};
-
 struct CoupledLineMove
 {
     QVector<MapLineAreaVertexMoveCommand::SecondaryMove> secondaryMoves;
@@ -377,76 +369,18 @@ CoupledLineMove coupledMovesForLineVertex(const MapGeometryFeature &lineFeature,
                                           const QPointF &newPoint)
 {
     CoupledLineMove result;
-    if (sourceVertexIndex < 0 || lineFeature.lineVertices.isEmpty()) {
-        return result;
-    }
-
-    auto appendSecondaryMove = [&](int vertexIndex, const QPointF &from, const QPointF &to) {
-        if (vertexIndex < 0 || !sourcePointsDifferForCommands(from, to)) {
-            return;
-        }
+    const QVector<MapLineSecondaryMove> moves = collectLineSecondaryMovesForVertexDrag(lineFeature,
+                                                                                       sourceVertexIndex,
+                                                                                       oldPoint,
+                                                                                       newPoint);
+    result.secondaryMoves.reserve(moves.size());
+    for (const MapLineSecondaryMove &sourceMove : moves) {
         MapLineAreaVertexMoveCommand::SecondaryMove move;
-        move.vertexIndex = vertexIndex;
-        move.oldPoint = from;
-        move.newPoint = to;
+        move.vertexIndex = sourceMove.sourceVertexIndex;
+        move.oldPoint = sourceMove.oldPoint;
+        move.newPoint = sourceMove.newPoint;
         result.secondaryMoves.append(move);
-    };
-
-    for (const MapGeometryFeature::TH2LineVertex &vertex : lineFeature.lineVertices) {
-        if (vertex.anchorSourceVertexIndex == sourceVertexIndex) {
-            const QPointF delta = newPoint - oldPoint;
-            if (!delta.isNull()) {
-                if (vertex.incomingSourceVertexIndex >= 0) {
-                    const QPointF oldIncoming = vertex.incomingControl.value_or(vertex.anchor);
-                    appendSecondaryMove(vertex.incomingSourceVertexIndex, oldIncoming, oldIncoming + delta);
-                }
-                if (vertex.outgoingSourceVertexIndex >= 0) {
-                    const QPointF oldOutgoing = vertex.outgoingControl.value_or(vertex.anchor);
-                    appendSecondaryMove(vertex.outgoingSourceVertexIndex, oldOutgoing, oldOutgoing + delta);
-                }
-            }
-            return result;
-        }
-
-        LineVertexRole role = LineVertexRole::None;
-        if (vertex.incomingSourceVertexIndex == sourceVertexIndex) {
-            role = LineVertexRole::IncomingControl;
-        } else if (vertex.outgoingSourceVertexIndex == sourceVertexIndex) {
-            role = LineVertexRole::OutgoingControl;
-        }
-        if (role == LineVertexRole::None || !vertex.isSmooth) {
-            continue;
-        }
-
-        const QPointF anchor = vertex.anchor;
-
-        if (role == LineVertexRole::IncomingControl) {
-            if (vertex.outgoingSourceVertexIndex < 0) {
-                return result;
-            }
-
-            const QPointF oldOpposite = vertex.outgoingControl.value_or(anchor);
-            const std::optional<QPointF> newOpposite = mirroredSmoothControlPoint(anchor, newPoint, vertex.outgoingControl);
-            if (newOpposite.has_value()) {
-                appendSecondaryMove(vertex.outgoingSourceVertexIndex, oldOpposite, newOpposite.value());
-            }
-            return result;
-        }
-
-        if (role == LineVertexRole::OutgoingControl) {
-            if (vertex.incomingSourceVertexIndex < 0) {
-                return result;
-            }
-
-            const QPointF oldOpposite = vertex.incomingControl.value_or(anchor);
-            const std::optional<QPointF> newOpposite = mirroredSmoothControlPoint(anchor, newPoint, vertex.incomingControl);
-            if (newOpposite.has_value()) {
-                appendSecondaryMove(vertex.incomingSourceVertexIndex, oldOpposite, newOpposite.value());
-            }
-            return result;
-        }
     }
-
     return result;
 }
 

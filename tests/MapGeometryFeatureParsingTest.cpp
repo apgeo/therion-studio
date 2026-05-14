@@ -16,6 +16,27 @@ bool expect(bool condition, const char *message)
     return condition;
 }
 
+bool expectMoveSetsEqual(const QVector<MapLineSecondaryMove> &expected,
+                         const QVector<MapLineSecondaryMove> &actual,
+                         const char *message)
+{
+    auto toMap = [](const QVector<MapLineSecondaryMove> &moves) {
+        QHash<int, QPair<QPointF, QPointF>> map;
+        for (const MapLineSecondaryMove &move : moves) {
+            map.insert(move.sourceVertexIndex, qMakePair(move.oldPoint, move.newPoint));
+        }
+        return map;
+    };
+
+    const QHash<int, QPair<QPointF, QPointF>> expectedMap = toMap(expected);
+    const QHash<int, QPair<QPointF, QPointF>> actualMap = toMap(actual);
+    if (expectedMap != actualMap) {
+        std::cerr << message << '\n';
+        return false;
+    }
+    return true;
+}
+
 const MapGeometryFeature *firstLineFeature(const QVector<MapGeometryFeature> &features)
 {
     for (const MapGeometryFeature &feature : features) {
@@ -566,6 +587,88 @@ int runLinePreviewAnchorSequencingNoStaleTest()
 
     return 0;
 }
+
+int runLinePreviewCommitParityTest()
+{
+    MapGeometryFeature lineFeature;
+    lineFeature.kind = MapGeometryFeature::Kind::Line;
+
+    MapGeometryFeature::TH2LineVertex smoothVertex;
+    smoothVertex.anchor = QPointF(100.0, 200.0);
+    smoothVertex.anchorSourceVertexIndex = 10;
+    smoothVertex.incomingControl = QPointF(90.0, 190.0);
+    smoothVertex.incomingSourceVertexIndex = 11;
+    smoothVertex.outgoingControl = QPointF(110.0, 210.0);
+    smoothVertex.outgoingSourceVertexIndex = 12;
+    smoothVertex.isSmooth = true;
+    lineFeature.lineVertices.append(smoothVertex);
+
+    MapGeometryFeature::TH2LineVertex cornerVertex;
+    cornerVertex.anchor = QPointF(300.0, 400.0);
+    cornerVertex.anchorSourceVertexIndex = 20;
+    cornerVertex.incomingControl = QPointF(290.0, 390.0);
+    cornerVertex.incomingSourceVertexIndex = 21;
+    cornerVertex.outgoingControl = QPointF(310.0, 410.0);
+    cornerVertex.outgoingSourceVertexIndex = 22;
+    cornerVertex.isSmooth = false;
+    lineFeature.lineVertices.append(cornerVertex);
+
+    QHash<int, QPointF> currentControls;
+    currentControls.insert(11, smoothVertex.incomingControl.value());
+    currentControls.insert(12, smoothVertex.outgoingControl.value());
+    currentControls.insert(21, cornerVertex.incomingControl.value());
+    currentControls.insert(22, cornerVertex.outgoingControl.value());
+
+    // 1) Anchor drag parity.
+    const QVector<MapLineSecondaryMove> commandAnchorMoves = collectLineSecondaryMovesForVertexDrag(lineFeature,
+                                                                                                     10,
+                                                                                                     smoothVertex.anchor,
+                                                                                                     QPointF(104.0, 197.0));
+    const QVector<MapLineSecondaryMove> previewAnchorMoves = collectLinePreviewCoupledUpdatesForVertexDrag(lineFeature,
+                                                                                                            10,
+                                                                                                            smoothVertex.anchor,
+                                                                                                            QPointF(104.0, 197.0),
+                                                                                                            currentControls);
+    if (!expectMoveSetsEqual(commandAnchorMoves,
+                             previewAnchorMoves,
+                             "Expected preview and commit coupling parity for anchor drag.")) {
+        return 1;
+    }
+
+    // 2) Smooth control drag parity.
+    const QVector<MapLineSecondaryMove> commandSmoothControlMoves = collectLineSecondaryMovesForVertexDrag(lineFeature,
+                                                                                                            11,
+                                                                                                            smoothVertex.incomingControl.value(),
+                                                                                                            QPointF(84.0, 196.0));
+    const QVector<MapLineSecondaryMove> previewSmoothControlMoves = collectLinePreviewCoupledUpdatesForVertexDrag(lineFeature,
+                                                                                                                   11,
+                                                                                                                   smoothVertex.incomingControl.value(),
+                                                                                                                   QPointF(84.0, 196.0),
+                                                                                                                   currentControls);
+    if (!expectMoveSetsEqual(commandSmoothControlMoves,
+                             previewSmoothControlMoves,
+                             "Expected preview and commit coupling parity for smooth control drag.")) {
+        return 1;
+    }
+
+    // 3) Corner control drag parity (no coupled move).
+    const QVector<MapLineSecondaryMove> commandCornerControlMoves = collectLineSecondaryMovesForVertexDrag(lineFeature,
+                                                                                                            21,
+                                                                                                            cornerVertex.incomingControl.value(),
+                                                                                                            QPointF(286.0, 388.0));
+    const QVector<MapLineSecondaryMove> previewCornerControlMoves = collectLinePreviewCoupledUpdatesForVertexDrag(lineFeature,
+                                                                                                                   21,
+                                                                                                                   cornerVertex.incomingControl.value(),
+                                                                                                                   QPointF(286.0, 388.0),
+                                                                                                                   currentControls);
+    if (!expectMoveSetsEqual(commandCornerControlMoves,
+                             previewCornerControlMoves,
+                             "Expected preview and commit coupling parity for corner control drag.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -607,6 +710,9 @@ int main()
         return rc;
     }
     if (const int rc = runLinePreviewAnchorSequencingNoStaleTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runLinePreviewCommitParityTest(); rc != 0) {
         return rc;
     }
 

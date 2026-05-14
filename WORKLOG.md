@@ -107,7 +107,7 @@ Legend:
 - ~~Fixed undo/redo re-entrancy crash path for map geometry edits by deferring `refreshMapScene()` while map undo commands are executing, then applying a single pending refresh after command completion.~~
 - Remaining checklist (Phase 5 closeout):
 - ~~Add focused regression coverage for live preview callback sequencing during map drags (anchor/control), including no-self-update and no-stale-preview assertions.~~
-- Add focused regression coverage for preview-vs-commit parity on representative line-edit operations (anchor move, smooth control move, corner control move).
+- ~~Add focused regression coverage for preview-vs-commit parity on representative line-edit operations (anchor move, smooth control move, corner control move).~~
 - Add a lightweight GUI smoke test for map drag/undo/redo workflow (single document, deterministic coordinates) to catch scene-refresh and undo-stack regressions.
 - Re-run Phase 5 verification suite after checklist completion and document residual parity gaps (if any) as Post-MVP.
 - Verification:
@@ -278,6 +278,7 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Expanded `MapGeometryFeatureParsingTest` with preview-coupling self-filter regression: malformed same-source incoming/outgoing control mapping now yields command-time secondary move but empty preview secondary move set after self-target filtering.~~
 - ~~Added current-state-aware preview coupling helper `collectLinePreviewCoupledUpdatesForVertexDrag` and wired live map preview updates through it so anchor-drag control transport is delta-sequenced (no stale absolute reset between drag events).~~
 - ~~Expanded `MapGeometryFeatureParsingTest` with live-preview sequencing regression coverage: multi-step anchor drag preview now asserts cumulative control transport, plus explicit no-self-update filtering in malformed shared source-index cases.~~
+- ~~Expanded `MapGeometryFeatureParsingTest` with explicit preview-vs-commit parity coverage for representative line edits: anchor move, smooth control move, and corner control move now assert identical coupled-secondary move sets between preview and command-time coupling helpers.~~
 - ~~Hardened map-geometry undo/redo dirty-state fidelity: point and line/area vertex move commands now restore exact pre/post command text snapshots through `TextEditorTab::replaceTextForCommand`, eliminating residual dirty flags caused by rewrite-path formatting drift in multi-step map commands.~~
 - ~~Extended Phase 5 line-edit parity with smoothness toggling: map canvas now supports `S` to toggle selected line vertex smooth/corner state, line-coordinate rewrite validation now accepts `smooth` continuation rows, and line-row regeneration preserves `smooth off` markers during map-driven line rewrites.~~
 - ~~Expanded `TherionDocumentEditorTest` with `rewriteLineCoordinateRows` coverage for null/non-line rejection, inline-start rejection, mixed-content rejection, and successful CRLF-preserving rewrite.~~

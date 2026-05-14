@@ -494,6 +494,7 @@ Required behavior:
 - the application shall support both light and dark appearance modes
 - the application theme shall provide coherent colors and contrast for both light and dark appearance modes across the main window, sidebars, inspectors, console surfaces, and editor chrome
 - the application may follow the operating-system appearance automatically or expose an explicit appearance preference, but dark mode support itself is mandatory
+- when the effective operating-system appearance changes at runtime, the application shall update active light/dark theme rendering without requiring an application restart
 - the application theme may use system colors, bundled theme tokens, or a combination of both, provided the resulting appearance remains consistent and accessible across supported platforms
 - missing or invalid theme entries shall fall back to safe defaults rather than breaking editor or application usability
 - changing the application theme shall affect appearance only and shall not change Therion tokenization, completion behavior, map style semantics, or document content
@@ -817,6 +818,7 @@ The criteria below are intended for implementation verification and QA.
 - Editor chrome uses application-theme styles for line numbers, gutter dividers, and fold-toggle states.
 - The application supports both light and dark appearance modes.
 - The application theme remains coherent and legible in both light and dark modes across the main window, sidebars, inspectors, console, and editor chrome.
+- Runtime operating-system light/dark appearance changes are applied in the running application without requiring relaunch.
 - Missing or invalid theme entries fall back to safe defaults without breaking application usability.
 - Packaged builds include the theme resources required to render the application chrome consistently on all supported platforms.
 

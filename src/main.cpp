@@ -1,6 +1,10 @@
 #include "app/MainWindow.h"
 
 #include <QApplication>
+#include <QEvent>
+#include <QGuiApplication>
+#include <QObject>
+#include <QStyleHints>
 #include <QStyleFactory>
 
 namespace
@@ -51,6 +55,51 @@ void applyPlatformStyle(QApplication &application)
         }
     }
 }
+
+QString applicationChromeStyleSheet()
+{
+    return QStringLiteral(
+        "QWidget#SidebarContainer {"
+        "  border: 0px;"
+        "}"
+        "QFrame#SidebarActivityRail {"
+        "  border: 0px;"
+        "  border-right: 1px solid palette(mid);"
+        "}"
+        "QStatusBar {"
+        "  border-top: 1px solid palette(mid);"
+        "}"
+        "QStatusBar::item {"
+        "  border: 0px;"
+        "}");
+}
+
+void applyApplicationChromeStyle(QApplication &application)
+{
+    application.setStyleSheet(applicationChromeStyleSheet());
+}
+
+class ApplicationAppearanceWatcher final : public QObject
+{
+public:
+    explicit ApplicationAppearanceWatcher(QApplication *application, QObject *parent = nullptr)
+        : QObject(parent)
+        , application_(application)
+    {
+    }
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        if (watched == application_ && event != nullptr && event->type() == QEvent::ApplicationPaletteChange) {
+            applyApplicationChromeStyle(*application_);
+        }
+        return QObject::eventFilter(watched, event);
+    }
+
+private:
+    QApplication *application_ = nullptr;
+};
 }
 
 int main(int argc, char *argv[])
@@ -61,21 +110,14 @@ int main(int argc, char *argv[])
     application.setOrganizationDomain(QStringLiteral("therionstudio.example"));
 
     applyPlatformStyle(application);
-    application.setStyleSheet(
-        QStringLiteral(
-            "QWidget#SidebarContainer {"
-            "  border: 0px;"
-            "}"
-            "QFrame#SidebarActivityRail {"
-            "  border: 0px;"
-            "  border-right: 1px solid palette(mid);"
-            "}"
-            "QStatusBar {"
-            "  border-top: 1px solid palette(mid);"
-            "}"
-            "QStatusBar::item {"
-            "  border: 0px;"
-            "}"));
+    applyApplicationChromeStyle(application);
+    ApplicationAppearanceWatcher appearanceWatcher(&application, &application);
+    application.installEventFilter(&appearanceWatcher);
+    if (QStyleHints *styleHints = QGuiApplication::styleHints()) {
+        QObject::connect(styleHints, &QStyleHints::colorSchemeChanged, &application, [&application](Qt::ColorScheme) {
+            applyApplicationChromeStyle(application);
+        });
+    }
 
     auto *window = new MainWindow;
     window->show();

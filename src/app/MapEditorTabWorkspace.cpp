@@ -1,5 +1,6 @@
 #include "MapEditorTab.h"
 
+#include <QGuiApplication>
 #include <QFileInfo>
 #include <QFrame>
 #include <QGraphicsView>
@@ -11,6 +12,7 @@
 #include <QScrollArea>
 #include <QScopedValueRollback>
 #include <QSplitter>
+#include <QStyleHints>
 #include <QTextBrowser>
 #include <QUndoStack>
 #include <QVBoxLayout>
@@ -61,6 +63,13 @@ MapEditorTab::MapEditorTab(QWidget *parent)
     buildUi();
     updateWorkspaceVisibility();
     setTouchFriendlyControlsEnabled(touchFriendlyControlsEnabled_);
+
+    if (QStyleHints *styleHints = QGuiApplication::styleHints()) {
+        connect(styleHints, &QStyleHints::colorSchemeChanged, this, [this](Qt::ColorScheme) {
+            handleApplicationAppearanceChanged();
+        });
+    }
+    handleApplicationAppearanceChanged();
 }
 
 void MapEditorTab::buildUi()
@@ -181,7 +190,7 @@ void MapEditorTab::buildUi()
     mapView_->setTransformationAnchor(QGraphicsView::AnchorViewCenter);
     mapView_->setResizeAnchor(QGraphicsView::AnchorViewCenter);
     mapView_->setRenderHint(QPainter::Antialiasing, true);
-    mapView_->setBackgroundBrush(QColor(QStringLiteral("#1e1f24")));
+    mapView_->setBackgroundBrush(palette().color(QPalette::Window));
     mapView_->setFocusPolicy(Qt::StrongFocus);
     mapView_->installEventFilter(this);
     if (mapView_->viewport() != nullptr) {

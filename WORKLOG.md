@@ -195,6 +195,7 @@ Automated tests currently in-tree and used as regression baseline:
 
 ### 2026-05-14
 
+- ~~Added live appearance-switch handling so runtime OS light/dark changes now reapply app chrome styling and refresh map workspace rendering without relaunch.~~
 - ~~Fixed map-theme regression where dark-mode app chrome could still render a light map canvas: map theme selection now cross-checks `QStyleHints::colorScheme` against effective application palette lightness and prefers palette-derived mode when they disagree.~~
 - ~~Fine-tuned light-mode map rendering: explicit OS light/dark scheme now takes precedence over scene-local palette overrides, and light-theme canvas/grid/label/stroke values were adjusted for cleaner contrast balance and stronger line readability.~~
 - ~~Fixed sidebar-rail and status-bar divider styling to use palette-driven border color (`palette(mid)`) instead of a hardcoded light gray, keeping separators consistent in dark mode while preserving light-mode contrast.~~

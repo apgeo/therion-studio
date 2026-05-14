@@ -174,6 +174,7 @@ Map tab uses a split text+map workspace by default.
 Map canvas appearance:
 
 - canvas and geometry contrast adapts to current system light/dark appearance so lines, handles, labels, and grid stay readable
+- switching system light/dark appearance updates the map workspace and sidebar/status separators live, without restarting the app
 
 Toolbar actions:
 

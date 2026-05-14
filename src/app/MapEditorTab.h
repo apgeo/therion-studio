@@ -99,6 +99,7 @@ signals:
     void openDedicatedWindowRequested(TherionStudio::MapEditorTab *tab);
 
 protected:
+    void changeEvent(QEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
@@ -186,6 +187,7 @@ private:
     void refreshStatus();
     QString displayPath() const;
     void setTouchFriendlyControlsEnabled(bool enabled);
+    void handleApplicationAppearanceChanged();
 
     TextEditorTab *textEditor_ = nullptr;
     QGraphicsView *mapView_ = nullptr;

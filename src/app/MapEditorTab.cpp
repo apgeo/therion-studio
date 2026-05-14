@@ -12,6 +12,7 @@
 #include <QLineF>
 #include <QMouseEvent>
 #include <QNativeGestureEvent>
+#include <QPalette>
 #include <QPushButton>
 #include <QScopedValueRollback>
 #include <QScrollBar>
@@ -741,6 +742,38 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
     }
 
     return QWidget::eventFilter(watched, event);
+}
+
+void MapEditorTab::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event == nullptr) {
+        return;
+    }
+
+    switch (event->type()) {
+    case QEvent::ApplicationPaletteChange:
+    case QEvent::PaletteChange:
+    case QEvent::StyleChange:
+        handleApplicationAppearanceChanged();
+        break;
+    default:
+        break;
+    }
+}
+
+void MapEditorTab::handleApplicationAppearanceChanged()
+{
+    if (mapView_ != nullptr) {
+        mapView_->setBackgroundBrush(mapView_->palette().color(QPalette::Window));
+        if (QWidget *viewport = mapView_->viewport(); viewport != nullptr) {
+            viewport->update();
+        }
+    }
+
+    if (mapScene_ != nullptr) {
+        refreshMapScenePreservingUndoStack();
+    }
 }
 
 void MapEditorTab::buildMapScene()

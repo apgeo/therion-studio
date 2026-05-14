@@ -223,6 +223,53 @@ int runWindows1252DirectiveRoundTripTest()
                                              "windows-1252 save did not preserve original byte encoding.");
 }
 
+int runUnknownDirectiveFallsBackToUtf8Test()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary directory creation failed.")) {
+        return 1;
+    }
+
+    const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("unknown-encoding-directive.th"));
+    const QString sourceText = QStringLiteral(
+        "encoding madeup-xyz\n"
+        "survey žluťoučký kůň\n"
+        "endsurvey\n");
+    const QByteArray utf8Bytes = sourceText.toUtf8();
+
+    if (!expect(writeRawFile(filePath, utf8Bytes), "Failed to write unknown-directive UTF-8 fixture file.")) {
+        return 1;
+    }
+
+    QString contents;
+    QString encodingName;
+    QString errorMessage;
+    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encodingName, nullptr, &errorMessage),
+                qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    if (!expect(contents == sourceText, "Unknown-directive UTF-8 fixture decoded contents mismatch.")) {
+        return 1;
+    }
+
+    if (!expect(encodingName.contains(QStringLiteral("utf"), Qt::CaseInsensitive),
+                "Unknown-directive UTF-8 fixture should resolve to a UTF-family encoding.")) {
+        return 1;
+    }
+
+    if (!expect(DocumentFile::writeTextFile(filePath, contents, encodingName, &errorMessage), qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    const QByteArray writtenBytes = readRawFile(filePath);
+    if (!expect(writtenBytes == utf8Bytes, "Unknown-directive UTF-8 fallback save did not preserve original bytes.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runInspectorFallbackEncodingPreservationTest()
 {
     QTemporaryDir tempDir;
@@ -414,6 +461,10 @@ int main()
 
     if (const int cp1252Result = runWindows1252DirectiveRoundTripTest(); cp1252Result != 0) {
         return cp1252Result;
+    }
+
+    if (const int unknownDirectiveResult = runUnknownDirectiveFallsBackToUtf8Test(); unknownDirectiveResult != 0) {
+        return unknownDirectiveResult;
     }
 
     if (const int inspector1250Result = runInspectorFallbackEncodingPreservationTest(); inspector1250Result != 0) {

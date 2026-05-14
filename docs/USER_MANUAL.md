@@ -142,6 +142,7 @@ Text editor includes:
 - conversion is explicit: clicking `Convert to UTF-8` asks for confirmation and marks the tab dirty; disk content changes only after save
 - status notes indicate whether saves are preserving original encoding or whether UTF-8 conversion is pending save
 - directive aliases such as `encoding cp1250` are supported via codec-name normalization (`cpNNNN` -> `windows-NNNN` candidate)
+- unsupported `encoding ...` directive tokens fall back to normal encoding detection/decode order instead of failing the file open
 
 ### 5.4 Use Structure + Inspector
 

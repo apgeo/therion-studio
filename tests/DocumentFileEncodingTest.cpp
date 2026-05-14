@@ -223,6 +223,38 @@ int runWindows1252DirectiveRoundTripTest()
                                              "windows-1252 save did not preserve original byte encoding.");
 }
 
+int runCp1252DirectiveAliasRoundTripTest()
+{
+    return runDirectiveEncodingRoundTripTest(QStringLiteral("windows-1252"),
+                                             QStringLiteral("cp1252"),
+                                             QStringLiteral("survey café déjà vu\nendsurvey\n"),
+                                             QStringLiteral("cp1252-alias.th"),
+                                             QStringLiteral("1252"),
+                                             "windows-1252 codec is not available in this Qt runtime.",
+                                             "Failed to encode cp1252 alias fixture text.",
+                                             "Failed to write cp1252 alias fixture file.",
+                                             "cp1252 alias fixture decoded contents mismatch.",
+                                             "cp1252 alias fixture did not resolve to a 1252-family codec.",
+                                             "cp1252 alias save failed.",
+                                             "cp1252 alias save did not preserve original byte encoding.");
+}
+
+int runLatin2DirectiveRoundTripTest()
+{
+    return runDirectiveEncodingRoundTripTest(QStringLiteral("iso-8859-2"),
+                                             QStringLiteral("latin2"),
+                                             QStringLiteral("survey žluťoučký\nendsurvey\n"),
+                                             QStringLiteral("latin2.th"),
+                                             QStringLiteral("8859"),
+                                             "iso-8859-2 codec is not available in this Qt runtime.",
+                                             "Failed to encode latin2 fixture text.",
+                                             "Failed to write latin2 fixture file.",
+                                             "latin2 fixture decoded contents mismatch.",
+                                             "latin2 fixture did not resolve to an 8859-family codec.",
+                                             "latin2 save failed.",
+                                             "latin2 save did not preserve original byte encoding.");
+}
+
 int runUnknownDirectiveFallsBackToUtf8Test()
 {
     QTemporaryDir tempDir;
@@ -264,6 +296,50 @@ int runUnknownDirectiveFallsBackToUtf8Test()
 
     const QByteArray writtenBytes = readRawFile(filePath);
     if (!expect(writtenBytes == utf8Bytes, "Unknown-directive UTF-8 fallback save did not preserve original bytes.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runUnknownDirectiveFallsBackToLatin1Test()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary directory creation failed.")) {
+        return 1;
+    }
+
+    const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("unknown-encoding-directive-latin1.th"));
+    const QByteArray latin1Bytes("encoding madeup-xyz\nsurvey caf\xe9\nendsurvey\n");
+
+    if (!expect(writeRawFile(filePath, latin1Bytes), "Failed to write unknown-directive Latin1 fixture file.")) {
+        return 1;
+    }
+
+    QString contents;
+    QString encodingName;
+    QString errorMessage;
+    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encodingName, nullptr, &errorMessage),
+                qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    if (!expect(contents == QStringLiteral("encoding madeup-xyz\nsurvey café\nendsurvey\n"),
+                "Unknown-directive Latin1 fixture decoded contents mismatch.")) {
+        return 1;
+    }
+
+    if (!expect(!encodingName.trimmed().isEmpty(),
+                "Unknown-directive Latin1 fixture should resolve to a non-empty fallback encoding.")) {
+        return 1;
+    }
+
+    if (!expect(DocumentFile::writeTextFile(filePath, contents, encodingName, &errorMessage), qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    const QByteArray writtenBytes = readRawFile(filePath);
+    if (!expect(writtenBytes == latin1Bytes, "Unknown-directive Latin1 fallback save did not preserve original bytes.")) {
         return 1;
     }
 
@@ -463,8 +539,20 @@ int main()
         return cp1252Result;
     }
 
+    if (const int cp1252AliasResult = runCp1252DirectiveAliasRoundTripTest(); cp1252AliasResult != 0) {
+        return cp1252AliasResult;
+    }
+
+    if (const int latin2Result = runLatin2DirectiveRoundTripTest(); latin2Result != 0) {
+        return latin2Result;
+    }
+
     if (const int unknownDirectiveResult = runUnknownDirectiveFallsBackToUtf8Test(); unknownDirectiveResult != 0) {
         return unknownDirectiveResult;
+    }
+
+    if (const int unknownDirectiveLatin1Result = runUnknownDirectiveFallsBackToLatin1Test(); unknownDirectiveLatin1Result != 0) {
+        return unknownDirectiveLatin1Result;
     }
 
     if (const int inspector1250Result = runInspectorFallbackEncodingPreservationTest(); inspector1250Result != 0) {

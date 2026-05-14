@@ -141,7 +141,7 @@ Text editor includes:
 - loading honors Therion `encoding ...` directive when the declared codec is available in Qt
 - conversion is explicit: clicking `Convert to UTF-8` asks for confirmation and marks the tab dirty; disk content changes only after save
 - status notes indicate whether saves are preserving original encoding or whether UTF-8 conversion is pending save
-- directive aliases such as `encoding cp1250` are supported via codec-name normalization (`cpNNNN` -> `windows-NNNN` candidate)
+- directive aliases such as `encoding cp1250` are supported via codec-name normalization (`cpNNNN` -> `windows-NNNN` candidate), and `encoding latin2` is normalized to an `iso-8859-2` candidate path
 - unsupported `encoding ...` directive tokens fall back to normal encoding detection/decode order instead of failing the file open
 
 ### 5.4 Use Structure + Inspector

@@ -149,6 +149,9 @@ Automated tests currently in-tree and used as regression baseline:
 
 ### 2026-05-14
 
+- ~~Populated `docs/USER_MANUAL.md` with current implemented UI/workflow coverage: menus, sidebar panes, map workspace behavior, cross-platform shortcuts, settings/session persistence, platform notes, and troubleshooting.~~
+- ~~Updated repository instructions to require maintaining a living `docs/USER_MANUAL.md` and updating it whenever UI layout, workflows, keyboard shortcuts, or settings behavior changes.~~
+- ~~Created initial `docs/USER_MANUAL.md` scaffold to track UI structure, workflows, shortcuts, settings, platform notes, and troubleshooting.~~
 - ~~Improved map-canvas interaction affordance for editable geometry handles: added hover/selected/drag visual states, stronger contrast, and per-handle tooltips (point and line/area vertices).~~
 - ~~Increased map preview handle and stroke readability (larger point/vertex radii and thicker preview line strokes) to improve selection/drag usability at normal fit scale.~~
 - ~~Added hover-state visual feedback to map cards and draft-geometry cards for clearer active-target discovery.~~
@@ -197,6 +200,11 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Added reusable line-curve editing helpers in map scene support: de Casteljau segment split insertion (`insertLineVertexByDeCasteljau`) and neighbor-control reconnect removal (`removeLineVertexWithReconnect`) on TH2 line-vertex sequences.~~
 - ~~Expanded `MapGeometryFeatureParsingTest` with direct curve-edit behavior checks for cubic split insertion and middle-vertex removal reconnect semantics.~~
 - ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest MapGeometryFeatureParsingTest TherionProjectStructureIndexTest MapBackgroundPlacementTest TherionBackgroundMetadataTest TherionXviParserTest` plus execution of all six regression binaries.~~
+- ~~Added safe source rewrite helper `rewriteLineCoordinateRows` for replacing coordinate rows in `line` blocks while preserving `line`/`endline` lines and CRLF, with explicit guardrails that reject inline-coordinate starts and mixed non-coordinate continuation content.~~
+- ~~Wired line coordinate-row rewrite through `TextEditorTab` and map-tab command path, including keyboard-driven line anchor editing (`Insert` or `I` = split/add via de Casteljau, `Delete/Backspace` = remove middle anchor with neighbor-handle reconnect).~~
+- ~~Added `MapEditableGeometryVertexItem` accessors (`lineNumber`, `geometryKind`, `vertexIndex`) and map-view focus/key handling needed for selection-driven anchor edit commands.~~
+- ~~Expanded `TherionDocumentEditorTest` with `rewriteLineCoordinateRows` coverage for null/non-line rejection, inline-start rejection, mixed-content rejection, and successful CRLF-preserving rewrite.~~
+- ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest MapGeometryFeatureParsingTest TherionProjectStructureIndexTest MapBackgroundPlacementTest TherionBackgroundMetadataTest TherionXviParserTest` plus execution of all six regression binaries after keyboard vertex-edit wiring.~~
 - ~~Closed Phase 4 (`MVP`) and moved additional corpus-scale rewrite expansion into the Post-MVP backlog.~~
 
 ### 2026-05-13

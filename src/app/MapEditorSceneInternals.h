@@ -207,6 +207,21 @@ public:
         setPos(sceneCoordsSourceToPreview(sourcePoint, sourceBounds, previewBounds));
     }
 
+    int lineNumber() const
+    {
+        return lineNumber_;
+    }
+
+    QString geometryKind() const
+    {
+        return geometryKind_;
+    }
+
+    int vertexIndex() const
+    {
+        return vertexIndex_;
+    }
+
     void setMoveCommittedCallback(std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> callback)
     {
         moveCommittedCallback_ = std::move(callback);

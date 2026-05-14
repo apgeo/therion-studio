@@ -897,4 +897,111 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
     *contents = lines.join(lineEnding);
     return true;
 }
+
+bool TherionDocumentEditor::rewriteLineCoordinateRows(QString *contents,
+                                                      int lineNumber,
+                                                      const QStringList &coordinateRows,
+                                                      QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+    if (lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line number is invalid.");
+        }
+        return false;
+    }
+    if (coordinateRows.isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No coordinate rows were provided for rewrite.");
+        }
+        return false;
+    }
+
+    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = splitLinesNormalized(*contents);
+    if (lineNumber > lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line no longer exists.");
+        }
+        return false;
+    }
+
+    const int blockStartLineIndex = lineNumber - 1;
+    const TherionParsedLine startLine = TherionDocumentParser::parseLine(lines.at(blockStartLineIndex), lineNumber);
+    if (startLine.directive != QStringLiteral("line")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line is not a writable line block.");
+        }
+        return false;
+    }
+
+    if (!coordinateTokenPairsForLine(startLine, 1).isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Line rewrite is not supported when start line contains inline coordinates.");
+        }
+        return false;
+    }
+
+    int blockEndLineIndex = -1;
+    for (int candidateIndex = blockStartLineIndex + 1; candidateIndex < lines.size(); ++candidateIndex) {
+        const TherionParsedLine candidateLine = TherionDocumentParser::parseLine(lines.at(candidateIndex), candidateIndex + 1);
+        if (candidateLine.directive == QStringLiteral("endline")) {
+            blockEndLineIndex = candidateIndex;
+            break;
+        }
+    }
+    if (blockEndLineIndex < 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line block is missing endline.");
+        }
+        return false;
+    }
+
+    for (int lineIndex = blockStartLineIndex + 1; lineIndex < blockEndLineIndex; ++lineIndex) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineIndex), lineIndex + 1);
+        if (parsedLine.tokens.isEmpty()) {
+            continue;
+        }
+        if (parsedLine.commentStart == 0) {
+            continue;
+        }
+        if (!coordinateTokenPairsForLine(parsedLine, 0).isEmpty()) {
+            continue;
+        }
+
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Line rewrite is only supported for coordinate-only line blocks.");
+        }
+        return false;
+    }
+
+    QStringList rewrittenBlock;
+    rewrittenBlock.reserve(2 + coordinateRows.size());
+    rewrittenBlock.append(lines.at(blockStartLineIndex));
+    for (const QString &row : coordinateRows) {
+        const QString trimmed = row.trimmed();
+        if (trimmed.isEmpty()) {
+            continue;
+        }
+        rewrittenBlock.append(QStringLiteral("  %1").arg(trimmed));
+    }
+    rewrittenBlock.append(lines.at(blockEndLineIndex));
+
+    const int replaceStart = blockStartLineIndex;
+    const int replaceCount = (blockEndLineIndex - blockStartLineIndex) + 1;
+    for (int index = 0; index < replaceCount; ++index) {
+        lines.removeAt(replaceStart);
+    }
+    for (int index = rewrittenBlock.size() - 1; index >= 0; --index) {
+        lines.insert(replaceStart, rewrittenBlock.at(index));
+    }
+
+    *contents = lines.join(lineEnding);
+    return true;
+}
 }

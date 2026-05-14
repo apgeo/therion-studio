@@ -38,5 +38,9 @@ public:
                                         const QString &optionName,
                                         bool enabled,
                                         QString *errorMessage = nullptr);
+    static bool rewriteLineCoordinateRows(QString *contents,
+                                          int lineNumber,
+                                          const QStringList &coordinateRows,
+                                          QString *errorMessage = nullptr);
 };
 }

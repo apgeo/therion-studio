@@ -70,6 +70,9 @@ public:
                                  const QString &optionName,
                                  bool enabled,
                                  QString *errorMessage = nullptr);
+    bool rewriteLineCoordinateRows(int lineNumber,
+                                   const QStringList &coordinateRows,
+                                   QString *errorMessage = nullptr);
 
     QString filePath() const;
     QString displayName() const;

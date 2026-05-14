@@ -148,8 +148,10 @@ void MapEditorTab::buildUi()
     mapView_->setResizeAnchor(QGraphicsView::AnchorViewCenter);
     mapView_->setRenderHint(QPainter::Antialiasing, true);
     mapView_->setBackgroundBrush(QColor(QStringLiteral("#1e1f24")));
+    mapView_->setFocusPolicy(Qt::StrongFocus);
     mapView_->installEventFilter(this);
     if (mapView_->viewport() != nullptr) {
+        mapView_->viewport()->setFocusPolicy(Qt::StrongFocus);
         mapView_->viewport()->installEventFilter(this);
     }
 

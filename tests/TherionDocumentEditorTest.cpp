@@ -820,6 +820,64 @@ int runRewriteLineOptionToggleTest()
     return 0;
 }
 
+int runRewriteLineCoordinateRowsTest()
+{
+    QString errorMessage;
+
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineCoordinateRows(nullptr, 1, {QStringLiteral("1 2")}, &errorMessage),
+                "rewriteLineCoordinateRows should reject null contents.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "rewriteLineCoordinateRows should report null-content error.")) {
+        return 1;
+    }
+
+    QString contents = QStringLiteral("point station 1 2 station -name a1\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineCoordinateRows(&contents, 1, {QStringLiteral("1 2")}, &errorMessage),
+                "rewriteLineCoordinateRows should reject non-line directives.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall 1 2 3 4\nendline\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineCoordinateRows(&contents, 1, {QStringLiteral("5 6")}, &errorMessage),
+                "rewriteLineCoordinateRows should reject start-line inline coordinate rewrites.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall\n  smooth off\nendline\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineCoordinateRows(&contents, 1, {QStringLiteral("5 6")}, &errorMessage),
+                "rewriteLineCoordinateRows should reject non-coordinate continuation content.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall -id line-1 # keep\n"
+                              "  10 20 30 40\n"
+                              "  50 60\n"
+                              "endline\r\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineCoordinateRows(&contents,
+                                                                  1,
+                                                                  {QStringLiteral("11 22 33 44 55 66"),
+                                                                   QStringLiteral("77 88")},
+                                                                  &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall -id line-1 # keep\r\n"
+                                           "  11 22 33 44 55 66\r\n"
+                                           "  77 88\r\n"
+                                           "endline\r\n"),
+                "rewriteLineCoordinateRows should replace coordinate rows and preserve start/end lines with CRLF.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runCorpusStyleRewriteFixtureTest()
 {
     QString errorMessage;
@@ -985,6 +1043,11 @@ int main()
     const int rewriteLineOptionToggleResult = runRewriteLineOptionToggleTest();
     if (rewriteLineOptionToggleResult != 0) {
         return rewriteLineOptionToggleResult;
+    }
+
+    const int rewriteLineCoordinateRowsResult = runRewriteLineCoordinateRowsTest();
+    if (rewriteLineCoordinateRowsResult != 0) {
+        return rewriteLineCoordinateRowsResult;
     }
 
     return runCorpusStyleRewriteFixtureTest();

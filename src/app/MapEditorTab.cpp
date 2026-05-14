@@ -8,6 +8,7 @@
 #include <QGraphicsView>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QKeyEvent>
 #include <QLineF>
 #include <QMouseEvent>
 #include <QNativeGestureEvent>
@@ -29,6 +30,7 @@
 #include <optional>
 
 #include "MapEditorSceneSupport.h"
+#include "MapEditorSceneInternals.h"
 #include "TextEditorTab.h"
 #include "../core/TherionDocumentParser.h"
 
@@ -56,7 +58,7 @@ QRectF fittedPreviewBoundsForSource(const QRectF &sourceBounds, const QRectF &pr
     return QRectF(left, top, fittedWidth, fittedHeight);
 }
 
-bool mapSourcePointsDiffer(const QPointF &a, const QPointF &b)
+bool sourcePointsDifferForCommands(const QPointF &a, const QPointF &b)
 {
     return (a - b).manhattanLength() > 0.01;
 }
@@ -333,7 +335,7 @@ CoupledLineMove coupledMovesForLineVertex(const MapGeometryFeature &lineFeature,
 
     constexpr qreal kEpsilon = 1e-6;
     auto appendSecondaryMove = [&](int vertexIndex, const QPointF &from, const QPointF &to) {
-        if (vertexIndex < 0 || !mapSourcePointsDiffer(from, to)) {
+        if (vertexIndex < 0 || !sourcePointsDifferForCommands(from, to)) {
             return;
         }
         MapLineAreaVertexMoveCommand::SecondaryMove move;
@@ -411,6 +413,59 @@ CoupledLineMove coupledMovesForLineVertex(const MapGeometryFeature &lineFeature,
     }
 
     return result;
+}
+
+int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int sourceVertexIndex)
+{
+    if (sourceVertexIndex < 0) {
+        return -1;
+    }
+
+    for (int index = 0; index < lineFeature.lineVertices.size(); ++index) {
+        if (lineFeature.lineVertices.at(index).anchorSourceVertexIndex == sourceVertexIndex) {
+            return index;
+        }
+    }
+
+    return -1;
+}
+
+QString formatSourceCoordinate(qreal value)
+{
+    return QString::number(value, 'f', 1);
+}
+
+QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2LineVertex> &lineVertices)
+{
+    QStringList rows;
+    if (lineVertices.size() < 2) {
+        return rows;
+    }
+
+    QStringList tokens;
+    tokens.reserve(lineVertices.size() * 6);
+    const auto appendPoint = [&tokens](const QPointF &point) {
+        tokens.append(formatSourceCoordinate(point.x()));
+        tokens.append(formatSourceCoordinate(point.y()));
+    };
+
+    appendPoint(lineVertices.first().anchor);
+    for (int index = 1; index < lineVertices.size(); ++index) {
+        const MapGeometryFeature::TH2LineVertex &previous = lineVertices.at(index - 1);
+        const MapGeometryFeature::TH2LineVertex &current = lineVertices.at(index);
+        const bool cubic = previous.outgoingControl.has_value() || current.incomingControl.has_value();
+        if (cubic) {
+            appendPoint(previous.outgoingControl.value_or(previous.anchor));
+            appendPoint(current.incomingControl.value_or(current.anchor));
+        }
+        appendPoint(current.anchor);
+    }
+
+    constexpr int kTokensPerRow = 10;
+    for (int index = 0; index < tokens.size(); index += kTokensPerRow) {
+        rows.append(tokens.mid(index, kTokensPerRow).join(QLatin1Char(' ')));
+    }
+    return rows;
 }
 }
 
@@ -659,6 +714,23 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
                 fitMapToView(fitBackgroundRequested_);
             }
             break;
+        case QEvent::KeyPress: {
+            auto *keyEvent = static_cast<QKeyEvent *>(event);
+            const bool insertShortcut = keyEvent->key() == Qt::Key_Insert
+                || (keyEvent->key() == Qt::Key_I && keyEvent->modifiers() == Qt::NoModifier);
+            if (insertShortcut) {
+                if (insertLineVertexFromSelection()) {
+                    event->accept();
+                    return true;
+                }
+            } else if (keyEvent->key() == Qt::Key_Delete || keyEvent->key() == Qt::Key_Backspace) {
+                if (removeLineVertexFromSelection()) {
+                    event->accept();
+                    return true;
+                }
+            }
+            break;
+        }
         default:
             break;
         }
@@ -1288,7 +1360,7 @@ void MapEditorTab::recordCardVisibility(int lineNumber, bool oldVisible, bool ne
 
 void MapEditorTab::recordPointGeometryMove(int lineNumber, const QPointF &oldPoint, const QPointF &newPoint)
 {
-    if (lineNumber <= 0 || !mapSourcePointsDiffer(oldPoint, newPoint) || textEditor_ == nullptr) {
+    if (lineNumber <= 0 || !sourcePointsDifferForCommands(oldPoint, newPoint) || textEditor_ == nullptr) {
         return;
     }
 
@@ -1316,7 +1388,7 @@ void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
                                             const QPointF &oldPoint,
                                             const QPointF &newPoint)
 {
-    if (lineNumber <= 0 || vertexIndex < 0 || !mapSourcePointsDiffer(oldPoint, newPoint) || textEditor_ == nullptr) {
+    if (lineNumber <= 0 || vertexIndex < 0 || !sourcePointsDifferForCommands(oldPoint, newPoint) || textEditor_ == nullptr) {
         return;
     }
 
@@ -1371,6 +1443,127 @@ void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
                                                secondaryMoves,
                                                statusCallback);
     directCommand.redo();
+}
+
+bool MapEditorTab::insertLineVertexFromSelection()
+{
+    if (mapScene_ == nullptr || textEditor_ == nullptr) {
+        return false;
+    }
+
+    const QList<QGraphicsItem *> selectedItems = mapScene_->selectedItems();
+    if (selectedItems.size() != 1) {
+        return false;
+    }
+
+    auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItems.first());
+    if (vertexItem == nullptr || vertexItem->geometryKind() != QStringLiteral("line")) {
+        return false;
+    }
+
+    const int lineNumber = vertexItem->lineNumber();
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(textEditor_->text(), lineNumber);
+    if (!lineFeature.has_value()) {
+        toolbarStatusNote_ = tr("Insert vertex failed: line geometry could not be resolved.");
+        refreshToolbarSummary();
+        return true;
+    }
+
+    const int anchorIndex = lineVertexIndexForSourceVertex(lineFeature.value(), vertexItem->vertexIndex());
+    if (anchorIndex < 0) {
+        toolbarStatusNote_ = tr("Insert vertex failed: selected line anchor could not be resolved.");
+        refreshToolbarSummary();
+        return true;
+    }
+
+    int segmentStartIndex = -1;
+    if (anchorIndex < lineFeature->lineVertices.size() - 1) {
+        segmentStartIndex = anchorIndex;
+    } else if (anchorIndex > 0) {
+        segmentStartIndex = anchorIndex - 1;
+    }
+    if (segmentStartIndex < 0) {
+        toolbarStatusNote_ = tr("Insert vertex failed: line needs at least one editable segment.");
+        refreshToolbarSummary();
+        return true;
+    }
+
+    QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
+    int insertedIndex = -1;
+    if (!insertLineVertexByDeCasteljau(&editedVertices, segmentStartIndex, 0.5, &insertedIndex)) {
+        toolbarStatusNote_ = tr("Insert vertex failed: segment split could not be computed.");
+        refreshToolbarSummary();
+        return true;
+    }
+
+    const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices);
+    QString errorMessage;
+    if (!textEditor_->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Insert vertex failed.")
+            : tr("Insert vertex failed: %1").arg(errorMessage);
+        refreshToolbarSummary();
+        return true;
+    }
+
+    toolbarStatusNote_ = insertedIndex >= 0
+        ? tr("Inserted line vertex %1 on source line %2.").arg(insertedIndex + 1).arg(lineNumber)
+        : tr("Inserted line vertex on source line %1.").arg(lineNumber);
+    refreshToolbarSummary();
+    return true;
+}
+
+bool MapEditorTab::removeLineVertexFromSelection()
+{
+    if (mapScene_ == nullptr || textEditor_ == nullptr) {
+        return false;
+    }
+
+    const QList<QGraphicsItem *> selectedItems = mapScene_->selectedItems();
+    if (selectedItems.size() != 1) {
+        return false;
+    }
+
+    auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItems.first());
+    if (vertexItem == nullptr || vertexItem->geometryKind() != QStringLiteral("line")) {
+        return false;
+    }
+
+    const int lineNumber = vertexItem->lineNumber();
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(textEditor_->text(), lineNumber);
+    if (!lineFeature.has_value()) {
+        toolbarStatusNote_ = tr("Delete vertex failed: line geometry could not be resolved.");
+        refreshToolbarSummary();
+        return true;
+    }
+
+    const int anchorIndex = lineVertexIndexForSourceVertex(lineFeature.value(), vertexItem->vertexIndex());
+    if (anchorIndex < 0) {
+        toolbarStatusNote_ = tr("Delete vertex failed: selected line anchor could not be resolved.");
+        refreshToolbarSummary();
+        return true;
+    }
+
+    QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
+    if (!removeLineVertexWithReconnect(&editedVertices, anchorIndex)) {
+        toolbarStatusNote_ = tr("Delete vertex failed: only middle anchors can be removed while keeping a valid line.");
+        refreshToolbarSummary();
+        return true;
+    }
+
+    const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices);
+    QString errorMessage;
+    if (!textEditor_->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Delete vertex failed.")
+            : tr("Delete vertex failed: %1").arg(errorMessage);
+        refreshToolbarSummary();
+        return true;
+    }
+
+    toolbarStatusNote_ = tr("Removed line vertex %1 on source line %2.").arg(anchorIndex + 1).arg(lineNumber);
+    refreshToolbarSummary();
+    return true;
 }
 
 QGraphicsRectItem *MapEditorTab::selectedDraftGeometryItem() const

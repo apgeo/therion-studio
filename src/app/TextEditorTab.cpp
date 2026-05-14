@@ -506,6 +506,45 @@ bool TextEditorTab::rewriteLineAreaVertex(int lineNumber,
     return true;
 }
 
+bool TextEditorTab::rewriteLineOptionToggle(int lineNumber,
+                                            const QString &optionName,
+                                            bool enabled,
+                                            QString *errorMessage)
+{
+    QString contents = editor_->toPlainText();
+    if (!TherionDocumentEditor::rewriteLineOptionToggle(&contents, lineNumber, optionName, enabled, errorMessage)) {
+        return false;
+    }
+
+    const QTextCursor previousCursor = editor_->textCursor();
+    const int previousLine = previousCursor.blockNumber();
+    const int previousColumn = previousCursor.positionInBlock();
+
+    loading_ = true;
+    editor_->setPlainText(contents);
+
+    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
+    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
+    if (targetBlock.isValid()) {
+        QTextCursor restoredCursor(targetBlock);
+        restoredCursor.movePosition(QTextCursor::StartOfBlock);
+        restoredCursor.movePosition(QTextCursor::Right,
+                                    QTextCursor::MoveAnchor,
+                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
+        editor_->setTextCursor(restoredCursor);
+    }
+
+    loading_ = false;
+    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
+    editor_->document()->setModified(true);
+    dirty_ = true;
+    refreshTitle();
+    emit dirtyStateChanged(true);
+    emit documentTextChanged();
+    updateContextHelp();
+    return true;
+}
+
 QString TextEditorTab::filePath() const
 {
     return filePath_;

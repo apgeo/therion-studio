@@ -33,5 +33,10 @@ public:
                                       int vertexIndex,
                                       const QPointF &point,
                                       QString *errorMessage = nullptr);
+    static bool rewriteLineOptionToggle(QString *contents,
+                                        int lineNumber,
+                                        const QString &optionName,
+                                        bool enabled,
+                                        QString *errorMessage = nullptr);
 };
 }

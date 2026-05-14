@@ -750,6 +750,76 @@ int runRewriteLineAreaVertexTest()
     return 0;
 }
 
+int runRewriteLineOptionToggleTest()
+{
+    QString errorMessage;
+
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineOptionToggle(nullptr, 1, QStringLiteral("-close"), true, &errorMessage),
+                "rewriteLineOptionToggle should reject null contents.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "rewriteLineOptionToggle should report null-content error.")) {
+        return 1;
+    }
+
+    QString contents = QStringLiteral("point station 1 2 station -name a1\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteLineOptionToggle(&contents, 1, QStringLiteral("-close"), true, &errorMessage),
+                "rewriteLineOptionToggle should reject non-line directives.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "rewriteLineOptionToggle should report non-line directive errors.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall # keep\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents, 1, QStringLiteral("-close"), true, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall -close on # keep\n"),
+                "rewriteLineOptionToggle should append missing toggle options before comments.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall -close\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents, 1, QStringLiteral("-close"), false, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall -close off\n"),
+                "rewriteLineOptionToggle should expand bare options with explicit off value when disabling.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall -close off -reverse on\r\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents, 1, QStringLiteral("-reverse"), false, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall -close off -reverse off\r\n"),
+                "rewriteLineOptionToggle should rewrite existing toggle values and preserve CRLF.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall -close on -reverse off\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents, 1, QStringLiteral("reverse"), true, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall -close on -reverse on\n"),
+                "rewriteLineOptionToggle should accept normalized option names without leading dashes.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runCorpusStyleRewriteFixtureTest()
 {
     QString errorMessage;
@@ -910,6 +980,11 @@ int main()
     const int rewriteLineAreaResult = runRewriteLineAreaVertexTest();
     if (rewriteLineAreaResult != 0) {
         return rewriteLineAreaResult;
+    }
+
+    const int rewriteLineOptionToggleResult = runRewriteLineOptionToggleTest();
+    if (rewriteLineOptionToggleResult != 0) {
+        return rewriteLineOptionToggleResult;
     }
 
     return runCorpusStyleRewriteFixtureTest();

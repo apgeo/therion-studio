@@ -182,6 +182,9 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Implemented line option parsing for map geometry features (`-close` and `-reverse`) with toggle-value handling (`on/off/yes/no/true/false/1/0` plus bare-flag enable semantics).~~
 - ~~Updated map line rendering to honor parsed closed-state by closing the line path when `-close` is enabled.~~
 - ~~Surfaced parsed line-state markers in map entry subtitles (`[closed]`, `[reversed]`) for faster state inspection while iterating map parity.~~
+- ~~Added `TherionDocumentEditor::rewriteLineOptionToggle` for safe source-line mutation of line toggles (`-close` / `-reverse`) with explicit value rewriting, bare-flag expansion, and comment/line-ending preservation.~~
+- ~~Wired line toggle rewrite wrappers through `TextEditorTab` and `MapEditorTab` so line-state changes participate in the current map/text refresh and save flow.~~
+- ~~Extended Inspector with line-state controls (`Closed`, `Reversed`) for selected `Lines` objects and connected them to persisted source rewrites plus sidebar/map selection refresh.~~
 - ~~Added a corpus-style `TherionDocumentEditorTest` fixture that performs coordinated point/line/area rewrites within a realistic TH2 scrap block containing metadata, comments, and CRLF line endings.~~
 - ~~Verified rewrite stability in the fixture across option-led continuation lines (`-subtype`), inline metadata (`-id`), `%` comments, and mixed-precision coordinate tokens.~~
 - ~~Added negative corpus-style fixture checks that assert rewrite failures (missing `endline`, incomplete area coordinate tuple) return errors and leave source text unchanged.~~
@@ -189,6 +192,8 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest TherionProjectStructureIndexTest MapBackgroundPlacementTest TherionBackgroundMetadataTest TherionXviParserTest` plus execution of all five regression binaries after map input-control changes.~~
 - ~~Verified `cmake --build build --target TherionStudio MapGeometryFeatureParsingTest TherionDocumentEditorTest TherionProjectStructureIndexTest MapBackgroundPlacementTest TherionBackgroundMetadataTest TherionXviParserTest` plus execution of all six regression binaries.~~
 - ~~Expanded `MapGeometryFeatureParsingTest` with line-option assertions for `-close`/`-reverse` parsing behavior, including explicit on/off and bare-flag cases.~~
+- ~~Expanded `TherionDocumentEditorTest` with `rewriteLineOptionToggle` coverage: null/non-line rejection, missing-option insertion before comments, bare-option disable normalization, explicit-value rewrite, and CRLF preservation.~~
+- ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest MapGeometryFeatureParsingTest` plus execution of `TherionDocumentEditorTest`, `MapGeometryFeatureParsingTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, and `TherionXviParserTest`.~~
 - ~~Closed Phase 4 (`MVP`) and moved additional corpus-scale rewrite expansion into the Post-MVP backlog.~~
 
 ### 2026-05-13

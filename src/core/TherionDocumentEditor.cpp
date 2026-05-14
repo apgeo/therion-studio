@@ -6,6 +6,7 @@
 #include <QPair>
 #include <QSet>
 #include <QRegularExpression>
+#include <optional>
 
 namespace TherionStudio
 {
@@ -202,6 +203,19 @@ int lineCountForText(const QString &text)
 QString formatCoordinate(qreal value)
 {
     return QString::number(value, 'f', 1);
+}
+
+std::optional<QString> normalizedLineToggleOptionName(const QString &optionName)
+{
+    const QString normalized = optionName.trimmed().toLower();
+    if (normalized == QStringLiteral("-close") || normalized == QStringLiteral("close")) {
+        return QStringLiteral("-close");
+    }
+    if (normalized == QStringLiteral("-reverse") || normalized == QStringLiteral("reverse")) {
+        return QStringLiteral("-reverse");
+    }
+
+    return std::nullopt;
 }
 
 QPair<int, int> coordinateTokenPair(const TherionParsedLine &parsedLine)
@@ -763,6 +777,114 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
     lineText.replace(reference.yToken.start, reference.yToken.length, formatCoordinate(point.y()));
     lineText.replace(reference.xToken.start, reference.xToken.length, formatCoordinate(point.x()));
     lines[reference.lineIndex] = lineText;
+    *contents = lines.join(lineEnding);
+    return true;
+}
+
+bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
+                                                    int lineNumber,
+                                                    const QString &optionName,
+                                                    bool enabled,
+                                                    QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+
+    if (lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line number is invalid.");
+        }
+        return false;
+    }
+
+    const std::optional<QString> normalizedOption = normalizedLineToggleOptionName(optionName);
+    if (!normalizedOption.has_value()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Unsupported line option toggle.");
+        }
+        return false;
+    }
+
+    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = splitLinesNormalized(*contents);
+    if (lineNumber > lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line no longer exists.");
+        }
+        return false;
+    }
+
+    const int lineIndex = lineNumber - 1;
+    QString lineText = lines.at(lineIndex);
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    if (parsedLine.directive != QStringLiteral("line")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line is not a writable line directive.");
+        }
+        return false;
+    }
+
+    int optionTokenIndex = -1;
+    int valueTokenIndex = -1;
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        if (parsedLine.tokens.at(index).toLower() != normalizedOption.value()) {
+            continue;
+        }
+
+        optionTokenIndex = index;
+        valueTokenIndex = -1;
+        if (index + 1 < parsedLine.tokens.size()) {
+            const QString nextToken = parsedLine.tokens.at(index + 1);
+            if (!nextToken.startsWith(QLatin1Char('-'))) {
+                valueTokenIndex = index + 1;
+            }
+        }
+    }
+
+    const QString optionValue = enabled ? QStringLiteral("on") : QStringLiteral("off");
+    if (optionTokenIndex >= 0) {
+        if (valueTokenIndex >= 0 && valueTokenIndex < parsedLine.tokenSpans.size()) {
+            const TherionParsedToken valueToken = parsedLine.tokenSpans.at(valueTokenIndex);
+            if (valueToken.start < 0
+                || valueToken.length < 0
+                || valueToken.start + valueToken.length > lineText.size()) {
+                if (errorMessage != nullptr) {
+                    *errorMessage = QStringLiteral("The selected line option value could not be rewritten.");
+                }
+                return false;
+            }
+
+            lineText.replace(valueToken.start, valueToken.length, optionValue);
+        } else {
+            if (optionTokenIndex >= parsedLine.tokenSpans.size()) {
+                if (errorMessage != nullptr) {
+                    *errorMessage = QStringLiteral("The selected line option could not be rewritten.");
+                }
+                return false;
+            }
+
+            const TherionParsedToken optionToken = parsedLine.tokenSpans.at(optionTokenIndex);
+            if (optionToken.start < 0
+                || optionToken.length < 0
+                || optionToken.start + optionToken.length > lineText.size()) {
+                if (errorMessage != nullptr) {
+                    *errorMessage = QStringLiteral("The selected line option could not be rewritten.");
+                }
+                return false;
+            }
+
+            lineText.insert(optionToken.start + optionToken.length, QStringLiteral(" %1").arg(optionValue));
+        }
+    } else {
+        const int insertionIndex = parsedLine.commentStart >= 0 ? parsedLine.commentStart : lineText.size();
+        lineText.insert(insertionIndex, QStringLiteral(" %1 %2").arg(normalizedOption.value(), optionValue));
+    }
+
+    lines[lineIndex] = lineText;
     *contents = lines.join(lineEnding);
     return true;
 }

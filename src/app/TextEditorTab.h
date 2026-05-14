@@ -66,6 +66,10 @@ public:
                                int vertexIndex,
                                const QPointF &point,
                                QString *errorMessage = nullptr);
+    bool rewriteLineOptionToggle(int lineNumber,
+                                 const QString &optionName,
+                                 bool enabled,
+                                 QString *errorMessage = nullptr);
 
     QString filePath() const;
     QString displayName() const;

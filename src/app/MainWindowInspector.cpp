@@ -4,6 +4,7 @@
 #include "MainWindowStructureRoles.h"
 
 #include <QDir>
+#include <QCheckBox>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QFrame>
@@ -11,13 +12,16 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QSignalBlocker>
 #include <QSplitter>
 #include <QVBoxLayout>
+#include <optional>
 
 #include "TextEditorTab.h"
 #include "MapEditorTab.h"
 #include "../core/DocumentFile.h"
 #include "../core/TherionDocumentEditor.h"
+#include "../core/TherionDocumentParser.h"
 
 namespace
 {
@@ -77,6 +81,66 @@ QString inspectorNameLabelForCategory(const QString &category)
 
     return QObject::tr("Name");
 }
+
+bool tokenLooksNumeric(const QString &token)
+{
+    if (token.isEmpty()) {
+        return false;
+    }
+
+    bool ok = false;
+    token.toDouble(&ok);
+    return ok;
+}
+
+std::optional<bool> parseToggleToken(const QString &token)
+{
+    const QString normalized = token.trimmed().toLower();
+    if (normalized == QStringLiteral("on")
+        || normalized == QStringLiteral("yes")
+        || normalized == QStringLiteral("true")
+        || normalized == QStringLiteral("1")) {
+        return true;
+    }
+    if (normalized == QStringLiteral("off")
+        || normalized == QStringLiteral("no")
+        || normalized == QStringLiteral("false")
+        || normalized == QStringLiteral("0")) {
+        return false;
+    }
+    return std::nullopt;
+}
+
+std::optional<bool> lineOptionValueFromParsedLine(const TherionStudio::TherionParsedLine &parsedLine,
+                                                  const QString &optionName)
+{
+    if (parsedLine.directive != QStringLiteral("line") || optionName.isEmpty()) {
+        return std::nullopt;
+    }
+
+    std::optional<bool> value;
+    const QString normalizedOption = optionName.toLower();
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        if (parsedLine.tokens.at(index).toLower() != normalizedOption) {
+            continue;
+        }
+
+        if (index + 1 >= parsedLine.tokens.size()) {
+            value = true;
+            continue;
+        }
+
+        const QString nextToken = parsedLine.tokens.at(index + 1);
+        if (nextToken.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(nextToken)) {
+            value = true;
+            continue;
+        }
+
+        value = parseToggleToken(nextToken).value_or(true);
+    }
+
+    return value;
+}
 }
 
 void MainWindow::buildInspector()
@@ -125,6 +189,21 @@ void MainWindow::buildInspector()
     form->addRow(tr("Source File"), inspectorSourceValue_);
     form->addRow(tr("Line"), inspectorLineValue_);
 
+    inspectorLineOptionsWidget_ = new QWidget(inspectorFrame);
+    auto *lineOptionsLayout = new QHBoxLayout(inspectorLineOptionsWidget_);
+    lineOptionsLayout->setContentsMargins(0, 0, 0, 0);
+    lineOptionsLayout->setSpacing(8);
+    inspectorLineClosedCheck_ = new QCheckBox(tr("Closed"), inspectorLineOptionsWidget_);
+    inspectorLineReversedCheck_ = new QCheckBox(tr("Reversed"), inspectorLineOptionsWidget_);
+    lineOptionsLayout->addWidget(inspectorLineClosedCheck_);
+    lineOptionsLayout->addWidget(inspectorLineReversedCheck_);
+    lineOptionsLayout->addStretch(1);
+    inspectorLineOptionsWidget_->setVisible(false);
+    form->addRow(tr("Line State"), inspectorLineOptionsWidget_);
+
+    connect(inspectorLineClosedCheck_, &QCheckBox::toggled, this, &MainWindow::handleInspectorLineClosedToggled);
+    connect(inspectorLineReversedCheck_, &QCheckBox::toggled, this, &MainWindow::handleInspectorLineReversedToggled);
+
     inspectorLayout->addLayout(form);
     inspectorLayout->addWidget(inspectorValidationLabel_);
 
@@ -164,6 +243,9 @@ void MainWindow::updateInspectorFromStructureItem(const QModelIndex &index)
         inspectorSourceValue_->setText(tr("-"));
         inspectorLineValue_->setText(tr("-"));
         inspectorValidationLabel_->setText(tr("Select a structure item to edit its metadata."));
+        if (inspectorLineOptionsWidget_ != nullptr) {
+            inspectorLineOptionsWidget_->setVisible(false);
+        }
         inspectorApplyButton_->setEnabled(false);
         inspectorOpenSourceButton_->setEnabled(false);
         selectedStructureIndex_ = QPersistentModelIndex();
@@ -192,6 +274,9 @@ void MainWindow::updateInspectorFromStructureItem(const QModelIndex &index)
         inspectorSourceValue_->setText(QDir(projectRootPath_).absolutePath());
         inspectorLineValue_->setText(tr("-"));
         inspectorValidationLabel_->setText(tr("Project nodes summarize the current project and are not directly editable."));
+        if (inspectorLineOptionsWidget_ != nullptr) {
+            inspectorLineOptionsWidget_->setVisible(false);
+        }
         inspectorApplyButton_->setEnabled(false);
         inspectorOpenSourceButton_->setText(tr("Open First Item"));
         inspectorOpenSourceButton_->setEnabled(selectedStructureIndex_.isValid() ? firstStructureSourceIndex(selectedStructureIndex_).isValid() : false);
@@ -212,6 +297,9 @@ void MainWindow::updateInspectorFromStructureItem(const QModelIndex &index)
         inspectorSourceValue_->setText(tr("-"));
         inspectorLineValue_->setText(tr("-"));
         inspectorValidationLabel_->setText(tr("The selected row is not a structure object that can be edited."));
+        if (inspectorLineOptionsWidget_ != nullptr) {
+            inspectorLineOptionsWidget_->setVisible(false);
+        }
         inspectorApplyButton_->setEnabled(false);
         inspectorOpenSourceButton_->setText(tr("Open Source"));
         inspectorOpenSourceButton_->setEnabled(false);
@@ -250,6 +338,12 @@ void MainWindow::updateInspectorFromStructureItem(const QModelIndex &index)
     inspectorLineValue_->setText(lineNumber > 0 ? QString::number(lineNumber) : tr("-"));
     inspectorOpenSourceButton_->setText(isContainerNode ? tr("Open First Item") : tr("Open Source"));
     inspectorOpenSourceButton_->setEnabled(isContainerNode ? firstStructureSourceIndex(index).isValid() : true);
+    const bool showLineOptions = !isContainerNode && category == QStringLiteral("Lines");
+    if (inspectorLineOptionsWidget_ != nullptr) {
+        inspectorLineOptionsWidget_->setVisible(showLineOptions);
+        inspectorLineOptionsWidget_->setEnabled(showLineOptions);
+    }
+    refreshInspectorLineOptionState();
     inspectorValidationLabel_->setText(isContainerNode
                                            ? tr("This row groups child objects; use Open First Item or double-click to drill down.")
                                            : tr("Editing is currently in-memory for the selected structure entry."));
@@ -356,6 +450,184 @@ void MainWindow::handleInspectorApplyTriggered()
                                    .arg(lineNumber));
     inspectorValidationLabel_->setText(tr("Updated the selected structure item in the source document."));
     inspectorApplyButton_->setEnabled(false);
+}
+
+void MainWindow::handleInspectorLineClosedToggled(bool checked)
+{
+    if (updatingInspectorLineOptions_) {
+        return;
+    }
+
+    QString errorMessage;
+    if (!applyInspectorLineOptionToggle(QStringLiteral("-close"), checked, &errorMessage)) {
+        if (!errorMessage.isEmpty()) {
+            inspectorValidationLabel_->setText(errorMessage);
+        }
+        refreshInspectorLineOptionState();
+        return;
+    }
+
+    inspectorValidationLabel_->setText(tr("Updated line close state in source."));
+}
+
+void MainWindow::handleInspectorLineReversedToggled(bool checked)
+{
+    if (updatingInspectorLineOptions_) {
+        return;
+    }
+
+    QString errorMessage;
+    if (!applyInspectorLineOptionToggle(QStringLiteral("-reverse"), checked, &errorMessage)) {
+        if (!errorMessage.isEmpty()) {
+            inspectorValidationLabel_->setText(errorMessage);
+        }
+        refreshInspectorLineOptionState();
+        return;
+    }
+
+    inspectorValidationLabel_->setText(tr("Updated line reverse state in source."));
+}
+
+bool MainWindow::applyInspectorLineOptionToggle(const QString &optionName, bool enabled, QString *errorMessage)
+{
+    if (!selectedStructureIndex_.isValid()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = tr("No structure item is selected.");
+        }
+        return false;
+    }
+
+    const QString category = selectedStructureIndex_.data(CategoryRole).toString();
+    const QString sourceFile = selectedStructureIndex_.data(SourceFileRole).toString();
+    const int lineNumber = selectedStructureIndex_.data(LineNumberRole).toInt();
+    if (category != QStringLiteral("Lines") || sourceFile.isEmpty() || lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = tr("The selected item is not an editable line object.");
+        }
+        return false;
+    }
+
+    QString localError;
+    QWidget *tabWidget = documentWidgetForFilePath(sourceFile);
+    if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget)) {
+        if (!textTab->rewriteLineOptionToggle(lineNumber, optionName, enabled, &localError)) {
+            if (errorMessage != nullptr) {
+                *errorMessage = localError;
+            }
+            return false;
+        }
+
+        if (!textTab->save(&localError)) {
+            if (errorMessage != nullptr) {
+                *errorMessage = localError;
+            }
+            return false;
+        }
+    } else if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(tabWidget)) {
+        if (!mapTab->rewriteLineOptionToggle(lineNumber, optionName, enabled, &localError)) {
+            if (errorMessage != nullptr) {
+                *errorMessage = localError;
+            }
+            return false;
+        }
+
+        if (!mapTab->save(&localError)) {
+            if (errorMessage != nullptr) {
+                *errorMessage = localError;
+            }
+            return false;
+        }
+    } else {
+        QString contents;
+        if (!TherionStudio::DocumentFile::readUtf8TextFile(sourceFile, &contents, &localError)) {
+            if (errorMessage != nullptr) {
+                *errorMessage = localError;
+            }
+            return false;
+        }
+
+        if (!TherionStudio::TherionDocumentEditor::rewriteLineOptionToggle(&contents, lineNumber, optionName, enabled, &localError)) {
+            if (errorMessage != nullptr) {
+                *errorMessage = localError;
+            }
+            return false;
+        }
+
+        if (!TherionStudio::DocumentFile::writeUtf8TextFile(sourceFile, contents, &localError)) {
+            if (errorMessage != nullptr) {
+                *errorMessage = localError;
+            }
+            return false;
+        }
+    }
+
+    rebuildMapObjectsTree();
+    updateMapObjectSelectionFromEditorLocation(sourceFile, lineNumber);
+    updateStructureSelectionFromEditorLocation(sourceFile, lineNumber);
+    refreshInspectorLineOptionState();
+
+    return true;
+}
+
+void MainWindow::refreshInspectorLineOptionState()
+{
+    if (inspectorLineClosedCheck_ == nullptr || inspectorLineReversedCheck_ == nullptr) {
+        return;
+    }
+
+    auto setControls = [&](bool enabled, bool closed, bool reversed) {
+        QSignalBlocker closedBlocker(inspectorLineClosedCheck_);
+        QSignalBlocker reversedBlocker(inspectorLineReversedCheck_);
+        updatingInspectorLineOptions_ = true;
+        inspectorLineClosedCheck_->setEnabled(enabled);
+        inspectorLineReversedCheck_->setEnabled(enabled);
+        inspectorLineClosedCheck_->setChecked(closed);
+        inspectorLineReversedCheck_->setChecked(reversed);
+        updatingInspectorLineOptions_ = false;
+    };
+
+    if (!selectedStructureIndex_.isValid()
+        || selectedStructureIndex_.data(CategoryRole).toString() != QStringLiteral("Lines")) {
+        setControls(false, false, false);
+        return;
+    }
+
+    const QString sourceFile = selectedStructureIndex_.data(SourceFileRole).toString();
+    const int lineNumber = selectedStructureIndex_.data(LineNumberRole).toInt();
+    if (sourceFile.isEmpty() || lineNumber <= 0) {
+        setControls(false, false, false);
+        return;
+    }
+
+    QString sourceText;
+    QWidget *tabWidget = documentWidgetForFilePath(sourceFile);
+    if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget)) {
+        sourceText = textTab->text();
+    } else if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(tabWidget)) {
+        sourceText = mapTab->text();
+    } else {
+        QString readError;
+        if (!TherionStudio::DocumentFile::readUtf8TextFile(sourceFile, &sourceText, &readError)) {
+            setControls(false, false, false);
+            return;
+        }
+    }
+
+    const QVector<TherionStudio::TherionParsedLine> parsedLines = TherionStudio::TherionDocumentParser::parseText(sourceText);
+    if (lineNumber <= 0 || lineNumber > parsedLines.size()) {
+        setControls(false, false, false);
+        return;
+    }
+
+    const TherionStudio::TherionParsedLine &parsedLine = parsedLines.at(lineNumber - 1);
+    if (parsedLine.directive != QStringLiteral("line")) {
+        setControls(false, false, false);
+        return;
+    }
+
+    const bool closed = lineOptionValueFromParsedLine(parsedLine, QStringLiteral("-close")).value_or(false);
+    const bool reversed = lineOptionValueFromParsedLine(parsedLine, QStringLiteral("-reverse")).value_or(false);
+    setControls(true, closed, reversed);
 }
 
 void MainWindow::openSelectedStructureSource()

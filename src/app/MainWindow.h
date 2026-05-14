@@ -8,6 +8,7 @@
 class QLabel;
 class QFileSystemModel;
 class QCloseEvent;
+class QCheckBox;
 class QDoubleSpinBox;
 class QDockWidget;
 class QFrame;
@@ -132,6 +133,10 @@ private:
     void updateStructureSelectionFromEditorLocation(const QString &filePath, int lineNumber);
     void updateMapObjectSelectionFromEditorLocation(const QString &filePath, int lineNumber);
     QString structureOverrideKey(const QString &sourceFile, int lineNumber) const;
+    void handleInspectorLineClosedToggled(bool checked);
+    void handleInspectorLineReversedToggled(bool checked);
+    bool applyInspectorLineOptionToggle(const QString &optionName, bool enabled, QString *errorMessage);
+    void refreshInspectorLineOptionState();
     void loadStructureNameOverrides();
     void saveStructureNameOverrides();
     void refreshMapBackgroundPanel();
@@ -199,6 +204,9 @@ private:
     QLabel *inspectorEditabilityValue_ = nullptr;
     QLabel *inspectorSourceValue_ = nullptr;
     QLabel *inspectorLineValue_ = nullptr;
+    QWidget *inspectorLineOptionsWidget_ = nullptr;
+    QCheckBox *inspectorLineClosedCheck_ = nullptr;
+    QCheckBox *inspectorLineReversedCheck_ = nullptr;
     QLabel *inspectorValidationLabel_ = nullptr;
     QPushButton *inspectorOpenSourceButton_ = nullptr;
     QPushButton *inspectorApplyButton_ = nullptr;
@@ -219,5 +227,6 @@ private:
     bool sidebarCollapsed_ = false;
     bool consoleCollapsed_ = false;
     bool updatingMapBackgroundPanel_ = false;
+    bool updatingInspectorLineOptions_ = false;
     int selectedStructureLine_ = 0;
 };

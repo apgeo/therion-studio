@@ -949,6 +949,53 @@ QVector<MapLineSecondaryMove> collectLinePreviewSecondaryMovesForVertexDrag(cons
     return filtered;
 }
 
+QVector<MapLineSecondaryMove> collectLinePreviewCoupledUpdatesForVertexDrag(const MapGeometryFeature &lineFeature,
+                                                                            int sourceVertexIndex,
+                                                                            const QPointF &oldPoint,
+                                                                            const QPointF &newPoint,
+                                                                            const QHash<int, QPointF> &currentControlPoints)
+{
+    QVector<MapLineSecondaryMove> updates;
+    if (sourceVertexIndex < 0 || lineFeature.lineVertices.isEmpty()) {
+        return updates;
+    }
+
+    for (const MapGeometryFeature::TH2LineVertex &vertex : lineFeature.lineVertices) {
+        if (vertex.anchorSourceVertexIndex != sourceVertexIndex) {
+            continue;
+        }
+
+        const QPointF delta = newPoint - oldPoint;
+        if (delta.isNull()) {
+            return updates;
+        }
+
+        auto appendAnchorTransport = [&](int controlSourceVertexIndex, const QPointF &fallbackBasePoint) {
+            if (controlSourceVertexIndex < 0) {
+                return;
+            }
+            MapLineSecondaryMove update;
+            update.sourceVertexIndex = controlSourceVertexIndex;
+            update.oldPoint = currentControlPoints.value(controlSourceVertexIndex, fallbackBasePoint);
+            update.newPoint = update.oldPoint + delta;
+            if (mapSourcePointsDiffer(update.oldPoint, update.newPoint)) {
+                updates.append(update);
+            }
+        };
+
+        appendAnchorTransport(vertex.incomingSourceVertexIndex,
+                              vertex.incomingControl.value_or(vertex.anchor));
+        appendAnchorTransport(vertex.outgoingSourceVertexIndex,
+                              vertex.outgoingControl.value_or(vertex.anchor));
+        return updates;
+    }
+
+    return collectLinePreviewSecondaryMovesForVertexDrag(lineFeature,
+                                                         sourceVertexIndex,
+                                                         oldPoint,
+                                                         newPoint);
+}
+
 bool insertLineVertexByDeCasteljau(QVector<MapGeometryFeature::TH2LineVertex> *lineVertices,
                                    int segmentStartIndex,
                                    qreal t,

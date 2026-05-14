@@ -672,6 +672,9 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     }
                 }
 
+                const auto previewToSource = [sourceBounds, previewBounds](const QPointF &previewPoint) {
+                    return sceneCoordsPreviewToSource(previewPoint, sourceBounds, previewBounds);
+                };
                 const auto sourceToPreview = [sourceBounds, previewBounds](const QPointF &sourcePoint) {
                     return mapGeometryPointToPreview(sourcePoint, sourceBounds, previewBounds);
                 };
@@ -758,6 +761,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                 const auto previewLineMove = [feature,
                                               controlItemsBySourceVertex,
+                                              previewToSource,
                                               sourceToPreview,
                                               couplingGuard,
                                               updateInteractiveLinePreview](MapEditableGeometryVertexItem *movedItem,
@@ -784,10 +788,20 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         return;
                     }
 
-                    const QVector<MapLineSecondaryMove> moves = collectLinePreviewSecondaryMovesForVertexDrag(feature,
+                    QHash<int, QPointF> currentControlPoints;
+                    currentControlPoints.reserve(controlItemsBySourceVertex->size());
+                    for (auto it = controlItemsBySourceVertex->cbegin(); it != controlItemsBySourceVertex->cend(); ++it) {
+                        if (it.value() == nullptr) {
+                            continue;
+                        }
+                        currentControlPoints.insert(it.key(), previewToSource(it.value()->pos()));
+                    }
+
+                    const QVector<MapLineSecondaryMove> moves = collectLinePreviewCoupledUpdatesForVertexDrag(feature,
                                                                                                                movedSourceVertexIndex,
                                                                                                                previousSourcePoint,
-                                                                                                               newSourcePoint);
+                                                                                                               newSourcePoint,
+                                                                                                               currentControlPoints);
                     if (moves.isEmpty()) {
                         updateInteractiveLinePreview();
                         return;

@@ -105,6 +105,11 @@ Legend:
 - ~~Opening the same TH2 document now focuses the existing detached map window/session instead of creating a duplicate map editor instance.~~
 - ~~Simplified TH2 workspace to a single embedded split layout plus detachable map pane; removed `Text Only / Map Only / Split` switcher UX to avoid conflicting states when map is detached.~~
 - ~~Fixed undo/redo re-entrancy crash path for map geometry edits by deferring `refreshMapScene()` while map undo commands are executing, then applying a single pending refresh after command completion.~~
+- Remaining checklist (Phase 5 closeout):
+- ~~Add focused regression coverage for live preview callback sequencing during map drags (anchor/control), including no-self-update and no-stale-preview assertions.~~
+- Add focused regression coverage for preview-vs-commit parity on representative line-edit operations (anchor move, smooth control move, corner control move).
+- Add a lightweight GUI smoke test for map drag/undo/redo workflow (single document, deterministic coordinates) to catch scene-refresh and undo-stack regressions.
+- Re-run Phase 5 verification suite after checklist completion and document residual parity gaps (if any) as Post-MVP.
 - Verification:
 - ~~`./build/MapBackgroundPlacementTest`~~
 - ~~`./build/TherionBackgroundMetadataTest`~~
@@ -271,6 +276,8 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Unified live-preview and commit-time line coupling behavior by routing map preview coupling through shared `collectLineSecondaryMovesForVertexDrag`, removing duplicated preview-only coupling math and reducing parity drift risk between drag preview and persisted undoable edits.~~
 - ~~Added preview-specific coupling helper `collectLinePreviewSecondaryMovesForVertexDrag` with defensive self-target filtering for malformed/shared source-index cases, and routed live preview coupling through it to prevent accidental self-reposition loops during drag callbacks.~~
 - ~~Expanded `MapGeometryFeatureParsingTest` with preview-coupling self-filter regression: malformed same-source incoming/outgoing control mapping now yields command-time secondary move but empty preview secondary move set after self-target filtering.~~
+- ~~Added current-state-aware preview coupling helper `collectLinePreviewCoupledUpdatesForVertexDrag` and wired live map preview updates through it so anchor-drag control transport is delta-sequenced (no stale absolute reset between drag events).~~
+- ~~Expanded `MapGeometryFeatureParsingTest` with live-preview sequencing regression coverage: multi-step anchor drag preview now asserts cumulative control transport, plus explicit no-self-update filtering in malformed shared source-index cases.~~
 - ~~Hardened map-geometry undo/redo dirty-state fidelity: point and line/area vertex move commands now restore exact pre/post command text snapshots through `TextEditorTab::replaceTextForCommand`, eliminating residual dirty flags caused by rewrite-path formatting drift in multi-step map commands.~~
 - ~~Extended Phase 5 line-edit parity with smoothness toggling: map canvas now supports `S` to toggle selected line vertex smooth/corner state, line-coordinate rewrite validation now accepts `smooth` continuation rows, and line-row regeneration preserves `smooth off` markers during map-driven line rewrites.~~
 - ~~Expanded `TherionDocumentEditorTest` with `rewriteLineCoordinateRows` coverage for null/non-line rejection, inline-start rejection, mixed-content rejection, and successful CRLF-preserving rewrite.~~

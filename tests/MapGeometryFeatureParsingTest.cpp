@@ -513,6 +513,59 @@ int runLinePreviewSecondaryMoveSelfFilterTest()
 
     return 0;
 }
+
+int runLinePreviewAnchorSequencingNoStaleTest()
+{
+    MapGeometryFeature lineFeature;
+    lineFeature.kind = MapGeometryFeature::Kind::Line;
+
+    MapGeometryFeature::TH2LineVertex vertex;
+    vertex.anchor = QPointF(100.0, 200.0);
+    vertex.anchorSourceVertexIndex = 10;
+    vertex.incomingControl = QPointF(90.0, 190.0);
+    vertex.incomingSourceVertexIndex = 11;
+    vertex.outgoingControl = QPointF(110.0, 210.0);
+    vertex.outgoingSourceVertexIndex = 12;
+    lineFeature.lineVertices.append(vertex);
+
+    QHash<int, QPointF> currentControls;
+    currentControls.insert(11, QPointF(90.0, 190.0));
+    currentControls.insert(12, QPointF(110.0, 210.0));
+
+    const QPointF step0(100.0, 200.0);
+    const QPointF step1(103.0, 198.0);
+    const QPointF step2(106.0, 197.0);
+
+    const QVector<MapLineSecondaryMove> firstStepMoves = collectLinePreviewCoupledUpdatesForVertexDrag(lineFeature,
+                                                                                                        10,
+                                                                                                        step0,
+                                                                                                        step1,
+                                                                                                        currentControls);
+    for (const MapLineSecondaryMove &move : firstStepMoves) {
+        currentControls.insert(move.sourceVertexIndex, move.newPoint);
+    }
+
+    const QVector<MapLineSecondaryMove> secondStepMoves = collectLinePreviewCoupledUpdatesForVertexDrag(lineFeature,
+                                                                                                         10,
+                                                                                                         step1,
+                                                                                                         step2,
+                                                                                                         currentControls);
+    for (const MapLineSecondaryMove &move : secondStepMoves) {
+        currentControls.insert(move.sourceVertexIndex, move.newPoint);
+    }
+
+    const QPointF totalDelta = step2 - step0;
+    if (!expect(currentControls.value(11) == QPointF(90.0, 190.0) + totalDelta,
+                "Expected incoming preview control transport to accumulate drag deltas (no stale absolute reset).")) {
+        return 1;
+    }
+    if (!expect(currentControls.value(12) == QPointF(110.0, 210.0) + totalDelta,
+                "Expected outgoing preview control transport to accumulate drag deltas (no stale absolute reset).")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -551,6 +604,9 @@ int main()
         return rc;
     }
     if (const int rc = runLinePreviewSecondaryMoveSelfFilterTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runLinePreviewAnchorSequencingNoStaleTest(); rc != 0) {
         return rc;
     }
 

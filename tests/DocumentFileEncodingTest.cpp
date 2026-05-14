@@ -1,4 +1,5 @@
 #include "../src/core/DocumentFile.h"
+#include "../src/core/TherionDocumentEditor.h"
 
 #include <QByteArray>
 #include <QDir>
@@ -75,9 +76,8 @@ int runDirectiveEncodingRoundTripTest(const QString &codecName,
 
     QString contents;
     QString encodingName;
-    QString encodingLabel;
     QString errorMessage;
-    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encodingName, &encodingLabel, &errorMessage),
+    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encodingName, nullptr, &errorMessage),
                 qPrintable(errorMessage))) {
         return 1;
     }
@@ -222,6 +222,91 @@ int runWindows1252DirectiveRoundTripTest()
                                              "windows-1252 save failed.",
                                              "windows-1252 save did not preserve original byte encoding.");
 }
+
+int runInspectorFallbackEncodingPreservationTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary directory creation failed.")) {
+        return 1;
+    }
+
+    const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("inspector-fallback-cp1250.th2"));
+    const QString originalText = QStringLiteral(
+        "encoding cp1250\n"
+        "line wall -id puvodni-linka -close off\n"
+        "map puvodni-mapa\n");
+
+    QStringEncoder encoder(QStringLiteral("windows-1250"), QStringConverter::Flag::Default);
+    if (!expect(encoder.isValid(), "windows-1250 codec is not available in this Qt runtime.")) {
+        return 1;
+    }
+
+    const QByteArray originalBytes = encoder.encode(originalText);
+    if (!expect(!encoder.hasError(), "Failed to encode inspector fallback fixture text.")) {
+        return 1;
+    }
+
+    if (!expect(writeRawFile(filePath, originalBytes), "Failed to write inspector fallback fixture file.")) {
+        return 1;
+    }
+
+    QString contents;
+    QString encodingName;
+    QString errorMessage;
+    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encodingName, nullptr, &errorMessage),
+                qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    if (!expect(encodingName.contains(QStringLiteral("1250"), Qt::CaseInsensitive),
+                "Inspector fallback fixture did not resolve to a 1250-family encoding.")) {
+        return 1;
+    }
+
+    if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents,
+                                                                2,
+                                                                QStringLiteral("-close"),
+                                                                true,
+                                                                &errorMessage),
+                qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents,
+                                                                  3,
+                                                                  QStringLiteral("Maps"),
+                                                                  QStringLiteral("žlutá-mapa"),
+                                                                  &errorMessage),
+                qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    if (!expect(DocumentFile::writeTextFile(filePath, contents, encodingName, &errorMessage), qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    QStringEncoder expectedEncoder(encodingName, QStringConverter::Flag::Default);
+    if (!expect(expectedEncoder.isValid(), "Resolved encoding is not writable for expected byte validation.")) {
+        return 1;
+    }
+
+    const QString expectedText = QStringLiteral(
+        "encoding cp1250\n"
+        "line wall -id puvodni-linka -close on\n"
+        "map žlutá-mapa\n");
+    const QByteArray expectedBytes = expectedEncoder.encode(expectedText);
+    if (!expect(!expectedEncoder.hasError(), "Failed to encode expected inspector fallback output.")) {
+        return 1;
+    }
+
+    const QByteArray writtenBytes = readRawFile(filePath);
+    if (!expect(writtenBytes == expectedBytes,
+                "Inspector fallback rewrite path did not preserve source encoding semantics.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -242,5 +327,9 @@ int main()
         return cp1250AliasResult;
     }
 
-    return runWindows1252DirectiveRoundTripTest();
+    if (const int cp1252Result = runWindows1252DirectiveRoundTripTest(); cp1252Result != 0) {
+        return cp1252Result;
+    }
+
+    return runInspectorFallbackEncodingPreservationTest();
 }

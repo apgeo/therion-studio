@@ -127,6 +127,10 @@ target_link_libraries(MapGeometryFeatureParsingTest PRIVATE Qt6::Widgets)
 qt_add_executable(DocumentFileEncodingTest
     tests/DocumentFileEncodingTest.cpp
     src/core/DocumentFile.cpp
-    src/core/DocumentFile.h)
+    src/core/DocumentFile.h
+    src/core/TherionDocumentEditor.cpp
+    src/core/TherionDocumentEditor.h
+    src/core/TherionDocumentParser.cpp
+    src/core/TherionDocumentParser.h)
 
 target_link_libraries(DocumentFileEncodingTest PRIVATE Qt6::Widgets)

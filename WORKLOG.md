@@ -112,6 +112,7 @@ Legend:
 - Text editor status row now exposes explicit `Convert to UTF-8` action for non-UTF documents.
 - Text editor conversion flow now requires confirmation and surfaces explicit encoding-state notes for save behavior.
 - Added `DocumentFileEncodingTest` regression coverage for UTF-8 detection plus Latin1, Windows-1250, `cp1250` alias, and Windows-1252 byte-preserving save round-trips.
+- Added inspector-fallback encoding-preservation regression coverage to `DocumentFileEncodingTest`: non-UTF (`cp1250`) read-detect-rewrite-write path keeps source encoding while applying structure rename and line-option rewrite.
 - Planned verification:
 - New unit tests for encoding detection and conversion paths.
 - Manual workflows with sample non-UTF-8 Therion files (tracked in `docs/ENCODING_QA_CHECKLIST.md`).
@@ -165,6 +166,7 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Expanded `DocumentFileEncodingTest` and verified UTF-8 detection plus Latin1 and Windows-1250 byte-preserving save round-trip behavior.~~
 - ~~Expanded encoding regression fixtures with `cp1250` alias and Windows-1252 directive coverage, verifying byte-preserving round-trip saves for both paths.~~
 - ~~Closed inspector encoding-preservation gap for unopened-source fallback edits: structure rename and line `-close`/`-reverse` rewrites now read and write using detected file encoding instead of forcing UTF-8.~~
+- ~~Added `DocumentFileEncodingTest` regression for inspector-style fallback rewrites on `cp1250` input (`readTextFile` + `rewrite...` + `writeTextFile`), verifying byte-level encoded output after map-name rename and line `-close` toggle edits.~~
 - ~~Added `docs/ENCODING_QA_CHECKLIST.md` and linked it from the user manual to standardize cross-platform manual validation for open/save/convert/reopen/byte-check encoding workflows.~~
 - ~~Populated `docs/USER_MANUAL.md` with current implemented UI/workflow coverage: menus, sidebar panes, map workspace behavior, cross-platform shortcuts, settings/session persistence, platform notes, and troubleshooting.~~
 - ~~Updated repository instructions to require maintaining a living `docs/USER_MANUAL.md` and updating it whenever UI layout, workflows, keyboard shortcuts, or settings behavior changes.~~

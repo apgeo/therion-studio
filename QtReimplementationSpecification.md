@@ -207,6 +207,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 #### 3.8.3 TH2 Map Editor Behavior
 
 - The map editor shall render the currently open TH2 document as an editable two-dimensional workspace.
+- The map workspace shall maintain sufficient contrast for geometry strokes, handles, labels, and grid lines in both light and dark system appearance modes.
 - When a TH2 document is active in the main window, the workspace shall support text-only, map-only, and split text/map modes or a functionally equivalent arrangement.
 - The user shall be able to detach the current TH2 session into a dedicated map editor window without creating a separate document state.
 - Embedded and detached map presentations shall remain synchronized with the same selection, undo history, and underlying text document.

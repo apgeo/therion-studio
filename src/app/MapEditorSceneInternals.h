@@ -98,7 +98,9 @@ protected:
 
         painter->setRenderHint(QPainter::Antialiasing, true);
         if (emphasize) {
-            QColor halo = selected ? QColor(72, 166, 255, 110) : QColor(255, 255, 255, 70);
+            QColor halo = selected
+                ? QColor(72, 166, 255, 110)
+                : (fill.lightnessF() > 0.6 ? QColor(24, 38, 56, 70) : QColor(255, 255, 255, 70));
             painter->setPen(Qt::NoPen);
             painter->setBrush(halo);
             painter->drawEllipse(drawRect.adjusted(-2.2, -2.2, 2.2, 2.2));
@@ -276,7 +278,9 @@ protected:
 
         painter->setRenderHint(QPainter::Antialiasing, true);
         if (emphasize) {
-            QColor halo = selected ? QColor(72, 166, 255, 110) : QColor(255, 255, 255, 70);
+            QColor halo = selected
+                ? QColor(72, 166, 255, 110)
+                : (fill.lightnessF() > 0.6 ? QColor(24, 38, 56, 70) : QColor(255, 255, 255, 70));
             painter->setPen(Qt::NoPen);
             painter->setBrush(halo);
             painter->drawEllipse(drawRect.adjusted(-2.0, -2.0, 2.0, 2.0));

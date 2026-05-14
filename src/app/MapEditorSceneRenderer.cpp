@@ -2,10 +2,13 @@
 #include "MapEditorSceneInternals.h"
 
 #include <QFont>
+#include <QGuiApplication>
 #include <QGraphicsLineItem>
 #include <QGraphicsScene>
+#include <QPalette>
 #include <QPainterPath>
 #include <QRegularExpression>
+#include <QStyleHints>
 
 #include "../core/TherionDocumentParser.h"
 
@@ -22,6 +25,88 @@ struct LineControlConnectorBinding
     int controlSourceVertexIndex = -1;
     QGraphicsLineItem *lineItem = nullptr;
 };
+
+struct MapCanvasTheme
+{
+    bool lightMode = false;
+    QColor canvasBorder;
+    QColor canvasFill;
+    QColor gridLine;
+    QColor geometryStroke;
+    QColor areaFill;
+    QColor labelText;
+    QColor mutedText;
+    QColor pointHandleStroke;
+    QColor pointHandleFill;
+    QColor controlConnector;
+    QColor controlHandleStroke;
+    QColor controlHandleFill;
+    QColor stationMarker;
+};
+
+MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
+{
+    Q_UNUSED(scene);
+
+    const QPalette appPalette = QGuiApplication::palette();
+    const QColor appWindow = appPalette.color(QPalette::Window);
+    const QColor appBase = appPalette.color(QPalette::Base);
+    const qreal appReferenceLightness = appWindow.isValid()
+        ? appWindow.lightnessF()
+        : (appBase.isValid() ? appBase.lightnessF() : 1.0);
+    const bool appLooksLight = appReferenceLightness > 0.58;
+    const bool appLooksDark = appReferenceLightness < 0.42;
+
+    bool lightMode = appLooksLight;
+    if (QGuiApplication::styleHints() != nullptr) {
+        const Qt::ColorScheme scheme = QGuiApplication::styleHints()->colorScheme();
+        if (scheme == Qt::ColorScheme::Dark) {
+            lightMode = false;
+        } else if (scheme == Qt::ColorScheme::Light) {
+            lightMode = true;
+        }
+
+        // On some platform/style combinations the color-scheme hint can disagree
+        // with the effective application palette; prefer the palette in that case.
+        if ((lightMode && appLooksDark) || (!lightMode && appLooksLight)) {
+            lightMode = appLooksLight;
+        }
+    }
+
+    MapCanvasTheme theme;
+    theme.lightMode = lightMode;
+    if (lightMode) {
+        theme.canvasBorder = QColor(QStringLiteral("#bec9d8"));
+        theme.canvasFill = QColor(QStringLiteral("#f4f8fd"));
+        theme.gridLine = QColor(124, 143, 167, 136);
+        theme.geometryStroke = QColor(QStringLiteral("#1d2837"));
+        theme.areaFill = QColor(48, 73, 105, 28);
+        theme.labelText = QColor(QStringLiteral("#344a67"));
+        theme.mutedText = QColor(QStringLiteral("#556b84"));
+        theme.pointHandleStroke = QColor(18, 26, 37, 220);
+        theme.pointHandleFill = QColor(24, 30, 42, 190);
+        theme.controlConnector = QColor(52, 110, 186, 190);
+        theme.controlHandleStroke = QColor(20, 73, 148, 230);
+        theme.controlHandleFill = QColor(96, 176, 248, 220);
+        theme.stationMarker = QColor(QStringLiteral("#cf472e"));
+        return theme;
+    }
+
+    theme.canvasBorder = QColor(QStringLiteral("#596477"));
+    theme.canvasFill = QColor(QStringLiteral("#232833"));
+    theme.gridLine = QColor(240, 246, 255, 198);
+    theme.geometryStroke = QColor(QStringLiteral("#e1e9f5"));
+    theme.areaFill = QColor(220, 227, 238, 24);
+    theme.labelText = QColor(QStringLiteral("#e6eefb"));
+    theme.mutedText = QColor(QStringLiteral("#a6b4c8"));
+    theme.pointHandleStroke = QColor(228, 236, 246, 220);
+    theme.pointHandleFill = QColor(206, 219, 235, 190);
+    theme.controlConnector = QColor(118, 178, 242, 190);
+    theme.controlHandleStroke = QColor(76, 150, 229, 230);
+    theme.controlHandleFill = QColor(130, 201, 255, 220);
+    theme.stationMarker = QColor(QStringLiteral("#ff6a56"));
+    return theme;
+}
 
 bool tokenLooksNumeric(const QString &token)
 {
@@ -498,10 +583,11 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
         mapItemsByLine->clear();
     }
 
+    const MapCanvasTheme canvasTheme = mapCanvasThemeForScene(scene);
     const QRectF sceneFrame(0, 0, 1200, 900);
     scene->setSceneRect(sceneFrame);
     const QRectF geometryCanvas = sceneFrame.adjusted(24.0, 24.0, -24.0, -24.0);
-    scene->addRect(geometryCanvas, QPen(QColor(QStringLiteral("#596477")), 1.2), QBrush(QColor(QStringLiteral("#232833"))));
+    scene->addRect(geometryCanvas, QPen(canvasTheme.canvasBorder, 1.2), QBrush(canvasTheme.canvasFill));
 
     const QRectF previewBounds = geometryCanvas.adjusted(20.0, 20.0, -20.0, -20.0);
     const QRectF sourceBounds = geometryBoundsForFeatures(geometryFeatures);
@@ -510,6 +596,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     const qreal vertexRadius = qBound(2.4, 3.8 * mapScale, 4.8);
     const qreal thickLineWidth = qBound(1.3, 2.2 * mapScale, 2.9);
     const qreal detailLineWidth = qBound(0.8, 1.4 * mapScale, 1.8);
+    const qreal gridLineWidth = canvasTheme.lightMode ? 1.0 : 1.1;
     const bool compactLabels = geometryFeatures.size() > 24;
     auto markGeometryItem = [](QGraphicsItem *item) {
         if (item != nullptr) {
@@ -519,16 +606,16 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
     for (int index = 0; index < 6; ++index) {
         const qreal y = previewBounds.top() + (index * previewBounds.height() / 5.0);
-        scene->addLine(previewBounds.left(), y, previewBounds.right(), y, QPen(QColor(QStringLiteral("#edf0f4")), 1.0, Qt::SolidLine));
+        scene->addLine(previewBounds.left(), y, previewBounds.right(), y, QPen(canvasTheme.gridLine, gridLineWidth, Qt::SolidLine));
     }
     for (int index = 0; index < 8; ++index) {
         const qreal x = previewBounds.left() + (index * previewBounds.width() / 7.0);
-        scene->addLine(x, previewBounds.top(), x, previewBounds.bottom(), QPen(QColor(QStringLiteral("#edf0f4")), 1.0, Qt::SolidLine));
+        scene->addLine(x, previewBounds.top(), x, previewBounds.bottom(), QPen(canvasTheme.gridLine, gridLineWidth, Qt::SolidLine));
     }
 
     if (geometryFeatures.isEmpty()) {
         auto *emptyGeometryItem = scene->addText(QObject::tr("No parseable point, line, or area geometry was found in this document yet."), QFont(QStringLiteral("Menlo"), 11));
-        emptyGeometryItem->setDefaultTextColor(QColor(QStringLiteral("#92a1b4")));
+        emptyGeometryItem->setDefaultTextColor(canvasTheme.mutedText);
         emptyGeometryItem->setPos(previewBounds.left() + 16.0, previewBounds.top() + 16.0);
     } else {
         for (const MapGeometryFeature &feature : geometryFeatures) {
@@ -541,8 +628,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 const QPointF previewPoint = mapGeometryPointToPreview(feature.anchor, sourceBounds, previewBounds);
                 auto *pointItem = new MapEditablePointItem(feature.lineNumber, feature.anchor, sourceBounds, previewBounds);
                 pointItem->setRect(QRectF(-pointRadius, -pointRadius, pointRadius * 2.0, pointRadius * 2.0));
-                pointItem->setPen(QPen(QColor(14, 14, 14, 220), 1.1));
-                pointItem->setBrush(QBrush(QColor(20, 20, 20, 180)));
+                pointItem->setPen(QPen(canvasTheme.pointHandleStroke, 1.1));
+                pointItem->setBrush(QBrush(canvasTheme.pointHandleFill));
                 pointItem->setMoveCommittedCallback(recordPointGeometryMove);
                 scene->addItem(pointItem);
                 pointItem->setZValue(3.0);
@@ -555,14 +642,14 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     markerPath.lineTo(previewPoint + QPointF(-10.0, 6.0));
                     markerPath.closeSubpath();
 
-                    auto *triangle = scene->addPath(markerPath, QPen(QColor(QStringLiteral("#ff4f3d")), 1.2), QBrush(QColor(QStringLiteral("#ff4f3d"))));
+                    auto *triangle = scene->addPath(markerPath, QPen(canvasTheme.stationMarker, 1.2), QBrush(canvasTheme.stationMarker));
                     triangle->setZValue(3.5);
                     markGeometryItem(triangle);
                 }
 
                 if (feature.stationPoint || !compactLabels) {
                     auto *label = scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold));
-                    label->setDefaultTextColor(QColor(QStringLiteral("#9d9d9d")));
+                    label->setDefaultTextColor(canvasTheme.labelText);
                     label->setPos(previewPoint + QPointF(10.0, -18.0));
                     label->setZValue(4.0);
                 }
@@ -574,11 +661,13 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 }
 
                 const QPainterPath path = linePathForFeature(feature, sourceBounds, previewBounds);
+                QColor detailStroke = feature.accent;
+                detailStroke.setAlpha(canvasTheme.lightMode ? 230 : 245);
 
-                auto *lineItem = scene->addPath(path, QPen(QColor(QStringLiteral("#222222")), thickLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                auto *lineItem = scene->addPath(path, QPen(canvasTheme.geometryStroke, thickLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
                 lineItem->setZValue(2.5);
                 markGeometryItem(lineItem);
-                auto *detailItem = scene->addPath(path, QPen(QColor(QStringLiteral("#2b2b2b")), detailLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                auto *detailItem = scene->addPath(path, QPen(detailStroke, detailLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
                 detailItem->setZValue(3.0);
                 markGeometryItem(detailItem);
 
@@ -617,7 +706,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         const QPointF anchorPreview = mapGeometryPointToPreview(previousVertex.anchor, sourceBounds, previewBounds);
                         const QPointF controlPreview = mapGeometryPointToPreview(previousVertex.outgoingControl.value(), sourceBounds, previewBounds);
                         auto *connector = scene->addLine(QLineF(anchorPreview, controlPreview),
-                                                         QPen(QColor(48, 128, 220, 160), qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
+                                                         QPen(canvasTheme.controlConnector, qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
                         connector->setZValue(3.2);
                         markGeometryItem(connector);
                         LineControlConnectorBinding binding;
@@ -633,8 +722,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                                               sourceBounds,
                                                                               previewBounds);
                         controlItem->setRect(QRectF(-controlRadius, -controlRadius, controlRadius * 2.0, controlRadius * 2.0));
-                        controlItem->setPen(QPen(QColor(28, 94, 182, 220), 1.0));
-                        controlItem->setBrush(QBrush(QColor(104, 188, 255, 205)));
+                        controlItem->setPen(QPen(canvasTheme.controlHandleStroke, 1.0));
+                        controlItem->setBrush(QBrush(canvasTheme.controlHandleFill));
                         controlItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                         scene->addItem(controlItem);
                         controlItem->setZValue(4.2);
@@ -646,7 +735,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         const QPointF anchorPreview = mapGeometryPointToPreview(currentVertex.anchor, sourceBounds, previewBounds);
                         const QPointF controlPreview = mapGeometryPointToPreview(currentVertex.incomingControl.value(), sourceBounds, previewBounds);
                         auto *connector = scene->addLine(QLineF(anchorPreview, controlPreview),
-                                                         QPen(QColor(48, 128, 220, 160), qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
+                                                         QPen(canvasTheme.controlConnector, qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
                         connector->setZValue(3.2);
                         markGeometryItem(connector);
                         LineControlConnectorBinding binding;
@@ -662,8 +751,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                                               sourceBounds,
                                                                               previewBounds);
                         controlItem->setRect(QRectF(-controlRadius, -controlRadius, controlRadius * 2.0, controlRadius * 2.0));
-                        controlItem->setPen(QPen(QColor(28, 94, 182, 220), 1.0));
-                        controlItem->setBrush(QBrush(QColor(104, 188, 255, 205)));
+                        controlItem->setPen(QPen(canvasTheme.controlHandleStroke, 1.0));
+                        controlItem->setBrush(QBrush(canvasTheme.controlHandleFill));
                         controlItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                         scene->addItem(controlItem);
                         controlItem->setZValue(4.2);
@@ -838,14 +927,14 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     markerPath.lineTo(headPoint + QPointF(-10.0, 6.0));
                     markerPath.closeSubpath();
 
-                    auto *triangle = scene->addPath(markerPath, QPen(QColor(QStringLiteral("#ff4f3d")), 1.2), QBrush(QColor(QStringLiteral("#ff4f3d"))));
+                    auto *triangle = scene->addPath(markerPath, QPen(canvasTheme.stationMarker, 1.2), QBrush(canvasTheme.stationMarker));
                     triangle->setZValue(3.5);
                     markGeometryItem(triangle);
                 }
 
                 if (!compactLabels) {
                     auto *label = scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold));
-                    label->setDefaultTextColor(QColor(QStringLiteral("#9d9d9d")));
+                    label->setDefaultTextColor(canvasTheme.labelText);
                     label->setPos(mapGeometryPointToPreview(feature.lineVertices.first().anchor, sourceBounds, previewBounds) + QPointF(10.0, -18.0));
                     label->setZValue(4.0);
                 }
@@ -864,7 +953,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 }
                 path.closeSubpath();
 
-                auto *fillItem = scene->addPath(path, QPen(QColor(QStringLiteral("#222222")), qBound(1.0, 2.0 * mapScale, 2.4), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), QBrush(QColor(0, 0, 0, 18)));
+                auto *fillItem = scene->addPath(path, QPen(canvasTheme.geometryStroke, qBound(1.0, 2.0 * mapScale, 2.4), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), QBrush(canvasTheme.areaFill));
                 fillItem->setZValue(2.0);
                 markGeometryItem(fillItem);
                 auto areaVertexItemsByOrder = std::make_shared<QVector<MapEditableGeometryVertexItem *>>(feature.vertices.size(), nullptr);
@@ -935,7 +1024,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                 if (!compactLabels) {
                     auto *label = scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold));
-                    label->setDefaultTextColor(QColor(QStringLiteral("#9d9d9d")));
+                    label->setDefaultTextColor(canvasTheme.labelText);
                     label->setPos(mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds) + QPointF(10.0, -18.0));
                     label->setZValue(4.0);
                 }
@@ -947,7 +1036,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
     if (entries.isEmpty()) {
         auto *emptyItem = scene->addText(QObject::tr("No Therion map objects were detected in this document."), QFont(QStringLiteral("Menlo"), 12));
-        emptyItem->setDefaultTextColor(QColor(QStringLiteral("#9ca7b6")));
+        emptyItem->setDefaultTextColor(canvasTheme.mutedText);
         emptyItem->setPos(previewBounds.left() + 16.0, previewBounds.top() + 44.0);
     }
 }

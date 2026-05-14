@@ -195,6 +195,12 @@ Automated tests currently in-tree and used as regression baseline:
 
 ### 2026-05-14
 
+- ~~Fixed map-theme regression where dark-mode app chrome could still render a light map canvas: map theme selection now cross-checks `QStyleHints::colorScheme` against effective application palette lightness and prefers palette-derived mode when they disagree.~~
+- ~~Fine-tuned light-mode map rendering: explicit OS light/dark scheme now takes precedence over scene-local palette overrides, and light-theme canvas/grid/label/stroke values were adjusted for cleaner contrast balance and stronger line readability.~~
+- ~~Fixed sidebar-rail and status-bar divider styling to use palette-driven border color (`palette(mid)`) instead of a hardcoded light gray, keeping separators consistent in dark mode while preserving light-mode contrast.~~
+- ~~Applied a dark-mode map readability polish pass: increased grid contrast/weight, brightened map label text, slightly strengthened dark-theme geometry base stroke, and raised accent overlay alpha for clearer line visibility at normal zoom.~~
+- ~~Fixed dark-mode map-canvas theme detection: map scene theme now prefers `QStyleHints::colorScheme` (OS light/dark) with guarded palette fallback, preventing false light-canvas rendering in dark mode.~~
+- ~~Improved map-canvas theme contrast in `MapEditorSceneRenderer`: canvas/frame/grid, geometry strokes/fills, labels, and control-handle visuals now adapt to active light/dark palette so line/area geometry remains visible in OS light mode.~~
 - ~~Started Phase 6 encoding workflow: added encoding-aware `DocumentFile` read/write APIs with detection (`UTF-8`/`UTF-16*`/`System`/`Latin1`) and codec-preserving save behavior.~~
 - ~~Extended Phase 6 encoding workflow with Therion `encoding ...` directive-aware decoding and codec-name preserving save semantics (including legacy single-byte codecs when supported by Qt).~~
 - ~~Added explicit text-editor `Convert to UTF-8` action (visible for non-UTF documents) and wired saves to preserve original encoding until conversion.~~

@@ -171,6 +171,10 @@ Inspector supports:
 
 Map tab uses a split text+map workspace by default.
 
+Map canvas appearance:
+
+- canvas and geometry contrast adapts to current system light/dark appearance so lines, handles, labels, and grid stay readable
+
 Toolbar actions:
 
 - mode buttons: `Select`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`

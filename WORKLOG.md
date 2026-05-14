@@ -15,6 +15,7 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 
 - Continue Phase 5 map-editor parity polish and interaction refinement.
 - Continue Phase 6 with broader non-UTF fixture coverage and conversion-flow UX polish.
+- Execute cross-platform manual pass using the new encoding QA checklist.
 
 ### Risks / blockers
 
@@ -110,10 +111,10 @@ Legend:
 - Therion `encoding ...` directive-aware decode path with codec-name preservation for save.
 - Text editor status row now exposes explicit `Convert to UTF-8` action for non-UTF documents.
 - Text editor conversion flow now requires confirmation and surfaces explicit encoding-state notes for save behavior.
-- Added `DocumentFileEncodingTest` regression coverage for UTF-8 detection plus Latin1 and Windows-1250 byte-preserving save round-trips.
+- Added `DocumentFileEncodingTest` regression coverage for UTF-8 detection plus Latin1, Windows-1250, `cp1250` alias, and Windows-1252 byte-preserving save round-trips.
 - Planned verification:
 - New unit tests for encoding detection and conversion paths.
-- Manual workflows with sample non-UTF-8 Therion files.
+- Manual workflows with sample non-UTF-8 Therion files (tracked in `docs/ENCODING_QA_CHECKLIST.md`).
 
 ### Phase 7 - UX/Accessibility/Platform Conventions (`MVP` baseline)
 
@@ -162,6 +163,8 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Added explicit text-editor `Convert to UTF-8` action (visible for non-UTF documents) and wired saves to preserve original encoding until conversion.~~
 - ~~Polished conversion UX: `Convert to UTF-8` now requires confirmation, marks conversion as an in-memory pending change, and shows explicit encoding-status notes about save behavior.~~
 - ~~Expanded `DocumentFileEncodingTest` and verified UTF-8 detection plus Latin1 and Windows-1250 byte-preserving save round-trip behavior.~~
+- ~~Expanded encoding regression fixtures with `cp1250` alias and Windows-1252 directive coverage, verifying byte-preserving round-trip saves for both paths.~~
+- ~~Added `docs/ENCODING_QA_CHECKLIST.md` and linked it from the user manual to standardize cross-platform manual validation for open/save/convert/reopen/byte-check encoding workflows.~~
 - ~~Populated `docs/USER_MANUAL.md` with current implemented UI/workflow coverage: menus, sidebar panes, map workspace behavior, cross-platform shortcuts, settings/session persistence, platform notes, and troubleshooting.~~
 - ~~Updated repository instructions to require maintaining a living `docs/USER_MANUAL.md` and updating it whenever UI layout, workflows, keyboard shortcuts, or settings behavior changes.~~
 - ~~Created initial `docs/USER_MANUAL.md` scaffold to track UI structure, workflows, shortcuts, settings, platform notes, and troubleshooting.~~

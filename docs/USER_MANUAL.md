@@ -141,6 +141,7 @@ Text editor includes:
 - loading honors Therion `encoding ...` directive when the declared codec is available in Qt
 - conversion is explicit: clicking `Convert to UTF-8` asks for confirmation and marks the tab dirty; disk content changes only after save
 - status notes indicate whether saves are preserving original encoding or whether UTF-8 conversion is pending save
+- directive aliases such as `encoding cp1250` are supported via codec-name normalization (`cpNNNN` -> `windows-NNNN` candidate)
 
 ### 5.4 Use Structure + Inspector
 
@@ -257,6 +258,10 @@ Persisted values include:
 - map background layer session JSON
 
 There is currently no dedicated Settings dialog; settings are updated through normal UI interactions.
+
+## 7. QA and Verification References
+
+- Encoding workflow manual checklist: [`docs/ENCODING_QA_CHECKLIST.md`](ENCODING_QA_CHECKLIST.md)
 
 ## 7. Platform Notes
 

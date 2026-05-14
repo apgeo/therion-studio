@@ -394,29 +394,51 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 void MainWindow::buildMenus()
 {
     QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
-    fileMenu->addAction(tr("New &Window"), this, &MainWindow::createNewWindow, QKeySequence::New);
-    openProjectAction_ = fileMenu->addAction(tr("&Open Project..."), this, &MainWindow::openProject, QKeySequence::Open);
-    closeProjectAction_ = fileMenu->addAction(tr("&Close Project"), this, &MainWindow::closeProject);
+    QAction *newWindowAction = fileMenu->addAction(tr("New &Window"));
+    newWindowAction->setShortcut(QKeySequence::New);
+    connect(newWindowAction, &QAction::triggered, this, &MainWindow::createNewWindow);
+
+    openProjectAction_ = fileMenu->addAction(tr("&Open Project..."));
+    openProjectAction_->setShortcut(QKeySequence::Open);
+    connect(openProjectAction_, &QAction::triggered, this, &MainWindow::openProject);
+
+    closeProjectAction_ = fileMenu->addAction(tr("&Close Project"));
+    connect(closeProjectAction_, &QAction::triggered, this, &MainWindow::closeProject);
     fileMenu->addSeparator();
-    fileMenu->addAction(tr("&Save"), this, &MainWindow::saveActiveDocument, QKeySequence::Save);
-    fileMenu->addAction(tr("Save &All"), this, &MainWindow::saveAllDocuments, QKeySequence::SaveAs);
-    fileMenu->addAction(tr("&Close"), this, &MainWindow::closeActiveTab);
-    fileMenu->addAction(tr("Close All Tabs"),
-                        this,
-                        &MainWindow::closeAllTabs,
-                        QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_W));
+
+    QAction *saveAction = fileMenu->addAction(tr("&Save"));
+    saveAction->setShortcut(QKeySequence::Save);
+    connect(saveAction, &QAction::triggered, this, &MainWindow::saveActiveDocument);
+
+    QAction *saveAllAction = fileMenu->addAction(tr("Save &All"));
+    saveAllAction->setShortcut(QKeySequence::SaveAs);
+    connect(saveAllAction, &QAction::triggered, this, &MainWindow::saveAllDocuments);
+
+    QAction *closeTabAction = fileMenu->addAction(tr("&Close"));
+    connect(closeTabAction, &QAction::triggered, this, &MainWindow::closeActiveTab);
+
+    QAction *closeAllTabsAction = fileMenu->addAction(tr("Close All Tabs"));
+    closeAllTabsAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_W));
+    connect(closeAllTabsAction, &QAction::triggered, this, &MainWindow::closeAllTabs);
+
     fileMenu->addSeparator();
-    fileMenu->addAction(tr("E&xit"), this, &QWidget::close, QKeySequence::Quit);
+    QAction *exitAction = fileMenu->addAction(tr("E&xit"));
+    exitAction->setShortcut(QKeySequence::Quit);
+    connect(exitAction, &QAction::triggered, this, &QWidget::close);
 
     QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
-    editMenu->addAction(tr("&Find"), this, [this]() { showFindBar(false); }, QKeySequence::Find);
-    editMenu->addAction(tr("Find and &Replace"), this, [this]() { showFindBar(true); }, QKeySequence::Replace);
+    QAction *findAction = editMenu->addAction(tr("&Find"));
+    findAction->setShortcut(QKeySequence::Find);
+    connect(findAction, &QAction::triggered, this, [this]() { showFindBar(false); });
+
+    QAction *replaceAction = editMenu->addAction(tr("Find and &Replace"));
+    replaceAction->setShortcut(QKeySequence::Replace);
+    connect(replaceAction, &QAction::triggered, this, [this]() { showFindBar(true); });
 
     QMenu *mapMenu = menuBar()->addMenu(tr("&Map"));
-    openMapEditorAction_ = mapMenu->addAction(tr("Open Current Document in &Map Editor"),
-                                              this,
-                                              &MainWindow::openCurrentDocumentInMapEditor,
-                                              QKeySequence(Qt::CTRL | Qt::ALT | Qt::SHIFT | Qt::Key_G));
+    openMapEditorAction_ = mapMenu->addAction(tr("Open Current Document in &Map Editor"));
+    openMapEditorAction_->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::SHIFT | Qt::Key_G));
+    connect(openMapEditorAction_, &QAction::triggered, this, &MainWindow::openCurrentDocumentInMapEditor);
     openMapEditorAction_->setEnabled(false);
 
     QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
@@ -464,13 +486,16 @@ void MainWindow::buildMenus()
     });
 
     QMenu *windowMenu = menuBar()->addMenu(tr("&Window"));
-    windowMenu->addAction(tr("New &Window"), this, &MainWindow::createNewWindow);
+    QAction *windowNewWindowAction = windowMenu->addAction(tr("New &Window"));
+    connect(windowNewWindowAction, &QAction::triggered, this, &MainWindow::createNewWindow);
 
     QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
-    helpMenu->addAction(tr("Quick User Manual"), this, [this]() {
+    QAction *quickManualAction = helpMenu->addAction(tr("Quick User Manual"));
+    connect(quickManualAction, &QAction::triggered, this, [this]() {
         showMarkdownDialog(this, tr("Quick User Manual"), quickUserManualMarkdown());
     });
-    helpMenu->addAction(tr("User Manual (Full)"), this, [this]() {
+    QAction *fullManualAction = helpMenu->addAction(tr("User Manual (Full)"));
+    connect(fullManualAction, &QAction::triggered, this, [this]() {
         const QString manualPath = resolveFullUserManualPath();
         if (manualPath.isEmpty()) {
             showMarkdownDialog(this,
@@ -495,7 +520,8 @@ void MainWindow::buildMenus()
                            tr("Source: %1").arg(QDir::toNativeSeparators(manualPath)));
     });
     helpMenu->addSeparator();
-    helpMenu->addAction(tr("About Therion Studio"), this, [this]() {
+    QAction *aboutAction = helpMenu->addAction(tr("About Therion Studio"));
+    connect(aboutAction, &QAction::triggered, this, [this]() {
         QMessageBox::information(this,
                                  tr("About Therion Studio"),
                                  tr("Therion Studio is a Qt-based editor for Therion projects."));

@@ -195,6 +195,8 @@ Automated tests currently in-tree and used as regression baseline:
 
 ### 2026-05-14
 
+- ~~Removed Qt menu-construction deprecation warnings by replacing deprecated `QMenu::addAction(..., shortcut)` overload usage with explicit `QAction` setup and signal wiring in `MainWindow::buildMenus`.~~
+- ~~Updated repository agent instructions to require avoiding deprecated APIs in new or touched code paths.~~
 - ~~Expanded `Help` menu with in-app `Quick User Manual` and `User Manual (Full)` viewer actions while keeping contextual map-help panel workflows intact.~~
 - ~~Added live appearance-switch handling so runtime OS light/dark changes now reapply app chrome styling and refresh map workspace rendering without relaunch.~~
 - ~~Fixed map-theme regression where dark-mode app chrome could still render a light map canvas: map theme selection now cross-checks `QStyleHints::colorScheme` against effective application palette lightness and prefers palette-derived mode when they disagree.~~

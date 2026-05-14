@@ -8,12 +8,11 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 
 ### In progress
 
-- Phase 5: map editor interaction parity and command-surface completion.
 - Phase 6: encoding detection/conversion and encoding-preserving save semantics.
 
 ### Next up
 
-- Continue Phase 5 map-editor parity polish and interaction refinement.
+- Start Phase 9 map-editor parity polish and interaction refinement.
 - Continue implementation work; defer Phase 6 manual verification pass.
 
 ### Risks / blockers
@@ -90,12 +89,12 @@ Legend:
 - ~~`./build/TherionXviParserTest`~~
 - ~~`cmake --build build --target TherionDocumentEditorTest TherionStudio`~~
 
-### Phase 5 - TH2 Map Workspace and Background Alignment (`MVP` core, `Post-MVP` parity polish)
+### ~~Phase 5 - TH2 Map Workspace and Background Alignment (`MVP`)~~
 
-- Spec scope: 3.3, 3.8.3, 3.11.1.
-- Goal: split/text/map workspace, geometry rendering/editing, background-layer management, fit/pan/zoom semantics.
-- Status: In progress (core implemented; feature parity refinement continues).
-- Implemented highlights:
+- ~~Spec scope: 3.3, 3.8.3, 3.11.1.~~
+- ~~Goal: split/text/map workspace, geometry rendering/editing, background-layer management, fit/pan/zoom semantics.~~
+- ~~Status: Completed (`MVP` closeout complete).~~
+- ~~Implemented highlights:~~
 - ~~Embedded map workspace modes and map help panel.~~
 - ~~Point and line/area vertex drag-to-source writeback.~~
 - ~~Undo/redo command integration with merge semantics and obsolete-command handling for failures.~~
@@ -105,12 +104,12 @@ Legend:
 - ~~Opening the same TH2 document now focuses the existing detached map window/session instead of creating a duplicate map editor instance.~~
 - ~~Simplified TH2 workspace to a single embedded split layout plus detachable map pane; removed `Text Only / Map Only / Split` switcher UX to avoid conflicting states when map is detached.~~
 - ~~Fixed undo/redo re-entrancy crash path for map geometry edits by deferring `refreshMapScene()` while map undo commands are executing, then applying a single pending refresh after command completion.~~
-- Remaining checklist (Phase 5 closeout):
+- ~~Remaining checklist (Phase 5 closeout):~~
 - ~~Add focused regression coverage for live preview callback sequencing during map drags (anchor/control), including no-self-update and no-stale-preview assertions.~~
 - ~~Add focused regression coverage for preview-vs-commit parity on representative line-edit operations (anchor move, smooth control move, corner control move).~~
 - ~~Add a lightweight GUI smoke test for map drag/undo/redo workflow (single document, deterministic coordinates) to catch scene-refresh and undo-stack regressions.~~
 - ~~Re-run Phase 5 verification suite after checklist completion and document residual parity gaps (if any) as Post-MVP.~~
-- Verification:
+- ~~Verification:~~
 - ~~`./build/MapBackgroundPlacementTest`~~
 - ~~`./build/TherionBackgroundMetadataTest`~~
 - ~~`./build/TherionXviParserTest`~~
@@ -156,10 +155,24 @@ Legend:
 - Release artifact checks per platform.
 - Performance smoke pass on representative project sizes.
 
+### Phase 9 - Map Editor Parity Polish (`Post-MVP`)
+
+- Spec scope: 3.3, 3.8.3, 3.11.1.
+- Goal: close remaining map-editor interaction/UX parity gaps after MVP completion.
+- Status: Not started.
+- Planned focus:
+- Cross-platform interaction parity polish beyond MVP baseline.
+- Expanded GUI automation for map-edit workflows and regressions.
+- Residual map command-surface and ergonomics refinements identified during manual QA.
+- Planned verification:
+- `MapEditorDragUndoRedoSmokeTest`
+- `MapEditorDetachedPaneTest`
+- Map geometry/background/parser regression suite
+- Manual parity pass on macOS, Windows, Linux
+
 ## Post-MVP Backlog (Phase-Linked)
 
 - Phase 3/7: broader GUI automation for structure/inspector/runner/map workflows.
-- Phase 5: map-editor parity polish beyond MVP command/interaction coverage.
 - Phase 4: expand rewrite corpus/regression coverage beyond MVP fixture set for higher corpus-level confidence.
 - Phase 8: extended performance benchmarking and packaging convenience improvements beyond baseline release criteria.
 
@@ -282,6 +295,7 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Expanded `MapGeometryFeatureParsingTest` with explicit preview-vs-commit parity coverage for representative line edits: anchor move, smooth control move, and corner control move now assert identical coupled-secondary move sets between preview and command-time coupling helpers.~~
 - ~~Added `MapEditorDragUndoRedoSmokeTest` as a focused GUI smoke executable for deterministic line-anchor drag + undo + redo, asserting text mutation, undo-to-baseline restoration, and dirty-state transitions through the map command path.~~
 - ~~Completed Phase 5 checklist re-verification pass after smoke-test integration: ran `MapGeometryFeatureParsingTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`, `TherionDocumentEditorTest`, `MapEditorDetachedPaneTest` (offscreen), and `MapEditorDragUndoRedoSmokeTest` (offscreen).~~
+- ~~Separated map-editor Post-MVP parity work into standalone Phase 9 and marked Phase 5 as MVP-complete.~~
 - ~~Hardened map-geometry undo/redo dirty-state fidelity: point and line/area vertex move commands now restore exact pre/post command text snapshots through `TextEditorTab::replaceTextForCommand`, eliminating residual dirty flags caused by rewrite-path formatting drift in multi-step map commands.~~
 - ~~Extended Phase 5 line-edit parity with smoothness toggling: map canvas now supports `S` to toggle selected line vertex smooth/corner state, line-coordinate rewrite validation now accepts `smooth` continuation rows, and line-row regeneration preserves `smooth off` markers during map-driven line rewrites.~~
 - ~~Expanded `TherionDocumentEditorTest` with `rewriteLineCoordinateRows` coverage for null/non-line rejection, inline-start rejection, mixed-content rejection, and successful CRLF-preserving rewrite.~~

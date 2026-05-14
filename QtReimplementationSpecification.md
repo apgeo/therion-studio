@@ -205,6 +205,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The help/documentation panel shall be collapsible and resizable and shall not disturb the active editor selection when it is shown or hidden.
 - When a TH2 file is open, the text editor selection shall stay synchronized with the graphical map selection.
 - When map/object selection reveals a source location in the text editor, the corresponding source line shall be visibly highlighted in the editor viewport.
+- When the text cursor is on a `scrap` or `endscrap` directive, the map selection shall include all selectable map objects that belong to that scrap block.
 
 #### 3.8.3 TH2 Map Editor Behavior
 

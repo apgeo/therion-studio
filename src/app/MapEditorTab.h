@@ -140,6 +140,7 @@ private:
     void restoreDraftGeometryItems();
     void restoreBackgroundImageItems();
     void selectMapLine(int lineNumber);
+    void selectMapLines(const QSet<int> &lineNumbers);
     void fitMapToView(bool includeBackgroundImages = false);
     void syncZoomFactorFromView();
     void applyZoomAtViewportPosition(qreal factor, const QPointF &viewportPosition);

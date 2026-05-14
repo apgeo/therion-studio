@@ -12,6 +12,7 @@
 #include <QMainWindow>
 #include <QMouseEvent>
 #include <QPushButton>
+#include <QSet>
 #include <QTemporaryDir>
 #include <QVBoxLayout>
 
@@ -145,6 +146,27 @@ int selectedSourceLineNumber(QGraphicsScene *scene)
     }
 
     return 0;
+}
+
+QSet<int> selectedSourceLineNumbers(QGraphicsScene *scene)
+{
+    QSet<int> lineNumbers;
+    if (scene == nullptr) {
+        return lineNumbers;
+    }
+
+    const QList<QGraphicsItem *> selectedItems = scene->selectedItems();
+    for (QGraphicsItem *rawItem : selectedItems) {
+        if (rawItem == nullptr) {
+            continue;
+        }
+        const int lineNumber = rawItem->data(kMapSceneLineNumberRole).toInt();
+        if (lineNumber > 0) {
+            lineNumbers.insert(lineNumber);
+        }
+    }
+
+    return lineNumbers;
 }
 
 
@@ -284,6 +306,20 @@ int runDragUndoRedoSmoke()
     if (!expect(mapTab->currentLineNumber() == 4, "Expected map tab current line to be the line object start.")) {
         return 1;
     }
+    textEditor->goToLineColumn(3, 3);
+    pumpEvents();
+    if (!expect(selectedSourceLineNumbers(mapView->scene()) == QSet<int>({4, 12, 17}),
+                "Moving text cursor to scrap should select all map objects inside the scrap block.")) {
+        return 1;
+    }
+    textEditor->goToLineColumn(18, 3);
+    pumpEvents();
+    if (!expect(selectedSourceLineNumbers(mapView->scene()) == QSet<int>({4, 12, 17}),
+                "Moving text cursor to endscrap should select all map objects inside the scrap block.")) {
+        return 1;
+    }
+    mapTab->goToLine(4);
+    pumpEvents();
 
     auto *anchorItem = findCenteredLineAnchor(mapView->scene(), visibleSceneRect);
     if (!expect(anchorItem != nullptr, "No visible editable line anchor was found after selecting line geometry.")) {

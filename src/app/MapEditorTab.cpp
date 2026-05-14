@@ -30,6 +30,7 @@
 #include <QTouchEvent>
 #include <QFont>
 
+#include <algorithm>
 #include <cmath>
 #include <optional>
 
@@ -959,6 +960,62 @@ std::optional<SourceVertexTextReference> sourceVertexTextReferenceForSelection(c
     return std::nullopt;
 }
 
+std::optional<QSet<int>> scrapObjectLinesForCursor(const QVector<TherionParsedLine> &parsedLines,
+                                                   int cursorLine)
+{
+    if (cursorLine <= 0) {
+        return std::nullopt;
+    }
+
+    struct ScrapContext
+    {
+        int startLine = 0;
+        QSet<int> objectLines;
+    };
+
+    QVector<ScrapContext> scrapStack;
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        const QString directive = parsedLine.directive;
+        if (directive == QStringLiteral("scrap")) {
+            ScrapContext context;
+            context.startLine = parsedLine.lineNumber;
+            scrapStack.append(context);
+            continue;
+        }
+
+        if (!scrapStack.isEmpty()
+            && (directive == QStringLiteral("point")
+                || directive == QStringLiteral("station")
+                || directive == QStringLiteral("line")
+                || directive == QStringLiteral("area"))) {
+            for (ScrapContext &context : scrapStack) {
+                context.objectLines.insert(parsedLine.lineNumber);
+            }
+        }
+
+        if (directive != QStringLiteral("endscrap")) {
+            continue;
+        }
+
+        if (scrapStack.isEmpty()) {
+            continue;
+        }
+
+        const ScrapContext context = scrapStack.takeLast();
+        if (cursorLine == context.startLine || cursorLine == parsedLine.lineNumber) {
+            return context.objectLines;
+        }
+    }
+
+    for (const ScrapContext &context : std::as_const(scrapStack)) {
+        if (cursorLine == context.startLine) {
+            return context.objectLines;
+        }
+    }
+
+    return std::nullopt;
+}
+
 std::optional<int> sourcePointLineNumberForSelection(const QVector<TherionParsedLine> &parsedLines,
                                                      const QPointF &sourcePoint)
 {
@@ -1644,6 +1701,16 @@ void MapEditorTab::syncMapSelectionFromTextCursor(int lineNumber, int columnNumb
     }
 
     const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_->text());
+    if (const std::optional<QSet<int>> scrapLines = scrapObjectLinesForCursor(parsedLines, lineNumber);
+        scrapLines.has_value()) {
+        if (!scrapLines->isEmpty()) {
+            selectMapLines(scrapLines.value());
+        } else {
+            selectMapLine(lineNumber);
+        }
+        return;
+    }
+
     const CursorGeometrySelection cursorSelection = cursorGeometrySelectionForTextCursor(parsedLines,
                                                                                          lineNumber,
                                                                                          columnNumber);
@@ -2690,6 +2757,41 @@ void MapEditorTab::selectMapLine(int lineNumber)
         if (!autoFitEnabled_) {
             mapView_->centerOn(selectedItemIt.value());
         }
+    }
+
+    updatingSelection_ = false;
+    updateGeometrySelectionPresentation();
+}
+
+void MapEditorTab::selectMapLines(const QSet<int> &lineNumbers)
+{
+    if (mapScene_ == nullptr) {
+        return;
+    }
+
+    pendingMapClickSelection_ = false;
+    pendingMapClickLineNumber_ = 0;
+    pendingMapClickSourceVertexIndex_ = -1;
+    pendingMapClickGeometryKind_.clear();
+    updatingSelection_ = true;
+    mapScene_->clearSelection();
+
+    QList<int> sortedLines = lineNumbers.values();
+    std::sort(sortedLines.begin(), sortedLines.end());
+    QGraphicsItem *firstSelectedItem = nullptr;
+    for (const int lineNumber : std::as_const(sortedLines)) {
+        auto selectedItemIt = mapItemsByLine_.find(lineNumber);
+        if (selectedItemIt == mapItemsByLine_.end() || selectedItemIt.value() == nullptr) {
+            continue;
+        }
+        selectedItemIt.value()->setSelected(true);
+        if (firstSelectedItem == nullptr) {
+            firstSelectedItem = selectedItemIt.value();
+        }
+    }
+
+    if (firstSelectedItem != nullptr && !autoFitEnabled_ && mapView_ != nullptr) {
+        mapView_->centerOn(firstSelectedItem);
     }
 
     updatingSelection_ = false;

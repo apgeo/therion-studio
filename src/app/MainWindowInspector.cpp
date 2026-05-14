@@ -417,7 +417,8 @@ void MainWindow::handleInspectorApplyTriggered()
         }
     } else {
         QString contents;
-        if (!TherionStudio::DocumentFile::readUtf8TextFile(sourceFile, &contents, &errorMessage)) {
+        QString encodingName;
+        if (!TherionStudio::DocumentFile::readTextFile(sourceFile, &contents, &encodingName, nullptr, &errorMessage)) {
             inspectorValidationLabel_->setText(errorMessage);
             inspectorApplyButton_->setEnabled(false);
             return;
@@ -429,7 +430,7 @@ void MainWindow::handleInspectorApplyTriggered()
             return;
         }
 
-        if (!TherionStudio::DocumentFile::writeUtf8TextFile(sourceFile, contents, &errorMessage)) {
+        if (!TherionStudio::DocumentFile::writeTextFile(sourceFile, contents, encodingName, &errorMessage)) {
             inspectorValidationLabel_->setText(errorMessage);
             inspectorApplyButton_->setEnabled(false);
             return;
@@ -539,7 +540,8 @@ bool MainWindow::applyInspectorLineOptionToggle(const QString &optionName, bool 
         }
     } else {
         QString contents;
-        if (!TherionStudio::DocumentFile::readUtf8TextFile(sourceFile, &contents, &localError)) {
+        QString encodingName;
+        if (!TherionStudio::DocumentFile::readTextFile(sourceFile, &contents, &encodingName, nullptr, &localError)) {
             if (errorMessage != nullptr) {
                 *errorMessage = localError;
             }
@@ -553,7 +555,7 @@ bool MainWindow::applyInspectorLineOptionToggle(const QString &optionName, bool 
             return false;
         }
 
-        if (!TherionStudio::DocumentFile::writeUtf8TextFile(sourceFile, contents, &localError)) {
+        if (!TherionStudio::DocumentFile::writeTextFile(sourceFile, contents, encodingName, &localError)) {
             if (errorMessage != nullptr) {
                 *errorMessage = localError;
             }
@@ -607,7 +609,8 @@ void MainWindow::refreshInspectorLineOptionState()
         sourceText = mapTab->text();
     } else {
         QString readError;
-        if (!TherionStudio::DocumentFile::readUtf8TextFile(sourceFile, &sourceText, &readError)) {
+        QString encodingName;
+        if (!TherionStudio::DocumentFile::readTextFile(sourceFile, &sourceText, &encodingName, nullptr, &readError)) {
             setControls(false, false, false);
             return;
         }

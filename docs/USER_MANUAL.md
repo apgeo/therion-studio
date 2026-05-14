@@ -156,6 +156,7 @@ Inspector supports:
 
 - renaming selected structure entry via `Apply` (persists to source)
 - line-state toggles for line entries: `Closed` (`-close`) and `Reversed` (`-reverse`)
+- encoding-preserving source rewrites for inspector-applied changes (non-UTF files keep their original encoding unless explicitly converted in the text editor)
 
 ### 5.5 Use Map Workspace (`.th2`)
 

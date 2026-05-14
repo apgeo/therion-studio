@@ -164,6 +164,7 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Polished conversion UX: `Convert to UTF-8` now requires confirmation, marks conversion as an in-memory pending change, and shows explicit encoding-status notes about save behavior.~~
 - ~~Expanded `DocumentFileEncodingTest` and verified UTF-8 detection plus Latin1 and Windows-1250 byte-preserving save round-trip behavior.~~
 - ~~Expanded encoding regression fixtures with `cp1250` alias and Windows-1252 directive coverage, verifying byte-preserving round-trip saves for both paths.~~
+- ~~Closed inspector encoding-preservation gap for unopened-source fallback edits: structure rename and line `-close`/`-reverse` rewrites now read and write using detected file encoding instead of forcing UTF-8.~~
 - ~~Added `docs/ENCODING_QA_CHECKLIST.md` and linked it from the user manual to standardize cross-platform manual validation for open/save/convert/reopen/byte-check encoding workflows.~~
 - ~~Populated `docs/USER_MANUAL.md` with current implemented UI/workflow coverage: menus, sidebar panes, map workspace behavior, cross-platform shortcuts, settings/session persistence, platform notes, and troubleshooting.~~
 - ~~Updated repository instructions to require maintaining a living `docs/USER_MANUAL.md` and updating it whenever UI layout, workflows, keyboard shortcuts, or settings behavior changes.~~

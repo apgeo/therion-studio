@@ -15,11 +15,11 @@
 #include <QSplitterHandle>
 #include <QTextBrowser>
 #include <QTextCursor>
-#include <QPushButton>
 #include <QTextDocument>
 #include <QVBoxLayout>
 #include <QMessageBox>
 #include <QPainter>
+#include <QResizeEvent>
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -34,12 +34,45 @@
 
 namespace
 {
+class HighlightPlainTextEdit;
+
+class LineNumberAreaWidget final : public QWidget
+{
+public:
+    explicit LineNumberAreaWidget(HighlightPlainTextEdit *editor);
+
+    QSize sizeHint() const override;
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+
+private:
+    HighlightPlainTextEdit *editor_ = nullptr;
+};
+
 class HighlightPlainTextEdit final : public QPlainTextEdit
 {
 public:
     explicit HighlightPlainTextEdit(QWidget *parent = nullptr)
         : QPlainTextEdit(parent)
+        , lineNumberArea_(new LineNumberAreaWidget(this))
     {
+        connect(this,
+                &QPlainTextEdit::blockCountChanged,
+                this,
+                [this](int) {
+                    updateLineNumberAreaWidth();
+                });
+        connect(this, &QPlainTextEdit::updateRequest, this, &HighlightPlainTextEdit::handleLineNumberAreaUpdate);
+        connect(this,
+                &QPlainTextEdit::cursorPositionChanged,
+                this,
+                [this] {
+                    if (lineNumberArea_ != nullptr) {
+                        lineNumberArea_->update();
+                    }
+                });
+        updateLineNumberAreaWidth();
     }
 
     void setHighlightedLineNumber(int lineNumber)
@@ -50,9 +83,103 @@ public:
 
         highlightedLineNumber_ = lineNumber;
         viewport()->update();
+        if (lineNumberArea_ != nullptr) {
+            lineNumberArea_->update();
+        }
+    }
+
+    int lineNumberAreaWidth() const
+    {
+        int digits = 1;
+        int maxLineNumber = qMax(1, blockCount());
+        while (maxLineNumber >= 10) {
+            maxLineNumber /= 10;
+            ++digits;
+        }
+
+        const int horizontalPadding = 8;
+        return (horizontalPadding * 2) + (fontMetrics().horizontalAdvance(QLatin1Char('9')) * digits);
+    }
+
+    void paintLineNumberArea(QPaintEvent *event)
+    {
+        if (lineNumberArea_ == nullptr || event == nullptr) {
+            return;
+        }
+
+        QPainter painter(lineNumberArea_);
+
+        QColor gutterBackground = palette().color(QPalette::Window);
+        if (!gutterBackground.isValid()) {
+            gutterBackground = palette().color(QPalette::Base);
+        }
+        painter.fillRect(event->rect(), gutterBackground);
+
+        QColor dividerColor = palette().color(QPalette::Mid);
+        if (!dividerColor.isValid()) {
+            dividerColor = QColor(QStringLiteral("#bcbcbc"));
+        }
+        painter.setPen(dividerColor);
+        painter.drawLine(lineNumberArea_->width() - 1,
+                         event->rect().top(),
+                         lineNumberArea_->width() - 1,
+                         event->rect().bottom());
+
+        QTextBlock block = firstVisibleBlock();
+        int blockNumber = block.blockNumber();
+        int top = qRound(blockBoundingGeometry(block).translated(contentOffset()).top());
+        int bottom = top + qRound(blockBoundingRect(block).height());
+
+        while (block.isValid() && top <= event->rect().bottom()) {
+            if (block.isVisible() && bottom >= event->rect().top()) {
+                const int visibleLineNumber = blockNumber + 1;
+                const bool isHighlightedLine = highlightedLineNumber_ == visibleLineNumber;
+
+                QFont numberFont = painter.font();
+                numberFont.setBold(isHighlightedLine);
+                painter.setFont(numberFont);
+
+                QColor numberColor = isHighlightedLine
+                    ? palette().color(QPalette::Text)
+                    : palette().color(QPalette::Mid);
+                if (!numberColor.isValid()) {
+                    numberColor = isHighlightedLine
+                        ? QColor(QStringLiteral("#202020"))
+                        : QColor(QStringLiteral("#808080"));
+                }
+                painter.setPen(numberColor);
+
+                painter.drawText(0,
+                                 top,
+                                 lineNumberArea_->width() - 6,
+                                 qRound(blockBoundingRect(block).height()),
+                                 Qt::AlignRight | Qt::AlignVCenter,
+                                 QString::number(visibleLineNumber));
+            }
+
+            block = block.next();
+            top = bottom;
+            bottom = top + qRound(blockBoundingRect(block).height());
+            ++blockNumber;
+        }
     }
 
 protected:
+    void resizeEvent(QResizeEvent *event) override
+    {
+        QPlainTextEdit::resizeEvent(event);
+
+        if (lineNumberArea_ == nullptr) {
+            return;
+        }
+
+        const QRect contentRect = contentsRect();
+        lineNumberArea_->setGeometry(QRect(contentRect.left(),
+                                           contentRect.top(),
+                                           lineNumberAreaWidth(),
+                                           contentRect.height()));
+    }
+
     void paintEvent(QPaintEvent *event) override
     {
         QPlainTextEdit::paintEvent(event);
@@ -96,8 +223,52 @@ protected:
     }
 
 private:
+    void updateLineNumberAreaWidth()
+    {
+        setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);
+    }
+
+    void handleLineNumberAreaUpdate(const QRect &rect, int dy)
+    {
+        if (lineNumberArea_ == nullptr) {
+            return;
+        }
+
+        if (dy != 0) {
+            lineNumberArea_->scroll(0, dy);
+        } else {
+            lineNumberArea_->update(0, rect.y(), lineNumberArea_->width(), rect.height());
+        }
+
+        if (rect.contains(viewport()->rect())) {
+            updateLineNumberAreaWidth();
+        }
+    }
+
     int highlightedLineNumber_ = 0;
+    QWidget *lineNumberArea_ = nullptr;
 };
+
+LineNumberAreaWidget::LineNumberAreaWidget(HighlightPlainTextEdit *editor)
+    : QWidget(editor)
+    , editor_(editor)
+{
+}
+
+QSize LineNumberAreaWidget::sizeHint() const
+{
+    if (editor_ == nullptr) {
+        return QWidget::sizeHint();
+    }
+    return QSize(editor_->lineNumberAreaWidth(), 0);
+}
+
+void LineNumberAreaWidget::paintEvent(QPaintEvent *event)
+{
+    if (editor_ != nullptr) {
+        editor_->paintLineNumberArea(event);
+    }
+}
 
 QString renderList(const QStringList &items)
 {

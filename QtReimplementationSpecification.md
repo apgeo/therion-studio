@@ -198,6 +198,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Find and Replace commands shall reveal an inline search bar in the editor area rather than requiring a separate modal dialog.
 - The search bar shall support next, previous, replace current, replace all, whole-word matching, and case-sensitive matching.
 - The user shall be able to hide the search bar without closing the current document.
+- The editor shall display 1-based source line numbers in a left gutter that stays synchronized with document scroll position.
 - The application shall show the active document path and current text encoding in a status area tied to the active document context.
 - When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8.
 - The text editor shall provide a contextual help/documentation panel that shows Therion command summaries, arguments, accepted values, options, and related keywords when metadata is available for the token or item at the caret.

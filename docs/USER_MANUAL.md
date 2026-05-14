@@ -138,6 +138,7 @@ Safety guardrails:
 Text editor includes:
 
 - syntax highlighting
+- left gutter with 1-based line numbers that scroll with the document
 - active-line highlight that follows the text cursor (including map-driven source navigation)
 - find/replace bar with `Whole word` and `Case sensitive` options
 - contextual help pane below the editor, resizable via splitter handle

@@ -167,6 +167,7 @@ private:
                                   const QPointF &newPoint);
     bool insertLineVertexFromSelection();
     bool removeLineVertexFromSelection();
+    bool toggleLineVertexSmoothFromSelection();
     void recordDraftMove(QGraphicsRectItem *item, const QPointF &oldPosition, const QPointF &newPosition);
     void recordDraftVisibility(QGraphicsRectItem *item, bool oldVisible, bool newVisible);
     QGraphicsRectItem *selectedDraftGeometryItem() const;

@@ -478,6 +478,24 @@ int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int so
     return -1;
 }
 
+int lineVertexOwnerIndexForSourceVertex(const MapGeometryFeature &lineFeature, int sourceVertexIndex)
+{
+    if (sourceVertexIndex < 0) {
+        return -1;
+    }
+
+    for (int index = 0; index < lineFeature.lineVertices.size(); ++index) {
+        const MapGeometryFeature::TH2LineVertex &vertex = lineFeature.lineVertices.at(index);
+        if (vertex.anchorSourceVertexIndex == sourceVertexIndex
+            || vertex.incomingSourceVertexIndex == sourceVertexIndex
+            || vertex.outgoingSourceVertexIndex == sourceVertexIndex) {
+            return index;
+        }
+    }
+
+    return -1;
+}
+
 QString formatSourceCoordinate(qreal value)
 {
     return QString::number(value, 'f', 1);
@@ -490,28 +508,34 @@ QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2L
         return rows;
     }
 
-    QStringList tokens;
-    tokens.reserve(lineVertices.size() * 6);
-    const auto appendPoint = [&tokens](const QPointF &point) {
-        tokens.append(formatSourceCoordinate(point.x()));
-        tokens.append(formatSourceCoordinate(point.y()));
+    const auto pointRow = [](const QPointF &point) {
+        return QStringLiteral("%1 %2")
+            .arg(formatSourceCoordinate(point.x()), formatSourceCoordinate(point.y()));
     };
 
-    appendPoint(lineVertices.first().anchor);
+    rows.append(pointRow(lineVertices.first().anchor));
+    if (!lineVertices.first().isSmooth) {
+        rows.append(QStringLiteral("smooth off"));
+    }
+
     for (int index = 1; index < lineVertices.size(); ++index) {
         const MapGeometryFeature::TH2LineVertex &previous = lineVertices.at(index - 1);
         const MapGeometryFeature::TH2LineVertex &current = lineVertices.at(index);
+        QStringList rowTokens;
         const bool cubic = previous.outgoingControl.has_value() || current.incomingControl.has_value();
+        const auto appendPointTokens = [&rowTokens](const QPointF &point) {
+            rowTokens.append(formatSourceCoordinate(point.x()));
+            rowTokens.append(formatSourceCoordinate(point.y()));
+        };
         if (cubic) {
-            appendPoint(previous.outgoingControl.value_or(previous.anchor));
-            appendPoint(current.incomingControl.value_or(current.anchor));
+            appendPointTokens(previous.outgoingControl.value_or(previous.anchor));
+            appendPointTokens(current.incomingControl.value_or(current.anchor));
         }
-        appendPoint(current.anchor);
-    }
-
-    constexpr int kTokensPerRow = 10;
-    for (int index = 0; index < tokens.size(); index += kTokensPerRow) {
-        rows.append(tokens.mid(index, kTokensPerRow).join(QLatin1Char(' ')));
+        appendPointTokens(current.anchor);
+        rows.append(rowTokens.join(QLatin1Char(' ')));
+        if (!current.isSmooth) {
+            rows.append(QStringLiteral("smooth off"));
+        }
     }
     return rows;
 }
@@ -776,6 +800,11 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
                 }
             } else if (keyEvent->key() == Qt::Key_Delete || keyEvent->key() == Qt::Key_Backspace) {
                 if (removeLineVertexFromSelection()) {
+                    event->accept();
+                    return true;
+                }
+            } else if (keyEvent->key() == Qt::Key_S && keyEvent->modifiers() == Qt::NoModifier) {
+                if (toggleLineVertexSmoothFromSelection()) {
                     event->accept();
                     return true;
                 }
@@ -1344,7 +1373,7 @@ void MapEditorTab::refreshToolbarSummary()
 
     QString summary = toolbarStatusNote_.trimmed();
     if (summary.isEmpty()) {
-        summary = tr("TH2 map workspace scaffolding");
+        summary = tr("Ready");
     }
 
     if (fitBackgroundRequested_) {
@@ -1658,6 +1687,67 @@ bool MapEditorTab::removeLineVertexFromSelection()
     }
 
     toolbarStatusNote_ = tr("Removed line vertex %1 on source line %2.").arg(anchorIndex + 1).arg(lineNumber);
+    refreshToolbarSummary();
+    return true;
+}
+
+bool MapEditorTab::toggleLineVertexSmoothFromSelection()
+{
+    if (mapScene_ == nullptr || textEditor_ == nullptr) {
+        return false;
+    }
+
+    const QList<QGraphicsItem *> selectedItems = mapScene_->selectedItems();
+    if (selectedItems.size() != 1) {
+        return false;
+    }
+
+    auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItems.first());
+    if (vertexItem == nullptr || vertexItem->geometryKind() != QStringLiteral("line")) {
+        return false;
+    }
+
+    const int lineNumber = vertexItem->lineNumber();
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(textEditor_->text(), lineNumber);
+    if (!lineFeature.has_value()) {
+        toolbarStatusNote_ = tr("Toggle smooth failed: line geometry could not be resolved.");
+        refreshToolbarSummary();
+        return true;
+    }
+
+    const int ownerIndex = lineVertexOwnerIndexForSourceVertex(lineFeature.value(), vertexItem->vertexIndex());
+    if (ownerIndex < 0 || ownerIndex >= lineFeature->lineVertices.size()) {
+        toolbarStatusNote_ = tr("Toggle smooth failed: selected line vertex could not be resolved.");
+        refreshToolbarSummary();
+        return true;
+    }
+
+    QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
+    MapGeometryFeature::TH2LineVertex &target = editedVertices[ownerIndex];
+    target.isSmooth = !target.isSmooth;
+    if (target.isSmooth) {
+        if (target.incomingControl.has_value() && !target.outgoingControl.has_value()) {
+            const QPointF vector = target.incomingControl.value() - target.anchor;
+            target.outgoingControl = target.anchor - vector;
+        } else if (target.outgoingControl.has_value() && !target.incomingControl.has_value()) {
+            const QPointF vector = target.outgoingControl.value() - target.anchor;
+            target.incomingControl = target.anchor - vector;
+        }
+    }
+
+    const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices);
+    QString errorMessage;
+    if (!textEditor_->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Toggle smooth failed.")
+            : tr("Toggle smooth failed: %1").arg(errorMessage);
+        refreshToolbarSummary();
+        return true;
+    }
+
+    toolbarStatusNote_ = target.isSmooth
+        ? tr("Line vertex %1 on source line %2 set to smooth.").arg(ownerIndex + 1).arg(lineNumber)
+        : tr("Line vertex %1 on source line %2 set to corner (smooth off).").arg(ownerIndex + 1).arg(lineNumber);
     refreshToolbarSummary();
     return true;
 }

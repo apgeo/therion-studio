@@ -98,6 +98,7 @@ Platform key substitution follows Qt standard behavior (`Ctrl` on Windows/Linux,
 | Open current `.th2` in map editor | `Ctrl/Cmd+Alt+Shift+G` |
 | Map: split selected line segment | `Insert` or `I` (no modifiers) |
 | Map: delete selected middle line anchor | `Delete` or `Backspace` |
+| Map: toggle selected line vertex smooth/corner | `S` (no modifiers) |
 
 Notes:
 
@@ -185,6 +186,7 @@ Map help pane:
 
 - shown below map canvas
 - collapsible via small triangle on splitter handle
+- line-vertex shortcut reminder includes split (`Insert`/`I`), remove (`Delete`/`Backspace`), and smooth toggle (`S`)
 
 Text + map status row:
 

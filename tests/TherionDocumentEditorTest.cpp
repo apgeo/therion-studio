@@ -883,10 +883,23 @@ int runRewriteLineCoordinateRowsTest()
         return 1;
     }
 
-    contents = QStringLiteral("line wall\n  smooth off\nendline\n");
+    contents = QStringLiteral("line wall\n  1 2\n  smooth off\n  3 4\nendline\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineCoordinateRows(&contents, 1, {QStringLiteral("5 6")}, &errorMessage),
-                "rewriteLineCoordinateRows should reject non-coordinate continuation content.")) {
+    if (!expect(TherionDocumentEditor::rewriteLineCoordinateRows(&contents,
+                                                                  1,
+                                                                  {QStringLiteral("5 6"),
+                                                                   QStringLiteral("smooth off"),
+                                                                   QStringLiteral("7 8")},
+                                                                  &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\n"
+                                           "  5 6\n"
+                                           "  smooth off\n"
+                                           "  7 8\n"
+                                           "endline\n"),
+                "rewriteLineCoordinateRows should allow smooth-off continuation lines and preserve them in rewritten output.")) {
         return 1;
     }
 

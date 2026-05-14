@@ -118,7 +118,7 @@ void MapEditorTab::buildUi()
     detachButton_->setEnabled(true);
     connect(detachButton_, &QPushButton::clicked, this, &MapEditorTab::handleDetachPaneTriggered);
 
-    summaryLabel_ = new QLabel(tr("TH2 map workspace scaffolding"), toolbar);
+    summaryLabel_ = new QLabel(tr("Ready"), toolbar);
     summaryLabel_->setWordWrap(true);
     summaryLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     summaryLabel_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);

@@ -333,7 +333,7 @@ QString mapWorkspaceHelpHtml()
         "<li><strong>Fit</strong> recenters the geometry preview.</li>"
         "<li><strong>Fit + BG</strong> fits the viewport to geometry plus all loaded background image layers.</li>"
         "</ul>"
-        "<p>Line-anchor editing shortcuts: <code>Insert</code> (or <code>I</code> on keyboards without Insert) splits the selected segment; <code>Delete</code>/<code>Backspace</code> removes a selected middle anchor.</p>"
+        "<p>Line-anchor editing shortcuts: <code>Insert</code> (or <code>I</code> on keyboards without Insert) splits the selected segment; <code>Delete</code>/<code>Backspace</code> removes a selected middle anchor; <code>S</code> toggles smooth/corner behavior for the selected line vertex.</p>"
         "<p>Background image layers are managed from the Map sidebar, including layer order, visibility, position, opacity, and gamma.</p>"
         "<p>When present, <code>##XTHERION## xth_me_image_insert</code> metadata is used to auto-load referenced background images.</p>"
         "<p>Drag parsed geometry handles to rewrite source coordinates. Select a draft item to move or toggle it.</p>");

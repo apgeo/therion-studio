@@ -1015,6 +1015,9 @@ bool TherionDocumentEditor::rewriteLineCoordinateRows(QString *contents,
         if (parsedLine.commentStart == 0) {
             continue;
         }
+        if (parsedLine.directive == QStringLiteral("smooth")) {
+            continue;
+        }
         if (!coordinateTokenPairsForLine(parsedLine, 0).isEmpty()) {
             continue;
         }

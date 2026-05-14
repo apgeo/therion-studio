@@ -319,6 +319,7 @@ Platform modifier mapping:
 | Open in Map Editor | Map | Command+Option+Shift+G | Open the current TH2 document in the map editor; disabled unless a TH2 tab is active |
 | Toggle Debug Sidebar | Debug | none in the current Swift app | Toggle the debug sidebar state from the menu |
 | Toggle Inspector | Toolbar | Command+Option+I | Toggle the inspector panel |
+| Quick User Manual | Help | none | Open an in-app short user manual focused on common workflows and map editing shortcuts |
 
 The Qt application may add additional platform-standard shortcuts only if they do not conflict with the behavior above and do not change the documented commands.
 

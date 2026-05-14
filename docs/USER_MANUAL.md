@@ -79,6 +79,8 @@ If no documents are open, a Welcome tab is shown.
 
 ### 3.5 Help Menu
 
+- `Quick User Manual` (short in-app workflow guide)
+- `User Manual (Full)` (loads `docs/USER_MANUAL.md` when available; falls back to quick manual if not found)
 - `About Therion Studio`
 
 ## 4. Keyboard Shortcuts

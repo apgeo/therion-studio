@@ -2,6 +2,8 @@
 
 #include <QAction>
 #include <QDockWidget>
+#include <QCoreApplication>
+#include <QFile>
 #include <QFileInfo>
 #include <QFileSystemModel>
 #include <QFileDialog>
@@ -13,6 +15,8 @@
 #include <QStandardPaths>
 #include <QLabel>
 #include <QMessageBox>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QMenu>
 #include <QMenuBar>
 #include <QPushButton>
@@ -25,6 +29,7 @@
 #include <QStringList>
 #include <QStatusBar>
 #include <QTabWidget>
+#include <QTextBrowser>
 #include <QTreeView>
 #include <QKeySequence>
 #include <QWidget>
@@ -121,6 +126,108 @@ QWidget *createCenteredMessage(const QString &title, const QString &body)
     layout->addStretch(1);
 
     return widget;
+}
+
+QString quickUserManualMarkdown()
+{
+    return QStringLiteral(
+        "# Therion Studio Quick User Manual\n"
+        "\n"
+        "## Core workflow\n"
+        "\n"
+        "1. Open a project with `File -> Open Project...`.\n"
+        "2. Open `.th`/`.th2` files from the Files sidebar.\n"
+        "3. Use Structure + Inspector to rename objects or toggle line flags.\n"
+        "4. Use the map workspace for TH2 geometry edits and keep source text in sync.\n"
+        "5. Save with `Save` or `Save All`.\n"
+        "\n"
+        "## Map workspace essentials\n"
+        "\n"
+        "- `Select`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`\n"
+        "- `Insert Scrap`, `Complete Draft`, `Undo`, `Redo`\n"
+        "- `Zoom -`, `Zoom +`, `Fit`, `Fit + BG`\n"
+        "- `Open Map in Window` to detach the map pane\n"
+        "\n"
+        "### Line-vertex shortcuts\n"
+        "\n"
+        "- Split selected segment: `Insert` or `I`\n"
+        "- Remove selected middle anchor: `Delete` or `Backspace`\n"
+        "- Toggle smooth/corner: `S`\n"
+        "\n"
+        "## Full manual\n"
+        "\n"
+        "Use `Help -> User Manual (Full)` when you need complete workflow details.\n");
+}
+
+QStringList fullUserManualPathCandidates()
+{
+    const QString appDir = QCoreApplication::applicationDirPath();
+    const QString cwd = QDir::currentPath();
+    return {
+        QDir(cwd).absoluteFilePath(QStringLiteral("docs/USER_MANUAL.md")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("docs/USER_MANUAL.md")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../docs/USER_MANUAL.md")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../../docs/USER_MANUAL.md")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../../../docs/USER_MANUAL.md")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../../../../docs/USER_MANUAL.md"))};
+}
+
+QString resolveFullUserManualPath()
+{
+    const QStringList candidates = fullUserManualPathCandidates();
+    for (const QString &candidatePath : candidates) {
+        const QFileInfo info(candidatePath);
+        if (info.exists() && info.isFile()) {
+            return info.absoluteFilePath();
+        }
+    }
+    return QString();
+}
+
+QString loadUtf8TextFile(const QString &filePath)
+{
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return QString();
+    }
+    return QString::fromUtf8(file.readAll());
+}
+
+void showMarkdownDialog(QWidget *parent,
+                        const QString &title,
+                        const QString &markdown,
+                        const QString &sourceLabel = QString())
+{
+    auto *dialog = new QDialog(parent);
+    dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+    dialog->setWindowTitle(title);
+    dialog->resize(860, 680);
+
+    auto *layout = new QVBoxLayout(dialog);
+    layout->setContentsMargins(12, 12, 12, 12);
+    layout->setSpacing(8);
+
+    if (!sourceLabel.trimmed().isEmpty()) {
+        auto *sourceInfo = new QLabel(sourceLabel, dialog);
+        sourceInfo->setWordWrap(true);
+        sourceInfo->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        layout->addWidget(sourceInfo);
+    }
+
+    auto *browser = new QTextBrowser(dialog);
+    browser->setOpenExternalLinks(true);
+    browser->setReadOnly(true);
+    browser->document()->setMarkdown(markdown);
+    layout->addWidget(browser, 1);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, dialog, &QDialog::close);
+    layout->addWidget(buttons);
+
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
 }
 
 QString canonicalDocumentPath(const QString &filePath)
@@ -360,6 +467,34 @@ void MainWindow::buildMenus()
     windowMenu->addAction(tr("New &Window"), this, &MainWindow::createNewWindow);
 
     QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
+    helpMenu->addAction(tr("Quick User Manual"), this, [this]() {
+        showMarkdownDialog(this, tr("Quick User Manual"), quickUserManualMarkdown());
+    });
+    helpMenu->addAction(tr("User Manual (Full)"), this, [this]() {
+        const QString manualPath = resolveFullUserManualPath();
+        if (manualPath.isEmpty()) {
+            showMarkdownDialog(this,
+                               tr("User Manual (Full)"),
+                               quickUserManualMarkdown(),
+                               tr("Full manual file `docs/USER_MANUAL.md` was not found in expected locations. Showing quick manual instead."));
+            return;
+        }
+
+        const QString manualText = loadUtf8TextFile(manualPath);
+        if (manualText.trimmed().isEmpty()) {
+            showMarkdownDialog(this,
+                               tr("User Manual (Full)"),
+                               quickUserManualMarkdown(),
+                               tr("Failed to load `%1`. Showing quick manual instead.").arg(QDir::toNativeSeparators(manualPath)));
+            return;
+        }
+
+        showMarkdownDialog(this,
+                           tr("User Manual (Full)"),
+                           manualText,
+                           tr("Source: %1").arg(QDir::toNativeSeparators(manualPath)));
+    });
+    helpMenu->addSeparator();
     helpMenu->addAction(tr("About Therion Studio"), this, [this]() {
         QMessageBox::information(this,
                                  tr("About Therion Studio"),

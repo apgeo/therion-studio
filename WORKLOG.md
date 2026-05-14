@@ -195,6 +195,7 @@ Automated tests currently in-tree and used as regression baseline:
 
 ### 2026-05-14
 
+- ~~Expanded `Help` menu with in-app `Quick User Manual` and `User Manual (Full)` viewer actions while keeping contextual map-help panel workflows intact.~~
 - ~~Added live appearance-switch handling so runtime OS light/dark changes now reapply app chrome styling and refresh map workspace rendering without relaunch.~~
 - ~~Fixed map-theme regression where dark-mode app chrome could still render a light map canvas: map theme selection now cross-checks `QStyleHints::colorScheme` against effective application palette lightness and prefers palette-derived mode when they disagree.~~
 - ~~Fine-tuned light-mode map rendering: explicit OS light/dark scheme now takes precedence over scene-local palette overrides, and light-theme canvas/grid/label/stroke values were adjusted for cleaner contrast balance and stronger line readability.~~

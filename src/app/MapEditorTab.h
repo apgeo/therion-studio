@@ -8,6 +8,7 @@
 #include <QPointF>
 #include <QRectF>
 #include <QDateTime>
+#include <QElapsedTimer>
 #include <QVector>
 #include <QPointer>
 
@@ -256,5 +257,11 @@ private:
     bool mapSelectionDrivenTextNavigationInProgress_ = false;
     int lastCursorSyncedLine_ = -1;
     int lastCursorSyncedColumn_ = -1;
+    bool pendingMapClickSelection_ = false;
+    QPointF pendingMapClickScenePosition_;
+    QElapsedTimer pendingMapClickElapsed_;
+    int pendingMapClickLineNumber_ = 0;
+    int pendingMapClickSourceVertexIndex_ = -1;
+    QString pendingMapClickGeometryKind_;
 };
 }

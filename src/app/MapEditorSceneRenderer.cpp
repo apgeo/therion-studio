@@ -44,6 +44,16 @@ struct MapCanvasTheme
     QColor stationMarker;
 };
 
+template <typename T>
+T *makeMouseTransparent(T *item)
+{
+    if (item != nullptr) {
+        item->setAcceptedMouseButtons(Qt::NoButton);
+        item->setFlag(QGraphicsItem::ItemIsSelectable, false);
+    }
+    return item;
+}
+
 MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
 {
     Q_UNUSED(scene);
@@ -587,7 +597,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     const QRectF sceneFrame(0, 0, 1200, 900);
     scene->setSceneRect(sceneFrame);
     const QRectF geometryCanvas = sceneFrame.adjusted(24.0, 24.0, -24.0, -24.0);
-    scene->addRect(geometryCanvas, QPen(canvasTheme.canvasBorder, 1.2), QBrush(canvasTheme.canvasFill));
+    makeMouseTransparent(scene->addRect(geometryCanvas, QPen(canvasTheme.canvasBorder, 1.2), QBrush(canvasTheme.canvasFill)));
 
     const QRectF previewBounds = geometryCanvas.adjusted(20.0, 20.0, -20.0, -20.0);
     const QRectF sourceBounds = geometryBoundsForFeatures(geometryFeatures);
@@ -606,15 +616,15 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
     for (int index = 0; index < 6; ++index) {
         const qreal y = previewBounds.top() + (index * previewBounds.height() / 5.0);
-        scene->addLine(previewBounds.left(), y, previewBounds.right(), y, QPen(canvasTheme.gridLine, gridLineWidth, Qt::SolidLine));
+        makeMouseTransparent(scene->addLine(previewBounds.left(), y, previewBounds.right(), y, QPen(canvasTheme.gridLine, gridLineWidth, Qt::SolidLine)));
     }
     for (int index = 0; index < 8; ++index) {
         const qreal x = previewBounds.left() + (index * previewBounds.width() / 7.0);
-        scene->addLine(x, previewBounds.top(), x, previewBounds.bottom(), QPen(canvasTheme.gridLine, gridLineWidth, Qt::SolidLine));
+        makeMouseTransparent(scene->addLine(x, previewBounds.top(), x, previewBounds.bottom(), QPen(canvasTheme.gridLine, gridLineWidth, Qt::SolidLine)));
     }
 
     if (geometryFeatures.isEmpty()) {
-        auto *emptyGeometryItem = scene->addText(QObject::tr("No parseable point, line, or area geometry was found in this document yet."), QFont(QStringLiteral("Menlo"), 11));
+        auto *emptyGeometryItem = makeMouseTransparent(scene->addText(QObject::tr("No parseable point, line, or area geometry was found in this document yet."), QFont(QStringLiteral("Menlo"), 11)));
         emptyGeometryItem->setDefaultTextColor(canvasTheme.mutedText);
         emptyGeometryItem->setPos(previewBounds.left() + 16.0, previewBounds.top() + 16.0);
     } else {
@@ -649,10 +659,11 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     auto *triangle = scene->addPath(markerPath, QPen(canvasTheme.stationMarker, 1.2), QBrush(canvasTheme.stationMarker));
                     triangle->setZValue(3.5);
                     markGeometryItem(triangle);
+                    makeMouseTransparent(triangle);
                 }
 
                 if (feature.stationPoint || !compactLabels) {
-                    auto *label = scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold));
+                    auto *label = makeMouseTransparent(scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold)));
                     label->setDefaultTextColor(canvasTheme.labelText);
                     label->setPos(previewPoint + QPointF(10.0, -18.0));
                     label->setZValue(4.0);
@@ -676,6 +687,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 auto *detailItem = scene->addPath(path, QPen(detailStroke, detailLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
                 detailItem->setZValue(3.0);
                 markGeometryItem(detailItem);
+                makeMouseTransparent(detailItem);
                 detailItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
                 detailItem->setData(kMapSceneSelectionGatedRole, true);
                 detailItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineDetail);
@@ -728,6 +740,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                          QPen(canvasTheme.controlConnector, qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
                         connector->setZValue(3.2);
                         markGeometryItem(connector);
+                        makeMouseTransparent(connector);
                         const int ownerAnchorVertexIndex = previousVertex.anchorSourceVertexIndex >= 0
                             ? previousVertex.anchorSourceVertexIndex
                             : (segmentIndex - 1);
@@ -770,6 +783,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                          QPen(canvasTheme.controlConnector, qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
                         connector->setZValue(3.2);
                         markGeometryItem(connector);
+                        makeMouseTransparent(connector);
                         const int ownerAnchorVertexIndex = currentVertex.anchorSourceVertexIndex >= 0
                             ? currentVertex.anchorSourceVertexIndex
                             : segmentIndex;
@@ -975,10 +989,11 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     auto *triangle = scene->addPath(markerPath, QPen(canvasTheme.stationMarker, 1.2), QBrush(canvasTheme.stationMarker));
                     triangle->setZValue(3.5);
                     markGeometryItem(triangle);
+                    makeMouseTransparent(triangle);
                 }
 
                 if (!compactLabels) {
-                    auto *label = scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold));
+                    auto *label = makeMouseTransparent(scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold)));
                     label->setDefaultTextColor(canvasTheme.labelText);
                     label->setPos(mapGeometryPointToPreview(feature.lineVertices.first().anchor, sourceBounds, previewBounds) + QPointF(10.0, -18.0));
                     label->setZValue(4.0);
@@ -1077,7 +1092,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 }
 
                 if (!compactLabels) {
-                    auto *label = scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold));
+                    auto *label = makeMouseTransparent(scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold)));
                     label->setDefaultTextColor(canvasTheme.labelText);
                     label->setPos(mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds) + QPointF(10.0, -18.0));
                     label->setZValue(4.0);
@@ -1089,7 +1104,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     }
 
     if (entries.isEmpty()) {
-        auto *emptyItem = scene->addText(QObject::tr("No Therion map objects were detected in this document."), QFont(QStringLiteral("Menlo"), 12));
+        auto *emptyItem = makeMouseTransparent(scene->addText(QObject::tr("No Therion map objects were detected in this document."), QFont(QStringLiteral("Menlo"), 12)));
         emptyItem->setDefaultTextColor(canvasTheme.mutedText);
         emptyItem->setPos(previewBounds.left() + 16.0, previewBounds.top() + 44.0);
     }

@@ -209,7 +209,11 @@ int runDragUndoRedoSmoke()
         "  0 0\n"
         "  100 0\n"
         "  100 -100\n"
+        "  smooth off\n"
+        "  subtype presumed\n"
+        "  altitude 12\n"
         "endline\n"
+        "\n"
         "point 200 -50 station -name P1\n"
         "endscrap\n";
     file.write(th2Contents);
@@ -245,6 +249,10 @@ int runDragUndoRedoSmoke()
     if (!expect(mapView->scene() != nullptr, "Map scene was not initialized.")) {
         return 1;
     }
+    auto *textEditor = mapTab->findChild<TextEditorTab *>();
+    if (!expect(textEditor != nullptr, "Text editor was not found in MapEditorTab.")) {
+        return 1;
+    }
 
     const QRectF visibleSceneRect = mapView->mapToScene(mapView->viewport()->rect()).boundingRect();
     mapTab->goToLine(4);
@@ -265,23 +273,54 @@ int runDragUndoRedoSmoke()
         return 1;
     }
 
-    auto *pointItem = findPointItemForLine(mapView->scene(), 9);
-    if (!expect(pointItem != nullptr, "Failed to find map point geometry item for source line 9.")) {
+    textEditor->goToLineColumn(8, 3);
+    pumpEvents();
+    auto *selectedVertexFromSmooth = findSelectedLineVertex(mapView->scene());
+    if (!expect(selectedVertexFromSmooth != nullptr,
+                "Moving text cursor to a smooth-option row should select the corresponding map vertex.")) {
+        return 1;
+    }
+    if (!expect(selectedVertexFromSmooth->lineNumber() == 4 && selectedVertexFromSmooth->vertexIndex() == 2,
+                "Text-to-map sync should map smooth-option row to the current line vertex.")) {
+        return 1;
+    }
+    textEditor->goToLineColumn(9, 3);
+    pumpEvents();
+    auto *selectedVertexFromSubtype = findSelectedLineVertex(mapView->scene());
+    if (!expect(selectedVertexFromSubtype != nullptr,
+                "Moving text cursor to subtype-option row should select the current line vertex.")) {
+        return 1;
+    }
+    if (!expect(selectedVertexFromSubtype->lineNumber() == 4 && selectedVertexFromSubtype->vertexIndex() == 2,
+                "Text-to-map sync should map subtype-option row to the current line vertex.")) {
+        return 1;
+    }
+    textEditor->goToLineColumn(10, 3);
+    pumpEvents();
+    auto *selectedVertexFromGenericOption = findSelectedLineVertex(mapView->scene());
+    if (!expect(selectedVertexFromGenericOption != nullptr,
+                "Moving text cursor to an arbitrary line option row should select the current line vertex.")) {
+        return 1;
+    }
+    if (!expect(selectedVertexFromGenericOption->lineNumber() == 4 && selectedVertexFromGenericOption->vertexIndex() == 2,
+                "Text-to-map sync should map arbitrary line option rows to the current line vertex.")) {
+        return 1;
+    }
+
+    auto *pointItem = findPointItemForLine(mapView->scene(), 13);
+    if (!expect(pointItem != nullptr, "Failed to find map point geometry item for source line 13.")) {
         return 1;
     }
     mapView->scene()->clearSelection();
+    pointItem->setData(kMapSceneLineNumberRole, 12);
     pointItem->setSelected(true);
     pumpEvents();
-    if (!expect(mapTab->currentLineNumber() == 9,
-                "Selecting map geometry should move text editor cursor to the geometry source line.")) {
+    if (!expect(mapTab->currentLineNumber() == 13,
+                "Selecting map point geometry should resolve the coordinate row, not the blank line above it.")) {
         return 1;
     }
     mapTab->goToLine(4);
     pumpEvents();
-    auto *textEditor = mapTab->findChild<TextEditorTab *>();
-    if (!expect(textEditor != nullptr, "Text editor was not found in MapEditorTab.")) {
-        return 1;
-    }
     textEditor->goToLineColumn(7, 3);
     pumpEvents();
     auto *selectedVertexFromText = findSelectedLineVertex(mapView->scene());

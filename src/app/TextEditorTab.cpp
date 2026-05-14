@@ -15,11 +15,11 @@
 #include <QSplitterHandle>
 #include <QTextBrowser>
 #include <QTextCursor>
-#include <QTextEdit>
 #include <QPushButton>
 #include <QTextDocument>
 #include <QVBoxLayout>
 #include <QMessageBox>
+#include <QPainter>
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -34,6 +34,71 @@
 
 namespace
 {
+class HighlightPlainTextEdit final : public QPlainTextEdit
+{
+public:
+    explicit HighlightPlainTextEdit(QWidget *parent = nullptr)
+        : QPlainTextEdit(parent)
+    {
+    }
+
+    void setHighlightedLineNumber(int lineNumber)
+    {
+        if (highlightedLineNumber_ == lineNumber) {
+            return;
+        }
+
+        highlightedLineNumber_ = lineNumber;
+        viewport()->update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent *event) override
+    {
+        QPlainTextEdit::paintEvent(event);
+
+        if (highlightedLineNumber_ <= 0 || document() == nullptr) {
+            return;
+        }
+
+        const QTextBlock block = document()->findBlockByLineNumber(highlightedLineNumber_ - 1);
+        if (!block.isValid() || !block.isVisible()) {
+            return;
+        }
+
+        QTextCursor blockCursor(block);
+        blockCursor.movePosition(QTextCursor::StartOfBlock);
+        const QRect cursorBounds = cursorRect(blockCursor);
+        if (!cursorBounds.isValid() || !cursorBounds.intersects(viewport()->rect())) {
+            return;
+        }
+
+        QColor fill = palette().color(QPalette::Highlight);
+        if (!fill.isValid()) {
+            fill = QColor(QStringLiteral("#4f8ad9"));
+        }
+
+        QPainter painter(viewport());
+        painter.setPen(Qt::NoPen);
+        fill.setAlpha(52);
+        painter.setBrush(fill);
+        const qreal lineHeight = qMax<qreal>(fontMetrics().height(), cursorBounds.height());
+        const qreal lineTop = cursorBounds.top() + lineHeight;
+        painter.drawRect(QRectF(0.0, lineTop, viewport()->width(), lineHeight));
+
+        QColor accent = palette().color(QPalette::Highlight);
+        if (!accent.isValid()) {
+            accent = QColor(QStringLiteral("#4f8ad9"));
+        }
+        accent.setAlpha(190);
+        painter.setBrush(accent);
+        painter.drawRect(QRectF(0.0, lineTop, 4.0, lineHeight));
+    }
+
+private:
+    int highlightedLineNumber_ = 0;
+};
+
 QString renderList(const QStringList &items)
 {
     if (items.isEmpty()) {
@@ -125,7 +190,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     connect(replaceAllButton_, &QPushButton::clicked, this, &TextEditorTab::handleReplaceAllTriggered);
     connect(closeSearchButton_, &QPushButton::clicked, this, &TextEditorTab::handleCloseSearchTriggered);
 
-    editor_ = new QPlainTextEdit(this);
+    editor_ = new HighlightPlainTextEdit(this);
     editor_->setTabChangesFocus(false);
     editor_->setPlaceholderText(tr("Open a Therion text file to begin editing."));
     highlighter_ = new TherionSyntaxHighlighter(editor_->document());
@@ -196,6 +261,7 @@ bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)
     const QTextCursor cursor = editor_->textCursor();
     currentLineNumber_ = cursor.blockNumber() + 1;
     currentColumnNumber_ = cursor.positionInBlock() + 1;
+    highlightedLineNumber_ = currentLineNumber_;
     cleanTextSnapshot_ = editor_->toPlainText();
     cleanEncodingNameSnapshot_ = fileEncodingName_;
     editor_->document()->setModified(false);
@@ -253,8 +319,8 @@ void TextEditorTab::goToLine(int lineNumber)
 
     QTextCursor cursor(block);
     cursor.movePosition(QTextCursor::StartOfBlock);
-    cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
     editor_->setTextCursor(cursor);
+    highlightedLineNumber_ = lineNumber;
     editor_->centerCursor();
     editor_->ensureCursorVisible();
     refreshCurrentLineHighlight();
@@ -281,6 +347,7 @@ void TextEditorTab::goToLineColumn(int lineNumber, int columnNumber)
     const int offsetInBlock = qMin(clampedColumn - 1, qMax(0, block.length() - 1));
     cursor.setPosition(block.position() + offsetInBlock);
     editor_->setTextCursor(cursor);
+    highlightedLineNumber_ = lineNumber;
     editor_->centerCursor();
     editor_->ensureCursorVisible();
     refreshCurrentLineHighlight();
@@ -835,6 +902,7 @@ void TextEditorTab::handleCursorPositionChanged()
         emit cursorPositionChanged(currentLineNumber_, currentColumnNumber_);
     }
 
+    highlightedLineNumber_ = currentLineNumber_;
     refreshCurrentLineHighlight();
     updateContextHelp();
 }
@@ -845,19 +913,9 @@ void TextEditorTab::refreshCurrentLineHighlight()
         return;
     }
 
-    QList<QTextEdit::ExtraSelection> selections;
-    QTextEdit::ExtraSelection selection;
-    QColor lineColor = palette().color(QPalette::Highlight);
-    if (!lineColor.isValid()) {
-        lineColor = QColor(QStringLiteral("#4f8ad9"));
+    if (auto *highlightEditor = dynamic_cast<HighlightPlainTextEdit *>(editor_)) {
+        highlightEditor->setHighlightedLineNumber(highlightedLineNumber_);
     }
-    lineColor.setAlpha(56);
-    selection.format.setBackground(lineColor);
-    selection.format.setProperty(QTextFormat::FullWidthSelection, true);
-    selection.cursor = editor_->textCursor();
-    selection.cursor.clearSelection();
-    selections.append(selection);
-    editor_->setExtraSelections(selections);
 }
 
 void TextEditorTab::refreshTitle()

@@ -70,6 +70,11 @@ public:
         displayToSourceMapper_ = std::move(mapper);
     }
 
+    QPointF sourcePoint() const
+    {
+        return mapDisplayToSource(previewToSource(pos()));
+    }
+
 protected:
     QRectF boundingRect() const override
     {

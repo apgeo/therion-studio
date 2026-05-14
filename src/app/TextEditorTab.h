@@ -150,6 +150,7 @@ private:
     QString projectRootPath_;
     int currentLineNumber_ = 0;
     int currentColumnNumber_ = 1;
+    int highlightedLineNumber_ = 0;
     QHash<QString, TherionHelpEntry> helpEntries_;
     int helpPanelHeight_ = 200;
     bool helpCollapsed_ = false;

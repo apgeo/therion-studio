@@ -2,6 +2,7 @@
 
 #include <QFrame>
 #include <QEvent>
+#include <QCursor>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsScene>
@@ -78,6 +79,88 @@ bool wheelEventHasPreciseScrollingDeltas(const QWheelEvent *event)
     }
 
     return event->phase() != Qt::NoScrollPhase;
+}
+
+bool isInteractiveMapSelectionItem(const QGraphicsItem *item)
+{
+    if (item == nullptr) {
+        return false;
+    }
+    if (!item->isVisible()) {
+        return false;
+    }
+    if (!(item->flags() & QGraphicsItem::ItemIsSelectable)) {
+        return false;
+    }
+    if (item->acceptedMouseButtons() == Qt::NoButton) {
+        return false;
+    }
+    return true;
+}
+
+int mapSelectionHitPriority(const QGraphicsItem *item)
+{
+    if (item == nullptr) {
+        return 100;
+    }
+
+    if (dynamic_cast<const MapEditablePointItem *>(item) != nullptr) {
+        return 0;
+    }
+    if (auto *vertexItem = dynamic_cast<const MapEditableGeometryVertexItem *>(item)) {
+        const QString geometryKind = vertexItem->geometryKind().trimmed().toLower();
+        if (geometryKind == QStringLiteral("line") || geometryKind == QStringLiteral("area")) {
+            return 0;
+        }
+        if (geometryKind.startsWith(QStringLiteral("line control"))) {
+            return 2;
+        }
+    }
+
+    const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
+    switch (subtype) {
+    case kMapSceneSelectionSubtypeLineAnchor:
+    case kMapSceneSelectionSubtypeAreaVertex:
+        return 0;
+    case kMapSceneSelectionSubtypeLineControl:
+        return 2;
+    case kMapSceneSelectionSubtypeLineControlConnector:
+        return 3;
+    case kMapSceneSelectionSubtypeLineDetail:
+        return 4;
+    default:
+        break;
+    }
+
+    return 1;
+}
+
+QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems, bool requireSelected = false)
+{
+    QGraphicsItem *bestItem = nullptr;
+    int bestPriority = std::numeric_limits<int>::max();
+    for (QGraphicsItem *item : hitItems) {
+        if (!isInteractiveMapSelectionItem(item)) {
+            continue;
+        }
+        if (requireSelected && !item->isSelected()) {
+            continue;
+        }
+        const int lineNumber = item->data(kMapSceneLineNumberRole).toInt();
+        if (lineNumber <= 0) {
+            continue;
+        }
+
+        const int priority = mapSelectionHitPriority(item);
+        if (priority < bestPriority) {
+            bestPriority = priority;
+            bestItem = item;
+            if (bestPriority == 0) {
+                break;
+            }
+        }
+    }
+    return bestItem;
 }
 
 class MapPointGeometryMoveCommand final : public QUndoCommand
@@ -642,18 +725,28 @@ QVector<SourceVertexTextReference> areaSourceVertexReferencesFromParsedLine(cons
 }
 
 std::optional<SourceVertexTextReference> sourceVertexReferenceAtCursor(const QVector<SourceVertexTextReference> &references,
-                                                                       int cursorColumn)
+                                                                       int cursorColumn,
+                                                                       bool preferLastOutsideTokenRange = false)
 {
     if (references.isEmpty()) {
         return std::nullopt;
     }
 
     const int normalizedColumn = qMax(1, cursorColumn);
+    int minColumn = std::numeric_limits<int>::max();
+    int maxColumn = std::numeric_limits<int>::min();
     for (const SourceVertexTextReference &reference : references) {
+        minColumn = qMin(minColumn, qMin(reference.xStartColumn, reference.yStartColumn));
+        maxColumn = qMax(maxColumn, qMax(reference.xEndColumn, reference.yEndColumn));
         if ((normalizedColumn >= reference.xStartColumn && normalizedColumn <= reference.xEndColumn)
             || (normalizedColumn >= reference.yStartColumn && normalizedColumn <= reference.yEndColumn)) {
             return reference;
         }
+    }
+
+    if (preferLastOutsideTokenRange
+        && (normalizedColumn < minColumn || normalizedColumn > maxColumn)) {
+        return references.last();
     }
 
     int bestDistance = std::numeric_limits<int>::max();
@@ -706,7 +799,7 @@ CursorGeometrySelection cursorGeometrySelectionForTextCursor(const QVector<Theri
                 selection.featureLineNumber = activeFeatureLine;
                 selection.geometryKind = QStringLiteral("line");
                 const auto references = lineSourceVertexReferencesFromParsedLine(parsedLine, 1, &nextLineSourceVertexIndex);
-                selection.sourceVertexReference = sourceVertexReferenceAtCursor(references, cursorColumn);
+                selection.sourceVertexReference = sourceVertexReferenceAtCursor(references, cursorColumn, true);
                 return selection;
             }
 
@@ -735,7 +828,22 @@ CursorGeometrySelection cursorGeometrySelectionForTextCursor(const QVector<Theri
             if (cursorLine == parsedLine.lineNumber) {
                 selection.featureLineNumber = activeFeatureLine;
                 selection.geometryKind = QStringLiteral("line");
-                selection.sourceVertexReference = sourceVertexReferenceAtCursor(references, cursorColumn);
+                selection.sourceVertexReference = sourceVertexReferenceAtCursor(references, cursorColumn, true);
+                // Any non-coordinate row inside a line block should still map to
+                // the current/last parsed line vertex.
+                if (!selection.sourceVertexReference.has_value()
+                    && references.isEmpty()
+                    && !parsedLine.tokens.isEmpty()
+                    && nextLineSourceVertexIndex > 0) {
+                    SourceVertexTextReference optionReference;
+                    optionReference.lineNumber = parsedLine.lineNumber;
+                    optionReference.sourceVertexIndex = nextLineSourceVertexIndex - 1;
+                    optionReference.xStartColumn = 1;
+                    optionReference.xEndColumn = 1;
+                    optionReference.yStartColumn = 1;
+                    optionReference.yEndColumn = 1;
+                    selection.sourceVertexReference = optionReference;
+                }
                 return selection;
             }
             continue;
@@ -841,6 +949,37 @@ std::optional<SourceVertexTextReference> sourceVertexTextReferenceForSelection(c
     return std::nullopt;
 }
 
+std::optional<int> sourcePointLineNumberForSelection(const QVector<TherionParsedLine> &parsedLines,
+                                                     const QPointF &sourcePoint)
+{
+    int bestLineNumber = 0;
+    qreal bestDistance = std::numeric_limits<qreal>::max();
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        if (parsedLine.directive != QStringLiteral("point")
+            && parsedLine.directive != QStringLiteral("station")) {
+            continue;
+        }
+
+        const QVector<QPointF> points = pointsFromTokens(parsedLine.tokens.mid(1));
+        if (points.isEmpty()) {
+            continue;
+        }
+
+        const QPointF delta = points.first() - sourcePoint;
+        const qreal distance = std::hypot(delta.x(), delta.y());
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestLineNumber = parsedLine.lineNumber;
+        }
+    }
+
+    if (bestLineNumber > 0 && bestDistance <= 0.5) {
+        return bestLineNumber;
+    }
+
+    return std::nullopt;
+}
+
 MapEditableGeometryVertexItem *findGeometryVertexItem(QGraphicsScene *scene,
                                                       int lineNumber,
                                                       int sourceVertexIndex,
@@ -887,6 +1026,28 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
             if (mouseEvent->button() == Qt::LeftButton) {
                 primaryPointerInteractionActive_ = true;
+                if (mapView_ != nullptr) {
+                    pendingMapClickSelection_ = true;
+                    pendingMapClickScenePosition_ = mapView_->mapToScene(mouseEvent->pos());
+                    pendingMapClickElapsed_.start();
+                    pendingMapClickLineNumber_ = 0;
+                    pendingMapClickSourceVertexIndex_ = -1;
+                    pendingMapClickGeometryKind_.clear();
+                    if (mapScene_ != nullptr) {
+                        const QList<QGraphicsItem *> hitItems = mapScene_->items(pendingMapClickScenePosition_,
+                                                                                 Qt::IntersectsItemShape,
+                                                                                 Qt::DescendingOrder,
+                                                                                 mapView_->transform());
+                        if (QGraphicsItem *item = preferredMapHitItem(hitItems)) {
+                            const int lineNumber = item->data(kMapSceneLineNumberRole).toInt();
+                            pendingMapClickLineNumber_ = lineNumber;
+                            if (auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item)) {
+                                pendingMapClickSourceVertexIndex_ = vertexItem->vertexIndex();
+                                pendingMapClickGeometryKind_ = vertexItem->geometryKind();
+                            }
+                        }
+                    }
+                }
             }
 
             if (mouseEvent->button() == Qt::RightButton) {
@@ -1313,31 +1474,125 @@ void MapEditorTab::handleMapSceneSelectionChanged()
     int selectedLineNumber = 0;
     int selectedSourceVertexIndex = -1;
     QString selectedGeometryKind;
-    auto *card = dynamic_cast<MapCardItem *>(selectedItems.first());
-    if (card != nullptr) {
-        selectedLineNumber = card->lineNumber();
-    } else {
-        for (QGraphicsItem *item : selectedItems) {
-            if (item == nullptr) {
-                continue;
-            }
+    std::optional<QPointF> selectedPointSource;
+    MapCardItem *selectedCard = nullptr;
+    QList<QGraphicsItem *> selectedLineItems;
+    QSet<int> selectedLineNumbers;
+    selectedLineItems.reserve(selectedItems.size());
+    for (QGraphicsItem *item : selectedItems) {
+        if (!isInteractiveMapSelectionItem(item)) {
+            continue;
+        }
+        const int lineNumber = item->data(kMapSceneLineNumberRole).toInt();
+        if (lineNumber <= 0) {
+            continue;
+        }
+        selectedLineItems.append(item);
+        selectedLineNumbers.insert(lineNumber);
+    }
 
-            const int lineNumber = item->data(kMapSceneLineNumberRole).toInt();
-            if (lineNumber > 0) {
-                selectedLineNumber = lineNumber;
+    QGraphicsItem *primarySelectedItem = nullptr;
+    const bool usePendingClickSelection = pendingMapClickSelection_
+        && pendingMapClickElapsed_.isValid()
+        && pendingMapClickElapsed_.elapsed() <= 1000;
+    if (usePendingClickSelection && pendingMapClickLineNumber_ > 0) {
+        if (pendingMapClickSourceVertexIndex_ >= 0) {
+            for (QGraphicsItem *item : selectedLineItems) {
+                if (item == nullptr) {
+                    continue;
+                }
+                if (item->data(kMapSceneLineNumberRole).toInt() != pendingMapClickLineNumber_) {
+                    continue;
+                }
+                auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item);
+                if (vertexItem == nullptr) {
+                    continue;
+                }
+                if (vertexItem->vertexIndex() != pendingMapClickSourceVertexIndex_) {
+                    continue;
+                }
+                if (!pendingMapClickGeometryKind_.isEmpty()
+                    && !vertexItem->geometryKind().startsWith(pendingMapClickGeometryKind_)) {
+                    continue;
+                }
+                primarySelectedItem = item;
+                break;
             }
+        }
+        if (primarySelectedItem == nullptr) {
+            for (QGraphicsItem *item : selectedLineItems) {
+                if (item != nullptr && item->data(kMapSceneLineNumberRole).toInt() == pendingMapClickLineNumber_) {
+                    primarySelectedItem = item;
+                    break;
+                }
+            }
+        }
+    }
+    if (mapView_ != nullptr && mapView_->viewport() != nullptr) {
+        if (primarySelectedItem == nullptr && usePendingClickSelection) {
+            const QPointF scenePos = pendingMapClickScenePosition_;
+            const QList<QGraphicsItem *> hitItems = mapScene_->items(scenePos,
+                                                                     Qt::IntersectsItemShape,
+                                                                     Qt::DescendingOrder,
+                                                                     mapView_->transform());
+            primarySelectedItem = preferredMapHitItem(hitItems, true);
+        } else if (primarySelectedItem == nullptr) {
+            const QPoint viewportPos = mapView_->viewport()->mapFromGlobal(QCursor::pos());
+            if (mapView_->viewport()->rect().contains(viewportPos)) {
+                const QPointF scenePos = mapView_->mapToScene(viewportPos);
+                const QList<QGraphicsItem *> hitItems = mapScene_->items(scenePos,
+                                                                         Qt::IntersectsItemShape,
+                                                                         Qt::DescendingOrder,
+                                                                         mapView_->transform());
+                primarySelectedItem = preferredMapHitItem(hitItems, true);
+            }
+        }
+    }
 
-            auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item);
-            if (vertexItem != nullptr && selectedSourceVertexIndex < 0) {
-                selectedSourceVertexIndex = vertexItem->vertexIndex();
-                selectedGeometryKind = vertexItem->geometryKind();
+    if (primarySelectedItem == nullptr && !selectedLineItems.isEmpty()) {
+        if (selectedLineNumbers.size() == 1 && selectedLineItems.size() > 1) {
+            QGraphicsItem *highestZItem = selectedLineItems.first();
+            qreal highestZ = highestZItem != nullptr ? highestZItem->zValue() : 0.0;
+            for (QGraphicsItem *item : selectedLineItems) {
+                if (item != nullptr && item->zValue() > highestZ) {
+                    highestZ = item->zValue();
+                    highestZItem = item;
+                }
             }
+            primarySelectedItem = highestZItem;
+        } else {
+            primarySelectedItem = selectedLineItems.first();
+        }
+    }
+
+    pendingMapClickSelection_ = false;
+    pendingMapClickLineNumber_ = 0;
+    pendingMapClickSourceVertexIndex_ = -1;
+    pendingMapClickGeometryKind_.clear();
+
+    if (primarySelectedItem != nullptr) {
+        selectedLineNumber = primarySelectedItem->data(kMapSceneLineNumberRole).toInt();
+        selectedCard = dynamic_cast<MapCardItem *>(primarySelectedItem);
+        if (auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(primarySelectedItem)) {
+            selectedSourceVertexIndex = vertexItem->vertexIndex();
+            selectedGeometryKind = vertexItem->geometryKind();
+        } else if (auto *pointItem = dynamic_cast<MapEditablePointItem *>(primarySelectedItem)) {
+            selectedPointSource = pointItem->sourcePoint();
         }
     }
 
     if (selectedLineNumber > 0 && textEditor_ != nullptr) {
         const QScopedValueRollback<bool> syncGuard(mapSelectionDrivenTextNavigationInProgress_, true);
-        if (selectedSourceVertexIndex >= 0) {
+        if (selectedPointSource.has_value()) {
+            const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_->text());
+            const std::optional<int> pointLineNumber =
+                sourcePointLineNumberForSelection(parsedLines, selectedPointSource.value());
+            if (pointLineNumber.has_value()) {
+                textEditor_->goToLineColumn(pointLineNumber.value(), 1);
+            } else if (selectedLineNumber != currentLineNumber()) {
+                textEditor_->goToLine(selectedLineNumber);
+            }
+        } else if (selectedSourceVertexIndex >= 0) {
             const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_->text());
             const std::optional<SourceVertexTextReference> sourceReference =
                 sourceVertexTextReferenceForSelection(parsedLines,
@@ -1357,7 +1612,7 @@ void MapEditorTab::handleMapSceneSelectionChanged()
         }
     }
 
-    if (card != nullptr) {
+    if (selectedCard != nullptr) {
         updateGeometrySelectionPresentation();
         updateCommandSurfaceState();
         updateHelpPanel();
@@ -2412,6 +2667,10 @@ void MapEditorTab::selectMapLine(int lineNumber)
         return;
     }
 
+    pendingMapClickSelection_ = false;
+    pendingMapClickLineNumber_ = 0;
+    pendingMapClickSourceVertexIndex_ = -1;
+    pendingMapClickGeometryKind_.clear();
     updatingSelection_ = true;
     mapScene_->clearSelection();
 

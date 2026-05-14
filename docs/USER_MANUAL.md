@@ -211,6 +211,7 @@ Line-handle behavior:
 - selecting a map object (card or geometry) moves the text editor cursor to that object's source line
 - selecting a map line/area vertex (including line control points) moves the text cursor to that specific vertex coordinate token
 - moving the text cursor onto a line/area coordinate token selects the corresponding map vertex/control point
+- moving the text cursor onto vertex-related line-option rows (for example `smooth off`) selects the corresponding current line vertex
 - dragging a line anchor moves attached incoming/outgoing control handles by the same delta
 - on smooth vertices, dragging one control handle updates the opposite control handle live (mirrored/collinear) during drag
 

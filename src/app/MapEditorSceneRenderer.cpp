@@ -10,6 +10,8 @@
 
 namespace TherionStudio {
 namespace {
+constexpr int kMapItemRole = Qt::UserRole + 120;
+constexpr int kMapItemGeometryValue = 1;
 
 bool tokenLooksNumeric(const QString &token)
 {
@@ -425,6 +427,11 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     const qreal thickLineWidth = qBound(1.3, 2.2 * mapScale, 2.9);
     const qreal detailLineWidth = qBound(0.8, 1.4 * mapScale, 1.8);
     const bool compactLabels = geometryFeatures.size() > 24;
+    auto markGeometryItem = [](QGraphicsItem *item) {
+        if (item != nullptr) {
+            item->setData(kMapItemRole, kMapItemGeometryValue);
+        }
+    };
 
     for (int index = 0; index < 6; ++index) {
         const qreal y = previewBounds.top() + (index * previewBounds.height() / 5.0);
@@ -455,6 +462,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 pointItem->setMoveCommittedCallback(recordPointGeometryMove);
                 scene->addItem(pointItem);
                 pointItem->setZValue(3.0);
+                markGeometryItem(pointItem);
 
                 if (feature.stationPoint) {
                     QPainterPath markerPath;
@@ -465,6 +473,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                     auto *triangle = scene->addPath(markerPath, QPen(QColor(QStringLiteral("#ff4f3d")), 1.2), QBrush(QColor(QStringLiteral("#ff4f3d"))));
                     triangle->setZValue(3.5);
+                    markGeometryItem(triangle);
                 }
 
                 if (feature.stationPoint || !compactLabels) {
@@ -484,8 +493,10 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                 auto *lineItem = scene->addPath(path, QPen(QColor(QStringLiteral("#222222")), thickLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
                 lineItem->setZValue(2.5);
+                markGeometryItem(lineItem);
                 auto *detailItem = scene->addPath(path, QPen(QColor(QStringLiteral("#2b2b2b")), detailLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
                 detailItem->setZValue(3.0);
+                markGeometryItem(detailItem);
 
                 for (int vertexIndex = 0; vertexIndex < feature.lineVertices.size(); ++vertexIndex) {
                     const MapGeometryFeature::TH2LineVertex &vertex = feature.lineVertices.at(vertexIndex);
@@ -505,6 +516,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     vertexItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                     scene->addItem(vertexItem);
                     vertexItem->setZValue(4.0);
+                    markGeometryItem(vertexItem);
                 }
 
                 const qreal controlRadius = qBound(1.8, 3.0 * mapScale, 4.0);
@@ -518,6 +530,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         auto *connector = scene->addLine(QLineF(anchorPreview, controlPreview),
                                                          QPen(QColor(48, 128, 220, 160), qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
                         connector->setZValue(3.2);
+                        markGeometryItem(connector);
 
                         auto *controlItem = new MapEditableGeometryVertexItem(feature.lineNumber,
                                                                               QStringLiteral("line control"),
@@ -531,6 +544,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         controlItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                         scene->addItem(controlItem);
                         controlItem->setZValue(4.2);
+                        markGeometryItem(controlItem);
                     }
 
                     if (currentVertex.incomingControl.has_value() && currentVertex.incomingSourceVertexIndex >= 0) {
@@ -539,6 +553,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         auto *connector = scene->addLine(QLineF(anchorPreview, controlPreview),
                                                          QPen(QColor(48, 128, 220, 160), qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
                         connector->setZValue(3.2);
+                        markGeometryItem(connector);
 
                         auto *controlItem = new MapEditableGeometryVertexItem(feature.lineNumber,
                                                                               QStringLiteral("line control"),
@@ -552,6 +567,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         controlItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                         scene->addItem(controlItem);
                         controlItem->setZValue(4.2);
+                        markGeometryItem(controlItem);
                     }
                 }
 
@@ -565,6 +581,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                     auto *triangle = scene->addPath(markerPath, QPen(QColor(QStringLiteral("#ff4f3d")), 1.2), QBrush(QColor(QStringLiteral("#ff4f3d"))));
                     triangle->setZValue(3.5);
+                    markGeometryItem(triangle);
                 }
 
                 if (!compactLabels) {
@@ -590,6 +607,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                 auto *fillItem = scene->addPath(path, QPen(QColor(QStringLiteral("#222222")), qBound(1.0, 2.0 * mapScale, 2.4), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), QBrush(QColor(0, 0, 0, 18)));
                 fillItem->setZValue(2.0);
+                markGeometryItem(fillItem);
 
                 for (int vertexIndex = 0; vertexIndex < feature.vertices.size(); ++vertexIndex) {
                     const QPointF vertex = feature.vertices.at(vertexIndex);
@@ -609,6 +627,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     vertexItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                     scene->addItem(vertexItem);
                     vertexItem->setZValue(4.0);
+                    markGeometryItem(vertexItem);
                 }
 
                 if (!compactLabels) {

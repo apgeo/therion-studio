@@ -175,6 +175,8 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Removed scaffold-only map-canvas header text blocks (`TH2 Map Workspace`, geometry preview captions) from the rendered scene to reduce visual noise in the map viewport.~~
 - ~~Resized the map geometry preview region to fill the scene canvas (instead of a fixed small top strip), so `Fit` no longer leaves a large empty dark area below geometry.~~
 - ~~Updated `mapPreviewBounds` to match the full-canvas preview layout, keeping fit/background placement math consistent with the new map-scene geometry region.~~
+- ~~Changed map `Fit` geometry bounds to use only tagged geometry items (paths, anchors, curve handles) instead of the full preview rectangle/scaffold extents, improving framing accuracy.~~
+- ~~Updated `Fit + BG` framing behavior to union real geometry bounds with visible background-layer bounds, avoiding oversized empty-canvas margins from non-content scene decorations.~~
 - ~~Added a corpus-style `TherionDocumentEditorTest` fixture that performs coordinated point/line/area rewrites within a realistic TH2 scrap block containing metadata, comments, and CRLF line endings.~~
 - ~~Verified rewrite stability in the fixture across option-led continuation lines (`-subtype`), inline metadata (`-id`), `%` comments, and mixed-precision coordinate tokens.~~
 - ~~Added negative corpus-style fixture checks that assert rewrite failures (missing `endline`, incomplete area coordinate tuple) return errors and leave source text unchanged.~~

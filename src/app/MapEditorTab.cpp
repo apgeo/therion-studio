@@ -36,6 +36,8 @@ namespace TherionStudio
 {
 namespace
 {
+constexpr int kMapItemRole = Qt::UserRole + 120;
+constexpr int kMapItemGeometryValue = 1;
 QRectF fittedPreviewBoundsForSource(const QRectF &sourceBounds, const QRectF &previewBounds)
 {
     if (!sourceBounds.isValid() || !previewBounds.isValid()) {
@@ -1163,7 +1165,35 @@ void MapEditorTab::refreshToolbarSummary()
 
 QRectF MapEditorTab::mapGeometryFitBounds() const
 {
-    return mapPreviewBounds();
+    if (mapScene_ == nullptr) {
+        return QRectF();
+    }
+
+    QRectF bounds;
+    bool hasBounds = false;
+    const QList<QGraphicsItem *> items = mapScene_->items();
+    for (QGraphicsItem *item : items) {
+        if (item == nullptr) {
+            continue;
+        }
+        if (item->data(kMapItemRole).toInt() != kMapItemGeometryValue) {
+            continue;
+        }
+
+        const QRectF itemBounds = item->sceneBoundingRect();
+        if (!itemBounds.isValid()) {
+            continue;
+        }
+
+        if (!hasBounds) {
+            bounds = itemBounds;
+            hasBounds = true;
+        } else {
+            bounds = bounds.united(itemBounds);
+        }
+    }
+
+    return hasBounds ? bounds : QRectF();
 }
 
 QRectF MapEditorTab::mapPreviewBounds() const

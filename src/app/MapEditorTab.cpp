@@ -14,6 +14,7 @@
 #include <QNativeGestureEvent>
 #include <QPalette>
 #include <QPushButton>
+#include <QSet>
 #include <QScopedValueRollback>
 #include <QScrollBar>
 #include <QSplitterHandle>
@@ -868,6 +869,7 @@ void MapEditorTab::refreshMapScenePreservingUndoStack()
     restoreBackgroundImageItems();
     restoreDraftGeometryItems();
     selectMapLine(textEditor_->currentLineNumber());
+    updateGeometrySelectionPresentation();
     if (autoFitEnabled_) {
         fitMapToView(fitBackgroundRequested_);
     } else {
@@ -897,6 +899,7 @@ void MapEditorTab::handleMapSceneSelectionChanged()
 
     const QList<QGraphicsItem *> selectedItems = mapScene_->selectedItems();
     if (selectedItems.isEmpty()) {
+        updateGeometrySelectionPresentation();
         updateHelpPanel();
         return;
     }
@@ -907,13 +910,70 @@ void MapEditorTab::handleMapSceneSelectionChanged()
             textEditor_->goToLine(card->lineNumber());
         }
 
+        updateGeometrySelectionPresentation();
         updateCommandSurfaceState();
         updateHelpPanel();
         return;
     }
 
+    updateGeometrySelectionPresentation();
     updateCommandSurfaceState();
     updateHelpPanel();
+}
+
+void MapEditorTab::updateGeometrySelectionPresentation()
+{
+    if (mapScene_ == nullptr) {
+        return;
+    }
+
+    QSet<int> selectedLines;
+    QHash<int, QSet<int>> selectedLineControlOwnersByLine;
+    const QList<QGraphicsItem *> selectedItems = mapScene_->selectedItems();
+    for (QGraphicsItem *item : selectedItems) {
+        if (item == nullptr) {
+            continue;
+        }
+
+        const int lineNumber = item->data(kMapSceneLineNumberRole).toInt();
+        if (lineNumber > 0) {
+            selectedLines.insert(lineNumber);
+        }
+
+        const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
+        if (subtype == kMapSceneSelectionSubtypeLineAnchor
+            || subtype == kMapSceneSelectionSubtypeLineControl
+            || subtype == kMapSceneSelectionSubtypeLineControlConnector) {
+            const int ownerVertexIndex = item->data(kMapSceneOwnerVertexRole).toInt();
+            if (lineNumber > 0 && ownerVertexIndex >= 0) {
+                selectedLineControlOwnersByLine[lineNumber].insert(ownerVertexIndex);
+            }
+        }
+    }
+
+    const auto sceneItems = mapScene_->items();
+    for (QGraphicsItem *item : sceneItems) {
+        if (item == nullptr) {
+            continue;
+        }
+        if (!item->data(kMapSceneSelectionGatedRole).toBool()) {
+            continue;
+        }
+
+        const int lineNumber = item->data(kMapSceneLineNumberRole).toInt();
+        bool visible = lineNumber > 0 && selectedLines.contains(lineNumber);
+        if (visible) {
+            const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
+            if (subtype == kMapSceneSelectionSubtypeLineControl
+                || subtype == kMapSceneSelectionSubtypeLineControlConnector) {
+                const int ownerVertexIndex = item->data(kMapSceneOwnerVertexRole).toInt();
+                visible = ownerVertexIndex >= 0
+                    && selectedLineControlOwnersByLine.value(lineNumber).contains(ownerVertexIndex);
+            }
+        }
+
+        item->setVisible(visible);
+    }
 }
 
 void MapEditorTab::handleAddPointTriggered()
@@ -1125,6 +1185,7 @@ void MapEditorTab::clearMapScene()
     if (mapScene_ == nullptr) {
         return;
     }
+    QScopedValueRollback<bool> selectionGuard(updatingSelection_, true);
 
     QVector<QGraphicsRectItem *> preservedDrafts;
     QVector<QGraphicsPixmapItem *> preservedBackgrounds;
@@ -1832,6 +1893,7 @@ void MapEditorTab::selectMapLine(int lineNumber)
     }
 
     updatingSelection_ = false;
+    updateGeometrySelectionPresentation();
 }
 
 }

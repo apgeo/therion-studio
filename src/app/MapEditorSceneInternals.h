@@ -342,7 +342,6 @@ protected:
             movePreviewCallback_(this, lastPreviewSourcePoint_, newSourcePoint, dragActive_);
             lastPreviewSourcePoint_ = newSourcePoint;
         }
-
         return QGraphicsEllipseItem::itemChange(change, value);
     }
 

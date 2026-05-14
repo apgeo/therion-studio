@@ -204,6 +204,9 @@ Map help pane:
 
 Line-handle behavior:
 
+- line and area edit vertices are shown only for the currently selected map object
+- line control handles/connectors are shown only for the currently selected line vertex (or its selected control handle)
+- line accent/highlight overlay is shown only for the currently selected line object
 - dragging a line anchor moves attached incoming/outgoing control handles by the same delta
 - on smooth vertices, dragging one control handle updates the opposite control handle live (mirrored/collinear) during drag
 

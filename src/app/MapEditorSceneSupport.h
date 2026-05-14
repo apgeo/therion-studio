@@ -2,6 +2,7 @@
 
 #include <QColor>
 #include <QHash>
+#include <QGraphicsItem>
 #include <QGraphicsRectItem>
 #include <QPointF>
 #include <QRectF>
@@ -23,6 +24,21 @@ class QWidget;
 
 namespace TherionStudio
 {
+constexpr int kMapSceneLineNumberRole = Qt::UserRole + 121;
+constexpr int kMapSceneSelectionGatedRole = Qt::UserRole + 122;
+constexpr int kMapSceneSelectionSubtypeRole = Qt::UserRole + 123;
+constexpr int kMapSceneOwnerVertexRole = Qt::UserRole + 124;
+
+enum MapSceneSelectionSubtype
+{
+    kMapSceneSelectionSubtypeGeneric = 0,
+    kMapSceneSelectionSubtypeLineDetail = 1,
+    kMapSceneSelectionSubtypeLineAnchor = 2,
+    kMapSceneSelectionSubtypeLineControl = 3,
+    kMapSceneSelectionSubtypeLineControlConnector = 4,
+    kMapSceneSelectionSubtypeAreaVertex = 5
+};
+
 struct TherionParsedLine;
 
 enum class DraftGeometryKind
@@ -210,7 +226,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const QString &documentPath,
                              const QVector<MapSceneEntry> &entries,
                              const QVector<MapGeometryFeature> &geometryFeatures,
-                             QHash<int, QGraphicsRectItem *> *mapItemsByLine,
+                             QHash<int, QGraphicsItem *> *mapItemsByLine,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,
                              const std::function<void(int, bool, bool)> &recordCardVisibility,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordPointGeometryMove,

@@ -72,6 +72,14 @@ MapEditorTab::MapEditorTab(QWidget *parent)
     handleApplicationAppearanceChanged();
 }
 
+MapEditorTab::~MapEditorTab()
+{
+    if (mapScene_ != nullptr) {
+        disconnect(mapScene_, nullptr, this, nullptr);
+    }
+    mapScene_ = nullptr;
+}
+
 void MapEditorTab::buildUi()
 {
     auto *layout = new QVBoxLayout(this);

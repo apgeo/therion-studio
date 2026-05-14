@@ -565,7 +565,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const QString &documentPath,
                              const QVector<MapSceneEntry> &entries,
                              const QVector<MapGeometryFeature> &geometryFeatures,
-                             QHash<int, QGraphicsRectItem *> *mapItemsByLine,
+                             QHash<int, QGraphicsItem *> *mapItemsByLine,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,
                              const std::function<void(int, bool, bool)> &recordCardVisibility,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordPointGeometryMove,
@@ -634,6 +634,10 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 scene->addItem(pointItem);
                 pointItem->setZValue(3.0);
                 markGeometryItem(pointItem);
+                pointItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                if (mapItemsByLine != nullptr && feature.lineNumber > 0) {
+                    mapItemsByLine->insert(feature.lineNumber, pointItem);
+                }
 
                 if (feature.stationPoint) {
                     QPainterPath markerPath;
@@ -665,11 +669,20 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 detailStroke.setAlpha(canvasTheme.lightMode ? 230 : 245);
 
                 auto *lineItem = scene->addPath(path, QPen(canvasTheme.geometryStroke, thickLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                lineItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
                 lineItem->setZValue(2.5);
                 markGeometryItem(lineItem);
+                lineItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
                 auto *detailItem = scene->addPath(path, QPen(detailStroke, detailLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
                 detailItem->setZValue(3.0);
                 markGeometryItem(detailItem);
+                detailItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                detailItem->setData(kMapSceneSelectionGatedRole, true);
+                detailItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineDetail);
+                detailItem->setVisible(false);
+                if (mapItemsByLine != nullptr && feature.lineNumber > 0) {
+                    mapItemsByLine->insert(feature.lineNumber, lineItem);
+                }
 
                 auto anchorItemsByOrder = std::make_shared<QVector<MapEditableGeometryVertexItem *>>(feature.lineVertices.size(), nullptr);
                 auto controlItemsBySourceVertex = std::make_shared<QHash<int, MapEditableGeometryVertexItem *>>();
@@ -694,6 +707,12 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     scene->addItem(vertexItem);
                     vertexItem->setZValue(4.0);
                     markGeometryItem(vertexItem);
+                    const int anchorSourceVertexIndex = vertex.anchorSourceVertexIndex >= 0 ? vertex.anchorSourceVertexIndex : vertexIndex;
+                    vertexItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                    vertexItem->setData(kMapSceneSelectionGatedRole, true);
+                    vertexItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineAnchor);
+                    vertexItem->setData(kMapSceneOwnerVertexRole, anchorSourceVertexIndex);
+                    vertexItem->setVisible(false);
                     anchorItemsByOrder->operator[](vertexIndex) = vertexItem;
                 }
 
@@ -709,6 +728,14 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                          QPen(canvasTheme.controlConnector, qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
                         connector->setZValue(3.2);
                         markGeometryItem(connector);
+                        const int ownerAnchorVertexIndex = previousVertex.anchorSourceVertexIndex >= 0
+                            ? previousVertex.anchorSourceVertexIndex
+                            : (segmentIndex - 1);
+                        connector->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                        connector->setData(kMapSceneSelectionGatedRole, true);
+                        connector->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineControlConnector);
+                        connector->setData(kMapSceneOwnerVertexRole, ownerAnchorVertexIndex);
+                        connector->setVisible(false);
                         LineControlConnectorBinding binding;
                         binding.anchorVertexOrder = segmentIndex - 1;
                         binding.controlSourceVertexIndex = previousVertex.outgoingSourceVertexIndex;
@@ -728,6 +755,11 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         scene->addItem(controlItem);
                         controlItem->setZValue(4.2);
                         markGeometryItem(controlItem);
+                        controlItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                        controlItem->setData(kMapSceneSelectionGatedRole, true);
+                        controlItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineControl);
+                        controlItem->setData(kMapSceneOwnerVertexRole, ownerAnchorVertexIndex);
+                        controlItem->setVisible(false);
                         controlItemsBySourceVertex->insert(previousVertex.outgoingSourceVertexIndex, controlItem);
                     }
 
@@ -738,6 +770,14 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                          QPen(canvasTheme.controlConnector, qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
                         connector->setZValue(3.2);
                         markGeometryItem(connector);
+                        const int ownerAnchorVertexIndex = currentVertex.anchorSourceVertexIndex >= 0
+                            ? currentVertex.anchorSourceVertexIndex
+                            : segmentIndex;
+                        connector->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                        connector->setData(kMapSceneSelectionGatedRole, true);
+                        connector->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineControlConnector);
+                        connector->setData(kMapSceneOwnerVertexRole, ownerAnchorVertexIndex);
+                        connector->setVisible(false);
                         LineControlConnectorBinding binding;
                         binding.anchorVertexOrder = segmentIndex;
                         binding.controlSourceVertexIndex = currentVertex.incomingSourceVertexIndex;
@@ -757,6 +797,11 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         scene->addItem(controlItem);
                         controlItem->setZValue(4.2);
                         markGeometryItem(controlItem);
+                        controlItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                        controlItem->setData(kMapSceneSelectionGatedRole, true);
+                        controlItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineControl);
+                        controlItem->setData(kMapSceneOwnerVertexRole, ownerAnchorVertexIndex);
+                        controlItem->setVisible(false);
                         controlItemsBySourceVertex->insert(currentVertex.incomingSourceVertexIndex, controlItem);
                     }
                 }
@@ -954,8 +999,13 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 path.closeSubpath();
 
                 auto *fillItem = scene->addPath(path, QPen(canvasTheme.geometryStroke, qBound(1.0, 2.0 * mapScale, 2.4), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), QBrush(canvasTheme.areaFill));
+                fillItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
                 fillItem->setZValue(2.0);
                 markGeometryItem(fillItem);
+                fillItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                if (mapItemsByLine != nullptr && feature.lineNumber > 0) {
+                    mapItemsByLine->insert(feature.lineNumber, fillItem);
+                }
                 auto areaVertexItemsByOrder = std::make_shared<QVector<MapEditableGeometryVertexItem *>>(feature.vertices.size(), nullptr);
 
                 for (int vertexIndex = 0; vertexIndex < feature.vertices.size(); ++vertexIndex) {
@@ -977,6 +1027,10 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     scene->addItem(vertexItem);
                     vertexItem->setZValue(4.0);
                     markGeometryItem(vertexItem);
+                    vertexItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                    vertexItem->setData(kMapSceneSelectionGatedRole, true);
+                    vertexItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeAreaVertex);
+                    vertexItem->setVisible(false);
                     areaVertexItemsByOrder->operator[](vertexIndex) = vertexItem;
                 }
 

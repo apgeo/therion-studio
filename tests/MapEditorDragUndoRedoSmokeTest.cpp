@@ -62,6 +62,9 @@ MapEditableGeometryVertexItem *findCenteredLineAnchor(QGraphicsScene *scene, con
         if (vertexItem == nullptr) {
             continue;
         }
+        if (!vertexItem->isVisible()) {
+            continue;
+        }
         if (vertexItem->geometryKind() != QStringLiteral("line")) {
             continue;
         }
@@ -81,6 +84,7 @@ MapEditableGeometryVertexItem *findCenteredLineAnchor(QGraphicsScene *scene, con
 
     return best;
 }
+
 
 void sendMouse(QWidget *widget,
                QEvent::Type type,
@@ -200,8 +204,11 @@ int runDragUndoRedoSmoke()
     }
 
     const QRectF visibleSceneRect = mapView->mapToScene(mapView->viewport()->rect()).boundingRect();
+    mapTab->goToLine(4);
+    pumpEvents();
+
     auto *anchorItem = findCenteredLineAnchor(mapView->scene(), visibleSceneRect);
-    if (!expect(anchorItem != nullptr, "No visible editable line anchor was found in map scene.")) {
+    if (!expect(anchorItem != nullptr, "No visible editable line anchor was found after selecting line geometry.")) {
         return 1;
     }
 

@@ -236,6 +236,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The map editor shall support an explicit touch-friendly controls mode for pen-first workflows rather than relying only on device heuristics.
 - After reparsing the document, the map editor shall restore the selected object when that object can still be resolved in the updated document.
 - Geometry editing shall support point placement, line vertex editing, area editing, and selection of individual vertices or control points.
+- Vertex overlays should be shown only for the currently selected map object, and line-control handles/connectors shall be shown only for the currently selected line vertex, to reduce visual clutter while preserving editability.
 - If line-point orientation is not explicitly set, the effective default shall be perpendicular to the local line tangent on the left side of the line direction.
 - Line-point orientation values shall be normalized to a canonical 0 to <360 degree range when parsed, edited, and serialized.
 - Repeated directional line decorations (for example teeth or ticks) shall use line direction as their reference frame, and when a line is reversed the decoration orientation shall reverse accordingly.
@@ -803,6 +804,8 @@ The criteria below are intended for implementation verification and QA.
 - Line symbols support configurable stroke width, dash pattern, and optional decorations such as arrows or ticks.
 - Area symbols support configurable solid, hatch, or dot-pattern fills and optional strokes.
 - Selection, draft, and edit-preview visuals are applied consistently through the shared style system.
+- Line/area vertex visuals and selection-highlight overlays are visible for selected objects and are suppressed for non-selected objects in normal editing view.
+- Line control handles/connectors are visible only for the selected line vertex (or its selected control handle) and remain hidden for other vertices.
 - Packaged builds include the style resources required to render the map consistently on all supported platforms.
 
 #### 8.1.14 Therion Syntax Highlighting Style System

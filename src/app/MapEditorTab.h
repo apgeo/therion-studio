@@ -23,6 +23,7 @@ class QGraphicsPixmapItem;
 class QTextBrowser;
 class QUndoStack;
 class QMainWindow;
+class QGraphicsItem;
 
 namespace TherionStudio
 {
@@ -47,6 +48,7 @@ public:
     };
 
     explicit MapEditorTab(QWidget *parent = nullptr);
+    ~MapEditorTab() override;
 
     bool loadFile(const QString &filePath, QString *errorMessage = nullptr);
     bool save(QString *errorMessage = nullptr);
@@ -179,6 +181,7 @@ private:
     void updateHelpPanel();
     void setHelpCollapsed(bool collapsed);
     void updateWorkspaceVisibility();
+    void updateGeometrySelectionPresentation();
     void detachMapPaneToWindow();
     void reattachMapPaneFromWindow();
     void focusDetachedMapPaneWindow();
@@ -215,7 +218,7 @@ private:
     QPushButton *fitBackgroundButton_ = nullptr;
     QPushButton *touchControlsButton_ = nullptr;
     QLabel *zoomLabel_ = nullptr;
-    QHash<int, QGraphicsRectItem *> mapItemsByLine_;
+    QHash<int, QGraphicsItem *> mapItemsByLine_;
     QVector<QGraphicsRectItem *> draftGeometryItems_;
     QVector<QGraphicsPixmapItem *> backgroundImageItems_;
     QUndoStack *undoStack_ = nullptr;

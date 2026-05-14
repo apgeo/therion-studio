@@ -195,6 +195,8 @@ Automated tests currently in-tree and used as regression baseline:
 
 ### 2026-05-14
 
+- ~~Updated map-editor geometry presentation to reduce clutter: line/area vertices and control handles now appear only for selected objects, and line accent highlight overlays render only for selected lines.~~
+- ~~Refined map-editor vertex visibility behavior: line control handles/connectors now appear only for the selected line vertex (or selected control handle), while non-selected vertices keep their controls hidden.~~
 - ~~Removed Qt menu-construction deprecation warnings by replacing deprecated `QMenu::addAction(..., shortcut)` overload usage with explicit `QAction` setup and signal wiring in `MainWindow::buildMenus`.~~
 - ~~Updated repository agent instructions to require avoiding deprecated APIs in new or touched code paths.~~
 - ~~Expanded `Help` menu with in-app `Quick User Manual` and `User Manual (Full)` viewer actions while keeping contextual map-help panel workflows intact.~~

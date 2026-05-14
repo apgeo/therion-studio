@@ -20,7 +20,7 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 
 - Parser/serializer round-trip coverage is still incomplete for full Therion corpus-level confidence.
 - Non-UTF decoding is now implemented with Qt-supported codecs, but broader legacy-encoding coverage still needs corpus validation.
-- Most map behaviors are covered by unit/smoke checks; dedicated GUI automation is still missing.
+- Most map behaviors are covered by unit/smoke checks; broader cross-platform GUI automation is still limited beyond focused smoke coverage.
 
 ### Manual QA Runs
 
@@ -108,8 +108,8 @@ Legend:
 - Remaining checklist (Phase 5 closeout):
 - ~~Add focused regression coverage for live preview callback sequencing during map drags (anchor/control), including no-self-update and no-stale-preview assertions.~~
 - ~~Add focused regression coverage for preview-vs-commit parity on representative line-edit operations (anchor move, smooth control move, corner control move).~~
-- Add a lightweight GUI smoke test for map drag/undo/redo workflow (single document, deterministic coordinates) to catch scene-refresh and undo-stack regressions.
-- Re-run Phase 5 verification suite after checklist completion and document residual parity gaps (if any) as Post-MVP.
+- ~~Add a lightweight GUI smoke test for map drag/undo/redo workflow (single document, deterministic coordinates) to catch scene-refresh and undo-stack regressions.~~
+- ~~Re-run Phase 5 verification suite after checklist completion and document residual parity gaps (if any) as Post-MVP.~~
 - Verification:
 - ~~`./build/MapBackgroundPlacementTest`~~
 - ~~`./build/TherionBackgroundMetadataTest`~~
@@ -175,6 +175,7 @@ Automated tests currently in-tree and used as regression baseline:
 - `DocumentFileEncodingTest`
 - `MapEditorInputPolicyTest`
 - `MapEditorDetachedPaneTest`
+- `MapEditorDragUndoRedoSmokeTest`
 - `SessionStoreTest`
 
 ## Recent Completed (Latest Slice)
@@ -279,6 +280,8 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Added current-state-aware preview coupling helper `collectLinePreviewCoupledUpdatesForVertexDrag` and wired live map preview updates through it so anchor-drag control transport is delta-sequenced (no stale absolute reset between drag events).~~
 - ~~Expanded `MapGeometryFeatureParsingTest` with live-preview sequencing regression coverage: multi-step anchor drag preview now asserts cumulative control transport, plus explicit no-self-update filtering in malformed shared source-index cases.~~
 - ~~Expanded `MapGeometryFeatureParsingTest` with explicit preview-vs-commit parity coverage for representative line edits: anchor move, smooth control move, and corner control move now assert identical coupled-secondary move sets between preview and command-time coupling helpers.~~
+- ~~Added `MapEditorDragUndoRedoSmokeTest` as a focused GUI smoke executable for deterministic line-anchor drag + undo + redo, asserting text mutation, undo-to-baseline restoration, and dirty-state transitions through the map command path.~~
+- ~~Completed Phase 5 checklist re-verification pass after smoke-test integration: ran `MapGeometryFeatureParsingTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`, `TherionDocumentEditorTest`, `MapEditorDetachedPaneTest` (offscreen), and `MapEditorDragUndoRedoSmokeTest` (offscreen).~~
 - ~~Hardened map-geometry undo/redo dirty-state fidelity: point and line/area vertex move commands now restore exact pre/post command text snapshots through `TextEditorTab::replaceTextForCommand`, eliminating residual dirty flags caused by rewrite-path formatting drift in multi-step map commands.~~
 - ~~Extended Phase 5 line-edit parity with smoothness toggling: map canvas now supports `S` to toggle selected line vertex smooth/corner state, line-coordinate rewrite validation now accepts `smooth` continuation rows, and line-row regeneration preserves `smooth off` markers during map-driven line rewrites.~~
 - ~~Expanded `TherionDocumentEditorTest` with `rewriteLineCoordinateRows` coverage for null/non-line rejection, inline-start rejection, mixed-content rejection, and successful CRLF-preserving rewrite.~~

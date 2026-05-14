@@ -183,3 +183,36 @@ qt_add_executable(MapEditorDetachedPaneTest
     src/editor/TherionSyntaxHighlighter.h)
 
 target_link_libraries(MapEditorDetachedPaneTest PRIVATE Qt6::Widgets)
+
+qt_add_executable(MapEditorDragUndoRedoSmokeTest
+    tests/MapEditorDragUndoRedoSmokeTest.cpp
+    src/app/MapEditorBackgroundLayers.cpp
+    src/app/MapEditorInputPolicy.cpp
+    src/app/MapEditorInputPolicy.h
+    src/app/MapEditorSceneInternals.h
+    src/app/MapEditorSceneItems.cpp
+    src/app/MapEditorSceneRenderer.cpp
+    src/app/MapEditorSceneSupport.h
+    src/app/MapEditorTab.cpp
+    src/app/MapEditorTabWorkspace.cpp
+    src/app/MapEditorTab.h
+    src/app/TextEditorTab.cpp
+    src/app/TextEditorTab.h
+    src/core/DocumentFile.cpp
+    src/core/DocumentFile.h
+    src/core/MapBackgroundPlacement.cpp
+    src/core/MapBackgroundPlacement.h
+    src/core/SessionStore.cpp
+    src/core/SessionStore.h
+    src/core/TherionBackgroundMetadata.cpp
+    src/core/TherionBackgroundMetadata.h
+    src/core/TherionDocumentEditor.cpp
+    src/core/TherionDocumentEditor.h
+    src/core/TherionDocumentParser.cpp
+    src/core/TherionDocumentParser.h
+    src/core/TherionXviParser.cpp
+    src/core/TherionXviParser.h
+    src/editor/TherionSyntaxHighlighter.cpp
+    src/editor/TherionSyntaxHighlighter.h)
+
+target_link_libraries(MapEditorDragUndoRedoSmokeTest PRIVATE Qt6::Widgets)

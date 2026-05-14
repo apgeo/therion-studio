@@ -107,13 +107,13 @@ Legend:
 - Goal: detect/load non-UTF-8 inputs, explicit UTF-8 conversion action, preserve original encoding until conversion.
 - Status: In progress.
 - Implemented highlights:
-- Encoding-aware `DocumentFile` read/write path with detection and codec-preserving save semantics.
-- Therion `encoding ...` directive-aware decode path with codec-name preservation for save.
-- Text editor status row now exposes explicit `Convert to UTF-8` action for non-UTF documents.
-- Text editor conversion flow now requires confirmation and surfaces explicit encoding-state notes for save behavior.
-- Added `DocumentFileEncodingTest` regression coverage for UTF-8 detection plus Latin1, Windows-1250, `cp1250` alias, and Windows-1252 byte-preserving save round-trips.
-- Added inspector-fallback encoding-preservation regression coverage to `DocumentFileEncodingTest`: non-UTF (`cp1250`) read-detect-rewrite-write path keeps source encoding while applying structure rename and line-option rewrite.
-- Added complementary inspector-fallback coverage for `windows-1252` so the same read-detect-rewrite-write encoding-preservation path is validated across two legacy single-byte codec families.
+- ~~Encoding-aware `DocumentFile` read/write path with detection and codec-preserving save semantics.~~
+- ~~Therion `encoding ...` directive-aware decode path with codec-name preservation for save.~~
+- ~~Text editor status row now exposes explicit `Convert to UTF-8` action for non-UTF documents.~~
+- ~~Text editor conversion flow now requires confirmation and surfaces explicit encoding-state notes for save behavior.~~
+- ~~Added `DocumentFileEncodingTest` regression coverage for UTF-8 detection plus Latin1, Windows-1250, `cp1250` alias, and Windows-1252 byte-preserving save round-trips.~~
+- ~~Added inspector-fallback encoding-preservation regression coverage to `DocumentFileEncodingTest`: non-UTF (`cp1250`) read-detect-rewrite-write path keeps source encoding while applying structure rename and line-option rewrite.~~
+- ~~Added complementary inspector-fallback coverage for `windows-1252` so the same read-detect-rewrite-write encoding-preservation path is validated across two legacy single-byte codec families.~~
 - Planned verification:
 - New unit tests for encoding detection and conversion paths.
 - Manual workflows with sample non-UTF-8 Therion files (tracked in `docs/ENCODING_QA_CHECKLIST.md`).
@@ -124,8 +124,8 @@ Legend:
 - Goal: keyboard command parity, panel ergonomics, platform-native behavior checks.
 - Status: Partially completed.
 - Implemented highlights:
-- Map command shortcut, close-all-tabs shortcut, collapsible sidebar/console/help panes.
-- Activity-rail sidebar and console integration.
+- ~~Map command shortcut, close-all-tabs shortcut, collapsible sidebar/console/help panes.~~
+- ~~Activity-rail sidebar and console integration.~~
 - Planned verification:
 - Manual shortcut matrix pass on macOS/Windows/Linux.
 

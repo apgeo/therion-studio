@@ -188,15 +188,27 @@ protected:
             return;
         }
 
-        const QTextBlock block = document()->findBlockByLineNumber(highlightedLineNumber_ - 1);
-        if (!block.isValid() || !block.isVisible()) {
+        const int targetBlockNumber = highlightedLineNumber_ - 1;
+        QTextBlock block = firstVisibleBlock();
+        int blockNumber = block.blockNumber();
+        int blockTop = qRound(blockBoundingGeometry(block).translated(contentOffset()).top());
+        int blockBottom = blockTop + qRound(blockBoundingRect(block).height());
+        bool foundVisibleBlock = false;
+        while (block.isValid() && blockNumber <= targetBlockNumber) {
+            if (blockNumber == targetBlockNumber) {
+                foundVisibleBlock = true;
+                break;
+            }
+            block = block.next();
+            blockTop = blockBottom;
+            blockBottom = blockTop + qRound(blockBoundingRect(block).height());
+            ++blockNumber;
+        }
+        if (!foundVisibleBlock || !block.isVisible()) {
             return;
         }
-
-        QTextCursor blockCursor(block);
-        blockCursor.movePosition(QTextCursor::StartOfBlock);
-        const QRect cursorBounds = cursorRect(blockCursor);
-        if (!cursorBounds.isValid() || !cursorBounds.intersects(viewport()->rect())) {
+        const QRect blockBounds(0, blockTop, viewport()->width(), qMax(1, blockBottom - blockTop));
+        if (!blockBounds.intersects(viewport()->rect())) {
             return;
         }
 
@@ -209,9 +221,7 @@ protected:
         painter.setPen(Qt::NoPen);
         fill.setAlpha(52);
         painter.setBrush(fill);
-        const qreal lineHeight = qMax<qreal>(fontMetrics().height(), cursorBounds.height());
-        const qreal lineTop = cursorBounds.top() + lineHeight;
-        painter.drawRect(QRectF(0.0, lineTop, viewport()->width(), lineHeight));
+        painter.drawRect(QRectF(blockBounds));
 
         QColor accent = palette().color(QPalette::Highlight);
         if (!accent.isValid()) {
@@ -219,7 +229,7 @@ protected:
         }
         accent.setAlpha(190);
         painter.setBrush(accent);
-        painter.drawRect(QRectF(0.0, lineTop, 4.0, lineHeight));
+        painter.drawRect(QRectF(0.0, static_cast<qreal>(blockBounds.top()), 4.0, static_cast<qreal>(blockBounds.height())));
     }
 
 private:

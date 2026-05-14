@@ -188,6 +188,78 @@ QString sanitizeScrapName(const QString &preferredName)
     return normalized;
 }
 
+void collectIdentifiersFromTokens(const QStringList &tokens, QSet<QString> *identifiers)
+{
+    if (identifiers == nullptr) {
+        return;
+    }
+
+    for (int index = 0; index + 1 < tokens.size(); ++index) {
+        if (tokens.at(index).toLower() != QStringLiteral("-id")) {
+            continue;
+        }
+
+        const QString candidate = tokens.at(index + 1).trimmed();
+        if (candidate.isEmpty() || candidate.startsWith(QLatin1Char('-'))) {
+            continue;
+        }
+        identifiers->insert(candidate.toLower());
+    }
+}
+
+QString generatedIdentifier(const QString &prefix, const QSet<QString> &existingIdentifiers)
+{
+    QString normalizedPrefix = prefix.trimmed().toLower();
+    if (normalizedPrefix.isEmpty()) {
+        normalizedPrefix = QStringLiteral("object");
+    }
+    int suffix = 1;
+    while (existingIdentifiers.contains(QStringLiteral("%1-%2").arg(normalizedPrefix).arg(suffix))) {
+        ++suffix;
+    }
+    return QStringLiteral("%1-%2").arg(normalizedPrefix).arg(suffix);
+}
+
+int matchingScrapStartIndex(const QStringList &lines, int endscrapIndex)
+{
+    if (endscrapIndex < 0 || endscrapIndex >= lines.size()) {
+        return -1;
+    }
+
+    int depth = 0;
+    for (int index = endscrapIndex; index >= 0; --index) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(index), index + 1);
+        if (parsedLine.directive == QStringLiteral("endscrap")) {
+            ++depth;
+            continue;
+        }
+        if (parsedLine.directive != QStringLiteral("scrap")) {
+            continue;
+        }
+        --depth;
+        if (depth == 0) {
+            return index;
+        }
+    }
+
+    return -1;
+}
+
+QSet<QString> identifiersInsideScrap(const QStringList &lines, int scrapStartIndex, int endscrapIndex)
+{
+    QSet<QString> identifiers;
+    if (scrapStartIndex < 0 || endscrapIndex <= scrapStartIndex || endscrapIndex > lines.size()) {
+        return identifiers;
+    }
+
+    for (int index = scrapStartIndex + 1; index < endscrapIndex; ++index) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(index), index + 1);
+        collectIdentifiersFromTokens(parsedLine.tokens, &identifiers);
+    }
+
+    return identifiers;
+}
+
 int lineCountForText(const QString &text)
 {
     if (text.isEmpty()) {
@@ -572,11 +644,14 @@ bool TherionDocumentEditor::appendScrapBlock(QString *contents,
         existingNames.insert(parsedLine.tokens.at(1).trimmed().toLower());
     }
 
-    const QString baseName = sanitizeScrapName(preferredName);
-    QString resolvedName = baseName;
-    int suffix = 2;
-    while (existingNames.contains(resolvedName.toLower())) {
-        resolvedName = QStringLiteral("%1-%2").arg(baseName).arg(suffix++);
+    QString resolvedName;
+    const QString sanitizedPreferredName = sanitizeScrapName(preferredName);
+    if (!preferredName.trimmed().isEmpty()
+        && sanitizedPreferredName != QStringLiteral("map-draft")
+        && sanitizedPreferredName != QStringLiteral("new-scrap")) {
+        resolvedName = uniqueObjectIdentifier(sanitizedPreferredName, existingNames);
+    } else {
+        resolvedName = generatedIdentifier(QStringLiteral("scrap"), existingNames);
     }
 
     QString updated = *contents;
@@ -634,7 +709,6 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         return false;
     }
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(*contents);
     QString updated = *contents;
     const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
     QStringList lines = splitLinesNormalized(updated);
@@ -669,23 +743,15 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         }
         geometryLines.append(QStringLiteral("  endline"));
     } else {
-        QSet<QString> existingIdentifiers;
-        existingIdentifiers.reserve(parsedLines.size());
-        for (const TherionParsedLine &parsedLine : parsedLines) {
-            if (parsedLine.directive != QStringLiteral("line")
-                && parsedLine.directive != QStringLiteral("area")
-                && parsedLine.directive != QStringLiteral("point")) {
-                continue;
+        const int scrapStartIndex = matchingScrapStartIndex(lines, insertionIndex);
+        if (scrapStartIndex < 0) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QStringLiteral("Unable to resolve scrap boundaries for area insertion.");
             }
-            const QString identifier = optionValue(parsedLine.tokens, QStringLiteral("-id"));
-            if (!identifier.trimmed().isEmpty()) {
-                existingIdentifiers.insert(identifier.trimmed().toLower());
-            }
+            return false;
         }
-
-        const QString borderIdentifier = uniqueObjectIdentifier(QStringLiteral("draft-area-border"), existingIdentifiers);
-        existingIdentifiers.insert(borderIdentifier.toLower());
-        const QString areaIdentifier = uniqueObjectIdentifier(QStringLiteral("draft-area"), existingIdentifiers);
+        const QSet<QString> existingIdentifiers = identifiersInsideScrap(lines, scrapStartIndex, insertionIndex);
+        const QString borderIdentifier = generatedIdentifier(QStringLiteral("line"), existingIdentifiers);
 
         geometryLines.append(QStringLiteral("  line border -id %1 -close on").arg(borderIdentifier));
         for (const QPointF &vertex : vertices) {
@@ -694,7 +760,7 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         }
         geometryLines.append(QStringLiteral("  endline"));
         insertionLineOffset = geometryLines.size();
-        geometryLines.append(QStringLiteral("  area water -id %1").arg(areaIdentifier));
+        geometryLines.append(QStringLiteral("  area water"));
         geometryLines.append(QStringLiteral("    %1").arg(borderIdentifier));
         geometryLines.append(QStringLiteral("  endarea"));
     }
@@ -822,7 +888,6 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
     const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
     QStringList lines = splitLinesNormalized(updated);
     int insertionIndex = lastEndscrapLineIndex(lines);
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(*contents);
 
     if (insertionIndex < 0) {
         if (!appendScrapBlock(&updated, QStringLiteral("map-draft"), nullptr, errorMessage)) {
@@ -839,23 +904,16 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
         }
     }
 
-    QSet<QString> existingIdentifiers;
-    existingIdentifiers.reserve(parsedLines.size());
-    for (const TherionParsedLine &parsedLine : parsedLines) {
-        if (parsedLine.directive != QStringLiteral("line")
-            && parsedLine.directive != QStringLiteral("area")
-            && parsedLine.directive != QStringLiteral("point")) {
-            continue;
+    const int scrapStartIndex = matchingScrapStartIndex(lines, insertionIndex);
+    if (scrapStartIndex < 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Unable to resolve scrap boundaries for area insertion.");
         }
-        const QString identifier = optionValue(parsedLine.tokens, QStringLiteral("-id"));
-        if (!identifier.trimmed().isEmpty()) {
-            existingIdentifiers.insert(identifier.trimmed().toLower());
-        }
+        return false;
     }
+    const QSet<QString> existingIdentifiers = identifiersInsideScrap(lines, scrapStartIndex, insertionIndex);
 
-    const QString borderIdentifier = uniqueObjectIdentifier(QStringLiteral("draft-area-border"), existingIdentifiers);
-    existingIdentifiers.insert(borderIdentifier.toLower());
-    const QString areaIdentifier = uniqueObjectIdentifier(QStringLiteral("draft-area"), existingIdentifiers);
+    const QString borderIdentifier = generatedIdentifier(QStringLiteral("line"), existingIdentifiers);
 
     QStringList geometryLines;
     geometryLines.append(QStringLiteral("  line border -id %1 -close on").arg(borderIdentifier));
@@ -863,7 +921,7 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
         geometryLines.append(QStringLiteral("    %1").arg(row));
     }
     geometryLines.append(QStringLiteral("  endline"));
-    geometryLines.append(QStringLiteral("  area water -id %1").arg(areaIdentifier));
+    geometryLines.append(QStringLiteral("  area water"));
     geometryLines.append(QStringLiteral("    %1").arg(borderIdentifier));
     geometryLines.append(QStringLiteral("  endarea"));
 

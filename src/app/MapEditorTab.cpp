@@ -43,6 +43,7 @@
 #include "MapEditorSceneInternals.h"
 #include "MapEditorInputPolicy.h"
 #include "TextEditorTab.h"
+#include "../core/TherionBackgroundMetadata.h"
 #include "../core/TherionDocumentParser.h"
 
 namespace TherionStudio
@@ -1724,10 +1725,15 @@ void MapEditorTab::refreshMapScenePreservingUndoStack()
     const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_->text());
     const QVector<MapSceneEntry> entries = collectMapSceneEntries(parsedLines);
     const QVector<MapGeometryFeature> geometryFeatures = collectGeometryFeatures(parsedLines);
+    const QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
+    const std::optional<QRectF> sourceBoundsOverride = sourceBounds.isValid()
+        ? std::optional<QRectF>(sourceBounds)
+        : std::nullopt;
     renderMapWorkspaceScene(mapScene_,
                             filePath(),
                             entries,
                             geometryFeatures,
+                            sourceBoundsOverride,
                             &mapItemsByLine_,
                             [this](int lineNumber, const QPointF &oldPosition, const QPointF &newPosition) {
                                 recordCardMove(lineNumber, oldPosition, newPosition);
@@ -1743,6 +1749,7 @@ void MapEditorTab::refreshMapScenePreservingUndoStack()
                             });
 
     restoreBackgroundImageItems();
+    reprojectMetadataBackgroundLayersForCurrentDocument();
     restoreDraftGeometryItems();
     selectMapLine(textEditor_->currentLineNumber());
     updateGeometrySelectionPresentation();
@@ -2588,6 +2595,23 @@ void MapEditorTab::updateInteractiveDrawPreview()
     }
 }
 
+QRectF MapEditorTab::mapSourceBoundsForCurrentDocument() const
+{
+    if (textEditor_ == nullptr) {
+        return QRectF();
+    }
+
+    const QString currentText = textEditor_->text();
+    const TherionAreaAdjust areaAdjust = parseTherionAreaAdjust(currentText);
+    if (areaAdjust.valid && areaAdjust.modelRect.isValid()) {
+        return areaAdjust.modelRect;
+    }
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(currentText);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    return geometryBoundsForFeatures(features);
+}
+
 QPointF MapEditorTab::sourcePointFromScenePosition(const QPointF &scenePosition) const
 {
     if (textEditor_ == nullptr) {
@@ -2599,9 +2623,7 @@ QPointF MapEditorTab::sourcePointFromScenePosition(const QPointF &scenePosition)
         return scenePosition;
     }
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_->text());
-    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
-    const QRectF sourceBounds = geometryBoundsForFeatures(features);
+    const QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
     if (!sourceBounds.isValid() || sourceBounds.width() < 0.001 || sourceBounds.height() < 0.001) {
         return scenePosition;
     }
@@ -3614,9 +3636,7 @@ QVector<QPointF> MapEditorTab::sourceVerticesForDraft(const QGraphicsRectItem *i
     }
 
     const QRectF previewBounds = mapPreviewBounds();
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_ != nullptr ? textEditor_->text() : QString());
-    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
-    const QRectF sourceBounds = geometryBoundsForFeatures(features);
+    const QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
     if (!previewBounds.isValid() || !sourceBounds.isValid() || sourceBounds.width() < 0.001 || sourceBounds.height() < 0.001) {
         return previewVertices;
     }

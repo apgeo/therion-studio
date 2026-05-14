@@ -161,6 +161,7 @@ private:
     bool commitInteractiveDrawSession();
     void clearInteractiveDrawSession(bool clearMode);
     void updateInteractiveDrawPreview();
+    QRectF mapSourceBoundsForCurrentDocument() const;
     QPointF sourcePointFromScenePosition(const QPointF &scenePosition) const;
     bool hasCompletableInteractiveDrawSession() const;
     bool commitInteractiveDrawVertices(const QString &geometryKind,
@@ -201,6 +202,7 @@ private:
     void loadBackgroundLayersFromSession();
     void loadBackgroundLayersFromDocumentMetadata();
     void syncAutoBackgroundLayersFromCurrentDocument();
+    void reprojectMetadataBackgroundLayersForCurrentDocument();
     QGraphicsPixmapItem *backgroundLayerItemAt(int index) const;
     QGraphicsPixmapItem *selectedBackgroundLayerItem() const;
     qreal backgroundLayerGammaValue(const QGraphicsPixmapItem *item) const;

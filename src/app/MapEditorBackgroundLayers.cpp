@@ -23,7 +23,6 @@
 #include "../core/MapBackgroundPlacement.h"
 #include "../core/SessionStore.h"
 #include "../core/TherionBackgroundMetadata.h"
-#include "../core/TherionDocumentParser.h"
 #include "../core/TherionXviParser.h"
 
 namespace TherionStudio
@@ -731,9 +730,7 @@ void MapEditorTab::loadBackgroundLayersFromSession()
         }
     }
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_ != nullptr ? textEditor_->text() : QString());
-    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
-    const QRectF sourceBounds = geometryBoundsForFeatures(features);
+    const QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
     const QRectF previewBounds = mapPreviewBounds();
 
     for (const QJsonValue &value : layersValue.toArray()) {
@@ -824,9 +821,7 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
         return;
     }
     const XtherionAreaAdjust areaAdjust = parseXtherionAreaAdjust(textEditor_->text());
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_->text());
-    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
-    const QRectF sourceBounds = geometryBoundsForFeatures(features);
+    const QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
     const QRectF previewBounds = mapPreviewBounds();
 
     QHash<QString, XtherionBackgroundReference> metadataByPath;
@@ -942,6 +937,91 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
         toolbarStatusNote_ = tr("Auto-loaded %1 background layer(s) from xth_me_image_insert metadata.").arg(addedCount);
         saveBackgroundLayersToSession();
         refreshToolbarSummary();
+    }
+}
+
+void MapEditorTab::reprojectMetadataBackgroundLayersForCurrentDocument()
+{
+    if (mapScene_ == nullptr || textEditor_ == nullptr || backgroundImageItems_.isEmpty()) {
+        return;
+    }
+
+    const QVector<XtherionBackgroundReference> references = parseXtherionBackgroundReferences(textEditor_->text(), filePath());
+    if (references.isEmpty()) {
+        return;
+    }
+
+    const XtherionAreaAdjust areaAdjust = parseXtherionAreaAdjust(textEditor_->text());
+    const QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
+    const QRectF previewBounds = mapPreviewBounds();
+    if (!sourceBounds.isValid() || !previewBounds.isValid()) {
+        return;
+    }
+
+    QHash<QString, XtherionBackgroundReference> metadataByPath;
+    QHash<QString, QVector<XtherionBackgroundReference>> metadataByFileName;
+    for (const XtherionBackgroundReference &reference : references) {
+        const QString pathKey = normalizedPathKey(reference.absolutePath);
+        if (!pathKey.isEmpty()) {
+            metadataByPath.insert(pathKey, reference);
+        }
+        const QString fileNameKey = QFileInfo(reference.absolutePath).fileName().trimmed().toCaseFolded();
+        if (!fileNameKey.isEmpty()) {
+            metadataByFileName[fileNameKey].append(reference);
+        }
+    }
+
+    bool updatedAnyLayer = false;
+    for (QGraphicsPixmapItem *existingLayer : std::as_const(backgroundImageItems_)) {
+        if (existingLayer == nullptr) {
+            continue;
+        }
+
+        const QString layerPath = QFileInfo(existingLayer->data(0).toString()).absoluteFilePath();
+        const XtherionBackgroundReference *metadataReference =
+            findMetadataReferenceForPath(layerPath, metadataByPath, metadataByFileName);
+        if (metadataReference == nullptr || !metadataReference->hasBasePosition) {
+            continue;
+        }
+
+        if (metadataReference->xviReference) {
+            XviDocument xviDocument;
+            if (!parseTherionXviDocumentFile(layerPath, &xviDocument)) {
+                continue;
+            }
+
+            QPixmap pixmap;
+            QPointF topLeft;
+            if (!buildXviLayerPixmap(xviDocument,
+                                     metadataReference->basePosition,
+                                     metadataReference->rootStationName,
+                                     sourceBounds,
+                                     previewBounds,
+                                     &pixmap,
+                                     &topLeft)) {
+                continue;
+            }
+
+            existingLayer->setPixmap(pixmap);
+            existingLayer->setPos(topLeft);
+            existingLayer->setData(4, true);
+            updatedAnyLayer = true;
+            continue;
+        }
+
+        if (placeRasterLayerFromMetadata(existingLayer,
+                                         *metadataReference,
+                                         areaAdjust,
+                                         sourceBounds,
+                                         previewBounds)) {
+            existingLayer->setData(4, true);
+            updatedAnyLayer = true;
+        }
+    }
+
+    if (updatedAnyLayer) {
+        applyBackgroundLayerStackingOrder();
+        refreshBackgroundLayerControls();
     }
 }
 

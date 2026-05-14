@@ -212,6 +212,10 @@ Interactive drawing (current):
 - control points are visible in the draft preview and can be dragged before commit
 - for curved areas, the closing segment (last anchor back to first anchor) is written as a smooth cubic segment when closing handles can be derived from first/last vertex tangents
 - Area commits are serialized in Therion border-reference form: a closed `line border -id ... -close on` block is written first, then the `area ...` block references that border line id.
+- The generated border line id for area commits uses `line-X` naming and increments to stay unique in the current scrap (`line-1`, `line-2`, ...).
+- Auto-created scraps use `scrap-X` naming (`scrap-1`, `scrap-2`, ...).
+- Area object `-id` is not auto-forced; only the referenced border `line` id is mandatory in generated output.
+- If the file contains `##XTHERION## xth_me_area_adjust`, map insertion/render projection uses that rectangle as stable model bounds to keep hidden-background insertions and later unhide aligned.
 - Line/area commit preserves all captured vertices from the current draft session.
 - Line commits are serialized as per-vertex coordinate rows; rows with bezier control points are written for curved segments.
 - While drafting `Line`/`Area`: `Backspace`/`Delete` removes the last draft vertex.

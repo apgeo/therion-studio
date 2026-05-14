@@ -266,7 +266,7 @@ int runAppendScrapBlockTest()
     if (!expect(TherionDocumentEditor::appendScrapBlock(&contents, QString(), &lineNumber, &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(contents == QStringLiteral("scrap new-scrap\nendscrap\n"), "appendScrapBlock should create the default block in an empty document.")) {
+    if (!expect(contents == QStringLiteral("scrap scrap-1\nendscrap\n"), "appendScrapBlock should create the default block in an empty document.")) {
         return 1;
     }
     if (!expect(lineNumber == 1, "appendScrapBlock should report line 1 for an empty-document insertion.")) {
@@ -279,7 +279,7 @@ int runAppendScrapBlockTest()
     if (!expect(TherionDocumentEditor::appendScrapBlock(&contents, QStringLiteral("new-scrap"), &lineNumber, &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(contents == QStringLiteral("survey demo\r\nscrap new-scrap\r\nendscrap\r\n\r\nscrap new-scrap-2\r\nendscrap\r\n"),
+    if (!expect(contents == QStringLiteral("survey demo\r\nscrap new-scrap\r\nendscrap\r\n\r\nscrap scrap-1\r\nendscrap\r\n"),
                 "appendScrapBlock should preserve CRLF and generate a unique scrap name.")) {
         return 1;
     }
@@ -343,7 +343,7 @@ int runAppendDraftGeometryTest()
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(contents == QStringLiteral("survey demo\r\n\r\nscrap map-draft\r\n  line wall\r\n    10.0 20.0\r\n    30.0 40.0\r\n    50.0 60.0\r\n    70.0 80.0\r\n  endline\r\nendscrap\r\n"),
+    if (!expect(contents == QStringLiteral("survey demo\r\n\r\nscrap scrap-1\r\n  line wall\r\n    10.0 20.0\r\n    30.0 40.0\r\n    50.0 60.0\r\n    70.0 80.0\r\n  endline\r\nendscrap\r\n"),
                 "appendDraftGeometry should serialize line drafts as anchor rows and preserve CRLF.")) {
         return 1;
     }
@@ -373,14 +373,14 @@ int runAppendDraftGeometryTest()
         return 1;
     }
     if (!expect(contents == QStringLiteral("scrap a\n"
-                                           "  line border -id draft-area-border -close on\n"
+                                           "  line border -id line-1 -close on\n"
                                            "    1.0 2.0\n"
                                            "    3.0 4.0\n"
                                            "    5.0 6.0\n"
                                            "    7.0 8.0\n"
                                            "  endline\n"
-                                           "  area water -id draft-area\n"
-                                           "    draft-area-border\n"
+                                           "  area water\n"
+                                           "    line-1\n"
                                            "  endarea\n"
                                            "endscrap\n"),
                 "appendDraftGeometry should serialize area drafts as closed border lines referenced from area blocks.")) {
@@ -405,7 +405,7 @@ int runAppendDraftGeometryTest()
     }
 
     contents = QStringLiteral("scrap a\n"
-                              "  line wall -id draft-area-border\n"
+                              "  line wall -id line-1\n"
                               "  endline\n"
                               "endscrap\n");
     lineNumber = 0;
@@ -420,15 +420,15 @@ int runAppendDraftGeometryTest()
         return 1;
     }
     if (!expect(contents == QStringLiteral("scrap a\n"
-                                           "  line wall -id draft-area-border\n"
+                                           "  line wall -id line-1\n"
                                            "  endline\n"
-                                           "  line border -id draft-area-border-2 -close on\n"
+                                           "  line border -id line-2 -close on\n"
                                            "    1 2\n"
                                            "    3 4 5 6\n"
                                            "    7 8\n"
                                            "  endline\n"
-                                           "  area water -id draft-area\n"
-                                           "    draft-area-border-2\n"
+                                           "  area water\n"
+                                           "    line-2\n"
                                            "  endarea\n"
                                            "endscrap\n"),
                 "appendDraftAreaGeometry should preserve coordinate rows and write area references to a unique border line id.")) {

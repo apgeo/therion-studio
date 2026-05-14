@@ -659,6 +659,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const QString &documentPath,
                              const QVector<MapSceneEntry> &entries,
                              const QVector<MapGeometryFeature> &geometryFeatures,
+                             const std::optional<QRectF> &sourceBoundsOverride,
                              QHash<int, QGraphicsItem *> *mapItemsByLine,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,
                              const std::function<void(int, bool, bool)> &recordCardVisibility,
@@ -684,7 +685,9 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     makeMouseTransparent(scene->addRect(geometryCanvas, QPen(canvasTheme.canvasBorder, 1.2), QBrush(canvasTheme.canvasFill)));
 
     const QRectF previewBounds = geometryCanvas.adjusted(20.0, 20.0, -20.0, -20.0);
-    const QRectF sourceBounds = geometryBoundsForFeatures(geometryFeatures);
+    const QRectF sourceBounds = (sourceBoundsOverride.has_value() && sourceBoundsOverride->isValid())
+        ? sourceBoundsOverride.value()
+        : geometryBoundsForFeatures(geometryFeatures);
     const qreal mapScale = sceneCoordsScaleFactor(sourceBounds, previewBounds);
     const qreal pointRadius = qBound(3.2, 4.8 * mapScale, 6.2);
     const qreal vertexRadius = qBound(2.4, 3.8 * mapScale, 4.8);

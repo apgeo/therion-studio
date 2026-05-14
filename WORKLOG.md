@@ -13,6 +13,7 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 ### Next up
 
 - Start Phase 9 map-editor parity polish and interaction refinement.
+- Start Phase 10 map drawing/insertion workflow implementation (true canvas authoring).
 - Continue implementation work; defer Phase 6 manual verification pass.
 
 ### Risks / blockers
@@ -169,6 +170,21 @@ Legend:
 - `MapEditorDetachedPaneTest`
 - Map geometry/background/parser regression suite
 - Manual parity pass on macOS, Windows, Linux
+
+### Phase 10 - Interactive Map Drawing and Insertion (`Post-MVP`)
+
+- Spec scope: 3.3, 3.8.3, 3.11.1.
+- Goal: replace draft-card-only insertion flows with direct canvas authoring workflows for point/line/area creation.
+- Status: Not started.
+- Planned focus:
+- Point mode click-to-place insertion in map coordinates with immediate source writeback.
+- Line/area click-by-click draft construction in canvas with explicit finish/cancel behavior and preview feedback.
+- Freehand line capture as sampled geometry input; keep smart-trace as explicit staged capability if tracing heuristics are not yet implemented.
+- Mode-aware undo/redo semantics for drawing sessions (single completed draw gesture = one undo step).
+- Planned verification:
+- `MapEditorDragUndoRedoSmokeTest`
+- New focused GUI smoke tests for point insertion and line/area draft completion paths
+- Manual authoring pass on macOS, Windows, Linux (mouse, trackpad, stylus where available)
 
 ## Post-MVP Backlog (Phase-Linked)
 

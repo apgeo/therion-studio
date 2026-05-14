@@ -19,6 +19,7 @@
 #include <QPushButton>
 #include <QTextDocument>
 #include <QVBoxLayout>
+#include <QMessageBox>
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -139,6 +140,10 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     pathLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     encodingLabel_ = new QLabel(tr("Encoding: UTF-8"), statusRow_);
     encodingLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    encodingNoteLabel_ = new QLabel(statusRow_);
+    encodingNoteLabel_->setWordWrap(true);
+    encodingNoteLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    encodingNoteLabel_->setVisible(false);
     convertEncodingButton_ = new QPushButton(tr("Convert to UTF-8"), statusRow_);
     convertEncodingButton_->setVisible(false);
     convertEncodingButton_->setEnabled(false);
@@ -147,6 +152,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 
     statusLayout->addWidget(pathLabel_, 1);
     statusLayout->addWidget(encodingLabel_);
+    statusLayout->addWidget(encodingNoteLabel_, 1);
     statusLayout->addWidget(convertEncodingButton_);
 
     editorHelpSplitter_ = new QSplitter(Qt::Vertical, this);
@@ -183,6 +189,12 @@ bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)
     filePath_ = filePath;
     fileEncodingName_ = loadedEncoding.trimmed().isEmpty() ? QStringLiteral("UTF-8") : loadedEncoding.trimmed();
     fileEncodingLabel_ = loadedEncodingLabel.isEmpty() ? QStringLiteral("UTF-8") : loadedEncodingLabel;
+    if (fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
+        encodingStatusNote_.clear();
+    } else {
+        encodingStatusNote_ = tr("Opened as %1. Save keeps this encoding unless you convert to UTF-8.")
+                                  .arg(fileEncodingLabel_);
+    }
     loading_ = true;
     editor_->setPlainText(contents);
     loading_ = false;
@@ -215,6 +227,11 @@ bool TextEditorTab::save(QString *errorMessage)
 
     editor_->document()->setModified(false);
     dirty_ = false;
+    if (fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
+        encodingStatusNote_.clear();
+    } else {
+        encodingStatusNote_ = tr("Saved using %1 encoding.").arg(fileEncodingLabel_);
+    }
     refreshTitle();
     emit dirtyStateChanged(false);
     return true;
@@ -721,8 +738,20 @@ void TextEditorTab::handleConvertToUtf8Triggered()
         return;
     }
 
+    const auto answer = QMessageBox::question(this,
+                                              tr("Convert to UTF-8"),
+                                              tr("Convert this document from %1 to UTF-8?\n\n"
+                                                 "The file on disk is not changed until you save.")
+                                                  .arg(fileEncodingLabel_),
+                                              QMessageBox::Yes | QMessageBox::No,
+                                              QMessageBox::No);
+    if (answer != QMessageBox::Yes) {
+        return;
+    }
+
     fileEncodingName_ = QStringLiteral("UTF-8");
     fileEncodingLabel_ = QStringLiteral("UTF-8");
+    encodingStatusNote_ = tr("Converted to UTF-8 in memory. Save to write UTF-8 to disk.");
 
     if (!dirty_) {
         dirty_ = true;
@@ -762,6 +791,10 @@ void TextEditorTab::refreshStatus()
     }
 
     encodingLabel_->setText(tr("Encoding: %1").arg(fileEncodingLabel_));
+    if (encodingNoteLabel_ != nullptr) {
+        encodingNoteLabel_->setText(encodingStatusNote_);
+        encodingNoteLabel_->setVisible(!encodingStatusNote_.isEmpty());
+    }
     if (convertEncodingButton_ != nullptr) {
         const bool showConversion = fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) != 0;
         convertEncodingButton_->setVisible(showConversion);

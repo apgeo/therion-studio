@@ -139,6 +139,8 @@ Text editor includes:
 - bottom status row with path and encoding
 - explicit `Convert to UTF-8` action shown when a file is opened with a non-UTF-8 encoding
 - loading honors Therion `encoding ...` directive when the declared codec is available in Qt
+- conversion is explicit: clicking `Convert to UTF-8` asks for confirmation and marks the tab dirty; disk content changes only after save
+- status notes indicate whether saves are preserving original encoding or whether UTF-8 conversion is pending save
 
 ### 5.4 Use Structure + Inspector
 

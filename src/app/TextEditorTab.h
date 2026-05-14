@@ -124,6 +124,7 @@ private:
 
     QLabel *pathLabel_ = nullptr;
     QLabel *encodingLabel_ = nullptr;
+    QLabel *encodingNoteLabel_ = nullptr;
     QPushButton *convertEncodingButton_ = nullptr;
     QWidget *statusRow_ = nullptr;
     QFrame *searchBar_ = nullptr;
@@ -155,5 +156,6 @@ private:
     bool replaceMode_ = false;
     QString fileEncodingName_ = QStringLiteral("UTF-8");
     QString fileEncodingLabel_ = QStringLiteral("UTF-8");
+    QString encodingStatusNote_;
 };
 }

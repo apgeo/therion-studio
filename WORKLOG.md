@@ -169,6 +169,9 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Switched map-canvas line rendering to the line-vertex handle rule: segment is straight when both handles are absent, cubic when either adjacent handle exists (`QPainterPath::cubicTo` with anchor fallback).~~
 - ~~Added editable control-handle visualization for parsed line curves (incoming/outgoing control points plus anchor-to-handle guide lines), wired to existing coordinate rewrite callbacks through source vertex indices.~~
 - ~~Expanded `MapGeometryFeatureParsingTest` with smooth-state and anchor-equivalent handle-normalization assertions for TH2 curve parsing behavior.~~
+- ~~Normalized map-editor line-handle writeback so control-handle drags use `line` rewrite semantics (instead of unsupported `line control` kind), removing a persistence gap for control-point edits.~~
+- ~~Added smooth-coupled line-handle update behavior in map writeback commands: when a smooth vertex handle is moved, the opposite handle is auto-updated collinearly with preserved/opportunistic mirrored length and committed in the same undoable command.~~
+- ~~Added anchor-drag handle transport in line writeback commands: moving an anchor now translates attached incoming/outgoing controls by the same delta and persists all affected coordinates as one undoable command.~~
 - ~~Added a corpus-style `TherionDocumentEditorTest` fixture that performs coordinated point/line/area rewrites within a realistic TH2 scrap block containing metadata, comments, and CRLF line endings.~~
 - ~~Verified rewrite stability in the fixture across option-led continuation lines (`-subtype`), inline metadata (`-id`), `%` comments, and mixed-precision coordinate tokens.~~
 - ~~Added negative corpus-style fixture checks that assert rewrite failures (missing `endline`, incomplete area coordinate tuple) return errors and leave source text unchanged.~~

@@ -26,6 +26,7 @@
 #include <QFont>
 
 #include <cmath>
+#include <optional>
 
 #include "MapEditorSceneSupport.h"
 #include "TextEditorTab.h"
@@ -155,6 +156,12 @@ class MapLineAreaVertexMoveCommand final : public QUndoCommand
 {
 public:
     static constexpr int kCommandId = 0x4d4c564d; // MLVM
+    struct SecondaryMove
+    {
+        int vertexIndex = -1;
+        QPointF oldPoint;
+        QPointF newPoint;
+    };
 
     MapLineAreaVertexMoveCommand(TextEditorTab *textEditor,
                                  int lineNumber,
@@ -162,6 +169,7 @@ public:
                                  int vertexIndex,
                                  const QPointF &oldPoint,
                                  const QPointF &newPoint,
+                                 QVector<SecondaryMove> secondaryMoves,
                                  std::function<void(const QString &)> statusCallback)
         : textEditor_(textEditor)
         , lineNumber_(lineNumber)
@@ -169,6 +177,7 @@ public:
         , vertexIndex_(vertexIndex)
         , oldPoint_(oldPoint)
         , newPoint_(newPoint)
+        , secondaryMoves_(std::move(secondaryMoves))
         , statusCallback_(std::move(statusCallback))
     {
     }
@@ -185,7 +194,9 @@ public:
             || textEditor_ != otherCommand->textEditor_
             || lineNumber_ != otherCommand->lineNumber_
             || kind_ != otherCommand->kind_
-            || vertexIndex_ != otherCommand->vertexIndex_) {
+            || vertexIndex_ != otherCommand->vertexIndex_
+            || !secondaryMoves_.isEmpty()
+            || !otherCommand->secondaryMoves_.isEmpty()) {
             return false;
         }
 
@@ -195,28 +206,41 @@ public:
 
     void undo() override
     {
-        if (!applyVertex(oldPoint_,
-                         QStringLiteral("Reverted %1 vertex %2 at source line %3.")
-                             .arg(kind_)
-                             .arg(vertexIndex_ + 1)
-                             .arg(lineNumber_))) {
+        QVector<SecondaryMove> reversedSecondaryMoves;
+        reversedSecondaryMoves.reserve(secondaryMoves_.size());
+        for (const SecondaryMove &move : std::as_const(secondaryMoves_)) {
+            SecondaryMove reversedMove = move;
+            reversedMove.oldPoint = move.newPoint;
+            reversedMove.newPoint = move.oldPoint;
+            reversedSecondaryMoves.append(reversedMove);
+        }
+
+        if (!applyVertexWithSecondaries(oldPoint_,
+                                        reversedSecondaryMoves,
+                                        QStringLiteral("Reverted %1 vertex %2 at source line %3.")
+                                            .arg(kind_)
+                                            .arg(vertexIndex_ + 1)
+                                            .arg(lineNumber_))) {
             setObsolete(true);
         }
     }
 
     void redo() override
     {
-        if (!applyVertex(newPoint_,
-                         QStringLiteral("Updated %1 vertex %2 at source line %3.")
-                             .arg(kind_)
-                             .arg(vertexIndex_ + 1)
-                             .arg(lineNumber_))) {
+        if (!applyVertexWithSecondaries(newPoint_,
+                                        secondaryMoves_,
+                                        QStringLiteral("Updated %1 vertex %2 at source line %3.")
+                                            .arg(kind_)
+                                            .arg(vertexIndex_ + 1)
+                                            .arg(lineNumber_))) {
             setObsolete(true);
         }
     }
 
 private:
-    bool applyVertex(const QPointF &point, const QString &successMessage)
+    bool applyVertexWithSecondaries(const QPointF &point,
+                                    const QVector<SecondaryMove> &secondaryMoves,
+                                    const QString &successMessage)
     {
         if (textEditor_ == nullptr) {
             return false;
@@ -232,6 +256,21 @@ private:
             return false;
         }
 
+        for (const SecondaryMove &move : secondaryMoves) {
+            if (move.vertexIndex < 0) {
+                continue;
+            }
+
+            if (!textEditor_->rewriteLineAreaVertex(lineNumber_, kind_, move.vertexIndex, move.newPoint, &errorMessage)) {
+                if (statusCallback_ != nullptr) {
+                    statusCallback_(errorMessage.isEmpty()
+                                        ? QStringLiteral("%1 coupled vertex move failed.").arg(kind_)
+                                        : QStringLiteral("%1 coupled vertex move failed: %2").arg(kind_, errorMessage));
+                }
+                return false;
+            }
+        }
+
         if (statusCallback_ != nullptr) {
             statusCallback_(successMessage);
         }
@@ -244,8 +283,133 @@ private:
     int vertexIndex_ = -1;
     QPointF oldPoint_;
     QPointF newPoint_;
+    QVector<SecondaryMove> secondaryMoves_;
     std::function<void(const QString &)> statusCallback_;
 };
+
+enum class LineVertexRole
+{
+    None,
+    Anchor,
+    IncomingControl,
+    OutgoingControl
+};
+
+struct CoupledLineMove
+{
+    QVector<MapLineAreaVertexMoveCommand::SecondaryMove> secondaryMoves;
+};
+
+std::optional<MapGeometryFeature> lineFeatureForLineNumber(const QString &documentText, int lineNumber)
+{
+    if (lineNumber <= 0) {
+        return std::nullopt;
+    }
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(documentText);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    for (const MapGeometryFeature &feature : features) {
+        if (feature.kind == MapGeometryFeature::Kind::Line
+            && feature.lineNumber == lineNumber
+            && !feature.lineVertices.isEmpty()) {
+            return feature;
+        }
+    }
+
+    return std::nullopt;
+}
+
+CoupledLineMove coupledMovesForLineVertex(const MapGeometryFeature &lineFeature,
+                                          int sourceVertexIndex,
+                                          const QPointF &oldPoint,
+                                          const QPointF &newPoint)
+{
+    CoupledLineMove result;
+    if (sourceVertexIndex < 0 || lineFeature.lineVertices.isEmpty()) {
+        return result;
+    }
+
+    constexpr qreal kEpsilon = 1e-6;
+    auto appendSecondaryMove = [&](int vertexIndex, const QPointF &from, const QPointF &to) {
+        if (vertexIndex < 0 || !mapSourcePointsDiffer(from, to)) {
+            return;
+        }
+        MapLineAreaVertexMoveCommand::SecondaryMove move;
+        move.vertexIndex = vertexIndex;
+        move.oldPoint = from;
+        move.newPoint = to;
+        result.secondaryMoves.append(move);
+    };
+
+    for (const MapGeometryFeature::TH2LineVertex &vertex : lineFeature.lineVertices) {
+        if (vertex.anchorSourceVertexIndex == sourceVertexIndex) {
+            const QPointF delta = newPoint - oldPoint;
+            if (!delta.isNull()) {
+                if (vertex.incomingSourceVertexIndex >= 0) {
+                    const QPointF oldIncoming = vertex.incomingControl.value_or(vertex.anchor);
+                    appendSecondaryMove(vertex.incomingSourceVertexIndex, oldIncoming, oldIncoming + delta);
+                }
+                if (vertex.outgoingSourceVertexIndex >= 0) {
+                    const QPointF oldOutgoing = vertex.outgoingControl.value_or(vertex.anchor);
+                    appendSecondaryMove(vertex.outgoingSourceVertexIndex, oldOutgoing, oldOutgoing + delta);
+                }
+            }
+            return result;
+        }
+
+        LineVertexRole role = LineVertexRole::None;
+        if (vertex.incomingSourceVertexIndex == sourceVertexIndex) {
+            role = LineVertexRole::IncomingControl;
+        } else if (vertex.outgoingSourceVertexIndex == sourceVertexIndex) {
+            role = LineVertexRole::OutgoingControl;
+        }
+        if (role == LineVertexRole::None || !vertex.isSmooth) {
+            continue;
+        }
+
+        const QPointF anchor = vertex.anchor;
+        const QPointF vector = newPoint - anchor;
+        qreal vectorLength = std::hypot(vector.x(), vector.y());
+        QPointF direction(0.0, 0.0);
+        if (vectorLength > kEpsilon) {
+            direction = QPointF(vector.x() / vectorLength, vector.y() / vectorLength);
+        }
+
+        if (role == LineVertexRole::IncomingControl) {
+            if (vertex.outgoingSourceVertexIndex < 0) {
+                return result;
+            }
+
+            const QPointF oldOpposite = vertex.outgoingControl.value_or(anchor);
+            const qreal oldOppositeLength = std::hypot(oldOpposite.x() - anchor.x(), oldOpposite.y() - anchor.y());
+            const qreal targetLength = vertex.outgoingControl.has_value() ? oldOppositeLength : vectorLength;
+            const QPointF newOpposite = (vectorLength > kEpsilon)
+                ? QPointF(anchor.x() - (direction.x() * targetLength),
+                          anchor.y() - (direction.y() * targetLength))
+                : anchor;
+            appendSecondaryMove(vertex.outgoingSourceVertexIndex, oldOpposite, newOpposite);
+            return result;
+        }
+
+        if (role == LineVertexRole::OutgoingControl) {
+            if (vertex.incomingSourceVertexIndex < 0) {
+                return result;
+            }
+
+            const QPointF oldOpposite = vertex.incomingControl.value_or(anchor);
+            const qreal oldOppositeLength = std::hypot(oldOpposite.x() - anchor.x(), oldOpposite.y() - anchor.y());
+            const qreal targetLength = vertex.incomingControl.has_value() ? oldOppositeLength : vectorLength;
+            const QPointF newOpposite = (vectorLength > kEpsilon)
+                ? QPointF(anchor.x() - (direction.x() * targetLength),
+                          anchor.y() - (direction.y() * targetLength))
+                : anchor;
+            appendSecondaryMove(vertex.incomingSourceVertexIndex, oldOpposite, newOpposite);
+            return result;
+        }
+    }
+
+    return result;
+}
 }
 
 bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
@@ -1088,6 +1252,31 @@ void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
         return;
     }
 
+    const QString normalizedKind = kind.trimmed().toLower();
+    const QString rewriteKind = normalizedKind.startsWith(QStringLiteral("line"))
+        ? QStringLiteral("line")
+        : (normalizedKind.startsWith(QStringLiteral("area")) ? QStringLiteral("area") : normalizedKind);
+    if (rewriteKind != QStringLiteral("line") && rewriteKind != QStringLiteral("area")) {
+        toolbarStatusNote_ = tr("Geometry move failed: unsupported geometry kind '%1'.").arg(kind);
+        refreshToolbarSummary();
+        return;
+    }
+
+    QVector<MapLineAreaVertexMoveCommand::SecondaryMove> secondaryMoves;
+    if (rewriteKind == QStringLiteral("line")) {
+        const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(textEditor_->text(), lineNumber);
+        if (lineFeature.has_value()) {
+            secondaryMoves = coupledMovesForLineVertex(lineFeature.value(), vertexIndex, oldPoint, newPoint).secondaryMoves;
+            for (auto it = secondaryMoves.begin(); it != secondaryMoves.end();) {
+                if (it->vertexIndex == vertexIndex) {
+                    it = secondaryMoves.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
+    }
+
     auto statusCallback = [this](const QString &statusMessage) {
         toolbarStatusNote_ = statusMessage;
         refreshToolbarSummary();
@@ -1096,20 +1285,22 @@ void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
     if (undoStack_ != nullptr) {
         undoStack_->push(new MapLineAreaVertexMoveCommand(textEditor_,
                                                           lineNumber,
-                                                          kind,
+                                                          rewriteKind,
                                                           vertexIndex,
                                                           oldPoint,
                                                           newPoint,
+                                                          secondaryMoves,
                                                           statusCallback));
         return;
     }
 
     MapLineAreaVertexMoveCommand directCommand(textEditor_,
                                                lineNumber,
-                                               kind,
+                                               rewriteKind,
                                                vertexIndex,
                                                oldPoint,
                                                newPoint,
+                                               secondaryMoves,
                                                statusCallback);
     directCommand.redo();
 }

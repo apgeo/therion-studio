@@ -9,16 +9,17 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 ### In progress
 
 - Phase 5: map editor interaction parity and command-surface completion.
+- Phase 6: encoding detection/conversion and encoding-preserving save semantics.
 
 ### Next up
 
-- Start Phase 6 non-UTF-8 loading/conversion workflow and encoding persistence.
 - Continue Phase 5 map-editor parity polish and interaction refinement.
+- Continue Phase 6 with broader non-UTF fixture coverage and conversion-flow UX polish.
 
 ### Risks / blockers
 
 - Parser/serializer round-trip coverage is still incomplete for full Therion corpus-level confidence.
-- Text pipeline is still UTF-8-only in practice; non-UTF-8 conversion UX is not implemented yet.
+- Non-UTF decoding is now implemented with Qt-supported codecs, but broader legacy-encoding coverage still needs corpus validation.
 - Most map behaviors are covered by unit/smoke checks; dedicated GUI automation is still missing.
 
 ## Phase Plan
@@ -103,7 +104,11 @@ Legend:
 
 - Spec scope: 3.2 (encoding conversion), 4 (encoding preservation).
 - Goal: detect/load non-UTF-8 inputs, explicit UTF-8 conversion action, preserve original encoding until conversion.
-- Status: Not started.
+- Status: In progress.
+- Implemented highlights:
+- Encoding-aware `DocumentFile` read/write path with detection and codec-preserving save semantics.
+- Text editor status row now exposes explicit `Convert to UTF-8` action for non-UTF documents.
+- Added `DocumentFileEncodingTest` regression coverage for UTF-8 detection and non-UTF byte-preserving save round-trip.
 - Planned verification:
 - New unit tests for encoding detection and conversion paths.
 - Manual workflows with sample non-UTF-8 Therion files.
@@ -144,11 +149,15 @@ Automated tests currently in-tree and used as regression baseline:
 - `MapBackgroundPlacementTest`
 - `TherionBackgroundMetadataTest`
 - `TherionXviParserTest`
+- `DocumentFileEncodingTest`
 
 ## Recent Completed (Latest Slice)
 
 ### 2026-05-14
 
+- ~~Started Phase 6 encoding workflow: added encoding-aware `DocumentFile` read/write APIs with detection (`UTF-8`/`UTF-16*`/`System`/`Latin1`) and codec-preserving save behavior.~~
+- ~~Added explicit text-editor `Convert to UTF-8` action (visible for non-UTF documents) and wired saves to preserve original encoding until conversion.~~
+- ~~Added `DocumentFileEncodingTest` and verified UTF-8 detection plus non-UTF byte-preserving save round-trip behavior.~~
 - ~~Populated `docs/USER_MANUAL.md` with current implemented UI/workflow coverage: menus, sidebar panes, map workspace behavior, cross-platform shortcuts, settings/session persistence, platform notes, and troubleshooting.~~
 - ~~Updated repository instructions to require maintaining a living `docs/USER_MANUAL.md` and updating it whenever UI layout, workflows, keyboard shortcuts, or settings behavior changes.~~
 - ~~Created initial `docs/USER_MANUAL.md` scaffold to track UI structure, workflows, shortcuts, settings, platform notes, and troubleshooting.~~

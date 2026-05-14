@@ -2,6 +2,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QStringConverter>
 #include <QTextDocument>
 #include <QWidget>
 #include <QHash>
@@ -99,6 +100,7 @@ private slots:
     void handleReplaceTriggered();
     void handleReplaceAllTriggered();
     void handleCloseSearchTriggered();
+    void handleConvertToUtf8Triggered();
     void handleCursorPositionChanged();
 
 private:
@@ -123,6 +125,7 @@ private:
 
     QLabel *pathLabel_ = nullptr;
     QLabel *encodingLabel_ = nullptr;
+    QPushButton *convertEncodingButton_ = nullptr;
     QWidget *statusRow_ = nullptr;
     QFrame *searchBar_ = nullptr;
     QSplitter *editorHelpSplitter_ = nullptr;
@@ -151,5 +154,7 @@ private:
     bool dirty_ = false;
     bool loading_ = false;
     bool replaceMode_ = false;
+    QStringConverter::Encoding fileEncoding_ = QStringConverter::Utf8;
+    QString fileEncodingLabel_ = QStringLiteral("UTF-8");
 };
 }

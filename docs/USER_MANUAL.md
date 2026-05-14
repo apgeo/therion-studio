@@ -137,6 +137,7 @@ Text editor includes:
 - find/replace bar with `Whole word` and `Case sensitive` options
 - contextual help pane (collapsible via small triangle on splitter handle)
 - bottom status row with path and encoding
+- explicit `Convert to UTF-8` action shown when a file is opened with a non-UTF-8 encoding
 
 ### 5.4 Use Structure + Inspector
 
@@ -274,6 +275,7 @@ There is currently no dedicated Settings dialog; settings are updated through no
 ## 8. Known Current Limitations
 
 - Text file load/save path is UTF-8 only (non-UTF-8 conversion workflow is planned).
+- Non-UTF-8 support currently relies on Qt-supported decoders (`UTF-16*`, `System`, `Latin1`) and may not perfectly decode all legacy encodings on every platform.
 - `Open Dedicated Window` button in map workspace is present but currently disabled.
 - Freehand/Smart Trace modes currently insert draft line items (no full tracing workflow yet).
 - GUI automation coverage is still incomplete; many checks are currently unit/regression + manual workflows.

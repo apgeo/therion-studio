@@ -139,9 +139,15 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     pathLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     encodingLabel_ = new QLabel(tr("Encoding: UTF-8"), statusRow_);
     encodingLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    convertEncodingButton_ = new QPushButton(tr("Convert to UTF-8"), statusRow_);
+    convertEncodingButton_->setVisible(false);
+    convertEncodingButton_->setEnabled(false);
+    convertEncodingButton_->setAutoDefault(false);
+    connect(convertEncodingButton_, &QPushButton::clicked, this, &TextEditorTab::handleConvertToUtf8Triggered);
 
     statusLayout->addWidget(pathLabel_, 1);
     statusLayout->addWidget(encodingLabel_);
+    statusLayout->addWidget(convertEncodingButton_);
 
     editorHelpSplitter_ = new QSplitter(Qt::Vertical, this);
     editorHelpSplitter_->setChildrenCollapsible(false);
@@ -168,11 +174,15 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)
 {
     QString contents;
-    if (!DocumentFile::readUtf8TextFile(filePath, &contents, errorMessage)) {
+    QStringConverter::Encoding loadedEncoding = QStringConverter::Utf8;
+    QString loadedEncodingLabel;
+    if (!DocumentFile::readTextFile(filePath, &contents, &loadedEncoding, &loadedEncodingLabel, errorMessage)) {
         return false;
     }
 
     filePath_ = filePath;
+    fileEncoding_ = loadedEncoding;
+    fileEncodingLabel_ = loadedEncodingLabel.isEmpty() ? QStringLiteral("UTF-8") : loadedEncodingLabel;
     loading_ = true;
     editor_->setPlainText(contents);
     loading_ = false;
@@ -199,7 +209,7 @@ bool TextEditorTab::save(QString *errorMessage)
         return false;
     }
 
-    if (!DocumentFile::writeUtf8TextFile(filePath_, editor_->toPlainText(), errorMessage)) {
+    if (!DocumentFile::writeTextFile(filePath_, editor_->toPlainText(), fileEncoding_, errorMessage)) {
         return false;
     }
 
@@ -628,7 +638,7 @@ QString TextEditorTab::statusPathText() const
 
 QString TextEditorTab::statusEncodingText() const
 {
-    return tr("UTF-8");
+    return fileEncodingLabel_;
 }
 
 void TextEditorTab::setInlineStatusVisible(bool visible)
@@ -705,6 +715,23 @@ void TextEditorTab::handleCloseSearchTriggered()
     hideFindBar();
 }
 
+void TextEditorTab::handleConvertToUtf8Triggered()
+{
+    if (fileEncoding_ == QStringConverter::Utf8) {
+        return;
+    }
+
+    fileEncoding_ = QStringConverter::Utf8;
+    fileEncodingLabel_ = QStringLiteral("UTF-8");
+
+    if (!dirty_) {
+        dirty_ = true;
+        emit dirtyStateChanged(true);
+    }
+
+    refreshTitle();
+}
+
 void TextEditorTab::handleCursorPositionChanged()
 {
     if (loading_) {
@@ -734,7 +761,12 @@ void TextEditorTab::refreshStatus()
         pathLabel_->setText(displayPath());
     }
 
-    encodingLabel_->setText(tr("Encoding: UTF-8"));
+    encodingLabel_->setText(tr("Encoding: %1").arg(fileEncodingLabel_));
+    if (convertEncodingButton_ != nullptr) {
+        const bool showConversion = fileEncoding_ != QStringConverter::Utf8;
+        convertEncodingButton_->setVisible(showConversion);
+        convertEncodingButton_->setEnabled(showConversion);
+    }
 }
 
 void TextEditorTab::buildHelpPanel()

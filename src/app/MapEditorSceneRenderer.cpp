@@ -412,31 +412,12 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
         mapItemsByLine->clear();
     }
 
-    const QRectF sceneFrame(0, 0, 980, 760);
+    const QRectF sceneFrame(0, 0, 1200, 900);
     scene->setSceneRect(sceneFrame);
-    scene->addRect(QRectF(32, 32, sceneFrame.width() - 64, sceneFrame.height() - 64), QPen(QColor(QStringLiteral("#596477")), 1.5), QBrush(QColor(QStringLiteral("#232833"))));
+    const QRectF geometryCanvas = sceneFrame.adjusted(24.0, 24.0, -24.0, -24.0);
+    scene->addRect(geometryCanvas, QPen(QColor(QStringLiteral("#596477")), 1.2), QBrush(QColor(QStringLiteral("#232833"))));
 
-    QFont headerFont(QStringLiteral("Georgia"), 18, QFont::Bold);
-    auto *titleItem = scene->addText(QObject::tr("TH2 Map Workspace"), headerFont);
-    titleItem->setDefaultTextColor(QColor(QStringLiteral("#e2e9f3")));
-    titleItem->setPos(56, 48);
-
-    auto *summaryItem = scene->addText(QObject::tr("%1 map object(s) and %2 geometry feature(s) parsed from the current TH2 source.").arg(entries.size()).arg(geometryFeatures.size()), QFont(QStringLiteral("Menlo"), 11));
-    summaryItem->setDefaultTextColor(QColor(QStringLiteral("#b4bfd0")));
-    summaryItem->setPos(56, 84);
-
-    const QRectF geometryCanvas(56.0, 132.0, sceneFrame.width() - 112.0, 260.0);
-    scene->addRect(geometryCanvas, QPen(QColor(QStringLiteral("#d8dde5")), 1.2), QBrush(QColor(QStringLiteral("#ffffff"))));
-
-    auto *geometryTitle = scene->addText(QObject::tr("Rendered TH2 geometry preview"), QFont(QStringLiteral("Menlo"), 12, QFont::Bold));
-    geometryTitle->setDefaultTextColor(QColor(QStringLiteral("#111418")));
-    geometryTitle->setPos(geometryCanvas.left() + 16.0, geometryCanvas.top() + 12.0);
-
-    auto *geometrySubtitle = scene->addText(QObject::tr("Points, lines, and areas are drawn from parsed source geometry when available."), QFont(QStringLiteral("Menlo"), 10));
-    geometrySubtitle->setDefaultTextColor(QColor(QStringLiteral("#7b8392")));
-    geometrySubtitle->setPos(geometryCanvas.left() + 16.0, geometryCanvas.top() + 36.0);
-
-    const QRectF previewBounds = geometryCanvas.adjusted(24.0, 64.0, -24.0, -24.0);
+    const QRectF previewBounds = geometryCanvas.adjusted(20.0, 20.0, -20.0, -20.0);
     const QRectF sourceBounds = geometryBoundsForFeatures(geometryFeatures);
     const qreal mapScale = sceneCoordsScaleFactor(sourceBounds, previewBounds);
     const qreal pointRadius = qBound(3.2, 4.8 * mapScale, 6.2);
@@ -645,7 +626,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     if (entries.isEmpty()) {
         auto *emptyItem = scene->addText(QObject::tr("No Therion map objects were detected in this document."), QFont(QStringLiteral("Menlo"), 12));
         emptyItem->setDefaultTextColor(QColor(QStringLiteral("#9ca7b6")));
-        emptyItem->setPos(56, geometryCanvas.bottom() + 28.0);
+        emptyItem->setPos(previewBounds.left() + 16.0, previewBounds.top() + 44.0);
     }
 }
 

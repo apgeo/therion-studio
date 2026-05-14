@@ -172,6 +172,9 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Normalized map-editor line-handle writeback so control-handle drags use `line` rewrite semantics (instead of unsupported `line control` kind), removing a persistence gap for control-point edits.~~
 - ~~Added smooth-coupled line-handle update behavior in map writeback commands: when a smooth vertex handle is moved, the opposite handle is auto-updated collinearly with preserved/opportunistic mirrored length and committed in the same undoable command.~~
 - ~~Added anchor-drag handle transport in line writeback commands: moving an anchor now translates attached incoming/outgoing controls by the same delta and persists all affected coordinates as one undoable command.~~
+- ~~Removed scaffold-only map-canvas header text blocks (`TH2 Map Workspace`, geometry preview captions) from the rendered scene to reduce visual noise in the map viewport.~~
+- ~~Resized the map geometry preview region to fill the scene canvas (instead of a fixed small top strip), so `Fit` no longer leaves a large empty dark area below geometry.~~
+- ~~Updated `mapPreviewBounds` to match the full-canvas preview layout, keeping fit/background placement math consistent with the new map-scene geometry region.~~
 - ~~Added a corpus-style `TherionDocumentEditorTest` fixture that performs coordinated point/line/area rewrites within a realistic TH2 scrap block containing metadata, comments, and CRLF line endings.~~
 - ~~Verified rewrite stability in the fixture across option-led continuation lines (`-subtype`), inline metadata (`-id`), `%` comments, and mixed-precision coordinate tokens.~~
 - ~~Added negative corpus-style fixture checks that assert rewrite failures (missing `endline`, incomplete area coordinate tuple) return errors and leave source text unchanged.~~

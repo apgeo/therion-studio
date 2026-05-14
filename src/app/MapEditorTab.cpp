@@ -1173,12 +1173,12 @@ QRectF MapEditorTab::mapPreviewBounds() const
     }
 
     const QRectF sceneFrame = mapScene_->sceneRect();
-    if (sceneFrame.width() <= 112.0 || sceneFrame.height() <= 260.0) {
+    if (sceneFrame.width() <= 80.0 || sceneFrame.height() <= 80.0) {
         return QRectF();
     }
 
-    const QRectF geometryCanvas(56.0, 132.0, sceneFrame.width() - 112.0, 260.0);
-    return geometryCanvas.adjusted(24.0, 64.0, -24.0, -24.0);
+    const QRectF geometryCanvas = sceneFrame.adjusted(24.0, 24.0, -24.0, -24.0);
+    return geometryCanvas.adjusted(20.0, 20.0, -20.0, -20.0);
 }
 
 void MapEditorTab::adjustMapZoom(qreal factor)

@@ -178,6 +178,7 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Changed map `Fit` geometry bounds to use only tagged geometry items (paths, anchors, curve handles) instead of the full preview rectangle/scaffold extents, improving framing accuracy.~~
 - ~~Updated `Fit + BG` framing behavior to union real geometry bounds with visible background-layer bounds, avoiding oversized empty-canvas margins from non-content scene decorations.~~
 - ~~Hardened map-editor pinch zoom handling to prevent viewport lockups: added native-gesture begin/end tracking, short wheel-suppression during active pinch, stale-gesture auto-reset, and finite/clamped per-event zoom delta normalization before applying zoom.~~
+- ~~Fixed a map-handle drag crash (`EXC_BAD_ACCESS` in `MapEditableGeometryVertexItem::mouseReleaseEvent`) by preventing post-callback item access in handle `mouseReleaseEvent` when commit callbacks may trigger scene rebuild and item deletion.~~
 - ~~Added a corpus-style `TherionDocumentEditorTest` fixture that performs coordinated point/line/area rewrites within a realistic TH2 scrap block containing metadata, comments, and CRLF line endings.~~
 - ~~Verified rewrite stability in the fixture across option-led continuation lines (`-subtype`), inline metadata (`-id`), `%` comments, and mixed-precision coordinate tokens.~~
 - ~~Added negative corpus-style fixture checks that assert rewrite failures (missing `endline`, incomplete area coordinate tuple) return errors and leave source text unchanged.~~

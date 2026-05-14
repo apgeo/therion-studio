@@ -120,6 +120,8 @@ protected:
         const QPointF releasedSourcePoint = mapDisplayToSource(previewToSource(pos()));
         if (moveCommittedCallback_ != nullptr && mapSourcePointsDiffer(pressSourcePoint_, releasedSourcePoint)) {
             moveCommittedCallback_(lineNumber_, pressSourcePoint_, releasedSourcePoint);
+            // The callback may trigger a scene rebuild that deletes this item.
+            return;
         }
         update();
     }
@@ -267,6 +269,8 @@ protected:
         const QPointF releasedSourcePoint = mapDisplayToSource(previewToSource(pos()));
         if (moveCommittedCallback_ != nullptr && mapSourcePointsDiffer(pressSourcePoint_, releasedSourcePoint)) {
             moveCommittedCallback_(lineNumber_, geometryKind_, vertexIndex_, pressSourcePoint_, releasedSourcePoint);
+            // The callback may trigger a scene rebuild that deletes this item.
+            return;
         }
         update();
     }

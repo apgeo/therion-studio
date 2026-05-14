@@ -84,6 +84,7 @@ struct MapGeometryFeature
     bool hasAnchor = false;
     bool hasSourceAnchor = false;
     bool closed = false;
+    bool reversed = false;
     bool stationPoint = false;
     bool hasCoordinateTransform = false;
     QTransform sourceToMapTransform;

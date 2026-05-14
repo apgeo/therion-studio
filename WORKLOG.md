@@ -179,12 +179,16 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Updated `Fit + BG` framing behavior to union real geometry bounds with visible background-layer bounds, avoiding oversized empty-canvas margins from non-content scene decorations.~~
 - ~~Hardened map-editor pinch zoom handling to prevent viewport lockups: added native-gesture begin/end tracking, short wheel-suppression during active pinch, stale-gesture auto-reset, and finite/clamped per-event zoom delta normalization before applying zoom.~~
 - ~~Fixed a map-handle drag crash (`EXC_BAD_ACCESS` in `MapEditableGeometryVertexItem::mouseReleaseEvent`) by preventing post-callback item access in handle `mouseReleaseEvent` when commit callbacks may trigger scene rebuild and item deletion.~~
+- ~~Implemented line option parsing for map geometry features (`-close` and `-reverse`) with toggle-value handling (`on/off/yes/no/true/false/1/0` plus bare-flag enable semantics).~~
+- ~~Updated map line rendering to honor parsed closed-state by closing the line path when `-close` is enabled.~~
+- ~~Surfaced parsed line-state markers in map entry subtitles (`[closed]`, `[reversed]`) for faster state inspection while iterating map parity.~~
 - ~~Added a corpus-style `TherionDocumentEditorTest` fixture that performs coordinated point/line/area rewrites within a realistic TH2 scrap block containing metadata, comments, and CRLF line endings.~~
 - ~~Verified rewrite stability in the fixture across option-led continuation lines (`-subtype`), inline metadata (`-id`), `%` comments, and mixed-precision coordinate tokens.~~
 - ~~Added negative corpus-style fixture checks that assert rewrite failures (missing `endline`, incomplete area coordinate tuple) return errors and leave source text unchanged.~~
 - ~~Verified `TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, and `TherionXviParserTest`.~~
 - ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest TherionProjectStructureIndexTest MapBackgroundPlacementTest TherionBackgroundMetadataTest TherionXviParserTest` plus execution of all five regression binaries after map input-control changes.~~
 - ~~Verified `cmake --build build --target TherionStudio MapGeometryFeatureParsingTest TherionDocumentEditorTest TherionProjectStructureIndexTest MapBackgroundPlacementTest TherionBackgroundMetadataTest TherionXviParserTest` plus execution of all six regression binaries.~~
+- ~~Expanded `MapGeometryFeatureParsingTest` with line-option assertions for `-close`/`-reverse` parsing behavior, including explicit on/off and bare-flag cases.~~
 - ~~Closed Phase 4 (`MVP`) and moved additional corpus-scale rewrite expansion into the Post-MVP backlog.~~
 
 ### 2026-05-13

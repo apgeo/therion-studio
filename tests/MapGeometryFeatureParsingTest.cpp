@@ -143,6 +143,55 @@ int runAnchorEquivalentControlNormalizationTest()
 
     return 0;
 }
+
+int runLineOptionToggleParsingTest()
+{
+    const QString text =
+        QStringLiteral("line wall -close on -reverse on\n"
+                       "  0 0\n"
+                       "  10 0\n"
+                       "  10 10\n"
+                       "endline\n"
+                       "line wall -close off -reverse off\n"
+                       "  20 20\n"
+                       "  30 20\n"
+                       "  30 30\n"
+                       "endline\n"
+                       "line wall -close\n"
+                       "  40 40\n"
+                       "  50 40\n"
+                       "  50 50\n"
+                       "endline\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+
+    QVector<const MapGeometryFeature *> lines;
+    for (const MapGeometryFeature &feature : features) {
+        if (feature.kind == MapGeometryFeature::Kind::Line) {
+            lines.append(&feature);
+        }
+    }
+
+    if (!expect(lines.size() == 3, "Expected three parsed line features for option-toggle parsing test.")) {
+        return 1;
+    }
+
+    if (!expect(lines.at(0)->closed && lines.at(0)->reversed,
+                "Expected first line to parse -close on and -reverse on as enabled.")) {
+        return 1;
+    }
+    if (!expect(!lines.at(1)->closed && !lines.at(1)->reversed,
+                "Expected second line to parse -close off and -reverse off as disabled.")) {
+        return 1;
+    }
+    if (!expect(lines.at(2)->closed,
+                "Expected bare -close option to enable closed-state parsing.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -154,6 +203,9 @@ int main()
         return rc;
     }
     if (const int rc = runAnchorEquivalentControlNormalizationTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runLineOptionToggleParsingTest(); rc != 0) {
         return rc;
     }
 

@@ -24,6 +24,56 @@ bool tokenLooksNumeric(const QString &token)
     return numericPattern.match(token).hasMatch();
 }
 
+std::optional<bool> parseToggleToken(const QString &token)
+{
+    const QString normalized = token.trimmed().toLower();
+    if (normalized == QStringLiteral("on")
+        || normalized == QStringLiteral("yes")
+        || normalized == QStringLiteral("true")
+        || normalized == QStringLiteral("1")) {
+        return true;
+    }
+    if (normalized == QStringLiteral("off")
+        || normalized == QStringLiteral("no")
+        || normalized == QStringLiteral("false")
+        || normalized == QStringLiteral("0")) {
+        return false;
+    }
+
+    return std::nullopt;
+}
+
+std::optional<bool> lineOptionToggleValue(const TherionParsedLine &parsedLine, const QString &optionName)
+{
+    std::optional<bool> value;
+    if (parsedLine.tokens.size() < 2 || optionName.isEmpty()) {
+        return value;
+    }
+
+    const QString normalizedOption = optionName.toLower();
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        const QString token = parsedLine.tokens.at(index).trimmed().toLower();
+        if (token != normalizedOption) {
+            continue;
+        }
+
+        if (index + 1 >= parsedLine.tokens.size()) {
+            value = true;
+            continue;
+        }
+
+        const QString nextToken = parsedLine.tokens.at(index + 1).trimmed();
+        if (nextToken.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(nextToken)) {
+            value = true;
+            continue;
+        }
+
+        value = parseToggleToken(nextToken).value_or(true);
+    }
+
+    return value;
+}
+
 QVector<QPointF> coordinatePointsFromLine(const TherionParsedLine &parsedLine, int startTokenIndex)
 {
     QVector<QPointF> points;
@@ -249,6 +299,10 @@ QPainterPath linePathForFeature(const MapGeometryFeature &feature, const QRectF 
         }
     }
 
+    if (feature.closed && feature.lineVertices.size() >= 3) {
+        path.closeSubpath();
+    }
+
     return path;
 }
 
@@ -340,7 +394,26 @@ QString mapEntrySubtitleForLine(const TherionParsedLine &parsedLine)
         remainder = parsedLine.tokens.mid(2);
     }
 
-    return remainder.join(QStringLiteral(" "));
+    QString subtitle = remainder.join(QStringLiteral(" "));
+    if (parsedLine.tokens.first().toLower() == QStringLiteral("line")) {
+        const bool closed = lineOptionToggleValue(parsedLine, QStringLiteral("-close")).value_or(false);
+        const bool reversed = lineOptionToggleValue(parsedLine, QStringLiteral("-reverse")).value_or(false);
+        QStringList flags;
+        if (closed) {
+            flags.append(QObject::tr("closed"));
+        }
+        if (reversed) {
+            flags.append(QObject::tr("reversed"));
+        }
+        if (!flags.isEmpty()) {
+            if (!subtitle.isEmpty()) {
+                subtitle += QStringLiteral(" ");
+            }
+            subtitle += QStringLiteral("[%1]").arg(flags.join(QStringLiteral(", ")));
+        }
+    }
+
+    return subtitle;
 }
 
 QColor mapEntryAccentForCategory(const QString &category)
@@ -747,6 +820,8 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.label = mapEntryTitleForLine(parsedLine);
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
+            currentFeature.closed = lineOptionToggleValue(parsedLine, QStringLiteral("-close")).value_or(false);
+            currentFeature.reversed = lineOptionToggleValue(parsedLine, QStringLiteral("-reverse")).value_or(false);
             appendLineDataPoints(&currentFeature, sourceCoordinatePointsFromLine(parsedLine, 1, &lineSourceVertexIndex));
             inLineBlock = true;
             continue;

@@ -81,3 +81,4 @@ These instructions apply to the whole repository.
 - Document progress in the repository itself, not only in chat. Update [WORKLOG.md](WORKLOG.md) after every change so the current implementation state stays visible in the repo.
 - Keep [WORKLOG.md](WORKLOG.md) structured with clear `In progress`, `Next up`, `Risks / blockers` and `Completed` sections when practical.
 - In [WORKLOG.md](WORKLOG.md), cross out completed items using Markdown strikethrough (for example, `~~completed item~~`) instead of deleting them.
+- Apply the same strikethrough rule inside phase sections (`Phase Plan` blocks), including per-phase `Implemented highlights`, checklist-style bullets, and verification bullets once they are completed.

@@ -45,6 +45,7 @@ public:
     void showFindBar(bool replaceMode = false);
     void hideFindBar();
     void goToLine(int lineNumber);
+    void goToLineColumn(int lineNumber, int columnNumber);
     bool findNext();
     bool findPrevious();
     bool replaceCurrent();
@@ -78,6 +79,7 @@ public:
     QString displayName() const;
     bool isDirty() const;
     int currentLineNumber() const;
+    int currentColumnNumber() const;
     QString text() const;
     QString statusPathText() const;
     QString statusEncodingText() const;
@@ -87,6 +89,7 @@ signals:
     void titleChanged();
     void dirtyStateChanged(bool dirty);
     void currentLineChanged(int lineNumber);
+    void cursorPositionChanged(int lineNumber, int columnNumber);
     void documentTextChanged();
 
 private slots:
@@ -103,6 +106,7 @@ private slots:
     void handleCursorPositionChanged();
 
 private:
+    void refreshCurrentLineHighlight();
     void refreshTitle();
     void refreshStatus();
     bool isCurrentStateDirty() const;
@@ -145,6 +149,7 @@ private:
     QString filePath_;
     QString projectRootPath_;
     int currentLineNumber_ = 0;
+    int currentColumnNumber_ = 1;
     QHash<QString, TherionHelpEntry> helpEntries_;
     int helpPanelHeight_ = 200;
     bool helpCollapsed_ = false;

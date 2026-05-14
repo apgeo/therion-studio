@@ -15,6 +15,7 @@
 #include <QSplitterHandle>
 #include <QTextBrowser>
 #include <QTextCursor>
+#include <QTextEdit>
 #include <QPushButton>
 #include <QTextDocument>
 #include <QVBoxLayout>
@@ -167,6 +168,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     connect(editor_, &QPlainTextEdit::cursorPositionChanged, this, &TextEditorTab::handleCursorPositionChanged);
 
     refreshStatus();
+    refreshCurrentLineHighlight();
     updateContextHelp();
 }
 
@@ -191,11 +193,15 @@ bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)
     loading_ = true;
     editor_->setPlainText(contents);
     loading_ = false;
+    const QTextCursor cursor = editor_->textCursor();
+    currentLineNumber_ = cursor.blockNumber() + 1;
+    currentColumnNumber_ = cursor.positionInBlock() + 1;
     cleanTextSnapshot_ = editor_->toPlainText();
     cleanEncodingNameSnapshot_ = fileEncodingName_;
     editor_->document()->setModified(false);
     dirty_ = false;
     refreshTitle();
+    refreshCurrentLineHighlight();
     emit dirtyStateChanged(false);
     updateContextHelp();
     return true;
@@ -251,6 +257,33 @@ void TextEditorTab::goToLine(int lineNumber)
     editor_->setTextCursor(cursor);
     editor_->centerCursor();
     editor_->ensureCursorVisible();
+    refreshCurrentLineHighlight();
+    updateContextHelp();
+
+    if (searchBar_->isVisible()) {
+        findEdit_->clearFocus();
+    }
+}
+
+void TextEditorTab::goToLineColumn(int lineNumber, int columnNumber)
+{
+    if (lineNumber <= 0) {
+        return;
+    }
+
+    const QTextBlock block = editor_->document()->findBlockByLineNumber(lineNumber - 1);
+    if (!block.isValid()) {
+        return;
+    }
+
+    const int clampedColumn = qMax(1, columnNumber);
+    QTextCursor cursor(block);
+    const int offsetInBlock = qMin(clampedColumn - 1, qMax(0, block.length() - 1));
+    cursor.setPosition(block.position() + offsetInBlock);
+    editor_->setTextCursor(cursor);
+    editor_->centerCursor();
+    editor_->ensureCursorVisible();
+    refreshCurrentLineHighlight();
     updateContextHelp();
 
     if (searchBar_->isVisible()) {
@@ -646,6 +679,11 @@ int TextEditorTab::currentLineNumber() const
     return editor_->textCursor().blockNumber() + 1;
 }
 
+int TextEditorTab::currentColumnNumber() const
+{
+    return editor_->textCursor().positionInBlock() + 1;
+}
+
 QString TextEditorTab::text() const
 {
     return editor_->toPlainText();
@@ -781,13 +819,45 @@ void TextEditorTab::handleCursorPositionChanged()
         return;
     }
 
-    const int currentLineNumber = editor_->textCursor().blockNumber() + 1;
+    const QTextCursor cursor = editor_->textCursor();
+    const int currentLineNumber = cursor.blockNumber() + 1;
+    const int currentColumnNumber = cursor.positionInBlock() + 1;
+    const bool lineChanged = currentLineNumber != currentLineNumber_;
+    const bool columnChanged = currentColumnNumber != currentColumnNumber_;
     if (currentLineNumber != currentLineNumber_) {
         currentLineNumber_ = currentLineNumber;
         emit currentLineChanged(currentLineNumber_);
     }
+    if (columnChanged) {
+        currentColumnNumber_ = currentColumnNumber;
+    }
+    if (lineChanged || columnChanged) {
+        emit cursorPositionChanged(currentLineNumber_, currentColumnNumber_);
+    }
 
+    refreshCurrentLineHighlight();
     updateContextHelp();
+}
+
+void TextEditorTab::refreshCurrentLineHighlight()
+{
+    if (editor_ == nullptr || editor_->isReadOnly()) {
+        return;
+    }
+
+    QList<QTextEdit::ExtraSelection> selections;
+    QTextEdit::ExtraSelection selection;
+    QColor lineColor = palette().color(QPalette::Highlight);
+    if (!lineColor.isValid()) {
+        lineColor = QColor(QStringLiteral("#4f8ad9"));
+    }
+    lineColor.setAlpha(56);
+    selection.format.setBackground(lineColor);
+    selection.format.setProperty(QTextFormat::FullWidthSelection, true);
+    selection.cursor = editor_->textCursor();
+    selection.cursor.clearSelection();
+    selections.append(selection);
+    editor_->setExtraSelections(selections);
 }
 
 void TextEditorTab::refreshTitle()

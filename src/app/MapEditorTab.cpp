@@ -14,6 +14,7 @@
 #include <QNativeGestureEvent>
 #include <QPalette>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QSet>
 #include <QScopedValueRollback>
 #include <QScrollBar>
@@ -461,6 +462,411 @@ QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2L
     }
     return rows;
 }
+
+struct SourceVertexTextReference
+{
+    int lineNumber = 0;
+    int sourceVertexIndex = -1;
+    int xStartColumn = 1;
+    int xEndColumn = 1;
+    int yStartColumn = 1;
+    int yEndColumn = 1;
+};
+
+struct CursorGeometrySelection
+{
+    int featureLineNumber = 0;
+    QString geometryKind;
+    std::optional<SourceVertexTextReference> sourceVertexReference;
+};
+
+bool tokenLooksNumeric(const QString &token)
+{
+    if (token.isEmpty()) {
+        return false;
+    }
+
+    static const QRegularExpression numericPattern(
+        QStringLiteral(R"(^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$)"));
+    return numericPattern.match(token).hasMatch();
+}
+
+QPair<int, int> tokenColumnsForParsedLine(const TherionParsedLine &parsedLine, int tokenIndex)
+{
+    if (tokenIndex < 0 || tokenIndex >= parsedLine.tokenSpans.size()) {
+        return qMakePair(1, 1);
+    }
+
+    const TherionParsedToken &span = parsedLine.tokenSpans.at(tokenIndex);
+    const int startColumn = qMax(1, span.start + 1);
+    const int endColumn = qMax(startColumn, span.start + qMax(1, span.length));
+    return qMakePair(startColumn, endColumn);
+}
+
+QVector<int> coordinateTokenIndicesFromLine(const TherionParsedLine &parsedLine, int startTokenIndex)
+{
+    QVector<int> numericIndices;
+    const int firstTokenIndex = qMax(0, startTokenIndex);
+    if (firstTokenIndex >= parsedLine.tokens.size()) {
+        return numericIndices;
+    }
+
+    if (firstTokenIndex == 0) {
+        int firstNonQuotedIndex = -1;
+        for (int index = firstTokenIndex; index < parsedLine.tokens.size(); ++index) {
+            if (index < parsedLine.tokenSpans.size()
+                && parsedLine.tokenSpans.at(index).type == TherionTokenType::QuotedString) {
+                continue;
+            }
+            firstNonQuotedIndex = index;
+            break;
+        }
+
+        if (firstNonQuotedIndex >= 0 && !tokenLooksNumeric(parsedLine.tokens.at(firstNonQuotedIndex))) {
+            return numericIndices;
+        }
+    }
+
+    const QString firstToken = parsedLine.tokens.at(firstTokenIndex);
+    if (firstTokenIndex == 0
+        && firstToken.startsWith(QLatin1Char('-'))
+        && !tokenLooksNumeric(firstToken)) {
+        return numericIndices;
+    }
+
+    bool sawCoordinateToken = false;
+    bool skipOptionValueToken = false;
+    for (int index = firstTokenIndex; index < parsedLine.tokens.size(); ++index) {
+        if (skipOptionValueToken && !sawCoordinateToken) {
+            skipOptionValueToken = false;
+            continue;
+        }
+
+        const QString token = parsedLine.tokens.at(index);
+        if (!sawCoordinateToken
+            && firstTokenIndex > 0
+            && token.startsWith(QLatin1Char('-'))
+            && !tokenLooksNumeric(token)) {
+            if (index + 1 < parsedLine.tokens.size()) {
+                const QString nextToken = parsedLine.tokens.at(index + 1);
+                if (!nextToken.startsWith(QLatin1Char('-')) || tokenLooksNumeric(nextToken)) {
+                    skipOptionValueToken = true;
+                }
+            }
+            continue;
+        }
+
+        if (!tokenLooksNumeric(token)) {
+            if (sawCoordinateToken) {
+                break;
+            }
+            continue;
+        }
+
+        if (index < parsedLine.tokenSpans.size()
+            && parsedLine.tokenSpans.at(index).type == TherionTokenType::QuotedString) {
+            continue;
+        }
+
+        numericIndices.append(index);
+        sawCoordinateToken = true;
+    }
+
+    return numericIndices;
+}
+
+QVector<SourceVertexTextReference> lineSourceVertexReferencesFromParsedLine(const TherionParsedLine &parsedLine,
+                                                                            int startTokenIndex,
+                                                                            int *nextSourceVertexIndex)
+{
+    QVector<SourceVertexTextReference> references;
+    if (nextSourceVertexIndex == nullptr) {
+        return references;
+    }
+
+    const QVector<int> numericIndices = coordinateTokenIndicesFromLine(parsedLine, startTokenIndex);
+    for (int index = 0; index + 1 < numericIndices.size(); index += 2) {
+        SourceVertexTextReference reference;
+        reference.lineNumber = parsedLine.lineNumber;
+        reference.sourceVertexIndex = *nextSourceVertexIndex;
+        ++(*nextSourceVertexIndex);
+        const auto xColumns = tokenColumnsForParsedLine(parsedLine, numericIndices.at(index));
+        const auto yColumns = tokenColumnsForParsedLine(parsedLine, numericIndices.at(index + 1));
+        reference.xStartColumn = xColumns.first;
+        reference.xEndColumn = xColumns.second;
+        reference.yStartColumn = yColumns.first;
+        reference.yEndColumn = yColumns.second;
+        references.append(reference);
+    }
+
+    return references;
+}
+
+QVector<SourceVertexTextReference> areaSourceVertexReferencesFromParsedLine(const TherionParsedLine &parsedLine,
+                                                                            int startTokenIndex,
+                                                                            int *nextSourceVertexIndex)
+{
+    QVector<SourceVertexTextReference> references;
+    if (nextSourceVertexIndex == nullptr) {
+        return references;
+    }
+
+    QVector<int> numericIndices;
+    for (int index = qMax(0, startTokenIndex); index < parsedLine.tokens.size(); ++index) {
+        const QString token = parsedLine.tokens.at(index);
+        if (!tokenLooksNumeric(token)) {
+            continue;
+        }
+        if (index < parsedLine.tokenSpans.size()
+            && parsedLine.tokenSpans.at(index).type == TherionTokenType::QuotedString) {
+            continue;
+        }
+        numericIndices.append(index);
+    }
+
+    for (int index = 0; index + 1 < numericIndices.size(); index += 2) {
+        SourceVertexTextReference reference;
+        reference.lineNumber = parsedLine.lineNumber;
+        reference.sourceVertexIndex = *nextSourceVertexIndex;
+        ++(*nextSourceVertexIndex);
+        const auto xColumns = tokenColumnsForParsedLine(parsedLine, numericIndices.at(index));
+        const auto yColumns = tokenColumnsForParsedLine(parsedLine, numericIndices.at(index + 1));
+        reference.xStartColumn = xColumns.first;
+        reference.xEndColumn = xColumns.second;
+        reference.yStartColumn = yColumns.first;
+        reference.yEndColumn = yColumns.second;
+        references.append(reference);
+    }
+
+    return references;
+}
+
+std::optional<SourceVertexTextReference> sourceVertexReferenceAtCursor(const QVector<SourceVertexTextReference> &references,
+                                                                       int cursorColumn)
+{
+    if (references.isEmpty()) {
+        return std::nullopt;
+    }
+
+    const int normalizedColumn = qMax(1, cursorColumn);
+    for (const SourceVertexTextReference &reference : references) {
+        if ((normalizedColumn >= reference.xStartColumn && normalizedColumn <= reference.xEndColumn)
+            || (normalizedColumn >= reference.yStartColumn && normalizedColumn <= reference.yEndColumn)) {
+            return reference;
+        }
+    }
+
+    int bestDistance = std::numeric_limits<int>::max();
+    std::optional<SourceVertexTextReference> bestReference;
+    for (const SourceVertexTextReference &reference : references) {
+        const int distance = qMin(qAbs(normalizedColumn - reference.xStartColumn),
+                                  qAbs(normalizedColumn - reference.yStartColumn));
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestReference = reference;
+        }
+    }
+
+    return bestReference;
+}
+
+CursorGeometrySelection cursorGeometrySelectionForTextCursor(const QVector<TherionParsedLine> &parsedLines,
+                                                             int cursorLine,
+                                                             int cursorColumn)
+{
+    CursorGeometrySelection selection;
+    bool inLineBlock = false;
+    bool inAreaBlock = false;
+    int activeFeatureLine = 0;
+    int nextLineSourceVertexIndex = 0;
+    int nextAreaSourceVertexIndex = 0;
+
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        const QString directive = parsedLine.directive;
+
+        if (directive == QStringLiteral("endline")) {
+            inLineBlock = false;
+            activeFeatureLine = 0;
+            nextLineSourceVertexIndex = 0;
+            continue;
+        }
+
+        if (directive == QStringLiteral("endarea")) {
+            inAreaBlock = false;
+            activeFeatureLine = 0;
+            nextAreaSourceVertexIndex = 0;
+            continue;
+        }
+
+        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("line")) {
+            inLineBlock = true;
+            activeFeatureLine = parsedLine.lineNumber;
+            nextLineSourceVertexIndex = 0;
+            if (cursorLine == parsedLine.lineNumber) {
+                selection.featureLineNumber = activeFeatureLine;
+                selection.geometryKind = QStringLiteral("line");
+                const auto references = lineSourceVertexReferencesFromParsedLine(parsedLine, 1, &nextLineSourceVertexIndex);
+                selection.sourceVertexReference = sourceVertexReferenceAtCursor(references, cursorColumn);
+                return selection;
+            }
+
+            lineSourceVertexReferencesFromParsedLine(parsedLine, 1, &nextLineSourceVertexIndex);
+            continue;
+        }
+
+        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("area")) {
+            inAreaBlock = true;
+            activeFeatureLine = parsedLine.lineNumber;
+            nextAreaSourceVertexIndex = 0;
+            if (cursorLine == parsedLine.lineNumber) {
+                selection.featureLineNumber = activeFeatureLine;
+                selection.geometryKind = QStringLiteral("area");
+                const auto references = areaSourceVertexReferencesFromParsedLine(parsedLine, 1, &nextAreaSourceVertexIndex);
+                selection.sourceVertexReference = sourceVertexReferenceAtCursor(references, cursorColumn);
+                return selection;
+            }
+
+            areaSourceVertexReferencesFromParsedLine(parsedLine, 1, &nextAreaSourceVertexIndex);
+            continue;
+        }
+
+        if (inLineBlock) {
+            const auto references = lineSourceVertexReferencesFromParsedLine(parsedLine, 0, &nextLineSourceVertexIndex);
+            if (cursorLine == parsedLine.lineNumber) {
+                selection.featureLineNumber = activeFeatureLine;
+                selection.geometryKind = QStringLiteral("line");
+                selection.sourceVertexReference = sourceVertexReferenceAtCursor(references, cursorColumn);
+                return selection;
+            }
+            continue;
+        }
+
+        if (inAreaBlock) {
+            const auto references = areaSourceVertexReferencesFromParsedLine(parsedLine, 0, &nextAreaSourceVertexIndex);
+            if (cursorLine == parsedLine.lineNumber) {
+                selection.featureLineNumber = activeFeatureLine;
+                selection.geometryKind = QStringLiteral("area");
+                selection.sourceVertexReference = sourceVertexReferenceAtCursor(references, cursorColumn);
+                return selection;
+            }
+            continue;
+        }
+    }
+
+    return selection;
+}
+
+std::optional<SourceVertexTextReference> sourceVertexTextReferenceForSelection(const QVector<TherionParsedLine> &parsedLines,
+                                                                               int featureLineNumber,
+                                                                               const QString &geometryKind,
+                                                                               int sourceVertexIndex)
+{
+    if (featureLineNumber <= 0 || sourceVertexIndex < 0) {
+        return std::nullopt;
+    }
+
+    const bool forLine = geometryKind.startsWith(QStringLiteral("line"));
+    const bool forArea = geometryKind.startsWith(QStringLiteral("area"));
+    if (!forLine && !forArea) {
+        return std::nullopt;
+    }
+
+    bool inLineBlock = false;
+    bool inAreaBlock = false;
+    int nextLineSourceVertexIndex = 0;
+    int nextAreaSourceVertexIndex = 0;
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        const QString directive = parsedLine.directive;
+
+        if (directive == QStringLiteral("endline")) {
+            inLineBlock = false;
+            nextLineSourceVertexIndex = 0;
+            continue;
+        }
+        if (directive == QStringLiteral("endarea")) {
+            inAreaBlock = false;
+            nextAreaSourceVertexIndex = 0;
+            continue;
+        }
+
+        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("line")) {
+            inLineBlock = (parsedLine.lineNumber == featureLineNumber) && forLine;
+            nextLineSourceVertexIndex = 0;
+            const auto references = lineSourceVertexReferencesFromParsedLine(parsedLine, 1, &nextLineSourceVertexIndex);
+            if (inLineBlock) {
+                for (const SourceVertexTextReference &reference : references) {
+                    if (reference.sourceVertexIndex == sourceVertexIndex) {
+                        return reference;
+                    }
+                }
+            }
+            continue;
+        }
+
+        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("area")) {
+            inAreaBlock = (parsedLine.lineNumber == featureLineNumber) && forArea;
+            nextAreaSourceVertexIndex = 0;
+            const auto references = areaSourceVertexReferencesFromParsedLine(parsedLine, 1, &nextAreaSourceVertexIndex);
+            if (inAreaBlock) {
+                for (const SourceVertexTextReference &reference : references) {
+                    if (reference.sourceVertexIndex == sourceVertexIndex) {
+                        return reference;
+                    }
+                }
+            }
+            continue;
+        }
+
+        if (inLineBlock) {
+            const auto references = lineSourceVertexReferencesFromParsedLine(parsedLine, 0, &nextLineSourceVertexIndex);
+            for (const SourceVertexTextReference &reference : references) {
+                if (reference.sourceVertexIndex == sourceVertexIndex) {
+                    return reference;
+                }
+            }
+            continue;
+        }
+
+        if (inAreaBlock) {
+            const auto references = areaSourceVertexReferencesFromParsedLine(parsedLine, 0, &nextAreaSourceVertexIndex);
+            for (const SourceVertexTextReference &reference : references) {
+                if (reference.sourceVertexIndex == sourceVertexIndex) {
+                    return reference;
+                }
+            }
+            continue;
+        }
+    }
+
+    return std::nullopt;
+}
+
+MapEditableGeometryVertexItem *findGeometryVertexItem(QGraphicsScene *scene,
+                                                      int lineNumber,
+                                                      int sourceVertexIndex,
+                                                      const QString &geometryKindPrefix)
+{
+    if (scene == nullptr || lineNumber <= 0 || sourceVertexIndex < 0) {
+        return nullptr;
+    }
+
+    const auto items = scene->items();
+    for (QGraphicsItem *item : items) {
+        auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item);
+        if (vertexItem == nullptr) {
+            continue;
+        }
+        if (vertexItem->lineNumber() != lineNumber || vertexItem->vertexIndex() != sourceVertexIndex) {
+            continue;
+        }
+        if (!geometryKindPrefix.isEmpty() && !vertexItem->geometryKind().startsWith(geometryKindPrefix)) {
+            continue;
+        }
+        return vertexItem;
+    }
+
+    return nullptr;
+}
 }
 
 bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
@@ -904,12 +1310,54 @@ void MapEditorTab::handleMapSceneSelectionChanged()
         return;
     }
 
+    int selectedLineNumber = 0;
+    int selectedSourceVertexIndex = -1;
+    QString selectedGeometryKind;
     auto *card = dynamic_cast<MapCardItem *>(selectedItems.first());
     if (card != nullptr) {
-        if (card->lineNumber() > 0 && card->lineNumber() != currentLineNumber()) {
-            textEditor_->goToLine(card->lineNumber());
-        }
+        selectedLineNumber = card->lineNumber();
+    } else {
+        for (QGraphicsItem *item : selectedItems) {
+            if (item == nullptr) {
+                continue;
+            }
 
+            const int lineNumber = item->data(kMapSceneLineNumberRole).toInt();
+            if (lineNumber > 0) {
+                selectedLineNumber = lineNumber;
+            }
+
+            auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item);
+            if (vertexItem != nullptr && selectedSourceVertexIndex < 0) {
+                selectedSourceVertexIndex = vertexItem->vertexIndex();
+                selectedGeometryKind = vertexItem->geometryKind();
+            }
+        }
+    }
+
+    if (selectedLineNumber > 0 && textEditor_ != nullptr) {
+        const QScopedValueRollback<bool> syncGuard(mapSelectionDrivenTextNavigationInProgress_, true);
+        if (selectedSourceVertexIndex >= 0) {
+            const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_->text());
+            const std::optional<SourceVertexTextReference> sourceReference =
+                sourceVertexTextReferenceForSelection(parsedLines,
+                                                      selectedLineNumber,
+                                                      selectedGeometryKind,
+                                                      selectedSourceVertexIndex);
+            if (sourceReference.has_value()) {
+                if (textEditor_->currentLineNumber() != sourceReference->lineNumber
+                    || textEditor_->currentColumnNumber() != sourceReference->xStartColumn) {
+                    textEditor_->goToLineColumn(sourceReference->lineNumber, sourceReference->xStartColumn);
+                }
+            } else if (selectedLineNumber != currentLineNumber()) {
+                textEditor_->goToLine(selectedLineNumber);
+            }
+        } else if (selectedLineNumber != currentLineNumber()) {
+            textEditor_->goToLine(selectedLineNumber);
+        }
+    }
+
+    if (card != nullptr) {
         updateGeometrySelectionPresentation();
         updateCommandSurfaceState();
         updateHelpPanel();
@@ -919,6 +1367,89 @@ void MapEditorTab::handleMapSceneSelectionChanged()
     updateGeometrySelectionPresentation();
     updateCommandSurfaceState();
     updateHelpPanel();
+}
+
+void MapEditorTab::syncMapSelectionFromTextCursor(int lineNumber, int columnNumber)
+{
+    lastCursorSyncedLine_ = lineNumber;
+    lastCursorSyncedColumn_ = columnNumber;
+
+    if (mapScene_ == nullptr || textEditor_ == nullptr || lineNumber <= 0) {
+        return;
+    }
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_->text());
+    const CursorGeometrySelection cursorSelection = cursorGeometrySelectionForTextCursor(parsedLines,
+                                                                                         lineNumber,
+                                                                                         columnNumber);
+    if (cursorSelection.featureLineNumber <= 0) {
+        selectMapLine(lineNumber);
+        return;
+    }
+
+    selectMapLine(cursorSelection.featureLineNumber);
+    if (!cursorSelection.sourceVertexReference.has_value()) {
+        return;
+    }
+
+    const int sourceVertexIndex = cursorSelection.sourceVertexReference->sourceVertexIndex;
+    if (sourceVertexIndex < 0 || mapScene_ == nullptr) {
+        return;
+    }
+
+    const QString geometryKind = cursorSelection.geometryKind.trimmed().toLower();
+    const bool lineGeometry = geometryKind == QStringLiteral("line");
+    const bool areaGeometry = geometryKind == QStringLiteral("area");
+    if (!lineGeometry && !areaGeometry) {
+        return;
+    }
+
+    MapEditableGeometryVertexItem *targetItem = nullptr;
+    if (lineGeometry) {
+        int ownerSourceVertexIndex = -1;
+        if (const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(textEditor_->text(),
+                                                                                            cursorSelection.featureLineNumber);
+            lineFeature.has_value()) {
+            const int ownerVertexOrder = lineVertexOwnerIndexForSourceVertex(lineFeature.value(), sourceVertexIndex);
+            if (ownerVertexOrder >= 0 && ownerVertexOrder < lineFeature->lineVertices.size()) {
+                const MapGeometryFeature::TH2LineVertex &ownerVertex = lineFeature->lineVertices.at(ownerVertexOrder);
+                ownerSourceVertexIndex = ownerVertex.anchorSourceVertexIndex >= 0
+                    ? ownerVertex.anchorSourceVertexIndex
+                    : ownerVertexOrder;
+            }
+        }
+
+        updatingSelection_ = true;
+        if (ownerSourceVertexIndex >= 0) {
+            if (MapEditableGeometryVertexItem *ownerAnchor = findGeometryVertexItem(mapScene_,
+                                                                                     cursorSelection.featureLineNumber,
+                                                                                     ownerSourceVertexIndex,
+                                                                                     QStringLiteral("line"))) {
+                ownerAnchor->setSelected(true);
+            }
+        }
+        updatingSelection_ = false;
+        updateGeometrySelectionPresentation();
+
+        targetItem = findGeometryVertexItem(mapScene_,
+                                            cursorSelection.featureLineNumber,
+                                            sourceVertexIndex,
+                                            QStringLiteral("line"));
+    } else {
+        targetItem = findGeometryVertexItem(mapScene_,
+                                            cursorSelection.featureLineNumber,
+                                            sourceVertexIndex,
+                                            QStringLiteral("area"));
+    }
+
+    if (targetItem != nullptr) {
+        updatingSelection_ = true;
+        targetItem->setSelected(true);
+        updatingSelection_ = false;
+        updateGeometrySelectionPresentation();
+        updateCommandSurfaceState();
+        updateHelpPanel();
+    }
 }
 
 void MapEditorTab::updateGeometrySelectionPresentation()

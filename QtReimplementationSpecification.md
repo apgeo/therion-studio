@@ -203,6 +203,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The text editor shall provide a contextual help/documentation panel that shows Therion command summaries, arguments, accepted values, options, and related keywords when metadata is available for the token or item at the caret.
 - The help/documentation panel shall be collapsible and resizable and shall not disturb the active editor selection when it is shown or hidden.
 - When a TH2 file is open, the text editor selection shall stay synchronized with the graphical map selection.
+- When map/object selection reveals a source location in the text editor, the corresponding source line shall be visibly highlighted in the editor viewport.
 
 #### 3.8.3 TH2 Map Editor Behavior
 
@@ -237,6 +238,8 @@ The rules below define the expected day-to-day interaction model. If a later req
 - After reparsing the document, the map editor shall restore the selected object when that object can still be resolved in the updated document.
 - Geometry editing shall support point placement, line vertex editing, area editing, and selection of individual vertices or control points.
 - Vertex overlays should be shown only for the currently selected map object, and line-control handles/connectors shall be shown only for the currently selected line vertex, to reduce visual clutter while preserving editability.
+- Selecting a line or area vertex/control point in the map editor shall reveal the corresponding source coordinate token in the text editor when that source token can be resolved.
+- Placing the text cursor on a line or area coordinate token shall select the corresponding map vertex/control point when that map geometry is resolvable.
 - If line-point orientation is not explicitly set, the effective default shall be perpendicular to the local line tangent on the left side of the line direction.
 - Line-point orientation values shall be normalized to a canonical 0 to <360 degree range when parsed, edited, and serialized.
 - Repeated directional line decorations (for example teeth or ticks) shall use line direction as their reference frame, and when a line is reversed the decoration orientation shall reverse accordingly.

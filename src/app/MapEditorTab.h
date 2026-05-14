@@ -106,6 +106,7 @@ protected:
 
 private slots:
     void handleTextEditorCurrentLineChanged(int lineNumber);
+    void handleTextEditorCursorPositionChanged(int lineNumber, int columnNumber);
     void handleMapSceneSelectionChanged();
     void handleAddPointTriggered();
     void handleAddLineTriggered();
@@ -182,6 +183,7 @@ private:
     void setHelpCollapsed(bool collapsed);
     void updateWorkspaceVisibility();
     void updateGeometrySelectionPresentation();
+    void syncMapSelectionFromTextCursor(int lineNumber, int columnNumber);
     void detachMapPaneToWindow();
     void reattachMapPaneFromWindow();
     void focusDetachedMapPaneWindow();
@@ -251,5 +253,8 @@ private:
     QPointer<QMainWindow> detachedMapPaneWindow_;
     bool mapPaneDetached_ = false;
     bool reattachingMapPane_ = false;
+    bool mapSelectionDrivenTextNavigationInProgress_ = false;
+    int lastCursorSyncedLine_ = -1;
+    int lastCursorSyncedColumn_ = -1;
 };
 }

@@ -176,6 +176,7 @@ void MapEditorTab::buildUi()
     connect(textEditor_, &TextEditorTab::titleChanged, this, &MapEditorTab::titleChanged);
     connect(textEditor_, &TextEditorTab::dirtyStateChanged, this, &MapEditorTab::dirtyStateChanged);
     connect(textEditor_, &TextEditorTab::currentLineChanged, this, &MapEditorTab::handleTextEditorCurrentLineChanged);
+    connect(textEditor_, &TextEditorTab::cursorPositionChanged, this, &MapEditorTab::handleTextEditorCursorPositionChanged);
     connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::refreshMapScene);
     connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::documentTextChanged);
 
@@ -354,8 +355,23 @@ void MapEditorTab::setWorkspaceMode(WorkspaceMode mode)
 
 void MapEditorTab::handleTextEditorCurrentLineChanged(int lineNumber)
 {
-    selectMapLine(lineNumber);
+    if (!mapSelectionDrivenTextNavigationInProgress_) {
+        syncMapSelectionFromTextCursor(lineNumber, textEditor_ != nullptr ? textEditor_->currentColumnNumber() : 1);
+    }
     emit currentLineChanged(lineNumber);
+}
+
+void MapEditorTab::handleTextEditorCursorPositionChanged(int lineNumber, int columnNumber)
+{
+    if (mapSelectionDrivenTextNavigationInProgress_) {
+        return;
+    }
+
+    if (lineNumber == lastCursorSyncedLine_ && columnNumber == lastCursorSyncedColumn_) {
+        return;
+    }
+
+    syncMapSelectionFromTextCursor(lineNumber, columnNumber);
 }
 
 void MapEditorTab::handleUndoTriggered()

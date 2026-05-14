@@ -1,5 +1,7 @@
 #include "../src/app/MapEditorTab.h"
 #include "../src/app/MapEditorSceneInternals.h"
+#include "../src/app/MapEditorSceneSupport.h"
+#include "../src/app/TextEditorTab.h"
 
 #include <QApplication>
 #include <QCoreApplication>
@@ -85,6 +87,46 @@ MapEditableGeometryVertexItem *findCenteredLineAnchor(QGraphicsScene *scene, con
     return best;
 }
 
+MapEditablePointItem *findPointItemForLine(QGraphicsScene *scene, int lineNumber)
+{
+    if (scene == nullptr || lineNumber <= 0) {
+        return nullptr;
+    }
+
+    const auto items = scene->items();
+    for (QGraphicsItem *rawItem : items) {
+        auto *pointItem = dynamic_cast<MapEditablePointItem *>(rawItem);
+        if (pointItem == nullptr || !pointItem->isVisible()) {
+            continue;
+        }
+        if (pointItem->data(kMapSceneLineNumberRole).toInt() == lineNumber) {
+            return pointItem;
+        }
+    }
+
+    return nullptr;
+}
+
+MapEditableGeometryVertexItem *findSelectedLineVertex(QGraphicsScene *scene)
+{
+    if (scene == nullptr) {
+        return nullptr;
+    }
+
+    const QList<QGraphicsItem *> selectedItems = scene->selectedItems();
+    for (QGraphicsItem *rawItem : selectedItems) {
+        auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(rawItem);
+        if (vertexItem == nullptr) {
+            continue;
+        }
+        if (vertexItem->geometryKind().startsWith(QStringLiteral("line"))) {
+            return vertexItem;
+        }
+    }
+
+    return nullptr;
+}
+
 
 void sendMouse(QWidget *widget,
                QEvent::Type type,
@@ -168,6 +210,7 @@ int runDragUndoRedoSmoke()
         "  100 0\n"
         "  100 -100\n"
         "endline\n"
+        "point 200 -50 station -name P1\n"
         "endscrap\n";
     file.write(th2Contents);
     file.close();
@@ -206,9 +249,48 @@ int runDragUndoRedoSmoke()
     const QRectF visibleSceneRect = mapView->mapToScene(mapView->viewport()->rect()).boundingRect();
     mapTab->goToLine(4);
     pumpEvents();
+    if (!expect(mapTab->currentLineNumber() == 4, "Expected map tab current line to be the line object start.")) {
+        return 1;
+    }
 
     auto *anchorItem = findCenteredLineAnchor(mapView->scene(), visibleSceneRect);
     if (!expect(anchorItem != nullptr, "No visible editable line anchor was found after selecting line geometry.")) {
+        return 1;
+    }
+    anchorItem->setSelected(true);
+    pumpEvents();
+    const int anchorSelectedLine = mapTab->currentLineNumber();
+    if (!expect(anchorSelectedLine >= 5 && anchorSelectedLine <= 7,
+                "Selecting map vertex should move text editor cursor to that vertex coordinate row.")) {
+        return 1;
+    }
+
+    auto *pointItem = findPointItemForLine(mapView->scene(), 9);
+    if (!expect(pointItem != nullptr, "Failed to find map point geometry item for source line 9.")) {
+        return 1;
+    }
+    mapView->scene()->clearSelection();
+    pointItem->setSelected(true);
+    pumpEvents();
+    if (!expect(mapTab->currentLineNumber() == 9,
+                "Selecting map geometry should move text editor cursor to the geometry source line.")) {
+        return 1;
+    }
+    mapTab->goToLine(4);
+    pumpEvents();
+    auto *textEditor = mapTab->findChild<TextEditorTab *>();
+    if (!expect(textEditor != nullptr, "Text editor was not found in MapEditorTab.")) {
+        return 1;
+    }
+    textEditor->goToLineColumn(7, 3);
+    pumpEvents();
+    auto *selectedVertexFromText = findSelectedLineVertex(mapView->scene());
+    if (!expect(selectedVertexFromText != nullptr,
+                "Moving text cursor to a vertex row should select the corresponding map vertex.")) {
+        return 1;
+    }
+    if (!expect(selectedVertexFromText->lineNumber() == 4 && selectedVertexFromText->vertexIndex() == 2,
+                "Text-to-map vertex sync should select line vertex index 2 for source row line 7.")) {
         return 1;
     }
 

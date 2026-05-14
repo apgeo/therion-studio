@@ -138,6 +138,7 @@ Safety guardrails:
 Text editor includes:
 
 - syntax highlighting
+- active-line highlight that follows the text cursor (including map-driven source navigation)
 - find/replace bar with `Whole word` and `Case sensitive` options
 - contextual help pane below the editor, resizable via splitter handle
 - bottom status row for encoding notes and conversion action
@@ -207,6 +208,9 @@ Line-handle behavior:
 - line and area edit vertices are shown only for the currently selected map object
 - line control handles/connectors are shown only for the currently selected line vertex (or its selected control handle)
 - line accent/highlight overlay is shown only for the currently selected line object
+- selecting a map object (card or geometry) moves the text editor cursor to that object's source line
+- selecting a map line/area vertex (including line control points) moves the text cursor to that specific vertex coordinate token
+- moving the text cursor onto a line/area coordinate token selects the corresponding map vertex/control point
 - dragging a line anchor moves attached incoming/outgoing control handles by the same delta
 - on smooth vertices, dragging one control handle updates the opposite control handle live (mirrored/collinear) during drag
 

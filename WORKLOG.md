@@ -195,6 +195,9 @@ Automated tests currently in-tree and used as regression baseline:
 
 ### 2026-05-14
 
+- ~~Added persistent active-line highlighting in the text editor (`QPlainTextEdit` extra-selection), so map-driven object/vertex selections visibly highlight the resolved source line without relying on text-range selection.~~
+- ~~Implemented vertex-level bidirectional map/text sync: selecting line/area vertices (including line control points) now navigates text to the matching coordinate token, and moving the text cursor onto coordinate tokens now selects the corresponding map vertex/control.~~
+- ~~Fixed reverse map/text sync gap: selecting map objects now moves the TH2 text cursor to the selected object's source line (cards and geometry items), matching existing text-to-map highlighting behavior.~~
 - ~~Updated map-editor geometry presentation to reduce clutter: line/area vertices and control handles now appear only for selected objects, and line accent highlight overlays render only for selected lines.~~
 - ~~Refined map-editor vertex visibility behavior: line control handles/connectors now appear only for the selected line vertex (or selected control handle), while non-selected vertices keep their controls hidden.~~
 - ~~Removed Qt menu-construction deprecation warnings by replacing deprecated `QMenu::addAction(..., shortcut)` overload usage with explicit `QAction` setup and signal wiring in `MainWindow::buildMenus`.~~

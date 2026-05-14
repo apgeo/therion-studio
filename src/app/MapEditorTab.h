@@ -226,6 +226,8 @@ private:
     QPointF touchPanStartPosition_;
     QPointF touchPanLastPosition_;
     QDateTime lastTabletInteractionUtc_;
+    bool nativeZoomGestureActive_ = false;
+    QDateTime lastNativeZoomGestureUtc_;
     bool helpCollapsed_ = false;
     int helpPanelHeight_ = 180;
     int selectedBackgroundLayerIndex_ = -1;

@@ -480,6 +480,19 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         }
         case QEvent::Wheel: {
             auto *wheelEvent = static_cast<QWheelEvent *>(event);
+            if (nativeZoomGestureActive_
+                && lastNativeZoomGestureUtc_.isValid()
+                && lastNativeZoomGestureUtc_.msecsTo(QDateTime::currentDateTimeUtc()) > 1500) {
+                nativeZoomGestureActive_ = false;
+            }
+
+            const bool recentNativeZoom = lastNativeZoomGestureUtc_.isValid()
+                && lastNativeZoomGestureUtc_.msecsTo(QDateTime::currentDateTimeUtc()) <= 150;
+            if (nativeZoomGestureActive_ || recentNativeZoom) {
+                event->accept();
+                return true;
+            }
+
             if (primaryPointerInteractionActive_) {
                 event->accept();
                 return true;
@@ -538,8 +551,32 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
                 return true;
             }
 
+            if (gestureEvent->gestureType() == Qt::BeginNativeGesture) {
+                nativeZoomGestureActive_ = true;
+                lastNativeZoomGestureUtc_ = QDateTime::currentDateTimeUtc();
+                event->accept();
+                return true;
+            }
+
+            if (gestureEvent->gestureType() == Qt::EndNativeGesture) {
+                nativeZoomGestureActive_ = false;
+                lastNativeZoomGestureUtc_ = QDateTime::currentDateTimeUtc();
+                event->accept();
+                return true;
+            }
+
             if (gestureEvent->gestureType() == Qt::ZoomNativeGesture) {
-                const qreal factor = 1.0 + gestureEvent->value();
+                nativeZoomGestureActive_ = true;
+                lastNativeZoomGestureUtc_ = QDateTime::currentDateTimeUtc();
+                const qreal rawValue = gestureEvent->value();
+                if (!std::isfinite(rawValue)) {
+                    event->accept();
+                    return true;
+                }
+
+                // Clamp one pinch update so trackpad spikes cannot jump straight to extreme scales.
+                const qreal clampedDelta = qBound(-0.35, rawValue, 0.35);
+                const qreal factor = std::exp(clampedDelta);
                 if (factor > 0.0) {
                     applyZoomAtViewportPosition(factor, gestureEvent->position());
                 }
@@ -615,6 +652,7 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             primaryPointerInteractionActive_ = false;
             touchPanCandidate_ = false;
             touchPanActive_ = false;
+            nativeZoomGestureActive_ = false;
             break;
         case QEvent::Resize:
             if (autoFitEnabled_ && mapView_->isVisible()) {

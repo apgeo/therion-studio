@@ -778,6 +778,11 @@ CursorGeometrySelection cursorGeometrySelectionForTextCursor(const QVector<Theri
         const QString directive = parsedLine.directive;
 
         if (directive == QStringLiteral("endline")) {
+            if (inLineBlock && cursorLine == parsedLine.lineNumber) {
+                selection.featureLineNumber = activeFeatureLine;
+                selection.geometryKind = QStringLiteral("line");
+                return selection;
+            }
             inLineBlock = false;
             activeFeatureLine = 0;
             nextLineSourceVertexIndex = 0;
@@ -785,6 +790,11 @@ CursorGeometrySelection cursorGeometrySelectionForTextCursor(const QVector<Theri
         }
 
         if (directive == QStringLiteral("endarea")) {
+            if (inAreaBlock && cursorLine == parsedLine.lineNumber) {
+                selection.featureLineNumber = activeFeatureLine;
+                selection.geometryKind = QStringLiteral("area");
+                return selection;
+            }
             inAreaBlock = false;
             activeFeatureLine = 0;
             nextAreaSourceVertexIndex = 0;

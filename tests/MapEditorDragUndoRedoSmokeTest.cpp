@@ -127,6 +127,26 @@ MapEditableGeometryVertexItem *findSelectedLineVertex(QGraphicsScene *scene)
     return nullptr;
 }
 
+int selectedSourceLineNumber(QGraphicsScene *scene)
+{
+    if (scene == nullptr) {
+        return 0;
+    }
+
+    const QList<QGraphicsItem *> selectedItems = scene->selectedItems();
+    for (QGraphicsItem *rawItem : selectedItems) {
+        if (rawItem == nullptr || !rawItem->isVisible()) {
+            continue;
+        }
+        const int lineNumber = rawItem->data(kMapSceneLineNumberRole).toInt();
+        if (lineNumber > 0) {
+            return lineNumber;
+        }
+    }
+
+    return 0;
+}
+
 
 void sendMouse(QWidget *widget,
                QEvent::Type type,
@@ -213,6 +233,10 @@ int runDragUndoRedoSmoke()
         "  subtype presumed\n"
         "  altitude 12\n"
         "endline\n"
+        "area water\n"
+        "  0 0\n"
+        "  100 0 100 -100\n"
+        "endarea\n"
         "\n"
         "point 200 -50 station -name P1\n"
         "endscrap\n";
@@ -306,16 +330,28 @@ int runDragUndoRedoSmoke()
                 "Text-to-map sync should map arbitrary line option rows to the current line vertex.")) {
         return 1;
     }
+    textEditor->goToLineColumn(11, 3);
+    pumpEvents();
+    if (!expect(selectedSourceLineNumber(mapView->scene()) == 4,
+                "Moving text cursor to endline should keep selection on the owning line block start.")) {
+        return 1;
+    }
+    textEditor->goToLineColumn(15, 3);
+    pumpEvents();
+    if (!expect(selectedSourceLineNumber(mapView->scene()) == 12,
+                "Moving text cursor to endarea should keep selection on the owning area block start.")) {
+        return 1;
+    }
 
-    auto *pointItem = findPointItemForLine(mapView->scene(), 13);
-    if (!expect(pointItem != nullptr, "Failed to find map point geometry item for source line 13.")) {
+    auto *pointItem = findPointItemForLine(mapView->scene(), 17);
+    if (!expect(pointItem != nullptr, "Failed to find map point geometry item for source line 17.")) {
         return 1;
     }
     mapView->scene()->clearSelection();
-    pointItem->setData(kMapSceneLineNumberRole, 12);
+    pointItem->setData(kMapSceneLineNumberRole, 16);
     pointItem->setSelected(true);
     pumpEvents();
-    if (!expect(mapTab->currentLineNumber() == 13,
+    if (!expect(mapTab->currentLineNumber() == 17,
                 "Selecting map point geometry should resolve the coordinate row, not the blank line above it.")) {
         return 1;
     }

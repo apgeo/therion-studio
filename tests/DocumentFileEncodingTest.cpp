@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QStringConverter>
 #include <QTemporaryDir>
 
 #include <iostream>
@@ -54,8 +55,8 @@ int runUtf8DetectionTest()
     QString contents;
     QString encodingLabel;
     QString errorMessage;
-    QStringConverter::Encoding encoding = QStringConverter::Latin1;
-    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encoding, &encodingLabel, &errorMessage),
+    QString encodingName = QStringLiteral("latin1");
+    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encodingName, &encodingLabel, &errorMessage),
                 qPrintable(errorMessage))) {
         return 1;
     }
@@ -63,7 +64,8 @@ int runUtf8DetectionTest()
     if (!expect(contents == QStringLiteral("survey čau\nendsurvey\n"), "UTF-8 fixture decoded contents mismatch.")) {
         return 1;
     }
-    if (!expect(encoding == QStringConverter::Utf8, "UTF-8 fixture did not report UTF-8 encoding.")) {
+    if (!expect(encodingName.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0,
+                "UTF-8 fixture did not report UTF-8 encoding.")) {
         return 1;
     }
 
@@ -86,8 +88,8 @@ int runNonUtf8RoundTripTest()
     QString contents;
     QString encodingLabel;
     QString errorMessage;
-    QStringConverter::Encoding encoding = QStringConverter::Utf8;
-    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encoding, &encodingLabel, &errorMessage),
+    QString encodingName = QStringLiteral("UTF-8");
+    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encodingName, &encodingLabel, &errorMessage),
                 qPrintable(errorMessage))) {
         return 1;
     }
@@ -95,17 +97,67 @@ int runNonUtf8RoundTripTest()
     if (!expect(contents == QStringLiteral("survey café\nendsurvey\n"), "Non-UTF-8 fixture decoded contents mismatch.")) {
         return 1;
     }
-    if (!expect(encoding == QStringConverter::Latin1 || encoding == QStringConverter::System,
-                "Non-UTF-8 fixture should decode as Latin1/System.")) {
+    if (!expect(!encodingName.trimmed().isEmpty(), "Non-UTF-8 fixture should report a non-empty encoding name.")) {
         return 1;
     }
 
-    if (!expect(DocumentFile::writeTextFile(filePath, contents, encoding, &errorMessage), qPrintable(errorMessage))) {
+    if (!expect(DocumentFile::writeTextFile(filePath, contents, encodingName, &errorMessage), qPrintable(errorMessage))) {
         return 1;
     }
 
     const QByteArray writtenBytes = readRawFile(filePath);
     if (!expect(writtenBytes == latin1Bytes, "Non-UTF-8 save did not preserve original byte encoding.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runWindows1250DirectiveRoundTripTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary directory creation failed.")) {
+        return 1;
+    }
+
+    const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("cp1250.th"));
+    const QString sourceText = QStringLiteral("encoding windows-1250\nsurvey žluťoučký\nendsurvey\n");
+    QStringEncoder encoder(QStringLiteral("windows-1250"), QStringConverter::Flag::Default);
+    if (!expect(encoder.isValid(), "windows-1250 codec is not available in this Qt runtime.")) {
+        return 1;
+    }
+
+    const QByteArray encodedBytes = encoder.encode(sourceText);
+    if (!expect(!encoder.hasError(), "Failed to encode windows-1250 fixture text.")) {
+        return 1;
+    }
+    if (!expect(writeRawFile(filePath, encodedBytes), "Failed to write windows-1250 fixture file.")) {
+        return 1;
+    }
+
+    QString contents;
+    QString encodingName;
+    QString encodingLabel;
+    QString errorMessage;
+    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encodingName, &encodingLabel, &errorMessage),
+                qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    if (!expect(contents == sourceText, "windows-1250 fixture decoded contents mismatch.")) {
+        return 1;
+    }
+    if (!expect(encodingName.compare(QStringLiteral("windows-1250"), Qt::CaseInsensitive) == 0,
+                "windows-1250 fixture did not preserve codec name from directive.")) {
+        return 1;
+    }
+
+    if (!expect(DocumentFile::writeTextFile(filePath, contents, encodingName, &errorMessage), qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    const QByteArray writtenBytes = readRawFile(filePath);
+    if (!expect(writtenBytes == encodedBytes, "windows-1250 save did not preserve original byte encoding.")) {
         return 1;
     }
 
@@ -119,5 +171,9 @@ int main()
         return utf8Result;
     }
 
-    return runNonUtf8RoundTripTest();
+    if (const int nonUtfResult = runNonUtf8RoundTripTest(); nonUtfResult != 0) {
+        return nonUtfResult;
+    }
+
+    return runWindows1250DirectiveRoundTripTest();
 }

@@ -2,7 +2,6 @@
 
 #include <QString>
 #include <QStringList>
-#include <QStringConverter>
 #include <QTextDocument>
 #include <QWidget>
 #include <QHash>
@@ -154,7 +153,7 @@ private:
     bool dirty_ = false;
     bool loading_ = false;
     bool replaceMode_ = false;
-    QStringConverter::Encoding fileEncoding_ = QStringConverter::Utf8;
+    QString fileEncodingName_ = QStringLiteral("UTF-8");
     QString fileEncodingLabel_ = QStringLiteral("UTF-8");
 };
 }

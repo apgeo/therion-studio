@@ -138,6 +138,7 @@ Text editor includes:
 - contextual help pane (collapsible via small triangle on splitter handle)
 - bottom status row with path and encoding
 - explicit `Convert to UTF-8` action shown when a file is opened with a non-UTF-8 encoding
+- loading honors Therion `encoding ...` directive when the declared codec is available in Qt
 
 ### 5.4 Use Structure + Inspector
 

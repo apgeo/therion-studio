@@ -174,14 +174,14 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)
 {
     QString contents;
-    QStringConverter::Encoding loadedEncoding = QStringConverter::Utf8;
+    QString loadedEncoding = QStringLiteral("UTF-8");
     QString loadedEncodingLabel;
     if (!DocumentFile::readTextFile(filePath, &contents, &loadedEncoding, &loadedEncodingLabel, errorMessage)) {
         return false;
     }
 
     filePath_ = filePath;
-    fileEncoding_ = loadedEncoding;
+    fileEncodingName_ = loadedEncoding.trimmed().isEmpty() ? QStringLiteral("UTF-8") : loadedEncoding.trimmed();
     fileEncodingLabel_ = loadedEncodingLabel.isEmpty() ? QStringLiteral("UTF-8") : loadedEncodingLabel;
     loading_ = true;
     editor_->setPlainText(contents);
@@ -209,7 +209,7 @@ bool TextEditorTab::save(QString *errorMessage)
         return false;
     }
 
-    if (!DocumentFile::writeTextFile(filePath_, editor_->toPlainText(), fileEncoding_, errorMessage)) {
+    if (!DocumentFile::writeTextFile(filePath_, editor_->toPlainText(), fileEncodingName_, errorMessage)) {
         return false;
     }
 
@@ -717,11 +717,11 @@ void TextEditorTab::handleCloseSearchTriggered()
 
 void TextEditorTab::handleConvertToUtf8Triggered()
 {
-    if (fileEncoding_ == QStringConverter::Utf8) {
+    if (fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
         return;
     }
 
-    fileEncoding_ = QStringConverter::Utf8;
+    fileEncodingName_ = QStringLiteral("UTF-8");
     fileEncodingLabel_ = QStringLiteral("UTF-8");
 
     if (!dirty_) {
@@ -763,7 +763,7 @@ void TextEditorTab::refreshStatus()
 
     encodingLabel_->setText(tr("Encoding: %1").arg(fileEncodingLabel_));
     if (convertEncodingButton_ != nullptr) {
-        const bool showConversion = fileEncoding_ != QStringConverter::Utf8;
+        const bool showConversion = fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) != 0;
         convertEncodingButton_->setVisible(showConversion);
         convertEncodingButton_->setEnabled(showConversion);
     }

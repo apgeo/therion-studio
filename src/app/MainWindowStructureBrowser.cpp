@@ -12,8 +12,10 @@
 #include <QLabel>
 #include <QModelIndex>
 #include <QSignalBlocker>
+#include <QStyle>
 #include <QStandardItem>
 #include <QStandardItemModel>
+#include <QTabWidget>
 #include <QToolButton>
 #include <QTreeView>
 
@@ -22,10 +24,12 @@
 #include "TextEditorTab.h"
 #include "MapEditorTab.h"
 #include "../core/ProjectStructureIndex.h"
+#include "../core/DocumentFile.h"
+#include "../core/TherionDocumentParser.h"
 
 namespace
 {
-QString inspectorObjectKindLabel(const QString &category)
+QString structureObjectKindLabel(const QString &category)
 {
     if (category == QStringLiteral("Stations")) {
         return QObject::tr("Station Point");
@@ -105,27 +109,181 @@ QString mapObjectItemText(const TherionStudio::ProjectStructureEntry &entry)
         return entry.name;
     }
 
-    return QStringLiteral("%1: %2").arg(inspectorObjectKindLabel(entry.category), entry.name);
+    return QStringLiteral("%1: %2").arg(structureObjectKindLabel(entry.category), entry.name);
+}
+
+QIcon structureItemIconForCategory(const QString &category, const QStyle *style)
+{
+    if (style == nullptr) {
+        return QIcon();
+    }
+
+    if (category == QStringLiteral("Surveys")) {
+        return style->standardIcon(QStyle::SP_DirHomeIcon);
+    }
+    if (category == QStringLiteral("Maps")) {
+        return style->standardIcon(QStyle::SP_DirIcon);
+    }
+    if (category == QStringLiteral("Scraps")) {
+        return style->standardIcon(QStyle::SP_FileIcon);
+    }
+
+    return QIcon();
+}
+
+QString structureEntryNodeKey(const TherionStudio::ProjectStructureEntry &entry)
+{
+    const QString normalizedPath = QFileInfo(entry.sourceFile).absoluteFilePath();
+    return QStringLiteral("%1:%2").arg(normalizedPath).arg(entry.lineNumber);
+}
+
+QString normalizedStructurePathKey(const QString &path)
+{
+    if (path.trimmed().isEmpty()) {
+        return QString();
+    }
+
+    QFileInfo fileInfo(path);
+    const QString canonicalPath = fileInfo.canonicalFilePath();
+    return canonicalPath.isEmpty() ? fileInfo.absoluteFilePath() : canonicalPath;
+}
+
+QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(const QVector<TherionStudio::ProjectStructureEntry> &entries)
+{
+    QHash<QString, QSet<QString>> referencesByMap;
+    QSet<QString> knownScrapNames;
+    for (const TherionStudio::ProjectStructureEntry &entry : entries) {
+        if (entry.category == QStringLiteral("Scraps") && !entry.name.trimmed().isEmpty()) {
+            knownScrapNames.insert(entry.name.trimmed().toLower());
+        }
+    }
+    if (knownScrapNames.isEmpty()) {
+        return referencesByMap;
+    }
+
+    QHash<QString, QVector<TherionStudio::ProjectStructureEntry>> mapsBySourceFile;
+    for (const TherionStudio::ProjectStructureEntry &entry : entries) {
+        if (entry.category == QStringLiteral("Maps") && !entry.sourceFile.isEmpty() && entry.lineNumber > 0) {
+            mapsBySourceFile[QFileInfo(entry.sourceFile).absoluteFilePath()].append(entry);
+        }
+    }
+    if (mapsBySourceFile.isEmpty()) {
+        return referencesByMap;
+    }
+
+    for (auto fileIt = mapsBySourceFile.constBegin(); fileIt != mapsBySourceFile.constEnd(); ++fileIt) {
+        QString contents;
+        if (!TherionStudio::DocumentFile::readUtf8TextFile(fileIt.key(), &contents, nullptr)) {
+            continue;
+        }
+        const QVector<TherionStudio::TherionParsedLine> parsedLines = TherionStudio::TherionDocumentParser::parseText(contents);
+        if (parsedLines.isEmpty()) {
+            continue;
+        }
+
+        for (const TherionStudio::ProjectStructureEntry &mapEntry : fileIt.value()) {
+            int mapLineIndex = -1;
+            for (int index = 0; index < parsedLines.size(); ++index) {
+                if (parsedLines.at(index).lineNumber == mapEntry.lineNumber
+                    && parsedLines.at(index).directive == QStringLiteral("map")) {
+                    mapLineIndex = index;
+                    break;
+                }
+            }
+            if (mapLineIndex < 0) {
+                continue;
+            }
+
+            QSet<QString> scrapReferences;
+            int mapDepth = 0;
+            for (int index = mapLineIndex; index < parsedLines.size(); ++index) {
+                const TherionStudio::TherionParsedLine &parsedLine = parsedLines.at(index);
+                const QString directive = parsedLine.directive;
+
+                if (directive == QStringLiteral("map")) {
+                    ++mapDepth;
+                    continue;
+                }
+                if (directive == QStringLiteral("endmap")) {
+                    --mapDepth;
+                    if (mapDepth <= 0) {
+                        break;
+                    }
+                    continue;
+                }
+                if (mapDepth != 1) {
+                    continue;
+                }
+                if (parsedLine.tokens.size() != 1) {
+                    continue;
+                }
+
+                const QString candidate = parsedLine.tokens.first().trimmed().toLower();
+                if (candidate.isEmpty() || candidate.startsWith(QLatin1Char('-'))) {
+                    continue;
+                }
+                if (knownScrapNames.contains(candidate)) {
+                    scrapReferences.insert(candidate);
+                }
+            }
+
+            referencesByMap.insert(structureEntryNodeKey(mapEntry), scrapReferences);
+        }
+    }
+
+    return referencesByMap;
 }
 }
 
 void MainWindow::rebuildStructureSidebar()
 {
     structureModel_->clear();
-    structureModel_->setHorizontalHeaderLabels({tr("Structure")});
+    structureModel_->setHorizontalHeaderLabels({tr("Name")});
 
     if (projectRootPath_.isEmpty() || !QDir(projectRootPath_).exists()) {
         auto *rootItem = new QStandardItem(tr("Open a project to populate the survey hierarchy"));
         rootItem->setEditable(false);
         structureModel_->appendRow(rootItem);
         projectStructureSummary_ = tr("Open a project to view its survey hierarchy summary.");
-        inspectorSummary_->setText(projectStructureSummary_);
         structureTree_->expandAll();
         return;
     }
 
+    QHash<QString, QString> inMemoryProjectContentsByPath;
+    auto captureInMemoryStructureSource = [&inMemoryProjectContentsByPath](QWidget *widget) {
+        if (widget == nullptr) {
+            return;
+        }
+
+        QString sourceFile;
+        QString sourceText;
+        if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(widget)) {
+            sourceFile = textTab->filePath();
+            sourceText = textTab->text();
+        } else if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(widget)) {
+            sourceFile = mapTab->filePath();
+            sourceText = mapTab->text();
+        } else {
+            return;
+        }
+
+        const QString normalizedPath = normalizedStructurePathKey(sourceFile);
+        if (normalizedPath.isEmpty()) {
+            return;
+        }
+        inMemoryProjectContentsByPath.insert(normalizedPath, sourceText);
+    };
+
+    for (int index = 0; editorTabs_ != nullptr && index < editorTabs_->count(); ++index) {
+        captureInMemoryStructureSource(editorTabs_->widget(index));
+    }
+    for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
+        captureInMemoryStructureSource(detachedTab);
+    }
+
     QString errorMessage;
-    const QVector<TherionStudio::ProjectStructureEntry> entries = TherionStudio::ProjectStructureIndex::scanProject(projectRootPath_, &errorMessage);
+    const QVector<TherionStudio::ProjectStructureEntry> entries
+        = TherionStudio::ProjectStructureIndex::scanProject(projectRootPath_, inMemoryProjectContentsByPath, &errorMessage);
     if (!errorMessage.isEmpty()) {
         appendConsoleLine(errorMessage);
     }
@@ -143,31 +301,41 @@ void MainWindow::rebuildStructureSidebar()
 
     projectStructureSummary_ = tr("Project structure summary: %1")
                                    .arg(formatProjectStructureSummary(categoryCounts, totalItems, rootSurveyCount));
-
-    auto *projectItem = new QStandardItem(QFileInfo(projectRootPath_).fileName().isEmpty()
-                                              ? projectRootPath_
-                                              : QFileInfo(projectRootPath_).fileName());
-    projectItem->setEditable(false);
-    projectItem->setData(projectRootPath_, SourceFileRole);
-    projectItem->setData(0, LineNumberRole);
-    projectItem->setData(QStringLiteral("Project"), CategoryRole);
-    projectItem->setData(projectItem->text(), NameRole);
-    structureModel_->appendRow(projectItem);
-
-    auto *summaryItem = new QStandardItem(projectStructureSummary_);
-    summaryItem->setEditable(false);
-    projectItem->appendRow(summaryItem);
+    const auto includeInStructureView = [](const QString &category) {
+        return category == QStringLiteral("Surveys")
+            || category == QStringLiteral("Maps")
+            || category == QStringLiteral("Scraps");
+    };
 
     if (entries.isEmpty()) {
         auto *emptyItem = new QStandardItem(tr("No survey hierarchy was found in the selected project"));
         emptyItem->setEditable(false);
-        projectItem->appendRow(emptyItem);
-        inspectorSummary_->setText(projectStructureSummary_);
+        structureModel_->appendRow(emptyItem);
     } else {
-        QVector<QStandardItem *> parentStack;
+        struct VisibleStructureNode
+        {
+            TherionStudio::ProjectStructureEntry entry;
+            QString entryName;
+            QString nodeKey;
+            QString forcedMapParentKey;
+            QStandardItem *item = nullptr;
+        };
+
+        const QStyle *appStyle = style();
+        const QHash<QString, QSet<QString>> mapScrapRefs = mapScrapReferencesByMapKey(entries);
+        QHash<QString, QSet<QString>> mapOwnersByScrapName;
+        for (auto it = mapScrapRefs.constBegin(); it != mapScrapRefs.constEnd(); ++it) {
+            for (const QString &scrapNameLower : it.value()) {
+                mapOwnersByScrapName[scrapNameLower].insert(it.key());
+            }
+        }
+
+        QVector<VisibleStructureNode> nodes;
+        nodes.reserve(entries.size());
+
         for (const TherionStudio::ProjectStructureEntry &entry : entries) {
-            while (parentStack.size() > entry.depth) {
-                parentStack.removeLast();
+            if (!includeInStructureView(entry.category)) {
+                continue;
             }
 
             QString entryName = entry.name;
@@ -184,18 +352,84 @@ void MainWindow::rebuildStructureSidebar()
                                                 entry.lineNumber,
                                                 entry.category,
                                                 entryName);
+            const QIcon entryIcon = structureItemIconForCategory(entry.category, appStyle);
+            if (!entryIcon.isNull()) {
+                entryItem->setIcon(entryIcon);
+            }
 
             if (entry.lineNumber > 0 && entry.category != QStringLiteral("File")) {
                 const QString overrideKey = structureOverrideKey(entry.sourceFile, entry.lineNumber);
                 entryItem->setData(overrideKey, Qt::UserRole + 5);
             }
 
-            QStandardItem *parentItem = parentStack.isEmpty() ? projectItem : parentStack.last();
-            parentItem->appendRow(entryItem);
-            parentStack.append(entryItem);
+            VisibleStructureNode node;
+            node.entry = entry;
+            node.entryName = entryName;
+            node.nodeKey = structureEntryNodeKey(entry);
+            node.item = entryItem;
+
+            if (entry.category == QStringLiteral("Scraps")) {
+                const QString scrapNameLower = entryName.trimmed().toLower();
+                const QSet<QString> owners = mapOwnersByScrapName.value(scrapNameLower);
+                if (owners.size() == 1) {
+                    node.forcedMapParentKey = *owners.constBegin();
+                }
+            }
+
+            nodes.append(node);
         }
 
-        inspectorSummary_->setText(projectStructureSummary_);
+        if (nodes.isEmpty()) {
+            auto *emptyItem = new QStandardItem(tr("No surveys, maps, or scraps were found in the selected project"));
+            emptyItem->setEditable(false);
+            structureModel_->appendRow(emptyItem);
+            structureTree_->expandAll();
+            return;
+        }
+
+        QHash<QString, QStandardItem *> mapItemByKey;
+        for (const VisibleStructureNode &node : std::as_const(nodes)) {
+            if (node.entry.category == QStringLiteral("Maps")) {
+                mapItemByKey.insert(node.nodeKey, node.item);
+            }
+        }
+
+        QVector<int> visibleNodeIndexByDepth;
+        for (int nodeIndex = 0; nodeIndex < nodes.size(); ++nodeIndex) {
+            VisibleStructureNode &node = nodes[nodeIndex];
+
+            while (visibleNodeIndexByDepth.size() <= node.entry.depth) {
+                visibleNodeIndexByDepth.append(-1);
+            }
+            for (int depth = node.entry.depth; depth < visibleNodeIndexByDepth.size(); ++depth) {
+                visibleNodeIndexByDepth[depth] = -1;
+            }
+
+            QStandardItem *parentItem = nullptr;
+            if (!node.forcedMapParentKey.isEmpty()) {
+                parentItem = mapItemByKey.value(node.forcedMapParentKey, nullptr);
+            }
+            if (parentItem == nullptr) {
+                for (int parentDepth = node.entry.depth - 1; parentDepth >= 0; --parentDepth) {
+                    if (parentDepth >= visibleNodeIndexByDepth.size()) {
+                        continue;
+                    }
+                    const int parentNodeIndex = visibleNodeIndexByDepth.at(parentDepth);
+                    if (parentNodeIndex >= 0 && parentNodeIndex < nodes.size()) {
+                        parentItem = nodes.at(parentNodeIndex).item;
+                        break;
+                    }
+                }
+            }
+
+            if (parentItem != nullptr) {
+                parentItem->appendRow(node.item);
+            } else {
+                structureModel_->appendRow(node.item);
+            }
+
+            visibleNodeIndexByDepth[node.entry.depth] = nodeIndex;
+        }
     }
 
     structureTree_->expandAll();
@@ -255,8 +489,6 @@ void MainWindow::rebuildMapObjectsTree()
 
 void MainWindow::handleStructureSelectionChanged(const QModelIndex &current, const QModelIndex &, QTreeView *)
 {
-    updateInspectorFromStructureItem(current);
-
     if (!current.isValid()) {
         return;
     }
@@ -483,5 +715,4 @@ void MainWindow::updateMapObjectSelectionFromEditorLocation(const QString &fileP
     }
 
     mapObjectsTree_->scrollTo(targetIndex, QAbstractItemView::PositionAtCenter);
-    updateInspectorFromStructureItem(targetIndex);
 }

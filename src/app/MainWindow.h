@@ -4,14 +4,12 @@
 #include <QHash>
 #include <QList>
 #include <QPointer>
-#include <QPersistentModelIndex>
 #include <QProcess>
 #include <QPoint>
 
 class QLabel;
 class QFileSystemModel;
 class QCloseEvent;
-class QCheckBox;
 class QDoubleSpinBox;
 class QDockWidget;
 class QFrame;
@@ -86,7 +84,6 @@ private:
     void buildMenus();
     void buildProjectBrowser();
     void buildStructureSidebar();
-    void buildInspector();
     void buildMapBackgroundPanel(QWidget *parent, QVBoxLayout *parentLayout);
     void buildConsole();
     void addWelcomeTab();
@@ -102,10 +99,6 @@ private:
     QWidget *documentWidgetForFilePath(const QString &filePath) const;
     void handleStructureSelectionChanged(const QModelIndex &current, const QModelIndex &previous, QTreeView *sourceTree);
     void handleStructureItemActivated(const QModelIndex &index, QTreeView *sourceTree);
-    void updateInspectorFromStructureItem(const QModelIndex &index);
-    void handleInspectorNameEdited(const QString &text);
-    void handleInspectorApplyTriggered();
-    void openSelectedStructureSource();
     bool confirmCloseTab(int index);
     bool confirmCloseDirtyDocuments();
     void clearDocumentTabs();
@@ -140,10 +133,6 @@ private:
     void updateStructureSelectionFromEditorLocation(const QString &filePath, int lineNumber);
     void updateMapObjectSelectionFromEditorLocation(const QString &filePath, int lineNumber);
     QString structureOverrideKey(const QString &sourceFile, int lineNumber) const;
-    void handleInspectorLineClosedToggled(bool checked);
-    void handleInspectorLineReversedToggled(bool checked);
-    bool applyInspectorLineOptionToggle(const QString &optionName, bool enabled, QString *errorMessage);
-    void refreshInspectorLineOptionState();
     void loadStructureNameOverrides();
     void saveStructureNameOverrides();
     void refreshMapBackgroundPanel();
@@ -181,7 +170,6 @@ private:
     QPushButton *mapBackgroundGammaResetButton_ = nullptr;
     QSplitter *mainContentSplitter_ = nullptr;
     QWidget *sidebarContainer_ = nullptr;
-    QSplitter *mapEditorSidebarSplitter_ = nullptr;
     QWidget *sidebarContentContainer_ = nullptr;
     QToolButton *sidebarFilesButton_ = nullptr;
     QToolButton *sidebarStructureButton_ = nullptr;
@@ -210,23 +198,6 @@ private:
     QPushButton *therionResetWorkingDirectoryButton_ = nullptr;
     QPushButton *therionCopyOutputButton_ = nullptr;
     QProcess *therionProcess_ = nullptr;
-    QLabel *inspectorSummary_ = nullptr;
-    QLabel *inspectorCategoryLabel_ = nullptr;
-    QLabel *inspectorNameLabel_ = nullptr;
-    QLabel *inspectorCategoryValue_ = nullptr;
-    QLineEdit *inspectorNameEdit_ = nullptr;
-    QLabel *inspectorProjectValue_ = nullptr;
-    QLabel *inspectorRelativePathValue_ = nullptr;
-    QLabel *inspectorObjectKindValue_ = nullptr;
-    QLabel *inspectorEditabilityValue_ = nullptr;
-    QLabel *inspectorSourceValue_ = nullptr;
-    QLabel *inspectorLineValue_ = nullptr;
-    QWidget *inspectorLineOptionsWidget_ = nullptr;
-    QCheckBox *inspectorLineClosedCheck_ = nullptr;
-    QCheckBox *inspectorLineReversedCheck_ = nullptr;
-    QLabel *inspectorValidationLabel_ = nullptr;
-    QPushButton *inspectorOpenSourceButton_ = nullptr;
-    QPushButton *inspectorApplyButton_ = nullptr;
     QLabel *statusDocumentPathLabel_ = nullptr;
     QLabel *statusMapModeLabel_ = nullptr;
     QLabel *statusDocumentEncodingLabel_ = nullptr;
@@ -235,9 +206,6 @@ private:
     QStandardItemModel *mapObjectsModel_ = nullptr;
     QString projectRootPath_;
     QString projectStructureSummary_;
-    QPersistentModelIndex selectedStructureIndex_;
-    QString selectedStructureSourceFile_;
-    QString selectedStructureName_;
     QHash<QString, QString> structureNameOverrides_;
     QString autoResolvedTherionWorkingDirectory_;
     SidebarPane activeSidebarPane_ = SidebarPane::FileBrowser;
@@ -249,10 +217,8 @@ private:
     bool consoleCollapsed_ = false;
     bool updatingSidebarSplitter_ = false;
     bool updatingMapBackgroundPanel_ = false;
-    bool updatingInspectorLineOptions_ = false;
     bool clearingDocumentTabs_ = false;
     bool shuttingDown_ = false;
-    int selectedStructureLine_ = 0;
 
     QHash<QString, QPointer<QMainWindow>> detachedMapWindowsByPath_;
     QHash<TherionStudio::MapEditorTab *, QString> detachedMapPathsByTab_;

@@ -157,20 +157,16 @@ Main window status bar shows:
 - when a `.th2` map editor tab is active: a color mode badge is shown in status bar (`Select` in green, `Insert` in red)
 - long paths are middle-elided in visible text and preserved as full path in tooltip
 
-### 5.4 Use Structure + Inspector
+### 5.4 Use Structure Sidebar
 
-Structure pane shows indexed Therion hierarchy.
+Structure pane shows simplified hierarchy with only `Survey` -> `Map` -> `Scrap` entries (no project-root or summary rows in the tree).
+Each row shows an icon by item kind (`Survey`, `Map`, `Scrap`) for quicker scanning.
+When a `map ... endmap` block references scraps, those scraps are shown under that map node.
+Structure updates from in-memory tab content, so unsaved edits (for example deleting a scrap block) are reflected immediately.
 Selecting an entry:
 
-- updates Inspector
-- can open source location
+- opens the source file when needed
 - syncs to editor line when relevant
-
-Inspector supports:
-
-- renaming selected structure entry via `Apply` (persists to source)
-- line-state toggles for line entries: `Closed` (`-close`) and `Reversed` (`-reverse`)
-- encoding-preserving source rewrites for inspector-applied changes (non-UTF files keep their original encoding unless explicitly converted in the text editor)
 
 ### 5.5 Use Map Workspace (`.th2`)
 

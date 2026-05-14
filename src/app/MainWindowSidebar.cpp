@@ -739,10 +739,7 @@ void MainWindow::buildStructureSidebar()
     structureLayout->setContentsMargins(12, 12, 12, 12);
     structureLayout->setSpacing(8);
 
-    mapEditorSidebarSplitter_ = new QSplitter(Qt::Vertical, structurePage);
-    mapEditorSidebarSplitter_->setChildrenCollapsible(false);
-
-    structureTree_ = new QTreeView(mapEditorSidebarSplitter_);
+    structureTree_ = new QTreeView(structurePage);
     structureTree_->setMinimumWidth(0);
     structureTree_->setModel(structureModel_);
     structureTree_->setRootIsDecorated(true);
@@ -758,11 +755,8 @@ void MainWindow::buildStructureSidebar()
         handleStructureItemActivated(index, structureTree_);
     });
 
-    mapEditorSidebarSplitter_->addWidget(structureTree_);
-    structureLayout->addWidget(mapEditorSidebarSplitter_, 1);
+    structureLayout->addWidget(structureTree_, 1);
     sidebarPages_->addWidget(structurePage);
-
-    buildInspector();
 
     auto *mapObjectsPage = new QWidget(sidebarPages_);
     auto *mapObjectsLayout = new QVBoxLayout(mapObjectsPage);

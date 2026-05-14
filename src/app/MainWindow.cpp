@@ -137,7 +137,7 @@ QString quickUserManualMarkdown()
         "\n"
         "1. Open a project with `File -> Open Project...`.\n"
         "2. Open `.th`/`.th2` files from the Files sidebar.\n"
-        "3. Use Structure + Inspector to rename objects or toggle line flags.\n"
+        "3. Use the Structure sidebar to navigate project hierarchy and source context.\n"
         "4. Use the map workspace for TH2 geometry edits and keep source text in sync.\n"
         "5. Save with `Save` or `Save All`.\n"
         "\n"
@@ -1021,6 +1021,9 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath)
         handleTextEditorCurrentLineChanged(tab->filePath(), lineNumber);
     });
     connect(tab, &TherionStudio::TextEditorTab::documentTextChanged, this, [this, tab]() {
+        if (!projectRootPath_.isEmpty()) {
+            rebuildStructureSidebar();
+        }
         if (currentDocumentWidget() == tab) {
             rebuildMapObjectsTree();
         }
@@ -1089,6 +1092,9 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         handleTextEditorCurrentLineChanged(tab->filePath(), lineNumber);
     });
     connect(tab, &TherionStudio::MapEditorTab::documentTextChanged, this, [this, tab]() {
+        if (!projectRootPath_.isEmpty()) {
+            rebuildStructureSidebar();
+        }
         if (currentDocumentWidget() == tab) {
             rebuildMapObjectsTree();
         }

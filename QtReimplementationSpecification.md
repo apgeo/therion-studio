@@ -129,7 +129,7 @@ The application shall provide a structure sidebar that summarizes the Therion pr
 
 Required capabilities:
 
-- display surveys, maps, scraps, stations, and related structural items
+- display only surveys, maps, and scraps in the Structure sidebar hierarchy
 - allow navigation through the project hierarchy
 - show selection state and the active document context
 - provide a readable overview of the current project structure
@@ -286,9 +286,13 @@ The rules below define the expected day-to-day interaction model. If a later req
 
 #### 3.8.6 Structure Sidebar Behavior
 
-- The structure sidebar shall present a navigable project hierarchy of surveys, maps, scraps, stations, and related items.
+- The structure sidebar shall present a navigable project hierarchy limited to surveys, maps, and scraps.
+- The structure sidebar shall not prepend synthetic top rows for project-root path or summary text inside the hierarchy tree.
+- Structure rows shall include a category icon for survey, map, and scrap items.
+- Scrap items that are referenced by a map block shall be presented as children of that map node when the reference can be resolved uniquely.
 - Selection in the structure sidebar shall change the active document context.
 - The structure sidebar shall remain synchronized with the open project and the currently selected content when possible.
+- For files currently open in editor tabs, structure indexing shall use in-memory document text so unsaved edits are reflected immediately in the structure tree.
 - The structure sidebar shall provide explicit user controls to collapse and re-expand the panel.
 - The sidebar shall use a fixed-width activity rail plus a resizable content pane so the rail remains available when content is collapsed.
 - Resizing the sidebar content pane to its collapsed threshold shall automatically collapse the content pane, leave the activity rail visible, and shall not resize the rail itself.
@@ -342,7 +346,6 @@ Platform modifier mapping:
 | Find Previous | Find | Command+Shift+G | Jump to the previous match |
 | Open in Map Editor | Map | Command+Option+Shift+G | Open the current TH2 document in the map editor; disabled unless a TH2 tab is active |
 | Toggle Debug Sidebar | Debug | none in the current Swift app | Toggle the debug sidebar state from the menu |
-| Toggle Inspector | Toolbar | Command+Option+I | Toggle the inspector panel |
 | Quick User Manual | Help | none | Open an in-app short user manual focused on common workflows and map editing shortcuts |
 | User Manual (Full) | Help | none | Open the full user manual document in-app, with fallback to quick manual content if the full document is unavailable |
 
@@ -352,7 +355,7 @@ The Qt application may add additional platform-standard shortcuts only if they d
 
 The Qt application shall define a consistent window and document model.
 
-- The main application window shall present the project browser, tabbed text editor, structure sidebar, inspector, and console-related views used for project work.
+- The main application window shall present the project browser, tabbed text editor, structure sidebar, and console-related views used for project work.
 - The main application window shall support a text workspace for all supported text files and, for TH2 files, a synchronized embedded text+map presentation.
 - The text editor shall provide a collapsible contextual help/documentation inspector below the editor or in an equivalent persistent surface.
 - A TH2 map shall open in a dedicated map editor window or equivalent dedicated top-level surface that remains associated with the same document session.
@@ -751,7 +754,8 @@ The criteria below are intended for implementation verification and QA.
 
 #### 8.1.5 Structure Sidebar
 
-- The structure sidebar shows surveys, maps, scraps, stations, and related hierarchy items.
+- The structure sidebar shows only surveys, maps, and scraps.
+- The structure tree does not include synthetic project-root or summary rows.
 - Sidebar selection changes the active document context.
 - The sidebar remains synchronized with the open project when the underlying structure changes.
 - The sidebar can be collapsed and re-expanded through explicit UI controls.

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QHash>
 #include <QString>
 #include <QVector>
 
@@ -19,6 +20,9 @@ class ProjectStructureIndex final
 {
 public:
     static QVector<ProjectStructureEntry> scanProject(const QString &projectRootPath, QString *errorMessage = nullptr);
+    static QVector<ProjectStructureEntry> scanProject(const QString &projectRootPath,
+                                                      const QHash<QString, QString> &inMemoryFileContentsByPath,
+                                                      QString *errorMessage = nullptr);
     static QVector<ProjectStructureEntry> scanTh2Objects(const QString &sourceFile, const QString &text);
 };
 }

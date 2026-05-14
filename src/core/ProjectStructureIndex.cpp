@@ -27,6 +27,18 @@ struct ParsedFileCache
     QHash<QString, QVector<TherionParsedLine>> parsedLines;
 };
 
+QString normalizedFilePathKey(const QString &path)
+{
+    if (path.trimmed().isEmpty()) {
+        return QString();
+    }
+
+    QFileInfo fileInfo(path);
+    const QString canonicalPath = fileInfo.canonicalFilePath();
+    const QString resolvedPath = canonicalPath.isEmpty() ? fileInfo.absoluteFilePath() : canonicalPath;
+    return QFileInfo(resolvedPath).absoluteFilePath();
+}
+
 QString optionValue(const QStringList &tokens, const QString &option);
 QString sectionNameFromLine(const TherionParsedLine &parsedLine);
 QString objectCategoryFromLine(const TherionParsedLine &parsedLine);
@@ -160,16 +172,20 @@ QString resolveInputPath(const QString &currentFilePath, const QString &inputPat
     return QString();
 }
 
-const QVector<TherionParsedLine> &parsedLinesForFile(const QString &filePath, ParsedFileCache *cache)
+const QVector<TherionParsedLine> &parsedLinesForFile(const QString &filePath,
+                                                     ParsedFileCache *cache,
+                                                     const QHash<QString, QString> &inMemoryFileContentsByPath)
 {
-    const QString normalizedPath = QFileInfo(filePath).absoluteFilePath();
+    const QString normalizedPath = normalizedFilePathKey(filePath);
     auto iterator = cache->parsedLines.find(normalizedPath);
     if (iterator != cache->parsedLines.end()) {
         return iterator.value();
     }
 
     QString fileContents;
-    if (!DocumentFile::readUtf8TextFile(normalizedPath, &fileContents, nullptr)) {
+    if (inMemoryFileContentsByPath.contains(normalizedPath)) {
+        fileContents = inMemoryFileContentsByPath.value(normalizedPath);
+    } else if (!DocumentFile::readUtf8TextFile(normalizedPath, &fileContents, nullptr)) {
         cache->parsedLines.insert(normalizedPath, {});
         return cache->parsedLines[normalizedPath];
     }
@@ -249,15 +265,16 @@ void appendProjectStructureFromFile(const QString &filePath,
                                     ParsedFileCache *cache,
                                     QVector<ProjectBlock> *blockStack,
                                     QSet<QString> *activeFiles,
-                                    QVector<ProjectStructureEntry> *entries)
+                                    QVector<ProjectStructureEntry> *entries,
+                                    const QHash<QString, QString> &inMemoryFileContentsByPath)
 {
-    const QString normalizedPath = QFileInfo(filePath).absoluteFilePath();
+    const QString normalizedPath = normalizedFilePathKey(filePath);
     if (activeFiles->contains(normalizedPath)) {
         return;
     }
 
     activeFiles->insert(normalizedPath);
-    const QVector<TherionParsedLine> &parsedLines = parsedLinesForFile(normalizedPath, cache);
+    const QVector<TherionParsedLine> &parsedLines = parsedLinesForFile(normalizedPath, cache, inMemoryFileContentsByPath);
 
     for (const TherionParsedLine &parsedLine : parsedLines) {
         const QString directive = parsedLine.directive;
@@ -266,7 +283,7 @@ void appendProjectStructureFromFile(const QString &filePath,
             const QString inputTarget = parsedLine.tokens.value(1);
             const QString resolvedInputPath = resolveInputPath(normalizedPath, inputTarget);
             if (!resolvedInputPath.isEmpty()) {
-                appendProjectStructureFromFile(resolvedInputPath, cache, blockStack, activeFiles, entries);
+                appendProjectStructureFromFile(resolvedInputPath, cache, blockStack, activeFiles, entries, inMemoryFileContentsByPath);
             }
             continue;
         }
@@ -300,11 +317,13 @@ void appendProjectStructureFromFile(const QString &filePath,
     activeFiles->remove(normalizedPath);
 }
 
-QVector<QString> rootProjectFiles(const QVector<QString> &filePaths, ParsedFileCache *cache)
+QVector<QString> rootProjectFiles(const QVector<QString> &filePaths,
+                                  ParsedFileCache *cache,
+                                  const QHash<QString, QString> &inMemoryFileContentsByPath)
 {
     QSet<QString> includedFiles;
     for (const QString &filePath : filePaths) {
-        const QVector<TherionParsedLine> &parsedLines = parsedLinesForFile(filePath, cache);
+        const QVector<TherionParsedLine> &parsedLines = parsedLinesForFile(filePath, cache, inMemoryFileContentsByPath);
         for (const TherionParsedLine &parsedLine : parsedLines) {
             if (parsedLine.directive != QStringLiteral("input")) {
                 continue;
@@ -313,14 +332,14 @@ QVector<QString> rootProjectFiles(const QVector<QString> &filePaths, ParsedFileC
             const QString inputTarget = parsedLine.tokens.value(1);
             const QString resolvedInputPath = resolveInputPath(filePath, inputTarget);
             if (!resolvedInputPath.isEmpty()) {
-                includedFiles.insert(QFileInfo(resolvedInputPath).absoluteFilePath());
+                includedFiles.insert(normalizedFilePathKey(resolvedInputPath));
             }
         }
     }
 
     QVector<QString> roots;
     for (const QString &filePath : filePaths) {
-        if (!includedFiles.contains(QFileInfo(filePath).absoluteFilePath())) {
+        if (!includedFiles.contains(normalizedFilePathKey(filePath))) {
             roots.append(filePath);
         }
     }
@@ -466,6 +485,13 @@ bool isInterestingProjectFile(const QFileInfo &fileInfo)
 
 QVector<ProjectStructureEntry> ProjectStructureIndex::scanProject(const QString &projectRootPath, QString *errorMessage)
 {
+    return scanProject(projectRootPath, QHash<QString, QString>(), errorMessage);
+}
+
+QVector<ProjectStructureEntry> ProjectStructureIndex::scanProject(const QString &projectRootPath,
+                                                                  const QHash<QString, QString> &inMemoryFileContentsByPath,
+                                                                  QString *errorMessage)
+{
     QVector<ProjectStructureEntry> entries;
     if (projectRootPath.isEmpty()) {
         return entries;
@@ -498,12 +524,12 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanProject(const QString 
     });
 
     ParsedFileCache cache;
-    const QVector<QString> rootFiles = rootProjectFiles(filePaths, &cache);
+    const QVector<QString> rootFiles = rootProjectFiles(filePaths, &cache, inMemoryFileContentsByPath);
 
     QVector<ProjectBlock> blockStack;
     QSet<QString> activeFiles;
     for (const QString &filePath : rootFiles) {
-        appendProjectStructureFromFile(filePath, &cache, &blockStack, &activeFiles, &entries);
+        appendProjectStructureFromFile(filePath, &cache, &blockStack, &activeFiles, &entries, inMemoryFileContentsByPath);
     }
 
     return entries;

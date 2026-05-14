@@ -103,6 +103,7 @@ Legend:
 - ~~Added explicit touch-friendly controls mode in the map toolbar, persisted via session settings, and wired into mode-aware wheel/touch-pan input policy.~~
 - ~~Enabled `Open Dedicated Window` map workflow: detach active TH2 map session into a dedicated top-level map window and keep the same in-memory document session (no duplicate document state).~~
 - ~~Opening the same TH2 document now focuses the existing detached map window/session instead of creating a duplicate map editor instance.~~
+- ~~Simplified TH2 workspace to a single embedded split layout plus detachable map pane; removed `Text Only / Map Only / Split` switcher UX to avoid conflicting states when map is detached.~~
 - Verification:
 - ~~`./build/MapBackgroundPlacementTest`~~
 - ~~`./build/TherionBackgroundMetadataTest`~~
@@ -167,6 +168,7 @@ Automated tests currently in-tree and used as regression baseline:
 - `TherionXviParserTest`
 - `DocumentFileEncodingTest`
 - `MapEditorInputPolicyTest`
+- `MapEditorDetachedPaneTest`
 - `SessionStoreTest`
 
 ## Recent Completed (Latest Slice)
@@ -247,6 +249,8 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Fixed detached map-window parenting/transfer path so `Open Dedicated Window` moves the actual `MapEditorTab` into a true top-level window (preventing empty detached-window opens).~~
 - ~~Implemented map-pane detach workflow inside `MapEditorTab`: `Open Map in Window` now moves only the graphical map pane into a second top-level window while keeping text editing in the main tab, and `Return Map Pane` (or closing detached window) reattaches it.~~
 - ~~Simplified TH2 workspace UX by removing the `Text Only / Map Only / Split` switcher and standardizing on embedded split view plus detachable map pane window.~~
+- ~~Removed obsolete map workspace-mode persistence API from `SessionStore` (`therionMapWorkspaceMode` read/write), since split layout is now fixed by design.~~
+- ~~Added `MapEditorDetachedPaneTest` coverage for map-pane detach/reattach lifecycle: open-window transition, single detached-window presence, reattach via toggle, and no leftover detached window after return.~~
 - ~~Expanded `TherionDocumentEditorTest` with `rewriteLineCoordinateRows` coverage for null/non-line rejection, inline-start rejection, mixed-content rejection, and successful CRLF-preserving rewrite.~~
 - ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest MapGeometryFeatureParsingTest TherionProjectStructureIndexTest MapBackgroundPlacementTest TherionBackgroundMetadataTest TherionXviParserTest` plus execution of all six regression binaries after keyboard vertex-edit wiring.~~
 - ~~Closed Phase 4 (`MVP`) and moved additional corpus-scale rewrite expansion into the Post-MVP backlog.~~

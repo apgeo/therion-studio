@@ -101,7 +101,6 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
-    void handleWorkspaceModeChanged(int index);
     void handleTextEditorCurrentLineChanged(int lineNumber);
     void handleMapSceneSelectionChanged();
     void handleAddPointTriggered();
@@ -184,10 +183,6 @@ private:
     void refreshTitle();
     void refreshStatus();
     QString displayPath() const;
-    static WorkspaceMode workspaceModeFromIndex(int index);
-    static int workspaceModeToIndex(WorkspaceMode mode);
-    static WorkspaceMode workspaceModeFromSetting(const QString &value);
-    static QString workspaceModeToSetting(WorkspaceMode mode);
     void setTouchFriendlyControlsEnabled(bool enabled);
 
     TextEditorTab *textEditor_ = nullptr;

@@ -113,17 +113,6 @@ void SessionStore::setTherionArguments(const QString &arguments)
     settings.setValue(QStringLiteral("session/therionArguments"), arguments);
 }
 
-QString SessionStore::therionMapWorkspaceMode()
-{
-    return makeSettings().value(QStringLiteral("session/therionMapWorkspaceMode")).toString();
-}
-
-void SessionStore::setTherionMapWorkspaceMode(const QString &mode)
-{
-    QSettings settings;
-    settings.setValue(QStringLiteral("session/therionMapWorkspaceMode"), mode);
-}
-
 bool SessionStore::therionMapTouchFriendlyControlsEnabled()
 {
     return makeSettings().value(QStringLiteral("session/therionMapTouchFriendlyControlsEnabled"), false).toBool();

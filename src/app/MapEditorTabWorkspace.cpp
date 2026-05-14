@@ -342,11 +342,6 @@ void MapEditorTab::setWorkspaceMode(WorkspaceMode mode)
     refreshMapScene();
 }
 
-void MapEditorTab::handleWorkspaceModeChanged(int index)
-{
-    Q_UNUSED(index);
-}
-
 void MapEditorTab::handleTextEditorCurrentLineChanged(int lineNumber)
 {
     selectMapLine(lineNumber);
@@ -458,38 +453,6 @@ void MapEditorTab::refreshStatus()
 QString MapEditorTab::displayPath() const
 {
     return textEditor_->filePath();
-}
-
-MapEditorTab::WorkspaceMode MapEditorTab::workspaceModeFromIndex(int index)
-{
-    Q_UNUSED(index);
-    return WorkspaceMode::Split;
-}
-
-int MapEditorTab::workspaceModeToIndex(WorkspaceMode mode)
-{
-    Q_UNUSED(mode);
-    return 0;
-}
-
-MapEditorTab::WorkspaceMode MapEditorTab::workspaceModeFromSetting(const QString &value)
-{
-    Q_UNUSED(value);
-    return WorkspaceMode::Split;
-}
-
-QString MapEditorTab::workspaceModeToSetting(WorkspaceMode mode)
-{
-    switch (mode) {
-    case WorkspaceMode::TextOnly:
-        return QStringLiteral("text-only");
-    case WorkspaceMode::MapOnly:
-        return QStringLiteral("map-only");
-    case WorkspaceMode::Split:
-        return QStringLiteral("split");
-    }
-
-    return QStringLiteral("split");
 }
 
 void MapEditorTab::handleDetachPaneTriggered()

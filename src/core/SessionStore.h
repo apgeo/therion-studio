@@ -36,8 +36,6 @@ public:
     static QString therionArguments();
     static void setTherionArguments(const QString &arguments);
 
-    static QString therionMapWorkspaceMode();
-    static void setTherionMapWorkspaceMode(const QString &mode);
     static bool therionMapTouchFriendlyControlsEnabled();
     static void setTherionMapTouchFriendlyControlsEnabled(bool enabled);
 

@@ -23,6 +23,7 @@
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QStandardItemModel>
+#include <QSizePolicy>
 #include <QStyle>
 #include <QStyledItemDelegate>
 #include <QStyleOptionViewItem>
@@ -195,6 +196,7 @@ private:
 };
 
 constexpr int SidebarCollapsedRailWidth = 56;
+constexpr int SidebarExpandedMinWidth = SidebarCollapsedRailWidth;
 
 bool isTherionProjectFilePath(const QString &filePath)
 {
@@ -258,6 +260,8 @@ void MainWindow::buildProjectBrowser()
     }
 
     auto *projectPage = new QWidget(sidebarPages_);
+    projectPage->setMinimumWidth(0);
+    projectPage->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
     auto *projectLayout = new QVBoxLayout(projectPage);
     projectLayout->setContentsMargins(12, 12, 12, 12);
     projectLayout->setSpacing(8);
@@ -267,6 +271,7 @@ void MainWindow::buildProjectBrowser()
     projectLayout->addWidget(projectDescription);
 
     projectTree_ = new QTreeView(projectPage);
+    projectTree_->setMinimumWidth(0);
     projectTree_->setModel(projectModel_);
     projectTree_->setRootIsDecorated(true);
     projectTree_->setAnimated(true);
@@ -631,6 +636,7 @@ void MainWindow::buildStructureSidebar()
     structureDock_ = new QDockWidget(tr("Sidebar"), this);
     structureDock_->setObjectName(QStringLiteral("SidebarDock"));
     structureDock_->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    structureDock_->setMinimumWidth(SidebarExpandedMinWidth);
     auto *titleBar = new QWidget(structureDock_);
     titleBar->setFixedHeight(0);
     titleBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -667,12 +673,16 @@ void MainWindow::buildStructureSidebar()
     });
 
     auto *container = new QWidget(structureDock_);
+    container->setMinimumWidth(0);
+    container->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
     auto *containerLayout = new QHBoxLayout(container);
     containerLayout->setContentsMargins(0, 0, 0, 0);
     containerLayout->setSpacing(0);
 
     auto *activityBar = new QFrame(container);
     activityBar->setFrameShape(QFrame::StyledPanel);
+    activityBar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    activityBar->setFixedWidth(SidebarCollapsedRailWidth);
     auto *activityLayout = new QVBoxLayout(activityBar);
     activityLayout->setContentsMargins(6, 8, 6, 8);
     activityLayout->setSpacing(6);
@@ -756,11 +766,15 @@ void MainWindow::buildStructureSidebar()
     activityLayout->addStretch(1);
 
     sidebarContentContainer_ = new QWidget(container);
+    sidebarContentContainer_->setMinimumWidth(0);
+    sidebarContentContainer_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
     auto *sidebarContentLayout = new QVBoxLayout(sidebarContentContainer_);
     sidebarContentLayout->setContentsMargins(0, 0, 0, 0);
     sidebarContentLayout->setSpacing(0);
 
     sidebarPages_ = new QStackedWidget(sidebarContentContainer_);
+    sidebarPages_->setMinimumWidth(0);
+    sidebarPages_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
     sidebarContentLayout->addWidget(sidebarPages_, 1);
 
     containerLayout->addWidget(activityBar, 0);
@@ -777,6 +791,7 @@ void MainWindow::buildStructureSidebar()
     mapEditorSidebarSplitter_->setChildrenCollapsible(false);
 
     structureTree_ = new QTreeView(mapEditorSidebarSplitter_);
+    structureTree_->setMinimumWidth(0);
     structureTree_->setModel(structureModel_);
     structureTree_->setRootIsDecorated(true);
     structureTree_->setAnimated(true);
@@ -807,6 +822,7 @@ void MainWindow::buildStructureSidebar()
     mapObjectsLayout->addWidget(mapObjectsDescription);
 
     mapObjectsTree_ = new QTreeView(mapObjectsPage);
+    mapObjectsTree_->setMinimumWidth(0);
     mapObjectsTree_->setModel(mapObjectsModel_);
     mapObjectsTree_->setRootIsDecorated(true);
     mapObjectsTree_->setAnimated(true);
@@ -888,7 +904,7 @@ void MainWindow::rememberSidebarWidth()
         return;
     }
 
-    sidebarExpandedWidth_ = qMax(220, structureDock_->width());
+    sidebarExpandedWidth_ = qMax(SidebarExpandedMinWidth, structureDock_->width());
 }
 
 void MainWindow::restoreSidebarWidth()

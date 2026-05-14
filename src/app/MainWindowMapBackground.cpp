@@ -12,6 +12,7 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QSizePolicy>
 
 #include "MapEditorTab.h"
 
@@ -28,6 +29,8 @@ void MainWindow::buildMapBackgroundPanel(QWidget *parent, QVBoxLayout *parentLay
 
     mapBackgroundPanel_ = new QFrame(parent);
     mapBackgroundPanel_->setFrameShape(QFrame::StyledPanel);
+    mapBackgroundPanel_->setMinimumWidth(0);
+    mapBackgroundPanel_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
 
     auto *panelLayout = new QVBoxLayout(mapBackgroundPanel_);
     panelLayout->setContentsMargins(10, 10, 10, 10);
@@ -55,6 +58,7 @@ void MainWindow::buildMapBackgroundPanel(QWidget *parent, QVBoxLayout *parentLay
     mapBackgroundLayersList_ = new QListWidget(mapBackgroundPanel_);
     mapBackgroundLayersList_->setSelectionMode(QAbstractItemView::SingleSelection);
     mapBackgroundLayersList_->setMinimumHeight(88);
+    mapBackgroundLayersList_->setMinimumWidth(0);
     panelLayout->addWidget(mapBackgroundLayersList_);
 
     auto *layerActionsRow = new QHBoxLayout;
@@ -62,6 +66,10 @@ void MainWindow::buildMapBackgroundPanel(QWidget *parent, QVBoxLayout *parentLay
     mapBackgroundVisibilityButton_ = new QPushButton(tr("Hide"), mapBackgroundPanel_);
     mapBackgroundMoveUpButton_ = new QPushButton(tr("Up"), mapBackgroundPanel_);
     mapBackgroundMoveDownButton_ = new QPushButton(tr("Down"), mapBackgroundPanel_);
+    mapBackgroundRemoveButton_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mapBackgroundVisibilityButton_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mapBackgroundMoveUpButton_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mapBackgroundMoveDownButton_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     layerActionsRow->addWidget(mapBackgroundRemoveButton_);
     layerActionsRow->addWidget(mapBackgroundVisibilityButton_);
     layerActionsRow->addWidget(mapBackgroundMoveUpButton_);
@@ -83,6 +91,7 @@ void MainWindow::buildMapBackgroundPanel(QWidget *parent, QVBoxLayout *parentLay
     mapBackgroundPosXSpin_ = new QDoubleSpinBox(positionFrame);
     mapBackgroundPosXSpin_->setRange(-50000.0, 50000.0);
     mapBackgroundPosXSpin_->setDecimals(1);
+    mapBackgroundPosXSpin_->setMinimumWidth(0);
     xRow->addWidget(mapBackgroundPosXSpin_, 1);
     positionLayout->addLayout(xRow);
 
@@ -91,6 +100,7 @@ void MainWindow::buildMapBackgroundPanel(QWidget *parent, QVBoxLayout *parentLay
     mapBackgroundPosYSpin_ = new QDoubleSpinBox(positionFrame);
     mapBackgroundPosYSpin_->setRange(-50000.0, 50000.0);
     mapBackgroundPosYSpin_->setDecimals(1);
+    mapBackgroundPosYSpin_->setMinimumWidth(0);
     yRow->addWidget(mapBackgroundPosYSpin_, 1);
     positionLayout->addLayout(yRow);
 

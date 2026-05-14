@@ -199,6 +199,8 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Extended Phase 6 encoding workflow with Therion `encoding ...` directive-aware decoding and codec-name preserving save semantics (including legacy single-byte codecs when supported by Qt).~~
 - ~~Added explicit text-editor `Convert to UTF-8` action (visible for non-UTF documents) and wired saves to preserve original encoding until conversion.~~
 - ~~Polished conversion UX: `Convert to UTF-8` now requires confirmation, marks conversion as an in-memory pending change, and shows explicit encoding-status notes about save behavior.~~
+- ~~Removed hard minimum sidebar width clamp and relaxed sidebar/page/content minimum-size policies so the sidebar can be resized to narrow widths across Files/Structure/Map/Console panes.~~
+- ~~Aligned sidebar collapsed rail width with the activity-menu strip by fixing the rail width and matching dock minimum/collapsed width constraints, so the left action menu no longer changes width when collapsing/expanding.~~
 - ~~Expanded `DocumentFileEncodingTest` and verified UTF-8 detection plus Latin1 and Windows-1250 byte-preserving save round-trip behavior.~~
 - ~~Expanded encoding regression fixtures with `cp1250` alias and Windows-1252 directive coverage, verifying byte-preserving round-trip saves for both paths.~~
 - ~~Closed inspector encoding-preservation gap for unopened-source fallback edits: structure rename and line `-close`/`-reverse` rewrites now read and write using detected file encoding instead of forcing UTF-8.~~

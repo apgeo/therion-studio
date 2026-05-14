@@ -139,14 +139,28 @@ public:
                 numberFont.setBold(isHighlightedLine);
                 painter.setFont(numberFont);
 
-                QColor numberColor = isHighlightedLine
-                    ? palette().color(QPalette::Text)
-                    : palette().color(QPalette::Mid);
-                if (!numberColor.isValid()) {
-                    numberColor = isHighlightedLine
-                        ? QColor(QStringLiteral("#202020"))
-                        : QColor(QStringLiteral("#808080"));
+                QColor activeNumberColor = palette().color(QPalette::Text);
+                if (!activeNumberColor.isValid()) {
+                    activeNumberColor = QColor(QStringLiteral("#202020"));
                 }
+
+                QColor numberColor;
+                if (isHighlightedLine) {
+                    numberColor = activeNumberColor;
+                } else {
+                    const QColor baseColor = palette().color(QPalette::Base);
+                    const bool darkPalette = baseColor.isValid() && baseColor.lightnessF() < 0.5;
+                    if (darkPalette) {
+                        numberColor = activeNumberColor;
+                        numberColor.setAlpha(190);
+                    } else {
+                        numberColor = palette().color(QPalette::Mid);
+                        if (!numberColor.isValid()) {
+                            numberColor = QColor(QStringLiteral("#808080"));
+                        }
+                    }
+                }
+
                 painter.setPen(numberColor);
 
                 painter.drawText(0,

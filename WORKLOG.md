@@ -14,7 +14,7 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 ### Next up
 
 - Continue Phase 5 map-editor parity polish and interaction refinement.
-- Continue Phase 6 with broader non-UTF fixture coverage and conversion-flow UX polish.
+- Continue Phase 6 manual verification using the encoding QA checklist and capture platform-by-platform results.
 - Execute cross-platform manual pass using the new encoding QA checklist.
 
 ### Risks / blockers
@@ -102,11 +102,11 @@ Legend:
 - ~~Undo/redo command integration with merge semantics and obsolete-command handling for failures.~~
 - ~~Raster and `.xvi` background parsing/placement/alignment; multi-layer controls and session restore.~~
 - Verification:
-- `./build/MapBackgroundPlacementTest`
-- `./build/TherionBackgroundMetadataTest`
-- `./build/TherionXviParserTest`
-- `./build/TherionDocumentEditorTest`
-- `cmake --build build`
+- ~~`./build/MapBackgroundPlacementTest`~~
+- ~~`./build/TherionBackgroundMetadataTest`~~
+- ~~`./build/TherionXviParserTest`~~
+- ~~`./build/TherionDocumentEditorTest`~~
+- ~~`cmake --build build`~~
 
 ### Phase 6 - Encoding and File-Format Robustness (`MVP`)
 
@@ -180,6 +180,7 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Added `DocumentFileEncodingTest` regression for inspector-style fallback rewrites on `windows-1252` input with accented map-name rename and line `-close` toggle, verifying byte-level encoded output preservation.~~
 - ~~Added negative `DocumentFileEncodingTest` case for unknown `encoding` directive token fallback, confirming UTF-8 decode fallback and byte-preserving UTF-8 save round-trip.~~
 - ~~Expanded `DocumentFileEncodingTest` with broader non-UTF fixture coverage: `cp1252` alias round-trip, `latin2` directive round-trip, and unknown-directive Latin1 fallback round-trip with byte-preserving save verification.~~
+- ~~Re-verified Phase 5 regression suite after ongoing map/editor work: built `TherionStudio`, `MapGeometryFeatureParsingTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`, and `TherionDocumentEditorTest`, then executed all five map-related binaries plus `TherionDocumentEditorTest`.~~
 - ~~Added `docs/ENCODING_QA_CHECKLIST.md` and linked it from the user manual to standardize cross-platform manual validation for open/save/convert/reopen/byte-check encoding workflows.~~
 - ~~Populated `docs/USER_MANUAL.md` with current implemented UI/workflow coverage: menus, sidebar panes, map workspace behavior, cross-platform shortcuts, settings/session persistence, platform notes, and troubleshooting.~~
 - ~~Updated repository instructions to require maintaining a living `docs/USER_MANUAL.md` and updating it whenever UI layout, workflows, keyboard shortcuts, or settings behavior changes.~~

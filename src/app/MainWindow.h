@@ -233,6 +233,7 @@ private:
     SidebarPane activeSidebarPane_ = SidebarPane::FileBrowser;
     SidebarPane lastNonMapSidebarPane_ = SidebarPane::FileBrowser;
     int sidebarExpandedWidth_ = 320;
+    int sidebarRailWidth_ = 56;
     int consoleExpandedHeight_ = 240;
     bool sidebarCollapsed_ = false;
     bool consoleCollapsed_ = false;

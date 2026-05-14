@@ -38,7 +38,10 @@ Behavior:
 - Clicking an activity icon opens that pane.
 - Clicking the active icon again collapses the sidebar to the rail.
 - Clicking any icon while collapsed expands sidebar and opens that pane.
+- If the sidebar is manually resized down to rail-only width, clicking any activity icon also expands it and opens the requested pane.
+- If the sidebar is manually resized to zero/hidden content width while still technically expanded, clicking any activity icon restores the content width and opens the requested pane.
 - `Map` pane is enabled only when the active tab is a `.th2` document.
+- The rail width is icon-driven (sized from the activity buttons), and collapsed sidebar width is locked to that same rail width.
 
 ### 2.2 Central Tabs
 

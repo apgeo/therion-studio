@@ -195,9 +195,6 @@ private:
     mutable QIcon therionFileIcon_;
 };
 
-constexpr int SidebarCollapsedRailWidth = 56;
-constexpr int SidebarExpandedMinWidth = SidebarCollapsedRailWidth;
-
 bool isTherionProjectFilePath(const QString &filePath)
 {
     const QFileInfo info(filePath);
@@ -636,7 +633,7 @@ void MainWindow::buildStructureSidebar()
     structureDock_ = new QDockWidget(tr("Sidebar"), this);
     structureDock_->setObjectName(QStringLiteral("SidebarDock"));
     structureDock_->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    structureDock_->setMinimumWidth(SidebarExpandedMinWidth);
+    structureDock_->setMinimumWidth(sidebarRailWidth_);
     auto *titleBar = new QWidget(structureDock_);
     titleBar->setFixedHeight(0);
     titleBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -662,7 +659,7 @@ void MainWindow::buildStructureSidebar()
                     return;
                 }
 
-                resizeDocks({structureDock_}, {SidebarCollapsedRailWidth}, Qt::Horizontal);
+                resizeDocks({structureDock_}, {sidebarRailWidth_}, Qt::Horizontal);
             });
             updateSidebarCollapseButton();
             return;
@@ -682,7 +679,6 @@ void MainWindow::buildStructureSidebar()
     auto *activityBar = new QFrame(container);
     activityBar->setFrameShape(QFrame::StyledPanel);
     activityBar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
-    activityBar->setFixedWidth(SidebarCollapsedRailWidth);
     auto *activityLayout = new QVBoxLayout(activityBar);
     activityLayout->setContentsMargins(6, 8, 6, 8);
     activityLayout->setSpacing(6);
@@ -691,22 +687,56 @@ void MainWindow::buildStructureSidebar()
     const QIcon structureIcon = style()->standardIcon(QStyle::SP_FileDialogDetailedView);
     const QIcon mapIcon = style()->standardIcon(QStyle::SP_FileIcon);
     const QIcon consoleIcon = style()->standardIcon(QStyle::SP_ComputerIcon);
+    const auto isSidebarEffectivelyCollapsed = [this]() -> bool {
+        if (sidebarCollapsed_) {
+            return true;
+        }
+        if (sidebarContentContainer_ != nullptr && !sidebarContentContainer_->isVisible()) {
+            return true;
+        }
+        if (structureDock_ != nullptr && structureDock_->isVisible()) {
+            return structureDock_->width() <= (sidebarRailWidth_ + 1);
+        }
+        return false;
+    };
+    const auto handleActivityButtonClick = [this, isSidebarEffectivelyCollapsed](SidebarPane pane) {
+        if (isSidebarEffectivelyCollapsed()) {
+            if (structureDock_ != nullptr && !structureDock_->isVisible()) {
+                structureDock_->show();
+            }
+
+            if (sidebarCollapsed_) {
+                setSidebarCollapsed(false);
+            } else {
+                if (sidebarExpandedWidth_ <= (sidebarRailWidth_ + 8)) {
+                    sidebarExpandedWidth_ = qMax(320, sidebarRailWidth_ + 240);
+                }
+                if (structureDock_ != nullptr) {
+                    structureDock_->setMaximumWidth(QWIDGETSIZE_MAX);
+                    structureDock_->setMinimumWidth(sidebarRailWidth_);
+                }
+                if (sidebarContentContainer_ != nullptr) {
+                    sidebarContentContainer_->setVisible(true);
+                }
+                restoreSidebarWidth();
+                updateSidebarCollapseButton();
+            }
+            setSidebarPane(pane);
+            return;
+        }
+        if (activeSidebarPane_ == pane) {
+            setSidebarCollapsed(true);
+            return;
+        }
+        setSidebarPane(pane);
+    };
 
     sidebarFilesButton_ = new QToolButton(activityBar);
     sidebarFilesButton_->setIcon(filesIcon);
     sidebarFilesButton_->setToolTip(tr("Files"));
     sidebarFilesButton_->setCheckable(true);
-    connect(sidebarFilesButton_, &QToolButton::clicked, this, [this]() {
-        if (sidebarCollapsed_) {
-            setSidebarCollapsed(false);
-            setSidebarPane(SidebarPane::FileBrowser);
-            return;
-        }
-        if (activeSidebarPane_ == SidebarPane::FileBrowser) {
-            setSidebarCollapsed(true);
-            return;
-        }
-        setSidebarPane(SidebarPane::FileBrowser);
+    connect(sidebarFilesButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
+        handleActivityButtonClick(SidebarPane::FileBrowser);
     });
     activityLayout->addWidget(sidebarFilesButton_);
 
@@ -714,17 +744,8 @@ void MainWindow::buildStructureSidebar()
     sidebarStructureButton_->setIcon(structureIcon);
     sidebarStructureButton_->setToolTip(tr("Structure"));
     sidebarStructureButton_->setCheckable(true);
-    connect(sidebarStructureButton_, &QToolButton::clicked, this, [this]() {
-        if (sidebarCollapsed_) {
-            setSidebarCollapsed(false);
-            setSidebarPane(SidebarPane::StructureBrowser);
-            return;
-        }
-        if (activeSidebarPane_ == SidebarPane::StructureBrowser) {
-            setSidebarCollapsed(true);
-            return;
-        }
-        setSidebarPane(SidebarPane::StructureBrowser);
+    connect(sidebarStructureButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
+        handleActivityButtonClick(SidebarPane::StructureBrowser);
     });
     activityLayout->addWidget(sidebarStructureButton_);
 
@@ -732,17 +753,8 @@ void MainWindow::buildStructureSidebar()
     sidebarMapButton_->setIcon(mapIcon);
     sidebarMapButton_->setToolTip(tr("Map"));
     sidebarMapButton_->setCheckable(true);
-    connect(sidebarMapButton_, &QToolButton::clicked, this, [this]() {
-        if (sidebarCollapsed_) {
-            setSidebarCollapsed(false);
-            setSidebarPane(SidebarPane::MapEditor);
-            return;
-        }
-        if (activeSidebarPane_ == SidebarPane::MapEditor) {
-            setSidebarCollapsed(true);
-            return;
-        }
-        setSidebarPane(SidebarPane::MapEditor);
+    connect(sidebarMapButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
+        handleActivityButtonClick(SidebarPane::MapEditor);
     });
     activityLayout->addWidget(sidebarMapButton_);
 
@@ -750,20 +762,16 @@ void MainWindow::buildStructureSidebar()
     sidebarConsoleButton_->setIcon(consoleIcon);
     sidebarConsoleButton_->setToolTip(tr("Console"));
     sidebarConsoleButton_->setCheckable(true);
-    connect(sidebarConsoleButton_, &QToolButton::clicked, this, [this]() {
-        if (sidebarCollapsed_) {
-            setSidebarCollapsed(false);
-            setSidebarPane(SidebarPane::Console);
-            return;
-        }
-        if (activeSidebarPane_ == SidebarPane::Console) {
-            setSidebarCollapsed(true);
-            return;
-        }
-        setSidebarPane(SidebarPane::Console);
+    connect(sidebarConsoleButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
+        handleActivityButtonClick(SidebarPane::Console);
     });
     activityLayout->addWidget(sidebarConsoleButton_);
     activityLayout->addStretch(1);
+
+    // Keep the activity rail width driven by icon/button metrics to avoid extra blank gutter.
+    sidebarRailWidth_ = qMax(40, activityBar->sizeHint().width());
+    activityBar->setFixedWidth(sidebarRailWidth_);
+    structureDock_->setMinimumWidth(sidebarRailWidth_);
 
     sidebarContentContainer_ = new QWidget(container);
     sidebarContentContainer_->setMinimumWidth(0);
@@ -904,7 +912,7 @@ void MainWindow::rememberSidebarWidth()
         return;
     }
 
-    sidebarExpandedWidth_ = qMax(SidebarExpandedMinWidth, structureDock_->width());
+    sidebarExpandedWidth_ = qMax(sidebarRailWidth_, structureDock_->width());
 }
 
 void MainWindow::restoreSidebarWidth()
@@ -937,6 +945,8 @@ void MainWindow::setSidebarCollapsed(bool collapsed)
     QWidget *contentWidget = sidebarContentContainer_;
     if (collapsed) {
         rememberSidebarWidth();
+        structureDock_->setMinimumWidth(sidebarRailWidth_);
+        structureDock_->setMaximumWidth(sidebarRailWidth_);
         if (contentWidget != nullptr) {
             contentWidget->setVisible(false);
         }
@@ -946,9 +956,11 @@ void MainWindow::setSidebarCollapsed(bool collapsed)
                 return;
             }
 
-            resizeDocks({structureDock_}, {SidebarCollapsedRailWidth}, Qt::Horizontal);
+            resizeDocks({structureDock_}, {sidebarRailWidth_}, Qt::Horizontal);
         });
     } else {
+        structureDock_->setMaximumWidth(QWIDGETSIZE_MAX);
+        structureDock_->setMinimumWidth(sidebarRailWidth_);
         if (contentWidget != nullptr) {
             contentWidget->setVisible(true);
         }

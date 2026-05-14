@@ -14,8 +14,7 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 ### Next up
 
 - Continue Phase 5 map-editor parity polish and interaction refinement.
-- Continue Phase 6 manual verification using the encoding QA checklist and capture platform-by-platform results.
-- Execute cross-platform manual pass using the new encoding QA checklist.
+- Continue implementation work; defer Phase 6 manual verification pass.
 
 ### Risks / blockers
 
@@ -26,9 +25,9 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 ### Manual QA Runs
 
 - Encoding checklist pass (`docs/ENCODING_QA_CHECKLIST.md`):
-- macOS: Pending
-- Windows: Pending
-- Linux: Pending
+- macOS: Deferred
+- Windows: Deferred
+- Linux: Deferred
 
 ## Phase Plan
 

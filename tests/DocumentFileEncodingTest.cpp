@@ -307,6 +307,91 @@ int runInspectorFallbackEncodingPreservationTest()
 
     return 0;
 }
+
+int runInspectorFallbackEncodingPreservationWindows1252Test()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary directory creation failed.")) {
+        return 1;
+    }
+
+    const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("inspector-fallback-cp1252.th2"));
+    const QString originalText = QStringLiteral(
+        "encoding windows-1252\n"
+        "line wall -id ligne-originale -close off\n"
+        "map cafe-plan\n");
+
+    QStringEncoder encoder(QStringLiteral("windows-1252"), QStringConverter::Flag::Default);
+    if (!expect(encoder.isValid(), "windows-1252 codec is not available in this Qt runtime.")) {
+        return 1;
+    }
+
+    const QByteArray originalBytes = encoder.encode(originalText);
+    if (!expect(!encoder.hasError(), "Failed to encode inspector fallback windows-1252 fixture text.")) {
+        return 1;
+    }
+
+    if (!expect(writeRawFile(filePath, originalBytes), "Failed to write inspector fallback windows-1252 fixture file.")) {
+        return 1;
+    }
+
+    QString contents;
+    QString encodingName;
+    QString errorMessage;
+    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encodingName, nullptr, &errorMessage),
+                qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    if (!expect(encodingName.contains(QStringLiteral("1252"), Qt::CaseInsensitive),
+                "Inspector fallback windows-1252 fixture did not resolve to a 1252-family encoding.")) {
+        return 1;
+    }
+
+    if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents,
+                                                                2,
+                                                                QStringLiteral("-close"),
+                                                                true,
+                                                                &errorMessage),
+                qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents,
+                                                                  3,
+                                                                  QStringLiteral("Maps"),
+                                                                  QStringLiteral("café-plan"),
+                                                                  &errorMessage),
+                qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    if (!expect(DocumentFile::writeTextFile(filePath, contents, encodingName, &errorMessage), qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    QStringEncoder expectedEncoder(encodingName, QStringConverter::Flag::Default);
+    if (!expect(expectedEncoder.isValid(), "Resolved windows-1252 encoding is not writable for expected byte validation.")) {
+        return 1;
+    }
+
+    const QString expectedText = QStringLiteral(
+        "encoding windows-1252\n"
+        "line wall -id ligne-originale -close on\n"
+        "map café-plan\n");
+    const QByteArray expectedBytes = expectedEncoder.encode(expectedText);
+    if (!expect(!expectedEncoder.hasError(), "Failed to encode expected inspector fallback windows-1252 output.")) {
+        return 1;
+    }
+
+    const QByteArray writtenBytes = readRawFile(filePath);
+    if (!expect(writtenBytes == expectedBytes,
+                "Inspector fallback windows-1252 rewrite path did not preserve source encoding semantics.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -331,5 +416,9 @@ int main()
         return cp1252Result;
     }
 
-    return runInspectorFallbackEncodingPreservationTest();
+    if (const int inspector1250Result = runInspectorFallbackEncodingPreservationTest(); inspector1250Result != 0) {
+        return inspector1250Result;
+    }
+
+    return runInspectorFallbackEncodingPreservationWindows1252Test();
 }

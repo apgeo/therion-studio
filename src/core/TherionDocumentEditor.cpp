@@ -881,7 +881,16 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
         }
     } else {
         const int insertionIndex = parsedLine.commentStart >= 0 ? parsedLine.commentStart : lineText.size();
-        lineText.insert(insertionIndex, QStringLiteral(" %1 %2").arg(normalizedOption.value(), optionValue));
+        const bool needsLeadingSpace = insertionIndex > 0 && !lineText.at(insertionIndex - 1).isSpace();
+        const bool needsTrailingSpace = insertionIndex < lineText.size() && !lineText.at(insertionIndex).isSpace();
+        QString insertionText = QStringLiteral("%1 %2").arg(normalizedOption.value(), optionValue);
+        if (needsLeadingSpace) {
+            insertionText.prepend(QLatin1Char(' '));
+        }
+        if (needsTrailingSpace) {
+            insertionText.append(QLatin1Char(' '));
+        }
+        lineText.insert(insertionIndex, insertionText);
     }
 
     lines[lineIndex] = lineText;

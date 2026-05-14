@@ -2,6 +2,7 @@
 #include "../src/core/TherionDocumentParser.h"
 
 #include <iostream>
+#include <cmath>
 
 using namespace TherionStudio;
 
@@ -192,6 +193,87 @@ int runLineOptionToggleParsingTest()
 
     return 0;
 }
+
+int runDeCasteljauInsertionTest()
+{
+    QVector<MapGeometryFeature::TH2LineVertex> vertices;
+    MapGeometryFeature::TH2LineVertex start;
+    start.anchor = QPointF(0.0, 0.0);
+    start.outgoingControl = QPointF(10.0, 0.0);
+    MapGeometryFeature::TH2LineVertex end;
+    end.anchor = QPointF(10.0, 10.0);
+    end.incomingControl = QPointF(12.0, 10.0);
+    vertices.append(start);
+    vertices.append(end);
+
+    int insertedIndex = -1;
+    if (!expect(insertLineVertexByDeCasteljau(&vertices, 0, 0.5, &insertedIndex),
+                "Expected de Casteljau insertion to succeed for cubic segment.")) {
+        return 1;
+    }
+    if (!expect(vertices.size() == 3 && insertedIndex == 1,
+                "Expected one inserted anchor between the original segment endpoints.")) {
+        return 1;
+    }
+
+    const MapGeometryFeature::TH2LineVertex &inserted = vertices.at(1);
+    if (!expect(std::abs(inserted.anchor.x() - 9.5) < 1e-6 && std::abs(inserted.anchor.y() - 5.0) < 1e-6,
+                "Expected inserted anchor to match de Casteljau midpoint for the source cubic.")) {
+        return 1;
+    }
+    if (!expect(vertices.at(0).outgoingControl.has_value(),
+                "Expected start outgoing control to remain defined after split.")) {
+        return 1;
+    }
+    if (!expect(vertices.at(2).incomingControl.has_value(),
+                "Expected end incoming control to be synthesized by split when original segment was cubic.")) {
+        return 1;
+    }
+    if (!expect(inserted.incomingControl.has_value() && inserted.outgoingControl.has_value(),
+                "Expected inserted vertex to carry both incoming and outgoing controls for cubic split.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runLineVertexRemovalReconnectTest()
+{
+    QVector<MapGeometryFeature::TH2LineVertex> vertices;
+    MapGeometryFeature::TH2LineVertex first;
+    first.anchor = QPointF(0.0, 0.0);
+    first.outgoingControl = QPointF(2.0, 0.0);
+    MapGeometryFeature::TH2LineVertex middle;
+    middle.anchor = QPointF(5.0, 5.0);
+    middle.incomingControl = QPointF(4.0, 5.0);
+    middle.outgoingControl = QPointF(6.0, 5.0);
+    MapGeometryFeature::TH2LineVertex last;
+    last.anchor = QPointF(10.0, 10.0);
+    last.incomingControl = QPointF(9.0, 10.0);
+    vertices.append(first);
+    vertices.append(middle);
+    vertices.append(last);
+
+    if (!expect(removeLineVertexWithReconnect(&vertices, 1),
+                "Expected middle-vertex removal to succeed for reconnect test.")) {
+        return 1;
+    }
+    if (!expect(vertices.size() == 2, "Expected removal to shrink line vertex sequence by one.")) {
+        return 1;
+    }
+    if (!expect(vertices.at(0).outgoingControl.has_value()
+                && vertices.at(0).outgoingControl.value() == QPointF(4.0, 5.0),
+                "Expected previous outgoing control to reconnect through removed incoming control.")) {
+        return 1;
+    }
+    if (!expect(vertices.at(1).incomingControl.has_value()
+                && vertices.at(1).incomingControl.value() == QPointF(6.0, 5.0),
+                "Expected next incoming control to reconnect through removed outgoing control.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -206,6 +288,12 @@ int main()
         return rc;
     }
     if (const int rc = runLineOptionToggleParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runDeCasteljauInsertionTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runLineVertexRemovalReconnectTest(); rc != 0) {
         return rc;
     }
 

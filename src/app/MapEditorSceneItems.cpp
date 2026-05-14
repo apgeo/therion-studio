@@ -819,6 +819,98 @@ QPointF mapGeometryPointToPreview(const QPointF &point, const QRectF &sourceBoun
     return sceneCoordsSourceToPreview(point, sourceBounds, targetBounds);
 }
 
+bool insertLineVertexByDeCasteljau(QVector<MapGeometryFeature::TH2LineVertex> *lineVertices,
+                                   int segmentStartIndex,
+                                   qreal t,
+                                   int *insertedVertexIndex)
+{
+    if (lineVertices == nullptr || lineVertices->size() < 2) {
+        return false;
+    }
+    if (segmentStartIndex < 0 || segmentStartIndex + 1 >= lineVertices->size()) {
+        return false;
+    }
+
+    const qreal clampedT = qBound(0.0, t, 1.0);
+    MapGeometryFeature::TH2LineVertex &startVertex = (*lineVertices)[segmentStartIndex];
+    MapGeometryFeature::TH2LineVertex &endVertex = (*lineVertices)[segmentStartIndex + 1];
+
+    auto lerp = [clampedT](const QPointF &a, const QPointF &b) {
+        return QPointF(a.x() + ((b.x() - a.x()) * clampedT),
+                       a.y() + ((b.y() - a.y()) * clampedT));
+    };
+    auto normalizeControl = [](const QPointF &anchor, const QPointF &control) -> std::optional<QPointF> {
+        return mapSourcePointsDiffer(anchor, control) ? std::optional<QPointF>(control) : std::nullopt;
+    };
+
+    const QPointF p0 = startVertex.anchor;
+    const QPointF p1 = startVertex.outgoingControl.value_or(startVertex.anchor);
+    const QPointF p2 = endVertex.incomingControl.value_or(endVertex.anchor);
+    const QPointF p3 = endVertex.anchor;
+    const bool segmentIsCubic = startVertex.outgoingControl.has_value() || endVertex.incomingControl.has_value();
+
+    MapGeometryFeature::TH2LineVertex inserted;
+    inserted.anchorSourceVertexIndex = -1;
+    inserted.incomingSourceVertexIndex = -1;
+    inserted.outgoingSourceVertexIndex = -1;
+    inserted.isSmooth = true;
+
+    if (!segmentIsCubic) {
+        inserted.anchor = lerp(p0, p3);
+        inserted.incomingControl.reset();
+        inserted.outgoingControl.reset();
+        startVertex.outgoingControl.reset();
+        endVertex.incomingControl.reset();
+    } else {
+        const QPointF p01 = lerp(p0, p1);
+        const QPointF p12 = lerp(p1, p2);
+        const QPointF p23 = lerp(p2, p3);
+        const QPointF p012 = lerp(p01, p12);
+        const QPointF p123 = lerp(p12, p23);
+        const QPointF p0123 = lerp(p012, p123);
+
+        inserted.anchor = p0123;
+        inserted.incomingControl = normalizeControl(inserted.anchor, p012);
+        inserted.outgoingControl = normalizeControl(inserted.anchor, p123);
+        startVertex.outgoingControl = normalizeControl(startVertex.anchor, p01);
+        endVertex.incomingControl = normalizeControl(endVertex.anchor, p23);
+    }
+
+    lineVertices->insert(segmentStartIndex + 1, inserted);
+    if (insertedVertexIndex != nullptr) {
+        *insertedVertexIndex = segmentStartIndex + 1;
+    }
+
+    return true;
+}
+
+bool removeLineVertexWithReconnect(QVector<MapGeometryFeature::TH2LineVertex> *lineVertices,
+                                   int vertexIndex)
+{
+    if (lineVertices == nullptr || lineVertices->size() < 3) {
+        return false;
+    }
+    if (vertexIndex <= 0 || vertexIndex >= lineVertices->size() - 1) {
+        return false;
+    }
+
+    const MapGeometryFeature::TH2LineVertex removed = lineVertices->at(vertexIndex);
+    MapGeometryFeature::TH2LineVertex &previous = (*lineVertices)[vertexIndex - 1];
+    MapGeometryFeature::TH2LineVertex &next = (*lineVertices)[vertexIndex + 1];
+
+    const bool reconnectThroughIncoming = removed.incomingControl.has_value();
+    const bool reconnectThroughOutgoing = removed.outgoingControl.has_value();
+    previous.outgoingControl = reconnectThroughIncoming
+        ? removed.incomingControl
+        : std::nullopt;
+    next.incomingControl = reconnectThroughOutgoing
+        ? removed.outgoingControl
+        : std::nullopt;
+
+    lineVertices->removeAt(vertexIndex);
+    return true;
+}
+
 QUndoCommand *createMapCardMoveCommand(MapCardItem *item, const QPointF &oldPosition, const QPointF &newPosition)
 {
     return new MapCardMoveCommand(item, oldPosition, newPosition);

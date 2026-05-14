@@ -176,6 +176,12 @@ QVector<MapSceneEntry> collectMapSceneEntries(const QVector<TherionParsedLine> &
 QRectF geometryBoundsForFeatures(const QVector<MapGeometryFeature> &features);
 QPointF mapGeometryPointToPreview(const QPointF &point, const QRectF &sourceBounds, const QRectF &targetBounds);
 QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedLine> &parsedLines);
+bool insertLineVertexByDeCasteljau(QVector<MapGeometryFeature::TH2LineVertex> *lineVertices,
+                                   int segmentStartIndex,
+                                   qreal t,
+                                   int *insertedVertexIndex = nullptr);
+bool removeLineVertexWithReconnect(QVector<MapGeometryFeature::TH2LineVertex> *lineVertices,
+                                   int vertexIndex);
 void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const QString &documentPath,
                              const QVector<MapSceneEntry> &entries,

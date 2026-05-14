@@ -194,6 +194,9 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Expanded `MapGeometryFeatureParsingTest` with line-option assertions for `-close`/`-reverse` parsing behavior, including explicit on/off and bare-flag cases.~~
 - ~~Expanded `TherionDocumentEditorTest` with `rewriteLineOptionToggle` coverage: null/non-line rejection, missing-option insertion before comments, bare-option disable normalization, explicit-value rewrite, and CRLF preservation.~~
 - ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest MapGeometryFeatureParsingTest` plus execution of `TherionDocumentEditorTest`, `MapGeometryFeatureParsingTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, and `TherionXviParserTest`.~~
+- ~~Added reusable line-curve editing helpers in map scene support: de Casteljau segment split insertion (`insertLineVertexByDeCasteljau`) and neighbor-control reconnect removal (`removeLineVertexWithReconnect`) on TH2 line-vertex sequences.~~
+- ~~Expanded `MapGeometryFeatureParsingTest` with direct curve-edit behavior checks for cubic split insertion and middle-vertex removal reconnect semantics.~~
+- ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest MapGeometryFeatureParsingTest TherionProjectStructureIndexTest MapBackgroundPlacementTest TherionBackgroundMetadataTest TherionXviParserTest` plus execution of all six regression binaries.~~
 - ~~Closed Phase 4 (`MVP`) and moved additional corpus-scale rewrite expansion into the Post-MVP backlog.~~
 
 ### 2026-05-13

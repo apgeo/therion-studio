@@ -49,7 +49,7 @@ public:
         , lineNumber_(lineNumber)
         , sourceBounds_(sourceBounds)
         , previewBounds_(previewBounds)
-        , fittedBounds_(sceneCoordsPreviewBounds(sourceBounds, previewBounds))
+        , fittedBounds_(previewBounds)
     {
         setFlag(QGraphicsItem::ItemIsMovable, true);
         setFlag(QGraphicsItem::ItemIsSelectable, true);
@@ -199,7 +199,7 @@ public:
         , vertexIndex_(vertexIndex)
         , sourceBounds_(sourceBounds)
         , previewBounds_(previewBounds)
-        , fittedBounds_(sceneCoordsPreviewBounds(sourceBounds, previewBounds))
+        , fittedBounds_(previewBounds)
     {
         setFlag(QGraphicsItem::ItemIsMovable, true);
         setFlag(QGraphicsItem::ItemIsSelectable, true);
@@ -238,7 +238,10 @@ public:
         displayToSourceMapper_ = std::move(mapper);
     }
 
-    void setMovePreviewCallback(std::function<void()> callback)
+    void setMovePreviewCallback(std::function<void(MapEditableGeometryVertexItem *,
+                                                   const QPointF &,
+                                                   const QPointF &,
+                                                   bool)> callback)
     {
         movePreviewCallback_ = std::move(callback);
     }
@@ -286,7 +289,8 @@ protected:
 
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override
     {
-        pressSourcePoint_ = mapDisplayToSource(previewToSource(pos()));
+        pressSourcePoint_ = sourcePointForPreviewPos(pos());
+        lastPreviewSourcePoint_ = pressSourcePoint_;
         dragActive_ = true;
         setCursor(Qt::ClosedHandCursor);
         QGraphicsEllipseItem::mousePressEvent(event);
@@ -298,7 +302,7 @@ protected:
         setCursor(Qt::OpenHandCursor);
         QGraphicsEllipseItem::mouseReleaseEvent(event);
 
-        const QPointF releasedSourcePoint = mapDisplayToSource(previewToSource(pos()));
+        const QPointF releasedSourcePoint = sourcePointForPreviewPos(pos());
         if (moveCommittedCallback_ != nullptr && mapSourcePointsDiffer(pressSourcePoint_, releasedSourcePoint)) {
             moveCommittedCallback_(lineNumber_, geometryKind_, vertexIndex_, pressSourcePoint_, releasedSourcePoint);
             // The callback may trigger a scene rebuild that deletes this item.
@@ -330,13 +334,20 @@ protected:
             return candidate;
         }
         if (change == QGraphicsItem::ItemPositionHasChanged && movePreviewCallback_ != nullptr) {
-            movePreviewCallback_();
+            const QPointF newSourcePoint = sourcePointForPreviewPos(pos());
+            movePreviewCallback_(this, lastPreviewSourcePoint_, newSourcePoint, dragActive_);
+            lastPreviewSourcePoint_ = newSourcePoint;
         }
 
         return QGraphicsEllipseItem::itemChange(change, value);
     }
 
 private:
+    QPointF sourcePointForPreviewPos(const QPointF &previewPoint) const
+    {
+        return mapDisplayToSource(previewToSource(previewPoint));
+    }
+
     QPointF mapDisplayToSource(const QPointF &displayPoint) const
     {
         if (displayToSourceMapper_ != nullptr) {
@@ -358,10 +369,11 @@ private:
     QRectF previewBounds_;
     QRectF fittedBounds_;
     QPointF pressSourcePoint_;
+    QPointF lastPreviewSourcePoint_;
     bool hoverActive_ = false;
     bool dragActive_ = false;
     std::function<QPointF(const QPointF &)> displayToSourceMapper_;
-    std::function<void()> movePreviewCallback_;
+    std::function<void(MapEditableGeometryVertexItem *, const QPointF &, const QPointF &, bool)> movePreviewCallback_;
     std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> moveCommittedCallback_;
 };
 

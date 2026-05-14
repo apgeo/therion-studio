@@ -274,6 +274,56 @@ int runLineVertexRemovalReconnectTest()
 
     return 0;
 }
+
+int runSmoothMirrorHelperTest()
+{
+    const QPointF anchor(10.0, 20.0);
+    const QPointF movedIncoming(16.0, 24.0); // vector length sqrt(52)
+    const QPointF oldOutgoing(4.0, 20.0);    // opposite length 6.0
+
+    const std::optional<QPointF> mirroredFromExisting = mirroredSmoothControlPoint(anchor,
+                                                                                     movedIncoming,
+                                                                                     oldOutgoing);
+    if (!expect(mirroredFromExisting.has_value(),
+                "Expected mirroredSmoothControlPoint to produce a point for non-zero drag vector.")) {
+        return 1;
+    }
+    const QPointF mirrored = mirroredFromExisting.value();
+    const qreal incomingLength = std::hypot(movedIncoming.x() - anchor.x(), movedIncoming.y() - anchor.y());
+    const qreal outgoingLength = std::hypot(mirrored.x() - anchor.x(), mirrored.y() - anchor.y());
+    if (!expect(std::abs(outgoingLength - 6.0) < 1e-6,
+                "Expected mirrored smooth opposite to preserve existing opposite-handle length.")) {
+        return 1;
+    }
+    if (!expect(std::abs(((movedIncoming.x() - anchor.x()) * (mirrored.x() - anchor.x()))
+                       + ((movedIncoming.y() - anchor.y()) * (mirrored.y() - anchor.y()))
+                       + (incomingLength * outgoingLength)) < 1e-4,
+                "Expected mirrored smooth opposite to remain collinear and opposite to moved handle.")) {
+        return 1;
+    }
+
+    const std::optional<QPointF> mirroredFromMissing = mirroredSmoothControlPoint(anchor,
+                                                                                   movedIncoming,
+                                                                                   std::nullopt);
+    if (!expect(mirroredFromMissing.has_value(),
+                "Expected mirroredSmoothControlPoint to create a mirrored point when opposite handle is missing.")) {
+        return 1;
+    }
+    const qreal mirroredFromMissingLength = std::hypot(mirroredFromMissing->x() - anchor.x(),
+                                                       mirroredFromMissing->y() - anchor.y());
+    if (!expect(std::abs(mirroredFromMissingLength - incomingLength) < 1e-6,
+                "Expected missing opposite handle to mirror using moved-handle length.")) {
+        return 1;
+    }
+
+    const std::optional<QPointF> collapsed = mirroredSmoothControlPoint(anchor, anchor, oldOutgoing);
+    if (!expect(!collapsed.has_value(),
+                "Expected mirroredSmoothControlPoint to return nullopt for zero-length moved vector.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -294,6 +344,9 @@ int main()
         return rc;
     }
     if (const int rc = runLineVertexRemovalReconnectTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runSmoothMirrorHelperTest(); rc != 0) {
         return rc;
     }
 

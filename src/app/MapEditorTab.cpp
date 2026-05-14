@@ -381,7 +381,6 @@ CoupledLineMove coupledMovesForLineVertex(const MapGeometryFeature &lineFeature,
         return result;
     }
 
-    constexpr qreal kEpsilon = 1e-6;
     auto appendSecondaryMove = [&](int vertexIndex, const QPointF &from, const QPointF &to) {
         if (vertexIndex < 0 || !sourcePointsDifferForCommands(from, to)) {
             return;
@@ -420,12 +419,6 @@ CoupledLineMove coupledMovesForLineVertex(const MapGeometryFeature &lineFeature,
         }
 
         const QPointF anchor = vertex.anchor;
-        const QPointF vector = newPoint - anchor;
-        qreal vectorLength = std::hypot(vector.x(), vector.y());
-        QPointF direction(0.0, 0.0);
-        if (vectorLength > kEpsilon) {
-            direction = QPointF(vector.x() / vectorLength, vector.y() / vectorLength);
-        }
 
         if (role == LineVertexRole::IncomingControl) {
             if (vertex.outgoingSourceVertexIndex < 0) {
@@ -433,13 +426,10 @@ CoupledLineMove coupledMovesForLineVertex(const MapGeometryFeature &lineFeature,
             }
 
             const QPointF oldOpposite = vertex.outgoingControl.value_or(anchor);
-            const qreal oldOppositeLength = std::hypot(oldOpposite.x() - anchor.x(), oldOpposite.y() - anchor.y());
-            const qreal targetLength = vertex.outgoingControl.has_value() ? oldOppositeLength : vectorLength;
-            const QPointF newOpposite = (vectorLength > kEpsilon)
-                ? QPointF(anchor.x() - (direction.x() * targetLength),
-                          anchor.y() - (direction.y() * targetLength))
-                : anchor;
-            appendSecondaryMove(vertex.outgoingSourceVertexIndex, oldOpposite, newOpposite);
+            const std::optional<QPointF> newOpposite = mirroredSmoothControlPoint(anchor, newPoint, vertex.outgoingControl);
+            if (newOpposite.has_value()) {
+                appendSecondaryMove(vertex.outgoingSourceVertexIndex, oldOpposite, newOpposite.value());
+            }
             return result;
         }
 
@@ -449,13 +439,10 @@ CoupledLineMove coupledMovesForLineVertex(const MapGeometryFeature &lineFeature,
             }
 
             const QPointF oldOpposite = vertex.incomingControl.value_or(anchor);
-            const qreal oldOppositeLength = std::hypot(oldOpposite.x() - anchor.x(), oldOpposite.y() - anchor.y());
-            const qreal targetLength = vertex.incomingControl.has_value() ? oldOppositeLength : vectorLength;
-            const QPointF newOpposite = (vectorLength > kEpsilon)
-                ? QPointF(anchor.x() - (direction.x() * targetLength),
-                          anchor.y() - (direction.y() * targetLength))
-                : anchor;
-            appendSecondaryMove(vertex.incomingSourceVertexIndex, oldOpposite, newOpposite);
+            const std::optional<QPointF> newOpposite = mirroredSmoothControlPoint(anchor, newPoint, vertex.incomingControl);
+            if (newOpposite.has_value()) {
+                appendSecondaryMove(vertex.incomingSourceVertexIndex, oldOpposite, newOpposite.value());
+            }
             return result;
         }
     }

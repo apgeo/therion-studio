@@ -182,6 +182,9 @@ bool insertLineVertexByDeCasteljau(QVector<MapGeometryFeature::TH2LineVertex> *l
                                    int *insertedVertexIndex = nullptr);
 bool removeLineVertexWithReconnect(QVector<MapGeometryFeature::TH2LineVertex> *lineVertices,
                                    int vertexIndex);
+std::optional<QPointF> mirroredSmoothControlPoint(const QPointF &anchor,
+                                                  const QPointF &movedControlPoint,
+                                                  const std::optional<QPointF> &oppositeControlPoint);
 void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const QString &documentPath,
                              const QVector<MapSceneEntry> &entries,

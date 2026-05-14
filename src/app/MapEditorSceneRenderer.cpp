@@ -23,6 +23,18 @@ struct LineControlConnectorBinding
     QGraphicsLineItem *lineItem = nullptr;
 };
 
+enum class LineControlRole
+{
+    Incoming,
+    Outgoing
+};
+
+struct LineControlBinding
+{
+    int ownerVertexOrder = -1;
+    LineControlRole role = LineControlRole::Incoming;
+};
+
 bool tokenLooksNumeric(const QString &token)
 {
     if (token.isEmpty()) {
@@ -584,6 +596,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                 auto anchorItemsByOrder = std::make_shared<QVector<MapEditableGeometryVertexItem *>>(feature.lineVertices.size(), nullptr);
                 auto controlItemsBySourceVertex = std::make_shared<QHash<int, MapEditableGeometryVertexItem *>>();
+                auto controlBindingsBySourceVertex = std::make_shared<QHash<int, LineControlBinding>>();
                 auto controlConnectors = std::make_shared<QVector<LineControlConnectorBinding>>();
 
                 for (int vertexIndex = 0; vertexIndex < feature.lineVertices.size(); ++vertexIndex) {
@@ -640,6 +653,10 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         controlItem->setZValue(4.2);
                         markGeometryItem(controlItem);
                         controlItemsBySourceVertex->insert(previousVertex.outgoingSourceVertexIndex, controlItem);
+                        LineControlBinding controlBinding;
+                        controlBinding.ownerVertexOrder = segmentIndex - 1;
+                        controlBinding.role = LineControlRole::Outgoing;
+                        controlBindingsBySourceVertex->insert(previousVertex.outgoingSourceVertexIndex, controlBinding);
                     }
 
                     if (currentVertex.incomingControl.has_value() && currentVertex.incomingSourceVertexIndex >= 0) {
@@ -669,9 +686,20 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         controlItem->setZValue(4.2);
                         markGeometryItem(controlItem);
                         controlItemsBySourceVertex->insert(currentVertex.incomingSourceVertexIndex, controlItem);
+                        LineControlBinding controlBinding;
+                        controlBinding.ownerVertexOrder = segmentIndex;
+                        controlBinding.role = LineControlRole::Incoming;
+                        controlBindingsBySourceVertex->insert(currentVertex.incomingSourceVertexIndex, controlBinding);
                     }
                 }
 
+                const auto previewToSource = [sourceBounds, previewBounds](const QPointF &previewPoint) {
+                    return sceneCoordsPreviewToSource(previewPoint, sourceBounds, previewBounds);
+                };
+                const auto sourceToPreview = [sourceBounds, previewBounds](const QPointF &sourcePoint) {
+                    return mapGeometryPointToPreview(sourcePoint, sourceBounds, previewBounds);
+                };
+                auto couplingGuard = std::make_shared<bool>(false);
                 const auto updateInteractiveLinePreview = [lineItem,
                                                            detailItem,
                                                            feature,
@@ -752,14 +780,130 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     }
                 };
 
+                const auto previewLineMove = [feature,
+                                              controlItemsBySourceVertex,
+                                              controlBindingsBySourceVertex,
+                                              previewToSource,
+                                              sourceToPreview,
+                                              couplingGuard,
+                                              updateInteractiveLinePreview](MapEditableGeometryVertexItem *movedItem,
+                                                                            const QPointF &previousSourcePoint,
+                                                                            const QPointF &newSourcePoint,
+                                                                            bool dragActive) {
+                    if (movedItem == nullptr) {
+                        updateInteractiveLinePreview();
+                        return;
+                    }
+                    if (*couplingGuard || !dragActive) {
+                        updateInteractiveLinePreview();
+                        return;
+                    }
+                    if (movedItem->geometryKind() == QStringLiteral("line")) {
+                        const int movedSourceVertexIndex = movedItem->vertexIndex();
+                        const QPointF delta = newSourcePoint - previousSourcePoint;
+                        if (movedSourceVertexIndex >= 0 && mapSourcePointsDiffer(QPointF(0.0, 0.0), delta)) {
+                            for (const MapGeometryFeature::TH2LineVertex &vertex : feature.lineVertices) {
+                                if (vertex.anchorSourceVertexIndex != movedSourceVertexIndex) {
+                                    continue;
+                                }
+
+                                *couplingGuard = true;
+                                if (vertex.incomingSourceVertexIndex >= 0) {
+                                    if (MapEditableGeometryVertexItem *incoming = controlItemsBySourceVertex->value(vertex.incomingSourceVertexIndex, nullptr)) {
+                                        const QPointF oldIncomingSource = previewToSource(incoming->pos());
+                                        incoming->setPos(sourceToPreview(oldIncomingSource + delta));
+                                    }
+                                }
+                                if (vertex.outgoingSourceVertexIndex >= 0) {
+                                    if (MapEditableGeometryVertexItem *outgoing = controlItemsBySourceVertex->value(vertex.outgoingSourceVertexIndex, nullptr)) {
+                                        const QPointF oldOutgoingSource = previewToSource(outgoing->pos());
+                                        outgoing->setPos(sourceToPreview(oldOutgoingSource + delta));
+                                    }
+                                }
+                                *couplingGuard = false;
+                                break;
+                            }
+                        }
+                        updateInteractiveLinePreview();
+                        return;
+                    }
+                    if (movedItem->geometryKind() != QStringLiteral("line control")) {
+                        updateInteractiveLinePreview();
+                        return;
+                    }
+                    if (controlBindingsBySourceVertex == nullptr || controlItemsBySourceVertex == nullptr) {
+                        updateInteractiveLinePreview();
+                        return;
+                    }
+
+                    const int movedSourceVertexIndex = movedItem->vertexIndex();
+                    if (movedSourceVertexIndex < 0 || !controlBindingsBySourceVertex->contains(movedSourceVertexIndex)) {
+                        updateInteractiveLinePreview();
+                        return;
+                    }
+
+                    const LineControlBinding controlBinding = controlBindingsBySourceVertex->value(movedSourceVertexIndex);
+                    if (controlBinding.ownerVertexOrder < 0 || controlBinding.ownerVertexOrder >= feature.lineVertices.size()) {
+                        updateInteractiveLinePreview();
+                        return;
+                    }
+
+                    const MapGeometryFeature::TH2LineVertex &ownerVertex = feature.lineVertices.at(controlBinding.ownerVertexOrder);
+                    if (!ownerVertex.isSmooth) {
+                        updateInteractiveLinePreview();
+                        return;
+                    }
+
+                    const QPointF anchorSource = ownerVertex.anchor;
+
+                    int oppositeSourceVertexIndex = -1;
+                    std::optional<QPointF> oppositeControlPoint;
+                    if (controlBinding.role == LineControlRole::Incoming) {
+                        oppositeSourceVertexIndex = ownerVertex.outgoingSourceVertexIndex;
+                        oppositeControlPoint = ownerVertex.outgoingControl;
+                    } else {
+                        oppositeSourceVertexIndex = ownerVertex.incomingSourceVertexIndex;
+                        oppositeControlPoint = ownerVertex.incomingControl;
+                    }
+                    if (oppositeSourceVertexIndex < 0) {
+                        updateInteractiveLinePreview();
+                        return;
+                    }
+
+                    MapEditableGeometryVertexItem *oppositeItem = controlItemsBySourceVertex->value(oppositeSourceVertexIndex, nullptr);
+                    if (oppositeItem == nullptr || oppositeItem == movedItem) {
+                        updateInteractiveLinePreview();
+                        return;
+                    }
+
+                    const QPointF oldOppositeSource = previewToSource(oppositeItem->pos());
+                    const std::optional<QPointF> mirroredOpposite = mirroredSmoothControlPoint(anchorSource,
+                                                                                                 newSourcePoint,
+                                                                                                 oppositeControlPoint);
+                    if (!mirroredOpposite.has_value()) {
+                        updateInteractiveLinePreview();
+                        return;
+                    }
+                    if (!mapSourcePointsDiffer(oldOppositeSource, mirroredOpposite.value())) {
+                        updateInteractiveLinePreview();
+                        return;
+                    }
+
+                    *couplingGuard = true;
+                    oppositeItem->setPos(sourceToPreview(mirroredOpposite.value()));
+                    *couplingGuard = false;
+                    Q_UNUSED(previousSourcePoint);
+                    updateInteractiveLinePreview();
+                };
+
                 for (MapEditableGeometryVertexItem *vertexItem : *anchorItemsByOrder) {
                     if (vertexItem != nullptr) {
-                        vertexItem->setMovePreviewCallback(updateInteractiveLinePreview);
+                        vertexItem->setMovePreviewCallback(previewLineMove);
                     }
                 }
                 for (MapEditableGeometryVertexItem *controlItem : controlItemsBySourceVertex->values()) {
                     if (controlItem != nullptr) {
-                        controlItem->setMovePreviewCallback(updateInteractiveLinePreview);
+                        controlItem->setMovePreviewCallback(previewLineMove);
                     }
                 }
 
@@ -856,7 +1000,13 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                 for (MapEditableGeometryVertexItem *vertexItem : *areaVertexItemsByOrder) {
                     if (vertexItem != nullptr) {
-                        vertexItem->setMovePreviewCallback(updateInteractiveAreaPreview);
+                        vertexItem->setMovePreviewCallback(
+                            [updateInteractiveAreaPreview](MapEditableGeometryVertexItem *,
+                                                           const QPointF &,
+                                                           const QPointF &,
+                                                           bool) {
+                                updateInteractiveAreaPreview();
+                            });
                     }
                 }
 

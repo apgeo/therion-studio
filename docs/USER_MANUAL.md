@@ -188,6 +188,11 @@ Map help pane:
 - collapsible via small triangle on splitter handle
 - line-vertex shortcut reminder includes split (`Insert`/`I`), remove (`Delete`/`Backspace`), and smooth toggle (`S`)
 
+Line-handle behavior:
+
+- dragging a line anchor moves attached incoming/outgoing control handles by the same delta
+- on smooth vertices, dragging one control handle updates the opposite control handle live (mirrored/collinear) during drag
+
 Text + map status row:
 
 - shared path + encoding row below workspace

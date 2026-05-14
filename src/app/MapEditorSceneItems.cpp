@@ -327,10 +327,8 @@ QPointF sceneCoordsPreviewToSource(const QPointF &preview, const QRectF &sourceB
                             fitted.height() / qMax(1.0, sourceBounds.height()));
     const qreal panX = fitted.left() - (sourceBounds.left() * zoom);
     const qreal panY = fitted.top() + (sourceBounds.bottom() * zoom);
-    const qreal clampedX = qBound(fitted.left(), preview.x(), fitted.right());
-    const qreal clampedY = qBound(fitted.top(), preview.y(), fitted.bottom());
-    return QPointF((clampedX - panX) / qMax(1e-6, zoom),
-                   (panY - clampedY) / qMax(1e-6, zoom));
+    return QPointF((preview.x() - panX) / qMax(1e-6, zoom),
+                   (panY - preview.y()) / qMax(1e-6, zoom));
 }
 
 qreal sceneCoordsScaleFactor(const QRectF &sourceBounds, const QRectF &previewBounds)
@@ -817,6 +815,26 @@ QRectF geometryBoundsForFeatures(const QVector<MapGeometryFeature> &features)
 QPointF mapGeometryPointToPreview(const QPointF &point, const QRectF &sourceBounds, const QRectF &targetBounds)
 {
     return sceneCoordsSourceToPreview(point, sourceBounds, targetBounds);
+}
+
+std::optional<QPointF> mirroredSmoothControlPoint(const QPointF &anchor,
+                                                  const QPointF &movedControlPoint,
+                                                  const std::optional<QPointF> &oppositeControlPoint)
+{
+    constexpr qreal kEpsilon = 1e-6;
+
+    const QPointF vector = movedControlPoint - anchor;
+    const qreal vectorLength = std::hypot(vector.x(), vector.y());
+    if (vectorLength <= kEpsilon) {
+        return std::nullopt;
+    }
+
+    const QPointF direction(vector.x() / vectorLength, vector.y() / vectorLength);
+    const qreal oppositeLength = oppositeControlPoint.has_value()
+        ? std::hypot(oppositeControlPoint->x() - anchor.x(), oppositeControlPoint->y() - anchor.y())
+        : vectorLength;
+    return QPointF(anchor.x() - (direction.x() * oppositeLength),
+                   anchor.y() - (direction.y() * oppositeLength));
 }
 
 bool insertLineVertexByDeCasteljau(QVector<MapGeometryFeature::TH2LineVertex> *lineVertices,

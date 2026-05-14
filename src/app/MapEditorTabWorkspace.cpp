@@ -9,6 +9,7 @@
 #include <QPainter>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QScopedValueRollback>
 #include <QSplitter>
 #include <QTextBrowser>
 #include <QToolButton>
@@ -351,14 +352,18 @@ void MapEditorTab::handleTextEditorCurrentLineChanged(int lineNumber)
 void MapEditorTab::handleUndoTriggered()
 {
     if (undoStack_ != nullptr) {
+        const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
         undoStack_->undo();
+        flushPendingMapSceneRefreshAfterCommand();
     }
 }
 
 void MapEditorTab::handleRedoTriggered()
 {
     if (undoStack_ != nullptr) {
+        const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
         undoStack_->redo();
+        flushPendingMapSceneRefreshAfterCommand();
     }
 }
 

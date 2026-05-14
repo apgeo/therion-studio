@@ -73,6 +73,7 @@ public:
     bool rewriteLineCoordinateRows(int lineNumber,
                                    const QStringList &coordinateRows,
                                    QString *errorMessage = nullptr);
+    void replaceTextForCommand(const QString &contents);
 
     QString filePath() const;
     QString displayName() const;
@@ -105,6 +106,8 @@ private slots:
 private:
     void refreshTitle();
     void refreshStatus();
+    bool isCurrentStateDirty() const;
+    void applyDirtyStateFromCurrentState();
     QString displayPath() const;
     void buildHelpPanel();
     void loadHelpMetadata();
@@ -156,6 +159,8 @@ private:
     bool replaceMode_ = false;
     QString fileEncodingName_ = QStringLiteral("UTF-8");
     QString fileEncodingLabel_ = QStringLiteral("UTF-8");
+    QString cleanEncodingNameSnapshot_ = QStringLiteral("UTF-8");
+    QString cleanTextSnapshot_;
     QString encodingStatusNote_;
 };
 }

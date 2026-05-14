@@ -2,16 +2,26 @@
 #include "MapEditorSceneInternals.h"
 
 #include <QFont>
+#include <QGraphicsLineItem>
 #include <QGraphicsScene>
 #include <QPainterPath>
 #include <QRegularExpression>
 
 #include "../core/TherionDocumentParser.h"
 
+#include <memory>
+
 namespace TherionStudio {
 namespace {
 constexpr int kMapItemRole = Qt::UserRole + 120;
 constexpr int kMapItemGeometryValue = 1;
+
+struct LineControlConnectorBinding
+{
+    int anchorVertexOrder = -1;
+    int controlSourceVertexIndex = -1;
+    QGraphicsLineItem *lineItem = nullptr;
+};
 
 bool tokenLooksNumeric(const QString &token)
 {
@@ -572,6 +582,10 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 detailItem->setZValue(3.0);
                 markGeometryItem(detailItem);
 
+                auto anchorItemsByOrder = std::make_shared<QVector<MapEditableGeometryVertexItem *>>(feature.lineVertices.size(), nullptr);
+                auto controlItemsBySourceVertex = std::make_shared<QHash<int, MapEditableGeometryVertexItem *>>();
+                auto controlConnectors = std::make_shared<QVector<LineControlConnectorBinding>>();
+
                 for (int vertexIndex = 0; vertexIndex < feature.lineVertices.size(); ++vertexIndex) {
                     const MapGeometryFeature::TH2LineVertex &vertex = feature.lineVertices.at(vertexIndex);
                     auto *vertexItem = new MapEditableGeometryVertexItem(feature.lineNumber,
@@ -591,6 +605,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     scene->addItem(vertexItem);
                     vertexItem->setZValue(4.0);
                     markGeometryItem(vertexItem);
+                    anchorItemsByOrder->operator[](vertexIndex) = vertexItem;
                 }
 
                 const qreal controlRadius = qBound(1.8, 3.0 * mapScale, 4.0);
@@ -605,6 +620,11 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                          QPen(QColor(48, 128, 220, 160), qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
                         connector->setZValue(3.2);
                         markGeometryItem(connector);
+                        LineControlConnectorBinding binding;
+                        binding.anchorVertexOrder = segmentIndex - 1;
+                        binding.controlSourceVertexIndex = previousVertex.outgoingSourceVertexIndex;
+                        binding.lineItem = connector;
+                        controlConnectors->append(binding);
 
                         auto *controlItem = new MapEditableGeometryVertexItem(feature.lineNumber,
                                                                               QStringLiteral("line control"),
@@ -619,6 +639,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         scene->addItem(controlItem);
                         controlItem->setZValue(4.2);
                         markGeometryItem(controlItem);
+                        controlItemsBySourceVertex->insert(previousVertex.outgoingSourceVertexIndex, controlItem);
                     }
 
                     if (currentVertex.incomingControl.has_value() && currentVertex.incomingSourceVertexIndex >= 0) {
@@ -628,6 +649,11 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                          QPen(QColor(48, 128, 220, 160), qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
                         connector->setZValue(3.2);
                         markGeometryItem(connector);
+                        LineControlConnectorBinding binding;
+                        binding.anchorVertexOrder = segmentIndex;
+                        binding.controlSourceVertexIndex = currentVertex.incomingSourceVertexIndex;
+                        binding.lineItem = connector;
+                        controlConnectors->append(binding);
 
                         auto *controlItem = new MapEditableGeometryVertexItem(feature.lineNumber,
                                                                               QStringLiteral("line control"),
@@ -642,6 +668,98 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         scene->addItem(controlItem);
                         controlItem->setZValue(4.2);
                         markGeometryItem(controlItem);
+                        controlItemsBySourceVertex->insert(currentVertex.incomingSourceVertexIndex, controlItem);
+                    }
+                }
+
+                const auto updateInteractiveLinePreview = [lineItem,
+                                                           detailItem,
+                                                           feature,
+                                                           sourceBounds,
+                                                           previewBounds,
+                                                           anchorItemsByOrder,
+                                                           controlItemsBySourceVertex,
+                                                           controlConnectors]() {
+                    if (lineItem == nullptr || detailItem == nullptr || anchorItemsByOrder == nullptr) {
+                        return;
+                    }
+                    if (anchorItemsByOrder->size() < 2) {
+                        return;
+                    }
+
+                    auto anchorPreviewAt = [&](int index) -> QPointF {
+                        if (index >= 0 && index < anchorItemsByOrder->size()) {
+                            if (MapEditableGeometryVertexItem *item = anchorItemsByOrder->at(index)) {
+                                return item->pos();
+                            }
+                        }
+                        if (index >= 0 && index < feature.lineVertices.size()) {
+                            return mapGeometryPointToPreview(feature.lineVertices.at(index).anchor, sourceBounds, previewBounds);
+                        }
+                        return QPointF();
+                    };
+
+                    QPainterPath interactivePath;
+                    interactivePath.moveTo(anchorPreviewAt(0));
+                    for (int index = 1; index < anchorItemsByOrder->size(); ++index) {
+                        const MapGeometryFeature::TH2LineVertex &previousVertex = feature.lineVertices.at(index - 1);
+                        const MapGeometryFeature::TH2LineVertex &currentVertex = feature.lineVertices.at(index);
+                        const QPointF previousAnchor = anchorPreviewAt(index - 1);
+                        const QPointF currentAnchor = anchorPreviewAt(index);
+
+                        QPointF cp1 = previousAnchor;
+                        QPointF cp2 = currentAnchor;
+                        if (previousVertex.outgoingSourceVertexIndex >= 0) {
+                            if (MapEditableGeometryVertexItem *control = controlItemsBySourceVertex->value(previousVertex.outgoingSourceVertexIndex, nullptr)) {
+                                cp1 = control->pos();
+                            }
+                        }
+                        if (currentVertex.incomingSourceVertexIndex >= 0) {
+                            if (MapEditableGeometryVertexItem *control = controlItemsBySourceVertex->value(currentVertex.incomingSourceVertexIndex, nullptr)) {
+                                cp2 = control->pos();
+                            }
+                        }
+
+                        const bool hasCurveHandle = previousVertex.outgoingControl.has_value() || currentVertex.incomingControl.has_value();
+                        if (hasCurveHandle) {
+                            interactivePath.cubicTo(cp1, cp2, currentAnchor);
+                        } else {
+                            interactivePath.lineTo(currentAnchor);
+                        }
+                    }
+
+                    if (feature.closed && anchorItemsByOrder->size() >= 3) {
+                        interactivePath.closeSubpath();
+                    }
+
+                    lineItem->setPath(interactivePath);
+                    detailItem->setPath(interactivePath);
+
+                    if (controlConnectors != nullptr) {
+                        for (const LineControlConnectorBinding &binding : *controlConnectors) {
+                            if (binding.lineItem == nullptr) {
+                                continue;
+                            }
+                            const QPointF anchorPoint = anchorPreviewAt(binding.anchorVertexOrder);
+                            QPointF controlPoint = anchorPoint;
+                            if (controlItemsBySourceVertex != nullptr) {
+                                if (MapEditableGeometryVertexItem *control = controlItemsBySourceVertex->value(binding.controlSourceVertexIndex, nullptr)) {
+                                    controlPoint = control->pos();
+                                }
+                            }
+                            binding.lineItem->setLine(QLineF(anchorPoint, controlPoint));
+                        }
+                    }
+                };
+
+                for (MapEditableGeometryVertexItem *vertexItem : *anchorItemsByOrder) {
+                    if (vertexItem != nullptr) {
+                        vertexItem->setMovePreviewCallback(updateInteractiveLinePreview);
+                    }
+                }
+                for (MapEditableGeometryVertexItem *controlItem : controlItemsBySourceVertex->values()) {
+                    if (controlItem != nullptr) {
+                        controlItem->setMovePreviewCallback(updateInteractiveLinePreview);
                     }
                 }
 
@@ -682,6 +800,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 auto *fillItem = scene->addPath(path, QPen(QColor(QStringLiteral("#222222")), qBound(1.0, 2.0 * mapScale, 2.4), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), QBrush(QColor(0, 0, 0, 18)));
                 fillItem->setZValue(2.0);
                 markGeometryItem(fillItem);
+                auto areaVertexItemsByOrder = std::make_shared<QVector<MapEditableGeometryVertexItem *>>(feature.vertices.size(), nullptr);
 
                 for (int vertexIndex = 0; vertexIndex < feature.vertices.size(); ++vertexIndex) {
                     const QPointF vertex = feature.vertices.at(vertexIndex);
@@ -702,6 +821,43 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     scene->addItem(vertexItem);
                     vertexItem->setZValue(4.0);
                     markGeometryItem(vertexItem);
+                    areaVertexItemsByOrder->operator[](vertexIndex) = vertexItem;
+                }
+
+                const auto updateInteractiveAreaPreview = [fillItem,
+                                                           areaVertexItemsByOrder,
+                                                           feature,
+                                                           sourceBounds,
+                                                           previewBounds]() {
+                    if (fillItem == nullptr || areaVertexItemsByOrder == nullptr || areaVertexItemsByOrder->size() < 3) {
+                        return;
+                    }
+
+                    auto previewPointAt = [&](int index) -> QPointF {
+                        if (index >= 0 && index < areaVertexItemsByOrder->size()) {
+                            if (MapEditableGeometryVertexItem *item = areaVertexItemsByOrder->at(index)) {
+                                return item->pos();
+                            }
+                        }
+                        if (index >= 0 && index < feature.vertices.size()) {
+                            return mapGeometryPointToPreview(feature.vertices.at(index), sourceBounds, previewBounds);
+                        }
+                        return QPointF();
+                    };
+
+                    QPainterPath interactivePath;
+                    interactivePath.moveTo(previewPointAt(0));
+                    for (int index = 1; index < areaVertexItemsByOrder->size(); ++index) {
+                        interactivePath.lineTo(previewPointAt(index));
+                    }
+                    interactivePath.closeSubpath();
+                    fillItem->setPath(interactivePath);
+                };
+
+                for (MapEditableGeometryVertexItem *vertexItem : *areaVertexItemsByOrder) {
+                    if (vertexItem != nullptr) {
+                        vertexItem->setMovePreviewCallback(updateInteractiveAreaPreview);
+                    }
                 }
 
                 if (!compactLabels) {

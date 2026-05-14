@@ -13,6 +13,7 @@
 #include <QMouseEvent>
 #include <QNativeGestureEvent>
 #include <QPushButton>
+#include <QScopedValueRollback>
 #include <QScrollBar>
 #include <QSplitterHandle>
 #include <QTabletEvent>
@@ -93,6 +94,9 @@ public:
         , newPoint_(newPoint)
         , statusCallback_(std::move(statusCallback))
     {
+        if (textEditor_ != nullptr) {
+            beforeTextSnapshot_ = textEditor_->text();
+        }
     }
 
     int id() const override
@@ -115,16 +119,38 @@ public:
 
     void undo() override
     {
-        if (!applyPoint(oldPoint_, QStringLiteral("Reverted point geometry at source line %1.").arg(lineNumber_))) {
+        if (textEditor_ == nullptr || beforeTextSnapshot_.isNull()) {
             setObsolete(true);
+            return;
+        }
+
+        textEditor_->replaceTextForCommand(beforeTextSnapshot_);
+        if (statusCallback_ != nullptr) {
+            statusCallback_(QStringLiteral("Reverted point geometry at source line %1.").arg(lineNumber_));
         }
     }
 
     void redo() override
     {
+        if (textEditor_ == nullptr) {
+            setObsolete(true);
+            return;
+        }
+
+        if (afterTextSnapshot_.has_value()) {
+            textEditor_->replaceTextForCommand(afterTextSnapshot_.value());
+            if (statusCallback_ != nullptr) {
+                statusCallback_(QStringLiteral("Updated point geometry at source line %1.").arg(lineNumber_));
+            }
+            return;
+        }
+
         if (!applyPoint(newPoint_, QStringLiteral("Updated point geometry at source line %1.").arg(lineNumber_))) {
             setObsolete(true);
+            return;
         }
+
+        afterTextSnapshot_ = textEditor_->text();
     }
 
 private:
@@ -155,6 +181,8 @@ private:
     QPointF oldPoint_;
     QPointF newPoint_;
     std::function<void(const QString &)> statusCallback_;
+    QString beforeTextSnapshot_;
+    std::optional<QString> afterTextSnapshot_;
 };
 
 class MapLineAreaVertexMoveCommand final : public QUndoCommand
@@ -185,6 +213,9 @@ public:
         , secondaryMoves_(std::move(secondaryMoves))
         , statusCallback_(std::move(statusCallback))
     {
+        if (textEditor_ != nullptr) {
+            beforeTextSnapshot_ = textEditor_->text();
+        }
     }
 
     int id() const override
@@ -211,27 +242,38 @@ public:
 
     void undo() override
     {
-        QVector<SecondaryMove> reversedSecondaryMoves;
-        reversedSecondaryMoves.reserve(secondaryMoves_.size());
-        for (const SecondaryMove &move : std::as_const(secondaryMoves_)) {
-            SecondaryMove reversedMove = move;
-            reversedMove.oldPoint = move.newPoint;
-            reversedMove.newPoint = move.oldPoint;
-            reversedSecondaryMoves.append(reversedMove);
+        if (textEditor_ == nullptr || beforeTextSnapshot_.isNull()) {
+            setObsolete(true);
+            return;
         }
 
-        if (!applyVertexWithSecondaries(oldPoint_,
-                                        reversedSecondaryMoves,
-                                        QStringLiteral("Reverted %1 vertex %2 at source line %3.")
-                                            .arg(kind_)
-                                            .arg(vertexIndex_ + 1)
-                                            .arg(lineNumber_))) {
-            setObsolete(true);
+        textEditor_->replaceTextForCommand(beforeTextSnapshot_);
+        if (statusCallback_ != nullptr) {
+            statusCallback_(QStringLiteral("Reverted %1 vertex %2 at source line %3.")
+                                .arg(kind_)
+                                .arg(vertexIndex_ + 1)
+                                .arg(lineNumber_));
         }
     }
 
     void redo() override
     {
+        if (textEditor_ == nullptr) {
+            setObsolete(true);
+            return;
+        }
+
+        if (afterTextSnapshot_.has_value()) {
+            textEditor_->replaceTextForCommand(afterTextSnapshot_.value());
+            if (statusCallback_ != nullptr) {
+                statusCallback_(QStringLiteral("Updated %1 vertex %2 at source line %3.")
+                                    .arg(kind_)
+                                    .arg(vertexIndex_ + 1)
+                                    .arg(lineNumber_));
+            }
+            return;
+        }
+
         if (!applyVertexWithSecondaries(newPoint_,
                                         secondaryMoves_,
                                         QStringLiteral("Updated %1 vertex %2 at source line %3.")
@@ -239,7 +281,10 @@ public:
                                             .arg(vertexIndex_ + 1)
                                             .arg(lineNumber_))) {
             setObsolete(true);
+            return;
         }
+
+        afterTextSnapshot_ = textEditor_->text();
     }
 
 private:
@@ -290,6 +335,8 @@ private:
     QPointF newPoint_;
     QVector<SecondaryMove> secondaryMoves_;
     std::function<void(const QString &)> statusCallback_;
+    QString beforeTextSnapshot_;
+    std::optional<QString> afterTextSnapshot_;
 };
 
 enum class LineVertexRole
@@ -829,8 +876,26 @@ void MapEditorTab::refreshMapScene()
         return;
     }
 
+    if (mapCommandApplyInProgress_) {
+        mapSceneRefreshPending_ = true;
+        return;
+    }
+
     if (undoStack_ != nullptr) {
         undoStack_->clear();
+    }
+
+    refreshMapScenePreservingUndoStack();
+}
+
+void MapEditorTab::refreshMapScenePreservingUndoStack()
+{
+    if (mapScene_ == nullptr) {
+        return;
+    }
+
+    if (undoStack_ != nullptr) {
+        updateCommandSurfaceState();
     }
 
     clearMapScene();
@@ -867,6 +932,16 @@ void MapEditorTab::refreshMapScene()
     refreshStatus();
     updateCommandSurfaceState();
     updateHelpPanel();
+}
+
+void MapEditorTab::flushPendingMapSceneRefreshAfterCommand()
+{
+    if (!mapSceneRefreshPending_) {
+        return;
+    }
+
+    mapSceneRefreshPending_ = false;
+    refreshMapScenePreservingUndoStack();
 }
 
 void MapEditorTab::handleMapSceneSelectionChanged()
@@ -1383,16 +1458,20 @@ void MapEditorTab::recordPointGeometryMove(int lineNumber, const QPointF &oldPoi
     };
 
     if (undoStack_ != nullptr) {
+        const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
         undoStack_->push(new MapPointGeometryMoveCommand(textEditor_,
                                                          lineNumber,
                                                          oldPoint,
                                                          newPoint,
                                                          statusCallback));
+        flushPendingMapSceneRefreshAfterCommand();
         return;
     }
 
+    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
     MapPointGeometryMoveCommand directCommand(textEditor_, lineNumber, oldPoint, newPoint, statusCallback);
     directCommand.redo();
+    flushPendingMapSceneRefreshAfterCommand();
 }
 
 void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
@@ -1436,6 +1515,7 @@ void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
     };
 
     if (undoStack_ != nullptr) {
+        const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
         undoStack_->push(new MapLineAreaVertexMoveCommand(textEditor_,
                                                           lineNumber,
                                                           rewriteKind,
@@ -1444,9 +1524,11 @@ void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
                                                           newPoint,
                                                           secondaryMoves,
                                                           statusCallback));
+        flushPendingMapSceneRefreshAfterCommand();
         return;
     }
 
+    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
     MapLineAreaVertexMoveCommand directCommand(textEditor_,
                                                lineNumber,
                                                rewriteKind,
@@ -1456,6 +1538,7 @@ void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
                                                secondaryMoves,
                                                statusCallback);
     directCommand.redo();
+    flushPendingMapSceneRefreshAfterCommand();
 }
 
 bool MapEditorTab::insertLineVertexFromSelection()

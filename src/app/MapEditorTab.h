@@ -126,6 +126,8 @@ private:
     void buildMapScene();
     void buildHelpPanel();
     void refreshMapScene();
+    void refreshMapScenePreservingUndoStack();
+    void flushPendingMapSceneRefreshAfterCommand();
     void clearMapScene();
     void clearDraftGeometryItems();
     void clearBackgroundImageItems();
@@ -243,6 +245,8 @@ private:
     bool helpCollapsed_ = false;
     int helpPanelHeight_ = 180;
     int selectedBackgroundLayerIndex_ = -1;
+    bool mapCommandApplyInProgress_ = false;
+    bool mapSceneRefreshPending_ = false;
     QPointer<QMainWindow> detachedMapPaneWindow_;
     bool mapPaneDetached_ = false;
     bool reattachingMapPane_ = false;

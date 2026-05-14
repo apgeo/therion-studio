@@ -71,6 +71,12 @@ public:
     }
 
 protected:
+    QRectF boundingRect() const override
+    {
+        // Paint includes scaled marker plus halo; keep update region larger to avoid drag trails.
+        return QGraphicsEllipseItem::boundingRect().adjusted(-6.0, -6.0, 6.0, 6.0);
+    }
+
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
     {
         Q_UNUSED(widget);
@@ -232,7 +238,18 @@ public:
         displayToSourceMapper_ = std::move(mapper);
     }
 
+    void setMovePreviewCallback(std::function<void()> callback)
+    {
+        movePreviewCallback_ = std::move(callback);
+    }
+
 protected:
+    QRectF boundingRect() const override
+    {
+        // Paint includes scaled marker plus halo; keep update region larger to avoid drag trails.
+        return QGraphicsEllipseItem::boundingRect().adjusted(-6.0, -6.0, 6.0, 6.0);
+    }
+
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
     {
         Q_UNUSED(widget);
@@ -312,6 +329,9 @@ protected:
             candidate.setY(qBound(fittedBounds_.top(), candidate.y(), fittedBounds_.bottom()));
             return candidate;
         }
+        if (change == QGraphicsItem::ItemPositionHasChanged && movePreviewCallback_ != nullptr) {
+            movePreviewCallback_();
+        }
 
         return QGraphicsEllipseItem::itemChange(change, value);
     }
@@ -341,6 +361,7 @@ private:
     bool hoverActive_ = false;
     bool dragActive_ = false;
     std::function<QPointF(const QPointF &)> displayToSourceMapper_;
+    std::function<void()> movePreviewCallback_;
     std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> moveCommittedCallback_;
 };
 

@@ -404,7 +404,7 @@ int runRewritePointCoordinatesTest()
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(contents == QStringLiteral("station st-a -10.0 55.5\n"),
+    if (!expect(contents == QStringLiteral("station st-a -10 55.5\n"),
                 "rewritePointCoordinates should rewrite station directive coordinates.")) {
         return 1;
     }
@@ -437,8 +437,25 @@ int runRewritePointCoordinatesTest()
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(contents == QStringLiteral("point station -7.0 8.5 station -name a4 % keep\r\n"),
+    if (!expect(contents == QStringLiteral("point station -7 8.5 station -name a4 % keep\r\n"),
                 "rewritePointCoordinates should preserve CRLF and percent-comments while rewriting coordinates.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("point station 397.50 -969.50 station -name a5\n");
+    const QString originalPrecisionPointContents = contents;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(402.25, -965.75), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(397.5, -969.5), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == originalPrecisionPointContents,
+                "rewritePointCoordinates should preserve coordinate precision style so rewrite-back restores original text.")) {
         return 1;
     }
 
@@ -507,7 +524,7 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
     if (!expect(contents == QStringLiteral("line wall\n"
-                                           "  10 20 70.0 80.0 -subtype 100 200\n"
+                                           "  10 20 70 80 -subtype 100 200\n"
                                            "endline\n"),
                 "rewriteLineAreaVertex should stop vertex selection at trailing metadata tokens on the same line.")) {
         return 1;
@@ -520,7 +537,7 @@ int runRewriteLineAreaVertexTest()
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(contents == QStringLiteral("line wall -id line-1 -3.0 9.0 -subtype 100 200\n"
+    if (!expect(contents == QStringLiteral("line wall -id line-1 -3 9 -subtype 100 200\n"
                                            "endline\n"),
                 "rewriteLineAreaVertex should allow metadata/options before coordinates and still ignore trailing metadata payload.")) {
         return 1;
@@ -533,7 +550,7 @@ int runRewriteLineAreaVertexTest()
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(contents == QStringLiteral("line wall -id line-1 -subtype temp 1.0 2.0 10 20\n"
+    if (!expect(contents == QStringLiteral("line wall -id line-1 -subtype temp 1 2 10 20\n"
                                            "endline\n"),
                 "rewriteLineAreaVertex should keep start-line numeric token ordering and rewrite the first writable vertex pair.")) {
         return 1;
@@ -559,7 +576,7 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
     if (!expect(contents == QStringLiteral("line wall\n"
-                                           "  10 20 77.0 -88.0\n"
+                                           "  10 20 77 -88\n"
                                            "  -subtype temporary 100 200\n"
                                            "endline\n"),
                 "rewriteLineAreaVertex should keep option-led continuation payload unchanged while rewriting real geometry vertices.")) {
@@ -586,7 +603,7 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
     if (!expect(contents == QStringLiteral("line wall\n"
-                                           "  10 20 77.0 66.0\n"
+                                           "  10 20 77 66\n"
                                            "  smooth off 50 60\n"
                                            "endline\n"),
                 "rewriteLineAreaVertex should rewrite only real geometry vertices and keep non-coordinate continuation metadata unchanged.")) {
@@ -608,7 +625,7 @@ int runRewriteLineAreaVertexTest()
                                            "  1 2 3 4\n"
                                            "  smooth off 9 9\n"
                                            "  -subtype temporary 11 12\n"
-                                           "  77.0 88.0 # anchor\n"
+                                           "  77 88 # anchor\n"
                                            "endarea\n"),
                 "rewriteLineAreaVertex should ignore interleaved option/comment metadata lines and rewrite only area-coordinate continuation lines.")) {
         return 1;
@@ -625,7 +642,7 @@ int runRewriteLineAreaVertexTest()
     }
     if (!expect(contents == QStringLiteral("area water\n"
                                            "  1 2 3 4\n"
-                                           "  42.0 -9.5 # keep area note\n"
+                                           "  42 -9.5 # keep area note\n"
                                            "endarea\n"),
                 "rewriteLineAreaVertex should support multi-line area vertex rewrites.")) {
         return 1;
@@ -650,7 +667,7 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
     if (!expect(contents == QStringLiteral("line wall\n"
-                                           "  \"10\" \"20\" 8.0 9.0\n"
+                                           "  \"10\" \"20\" 8 9\n"
                                            "endline\n"),
                 "rewriteLineAreaVertex should ignore quoted numeric tokens when selecting writable vertices.")) {
         return 1;
@@ -667,7 +684,7 @@ int runRewriteLineAreaVertexTest()
     }
     if (!expect(contents == QStringLiteral("line wall\r\n"
                                            "  10 20\r\n"
-                                           "  7.0 8.0\r\n"
+                                           "  7 8\r\n"
                                            "endline\r\n"),
                 "rewriteLineAreaVertex should preserve CRLF line endings.")) {
         return 1;
@@ -682,7 +699,7 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
     if (!expect(contents == QStringLiteral("line wall 10 20 30 40 -id line-1\n"
-                                           "  -11.0 12.5\n"
+                                           "  -11 12.5\n"
                                            "endline\n"),
                 "rewriteLineAreaVertex should support rewriting vertices that continue on following lines.")) {
         return 1;
@@ -722,7 +739,7 @@ int runRewriteLineAreaVertexTest()
     }
     if (!expect(contents == QStringLiteral("line wall -id line-2 1 2 3 4 % keep line note\n"
                                            "  -subtype \"temp 1\" 900 800\n"
-                                           "  -15.0 16.0\n"
+                                           "  -15 16\n"
                                            "endline\n"),
                 "rewriteLineAreaVertex should ignore option-led continuation payload, keep percent-comments, and rewrite the correct vertex.")) {
         return 1;
@@ -741,9 +758,28 @@ int runRewriteLineAreaVertexTest()
     if (!expect(contents == QStringLiteral("line wall\r\n"
                                            "  10 20\r\n"
                                            "  \"30\" \"40\"\r\n"
-                                           "  99.0 -42.0 % keep last vertex\r\n"
+                                           "  99 -42 % keep last vertex\r\n"
                                            "endline\r\n"),
                 "rewriteLineAreaVertex should preserve CRLF, ignore quoted numeric noise, and keep percent-comments.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall\n"
+                              "  397.50 -969.50 378.50 -908.00\n"
+                              "endline\n");
+    const QString originalPrecisionLineContents = contents;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(400.25, -960.75), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(397.5, -969.5), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == originalPrecisionLineContents,
+                "rewriteLineAreaVertex should preserve coordinate precision style so rewrite-back restores original text.")) {
         return 1;
     }
 

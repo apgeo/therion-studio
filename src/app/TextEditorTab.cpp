@@ -198,6 +198,8 @@ bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)
     loading_ = true;
     editor_->setPlainText(contents);
     loading_ = false;
+    cleanTextSnapshot_ = editor_->toPlainText();
+    cleanEncodingNameSnapshot_ = fileEncodingName_;
     editor_->document()->setModified(false);
     dirty_ = false;
     refreshTitle();
@@ -225,6 +227,8 @@ bool TextEditorTab::save(QString *errorMessage)
         return false;
     }
 
+    cleanTextSnapshot_ = editor_->toPlainText();
+    cleanEncodingNameSnapshot_ = fileEncodingName_;
     editor_->document()->setModified(false);
     dirty_ = false;
     if (fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
@@ -366,10 +370,7 @@ bool TextEditorTab::rewriteStructureEntryName(int lineNumber, const QString &cat
 
     loading_ = false;
     currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    editor_->document()->setModified(true);
-    dirty_ = true;
-    refreshTitle();
-    emit dirtyStateChanged(true);
+    applyDirtyStateFromCurrentState();
     updateContextHelp();
     return true;
 }
@@ -400,10 +401,7 @@ bool TextEditorTab::insertScrapBlock(const QString &preferredName,
 
     loading_ = false;
     currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    editor_->document()->setModified(true);
-    dirty_ = true;
-    refreshTitle();
-    emit dirtyStateChanged(true);
+    applyDirtyStateFromCurrentState();
     emit documentTextChanged();
     updateContextHelp();
 
@@ -441,10 +439,7 @@ bool TextEditorTab::insertDraftGeometry(const QString &kind,
 
     loading_ = false;
     currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    editor_->document()->setModified(true);
-    dirty_ = true;
-    refreshTitle();
-    emit dirtyStateChanged(true);
+    applyDirtyStateFromCurrentState();
     emit documentTextChanged();
     updateContextHelp();
 
@@ -484,10 +479,7 @@ bool TextEditorTab::rewritePointCoordinates(int lineNumber,
 
     loading_ = false;
     currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    editor_->document()->setModified(true);
-    dirty_ = true;
-    refreshTitle();
-    emit dirtyStateChanged(true);
+    applyDirtyStateFromCurrentState();
     emit documentTextChanged();
     updateContextHelp();
     return true;
@@ -524,10 +516,7 @@ bool TextEditorTab::rewriteLineAreaVertex(int lineNumber,
 
     loading_ = false;
     currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    editor_->document()->setModified(true);
-    dirty_ = true;
-    refreshTitle();
-    emit dirtyStateChanged(true);
+    applyDirtyStateFromCurrentState();
     emit documentTextChanged();
     updateContextHelp();
     return true;
@@ -563,10 +552,7 @@ bool TextEditorTab::rewriteLineOptionToggle(int lineNumber,
 
     loading_ = false;
     currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    editor_->document()->setModified(true);
-    dirty_ = true;
-    refreshTitle();
-    emit dirtyStateChanged(true);
+    applyDirtyStateFromCurrentState();
     emit documentTextChanged();
     updateContextHelp();
     return true;
@@ -601,13 +587,37 @@ bool TextEditorTab::rewriteLineCoordinateRows(int lineNumber,
 
     loading_ = false;
     currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    editor_->document()->setModified(true);
-    dirty_ = true;
-    refreshTitle();
-    emit dirtyStateChanged(true);
+    applyDirtyStateFromCurrentState();
     emit documentTextChanged();
     updateContextHelp();
     return true;
+}
+
+void TextEditorTab::replaceTextForCommand(const QString &contents)
+{
+    const QTextCursor previousCursor = editor_->textCursor();
+    const int previousLine = previousCursor.blockNumber();
+    const int previousColumn = previousCursor.positionInBlock();
+
+    loading_ = true;
+    editor_->setPlainText(contents);
+
+    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
+    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
+    if (targetBlock.isValid()) {
+        QTextCursor restoredCursor(targetBlock);
+        restoredCursor.movePosition(QTextCursor::StartOfBlock);
+        restoredCursor.movePosition(QTextCursor::Right,
+                                    QTextCursor::MoveAnchor,
+                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
+        editor_->setTextCursor(restoredCursor);
+    }
+
+    loading_ = false;
+    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
+    applyDirtyStateFromCurrentState();
+    emit documentTextChanged();
+    updateContextHelp();
 }
 
 QString TextEditorTab::filePath() const
@@ -665,18 +675,35 @@ void TextEditorTab::setInlineStatusVisible(bool visible)
     }
 }
 
+bool TextEditorTab::isCurrentStateDirty() const
+{
+    const bool textDirty = editor_ != nullptr && editor_->toPlainText() != cleanTextSnapshot_;
+    const bool encodingDirty = fileEncodingName_.compare(cleanEncodingNameSnapshot_, Qt::CaseInsensitive) != 0;
+    return textDirty || encodingDirty;
+}
+
+void TextEditorTab::applyDirtyStateFromCurrentState()
+{
+    const bool dirtyNow = isCurrentStateDirty();
+    if (editor_ != nullptr && editor_->document() != nullptr) {
+        editor_->document()->setModified(dirtyNow);
+    }
+    if (dirty_ == dirtyNow) {
+        return;
+    }
+
+    dirty_ = dirtyNow;
+    refreshTitle();
+    emit dirtyStateChanged(dirty_);
+}
+
 void TextEditorTab::handleTextChanged()
 {
     if (loading_) {
         return;
     }
 
-    if (!dirty_) {
-        dirty_ = true;
-        refreshTitle();
-        emit dirtyStateChanged(true);
-    }
-
+    applyDirtyStateFromCurrentState();
     emit documentTextChanged();
 }
 
@@ -752,13 +779,8 @@ void TextEditorTab::handleConvertToUtf8Triggered()
     fileEncodingName_ = QStringLiteral("UTF-8");
     fileEncodingLabel_ = QStringLiteral("UTF-8");
     encodingStatusNote_ = tr("Converted to UTF-8 in memory. Save to write UTF-8 to disk.");
-
-    if (!dirty_) {
-        dirty_ = true;
-        emit dirtyStateChanged(true);
-    }
-
-    refreshTitle();
+    applyDirtyStateFromCurrentState();
+    refreshStatus();
 }
 
 void TextEditorTab::handleCursorPositionChanged()

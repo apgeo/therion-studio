@@ -104,6 +104,7 @@ Legend:
 - ~~Enabled `Open Dedicated Window` map workflow: detach active TH2 map session into a dedicated top-level map window and keep the same in-memory document session (no duplicate document state).~~
 - ~~Opening the same TH2 document now focuses the existing detached map window/session instead of creating a duplicate map editor instance.~~
 - ~~Simplified TH2 workspace to a single embedded split layout plus detachable map pane; removed `Text Only / Map Only / Split` switcher UX to avoid conflicting states when map is detached.~~
+- ~~Fixed undo/redo re-entrancy crash path for map geometry edits by deferring `refreshMapScene()` while map undo commands are executing, then applying a single pending refresh after command completion.~~
 - Verification:
 - ~~`./build/MapBackgroundPlacementTest`~~
 - ~~`./build/TherionBackgroundMetadataTest`~~
@@ -251,6 +252,13 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Simplified TH2 workspace UX by removing the `Text Only / Map Only / Split` switcher and standardizing on embedded split view plus detachable map pane window.~~
 - ~~Removed obsolete map workspace-mode persistence API from `SessionStore` (`therionMapWorkspaceMode` read/write), since split layout is now fixed by design.~~
 - ~~Added `MapEditorDetachedPaneTest` coverage for map-pane detach/reattach lifecycle: open-window transition, single detached-window presence, reattach via toggle, and no leftover detached window after return.~~
+- ~~Fixed map-editor undo crash after vertex moves: map command apply now defers scene rebuild during command execution (`mapCommandApplyInProgress_` / `mapSceneRefreshPending_`), preventing `undoStack_->clear()` re-entrancy corruption while text rewrite signals are emitted.~~
+- ~~Fixed map-canvas drag-preview regression after undo-crash hardening: editable point/vertex items now use expanded repaint bounds to prevent ghost trails, and line-path/control-connector visuals are recomputed live while dragging anchors/handles so geometry updates in real time before commit.~~
+- ~~Fixed map-editor undo-history regression introduced by deferred scene refresh: command-originated refresh now rebuilds map visuals without clearing the undo stack, so vertex/control-point moves can be undone/redone correctly while preserving crash-safe re-entrancy guards.~~
+- ~~Fixed text-tab dirty-state false-positive after map undo/redo-to-baseline: dirty marker is now derived from current text+encoding snapshot versus last load/save snapshot, so undoing all edits clears `*modified` as expected.~~
+- ~~Fixed remaining map-undo dirty false-positive by preserving coordinate token precision/style in `TherionDocumentEditor` point/line vertex rewrites (including integer tokens), so moving geometry and undoing back restores original source text instead of normalization drift.~~
+- ~~Fixed persistent dirty marker on CRLF-backed files after undo-to-baseline: clean-text snapshot now captures the editor-normalized text representation on load, preventing false dirty due to line-ending canonicalization (`\r\n` file bytes vs `\n` in editor).~~
+- ~~Hardened map-geometry undo/redo dirty-state fidelity: point and line/area vertex move commands now restore exact pre/post command text snapshots through `TextEditorTab::replaceTextForCommand`, eliminating residual dirty flags caused by rewrite-path formatting drift in multi-step map commands.~~
 - ~~Expanded `TherionDocumentEditorTest` with `rewriteLineCoordinateRows` coverage for null/non-line rejection, inline-start rejection, mixed-content rejection, and successful CRLF-preserving rewrite.~~
 - ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest MapGeometryFeatureParsingTest TherionProjectStructureIndexTest MapBackgroundPlacementTest TherionBackgroundMetadataTest TherionXviParserTest` plus execution of all six regression binaries after keyboard vertex-edit wiring.~~
 - ~~Closed Phase 4 (`MVP`) and moved additional corpus-scale rewrite expansion into the Post-MVP backlog.~~

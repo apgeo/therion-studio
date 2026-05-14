@@ -6,6 +6,7 @@
 #include <QPair>
 #include <QSet>
 #include <QRegularExpression>
+#include <cmath>
 #include <optional>
 
 namespace TherionStudio
@@ -203,6 +204,38 @@ int lineCountForText(const QString &text)
 QString formatCoordinate(qreal value)
 {
     return QString::number(value, 'f', 1);
+}
+
+QString formatCoordinateLikeExistingToken(const QString &existingToken, qreal value)
+{
+    QString token = existingToken.trimmed();
+    if (token.isEmpty()) {
+        return formatCoordinate(value);
+    }
+
+    const int exponentIndex = token.indexOf(QRegularExpression(QStringLiteral("[eE]")));
+    if (exponentIndex >= 0) {
+        token = token.left(exponentIndex);
+    }
+
+    int decimalPlaces = 0;
+    const int dotIndex = token.indexOf(QLatin1Char('.'));
+    if (dotIndex >= 0) {
+        int index = dotIndex + 1;
+        while (index < token.size() && token.at(index).isDigit()) {
+            ++decimalPlaces;
+            ++index;
+        }
+    }
+
+    if (decimalPlaces == 0) {
+        const qreal nearestInteger = std::round(value);
+        if (std::fabs(value - nearestInteger) > 1e-6) {
+            decimalPlaces = 1;
+        }
+    }
+
+    return QString::number(value, 'f', decimalPlaces);
 }
 
 std::optional<QString> normalizedLineToggleOptionName(const QString &optionName)
@@ -639,8 +672,14 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
         return false;
     }
 
-    lineText.replace(secondToken.start, secondToken.length, formatCoordinate(point.y()));
-    lineText.replace(firstToken.start, firstToken.length, formatCoordinate(point.x()));
+    const QString oldYTokenText = lineText.mid(secondToken.start, secondToken.length);
+    const QString oldXTokenText = lineText.mid(firstToken.start, firstToken.length);
+    lineText.replace(secondToken.start,
+                     secondToken.length,
+                     formatCoordinateLikeExistingToken(oldYTokenText, point.y()));
+    lineText.replace(firstToken.start,
+                     firstToken.length,
+                     formatCoordinateLikeExistingToken(oldXTokenText, point.x()));
     lines[lineNumber - 1] = lineText;
     *contents = lines.join(lineEnding);
     return true;
@@ -774,8 +813,14 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
         return false;
     }
 
-    lineText.replace(reference.yToken.start, reference.yToken.length, formatCoordinate(point.y()));
-    lineText.replace(reference.xToken.start, reference.xToken.length, formatCoordinate(point.x()));
+    const QString oldYTokenText = lineText.mid(reference.yToken.start, reference.yToken.length);
+    const QString oldXTokenText = lineText.mid(reference.xToken.start, reference.xToken.length);
+    lineText.replace(reference.yToken.start,
+                     reference.yToken.length,
+                     formatCoordinateLikeExistingToken(oldYTokenText, point.y()));
+    lineText.replace(reference.xToken.start,
+                     reference.xToken.length,
+                     formatCoordinateLikeExistingToken(oldXTokenText, point.x()));
     lines[reference.lineIndex] = lineText;
     *contents = lines.join(lineEnding);
     return true;

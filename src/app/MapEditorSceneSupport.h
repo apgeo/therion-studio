@@ -197,6 +197,10 @@ QVector<MapLineSecondaryMove> collectLineSecondaryMovesForVertexDrag(const MapGe
                                                                      int sourceVertexIndex,
                                                                      const QPointF &oldPoint,
                                                                      const QPointF &newPoint);
+QVector<MapLineSecondaryMove> collectLinePreviewSecondaryMovesForVertexDrag(const MapGeometryFeature &lineFeature,
+                                                                            int sourceVertexIndex,
+                                                                            const QPointF &oldPoint,
+                                                                            const QPointF &newPoint);
 void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const QString &documentPath,
                              const QVector<MapSceneEntry> &entries,

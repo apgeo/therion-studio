@@ -400,6 +400,119 @@ int runLineAnchorSecondaryMoveCouplingTest()
 
     return 0;
 }
+
+int runLineControlSecondaryMoveSmoothTest()
+{
+    MapGeometryFeature lineFeature;
+    lineFeature.kind = MapGeometryFeature::Kind::Line;
+
+    MapGeometryFeature::TH2LineVertex vertex;
+    vertex.anchor = QPointF(100.0, 200.0);
+    vertex.anchorSourceVertexIndex = 10;
+    vertex.incomingControl = QPointF(90.0, 200.0);
+    vertex.incomingSourceVertexIndex = 11;
+    vertex.outgoingControl = QPointF(110.0, 200.0);
+    vertex.outgoingSourceVertexIndex = 12;
+    vertex.isSmooth = true;
+    lineFeature.lineVertices.append(vertex);
+
+    const QPointF oldIncoming = vertex.incomingControl.value();
+    const QPointF newIncoming(85.0, 195.0);
+
+    const QVector<MapLineSecondaryMove> secondaryMoves = collectLineSecondaryMovesForVertexDrag(lineFeature,
+                                                                                                  11,
+                                                                                                  oldIncoming,
+                                                                                                  newIncoming);
+    if (!expect(secondaryMoves.size() == 1,
+                "Expected smooth incoming-control drag to produce one opposite-control secondary move.")) {
+        return 1;
+    }
+
+    const MapLineSecondaryMove &move = secondaryMoves.first();
+    if (!expect(move.sourceVertexIndex == 12,
+                "Expected smooth incoming-control drag to target outgoing control source vertex.")) {
+        return 1;
+    }
+    if (!expect(move.oldPoint == QPointF(110.0, 200.0),
+                "Expected opposite-control secondary move to preserve original outgoing control point.")) {
+        return 1;
+    }
+
+    const qreal oldOppositeLength = std::hypot(move.oldPoint.x() - vertex.anchor.x(),
+                                                move.oldPoint.y() - vertex.anchor.y());
+    const qreal newOppositeLength = std::hypot(move.newPoint.x() - vertex.anchor.x(),
+                                                move.newPoint.y() - vertex.anchor.y());
+    if (!expect(std::abs(oldOppositeLength - newOppositeLength) < 1e-6,
+                "Expected smooth opposite-control move to preserve prior opposite handle length.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runLineControlSecondaryMoveCornerTest()
+{
+    MapGeometryFeature lineFeature;
+    lineFeature.kind = MapGeometryFeature::Kind::Line;
+
+    MapGeometryFeature::TH2LineVertex vertex;
+    vertex.anchor = QPointF(100.0, 200.0);
+    vertex.anchorSourceVertexIndex = 10;
+    vertex.incomingControl = QPointF(90.0, 200.0);
+    vertex.incomingSourceVertexIndex = 11;
+    vertex.outgoingControl = QPointF(110.0, 200.0);
+    vertex.outgoingSourceVertexIndex = 12;
+    vertex.isSmooth = false;
+    lineFeature.lineVertices.append(vertex);
+
+    const QVector<MapLineSecondaryMove> secondaryMoves = collectLineSecondaryMovesForVertexDrag(lineFeature,
+                                                                                                  11,
+                                                                                                  QPointF(90.0, 200.0),
+                                                                                                  QPointF(85.0, 195.0));
+    if (!expect(secondaryMoves.isEmpty(),
+                "Expected corner vertex control drag to keep handles independent (no secondary moves).")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runLinePreviewSecondaryMoveSelfFilterTest()
+{
+    MapGeometryFeature lineFeature;
+    lineFeature.kind = MapGeometryFeature::Kind::Line;
+
+    MapGeometryFeature::TH2LineVertex vertex;
+    vertex.anchor = QPointF(100.0, 200.0);
+    vertex.anchorSourceVertexIndex = 10;
+    vertex.incomingControl = QPointF(90.0, 200.0);
+    vertex.incomingSourceVertexIndex = 11;
+    // Malformed but possible in partially rewritten sources: opposite maps to same source index.
+    vertex.outgoingControl = QPointF(110.0, 200.0);
+    vertex.outgoingSourceVertexIndex = 11;
+    vertex.isSmooth = true;
+    lineFeature.lineVertices.append(vertex);
+
+    const QVector<MapLineSecondaryMove> commandMoves = collectLineSecondaryMovesForVertexDrag(lineFeature,
+                                                                                               11,
+                                                                                               QPointF(90.0, 200.0),
+                                                                                               QPointF(86.0, 196.0));
+    if (!expect(commandMoves.size() == 1,
+                "Expected command-time coupling to include malformed self-target move before preview filtering.")) {
+        return 1;
+    }
+
+    const QVector<MapLineSecondaryMove> previewMoves = collectLinePreviewSecondaryMovesForVertexDrag(lineFeature,
+                                                                                                      11,
+                                                                                                      QPointF(90.0, 200.0),
+                                                                                                      QPointF(86.0, 196.0));
+    if (!expect(previewMoves.isEmpty(),
+                "Expected preview coupling helper to filter out self-target secondary moves.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -429,6 +542,15 @@ int main()
         return rc;
     }
     if (const int rc = runLineAnchorSecondaryMoveCouplingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runLineControlSecondaryMoveSmoothTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runLineControlSecondaryMoveCornerTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runLinePreviewSecondaryMoveSelfFilterTest(); rc != 0) {
         return rc;
     }
 

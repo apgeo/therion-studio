@@ -929,6 +929,26 @@ QVector<MapLineSecondaryMove> collectLineSecondaryMovesForVertexDrag(const MapGe
     return moves;
 }
 
+QVector<MapLineSecondaryMove> collectLinePreviewSecondaryMovesForVertexDrag(const MapGeometryFeature &lineFeature,
+                                                                            int sourceVertexIndex,
+                                                                            const QPointF &oldPoint,
+                                                                            const QPointF &newPoint)
+{
+    QVector<MapLineSecondaryMove> moves = collectLineSecondaryMovesForVertexDrag(lineFeature,
+                                                                                  sourceVertexIndex,
+                                                                                  oldPoint,
+                                                                                  newPoint);
+    QVector<MapLineSecondaryMove> filtered;
+    filtered.reserve(moves.size());
+    for (const MapLineSecondaryMove &move : std::as_const(moves)) {
+        if (move.sourceVertexIndex == sourceVertexIndex) {
+            continue;
+        }
+        filtered.append(move);
+    }
+    return filtered;
+}
+
 bool insertLineVertexByDeCasteljau(QVector<MapGeometryFeature::TH2LineVertex> *lineVertices,
                                    int segmentStartIndex,
                                    qreal t,

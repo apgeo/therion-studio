@@ -265,6 +265,8 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Selection in the structure sidebar shall change the active document context.
 - The structure sidebar shall remain synchronized with the open project and the currently selected content when possible.
 - The structure sidebar shall provide explicit user controls to collapse and re-expand the panel.
+- The sidebar shall use a fixed-width activity rail plus a resizable content pane so the rail remains available when content is collapsed.
+- Resizing the sidebar content pane to its collapsed threshold shall automatically collapse the content pane, leave the activity rail visible, and shall not resize the rail itself.
 
 #### 3.8.7 Therion Runner and Console Behavior
 

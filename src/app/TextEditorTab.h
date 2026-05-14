@@ -17,7 +17,6 @@ class QPlainTextEdit;
 class QSplitter;
 class QSplitterHandle;
 class QTextBrowser;
-class QToolButton;
 
 namespace TherionStudio
 {
@@ -114,8 +113,6 @@ private:
     void updateContextHelp();
     QStringList helpCandidateTokens() const;
     QString currentHelpTokenForCursor() const;
-    void installHelpBorderToggle();
-    void refreshHelpBorderToggle();
     void setHelpCollapsed(bool collapsed);
     QString renderHelpHtml(const QString &token, const TherionHelpEntry &entry) const;
     void updateSearchResults(const QString &message, bool error = false);
@@ -125,8 +122,6 @@ private:
     QString currentFindText() const;
     QString currentReplaceText() const;
 
-    QLabel *pathLabel_ = nullptr;
-    QLabel *encodingLabel_ = nullptr;
     QLabel *encodingNoteLabel_ = nullptr;
     QPushButton *convertEncodingButton_ = nullptr;
     QWidget *statusRow_ = nullptr;
@@ -134,7 +129,6 @@ private:
     QSplitter *editorHelpSplitter_ = nullptr;
     QWidget *helpPanel_ = nullptr;
     QTextBrowser *helpBrowser_ = nullptr;
-    QToolButton *helpBorderToggleButton_ = nullptr;
     QWidget *replaceRow_ = nullptr;
     QLineEdit *findEdit_ = nullptr;
     QLineEdit *replaceEdit_ = nullptr;
@@ -157,6 +151,7 @@ private:
     bool dirty_ = false;
     bool loading_ = false;
     bool replaceMode_ = false;
+    bool inlineStatusRequestedVisible_ = true;
     QString fileEncodingName_ = QStringLiteral("UTF-8");
     QString fileEncodingLabel_ = QStringLiteral("UTF-8");
     QString cleanEncodingNameSnapshot_ = QStringLiteral("UTF-8");

@@ -12,7 +12,6 @@
 #include <QScopedValueRollback>
 #include <QSplitter>
 #include <QTextBrowser>
-#include <QToolButton>
 #include <QUndoStack>
 #include <QVBoxLayout>
 #include <QCloseEvent>
@@ -201,28 +200,11 @@ void MapEditorTab::buildUi()
     mapHelpSplitter_->setStretchFactor(1, 0);
     mapHelpSplitter_->setCollapsible(1, true);
     mapHelpSplitter_->setSizes(QList<int>{1, helpPanelHeight_});
-    installHelpBorderToggle();
     splitter_->addWidget(mapHelpSplitter_);
     splitter_->setStretchFactor(0, 1);
     splitter_->setStretchFactor(1, 1);
 
     layout->addWidget(splitter_, 1);
-
-    statusRow_ = new QWidget(this);
-    auto *statusLayout = new QHBoxLayout(statusRow_);
-    statusLayout->setContentsMargins(8, 0, 8, 8);
-    statusLayout->setSpacing(12);
-
-    statusPathLabel_ = new QLabel(tr("No file open"), statusRow_);
-    statusPathLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    statusPathLabel_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    statusPathLabel_->setMinimumWidth(0);
-    statusEncodingLabel_ = new QLabel(tr("Encoding: UTF-8"), statusRow_);
-    statusEncodingLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-
-    statusLayout->addWidget(statusPathLabel_, 1);
-    statusLayout->addWidget(statusEncodingLabel_);
-    layout->addWidget(statusRow_);
 
     refreshMapScene();
     refreshDetachButtonState();
@@ -330,6 +312,16 @@ QString MapEditorTab::text() const
     return textEditor_ != nullptr ? textEditor_->text() : QString();
 }
 
+QString MapEditorTab::statusPathText() const
+{
+    return textEditor_ != nullptr ? textEditor_->statusPathText() : tr("No file open");
+}
+
+QString MapEditorTab::statusEncodingText() const
+{
+    return textEditor_ != nullptr ? textEditor_->statusEncodingText() : tr("UTF-8");
+}
+
 MapEditorTab::WorkspaceMode MapEditorTab::workspaceMode() const
 {
     return workspaceMode_;
@@ -396,7 +388,6 @@ void MapEditorTab::setHelpCollapsed(bool collapsed)
     if (helpBrowser_ != nullptr) {
         helpBrowser_->setVisible(!collapsed);
     }
-    refreshHelpBorderToggle();
     if (mapHelpSplitter_ != nullptr && helpPanel_ != nullptr) {
         if (!collapsed && helpPanelHeight_ > 0) {
             const QList<int> sizes = mapHelpSplitter_->sizes();
@@ -440,15 +431,6 @@ void MapEditorTab::refreshTitle()
 
 void MapEditorTab::refreshStatus()
 {
-    if (statusPathLabel_ == nullptr || statusEncodingLabel_ == nullptr) {
-        return;
-    }
-
-    const QString documentLabel = textEditor_ != nullptr ? textEditor_->statusPathText() : tr("No file open");
-    const QString encodingLabel = textEditor_ != nullptr ? textEditor_->statusEncodingText() : tr("UTF-8");
-    statusPathLabel_->setText(documentLabel);
-    statusEncodingLabel_->setText(tr("Encoding: %1").arg(encodingLabel));
-
     if (detachedMapPaneWindow_ != nullptr) {
         detachedMapPaneWindow_->setWindowTitle(tr("%1 — Map").arg(displayName()));
         detachedMapPaneWindow_->setWindowFilePath(filePath());

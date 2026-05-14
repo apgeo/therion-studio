@@ -17,6 +17,8 @@
 #include <QMenuBar>
 #include <QPushButton>
 #include <QHash>
+#include <QSizePolicy>
+#include <QSplitter>
 #include <QLineEdit>
 #include <QStandardItem>
 #include <QStandardItemModel>
@@ -26,6 +28,8 @@
 #include <QTreeView>
 #include <QKeySequence>
 #include <QWidget>
+#include <QResizeEvent>
+#include <QFontMetrics>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <functional>
@@ -197,15 +201,87 @@ void MainWindow::buildUi()
         updateMapEditorActionState();
         refreshTherionConfigDisplay();
         refreshMapBackgroundPanel();
+        refreshDocumentStatusWidgets();
     });
 
-    setCentralWidget(editorTabs_);
+    auto *mainContentHost = new QWidget(this);
+    mainContentLayout_ = new QHBoxLayout(mainContentHost);
+    mainContentLayout_->setContentsMargins(0, 0, 0, 0);
+    mainContentLayout_->setSpacing(0);
+    mainContentSplitter_ = new QSplitter(Qt::Horizontal, mainContentHost);
+    mainContentSplitter_->setChildrenCollapsible(true);
+    setCentralWidget(mainContentHost);
 
     buildStructureSidebar();
+    mainContentSplitter_->addWidget(editorTabs_);
+    mainContentLayout_->addWidget(mainContentSplitter_, 1);
+    mainContentSplitter_->setCollapsible(0, true);
+    mainContentSplitter_->setCollapsible(1, false);
+    mainContentSplitter_->setStretchFactor(0, 0);
+    mainContentSplitter_->setStretchFactor(1, 1);
     buildConsole();
     buildMenus();
 
+    initializeDocumentStatusWidgets();
     statusBar()->showMessage(tr("Ready"));
+}
+
+void MainWindow::initializeDocumentStatusWidgets()
+{
+    if (statusBar() == nullptr || statusDocumentPathLabel_ != nullptr || statusDocumentEncodingLabel_ != nullptr) {
+        return;
+    }
+
+    statusDocumentPathLabel_ = new QLabel(statusBar());
+    statusDocumentPathLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    statusDocumentPathLabel_->setMinimumWidth(200);
+    statusDocumentPathLabel_->setMaximumWidth(560);
+    statusDocumentPathLabel_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+
+    statusDocumentEncodingLabel_ = new QLabel(statusBar());
+    statusDocumentEncodingLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    statusDocumentEncodingLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    statusDocumentEncodingLabel_->setMinimumWidth(130);
+
+    statusBar()->addPermanentWidget(statusDocumentPathLabel_, 0);
+    statusBar()->addPermanentWidget(statusDocumentEncodingLabel_, 0);
+    refreshDocumentStatusWidgets();
+}
+
+void MainWindow::refreshDocumentStatusWidgets()
+{
+    if (statusDocumentPathLabel_ == nullptr || statusDocumentEncodingLabel_ == nullptr) {
+        return;
+    }
+
+    QWidget *tabWidget = currentDocumentWidget();
+    QString pathText = tr("No file open");
+    QString encodingText;
+
+    if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget)) {
+        pathText = textTab->statusPathText();
+        encodingText = textTab->statusEncodingText();
+    } else if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(tabWidget)) {
+        pathText = mapTab->statusPathText();
+        encodingText = mapTab->statusEncodingText();
+    }
+
+    const int maxPathWidth = statusDocumentPathLabel_->maximumWidth();
+    const QFontMetrics metrics(statusDocumentPathLabel_->fontMetrics());
+    const QString elidedPathText = metrics.elidedText(pathText, Qt::ElideMiddle, maxPathWidth);
+    statusDocumentPathLabel_->setText(elidedPathText);
+    statusDocumentPathLabel_->setToolTip(pathText);
+    if (encodingText.trimmed().isEmpty()) {
+        statusDocumentEncodingLabel_->clear();
+    } else {
+        statusDocumentEncodingLabel_->setText(tr("Encoding: %1").arg(encodingText));
+    }
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+    QMainWindow::resizeEvent(event);
+    refreshDocumentStatusWidgets();
 }
 
 void MainWindow::buildMenus()
@@ -237,17 +313,45 @@ void MainWindow::buildMenus()
     openMapEditorAction_->setEnabled(false);
 
     QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
-    if (structureDock_ != nullptr) {
-        QAction *toggleSidebarAction = structureDock_->toggleViewAction();
-        toggleSidebarAction->setText(tr("Show Sidebar"));
-        toggleSidebarAction->setStatusTip(tr("Show or hide the sidebar panel"));
-        viewMenu->addAction(toggleSidebarAction);
-    }
+    QAction *toggleSidebarAction = viewMenu->addAction(tr("Show Sidebar"));
+    toggleSidebarAction->setCheckable(true);
+    toggleSidebarAction->setChecked(true);
+    toggleSidebarAction->setStatusTip(tr("Show or hide the sidebar panel"));
+    connect(toggleSidebarAction, &QAction::toggled, this, [this](bool visible) {
+        if (sidebarContainer_ == nullptr) {
+            return;
+        }
+        if (!visible) {
+            rememberSidebarWidth();
+            sidebarContainer_->setVisible(false);
+            if (sidebarContentContainer_ != nullptr) {
+                sidebarContentContainer_->setVisible(false);
+            }
+            return;
+        }
+        sidebarContainer_->setVisible(true);
+        if (sidebarContentContainer_ != nullptr) {
+            sidebarContentContainer_->setVisible(true);
+        }
+        if (sidebarCollapsed_) {
+            sidebarCollapsed_ = false;
+            setSidebarCollapsed(true);
+            return;
+        }
+        restoreSidebarWidth();
+    });
     QAction *showConsolePaneAction = viewMenu->addAction(tr("Show Console"));
     showConsolePaneAction->setStatusTip(tr("Switch the sidebar to the console pane"));
     connect(showConsolePaneAction, &QAction::triggered, this, [this]() {
-        if (structureDock_ != nullptr) {
-            structureDock_->show();
+        if (sidebarContainer_ != nullptr) {
+            sidebarContainer_->setVisible(true);
+            if (sidebarContentContainer_ != nullptr) {
+                sidebarContentContainer_->setVisible(true);
+            }
+            if (sidebarCollapsed_) {
+                setSidebarCollapsed(false);
+            }
+            restoreSidebarWidth();
         }
         setSidebarPane(SidebarPane::Console);
     });
@@ -395,6 +499,7 @@ void MainWindow::addWelcomeTab()
     editorTabs_->addTab(createCenteredMessage(tr("Therion Studio"),
                                              tr("Open a project to begin working with Therion documents, maps, and structure views.")),
                         tr("Welcome"));
+    refreshDocumentStatusWidgets();
 }
 
 void MainWindow::createNewWindow()
@@ -499,6 +604,7 @@ void MainWindow::handleTabCloseRequested(int index)
         addWelcomeTab();
     }
 
+    refreshDocumentStatusWidgets();
     persistOpenDocuments();
 }
 
@@ -561,6 +667,7 @@ void MainWindow::closeAllTabs()
         addWelcomeTab();
     }
 
+    refreshDocumentStatusWidgets();
     persistOpenDocuments();
     if (closedAny) {
         statusBar()->showMessage(tr("Closed all open document tabs"), 2000);
@@ -676,6 +783,7 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath)
         if (existingTab != nullptr && existingTab->filePath() == canonicalPath) {
             existingTab->setProjectRootPath(projectRootPath_);
             editorTabs_->setCurrentIndex(index);
+            refreshDocumentStatusWidgets();
             return existingTab;
         }
     }
@@ -694,10 +802,16 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath)
 
     connect(tab, &TherionStudio::TextEditorTab::titleChanged, this, [this, tab]() {
         updateTabTitle(tab);
+        if (currentDocumentWidget() == tab) {
+            refreshDocumentStatusWidgets();
+        }
     });
 
     connect(tab, &TherionStudio::TextEditorTab::dirtyStateChanged, this, [this, tab](bool) {
         updateTabTitle(tab);
+        if (currentDocumentWidget() == tab) {
+            refreshDocumentStatusWidgets();
+        }
     });
 
     connect(tab, &TherionStudio::TextEditorTab::currentLineChanged, this, [this, tab](int lineNumber) {
@@ -712,6 +826,7 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath)
     handleTextEditorCurrentLineChanged(tab->filePath(), tab->currentLineNumber());
 
     updateTabTitle(tab);
+    refreshDocumentStatusWidgets();
     persistOpenDocuments();
     appendConsoleLine(tr("Opened %1").arg(canonicalPath));
     return tab;
@@ -724,6 +839,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
     if (auto *detachedTab = detachedMapEditorTabForPath(canonicalPath); detachedTab != nullptr) {
         detachedTab->setProjectRootPath(projectRootPath_);
         focusDetachedMapEditorTab(canonicalPath);
+        refreshDocumentStatusWidgets();
         return detachedTab;
     }
 
@@ -737,6 +853,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
                     this,
                     &MainWindow::handleMapEditorDetachRequested,
                     Qt::UniqueConnection);
+            refreshDocumentStatusWidgets();
             return existingTab;
         }
     }
@@ -753,8 +870,18 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
     const int tabIndex = editorTabs_->addTab(tab, tab->displayName());
     editorTabs_->setCurrentIndex(tabIndex);
 
-    connect(tab, &TherionStudio::MapEditorTab::titleChanged, this, [this, tab]() { updateTabTitle(tab); });
-    connect(tab, &TherionStudio::MapEditorTab::dirtyStateChanged, this, [this, tab](bool) { updateTabTitle(tab); });
+    connect(tab, &TherionStudio::MapEditorTab::titleChanged, this, [this, tab]() {
+        updateTabTitle(tab);
+        if (currentDocumentWidget() == tab) {
+            refreshDocumentStatusWidgets();
+        }
+    });
+    connect(tab, &TherionStudio::MapEditorTab::dirtyStateChanged, this, [this, tab](bool) {
+        updateTabTitle(tab);
+        if (currentDocumentWidget() == tab) {
+            refreshDocumentStatusWidgets();
+        }
+    });
     connect(tab, &TherionStudio::MapEditorTab::currentLineChanged, this, [this, tab](int lineNumber) {
         handleTextEditorCurrentLineChanged(tab->filePath(), lineNumber);
     });
@@ -777,6 +904,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
     handleTextEditorCurrentLineChanged(tab->filePath(), tab->currentLineNumber());
 
     updateTabTitle(tab);
+    refreshDocumentStatusWidgets();
     persistOpenDocuments();
     appendConsoleLine(tr("Opened %1").arg(canonicalPath));
     return tab;
@@ -808,6 +936,7 @@ void MainWindow::syncOpenDocumentsToProjectRoot()
     for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
         documentSetProjectRootPathForWidget(detachedTab, projectRootPath_);
     }
+    refreshDocumentStatusWidgets();
 }
 
 void MainWindow::handleMapEditorDetachRequested(TherionStudio::MapEditorTab *tab)
@@ -993,6 +1122,9 @@ void MainWindow::updateTabTitle(QWidget *tabWidget)
 
     editorTabs_->setTabText(tabIndex, documentDisplayNameForWidget(tabWidget));
     editorTabs_->setTabToolTip(tabIndex, documentPathForWidget(tabWidget));
+    if (currentDocumentWidget() == tabWidget) {
+        refreshDocumentStatusWidgets();
+    }
 
     persistOpenDocuments();
 }
@@ -1110,6 +1242,7 @@ void MainWindow::clearDocumentTabs()
 
     addWelcomeTab();
     clearingDocumentTabs_ = false;
+    refreshDocumentStatusWidgets();
 }
 
 void MainWindow::updateProjectActionState()

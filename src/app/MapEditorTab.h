@@ -21,7 +21,6 @@ class QPushButton;
 class QGraphicsRectItem;
 class QGraphicsPixmapItem;
 class QTextBrowser;
-class QToolButton;
 class QUndoStack;
 class QMainWindow;
 
@@ -65,6 +64,8 @@ public:
     bool isDirty() const;
     int currentLineNumber() const;
     QString text() const;
+    QString statusPathText() const;
+    QString statusEncodingText() const;
     WorkspaceMode workspaceMode() const;
     int backgroundLayerCount() const;
     QString backgroundLayerLabel(int index) const;
@@ -175,8 +176,6 @@ private:
     void addDraftGeometryItem(QGraphicsRectItem *item, const QPointF &position);
     void removeDraftGeometryItem(QGraphicsRectItem *item);
     void updateHelpPanel();
-    void installHelpBorderToggle();
-    void refreshHelpBorderToggle();
     void setHelpCollapsed(bool collapsed);
     void updateWorkspaceVisibility();
     void detachMapPaneToWindow();
@@ -196,11 +195,7 @@ private:
     QSplitter *mapHelpSplitter_ = nullptr;
     QFrame *helpPanel_ = nullptr;
     QLabel *summaryLabel_ = nullptr;
-    QWidget *statusRow_ = nullptr;
-    QLabel *statusPathLabel_ = nullptr;
-    QLabel *statusEncodingLabel_ = nullptr;
     QTextBrowser *helpBrowser_ = nullptr;
-    QToolButton *helpBorderToggleButton_ = nullptr;
     QPushButton *detachButton_ = nullptr;
     QPushButton *undoButton_ = nullptr;
     QPushButton *redoButton_ = nullptr;

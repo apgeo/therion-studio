@@ -10,7 +10,7 @@ Update this file whenever UI layout, workflows, keyboard shortcuts, or settings 
 Therion Studio is a Qt desktop editor for Therion projects with:
 
 - project file browsing
-- text editing for `.th`, `.th2`, and `thconfig`/`*.thconfig`
+- text editing for `.th`, `.th2`, and `.thconfig`
 - structure and map-object navigation
 - TH2 map workspace with source-linked geometry editing
 - integrated Therion runner console
@@ -38,10 +38,8 @@ Behavior:
 - Clicking an activity icon opens that pane.
 - Clicking the active icon again collapses the sidebar to the rail.
 - Clicking any icon while collapsed expands sidebar and opens that pane.
-- If the sidebar is manually resized down to rail-only width, clicking any activity icon also expands it and opens the requested pane.
-- If the sidebar is manually resized to zero/hidden content width while still technically expanded, clicking any activity icon restores the content width and opens the requested pane.
+- Dragging the sidebar content resize handle below the minimum usable width snaps the content pane closed while keeping the activity rail fixed and visible.
 - `Map` pane is enabled only when the active tab is a `.th2` document.
-- The rail width is icon-driven (sized from the activity buttons), and collapsed sidebar width is locked to that same rail width.
 
 ### 2.2 Central Tabs
 
@@ -139,14 +137,20 @@ Text editor includes:
 
 - syntax highlighting
 - find/replace bar with `Whole word` and `Case sensitive` options
-- contextual help pane (collapsible via small triangle on splitter handle)
-- bottom status row with path and encoding
+- contextual help pane below the editor, resizable via splitter handle
+- bottom status row for encoding notes and conversion action
 - explicit `Convert to UTF-8` action shown when a file is opened with a non-UTF-8 encoding
 - loading honors Therion `encoding ...` directive when the declared codec is available in Qt
 - conversion is explicit: clicking `Convert to UTF-8` asks for confirmation and marks the tab dirty; disk content changes only after save
 - status notes indicate whether saves are preserving original encoding or whether UTF-8 conversion is pending save
 - directive aliases such as `encoding cp1250` are supported via codec-name normalization (`cpNNNN` -> `windows-NNNN` candidate), and `encoding latin2` is normalized to an `iso-8859-2` candidate path
 - unsupported `encoding ...` directive tokens fall back to normal encoding detection/decode order instead of failing the file open
+
+Main window status bar shows:
+
+- left: transient app status (`Ready`, operation results)
+- center/right: active document path and encoding
+- long paths are middle-elided in visible text and preserved as full path in tooltip
 
 ### 5.4 Use Structure + Inspector
 
@@ -188,17 +192,13 @@ Detached map-pane behavior:
 Map help pane:
 
 - shown below map canvas
-- collapsible via small triangle on splitter handle
+- resizable via splitter handle
 - line-vertex shortcut reminder includes split (`Insert`/`I`), remove (`Delete`/`Backspace`), and smooth toggle (`S`)
 
 Line-handle behavior:
 
 - dragging a line anchor moves attached incoming/outgoing control handles by the same delta
 - on smooth vertices, dragging one control handle updates the opposite control handle live (mirrored/collinear) during drag
-
-Text + map status row:
-
-- shared path + encoding row below workspace
 
 ### 5.6 Map Navigation and Input
 

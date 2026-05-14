@@ -15,7 +15,6 @@
 #include <QSplitterHandle>
 #include <QTextBrowser>
 #include <QTextCursor>
-#include <QToolButton>
 #include <QPushButton>
 #include <QTextDocument>
 #include <QVBoxLayout>
@@ -136,10 +135,6 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     statusLayout->setContentsMargins(8, 0, 8, 8);
     statusLayout->setSpacing(12);
 
-    pathLabel_ = new QLabel(tr("No file open"), statusRow_);
-    pathLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    encodingLabel_ = new QLabel(tr("Encoding: UTF-8"), statusRow_);
-    encodingLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     encodingNoteLabel_ = new QLabel(statusRow_);
     encodingNoteLabel_->setWordWrap(true);
     encodingNoteLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -150,8 +145,6 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     convertEncodingButton_->setAutoDefault(false);
     connect(convertEncodingButton_, &QPushButton::clicked, this, &TextEditorTab::handleConvertToUtf8Triggered);
 
-    statusLayout->addWidget(pathLabel_, 1);
-    statusLayout->addWidget(encodingLabel_);
     statusLayout->addWidget(encodingNoteLabel_, 1);
     statusLayout->addWidget(convertEncodingButton_);
 
@@ -165,7 +158,6 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     editorHelpSplitter_->setStretchFactor(0, 1);
     editorHelpSplitter_->setStretchFactor(1, 0);
     editorHelpSplitter_->setCollapsible(1, true);
-    installHelpBorderToggle();
 
     layout->addWidget(searchBar_);
     layout->addWidget(editorHelpSplitter_, 1);
@@ -174,6 +166,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     connect(editor_, &QPlainTextEdit::textChanged, this, &TextEditorTab::handleTextChanged);
     connect(editor_, &QPlainTextEdit::cursorPositionChanged, this, &TextEditorTab::handleCursorPositionChanged);
 
+    refreshStatus();
     updateContextHelp();
 }
 
@@ -670,9 +663,8 @@ QString TextEditorTab::statusEncodingText() const
 
 void TextEditorTab::setInlineStatusVisible(bool visible)
 {
-    if (statusRow_ != nullptr) {
-        statusRow_->setVisible(visible);
-    }
+    inlineStatusRequestedVisible_ = visible;
+    refreshStatus();
 }
 
 bool TextEditorTab::isCurrentStateDirty() const
@@ -806,13 +798,6 @@ void TextEditorTab::refreshTitle()
 
 void TextEditorTab::refreshStatus()
 {
-    if (filePath_.isEmpty()) {
-        pathLabel_->setText(tr("No file open"));
-    } else {
-        pathLabel_->setText(displayPath());
-    }
-
-    encodingLabel_->setText(tr("Encoding: %1").arg(fileEncodingLabel_));
     if (encodingNoteLabel_ != nullptr) {
         encodingNoteLabel_->setText(encodingStatusNote_);
         encodingNoteLabel_->setVisible(!encodingStatusNote_.isEmpty());
@@ -821,6 +806,13 @@ void TextEditorTab::refreshStatus()
         const bool showConversion = fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) != 0;
         convertEncodingButton_->setVisible(showConversion);
         convertEncodingButton_->setEnabled(showConversion);
+    }
+
+    const bool showInlineRow = inlineStatusRequestedVisible_ && (!encodingStatusNote_.isEmpty()
+                                                                 || (convertEncodingButton_ != nullptr
+                                                                     && convertEncodingButton_->isVisible()));
+    if (statusRow_ != nullptr) {
+        statusRow_->setVisible(showInlineRow);
     }
 }
 
@@ -853,44 +845,6 @@ void TextEditorTab::buildHelpPanel()
 
     panelLayout->addLayout(headerRow);
     panelLayout->addWidget(helpBrowser_, 1);
-}
-
-void TextEditorTab::installHelpBorderToggle()
-{
-    if (editorHelpSplitter_ == nullptr || helpBorderToggleButton_ != nullptr) {
-        return;
-    }
-
-    auto *handle = editorHelpSplitter_->handle(1);
-    if (handle == nullptr) {
-        return;
-    }
-
-    auto *handleLayout = new QHBoxLayout(handle);
-    handleLayout->setContentsMargins(0, 0, 4, 0);
-    handleLayout->setSpacing(0);
-    handleLayout->addStretch(1);
-
-    helpBorderToggleButton_ = new QToolButton(handle);
-    helpBorderToggleButton_->setAutoRaise(true);
-    helpBorderToggleButton_->setFocusPolicy(Qt::NoFocus);
-    helpBorderToggleButton_->setFixedSize(12, 12);
-    helpBorderToggleButton_->setToolTip(tr("Collapse or expand help pane"));
-    connect(helpBorderToggleButton_, &QToolButton::clicked, this, [this]() {
-        setHelpCollapsed(!helpCollapsed_);
-    });
-
-    handleLayout->addWidget(helpBorderToggleButton_);
-    refreshHelpBorderToggle();
-}
-
-void TextEditorTab::refreshHelpBorderToggle()
-{
-    if (helpBorderToggleButton_ == nullptr) {
-        return;
-    }
-
-    helpBorderToggleButton_->setArrowType(helpCollapsed_ ? Qt::RightArrow : Qt::DownArrow);
 }
 
 void TextEditorTab::loadHelpMetadata()
@@ -1009,7 +963,6 @@ void TextEditorTab::setHelpCollapsed(bool collapsed)
     if (helpBrowser_ != nullptr) {
         helpBrowser_->setVisible(!collapsed);
     }
-    refreshHelpBorderToggle();
     if (editorHelpSplitter_ != nullptr) {
         if (!collapsed && helpPanelHeight_ > 0) {
             const QList<int> sizes = editorHelpSplitter_->sizes();

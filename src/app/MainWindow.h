@@ -27,8 +27,10 @@ class QStandardItem;
 class QTabWidget;
 class QToolButton;
 class QTreeView;
+class QHBoxLayout;
 class QVBoxLayout;
 class QModelIndex;
+class QResizeEvent;
 
 namespace TherionStudio
 {
@@ -46,6 +48,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private slots:
     void createNewWindow();
@@ -151,7 +154,10 @@ private:
     TherionStudio::MapEditorTab *detachedMapEditorTabForPath(const QString &canonicalPath) const;
     QList<TherionStudio::MapEditorTab *> detachedMapEditorTabs() const;
     bool confirmCloseDocumentWidget(QWidget *documentWidget);
+    void initializeDocumentStatusWidgets();
+    void refreshDocumentStatusWidgets();
 
+    QHBoxLayout *mainContentLayout_ = nullptr;
     QTabWidget *editorTabs_ = nullptr;
     QTreeView *projectTree_ = nullptr;
     QTreeView *structureTree_ = nullptr;
@@ -173,7 +179,8 @@ private:
     QSlider *mapBackgroundGammaSlider_ = nullptr;
     QPushButton *mapBackgroundOpacityResetButton_ = nullptr;
     QPushButton *mapBackgroundGammaResetButton_ = nullptr;
-    QDockWidget *structureDock_ = nullptr;
+    QSplitter *mainContentSplitter_ = nullptr;
+    QWidget *sidebarContainer_ = nullptr;
     QSplitter *mapEditorSidebarSplitter_ = nullptr;
     QWidget *sidebarContentContainer_ = nullptr;
     QToolButton *sidebarFilesButton_ = nullptr;
@@ -220,6 +227,8 @@ private:
     QLabel *inspectorValidationLabel_ = nullptr;
     QPushButton *inspectorOpenSourceButton_ = nullptr;
     QPushButton *inspectorApplyButton_ = nullptr;
+    QLabel *statusDocumentPathLabel_ = nullptr;
+    QLabel *statusDocumentEncodingLabel_ = nullptr;
     QFileSystemModel *projectModel_ = nullptr;
     QStandardItemModel *structureModel_ = nullptr;
     QStandardItemModel *mapObjectsModel_ = nullptr;
@@ -237,6 +246,7 @@ private:
     int consoleExpandedHeight_ = 240;
     bool sidebarCollapsed_ = false;
     bool consoleCollapsed_ = false;
+    bool updatingSidebarSplitter_ = false;
     bool updatingMapBackgroundPanel_ = false;
     bool updatingInspectorLineOptions_ = false;
     bool clearingDocumentTabs_ = false;

@@ -61,6 +61,21 @@ int main(int argc, char *argv[])
     application.setOrganizationDomain(QStringLiteral("therionstudio.example"));
 
     applyPlatformStyle(application);
+    application.setStyleSheet(
+        QStringLiteral(
+            "QWidget#SidebarContainer {"
+            "  border: 0px;"
+            "}"
+            "QFrame#SidebarActivityRail {"
+            "  border: 0px;"
+            "  border-right: 1px solid #bebebe;"
+            "}"
+            "QStatusBar {"
+            "  border-top: 1px solid #bebebe;"
+            "}"
+            "QStatusBar::item {"
+            "  border: 0px;"
+            "}"));
 
     auto *window = new MainWindow;
     window->show();

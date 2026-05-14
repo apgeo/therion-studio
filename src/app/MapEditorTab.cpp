@@ -18,7 +18,6 @@
 #include <QSplitterHandle>
 #include <QTabletEvent>
 #include <QTextBrowser>
-#include <QToolButton>
 #include <QPointer>
 #include <QUndoCommand>
 #include <QUndoStack>
@@ -780,44 +779,6 @@ void MapEditorTab::buildHelpPanel()
 
     panelLayout->addLayout(headerRow);
     panelLayout->addWidget(helpBrowser_, 1);
-}
-
-void MapEditorTab::installHelpBorderToggle()
-{
-    if (mapHelpSplitter_ == nullptr || helpBorderToggleButton_ != nullptr) {
-        return;
-    }
-
-    auto *handle = mapHelpSplitter_->handle(1);
-    if (handle == nullptr) {
-        return;
-    }
-
-    auto *handleLayout = new QHBoxLayout(handle);
-    handleLayout->setContentsMargins(0, 0, 4, 0);
-    handleLayout->setSpacing(0);
-    handleLayout->addStretch(1);
-
-    helpBorderToggleButton_ = new QToolButton(handle);
-    helpBorderToggleButton_->setAutoRaise(true);
-    helpBorderToggleButton_->setFocusPolicy(Qt::NoFocus);
-    helpBorderToggleButton_->setFixedSize(12, 12);
-    helpBorderToggleButton_->setToolTip(tr("Collapse or expand help pane"));
-    connect(helpBorderToggleButton_, &QToolButton::clicked, this, [this]() {
-        setHelpCollapsed(!helpCollapsed_);
-    });
-
-    handleLayout->addWidget(helpBorderToggleButton_);
-    refreshHelpBorderToggle();
-}
-
-void MapEditorTab::refreshHelpBorderToggle()
-{
-    if (helpBorderToggleButton_ == nullptr) {
-        return;
-    }
-
-    helpBorderToggleButton_->setArrowType(helpCollapsed_ ? Qt::RightArrow : Qt::DownArrow);
 }
 
 void MapEditorTab::refreshMapScene()

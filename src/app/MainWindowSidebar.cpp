@@ -4,7 +4,6 @@
 
 #include <QAbstractItemView>
 #include <QApplication>
-#include <QDockWidget>
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
@@ -16,7 +15,6 @@
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QMessageBox>
-#include <QMouseEvent>
 #include <QMenu>
 #include <QPainter>
 #include <QSplitter>
@@ -72,76 +70,6 @@ QIcon therionBadgedFileIcon(const QIcon &baseIcon)
 
     return composed;
 }
-
-class DockTitleBarWidget final : public QWidget
-{
-public:
-    explicit DockTitleBarWidget(const QString &title, QWidget *parent = nullptr)
-        : QWidget(parent)
-        , titleLabel_(new QLabel(title, this))
-        , toggleButton_(new QToolButton(this))
-    {
-        layout_ = new QHBoxLayout(this);
-        layout_->setContentsMargins(8, 4, 4, 4);
-        layout_->setSpacing(4);
-        layout_->addWidget(titleLabel_);
-        layout_->addStretch(1);
-        toggleButton_->setAutoRaise(true);
-        toggleButton_->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        layout_->addWidget(toggleButton_);
-    }
-
-    void setCollapsedVisual(bool collapsed)
-    {
-        titleLabel_->setVisible(!collapsed);
-        layout_->setContentsMargins(collapsed ? 2 : 8, 2, 2, 2);
-        layout_->setSpacing(collapsed ? 0 : 4);
-        updateGeometry();
-    }
-
-    QToolButton *toggleButton() const
-    {
-        return toggleButton_;
-    }
-
-protected:
-    void mousePressEvent(QMouseEvent *event) override
-    {
-        event->ignore();
-    }
-
-    void mouseMoveEvent(QMouseEvent *event) override
-    {
-        event->ignore();
-    }
-
-    void mouseDoubleClickEvent(QMouseEvent *event) override
-    {
-        event->ignore();
-    }
-
-    QSize minimumSizeHint() const override
-    {
-        const QSize buttonSize = toggleButton_->sizeHint();
-        const bool titleVisible = titleLabel_->isVisible();
-        const int left = titleVisible ? 8 : 2;
-        const int right = 2;
-        const int topBottom = 4;
-        const int titleWidth = titleVisible ? titleLabel_->sizeHint().width() + 4 : 0;
-        return QSize(left + titleWidth + buttonSize.width() + right,
-                     qMax(buttonSize.height(), titleLabel_->sizeHint().height()) + topBottom);
-    }
-
-    QSize sizeHint() const override
-    {
-        return minimumSizeHint();
-    }
-
-private:
-    QHBoxLayout *layout_ = nullptr;
-    QLabel *titleLabel_ = nullptr;
-    QToolButton *toggleButton_ = nullptr;
-};
 
 class ProjectTreeItemDelegate final : public QStyledItemDelegate
 {
@@ -247,6 +175,39 @@ QString ensureSuffix(const QString &name, const QString &suffix)
     }
 
     return normalized;
+}
+
+int sidebarAutoSnapThreshold(int railWidth)
+{
+    // Keep a small-but-usable content width below which the sidebar snaps to rail.
+    return qMax(240, railWidth + 180);
+}
+
+void prepareSidebarContentPane(QWidget *contentWidget)
+{
+    if (contentWidget == nullptr) {
+        return;
+    }
+    contentWidget->setVisible(true);
+    contentWidget->setMinimumWidth(0);
+    contentWidget->setMaximumWidth(QWIDGETSIZE_MAX);
+}
+
+int splitterTotalWidth(QSplitter *splitter)
+{
+    if (splitter == nullptr) {
+        return 0;
+    }
+
+    int totalWidth = 0;
+    const QList<int> sizes = splitter->sizes();
+    for (const int size : sizes) {
+        totalWidth += size;
+    }
+    if (totalWidth <= 0) {
+        totalWidth = splitter->width();
+    }
+    return totalWidth;
 }
 }
 
@@ -630,54 +591,44 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
 void MainWindow::buildStructureSidebar()
 {
-    structureDock_ = new QDockWidget(tr("Sidebar"), this);
-    structureDock_->setObjectName(QStringLiteral("SidebarDock"));
-    structureDock_->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    structureDock_->setMinimumWidth(sidebarRailWidth_);
-    auto *titleBar = new QWidget(structureDock_);
-    titleBar->setFixedHeight(0);
-    titleBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    if (mainContentLayout_ == nullptr || mainContentSplitter_ == nullptr) {
+        return;
+    }
+
     sidebarCollapseButton_ = nullptr;
-    structureDock_->setTitleBarWidget(titleBar);
-    connect(structureDock_, &QDockWidget::dockLocationChanged, this, [this](Qt::DockWidgetArea) {
-        updateSidebarCollapseButton();
-    });
-    connect(structureDock_, &QDockWidget::visibilityChanged, this, [this](bool visible) {
-        if (!visible) {
-            if (!sidebarCollapsed_) {
-                rememberSidebarWidth();
-            }
+
+    connect(mainContentSplitter_, &QSplitter::splitterMoved, this, [this](int position, int) {
+        if (updatingSidebarSplitter_) {
+            return;
+        }
+        if (sidebarContainer_ == nullptr || sidebarContentContainer_ == nullptr || !sidebarContainer_->isVisible()) {
             return;
         }
 
+        const int width = qMax(0, position);
+        const int snapThreshold = sidebarAutoSnapThreshold(sidebarRailWidth_);
         if (sidebarCollapsed_) {
-            if (sidebarContentContainer_ != nullptr) {
-                sidebarContentContainer_->setVisible(false);
+            if (width > snapThreshold) {
+                sidebarCollapsed_ = false;
+                sidebarExpandedWidth_ = qMax(width, sidebarRailWidth_ + 240);
+                prepareSidebarContentPane(sidebarContentContainer_);
+                updateSidebarCollapseButton();
             }
-            QTimer::singleShot(0, this, [this]() {
-                if (structureDock_ == nullptr || !structureDock_->isVisible()) {
-                    return;
-                }
-
-                resizeDocks({structureDock_}, {sidebarRailWidth_}, Qt::Horizontal);
-            });
-            updateSidebarCollapseButton();
             return;
         }
 
-        restoreSidebarWidth();
-        updateSidebarCollapseButton();
+        if (width <= snapThreshold) {
+            setSidebarCollapsed(true);
+        } else {
+            sidebarExpandedWidth_ = width;
+        }
     });
 
-    auto *container = new QWidget(structureDock_);
-    container->setMinimumWidth(0);
-    container->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
-    auto *containerLayout = new QHBoxLayout(container);
-    containerLayout->setContentsMargins(0, 0, 0, 0);
-    containerLayout->setSpacing(0);
-
-    auto *activityBar = new QFrame(container);
+    auto *activityBar = new QFrame;
+    sidebarContainer_ = activityBar;
+    activityBar->setObjectName(QStringLiteral("SidebarActivityRail"));
     activityBar->setFrameShape(QFrame::StyledPanel);
+    activityBar->setFixedWidth(sidebarRailWidth_);
     activityBar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
     auto *activityLayout = new QVBoxLayout(activityBar);
     activityLayout->setContentsMargins(6, 8, 6, 8);
@@ -691,18 +642,15 @@ void MainWindow::buildStructureSidebar()
         if (sidebarCollapsed_) {
             return true;
         }
-        if (sidebarContentContainer_ != nullptr && !sidebarContentContainer_->isVisible()) {
-            return true;
-        }
-        if (structureDock_ != nullptr && structureDock_->isVisible()) {
-            return structureDock_->width() <= (sidebarRailWidth_ + 1);
+        if (sidebarContentContainer_ != nullptr && sidebarContentContainer_->isVisible()) {
+            return sidebarContentContainer_->width() <= sidebarAutoSnapThreshold(sidebarRailWidth_);
         }
         return false;
     };
     const auto handleActivityButtonClick = [this, isSidebarEffectivelyCollapsed](SidebarPane pane) {
         if (isSidebarEffectivelyCollapsed()) {
-            if (structureDock_ != nullptr && !structureDock_->isVisible()) {
-                structureDock_->show();
+            if (sidebarContainer_ != nullptr && !sidebarContainer_->isVisible()) {
+                sidebarContainer_->setVisible(true);
             }
 
             if (sidebarCollapsed_) {
@@ -711,13 +659,8 @@ void MainWindow::buildStructureSidebar()
                 if (sidebarExpandedWidth_ <= (sidebarRailWidth_ + 8)) {
                     sidebarExpandedWidth_ = qMax(320, sidebarRailWidth_ + 240);
                 }
-                if (structureDock_ != nullptr) {
-                    structureDock_->setMaximumWidth(QWIDGETSIZE_MAX);
-                    structureDock_->setMinimumWidth(sidebarRailWidth_);
-                }
-                if (sidebarContentContainer_ != nullptr) {
-                    sidebarContentContainer_->setVisible(true);
-                }
+                sidebarCollapsed_ = false;
+                prepareSidebarContentPane(sidebarContentContainer_);
                 restoreSidebarWidth();
                 updateSidebarCollapseButton();
             }
@@ -771,9 +714,11 @@ void MainWindow::buildStructureSidebar()
     // Keep the activity rail width driven by icon/button metrics to avoid extra blank gutter.
     sidebarRailWidth_ = qMax(40, activityBar->sizeHint().width());
     activityBar->setFixedWidth(sidebarRailWidth_);
-    structureDock_->setMinimumWidth(sidebarRailWidth_);
+    sidebarContainer_->setMinimumWidth(sidebarRailWidth_);
+    sidebarContainer_->setMaximumWidth(sidebarRailWidth_);
+    mainContentLayout_->addWidget(sidebarContainer_, 0);
 
-    sidebarContentContainer_ = new QWidget(container);
+    sidebarContentContainer_ = new QWidget(mainContentSplitter_);
     sidebarContentContainer_->setMinimumWidth(0);
     sidebarContentContainer_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
     auto *sidebarContentLayout = new QVBoxLayout(sidebarContentContainer_);
@@ -785,8 +730,7 @@ void MainWindow::buildStructureSidebar()
     sidebarPages_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
     sidebarContentLayout->addWidget(sidebarPages_, 1);
 
-    containerLayout->addWidget(activityBar, 0);
-    containerLayout->addWidget(sidebarContentContainer_, 1);
+    mainContentSplitter_->addWidget(sidebarContentContainer_);
 
     buildProjectBrowser();
 
@@ -869,8 +813,6 @@ void MainWindow::buildStructureSidebar()
     consoleSidebarPageLayout_->setSpacing(8);
     sidebarPages_->addWidget(consoleSidebarPage_);
 
-    structureDock_->setWidget(container);
-    addDockWidget(Qt::LeftDockWidgetArea, structureDock_);
     updateSidebarCollapseButton();
     setSidebarPane(activeSidebarPane_);
     refreshMapBackgroundPanel();
@@ -908,35 +850,56 @@ void MainWindow::setSidebarPane(SidebarPane pane)
 
 void MainWindow::rememberSidebarWidth()
 {
-    if (structureDock_ == nullptr || !structureDock_->isVisible()) {
+    if (sidebarContentContainer_ == nullptr || !sidebarContentContainer_->isVisible()) {
         return;
     }
 
-    sidebarExpandedWidth_ = qMax(sidebarRailWidth_, structureDock_->width());
+    const int width = sidebarContentContainer_->width();
+    if (width <= sidebarAutoSnapThreshold(sidebarRailWidth_)) {
+        return;
+    }
+
+    sidebarExpandedWidth_ = qMax(sidebarRailWidth_ + 120, width);
 }
 
 void MainWindow::restoreSidebarWidth()
 {
-    if (structureDock_ == nullptr || sidebarExpandedWidth_ <= 0) {
+    if (mainContentSplitter_ == nullptr || sidebarContainer_ == nullptr || sidebarContentContainer_ == nullptr || sidebarExpandedWidth_ <= 0) {
         return;
     }
 
-    QTimer::singleShot(0, this, [this]() {
-        if (structureDock_ == nullptr || !structureDock_->isVisible()) {
+    const auto applyRestore = [this]() {
+        if (mainContentSplitter_ == nullptr || sidebarContainer_ == nullptr || sidebarContentContainer_ == nullptr || !sidebarContainer_->isVisible()) {
+            return;
+        }
+        sidebarContentContainer_->setVisible(true);
+
+        const int totalWidth = splitterTotalWidth(mainContentSplitter_);
+        if (totalWidth <= 0) {
             return;
         }
 
-        resizeDocks({structureDock_}, {sidebarExpandedWidth_}, Qt::Horizontal);
-    });
+        const int targetContentWidth = qBound(0, sidebarExpandedWidth_, qMax(0, totalWidth - 240));
+        const int editorWidth = qMax(240, totalWidth - targetContentWidth);
+        updatingSidebarSplitter_ = true;
+        mainContentSplitter_->setSizes({targetContentWidth, editorWidth});
+        updatingSidebarSplitter_ = false;
+    };
+
+    if (mainContentSplitter_->width() <= 0) {
+        QTimer::singleShot(0, this, applyRestore);
+        return;
+    }
+    applyRestore();
 }
 
 void MainWindow::setSidebarCollapsed(bool collapsed)
 {
-    if (structureDock_ == nullptr) {
+    if (mainContentSplitter_ == nullptr || sidebarContainer_ == nullptr) {
         return;
     }
 
-    if (collapsed == sidebarCollapsed_) {
+    if (collapsed == sidebarCollapsed_ && (!collapsed || sidebarContentContainer_ == nullptr || sidebarContentContainer_->width() == 0)) {
         updateSidebarCollapseButton();
         return;
     }
@@ -945,25 +908,31 @@ void MainWindow::setSidebarCollapsed(bool collapsed)
     QWidget *contentWidget = sidebarContentContainer_;
     if (collapsed) {
         rememberSidebarWidth();
-        structureDock_->setMinimumWidth(sidebarRailWidth_);
-        structureDock_->setMaximumWidth(sidebarRailWidth_);
-        if (contentWidget != nullptr) {
-            contentWidget->setVisible(false);
-        }
+        sidebarContainer_->setMinimumWidth(sidebarRailWidth_);
+        prepareSidebarContentPane(contentWidget);
 
-        QTimer::singleShot(0, this, [this]() {
-            if (structureDock_ == nullptr || !structureDock_->isVisible()) {
+        const auto applyCollapse = [this]() {
+            if (mainContentSplitter_ == nullptr || sidebarContainer_ == nullptr || sidebarContentContainer_ == nullptr || !sidebarContainer_->isVisible()) {
                 return;
             }
 
-            resizeDocks({structureDock_}, {sidebarRailWidth_}, Qt::Horizontal);
-        });
-    } else {
-        structureDock_->setMaximumWidth(QWIDGETSIZE_MAX);
-        structureDock_->setMinimumWidth(sidebarRailWidth_);
-        if (contentWidget != nullptr) {
-            contentWidget->setVisible(true);
+            const int totalWidth = splitterTotalWidth(mainContentSplitter_);
+            if (totalWidth <= 0) {
+                return;
+            }
+            updatingSidebarSplitter_ = true;
+            mainContentSplitter_->setSizes({0, qMax(240, totalWidth)});
+            updatingSidebarSplitter_ = false;
+        };
+
+        if (mainContentSplitter_->width() <= 0) {
+            QTimer::singleShot(0, this, applyCollapse);
+        } else {
+            applyCollapse();
         }
+    } else {
+        sidebarContainer_->setMinimumWidth(sidebarRailWidth_);
+        prepareSidebarContentPane(contentWidget);
         restoreSidebarWidth();
     }
 
@@ -972,22 +941,11 @@ void MainWindow::setSidebarCollapsed(bool collapsed)
 
 void MainWindow::updateSidebarCollapseButton()
 {
-    if (sidebarCollapseButton_ == nullptr || structureDock_ == nullptr) {
+    if (sidebarCollapseButton_ == nullptr || sidebarContainer_ == nullptr) {
         return;
     }
 
-    if (auto *titleBar = dynamic_cast<DockTitleBarWidget *>(structureDock_->titleBarWidget())) {
-        titleBar->setCollapsedVisual(sidebarCollapsed_);
-    }
-
-    const Qt::DockWidgetArea area = dockWidgetArea(structureDock_);
-    Qt::ArrowType arrowType = Qt::LeftArrow;
-    if (sidebarCollapsed_) {
-        arrowType = area == Qt::RightDockWidgetArea ? Qt::LeftArrow : Qt::RightArrow;
-    } else {
-        arrowType = area == Qt::RightDockWidgetArea ? Qt::RightArrow : Qt::LeftArrow;
-    }
-
+    const Qt::ArrowType arrowType = sidebarCollapsed_ ? Qt::RightArrow : Qt::LeftArrow;
     sidebarCollapseButton_->setArrowType(arrowType);
     sidebarCollapseButton_->setToolTip(sidebarCollapsed_ ? tr("Expand sidebar") : tr("Collapse sidebar"));
 }

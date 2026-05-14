@@ -1284,6 +1284,7 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
                  || interactiveDrawMode_ == InteractiveDrawMode::Area)
                 && interactiveDrawAnchorPressActive_
                 && mouseEvent->button() == Qt::LeftButton) {
+                const QPointF anchorScenePoint = interactiveDrawAnchorPressScenePoint_;
                 std::optional<QPointF> dragScenePoint;
                 if (interactiveDrawAnchorDragActive_) {
                     const QPointF releaseScenePoint = mapView_->mapToScene(mouseEvent->pos());
@@ -1293,10 +1294,10 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
                     }
                 }
 
-                captureInteractiveLineAnchor(interactiveDrawAnchorPressScenePoint_, dragScenePoint);
                 interactiveDrawAnchorPressActive_ = false;
                 interactiveDrawAnchorDragActive_ = false;
                 interactiveDrawHoverActive_ = false;
+                captureInteractiveLineAnchor(anchorScenePoint, dragScenePoint);
                 toolbarStatusNote_ = interactiveDrawMode_ == InteractiveDrawMode::Line
                     ? tr("Line mode: %1 vertex/vertices captured. Press Enter or Complete Draft.")
                           .arg(interactiveDrawLineVertices_.size())

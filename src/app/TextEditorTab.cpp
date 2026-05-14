@@ -223,13 +223,6 @@ protected:
         painter.setBrush(fill);
         painter.drawRect(QRectF(blockBounds));
 
-        QColor accent = palette().color(QPalette::Highlight);
-        if (!accent.isValid()) {
-            accent = QColor(QStringLiteral("#4f8ad9"));
-        }
-        accent.setAlpha(190);
-        painter.setBrush(accent);
-        painter.drawRect(QRectF(0.0, static_cast<qreal>(blockBounds.top()), 4.0, static_cast<qreal>(blockBounds.height())));
     }
 
 private:

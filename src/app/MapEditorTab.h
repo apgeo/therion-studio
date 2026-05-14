@@ -116,6 +116,7 @@ private slots:
     void handleZoomOutTriggered();
     void handleFitTriggered();
     void handleFitWithBackgroundTriggered();
+    void handleTouchFriendlyControlsToggled(bool checked);
     void updateCommandSurfaceState();
 
 private:
@@ -180,6 +181,7 @@ private:
     static int workspaceModeToIndex(WorkspaceMode mode);
     static WorkspaceMode workspaceModeFromSetting(const QString &value);
     static QString workspaceModeToSetting(WorkspaceMode mode);
+    void setTouchFriendlyControlsEnabled(bool enabled);
 
     TextEditorTab *textEditor_ = nullptr;
     QGraphicsView *mapView_ = nullptr;
@@ -209,6 +211,7 @@ private:
     QPushButton *zoomInButton_ = nullptr;
     QPushButton *fitButton_ = nullptr;
     QPushButton *fitBackgroundButton_ = nullptr;
+    QPushButton *touchControlsButton_ = nullptr;
     QLabel *zoomLabel_ = nullptr;
     QHash<int, QGraphicsRectItem *> mapItemsByLine_;
     QVector<QGraphicsRectItem *> draftGeometryItems_;
@@ -234,6 +237,7 @@ private:
     QDateTime lastTabletInteractionUtc_;
     bool nativeZoomGestureActive_ = false;
     QDateTime lastNativeZoomGestureUtc_;
+    bool touchFriendlyControlsEnabled_ = false;
     bool helpCollapsed_ = false;
     int helpPanelHeight_ = 180;
     int selectedBackgroundLayerIndex_ = -1;

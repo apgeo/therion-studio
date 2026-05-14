@@ -38,6 +38,8 @@ public:
 
     static QString therionMapWorkspaceMode();
     static void setTherionMapWorkspaceMode(const QString &mode);
+    static bool therionMapTouchFriendlyControlsEnabled();
+    static void setTherionMapTouchFriendlyControlsEnabled(bool enabled);
 
     static QString therionMapBackgroundLayers();
     static void setTherionMapBackgroundLayers(const QString &json);

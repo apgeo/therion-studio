@@ -23,6 +23,8 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/MainWindowStructureRoles.h
     src/app/MainWindowTherionRunner.cpp
     src/app/MapEditorBackgroundLayers.cpp
+    src/app/MapEditorInputPolicy.cpp
+    src/app/MapEditorInputPolicy.h
     src/app/MapEditorSceneInternals.h
     src/app/MapEditorSceneItems.cpp
     src/app/MapEditorSceneRenderer.cpp
@@ -134,3 +136,17 @@ qt_add_executable(DocumentFileEncodingTest
     src/core/TherionDocumentParser.h)
 
 target_link_libraries(DocumentFileEncodingTest PRIVATE Qt6::Widgets)
+
+qt_add_executable(MapEditorInputPolicyTest
+    tests/MapEditorInputPolicyTest.cpp
+    src/app/MapEditorInputPolicy.cpp
+    src/app/MapEditorInputPolicy.h)
+
+target_link_libraries(MapEditorInputPolicyTest PRIVATE Qt6::Widgets)
+
+qt_add_executable(SessionStoreTest
+    tests/SessionStoreTest.cpp
+    src/core/SessionStore.cpp
+    src/core/SessionStore.h)
+
+target_link_libraries(SessionStoreTest PRIVATE Qt6::Widgets)

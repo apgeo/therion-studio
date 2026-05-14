@@ -25,8 +25,10 @@ MapEditorTab::MapEditorTab(QWidget *parent)
 {
     undoStack_ = new QUndoStack(this);
     workspaceMode_ = workspaceModeFromSetting(SessionStore::therionMapWorkspaceMode());
+    touchFriendlyControlsEnabled_ = SessionStore::therionMapTouchFriendlyControlsEnabled();
     buildUi();
     setWorkspaceMode(workspaceMode_);
+    setTouchFriendlyControlsEnabled(touchFriendlyControlsEnabled_);
 }
 
 void MapEditorTab::buildUi()
@@ -66,6 +68,9 @@ void MapEditorTab::buildUi()
     zoomInButton_ = new QPushButton(tr("Zoom +"), toolbar);
     fitButton_ = new QPushButton(tr("Fit"), toolbar);
     fitBackgroundButton_ = new QPushButton(tr("Fit + BG"), toolbar);
+    touchControlsButton_ = new QPushButton(tr("Touch Controls"), toolbar);
+    touchControlsButton_->setCheckable(true);
+    touchControlsButton_->setToolTip(tr("Enable touch-friendly map controls for pen-first workflows."));
     zoomLabel_ = new QLabel(tr("100%"), toolbar);
     zoomLabel_->setMinimumWidth(52);
     zoomLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -76,6 +81,7 @@ void MapEditorTab::buildUi()
     connect(zoomInButton_, &QPushButton::clicked, this, &MapEditorTab::handleZoomInTriggered);
     connect(fitButton_, &QPushButton::clicked, this, &MapEditorTab::handleFitTriggered);
     connect(fitBackgroundButton_, &QPushButton::clicked, this, &MapEditorTab::handleFitWithBackgroundTriggered);
+    connect(touchControlsButton_, &QPushButton::toggled, this, &MapEditorTab::handleTouchFriendlyControlsToggled);
 
     workspaceModeCombo_ = new QComboBox(toolbar);
     workspaceModeCombo_->addItem(tr("Text Only"));
@@ -109,6 +115,7 @@ void MapEditorTab::buildUi()
     toolbarLayout->addWidget(zoomInButton_);
     toolbarLayout->addWidget(fitButton_);
     toolbarLayout->addWidget(fitBackgroundButton_);
+    toolbarLayout->addWidget(touchControlsButton_);
     toolbarLayout->addWidget(zoomLabel_);
     toolbarLayout->addWidget(detachButton_);
     toolbarLayout->addWidget(summaryLabel_, 1);
@@ -363,6 +370,11 @@ void MapEditorTab::handleFitTriggered()
     refreshToolbarSummary();
 }
 
+void MapEditorTab::handleTouchFriendlyControlsToggled(bool checked)
+{
+    setTouchFriendlyControlsEnabled(checked);
+}
+
 void MapEditorTab::setHelpCollapsed(bool collapsed)
 {
     helpCollapsed_ = collapsed;
@@ -483,5 +495,17 @@ QString MapEditorTab::workspaceModeToSetting(WorkspaceMode mode)
     }
 
     return QStringLiteral("split");
+}
+
+void MapEditorTab::setTouchFriendlyControlsEnabled(bool enabled)
+{
+    touchFriendlyControlsEnabled_ = enabled;
+    SessionStore::setTherionMapTouchFriendlyControlsEnabled(enabled);
+    if (touchControlsButton_ != nullptr) {
+        touchControlsButton_->blockSignals(true);
+        touchControlsButton_->setChecked(enabled);
+        touchControlsButton_->blockSignals(false);
+    }
+    updateCommandSurfaceState();
 }
 }

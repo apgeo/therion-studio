@@ -124,6 +124,17 @@ void SessionStore::setTherionMapWorkspaceMode(const QString &mode)
     settings.setValue(QStringLiteral("session/therionMapWorkspaceMode"), mode);
 }
 
+bool SessionStore::therionMapTouchFriendlyControlsEnabled()
+{
+    return makeSettings().value(QStringLiteral("session/therionMapTouchFriendlyControlsEnabled"), false).toBool();
+}
+
+void SessionStore::setTherionMapTouchFriendlyControlsEnabled(bool enabled)
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("session/therionMapTouchFriendlyControlsEnabled"), enabled);
+}
+
 QString SessionStore::therionMapBackgroundLayers()
 {
     return makeSettings().value(QStringLiteral("session/therionMapBackgroundLayers")).toString();

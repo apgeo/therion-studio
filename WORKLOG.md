@@ -100,6 +100,7 @@ Legend:
 - ~~Point and line/area vertex drag-to-source writeback.~~
 - ~~Undo/redo command integration with merge semantics and obsolete-command handling for failures.~~
 - ~~Raster and `.xvi` background parsing/placement/alignment; multi-layer controls and session restore.~~
+- ~~Added explicit touch-friendly controls mode in the map toolbar, persisted via session settings, and wired into mode-aware wheel/touch-pan input policy.~~
 - Verification:
 - ~~`./build/MapBackgroundPlacementTest`~~
 - ~~`./build/TherionBackgroundMetadataTest`~~
@@ -163,6 +164,8 @@ Automated tests currently in-tree and used as regression baseline:
 - `TherionBackgroundMetadataTest`
 - `TherionXviParserTest`
 - `DocumentFileEncodingTest`
+- `MapEditorInputPolicyTest`
+- `SessionStoreTest`
 
 ## Recent Completed (Latest Slice)
 
@@ -180,6 +183,8 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Added negative `DocumentFileEncodingTest` case for unknown `encoding` directive token fallback, confirming UTF-8 decode fallback and byte-preserving UTF-8 save round-trip.~~
 - ~~Expanded `DocumentFileEncodingTest` with broader non-UTF fixture coverage: `cp1252` alias round-trip, `latin2` directive round-trip, and unknown-directive Latin1 fallback round-trip with byte-preserving save verification.~~
 - ~~Re-verified Phase 5 regression suite after ongoing map/editor work: built `TherionStudio`, `MapGeometryFeatureParsingTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`, and `TherionDocumentEditorTest`, then executed all five map-related binaries plus `TherionDocumentEditorTest`.~~
+- ~~Implemented explicit touch-friendly controls mode for map editor workflows: added toolbar toggle, persisted state in `SessionStore`, and routed wheel/touch-pan behavior through tested input policy helpers.~~
+- ~~Added `MapEditorInputPolicyTest` and `SessionStoreTest` coverage for mode-aware pan/zoom decision logic and touch-controls persistence round-trip behavior.~~
 - ~~Added `docs/ENCODING_QA_CHECKLIST.md` and linked it from the user manual to standardize cross-platform manual validation for open/save/convert/reopen/byte-check encoding workflows.~~
 - ~~Populated `docs/USER_MANUAL.md` with current implemented UI/workflow coverage: menus, sidebar panes, map workspace behavior, cross-platform shortcuts, settings/session persistence, platform notes, and troubleshooting.~~
 - ~~Updated repository instructions to require maintaining a living `docs/USER_MANUAL.md` and updating it whenever UI layout, workflows, keyboard shortcuts, or settings behavior changes.~~

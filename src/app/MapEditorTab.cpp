@@ -31,6 +31,7 @@
 
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSceneInternals.h"
+#include "MapEditorInputPolicy.h"
 #include "TextEditorTab.h"
 #include "../core/TherionDocumentParser.h"
 
@@ -556,9 +557,10 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             const Qt::KeyboardModifiers modifiers = wheelEvent->modifiers();
             const bool cmdModifier = modifiers.testFlag(Qt::ControlModifier) || modifiers.testFlag(Qt::MetaModifier);
             const bool preciseScroll = wheelEventHasPreciseScrollingDeltas(wheelEvent);
-
-            const bool shouldZoom = cmdModifier || !preciseScroll;
-            if (shouldZoom) {
+            const MapEditorWheelAction wheelAction = resolveMapEditorWheelAction(touchFriendlyControlsEnabled_,
+                                                                                 preciseScroll,
+                                                                                 cmdModifier);
+            if (wheelAction == MapEditorWheelAction::Zoom) {
                 const QPoint pixelDelta = wheelEvent->pixelDelta();
                 const QPoint angleDelta = wheelEvent->angleDelta();
                 qreal delta = !pixelDelta.isNull()
@@ -641,7 +643,9 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             break;
         }
         case QEvent::TouchBegin: {
-            if (!selectModeActive_ || primaryPointerInteractionActive_) {
+            if (!shouldEnableTouchPanCandidate(touchFriendlyControlsEnabled_,
+                                               selectModeActive_,
+                                               primaryPointerInteractionActive_)) {
                 event->accept();
                 return true;
             }
@@ -1043,6 +1047,12 @@ void MapEditorTab::updateCommandSurfaceState()
         completeDraftButton_->setEnabled(mapReady && selectedDraftGeometryItem() != nullptr);
         fitBackgroundButton_->setEnabled(mapReady);
     }
+    if (touchControlsButton_ != nullptr) {
+        touchControlsButton_->setChecked(touchFriendlyControlsEnabled_);
+        touchControlsButton_->setText(touchFriendlyControlsEnabled_
+                                          ? tr("Touch Controls: On")
+                                          : tr("Touch Controls: Off"));
+    }
     refreshBackgroundLayerControls();
     refreshToolbarSummary();
 }
@@ -1268,6 +1278,9 @@ void MapEditorTab::refreshToolbarSummary()
 
     if (!backgroundImageItems_.isEmpty()) {
         summary += tr(" | Backgrounds: %1").arg(backgroundImageItems_.size());
+    }
+    if (touchFriendlyControlsEnabled_) {
+        summary += tr(" | Touch Controls: On");
     }
 
     summaryLabel_->setText(summary);

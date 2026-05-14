@@ -194,6 +194,11 @@ Implemented map navigation behavior:
 - precise scrolling devices (touchpads / Magic Mouse style deltas): two-finger/surface scroll pans, `Cmd/Ctrl + scroll` zooms
 - pinch: native pinch zoom (`ZoomNativeGesture`) zooms around gesture position
 - additional touch handling: two-touch threshold pan in Select mode, viewport gestures suppressed during active primary-pointer interaction
+- explicit `Touch Controls` toolbar toggle for pen-first workflows:
+  - when enabled, non-modified wheel/scroll input pans by default (including non-precise wheel devices)
+  - `Cmd/Ctrl + scroll` still zooms
+  - two-touch pan candidate can activate outside Select mode
+  - setting is persisted in app session settings
 
 Zoom constraints:
 

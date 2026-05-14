@@ -154,6 +154,7 @@ Main window status bar shows:
 
 - left: transient app status (`Ready`, operation results)
 - center/right: active document path and encoding
+- when a `.th2` map editor tab is active: current map mode indicator (`Map mode: Select` or `Map mode: Insert`)
 - long paths are middle-elided in visible text and preserved as full path in tooltip
 
 ### 5.4 Use Structure + Inspector
@@ -190,6 +191,34 @@ Toolbar actions:
 - `Fit`
 - `Fit + BG`
 - `Open Map in Window` / `Return Map Pane`
+
+Interactive drawing (current):
+
+- `Point`: click directly in the map canvas to insert a point immediately.
+- `Line`: click to add draft vertices in the canvas, then press `Enter` or click `Complete Draft` to write the line; mode stays in `Line` so you can immediately draw the next line.
+- In `Line` mode:
+- click only: adds straight polyline anchors
+- click and drag while placing a new anchor: creates a bezier segment with control points for curve shaping
+- click+drag curve seeding uses the drag point as a curve pull point (quadratic-style), then maps it to cubic controls; this avoids rigid midpoint-coupled parallel handles across segment endpoints
+- when click+drag creates a new curved segment from a vertex that already has the opposite control handle, that opposite handle is auto-mirrored so both controls stay on one tangent line
+- after a curved segment exists, bezier control points are visible in the draft preview and can be dragged to adjust shape before commit
+- while hovering a draft bezier control point, the map cursor changes to a hand; while dragging it, cursor changes to closed hand
+- when a draft line vertex has both incoming and outgoing bezier controls, dragging one control mirrors/adapts the opposite control to keep smooth tangent behavior
+- `Freehand`: press, drag, and release in the map canvas to insert a sampled line stroke in one gesture.
+- `Area`: click to add draft vertices in the canvas, then press `Enter` or click `Complete Draft` to write the area; mode stays in `Area` so you can immediately draw the next area.
+- In `Area` mode, bezier drafting behavior matches `Line` mode:
+- click only: adds straight anchors
+- click and drag while placing a new anchor: creates a curved segment with control points
+- control points are visible in the draft preview and can be dragged before commit
+- for curved areas, the closing segment (last anchor back to first anchor) is written as a smooth cubic segment when closing handles can be derived from first/last vertex tangents
+- Area commits are serialized in Therion border-reference form: a closed `line border -id ... -close on` block is written first, then the `area ...` block references that border line id.
+- Line/area commit preserves all captured vertices from the current draft session.
+- Line commits are serialized as per-vertex coordinate rows; rows with bezier control points are written for curved segments.
+- While drafting `Line`/`Area`: `Backspace`/`Delete` removes the last draft vertex.
+- `Esc` exits active insert mode and returns to `Select` mode:
+- in `Line`/`Area`, if draft has enough captured vertices it is committed before exiting; otherwise the incomplete draft is canceled
+- in `Point`/`Freehand`, the active insert mode is canceled
+- `Smart Trace` still uses the existing draft-card workflow (not full trace capture yet).
 
 Detached map-pane behavior:
 

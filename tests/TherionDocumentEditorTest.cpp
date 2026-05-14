@@ -337,14 +337,14 @@ int runAppendDraftGeometryTest()
     errorMessage.clear();
     if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
                                                            QStringLiteral("line"),
-                                                           {QPointF(10.0, 20.0), QPointF(30.0, 40.0)},
+                                                           {QPointF(10.0, 20.0), QPointF(30.0, 40.0), QPointF(50.0, 60.0), QPointF(70.0, 80.0)},
                                                            &lineNumber,
                                                            &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(contents == QStringLiteral("survey demo\r\n\r\nscrap map-draft\r\n  line wall\r\n    10.0 20.0 30.0 40.0\r\n  endline\r\nendscrap\r\n"),
-                "appendDraftGeometry should create fallback scrap context and preserve CRLF.")) {
+    if (!expect(contents == QStringLiteral("survey demo\r\n\r\nscrap map-draft\r\n  line wall\r\n    10.0 20.0\r\n    30.0 40.0\r\n    50.0 60.0\r\n    70.0 80.0\r\n  endline\r\nendscrap\r\n"),
+                "appendDraftGeometry should serialize line drafts as anchor rows and preserve CRLF.")) {
         return 1;
     }
     if (!expect(lineNumber == 4, "appendDraftGeometry should report line number for inserted line geometry.")) {
@@ -358,6 +358,83 @@ int runAppendDraftGeometryTest()
         return 1;
     }
     if (!expect(!errorMessage.isEmpty(), "appendDraftGeometry should report a validation error for insufficient vertices.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap a\nendscrap\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
+                                                           QStringLiteral("area"),
+                                                           {QPointF(1.0, 2.0), QPointF(3.0, 4.0), QPointF(5.0, 6.0), QPointF(7.0, 8.0)},
+                                                           &lineNumber,
+                                                           &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap a\n"
+                                           "  line border -id draft-area-border -close on\n"
+                                           "    1.0 2.0\n"
+                                           "    3.0 4.0\n"
+                                           "    5.0 6.0\n"
+                                           "    7.0 8.0\n"
+                                           "  endline\n"
+                                           "  area water -id draft-area\n"
+                                           "    draft-area-border\n"
+                                           "  endarea\n"
+                                           "endscrap\n"),
+                "appendDraftGeometry should serialize area drafts as closed border lines referenced from area blocks.")) {
+        return 1;
+    }
+    if (!expect(lineNumber == 8, "appendDraftGeometry should report the inserted area line number.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap a\nendscrap\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::appendDraftAreaGeometry(&contents,
+                                                                {QStringLiteral("1 2"), QStringLiteral("3 4")},
+                                                                nullptr,
+                                                                &errorMessage),
+                "appendDraftAreaGeometry should reject area geometry with too few coordinate rows.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(),
+                "appendDraftAreaGeometry should report a validation error for insufficient coordinate rows.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap a\n"
+                              "  line wall -id draft-area-border\n"
+                              "  endline\n"
+                              "endscrap\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::appendDraftAreaGeometry(&contents,
+                                                               {QStringLiteral("1 2"),
+                                                                QStringLiteral("3 4 5 6"),
+                                                                QStringLiteral("7 8")},
+                                                               &lineNumber,
+                                                               &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap a\n"
+                                           "  line wall -id draft-area-border\n"
+                                           "  endline\n"
+                                           "  line border -id draft-area-border-2 -close on\n"
+                                           "    1 2\n"
+                                           "    3 4 5 6\n"
+                                           "    7 8\n"
+                                           "  endline\n"
+                                           "  area water -id draft-area\n"
+                                           "    draft-area-border-2\n"
+                                           "  endarea\n"
+                                           "endscrap\n"),
+                "appendDraftAreaGeometry should preserve coordinate rows and write area references to a unique border line id.")) {
+        return 1;
+    }
+    if (!expect(lineNumber == 9, "appendDraftAreaGeometry should report the inserted area line number.")) {
         return 1;
     }
 

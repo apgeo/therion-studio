@@ -411,6 +411,90 @@ QPainterPath linePathForFeature(const MapGeometryFeature &feature, const QRectF 
     return path;
 }
 
+QString optionValue(const QStringList &tokens, const QString &option)
+{
+    const QString normalizedOption = option.toLower();
+    for (int index = 0; index + 1 < tokens.size(); ++index) {
+        if (tokens.at(index).toLower() != normalizedOption) {
+            continue;
+        }
+
+        const QString candidate = tokens.at(index + 1);
+        if (!candidate.startsWith(QLatin1Char('-'))) {
+            return candidate;
+        }
+    }
+
+    return QString();
+}
+
+void appendAreaReferenceIdentifiers(const TherionParsedLine &parsedLine,
+                                    int startTokenIndex,
+                                    QStringList *identifiers)
+{
+    if (identifiers == nullptr) {
+        return;
+    }
+
+    for (int index = qMax(0, startTokenIndex); index < parsedLine.tokens.size(); ++index) {
+        const QString token = parsedLine.tokens.at(index).trimmed();
+        if (token.isEmpty() || tokenLooksNumeric(token) || token.startsWith(QLatin1Char('-'))) {
+            continue;
+        }
+        identifiers->append(token);
+    }
+}
+
+QVector<QPointF> areaVerticesFromReferencedLines(const QStringList &identifiers,
+                                                 const QHash<QString, MapGeometryFeature> &lineFeaturesByIdentifier,
+                                                 QVector<MapGeometryFeature::TH2LineVertex> *resolvedLineVertices = nullptr)
+{
+    QVector<QPointF> vertices;
+    if (resolvedLineVertices != nullptr) {
+        resolvedLineVertices->clear();
+    }
+
+    for (const QString &identifier : identifiers) {
+        const QString normalizedIdentifier = identifier.trimmed().toLower();
+        if (normalizedIdentifier.isEmpty()) {
+            continue;
+        }
+
+        const auto featureIt = lineFeaturesByIdentifier.constFind(normalizedIdentifier);
+        if (featureIt == lineFeaturesByIdentifier.constEnd()) {
+            continue;
+        }
+
+        const MapGeometryFeature &lineFeature = featureIt.value();
+        if (lineFeature.lineVertices.size() < 2) {
+            continue;
+        }
+
+        const int existingVertexCount = vertices.size();
+        for (int index = 0; index < lineFeature.lineVertices.size(); ++index) {
+            const QPointF anchor = lineFeature.lineVertices.at(index).anchor;
+            if (!vertices.isEmpty() && vertices.last() == anchor) {
+                continue;
+            }
+            vertices.append(anchor);
+            if (resolvedLineVertices != nullptr) {
+                resolvedLineVertices->append(lineFeature.lineVertices.at(index));
+            }
+        }
+
+        if (existingVertexCount > 0
+            && !vertices.isEmpty()
+            && vertices.first() == vertices.last()) {
+            vertices.removeLast();
+            if (resolvedLineVertices != nullptr && !resolvedLineVertices->isEmpty()) {
+                resolvedLineVertices->removeLast();
+            }
+        }
+    }
+
+    return vertices;
+}
+
 } // namespace
 
 QString mapWorkspaceHelpHtml()
@@ -1006,10 +1090,14 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 }
 
                 QPainterPath path;
-                const QPointF firstPoint = mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds);
-                path.moveTo(firstPoint);
-                for (int vertexIndex = 1; vertexIndex < feature.vertices.size(); ++vertexIndex) {
-                    path.lineTo(mapGeometryPointToPreview(feature.vertices.at(vertexIndex), sourceBounds, previewBounds));
+                if (feature.verticesEditable || feature.lineVertices.size() < 2) {
+                    const QPointF firstPoint = mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds);
+                    path.moveTo(firstPoint);
+                    for (int vertexIndex = 1; vertexIndex < feature.vertices.size(); ++vertexIndex) {
+                        path.lineTo(mapGeometryPointToPreview(feature.vertices.at(vertexIndex), sourceBounds, previewBounds));
+                    }
+                } else {
+                    path = linePathForFeature(feature, sourceBounds, previewBounds);
                 }
                 path.closeSubpath();
 
@@ -1021,73 +1109,75 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 if (mapItemsByLine != nullptr && feature.lineNumber > 0) {
                     mapItemsByLine->insert(feature.lineNumber, fillItem);
                 }
-                auto areaVertexItemsByOrder = std::make_shared<QVector<MapEditableGeometryVertexItem *>>(feature.vertices.size(), nullptr);
+                if (feature.verticesEditable) {
+                    auto areaVertexItemsByOrder = std::make_shared<QVector<MapEditableGeometryVertexItem *>>(feature.vertices.size(), nullptr);
 
-                for (int vertexIndex = 0; vertexIndex < feature.vertices.size(); ++vertexIndex) {
-                    const QPointF vertex = feature.vertices.at(vertexIndex);
-                    auto *vertexItem = new MapEditableGeometryVertexItem(feature.lineNumber,
-                                                                         QStringLiteral("area"),
-                                                                         vertexIndex,
-                                                                         vertex,
-                                                                         sourceBounds,
-                                                                         previewBounds);
-                    vertexItem->setRect(QRectF(-vertexRadius, -vertexRadius, vertexRadius * 2.0, vertexRadius * 2.0));
-                    QColor vertexFill = feature.accent;
-                    vertexFill.setAlpha(185);
-                    QColor vertexOutline = feature.accent.darker(220);
-                    vertexOutline.setAlpha(220);
-                    vertexItem->setPen(QPen(vertexOutline, 1.0));
-                    vertexItem->setBrush(QBrush(vertexFill));
-                    vertexItem->setMoveCommittedCallback(recordLineAreaVertexMove);
-                    scene->addItem(vertexItem);
-                    vertexItem->setZValue(4.0);
-                    markGeometryItem(vertexItem);
-                    vertexItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
-                    vertexItem->setData(kMapSceneSelectionGatedRole, true);
-                    vertexItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeAreaVertex);
-                    vertexItem->setVisible(false);
-                    areaVertexItemsByOrder->operator[](vertexIndex) = vertexItem;
-                }
-
-                const auto updateInteractiveAreaPreview = [fillItem,
-                                                           areaVertexItemsByOrder,
-                                                           feature,
-                                                           sourceBounds,
-                                                           previewBounds]() {
-                    if (fillItem == nullptr || areaVertexItemsByOrder == nullptr || areaVertexItemsByOrder->size() < 3) {
-                        return;
+                    for (int vertexIndex = 0; vertexIndex < feature.vertices.size(); ++vertexIndex) {
+                        const QPointF vertex = feature.vertices.at(vertexIndex);
+                        auto *vertexItem = new MapEditableGeometryVertexItem(feature.lineNumber,
+                                                                             QStringLiteral("area"),
+                                                                             vertexIndex,
+                                                                             vertex,
+                                                                             sourceBounds,
+                                                                             previewBounds);
+                        vertexItem->setRect(QRectF(-vertexRadius, -vertexRadius, vertexRadius * 2.0, vertexRadius * 2.0));
+                        QColor vertexFill = feature.accent;
+                        vertexFill.setAlpha(185);
+                        QColor vertexOutline = feature.accent.darker(220);
+                        vertexOutline.setAlpha(220);
+                        vertexItem->setPen(QPen(vertexOutline, 1.0));
+                        vertexItem->setBrush(QBrush(vertexFill));
+                        vertexItem->setMoveCommittedCallback(recordLineAreaVertexMove);
+                        scene->addItem(vertexItem);
+                        vertexItem->setZValue(4.0);
+                        markGeometryItem(vertexItem);
+                        vertexItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                        vertexItem->setData(kMapSceneSelectionGatedRole, true);
+                        vertexItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeAreaVertex);
+                        vertexItem->setVisible(false);
+                        areaVertexItemsByOrder->operator[](vertexIndex) = vertexItem;
                     }
 
-                    auto previewPointAt = [&](int index) -> QPointF {
-                        if (index >= 0 && index < areaVertexItemsByOrder->size()) {
-                            if (MapEditableGeometryVertexItem *item = areaVertexItemsByOrder->at(index)) {
-                                return item->pos();
+                    const auto updateInteractiveAreaPreview = [fillItem,
+                                                               areaVertexItemsByOrder,
+                                                               feature,
+                                                               sourceBounds,
+                                                               previewBounds]() {
+                        if (fillItem == nullptr || areaVertexItemsByOrder == nullptr || areaVertexItemsByOrder->size() < 3) {
+                            return;
+                        }
+
+                        auto previewPointAt = [&](int index) -> QPointF {
+                            if (index >= 0 && index < areaVertexItemsByOrder->size()) {
+                                if (MapEditableGeometryVertexItem *item = areaVertexItemsByOrder->at(index)) {
+                                    return item->pos();
+                                }
                             }
+                            if (index >= 0 && index < feature.vertices.size()) {
+                                return mapGeometryPointToPreview(feature.vertices.at(index), sourceBounds, previewBounds);
+                            }
+                            return QPointF();
+                        };
+
+                        QPainterPath interactivePath;
+                        interactivePath.moveTo(previewPointAt(0));
+                        for (int index = 1; index < areaVertexItemsByOrder->size(); ++index) {
+                            interactivePath.lineTo(previewPointAt(index));
                         }
-                        if (index >= 0 && index < feature.vertices.size()) {
-                            return mapGeometryPointToPreview(feature.vertices.at(index), sourceBounds, previewBounds);
-                        }
-                        return QPointF();
+                        interactivePath.closeSubpath();
+                        fillItem->setPath(interactivePath);
                     };
 
-                    QPainterPath interactivePath;
-                    interactivePath.moveTo(previewPointAt(0));
-                    for (int index = 1; index < areaVertexItemsByOrder->size(); ++index) {
-                        interactivePath.lineTo(previewPointAt(index));
-                    }
-                    interactivePath.closeSubpath();
-                    fillItem->setPath(interactivePath);
-                };
-
-                for (MapEditableGeometryVertexItem *vertexItem : *areaVertexItemsByOrder) {
-                    if (vertexItem != nullptr) {
-                        vertexItem->setMovePreviewCallback(
-                            [updateInteractiveAreaPreview](MapEditableGeometryVertexItem *,
-                                                           const QPointF &,
-                                                           const QPointF &,
-                                                           bool) {
-                                updateInteractiveAreaPreview();
-                            });
+                    for (MapEditableGeometryVertexItem *vertexItem : *areaVertexItemsByOrder) {
+                        if (vertexItem != nullptr) {
+                            vertexItem->setMovePreviewCallback(
+                                [updateInteractiveAreaPreview](MapEditableGeometryVertexItem *,
+                                                               const QPointF &,
+                                                               const QPointF &,
+                                                               bool) {
+                                    updateInteractiveAreaPreview();
+                                });
+                        }
                     }
                 }
 
@@ -1117,6 +1207,9 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
     bool inLineBlock = false;
     bool inAreaBlock = false;
     int lineSourceVertexIndex = 0;
+    QString currentLineIdentifier;
+    QStringList currentAreaBorderIdentifiers;
+    QHash<QString, MapGeometryFeature> lineFeaturesByIdentifier;
 
     auto flushCurrentFeature = [&]() {
         if (currentFeature.kind == MapGeometryFeature::Kind::Point) {
@@ -1126,10 +1219,25 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
         } else if (currentFeature.kind == MapGeometryFeature::Kind::Line) {
             if (currentFeature.vertices.size() >= 2) {
                 features.append(currentFeature);
+                if (!currentLineIdentifier.trimmed().isEmpty()) {
+                    lineFeaturesByIdentifier.insert(currentLineIdentifier.trimmed().toLower(), currentFeature);
+                }
             }
         } else if (currentFeature.kind == MapGeometryFeature::Kind::Area) {
             if (currentFeature.vertices.size() >= 3) {
                 features.append(currentFeature);
+            } else if (!currentAreaBorderIdentifiers.isEmpty()) {
+                QVector<MapGeometryFeature::TH2LineVertex> resolvedLineVertices;
+                const QVector<QPointF> resolvedVertices = areaVerticesFromReferencedLines(currentAreaBorderIdentifiers,
+                                                                                          lineFeaturesByIdentifier,
+                                                                                          &resolvedLineVertices);
+                if (resolvedVertices.size() >= 3) {
+                    currentFeature.vertices = resolvedVertices;
+                    currentFeature.lineVertices = resolvedLineVertices;
+                    currentFeature.closed = true;
+                    currentFeature.verticesEditable = false;
+                    features.append(currentFeature);
+                }
             }
         }
 
@@ -1137,6 +1245,8 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
         inLineBlock = false;
         inAreaBlock = false;
         lineSourceVertexIndex = 0;
+        currentLineIdentifier.clear();
+        currentAreaBorderIdentifiers.clear();
     };
 
     for (const TherionParsedLine &parsedLine : parsedLines) {
@@ -1210,6 +1320,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
             currentFeature.closed = lineOptionToggleValue(parsedLine, QStringLiteral("-close")).value_or(false);
             currentFeature.reversed = lineOptionToggleValue(parsedLine, QStringLiteral("-reverse")).value_or(false);
+            currentLineIdentifier = optionValue(parsedLine.tokens, QStringLiteral("-id"));
             appendLineDataPoints(&currentFeature, sourceCoordinatePointsFromLine(parsedLine, 1, &lineSourceVertexIndex));
             inLineBlock = true;
             continue;
@@ -1224,6 +1335,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
             currentFeature.vertices.append(pointsFromTokens(parsedLine.tokens.mid(1)));
+            appendAreaReferenceIdentifiers(parsedLine, 1, &currentAreaBorderIdentifiers);
             inAreaBlock = true;
             continue;
         }
@@ -1244,6 +1356,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
 
         if (inAreaBlock) {
             currentFeature.vertices.append(pointsFromTokens(parsedLine.tokens));
+            appendAreaReferenceIdentifiers(parsedLine, 0, &currentAreaBorderIdentifiers);
             continue;
         }
     }

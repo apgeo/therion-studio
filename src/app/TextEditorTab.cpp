@@ -724,6 +724,80 @@ bool TextEditorTab::insertDraftGeometry(const QString &kind,
     return true;
 }
 
+bool TextEditorTab::insertDraftLineGeometry(const QStringList &coordinateRows,
+                                            int *insertedLineNumber,
+                                            QString *errorMessage)
+{
+    QString contents = editor_->toPlainText();
+    int resolvedLineNumber = 0;
+    if (!TherionDocumentEditor::appendDraftLineGeometry(&contents, coordinateRows, &resolvedLineNumber, errorMessage)) {
+        return false;
+    }
+
+    loading_ = true;
+    editor_->setPlainText(contents);
+
+    if (resolvedLineNumber > 0) {
+        const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(resolvedLineNumber - 1);
+        if (targetBlock.isValid()) {
+            QTextCursor cursor(targetBlock);
+            cursor.movePosition(QTextCursor::StartOfBlock);
+            cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+            editor_->setTextCursor(cursor);
+            editor_->centerCursor();
+        }
+    }
+
+    loading_ = false;
+    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
+    applyDirtyStateFromCurrentState();
+    emit documentTextChanged();
+    updateContextHelp();
+
+    if (insertedLineNumber != nullptr) {
+        *insertedLineNumber = resolvedLineNumber;
+    }
+
+    return true;
+}
+
+bool TextEditorTab::insertDraftAreaGeometry(const QStringList &coordinateRows,
+                                            int *insertedLineNumber,
+                                            QString *errorMessage)
+{
+    QString contents = editor_->toPlainText();
+    int resolvedLineNumber = 0;
+    if (!TherionDocumentEditor::appendDraftAreaGeometry(&contents, coordinateRows, &resolvedLineNumber, errorMessage)) {
+        return false;
+    }
+
+    loading_ = true;
+    editor_->setPlainText(contents);
+
+    if (resolvedLineNumber > 0) {
+        const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(resolvedLineNumber - 1);
+        if (targetBlock.isValid()) {
+            QTextCursor cursor(targetBlock);
+            cursor.movePosition(QTextCursor::StartOfBlock);
+            cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+            editor_->setTextCursor(cursor);
+            editor_->centerCursor();
+        }
+    }
+
+    loading_ = false;
+    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
+    applyDirtyStateFromCurrentState();
+    emit documentTextChanged();
+    updateContextHelp();
+
+    if (insertedLineNumber != nullptr) {
+        *insertedLineNumber = resolvedLineNumber;
+    }
+
+    return true;
+}
+
 bool TextEditorTab::rewritePointCoordinates(int lineNumber,
                                             const QPointF &point,
                                             QString *errorMessage)

@@ -2,6 +2,7 @@
 
 #include <QPointF>
 #include <QString>
+#include <QStringList>
 #include <QVector>
 
 namespace TherionStudio
@@ -23,6 +24,14 @@ public:
                                     const QVector<QPointF> &vertices,
                                     int *insertedLineNumber = nullptr,
                                     QString *errorMessage = nullptr);
+    static bool appendDraftLineGeometry(QString *contents,
+                                        const QStringList &coordinateRows,
+                                        int *insertedLineNumber = nullptr,
+                                        QString *errorMessage = nullptr);
+    static bool appendDraftAreaGeometry(QString *contents,
+                                        const QStringList &coordinateRows,
+                                        int *insertedLineNumber = nullptr,
+                                        QString *errorMessage = nullptr);
     static bool rewritePointCoordinates(QString *contents,
                                         int lineNumber,
                                         const QPointF &point,

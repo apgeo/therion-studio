@@ -2,6 +2,7 @@
 
 #include <QColor>
 #include <QString>
+#include <QStringList>
 #include <QWidget>
 #include <QHash>
 #include <QPoint>
@@ -11,6 +12,7 @@
 #include <QElapsedTimer>
 #include <QVector>
 #include <QPointer>
+#include <optional>
 
 class QLabel;
 class QFrame;
@@ -21,10 +23,12 @@ class QSplitterHandle;
 class QPushButton;
 class QGraphicsRectItem;
 class QGraphicsPixmapItem;
+class QGraphicsPathItem;
 class QTextBrowser;
 class QUndoStack;
 class QMainWindow;
 class QGraphicsItem;
+class QShortcut;
 
 namespace TherionStudio
 {
@@ -46,6 +50,14 @@ public:
         TextOnly,
         MapOnly,
         Split
+    };
+    enum class InteractiveDrawMode
+    {
+        None,
+        Point,
+        Line,
+        Freehand,
+        Area
     };
 
     explicit MapEditorTab(QWidget *parent = nullptr);
@@ -69,6 +81,7 @@ public:
     QString text() const;
     QString statusPathText() const;
     QString statusEncodingText() const;
+    QString statusModeText() const;
     WorkspaceMode workspaceMode() const;
     int backgroundLayerCount() const;
     QString backgroundLayerLabel(int index) const;
@@ -99,6 +112,7 @@ signals:
     void currentLineChanged(int lineNumber);
     void documentTextChanged();
     void backgroundLayersChanged();
+    void modeStatusChanged();
     void openDedicatedWindowRequested(TherionStudio::MapEditorTab *tab);
 
 protected:
@@ -141,6 +155,36 @@ private:
     void restoreBackgroundImageItems();
     void selectMapLine(int lineNumber);
     void selectMapLines(const QSet<int> &lineNumbers);
+    void setInteractiveDrawMode(InteractiveDrawMode mode);
+    bool handleInteractiveDrawClick(const QPointF &scenePosition);
+    bool commitInteractiveDrawSession();
+    void clearInteractiveDrawSession(bool clearMode);
+    void updateInteractiveDrawPreview();
+    QPointF sourcePointFromScenePosition(const QPointF &scenePosition) const;
+    bool hasCompletableInteractiveDrawSession() const;
+    bool commitInteractiveDrawVertices(const QString &geometryKind,
+                                       const QVector<QPointF> &vertices,
+                                       const QString &successLabel);
+    bool cancelInteractiveDrawingToSelectMode();
+    QStringList lineCoordinateRowsForInteractiveDraft() const;
+    QStringList areaCoordinateRowsForInteractiveDraft() const;
+    void captureInteractiveLineAnchor(const QPointF &anchorScenePoint,
+                                      const std::optional<QPointF> &dragScenePoint);
+    struct InteractiveLineControlHandleRef
+    {
+        enum class Kind
+        {
+            Incoming,
+            Outgoing
+        };
+
+        int vertexIndex = -1;
+        Kind kind = Kind::Incoming;
+    };
+    std::optional<InteractiveLineControlHandleRef> interactiveLineControlAt(const QPointF &scenePosition,
+                                                                            qreal sceneRadius) const;
+    bool setInteractiveLineControlScenePoint(const InteractiveLineControlHandleRef &handle,
+                                             const QPointF &scenePoint);
     void fitMapToView(bool includeBackgroundImages = false);
     void syncZoomFactorFromView();
     void applyZoomAtViewportPosition(qreal factor, const QPointF &viewportPosition);
@@ -222,6 +266,8 @@ private:
     QPushButton *fitBackgroundButton_ = nullptr;
     QPushButton *touchControlsButton_ = nullptr;
     QLabel *zoomLabel_ = nullptr;
+    QShortcut *cancelDrawShortcut_ = nullptr;
+    QShortcut *commitDrawShortcut_ = nullptr;
     QHash<int, QGraphicsItem *> mapItemsByLine_;
     QVector<QGraphicsRectItem *> draftGeometryItems_;
     QVector<QGraphicsPixmapItem *> backgroundImageItems_;
@@ -264,5 +310,29 @@ private:
     int pendingMapClickLineNumber_ = 0;
     int pendingMapClickSourceVertexIndex_ = -1;
     QString pendingMapClickGeometryKind_;
+    InteractiveDrawMode interactiveDrawMode_ = InteractiveDrawMode::None;
+    QVector<QPointF> interactiveDrawSourceVertices_;
+    QVector<QPointF> interactiveDrawSceneVertices_;
+    struct InteractiveLineDraftVertex
+    {
+        QPointF anchorSource;
+        QPointF anchorScene;
+        std::optional<QPointF> incomingControlSource;
+        std::optional<QPointF> incomingControlScene;
+        std::optional<QPointF> outgoingControlSource;
+        std::optional<QPointF> outgoingControlScene;
+    };
+    QVector<InteractiveLineDraftVertex> interactiveDrawLineVertices_;
+    bool interactiveDrawStrokeActive_ = false;
+    bool interactiveDrawAnchorPressActive_ = false;
+    QPointF interactiveDrawAnchorPressScenePoint_;
+    bool interactiveDrawAnchorDragActive_ = false;
+    QPointF interactiveDrawAnchorDragScenePoint_;
+    bool interactiveDrawControlDragActive_ = false;
+    InteractiveLineControlHandleRef interactiveDrawControlDragHandle_;
+    bool interactiveDrawHoverActive_ = false;
+    QPointF interactiveDrawHoverScenePoint_;
+    QGraphicsPathItem *interactiveDrawPreviewPath_ = nullptr;
+    QVector<QGraphicsItem *> interactiveDrawPreviewMarkers_;
 };
 }

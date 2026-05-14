@@ -10,14 +10,17 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QMainWindow>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QSet>
 #include <QTemporaryDir>
 #include <QVBoxLayout>
 
 #include <cmath>
 #include <iostream>
+#include <optional>
 
 using namespace TherionStudio;
 
@@ -30,6 +33,345 @@ bool expect(bool condition, const char *message)
     }
 
     return condition;
+}
+
+bool tokenIsNumber(const QString &token)
+{
+    if (token.isEmpty()) {
+        return false;
+    }
+
+    bool ok = false;
+    token.toDouble(&ok);
+    return ok;
+}
+
+int countDirectiveLines(const QString &text, const QString &directive)
+{
+    if (directive.isEmpty()) {
+        return 0;
+    }
+
+    const QString trimmedDirective = directive.trimmed().toLower();
+    int count = 0;
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    for (const QString &line : lines) {
+        const QString trimmedLine = line.trimmed();
+        if (trimmedLine.isEmpty()) {
+            continue;
+        }
+        if (trimmedLine == trimmedDirective || trimmedLine.startsWith(trimmedDirective + QLatin1Char(' '))) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+int lastDraftLineCoordinateTokenCount(const QString &text)
+{
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    int blockStart = -1;
+    for (int index = 0; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed().toLower();
+        if (trimmed == QStringLiteral("line wall")) {
+            blockStart = index;
+        }
+    }
+
+    if (blockStart < 0 || blockStart + 1 >= lines.size()) {
+        return 0;
+    }
+
+    int numericTokenCount = 0;
+    for (int index = blockStart + 1; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed().toLower();
+        if (trimmed == QStringLiteral("endline")) {
+            break;
+        }
+        const QStringList tokens = trimmed.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+        for (const QString &token : tokens) {
+            if (tokenIsNumber(token)) {
+                ++numericTokenCount;
+            }
+        }
+    }
+    return numericTokenCount;
+}
+
+bool lastDraftLineHasBezierCoordinateRow(const QString &text)
+{
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    int blockStart = -1;
+    for (int index = 0; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed().toLower();
+        if (trimmed == QStringLiteral("line wall")) {
+            blockStart = index;
+        }
+    }
+
+    if (blockStart < 0) {
+        return false;
+    }
+
+    for (int index = blockStart + 1; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed().toLower();
+        if (trimmed == QStringLiteral("endline")) {
+            break;
+        }
+        const QStringList tokens = trimmed.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+        int numericTokenCount = 0;
+        for (const QString &token : tokens) {
+            if (tokenIsNumber(token)) {
+                ++numericTokenCount;
+            }
+        }
+        if (numericTokenCount >= 6) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::optional<QVector<double>> lastDraftLineBezierCoordinateRow(const QString &text)
+{
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    int blockStart = -1;
+    for (int index = 0; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed().toLower();
+        if (trimmed == QStringLiteral("line wall")) {
+            blockStart = index;
+        }
+    }
+
+    if (blockStart < 0) {
+        return std::nullopt;
+    }
+
+    for (int index = blockStart + 1; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed().toLower();
+        if (trimmed == QStringLiteral("endline")) {
+            break;
+        }
+        const QStringList tokens = trimmed.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+        QVector<double> numericValues;
+        for (const QString &token : tokens) {
+            bool ok = false;
+            const double value = token.toDouble(&ok);
+            if (ok) {
+                numericValues.append(value);
+            }
+        }
+        if (numericValues.size() >= 6) {
+            return numericValues;
+        }
+    }
+
+    return std::nullopt;
+}
+
+QVector<QVector<double>> lastDraftLineNumericRows(const QString &text)
+{
+    QVector<QVector<double>> rows;
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    int blockStart = -1;
+    for (int index = 0; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed().toLower();
+        if (trimmed == QStringLiteral("line wall")) {
+            blockStart = index;
+        }
+    }
+
+    if (blockStart < 0) {
+        return rows;
+    }
+
+    for (int index = blockStart + 1; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed().toLower();
+        if (trimmed == QStringLiteral("endline")) {
+            break;
+        }
+        const QStringList tokens = trimmed.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+        QVector<double> numericValues;
+        for (const QString &token : tokens) {
+            bool ok = false;
+            const double value = token.toDouble(&ok);
+            if (ok) {
+                numericValues.append(value);
+            }
+        }
+        if (!numericValues.isEmpty()) {
+            rows.append(numericValues);
+        }
+    }
+
+    return rows;
+}
+
+bool lastDraftAreaReferencesLineId(const QString &text)
+{
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    int areaStart = -1;
+    for (int index = 0; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed().toLower();
+        if (trimmed == QStringLiteral("area water")
+            || trimmed.startsWith(QStringLiteral("area water "))) {
+            areaStart = index;
+        }
+    }
+    if (areaStart < 0) {
+        return false;
+    }
+
+    for (int index = areaStart + 1; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed();
+        if (trimmed.isEmpty()) {
+            continue;
+        }
+        if (trimmed.compare(QStringLiteral("endarea"), Qt::CaseInsensitive) == 0) {
+            return false;
+        }
+
+        const QStringList tokens = trimmed.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+        if (tokens.size() != 1) {
+            return false;
+        }
+        const QString token = tokens.first();
+        if (token.startsWith(QLatin1Char('-')) || tokenIsNumber(token)) {
+            return false;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+std::optional<QString> lastDraftAreaReferencedLineId(const QString &text)
+{
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    int areaStart = -1;
+    for (int index = 0; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed().toLower();
+        if (trimmed == QStringLiteral("area water")
+            || trimmed.startsWith(QStringLiteral("area water "))) {
+            areaStart = index;
+        }
+    }
+    if (areaStart < 0) {
+        return std::nullopt;
+    }
+
+    for (int index = areaStart + 1; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed();
+        if (trimmed.isEmpty()) {
+            continue;
+        }
+        if (trimmed.compare(QStringLiteral("endarea"), Qt::CaseInsensitive) == 0) {
+            return std::nullopt;
+        }
+
+        const QStringList tokens = trimmed.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+        if (tokens.size() != 1) {
+            return std::nullopt;
+        }
+        const QString token = tokens.first();
+        if (token.startsWith(QLatin1Char('-')) || tokenIsNumber(token)) {
+            return std::nullopt;
+        }
+        return token;
+    }
+
+    return std::nullopt;
+}
+
+bool lineBlockByIdHasBezierCoordinateRow(const QString &text, const QString &lineId)
+{
+    if (lineId.trimmed().isEmpty()) {
+        return false;
+    }
+
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    int blockStart = -1;
+    for (int index = 0; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed();
+        if (!trimmed.startsWith(QStringLiteral("line "), Qt::CaseInsensitive)) {
+            continue;
+        }
+        const QString lower = trimmed.toLower();
+        const QString idNeedle = QStringLiteral("-id %1").arg(lineId.toLower());
+        if (lower.contains(idNeedle)) {
+            blockStart = index;
+        }
+    }
+
+    if (blockStart < 0) {
+        return false;
+    }
+
+    for (int index = blockStart + 1; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed().toLower();
+        if (trimmed == QStringLiteral("endline")) {
+            break;
+        }
+        const QStringList tokens = trimmed.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+        int numericTokenCount = 0;
+        for (const QString &token : tokens) {
+            if (tokenIsNumber(token)) {
+                ++numericTokenCount;
+            }
+        }
+        if (numericTokenCount >= 6) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+QVector<QVector<double>> lineBlockByIdNumericRows(const QString &text, const QString &lineId)
+{
+    QVector<QVector<double>> rows;
+    if (lineId.trimmed().isEmpty()) {
+        return rows;
+    }
+
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    int blockStart = -1;
+    for (int index = 0; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed();
+        if (!trimmed.startsWith(QStringLiteral("line "), Qt::CaseInsensitive)) {
+            continue;
+        }
+        const QString lower = trimmed.toLower();
+        const QString idNeedle = QStringLiteral("-id %1").arg(lineId.toLower());
+        if (lower.contains(idNeedle)) {
+            blockStart = index;
+        }
+    }
+
+    if (blockStart < 0) {
+        return rows;
+    }
+
+    for (int index = blockStart + 1; index < lines.size(); ++index) {
+        const QString trimmed = lines.at(index).trimmed().toLower();
+        if (trimmed == QStringLiteral("endline")) {
+            break;
+        }
+        const QStringList tokens = trimmed.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+        QVector<double> numericValues;
+        for (const QString &token : tokens) {
+            bool ok = false;
+            const double value = token.toDouble(&ok);
+            if (ok) {
+                numericValues.append(value);
+            }
+        }
+        if (!numericValues.isEmpty()) {
+            rows.append(numericValues);
+        }
+    }
+
+    return rows;
 }
 
 void pumpEvents()
@@ -183,6 +525,16 @@ void sendMouse(QWidget *widget,
                       button,
                       buttons,
                       Qt::NoModifier);
+    QCoreApplication::sendEvent(widget, &event);
+}
+
+void sendKey(QWidget *widget, QEvent::Type type, int key, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+{
+    if (widget == nullptr) {
+        return;
+    }
+
+    QKeyEvent event(type, key, modifiers);
     QCoreApplication::sendEvent(widget, &event);
 }
 
@@ -449,6 +801,371 @@ int runDragUndoRedoSmoke()
         return 1;
     }
     if (!expect(mapTab->isDirty(), "Map tab should be dirty after redo reapplies edit.")) {
+        return 1;
+    }
+
+    const QString textBeforeInteractiveDrawing = mapTab->text();
+    const int pointDirectivesBefore = countDirectiveLines(textBeforeInteractiveDrawing, QStringLiteral("point"));
+    const int lineDirectivesBefore = countDirectiveLines(textBeforeInteractiveDrawing, QStringLiteral("line"));
+    const int areaDirectivesBefore = countDirectiveLines(textBeforeInteractiveDrawing, QStringLiteral("area"));
+    auto *pointModeButton = findButtonByText(*mapTab, QStringLiteral("Point"));
+    auto *lineModeButton = findButtonByText(*mapTab, QStringLiteral("Line"));
+    auto *freehandModeButton = findButtonByText(*mapTab, QStringLiteral("Freehand"));
+    auto *areaModeButton = findButtonByText(*mapTab, QStringLiteral("Area"));
+    auto *completeDraftButton = findButtonByText(*mapTab, QStringLiteral("Complete Draft"));
+    if (!expect(pointModeButton != nullptr
+                && lineModeButton != nullptr
+                && freehandModeButton != nullptr
+                && areaModeButton != nullptr
+                && completeDraftButton != nullptr,
+                "Point/Line/Freehand/Area/Complete Draft buttons were not found for interactive drawing checks.")) {
+        return 1;
+    }
+
+    const QPoint viewportCenter = mapView->viewport()->rect().center();
+    pointModeButton->click();
+    pumpEvents();
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, viewportCenter, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, viewportCenter, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("point")) == pointDirectivesBefore + 1,
+                "Point mode click-to-place should insert one new point directive.")) {
+        return 1;
+    }
+
+    const int pointDirectivesBeforeEscCancel = countDirectiveLines(mapTab->text(), QStringLiteral("point"));
+    pointModeButton->click();
+    pumpEvents();
+    textEditor->setFocus(Qt::OtherFocusReason);
+    pumpEvents();
+    sendKey(textEditor, QEvent::KeyPress, Qt::Key_Escape);
+    sendKey(textEditor, QEvent::KeyRelease, Qt::Key_Escape);
+    pumpEvents();
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, viewportCenter, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, viewportCenter, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("point")) == pointDirectivesBeforeEscCancel,
+                "Esc in Point mode should cancel insert mode and return to Select mode.")) {
+        return 1;
+    }
+
+    lineModeButton->click();
+    pumpEvents();
+    const QPoint firstLineVertex(viewportCenter.x() - 20, viewportCenter.y() - 12);
+    const QPoint secondLineVertex(viewportCenter.x() + 24, viewportCenter.y() - 8);
+    const QPoint thirdLineVertex(viewportCenter.x() + 18, viewportCenter.y() + 18);
+    const QPoint fourthLineVertex(viewportCenter.x() - 14, viewportCenter.y() + 22);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, firstLineVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, firstLineVertex, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, secondLineVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, secondLineVertex, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, thirdLineVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, thirdLineVertex, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, fourthLineVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, fourthLineVertex, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    mapView->setFocus(Qt::OtherFocusReason);
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_Return);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_Return);
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBefore + 1,
+                "Line mode click-to-add + Enter should insert one new line directive.")) {
+        return 1;
+    }
+    if (!expect(lastDraftLineCoordinateTokenCount(mapTab->text()) >= 8,
+                "Committing a 4-vertex line draft should preserve all captured vertices in source text.")) {
+        return 1;
+    }
+
+    const int lineDirectivesBeforeModePersistenceCheck = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
+    const QPoint fifthLineVertex(viewportCenter.x() - 14, viewportCenter.y() + 26);
+    const QPoint sixthLineVertex(viewportCenter.x() + 28, viewportCenter.y() + 30);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, fifthLineVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, fifthLineVertex, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, sixthLineVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, sixthLineVertex, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    completeDraftButton->click();
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeModePersistenceCheck + 1,
+                "After Enter commit, Line mode should stay active so a new line can be inserted without reselecting Line mode.")) {
+        return 1;
+    }
+
+    const int lineDirectivesBeforeBezierInsert = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
+    lineModeButton->click();
+    pumpEvents();
+    const QPoint bezierAnchor1(viewportCenter.x() - 60, viewportCenter.y() - 30);
+    const QPoint bezierAnchor2(viewportCenter.x() + 60, viewportCenter.y() - 22);
+    const QPoint bezierDrag(viewportCenter.x() + 60, viewportCenter.y() + 24);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, bezierAnchor1, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, bezierAnchor1, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, bezierAnchor2, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseMove, bezierDrag, Qt::NoButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, bezierDrag, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    completeDraftButton->click();
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeBezierInsert + 1,
+                "Line mode click+drag should insert a new line directive.")) {
+        return 1;
+    }
+    if (!expect(lastDraftLineHasBezierCoordinateRow(mapTab->text()),
+                "Line mode click+drag should create a bezier coordinate row with control points.")) {
+        return 1;
+    }
+    const auto baselineBezierRow = lastDraftLineBezierCoordinateRow(mapTab->text());
+    if (!expect(baselineBezierRow.has_value(),
+                "Bezier insert should expose a parseable coordinate row with control-point values.")) {
+        return 1;
+    }
+
+    const int lineDirectivesBeforeBezierAdjustInsert = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
+    lineModeButton->click();
+    pumpEvents();
+    const QPoint adjustedBezierAnchor1(viewportCenter.x() - 62, viewportCenter.y() + 42);
+    const QPoint adjustedBezierAnchor2(viewportCenter.x() + 58, viewportCenter.y() + 50);
+    const QPoint adjustedBezierDrag(viewportCenter.x() + 58, viewportCenter.y() + 98);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, adjustedBezierAnchor1, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, adjustedBezierAnchor1, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, adjustedBezierAnchor2, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseMove, adjustedBezierDrag, Qt::NoButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, adjustedBezierDrag, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+
+    const QPointF anchor1Scene = mapView->mapToScene(adjustedBezierAnchor1);
+    const QPointF dragScene = mapView->mapToScene(adjustedBezierDrag);
+    const QPointF initialControlScene = anchor1Scene + ((dragScene - anchor1Scene) * (2.0 / 3.0));
+    const QPoint controlPress = mapView->mapFromScene(initialControlScene);
+    const QPoint controlDrag = mapView->mapFromScene(initialControlScene + QPointF(48.0, -30.0));
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, controlPress, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseMove, controlDrag, Qt::NoButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, controlDrag, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+
+    completeDraftButton->click();
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeBezierAdjustInsert + 1,
+                "Dragging a bezier control handle in Line mode should still commit as a new line.")) {
+        return 1;
+    }
+    const auto adjustedBezierRow = lastDraftLineBezierCoordinateRow(mapTab->text());
+    if (!expect(adjustedBezierRow.has_value(),
+                "Adjusted bezier insert should keep a parseable coordinate row with control-point values.")) {
+        return 1;
+    }
+    if (!expect(std::abs(adjustedBezierRow->first() - baselineBezierRow->first()) > 0.001
+                || std::abs(adjustedBezierRow->at(1) - baselineBezierRow->at(1)) > 0.001,
+                "Dragging a bezier control handle should change serialized control-point coordinates.")) {
+        return 1;
+    }
+
+    const int lineDirectivesBeforeBezierAnchorMirrorInsert = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
+    lineModeButton->click();
+    pumpEvents();
+    const QPoint anchorMirror1(viewportCenter.x() - 88, viewportCenter.y() - 28);
+    const QPoint anchorMirror2(viewportCenter.x() - 18, viewportCenter.y() - 14);
+    const QPoint anchorMirrorDrag2(viewportCenter.x() - 18, viewportCenter.y() + 34);
+    const QPoint anchorMirror3(viewportCenter.x() + 74, viewportCenter.y() - 40);
+    const QPoint anchorMirrorDrag3(viewportCenter.x() + 74, viewportCenter.y() - 90);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, anchorMirror1, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, anchorMirror1, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, anchorMirror2, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseMove, anchorMirrorDrag2, Qt::NoButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, anchorMirrorDrag2, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, anchorMirror3, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseMove, anchorMirrorDrag3, Qt::NoButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, anchorMirrorDrag3, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    completeDraftButton->click();
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeBezierAnchorMirrorInsert + 1,
+                "Placing consecutive curved anchors should still commit as a new line.")) {
+        return 1;
+    }
+    const QVector<QVector<double>> anchorMirrorRows = lastDraftLineNumericRows(mapTab->text());
+    if (!expect(anchorMirrorRows.size() >= 3 && anchorMirrorRows.at(1).size() >= 6 && anchorMirrorRows.at(2).size() >= 6,
+                "Consecutive curved-anchor draft should serialize two cubic coordinate rows.")) {
+        return 1;
+    }
+    const QPointF anchorMirrorMiddleAnchorSource(anchorMirrorRows.at(1).at(4), anchorMirrorRows.at(1).at(5));
+    const QPointF anchorMirrorMiddleIncomingSource(anchorMirrorRows.at(1).at(2), anchorMirrorRows.at(1).at(3));
+    const QPointF anchorMirrorMiddleOutgoingSource(anchorMirrorRows.at(2).at(0), anchorMirrorRows.at(2).at(1));
+    const QPointF anchorMirrorIncomingVector = anchorMirrorMiddleIncomingSource - anchorMirrorMiddleAnchorSource;
+    const QPointF anchorMirrorOutgoingVector = anchorMirrorMiddleOutgoingSource - anchorMirrorMiddleAnchorSource;
+    const qreal anchorMirrorIncomingLength = std::hypot(anchorMirrorIncomingVector.x(), anchorMirrorIncomingVector.y());
+    const qreal anchorMirrorOutgoingLength = std::hypot(anchorMirrorOutgoingVector.x(), anchorMirrorOutgoingVector.y());
+    const qreal anchorMirrorCross = anchorMirrorIncomingVector.x() * anchorMirrorOutgoingVector.y()
+        - anchorMirrorIncomingVector.y() * anchorMirrorOutgoingVector.x();
+    const qreal anchorMirrorDot = anchorMirrorIncomingVector.x() * anchorMirrorOutgoingVector.x()
+        + anchorMirrorIncomingVector.y() * anchorMirrorOutgoingVector.y();
+    if (!expect(anchorMirrorIncomingLength > 0.01 && anchorMirrorOutgoingLength > 0.01,
+                "Consecutive curved anchors should keep non-zero incoming/outgoing control vectors on middle vertex.")) {
+        return 1;
+    }
+    const qreal anchorMirrorNormalizedCross = std::abs(anchorMirrorCross / (anchorMirrorIncomingLength * anchorMirrorOutgoingLength));
+    const qreal anchorMirrorNormalizedDot = anchorMirrorDot / (anchorMirrorIncomingLength * anchorMirrorOutgoingLength);
+    if (!expect(anchorMirrorNormalizedCross < 0.08 && anchorMirrorNormalizedDot < -0.9,
+                "Consecutive curved anchors should keep middle draft controls collinear/opposed.")) {
+        return 1;
+    }
+
+    const int lineDirectivesBeforeBezierMirrorInsert = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
+    lineModeButton->click();
+    pumpEvents();
+    const QPoint mirroredAnchor1(viewportCenter.x() - 70, viewportCenter.y() + 58);
+    const QPoint mirroredAnchor2(viewportCenter.x() - 8, viewportCenter.y() + 46);
+    const QPoint mirroredDrag2(viewportCenter.x() - 8, viewportCenter.y() + 92);
+    const QPoint mirroredAnchor3(viewportCenter.x() + 66, viewportCenter.y() + 54);
+    const QPoint mirroredDrag3(viewportCenter.x() + 66, viewportCenter.y() + 8);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, mirroredAnchor1, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, mirroredAnchor1, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, mirroredAnchor2, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseMove, mirroredDrag2, Qt::NoButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, mirroredDrag2, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, mirroredAnchor3, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseMove, mirroredDrag3, Qt::NoButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, mirroredDrag3, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+
+    const QPointF mirroredAnchor2Scene = mapView->mapToScene(mirroredAnchor2);
+    const QPointF mirroredDrag3Scene = mapView->mapToScene(mirroredDrag3);
+    const QPointF middleOutgoingControlScene
+        = mirroredAnchor2Scene + ((mirroredDrag3Scene - mirroredAnchor2Scene) * (2.0 / 3.0));
+    const QPoint mirroredControlPress = mapView->mapFromScene(middleOutgoingControlScene);
+    const QPoint mirroredControlDrag = mapView->mapFromScene(middleOutgoingControlScene + QPointF(52.0, -24.0));
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, mirroredControlPress, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseMove, mirroredControlDrag, Qt::NoButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, mirroredControlDrag, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+
+    completeDraftButton->click();
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeBezierMirrorInsert + 1,
+                "Dragging one control on a smooth draft vertex should still commit as a new line.")) {
+        return 1;
+    }
+    const QVector<QVector<double>> mirroredRows = lastDraftLineNumericRows(mapTab->text());
+    if (!expect(mirroredRows.size() >= 3 && mirroredRows.at(1).size() >= 6 && mirroredRows.at(2).size() >= 6,
+                "Three-anchor bezier draft should serialize two cubic coordinate rows.")) {
+        return 1;
+    }
+    const QPointF middleAnchorSource(mirroredRows.at(1).at(4), mirroredRows.at(1).at(5));
+    const QPointF middleIncomingSource(mirroredRows.at(1).at(2), mirroredRows.at(1).at(3));
+    const QPointF middleOutgoingSource(mirroredRows.at(2).at(0), mirroredRows.at(2).at(1));
+    const QPointF incomingVector = middleIncomingSource - middleAnchorSource;
+    const QPointF outgoingVector = middleOutgoingSource - middleAnchorSource;
+    const qreal incomingLength = std::hypot(incomingVector.x(), incomingVector.y());
+    const qreal outgoingLength = std::hypot(outgoingVector.x(), outgoingVector.y());
+    const qreal cross = incomingVector.x() * outgoingVector.y() - incomingVector.y() * outgoingVector.x();
+    const qreal dot = incomingVector.x() * outgoingVector.x() + incomingVector.y() * outgoingVector.y();
+    if (!expect(incomingLength > 0.01 && outgoingLength > 0.01,
+                "Middle draft vertex should keep non-zero incoming/outgoing control vectors.")) {
+        return 1;
+    }
+    const qreal normalizedCross = std::abs(cross / (incomingLength * outgoingLength));
+    const qreal normalizedDot = dot / (incomingLength * outgoingLength);
+    if (!expect(normalizedCross < 0.05 && normalizedDot < -0.95,
+                "Dragging one control on a smooth draft vertex should mirror-adapt the opposite control.")) {
+        return 1;
+    }
+
+    const int lineDirectivesBeforeEscCancel = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
+    lineModeButton->click();
+    pumpEvents();
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, firstLineVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, firstLineVertex, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, secondLineVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, secondLineVertex, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    textEditor->setFocus(Qt::OtherFocusReason);
+    pumpEvents();
+    sendKey(textEditor, QEvent::KeyPress, Qt::Key_Escape);
+    sendKey(textEditor, QEvent::KeyRelease, Qt::Key_Escape);
+    pumpEvents();
+    completeDraftButton->click();
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeEscCancel + 1,
+                "Esc in Line mode should commit captured vertices and return to Select mode.")) {
+        return 1;
+    }
+
+    const int areaDirectivesBeforeEscCommit = countDirectiveLines(mapTab->text(), QStringLiteral("area"));
+    const int lineDirectivesBeforeAreaEscCommit = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
+    areaModeButton->click();
+    pumpEvents();
+    const QPoint firstAreaVertex(viewportCenter.x() - 22, viewportCenter.y() + 18);
+    const QPoint secondAreaVertex(viewportCenter.x() + 14, viewportCenter.y() + 18);
+    const QPoint secondAreaDrag(viewportCenter.x() + 14, viewportCenter.y() + 48);
+    const QPoint thirdAreaVertex(viewportCenter.x() - 4, viewportCenter.y() - 14);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, firstAreaVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, firstAreaVertex, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, secondAreaVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseMove, secondAreaDrag, Qt::NoButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, secondAreaDrag, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, thirdAreaVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, thirdAreaVertex, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    textEditor->setFocus(Qt::OtherFocusReason);
+    pumpEvents();
+    sendKey(textEditor, QEvent::KeyPress, Qt::Key_Escape);
+    sendKey(textEditor, QEvent::KeyRelease, Qt::Key_Escape);
+    pumpEvents();
+    completeDraftButton->click();
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("area")) == areaDirectivesBeforeEscCommit + 1,
+                "Esc in Area mode should commit captured vertices and return to Select mode.")) {
+        return 1;
+    }
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeAreaEscCommit + 1,
+                "Area commit should create a closed border line referenced by the area block.")) {
+        return 1;
+    }
+    if (!expect(lastDraftAreaReferencesLineId(mapTab->text()),
+                "Committed area should reference a border line id inside the area block.")) {
+        return 1;
+    }
+    const auto areaBorderId = lastDraftAreaReferencedLineId(mapTab->text());
+    if (!expect(areaBorderId.has_value() && lineBlockByIdHasBezierCoordinateRow(mapTab->text(), areaBorderId.value()),
+                "Area click+drag draft should serialize bezier coordinate rows in the referenced border line.")) {
+        return 1;
+    }
+    const QVector<QVector<double>> areaBorderRows = areaBorderId.has_value()
+        ? lineBlockByIdNumericRows(mapTab->text(), areaBorderId.value())
+        : QVector<QVector<double>>();
+    if (!expect(areaBorderRows.size() >= 4
+                && areaBorderRows.first().size() >= 2
+                && areaBorderRows.last().size() >= 6,
+                "Bezier area close should append an explicit closing cubic row in the referenced border line.")) {
+        return 1;
+    }
+    const QVector<double> &areaFirstRow = areaBorderRows.first();
+    const QVector<double> &areaLastRow = areaBorderRows.last();
+    if (!expect(std::abs(areaLastRow.at(areaLastRow.size() - 2) - areaFirstRow.at(0)) < 0.01
+                && std::abs(areaLastRow.at(areaLastRow.size() - 1) - areaFirstRow.at(1)) < 0.01,
+                "Bezier area closing row should terminate at the first area anchor.")) {
+        return 1;
+    }
+
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("area")) >= areaDirectivesBefore + 1,
+                "Interactive area workflows should produce at least one additional area directive.")) {
+        return 1;
+    }
+
+    const int lineDirectivesBeforeFreehand = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
+    freehandModeButton->click();
+    pumpEvents();
+    const QPoint strokeStart(viewportCenter.x() - 30, viewportCenter.y() + 20);
+    const QPoint strokeMid1(viewportCenter.x() - 10, viewportCenter.y() + 8);
+    const QPoint strokeMid2(viewportCenter.x() + 16, viewportCenter.y() - 4);
+    const QPoint strokeEnd(viewportCenter.x() + 34, viewportCenter.y() - 14);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, strokeStart, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseMove, strokeMid1, Qt::NoButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseMove, strokeMid2, Qt::NoButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, strokeEnd, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeFreehand + 1,
+                "Freehand drag-and-release should insert one new line directive.")) {
         return 1;
     }
 

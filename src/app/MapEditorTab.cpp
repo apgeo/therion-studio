@@ -3,6 +3,9 @@
 #include <QFrame>
 #include <QEvent>
 #include <QCursor>
+#include <QGraphicsEllipseItem>
+#include <QGraphicsLineItem>
+#include <QGraphicsPathItem>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsScene>
@@ -19,6 +22,7 @@
 #include <QSet>
 #include <QScopedValueRollback>
 #include <QScrollBar>
+#include <QShortcut>
 #include <QSplitterHandle>
 #include <QTabletEvent>
 #include <QTextBrowser>
@@ -29,6 +33,7 @@
 #include <QWheelEvent>
 #include <QTouchEvent>
 #include <QFont>
+#include <QPainterPath>
 
 #include <algorithm>
 #include <cmath>
@@ -46,23 +51,6 @@ namespace
 {
 constexpr int kMapItemRole = Qt::UserRole + 120;
 constexpr int kMapItemGeometryValue = 1;
-QRectF fittedPreviewBoundsForSource(const QRectF &sourceBounds, const QRectF &previewBounds)
-{
-    if (!sourceBounds.isValid() || !previewBounds.isValid()) {
-        return previewBounds;
-    }
-
-    const qreal sourceWidth = qMax(1.0, sourceBounds.width());
-    const qreal sourceHeight = qMax(1.0, sourceBounds.height());
-    const qreal previewWidth = qMax(1.0, previewBounds.width());
-    const qreal previewHeight = qMax(1.0, previewBounds.height());
-    const qreal scale = qMin(previewWidth / sourceWidth, previewHeight / sourceHeight);
-    const qreal fittedWidth = sourceWidth * scale;
-    const qreal fittedHeight = sourceHeight * scale;
-    const qreal left = previewBounds.left() + ((previewWidth - fittedWidth) / 2.0);
-    const qreal top = previewBounds.top() + ((previewHeight - fittedHeight) / 2.0);
-    return QRectF(left, top, fittedWidth, fittedHeight);
-}
 
 bool sourcePointsDifferForCommands(const QPointF &a, const QPointF &b)
 {
@@ -1092,6 +1080,65 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         case QEvent::MouseButtonPress: {
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
             if (mouseEvent->button() == Qt::LeftButton) {
+                if (interactiveDrawMode_ == InteractiveDrawMode::Freehand) {
+                    if (textEditor_ == nullptr) {
+                        toolbarStatusNote_ = tr("Drawing failed: no active TH2 text editor.");
+                        refreshToolbarSummary();
+                        event->accept();
+                        return true;
+                    }
+
+                    clearInteractiveDrawSession(false);
+                    const QPointF scenePoint = mapView_->mapToScene(mouseEvent->pos());
+                    interactiveDrawStrokeActive_ = true;
+                    interactiveDrawSourceVertices_.append(sourcePointFromScenePosition(scenePoint));
+                    interactiveDrawSceneVertices_.append(scenePoint);
+                    updateInteractiveDrawPreview();
+                    toolbarStatusNote_ = tr("Freehand mode: drawing stroke...");
+                    refreshToolbarSummary();
+                    updateCommandSurfaceState();
+                    primaryPointerInteractionActive_ = false;
+                    event->accept();
+                    return true;
+                }
+                if (interactiveDrawMode_ == InteractiveDrawMode::Line
+                    || interactiveDrawMode_ == InteractiveDrawMode::Area) {
+                    const QPointF scenePoint = mapView_->mapToScene(mouseEvent->pos());
+                    const QPointF sceneOffset = mapView_->mapToScene(mouseEvent->pos() + QPoint(8, 0));
+                    const qreal controlHitRadius = std::max<qreal>(4.0, QLineF(scenePoint, sceneOffset).length());
+                    if (const auto handle = interactiveLineControlAt(scenePoint, controlHitRadius)) {
+                        interactiveDrawControlDragActive_ = true;
+                        interactiveDrawControlDragHandle_ = handle.value();
+                        interactiveDrawAnchorPressActive_ = false;
+                        interactiveDrawAnchorDragActive_ = false;
+                        interactiveDrawHoverActive_ = false;
+                        viewport->setCursor(Qt::ClosedHandCursor);
+                        toolbarStatusNote_ = interactiveDrawMode_ == InteractiveDrawMode::Line
+                            ? tr("Line mode: dragging bezier control point.")
+                            : tr("Area mode: dragging bezier control point.");
+                        refreshToolbarSummary();
+                        updateCommandSurfaceState();
+                        primaryPointerInteractionActive_ = false;
+                        event->accept();
+                        return true;
+                    }
+
+                    interactiveDrawAnchorPressActive_ = true;
+                    interactiveDrawAnchorPressScenePoint_ = scenePoint;
+                    interactiveDrawAnchorDragActive_ = false;
+                    interactiveDrawAnchorDragScenePoint_ = interactiveDrawAnchorPressScenePoint_;
+                    interactiveDrawControlDragActive_ = false;
+                    interactiveDrawHoverActive_ = false;
+                    updateInteractiveDrawPreview();
+                    primaryPointerInteractionActive_ = false;
+                    event->accept();
+                    return true;
+                }
+                if (handleInteractiveDrawClick(mapView_->mapToScene(mouseEvent->pos()))) {
+                    primaryPointerInteractionActive_ = false;
+                    event->accept();
+                    return true;
+                }
                 primaryPointerInteractionActive_ = true;
                 if (mapView_ != nullptr) {
                     pendingMapClickSelection_ = true;
@@ -1127,6 +1174,67 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             break;
         }
         case QEvent::MouseMove: {
+            if ((interactiveDrawMode_ == InteractiveDrawMode::Line
+                 || interactiveDrawMode_ == InteractiveDrawMode::Area)
+                && interactiveDrawControlDragActive_) {
+                const QPointF scenePoint = mapView_->mapToScene(static_cast<QMouseEvent *>(event)->pos());
+                if (setInteractiveLineControlScenePoint(interactiveDrawControlDragHandle_, scenePoint)) {
+                    updateInteractiveDrawPreview();
+                }
+                event->accept();
+                return true;
+            }
+
+            if ((interactiveDrawMode_ == InteractiveDrawMode::Line
+                 || interactiveDrawMode_ == InteractiveDrawMode::Area)
+                && interactiveDrawAnchorPressActive_) {
+                const QPointF scenePoint = mapView_->mapToScene(static_cast<QMouseEvent *>(event)->pos());
+                constexpr qreal dragThreshold = 4.0;
+                if (!interactiveDrawAnchorDragActive_
+                    && QLineF(interactiveDrawAnchorPressScenePoint_, scenePoint).length() >= dragThreshold) {
+                    interactiveDrawAnchorDragActive_ = true;
+                }
+                interactiveDrawAnchorDragScenePoint_ = scenePoint;
+                updateInteractiveDrawPreview();
+                event->accept();
+                return true;
+            }
+
+            if (interactiveDrawMode_ == InteractiveDrawMode::Freehand && interactiveDrawStrokeActive_) {
+                const QPointF scenePoint = mapView_->mapToScene(static_cast<QMouseEvent *>(event)->pos());
+                constexpr qreal minimumSceneSampleDistance = 4.0;
+                if (interactiveDrawSceneVertices_.isEmpty()
+                    || QLineF(interactiveDrawSceneVertices_.last(), scenePoint).length() >= minimumSceneSampleDistance) {
+                    interactiveDrawSceneVertices_.append(scenePoint);
+                    interactiveDrawSourceVertices_.append(sourcePointFromScenePosition(scenePoint));
+                    updateInteractiveDrawPreview();
+                    updateCommandSurfaceState();
+                }
+                event->accept();
+                return true;
+            }
+
+            if (interactiveDrawMode_ == InteractiveDrawMode::Line
+                || interactiveDrawMode_ == InteractiveDrawMode::Area) {
+                const bool hasDraftVertices = !interactiveDrawLineVertices_.isEmpty();
+                if (hasDraftVertices) {
+                    const QPoint mousePosition = static_cast<QMouseEvent *>(event)->pos();
+                    const QPointF scenePoint = mapView_->mapToScene(mousePosition);
+                    const QPointF sceneOffset = mapView_->mapToScene(mousePosition + QPoint(8, 0));
+                    const qreal controlHitRadius = std::max<qreal>(4.0, QLineF(scenePoint, sceneOffset).length());
+                    if (interactiveLineControlAt(scenePoint, controlHitRadius).has_value()) {
+                        viewport->setCursor(Qt::OpenHandCursor);
+                    } else {
+                        viewport->unsetCursor();
+                    }
+                    interactiveDrawHoverActive_ = true;
+                    interactiveDrawHoverScenePoint_ = scenePoint;
+                    updateInteractiveDrawPreview();
+                    event->accept();
+                    return true;
+                }
+            }
+
             if (!mapPanActive_) {
                 break;
             }
@@ -1149,6 +1257,89 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         }
         case QEvent::MouseButtonRelease: {
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if ((interactiveDrawMode_ == InteractiveDrawMode::Line
+                 || interactiveDrawMode_ == InteractiveDrawMode::Area)
+                && interactiveDrawControlDragActive_
+                && mouseEvent->button() == Qt::LeftButton) {
+                const QPointF scenePoint = mapView_->mapToScene(mouseEvent->pos());
+                setInteractiveLineControlScenePoint(interactiveDrawControlDragHandle_, scenePoint);
+                interactiveDrawControlDragActive_ = false;
+                const QPointF sceneOffset = mapView_->mapToScene(mouseEvent->pos() + QPoint(8, 0));
+                const qreal controlHitRadius = std::max<qreal>(4.0, QLineF(scenePoint, sceneOffset).length());
+                if (interactiveLineControlAt(scenePoint, controlHitRadius).has_value()) {
+                    viewport->setCursor(Qt::OpenHandCursor);
+                } else {
+                    viewport->unsetCursor();
+                }
+                toolbarStatusNote_ = interactiveDrawMode_ == InteractiveDrawMode::Line
+                    ? tr("Line mode: bezier control adjusted.")
+                    : tr("Area mode: bezier control adjusted.");
+                refreshToolbarSummary();
+                updateCommandSurfaceState();
+                event->accept();
+                return true;
+            }
+
+            if ((interactiveDrawMode_ == InteractiveDrawMode::Line
+                 || interactiveDrawMode_ == InteractiveDrawMode::Area)
+                && interactiveDrawAnchorPressActive_
+                && mouseEvent->button() == Qt::LeftButton) {
+                std::optional<QPointF> dragScenePoint;
+                if (interactiveDrawAnchorDragActive_) {
+                    const QPointF releaseScenePoint = mapView_->mapToScene(mouseEvent->pos());
+                    constexpr qreal dragThreshold = 4.0;
+                    if (QLineF(interactiveDrawAnchorPressScenePoint_, releaseScenePoint).length() >= dragThreshold) {
+                        dragScenePoint = releaseScenePoint;
+                    }
+                }
+
+                captureInteractiveLineAnchor(interactiveDrawAnchorPressScenePoint_, dragScenePoint);
+                interactiveDrawAnchorPressActive_ = false;
+                interactiveDrawAnchorDragActive_ = false;
+                interactiveDrawHoverActive_ = false;
+                toolbarStatusNote_ = interactiveDrawMode_ == InteractiveDrawMode::Line
+                    ? tr("Line mode: %1 vertex/vertices captured. Press Enter or Complete Draft.")
+                          .arg(interactiveDrawLineVertices_.size())
+                    : tr("Area mode: %1 vertex/vertices captured. Press Enter or Complete Draft.")
+                          .arg(interactiveDrawLineVertices_.size());
+                refreshToolbarSummary();
+                updateCommandSurfaceState();
+                event->accept();
+                return true;
+            }
+            if (interactiveDrawMode_ == InteractiveDrawMode::Freehand
+                && interactiveDrawStrokeActive_
+                && mouseEvent->button() == Qt::LeftButton) {
+                const QPointF releasePoint = mapView_->mapToScene(mouseEvent->pos());
+                if (interactiveDrawSceneVertices_.isEmpty()
+                    || QLineF(interactiveDrawSceneVertices_.last(), releasePoint).length() >= 1.0) {
+                    interactiveDrawSceneVertices_.append(releasePoint);
+                    interactiveDrawSourceVertices_.append(sourcePointFromScenePosition(releasePoint));
+                }
+                interactiveDrawStrokeActive_ = false;
+
+                if (interactiveDrawSourceVertices_.size() < 2) {
+                    clearInteractiveDrawSession(false);
+                    toolbarStatusNote_ = tr("Freehand mode needs a drag stroke to create a line.");
+                    refreshToolbarSummary();
+                    updateCommandSurfaceState();
+                    event->accept();
+                    return true;
+                }
+
+                const bool committed = commitInteractiveDrawVertices(QStringLiteral("line"),
+                                                                     interactiveDrawSourceVertices_,
+                                                                     tr("freehand line"));
+                clearInteractiveDrawSession(false);
+                if (committed) {
+                    updateHelpPanel();
+                }
+                refreshToolbarSummary();
+                updateCommandSurfaceState();
+                event->accept();
+                return true;
+            }
+
             if (mouseEvent->button() == Qt::LeftButton && mouseEvent->buttons() == Qt::NoButton) {
                 primaryPointerInteractionActive_ = false;
             }
@@ -1339,6 +1530,15 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             touchPanCandidate_ = false;
             touchPanActive_ = false;
             nativeZoomGestureActive_ = false;
+            interactiveDrawStrokeActive_ = false;
+            interactiveDrawAnchorPressActive_ = false;
+            interactiveDrawAnchorDragActive_ = false;
+            interactiveDrawControlDragActive_ = false;
+            viewport->unsetCursor();
+            if (interactiveDrawHoverActive_) {
+                interactiveDrawHoverActive_ = false;
+                updateInteractiveDrawPreview();
+            }
             break;
         case QEvent::Resize:
             if (autoFitEnabled_ && mapView_->isVisible()) {
@@ -1347,6 +1547,47 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             break;
         case QEvent::KeyPress: {
             auto *keyEvent = static_cast<QKeyEvent *>(event);
+            if (interactiveDrawMode_ == InteractiveDrawMode::Line
+                || interactiveDrawMode_ == InteractiveDrawMode::Area
+                || interactiveDrawMode_ == InteractiveDrawMode::Freehand) {
+                if ((keyEvent->key() == Qt::Key_Backspace || keyEvent->key() == Qt::Key_Delete)
+                    && keyEvent->modifiers() == Qt::NoModifier
+                    && interactiveDrawMode_ != InteractiveDrawMode::Freehand) {
+                    if (interactiveDrawMode_ == InteractiveDrawMode::Line
+                        && !interactiveDrawLineVertices_.isEmpty()) {
+                        interactiveDrawLineVertices_.removeLast();
+                        if (!interactiveDrawLineVertices_.isEmpty()) {
+                            InteractiveLineDraftVertex &tail = interactiveDrawLineVertices_.last();
+                            tail.outgoingControlScene.reset();
+                            tail.outgoingControlSource.reset();
+                        }
+                        updateInteractiveDrawPreview();
+                        toolbarStatusNote_ = tr("Vertex removed from current draft (%1 remaining).")
+                                                 .arg(interactiveDrawLineVertices_.size());
+                        refreshToolbarSummary();
+                        updateCommandSurfaceState();
+                        event->accept();
+                        return true;
+                    }
+                    if (interactiveDrawMode_ == InteractiveDrawMode::Area
+                        && !interactiveDrawLineVertices_.isEmpty()) {
+                        interactiveDrawLineVertices_.removeLast();
+                        if (!interactiveDrawLineVertices_.isEmpty()) {
+                            InteractiveLineDraftVertex &tail = interactiveDrawLineVertices_.last();
+                            tail.outgoingControlScene.reset();
+                            tail.outgoingControlSource.reset();
+                        }
+                        updateInteractiveDrawPreview();
+                        toolbarStatusNote_ = tr("Vertex removed from current draft (%1 remaining).")
+                                                 .arg(interactiveDrawLineVertices_.size());
+                        refreshToolbarSummary();
+                        updateCommandSurfaceState();
+                        event->accept();
+                        return true;
+                    }
+                }
+            }
+
             const bool insertShortcut = keyEvent->key() == Qt::Key_Insert
                 || (keyEvent->key() == Qt::Key_I && keyEvent->modifiers() == Qt::NoModifier);
             if (insertShortcut) {
@@ -1509,6 +1750,7 @@ void MapEditorTab::refreshMapScenePreservingUndoStack()
     } else {
         syncZoomFactorFromView();
     }
+    updateInteractiveDrawPreview();
     refreshStatus();
     updateCommandSurfaceState();
     updateHelpPanel();
@@ -1841,30 +2083,28 @@ void MapEditorTab::updateGeometrySelectionPresentation()
 
 void MapEditorTab::handleAddPointTriggered()
 {
-    selectModeActive_ = false;
-    toolbarStatusNote_ = tr("Point mode: click Point again to add another draft point.");
-    addDraftGeometryItem(createDraftGeometryItem(DraftGeometryKind::Point), mapView_ != nullptr ? mapView_->mapToScene(mapView_->viewport()->rect().center()) : QPointF(160.0, 160.0));
+    setInteractiveDrawMode(InteractiveDrawMode::Point);
+    toolbarStatusNote_ = tr("Point mode: click in map to insert a point.");
     refreshToolbarSummary();
 }
 
 void MapEditorTab::handleAddLineTriggered()
 {
-    selectModeActive_ = false;
-    toolbarStatusNote_ = tr("Line mode: each action inserts one draft line card.");
-    addDraftGeometryItem(createDraftGeometryItem(DraftGeometryKind::Line), mapView_ != nullptr ? mapView_->mapToScene(mapView_->viewport()->rect().center()) : QPointF(180.0, 180.0));
+    setInteractiveDrawMode(InteractiveDrawMode::Line);
+    toolbarStatusNote_ = tr("Line mode: click to add vertices, then press Enter or Complete Draft.");
     refreshToolbarSummary();
 }
 
 void MapEditorTab::handleAddFreehandLineTriggered()
 {
-    selectModeActive_ = false;
-    toolbarStatusNote_ = tr("Freehand mode: inserted a draft line. Complete Draft commits one undo step.");
-    addDraftGeometryItem(createDraftGeometryItem(DraftGeometryKind::Line), mapView_ != nullptr ? mapView_->mapToScene(mapView_->viewport()->rect().center()) : QPointF(185.0, 185.0));
+    setInteractiveDrawMode(InteractiveDrawMode::Freehand);
+    toolbarStatusNote_ = tr("Freehand mode: drag in map to draw a line, then release to finish.");
     refreshToolbarSummary();
 }
 
 void MapEditorTab::handleAddSmartTraceLineTriggered()
 {
+    setInteractiveDrawMode(InteractiveDrawMode::None);
     selectModeActive_ = false;
     toolbarStatusNote_ = tr("Smart Trace mode: inserted a trace-ready draft line. Complete Draft commits one undo step.");
     addDraftGeometryItem(createDraftGeometryItem(DraftGeometryKind::Line), mapView_ != nullptr ? mapView_->mapToScene(mapView_->viewport()->rect().center()) : QPointF(190.0, 190.0));
@@ -1873,14 +2113,14 @@ void MapEditorTab::handleAddSmartTraceLineTriggered()
 
 void MapEditorTab::handleAddAreaTriggered()
 {
-    selectModeActive_ = false;
-    toolbarStatusNote_ = tr("Area mode: each action inserts one draft area card.");
-    addDraftGeometryItem(createDraftGeometryItem(DraftGeometryKind::Area), mapView_ != nullptr ? mapView_->mapToScene(mapView_->viewport()->rect().center()) : QPointF(200.0, 200.0));
+    setInteractiveDrawMode(InteractiveDrawMode::Area);
+    toolbarStatusNote_ = tr("Area mode: click to add vertices, then press Enter or Complete Draft.");
     refreshToolbarSummary();
 }
 
 void MapEditorTab::handleSelectModeTriggered()
 {
+    setInteractiveDrawMode(InteractiveDrawMode::None);
     selectModeActive_ = true;
     toolbarStatusNote_ = tr("Selection mode: select map cards or draft objects.");
     if (mapView_ != nullptr) {
@@ -1915,6 +2155,10 @@ void MapEditorTab::handleInsertScrapTriggered()
 
 void MapEditorTab::handleCompleteDraftTriggered()
 {
+    if (commitInteractiveDrawSession()) {
+        return;
+    }
+
     auto *draftRectItem = selectedDraftGeometryItem();
     auto *draftItem = dynamic_cast<MapDraftGeometryItem *>(draftRectItem);
     if (draftItem == nullptr || draftItem->isDraftComplete()) {
@@ -1966,6 +2210,677 @@ void MapEditorTab::handleCompleteDraftTriggered()
     updateHelpPanel();
 }
 
+void MapEditorTab::setInteractiveDrawMode(InteractiveDrawMode mode)
+{
+    const InteractiveDrawMode previousMode = interactiveDrawMode_;
+    clearInteractiveDrawSession(false);
+    interactiveDrawMode_ = mode;
+    selectModeActive_ = mode == InteractiveDrawMode::None;
+    if (previousMode != interactiveDrawMode_) {
+        emit modeStatusChanged();
+    }
+    updateCommandSurfaceState();
+}
+
+bool MapEditorTab::handleInteractiveDrawClick(const QPointF &scenePosition)
+{
+    if (interactiveDrawMode_ == InteractiveDrawMode::None) {
+        return false;
+    }
+
+    if (textEditor_ == nullptr) {
+        toolbarStatusNote_ = tr("Drawing failed: no active TH2 text editor.");
+        refreshToolbarSummary();
+        return true;
+    }
+
+    if (interactiveDrawMode_ == InteractiveDrawMode::Point) {
+        QString errorMessage;
+        int insertedLineNumber = 0;
+        const QVector<QPointF> vertices{sourcePointFromScenePosition(scenePosition)};
+        if (!textEditor_->insertDraftGeometry(QStringLiteral("point"), vertices, &insertedLineNumber, &errorMessage)) {
+            toolbarStatusNote_ = errorMessage.isEmpty()
+                ? tr("Point insert failed.")
+                : tr("Point insert failed: %1").arg(errorMessage);
+        } else {
+            toolbarStatusNote_ = insertedLineNumber > 0
+                ? tr("Inserted point at source line %1.").arg(insertedLineNumber)
+                : tr("Inserted point.");
+        }
+        refreshToolbarSummary();
+        return true;
+    }
+
+    if (interactiveDrawMode_ == InteractiveDrawMode::Area) {
+        captureInteractiveLineAnchor(scenePosition, std::nullopt);
+        interactiveDrawHoverActive_ = false;
+        toolbarStatusNote_ = tr("Area mode: %1 vertex/vertices captured. Press Enter or Complete Draft.")
+                                 .arg(interactiveDrawLineVertices_.size());
+        refreshToolbarSummary();
+        updateCommandSurfaceState();
+        return true;
+    }
+
+    return false;
+}
+
+bool MapEditorTab::commitInteractiveDrawSession()
+{
+    const InteractiveDrawMode modeAtCommit = interactiveDrawMode_;
+    if (modeAtCommit != InteractiveDrawMode::Line
+        && modeAtCommit != InteractiveDrawMode::Area) {
+        return false;
+    }
+
+    if (textEditor_ == nullptr) {
+        toolbarStatusNote_ = tr("Complete Draft failed: no active TH2 text editor.");
+        refreshToolbarSummary();
+        return true;
+    }
+
+    const int minVertexCount = modeAtCommit == InteractiveDrawMode::Line ? 2 : 3;
+    const int capturedVertices = interactiveDrawLineVertices_.size();
+    if (capturedVertices < minVertexCount) {
+        toolbarStatusNote_ = modeAtCommit == InteractiveDrawMode::Line
+            ? tr("Line mode needs at least 2 vertices before completion.")
+            : tr("Area mode needs at least 3 vertices before completion.");
+        refreshToolbarSummary();
+        return true;
+    }
+
+    if (modeAtCommit == InteractiveDrawMode::Line) {
+        QString errorMessage;
+        int insertedLineNumber = 0;
+        const QStringList coordinateRows = lineCoordinateRowsForInteractiveDraft();
+        if (!textEditor_->insertDraftLineGeometry(coordinateRows, &insertedLineNumber, &errorMessage)) {
+            toolbarStatusNote_ = errorMessage.isEmpty()
+                ? tr("Complete Draft failed.")
+                : tr("Complete Draft failed: %1").arg(errorMessage);
+            refreshToolbarSummary();
+            return true;
+        }
+        toolbarStatusNote_ = insertedLineNumber > 0
+            ? tr("Complete Draft wrote line geometry at source line %1.").arg(insertedLineNumber)
+            : tr("Complete Draft wrote line geometry to source.");
+    } else {
+        QString errorMessage;
+        int insertedLineNumber = 0;
+        if (!textEditor_->insertDraftAreaGeometry(areaCoordinateRowsForInteractiveDraft(),
+                                                  &insertedLineNumber,
+                                                  &errorMessage)) {
+            toolbarStatusNote_ = errorMessage.isEmpty()
+                ? tr("Complete Draft failed.")
+                : tr("Complete Draft failed: %1").arg(errorMessage);
+            refreshToolbarSummary();
+            return true;
+        }
+        toolbarStatusNote_ = insertedLineNumber > 0
+            ? tr("Complete Draft wrote area geometry at source line %1.").arg(insertedLineNumber)
+            : tr("Complete Draft wrote area geometry to source.");
+    }
+
+    clearInteractiveDrawSession(false);
+    interactiveDrawMode_ = modeAtCommit;
+    selectModeActive_ = false;
+    toolbarStatusNote_ = modeAtCommit == InteractiveDrawMode::Line
+        ? tr("Line committed. Line mode is still active for the next object.")
+        : tr("Area committed. Area mode is still active for the next object.");
+    refreshToolbarSummary();
+    updateHelpPanel();
+    updateCommandSurfaceState();
+    return true;
+}
+
+void MapEditorTab::clearInteractiveDrawSession(bool clearMode)
+{
+    interactiveDrawSourceVertices_.clear();
+    interactiveDrawSceneVertices_.clear();
+    interactiveDrawLineVertices_.clear();
+    interactiveDrawStrokeActive_ = false;
+    interactiveDrawAnchorPressActive_ = false;
+    interactiveDrawAnchorDragActive_ = false;
+    interactiveDrawControlDragActive_ = false;
+    interactiveDrawHoverActive_ = false;
+    if (mapView_ != nullptr && mapView_->viewport() != nullptr && !mapPanActive_) {
+        mapView_->viewport()->unsetCursor();
+    }
+
+    if (mapScene_ != nullptr) {
+        if (interactiveDrawPreviewPath_ != nullptr) {
+            mapScene_->removeItem(interactiveDrawPreviewPath_);
+            delete interactiveDrawPreviewPath_;
+            interactiveDrawPreviewPath_ = nullptr;
+        }
+        for (QGraphicsItem *marker : std::as_const(interactiveDrawPreviewMarkers_)) {
+            if (marker != nullptr) {
+                mapScene_->removeItem(marker);
+                delete marker;
+            }
+        }
+    }
+    interactiveDrawPreviewMarkers_.clear();
+    interactiveDrawPreviewPath_ = nullptr;
+
+    if (clearMode) {
+        const bool modeChanged = interactiveDrawMode_ != InteractiveDrawMode::None;
+        interactiveDrawMode_ = InteractiveDrawMode::None;
+        selectModeActive_ = true;
+        if (modeChanged) {
+            emit modeStatusChanged();
+        }
+    }
+}
+
+void MapEditorTab::updateInteractiveDrawPreview()
+{
+    if (mapScene_ == nullptr) {
+        return;
+    }
+
+    if (interactiveDrawPreviewPath_ != nullptr) {
+        mapScene_->removeItem(interactiveDrawPreviewPath_);
+        delete interactiveDrawPreviewPath_;
+        interactiveDrawPreviewPath_ = nullptr;
+    }
+    for (QGraphicsItem *marker : std::as_const(interactiveDrawPreviewMarkers_)) {
+        if (marker != nullptr) {
+            mapScene_->removeItem(marker);
+            delete marker;
+        }
+    }
+    interactiveDrawPreviewMarkers_.clear();
+
+    if (interactiveDrawMode_ != InteractiveDrawMode::Line
+        && interactiveDrawMode_ != InteractiveDrawMode::Area
+        && interactiveDrawMode_ != InteractiveDrawMode::Freehand) {
+        return;
+    }
+
+    QColor accent;
+    if (interactiveDrawMode_ == InteractiveDrawMode::Line) {
+        accent = QColor(QStringLiteral("#ffb15a"));
+    } else if (interactiveDrawMode_ == InteractiveDrawMode::Area) {
+        accent = QColor(QStringLiteral("#ff7f8f"));
+    } else {
+        accent = QColor(QStringLiteral("#66d38f"));
+    }
+    accent.setAlpha(220);
+    QColor controlColor = QColor(QStringLiteral("#33a8ff"));
+    controlColor.setAlpha(225);
+
+    QPainterPath path;
+    QVector<QPointF> anchorMarkers;
+    QVector<QPointF> controlMarkers;
+    QVector<QLineF> controlConnectors;
+    if (interactiveDrawMode_ == InteractiveDrawMode::Line
+        || interactiveDrawMode_ == InteractiveDrawMode::Area) {
+        struct DraftPreviewVertex
+        {
+            QPointF anchorScene;
+            std::optional<QPointF> incomingControlScene;
+            std::optional<QPointF> outgoingControlScene;
+        };
+
+        QVector<DraftPreviewVertex> previewVertices;
+        previewVertices.reserve(interactiveDrawLineVertices_.size() + 1);
+        for (const InteractiveLineDraftVertex &vertex : std::as_const(interactiveDrawLineVertices_)) {
+            DraftPreviewVertex previewVertex;
+            previewVertex.anchorScene = vertex.anchorScene;
+            previewVertex.incomingControlScene = vertex.incomingControlScene;
+            previewVertex.outgoingControlScene = vertex.outgoingControlScene;
+            previewVertices.append(previewVertex);
+            anchorMarkers.append(vertex.anchorScene);
+        }
+
+        auto appendBezierControlsForLastSegment = [&previewVertices](const QPointF &dragScenePoint) {
+            if (previewVertices.size() < 2) {
+                return;
+            }
+            DraftPreviewVertex &previous = previewVertices[previewVertices.size() - 2];
+            DraftPreviewVertex &current = previewVertices[previewVertices.size() - 1];
+            // Treat drag location as a quadratic control point, then elevate to cubic.
+            // This avoids midpoint-coupled handles that feel artificially parallel.
+            constexpr qreal quadraticToCubicFactor = 2.0 / 3.0;
+            const QPointF quadraticControlScene = dragScenePoint;
+            previous.outgoingControlScene = previous.anchorScene
+                + ((quadraticControlScene - previous.anchorScene) * quadraticToCubicFactor);
+            current.incomingControlScene = current.anchorScene
+                + ((quadraticControlScene - current.anchorScene) * quadraticToCubicFactor);
+            if (previous.incomingControlScene.has_value()) {
+                const std::optional<QPointF> mirrored = mirroredSmoothControlPoint(previous.anchorScene,
+                                                                                    previous.outgoingControlScene.value(),
+                                                                                    previous.incomingControlScene);
+                if (mirrored.has_value()) {
+                    previous.incomingControlScene = mirrored.value();
+                }
+            }
+        };
+
+        if (interactiveDrawAnchorPressActive_) {
+            DraftPreviewVertex candidate;
+            candidate.anchorScene = interactiveDrawAnchorPressScenePoint_;
+            previewVertices.append(candidate);
+            anchorMarkers.append(candidate.anchorScene);
+            if (interactiveDrawAnchorDragActive_) {
+                appendBezierControlsForLastSegment(interactiveDrawAnchorDragScenePoint_);
+            }
+        } else if (interactiveDrawHoverActive_ && !previewVertices.isEmpty()) {
+            DraftPreviewVertex candidate;
+            candidate.anchorScene = interactiveDrawHoverScenePoint_;
+            previewVertices.append(candidate);
+        }
+
+        if (!previewVertices.isEmpty()) {
+            path.moveTo(previewVertices.first().anchorScene);
+            for (int index = 1; index < previewVertices.size(); ++index) {
+                const DraftPreviewVertex &previous = previewVertices.at(index - 1);
+                const DraftPreviewVertex &current = previewVertices.at(index);
+                const QPointF control1 = previous.outgoingControlScene.value_or(previous.anchorScene);
+                const QPointF control2 = current.incomingControlScene.value_or(current.anchorScene);
+                const bool curved = previous.outgoingControlScene.has_value() || current.incomingControlScene.has_value();
+                if (curved) {
+                    path.cubicTo(control1, control2, current.anchorScene);
+                } else {
+                    path.lineTo(current.anchorScene);
+                }
+            }
+
+            for (const DraftPreviewVertex &vertex : std::as_const(previewVertices)) {
+                if (vertex.incomingControlScene.has_value()) {
+                    controlConnectors.append(QLineF(vertex.anchorScene, vertex.incomingControlScene.value()));
+                    controlMarkers.append(vertex.incomingControlScene.value());
+                }
+                if (vertex.outgoingControlScene.has_value()) {
+                    controlConnectors.append(QLineF(vertex.anchorScene, vertex.outgoingControlScene.value()));
+                    controlMarkers.append(vertex.outgoingControlScene.value());
+                }
+            }
+        }
+        if (interactiveDrawMode_ == InteractiveDrawMode::Area && previewVertices.size() >= 3) {
+            const DraftPreviewVertex &first = previewVertices.first();
+            const DraftPreviewVertex &last = previewVertices.last();
+
+            std::optional<QPointF> closingOutgoing = last.outgoingControlScene;
+            if (!closingOutgoing.has_value() && last.incomingControlScene.has_value()) {
+                closingOutgoing = mirroredSmoothControlPoint(last.anchorScene,
+                                                             last.incomingControlScene.value(),
+                                                             std::nullopt);
+            }
+
+            std::optional<QPointF> closingIncoming = first.incomingControlScene;
+            if (!closingIncoming.has_value() && first.outgoingControlScene.has_value()) {
+                closingIncoming = mirroredSmoothControlPoint(first.anchorScene,
+                                                             first.outgoingControlScene.value(),
+                                                             std::nullopt);
+            }
+
+            const bool curvedClose = closingOutgoing.has_value() || closingIncoming.has_value();
+            if (curvedClose) {
+                path.cubicTo(closingOutgoing.value_or(last.anchorScene),
+                             closingIncoming.value_or(first.anchorScene),
+                             first.anchorScene);
+                if (closingOutgoing.has_value()) {
+                    controlConnectors.append(QLineF(last.anchorScene, closingOutgoing.value()));
+                    controlMarkers.append(closingOutgoing.value());
+                }
+                if (closingIncoming.has_value()) {
+                    controlConnectors.append(QLineF(first.anchorScene, closingIncoming.value()));
+                    controlMarkers.append(closingIncoming.value());
+                }
+            } else {
+                path.lineTo(first.anchorScene);
+            }
+        }
+    } else {
+        if (interactiveDrawSceneVertices_.isEmpty()) {
+            return;
+        }
+        QVector<QPointF> displayVertices = interactiveDrawSceneVertices_;
+        if (interactiveDrawHoverActive_) {
+            displayVertices.append(interactiveDrawHoverScenePoint_);
+        }
+
+        path = QPainterPath(displayVertices.first());
+        for (int index = 1; index < displayVertices.size(); ++index) {
+            path.lineTo(displayVertices.at(index));
+        }
+        if (interactiveDrawMode_ == InteractiveDrawMode::Area && displayVertices.size() >= 3) {
+            path.closeSubpath();
+        }
+        anchorMarkers = interactiveDrawSceneVertices_;
+    }
+
+    interactiveDrawPreviewPath_ = new QGraphicsPathItem(path);
+    interactiveDrawPreviewPath_->setPen(QPen(accent, 2.0, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
+    interactiveDrawPreviewPath_->setBrush(Qt::NoBrush);
+    interactiveDrawPreviewPath_->setZValue(28.0);
+    interactiveDrawPreviewPath_->setAcceptedMouseButtons(Qt::NoButton);
+    mapScene_->addItem(interactiveDrawPreviewPath_);
+
+    for (const QPointF &vertex : std::as_const(anchorMarkers)) {
+        auto *marker = new QGraphicsEllipseItem(QRectF(vertex.x() - 3.2, vertex.y() - 3.2, 6.4, 6.4));
+        marker->setPen(QPen(accent.darker(130), 1.0));
+        marker->setBrush(QBrush(accent));
+        marker->setZValue(28.5);
+        marker->setAcceptedMouseButtons(Qt::NoButton);
+        mapScene_->addItem(marker);
+        interactiveDrawPreviewMarkers_.append(marker);
+    }
+
+    for (const QLineF &connector : std::as_const(controlConnectors)) {
+        auto *connectorItem = new QGraphicsLineItem(connector);
+        connectorItem->setPen(QPen(controlColor.lighter(115), 1.2, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
+        connectorItem->setZValue(28.4);
+        connectorItem->setAcceptedMouseButtons(Qt::NoButton);
+        mapScene_->addItem(connectorItem);
+        interactiveDrawPreviewMarkers_.append(connectorItem);
+    }
+
+    for (const QPointF &control : std::as_const(controlMarkers)) {
+        auto *marker = new QGraphicsEllipseItem(QRectF(control.x() - 4.0, control.y() - 4.0, 8.0, 8.0));
+        marker->setPen(QPen(controlColor.darker(150), 1.2));
+        marker->setBrush(QBrush(controlColor));
+        marker->setZValue(28.6);
+        marker->setAcceptedMouseButtons(Qt::NoButton);
+        mapScene_->addItem(marker);
+        interactiveDrawPreviewMarkers_.append(marker);
+    }
+}
+
+QPointF MapEditorTab::sourcePointFromScenePosition(const QPointF &scenePosition) const
+{
+    if (textEditor_ == nullptr) {
+        return scenePosition;
+    }
+
+    const QRectF previewBounds = mapPreviewBounds();
+    if (!previewBounds.isValid()) {
+        return scenePosition;
+    }
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_->text());
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    const QRectF sourceBounds = geometryBoundsForFeatures(features);
+    if (!sourceBounds.isValid() || sourceBounds.width() < 0.001 || sourceBounds.height() < 0.001) {
+        return scenePosition;
+    }
+
+    return previewToSourcePoint(scenePosition, sourceBounds, previewBounds);
+}
+
+bool MapEditorTab::hasCompletableInteractiveDrawSession() const
+{
+    if (interactiveDrawMode_ == InteractiveDrawMode::Line) {
+        return interactiveDrawLineVertices_.size() >= 2;
+    }
+    if (interactiveDrawMode_ == InteractiveDrawMode::Area) {
+        return interactiveDrawLineVertices_.size() >= 3;
+    }
+    return false;
+}
+
+QStringList MapEditorTab::lineCoordinateRowsForInteractiveDraft() const
+{
+    QStringList rows;
+    if (interactiveDrawLineVertices_.isEmpty()) {
+        return rows;
+    }
+
+    rows.reserve(interactiveDrawLineVertices_.size());
+    const auto formatPoint = [](const QPointF &point) {
+        return QStringLiteral("%1 %2")
+            .arg(formatSourceCoordinate(point.x()), formatSourceCoordinate(point.y()));
+    };
+
+    rows.append(formatPoint(interactiveDrawLineVertices_.first().anchorSource));
+    for (int index = 1; index < interactiveDrawLineVertices_.size(); ++index) {
+        const InteractiveLineDraftVertex &previous = interactiveDrawLineVertices_.at(index - 1);
+        const InteractiveLineDraftVertex &current = interactiveDrawLineVertices_.at(index);
+        QStringList tokens;
+        if (previous.outgoingControlSource.has_value() || current.incomingControlSource.has_value()) {
+            const QPointF control1 = previous.outgoingControlSource.value_or(previous.anchorSource);
+            const QPointF control2 = current.incomingControlSource.value_or(current.anchorSource);
+            tokens << formatSourceCoordinate(control1.x())
+                   << formatSourceCoordinate(control1.y())
+                   << formatSourceCoordinate(control2.x())
+                   << formatSourceCoordinate(control2.y());
+        }
+        tokens << formatSourceCoordinate(current.anchorSource.x())
+               << formatSourceCoordinate(current.anchorSource.y());
+        rows.append(tokens.join(QLatin1Char(' ')));
+    }
+
+    return rows;
+}
+
+QStringList MapEditorTab::areaCoordinateRowsForInteractiveDraft() const
+{
+    QStringList rows = lineCoordinateRowsForInteractiveDraft();
+    if (interactiveDrawLineVertices_.size() < 3) {
+        return rows;
+    }
+
+    const InteractiveLineDraftVertex &first = interactiveDrawLineVertices_.first();
+    const InteractiveLineDraftVertex &last = interactiveDrawLineVertices_.last();
+
+    std::optional<QPointF> closingOutgoing = last.outgoingControlSource;
+    if (!closingOutgoing.has_value() && last.incomingControlSource.has_value()) {
+        closingOutgoing = mirroredSmoothControlPoint(last.anchorSource,
+                                                     last.incomingControlSource.value(),
+                                                     std::nullopt);
+    }
+
+    std::optional<QPointF> closingIncoming = first.incomingControlSource;
+    if (!closingIncoming.has_value() && first.outgoingControlSource.has_value()) {
+        closingIncoming = mirroredSmoothControlPoint(first.anchorSource,
+                                                     first.outgoingControlSource.value(),
+                                                     std::nullopt);
+    }
+
+    if (!closingOutgoing.has_value() && !closingIncoming.has_value()) {
+        return rows;
+    }
+
+    QStringList tokens;
+    const QPointF control1 = closingOutgoing.value_or(last.anchorSource);
+    const QPointF control2 = closingIncoming.value_or(first.anchorSource);
+    tokens << formatSourceCoordinate(control1.x())
+           << formatSourceCoordinate(control1.y())
+           << formatSourceCoordinate(control2.x())
+           << formatSourceCoordinate(control2.y())
+           << formatSourceCoordinate(first.anchorSource.x())
+           << formatSourceCoordinate(first.anchorSource.y());
+    rows.append(tokens.join(QLatin1Char(' ')));
+    return rows;
+}
+
+void MapEditorTab::captureInteractiveLineAnchor(const QPointF &anchorScenePoint,
+                                                const std::optional<QPointF> &dragScenePoint)
+{
+    InteractiveLineDraftVertex vertex;
+    vertex.anchorScene = anchorScenePoint;
+    vertex.anchorSource = sourcePointFromScenePosition(anchorScenePoint);
+    interactiveDrawLineVertices_.append(vertex);
+
+    if (dragScenePoint.has_value() && interactiveDrawLineVertices_.size() >= 2) {
+        InteractiveLineDraftVertex &previous = interactiveDrawLineVertices_[interactiveDrawLineVertices_.size() - 2];
+        InteractiveLineDraftVertex &current = interactiveDrawLineVertices_.last();
+        constexpr qreal quadraticToCubicFactor = 2.0 / 3.0;
+        const QPointF quadraticControlScene = dragScenePoint.value();
+        previous.outgoingControlScene = previous.anchorScene
+            + ((quadraticControlScene - previous.anchorScene) * quadraticToCubicFactor);
+        current.incomingControlScene = current.anchorScene
+            + ((quadraticControlScene - current.anchorScene) * quadraticToCubicFactor);
+        previous.outgoingControlSource = sourcePointFromScenePosition(previous.outgoingControlScene.value());
+        current.incomingControlSource = sourcePointFromScenePosition(current.incomingControlScene.value());
+        if (previous.incomingControlScene.has_value()) {
+            const std::optional<QPointF> mirrored = mirroredSmoothControlPoint(previous.anchorScene,
+                                                                                previous.outgoingControlScene.value(),
+                                                                                previous.incomingControlScene);
+            if (mirrored.has_value()) {
+                previous.incomingControlScene = mirrored.value();
+                previous.incomingControlSource = sourcePointFromScenePosition(mirrored.value());
+            }
+        }
+    }
+
+    updateInteractiveDrawPreview();
+}
+
+std::optional<MapEditorTab::InteractiveLineControlHandleRef> MapEditorTab::interactiveLineControlAt(
+    const QPointF &scenePosition,
+    qreal sceneRadius) const
+{
+    if (sceneRadius <= 0.0) {
+        return std::nullopt;
+    }
+
+    qreal bestDistance = sceneRadius;
+    std::optional<InteractiveLineControlHandleRef> bestHandle;
+    for (int index = 0; index < interactiveDrawLineVertices_.size(); ++index) {
+        const InteractiveLineDraftVertex &vertex = interactiveDrawLineVertices_.at(index);
+        if (vertex.incomingControlScene.has_value()) {
+            const qreal distance = QLineF(scenePosition, vertex.incomingControlScene.value()).length();
+            if (distance <= bestDistance) {
+                bestDistance = distance;
+                bestHandle = InteractiveLineControlHandleRef{index, InteractiveLineControlHandleRef::Kind::Incoming};
+            }
+        }
+        if (vertex.outgoingControlScene.has_value()) {
+            const qreal distance = QLineF(scenePosition, vertex.outgoingControlScene.value()).length();
+            if (distance <= bestDistance) {
+                bestDistance = distance;
+                bestHandle = InteractiveLineControlHandleRef{index, InteractiveLineControlHandleRef::Kind::Outgoing};
+            }
+        }
+    }
+
+    return bestHandle;
+}
+
+bool MapEditorTab::setInteractiveLineControlScenePoint(const InteractiveLineControlHandleRef &handle,
+                                                       const QPointF &scenePoint)
+{
+    if (handle.vertexIndex < 0 || handle.vertexIndex >= interactiveDrawLineVertices_.size()) {
+        return false;
+    }
+
+    InteractiveLineDraftVertex &vertex = interactiveDrawLineVertices_[handle.vertexIndex];
+    if (handle.kind == InteractiveLineControlHandleRef::Kind::Incoming) {
+        vertex.incomingControlScene = scenePoint;
+        vertex.incomingControlSource = sourcePointFromScenePosition(scenePoint);
+        if (vertex.outgoingControlScene.has_value()) {
+            const std::optional<QPointF> mirrored = mirroredSmoothControlPoint(vertex.anchorScene,
+                                                                                scenePoint,
+                                                                                vertex.outgoingControlScene);
+            if (mirrored.has_value()) {
+                vertex.outgoingControlScene = mirrored.value();
+                vertex.outgoingControlSource = sourcePointFromScenePosition(mirrored.value());
+            }
+        }
+        return true;
+    }
+
+    vertex.outgoingControlScene = scenePoint;
+    vertex.outgoingControlSource = sourcePointFromScenePosition(scenePoint);
+    if (vertex.incomingControlScene.has_value()) {
+        const std::optional<QPointF> mirrored = mirroredSmoothControlPoint(vertex.anchorScene,
+                                                                            scenePoint,
+                                                                            vertex.incomingControlScene);
+        if (mirrored.has_value()) {
+            vertex.incomingControlScene = mirrored.value();
+            vertex.incomingControlSource = sourcePointFromScenePosition(mirrored.value());
+        }
+    }
+    return true;
+}
+
+bool MapEditorTab::commitInteractiveDrawVertices(const QString &geometryKind,
+                                                 const QVector<QPointF> &vertices,
+                                                 const QString &successLabel)
+{
+    if (textEditor_ == nullptr) {
+        toolbarStatusNote_ = tr("Complete Draft failed: no active TH2 text editor.");
+        return false;
+    }
+
+    QString errorMessage;
+    int insertedLineNumber = 0;
+    if (!textEditor_->insertDraftGeometry(geometryKind, vertices, &insertedLineNumber, &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Complete Draft failed.")
+            : tr("Complete Draft failed: %1").arg(errorMessage);
+        return false;
+    }
+
+    toolbarStatusNote_ = insertedLineNumber > 0
+        ? tr("Complete Draft wrote %1 geometry at source line %2.").arg(successLabel, QString::number(insertedLineNumber))
+        : tr("Complete Draft wrote %1 geometry to source.").arg(successLabel);
+    return true;
+}
+
+bool MapEditorTab::cancelInteractiveDrawingToSelectMode()
+{
+    if (interactiveDrawMode_ == InteractiveDrawMode::None) {
+        return false;
+    }
+
+    const InteractiveDrawMode modeAtCancel = interactiveDrawMode_;
+    const bool isLineOrArea = modeAtCancel == InteractiveDrawMode::Line
+        || modeAtCancel == InteractiveDrawMode::Area;
+    bool committedLineOrAreaDraft = false;
+    if (isLineOrArea && hasCompletableInteractiveDrawSession()) {
+        if (modeAtCancel == InteractiveDrawMode::Line) {
+            QString errorMessage;
+            int insertedLineNumber = 0;
+            if (!textEditor_->insertDraftLineGeometry(lineCoordinateRowsForInteractiveDraft(),
+                                                      &insertedLineNumber,
+                                                      &errorMessage)) {
+                toolbarStatusNote_ = errorMessage.isEmpty()
+                    ? tr("Complete Draft failed.")
+                    : tr("Complete Draft failed: %1").arg(errorMessage);
+                refreshToolbarSummary();
+                updateCommandSurfaceState();
+                updateHelpPanel();
+                return false;
+            }
+        } else {
+            QString errorMessage;
+            int insertedLineNumber = 0;
+            if (!textEditor_->insertDraftAreaGeometry(areaCoordinateRowsForInteractiveDraft(),
+                                                      &insertedLineNumber,
+                                                      &errorMessage)) {
+                toolbarStatusNote_ = errorMessage.isEmpty()
+                    ? tr("Complete Draft failed.")
+                    : tr("Complete Draft failed: %1").arg(errorMessage);
+                refreshToolbarSummary();
+                updateCommandSurfaceState();
+                updateHelpPanel();
+                return false;
+            }
+        }
+        committedLineOrAreaDraft = true;
+    }
+
+    clearInteractiveDrawSession(true);
+    interactiveDrawStrokeActive_ = false;
+    if (mapView_ != nullptr) {
+        mapView_->setDragMode(QGraphicsView::NoDrag);
+    }
+
+    if (committedLineOrAreaDraft) {
+        toolbarStatusNote_ = tr("Selection mode: draft committed.");
+    } else if (isLineOrArea) {
+        toolbarStatusNote_ = tr("Selection mode: draft canceled.");
+    } else {
+        toolbarStatusNote_ = tr("Selection mode: drawing canceled.");
+    }
+    refreshToolbarSummary();
+    updateCommandSurfaceState();
+    updateHelpPanel();
+    return true;
+}
+
 void MapEditorTab::updateCommandSurfaceState()
 {
     if (undoButton_ != nullptr) {
@@ -1986,7 +2901,9 @@ void MapEditorTab::updateCommandSurfaceState()
         smartTraceLineButton_->setEnabled(mapReady);
         areaButton_->setEnabled(mapReady);
         insertScrapButton_->setEnabled(mapReady);
-        completeDraftButton_->setEnabled(mapReady && selectedDraftGeometryItem() != nullptr);
+        completeDraftButton_->setEnabled(mapReady
+                                         && (selectedDraftGeometryItem() != nullptr
+                                             || hasCompletableInteractiveDrawSession()));
         fitBackgroundButton_->setEnabled(mapReady);
     }
     if (touchControlsButton_ != nullptr) {
@@ -1994,6 +2911,13 @@ void MapEditorTab::updateCommandSurfaceState()
         touchControlsButton_->setText(touchFriendlyControlsEnabled_
                                           ? tr("Touch Controls: On")
                                           : tr("Touch Controls: Off"));
+    }
+    if (cancelDrawShortcut_ != nullptr) {
+        cancelDrawShortcut_->setEnabled(interactiveDrawMode_ != InteractiveDrawMode::None);
+    }
+    if (commitDrawShortcut_ != nullptr) {
+        commitDrawShortcut_->setEnabled(interactiveDrawMode_ == InteractiveDrawMode::Line
+                                        || interactiveDrawMode_ == InteractiveDrawMode::Area);
     }
     refreshBackgroundLayerControls();
     refreshToolbarSummary();
@@ -2045,6 +2969,9 @@ void MapEditorTab::updateHelpPanel()
 void MapEditorTab::clearMapScene()
 {
     mapItemsByLine_.clear();
+    interactiveDrawStrokeActive_ = false;
+    interactiveDrawPreviewPath_ = nullptr;
+    interactiveDrawPreviewMarkers_.clear();
     if (mapScene_ == nullptr) {
         return;
     }
@@ -2708,14 +3635,10 @@ QPointF MapEditorTab::previewToSourcePoint(const QPointF &previewPoint, const QR
         return previewPoint;
     }
 
-    const QRectF fittedBounds = fittedPreviewBoundsForSource(sourceBounds, previewBounds);
-    const qreal clampedX = qBound(fittedBounds.left(), previewPoint.x(), fittedBounds.right());
-    const qreal clampedY = qBound(fittedBounds.top(), previewPoint.y(), fittedBounds.bottom());
-    const qreal normalizedX = qBound(0.0, (clampedX - fittedBounds.left()) / qMax(1.0, fittedBounds.width()), 1.0);
-    const qreal normalizedY = qBound(0.0, (fittedBounds.bottom() - clampedY) / qMax(1.0, fittedBounds.height()), 1.0);
-
-    return QPointF(sourceBounds.left() + (normalizedX * sourceBounds.width()),
-                   sourceBounds.top() + (normalizedY * sourceBounds.height()));
+    // Use the shared inverse transform without clamping so drafted points
+    // outside the fitted geometry strip keep their relative shape instead of
+    // collapsing onto one boundary axis.
+    return mapGeometryPreviewToSource(previewPoint, sourceBounds, previewBounds);
 }
 
 void MapEditorTab::recordDraftMove(QGraphicsRectItem *item, const QPointF &oldPosition, const QPointF &newPosition)

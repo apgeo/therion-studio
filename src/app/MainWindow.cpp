@@ -335,7 +335,10 @@ void MainWindow::buildUi()
 
 void MainWindow::initializeDocumentStatusWidgets()
 {
-    if (statusBar() == nullptr || statusDocumentPathLabel_ != nullptr || statusDocumentEncodingLabel_ != nullptr) {
+    if (statusBar() == nullptr
+        || statusDocumentPathLabel_ != nullptr
+        || statusMapModeLabel_ != nullptr
+        || statusDocumentEncodingLabel_ != nullptr) {
         return;
     }
 
@@ -350,20 +353,29 @@ void MainWindow::initializeDocumentStatusWidgets()
     statusDocumentEncodingLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     statusDocumentEncodingLabel_->setMinimumWidth(130);
 
+    statusMapModeLabel_ = new QLabel(statusBar());
+    statusMapModeLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    statusMapModeLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    statusMapModeLabel_->setMinimumWidth(120);
+
     statusBar()->addPermanentWidget(statusDocumentPathLabel_, 0);
+    statusBar()->addPermanentWidget(statusMapModeLabel_, 0);
     statusBar()->addPermanentWidget(statusDocumentEncodingLabel_, 0);
     refreshDocumentStatusWidgets();
 }
 
 void MainWindow::refreshDocumentStatusWidgets()
 {
-    if (statusDocumentPathLabel_ == nullptr || statusDocumentEncodingLabel_ == nullptr) {
+    if (statusDocumentPathLabel_ == nullptr
+        || statusMapModeLabel_ == nullptr
+        || statusDocumentEncodingLabel_ == nullptr) {
         return;
     }
 
     QWidget *tabWidget = currentDocumentWidget();
     QString pathText = tr("No file open");
     QString encodingText;
+    QString mapModeText;
 
     if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget)) {
         pathText = textTab->statusPathText();
@@ -371,6 +383,7 @@ void MainWindow::refreshDocumentStatusWidgets()
     } else if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(tabWidget)) {
         pathText = mapTab->statusPathText();
         encodingText = mapTab->statusEncodingText();
+        mapModeText = mapTab->statusModeText();
     }
 
     const int maxPathWidth = statusDocumentPathLabel_->maximumWidth();
@@ -383,6 +396,7 @@ void MainWindow::refreshDocumentStatusWidgets()
     } else {
         statusDocumentEncodingLabel_->setText(tr("Encoding: %1").arg(encodingText));
     }
+    statusMapModeLabel_->setText(mapModeText);
 }
 
 void MainWindow::resizeEvent(QResizeEvent *event)
@@ -1054,6 +1068,11 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
     connect(tab, &TherionStudio::MapEditorTab::backgroundLayersChanged, this, [this, tab]() {
         if (currentDocumentWidget() == tab) {
             refreshMapBackgroundPanel();
+        }
+    });
+    connect(tab, &TherionStudio::MapEditorTab::modeStatusChanged, this, [this, tab]() {
+        if (currentDocumentWidget() == tab) {
+            refreshDocumentStatusWidgets();
         }
     });
     connect(tab,

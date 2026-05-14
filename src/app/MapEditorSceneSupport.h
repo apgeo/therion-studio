@@ -102,6 +102,7 @@ struct MapGeometryFeature
     bool closed = false;
     bool reversed = false;
     bool stationPoint = false;
+    bool verticesEditable = true;
     bool hasCoordinateTransform = false;
     QTransform sourceToMapTransform;
     QTransform mapToSourceTransform;

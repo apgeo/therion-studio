@@ -9,6 +9,7 @@
 #include <QMainWindow>
 #include <QPainter>
 #include <QPushButton>
+#include <QShortcut>
 #include <QScrollArea>
 #include <QScopedValueRollback>
 #include <QSplitter>
@@ -210,6 +211,20 @@ void MapEditorTab::buildUi()
     buildMapScene();
     buildHelpPanel();
 
+    cancelDrawShortcut_ = new QShortcut(this);
+    cancelDrawShortcut_->setKey(QKeySequence(Qt::Key_Escape));
+    cancelDrawShortcut_->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(cancelDrawShortcut_, &QShortcut::activated, this, [this]() {
+        cancelInteractiveDrawingToSelectMode();
+    });
+
+    commitDrawShortcut_ = new QShortcut(this);
+    commitDrawShortcut_->setKeys(QList<QKeySequence>{QKeySequence(Qt::Key_Return), QKeySequence(Qt::Key_Enter)});
+    commitDrawShortcut_->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(commitDrawShortcut_, &QShortcut::activated, this, [this]() {
+        commitInteractiveDrawSession();
+    });
+
     splitter_->addWidget(textEditor_);
     mapPaneLayout->addWidget(mapView_);
     mapHelpSplitter_->addWidget(mapPaneContainer_);
@@ -338,6 +353,13 @@ QString MapEditorTab::statusPathText() const
 QString MapEditorTab::statusEncodingText() const
 {
     return textEditor_ != nullptr ? textEditor_->statusEncodingText() : tr("UTF-8");
+}
+
+QString MapEditorTab::statusModeText() const
+{
+    return interactiveDrawMode_ == InteractiveDrawMode::None
+        ? tr("Map mode: Select")
+        : tr("Map mode: Insert");
 }
 
 MapEditorTab::WorkspaceMode MapEditorTab::workspaceMode() const

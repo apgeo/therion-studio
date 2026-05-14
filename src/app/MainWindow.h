@@ -228,6 +228,7 @@ private:
     QPushButton *inspectorOpenSourceButton_ = nullptr;
     QPushButton *inspectorApplyButton_ = nullptr;
     QLabel *statusDocumentPathLabel_ = nullptr;
+    QLabel *statusMapModeLabel_ = nullptr;
     QLabel *statusDocumentEncodingLabel_ = nullptr;
     QFileSystemModel *projectModel_ = nullptr;
     QStandardItemModel *structureModel_ = nullptr;

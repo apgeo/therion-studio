@@ -8,6 +8,7 @@
 #include <QRegularExpression>
 #include <cmath>
 #include <optional>
+#include <utility>
 
 namespace TherionStudio
 {
@@ -368,6 +369,82 @@ QString formatVerticesInline(const QVector<QPointF> &vertices)
     return tokens.join(QLatin1Char(' '));
 }
 
+QString optionValue(const QStringList &tokens, const QString &option)
+{
+    const QString normalizedOption = option.toLower();
+    for (int index = 0; index + 1 < tokens.size(); ++index) {
+        if (tokens.at(index).toLower() != normalizedOption) {
+            continue;
+        }
+
+        const QString candidate = tokens.at(index + 1);
+        if (!candidate.startsWith(QLatin1Char('-'))) {
+            return candidate;
+        }
+    }
+
+    return QString();
+}
+
+QString sanitizeObjectIdentifier(const QString &candidate, const QString &fallbackPrefix)
+{
+    QString source = candidate.trimmed().toLower();
+    if (source.isEmpty()) {
+        source = fallbackPrefix.trimmed().toLower();
+    }
+    if (source.isEmpty()) {
+        source = QStringLiteral("object");
+    }
+
+    QString normalized;
+    normalized.reserve(source.size());
+    bool previousDash = false;
+    for (const QChar character : source) {
+        const bool allowed = character.isLetterOrNumber()
+            || character == QLatin1Char('-')
+            || character == QLatin1Char('_')
+            || character == QLatin1Char('.');
+        if (allowed) {
+            normalized.append(character);
+            previousDash = false;
+            continue;
+        }
+        if (!previousDash) {
+            normalized.append(QLatin1Char('-'));
+            previousDash = true;
+        }
+    }
+
+    while (normalized.startsWith(QLatin1Char('-'))) {
+        normalized.remove(0, 1);
+    }
+    while (normalized.endsWith(QLatin1Char('-'))) {
+        normalized.chop(1);
+    }
+
+    if (normalized.isEmpty()) {
+        return fallbackPrefix.isEmpty() ? QStringLiteral("object") : fallbackPrefix;
+    }
+
+    return normalized;
+}
+
+QString uniqueObjectIdentifier(const QString &baseIdentifier, const QSet<QString> &existingIdentifiers)
+{
+    const QString base = sanitizeObjectIdentifier(baseIdentifier, QStringLiteral("object"));
+    if (!existingIdentifiers.contains(base.toLower())) {
+        return base;
+    }
+
+    int suffix = 2;
+    while (true) {
+        const QString candidate = QStringLiteral("%1-%2").arg(base).arg(suffix++);
+        if (!existingIdentifiers.contains(candidate.toLower())) {
+            return candidate;
+        }
+    }
+}
+
 int lastEndscrapLineIndex(const QStringList &lines)
 {
     int foundIndex = -1;
@@ -557,6 +634,7 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         return false;
     }
 
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(*contents);
     QString updated = *contents;
     const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
     QStringList lines = splitLinesNormalized(updated);
@@ -578,17 +656,46 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
     }
 
     QStringList geometryLines;
+    int insertionLineOffset = 0;
     if (normalizedKind == QStringLiteral("point")) {
         const QPointF anchor = vertices.first();
         geometryLines.append(QStringLiteral("  point %1 %2 station -name draft-point")
                                  .arg(formatCoordinate(anchor.x()), formatCoordinate(anchor.y())));
     } else if (normalizedKind == QStringLiteral("line")) {
         geometryLines.append(QStringLiteral("  line wall"));
-        geometryLines.append(QStringLiteral("    %1").arg(formatVerticesInline(vertices.mid(0, 2))));
+        for (const QPointF &vertex : vertices) {
+            geometryLines.append(QStringLiteral("    %1 %2")
+                                     .arg(formatCoordinate(vertex.x()), formatCoordinate(vertex.y())));
+        }
         geometryLines.append(QStringLiteral("  endline"));
     } else {
-        geometryLines.append(QStringLiteral("  area water"));
-        geometryLines.append(QStringLiteral("    %1").arg(formatVerticesInline(vertices.mid(0, 3))));
+        QSet<QString> existingIdentifiers;
+        existingIdentifiers.reserve(parsedLines.size());
+        for (const TherionParsedLine &parsedLine : parsedLines) {
+            if (parsedLine.directive != QStringLiteral("line")
+                && parsedLine.directive != QStringLiteral("area")
+                && parsedLine.directive != QStringLiteral("point")) {
+                continue;
+            }
+            const QString identifier = optionValue(parsedLine.tokens, QStringLiteral("-id"));
+            if (!identifier.trimmed().isEmpty()) {
+                existingIdentifiers.insert(identifier.trimmed().toLower());
+            }
+        }
+
+        const QString borderIdentifier = uniqueObjectIdentifier(QStringLiteral("draft-area-border"), existingIdentifiers);
+        existingIdentifiers.insert(borderIdentifier.toLower());
+        const QString areaIdentifier = uniqueObjectIdentifier(QStringLiteral("draft-area"), existingIdentifiers);
+
+        geometryLines.append(QStringLiteral("  line border -id %1 -close on").arg(borderIdentifier));
+        for (const QPointF &vertex : vertices) {
+            geometryLines.append(QStringLiteral("    %1 %2")
+                                     .arg(formatCoordinate(vertex.x()), formatCoordinate(vertex.y())));
+        }
+        geometryLines.append(QStringLiteral("  endline"));
+        insertionLineOffset = geometryLines.size();
+        geometryLines.append(QStringLiteral("  area water -id %1").arg(areaIdentifier));
+        geometryLines.append(QStringLiteral("    %1").arg(borderIdentifier));
         geometryLines.append(QStringLiteral("  endarea"));
     }
 
@@ -604,7 +711,175 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
     }
 
     if (insertedLineNumber != nullptr) {
+        *insertedLineNumber = insertionIndex + 1 + insertionLineOffset;
+    }
+
+    return true;
+}
+
+bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
+                                                    const QStringList &coordinateRows,
+                                                    int *insertedLineNumber,
+                                                    QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+
+    QStringList normalizedRows;
+    normalizedRows.reserve(coordinateRows.size());
+    for (const QString &row : coordinateRows) {
+        const QString trimmedRow = row.trimmed();
+        if (!trimmedRow.isEmpty()) {
+            normalizedRows.append(trimmedRow);
+        }
+    }
+
+    if (normalizedRows.size() < 2) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Draft line geometry does not contain enough coordinate rows.");
+        }
+        return false;
+    }
+
+    QString updated = *contents;
+    const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = splitLinesNormalized(updated);
+    int insertionIndex = lastEndscrapLineIndex(lines);
+
+    if (insertionIndex < 0) {
+        if (!appendScrapBlock(&updated, QStringLiteral("map-draft"), nullptr, errorMessage)) {
+            return false;
+        }
+
+        lines = splitLinesNormalized(updated);
+        insertionIndex = lastEndscrapLineIndex(lines);
+        if (insertionIndex < 0) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QStringLiteral("Unable to resolve a scrap insertion target.");
+            }
+            return false;
+        }
+    }
+
+    QStringList geometryLines;
+    geometryLines.append(QStringLiteral("  line wall"));
+    for (const QString &row : std::as_const(normalizedRows)) {
+        geometryLines.append(QStringLiteral("    %1").arg(row));
+    }
+    geometryLines.append(QStringLiteral("  endline"));
+
+    int nextInsertionIndex = insertionIndex;
+    for (const QString &line : geometryLines) {
+        lines.insert(nextInsertionIndex, line);
+        ++nextInsertionIndex;
+    }
+
+    *contents = lines.join(lineEnding);
+    if (!contents->endsWith(QLatin1Char('\n'))) {
+        *contents += lineEnding;
+    }
+
+    if (insertedLineNumber != nullptr) {
         *insertedLineNumber = insertionIndex + 1;
+    }
+
+    return true;
+}
+
+bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
+                                                    const QStringList &coordinateRows,
+                                                    int *insertedLineNumber,
+                                                    QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+
+    QStringList normalizedRows;
+    normalizedRows.reserve(coordinateRows.size());
+    for (const QString &row : coordinateRows) {
+        const QString trimmedRow = row.trimmed();
+        if (!trimmedRow.isEmpty()) {
+            normalizedRows.append(trimmedRow);
+        }
+    }
+
+    if (normalizedRows.size() < 3) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Draft area geometry does not contain enough coordinate rows.");
+        }
+        return false;
+    }
+
+    QString updated = *contents;
+    const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = splitLinesNormalized(updated);
+    int insertionIndex = lastEndscrapLineIndex(lines);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(*contents);
+
+    if (insertionIndex < 0) {
+        if (!appendScrapBlock(&updated, QStringLiteral("map-draft"), nullptr, errorMessage)) {
+            return false;
+        }
+
+        lines = splitLinesNormalized(updated);
+        insertionIndex = lastEndscrapLineIndex(lines);
+        if (insertionIndex < 0) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QStringLiteral("Unable to resolve a scrap insertion target.");
+            }
+            return false;
+        }
+    }
+
+    QSet<QString> existingIdentifiers;
+    existingIdentifiers.reserve(parsedLines.size());
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        if (parsedLine.directive != QStringLiteral("line")
+            && parsedLine.directive != QStringLiteral("area")
+            && parsedLine.directive != QStringLiteral("point")) {
+            continue;
+        }
+        const QString identifier = optionValue(parsedLine.tokens, QStringLiteral("-id"));
+        if (!identifier.trimmed().isEmpty()) {
+            existingIdentifiers.insert(identifier.trimmed().toLower());
+        }
+    }
+
+    const QString borderIdentifier = uniqueObjectIdentifier(QStringLiteral("draft-area-border"), existingIdentifiers);
+    existingIdentifiers.insert(borderIdentifier.toLower());
+    const QString areaIdentifier = uniqueObjectIdentifier(QStringLiteral("draft-area"), existingIdentifiers);
+
+    QStringList geometryLines;
+    geometryLines.append(QStringLiteral("  line border -id %1 -close on").arg(borderIdentifier));
+    for (const QString &row : std::as_const(normalizedRows)) {
+        geometryLines.append(QStringLiteral("    %1").arg(row));
+    }
+    geometryLines.append(QStringLiteral("  endline"));
+    geometryLines.append(QStringLiteral("  area water -id %1").arg(areaIdentifier));
+    geometryLines.append(QStringLiteral("    %1").arg(borderIdentifier));
+    geometryLines.append(QStringLiteral("  endarea"));
+
+    int nextInsertionIndex = insertionIndex;
+    for (const QString &line : geometryLines) {
+        lines.insert(nextInsertionIndex, line);
+        ++nextInsertionIndex;
+    }
+
+    *contents = lines.join(lineEnding);
+    if (!contents->endsWith(QLatin1Char('\n'))) {
+        *contents += lineEnding;
+    }
+
+    if (insertedLineNumber != nullptr) {
+        *insertedLineNumber = insertionIndex + 1 + normalizedRows.size() + 2;
     }
 
     return true;

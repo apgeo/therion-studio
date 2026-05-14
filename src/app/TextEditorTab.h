@@ -58,6 +58,12 @@ public:
                              const QVector<QPointF> &vertices,
                              int *insertedLineNumber = nullptr,
                              QString *errorMessage = nullptr);
+    bool insertDraftLineGeometry(const QStringList &coordinateRows,
+                                 int *insertedLineNumber = nullptr,
+                                 QString *errorMessage = nullptr);
+    bool insertDraftAreaGeometry(const QStringList &coordinateRows,
+                                 int *insertedLineNumber = nullptr,
+                                 QString *errorMessage = nullptr);
     bool rewritePointCoordinates(int lineNumber,
                                  const QPointF &point,
                                  QString *errorMessage = nullptr);

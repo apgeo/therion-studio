@@ -75,6 +75,8 @@ These instructions apply to the whole repository.
 ## Change Discipline
 
 - Keep changes tightly scoped to the request.
+- Maintain a living [QtReimplementationSpecification.md](QtReimplementationSpecification.md): whenever important behavior, workflow, constraints, acceptance criteria, or architecture assumptions change, update the specification in the same change.
+- Prefer specification wording that is framework-agnostic where practical so future reimplementations can reuse it as product/source-of-truth guidance.
 - Update documentation when behavior, architecture, packaging, or verification expectations change.
 - Maintain a living [docs/USER_MANUAL.md](docs/USER_MANUAL.md) and update it whenever UI layout, user workflows, keyboard shortcuts, or settings behavior changes; if the file does not exist yet, create it as part of the first such change.
 - Surface ambiguities instead of silently choosing a product behavior that could ripple through the spec.

@@ -78,8 +78,8 @@ Required capabilities:
 
 - render the current TH2 document as an editable 2D map
 - support an embedded map workspace inside the main editor for TH2 files
-- support switching TH2 editing between text-only, map-only, and split text/map workspaces
-- support opening the current TH2 session in a dedicated map window without losing synchronization with the source document
+- support a synchronized split text+map TH2 workspace in the main editor
+- support detaching and reattaching the map pane into a dedicated top-level window without losing synchronization with the source document
 - support the main TH2 object types:
   - scraps
   - lines
@@ -162,7 +162,7 @@ Required capabilities:
 - restore previously opened tabs
 - restore the active tab where possible
 - preserve editor state such as selection and viewport state where appropriate
-- persist help/inspector visibility and TH2 workspace mode where they materially affect the active workflow
+- persist help/inspector visibility where they materially affect the active workflow
 - persist user-visible preferences that affect navigation and editing behavior
 
 ### 3.8 Detailed Behavioral Rules
@@ -198,7 +198,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Find and Replace commands shall reveal an inline search bar in the editor area rather than requiring a separate modal dialog.
 - The search bar shall support next, previous, replace current, replace all, whole-word matching, and case-sensitive matching.
 - The user shall be able to hide the search bar without closing the current document.
-- The editor shall show a compact status bar with the active relative path and current text encoding.
+- The application shall show the active document path and current text encoding in a status area tied to the active document context.
 - When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8.
 - The text editor shall provide a contextual help/documentation panel that shows Therion command summaries, arguments, accepted values, options, and related keywords when metadata is available for the token or item at the caret.
 - The help/documentation panel shall be collapsible and resizable and shall not disturb the active editor selection when it is shown or hidden.
@@ -209,7 +209,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 
 - The map editor shall render the currently open TH2 document as an editable two-dimensional workspace.
 - The map workspace shall maintain sufficient contrast for geometry strokes, handles, labels, and grid lines in both light and dark system appearance modes.
-- When a TH2 document is active in the main window, the workspace shall support text-only, map-only, and split text/map modes or a functionally equivalent arrangement.
+- When a TH2 document is active in the main window, the workspace shall provide synchronized text+map editing in a split or functionally equivalent embedded arrangement.
 - The user shall be able to detach the current TH2 session into a dedicated map editor window without creating a separate document state.
 - Embedded and detached map presentations shall remain synchronized with the same selection, undo history, and underlying text document.
 - On first display, scrap nodes shall default to expanded state.
@@ -324,6 +324,7 @@ Platform modifier mapping:
 | Toggle Debug Sidebar | Debug | none in the current Swift app | Toggle the debug sidebar state from the menu |
 | Toggle Inspector | Toolbar | Command+Option+I | Toggle the inspector panel |
 | Quick User Manual | Help | none | Open an in-app short user manual focused on common workflows and map editing shortcuts |
+| User Manual (Full) | Help | none | Open the full user manual document in-app, with fallback to quick manual content if the full document is unavailable |
 
 The Qt application may add additional platform-standard shortcuts only if they do not conflict with the behavior above and do not change the documented commands.
 
@@ -332,7 +333,7 @@ The Qt application may add additional platform-standard shortcuts only if they d
 The Qt application shall define a consistent window and document model.
 
 - The main application window shall present the project browser, tabbed text editor, structure sidebar, inspector, and console-related views used for project work.
-- The main application window shall support a text workspace for all supported text files and, for TH2 files, text-only, map-only, and split text/map presentation.
+- The main application window shall support a text workspace for all supported text files and, for TH2 files, a synchronized embedded text+map presentation.
 - The text editor shall provide a collapsible contextual help/documentation inspector below the editor or in an equivalent persistent surface.
 - A TH2 map shall open in a dedicated map editor window or equivalent dedicated top-level surface that remains associated with the same document session.
 - A TH2 map may also be embedded in the main application window as part of a split or map-focused workspace.
@@ -391,7 +392,6 @@ Required persistent preferences include:
 - visibility of the inspector and debug sidebar
 - visibility and height of the help/documentation inspector
 - project browser expansion state, where practical
-- TH2 workspace mode, where practical
 - map editor viewport state, where practical
 - map editor touch-friendly controls mode
 - background image adjustment state, where practical
@@ -698,7 +698,7 @@ The criteria below are intended for implementation verification and QA.
 - The editor supports syntax highlighting, completion, and code folding for Therion syntax.
 - Find and Replace show an inline search bar with next, previous, replace, replace all, whole-word, and match-case controls.
 - The editor shows a contextual help/documentation panel for Therion commands and options when metadata is available.
-- The editor shows the active file path and encoding in a status area.
+- The application shows the active file path and encoding in a status area for the active document.
 - Non-UTF-8 files can be explicitly converted to UTF-8.
 - Search and replace works in the current file and is usable for broader project search where implemented.
 - When a TH2 file is active, text selection and map selection remain synchronized where the source location is known.
@@ -706,8 +706,8 @@ The criteria below are intended for implementation verification and QA.
 #### 8.1.3 TH2 Map Editor
 
 - The map editor renders the currently open TH2 file as a 2D editable workspace.
-- A TH2 document can be shown in text-only, map-only, and split text/map workspaces or an equivalent synchronized arrangement.
-- The same TH2 session can be shown in an embedded workspace and a detached map window without diverging document state.
+- A TH2 document is shown in a synchronized embedded text+map workspace or an equivalent arrangement.
+- The same TH2 session can be shown in an embedded workspace and a detached map pane window without diverging document state.
 - Scrap nodes start expanded on first display.
 - Selecting an object in the map editor updates the selected object state in the rest of the application.
 - Clicking a map object row reveals the corresponding source line when it exists.
@@ -775,7 +775,7 @@ The criteria below are intended for implementation verification and QA.
 
 - Recent projects are restored after restart.
 - Window state and visible sidebars are restored when practical.
-- Help/documentation inspector state and TH2 workspace mode are restored when practical.
+- Help/documentation inspector state is restored when practical.
 - Therion runner configuration persists across restarts.
 - The application starts with a safe default if a saved preference cannot be restored.
 

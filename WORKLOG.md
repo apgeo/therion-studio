@@ -195,6 +195,8 @@ Automated tests currently in-tree and used as regression baseline:
 
 ### 2026-05-14
 
+- ~~Updated repository instructions (`AGENTS.md`) with an explicit “living specification” rule: keep `QtReimplementationSpecification.md` current for important behavior/acceptance/architecture changes, and prefer framework-agnostic wording for future reimplementation reuse.~~
+- ~~Completed a specification-hardening pass for cross-framework reuse: removed stale TH2 mode-switch requirements (`text-only/map-only/split` and workspace-mode persistence), aligned spec to synchronized embedded text+map plus detachable map-pane behavior, and added explicit `Help -> User Manual (Full)` requirement with fallback semantics.~~
 - ~~Added persistent active-line highlighting in the text editor (`QPlainTextEdit` extra-selection), so map-driven object/vertex selections visibly highlight the resolved source line without relying on text-range selection.~~
 - ~~Implemented vertex-level bidirectional map/text sync: selecting line/area vertices (including line control points) now navigates text to the matching coordinate token, and moving the text cursor onto coordinate tokens now selects the corresponding map vertex/control.~~
 - ~~Fixed reverse map/text sync gap: selecting map objects now moves the TH2 text cursor to the selected object's source line (cards and geometry items), matching existing text-to-map highlighting behavior.~~

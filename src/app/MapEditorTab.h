@@ -82,6 +82,7 @@ public:
     QString statusPathText() const;
     QString statusEncodingText() const;
     QString statusModeText() const;
+    bool isInsertModeActive() const;
     WorkspaceMode workspaceMode() const;
     int backgroundLayerCount() const;
     QString backgroundLayerLabel(int index) const;

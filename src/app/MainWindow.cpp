@@ -354,9 +354,10 @@ void MainWindow::initializeDocumentStatusWidgets()
     statusDocumentEncodingLabel_->setMinimumWidth(130);
 
     statusMapModeLabel_ = new QLabel(statusBar());
-    statusMapModeLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    statusMapModeLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    statusMapModeLabel_->setMinimumWidth(120);
+    statusMapModeLabel_->setTextInteractionFlags(Qt::NoTextInteraction);
+    statusMapModeLabel_->setAlignment(Qt::AlignCenter);
+    statusMapModeLabel_->setMinimumWidth(78);
+    statusMapModeLabel_->setVisible(false);
 
     statusBar()->addPermanentWidget(statusDocumentPathLabel_, 0);
     statusBar()->addPermanentWidget(statusMapModeLabel_, 0);
@@ -376,6 +377,8 @@ void MainWindow::refreshDocumentStatusWidgets()
     QString pathText = tr("No file open");
     QString encodingText;
     QString mapModeText;
+    bool mapModeVisible = false;
+    bool mapModeInsertActive = false;
 
     if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget)) {
         pathText = textTab->statusPathText();
@@ -384,6 +387,8 @@ void MainWindow::refreshDocumentStatusWidgets()
         pathText = mapTab->statusPathText();
         encodingText = mapTab->statusEncodingText();
         mapModeText = mapTab->statusModeText();
+        mapModeVisible = true;
+        mapModeInsertActive = mapTab->isInsertModeActive();
     }
 
     const int maxPathWidth = statusDocumentPathLabel_->maximumWidth();
@@ -396,7 +401,30 @@ void MainWindow::refreshDocumentStatusWidgets()
     } else {
         statusDocumentEncodingLabel_->setText(tr("Encoding: %1").arg(encodingText));
     }
-    statusMapModeLabel_->setText(mapModeText);
+
+    if (!mapModeVisible) {
+        statusMapModeLabel_->clear();
+        statusMapModeLabel_->setToolTip(QString());
+        statusMapModeLabel_->setStyleSheet(QString());
+        statusMapModeLabel_->setVisible(false);
+    } else {
+        const QString badgeText = mapModeInsertActive ? tr("Insert") : tr("Select");
+        const QString background = mapModeInsertActive
+            ? QStringLiteral("#d34a4a")
+            : QStringLiteral("#2e9f5c");
+        statusMapModeLabel_->setText(badgeText);
+        statusMapModeLabel_->setToolTip(mapModeText);
+        statusMapModeLabel_->setStyleSheet(QStringLiteral(
+                                               "QLabel {"
+                                               " color: white;"
+                                               " font-weight: 700;"
+                                               " background-color: %1;"
+                                               " border-radius: 4px;"
+                                               " padding: 1px 8px;"
+                                               " min-height: 18px;"
+                                               "}").arg(background));
+        statusMapModeLabel_->setVisible(true);
+    }
 }
 
 void MainWindow::resizeEvent(QResizeEvent *event)

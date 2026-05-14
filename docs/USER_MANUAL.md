@@ -154,7 +154,7 @@ Main window status bar shows:
 
 - left: transient app status (`Ready`, operation results)
 - center/right: active document path and encoding
-- when a `.th2` map editor tab is active: current map mode indicator (`Map mode: Select` or `Map mode: Insert`)
+- when a `.th2` map editor tab is active: a color mode badge is shown in status bar (`Select` in green, `Insert` in red)
 - long paths are middle-elided in visible text and preserved as full path in tooltip
 
 ### 5.4 Use Structure + Inspector

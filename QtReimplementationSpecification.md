@@ -200,7 +200,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The user shall be able to hide the search bar without closing the current document.
 - The editor shall display 1-based source line numbers in a left gutter that stays synchronized with document scroll position.
 - The application shall show the active document path and current text encoding in a status area tied to the active document context.
-- When the active document is open in the map editor, the status area shall also show the current map interaction mode as `Select` or `Insert`.
+- When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
 - When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8.
 - The text editor shall provide a contextual help/documentation panel that shows Therion command summaries, arguments, accepted values, options, and related keywords when metadata is available for the token or item at the caret.
 - The help/documentation panel shall be collapsible and resizable and shall not disturb the active editor selection when it is shown or hidden.
@@ -715,7 +715,7 @@ The criteria below are intended for implementation verification and QA.
 - Find and Replace show an inline search bar with next, previous, replace, replace all, whole-word, and match-case controls.
 - The editor shows a contextual help/documentation panel for Therion commands and options when metadata is available.
 - The application shows the active file path and encoding in a status area for the active document.
-- For map-editor documents, the status area shows the current map interaction mode (`Select` or `Insert`) and updates when the mode changes.
+- For map-editor documents, the status area shows a color mode badge (`Select` green, `Insert` red) and updates when the mode changes.
 - Non-UTF-8 files can be explicitly converted to UTF-8.
 - Search and replace works in the current file and is usable for broader project search where implemented.
 - When a TH2 file is active, text selection and map selection remain synchronized where the source location is known.

@@ -362,6 +362,11 @@ QString MapEditorTab::statusModeText() const
         : tr("Map mode: Insert");
 }
 
+bool MapEditorTab::isInsertModeActive() const
+{
+    return interactiveDrawMode_ != InteractiveDrawMode::None;
+}
+
 MapEditorTab::WorkspaceMode MapEditorTab::workspaceMode() const
 {
     return workspaceMode_;

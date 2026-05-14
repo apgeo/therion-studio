@@ -1,6 +1,9 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QHash>
+#include <QList>
+#include <QPointer>
 #include <QPersistentModelIndex>
 #include <QProcess>
 #include <QPoint>
@@ -65,6 +68,7 @@ private slots:
     void handleTherionProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void handleTherionProcessError(QProcess::ProcessError error);
     void showComingSoon(const QString &featureName);
+    void handleMapEditorDetachRequested(TherionStudio::MapEditorTab *tab);
 
 private:
     enum class SidebarPane
@@ -141,6 +145,12 @@ private:
     void saveStructureNameOverrides();
     void refreshMapBackgroundPanel();
     TherionStudio::MapEditorTab *currentMapEditorTab() const;
+    void detachMapEditorTab(TherionStudio::MapEditorTab *tab);
+    void reattachDetachedMapEditorTab(TherionStudio::MapEditorTab *tab, bool focusTab);
+    void focusDetachedMapEditorTab(const QString &canonicalPath);
+    TherionStudio::MapEditorTab *detachedMapEditorTabForPath(const QString &canonicalPath) const;
+    QList<TherionStudio::MapEditorTab *> detachedMapEditorTabs() const;
+    bool confirmCloseDocumentWidget(QWidget *documentWidget);
 
     QTabWidget *editorTabs_ = nullptr;
     QTreeView *projectTree_ = nullptr;
@@ -228,5 +238,10 @@ private:
     bool consoleCollapsed_ = false;
     bool updatingMapBackgroundPanel_ = false;
     bool updatingInspectorLineOptions_ = false;
+    bool clearingDocumentTabs_ = false;
+    bool shuttingDown_ = false;
     int selectedStructureLine_ = 0;
+
+    QHash<QString, QPointer<QMainWindow>> detachedMapWindowsByPath_;
+    QHash<TherionStudio::MapEditorTab *, QString> detachedMapPathsByTab_;
 };

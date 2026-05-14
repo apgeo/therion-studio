@@ -9,9 +9,9 @@
 #include <QRectF>
 #include <QDateTime>
 #include <QVector>
+#include <QPointer>
 
 class QLabel;
-class QComboBox;
 class QFrame;
 class QGraphicsScene;
 class QGraphicsView;
@@ -23,6 +23,7 @@ class QGraphicsPixmapItem;
 class QTextBrowser;
 class QToolButton;
 class QUndoStack;
+class QMainWindow;
 
 namespace TherionStudio
 {
@@ -94,6 +95,7 @@ signals:
     void currentLineChanged(int lineNumber);
     void documentTextChanged();
     void backgroundLayersChanged();
+    void openDedicatedWindowRequested(TherionStudio::MapEditorTab *tab);
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -118,6 +120,7 @@ private slots:
     void handleFitWithBackgroundTriggered();
     void handleTouchFriendlyControlsToggled(bool checked);
     void updateCommandSurfaceState();
+    void handleDetachPaneTriggered();
 
 private:
     void buildUi();
@@ -174,6 +177,10 @@ private:
     void refreshHelpBorderToggle();
     void setHelpCollapsed(bool collapsed);
     void updateWorkspaceVisibility();
+    void detachMapPaneToWindow();
+    void reattachMapPaneFromWindow();
+    void focusDetachedMapPaneWindow();
+    void refreshDetachButtonState();
     void refreshTitle();
     void refreshStatus();
     QString displayPath() const;
@@ -186,10 +193,10 @@ private:
     TextEditorTab *textEditor_ = nullptr;
     QGraphicsView *mapView_ = nullptr;
     QGraphicsScene *mapScene_ = nullptr;
+    QWidget *mapPaneContainer_ = nullptr;
     QSplitter *splitter_ = nullptr;
     QSplitter *mapHelpSplitter_ = nullptr;
     QFrame *helpPanel_ = nullptr;
-    QComboBox *workspaceModeCombo_ = nullptr;
     QLabel *summaryLabel_ = nullptr;
     QWidget *statusRow_ = nullptr;
     QLabel *statusPathLabel_ = nullptr;
@@ -241,5 +248,8 @@ private:
     bool helpCollapsed_ = false;
     int helpPanelHeight_ = 180;
     int selectedBackgroundLayerIndex_ = -1;
+    QPointer<QMainWindow> detachedMapPaneWindow_;
+    bool mapPaneDetached_ = false;
+    bool reattachingMapPane_ = false;
 };
 }

@@ -161,11 +161,7 @@ Inspector supports:
 
 ### 5.5 Use Map Workspace (`.th2`)
 
-Map tab has workspace modes:
-
-- `Text Only`
-- `Map Only`
-- `Split`
+Map tab uses a split text+map workspace by default.
 
 Toolbar actions:
 
@@ -176,6 +172,14 @@ Toolbar actions:
 - `Zoom -`, `Zoom +`
 - `Fit`
 - `Fit + BG`
+- `Open Map in Window` / `Return Map Pane`
+
+Detached map-pane behavior:
+
+- `Open Map in Window` detaches the graphical map pane into its own top-level window (useful for a second monitor).
+- The text editor stays in the main tab.
+- Closing the detached map window (or clicking `Return Map Pane`) reattaches the same map pane back to the tab.
+- While detached, the embedded map pane area in the main tab is hidden.
 
 Map help pane:
 
@@ -261,8 +265,8 @@ Persisted values include:
 - open document paths and active document
 - structure-name overrides
 - Therion executable/working directory/arguments
-- map workspace mode
 - map background layer session JSON
+- detached map document paths (stored with open-document session state)
 
 There is currently no dedicated Settings dialog; settings are updated through normal UI interactions.
 
@@ -289,9 +293,7 @@ There is currently no dedicated Settings dialog; settings are updated through no
 
 ## 8. Known Current Limitations
 
-- Text file load/save path is UTF-8 only (non-UTF-8 conversion workflow is planned).
-- Non-UTF-8 support currently relies on Qt-supported decoders (`UTF-16*`, `System`, `Latin1`) and may not perfectly decode all legacy encodings on every platform.
-- `Open Dedicated Window` button in map workspace is present but currently disabled.
+- Non-UTF-8 support relies on Qt-supported codecs and may not perfectly decode every legacy encoding variant on every platform.
 - Freehand/Smart Trace modes currently insert draft line items (no full tracing workflow yet).
 - GUI automation coverage is still incomplete; many checks are currently unit/regression + manual workflows.
 

@@ -1,11 +1,11 @@
 #include "MapEditorTab.h"
 
-#include <QComboBox>
 #include <QFileInfo>
 #include <QFrame>
 #include <QGraphicsView>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QMainWindow>
 #include <QPainter>
 #include <QPushButton>
 #include <QScrollArea>
@@ -14,20 +14,52 @@
 #include <QToolButton>
 #include <QUndoStack>
 #include <QVBoxLayout>
+#include <QCloseEvent>
+#include <functional>
 
 #include "TextEditorTab.h"
 #include "../core/SessionStore.h"
 
 namespace TherionStudio
 {
+namespace
+{
+class DetachedMapPaneWindow final : public QMainWindow
+{
+public:
+    explicit DetachedMapPaneWindow(QWidget *parent = nullptr)
+        : QMainWindow(parent, Qt::Window)
+    {
+        setAttribute(Qt::WA_DeleteOnClose, true);
+    }
+
+    void setCloseCallback(std::function<void()> callback)
+    {
+        closeCallback_ = std::move(callback);
+    }
+
+protected:
+    void closeEvent(QCloseEvent *event) override
+    {
+        if (closeCallback_) {
+            closeCallback_();
+        }
+        QMainWindow::closeEvent(event);
+    }
+
+private:
+    std::function<void()> closeCallback_;
+};
+}
+
 MapEditorTab::MapEditorTab(QWidget *parent)
     : QWidget(parent)
 {
     undoStack_ = new QUndoStack(this);
-    workspaceMode_ = workspaceModeFromSetting(SessionStore::therionMapWorkspaceMode());
+    workspaceMode_ = WorkspaceMode::Split;
     touchFriendlyControlsEnabled_ = SessionStore::therionMapTouchFriendlyControlsEnabled();
     buildUi();
-    setWorkspaceMode(workspaceMode_);
+    updateWorkspaceVisibility();
     setTouchFriendlyControlsEnabled(touchFriendlyControlsEnabled_);
 }
 
@@ -41,8 +73,6 @@ void MapEditorTab::buildUi()
     auto *toolbarLayout = new QHBoxLayout(toolbar);
     toolbarLayout->setContentsMargins(12, 12, 12, 8);
     toolbarLayout->setSpacing(8);
-
-    auto *modeLabel = new QLabel(tr("Workspace"), toolbar);
 
     selectButton_ = new QPushButton(tr("Select"), toolbar);
     pointButton_ = new QPushButton(tr("Point"), toolbar);
@@ -83,15 +113,9 @@ void MapEditorTab::buildUi()
     connect(fitBackgroundButton_, &QPushButton::clicked, this, &MapEditorTab::handleFitWithBackgroundTriggered);
     connect(touchControlsButton_, &QPushButton::toggled, this, &MapEditorTab::handleTouchFriendlyControlsToggled);
 
-    workspaceModeCombo_ = new QComboBox(toolbar);
-    workspaceModeCombo_->addItem(tr("Text Only"));
-    workspaceModeCombo_->addItem(tr("Map Only"));
-    workspaceModeCombo_->addItem(tr("Split"));
-    workspaceModeCombo_->setCurrentIndex(workspaceModeToIndex(workspaceMode_));
-    connect(workspaceModeCombo_, &QComboBox::currentIndexChanged, this, &MapEditorTab::handleWorkspaceModeChanged);
-
-    detachButton_ = new QPushButton(tr("Open Dedicated Window"), toolbar);
-    detachButton_->setEnabled(false);
+    detachButton_ = new QPushButton(tr("Open Map in Window"), toolbar);
+    detachButton_->setEnabled(true);
+    connect(detachButton_, &QPushButton::clicked, this, &MapEditorTab::handleDetachPaneTriggered);
 
     summaryLabel_ = new QLabel(tr("TH2 map workspace scaffolding"), toolbar);
     summaryLabel_->setWordWrap(true);
@@ -99,8 +123,6 @@ void MapEditorTab::buildUi()
     summaryLabel_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     toolbarStatusNote_ = summaryLabel_->text();
 
-    toolbarLayout->addWidget(modeLabel);
-    toolbarLayout->addWidget(workspaceModeCombo_);
     toolbarLayout->addWidget(selectButton_);
     toolbarLayout->addWidget(pointButton_);
     toolbarLayout->addWidget(lineButton_);
@@ -148,7 +170,12 @@ void MapEditorTab::buildUi()
     mapHelpSplitter_->setChildrenCollapsible(false);
     mapHelpSplitter_->setHandleWidth(12);
 
-    mapView_ = new QGraphicsView(mapHelpSplitter_);
+    mapPaneContainer_ = new QWidget(mapHelpSplitter_);
+    auto *mapPaneLayout = new QVBoxLayout(mapPaneContainer_);
+    mapPaneLayout->setContentsMargins(0, 0, 0, 0);
+    mapPaneLayout->setSpacing(0);
+
+    mapView_ = new QGraphicsView(mapPaneContainer_);
     mapView_->setFrameShape(QFrame::NoFrame);
     mapView_->setDragMode(QGraphicsView::NoDrag);
     mapView_->setTransformationAnchor(QGraphicsView::AnchorViewCenter);
@@ -166,7 +193,8 @@ void MapEditorTab::buildUi()
     buildHelpPanel();
 
     splitter_->addWidget(textEditor_);
-    mapHelpSplitter_->addWidget(mapView_);
+    mapPaneLayout->addWidget(mapView_);
+    mapHelpSplitter_->addWidget(mapPaneContainer_);
     mapHelpSplitter_->addWidget(helpPanel_);
     mapHelpSplitter_->setStretchFactor(0, 1);
     mapHelpSplitter_->setStretchFactor(1, 0);
@@ -196,6 +224,7 @@ void MapEditorTab::buildUi()
     layout->addWidget(statusRow_);
 
     refreshMapScene();
+    refreshDetachButtonState();
     updateCommandSurfaceState();
 }
 
@@ -262,10 +291,6 @@ void MapEditorTab::setProjectRootPath(const QString &projectRootPath)
 
 void MapEditorTab::showFindBar(bool replaceMode)
 {
-    if (workspaceMode_ == WorkspaceMode::MapOnly) {
-        setWorkspaceMode(WorkspaceMode::Split);
-    }
-
     textEditor_->showFindBar(replaceMode);
 }
 
@@ -276,10 +301,6 @@ void MapEditorTab::hideFindBar()
 
 void MapEditorTab::goToLine(int lineNumber)
 {
-    if (workspaceMode_ == WorkspaceMode::MapOnly) {
-        setWorkspaceMode(WorkspaceMode::Split);
-    }
-
     textEditor_->goToLine(lineNumber);
 }
 
@@ -315,21 +336,15 @@ MapEditorTab::WorkspaceMode MapEditorTab::workspaceMode() const
 
 void MapEditorTab::setWorkspaceMode(WorkspaceMode mode)
 {
-    workspaceMode_ = mode;
-    if (workspaceModeCombo_ != nullptr) {
-        workspaceModeCombo_->blockSignals(true);
-        workspaceModeCombo_->setCurrentIndex(workspaceModeToIndex(mode));
-        workspaceModeCombo_->blockSignals(false);
-    }
-
-    SessionStore::setTherionMapWorkspaceMode(workspaceModeToSetting(mode));
+    Q_UNUSED(mode);
+    workspaceMode_ = WorkspaceMode::Split;
     updateWorkspaceVisibility();
     refreshMapScene();
 }
 
 void MapEditorTab::handleWorkspaceModeChanged(int index)
 {
-    setWorkspaceMode(workspaceModeFromIndex(index));
+    Q_UNUSED(index);
 }
 
 void MapEditorTab::handleTextEditorCurrentLineChanged(int lineNumber)
@@ -401,22 +416,18 @@ void MapEditorTab::setHelpCollapsed(bool collapsed)
 
 void MapEditorTab::updateWorkspaceVisibility()
 {
-    if (workspaceMode_ == WorkspaceMode::TextOnly) {
+    if (mapPaneDetached_) {
         textEditor_->show();
         if (mapHelpSplitter_ != nullptr) {
             mapHelpSplitter_->hide();
         }
-    } else if (workspaceMode_ == WorkspaceMode::MapOnly) {
-        textEditor_->hide();
-        if (mapHelpSplitter_ != nullptr) {
-            mapHelpSplitter_->show();
-        }
-    } else {
-        textEditor_->show();
-        if (mapHelpSplitter_ != nullptr) {
-            mapHelpSplitter_->show();
-        }
-        splitter_->setSizes(QList<int>{1, 1});
+        refreshStatus();
+        return;
+    }
+
+    textEditor_->show();
+    if (mapHelpSplitter_ != nullptr) {
+        mapHelpSplitter_->show();
     }
 
     refreshStatus();
@@ -437,6 +448,11 @@ void MapEditorTab::refreshStatus()
     const QString encodingLabel = textEditor_ != nullptr ? textEditor_->statusEncodingText() : tr("UTF-8");
     statusPathLabel_->setText(documentLabel);
     statusEncodingLabel_->setText(tr("Encoding: %1").arg(encodingLabel));
+
+    if (detachedMapPaneWindow_ != nullptr) {
+        detachedMapPaneWindow_->setWindowTitle(tr("%1 — Map").arg(displayName()));
+        detachedMapPaneWindow_->setWindowFilePath(filePath());
+    }
 }
 
 QString MapEditorTab::displayPath() const
@@ -446,40 +462,19 @@ QString MapEditorTab::displayPath() const
 
 MapEditorTab::WorkspaceMode MapEditorTab::workspaceModeFromIndex(int index)
 {
-    switch (index) {
-    case 0:
-        return WorkspaceMode::TextOnly;
-    case 1:
-        return WorkspaceMode::MapOnly;
-    default:
-        return WorkspaceMode::Split;
-    }
+    Q_UNUSED(index);
+    return WorkspaceMode::Split;
 }
 
 int MapEditorTab::workspaceModeToIndex(WorkspaceMode mode)
 {
-    switch (mode) {
-    case WorkspaceMode::TextOnly:
-        return 0;
-    case WorkspaceMode::MapOnly:
-        return 1;
-    case WorkspaceMode::Split:
-        return 2;
-    }
-
-    return 2;
+    Q_UNUSED(mode);
+    return 0;
 }
 
 MapEditorTab::WorkspaceMode MapEditorTab::workspaceModeFromSetting(const QString &value)
 {
-    const QString normalized = value.trimmed().toLower();
-    if (normalized == QStringLiteral("text-only")) {
-        return WorkspaceMode::TextOnly;
-    }
-    if (normalized == QStringLiteral("map-only")) {
-        return WorkspaceMode::MapOnly;
-    }
-
+    Q_UNUSED(value);
     return WorkspaceMode::Split;
 }
 
@@ -495,6 +490,99 @@ QString MapEditorTab::workspaceModeToSetting(WorkspaceMode mode)
     }
 
     return QStringLiteral("split");
+}
+
+void MapEditorTab::handleDetachPaneTriggered()
+{
+    if (mapPaneDetached_) {
+        if (detachedMapPaneWindow_ != nullptr) {
+            detachedMapPaneWindow_->close();
+            return;
+        }
+
+        reattachMapPaneFromWindow();
+        return;
+    }
+
+    detachMapPaneToWindow();
+}
+
+void MapEditorTab::detachMapPaneToWindow()
+{
+    if (mapPaneDetached_ || mapPaneContainer_ == nullptr || mapHelpSplitter_ == nullptr) {
+        return;
+    }
+
+    mapPaneContainer_->setParent(nullptr);
+
+    auto *window = new DetachedMapPaneWindow(this);
+    window->setWindowTitle(tr("%1 — Map").arg(displayName()));
+    window->setWindowFilePath(filePath());
+    window->setCentralWidget(mapPaneContainer_);
+    window->setCloseCallback([this]() { reattachMapPaneFromWindow(); });
+
+    detachedMapPaneWindow_ = window;
+    mapPaneDetached_ = true;
+    refreshDetachButtonState();
+    updateWorkspaceVisibility();
+
+    const QSize mapSize = mapView_ != nullptr ? mapView_->size() : QSize();
+    window->resize(mapSize.isValid() ? mapSize.expandedTo(QSize(900, 700)) : QSize(1200, 800));
+    window->show();
+    window->raise();
+    window->activateWindow();
+}
+
+void MapEditorTab::reattachMapPaneFromWindow()
+{
+    if (!mapPaneDetached_ || mapPaneContainer_ == nullptr || mapHelpSplitter_ == nullptr || reattachingMapPane_) {
+        return;
+    }
+
+    reattachingMapPane_ = true;
+
+    if (detachedMapPaneWindow_ != nullptr && detachedMapPaneWindow_->centralWidget() == mapPaneContainer_) {
+        detachedMapPaneWindow_->takeCentralWidget();
+    }
+
+    mapPaneContainer_->setParent(mapHelpSplitter_);
+    mapHelpSplitter_->insertWidget(0, mapPaneContainer_);
+
+    mapPaneDetached_ = false;
+    detachedMapPaneWindow_ = nullptr;
+    refreshDetachButtonState();
+    updateWorkspaceVisibility();
+    if (mapView_ != nullptr) {
+        mapView_->setFocus(Qt::OtherFocusReason);
+    }
+
+    reattachingMapPane_ = false;
+}
+
+void MapEditorTab::focusDetachedMapPaneWindow()
+{
+    if (detachedMapPaneWindow_ == nullptr) {
+        return;
+    }
+
+    detachedMapPaneWindow_->showNormal();
+    detachedMapPaneWindow_->raise();
+    detachedMapPaneWindow_->activateWindow();
+}
+
+void MapEditorTab::refreshDetachButtonState()
+{
+    if (detachButton_ == nullptr) {
+        return;
+    }
+
+    if (mapPaneDetached_) {
+        detachButton_->setText(tr("Return Map Pane"));
+        detachButton_->setToolTip(tr("Return the map pane from the detached window into this tab."));
+    } else {
+        detachButton_->setText(tr("Open Map in Window"));
+        detachButton_->setToolTip(tr("Open the map pane in a separate window (for multi-monitor workflows)."));
+    }
 }
 
 void MapEditorTab::setTouchFriendlyControlsEnabled(bool enabled)

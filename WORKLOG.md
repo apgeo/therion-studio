@@ -101,6 +101,8 @@ Legend:
 - ~~Undo/redo command integration with merge semantics and obsolete-command handling for failures.~~
 - ~~Raster and `.xvi` background parsing/placement/alignment; multi-layer controls and session restore.~~
 - ~~Added explicit touch-friendly controls mode in the map toolbar, persisted via session settings, and wired into mode-aware wheel/touch-pan input policy.~~
+- ~~Enabled `Open Dedicated Window` map workflow: detach active TH2 map session into a dedicated top-level map window and keep the same in-memory document session (no duplicate document state).~~
+- ~~Opening the same TH2 document now focuses the existing detached map window/session instead of creating a duplicate map editor instance.~~
 - Verification:
 - ~~`./build/MapBackgroundPlacementTest`~~
 - ~~`./build/TherionBackgroundMetadataTest`~~
@@ -240,6 +242,11 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Added safe source rewrite helper `rewriteLineCoordinateRows` for replacing coordinate rows in `line` blocks while preserving `line`/`endline` lines and CRLF, with explicit guardrails that reject inline-coordinate starts and mixed non-coordinate continuation content.~~
 - ~~Wired line coordinate-row rewrite through `TextEditorTab` and map-tab command path, including keyboard-driven line anchor editing (`Insert` or `I` = split/add via de Casteljau, `Delete/Backspace` = remove middle anchor with neighbor-handle reconnect).~~
 - ~~Added `MapEditableGeometryVertexItem` accessors (`lineNumber`, `geometryKind`, `vertexIndex`) and map-view focus/key handling needed for selection-driven anchor edit commands.~~
+- ~~Enabled dedicated map-window lifecycle parity in `MainWindow`: detached map sessions are tracked in open-document session state, save-all/dirty-close prompts include detached maps, and explicit open actions reuse/focus existing detached sessions by canonical path.~~
+- ~~Updated `Close All Tabs` to include detached map sessions (with unsaved-change confirmation) so tab-level close workflows behave consistently across embedded and detached TH2 editors.~~
+- ~~Fixed detached map-window parenting/transfer path so `Open Dedicated Window` moves the actual `MapEditorTab` into a true top-level window (preventing empty detached-window opens).~~
+- ~~Implemented map-pane detach workflow inside `MapEditorTab`: `Open Map in Window` now moves only the graphical map pane into a second top-level window while keeping text editing in the main tab, and `Return Map Pane` (or closing detached window) reattaches it.~~
+- ~~Simplified TH2 workspace UX by removing the `Text Only / Map Only / Split` switcher and standardizing on embedded split view plus detachable map pane window.~~
 - ~~Expanded `TherionDocumentEditorTest` with `rewriteLineCoordinateRows` coverage for null/non-line rejection, inline-start rejection, mixed-content rejection, and successful CRLF-preserving rewrite.~~
 - ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest MapGeometryFeatureParsingTest TherionProjectStructureIndexTest MapBackgroundPlacementTest TherionBackgroundMetadataTest TherionXviParserTest` plus execution of all six regression binaries after keyboard vertex-edit wiring.~~
 - ~~Closed Phase 4 (`MVP`) and moved additional corpus-scale rewrite expansion into the Post-MVP backlog.~~

@@ -28,6 +28,7 @@
 #include <QWidget>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <functional>
 
 #include "TextEditorTab.h"
 #include "MapEditorTab.h"
@@ -117,6 +118,48 @@ QWidget *createCenteredMessage(const QString &title, const QString &body)
 
     return widget;
 }
+
+QString canonicalDocumentPath(const QString &filePath)
+{
+    const QFileInfo fileInfo(filePath);
+    const QString canonical = fileInfo.canonicalFilePath();
+    return canonical.isEmpty() ? fileInfo.absoluteFilePath() : canonical;
+}
+
+class DetachedMapWindow final : public QMainWindow
+{
+public:
+    explicit DetachedMapWindow(TherionStudio::MapEditorTab *mapTab, QWidget *parent = nullptr)
+        : QMainWindow(parent)
+        , mapTab_(mapTab)
+    {
+        setAttribute(Qt::WA_DeleteOnClose, true);
+        setCentralWidget(mapTab);
+    }
+
+    TherionStudio::MapEditorTab *mapTab() const
+    {
+        return mapTab_;
+    }
+
+    void setCloseCallback(std::function<void(TherionStudio::MapEditorTab *)> callback)
+    {
+        closeCallback_ = std::move(callback);
+    }
+
+protected:
+    void closeEvent(QCloseEvent *event) override
+    {
+        if (closeCallback_) {
+            closeCallback_(mapTab_);
+        }
+        QMainWindow::closeEvent(event);
+    }
+
+private:
+    QPointer<TherionStudio::MapEditorTab> mapTab_;
+    std::function<void(TherionStudio::MapEditorTab *)> closeCallback_;
+};
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -291,11 +334,15 @@ void MainWindow::restoreOpenDocuments()
     if (!activeDocumentPath.isEmpty()) {
         QWidget *activeWidget = documentWidgetForFilePath(activeDocumentPath);
         if (activeWidget != nullptr) {
-            editorTabs_->setCurrentWidget(activeWidget);
-        }
-
-        if (activeWidget != nullptr && documentPathForWidget(activeWidget).isEmpty()) {
-            editorTabs_->setCurrentIndex(editorTabs_->count() - 1);
+            const int tabIndex = editorTabs_->indexOf(activeWidget);
+            if (tabIndex >= 0) {
+                editorTabs_->setCurrentWidget(activeWidget);
+                if (documentPathForWidget(activeWidget).isEmpty()) {
+                    editorTabs_->setCurrentIndex(editorTabs_->count() - 1);
+                }
+            } else {
+                focusDetachedMapEditorTab(canonicalDocumentPath(activeDocumentPath));
+            }
         }
     }
 }
@@ -314,10 +361,33 @@ void MainWindow::persistOpenDocuments()
         documentPaths.append(filePath);
     }
 
+    for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
+        if (detachedTab == nullptr) {
+            continue;
+        }
+        const QString filePath = documentPathForWidget(detachedTab);
+        if (filePath.isEmpty() || documentPaths.contains(filePath)) {
+            continue;
+        }
+        documentPaths.append(filePath);
+    }
+
     TherionStudio::SessionStore::setOpenDocumentPaths(documentPaths);
 
-    QWidget *currentWidget = currentDocumentWidget();
-    TherionStudio::SessionStore::setActiveDocumentPath(currentWidget != nullptr ? documentPathForWidget(currentWidget) : QString());
+    QString activeDocumentPath;
+    for (auto iterator = detachedMapWindowsByPath_.constBegin(); iterator != detachedMapWindowsByPath_.constEnd(); ++iterator) {
+        QMainWindow *window = iterator.value();
+        if (window != nullptr && window->isActiveWindow()) {
+            activeDocumentPath = iterator.key();
+            break;
+        }
+    }
+    if (activeDocumentPath.isEmpty()) {
+        QWidget *currentWidget = currentDocumentWidget();
+        activeDocumentPath = currentWidget != nullptr ? documentPathForWidget(currentWidget) : QString();
+    }
+
+    TherionStudio::SessionStore::setActiveDocumentPath(activeDocumentPath);
 }
 
 void MainWindow::addWelcomeTab()
@@ -464,6 +534,29 @@ void MainWindow::closeAllTabs()
         closedAny = true;
     }
 
+    const QList<TherionStudio::MapEditorTab *> detachedTabs = detachedMapEditorTabs();
+    for (TherionStudio::MapEditorTab *detachedTab : detachedTabs) {
+        if (detachedTab == nullptr) {
+            continue;
+        }
+        if (!confirmCloseDocumentWidget(detachedTab)) {
+            break;
+        }
+
+        const QString path = detachedMapPathsByTab_.value(detachedTab);
+        if (path.isEmpty()) {
+            continue;
+        }
+
+        if (QMainWindow *window = detachedMapWindowsByPath_.value(path)) {
+            const bool wasClearingTabs = clearingDocumentTabs_;
+            clearingDocumentTabs_ = true;
+            window->close();
+            clearingDocumentTabs_ = wasClearingTabs;
+            closedAny = true;
+        }
+    }
+
     if (editorTabs_->count() == 0) {
         addWelcomeTab();
     }
@@ -533,15 +626,23 @@ void MainWindow::saveActiveDocument()
 void MainWindow::saveAllDocuments()
 {
     bool hadFailure = false;
+    QList<QWidget *> allDocuments;
     for (int index = 0; index < editorTabs_->count(); ++index) {
-        QWidget *tabWidget = editorTabs_->widget(index);
-        if (tabWidget == nullptr) {
+        allDocuments.append(editorTabs_->widget(index));
+    }
+    for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
+        allDocuments.append(detachedTab);
+    }
+
+    for (QWidget *tabWidget : allDocuments) {
+        if (tabWidget == nullptr || documentPathForWidget(tabWidget).isEmpty()) {
             continue;
         }
-
         QString errorMessage;
         if (!documentIsDirtyForWidget(tabWidget) || documentSaveForWidget(tabWidget, &errorMessage)) {
-            updateTabTitle(tabWidget);
+            if (editorTabs_->indexOf(tabWidget) >= 0) {
+                updateTabTitle(tabWidget);
+            }
             continue;
         }
 
@@ -568,9 +669,7 @@ void MainWindow::showFindBar(bool replaceMode)
 
 TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath)
 {
-    const QString canonicalPath = QFileInfo(filePath).canonicalFilePath().isEmpty()
-                                      ? QFileInfo(filePath).absoluteFilePath()
-                                      : QFileInfo(filePath).canonicalFilePath();
+    const QString canonicalPath = canonicalDocumentPath(filePath);
 
     for (int index = 0; index < editorTabs_->count(); ++index) {
         auto *existingTab = qobject_cast<TherionStudio::TextEditorTab *>(editorTabs_->widget(index));
@@ -620,15 +719,24 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath)
 
 TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePath)
 {
-    const QString canonicalPath = QFileInfo(filePath).canonicalFilePath().isEmpty()
-                                      ? QFileInfo(filePath).absoluteFilePath()
-                                      : QFileInfo(filePath).canonicalFilePath();
+    const QString canonicalPath = canonicalDocumentPath(filePath);
+
+    if (auto *detachedTab = detachedMapEditorTabForPath(canonicalPath); detachedTab != nullptr) {
+        detachedTab->setProjectRootPath(projectRootPath_);
+        focusDetachedMapEditorTab(canonicalPath);
+        return detachedTab;
+    }
 
     for (int index = 0; index < editorTabs_->count(); ++index) {
         auto *existingTab = qobject_cast<TherionStudio::MapEditorTab *>(editorTabs_->widget(index));
         if (existingTab != nullptr && existingTab->filePath() == canonicalPath) {
             existingTab->setProjectRootPath(projectRootPath_);
             editorTabs_->setCurrentIndex(index);
+            connect(existingTab,
+                    &TherionStudio::MapEditorTab::openDedicatedWindowRequested,
+                    this,
+                    &MainWindow::handleMapEditorDetachRequested,
+                    Qt::UniqueConnection);
             return existingTab;
         }
     }
@@ -660,6 +768,11 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
             refreshMapBackgroundPanel();
         }
     });
+    connect(tab,
+            &TherionStudio::MapEditorTab::openDedicatedWindowRequested,
+            this,
+            &MainWindow::handleMapEditorDetachRequested,
+            Qt::UniqueConnection);
 
     handleTextEditorCurrentLineChanged(tab->filePath(), tab->currentLineNumber());
 
@@ -671,15 +784,17 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
 
 QWidget *MainWindow::documentWidgetForFilePath(const QString &filePath) const
 {
-    const QString canonicalPath = QFileInfo(filePath).canonicalFilePath().isEmpty()
-                                      ? QFileInfo(filePath).absoluteFilePath()
-                                      : QFileInfo(filePath).canonicalFilePath();
+    const QString canonicalPath = canonicalDocumentPath(filePath);
 
     for (int index = 0; index < editorTabs_->count(); ++index) {
         QWidget *tabWidget = editorTabs_->widget(index);
         if (documentPathForWidget(tabWidget) == canonicalPath) {
             return tabWidget;
         }
+    }
+
+    if (auto *detachedTab = detachedMapEditorTabForPath(canonicalPath); detachedTab != nullptr) {
+        return detachedTab;
     }
 
     return nullptr;
@@ -690,6 +805,164 @@ void MainWindow::syncOpenDocumentsToProjectRoot()
     for (int index = 0; index < editorTabs_->count(); ++index) {
         documentSetProjectRootPathForWidget(editorTabs_->widget(index), projectRootPath_);
     }
+    for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
+        documentSetProjectRootPathForWidget(detachedTab, projectRootPath_);
+    }
+}
+
+void MainWindow::handleMapEditorDetachRequested(TherionStudio::MapEditorTab *tab)
+{
+    detachMapEditorTab(tab);
+}
+
+void MainWindow::detachMapEditorTab(TherionStudio::MapEditorTab *tab)
+{
+    if (tab == nullptr) {
+        return;
+    }
+
+    const QString canonicalPath = canonicalDocumentPath(tab->filePath());
+    if (canonicalPath.isEmpty()) {
+        return;
+    }
+
+    if (detachedMapPathsByTab_.contains(tab)) {
+        focusDetachedMapEditorTab(canonicalPath);
+        return;
+    }
+
+    const int tabIndex = editorTabs_->indexOf(tab);
+    if (tabIndex >= 0) {
+        editorTabs_->removeTab(tabIndex);
+        if (editorTabs_->count() == 0) {
+            addWelcomeTab();
+        }
+    }
+
+    // Make the detached map window a true top-level window and explicitly
+    // reparent the tab out of the tab stack before attaching it.
+    tab->setParent(nullptr);
+    auto *window = new DetachedMapWindow(tab);
+    window->setWindowTitle(documentDisplayNameForWidget(tab));
+    window->setWindowFilePath(canonicalPath);
+    window->setCloseCallback([this](TherionStudio::MapEditorTab *mapTab) {
+        if (mapTab == nullptr) {
+            return;
+        }
+
+        if (!clearingDocumentTabs_ && !shuttingDown_) {
+            reattachDetachedMapEditorTab(mapTab, true);
+            return;
+        }
+
+        const QString path = detachedMapPathsByTab_.take(mapTab);
+        if (!path.isEmpty()) {
+            detachedMapWindowsByPath_.remove(path);
+        }
+    });
+
+    detachedMapWindowsByPath_.insert(canonicalPath, window);
+    detachedMapPathsByTab_.insert(tab, canonicalPath);
+
+    connect(tab, &TherionStudio::MapEditorTab::titleChanged, this, [this, tab]() {
+        const QString path = detachedMapPathsByTab_.value(tab);
+        if (!path.isEmpty()) {
+            if (QMainWindow *window = detachedMapWindowsByPath_.value(path)) {
+                window->setWindowTitle(documentDisplayNameForWidget(tab));
+            }
+        }
+
+        updateTabTitle(tab);
+    });
+    connect(tab, &QObject::destroyed, this, [this, tab]() {
+        const QString path = detachedMapPathsByTab_.take(tab);
+        if (!path.isEmpty()) {
+            detachedMapWindowsByPath_.remove(path);
+        }
+    });
+    connect(window, &QObject::destroyed, this, [this, canonicalPath]() {
+        detachedMapWindowsByPath_.remove(canonicalPath);
+    });
+
+    window->resize(tab->size().isValid() ? tab->size() : QSize(1200, 800));
+    window->show();
+    window->raise();
+    window->activateWindow();
+
+    persistOpenDocuments();
+    appendConsoleLine(tr("Opened dedicated map window for %1").arg(canonicalPath));
+}
+
+void MainWindow::reattachDetachedMapEditorTab(TherionStudio::MapEditorTab *tab, bool focusTab)
+{
+    if (tab == nullptr) {
+        return;
+    }
+
+    const QString path = detachedMapPathsByTab_.take(tab);
+    if (!path.isEmpty()) {
+        if (QMainWindow *window = detachedMapWindowsByPath_.value(path)) {
+            if (window->centralWidget() == tab) {
+                window->takeCentralWidget();
+            }
+        }
+        detachedMapWindowsByPath_.remove(path);
+    }
+
+    if (editorTabs_->count() == 1 && documentPathForWidget(editorTabs_->widget(0)).isEmpty()) {
+        QWidget *welcomeWidget = editorTabs_->widget(0);
+        editorTabs_->removeTab(0);
+        if (welcomeWidget != nullptr) {
+            welcomeWidget->deleteLater();
+        }
+    }
+
+    int existingIndex = editorTabs_->indexOf(tab);
+    if (existingIndex < 0) {
+        existingIndex = editorTabs_->addTab(tab, tab->displayName());
+    }
+    if (focusTab && existingIndex >= 0) {
+        editorTabs_->setCurrentIndex(existingIndex);
+    }
+
+    connect(tab,
+            &TherionStudio::MapEditorTab::openDedicatedWindowRequested,
+            this,
+            &MainWindow::handleMapEditorDetachRequested,
+            Qt::UniqueConnection);
+    tab->setProjectRootPath(projectRootPath_);
+    updateTabTitle(tab);
+    persistOpenDocuments();
+}
+
+void MainWindow::focusDetachedMapEditorTab(const QString &canonicalPath)
+{
+    if (QMainWindow *window = detachedMapWindowsByPath_.value(canonicalPath)) {
+        window->showNormal();
+        window->raise();
+        window->activateWindow();
+    }
+}
+
+TherionStudio::MapEditorTab *MainWindow::detachedMapEditorTabForPath(const QString &canonicalPath) const
+{
+    if (QMainWindow *window = detachedMapWindowsByPath_.value(canonicalPath)) {
+        if (auto *detachedWindow = dynamic_cast<DetachedMapWindow *>(window)) {
+            return detachedWindow->mapTab();
+        }
+    }
+    return nullptr;
+}
+
+QList<TherionStudio::MapEditorTab *> MainWindow::detachedMapEditorTabs() const
+{
+    QList<TherionStudio::MapEditorTab *> tabs;
+    for (auto iterator = detachedMapPathsByTab_.constBegin(); iterator != detachedMapPathsByTab_.constEnd(); ++iterator) {
+        if (iterator.key() != nullptr) {
+            tabs.append(iterator.key());
+        }
+    }
+    return tabs;
 }
 
 TherionStudio::TextEditorTab *MainWindow::currentTextTab() const
@@ -738,6 +1011,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
         return;
     }
 
+    shuttingDown_ = true;
     persistSessionState();
     QMainWindow::closeEvent(event);
 }
@@ -745,15 +1019,20 @@ void MainWindow::closeEvent(QCloseEvent *event)
 bool MainWindow::confirmCloseTab(int index)
 {
     QWidget *tabWidget = editorTabs_->widget(index);
-    if (tabWidget == nullptr || !documentIsDirtyForWidget(tabWidget)) {
+    return confirmCloseDocumentWidget(tabWidget);
+}
+
+bool MainWindow::confirmCloseDocumentWidget(QWidget *documentWidget)
+{
+    if (documentWidget == nullptr || documentPathForWidget(documentWidget).isEmpty() || !documentIsDirtyForWidget(documentWidget)) {
         return true;
     }
 
     QMessageBox prompt(this);
     prompt.setIcon(QMessageBox::Warning);
     prompt.setWindowTitle(tr("Unsaved Changes"));
-    prompt.setText(tr("The document %1 has unsaved changes.").arg(documentDisplayNameForWidget(tabWidget)));
-    prompt.setInformativeText(tr("Do you want to save your changes before closing this tab?"));
+    prompt.setText(tr("The document %1 has unsaved changes.").arg(documentDisplayNameForWidget(documentWidget)));
+    prompt.setInformativeText(tr("Do you want to save your changes before closing this document?"));
     QPushButton *saveButton = prompt.addButton(tr("Save"), QMessageBox::AcceptRole);
     QPushButton *discardButton = prompt.addButton(tr("Discard"), QMessageBox::DestructiveRole);
     prompt.addButton(QMessageBox::Cancel);
@@ -762,12 +1041,14 @@ bool MainWindow::confirmCloseTab(int index)
 
     if (prompt.clickedButton() == saveButton) {
         QString errorMessage;
-        if (!documentSaveForWidget(tabWidget, &errorMessage)) {
+        if (!documentSaveForWidget(documentWidget, &errorMessage)) {
             QMessageBox::warning(this, tr("Save"), errorMessage);
             return false;
         }
 
-        updateTabTitle(tabWidget);
+        if (editorTabs_->indexOf(documentWidget) >= 0) {
+            updateTabTitle(documentWidget);
+        }
         return true;
     }
 
@@ -780,8 +1061,21 @@ bool MainWindow::confirmCloseTab(int index)
 
 bool MainWindow::confirmCloseDirtyDocuments()
 {
+    QList<QWidget *> documents;
     for (int index = 0; index < editorTabs_->count(); ++index) {
-        if (!confirmCloseTab(index)) {
+        QWidget *tabWidget = editorTabs_->widget(index);
+        if (tabWidget != nullptr && !documentPathForWidget(tabWidget).isEmpty()) {
+            documents.append(tabWidget);
+        }
+    }
+    for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
+        if (detachedTab != nullptr && !documentPathForWidget(detachedTab).isEmpty()) {
+            documents.append(detachedTab);
+        }
+    }
+
+    for (QWidget *documentWidget : documents) {
+        if (!confirmCloseDocumentWidget(documentWidget)) {
             return false;
         }
     }
@@ -791,6 +1085,21 @@ bool MainWindow::confirmCloseDirtyDocuments()
 
 void MainWindow::clearDocumentTabs()
 {
+    clearingDocumentTabs_ = true;
+
+    const auto detachedPaths = detachedMapWindowsByPath_.keys();
+    for (const QString &path : detachedPaths) {
+        if (QMainWindow *window = detachedMapWindowsByPath_.value(path)) {
+            if (window->isVisible()) {
+                window->close();
+            } else {
+                window->deleteLater();
+            }
+        }
+    }
+    detachedMapWindowsByPath_.clear();
+    detachedMapPathsByTab_.clear();
+
     while (editorTabs_->count() > 0) {
         QWidget *tabWidget = editorTabs_->widget(0);
         editorTabs_->removeTab(0);
@@ -800,6 +1109,7 @@ void MainWindow::clearDocumentTabs()
     }
 
     addWelcomeTab();
+    clearingDocumentTabs_ = false;
 }
 
 void MainWindow::updateProjectActionState()

@@ -65,10 +65,29 @@ Required capabilities:
 - search and replace within the current file and, where feasible, across the project
 - provide an inline find/replace bar with next/previous navigation, replace current/all, and common search options
 - show contextual Therion help/documentation for the token or command at the current caret location when metadata is available
+- source command/option/value metadata from a versioned structured catalog generated from Therion documentation snapshots, with deterministic fallback when optional metadata is unavailable
 - caret/selection synchronization with the map editor when a TH2 file is open
 - show document path and text encoding status for the active file
 - allow explicit conversion of non-UTF-8 text documents to UTF-8
 - preserve unsaved edits and document state across tab changes
+- provide an editor-surface mode switch between raw text editing and a structured block-canvas view for supported Therion source files
+- keep raw text as the canonical source of truth; any structured-view mutation shall be applied through source edits with immediate source synchronization
+
+Structured block-canvas PoC requirements:
+
+- the structured mode shall be explicitly marked as experimental and shall be optional per file type
+- initial scope shall support `.th` documents
+- the structured mode shall expose a toolbox of compatible Therion block/command templates that can be inserted via drag and drop into the canvas
+- the structured mode shall render parsed structure cards in source order with parent-child nesting for supported directives
+- selecting or configuring a structure card shall mutate the underlying source text through the same safe-edit pipeline used by raw mode
+- dragging a structure card in the canvas should reorder the corresponding source block; for container directives, reordering shall move the full block span including nested lines
+- centerline-oriented configuration flows should support quick insertion of common child commands (for example `team`, `explo-date`, and starter `data` definitions) without requiring manual raw-text typing
+- data-block configuration should support editing both the `data ...` column header and multi-row measurement body content in one structured interaction
+- data-block configuration should render measurement rows in a table derived from the active `data ...` field definition so row editing follows the declared column schema
+- data-block table presentation should auto-size visible column widths from the active field definition and should provide enter-key row flow where pressing Enter in the last column advances to a new row at column one
+- data-block configuration should support mixed ordering of measurement and non-tabular directive rows (for example `extend ...`) in one structured row sequence without introducing one dedicated UI button per possible Therion command
+- data-block editor dialog should auto-expand horizontally up to available host/screen space so all configured table columns remain visible when practical
+- operations that require exact text caret semantics (for example line/column navigation and find/replace focus jumps) shall switch to raw mode automatically
 
 ### 3.3 TH2 Map Editor
 

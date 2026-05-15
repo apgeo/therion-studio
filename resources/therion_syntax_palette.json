@@ -1,10 +1,20 @@
 {
   "styles": {
     "baseText": {
-      "foreground": "#D4D4D4"
+      "foreground": "#333333"
     },
     "keyword": {
       "foreground": "#569CD6",
+      "bold": true
+    },
+    "option": {
+      "foreground": "#9CDCFE"
+    },
+    "identifier": {
+      "foreground": "#DCDCAA"
+    },
+    "invalidToken": {
+      "foreground": "#F44747",
       "bold": true
     },
     "string": {
@@ -18,18 +28,5 @@
       "italic": true
     }
   },
-  "keywords": [
-    "area",
-    "declare",
-    "end",
-    "equate",
-    "include",
-    "line",
-    "map",
-    "point",
-    "scrap",
-    "survey",
-    "th2",
-    "thconfig"
-  ]
+  "additionalKeywords": []
 }

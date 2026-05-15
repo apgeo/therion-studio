@@ -56,7 +56,8 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
 qt_add_resources(TherionStudio "TherionStudioResources"
     PREFIX "/"
     FILES
-        resources/therion_help_metadata.json
+        resources/therion_command_catalog.json
+        resources/therion_command_catalog.overrides.json
         resources/therion_syntax_palette.json)
 
 if(APPLE)
@@ -149,6 +150,50 @@ qt_add_executable(SessionStoreTest
     src/core/SessionStore.h)
 
 target_link_libraries(SessionStoreTest PRIVATE Qt6::Widgets)
+
+qt_add_executable(TextEditorCaretInteractionTest
+    tests/TextEditorCaretInteractionTest.cpp
+    src/app/TextEditorTab.cpp
+    src/app/TextEditorTab.h
+    src/core/DocumentFile.cpp
+    src/core/DocumentFile.h
+    src/core/TherionDocumentEditor.cpp
+    src/core/TherionDocumentEditor.h
+    src/core/TherionDocumentParser.cpp
+    src/core/TherionDocumentParser.h
+    src/editor/TherionSyntaxHighlighter.cpp
+    src/editor/TherionSyntaxHighlighter.h)
+
+target_link_libraries(TextEditorCaretInteractionTest PRIVATE Qt6::Widgets)
+
+qt_add_resources(TextEditorCaretInteractionTest "TextEditorCaretInteractionResources"
+    PREFIX "/"
+    FILES
+        resources/therion_command_catalog.json
+        resources/therion_command_catalog.overrides.json
+        resources/therion_syntax_palette.json)
+
+qt_add_executable(TextEditorCompletionHighlightTest
+    tests/TextEditorCompletionHighlightTest.cpp
+    src/app/TextEditorTab.cpp
+    src/app/TextEditorTab.h
+    src/core/DocumentFile.cpp
+    src/core/DocumentFile.h
+    src/core/TherionDocumentEditor.cpp
+    src/core/TherionDocumentEditor.h
+    src/core/TherionDocumentParser.cpp
+    src/core/TherionDocumentParser.h
+    src/editor/TherionSyntaxHighlighter.cpp
+    src/editor/TherionSyntaxHighlighter.h)
+
+target_link_libraries(TextEditorCompletionHighlightTest PRIVATE Qt6::Widgets)
+
+qt_add_resources(TextEditorCompletionHighlightTest "TextEditorCompletionHighlightResources"
+    PREFIX "/"
+    FILES
+        resources/therion_command_catalog.json
+        resources/therion_command_catalog.overrides.json
+        resources/therion_syntax_palette.json)
 
 qt_add_executable(MapEditorDetachedPaneTest
     tests/MapEditorDetachedPaneTest.cpp

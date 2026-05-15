@@ -1,0 +1,19 @@
+{
+  "source_repository": "snapshot-copy",
+  "source_reference": "snapshot-copy",
+  "updated_at_utc": "2026-05-15T00:00:00Z",
+  "files": [
+    {
+      "path": "therion/thbook/ch02.tex",
+      "sha256": "2ae36455040f2db09f34a5782f3362817f58cfb8910148fb3c785386cd402ce3"
+    },
+    {
+      "path": "therion/thbook/ch03.tex",
+      "sha256": "438ca827d33564e6f2ea7d22dff13cca9a933ec155b0b4d0c332f92bc1e3fbf1"
+    },
+    {
+      "path": "therion/thbook/thbook.tex",
+      "sha256": "55ee00fc3c9036298f8124c0000c0fb63afbc708323cd04005dba151748894a0"
+    }
+  ]
+}

@@ -11,12 +11,19 @@
 class QLabel;
 class QCheckBox;
 class QFrame;
+class QListWidget;
 class QLineEdit;
 class QPushButton;
 class QPlainTextEdit;
+class QGraphicsScene;
+class QGraphicsView;
+class QStackedWidget;
 class QSplitter;
 class QSplitterHandle;
 class QTextBrowser;
+class QCompleter;
+class QStringListModel;
+class QEvent;
 
 namespace TherionStudio
 {
@@ -110,8 +117,11 @@ private slots:
     void handleCloseSearchTriggered();
     void handleConvertToUtf8Triggered();
     void handleCursorPositionChanged();
+    void handleRawModeRequested();
+    void handleBlocksModeRequested();
 
 private:
+    bool eventFilter(QObject *watched, QEvent *event) override;
     void refreshCurrentLineHighlight();
     void refreshTitle();
     void refreshStatus();
@@ -120,9 +130,14 @@ private:
     QString displayPath() const;
     void buildHelpPanel();
     void loadHelpMetadata();
+    void loadHelpMetadataFromCommandCatalog();
+    void mergeHelpEntry(const QString &token, const TherionHelpEntry &entry);
     void updateContextHelp();
+    void updateValidationTooltipForCursor();
     QStringList helpCandidateTokens() const;
     QString currentHelpTokenForCursor() const;
+    QString validationHelpHtmlForCursor(QString *tooltipText = nullptr,
+                                        QString *tooltipKey = nullptr) const;
     void setHelpCollapsed(bool collapsed);
     QString renderHelpHtml(const QString &token, const TherionHelpEntry &entry) const;
     void updateSearchResults(const QString &message, bool error = false);
@@ -131,6 +146,29 @@ private:
     QTextDocument::FindFlags findFlags() const;
     QString currentFindText() const;
     QString currentReplaceText() const;
+    void refreshEditorModeUi();
+    bool isBlocksModeSupportedForCurrentFile() const;
+    void refreshBlocksModeAvailability();
+    void setBlocksModeActive(bool active);
+    void populateBlockToolbox();
+    void rebuildBlocksCanvasFromText();
+    void handleCanvasDrop(const QString &kind, const QPointF &scenePos);
+    void handleBlockMoveRequest(int lineNumber, const QPointF &scenePos);
+    void handleBlockConfigureRequest(const QString &kind, int lineNumber);
+    bool insertLinesBefore(int lineNumber,
+                           const QStringList &newLines,
+                           QString *errorMessage = nullptr);
+    void registerCompletionToken(const QString &token);
+    void rebuildCompletionModel();
+    QString currentCompletionPrefix() const;
+    void triggerCompletionPopup();
+    void insertCompletionToken(const QString &completion);
+    QStringList buildCompletionSuggestionsForCursor(const QString &prefix) const;
+    QStringList projectInputFileCompletionCandidates() const;
+    QString currentCompletionCommand() const;
+    QStringList activeCompletionScopeStack() const;
+    QString normalizeCompletionContext(const QString &contextToken) const;
+    QString currentCompletionScopeLabel() const;
 
     QLabel *encodingNoteLabel_ = nullptr;
     QPushButton *convertEncodingButton_ = nullptr;
@@ -150,6 +188,14 @@ private:
     QPushButton *replaceButton_ = nullptr;
     QPushButton *replaceAllButton_ = nullptr;
     QPushButton *closeSearchButton_ = nullptr;
+    QWidget *modeRow_ = nullptr;
+    QPushButton *rawModeButton_ = nullptr;
+    QPushButton *blocksModeButton_ = nullptr;
+    QStackedWidget *editorModeStack_ = nullptr;
+    QWidget *blocksPanel_ = nullptr;
+    QListWidget *blockToolboxList_ = nullptr;
+    QGraphicsView *blockCanvasView_ = nullptr;
+    QGraphicsScene *blockCanvasScene_ = nullptr;
     QPlainTextEdit *editor_ = nullptr;
     TherionSyntaxHighlighter *highlighter_ = nullptr;
     QString filePath_;
@@ -158,12 +204,26 @@ private:
     int currentColumnNumber_ = 1;
     int highlightedLineNumber_ = 0;
     QHash<QString, TherionHelpEntry> helpEntries_;
+    QStringList completionTokens_;
+    QStringList commandCompletionTokens_;
+    QHash<QString, QStringList> commandOptionTokens_;
+    QHash<QString, QStringList> commandValueTokens_;
+    QHash<QString, QStringList> commandOptionValueTokens_;
+    QHash<QString, QString> commandOptionValueArityTokens_;
+    QHash<QString, QStringList> commandTypeValueTokens_;
+    QHash<QString, QHash<QString, QStringList>> commandSubtypeByTypeTokens_;
+    QHash<QString, int> commandRequiredPositionalCount_;
+    QHash<QString, QStringList> contextCommandTokens_;
+    QCompleter *completionCompleter_ = nullptr;
+    QStringListModel *completionModel_ = nullptr;
+    QString lastValidationTooltipKey_;
     int helpPanelHeight_ = 200;
     bool helpCollapsed_ = false;
     bool dirty_ = false;
     bool loading_ = false;
     bool replaceMode_ = false;
     bool inlineStatusRequestedVisible_ = true;
+    bool blocksModeActive_ = false;
     QString fileEncodingName_ = QStringLiteral("UTF-8");
     QString fileEncodingLabel_ = QStringLiteral("UTF-8");
     QString cleanEncodingNameSnapshot_ = QStringLiteral("UTF-8");

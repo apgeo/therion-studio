@@ -1,6 +1,6 @@
 # Therion Studio User Manual
 
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 This manual describes the currently implemented behavior.
 Update this file whenever UI layout, workflows, keyboard shortcuts, or settings behavior changes.
@@ -97,6 +97,7 @@ Platform key substitution follows Qt standard behavior (`Ctrl` on Windows/Linux,
 | Close app | Platform default `QKeySequence::Quit` |
 | Find | Platform default `QKeySequence::Find` |
 | Find and replace | Platform default `QKeySequence::Replace` |
+| Text editor: completion popup (manual trigger) | `Ctrl+Space` |
 | Close all tabs | `Ctrl/Cmd+Shift+W` |
 | Open current `.th2` in map editor | `Ctrl/Cmd+Alt+Shift+G` |
 | Map: split selected line segment | `Insert` or `I` (no modifiers) |
@@ -138,10 +139,28 @@ Safety guardrails:
 Text editor includes:
 
 - syntax highlighting
+- command keyword highlighting is augmented from the generated Therion command catalog (`resources/therion_command_catalog.json`)
 - left gutter with 1-based line numbers that scroll with the document
 - active-line highlight that follows the text cursor (including map-driven source navigation)
+- editor mode toggle: `Raw` and experimental `Blocks` (currently available for `.th` files only)
 - find/replace bar with `Whole word` and `Case sensitive` options
+- completion popup is shown while typing (commands/options/values), sourced from command catalog metadata; `Ctrl+Space` remains available as manual trigger
+- when completion popup is visible, confirm a suggestion with `Enter`, `Tab`, or mouse click; `Esc` closes the popup
+- when completion popup is not visible, pressing `Tab` inserts four spaces (no literal tab character)
+- when confirming a block-opening command completion on an otherwise empty command line (for example `survey`, `map`, `scrap`, `centerline`, `line`, `area`), editor auto-inserts the matching `end...` line
+- completion suggestions are context-aware: command position favors commands, `-` option position favors command options, and value position after an option favors allowed values
+- when a command has required positional arguments and catalog-defined value tokens, completion suggests those value tokens while positional input is still incomplete (for example `centerline` `data` styles/readings such as `normal`, `from`, `to`)
+- value-position completion supports both single-value and multi-value option slots from catalog metadata (`value_arity`), so options like `-context` continue suggesting valid values after the first token
+- command-position completion inside `centerline` also includes inline centerline subcommands parsed from centerline syntax metadata (for example `data`, `date`, `team`, `units`, `station`, `extend`)
+- for commands with required positional arguments (for example `survey <id>`), autocomplete suppresses option suggestions until required arguments are entered; manual completion shows a short hint when required arguments are still missing
+- command-position completion also respects nested block scope from lines above the cursor (for example top-level vs inside `survey`/`scrap`/`centerline`) when catalog context metadata is available
+- when completion popup opens, a short tooltip shows the detected scope (`top-level`, `survey`, `scrap`, `centerline`, etc.) for quick verification
+- syntax highlighting validates command options against catalog metadata on each command line: known options use option styling and unknown options are marked as invalid (red wavy underline)
+- syntax highlighting also validates option values where catalog enum/type metadata is available (for example `-close`, `-reverse`, and type-scoped `-subtype` on `line`/`point`/`area`), and marks incompatible values as invalid
+- when caret is on an invalid option or invalid enum/subtype value, contextual help switches to a `Validation` panel with reason and allowed values
+- when caret lands on an invalid token, an inline tooltip is also shown near the cursor with a short validation reason and allowed values
 - contextual help pane below the editor, resizable via splitter handle
+- contextual help resolution is driven by `therion_command_catalog.json` only
 - bottom status row for encoding notes and conversion action
 - explicit `Convert to UTF-8` action shown when a file is opened with a non-UTF-8 encoding
 - loading honors Therion `encoding ...` directive when the declared codec is available in Qt
@@ -149,6 +168,28 @@ Text editor includes:
 - status notes indicate whether saves are preserving original encoding or whether UTF-8 conversion is pending save
 - directive aliases such as `encoding cp1250` are supported via codec-name normalization (`cpNNNN` -> `windows-NNNN` candidate), and `encoding latin2` is normalized to an `iso-8859-2` candidate path
 - unsupported `encoding ...` directive tokens fall back to normal encoding detection/decode order instead of failing the file open
+
+`Blocks` mode (experimental PoC):
+
+- left toolbox provides draggable Therion blocks: `Survey`, `Centerline`, `Data`, `Map`, `Scrap`, `Team`, `Explo Date`
+- right canvas renders parsed block hierarchy from current source and keeps order by source line
+- dragging a toolbox item to the canvas inserts source templates at compatible positions
+- dragging an existing block card in canvas reorders source blocks (whole block is moved, including nested content for container blocks)
+- dropping onto a compatible container (for example `survey`) moves the block inside that container near its end
+- `Config` on block cards currently supports:
+- rename for `Survey`, `Map`, `Scrap`
+- quick centerline actions: insert `team`, `explo-date`, or starter `data` block before `endcenterline`
+- value edit for `Team` and `Explo Date`
+- `Data` block editor dialog:
+- edit header columns (`data normal from to ...`)
+- measurement rows are shown in a table generated from the current column definition
+- `Add Data Row` / `Add Directive Row` / `Remove Row` control one combined row table
+- table width/column widths auto-resize based on current column definition and expand to fill available dialog width
+- dialog auto-expands (up to available window/screen space) so all table columns stay visible when possible
+- pressing `Enter` in the last table column moves to a new row and focuses the first column
+- measurement rows and directive rows (for example `extend right`) can be mixed in any order in the same table
+- row `Type` can be `data` or `directive`; `directive` rows use the `Directive` column text
+- navigation/find commands automatically switch back to `Raw` mode when line-accurate text focus is needed
 
 Main window status bar shows:
 

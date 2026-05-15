@@ -1,0 +1,15 @@
+{
+  "command_patches": {
+    "centreline": {
+      "aliases": [
+        "centerline"
+      ]
+    },
+    "centerline": {
+      "aliases": [
+        "centreline"
+      ]
+    }
+  },
+  "extra_commands": []
+}

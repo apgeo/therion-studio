@@ -92,6 +92,7 @@ private:
     void restoreOpenDocuments();
     void persistOpenDocuments();
     void resetProjectBrowser();
+    void refreshProjectBrowserView(const QString &focusPath = QString());
     void rebuildStructureSidebar();
     void rebuildMapObjectsTree();
     void setSidebarPane(SidebarPane pane);

@@ -129,6 +129,7 @@ Project tree context menu actions:
 - Files: `Open`, `Open in Map Editor` (for `.th2`), `Open Externally` (non-Therion files), `Duplicate`, `Rename`, `Delete`
 - Folders: `Rename Folder`, `Delete Folder`
 - Create: `New Folder`, `New .th File`, `New .th2 File`, `New thconfig`
+- Newly created/renamed/deleted items refresh immediately in the Files tree without restarting the app.
 
 Safety guardrails:
 

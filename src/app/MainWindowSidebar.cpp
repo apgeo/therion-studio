@@ -360,6 +360,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
             }
             file.close();
 
+            refreshProjectBrowserView(filePath);
             statusBar()->showMessage(tr("Created %1").arg(QDir::toNativeSeparators(filePath)), 3000);
             appendConsoleLine(tr("Created %1").arg(filePath));
         });
@@ -404,6 +405,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
             statusBar()->showMessage(tr("Duplicated %1").arg(QDir::toNativeSeparators(itemPath)), 3000);
             appendConsoleLine(tr("Duplicated %1 -> %2").arg(itemPath, targetPath));
+            refreshProjectBrowserView(targetPath);
         });
 
         menu.addAction(tr("Rename"), this, [this, itemPath, &warnOpenTabs]() {
@@ -443,6 +445,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
             statusBar()->showMessage(tr("Renamed to %1").arg(QDir::toNativeSeparators(renamedPath)), 3000);
             appendConsoleLine(tr("Renamed %1 -> %2").arg(itemPath, renamedPath));
+            refreshProjectBrowserView(renamedPath);
             rebuildStructureSidebar();
             rebuildMapObjectsTree();
         });
@@ -468,6 +471,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
             statusBar()->showMessage(tr("Deleted %1").arg(QDir::toNativeSeparators(itemPath)), 3000);
             appendConsoleLine(tr("Deleted %1").arg(itemPath));
+            refreshProjectBrowserView(QFileInfo(itemPath).absolutePath());
             rebuildStructureSidebar();
             rebuildMapObjectsTree();
         });
@@ -509,6 +513,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
             statusBar()->showMessage(tr("Renamed folder to %1").arg(QDir::toNativeSeparators(renamedPath)), 3000);
             appendConsoleLine(tr("Renamed folder %1 -> %2").arg(itemPath, renamedPath));
+            refreshProjectBrowserView(renamedPath);
             rebuildStructureSidebar();
             rebuildMapObjectsTree();
         });
@@ -536,6 +541,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
             statusBar()->showMessage(tr("Deleted folder %1").arg(QDir::toNativeSeparators(itemPath)), 3000);
             appendConsoleLine(tr("Deleted folder %1").arg(itemPath));
+            refreshProjectBrowserView(QFileInfo(itemPath).absolutePath());
             rebuildStructureSidebar();
             rebuildMapObjectsTree();
         });
@@ -575,6 +581,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
             statusBar()->showMessage(tr("Created folder %1").arg(QDir::toNativeSeparators(folderPath)), 3000);
             appendConsoleLine(tr("Created folder %1").arg(folderPath));
+            refreshProjectBrowserView(folderPath);
         });
 
         createFileAction(tr("New .th File"), tr("File name:"), tr("new-file.th"), QStringLiteral("th"));

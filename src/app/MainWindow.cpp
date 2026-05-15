@@ -29,6 +29,7 @@
 #include <QStringList>
 #include <QStatusBar>
 #include <QTabWidget>
+#include <QTimer>
 #include <QTextBrowser>
 #include <QTreeView>
 #include <QKeySequence>
@@ -882,6 +883,43 @@ void MainWindow::resetProjectBrowser()
     const QString defaultRootPath = QDir::rootPath();
     projectModel_->setRootPath(defaultRootPath);
     projectTree_->setRootIndex(projectModel_->index(defaultRootPath));
+}
+
+void MainWindow::refreshProjectBrowserView(const QString &focusPath)
+{
+    if (projectModel_ == nullptr || projectTree_ == nullptr) {
+        return;
+    }
+
+    const QString rootPath = projectRootPath_.isEmpty() ? QDir::rootPath() : projectRootPath_;
+    projectModel_->setRootPath(rootPath);
+    projectTree_->setRootIndex(projectModel_->index(rootPath));
+
+    const QString normalizedFocusPath = focusPath.trimmed();
+    if (normalizedFocusPath.isEmpty()) {
+        return;
+    }
+
+    const QString absoluteFocusPath = QFileInfo(normalizedFocusPath).absoluteFilePath();
+    QTimer::singleShot(0, this, [this, absoluteFocusPath]() {
+        if (projectModel_ == nullptr || projectTree_ == nullptr) {
+            return;
+        }
+
+        QModelIndex targetIndex = projectModel_->index(absoluteFocusPath);
+        if (!targetIndex.isValid()) {
+            return;
+        }
+
+        QModelIndex parentIndex = targetIndex.parent();
+        while (parentIndex.isValid() && parentIndex != projectTree_->rootIndex()) {
+            projectTree_->expand(parentIndex);
+            parentIndex = parentIndex.parent();
+        }
+
+        projectTree_->scrollTo(targetIndex);
+        projectTree_->setCurrentIndex(targetIndex);
+    });
 }
 
 void MainWindow::openCurrentDocumentInMapEditor()

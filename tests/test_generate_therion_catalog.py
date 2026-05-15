@@ -181,6 +181,16 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         self.assertIn("backlength", values)
         self.assertIn("backcompass", values)
         self.assertIn("backclino", values)
+        arguments = data.get("arguments", [])
+        self.assertGreaterEqual(len(arguments), 2)
+        style_values = set(arguments[0].get("allowed_values", []))
+        reading_values = set(arguments[1].get("allowed_values", []))
+        self.assertIn("normal", style_values)
+        self.assertIn("topofil", style_values)
+        self.assertIn("from", reading_values)
+        self.assertIn("to", reading_values)
+        self.assertIn("length", reading_values)
+        self.assertIn("compass", reading_values)
 
     def test_centerline_inline_commands_have_command_entries(self) -> None:
         centreline = self.commands_by_name["centreline"]

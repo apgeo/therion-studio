@@ -171,15 +171,21 @@ Text editor includes:
 
 `Blocks` mode (experimental PoC):
 
-- left toolbox provides draggable Therion blocks: `Survey`, `Centerline`, `Data`, `Map`, `Scrap`, `Team`, `Explo Date`
+- left toolbox provides draggable Therion command entries grouped by context
+- toolbox has a live filter field (`Filter commands...`) for narrowing large command lists by keyword
+- toolbox sections are catalog-context driven (`Top-level`, `Inside Survey`, `Inside Centerline`) using `resources/therion_command_catalog.json` command context metadata, and now list supported draggable commands from catalog scope metadata (excluding unsupported block-pair families not yet modeled in canvas)
 - right canvas renders parsed block hierarchy from current source and keeps order by source line
+- right canvas also renders catalog-recognized leaf directives in-scope (for example `input`), not only the previously hardcoded centerline leaf pair
 - dragging a toolbox item to the canvas inserts source templates at compatible positions
 - dragging an existing block card in canvas reorders source blocks (whole block is moved, including nested content for container blocks)
 - dropping onto a compatible container (for example `survey`) moves the block inside that container near its end
-- `Config` on block cards currently supports:
-- rename for `Survey`, `Map`, `Scrap`
-- quick centerline actions: insert `team`, `explo-date`, or starter `data` block before `endcenterline`
+- block cards use icon actions in the top-right corner: configure icon (edit) and trash icon (delete)
+- delete icon asks for confirmation and removes the full logical block span (`survey`/`map`/`scrap`/`centerline` with matching end directive, `data` with its measured rows, or single-line leaf directives)
+- `Configure` icon on block cards currently supports:
+- `Survey` / `Map` / `Scrap`: `Rename` and catalog-driven `Insert Command` actions in container context
+- centerline insert actions are catalog-driven from `centerline` command metadata (command list comes from command-catalog contexts); `data` keeps a starter multi-line template, and other commands use a generated placeholder/value template
 - value edit for `Team` and `Explo Date`
+- value edit path is now generic for simple leaf directives without catalog options (catalog-driven, not command-name hardcoded)
 - `Data` block editor dialog:
 - edit header columns (`data normal from to ...`)
 - measurement rows are shown in a table generated from the current column definition

@@ -155,6 +155,7 @@ private:
     void handleCanvasDrop(const QString &kind, const QPointF &scenePos);
     void handleBlockMoveRequest(int lineNumber, const QPointF &scenePos);
     void handleBlockConfigureRequest(const QString &kind, int lineNumber);
+    void handleBlockDeleteRequest(int lineNumber);
     bool insertLinesBefore(int lineNumber,
                            const QStringList &newLines,
                            QString *errorMessage = nullptr);
@@ -165,6 +166,7 @@ private:
     void insertCompletionToken(const QString &completion);
     QStringList buildCompletionSuggestionsForCursor(const QString &prefix) const;
     QStringList projectInputFileCompletionCandidates() const;
+    bool isCompatibleChildKindForBlocks(const QString &parentKind, const QString &childKind) const;
     QString currentCompletionCommand() const;
     QStringList activeCompletionScopeStack() const;
     QString normalizeCompletionContext(const QString &contextToken) const;
@@ -193,6 +195,7 @@ private:
     QPushButton *blocksModeButton_ = nullptr;
     QStackedWidget *editorModeStack_ = nullptr;
     QWidget *blocksPanel_ = nullptr;
+    QLineEdit *blockToolboxFilterEdit_ = nullptr;
     QListWidget *blockToolboxList_ = nullptr;
     QGraphicsView *blockCanvasView_ = nullptr;
     QGraphicsScene *blockCanvasScene_ = nullptr;
@@ -208,12 +211,14 @@ private:
     QStringList commandCompletionTokens_;
     QHash<QString, QStringList> commandOptionTokens_;
     QHash<QString, QStringList> commandValueTokens_;
+    QHash<QString, QStringList> commandArgumentValueTokens_;
     QHash<QString, QStringList> commandOptionValueTokens_;
     QHash<QString, QString> commandOptionValueArityTokens_;
     QHash<QString, QStringList> commandTypeValueTokens_;
     QHash<QString, QHash<QString, QStringList>> commandSubtypeByTypeTokens_;
     QHash<QString, int> commandRequiredPositionalCount_;
     QHash<QString, QStringList> contextCommandTokens_;
+    QHash<QString, QStringList> blockCommandContextsByKind_;
     QCompleter *completionCompleter_ = nullptr;
     QStringListModel *completionModel_ = nullptr;
     QString lastValidationTooltipKey_;

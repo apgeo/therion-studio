@@ -2,6 +2,7 @@
 
 #include <QAbstractButton>
 #include <QAbstractItemView>
+#include <QApplication>
 #include <QCheckBox>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -42,6 +43,7 @@
 #include <QHeaderView>
 #include <QScreen>
 #include <QScrollBar>
+#include <QStyle>
 #include <QStringListModel>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -391,6 +393,12 @@ QString commandOptionValueKey(const QString &commandName, const QString &optionT
         + optionToken.trimmed().toLower();
 }
 
+QString commandArgumentValueKey(const QString &commandName, int argumentIndex)
+{
+    return commandName.trimmed().toLower() + QStringLiteral("\x1farg\x1f")
+        + QString::number(qMax(argumentIndex, 0));
+}
+
 QStringList extractOptionKeys(const QString &optionKeyField)
 {
     QStringList keys;
@@ -636,6 +644,7 @@ public:
     }
 
     std::function<void(const QString &, int)> onConfigure;
+    std::function<void(int)> onDelete;
     std::function<void(int, const QPointF &)> onMoveRequest;
 
     QRectF boundingRect() const override
@@ -691,25 +700,40 @@ protected:
         painter->setBrush(baseColor);
         painter->drawRoundedRect(boundingRect(), 6.0, 6.0);
 
-        const QRectF configureButtonRect = QRectF(boundingRect().right() - 62.0, 8.0, 54.0, 26.0);
+        const QRectF configureButtonRect = configureIconRect();
+        const QRectF deleteButtonRect = deleteIconRect();
+
         painter->setPen(QPen(QColor(QStringLiteral("#6a6a6a")), 1.0));
         painter->setBrush(QColor(QStringLiteral("#f2f2f2")));
         painter->drawRoundedRect(configureButtonRect, 4.0, 4.0);
-        painter->setPen(QColor(QStringLiteral("#333333")));
-        painter->drawText(configureButtonRect, Qt::AlignCenter, QStringLiteral("Config"));
+        painter->drawRoundedRect(deleteButtonRect, 4.0, 4.0);
+
+        const QRect configureIconBounds = configureButtonRect.adjusted(4.0, 4.0, -4.0, -4.0).toRect();
+        const QRect deleteIconBounds = deleteButtonRect.adjusted(4.0, 4.0, -4.0, -4.0).toRect();
+        if (QStyle *style = QApplication::style(); style != nullptr) {
+            style->standardIcon(QStyle::SP_FileDialogDetailedView).paint(painter, configureIconBounds);
+            style->standardIcon(QStyle::SP_TrashIcon).paint(painter, deleteIconBounds);
+        }
 
         const QString title = name_.isEmpty() ? kind_ : QStringLiteral("%1: %2").arg(kind_, name_);
         painter->setPen(QColor(QStringLiteral("#1f1f1f")));
-        painter->drawText(QRectF(10.0, 0.0, boundingRect().width() - 78.0, boundingRect().height()),
+        painter->drawText(QRectF(10.0, 0.0, configureButtonRect.left() - 16.0, boundingRect().height()),
                           Qt::AlignVCenter | Qt::AlignLeft,
                           title);
     }
 
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override
     {
-        if (event != nullptr && QRectF(boundingRect().right() - 62.0, 8.0, 54.0, 26.0).contains(event->pos())) {
+        if (event != nullptr && configureIconRect().contains(event->pos())) {
             if (onConfigure) {
                 onConfigure(kind_, lineNumber_);
+            }
+            event->accept();
+            return;
+        }
+        if (event != nullptr && deleteIconRect().contains(event->pos())) {
+            if (onDelete) {
+                onDelete(lineNumber_);
             }
             event->accept();
             return;
@@ -751,6 +775,23 @@ protected:
     }
 
 private:
+    QRectF configureIconRect() const
+    {
+        const qreal iconSize = 24.0;
+        const qreal margin = 8.0;
+        const qreal gap = 6.0;
+        const qreal x = boundingRect().right() - margin - (iconSize * 2.0) - gap;
+        return QRectF(x, 9.0, iconSize, iconSize);
+    }
+
+    QRectF deleteIconRect() const
+    {
+        const qreal iconSize = 24.0;
+        const qreal margin = 8.0;
+        const qreal x = boundingRect().right() - margin - iconSize;
+        return QRectF(x, 9.0, iconSize, iconSize);
+    }
+
     QString kind_;
     QString name_;
     int lineNumber_ = 0;
@@ -867,7 +908,7 @@ QString closingDirectiveFor(const QString &openingDirective)
     return QString();
 }
 
-bool isCompatibleChildKind(const QString &parentKind, const QString &childKind)
+bool legacyIsCompatibleChildKind(const QString &parentKind, const QString &childKind)
 {
     const QString normalizedParent = parentKind.toLower();
     const QString normalizedChild = childKind.toLower();
@@ -1192,9 +1233,21 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     blocksLayout->setContentsMargins(8, 8, 8, 8);
     blocksLayout->setSpacing(8);
 
-    blockToolboxList_ = new BlockToolboxList(blocksPanel_);
+    auto *toolboxColumn = new QWidget(blocksPanel_);
+    auto *toolboxColumnLayout = new QVBoxLayout(toolboxColumn);
+    toolboxColumnLayout->setContentsMargins(0, 0, 0, 0);
+    toolboxColumnLayout->setSpacing(6);
+    blockToolboxFilterEdit_ = new QLineEdit(toolboxColumn);
+    blockToolboxFilterEdit_->setPlaceholderText(tr("Filter commands..."));
+
+    blockToolboxList_ = new BlockToolboxList(toolboxColumn);
     blockToolboxList_->setMinimumWidth(180);
+    toolboxColumnLayout->addWidget(blockToolboxFilterEdit_);
+    toolboxColumnLayout->addWidget(blockToolboxList_, 1);
     populateBlockToolbox();
+    connect(blockToolboxFilterEdit_, &QLineEdit::textChanged, this, [this](const QString &) {
+        populateBlockToolbox();
+    });
 
     blockCanvasScene_ = new QGraphicsScene(blocksPanel_);
     auto *typedCanvasView = new BlockCanvasView(blocksPanel_);
@@ -1206,7 +1259,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     };
     blockCanvasView_ = typedCanvasView;
 
-    blocksLayout->addWidget(blockToolboxList_);
+    blocksLayout->addWidget(toolboxColumn);
     blocksLayout->addWidget(blockCanvasView_, 1);
 
     editorModeStack_ = new QStackedWidget(this);
@@ -1920,32 +1973,94 @@ void TextEditorTab::populateBlockToolbox()
     }
 
     blockToolboxList_->clear();
+    const QString filterText = blockToolboxFilterEdit_ != nullptr
+        ? blockToolboxFilterEdit_->text().trimmed().toLower()
+        : QString();
 
-    const struct ToolboxRow {
-        QString category;
-        QString label;
-        QString kind;
-    } rows[] = {
-        {QStringLiteral("Structure"), QStringLiteral("Survey"), QStringLiteral("survey")},
-        {QStringLiteral("Structure"), QStringLiteral("Centerline"), QStringLiteral("centerline")},
-        {QStringLiteral("Structure"), QStringLiteral("Data"), QStringLiteral("data")},
-        {QStringLiteral("Structure"), QStringLiteral("Map"), QStringLiteral("map")},
-        {QStringLiteral("Structure"), QStringLiteral("Scrap"), QStringLiteral("scrap")},
-        {QStringLiteral("Commands"), QStringLiteral("Team"), QStringLiteral("team")},
-        {QStringLiteral("Commands"), QStringLiteral("Explo Date"), QStringLiteral("explo-date")},
+    auto labelForCommand = [](const QString &commandToken) {
+        QStringList parts = commandToken.split(QLatin1Char('-'), Qt::SkipEmptyParts);
+        for (QString &part : parts) {
+            if (!part.isEmpty()) {
+                part[0] = part.at(0).toUpper();
+            }
+        }
+        return parts.join(QLatin1Char(' '));
     };
 
-    QString currentCategory;
-    for (const ToolboxRow &row : rows) {
-        if (row.category != currentCategory) {
-            currentCategory = row.category;
-            auto *categoryItem = new QListWidgetItem(QStringLiteral("[%1]").arg(currentCategory), blockToolboxList_);
-            categoryItem->setFlags(Qt::ItemIsEnabled);
+    const struct ToolboxSection {
+        QString title;
+        QStringList activeContexts;
+    } sections[] = {
+        {QStringLiteral("Top-level"), {QStringLiteral("none"), QStringLiteral("all")}},
+        {QStringLiteral("Inside Survey"), {QStringLiteral("survey"), QStringLiteral("all")}},
+        {QStringLiteral("Inside Centerline"), {QStringLiteral("centerline"), QStringLiteral("all")}},
+    };
+
+    int insertedRows = 0;
+    for (const ToolboxSection &section : sections) {
+        QStringList sectionCommands;
+        for (const QString &activeContext : section.activeContexts) {
+            appendUniqueList(sectionCommands, contextCommandTokens_.value(activeContext));
         }
 
-        auto *item = new QListWidgetItem(QStringLiteral("  %1").arg(row.label), blockToolboxList_);
-        item->setData(Qt::UserRole, row.kind);
-        item->setToolTip(tr("Drag to canvas."));
+        QStringList visibleCommands;
+        for (const QString &command : sectionCommands) {
+            const QString normalizedCommand = normalizeDirective(command);
+            if (normalizedCommand.isEmpty()) {
+                continue;
+            }
+            if (normalizedCommand == QStringLiteral("all")
+                || normalizedCommand == QStringLiteral("none")
+                || normalizedCommand.startsWith(QStringLiteral("end"))) {
+                continue;
+            }
+            if (!isCompatibleChildKindForBlocks(section.activeContexts.contains(QStringLiteral("survey"))
+                                                    ? QStringLiteral("survey")
+                                                    : (section.activeContexts.contains(QStringLiteral("centerline"))
+                                                           ? QStringLiteral("centerline")
+                                                           : QString()),
+                                                normalizedCommand)) {
+                continue;
+            }
+            const QString closingDirective = completionClosingDirectiveForOpening(normalizedCommand);
+            const bool unsupportedContainer = !closingDirective.isEmpty()
+                && !isContainerBlockDirective(normalizedCommand);
+            if (unsupportedContainer) {
+                continue;
+            }
+
+            const QString label = labelForCommand(normalizedCommand);
+            const QString searchable = normalizedCommand + QStringLiteral(" ") + label.toLower();
+            if (!filterText.isEmpty() && !searchable.contains(filterText)) {
+                continue;
+            }
+            appendUnique(visibleCommands, normalizedCommand);
+        }
+
+        std::sort(visibleCommands.begin(), visibleCommands.end(), [](const QString &a, const QString &b) {
+            return QString::compare(a, b, Qt::CaseInsensitive) < 0;
+        });
+
+        if (visibleCommands.isEmpty()) {
+            continue;
+        }
+
+        auto *categoryItem = new QListWidgetItem(QStringLiteral("[%1]").arg(section.title), blockToolboxList_);
+        categoryItem->setFlags(Qt::ItemIsEnabled);
+        ++insertedRows;
+
+        for (const QString &commandToken : visibleCommands) {
+            const QString label = labelForCommand(commandToken);
+            auto *item = new QListWidgetItem(QStringLiteral("  %1").arg(label), blockToolboxList_);
+            item->setData(Qt::UserRole, commandToken);
+            item->setToolTip(tr("Drag to canvas."));
+            ++insertedRows;
+        }
+    }
+
+    if (insertedRows == 0) {
+        auto *emptyItem = new QListWidgetItem(tr("[No commands match filter]"), blockToolboxList_);
+        emptyItem->setFlags(Qt::ItemIsEnabled);
     }
 }
 
@@ -1999,20 +2114,28 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
             continue;
         }
 
-        const bool commandDirective = directive == QStringLiteral("team") || directive == QStringLiteral("explo-date");
+        QString activeScope = QStringLiteral("none");
+        if (!stack.isEmpty()) {
+            activeScope = normalizeDirective(stack.last().directive);
+        }
+
+        auto isCommandDirectiveInScope = [this](const QString &commandToken, const QString &scope) {
+            QStringList candidates = contextCommandTokens_.value(scope);
+            appendUniqueList(candidates, contextCommandTokens_.value(QStringLiteral("all")));
+            if (scope == QStringLiteral("none")) {
+                appendUniqueList(candidates, contextCommandTokens_.value(QStringLiteral("none")));
+            }
+            return candidates.contains(commandToken, Qt::CaseInsensitive);
+        };
+
+        const bool commandDirective = !isBlockOpeningDirective(directive)
+            && isCommandDirectiveInScope(directive, activeScope);
         if (!isBlockOpeningDirective(directive) && !commandDirective) {
             continue;
         }
 
         BlockCanvasItem *parentItem = nullptr;
-        if (commandDirective) {
-            for (int index = stack.size() - 1; index >= 0; --index) {
-                if (stack.at(index).directive == QStringLiteral("centerline")) {
-                    parentItem = stack.at(index).item;
-                    break;
-                }
-            }
-        } else if (!stack.isEmpty()) {
+        if (!stack.isEmpty()) {
             parentItem = stack.last().item;
         }
 
@@ -2020,6 +2143,9 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
         auto *item = new BlockCanvasItem(directive, name, parsedLine.lineNumber, parentItem);
         item->onConfigure = [this](const QString &kind, int lineNumber) {
             handleBlockConfigureRequest(kind, lineNumber);
+        };
+        item->onDelete = [this](int lineNumber) {
+            handleBlockDeleteRequest(lineNumber);
         };
         item->onMoveRequest = [this](int lineNumber, const QPointF &scenePos) {
             handleBlockMoveRequest(lineNumber, scenePos);
@@ -2174,13 +2300,36 @@ void TextEditorTab::handleCanvasDrop(const QString &kind, const QPointF &scenePo
     }
 
     const QString normalizedKind = kind.trimmed().toLower();
-    if (!isCompatibleChildKind(parentKind, normalizedKind)) {
+    if (!isCompatibleChildKindForBlocks(parentKind, normalizedKind)) {
         QMessageBox::warning(this,
                              tr("Incompatible Drop"),
                              tr("`%1` cannot be inserted inside `%2`.")
                                  .arg(normalizedKind, parentKind.isEmpty() ? tr("root") : parentKind));
         return;
     }
+
+    QString contents = editor_->toPlainText();
+    QStringList existingLines = contents.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    for (QString &line : existingLines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+    const QRegularExpression indentPattern(QStringLiteral(R"(^[ \t]*)"));
+
+    auto lineIndent = [&existingLines, &indentPattern](int lineNumber) {
+        if (lineNumber <= 0 || lineNumber > existingLines.size()) {
+            return QString();
+        }
+        const auto match = indentPattern.match(existingLines.at(lineNumber - 1));
+        return match.hasMatch() ? match.captured(0) : QString();
+    };
+
+    auto insertionAnchorForContainer = [&existingLines](int openingLineNumber, const QString &openingDirective) {
+        const QString closingDirective = closingDirectiveFor(openingDirective);
+        const int endLine = findMatchingBlockEndLine(existingLines, openingLineNumber, openingDirective, closingDirective);
+        return endLine > openingLineNumber ? endLine : (openingLineNumber + 1);
+    };
 
     QStringList linesToInsert;
     int insertBeforeLine = qMax(1, editor_->document()->blockCount() + 1);
@@ -2191,89 +2340,74 @@ void TextEditorTab::handleCanvasDrop(const QString &kind, const QPointF &scenePo
         if (parentLine <= 0) {
             return;
         }
-        insertBeforeLine = parentLine + 1;
-        const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(editor_->toPlainText());
-        int depth = 0;
-        for (const TherionParsedLine &line : parsedLines) {
-            if (line.lineNumber < parentLine) {
-                continue;
-            }
-            if (line.directive == QStringLiteral("survey")) {
-                ++depth;
-            } else if (line.directive == QStringLiteral("endsurvey")) {
-                if (depth == 1) {
-                    insertBeforeLine = line.lineNumber;
-                    break;
-                }
-                --depth;
-            }
-        }
-        linesToInsert << QStringLiteral("  centerline")
-                      << QStringLiteral("  endcenterline");
+        insertBeforeLine = insertionAnchorForContainer(parentLine, QStringLiteral("survey"));
+        const QString indent = lineIndent(parentLine) + QStringLiteral("  ");
+        linesToInsert << QStringLiteral("%1centerline").arg(indent)
+                      << QStringLiteral("%1endcenterline").arg(indent);
     } else if (normalizedKind == QStringLiteral("data")) {
-        insertBeforeLine = parentLine + 1;
-        const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(editor_->toPlainText());
-        int depth = 0;
-        for (const TherionParsedLine &line : parsedLines) {
-            if (line.lineNumber < parentLine) {
-                continue;
-            }
-            const QString directive = normalizeDirective(line.directive);
-            if (directive == QStringLiteral("centerline")) {
-                ++depth;
-            } else if (directive == QStringLiteral("endcenterline")) {
-                if (depth == 1) {
-                    insertBeforeLine = line.lineNumber;
-                    break;
-                }
-                --depth;
-            }
+        if (parentLine <= 0) {
+            return;
         }
-        linesToInsert << QStringLiteral("    data normal from to compass clino tape")
-                      << QStringLiteral("      1 2 0 0 1");
+        insertBeforeLine = insertionAnchorForContainer(parentLine, QStringLiteral("centerline"));
+        const QString indent = lineIndent(parentLine) + QStringLiteral("  ");
+        linesToInsert << QStringLiteral("%1data normal from to compass clino tape").arg(indent)
+                      << QStringLiteral("%1  1 2 0 0 1").arg(indent);
     } else if (normalizedKind == QStringLiteral("map")) {
-        insertBeforeLine = parentLine + 1;
-        const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(editor_->toPlainText());
-        int depth = 0;
-        for (const TherionParsedLine &line : parsedLines) {
-            if (line.lineNumber < parentLine) {
-                continue;
-            }
-            if (line.directive == QStringLiteral("survey")) {
-                ++depth;
-            } else if (line.directive == QStringLiteral("endsurvey")) {
-                if (depth == 1) {
-                    insertBeforeLine = line.lineNumber;
-                    break;
-                }
-                --depth;
-            }
+        if (parentLine <= 0) {
+            return;
         }
-        linesToInsert << QStringLiteral("  map new-map")
-                      << QStringLiteral("  endmap");
+        insertBeforeLine = insertionAnchorForContainer(parentLine, QStringLiteral("survey"));
+        const QString indent = lineIndent(parentLine) + QStringLiteral("  ");
+        linesToInsert << QStringLiteral("%1map new-map").arg(indent)
+                      << QStringLiteral("%1endmap").arg(indent);
     } else if (normalizedKind == QStringLiteral("scrap")) {
-        insertBeforeLine = parentLine + 1;
-        const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(editor_->toPlainText());
-        int depth = 0;
-        for (const TherionParsedLine &line : parsedLines) {
-            if (line.lineNumber < parentLine) {
-                continue;
-            }
-            if (line.directive == QStringLiteral("survey")) {
-                ++depth;
-            } else if (line.directive == QStringLiteral("endsurvey")) {
-                if (depth == 1) {
-                    insertBeforeLine = line.lineNumber;
-                    break;
-                }
-                --depth;
+        if (parentLine <= 0) {
+            return;
+        }
+        insertBeforeLine = insertionAnchorForContainer(parentLine, QStringLiteral("survey"));
+        const QString indent = lineIndent(parentLine) + QStringLiteral("  ");
+        linesToInsert << QStringLiteral("%1scrap new-scrap").arg(indent)
+                      << QStringLiteral("%1endscrap").arg(indent);
+    } else if (normalizedKind == QStringLiteral("team") || normalizedKind == QStringLiteral("explo-date")) {
+        if (parentLine > 0 && isContainerBlockDirective(parentKind)) {
+            insertBeforeLine = insertionAnchorForContainer(parentLine, parentKind);
+        } else if (parentLine > 0) {
+            insertBeforeLine = parentLine + 1;
+        }
+        const QString indent = parentLine > 0
+            ? lineIndent(parentLine) + (isContainerBlockDirective(parentKind) ? QStringLiteral("  ") : QString())
+            : QString();
+        linesToInsert << QStringLiteral("%1%2 value").arg(indent, normalizedKind);
+    } else {
+        if (parentLine > 0 && isContainerBlockDirective(parentKind)) {
+            insertBeforeLine = insertionAnchorForContainer(parentLine, parentKind);
+        } else if (parentLine > 0) {
+            insertBeforeLine = parentLine + 1;
+        }
+
+        const QString indent = parentLine > 0
+            ? lineIndent(parentLine) + (isContainerBlockDirective(parentKind) ? QStringLiteral("  ") : QString())
+            : QString();
+        QStringList placeholderTokens;
+        const int requiredArgumentCount = qMax(0, commandRequiredPositionalCount_.value(normalizedKind));
+        for (int argumentIndex = 0; argumentIndex < requiredArgumentCount; ++argumentIndex) {
+            placeholderTokens.append(QStringLiteral("value%1").arg(argumentIndex + 1));
+        }
+        if (normalizedKind == QStringLiteral("input") && placeholderTokens.isEmpty()) {
+            placeholderTokens.append(QStringLiteral("./path/file.th"));
+        }
+        if (placeholderTokens.isEmpty()) {
+            const QStringList suggestedValues = commandValueTokens_.value(normalizedKind);
+            if (!suggestedValues.isEmpty()) {
+                placeholderTokens.append(suggestedValues.first());
             }
         }
-        linesToInsert << QStringLiteral("  scrap new-scrap")
-                      << QStringLiteral("  endscrap");
-    } else if (normalizedKind == QStringLiteral("team") || normalizedKind == QStringLiteral("explo-date")) {
-        insertBeforeLine = parentLine + 1;
-        linesToInsert << QStringLiteral("    %1 value").arg(normalizedKind);
+
+        QString line = QStringLiteral("%1%2").arg(indent, normalizedKind);
+        if (!placeholderTokens.isEmpty()) {
+            line += QStringLiteral(" ") + placeholderTokens.join(QLatin1Char(' '));
+        }
+        linesToInsert << line;
     }
 
     QString errorMessage;
@@ -2501,7 +2635,7 @@ void TextEditorTab::handleBlockMoveRequest(int lineNumber, const QPointF &sceneP
     int insertBeforeLineOriginal = targetEntry.startLine;
 
     const bool targetAcceptsSourceAsChild = isContainerBlockDirective(targetEntry.kind)
-        && isCompatibleChildKind(targetEntry.kind, sourceEntry.kind);
+        && isCompatibleChildKindForBlocks(targetEntry.kind, sourceEntry.kind);
     if (targetAcceptsSourceAsChild && targetEntry.startLine != sourceEntry.startLine) {
         destinationParentLine = targetEntry.startLine;
         insertBeforeLineOriginal = targetEntry.endLine;
@@ -2528,7 +2662,7 @@ void TextEditorTab::handleBlockMoveRequest(int lineNumber, const QPointF &sceneP
         }
     }
 
-    if (!isCompatibleChildKind(destinationParentKind, sourceEntry.kind)) {
+    if (!isCompatibleChildKindForBlocks(destinationParentKind, sourceEntry.kind)) {
         QMessageBox::warning(this,
                              tr("Reorder Block"),
                              tr("`%1` cannot be moved under `%2`.")
@@ -2587,25 +2721,176 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
     }
 
     const QString normalizedKind = kind.toLower();
+
+    auto buildInsertableCommandsForContext = [this](const QString &context, const QString &currentDirective) {
+        QStringList actions = contextCommandTokens_.value(context);
+        const QString normalizedCurrentDirective = normalizeDirective(currentDirective);
+        const QString currentClosingDirective = completionClosingDirectiveForOpening(normalizedCurrentDirective);
+        actions.removeAll(normalizedCurrentDirective);
+        if (!currentClosingDirective.isEmpty()) {
+            actions.removeAll(currentClosingDirective);
+        }
+        actions.removeAll(QStringLiteral("all"));
+        actions.removeAll(QStringLiteral("none"));
+        actions.removeAll(QStringLiteral("centreline"));
+        actions.removeAll(QStringLiteral("endcentreline"));
+        actions.removeAll(QStringLiteral("centerline"));
+        actions.removeAll(QStringLiteral("endcenterline"));
+
+        QStringList filtered;
+        for (const QString &action : actions) {
+            const QString normalizedAction = normalizeDirective(action);
+            if (normalizedAction.isEmpty() || normalizedAction.startsWith(QStringLiteral("end"))) {
+                continue;
+            }
+            appendUnique(filtered, normalizedAction);
+        }
+        std::sort(filtered.begin(), filtered.end(), [](const QString &a, const QString &b) {
+            return QString::compare(a, b, Qt::CaseInsensitive) < 0;
+        });
+        return filtered;
+    };
+
+    auto buildInsertionTemplate = [this](const QString &commandToken,
+                                         const QString &childIndent) {
+        QStringList linesToInsert;
+        const QString normalizedCommand = normalizeDirective(commandToken.trimmed().toLower());
+        if (normalizedCommand.isEmpty()) {
+            return linesToInsert;
+        }
+
+        if (normalizedCommand == QStringLiteral("data")) {
+            linesToInsert << QStringLiteral("%1data normal from to compass clino tape").arg(childIndent)
+                          << QStringLiteral("%1  1 2 0 0 1").arg(childIndent);
+            return linesToInsert;
+        }
+
+        if (normalizedCommand == QStringLiteral("team")) {
+            linesToInsert << QStringLiteral("%1team \"Team Name\"").arg(childIndent);
+            return linesToInsert;
+        }
+
+        if (normalizedCommand == QStringLiteral("explo-date")
+            || normalizedCommand == QStringLiteral("date")) {
+            linesToInsert << QStringLiteral("%1%2 2000").arg(childIndent, normalizedCommand);
+            return linesToInsert;
+        }
+
+        if (normalizedCommand == QStringLiteral("group")
+            || normalizedCommand == QStringLiteral("endgroup")
+            || normalizedCommand == QStringLiteral("break")) {
+            linesToInsert << QStringLiteral("%1%2").arg(childIndent, normalizedCommand);
+            return linesToInsert;
+        }
+
+        const int requiredArgumentCount = qMax(0, commandRequiredPositionalCount_.value(normalizedCommand));
+        QStringList placeholderTokens;
+        for (int argumentIndex = 0; argumentIndex < requiredArgumentCount; ++argumentIndex) {
+            placeholderTokens.append(QStringLiteral("value%1").arg(argumentIndex + 1));
+        }
+        if (placeholderTokens.isEmpty()) {
+            const QStringList suggestedValues = commandValueTokens_.value(normalizedCommand);
+            if (!suggestedValues.isEmpty()) {
+                placeholderTokens.append(suggestedValues.first());
+            }
+        }
+
+        QString line = QStringLiteral("%1%2").arg(childIndent, normalizedCommand);
+        if (!placeholderTokens.isEmpty()) {
+            line += QStringLiteral(" ") + placeholderTokens.join(QLatin1Char(' '));
+        }
+        linesToInsert << line;
+
+        const QString closingDirective = completionClosingDirectiveForOpening(normalizedCommand);
+        if (!closingDirective.isEmpty()) {
+            linesToInsert << QStringLiteral("%1%2").arg(childIndent, closingDirective);
+        }
+
+        return linesToInsert;
+    };
+
     if (normalizedKind == QStringLiteral("survey")
         || normalizedKind == QStringLiteral("map")
         || normalizedKind == QStringLiteral("scrap")) {
+        const QStringList operations = {
+            tr("Rename"),
+            tr("Insert Command"),
+        };
         bool ok = false;
-        const QString currentName = parsedLine.tokens.value(1);
-        const QString updatedName = QInputDialog::getText(this,
-                                                          tr("Configure Block"),
-                                                          tr("Name"),
-                                                          QLineEdit::Normal,
-                                                          currentName,
-                                                          &ok);
-        if (!ok || updatedName.trimmed().isEmpty()) {
+        const QString selectedOperation = QInputDialog::getItem(this,
+                                                                tr("Configure Block"),
+                                                                tr("Action"),
+                                                                operations,
+                                                                0,
+                                                                false,
+                                                                &ok);
+        if (!ok || selectedOperation.isEmpty()) {
             return;
         }
-        const QString category = normalizedKind == QStringLiteral("survey")
-            ? QStringLiteral("surveys")
-            : (normalizedKind == QStringLiteral("map") ? QStringLiteral("maps") : QStringLiteral("scraps"));
+
+        if (selectedOperation == operations.at(0)) {
+            bool renameOk = false;
+            const QString currentName = parsedLine.tokens.value(1);
+            const QString updatedName = QInputDialog::getText(this,
+                                                              tr("Configure Block"),
+                                                              tr("Name"),
+                                                              QLineEdit::Normal,
+                                                              currentName,
+                                                              &renameOk);
+            if (!renameOk || updatedName.trimmed().isEmpty()) {
+                return;
+            }
+            const QString category = normalizedKind == QStringLiteral("survey")
+                ? QStringLiteral("surveys")
+                : (normalizedKind == QStringLiteral("map") ? QStringLiteral("maps") : QStringLiteral("scraps"));
+            QString errorMessage;
+            if (!rewriteStructureEntryName(lineNumber, category, updatedName, &errorMessage)) {
+                QMessageBox::warning(this, tr("Update Failed"), errorMessage);
+            }
+            return;
+        }
+
+        const QStringList actions = buildInsertableCommandsForContext(normalizedKind, normalizedKind);
+        if (actions.isEmpty()) {
+            QMessageBox::information(this,
+                                     tr("Configure Block"),
+                                     tr("No catalog-driven insert commands are available for this context."));
+            return;
+        }
+
+        bool selectOk = false;
+        const QString selectedAction = QInputDialog::getItem(this,
+                                                             tr("Configure %1").arg(normalizedKind),
+                                                             tr("Insert Command"),
+                                                             actions,
+                                                             0,
+                                                             false,
+                                                             &selectOk);
+        if (!selectOk || selectedAction.isEmpty()) {
+            return;
+        }
+
+        const QRegularExpression indentPattern(QStringLiteral(R"(^[ \t]*)"));
+        const auto match = indentPattern.match(lines.at(lineNumber - 1));
+        const QString indent = match.hasMatch() ? match.captured(0) : QString();
+        const QString childIndent = indent + QStringLiteral("  ");
+        const QStringList linesToInsert = buildInsertionTemplate(selectedAction, childIndent);
+        if (linesToInsert.isEmpty()) {
+            return;
+        }
+
+        const QString containerClosingDirective = closingDirectiveFor(normalizedKind);
+        const int insertBeforeLine = findMatchingBlockEndLine(lines,
+                                                              lineNumber,
+                                                              normalizedKind,
+                                                              containerClosingDirective);
+        if (insertBeforeLine <= lineNumber) {
+            QMessageBox::warning(this, tr("Configure Block"), tr("Unable to resolve closing directive for this block."));
+            return;
+        }
+
         QString errorMessage;
-        if (!rewriteStructureEntryName(lineNumber, category, updatedName, &errorMessage)) {
+        if (!insertLinesBefore(insertBeforeLine, linesToInsert, &errorMessage)) {
             QMessageBox::warning(this, tr("Update Failed"), errorMessage);
         }
         return;
@@ -2621,15 +2906,15 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
             return;
         }
 
-        const QStringList actions = {
-            tr("Insert team"),
-            tr("Insert explo-date"),
-            tr("Insert data block"),
-        };
+        QStringList actions = buildInsertableCommandsForContext(QStringLiteral("centerline"), normalizedKind);
+        if (actions.isEmpty()) {
+            actions = {QStringLiteral("team"), QStringLiteral("explo-date"), QStringLiteral("data")};
+        }
+
         bool ok = false;
         const QString selectedAction = QInputDialog::getItem(this,
                                                              tr("Configure Centerline"),
-                                                             tr("Action"),
+                                                             tr("Insert Command"),
                                                              actions,
                                                              0,
                                                              false,
@@ -2643,14 +2928,9 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
         const QString indent = match.hasMatch() ? match.captured(0) : QString();
         const QString childIndent = indent + QStringLiteral("  ");
 
-        QStringList linesToInsert;
-        if (selectedAction == actions.at(0)) {
-            linesToInsert << QStringLiteral("%1team \"Team Name\"").arg(childIndent);
-        } else if (selectedAction == actions.at(1)) {
-            linesToInsert << QStringLiteral("%1explo-date 2000").arg(childIndent);
-        } else {
-            linesToInsert << QStringLiteral("%1data normal from to compass clino tape").arg(childIndent)
-                          << QStringLiteral("%1  1 2 0 0 1").arg(childIndent);
+        const QStringList linesToInsert = buildInsertionTemplate(selectedAction, childIndent);
+        if (linesToInsert.isEmpty()) {
+            return;
         }
 
         QString errorMessage;
@@ -2731,20 +3011,13 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
             currentRows.append(rowText);
         }
 
-        auto parseDataFields = [](const QString &columnsText) {
+        const QStringList dataStyleValues = commandArgumentValueTokens_.value(commandArgumentValueKey(QStringLiteral("data"), 0));
+        auto parseDataFields = [dataStyleValues](const QString &columnsText) {
             QStringList tokens = TherionDocumentParser::tokenizeLine(columnsText.trimmed());
             if (tokens.isEmpty()) {
                 return QStringList{};
             }
-            static const QSet<QString> dataKinds = {
-                QStringLiteral("normal"),
-                QStringLiteral("diving"),
-                QStringLiteral("cartesian"),
-                QStringLiteral("cylpolar"),
-                QStringLiteral("dimensions"),
-                QStringLiteral("nosurvey"),
-            };
-            if (tokens.size() > 1 && dataKinds.contains(tokens.first().toLower())) {
+            if (tokens.size() > 1 && dataStyleValues.contains(tokens.first(), Qt::CaseInsensitive)) {
                 tokens.removeFirst();
             }
             return tokens;
@@ -3116,7 +3389,10 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
         return;
     }
 
-    if (normalizedKind == QStringLiteral("team") || normalizedKind == QStringLiteral("explo-date")) {
+    const bool hasCatalogOptions = !commandOptionTokens_.value(normalizedKind).isEmpty();
+    if (!isContainerBlockDirective(normalizedKind)
+        && normalizedKind != QStringLiteral("data")
+        && !hasCatalogOptions) {
         bool ok = false;
         const QString currentValue = parsedLine.tokens.size() > 1
             ? parsedLine.tokens.mid(1).join(QLatin1Char(' '))
@@ -3147,6 +3423,117 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
                              tr("Configure Block"),
                              tr("Configuration for `%1` is not implemented yet.")
                                  .arg(kind));
+}
+
+void TextEditorTab::handleBlockDeleteRequest(int lineNumber)
+{
+    if (lineNumber <= 0) {
+        return;
+    }
+
+    QString contents = editor_->toPlainText();
+    QStringList lines = contents.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    for (QString &line : lines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+    if (lineNumber > lines.size()) {
+        return;
+    }
+
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineNumber - 1), lineNumber);
+    const QString directive = normalizeDirective(parsedLine.directive);
+    if (directive.isEmpty()) {
+        return;
+    }
+
+    int removeStartLine = lineNumber;
+    int removeEndLine = lineNumber;
+
+    if (isContainerBlockDirective(directive)) {
+        const QString closingDirective = closingDirectiveFor(directive);
+        const int endLine = findMatchingBlockEndLine(lines, lineNumber, directive, closingDirective);
+        if (endLine <= lineNumber) {
+            QMessageBox::warning(this,
+                                 tr("Delete Block"),
+                                 tr("Unable to resolve closing directive for `%1`.").arg(directive));
+            return;
+        }
+        removeEndLine = endLine;
+    } else if (directive == QStringLiteral("data")) {
+        int centerlineStartLine = -1;
+        int centerlineDepth = 0;
+        for (int currentLine = lineNumber; currentLine >= 1; --currentLine) {
+            const TherionParsedLine currentParsedLine = TherionDocumentParser::parseLine(lines.at(currentLine - 1), currentLine);
+            const QString currentDirective = normalizeDirective(currentParsedLine.directive);
+            if (currentDirective == QStringLiteral("endcenterline")) {
+                ++centerlineDepth;
+                continue;
+            }
+            if (currentDirective != QStringLiteral("centerline")) {
+                continue;
+            }
+            if (centerlineDepth == 0) {
+                centerlineStartLine = currentLine;
+                break;
+            }
+            --centerlineDepth;
+        }
+
+        if (centerlineStartLine <= 0) {
+            QMessageBox::warning(this, tr("Delete Block"), tr("Unable to resolve parent centerline block."));
+            return;
+        }
+
+        const int centerlineEndLine = findMatchingBlockEndLine(lines,
+                                                               centerlineStartLine,
+                                                               QStringLiteral("centerline"),
+                                                               QStringLiteral("endcenterline"));
+        if (centerlineEndLine <= lineNumber) {
+            QMessageBox::warning(this, tr("Delete Block"), tr("Unable to resolve endcenterline for this block."));
+            return;
+        }
+
+        int dataBodyLastLine = centerlineEndLine - 1;
+        for (int currentLine = lineNumber + 1; currentLine <= centerlineEndLine - 1; ++currentLine) {
+            const TherionParsedLine currentParsedLine = TherionDocumentParser::parseLine(lines.at(currentLine - 1), currentLine);
+            const QString currentDirective = normalizeDirective(currentParsedLine.directive);
+            if (currentDirective.isEmpty() || currentDirective == QStringLiteral("extend")) {
+                continue;
+            }
+            if (currentDirective == QStringLiteral("data")
+                || currentDirective == QStringLiteral("endcenterline")
+                || isLikelyCenterlineCommand(currentDirective)) {
+                dataBodyLastLine = currentLine - 1;
+                break;
+            }
+        }
+        removeEndLine = qMax(lineNumber, dataBodyLastLine);
+    }
+
+    const QString label = directive == QStringLiteral("data")
+        ? tr("data block")
+        : tr("`%1` block").arg(directive);
+    const int lineCount = qMax(1, removeEndLine - removeStartLine + 1);
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        this,
+        tr("Delete Block"),
+        tr("Delete %1 (%2 line(s))?").arg(label).arg(lineCount),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+    if (answer != QMessageBox::Yes) {
+        return;
+    }
+
+    const int removeStartIndex = removeStartLine - 1;
+    const int removeEndIndex = qMin(lines.size() - 1, removeEndLine - 1);
+    for (int index = removeEndIndex; index >= removeStartIndex; --index) {
+        lines.removeAt(index);
+    }
+
+    const QString lineEnding = contents.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    replaceTextForCommand(lines.join(lineEnding));
 }
 
 bool TextEditorTab::isCurrentStateDirty() const
@@ -3371,12 +3758,14 @@ void TextEditorTab::loadHelpMetadata()
     commandCompletionTokens_.clear();
     commandOptionTokens_.clear();
     commandValueTokens_.clear();
+    commandArgumentValueTokens_.clear();
     commandOptionValueTokens_.clear();
     commandOptionValueArityTokens_.clear();
     commandTypeValueTokens_.clear();
     commandSubtypeByTypeTokens_.clear();
     commandRequiredPositionalCount_.clear();
     contextCommandTokens_.clear();
+    blockCommandContextsByKind_.clear();
     loadHelpMetadataFromCommandCatalog();
     rebuildCompletionModel();
 }
@@ -3413,7 +3802,8 @@ void TextEditorTab::loadHelpMetadataFromCommandCatalog()
         entry.syntax = syntaxRows.join(QStringLiteral("\n"));
 
         const QJsonArray argumentsArray = commandObject.value(QStringLiteral("arguments")).toArray();
-        for (const QJsonValue &value : argumentsArray) {
+        for (int argumentIndex = 0; argumentIndex < argumentsArray.size(); ++argumentIndex) {
+            const QJsonValue value = argumentsArray.at(argumentIndex);
             const QJsonObject argumentObject = value.toObject();
             const QString signature = argumentObject.value(QStringLiteral("signature")).toString().trimmed();
             const QString description = argumentObject.value(QStringLiteral("description")).toString().trimmed();
@@ -3421,6 +3811,16 @@ void TextEditorTab::loadHelpMetadataFromCommandCatalog()
             appendUnique(entry.arguments, argumentLine);
             if (isRequiredArgumentSignature(signature)) {
                 ++requiredPositionalCount;
+            }
+
+            QStringList argumentAllowedValues;
+            const QJsonArray argumentAllowedValuesArray = argumentObject.value(QStringLiteral("allowed_values")).toArray();
+            for (const QJsonValue &argumentAllowedValue : argumentAllowedValuesArray) {
+                appendUnique(argumentAllowedValues, argumentAllowedValue.toString().trimmed().toLower());
+            }
+            if (!argumentAllowedValues.isEmpty()) {
+                appendUniqueList(commandArgumentValueTokens_[commandArgumentValueKey(commandName, argumentIndex)],
+                                 argumentAllowedValues);
             }
         }
 
@@ -3483,13 +3883,16 @@ void TextEditorTab::loadHelpMetadataFromCommandCatalog()
         appendUnique(entry.relatedKeywords, commandName);
 
         const QJsonArray contextsArray = commandObject.value(QStringLiteral("contexts")).toArray();
+        QStringList normalizedCommandContexts;
         for (const QJsonValue &contextValue : contextsArray) {
             const QString contextToken = normalizeCompletionContext(contextValue.toString());
             if (contextToken.isEmpty()) {
                 continue;
             }
+            appendUnique(normalizedCommandContexts, contextToken);
             appendUnique(contextCommandTokens_[contextToken], commandName);
         }
+        appendUniqueList(blockCommandContextsByKind_[normalizeDirective(commandName)], normalizedCommandContexts);
 
         if (commandName == QStringLiteral("centreline")
             || commandName == QStringLiteral("centerline")) {
@@ -3532,6 +3935,19 @@ void TextEditorTab::loadHelpMetadataFromCommandCatalog()
             mergeHelpEntry(alias, aliasEntry);
             appendUniqueList(commandOptionTokens_[alias], commandOptionTokens_.value(commandName));
             appendUniqueList(commandValueTokens_[alias], commandValueTokens_.value(commandName));
+            const QString argumentPrefix = commandName + QStringLiteral("\x1farg\x1f");
+            QStringList commandArgumentKeys;
+            for (auto argumentIterator = commandArgumentValueTokens_.cbegin();
+                 argumentIterator != commandArgumentValueTokens_.cend();
+                 ++argumentIterator) {
+                if (argumentIterator.key().startsWith(argumentPrefix)) {
+                    commandArgumentKeys.append(argumentIterator.key());
+                }
+            }
+            for (const QString &key : commandArgumentKeys) {
+                const QString suffix = key.mid(commandName.size());
+                appendUniqueList(commandArgumentValueTokens_[alias + suffix], commandArgumentValueTokens_.value(key));
+            }
             appendUniqueList(commandTypeValueTokens_[alias], commandTypeValueTokens_.value(commandName));
             for (const QString &optionKey : commandOptionTokens_.value(commandName)) {
                 appendUniqueList(commandOptionValueTokens_[commandOptionValueKey(alias, optionKey)],
@@ -3552,6 +3968,7 @@ void TextEditorTab::loadHelpMetadataFromCommandCatalog()
                     appendUnique(contextIterator.value(), alias);
                 }
             }
+            appendUniqueList(blockCommandContextsByKind_[normalizeDirective(alias)], normalizedCommandContexts);
         }
     }
 }
@@ -3814,6 +4231,31 @@ QString TextEditorTab::currentCompletionPrefix() const
 QString TextEditorTab::normalizeCompletionContext(const QString &contextToken) const
 {
     return normalizedCompletionContextToken(contextToken);
+}
+
+bool TextEditorTab::isCompatibleChildKindForBlocks(const QString &parentKind, const QString &childKind) const
+{
+    const QString normalizedParent = normalizeDirective(parentKind.trimmed().toLower());
+    const QString normalizedChild = normalizeDirective(childKind.trimmed().toLower());
+    if (normalizedChild.isEmpty()) {
+        return false;
+    }
+
+    const QString parentContext = normalizedParent.isEmpty()
+        ? QStringLiteral("none")
+        : normalizeCompletionContext(normalizedParent);
+    const QStringList childContexts = blockCommandContextsByKind_.value(normalizedChild);
+    if (!childContexts.isEmpty()) {
+        if (childContexts.contains(QStringLiteral("all"), Qt::CaseInsensitive)) {
+            return true;
+        }
+        if (!parentContext.isEmpty() && childContexts.contains(parentContext, Qt::CaseInsensitive)) {
+            return true;
+        }
+        return false;
+    }
+
+    return legacyIsCompatibleChildKind(normalizedParent, normalizedChild);
 }
 
 QStringList TextEditorTab::activeCompletionScopeStack() const

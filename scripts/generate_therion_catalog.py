@@ -372,17 +372,18 @@ def extract_symbol_subtype_matrix(section_text: str) -> dict[str, list[str]]:
     return subtype_matrix
 
 
-def extract_centerline_data_allowed_values(description: str) -> list[str]:
-    allowed_values: list[str] = []
+def extract_centerline_data_value_groups(description: str) -> tuple[list[str], list[str]]:
+    style_values: list[str] = []
+    reading_values: list[str] = []
     if not description:
-        return allowed_values
+        return style_values, reading_values
 
     style_match = re.search(r"style\s*\(([^)]+)\)", description, re.IGNORECASE)
     if style_match:
         for token in style_match.group(1).split(","):
             keyword = symbol_keyword_from_token(token)
             if keyword:
-                append_unique(allowed_values, keyword)
+                append_unique(style_values, keyword)
 
     readings_match = re.search(
         r"keywords:\s*(.*?)(?:\.\s*See\s+Survex\s+manual|\.\s*For\s+interleaved\s+data|$)",
@@ -390,7 +391,7 @@ def extract_centerline_data_allowed_values(description: str) -> list[str]:
         re.IGNORECASE | re.DOTALL,
     )
     if not readings_match:
-        return allowed_values
+        return style_values, reading_values
 
     readings_text = readings_match.group(1)
 
@@ -401,8 +402,8 @@ def extract_centerline_data_allowed_values(description: str) -> list[str]:
         base = symbol_keyword_from_token(match.group(1))
         if not base:
             continue
-        append_unique(allowed_values, base)
-        append_unique(allowed_values, f"back{base}")
+        append_unique(reading_values, base)
+        append_unique(reading_values, f"back{base}")
 
     readings_text = re.sub(r"\\\[\s*dimension.*?shot\]", " ", readings_text, flags=re.IGNORECASE | re.DOTALL)
     readings_text = re.sub(r"\\[a-zA-Z]+(?:\d+)?(?:\{[^}]*\})?", " ", readings_text)
@@ -418,8 +419,18 @@ def extract_centerline_data_allowed_values(description: str) -> list[str]:
         normalized = re.sub(r"^\d+", "", normalized)
         keyword = symbol_keyword_from_token(normalized)
         if keyword:
-            append_unique(allowed_values, keyword)
+            append_unique(reading_values, keyword)
 
+    return style_values, reading_values
+
+
+def extract_centerline_data_allowed_values(description: str) -> list[str]:
+    style_values, reading_values = extract_centerline_data_value_groups(description)
+    allowed_values: list[str] = []
+    for keyword in style_values:
+        append_unique(allowed_values, keyword)
+    for keyword in reading_values:
+        append_unique(allowed_values, keyword)
     return allowed_values
 
 
@@ -457,11 +468,10 @@ def extract_centerline_inline_allowed_values(inline_command_name: str, descripti
         append_unique(allowed_values, token)
 
     if inline_command_name == "data":
-        append_unique(allowed_values, "normal")
-        append_unique(allowed_values, "from")
-        append_unique(allowed_values, "to")
-        append_values = extract_centerline_data_allowed_values(description)
-        for token in append_values:
+        style_values, reading_values = extract_centerline_data_value_groups(description)
+        for token in style_values:
+            append_unique(allowed_values, token)
+        for token in reading_values:
             append_unique(allowed_values, token)
         return allowed_values
 
@@ -600,6 +610,16 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
                 signature_core = extract_signature_core(signature)
                 arguments_for_command = build_argument_entries_from_signature(signature_core)
                 description_for_command = clean_tex_text(item.get("description", ""))
+                if inline_command_name == "data":
+                    style_values, reading_values = extract_centerline_data_value_groups(item.get("description", ""))
+                    if arguments_for_command:
+                        arguments_for_command[0]["allowed_values"] = style_values
+                        arguments_for_command[0]["value_domain"] = "enum" if style_values else "keyword"
+                        arguments_for_command[0]["value_arity"] = "1"
+                    if len(arguments_for_command) >= 2:
+                        arguments_for_command[1]["allowed_values"] = reading_values
+                        arguments_for_command[1]["value_domain"] = "enum" if reading_values else "keyword"
+                        arguments_for_command[1]["value_arity"] = "N"
                 allowed_for_command = extract_centerline_inline_allowed_values(
                     inline_command_name,
                     item.get("description", ""),

@@ -358,6 +358,17 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
                                      tr("Failed to create file: %1").arg(QDir::toNativeSeparators(filePath)));
                 return;
             }
+            if (isTherionProjectFilePath(filePath)) {
+                const QByteArray initialContents("encoding utf-8\n");
+                if (file.write(initialContents) != initialContents.size()) {
+                    file.close();
+                    QMessageBox::warning(this,
+                                         tr("Create File"),
+                                         tr("Failed to initialize file: %1").arg(QDir::toNativeSeparators(filePath)));
+                    QFile::remove(filePath);
+                    return;
+                }
+            }
             file.close();
 
             refreshProjectBrowserView(filePath);

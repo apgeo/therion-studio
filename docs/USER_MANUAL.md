@@ -130,6 +130,7 @@ Project tree context menu actions:
 - Folders: `Rename Folder`, `Delete Folder`
 - Create: `New Folder`, `New .th File`, `New .th2 File`, `New thconfig`
 - Newly created/renamed/deleted items refresh immediately in the Files tree without restarting the app.
+- Newly created Therion source/config files (`.th`, `.th2`, `thconfig`) are initialized with `encoding utf-8` on the first line.
 
 Safety guardrails:
 

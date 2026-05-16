@@ -1,4 +1,5 @@
 #include "../src/app/TextEditorTab.h"
+#include "../src/core/TherionDocumentParser.h"
 
 #include <QApplication>
 #include <QCoreApplication>
@@ -7,6 +8,7 @@
 #include <QGraphicsItem>
 #include <QGraphicsScene>
 #include <QGraphicsView>
+#include <QComboBox>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPlainTextEdit>
@@ -14,6 +16,7 @@
 #include <QLineEdit>
 #include <QLabel>
 #include <QListWidget>
+#include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTextBlock>
 #include <QTextCursor>
@@ -107,13 +110,21 @@ bool selectBlockByKind(QGraphicsView *view, QLabel *statusLabel, const QString &
         return false;
     }
 
-    for (int y = 24; y <= 360; y += 22) {
-        if (!selectBlockAtScenePoint(view, QPointF(84.0, y))) {
-            continue;
-        }
-        const QString statusText = statusLabel->text().toLower();
-        if (statusText.contains(kindToken.toLower())) {
-            return true;
+    const QVector<qreal> xCandidates = {36.0, 72.0, 108.0, 144.0};
+    for (int y = 8; y <= 560; y += 12) {
+        for (qreal x : xCandidates) {
+            if (!selectBlockAtScenePoint(view, QPointF(x, y))) {
+                continue;
+            }
+            const QString statusText = statusLabel->text().trimmed().toLower();
+            QString commandToken = statusText;
+            const QString prefix = QStringLiteral("command:");
+            if (commandToken.startsWith(prefix)) {
+                commandToken = commandToken.mid(prefix.size()).trimmed();
+            }
+            if (commandToken == kindToken.trimmed().toLower()) {
+                return true;
+            }
         }
     }
     return false;
@@ -153,7 +164,7 @@ int main(int argc, char *argv[])
     if (!expect(file.open(QIODevice::WriteOnly | QIODevice::Text), "Failed to create test file.")) {
         return 1;
     }
-    file.write("survey demo -title old\ncenterline\nteam oldteam\ndata normal from to tape compass clino\n  1 2 3 4 5 6\nendcenterline\nendsurvey\n");
+    file.write("survey demo -title old # survey comment\ncenterline\n# caret-target line for typing test\nteam oldteam\nexplo-team old-discovery-team\ndata normal from to tape compass clino\n  1 2 3 4 5 6\nendcenterline\nendsurvey\n");
     file.close();
 
     TextEditorTab tab;
@@ -250,7 +261,7 @@ int main(int argc, char *argv[])
     if (!expect(detailsStatus != nullptr, "Failed to find block details status label.")) {
         return 1;
     }
-    auto *detailsHelp = tab.findChild<QTextEdit *>();
+    auto *detailsHelp = tab.findChild<QTextEdit *>(QStringLiteral("blockDetailsHelpBrowser"));
     if (!expect(detailsHelp != nullptr, "Failed to find block details help browser.")) {
         return 1;
     }
@@ -258,12 +269,73 @@ int main(int argc, char *argv[])
     if (!expect(toolboxList != nullptr, "Failed to find block toolbox list.")) {
         return 1;
     }
-    auto *primaryEdit = tab.findChild<QLineEdit *>(QStringLiteral("blockDetailsPrimaryEdit"));
-    auto *applyButton = tab.findChild<QPushButton *>(QStringLiteral("blockDetailsApplyButton"));
-    if (!expect(primaryEdit != nullptr && applyButton != nullptr,
-                "Failed to find block details primary edit/apply button.")) {
+    QComboBox *scopeCombo = nullptr;
+    const QList<QComboBox *> combos = tab.findChildren<QComboBox *>();
+    for (QComboBox *combo : combos) {
+        if (combo == nullptr) {
+            continue;
+        }
+        bool hasAutoScope = false;
+        for (int row = 0; row < combo->count(); ++row) {
+            if (combo->itemData(row).toString() == QStringLiteral("__auto__")) {
+                hasAutoScope = true;
+                break;
+            }
+        }
+        if (hasAutoScope) {
+            scopeCombo = combo;
+            break;
+        }
+    }
+    if (!expect(scopeCombo != nullptr, "Failed to find block toolbox scope combo.")) {
         return 1;
     }
+    auto *primaryEdit = tab.findChild<QLineEdit *>(QStringLiteral("blockDetailsPrimaryEdit"));
+    auto *secondaryEdit = tab.findChild<QLineEdit *>(QStringLiteral("blockDetailsSecondaryEdit"));
+    auto *commentEdit = tab.findChild<QLineEdit *>(QStringLiteral("blockDetailsCommentEdit"));
+    auto *primaryLabel = tab.findChild<QLabel *>(QStringLiteral("blockDetailsPrimaryLabel"));
+    auto *secondaryLabel = tab.findChild<QLabel *>(QStringLiteral("blockDetailsSecondaryLabel"));
+    auto *optionsLabel = tab.findChild<QLabel *>(QStringLiteral("blockDetailsOptionsLabel"));
+    auto *optionsTable = tab.findChild<QTableWidget *>(QStringLiteral("blockDetailsOptionsTable"));
+    auto *addOptionButton = findButtonByText(&tab, QStringLiteral("Add Option"));
+    auto *applyButton = tab.findChild<QPushButton *>(QStringLiteral("blockDetailsApplyButton"));
+    if (!expect(primaryEdit != nullptr && secondaryEdit != nullptr && commentEdit != nullptr
+                    && primaryLabel != nullptr && secondaryLabel != nullptr
+                    && optionsLabel != nullptr && optionsTable != nullptr
+                    && addOptionButton != nullptr && applyButton != nullptr,
+                "Failed to find block details controls.")) {
+        return 1;
+    }
+
+    const QString blocksText = tab.text();
+    if (!expect(blocksText.startsWith(QStringLiteral("encoding utf-8")),
+                "Blocks mode should normalize source to `encoding utf-8` at line 1.")) {
+        return 1;
+    }
+    int encodingDirectiveCount = 0;
+    const QStringList blocksLines = blocksText.split(QLatin1Char('\n'));
+    for (int index = 0; index < blocksLines.size(); ++index) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(blocksLines.at(index), index + 1);
+        if (parsedLine.directive.trimmed().compare(QStringLiteral("encoding"), Qt::CaseInsensitive) == 0) {
+            ++encodingDirectiveCount;
+        }
+    }
+    if (!expect(encodingDirectiveCount == 1,
+                "Blocks mode should keep exactly one `encoding` directive.")) {
+        return 1;
+    }
+
+    if (!expect(findToolboxCommandItem(toolboxList, QStringLiteral("encoding")) == nullptr,
+                "Toolbox should not expose `encoding` command templates.")) {
+        return 1;
+    }
+
+    const int allScopeIndex = scopeCombo->findData(QStringLiteral("all"));
+    if (!expect(allScopeIndex >= 0, "Failed to find `All` scope in toolbox scope selector.")) {
+        return 1;
+    }
+    scopeCombo->setCurrentIndex(allScopeIndex);
+    pumpEvents();
 
     QListWidgetItem *toolboxDataItem = findToolboxCommandItem(toolboxList, QStringLiteral("data"));
     if (!expect(toolboxDataItem != nullptr, "Failed to find `data` command in block toolbox list.")) {
@@ -275,8 +347,30 @@ int main(int argc, char *argv[])
                 "Selecting toolbox command should hide editable Block Details section.")) {
         return 1;
     }
-    if (!expect(detailsHelp->toPlainText().toLower().contains(QStringLiteral("syntax")),
-                "Selecting toolbox command should show command contextual help in third column.")) {
+    const QString toolboxHelpText = detailsHelp->toPlainText().toLower();
+    const QString toolboxHelpHtml = detailsHelp->toHtml().toLower();
+    if (!expect(toolboxHelpText.trimmed().size() > 12,
+                "Selecting toolbox command should show non-empty compact descriptive help.")) {
+        return 1;
+    }
+    if (!expect(toolboxHelpText.contains(QStringLiteral("summary:")),
+                "Selecting toolbox command should keep 'Summary:' label for consistency.")) {
+        return 1;
+    }
+    if (!expect(!toolboxHelpText.contains(QStringLiteral("inspect help before drag/drop insertion")),
+                "Toolbox command preview should not include introductory instruction sentence.")) {
+        return 1;
+    }
+    if (!expect(!toolboxHelpHtml.contains(QStringLiteral("<h4>arguments</h4>")),
+                "Toolbox command preview should not show full argument sections.")) {
+        return 1;
+    }
+    if (!expect(!toolboxHelpHtml.contains(QStringLiteral("<h4>accepted values</h4>")),
+                "Toolbox command preview should not show full accepted-values sections.")) {
+        return 1;
+    }
+    if (!expect(!toolboxHelpHtml.contains(QStringLiteral("<h4>options</h4>")),
+                "Toolbox command preview should not show full options sections.")) {
         return 1;
     }
 
@@ -288,6 +382,60 @@ int main(int argc, char *argv[])
                 "Selecting a canvas block should show editable Block Details section.")) {
         return 1;
     }
+    if (!expect(!secondaryEdit->isVisible(),
+                "Extra arguments field should stay hidden when no extra positional tokens exist.")) {
+        return 1;
+    }
+    if (!expect(optionsLabel->isVisible(),
+                "Options section should be visible for commands that support options.")) {
+        return 1;
+    }
+    if (!expect(commentEdit->isVisible()
+                    && commentEdit->text().trimmed().compare(QStringLiteral("survey comment"), Qt::CaseInsensitive) == 0,
+                "Selected block should expose editable inline comment field with parsed comment text.")) {
+        return 1;
+    }
+    const int surveyOptionRowCount = optionsTable->rowCount();
+    addOptionButton->click();
+    pumpEvents();
+    if (!expect(optionsTable->rowCount() == surveyOptionRowCount + 1,
+                "Add Option should append a new option row.")) {
+        return 1;
+    }
+    QTableWidgetItem *newOptionItem = optionsTable->item(optionsTable->rowCount() - 1, 0);
+    if (!expect(newOptionItem != nullptr && newOptionItem->text().trimmed().isEmpty(),
+                "Add Option should keep new option key empty (no prepopulated placeholder).")) {
+        return 1;
+    }
+    optionsTable->removeRow(optionsTable->rowCount() - 1);
+    pumpEvents();
+    if (!expect(!detailsHelp->toPlainText().toLower().contains(QStringLiteral("option: |title")),
+                "Selecting a block should show command/parameter help by default, not sticky option-row help.")) {
+        return 1;
+    }
+    optionsTable->setFocus();
+    optionsTable->setCurrentCell(0, 0);
+    pumpEvents();
+    if (!expect(!detailsHelp->toPlainText().toLower().contains(QStringLiteral("option: |title")),
+                "Focusing an option row should keep parent command/parameter help visible.")) {
+        return 1;
+    }
+    blockView->setFocus();
+    pumpEvents();
+    if (!expect(!detailsHelp->toPlainText().toLower().contains(QStringLiteral("option: |title")),
+                "Leaving option-table focus should restore command/parameter help.")) {
+        return 1;
+    }
+    if (!expect(detailsStatus->text().toLower().contains(QStringLiteral("command: survey"))
+                    && !detailsStatus->text().toLower().contains(QStringLiteral("line ")),
+                "Block Details status should show command-only context without line number.")) {
+        return 1;
+    }
+    if (!expect(!detailsHelp->toHtml().toLower().contains(QStringLiteral("<strong>syntax:</strong>")),
+                "Block details contextual help should hide Syntax section in Blocks mode.")) {
+        return 1;
+    }
+
     primaryEdit->setText(QStringLiteral("demo2"));
     applyButton->click();
     pumpEvents();
@@ -295,16 +443,59 @@ int main(int argc, char *argv[])
                 "Applying details for survey block should update survey id.")) {
         return 1;
     }
+    if (!expect(editor->toPlainText().contains(QStringLiteral("# survey comment")),
+                "Applying block details should preserve existing inline comment.")) {
+        return 1;
+    }
 
     if (!expect(selectBlockByKind(blockView, detailsStatus, QStringLiteral("team")),
                 "Failed to select team block in blocks view.")) {
         return 1;
     }
-    primaryEdit->setText(QStringLiteral("newteam"));
+    if (!expect(primaryEdit->isVisible() && secondaryEdit->isVisible(),
+                "Team block should expose separate Person and Roles fields.")) {
+        return 1;
+    }
+    if (!expect(primaryLabel->text().trimmed().compare(QStringLiteral("Person"), Qt::CaseInsensitive) == 0,
+                "Team block primary field should be labeled Person.")) {
+        return 1;
+    }
+    if (!expect(secondaryLabel->text().trimmed().compare(QStringLiteral("Roles"), Qt::CaseInsensitive) == 0,
+                "Team block secondary field should be labeled Roles.")) {
+        return 1;
+    }
+    if (!expect(!optionsLabel->isVisible(),
+                "Options section should stay hidden for commands without options support.")) {
+        return 1;
+    }
+    primaryEdit->setText(QStringLiteral("ZO /CSS 6-28"));
     applyButton->click();
     pumpEvents();
-    if (!expect(editor->toPlainText().contains(QStringLiteral("team newteam")),
-                "Applying details for team block should update team value.")) {
+    if (!expect(editor->toPlainText().contains(QStringLiteral("team \"ZO /CSS 6-28\"")),
+                "Applying details for team block should quote spaced team value.")) {
+        return 1;
+    }
+    if (!expect(selectBlockByKind(blockView, detailsStatus, QStringLiteral("team")),
+                "Failed to reselect team block after apply.")) {
+        return 1;
+    }
+    if (!expect(secondaryEdit->text().trimmed().isEmpty(),
+                QStringLiteral("Team block without roles should parse empty Roles field (actual: `%1`).")
+                    .arg(secondaryEdit->text())
+                    .toUtf8()
+                    .constData())) {
+        return 1;
+    }
+
+    if (!expect(selectBlockByKind(blockView, detailsStatus, QStringLiteral("explo-team")),
+                "Failed to select explo-team block in blocks view.")) {
+        return 1;
+    }
+    primaryEdit->setText(QStringLiteral("Babicka Speleo Group"));
+    applyButton->click();
+    pumpEvents();
+    if (!expect(editor->toPlainText().contains(QStringLiteral("explo-team \"Babicka Speleo Group\"")),
+                "Applying details for explo-team block should quote spaced person value.")) {
         return 1;
     }
 
@@ -312,17 +503,51 @@ int main(int argc, char *argv[])
                 "Failed to select data block in blocks view.")) {
         return 1;
     }
-    primaryEdit->setText(QStringLiteral("normal from to length compass clino"));
+    if (!expect(primaryLabel->text().trimmed().compare(QStringLiteral("Style"), Qt::CaseInsensitive) == 0,
+                "Data block primary field should be labeled Style.")) {
+        return 1;
+    }
+    if (!expect(secondaryLabel->isVisible()
+                    && secondaryLabel->text().trimmed().compare(QStringLiteral("Readings Order"), Qt::CaseInsensitive) == 0,
+                "Data block secondary field should be visible and labeled Readings Order.")) {
+        return 1;
+    }
+    if (!expect(secondaryEdit->isVisible()
+                    && secondaryEdit->text().trimmed().compare(QStringLiteral("from to tape compass clino"),
+                                                               Qt::CaseInsensitive) == 0,
+                "Data block should parse existing readings order into secondary field.")) {
+        return 1;
+    }
+    primaryEdit->setText(QStringLiteral("normal"));
+    secondaryEdit->setText(QStringLiteral("from to length compass clino"));
     applyButton->click();
     pumpEvents();
     if (!expect(editor->toPlainText().contains(QStringLiteral("data normal from to length compass clino")),
-                "Applying details for data block should update data header columns.")) {
+                "Applying details for data block should update style + readings order.")) {
         return 1;
     }
     if (!expect(editor->toPlainText().contains(QStringLiteral("  1 2 3 4 5 6")),
                 "Applying data header edit should preserve existing data rows.")) {
         return 1;
     }
+
+    if (!expect(selectBlockByKind(blockView, detailsStatus, QStringLiteral("centerline")),
+                "Failed to select centerline block in blocks view.")) {
+        return 1;
+    }
+    const int centerlineOptionRows = optionsTable->rowCount();
+    addOptionButton->click();
+    pumpEvents();
+    if (!expect(optionsTable->rowCount() == centerlineOptionRows + 1,
+                "Centerline Add Option should append a new option row.")) {
+        return 1;
+    }
+    const int newRow = optionsTable->rowCount() - 1;
+    optionsTable->setItem(newRow, 0, new QTableWidgetItem(QStringLiteral("-walls")));
+    optionsTable->setItem(newRow, 1, new QTableWidgetItem(QStringLiteral("invalid-value")));
+    pumpEvents();
+    optionsTable->removeRow(newRow);
+    pumpEvents();
 
     {
         auto *crashGuardTab = new TextEditorTab;

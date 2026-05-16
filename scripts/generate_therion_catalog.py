@@ -69,6 +69,15 @@ def normalize_whitespace(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
 
 
+def normalize_directive_token(value: str) -> str:
+    normalized = normalize_whitespace(value).lower()
+    if normalized == "centreline":
+        return "centerline"
+    if normalized == "endcentreline":
+        return "endcenterline"
+    return normalized
+
+
 def append_unique(items: list[str], value: str) -> None:
     normalized = normalize_whitespace(value).lower()
     if not normalized or normalized in items:
@@ -88,6 +97,35 @@ def extract_signature_core(signature: str) -> str:
     if pipe_tokens:
         return pipe_tokens[0]
     return normalize_whitespace(signature)
+
+
+def infer_block_closing_directive(command_directive: str, syntax_rows: list[str]) -> str:
+    if not command_directive or command_directive.startswith("end"):
+        return ""
+
+    candidate_end_tokens: list[str] = []
+    for syntax_row in syntax_rows:
+        lowered_row = normalize_whitespace(syntax_row).lower()
+        for match in re.findall(r"\bend[a-z][a-z0-9-]*\b", lowered_row):
+            candidate = normalize_directive_token(match)
+            if candidate and candidate not in candidate_end_tokens:
+                candidate_end_tokens.append(candidate)
+
+    if not candidate_end_tokens:
+        return ""
+
+    expected_candidate = f"end{command_directive}"
+    if expected_candidate in candidate_end_tokens:
+        return expected_candidate
+
+    for candidate in candidate_end_tokens:
+        opening_candidate = normalize_directive_token(candidate[3:]) if candidate.startswith("end") else ""
+        if opening_candidate == command_directive:
+            return candidate
+
+    if len(candidate_end_tokens) == 1:
+        return candidate_end_tokens[0]
+    return ""
 
 
 def extract_option_key(signature_core: str) -> str:
@@ -544,6 +582,7 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
             comopt_items.extend(parse_item_block(block))
 
         normalized_command_name = command_name.strip().lower()
+        command_directive = normalize_directive_token(command_name)
         if normalized_command_name not in {"centreline", "centerline"}:
             options.extend(comopt_items)
         deduped_options = []
@@ -572,6 +611,7 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
 
         result_entry = {
             "name": command_name,
+            "directive": command_directive,
             "source": {
                 "file": source_file,
                 "line": tex_text.count("\n", 0, start) + 1,
@@ -634,6 +674,7 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
                 results.append(
                     {
                         "name": inline_command_name,
+                        "directive": normalize_directive_token(inline_command_name),
                         "source": {
                             "file": source_file,
                             "line": command_line,
@@ -677,6 +718,40 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
     return results
 
 
+def annotate_block_metadata(commands: list[dict[str, Any]]) -> list[dict[str, str]]:
+    open_to_close: dict[str, str] = {}
+    close_to_open: dict[str, str] = {}
+
+    for command in commands:
+        directive = normalize_directive_token(command.get("directive", command.get("name", "")))
+        command["directive"] = directive
+        closing_directive = infer_block_closing_directive(directive, command.get("syntax", []))
+        if closing_directive:
+            open_to_close[directive] = closing_directive
+            close_to_open[closing_directive] = directive
+
+    for command in commands:
+        directive = normalize_directive_token(command.get("directive", command.get("name", "")))
+        block_meta: dict[str, Any] = {"role": "leaf"}
+        if directive in open_to_close:
+            block_meta = {
+                "role": "container_open",
+                "close_directive": open_to_close[directive],
+            }
+        elif directive in close_to_open:
+            block_meta = {
+                "role": "container_close",
+                "open_directive": close_to_open[directive],
+            }
+        command["block"] = block_meta
+
+    pairs = [
+        {"open_directive": opening, "close_directive": closing}
+        for opening, closing in sorted(open_to_close.items())
+    ]
+    return pairs
+
+
 def apply_overrides(catalog: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
     commands_by_name = {command["name"]: command for command in catalog["commands"]}
     for command_name, patch in overrides.get("command_patches", {}).items():
@@ -694,6 +769,13 @@ def apply_overrides(catalog: dict[str, Any], overrides: dict[str, Any]) -> dict[
         catalog["commands"].append(extra)
 
     catalog["commands"] = sorted(catalog["commands"], key=lambda item: item["name"].lower())
+    return catalog
+
+
+def finalize_catalog(catalog: dict[str, Any]) -> dict[str, Any]:
+    commands = sorted(catalog.get("commands", []), key=lambda item: item["name"].lower())
+    catalog["commands"] = commands
+    catalog["block_pairs"] = annotate_block_metadata(commands)
     return catalog
 
 
@@ -718,15 +800,19 @@ def build_catalog(inputs: list[Path], source_repo: str, source_ref: str) -> dict
     for command in commands:
         deduped.setdefault(command["name"], command)
 
+    sorted_commands = sorted(deduped.values(), key=lambda item: item["name"].lower())
+    block_pairs = annotate_block_metadata(sorted_commands)
+
     return {
         "metadata": {
             "generated_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
-            "generator_version": "1",
+            "generator_version": "2",
             "source_repository": source_repo,
             "source_reference": source_ref,
             "source_files": [str(path) for path in inputs],
         },
-        "commands": sorted(deduped.values(), key=lambda item: item["name"].lower()),
+        "block_pairs": block_pairs,
+        "commands": sorted_commands,
     }
 
 
@@ -775,6 +861,8 @@ def main() -> int:
     if overrides_path.exists():
         overrides = json.loads(overrides_path.read_text(encoding="utf-8"))
         catalog = apply_overrides(catalog, overrides)
+
+    catalog = finalize_catalog(catalog)
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)

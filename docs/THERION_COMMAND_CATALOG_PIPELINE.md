@@ -79,6 +79,16 @@ Parser-level extraction is the default and required path for Therion metadata be
 
 Do not hardcode Therion command semantics in UI code when it can be represented in catalog JSON or overrides.
 
+## Schema extension policy
+
+When UI behavior needs metadata that is not currently present in `resources/therion_command_catalog.json`, follow this order:
+
+1. extend `scripts/generate_therion_catalog.py` (parser/generator level),
+2. regenerate `resources/therion_command_catalog.json`,
+3. update consumers to use the new generated fields.
+
+Do not hand-edit generated catalog output to add persistent fields.
+
 ## Option-shape fields (current generator output)
 
 Each parsed option entry includes normalized shape hints for UI/autocomplete:
@@ -98,6 +108,14 @@ These fields are heuristic and should be improved by parser refinements and regr
 This field is intentionally separate from `options` to avoid mixing real dash-options with argument placeholders or prose tokens.
 
 Generator also emits standalone centerline-context command entries for inline commands that do not have dedicated top-level sections, so autocomplete/help can use per-inline-command value metadata (for example `infer` -> `on/off`, `walls` -> `auto/on/off`, `mark` -> `fixed/painted/temporary`).
+
+## Block-structure fields
+
+Generator now emits directive-normalized and block-structure hints derived from syntax:
+
+- command-level `directive`: normalized command token (`centreline` -> `centerline`)
+- command-level `block`: structural role metadata (`leaf`, `container_open`, `container_close`)
+- root-level `block_pairs`: derived open/close directive pairs used by block-aware editors
 
 ## Future-proofing guidance
 

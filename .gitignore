@@ -1,2 +1,4 @@
 build/
 .DS_Store
+therion/
+scripts/__pycache__

@@ -174,16 +174,36 @@ Text editor includes:
 `Blocks` mode (experimental PoC):
 
 - left toolbox provides draggable Therion command entries grouped by context
-- toolbox has a live filter field (`Filter commands...`) for narrowing large command lists by keyword
-- toolbox sections are catalog-context driven (`Top-level`, `Inside Survey`, `Inside Centerline`) using `resources/therion_command_catalog.json` command context metadata, and now list supported draggable commands from catalog scope metadata (excluding unsupported block-pair families not yet modeled in canvas)
-- selecting a command item in toolbox shows that command’s contextual help in the `Block Details` pane (third column), even before inserting it
+- `encoding` is not offered in toolbox (it is managed as a fixed document-root directive)
+- toolbox has a persistent scope selector (`Auto (selected block)`, `All`, `Top-level`, `Inside ...`) to narrow command list context before drag/drop; `Inside ...` entries are populated from catalog command contexts (not hardcoded)
+- default toolbox scope is `Auto (selected block)`
+- toolbox has a live filter field (`Filter commands...`) for narrowing the current scoped list by keyword
+- `Auto (selected block)` resolves scope from the currently selected canvas block context (container selection -> inside that container; leaf selection -> parent container; no selection -> top-level)
+- toolbox list sections are catalog-context driven from `resources/therion_command_catalog.json` context metadata and show supported draggable commands from each effective scope (excluding unsupported block-pair families not yet modeled in canvas)
+- toolbox also includes a draggable `Comment` block for inserting full-line comments (`# ...`) in the current context
+- selecting a command item in toolbox shows compact help in the `Block Details` pane (third column): command title + `Summary` line only
 - the editable `Block Details` section is visible only when a canvas block is selected; toolbox-command preview keeps only contextual help visible
+- selected-block status in `Block Details` shows command context (`Command: ...`) without source line numbers
+- in Blocks mode contextual help omits the `Syntax` section; help focuses on summary/arguments/options relevant to block-parameter editing
 - right canvas renders parsed block hierarchy from current source and keeps order by source line
+- Blocks mode enforces exactly one `encoding ...` directive at document root:
+- if missing, it is auto-inserted at line 1 using the currently detected document encoding
+- duplicate `encoding` directives are removed
+- encoding card is sticky (not movable) and has no delete action
+- all non-`encoding` cards are visually indented one level to reinforce `encoding` as document root
 - right canvas also renders catalog-recognized leaf directives in-scope (for example `input`), not only the previously hardcoded centerline leaf pair
 - right `Block Details` pane edits parameters of the selected block directly (no modal dialog for supported block kinds)
 - blocks view uses a 3-column horizontal splitter (`Toolbox | Canvas | Block Details`), so `Block Details` can be resized wider for multi-column option/value editing
 - dragging a toolbox item to the canvas inserts source templates at compatible positions
+- if a toolbox drop lands between cards (not exactly on one card), insertion context resolves from the nearest canvas block by vertical position
+- while dragging from toolbox to canvas, the same dashed placement guide line is shown as for block reordering
+- toolbox drop insertion now uses boundary zones: before/after target near edges, or inside compatible container in middle zone
 - dragging an existing block card in canvas reorders source blocks (whole block is moved, including nested content for container blocks)
+- blocks-mode right-column contextual help now uses the same framed header/body style and internal padding as Raw mode contextual help for consistent spacing
+- full-line source comments (`# ...`) are rendered as `comment` cards in canvas and can be moved/deleted like other leaf cards
+- while dragging a canvas card, a dashed horizontal placement guide line shows the current insertion boundary between blocks
+- when dragging over a container card, dropping near the card top/bottom edge inserts before/after that block; dropping in the middle keeps container-child insertion behavior
+- for container-compatible child blocks (for example comment under `survey`), dropping near container bottom edge inserts at the beginning of the container body (before first child), enabling direct placement between container header and first child
 - dropping onto a compatible container (for example `survey`) moves the block inside that container near its end
 - block cards use a trash icon action in the top-right corner for delete
 - selecting a block card focuses it in `Block Details` for editing
@@ -191,25 +211,46 @@ Text editor includes:
 - selecting a `Survey` / `Map` / `Scrap` / `Centerline` block enables structured header editing in details pane:
 - `ID` field (`required` for `survey/map/scrap`, `optional` for `centerline`)
 - option key/value table
-- optional `Additional Positional Tokens` preservation field
+- options section is shown only when the command supports options (or when option tokens already exist on that source line)
+- option list actions (`Add Option`, `Remove Option`) are placed in the bottom action row directly beneath the options table, together with `Apply`, to keep edit/commit actions in one stable area
+- `Add Option` appends an empty option row (no forced default), so custom options can still be entered
+- option/value cells support inline completion from catalog metadata while remaining editable as free text
+- when catalog defines enum-like allowed values for an option, invalid values are rejected by Block Details validation (`Apply` stays disabled and inline status explains the issue)
+- every editable block exposes an always-visible optional inline `Comment` field for end-of-line comments (`... # comment`)
+- block cards show a comment badge when inline comment exists; hover shows comment text tooltip
+- action row keeps a clear visual gap before `Contextual Help` to separate editing controls from help content
+- optional `Extra Arguments (Advanced)` preservation field (shown only when such unsupported positional tokens already exist in source)
 - `Apply` writes the updated command line back to source as one undoable edit step
 - `Apply` is enabled only when there is a valid change against current source line
 - validation errors (for example required ID/value missing or invalid option key/value arity) are shown inline in details status and block `Apply`
 - contextual help in details pane follows the currently active field/row (`ID` help or selected option help)
-- selecting `Team`, `Date`, or `Explo Date` enables direct value editing in details pane (`Value` field + `Apply`)
-- selecting `Data` enables header-column editing in details pane (`Columns` field + `Apply`), while `Edit Data Rows...` opens the full mixed-row data editor for body rows/directives
+- contextual help in Block Details always stays at parent command/parameter level; selecting option rows does not replace the panel with option-only help
+- selecting `Team`, `Explo Team`, `Date`, or `Explo Date` enables direct value editing in details pane (`Person`/`Value` field + `Apply`)
+- for `Team`, details pane also exposes optional `Roles` tokens (for example `station`, `length`, `compass`) as a separate field
+- for `Team`/`Explo Team`, `Apply` auto-quotes the person value when needed (for example names with spaces), preserving valid Therion tokenization
+- simple command fields are argument-aware: Block Details labels positional fields from command argument metadata and parses current raw-line tokens back into those fields
+- selecting `Data` enables split header editing in details pane (`Style` + `Readings Order` fields + `Apply`, serialized as `data <style> <readings order>`), while `Edit Data Rows...` opens the full mixed-row data editor for body rows/directives
 - most in-scope command cards now edit directly in details pane; unsupported kinds keep a `Legacy Configure...` fallback button
 - `Apply` / `Legacy Configure...` actions are placed above `Contextual Help` in a stable row to keep commit actions in a fixed position while help content changes/scrolls
 - nested commands should be inserted through toolbox drag/drop, not through block-parameter editing
 - `Data` block editor dialog:
-- edit header columns (`data normal from to ...`)
+- data header (`data <style> <readings order>`) is edited in Block Details; rows dialog uses that active header as schema
 - measurement rows are shown in a table generated from the current column definition
+- the rows dialog does not expose a second editable columns/header input
 - `Add Data Row` / `Add Directive Row` / `Remove Row` control one combined row table
+- `Add Comment Row` inserts a comment-only row
+- if existing body rows do not match the current `data` header schema, the dialog shows a warning (`Schema no longer matches ...`)
 - table width/column widths auto-resize based on current column definition and expand to fill available dialog width
 - dialog auto-expands (up to available window/screen space) so all table columns stay visible when possible
 - pressing `Enter` in the last table column moves to a new row and focuses the first column
 - measurement rows and directive rows (for example `extend right`) can be mixed in any order in the same table
 - row `Type` can be `data` or `directive`; `directive` rows use the `Directive` column text
+- row `Type` also supports `comment` for comment-only lines
+- row `Type` is edited via a pick list (`Data`, `Directive`, `Comment`)
+- `Directive` column has inline suggestions (centerline commands/templates) and is editable only for `directive` rows
+- data value columns are locked for `directive`/`comment` rows; `Directive` is locked for `data`/`comment` rows
+- all rows expose a trailing `Comment` column for inline end-of-line notes
+- data column headers in the rows table are shown as consistent humanized labels
 - navigation/find commands automatically switch back to `Raw` mode when line-accurate text focus is needed
 
 Main window status bar shows:

@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "generated_at_utc": "2026-05-15T18:09:34.954683+00:00",
-    "generator_version": "1",
+    "generated_at_utc": "2026-05-16T18:07:01.947346+00:00",
+    "generator_version": "2",
     "source_repository": "snapshot-copy",
     "source_reference": "snapshot-copy",
     "source_files": [
@@ -9,9 +9,60 @@
       "therion/thbook/ch03.tex"
     ]
   },
+  "block_pairs": [
+    {
+      "open_directive": "area",
+      "close_directive": "endarea"
+    },
+    {
+      "open_directive": "centerline",
+      "close_directive": "endcenterline"
+    },
+    {
+      "open_directive": "grade",
+      "close_directive": "endgrade"
+    },
+    {
+      "open_directive": "layout",
+      "close_directive": "endlayout"
+    },
+    {
+      "open_directive": "line",
+      "close_directive": "endline"
+    },
+    {
+      "open_directive": "lookup",
+      "close_directive": "endlookup"
+    },
+    {
+      "open_directive": "map",
+      "close_directive": "endmap"
+    },
+    {
+      "open_directive": "revise",
+      "close_directive": "endrevise"
+    },
+    {
+      "open_directive": "scrap",
+      "close_directive": "endscrap"
+    },
+    {
+      "open_directive": "source",
+      "close_directive": "endsource"
+    },
+    {
+      "open_directive": "surface",
+      "close_directive": "endsurface"
+    },
+    {
+      "open_directive": "survey",
+      "close_directive": "endsurvey"
+    }
+  ],
   "commands": [
     {
       "name": "area",
+      "directive": "area",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 1201
@@ -149,10 +200,15 @@
         "u": [
           "*"
         ]
+      },
+      "block": {
+        "role": "container_open",
+        "close_directive": "endarea"
       }
     },
     {
       "name": "break",
+      "directive": "break",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 459
@@ -169,10 +225,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "calibrate",
+      "directive": "calibrate",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 454
@@ -223,10 +283,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "centreline",
+      "directive": "centerline",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 342
@@ -318,12 +382,17 @@
         "extend",
         "station-names"
       ],
+      "block": {
+        "role": "container_open",
+        "close_directive": "endcenterline"
+      },
       "aliases": [
         "centerline"
       ]
     },
     {
       "name": "cs",
+      "directive": "cs",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 47
@@ -336,10 +405,14 @@
       "arguments": [],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "data",
+      "directive": "data",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 503
@@ -462,10 +535,14 @@
         "right",
         "ignore",
         "ignoreall"
-      ]
+      ],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "date",
+      "directive": "date",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 397
@@ -494,10 +571,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "declination",
+      "directive": "declination",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 432
@@ -537,10 +618,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "encoding",
+      "directive": "encoding",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 213
@@ -569,10 +654,14 @@
       "dependencies": [
         "context: none"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "endgroup",
+      "directive": "endgroup",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 526
@@ -589,10 +678,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "equate",
+      "directive": "equate",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 1312
@@ -610,10 +703,14 @@
       "dependencies": [
         "context: none, survey"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "explo-date",
+      "directive": "explo-date",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 399
@@ -642,10 +739,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "explo-team",
+      "directive": "explo-team",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 422
@@ -674,10 +775,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "export",
+      "directive": "export",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 672
@@ -1070,10 +1175,14 @@
         }
       ],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "extend",
+      "directive": "extend",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 543
@@ -1113,10 +1222,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "fix",
+      "directive": "fix",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 499
@@ -1156,10 +1269,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "flags",
+      "directive": "flags",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 464
@@ -1192,10 +1309,14 @@
         "surface",
         "duplicate",
         "splay"
-      ]
+      ],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "grade",
+      "directive": "grade",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 1490
@@ -1212,10 +1333,15 @@
       "dependencies": [
         "context: all"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "container_open",
+        "close_directive": "endgrade"
+      }
     },
     {
       "name": "grid-angle",
+      "directive": "grid-angle",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 438
@@ -1255,10 +1381,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "group",
+      "directive": "group",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 525
@@ -1275,10 +1405,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "import",
+      "directive": "import",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 1453
@@ -1345,10 +1479,14 @@
       "dependencies": [
         "context: all, survey"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "infer",
+      "directive": "infer",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 426
@@ -1391,10 +1529,14 @@
       "allowed_values": [
         "on",
         "off"
-      ]
+      ],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "input",
+      "directive": "input",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 237
@@ -1423,10 +1565,14 @@
       "dependencies": [
         "context: all"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "instrument",
+      "directive": "instrument",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 423
@@ -1466,10 +1612,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "join",
+      "directive": "join",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 1260
@@ -1526,10 +1676,14 @@
       "dependencies": [
         "context: none, survey, scrap"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "language",
+      "directive": "language",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 38
@@ -1542,10 +1696,14 @@
       "arguments": [],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "layout",
+      "directive": "layout",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 224
@@ -2380,10 +2538,15 @@
         }
       ],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "container_open",
+        "close_directive": "endlayout"
+      }
     },
     {
       "name": "line",
+      "directive": "line",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 1002
@@ -2846,10 +3009,15 @@
           "symbol-show",
           "fix"
         ]
+      },
+      "block": {
+        "role": "container_open",
+        "close_directive": "endline"
       }
     },
     {
       "name": "log",
+      "directive": "log",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 195
@@ -2862,10 +3030,14 @@
       "arguments": [],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "lookup",
+      "directive": "lookup",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 597
@@ -2934,10 +3106,15 @@
       ],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "container_open",
+        "close_directive": "endlookup"
+      }
     },
     {
       "name": "map",
+      "directive": "map",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 1327
@@ -3068,10 +3245,15 @@
       "dependencies": [
         "context: none, survey"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "container_open",
+        "close_directive": "endmap"
+      }
     },
     {
       "name": "maps",
+      "directive": "maps",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 170
@@ -3084,10 +3266,14 @@
       "arguments": [],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "maps-offset",
+      "directive": "maps-offset",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 182
@@ -3100,10 +3286,14 @@
       "arguments": [],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "mark",
+      "directive": "mark",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 460
@@ -3147,10 +3337,14 @@
         "fixed",
         "painted",
         "temporary"
-      ]
+      ],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "point",
+      "directive": "point",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 708
@@ -3524,10 +3718,14 @@
           "symbol-show",
           "text"
         ]
+      },
+      "block": {
+        "role": "leaf"
       }
     },
     {
       "name": "require",
+      "directive": "require",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 1552
@@ -3556,10 +3754,14 @@
       "dependencies": [
         "context: all"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "revise",
+      "directive": "revise",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 1517
@@ -3576,10 +3778,15 @@
       "dependencies": [
         "context: all"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "container_open",
+        "close_directive": "endrevise"
+      }
     },
     {
       "name": "scrap",
+      "directive": "scrap",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 576
@@ -3739,10 +3946,15 @@
       "dependencies": [
         "context: none, survey"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "container_open",
+        "close_directive": "endscrap"
+      }
     },
     {
       "name": "sd",
+      "directive": "sd",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 440
@@ -3793,10 +4005,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "select",
+      "directive": "select",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 106
@@ -3868,10 +4084,14 @@
         "valid only when a map is selected. Determines the level at which map expansion for atlas export is stopped. By default 0 is used; if `basic' is specified, expansion is done up to the basic maps. {\\it Note:} Map previews are displayed only as specified in maps in the current |map-level|.",
         "valid only when a map is selected. Determines the level at which chapter expansion for atlas export is stopped. By default 0 is used, if `|-|' or `|.|' is specified, no chapter is exported for this map. If |title-pages| option in |layout| is on, each chapter starts with a title page."
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "setup3d",
+      "directive": "setup3d",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 648
@@ -3884,10 +4104,14 @@
       "arguments": [],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "sketch-colors",
+      "directive": "sketch-colors",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 660
@@ -3900,10 +4124,14 @@
       "arguments": [],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "sketch-warp",
+      "directive": "sketch-warp",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 66
@@ -3916,10 +4144,14 @@
       "arguments": [],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "source",
+      "directive": "source",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 82
@@ -3944,10 +4176,15 @@
       ],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "container_open",
+        "close_directive": "endsource"
+      }
     },
     {
       "name": "station",
+      "directive": "station",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 479
@@ -4005,10 +4242,14 @@
         "spring",
         "doline",
         "dig"
-      ]
+      ],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "station-names",
+      "directive": "station-names",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 566
@@ -4048,10 +4289,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "surface",
+      "directive": "surface",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 1389
@@ -4140,10 +4385,15 @@
       "dependencies": [
         "context: none, survey"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "container_open",
+        "close_directive": "endsurface"
+      }
     },
     {
       "name": "survey",
+      "directive": "survey",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 262
@@ -4232,10 +4482,15 @@
       "dependencies": [
         "context: none, survey"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "container_open",
+        "close_directive": "endsurvey"
+      }
     },
     {
       "name": "system",
+      "directive": "system",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 27
@@ -4246,10 +4501,14 @@
       "arguments": [],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "team",
+      "directive": "team",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 401
@@ -4289,10 +4548,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "text",
+      "directive": "text",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 207
@@ -4328,10 +4591,14 @@
       ],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "units",
+      "directive": "units",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 452
@@ -4382,10 +4649,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "unselect",
+      "directive": "unselect",
       "source": {
         "file": "therion/thbook/ch03.tex",
         "line": 152
@@ -4398,10 +4669,14 @@
       "arguments": [],
       "options": [],
       "dependencies": [],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "vthreshold",
+      "directive": "vthreshold",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 532
@@ -4441,10 +4716,14 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": []
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "walls",
+      "directive": "walls",
       "source": {
         "file": "therion/thbook/ch02.tex",
         "line": 529
@@ -4477,7 +4756,10 @@
         "on",
         "off",
         "auto"
-      ]
+      ],
+      "block": {
+        "role": "leaf"
+      }
     }
   ]
 }

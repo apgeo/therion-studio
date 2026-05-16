@@ -175,6 +175,7 @@ private:
     void handleBlockMoveRequest(int lineNumber, const QPointF &scenePos);
     void updateBlockMovePreview(int sourceLineNumber, const QPointF &scenePos);
     void clearBlockMovePreview();
+    int resolveEndHintContainerStartLineAtScenePos(const QPointF &scenePos) const;
     void handleBlockConfigureRequest(const QString &kind, int lineNumber);
     void selectBlockInCanvasAndDetails(int lineNumber);
     void clearBlockDetailsPane();
@@ -241,6 +242,8 @@ private:
     QGraphicsView *blockCanvasView_ = nullptr;
     QGraphicsScene *blockCanvasScene_ = nullptr;
     QGraphicsLineItem *blockMovePreviewLine_ = nullptr;
+    QList<QGraphicsLineItem *> blockContainerBoundaryGuideItems_;
+    QHash<int, qreal> blockContainerBoundaryEndYByLine_;
     QWidget *blockDetailsPanel_ = nullptr;
     QWidget *blockDetailsEditPanel_ = nullptr;
     QLabel *blockDetailsStatusLabel_ = nullptr;

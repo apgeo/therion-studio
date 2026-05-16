@@ -46,6 +46,7 @@
 #include <QScreen>
 #include <QScrollBar>
 #include <QSignalBlocker>
+#include <QScopeGuard>
 #include <QStyledItemDelegate>
 #include <QStyle>
 #include <QStringListModel>
@@ -73,6 +74,9 @@
 
 namespace
 {
+constexpr int kBlockEndHintContainerLineDataRole = 0x42554e44; // "BUND"
+QColor blockBaseColorForDirective(const QString &directive);
+
 class HighlightPlainTextEdit;
 
 class LineNumberAreaWidget final : public QWidget
@@ -1085,17 +1089,7 @@ protected:
             return;
         }
 
-        QColor baseColor(QStringLiteral("#d8e9ff"));
-        const QString normalizedKind = kind_.toLower();
-        if (normalizedKind == QStringLiteral("survey")) {
-            baseColor = QColor(QStringLiteral("#d7f7d7"));
-        } else if (normalizedKind == QStringLiteral("centerline")) {
-            baseColor = QColor(QStringLiteral("#ffe9cc"));
-        } else if (normalizedKind == QStringLiteral("data")) {
-            baseColor = QColor(QStringLiteral("#e8dbff"));
-        } else if (normalizedKind == QStringLiteral("map")) {
-            baseColor = QColor(QStringLiteral("#d5f3f0"));
-        }
+        const QColor baseColor = blockBaseColorForDirective(kind_);
 
         painter->setPen(QPen(isSelected() ? QColor(QStringLiteral("#2f6fed")) : QColor(QStringLiteral("#8c8c8c")), isSelected() ? 2.0 : 1.0));
         painter->setBrush(baseColor);
@@ -1172,7 +1166,10 @@ protected:
         }
         QGraphicsObject::mouseMoveEvent(event);
         if (dragging_ && onMovePreview) {
-            onMovePreview(lineNumber_, mapToScene(boundingRect().center()), true);
+            const QPointF previewScenePos = event != nullptr
+                ? event->scenePos()
+                : mapToScene(boundingRect().center());
+            onMovePreview(lineNumber_, previewScenePos, true);
         }
     }
 
@@ -1180,20 +1177,25 @@ protected:
     {
         QGraphicsObject::mouseReleaseEvent(event);
         setCursor(movable_ ? Qt::OpenHandCursor : Qt::ArrowCursor);
-        if (onMovePreview) {
-            onMovePreview(lineNumber_, QPointF(), false);
-        }
         if (!movable_) {
+            if (onMovePreview) {
+                onMovePreview(lineNumber_, QPointF(), false);
+            }
             dragging_ = false;
             return;
         }
         const bool moved = (pos() - dragStartItemPos_).manhattanLength() >= 2.0;
         if (!moved) {
+            if (onMovePreview) {
+                onMovePreview(lineNumber_, QPointF(), false);
+            }
             dragging_ = false;
             return;
         }
 
-        const QPointF dropScenePos = mapToScene(boundingRect().center());
+        const QPointF dropScenePos = event != nullptr
+            ? event->scenePos()
+            : mapToScene(boundingRect().center());
         setPos(dragStartItemPos_);
         dragging_ = false;
         if (onMoveRequest) {
@@ -1407,6 +1409,24 @@ QHash<QString, QString> invertBlockOpenCloseMap(const QHash<QString, QString> &o
 
 QHash<QString, QString> gBlockOpenToCloseMap = defaultBlockOpenToCloseMap();
 QHash<QString, QString> gBlockCloseToOpenMap = invertBlockOpenCloseMap(gBlockOpenToCloseMap);
+
+QColor blockBaseColorForDirective(const QString &directive)
+{
+    const QString normalizedKind = normalizeDirectiveToken(directive);
+    if (normalizedKind == QStringLiteral("survey")) {
+        return QColor(QStringLiteral("#d7f7d7"));
+    }
+    if (normalizedKind == QStringLiteral("centerline")) {
+        return QColor(QStringLiteral("#ffe9cc"));
+    }
+    if (normalizedKind == QStringLiteral("data")) {
+        return QColor(QStringLiteral("#e8dbff"));
+    }
+    if (normalizedKind == QStringLiteral("map")) {
+        return QColor(QStringLiteral("#d5f3f0"));
+    }
+    return QColor(QStringLiteral("#d8e9ff"));
+}
 
 void resetCatalogBlockDirectiveMetadataToDefaults()
 {
@@ -1699,7 +1719,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     rawModeButton_->setCheckable(true);
     blocksModeButton_ = new QPushButton(tr("Blocks"), modeRow_);
     blocksModeButton_->setCheckable(true);
-    blocksModeButton_->setToolTip(tr("Experimental block canvas for .th files."));
+    blocksModeButton_->setToolTip(tr("Structured block canvas for .th files."));
     modeLayout->addWidget(rawModeButton_);
     modeLayout->addWidget(blocksModeButton_);
     modeLayout->addStretch(1);
@@ -2996,7 +3016,6 @@ QString TextEditorTab::selectedBlockInsertionContextToken() const
         }
         return nullptr;
     };
-
     BlockCanvasItem *selectedBlock = nullptr;
     if (!blockCanvasScene_->selectedItems().isEmpty()) {
         selectedBlock = resolveBlockFromItem(blockCanvasScene_->selectedItems().first());
@@ -3086,6 +3105,8 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
 
     const int preferredSelectedLine = blockDetailsSelectedLineNumber_;
     blockMovePreviewLine_ = nullptr;
+    blockContainerBoundaryGuideItems_.clear();
+    blockContainerBoundaryEndYByLine_.clear();
     {
         const QSignalBlocker sceneSignalBlocker(blockCanvasScene_);
         blockCanvasScene_->clear();
@@ -3275,7 +3296,373 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
     for (BlockCanvasItem *root : roots) {
         layoutTree(root, 0);
     }
+
+    QStringList sourceLines = editor_->toPlainText().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    for (QString &line : sourceLines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+
+    auto visualSubtreeBottomForSpan = [&allItems](int startLine, int endLine, qreal fallbackBottom) {
+        qreal bottom = fallbackBottom;
+        for (BlockCanvasItem *blockItem : allItems) {
+            if (blockItem == nullptr) {
+                continue;
+            }
+            const int blockLine = blockItem->lineNumber();
+            if (blockLine < startLine || blockLine > endLine) {
+                continue;
+            }
+            bottom = qMax(bottom, blockItem->sceneBoundingRect().bottom());
+        }
+        return bottom;
+    };
+
+    struct ContainerBoundary
+    {
+        BlockCanvasItem *item = nullptr;
+        int closingLine = 0;
+        qreal minEndY = 0.0;
+        qreal endY = 0.0;
+        qreal maxEndY = std::numeric_limits<qreal>::max();
+        int depth = 0;
+    };
+
+    QVector<ContainerBoundary> boundaries;
+    boundaries.reserve(allItems.size());
+
+    // Keep closure lines on the same visible rhythm as block-to-block spacing.
+    // Because closure lines are thick, include half stroke width in spacing math.
+    constexpr qreal kClosureMarkerStrokeWidth = 3.4;
+    constexpr qreal kCardToCardGap = 10.0;
+    constexpr qreal kClosurePadAboveSubtree = kCardToCardGap + (kClosureMarkerStrokeWidth * 0.5);
+    constexpr qreal kClosurePadBeforeNextBlock = kCardToCardGap + (kClosureMarkerStrokeWidth * 0.5);
+    constexpr qreal kClosurePreferredOffset = kClosurePadAboveSubtree;
+
+    auto subtreeBottomForItem = [](BlockCanvasItem *root) {
+        if (root == nullptr) {
+            return 0.0;
+        }
+        qreal bottom = root->sceneBoundingRect().bottom();
+        QList<QGraphicsItem *> stack;
+        stack.append(root);
+        while (!stack.isEmpty()) {
+            QGraphicsItem *current = stack.takeLast();
+            if (current == nullptr) {
+                continue;
+            }
+            bottom = qMax(bottom, current->sceneBoundingRect().bottom());
+            for (QGraphicsItem *child : current->childItems()) {
+                stack.append(child);
+            }
+        }
+        return bottom;
+    };
+
+    auto compactImmediateChildGaps = [&allItems]() {
+        constexpr qreal kGapEpsilon = 0.5;
+        for (BlockCanvasItem *parent : allItems) {
+            if (parent == nullptr) {
+                continue;
+            }
+
+            QList<BlockCanvasItem *> childBlocks;
+            const QList<QGraphicsItem *> children = parent->childItems();
+            for (QGraphicsItem *child : children) {
+                auto *childBlock = dynamic_cast<BlockCanvasItem *>(child);
+                if (childBlock != nullptr) {
+                    childBlocks.append(childBlock);
+                }
+            }
+            std::sort(childBlocks.begin(), childBlocks.end(), [](BlockCanvasItem *left, BlockCanvasItem *right) {
+                return left->lineNumber() < right->lineNumber();
+            });
+            if (childBlocks.isEmpty()) {
+                continue;
+            }
+
+            BlockCanvasItem *firstChild = childBlocks.first();
+            if (firstChild == nullptr) {
+                continue;
+            }
+            const qreal expectedTop = parent->sceneBoundingRect().bottom() + kCardToCardGap;
+            const qreal actualTop = firstChild->sceneBoundingRect().top();
+            if (actualTop > expectedTop + kGapEpsilon) {
+                const qreal deltaY = actualTop - expectedTop;
+                // Move the whole first-child subtree by moving its root item.
+                firstChild->moveBy(0.0, -deltaY);
+            }
+        }
+    };
+
+    auto nextBlockTopAfterLine = [&allItems](int lineNumber) {
+        qreal nextTop = std::numeric_limits<qreal>::max();
+        for (BlockCanvasItem *candidate : allItems) {
+            if (candidate == nullptr || candidate->lineNumber() <= lineNumber) {
+                continue;
+            }
+            nextTop = qMin(nextTop, candidate->sceneBoundingRect().top());
+        }
+        return nextTop;
+    };
+    auto shiftBlocksAfterLine = [&allItems, &compactImmediateChildGaps](int lineNumber, qreal deltaY) {
+        if (deltaY <= 0.0) {
+            return;
+        }
+        for (BlockCanvasItem *candidate : allItems) {
+            if (candidate == nullptr || candidate->lineNumber() <= lineNumber) {
+                continue;
+            }
+            candidate->moveBy(0.0, deltaY);
+        }
+        compactImmediateChildGaps();
+    };
+    auto maxDescendantLineNumber = [](BlockCanvasItem *root) {
+        if (root == nullptr) {
+            return 0;
+        }
+        int maxLine = root->lineNumber();
+        QList<QGraphicsItem *> stack;
+        stack.append(root);
+        while (!stack.isEmpty()) {
+            QGraphicsItem *current = stack.takeLast();
+            if (current == nullptr) {
+                continue;
+            }
+            if (auto *blockItem = dynamic_cast<BlockCanvasItem *>(current)) {
+                maxLine = qMax(maxLine, blockItem->lineNumber());
+            }
+            for (QGraphicsItem *child : current->childItems()) {
+                stack.append(child);
+            }
+        }
+        return maxLine;
+    };
+
+    struct ContainerLayoutTarget
+    {
+        BlockCanvasItem *item = nullptr;
+        int openingLine = 0;
+        int closingLine = 0;
+        int depth = 0;
+    };
+
+    QVector<ContainerLayoutTarget> targets;
+    targets.reserve(allItems.size());
+
+    for (BlockCanvasItem *item : allItems) {
+        if (item == nullptr || !isContainerBlockDirective(item->kind())) {
+            continue;
+        }
+
+        int closureLine = item->lineNumber();
+        const QString openingDirective = normalizeDirective(item->kind());
+        const QString closingDirective = closingDirectiveFor(openingDirective);
+        if (!openingDirective.isEmpty() && !closingDirective.isEmpty()) {
+            const int openingLine = item->lineNumber();
+            const int closingLine = findMatchingBlockEndLine(sourceLines,
+                                                             openingLine,
+                                                             openingDirective,
+                                                             closingDirective);
+            if (closingLine > openingLine) {
+                closureLine = closingLine;
+            }
+        }
+        closureLine = qMax(closureLine, maxDescendantLineNumber(item));
+
+        int depth = 0;
+        for (QGraphicsItem *parent = item->parentItem(); parent != nullptr; parent = parent->parentItem()) {
+            if (dynamic_cast<BlockCanvasItem *>(parent) != nullptr) {
+                ++depth;
+            }
+        }
+
+        targets.append(ContainerLayoutTarget{item, item->lineNumber(), closureLine, depth});
+    }
+
+    std::sort(targets.begin(), targets.end(), [](const ContainerLayoutTarget &left, const ContainerLayoutTarget &right) {
+        if (left.closingLine != right.closingLine) {
+            return left.closingLine < right.closingLine;
+        }
+        return left.depth > right.depth;
+    });
+
+    for (const ContainerLayoutTarget &target : std::as_const(targets)) {
+        BlockCanvasItem *item = target.item;
+        if (item == nullptr) {
+            continue;
+        }
+
+        qreal subtreeBottom = visualSubtreeBottomForSpan(target.openingLine,
+                                                         target.closingLine,
+                                                         item->sceneBoundingRect().bottom());
+        const qreal minEndY = subtreeBottom + kClosurePadAboveSubtree;
+        qreal preferredEndY = qMax(subtreeBottom + kClosurePreferredOffset, minEndY);
+
+        qreal maxEndY = std::numeric_limits<qreal>::max();
+        const qreal nextTop = nextBlockTopAfterLine(target.closingLine);
+        if (nextTop != std::numeric_limits<qreal>::max()) {
+            maxEndY = nextTop - kClosurePadBeforeNextBlock;
+        }
+
+        if (maxEndY < minEndY) {
+            const qreal deltaY = minEndY - maxEndY;
+            shiftBlocksAfterLine(target.closingLine, deltaY);
+            maxEndY += deltaY;
+        }
+
+        boundaries.append(ContainerBoundary{item,
+                                            target.closingLine,
+                                            minEndY,
+                                            qMin(preferredEndY, maxEndY),
+                                            maxEndY,
+                                            target.depth});
+    }
+
+    std::sort(boundaries.begin(), boundaries.end(), [](const ContainerBoundary &left, const ContainerBoundary &right) {
+        if (!qFuzzyCompare(left.endY + 1.0, right.endY + 1.0)) {
+            return left.endY < right.endY;
+        }
+        return left.depth > right.depth;
+    });
+
+    // Keep nested closure markers visually distinct even when container spans end
+    // at the same rendered subtree bottom (for example `endcenterline` + `endsurvey`).
+    // Respect each boundary's [minEndY, maxEndY] corridor and back-propagate when
+    // a lower marker is clamped by available space.
+    constexpr qreal kMinClosureMarkerGap = 10.0;
+    for (int i = 0; i < boundaries.size(); ++i) {
+        ContainerBoundary &boundary = boundaries[i];
+        if (i > 0) {
+            const qreal minAllowedY = boundaries.at(i - 1).endY + kMinClosureMarkerGap;
+            if (boundary.endY < minAllowedY) {
+                boundary.endY = minAllowedY;
+            }
+        }
+        boundary.endY = qMax(boundary.endY, boundary.minEndY);
+        if (boundary.endY > boundary.maxEndY) {
+            boundary.endY = boundary.maxEndY;
+            for (int j = i - 1; j >= 0; --j) {
+                ContainerBoundary &previous = boundaries[j];
+                const qreal maxAllowedY = boundaries.at(j + 1).endY - kMinClosureMarkerGap;
+                if (previous.endY <= maxAllowedY) {
+                    break;
+                }
+                previous.endY = qMax(previous.minEndY, maxAllowedY);
+            }
+        }
+    }
+
+    // If constraints are still too tight for exact nested spacing, expand the
+    // layout by pushing subsequent blocks down so closure lines never collapse.
+    for (int i = 1; i < boundaries.size(); ++i) {
+        const qreal requiredY = boundaries.at(i - 1).endY + kMinClosureMarkerGap;
+        if (boundaries.at(i).endY >= requiredY) {
+            continue;
+        }
+
+        const qreal deltaY = requiredY - boundaries.at(i).endY;
+        shiftBlocksAfterLine(boundaries.at(i).closingLine, deltaY);
+
+        for (int j = i; j < boundaries.size(); ++j) {
+            ContainerBoundary &shifted = boundaries[j];
+            shifted.minEndY += deltaY;
+            shifted.endY += deltaY;
+            if (shifted.maxEndY < std::numeric_limits<qreal>::max()) {
+                shifted.maxEndY += deltaY;
+            }
+        }
+    }
+
+    // Compaction/shift steps above can move cards after a boundary was initially
+    // solved. Re-clamp each closure marker against current subtree/next-card
+    // geometry so end-caps never ride into the following card.
+    const qreal kInfinity = std::numeric_limits<qreal>::max();
+    for (ContainerBoundary &boundary : boundaries) {
+        BlockCanvasItem *item = boundary.item;
+        if (item == nullptr) {
+            continue;
+        }
+
+        const qreal subtreeBottom = visualSubtreeBottomForSpan(item->lineNumber(),
+                                                               boundary.closingLine,
+                                                               item->sceneBoundingRect().bottom());
+        boundary.minEndY = subtreeBottom + kClosurePadAboveSubtree;
+
+        const qreal nextTop = nextBlockTopAfterLine(boundary.closingLine);
+        boundary.maxEndY = nextTop != kInfinity
+            ? (nextTop - kClosurePadBeforeNextBlock)
+            : kInfinity;
+
+        // Prefer keeping distance from the next card over preserving a stale
+        // lower endY, even when constraints are tight.
+        if (boundary.maxEndY != kInfinity && boundary.maxEndY < boundary.minEndY) {
+            boundary.endY = boundary.maxEndY;
+            continue;
+        }
+
+        boundary.endY = qMax(boundary.endY, boundary.minEndY);
+        if (boundary.maxEndY != kInfinity) {
+            boundary.endY = qMin(boundary.endY, boundary.maxEndY);
+        }
+    }
+
+    QPen connectorPen(QColor(QStringLiteral("#4f6b86")));
+    connectorPen.setWidthF(1.2);
+    connectorPen.setStyle(Qt::SolidLine);
+
+    qreal minGuideX = std::numeric_limits<qreal>::max();
+    qreal maxGuideBottom = 0.0;
+    constexpr qreal kConnectorInsetX = 2.0;
+
+    for (const ContainerBoundary &boundary : std::as_const(boundaries)) {
+        BlockCanvasItem *item = boundary.item;
+        if (item == nullptr) {
+            continue;
+        }
+
+        const QRectF itemRect = item->sceneBoundingRect();
+        const qreal guideX = itemRect.left() + kConnectorInsetX;
+        const qreal startY = itemRect.bottom();
+        const qreal endY = boundary.endY;
+
+        auto *vertical = blockCanvasScene_->addLine(QLineF(guideX, startY, guideX, endY), connectorPen);
+        vertical->setOpacity(0.38);
+        vertical->setZValue(-100.0);
+        blockContainerBoundaryGuideItems_.append(vertical);
+
+        // Keep the closure marker aligned with the opening card width.
+        const qreal endCapStartX = itemRect.left();
+        const qreal endCapEndX = itemRect.right();
+
+        QColor closeColor = blockBaseColorForDirective(item->kind()).darker(130);
+        closeColor.setAlpha(245);
+        QPen closePen(closeColor);
+        closePen.setWidthF(kClosureMarkerStrokeWidth);
+        closePen.setStyle(Qt::SolidLine);
+        auto *endCap = blockCanvasScene_->addLine(QLineF(endCapStartX, endY, endCapEndX, endY), closePen);
+        endCap->setOpacity(0.95);
+        endCap->setZValue(-99.0);
+        endCap->setData(kBlockEndHintContainerLineDataRole, item->lineNumber());
+        blockContainerBoundaryGuideItems_.append(endCap);
+        blockContainerBoundaryEndYByLine_.insert(item->lineNumber(), endY);
+
+        minGuideX = qMin(minGuideX, guideX);
+        maxGuideBottom = qMax(maxGuideBottom, endY);
+    }
+
     blockCanvasScene_->setSceneRect(0.0, 0.0, 1400.0, qMax<qreal>(y + 40.0, 600.0));
+    if (minGuideX != std::numeric_limits<qreal>::max() || maxGuideBottom > 0.0) {
+        QRectF sceneRect = blockCanvasScene_->sceneRect();
+        if (minGuideX != std::numeric_limits<qreal>::max() && minGuideX - 12.0 < sceneRect.left()) {
+            sceneRect.setLeft(minGuideX - 12.0);
+        }
+        if (maxGuideBottom + 16.0 > sceneRect.bottom()) {
+            sceneRect.setBottom(maxGuideBottom + 16.0);
+        }
+        blockCanvasScene_->setSceneRect(sceneRect);
+    }
 
     if (preferredSelectedLine > 0) {
         for (BlockCanvasItem *item : allItems) {
@@ -3298,6 +3685,8 @@ void TextEditorTab::updateBlockMovePreview(int sourceLineNumber, const QPointF &
         return;
     }
 
+    const QList<QGraphicsItem *> sceneItems = blockCanvasScene_->items();
+
     auto resolveBlockFromItem = [](QGraphicsItem *item) -> BlockCanvasItem * {
         while (item != nullptr) {
             if (auto *blockItem = dynamic_cast<BlockCanvasItem *>(item)) {
@@ -3307,6 +3696,94 @@ void TextEditorTab::updateBlockMovePreview(int sourceLineNumber, const QPointF &
         }
         return nullptr;
     };
+    auto subtreeBottomForItem = [](BlockCanvasItem *rootItem) -> qreal {
+        if (rootItem == nullptr) {
+            return 0.0;
+        }
+        qreal subtreeBottom = rootItem->sceneBoundingRect().bottom();
+        QList<QGraphicsItem *> stack;
+        stack.append(rootItem);
+        while (!stack.isEmpty()) {
+            QGraphicsItem *current = stack.takeLast();
+            if (current == nullptr) {
+                continue;
+            }
+            subtreeBottom = qMax(subtreeBottom, current->sceneBoundingRect().bottom());
+            for (QGraphicsItem *child : current->childItems()) {
+                stack.append(child);
+            }
+        }
+        return subtreeBottom;
+    };
+
+    qreal sceneTop = 0.0;
+    qreal sceneBottom = 0.0;
+    bool hasSceneVerticalBounds = false;
+    for (QGraphicsItem *item : sceneItems) {
+        auto *blockItem = dynamic_cast<BlockCanvasItem *>(item);
+        if (blockItem == nullptr) {
+            continue;
+        }
+        const QRectF blockRect = blockItem->sceneBoundingRect();
+        if (!hasSceneVerticalBounds) {
+            sceneTop = blockRect.top();
+            sceneBottom = blockRect.bottom();
+            hasSceneVerticalBounds = true;
+        } else {
+            sceneTop = qMin(sceneTop, blockRect.top());
+            sceneBottom = qMax(sceneBottom, blockRect.bottom());
+        }
+    }
+
+    const int hintedContainerLine = resolveEndHintContainerStartLineAtScenePos(scenePos);
+    if (hintedContainerLine > 0) {
+        BlockCanvasItem *hintedContainerItem = nullptr;
+        for (QGraphicsItem *item : sceneItems) {
+            auto *blockItem = dynamic_cast<BlockCanvasItem *>(item);
+            if (blockItem == nullptr || blockItem->lineNumber() != hintedContainerLine) {
+                continue;
+            }
+            hintedContainerItem = blockItem;
+            break;
+        }
+        if (hintedContainerItem != nullptr && hintedContainerItem->lineNumber() != sourceLineNumber) {
+            qreal y = blockContainerBoundaryEndYByLine_.value(hintedContainerLine,
+                                                              subtreeBottomForItem(hintedContainerItem) + 10.0) + 4.0;
+            const qreal left = 10.0;
+            const qreal right = qMax<qreal>(left + 120.0, blockCanvasScene_->sceneRect().right() - 10.0);
+            if (blockMovePreviewLine_ == nullptr) {
+                QPen guidePen(QColor(QStringLiteral("#2f6fed")));
+                guidePen.setWidthF(2.0);
+                guidePen.setStyle(Qt::DashLine);
+                blockMovePreviewLine_ = blockCanvasScene_->addLine(QLineF(left, y, right, y), guidePen);
+                blockMovePreviewLine_->setZValue(10000.0);
+            } else {
+                blockMovePreviewLine_->setLine(QLineF(left, y, right, y));
+                blockMovePreviewLine_->show();
+            }
+            return;
+        }
+    }
+
+    const qreal outerDropThreshold = 16.0;
+    const bool dropBeforeAllBlocks = hasSceneVerticalBounds && scenePos.y() < (sceneTop - outerDropThreshold);
+    const bool dropAfterAllBlocks = hasSceneVerticalBounds && scenePos.y() > (sceneBottom + outerDropThreshold);
+    if (dropBeforeAllBlocks || dropAfterAllBlocks) {
+        const qreal y = dropBeforeAllBlocks ? (sceneTop - 4.0) : (sceneBottom + 4.0);
+        const qreal left = 10.0;
+        const qreal right = qMax<qreal>(left + 120.0, blockCanvasScene_->sceneRect().right() - 10.0);
+        if (blockMovePreviewLine_ == nullptr) {
+            QPen guidePen(QColor(QStringLiteral("#2f6fed")));
+            guidePen.setWidthF(2.0);
+            guidePen.setStyle(Qt::DashLine);
+            blockMovePreviewLine_ = blockCanvasScene_->addLine(QLineF(left, y, right, y), guidePen);
+            blockMovePreviewLine_->setZValue(10000.0);
+        } else {
+            blockMovePreviewLine_->setLine(QLineF(left, y, right, y));
+            blockMovePreviewLine_->show();
+        }
+        return;
+    }
 
     BlockCanvasItem *targetBlockItem = resolveBlockFromItem(blockCanvasScene_->itemAt(scenePos, QTransform()));
     if (targetBlockItem != nullptr && targetBlockItem->lineNumber() == sourceLineNumber) {
@@ -3315,7 +3792,6 @@ void TextEditorTab::updateBlockMovePreview(int sourceLineNumber, const QPointF &
 
     if (targetBlockItem == nullptr) {
         qreal bestDistance = std::numeric_limits<qreal>::max();
-        const QList<QGraphicsItem *> sceneItems = blockCanvasScene_->items();
         for (QGraphicsItem *item : sceneItems) {
             auto *blockItem = dynamic_cast<BlockCanvasItem *>(item);
             if (blockItem == nullptr || blockItem->lineNumber() == sourceLineNumber) {
@@ -3360,6 +3836,73 @@ void TextEditorTab::clearBlockMovePreview()
     if (blockMovePreviewLine_ != nullptr) {
         blockMovePreviewLine_->hide();
     }
+}
+
+int TextEditorTab::resolveEndHintContainerStartLineAtScenePos(const QPointF &scenePos) const
+{
+    if (blockCanvasScene_ == nullptr) {
+        return 0;
+    }
+
+    auto resolveFromItem = [](QGraphicsItem *item) -> int {
+        while (item != nullptr) {
+            const QVariant hintValue = item->data(kBlockEndHintContainerLineDataRole);
+            bool ok = false;
+            const int lineNumber = hintValue.toInt(&ok);
+            if (ok && lineNumber > 0) {
+                return lineNumber;
+            }
+            item = item->parentItem();
+        }
+        return 0;
+    };
+
+    const int directLine = resolveFromItem(blockCanvasScene_->itemAt(scenePos, QTransform()));
+    if (directLine > 0) {
+        return directLine;
+    }
+
+    auto pointToSegmentDistance = [](const QPointF &point, const QLineF &segment) {
+        const QPointF p1 = segment.p1();
+        const QPointF p2 = segment.p2();
+        const qreal dx = p2.x() - p1.x();
+        const qreal dy = p2.y() - p1.y();
+        const qreal lengthSquared = (dx * dx) + (dy * dy);
+        if (lengthSquared <= std::numeric_limits<qreal>::epsilon()) {
+            return QLineF(point, p1).length();
+        }
+
+        const qreal t = qBound<qreal>(0.0,
+                                      ((point.x() - p1.x()) * dx + (point.y() - p1.y()) * dy) / lengthSquared,
+                                      1.0);
+        const QPointF projection(p1.x() + (t * dx), p1.y() + (t * dy));
+        return QLineF(point, projection).length();
+    };
+
+    constexpr qreal kLineHitThreshold = 12.0;
+    int bestLineNumber = 0;
+    qreal bestDistance = std::numeric_limits<qreal>::max();
+
+    for (QGraphicsLineItem *guideItem : blockContainerBoundaryGuideItems_) {
+        if (guideItem == nullptr || !guideItem->isVisible()) {
+            continue;
+        }
+        bool ok = false;
+        const int lineNumber = guideItem->data(kBlockEndHintContainerLineDataRole).toInt(&ok);
+        if (!ok || lineNumber <= 0) {
+            continue;
+        }
+
+        const QLineF sceneLine = QLineF(guideItem->mapToScene(guideItem->line().p1()),
+                                        guideItem->mapToScene(guideItem->line().p2()));
+        const qreal distance = pointToSegmentDistance(scenePos, sceneLine);
+        if (distance <= kLineHitThreshold && distance < bestDistance) {
+            bestDistance = distance;
+            bestLineNumber = lineNumber;
+        }
+    }
+
+    return bestLineNumber;
 }
 
 bool TextEditorTab::supportsDetailsPaneForKind(const QString &kind) const
@@ -4763,7 +5306,6 @@ void TextEditorTab::handleCanvasDrop(const QString &kind, const QPointF &scenePo
         }
         return nullptr;
     };
-
     const QString normalizedKind = kind.trimmed().toLower();
     if (normalizedKind.isEmpty()) {
         return;
@@ -4956,24 +5498,54 @@ void TextEditorTab::handleCanvasDrop(const QString &kind, const QPointF &scenePo
         }
     }
 
-    BlockCanvasItem *targetBlockItem = nullptr;
-    if (blockCanvasScene_ != nullptr) {
-        targetBlockItem = resolveBlockFromItem(blockCanvasScene_->itemAt(scenePos, QTransform()));
+    qreal sceneTop = 0.0;
+    qreal sceneBottom = 0.0;
+    bool hasSceneVerticalBounds = false;
+    for (const BlockEntry &entry : entries) {
+        const auto sceneItemIt = sceneBlocksByLine.constFind(entry.startLine);
+        if (sceneItemIt == sceneBlocksByLine.cend() || sceneItemIt.value() == nullptr) {
+            continue;
+        }
+        const QRectF blockRect = sceneItemIt.value()->sceneBoundingRect();
+        if (!hasSceneVerticalBounds) {
+            sceneTop = blockRect.top();
+            sceneBottom = blockRect.bottom();
+            hasSceneVerticalBounds = true;
+        } else {
+            sceneTop = qMin(sceneTop, blockRect.top());
+            sceneBottom = qMax(sceneBottom, blockRect.bottom());
+        }
     }
-    if (targetBlockItem == nullptr) {
-        qreal bestDistance = std::numeric_limits<qreal>::max();
-        for (const BlockEntry &entry : entries) {
-            const auto sceneItemIt = sceneBlocksByLine.constFind(entry.startLine);
-            if (sceneItemIt == sceneBlocksByLine.cend() || sceneItemIt.value() == nullptr) {
-                continue;
-            }
-            const QRectF blockRect = sceneItemIt.value()->sceneBoundingRect();
-            const qreal topDistance = qAbs(blockRect.top() - scenePos.y());
-            const qreal bottomDistance = qAbs(blockRect.bottom() - scenePos.y());
-            const qreal distance = qMin(topDistance, bottomDistance);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                targetBlockItem = sceneItemIt.value();
+
+    const qreal outerDropThreshold = 16.0;
+    const bool dropBeforeAllBlocks = hasSceneVerticalBounds && scenePos.y() < (sceneTop - outerDropThreshold);
+    const bool dropAfterAllBlocks = hasSceneVerticalBounds && scenePos.y() > (sceneBottom + outerDropThreshold);
+
+    int explicitEndHintContainerLine = 0;
+    if (blockCanvasScene_ != nullptr) {
+        explicitEndHintContainerLine = resolveEndHintContainerStartLineAtScenePos(scenePos);
+    }
+
+    BlockCanvasItem *targetBlockItem = nullptr;
+    if (!dropBeforeAllBlocks && !dropAfterAllBlocks && explicitEndHintContainerLine <= 0) {
+        if (blockCanvasScene_ != nullptr) {
+            targetBlockItem = resolveBlockFromItem(blockCanvasScene_->itemAt(scenePos, QTransform()));
+        }
+        if (targetBlockItem == nullptr) {
+            qreal bestDistance = std::numeric_limits<qreal>::max();
+            for (const BlockEntry &entry : entries) {
+                const auto sceneItemIt = sceneBlocksByLine.constFind(entry.startLine);
+                if (sceneItemIt == sceneBlocksByLine.cend() || sceneItemIt.value() == nullptr) {
+                    continue;
+                }
+                const QRectF blockRect = sceneItemIt.value()->sceneBoundingRect();
+                const qreal topDistance = qAbs(blockRect.top() - scenePos.y());
+                const qreal bottomDistance = qAbs(blockRect.bottom() - scenePos.y());
+                const qreal distance = qMin(topDistance, bottomDistance);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    targetBlockItem = sceneItemIt.value();
+                }
             }
         }
     }
@@ -4983,7 +5555,17 @@ void TextEditorTab::handleCanvasDrop(const QString &kind, const QPointF &scenePo
     int parentLine = 0;
     QString parentKind;
 
-    if (targetBlockItem != nullptr) {
+    if (dropBeforeAllBlocks) {
+        insertBeforeLine = 1;
+        parentLine = 0;
+    } else if (explicitEndHintContainerLine > 0) {
+        const auto hintedEntryIt = entryIndexByStartLine.constFind(explicitEndHintContainerLine);
+        if (hintedEntryIt != entryIndexByStartLine.cend()) {
+            const BlockEntry hintedEntry = entries.at(*hintedEntryIt);
+            insertBeforeLine = hintedEntry.endLine + 1;
+            parentLine = hintedEntry.parentLine;
+        }
+    } else if (targetBlockItem != nullptr) {
         const auto targetIndexIt = entryIndexByStartLine.constFind(targetBlockItem->lineNumber());
         if (targetIndexIt != entryIndexByStartLine.cend()) {
             const BlockEntry targetEntry = entries.at(*targetIndexIt);
@@ -5037,11 +5619,46 @@ void TextEditorTab::handleCanvasDrop(const QString &kind, const QPointF &scenePo
     }
 
     if (!isCompatibleChildKindForBlocks(parentKind, normalizedKind)) {
-        QMessageBox::warning(this,
-                             tr("Incompatible Drop"),
-                             tr("`%1` cannot be inserted inside `%2`.")
-                                 .arg(normalizedKind, parentKind.isEmpty() ? tr("root") : parentKind));
-        return;
+        bool promoted = false;
+        int incompatibleParentLine = parentLine;
+        while (incompatibleParentLine > 0) {
+            const auto incompatibleParentIt = entryIndexByStartLine.constFind(incompatibleParentLine);
+            if (incompatibleParentIt == entryIndexByStartLine.cend()) {
+                break;
+            }
+            const BlockEntry incompatibleParentEntry = entries.at(*incompatibleParentIt);
+            const int candidateParentLine = incompatibleParentEntry.parentLine;
+            QString candidateParentKind;
+            if (candidateParentLine > 0) {
+                const auto candidateParentIt = entryIndexByStartLine.constFind(candidateParentLine);
+                if (candidateParentIt != entryIndexByStartLine.cend()) {
+                    candidateParentKind = entries.at(*candidateParentIt).kind;
+                }
+            }
+            if (isCompatibleChildKindForBlocks(candidateParentKind, normalizedKind)) {
+                insertBeforeLine = incompatibleParentEntry.endLine + 1;
+                parentLine = candidateParentLine;
+                parentKind = candidateParentKind;
+                promoted = true;
+                break;
+            }
+            incompatibleParentLine = candidateParentLine;
+        }
+
+        if (!promoted && isCompatibleChildKindForBlocks(QString(), normalizedKind)) {
+            insertBeforeLine = qMax(1, editor_->document()->blockCount() + 1);
+            parentLine = 0;
+            parentKind.clear();
+            promoted = true;
+        }
+
+        if (!promoted) {
+            QMessageBox::warning(this,
+                                 tr("Incompatible Drop"),
+                                 tr("`%1` cannot be inserted inside `%2`.")
+                                     .arg(normalizedKind, parentKind.isEmpty() ? tr("root") : parentKind));
+            return;
+        }
     }
 
     auto requiredArgumentSignaturesForCommand = [this](const QString &commandToken) {
@@ -5182,6 +5799,10 @@ void TextEditorTab::handleCanvasDrop(const QString &kind, const QPointF &scenePo
 
 void TextEditorTab::handleBlockMoveRequest(int lineNumber, const QPointF &scenePos)
 {
+    const auto clearPreviewOnExit = qScopeGuard([this]() {
+        clearBlockMovePreview();
+    });
+
     if (!isBlocksModeSupportedForCurrentFile()) {
         return;
     }
@@ -5383,78 +6004,130 @@ void TextEditorTab::handleBlockMoveRequest(int lineNumber, const QPointF &sceneP
         return;
     }
 
-    BlockCanvasItem *targetBlockItem = resolveBlockFromItem(blockCanvasScene_->itemAt(scenePos, QTransform()));
-    if (targetBlockItem != nullptr && targetBlockItem->lineNumber() == sourceEntry.startLine) {
-        targetBlockItem = nullptr;
-    }
-    if (targetBlockItem == nullptr) {
-        qreal bestDistance = std::numeric_limits<qreal>::max();
-        for (const BlockEntry &entry : entries) {
-            if (entry.startLine == sourceEntry.startLine) {
-                continue;
-            }
-            const auto sceneItemIt = sceneBlocksByLine.constFind(entry.startLine);
-            if (sceneItemIt == sceneBlocksByLine.cend() || sceneItemIt.value() == nullptr) {
-                continue;
-            }
-            const QRectF blockRect = sceneItemIt.value()->sceneBoundingRect();
-            const qreal topDistance = qAbs(blockRect.top() - scenePos.y());
-            const qreal bottomDistance = qAbs(blockRect.bottom() - scenePos.y());
-            const qreal distance = qMin(topDistance, bottomDistance);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                targetBlockItem = sceneItemIt.value();
-            }
+    auto isEntryInsideSourceSubtree = [&sourceEntry](const BlockEntry &entry) {
+        return entry.startLine >= sourceEntry.startLine && entry.startLine <= sourceEntry.endLine;
+    };
+
+    qreal sceneTop = 0.0;
+    qreal sceneBottom = 0.0;
+    bool hasSceneVerticalBounds = false;
+    for (const BlockEntry &entry : entries) {
+        const auto sceneItemIt = sceneBlocksByLine.constFind(entry.startLine);
+        if (sceneItemIt == sceneBlocksByLine.cend() || sceneItemIt.value() == nullptr) {
+            continue;
+        }
+        const QRectF blockRect = sceneItemIt.value()->sceneBoundingRect();
+        if (!hasSceneVerticalBounds) {
+            sceneTop = blockRect.top();
+            sceneBottom = blockRect.bottom();
+            hasSceneVerticalBounds = true;
+        } else {
+            sceneTop = qMin(sceneTop, blockRect.top());
+            sceneBottom = qMax(sceneBottom, blockRect.bottom());
         }
     }
-    if (targetBlockItem == nullptr) {
-        return;
+
+    const qreal outerDropThreshold = 16.0;
+    const bool dropBeforeAllBlocks = hasSceneVerticalBounds && scenePos.y() < (sceneTop - outerDropThreshold);
+    const bool dropAfterAllBlocks = hasSceneVerticalBounds && scenePos.y() > (sceneBottom + outerDropThreshold);
+    const int explicitEndHintContainerLine = resolveEndHintContainerStartLineAtScenePos(scenePos);
+
+    int destinationParentLine = 0;
+    int insertBeforeLineOriginal = 1;
+    bool destinationResolved = false;
+
+    if (dropBeforeAllBlocks) {
+        destinationParentLine = 0;
+        insertBeforeLineOriginal = 1;
+        destinationResolved = true;
+    } else if (dropAfterAllBlocks) {
+        destinationParentLine = 0;
+        insertBeforeLineOriginal = lines.size() + 1;
+        destinationResolved = true;
+    } else if (explicitEndHintContainerLine > 0) {
+        const auto hintedIndexIt = entryIndexByStartLine.constFind(explicitEndHintContainerLine);
+        if (hintedIndexIt != entryIndexByStartLine.cend()) {
+            const BlockEntry hintedEntry = entries.at(*hintedIndexIt);
+            destinationParentLine = hintedEntry.parentLine;
+            insertBeforeLineOriginal = hintedEntry.endLine + 1;
+            destinationResolved = true;
+        }
     }
 
-    const auto targetIndexIt = entryIndexByStartLine.constFind(targetBlockItem->lineNumber());
-    if (targetIndexIt == entryIndexByStartLine.cend()) {
-        return;
-    }
-    const BlockEntry targetEntry = entries.at(*targetIndexIt);
-
-    int destinationParentLine = targetEntry.parentLine;
-    int insertBeforeLineOriginal = targetEntry.startLine;
-
-    const QRectF targetRect = targetBlockItem->sceneBoundingRect();
-    const qreal edgeDropThreshold = qMin<qreal>(10.0, targetRect.height() * 0.25);
-    const bool nearTopEdge = scenePos.y() <= (targetRect.top() + edgeDropThreshold);
-    const bool nearBottomEdge = scenePos.y() >= (targetRect.bottom() - edgeDropThreshold);
-    const bool preferBetweenInsertion = nearTopEdge || nearBottomEdge;
-
-    const bool targetAcceptsSourceAsChild = isContainerBlockDirective(targetEntry.kind)
-        && isCompatibleChildKindForBlocks(targetEntry.kind, sourceEntry.kind);
-    if (targetAcceptsSourceAsChild && targetEntry.startLine != sourceEntry.startLine) {
-        if (!preferBetweenInsertion) {
-            destinationParentLine = targetEntry.startLine;
-            insertBeforeLineOriginal = targetEntry.endLine;
-        } else if (nearBottomEdge) {
-            int firstChildStartLine = 0;
+    if (!destinationResolved) {
+        BlockCanvasItem *targetBlockItem = resolveBlockFromItem(blockCanvasScene_->itemAt(scenePos, QTransform()));
+        if (targetBlockItem != nullptr && targetBlockItem->lineNumber() == sourceEntry.startLine) {
+            targetBlockItem = nullptr;
+        }
+        if (targetBlockItem == nullptr) {
+            qreal bestDistance = std::numeric_limits<qreal>::max();
             for (const BlockEntry &entry : entries) {
-                if (entry.parentLine != targetEntry.startLine || entry.startLine == sourceEntry.startLine) {
+                if (isEntryInsideSourceSubtree(entry)) {
                     continue;
                 }
-                if (firstChildStartLine == 0 || entry.startLine < firstChildStartLine) {
-                    firstChildStartLine = entry.startLine;
+                const auto sceneItemIt = sceneBlocksByLine.constFind(entry.startLine);
+                if (sceneItemIt == sceneBlocksByLine.cend() || sceneItemIt.value() == nullptr) {
+                    continue;
+                }
+                const QRectF blockRect = sceneItemIt.value()->sceneBoundingRect();
+                const qreal topDistance = qAbs(blockRect.top() - scenePos.y());
+                const qreal bottomDistance = qAbs(blockRect.bottom() - scenePos.y());
+                const qreal distance = qMin(topDistance, bottomDistance);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    targetBlockItem = sceneItemIt.value();
                 }
             }
-            destinationParentLine = targetEntry.startLine;
-            insertBeforeLineOriginal = firstChildStartLine > 0 ? firstChildStartLine : targetEntry.endLine;
+        }
+        if (targetBlockItem == nullptr) {
+            return;
+        }
+
+        const auto targetIndexIt = entryIndexByStartLine.constFind(targetBlockItem->lineNumber());
+        if (targetIndexIt == entryIndexByStartLine.cend()) {
+            return;
+        }
+        const BlockEntry targetEntry = entries.at(*targetIndexIt);
+
+        destinationParentLine = targetEntry.parentLine;
+        insertBeforeLineOriginal = targetEntry.startLine;
+
+        const QRectF targetRect = targetBlockItem->sceneBoundingRect();
+        const qreal edgeDropThreshold = qMin<qreal>(10.0, targetRect.height() * 0.25);
+        const bool nearTopEdge = scenePos.y() <= (targetRect.top() + edgeDropThreshold);
+        const bool nearBottomEdge = scenePos.y() >= (targetRect.bottom() - edgeDropThreshold);
+        const bool preferBetweenInsertion = nearTopEdge || nearBottomEdge;
+
+        const bool targetAcceptsSourceAsChild = isContainerBlockDirective(targetEntry.kind)
+            && isCompatibleChildKindForBlocks(targetEntry.kind, sourceEntry.kind);
+        if (targetAcceptsSourceAsChild && targetEntry.startLine != sourceEntry.startLine) {
+            if (!preferBetweenInsertion) {
+                destinationParentLine = targetEntry.startLine;
+                insertBeforeLineOriginal = targetEntry.endLine;
+            } else if (nearBottomEdge) {
+                int firstChildStartLine = 0;
+                for (const BlockEntry &entry : entries) {
+                    if (entry.parentLine != targetEntry.startLine || isEntryInsideSourceSubtree(entry)) {
+                        continue;
+                    }
+                    if (firstChildStartLine == 0 || entry.startLine < firstChildStartLine) {
+                        firstChildStartLine = entry.startLine;
+                    }
+                }
+                destinationParentLine = targetEntry.startLine;
+                insertBeforeLineOriginal = firstChildStartLine > 0 ? firstChildStartLine : targetEntry.endLine;
+            } else {
+                const qreal targetCenterY = targetRect.center().y();
+                const bool insertAfterTarget = scenePos.y() > targetCenterY;
+                insertBeforeLineOriginal = insertAfterTarget ? (targetEntry.endLine + 1) : targetEntry.startLine;
+                destinationParentLine = targetEntry.parentLine;
+            }
         } else {
             const qreal targetCenterY = targetRect.center().y();
             const bool insertAfterTarget = scenePos.y() > targetCenterY;
             insertBeforeLineOriginal = insertAfterTarget ? (targetEntry.endLine + 1) : targetEntry.startLine;
             destinationParentLine = targetEntry.parentLine;
         }
-    } else {
-        const qreal targetCenterY = targetRect.center().y();
-        const bool insertAfterTarget = scenePos.y() > targetCenterY;
-        insertBeforeLineOriginal = insertAfterTarget ? (targetEntry.endLine + 1) : targetEntry.startLine;
-        destinationParentLine = targetEntry.parentLine;
     }
 
     if (destinationParentLine >= sourceEntry.startLine && destinationParentLine <= sourceEntry.endLine) {

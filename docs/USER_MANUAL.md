@@ -195,9 +195,14 @@ Text editor includes:
 - right `Block Details` pane edits parameters of the selected block directly (no modal dialog for supported block kinds)
 - blocks view uses a 3-column horizontal splitter (`Toolbox | Canvas | Block Details`), so `Block Details` can be resized wider for multi-column option/value editing
 - dragging a toolbox item to the canvas inserts source templates at compatible positions
+- dropping below the last canvas card appends a new top-level block at document end; dropping above the first card inserts at document start
 - if a toolbox drop lands between cards (not exactly on one card), insertion context resolves from the nearest canvas block by vertical position
 - while dragging from toolbox to canvas, the same dashed placement guide line is shown as for block reordering
+- container blocks render persistent boundary guides in the left gutter: a vertical connector from header toward closure and a thicker closure marker line indicating block end-pair intent
+- the thicker closure marker line is color-matched to the opening block card family (`survey`, `centerline`, etc.) for quick visual pairing
+- dropping on/near a container closure marker (toolbox insert or canvas reorder) inserts after that container block boundary
 - toolbox drop insertion now uses boundary zones: before/after target near edges, or inside compatible container in middle zone
+- if drop context is incompatible, insertion is auto-promoted to the nearest valid ancestor scope (or root) to avoid hard failure dialogs in common workflows
 - dragging an existing block card in canvas reorders source blocks (whole block is moved, including nested content for container blocks)
 - blocks-mode right-column contextual help now uses the same framed header/body style and internal padding as Raw mode contextual help for consistent spacing
 - full-line source comments (`# ...`) are rendered as `comment` cards in canvas and can be moved/deleted like other leaf cards

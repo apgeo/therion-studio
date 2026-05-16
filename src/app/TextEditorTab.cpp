@@ -5661,127 +5661,24 @@ void TextEditorTab::handleCanvasDrop(const QString &kind, const QPointF &scenePo
         }
     }
 
-    auto requiredArgumentSignaturesForCommand = [this](const QString &commandToken) {
-        QStringList signatures;
-        const TherionHelpEntry helpEntry = helpEntries_.value(commandToken);
-        for (const QString &argumentLine : helpEntry.arguments) {
-            const QString signature = argumentSignatureFromHelpLine(argumentLine);
-            if (!isRequiredArgumentSignature(signature)) {
-                continue;
-            }
-            signatures.append(signature);
-        }
-        return signatures;
-    };
-
-    auto placeholderForRequiredArgument = [](const QString &commandToken,
-                                             const QString &signature,
-                                             int argumentIndex) {
-        const QString normalizedSignature = signature.toLower();
-        if (normalizedSignature == QStringLiteral("<id>")) {
-            return QStringLiteral("new-%1").arg(commandToken);
-        }
-        if (normalizedSignature.contains(QStringLiteral("file"))) {
-            return QStringLiteral("./path/file.th");
-        }
-        return QStringLiteral("value%1").arg(argumentIndex + 1);
-    };
-
-    auto defaultRequiredArgumentTokens = [this,
-                                          &requiredArgumentSignaturesForCommand,
-                                          &placeholderForRequiredArgument](const QString &commandToken) {
-        QStringList tokens;
-        const QStringList signatures = requiredArgumentSignaturesForCommand(commandToken);
-        for (int argumentIndex = 0; argumentIndex < signatures.size(); ++argumentIndex) {
-            const QStringList suggestedValues = commandArgumentValueTokens_.value(commandArgumentValueKey(commandToken, argumentIndex));
-            if (!suggestedValues.isEmpty()) {
-                tokens.append(suggestedValues.first());
-                continue;
-            }
-            tokens.append(placeholderForRequiredArgument(commandToken, signatures.at(argumentIndex), argumentIndex));
-        }
-        return tokens;
-    };
-
     const QString indent = parentLine > 0
         ? lineIndent(parentLine) + (isContainerBlockDirective(parentKind) ? QStringLiteral("  ") : QString())
         : QString();
 
     if (normalizedKind == QStringLiteral("comment")) {
-        linesToInsert << QStringLiteral("%1# comment").arg(indent);
+        linesToInsert << QStringLiteral("%1#").arg(indent);
     } else if (normalizedKind == QStringLiteral("data")) {
-        QStringList argumentTokens = defaultRequiredArgumentTokens(normalizedKind);
-        QString styleToken = argumentTokens.isEmpty() ? QStringLiteral("normal") : argumentTokens.takeFirst();
-        QStringList readingTokens = argumentTokens;
-        const QStringList allReadingSuggestions = commandArgumentValueTokens_.value(commandArgumentValueKey(QStringLiteral("data"), 1));
-        const QStringList preferredReadings = {
-            QStringLiteral("from"),
-            QStringLiteral("to"),
-            QStringLiteral("length"),
-            QStringLiteral("compass"),
-            QStringLiteral("clino"),
-        };
-        for (const QString &candidate : preferredReadings) {
-            if (readingTokens.contains(candidate, Qt::CaseInsensitive)) {
-                continue;
-            }
-            if (allReadingSuggestions.contains(candidate, Qt::CaseInsensitive)) {
-                readingTokens.append(candidate);
-            }
-        }
-        if (readingTokens.isEmpty()) {
-            readingTokens << QStringLiteral("from")
-                          << QStringLiteral("to")
-                          << QStringLiteral("length")
-                          << QStringLiteral("compass")
-                          << QStringLiteral("clino");
-        }
-
-        QStringList headerTokens;
-        headerTokens << QStringLiteral("data") << styleToken;
-        headerTokens.append(readingTokens);
-        linesToInsert << QStringLiteral("%1%2").arg(indent, headerTokens.join(QLatin1Char(' ')));
-
-        QStringList firstDataRow;
-        for (const QString &readingToken : readingTokens) {
-            const QString normalizedReading = readingToken.trimmed().toLower();
-            if (normalizedReading == QStringLiteral("from")) {
-                firstDataRow << QStringLiteral("1");
-            } else if (normalizedReading == QStringLiteral("to")) {
-                firstDataRow << QStringLiteral("2");
-            } else {
-                firstDataRow << QStringLiteral("0");
-            }
-        }
-        linesToInsert << QStringLiteral("%1  %2").arg(indent, firstDataRow.join(QLatin1Char(' ')));
+        // Insert bare `data` so users can define style/readings explicitly.
+        linesToInsert << QStringLiteral("%1data").arg(indent);
     } else if (isContainerBlockDirective(normalizedKind)) {
         QString line = QStringLiteral("%1%2").arg(indent, normalizedKind);
-        const QStringList argumentTokens = defaultRequiredArgumentTokens(normalizedKind);
-        if (!argumentTokens.isEmpty()) {
-            line += QStringLiteral(" ") + argumentTokens.join(QLatin1Char(' '));
-        }
         const QString closingDirective = completionClosingDirectiveForOpening(normalizedKind);
         linesToInsert << line;
         if (!closingDirective.isEmpty()) {
             linesToInsert << QStringLiteral("%1%2").arg(indent, closingDirective);
         }
     } else {
-        QStringList placeholderTokens = defaultRequiredArgumentTokens(normalizedKind);
-        if (normalizedKind == QStringLiteral("input") && placeholderTokens.isEmpty()) {
-            placeholderTokens.append(QStringLiteral("./path/file.th"));
-        }
-        if (placeholderTokens.isEmpty()) {
-            const QStringList suggestedValues = commandValueTokens_.value(normalizedKind);
-            if (!suggestedValues.isEmpty()) {
-                placeholderTokens.append(suggestedValues.first());
-            }
-        }
-
-        QString line = QStringLiteral("%1%2").arg(indent, normalizedKind);
-        if (!placeholderTokens.isEmpty()) {
-            line += QStringLiteral(" ") + placeholderTokens.join(QLatin1Char(' '));
-        }
-        linesToInsert << line;
+        linesToInsert << QStringLiteral("%1%2").arg(indent, normalizedKind);
     }
 
     if (linesToInsert.isEmpty()) {

@@ -180,7 +180,7 @@ Text editor includes:
 - toolbox has a live filter field (`Filter commands...`) for narrowing the current scoped list by keyword
 - `Auto (selected block)` resolves scope from the currently selected canvas block context (container selection -> inside that container; leaf selection -> parent container; no selection -> top-level)
 - toolbox list sections are catalog-context driven from `resources/therion_command_catalog.json` context metadata and show supported draggable commands from each effective scope (excluding unsupported block-pair families not yet modeled in canvas)
-- toolbox also includes a draggable `Comment` block for inserting full-line comments (`# ...`) in the current context
+- toolbox also includes a draggable `Comment` block for inserting full-line comments in the current context
 - selecting a command item in toolbox shows compact help in the `Block Details` pane (third column): command title + `Summary` line only
 - the editable `Block Details` section is visible only when a canvas block is selected; toolbox-command preview keeps only contextual help visible
 - selected-block status in `Block Details` shows command context (`Command: ...`) without source line numbers
@@ -195,6 +195,7 @@ Text editor includes:
 - right `Block Details` pane edits parameters of the selected block directly (no modal dialog for supported block kinds)
 - blocks view uses a 3-column horizontal splitter (`Toolbox | Canvas | Block Details`), so `Block Details` can be resized wider for multi-column option/value editing
 - dragging a toolbox item to the canvas inserts source templates at compatible positions
+- inserted templates are intentionally bare skeletons (no example IDs/paths/values are auto-filled)
 - dropping below the last canvas card appends a new top-level block at document end; dropping above the first card inserts at document start
 - if a toolbox drop lands between cards (not exactly on one card), insertion context resolves from the nearest canvas block by vertical position
 - while dragging from toolbox to canvas, the same dashed placement guide line is shown as for block reordering
@@ -238,6 +239,7 @@ Text editor includes:
 - for `Team`/`Explo Team`, `Apply` auto-quotes the person value when needed (for example names with spaces), preserving valid Therion tokenization
 - simple command fields are argument-aware: Block Details labels positional fields from command argument metadata and parses current raw-line tokens back into those fields
 - selecting `Data` enables split header editing in details pane (`Style` + `Readings Order` fields + `Apply`, serialized as `data <style> <readings order>`), while `Edit Data Rows...` opens the full mixed-row data editor for body rows/directives
+- inserting a new `Data` command from the Blocks toolbox creates a bare `data` header line; fill `Style` and `Readings Order` in Block Details
 - most in-scope command cards now edit directly in details pane; unsupported kinds keep a `Legacy Configure...` fallback button
 - `Apply` / `Legacy Configure...` actions are placed above `Contextual Help` in a stable row to keep commit actions in a fixed position while help content changes/scrolls
 - nested commands should be inserted through toolbox drag/drop, not through block-parameter editing

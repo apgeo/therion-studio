@@ -90,9 +90,10 @@ Structured block-canvas requirements:
 - dragging a structure card in the canvas should reorder the corresponding source block; for container directives, reordering shall move the full block span including nested lines
 - dropping a toolbox command below the lowest canvas block shall append it at document top-level end; dropping above the first block shall insert at document start.
 - when a toolbox drop lands in an incompatible nested scope, insertion should auto-promote to the nearest valid ancestor scope (or root) instead of failing immediately.
+- toolbox insertion templates shall not prefill example/sample argument values; inserted directives shall start with empty parameters for explicit user entry.
 - container blocks should render explicit paired boundary guides in the canvas: a vertical connector from the container header toward closure and a visible closure boundary marker (end-pair intent).
 - drag/drop targeting should treat the container boundary marker as a valid `after block` drop target, while dropping on the container body should still support `inside block` insertion.
-- centerline-oriented configuration flows should support quick insertion of common child commands (for example `team`, `explo-date`, and starter `data` definitions) without requiring manual raw-text typing
+- centerline-oriented configuration flows should support quick insertion of common child commands (for example `team`, `explo-date`, and empty `data` header skeletons) without requiring manual raw-text typing
 - data-block configuration should separate header editing and row editing: Block Details edits the `data ...` header (`style` + `readings order`), while the row editor dialog focuses on body rows/directives using the active header as schema
 - data-block header editing in the Block Details pane should expose separate `style` and `readings order` fields and shall serialize them back as `data <style> <readings order>`
 - Block Details option editing should provide catalog-backed suggestions for option keys/values while remaining free-form to allow unknown but valid Therion options.

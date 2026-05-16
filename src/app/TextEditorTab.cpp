@@ -2410,6 +2410,38 @@ TextEditorTab::~TextEditorTab()
     }
 }
 
+void TextEditorTab::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event == nullptr) {
+        return;
+    }
+
+    switch (event->type()) {
+    case QEvent::ApplicationPaletteChange:
+    case QEvent::PaletteChange:
+    case QEvent::StyleChange:
+        handleApplicationAppearanceChanged();
+        break;
+    default:
+        break;
+    }
+}
+
+void TextEditorTab::handleApplicationAppearanceChanged()
+{
+    if (blockCanvasView_ != nullptr) {
+        blockCanvasView_->setBackgroundBrush(blockCanvasView_->palette().color(QPalette::Base));
+        if (QWidget *viewport = blockCanvasView_->viewport(); viewport != nullptr) {
+            viewport->update();
+        }
+    }
+
+    if (blocksModeActive_ && blockCanvasScene_ != nullptr) {
+        rebuildBlocksCanvasFromText();
+    }
+}
+
 bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)
 {
     QString contents;

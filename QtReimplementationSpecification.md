@@ -93,6 +93,7 @@ Structured block-canvas requirements:
 - toolbox insertion templates shall not prefill example/sample argument values; inserted directives shall start with empty parameters for explicit user entry.
 - container blocks should render explicit paired boundary guides in the canvas: a vertical connector from the container header toward closure and a visible closure boundary marker (end-pair intent).
 - drag/drop targeting should treat the container boundary marker as a valid `after block` drop target, while dropping on the container body should still support `inside block` insertion.
+- block-canvas presentation shall react to runtime application appearance changes (light/dark and palette/style updates) without requiring tab reload or application restart.
 - centerline-oriented configuration flows should support quick insertion of common child commands (for example `team`, `explo-date`, and empty `data` header skeletons) without requiring manual raw-text typing
 - data-block configuration should separate header editing and row editing: Block Details edits the `data ...` header (`style` + `readings order`), while the row editor dialog focuses on body rows/directives using the active header as schema
 - data-block header editing in the Block Details pane should expose separate `style` and `readings order` fields and shall serialize them back as `data <style> <readings order>`

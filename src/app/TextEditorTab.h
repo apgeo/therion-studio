@@ -110,6 +110,9 @@ signals:
     void cursorPositionChanged(int lineNumber, int columnNumber);
     void documentTextChanged();
 
+protected:
+    void changeEvent(QEvent *event) override;
+
 private slots:
     void handleTextChanged();
     void handleFindTextEdited(const QString &text);
@@ -153,6 +156,7 @@ private:
     QString validationHelpHtmlForCursor(QString *tooltipText = nullptr,
                                         QString *tooltipKey = nullptr) const;
     void setHelpCollapsed(bool collapsed);
+    void handleApplicationAppearanceChanged();
     QString renderHelpHtml(const QString &token, const TherionHelpEntry &entry, bool includeSyntax = true) const;
     QString renderHelpSummaryHtml(const QString &token, const TherionHelpEntry &entry) const;
     void updateSearchResults(const QString &message, bool error = false);

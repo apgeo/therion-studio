@@ -211,6 +211,7 @@ Text editor includes:
 - when dragging over a container card, dropping near the card top/bottom edge inserts before/after that block; dropping in the middle keeps container-child insertion behavior
 - for container-compatible child blocks (for example comment under `survey`), dropping near container bottom edge inserts at the beginning of the container body (before first child), enabling direct placement between container header and first child
 - dropping onto a compatible container (for example `survey`) moves the block inside that container near its end
+- block canvas updates live when application/system appearance changes (light/dark), including immediate canvas background and boundary-guide redraw
 - block cards use a trash icon action in the top-right corner for delete
 - selecting a block card focuses it in `Block Details` for editing
 - delete icon asks for confirmation and removes the full logical block span (`survey`/`map`/`scrap`/`centerline` with matching end directive, `data` with its measured rows, or single-line leaf directives)

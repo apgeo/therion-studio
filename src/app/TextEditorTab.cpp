@@ -37,12 +37,14 @@
 #include <QSplitterHandle>
 #include <QTableWidget>
 #include <QTextBrowser>
+#include <QTextEdit>
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QToolTip>
 #include <QHeaderView>
 #include <QScreen>
 #include <QScrollBar>
+#include <QSignalBlocker>
 #include <QStyle>
 #include <QStringListModel>
 #include <QTimer>
@@ -393,6 +395,12 @@ QString commandOptionValueKey(const QString &commandName, const QString &optionT
         + optionToken.trimmed().toLower();
 }
 
+QString commandOptionHelpKey(const QString &commandName, const QString &optionToken)
+{
+    return commandName.trimmed().toLower() + QStringLiteral("\x1fhelp\x1f")
+        + optionToken.trimmed().toLower();
+}
+
 QString commandArgumentValueKey(const QString &commandName, int argumentIndex)
 {
     return commandName.trimmed().toLower() + QStringLiteral("\x1farg\x1f")
@@ -643,7 +651,6 @@ public:
         setCursor(Qt::OpenHandCursor);
     }
 
-    std::function<void(const QString &, int)> onConfigure;
     std::function<void(int)> onDelete;
     std::function<void(int, const QPointF &)> onMoveRequest;
 
@@ -700,37 +707,26 @@ protected:
         painter->setBrush(baseColor);
         painter->drawRoundedRect(boundingRect(), 6.0, 6.0);
 
-        const QRectF configureButtonRect = configureIconRect();
         const QRectF deleteButtonRect = deleteIconRect();
 
         painter->setPen(QPen(QColor(QStringLiteral("#6a6a6a")), 1.0));
         painter->setBrush(QColor(QStringLiteral("#f2f2f2")));
-        painter->drawRoundedRect(configureButtonRect, 4.0, 4.0);
         painter->drawRoundedRect(deleteButtonRect, 4.0, 4.0);
 
-        const QRect configureIconBounds = configureButtonRect.adjusted(4.0, 4.0, -4.0, -4.0).toRect();
         const QRect deleteIconBounds = deleteButtonRect.adjusted(4.0, 4.0, -4.0, -4.0).toRect();
         if (QStyle *style = QApplication::style(); style != nullptr) {
-            style->standardIcon(QStyle::SP_FileDialogDetailedView).paint(painter, configureIconBounds);
             style->standardIcon(QStyle::SP_TrashIcon).paint(painter, deleteIconBounds);
         }
 
         const QString title = name_.isEmpty() ? kind_ : QStringLiteral("%1: %2").arg(kind_, name_);
         painter->setPen(QColor(QStringLiteral("#1f1f1f")));
-        painter->drawText(QRectF(10.0, 0.0, configureButtonRect.left() - 16.0, boundingRect().height()),
+        painter->drawText(QRectF(10.0, 0.0, deleteButtonRect.left() - 16.0, boundingRect().height()),
                           Qt::AlignVCenter | Qt::AlignLeft,
                           title);
     }
 
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override
     {
-        if (event != nullptr && configureIconRect().contains(event->pos())) {
-            if (onConfigure) {
-                onConfigure(kind_, lineNumber_);
-            }
-            event->accept();
-            return;
-        }
         if (event != nullptr && deleteIconRect().contains(event->pos())) {
             if (onDelete) {
                 onDelete(lineNumber_);
@@ -775,15 +771,6 @@ protected:
     }
 
 private:
-    QRectF configureIconRect() const
-    {
-        const qreal iconSize = 24.0;
-        const qreal margin = 8.0;
-        const qreal gap = 6.0;
-        const qreal x = boundingRect().right() - margin - (iconSize * 2.0) - gap;
-        return QRectF(x, 9.0, iconSize, iconSize);
-    }
-
     QRectF deleteIconRect() const
     {
         const qreal iconSize = 24.0;
@@ -1233,7 +1220,10 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     blocksLayout->setContentsMargins(8, 8, 8, 8);
     blocksLayout->setSpacing(8);
 
-    auto *toolboxColumn = new QWidget(blocksPanel_);
+    auto *blocksSplitter = new QSplitter(Qt::Horizontal, blocksPanel_);
+    blocksSplitter->setChildrenCollapsible(false);
+
+    auto *toolboxColumn = new QWidget(blocksSplitter);
     auto *toolboxColumnLayout = new QVBoxLayout(toolboxColumn);
     toolboxColumnLayout->setContentsMargins(0, 0, 0, 0);
     toolboxColumnLayout->setSpacing(6);
@@ -1249,8 +1239,8 @@ TextEditorTab::TextEditorTab(QWidget *parent)
         populateBlockToolbox();
     });
 
-    blockCanvasScene_ = new QGraphicsScene(blocksPanel_);
-    auto *typedCanvasView = new BlockCanvasView(blocksPanel_);
+    blockCanvasScene_ = new QGraphicsScene(blocksSplitter);
+    auto *typedCanvasView = new BlockCanvasView(blocksSplitter);
     typedCanvasView->setScene(blockCanvasScene_);
     typedCanvasView->setSceneRect(QRectF(0.0, 0.0, 1400.0, 2000.0));
     typedCanvasView->setBackgroundBrush(palette().color(QPalette::Base));
@@ -1259,8 +1249,106 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     };
     blockCanvasView_ = typedCanvasView;
 
-    blocksLayout->addWidget(toolboxColumn);
-    blocksLayout->addWidget(blockCanvasView_, 1);
+    blockDetailsPanel_ = new QFrame(blocksSplitter);
+    blockDetailsPanel_->setMinimumWidth(320);
+    auto *blockDetailsLayout = new QVBoxLayout(blockDetailsPanel_);
+    blockDetailsLayout->setContentsMargins(8, 8, 8, 8);
+    blockDetailsLayout->setSpacing(6);
+
+    blockDetailsEditPanel_ = new QWidget(blockDetailsPanel_);
+    auto *blockDetailsEditLayout = new QVBoxLayout(blockDetailsEditPanel_);
+    blockDetailsEditLayout->setContentsMargins(0, 0, 0, 0);
+    blockDetailsEditLayout->setSpacing(6);
+
+    auto *blockDetailsHeader = new QLabel(tr("Block Details"), blockDetailsEditPanel_);
+    QFont blockDetailsHeaderFont = blockDetailsHeader->font();
+    blockDetailsHeaderFont.setBold(true);
+    blockDetailsHeader->setFont(blockDetailsHeaderFont);
+    blockDetailsEditLayout->addWidget(blockDetailsHeader);
+
+    blockDetailsStatusLabel_ = new QLabel(blockDetailsEditPanel_);
+    blockDetailsStatusLabel_->setObjectName(QStringLiteral("blockDetailsStatusLabel"));
+    blockDetailsStatusLabel_->setWordWrap(true);
+    blockDetailsEditLayout->addWidget(blockDetailsStatusLabel_);
+
+    auto *blockDetailsFormLayout = new QFormLayout;
+    blockDetailsFormLayout->setContentsMargins(0, 0, 0, 0);
+    blockDetailsFormLayout->setSpacing(6);
+    blockDetailsPrimaryFieldLabel_ = new QLabel(tr("ID"), blockDetailsEditPanel_);
+    blockDetailsIdEdit_ = new QLineEdit(blockDetailsEditPanel_);
+    blockDetailsIdEdit_->setObjectName(QStringLiteral("blockDetailsPrimaryEdit"));
+    blockDetailsFormLayout->addRow(blockDetailsPrimaryFieldLabel_, blockDetailsIdEdit_);
+    blockDetailsSecondaryFieldLabel_ = new QLabel(tr("Additional Positional Tokens"), blockDetailsEditPanel_);
+    blockDetailsAdditionalPositionalEdit_ = new QLineEdit(blockDetailsEditPanel_);
+    blockDetailsAdditionalPositionalEdit_->setObjectName(QStringLiteral("blockDetailsSecondaryEdit"));
+    blockDetailsAdditionalPositionalEdit_->setToolTip(
+        tr("Preserved positional tokens that are not parsed as options. Prefer explicit options when possible."));
+    blockDetailsFormLayout->addRow(blockDetailsSecondaryFieldLabel_, blockDetailsAdditionalPositionalEdit_);
+    blockDetailsEditLayout->addLayout(blockDetailsFormLayout);
+
+    auto *blockDetailsOptionsLabel = new QLabel(tr("Options (key/value pairs)"), blockDetailsEditPanel_);
+    blockDetailsEditLayout->addWidget(blockDetailsOptionsLabel);
+
+    auto *blockDetailsOptionsActions = new QHBoxLayout;
+    blockDetailsOptionsActions->setContentsMargins(0, 0, 0, 0);
+    blockDetailsOptionsActions->setSpacing(6);
+    blockDetailsAddOptionButton_ = new QPushButton(tr("Add Option"), blockDetailsEditPanel_);
+    blockDetailsRemoveOptionButton_ = new QPushButton(tr("Remove Option"), blockDetailsEditPanel_);
+    blockDetailsAddOptionButton_->setAutoDefault(false);
+    blockDetailsRemoveOptionButton_->setAutoDefault(false);
+    blockDetailsOptionsActions->addWidget(blockDetailsAddOptionButton_);
+    blockDetailsOptionsActions->addWidget(blockDetailsRemoveOptionButton_);
+    blockDetailsOptionsActions->addStretch(1);
+    blockDetailsEditLayout->addLayout(blockDetailsOptionsActions);
+
+    blockDetailsOptionsTable_ = new QTableWidget(blockDetailsEditPanel_);
+    blockDetailsOptionsTable_->setObjectName(QStringLiteral("blockDetailsOptionsTable"));
+    blockDetailsOptionsTable_->setColumnCount(2);
+    blockDetailsOptionsTable_->setHorizontalHeaderLabels({tr("Option"), tr("Value")});
+    blockDetailsOptionsTable_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    blockDetailsOptionsTable_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    blockDetailsOptionsTable_->verticalHeader()->setVisible(false);
+    blockDetailsOptionsTable_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    blockDetailsOptionsTable_->setSelectionMode(QAbstractItemView::SingleSelection);
+    blockDetailsOptionsTable_->setAlternatingRowColors(true);
+    blockDetailsOptionsTable_->setMinimumHeight(140);
+    blockDetailsEditLayout->addWidget(blockDetailsOptionsTable_, 1);
+
+    auto *blockDetailsButtonsRow = new QHBoxLayout;
+    blockDetailsButtonsRow->setContentsMargins(0, 0, 0, 0);
+    blockDetailsButtonsRow->setSpacing(6);
+    blockDetailsLegacyConfigureButton_ = new QPushButton(tr("Legacy Configure..."), blockDetailsEditPanel_);
+    blockDetailsLegacyConfigureButton_->setObjectName(QStringLiteral("blockDetailsLegacyButton"));
+    blockDetailsLegacyConfigureButton_->setAutoDefault(false);
+    blockDetailsApplyButton_ = new QPushButton(tr("Apply"), blockDetailsEditPanel_);
+    blockDetailsApplyButton_->setObjectName(QStringLiteral("blockDetailsApplyButton"));
+    blockDetailsApplyButton_->setAutoDefault(false);
+    blockDetailsButtonsRow->addWidget(blockDetailsLegacyConfigureButton_);
+    blockDetailsButtonsRow->addStretch(1);
+    blockDetailsButtonsRow->addWidget(blockDetailsApplyButton_);
+    blockDetailsEditLayout->addLayout(blockDetailsButtonsRow);
+
+    blockDetailsLayout->addWidget(blockDetailsEditPanel_);
+
+    auto *blockDetailsHelpLabel = new QLabel(tr("Contextual Help"), blockDetailsPanel_);
+    QFont blockDetailsHelpLabelFont = blockDetailsHelpLabel->font();
+    blockDetailsHelpLabelFont.setBold(true);
+    blockDetailsHelpLabel->setFont(blockDetailsHelpLabelFont);
+    blockDetailsLayout->addWidget(blockDetailsHelpLabel);
+
+    blockDetailsHelpBrowser_ = new QTextEdit(blockDetailsPanel_);
+    blockDetailsHelpBrowser_->setReadOnly(true);
+    blockDetailsHelpBrowser_->setMinimumHeight(140);
+    blockDetailsLayout->addWidget(blockDetailsHelpBrowser_, 1);
+
+    blocksSplitter->addWidget(toolboxColumn);
+    blocksSplitter->addWidget(blockCanvasView_);
+    blocksSplitter->addWidget(blockDetailsPanel_);
+    blocksSplitter->setStretchFactor(0, 0);
+    blocksSplitter->setStretchFactor(1, 1);
+    blocksSplitter->setStretchFactor(2, 0);
+    blocksSplitter->setSizes({220, 860, 520});
+    blocksLayout->addWidget(blocksSplitter, 1);
 
     editorModeStack_ = new QStackedWidget(this);
     editorModeStack_->addWidget(editorHelpSplitter_);
@@ -1275,13 +1363,99 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     connect(editor_, &QPlainTextEdit::cursorPositionChanged, this, &TextEditorTab::handleCursorPositionChanged);
     connect(rawModeButton_, &QPushButton::clicked, this, &TextEditorTab::handleRawModeRequested);
     connect(blocksModeButton_, &QPushButton::clicked, this, &TextEditorTab::handleBlocksModeRequested);
+    connect(blockCanvasScene_, &QGraphicsScene::selectionChanged, this, &TextEditorTab::refreshBlockDetailsSelectionFromScene);
+    connect(blockToolboxList_, &QListWidget::currentItemChanged, this, [this](QListWidgetItem *current, QListWidgetItem *) {
+        if (tearingDown_) {
+            return;
+        }
+        if (current == nullptr) {
+            return;
+        }
+        const QString commandToken = normalizeDirective(current->data(Qt::UserRole).toString());
+        if (commandToken.isEmpty()) {
+            return;
+        }
+        showBlockDetailsForToolboxCommand(commandToken);
+    });
+    connect(blockDetailsOptionsTable_, &QTableWidget::currentCellChanged, this, [this](int, int, int, int) {
+        updateBlockDetailsHelpForCurrentFocus();
+        refreshBlockDetailsApplyState();
+    });
+    connect(blockDetailsOptionsTable_, &QTableWidget::itemChanged, this, [this](QTableWidgetItem *) {
+        if (!blockDetailsPopulating_) {
+            updateBlockDetailsHelpForCurrentFocus();
+            refreshBlockDetailsApplyState();
+        }
+    });
+    connect(blockDetailsIdEdit_, &QLineEdit::selectionChanged, this, [this]() {
+        updateBlockDetailsHelpForCurrentFocus();
+    });
+    connect(blockDetailsIdEdit_, &QLineEdit::textChanged, this, [this](const QString &) {
+        updateBlockDetailsHelpForCurrentFocus();
+        refreshBlockDetailsApplyState();
+    });
+    connect(blockDetailsAdditionalPositionalEdit_, &QLineEdit::selectionChanged, this, [this]() {
+        updateBlockDetailsHelpForCurrentFocus();
+    });
+    connect(blockDetailsAdditionalPositionalEdit_, &QLineEdit::textChanged, this, [this](const QString &) {
+        updateBlockDetailsHelpForCurrentFocus();
+        refreshBlockDetailsApplyState();
+    });
+    connect(blockDetailsAddOptionButton_, &QPushButton::clicked, this, [this]() {
+        if (blockDetailsOptionsTable_ == nullptr
+            || blockDetailsPopulating_
+            || blockDetailsMode_ != BlockDetailsMode::StructuredOptions) {
+            return;
+        }
+        const int row = blockDetailsOptionsTable_->rowCount();
+        blockDetailsOptionsTable_->insertRow(row);
+        const QString defaultOption = !commandOptionTokens_.value(blockDetailsSelectedKind_).isEmpty()
+            ? commandOptionTokens_.value(blockDetailsSelectedKind_).first()
+            : QStringLiteral("-option");
+        blockDetailsOptionsTable_->setItem(row, 0, new QTableWidgetItem(defaultOption));
+        blockDetailsOptionsTable_->setItem(row, 1, new QTableWidgetItem(QString()));
+        blockDetailsOptionsTable_->setCurrentCell(row, 0);
+        blockDetailsOptionsTable_->editItem(blockDetailsOptionsTable_->item(row, 0));
+        updateBlockDetailsHelpForCurrentFocus();
+        refreshBlockDetailsApplyState();
+    });
+    connect(blockDetailsRemoveOptionButton_, &QPushButton::clicked, this, [this]() {
+        if (blockDetailsOptionsTable_ == nullptr
+            || blockDetailsPopulating_
+            || blockDetailsMode_ != BlockDetailsMode::StructuredOptions
+            || blockDetailsOptionsTable_->rowCount() == 0) {
+            return;
+        }
+        const int row = blockDetailsOptionsTable_->currentRow() >= 0
+            ? blockDetailsOptionsTable_->currentRow()
+            : blockDetailsOptionsTable_->rowCount() - 1;
+        blockDetailsOptionsTable_->removeRow(row);
+        updateBlockDetailsHelpForCurrentFocus();
+        refreshBlockDetailsApplyState();
+    });
+    connect(blockDetailsApplyButton_, &QPushButton::clicked, this, &TextEditorTab::applyBlockDetailsChanges);
+    connect(blockDetailsLegacyConfigureButton_, &QPushButton::clicked, this, [this]() {
+        if (blockDetailsSelectedLineNumber_ <= 0 || blockDetailsSelectedKind_.isEmpty()) {
+            return;
+        }
+        handleBlockConfigureRequest(blockDetailsSelectedKind_, blockDetailsSelectedLineNumber_);
+    });
 
     refreshBlocksModeAvailability();
     refreshEditorModeUi();
     rebuildBlocksCanvasFromText();
+    clearBlockDetailsPane();
     refreshStatus();
     refreshCurrentLineHighlight();
     updateContextHelp();
+}
+
+TextEditorTab::~TextEditorTab()
+{
+    tearingDown_ = true;
+    if (blockCanvasScene_ != nullptr) {
+        disconnect(blockCanvasScene_, &QGraphicsScene::selectionChanged, this, &TextEditorTab::refreshBlockDetailsSelectionFromScene);
+    }
 }
 
 bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)
@@ -1317,7 +1491,10 @@ bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)
     if (blocksModeActive_ && !isBlocksModeSupportedForCurrentFile()) {
         setBlocksModeActive(false);
     }
+    blockDetailsSelectedLineNumber_ = 0;
+    blockDetailsSelectedKind_.clear();
     rebuildBlocksCanvasFromText();
+    clearBlockDetailsPane();
     refreshEditorModeUi();
     refreshTitle();
     refreshCurrentLineHighlight();
@@ -2066,11 +2243,15 @@ void TextEditorTab::populateBlockToolbox()
 
 void TextEditorTab::rebuildBlocksCanvasFromText()
 {
-    if (blockCanvasScene_ == nullptr) {
+    if (blockCanvasScene_ == nullptr || tearingDown_) {
         return;
     }
 
-    blockCanvasScene_->clear();
+    const int preferredSelectedLine = blockDetailsSelectedLineNumber_;
+    {
+        const QSignalBlocker sceneSignalBlocker(blockCanvasScene_);
+        blockCanvasScene_->clear();
+    }
 
     if (!isBlocksModeSupportedForCurrentFile()) {
         auto *note = blockCanvasScene_->addText(
@@ -2141,9 +2322,6 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
 
         const QString name = blockDisplayName(parsedLine);
         auto *item = new BlockCanvasItem(directive, name, parsedLine.lineNumber, parentItem);
-        item->onConfigure = [this](const QString &kind, int lineNumber) {
-            handleBlockConfigureRequest(kind, lineNumber);
-        };
         item->onDelete = [this](int lineNumber) {
             handleBlockDeleteRequest(lineNumber);
         };
@@ -2152,9 +2330,9 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
         };
         if (parentItem == nullptr) {
             roots.append(item);
+            blockCanvasScene_->addItem(item);
         }
         allItems.append(item);
-        blockCanvasScene_->addItem(item);
 
         if (!commandDirective && isContainerBlockDirective(directive)) {
             stack.append(StackEntry{directive, item});
@@ -2194,6 +2372,849 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
         layoutTree(root, 0);
     }
     blockCanvasScene_->setSceneRect(0.0, 0.0, 1400.0, qMax<qreal>(y + 40.0, 600.0));
+
+    if (preferredSelectedLine > 0) {
+        for (BlockCanvasItem *item : allItems) {
+            if (item == nullptr || item->lineNumber() != preferredSelectedLine) {
+                continue;
+            }
+            blockCanvasScene_->clearSelection();
+            item->setSelected(true);
+            blockCanvasScene_->setFocusItem(item);
+            break;
+        }
+    }
+
+    refreshBlockDetailsSelectionFromScene();
+}
+
+bool TextEditorTab::supportsDetailsPaneForKind(const QString &kind) const
+{
+    const QString normalizedKind = normalizeDirective(kind);
+    if (normalizedKind.isEmpty() || isBlockClosingDirective(normalizedKind)) {
+        return false;
+    }
+    if (isContainerBlockDirective(normalizedKind) || normalizedKind == QStringLiteral("data")) {
+        return true;
+    }
+    if (!commandOptionTokens_.value(normalizedKind).isEmpty()) {
+        return true;
+    }
+    return true;
+}
+
+void TextEditorTab::clearBlockDetailsPane()
+{
+    if (tearingDown_) {
+        blockDetailsMode_ = BlockDetailsMode::None;
+        blockDetailsSelectedLineNumber_ = 0;
+        blockDetailsSelectedKind_.clear();
+        return;
+    }
+    blockDetailsMode_ = BlockDetailsMode::None;
+    blockDetailsSelectedLineNumber_ = 0;
+    blockDetailsSelectedKind_.clear();
+    blockDetailsBaseStatusText_.clear();
+    if (blockDetailsEditPanel_ != nullptr) {
+        blockDetailsEditPanel_->setVisible(false);
+    }
+    blockDetailsPopulating_ = true;
+    if (blockDetailsStatusLabel_ != nullptr) {
+        blockDetailsStatusLabel_->setStyleSheet(QString());
+        blockDetailsStatusLabel_->setText(tr("Select a block in the canvas to edit its parameters."));
+    }
+    if (blockDetailsIdEdit_ != nullptr) {
+        blockDetailsIdEdit_->clear();
+        blockDetailsIdEdit_->setEnabled(false);
+        blockDetailsIdEdit_->setVisible(true);
+    }
+    if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+        blockDetailsAdditionalPositionalEdit_->clear();
+        blockDetailsAdditionalPositionalEdit_->setEnabled(false);
+        blockDetailsAdditionalPositionalEdit_->setVisible(true);
+    }
+    if (blockDetailsPrimaryFieldLabel_ != nullptr) {
+        blockDetailsPrimaryFieldLabel_->setText(tr("ID"));
+        blockDetailsPrimaryFieldLabel_->setVisible(true);
+    }
+    if (blockDetailsSecondaryFieldLabel_ != nullptr) {
+        blockDetailsSecondaryFieldLabel_->setText(tr("Additional Positional Tokens"));
+        blockDetailsSecondaryFieldLabel_->setVisible(true);
+    }
+    if (blockDetailsOptionsTable_ != nullptr) {
+        blockDetailsOptionsTable_->setRowCount(0);
+        blockDetailsOptionsTable_->setEnabled(false);
+        blockDetailsOptionsTable_->setVisible(true);
+    }
+    if (blockDetailsAddOptionButton_ != nullptr) {
+        blockDetailsAddOptionButton_->setEnabled(false);
+        blockDetailsAddOptionButton_->setVisible(true);
+    }
+    if (blockDetailsRemoveOptionButton_ != nullptr) {
+        blockDetailsRemoveOptionButton_->setEnabled(false);
+        blockDetailsRemoveOptionButton_->setVisible(true);
+    }
+    if (blockDetailsApplyButton_ != nullptr) {
+        blockDetailsApplyButton_->setEnabled(false);
+    }
+    if (blockDetailsLegacyConfigureButton_ != nullptr) {
+        blockDetailsLegacyConfigureButton_->setEnabled(false);
+        blockDetailsLegacyConfigureButton_->setVisible(false);
+    }
+    if (blockDetailsHelpBrowser_ != nullptr) {
+        blockDetailsHelpBrowser_->setHtml(tr("<p>Select a block parameter to see contextual help.</p>"));
+    }
+    blockDetailsPopulating_ = false;
+}
+
+void TextEditorTab::showBlockDetailsForToolboxCommand(const QString &commandToken)
+{
+    if (tearingDown_) {
+        return;
+    }
+    const QString normalizedCommand = normalizeDirective(commandToken);
+    if (normalizedCommand.isEmpty()) {
+        return;
+    }
+
+    if (blockCanvasScene_ != nullptr) {
+        const QSignalBlocker signalBlocker(blockCanvasScene_);
+        blockCanvasScene_->clearSelection();
+    }
+
+    blockDetailsPopulating_ = true;
+    blockDetailsMode_ = BlockDetailsMode::Unsupported;
+    blockDetailsSelectedLineNumber_ = 0;
+    blockDetailsSelectedKind_ = normalizedCommand;
+    blockDetailsBaseStatusText_ = tr("Command: %1").arg(normalizedCommand);
+    if (blockDetailsEditPanel_ != nullptr) {
+        blockDetailsEditPanel_->setVisible(false);
+    }
+
+    if (blockDetailsStatusLabel_ != nullptr) {
+        blockDetailsStatusLabel_->setStyleSheet(QString());
+        blockDetailsStatusLabel_->setText(blockDetailsBaseStatusText_);
+    }
+    if (blockDetailsPrimaryFieldLabel_ != nullptr) {
+        blockDetailsPrimaryFieldLabel_->setVisible(false);
+    }
+    if (blockDetailsSecondaryFieldLabel_ != nullptr) {
+        blockDetailsSecondaryFieldLabel_->setVisible(false);
+    }
+    if (blockDetailsIdEdit_ != nullptr) {
+        blockDetailsIdEdit_->clear();
+        blockDetailsIdEdit_->setEnabled(false);
+        blockDetailsIdEdit_->setVisible(false);
+    }
+    if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+        blockDetailsAdditionalPositionalEdit_->clear();
+        blockDetailsAdditionalPositionalEdit_->setEnabled(false);
+        blockDetailsAdditionalPositionalEdit_->setVisible(false);
+    }
+    if (blockDetailsOptionsTable_ != nullptr) {
+        blockDetailsOptionsTable_->clearSelection();
+        blockDetailsOptionsTable_->setRowCount(0);
+        blockDetailsOptionsTable_->setEnabled(false);
+        blockDetailsOptionsTable_->setVisible(false);
+    }
+    if (blockDetailsAddOptionButton_ != nullptr) {
+        blockDetailsAddOptionButton_->setEnabled(false);
+        blockDetailsAddOptionButton_->setVisible(false);
+    }
+    if (blockDetailsRemoveOptionButton_ != nullptr) {
+        blockDetailsRemoveOptionButton_->setEnabled(false);
+        blockDetailsRemoveOptionButton_->setVisible(false);
+    }
+    if (blockDetailsLegacyConfigureButton_ != nullptr) {
+        blockDetailsLegacyConfigureButton_->setVisible(false);
+        blockDetailsLegacyConfigureButton_->setEnabled(false);
+    }
+    if (blockDetailsApplyButton_ != nullptr) {
+        blockDetailsApplyButton_->setEnabled(false);
+    }
+    if (blockDetailsHelpBrowser_ != nullptr) {
+        const TherionHelpEntry entry = helpEntries_.value(normalizedCommand);
+        QString html = tr("<p>Select a command card in toolbox to inspect help before drag/drop insertion.</p>");
+        html += renderHelpHtml(normalizedCommand, entry);
+        blockDetailsHelpBrowser_->setHtml(html);
+    }
+    blockDetailsPopulating_ = false;
+}
+
+void TextEditorTab::selectBlockInCanvasAndDetails(int lineNumber)
+{
+    if (tearingDown_) {
+        return;
+    }
+    if (lineNumber <= 0 || blockCanvasScene_ == nullptr) {
+        clearBlockDetailsPane();
+        return;
+    }
+
+    auto resolveBlockFromItem = [](QGraphicsItem *item) -> BlockCanvasItem * {
+        while (item != nullptr) {
+            if (auto *blockItem = dynamic_cast<BlockCanvasItem *>(item)) {
+                return blockItem;
+            }
+            item = item->parentItem();
+        }
+        return nullptr;
+    };
+
+    const QList<QGraphicsItem *> sceneItems = blockCanvasScene_->items();
+    for (QGraphicsItem *item : sceneItems) {
+        auto *blockItem = resolveBlockFromItem(item);
+        if (blockItem == nullptr) {
+            continue;
+        }
+        if (blockItem->lineNumber() == lineNumber) {
+            blockCanvasScene_->clearSelection();
+            blockItem->setSelected(true);
+            blockCanvasScene_->setFocusItem(blockItem);
+            if (blockCanvasView_ != nullptr) {
+                blockCanvasView_->centerOn(blockItem);
+            }
+            refreshBlockDetailsSelectionFromScene();
+            return;
+        }
+    }
+    clearBlockDetailsPane();
+}
+
+void TextEditorTab::refreshBlockDetailsSelectionFromScene()
+{
+    if (tearingDown_) {
+        return;
+    }
+    if (blockCanvasScene_ == nullptr) {
+        clearBlockDetailsPane();
+        return;
+    }
+
+    auto resolveBlockFromItem = [](QGraphicsItem *item) -> BlockCanvasItem * {
+        while (item != nullptr) {
+            if (auto *blockItem = dynamic_cast<BlockCanvasItem *>(item)) {
+                return blockItem;
+            }
+            item = item->parentItem();
+        }
+        return nullptr;
+    };
+
+    BlockCanvasItem *selectedBlock = nullptr;
+    if (!blockCanvasScene_->selectedItems().isEmpty()) {
+        selectedBlock = resolveBlockFromItem(blockCanvasScene_->selectedItems().first());
+    }
+    if (selectedBlock == nullptr) {
+        selectedBlock = resolveBlockFromItem(blockCanvasScene_->focusItem());
+    }
+    if (selectedBlock == nullptr) {
+        clearBlockDetailsPane();
+        return;
+    }
+
+    if (!loadBlockDetailsForSelection(selectedBlock->kind(), selectedBlock->lineNumber())) {
+        blockDetailsSelectedLineNumber_ = selectedBlock->lineNumber();
+        blockDetailsSelectedKind_ = normalizeDirective(selectedBlock->kind());
+    }
+}
+
+bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNumber)
+{
+    if (tearingDown_) {
+        return false;
+    }
+    if (lineNumber <= 0 || editor_ == nullptr) {
+        clearBlockDetailsPane();
+        return false;
+    }
+
+    QStringList lines = editor_->toPlainText().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    for (QString &line : lines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+    if (lineNumber > lines.size()) {
+        clearBlockDetailsPane();
+        return false;
+    }
+
+    const QString normalizedKind = normalizeDirective(kind);
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineNumber - 1), lineNumber);
+    if (parsedLine.tokens.isEmpty()) {
+        clearBlockDetailsPane();
+        return false;
+    }
+
+    blockDetailsSelectedLineNumber_ = lineNumber;
+    blockDetailsSelectedKind_ = normalizedKind;
+    if (blockDetailsEditPanel_ != nullptr) {
+        blockDetailsEditPanel_->setVisible(true);
+    }
+
+    blockDetailsPopulating_ = true;
+
+    const bool supported = supportsDetailsPaneForKind(normalizedKind);
+    const bool hasCatalogOptions = !commandOptionTokens_.value(normalizedKind).isEmpty();
+    const bool structuredOptionsMode = isContainerBlockDirective(normalizedKind) || hasCatalogOptions;
+    const bool simpleValueMode = !structuredOptionsMode && normalizedKind != QStringLiteral("data");
+    const bool dataHeaderMode = normalizedKind == QStringLiteral("data");
+    if (!supported) {
+        blockDetailsMode_ = BlockDetailsMode::Unsupported;
+    } else if (structuredOptionsMode) {
+        blockDetailsMode_ = BlockDetailsMode::StructuredOptions;
+    } else if (simpleValueMode) {
+        blockDetailsMode_ = BlockDetailsMode::SimpleValue;
+    } else if (dataHeaderMode) {
+        blockDetailsMode_ = BlockDetailsMode::DataHeader;
+    } else {
+        blockDetailsMode_ = BlockDetailsMode::Unsupported;
+    }
+
+    blockDetailsBaseStatusText_ = tr("Line %1: %2").arg(lineNumber).arg(normalizedKind);
+    if (blockDetailsStatusLabel_ != nullptr) {
+        blockDetailsStatusLabel_->setStyleSheet(QString());
+        blockDetailsStatusLabel_->setText(blockDetailsBaseStatusText_);
+    }
+
+    if (blockDetailsPrimaryFieldLabel_ != nullptr) {
+        blockDetailsPrimaryFieldLabel_->setVisible(true);
+    }
+    if (blockDetailsSecondaryFieldLabel_ != nullptr) {
+        blockDetailsSecondaryFieldLabel_->setVisible(true);
+    }
+    if (blockDetailsIdEdit_ != nullptr) {
+        blockDetailsIdEdit_->setVisible(true);
+    }
+    if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+        blockDetailsAdditionalPositionalEdit_->setVisible(true);
+    }
+    if (blockDetailsOptionsTable_ != nullptr) {
+        blockDetailsOptionsTable_->setEnabled(false);
+        blockDetailsOptionsTable_->setRowCount(0);
+        blockDetailsOptionsTable_->setVisible(true);
+    }
+    if (blockDetailsAddOptionButton_ != nullptr) {
+        blockDetailsAddOptionButton_->setEnabled(false);
+        blockDetailsAddOptionButton_->setVisible(true);
+    }
+    if (blockDetailsRemoveOptionButton_ != nullptr) {
+        blockDetailsRemoveOptionButton_->setEnabled(false);
+        blockDetailsRemoveOptionButton_->setVisible(true);
+    }
+    if (blockDetailsApplyButton_ != nullptr) {
+        blockDetailsApplyButton_->setEnabled(false);
+    }
+
+    if (blockDetailsLegacyConfigureButton_ != nullptr) {
+        if (!supported) {
+            blockDetailsLegacyConfigureButton_->setText(tr("Legacy Configure..."));
+            blockDetailsLegacyConfigureButton_->setVisible(true);
+            blockDetailsLegacyConfigureButton_->setEnabled(true);
+        } else if (dataHeaderMode) {
+            blockDetailsLegacyConfigureButton_->setText(tr("Edit Data Rows..."));
+            blockDetailsLegacyConfigureButton_->setVisible(true);
+            blockDetailsLegacyConfigureButton_->setEnabled(true);
+        } else {
+            blockDetailsLegacyConfigureButton_->setVisible(false);
+            blockDetailsLegacyConfigureButton_->setEnabled(false);
+        }
+    }
+
+    if (!supported) {
+        if (blockDetailsIdEdit_ != nullptr) {
+            blockDetailsIdEdit_->clear();
+            blockDetailsIdEdit_->setEnabled(false);
+            blockDetailsIdEdit_->setPlaceholderText(QString());
+        }
+        if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+            blockDetailsAdditionalPositionalEdit_->clear();
+            blockDetailsAdditionalPositionalEdit_->setEnabled(false);
+        }
+        if (blockDetailsHelpBrowser_ != nullptr) {
+            const TherionHelpEntry entry = helpEntries_.value(normalizedKind);
+            QString html = tr("<p>This block currently uses legacy dialog-based configuration.</p>");
+            html += renderHelpHtml(normalizedKind, entry);
+            blockDetailsHelpBrowser_->setHtml(html);
+        }
+        blockDetailsPopulating_ = false;
+        return false;
+    }
+
+    if (structuredOptionsMode) {
+        const bool explicitIdMode = normalizedKind == QStringLiteral("survey")
+            || normalizedKind == QStringLiteral("map")
+            || normalizedKind == QStringLiteral("scrap")
+            || normalizedKind == QStringLiteral("centerline");
+        const bool requiresId = normalizedKind == QStringLiteral("survey")
+            || normalizedKind == QStringLiteral("map")
+            || normalizedKind == QStringLiteral("scrap");
+
+        QString currentId;
+        int optionsStartIndex = 1;
+        if (parsedLine.tokens.size() > 1
+            && !parsedLine.tokens.at(1).trimmed().startsWith(QLatin1Char('-'))) {
+            currentId = parsedLine.tokens.at(1).trimmed();
+            optionsStartIndex = 2;
+        }
+
+        QStringList extraPositionalTokens;
+        struct OptionEntry
+        {
+            QString key;
+            QString value;
+        };
+        QVector<OptionEntry> optionEntries;
+        for (int index = optionsStartIndex; index < parsedLine.tokens.size();) {
+            const QString token = parsedLine.tokens.at(index).trimmed();
+            if (token.startsWith(QLatin1Char('-'))) {
+                int nextOptionIndex = parsedLine.tokens.size();
+                for (int scan = index + 1; scan < parsedLine.tokens.size(); ++scan) {
+                    if (parsedLine.tokens.at(scan).trimmed().startsWith(QLatin1Char('-'))) {
+                        nextOptionIndex = scan;
+                        break;
+                    }
+                }
+                optionEntries.append(OptionEntry{
+                    token,
+                    parsedLine.tokens.mid(index + 1, nextOptionIndex - index - 1).join(QLatin1Char(' ')),
+                });
+                index = nextOptionIndex;
+                continue;
+            }
+            extraPositionalTokens.append(token);
+            ++index;
+        }
+
+        if (blockDetailsPrimaryFieldLabel_ != nullptr) {
+            blockDetailsPrimaryFieldLabel_->setText(explicitIdMode ? tr("ID") : tr("Primary Value"));
+        }
+        if (blockDetailsSecondaryFieldLabel_ != nullptr) {
+            blockDetailsSecondaryFieldLabel_->setText(tr("Additional Positional Tokens"));
+        }
+        if (blockDetailsIdEdit_ != nullptr) {
+            blockDetailsIdEdit_->setEnabled(true);
+            if (explicitIdMode) {
+                blockDetailsIdEdit_->setPlaceholderText(requiresId ? tr("required") : tr("optional"));
+            } else {
+                blockDetailsIdEdit_->setPlaceholderText(tr("optional"));
+            }
+            blockDetailsIdEdit_->setText(currentId);
+        }
+        if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+            blockDetailsAdditionalPositionalEdit_->setEnabled(true);
+            blockDetailsAdditionalPositionalEdit_->setText(extraPositionalTokens.join(QLatin1Char(' ')));
+        }
+        if (blockDetailsOptionsTable_ != nullptr) {
+            blockDetailsOptionsTable_->setEnabled(true);
+            blockDetailsOptionsTable_->setRowCount(optionEntries.size());
+            for (int row = 0; row < optionEntries.size(); ++row) {
+                blockDetailsOptionsTable_->setItem(row, 0, new QTableWidgetItem(optionEntries.at(row).key));
+                blockDetailsOptionsTable_->setItem(row, 1, new QTableWidgetItem(optionEntries.at(row).value));
+            }
+            if (optionEntries.size() > 0) {
+                blockDetailsOptionsTable_->setCurrentCell(0, 0);
+            }
+        }
+        if (blockDetailsAddOptionButton_ != nullptr) {
+            blockDetailsAddOptionButton_->setEnabled(true);
+        }
+        if (blockDetailsRemoveOptionButton_ != nullptr) {
+            blockDetailsRemoveOptionButton_->setEnabled(true);
+        }
+    } else if (simpleValueMode) {
+        const QString currentValue = parsedLine.tokens.size() > 1
+            ? parsedLine.tokens.mid(1).join(QLatin1Char(' '))
+            : QString();
+        if (blockDetailsPrimaryFieldLabel_ != nullptr) {
+            blockDetailsPrimaryFieldLabel_->setText(tr("Value"));
+        }
+        if (blockDetailsSecondaryFieldLabel_ != nullptr) {
+            blockDetailsSecondaryFieldLabel_->setVisible(false);
+        }
+        if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+            blockDetailsAdditionalPositionalEdit_->clear();
+            blockDetailsAdditionalPositionalEdit_->setEnabled(false);
+            blockDetailsAdditionalPositionalEdit_->setVisible(false);
+        }
+        if (blockDetailsIdEdit_ != nullptr) {
+            blockDetailsIdEdit_->setEnabled(true);
+            blockDetailsIdEdit_->setPlaceholderText(tr("required"));
+            blockDetailsIdEdit_->setText(currentValue);
+        }
+        if (blockDetailsOptionsTable_ != nullptr) {
+            blockDetailsOptionsTable_->setVisible(false);
+        }
+        if (blockDetailsAddOptionButton_ != nullptr) {
+            blockDetailsAddOptionButton_->setVisible(false);
+        }
+        if (blockDetailsRemoveOptionButton_ != nullptr) {
+            blockDetailsRemoveOptionButton_->setVisible(false);
+        }
+    } else if (dataHeaderMode) {
+        const QString currentColumns = parsedLine.tokens.size() > 1
+            ? parsedLine.tokens.mid(1).join(QLatin1Char(' '))
+            : QString();
+        if (blockDetailsPrimaryFieldLabel_ != nullptr) {
+            blockDetailsPrimaryFieldLabel_->setText(tr("Columns"));
+        }
+        if (blockDetailsSecondaryFieldLabel_ != nullptr) {
+            blockDetailsSecondaryFieldLabel_->setVisible(false);
+        }
+        if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+            blockDetailsAdditionalPositionalEdit_->clear();
+            blockDetailsAdditionalPositionalEdit_->setEnabled(false);
+            blockDetailsAdditionalPositionalEdit_->setVisible(false);
+        }
+        if (blockDetailsIdEdit_ != nullptr) {
+            blockDetailsIdEdit_->setEnabled(true);
+            blockDetailsIdEdit_->setPlaceholderText(tr("normal from to compass clino tape"));
+            blockDetailsIdEdit_->setText(currentColumns);
+        }
+        if (blockDetailsOptionsTable_ != nullptr) {
+            blockDetailsOptionsTable_->setVisible(false);
+        }
+        if (blockDetailsAddOptionButton_ != nullptr) {
+            blockDetailsAddOptionButton_->setVisible(false);
+        }
+        if (blockDetailsRemoveOptionButton_ != nullptr) {
+            blockDetailsRemoveOptionButton_->setVisible(false);
+        }
+    }
+
+    blockDetailsPopulating_ = false;
+    updateBlockDetailsHelpForCurrentFocus();
+    refreshBlockDetailsApplyState();
+    return true;
+}
+
+void TextEditorTab::updateBlockDetailsHelpForCurrentFocus()
+{
+    if (tearingDown_) {
+        return;
+    }
+    if (blockDetailsHelpBrowser_ == nullptr) {
+        return;
+    }
+    if (blockDetailsSelectedKind_.isEmpty()) {
+        blockDetailsHelpBrowser_->setHtml(tr("<p>Select a block parameter to see contextual help.</p>"));
+        return;
+    }
+
+    const QString normalizedKind = normalizeDirective(blockDetailsSelectedKind_);
+    const TherionHelpEntry commandHelpEntry = helpEntries_.value(normalizedKind);
+    const QString commandHelpHtml = renderHelpHtml(normalizedKind, commandHelpEntry);
+
+    auto buildIdHelpHtml = [commandHelpEntry]() {
+        QString idArgumentLine;
+        for (const QString &argumentLine : commandHelpEntry.arguments) {
+            if (argumentLine.contains(QStringLiteral("<id>"), Qt::CaseInsensitive)) {
+                idArgumentLine = argumentLine.trimmed();
+                break;
+            }
+        }
+        if (idArgumentLine.isEmpty()) {
+            for (const QString &argumentLine : commandHelpEntry.arguments) {
+                if (isRequiredArgumentSignature(argumentLine.section(QLatin1Char('='), 0, 0).trimmed())) {
+                    idArgumentLine = argumentLine.trimmed();
+                    break;
+                }
+            }
+        }
+        if (idArgumentLine.isEmpty() && !commandHelpEntry.arguments.isEmpty()) {
+            idArgumentLine = commandHelpEntry.arguments.first().trimmed();
+        }
+
+        QString signature = idArgumentLine;
+        QString description;
+        const int equalsIndex = idArgumentLine.indexOf(QLatin1Char('='));
+        if (equalsIndex >= 0) {
+            signature = idArgumentLine.left(equalsIndex).trimmed();
+            description = idArgumentLine.mid(equalsIndex + 1).trimmed();
+        }
+
+        QStringList html;
+        html << QStringLiteral("<p><b>Parameter:</b> %1</p>").arg(signature.isEmpty()
+                                                                     ? QStringLiteral("&lt;id&gt;")
+                                                                     : signature.toHtmlEscaped());
+        if (!description.isEmpty()) {
+            html << QStringLiteral("<p><b>Description:</b> %1</p>").arg(description.toHtmlEscaped());
+        }
+        return html.join(QString());
+    };
+
+    if ((blockDetailsMode_ == BlockDetailsMode::StructuredOptions
+         || blockDetailsMode_ == BlockDetailsMode::SimpleValue
+         || blockDetailsMode_ == BlockDetailsMode::DataHeader)
+        && blockDetailsIdEdit_ != nullptr
+        && blockDetailsIdEdit_->hasFocus()) {
+        const bool idSemantics = blockDetailsPrimaryFieldLabel_ != nullptr
+            && blockDetailsPrimaryFieldLabel_->text().trimmed().compare(tr("ID"), Qt::CaseInsensitive) == 0;
+        if (blockDetailsMode_ == BlockDetailsMode::SimpleValue) {
+            blockDetailsHelpBrowser_->setHtml(commandHelpHtml);
+            return;
+        }
+        if (blockDetailsMode_ == BlockDetailsMode::DataHeader) {
+            const QString html = QStringLiteral("<p><b>Columns:</b> update the `data ...` header only.</p>"
+                                                "<p>Use `Edit Data Rows...` to modify measurement rows and directives.</p>%1")
+                                     .arg(commandHelpHtml);
+            blockDetailsHelpBrowser_->setHtml(html);
+            return;
+        }
+        if (!idSemantics) {
+            blockDetailsHelpBrowser_->setHtml(commandHelpHtml);
+            return;
+        }
+        const QString idHelpHtml = buildIdHelpHtml();
+        blockDetailsHelpBrowser_->setHtml(!idHelpHtml.isEmpty() ? idHelpHtml : commandHelpHtml);
+        return;
+    }
+
+    if (blockDetailsMode_ == BlockDetailsMode::StructuredOptions
+        && blockDetailsAdditionalPositionalEdit_ != nullptr
+        && blockDetailsAdditionalPositionalEdit_->hasFocus()) {
+        const QString html = QStringLiteral("<p><b>Additional positional tokens</b> keep unsupported tokens intact.</p>"
+                                            "<p>Prefer explicit key/value options where available.</p>%1")
+                                 .arg(commandHelpHtml);
+        blockDetailsHelpBrowser_->setHtml(html);
+        return;
+    }
+
+    if (blockDetailsMode_ == BlockDetailsMode::StructuredOptions && blockDetailsOptionsTable_ != nullptr) {
+        const int row = blockDetailsOptionsTable_->currentRow();
+        const QString optionToken = row >= 0 && blockDetailsOptionsTable_->item(row, 0) != nullptr
+            ? blockDetailsOptionsTable_->item(row, 0)->text().trimmed().toLower()
+            : QString();
+        if (!optionToken.isEmpty()) {
+            const QString optionHelp = commandOptionHelpHtmlByKey_.value(commandOptionHelpKey(normalizedKind, optionToken));
+            if (!optionHelp.trimmed().isEmpty()) {
+                blockDetailsHelpBrowser_->setHtml(optionHelp);
+                return;
+            }
+        }
+    }
+
+    blockDetailsHelpBrowser_->setHtml(commandHelpHtml);
+}
+
+bool TextEditorTab::buildUpdatedLineFromBlockDetails(QString *updatedLine, QString *validationError) const
+{
+    if (updatedLine == nullptr) {
+        return false;
+    }
+    updatedLine->clear();
+    if (validationError != nullptr) {
+        validationError->clear();
+    }
+
+    if (blockDetailsSelectedLineNumber_ <= 0 || blockDetailsSelectedKind_.isEmpty() || editor_ == nullptr) {
+        if (validationError != nullptr) {
+            *validationError = tr("No block is selected.");
+        }
+        return false;
+    }
+
+    QStringList lines = editor_->toPlainText().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    for (QString &line : lines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+    if (blockDetailsSelectedLineNumber_ > lines.size()) {
+        if (validationError != nullptr) {
+            *validationError = tr("Selected line is out of range.");
+        }
+        return false;
+    }
+
+    const QString normalizedKind = normalizeDirective(blockDetailsSelectedKind_);
+    const TherionParsedLine parsedLine =
+        TherionDocumentParser::parseLine(lines.at(blockDetailsSelectedLineNumber_ - 1), blockDetailsSelectedLineNumber_);
+    if (parsedLine.tokens.isEmpty()) {
+        if (validationError != nullptr) {
+            *validationError = tr("Selected line is empty.");
+        }
+        return false;
+    }
+
+    const QRegularExpression indentPattern(QStringLiteral(R"(^[ \t]*)"));
+    const auto match = indentPattern.match(lines.at(blockDetailsSelectedLineNumber_ - 1));
+    const QString indent = match.hasMatch() ? match.captured(0) : QString();
+    const QString commandToken = parsedLine.tokens.value(0).trimmed().isEmpty()
+        ? normalizedKind
+        : parsedLine.tokens.value(0).trimmed();
+
+    QString result = QStringLiteral("%1%2").arg(indent, commandToken);
+
+    if (blockDetailsMode_ == BlockDetailsMode::SimpleValue) {
+        const QString updatedValue = blockDetailsIdEdit_ != nullptr ? blockDetailsIdEdit_->text().trimmed() : QString();
+        if (updatedValue.isEmpty()) {
+            if (validationError != nullptr) {
+                *validationError = tr("Value cannot be empty.");
+            }
+            return false;
+        }
+        result += QStringLiteral(" ") + updatedValue;
+    } else if (blockDetailsMode_ == BlockDetailsMode::DataHeader) {
+        const QString updatedColumns = blockDetailsIdEdit_ != nullptr ? blockDetailsIdEdit_->text().trimmed() : QString();
+        if (updatedColumns.isEmpty()) {
+            if (validationError != nullptr) {
+                *validationError = tr("Columns cannot be empty.");
+            }
+            return false;
+        }
+        result += QStringLiteral(" ") + updatedColumns;
+    } else if (blockDetailsMode_ == BlockDetailsMode::StructuredOptions) {
+        const bool requiresId = normalizedKind == QStringLiteral("survey")
+            || normalizedKind == QStringLiteral("map")
+            || normalizedKind == QStringLiteral("scrap");
+        const QString updatedId = blockDetailsIdEdit_ != nullptr ? blockDetailsIdEdit_->text().trimmed() : QString();
+        if (requiresId && updatedId.isEmpty()) {
+            if (validationError != nullptr) {
+                *validationError = tr("ID cannot be empty.");
+            }
+            return false;
+        }
+
+        QStringList serializedOptions;
+        if (blockDetailsOptionsTable_ != nullptr) {
+            for (int row = 0; row < blockDetailsOptionsTable_->rowCount(); ++row) {
+                const QString key = (blockDetailsOptionsTable_->item(row, 0) != nullptr
+                                         ? blockDetailsOptionsTable_->item(row, 0)->text()
+                                         : QString())
+                                        .trimmed();
+                const QString value = (blockDetailsOptionsTable_->item(row, 1) != nullptr
+                                           ? blockDetailsOptionsTable_->item(row, 1)->text()
+                                           : QString())
+                                          .trimmed();
+                if (key.isEmpty()) {
+                    continue;
+                }
+                if (!key.startsWith(QLatin1Char('-'))) {
+                    if (validationError != nullptr) {
+                        *validationError = tr("Option key `%1` must start with '-'.").arg(key);
+                    }
+                    return false;
+                }
+
+                const QString normalizedKey = key.toLower();
+                const QString arity = commandOptionValueArityTokens_.value(commandOptionValueKey(commandToken, normalizedKey));
+                const bool arityRequiresValue = arity == QStringLiteral("EXACTLY_ONE")
+                    || arity == QStringLiteral("ONE_OR_MORE");
+                const bool arityForbidsValue = arity == QStringLiteral("NONE");
+                if (arityRequiresValue && value.isEmpty()) {
+                    if (validationError != nullptr) {
+                        *validationError = tr("Option `%1` requires a value.").arg(key);
+                    }
+                    return false;
+                }
+                if (arityForbidsValue && !value.isEmpty()) {
+                    if (validationError != nullptr) {
+                        *validationError = tr("Option `%1` does not accept a value.").arg(key);
+                    }
+                    return false;
+                }
+
+                serializedOptions.append(key);
+                if (!value.isEmpty()) {
+                    serializedOptions.append(value);
+                }
+            }
+        }
+
+        if (!updatedId.isEmpty()) {
+            result += QStringLiteral(" ") + updatedId;
+        }
+        const QString updatedAdditionalPositionalTokens = blockDetailsAdditionalPositionalEdit_ != nullptr
+            ? blockDetailsAdditionalPositionalEdit_->text().trimmed()
+            : QString();
+        if (!updatedAdditionalPositionalTokens.isEmpty()) {
+            result += QStringLiteral(" ") + updatedAdditionalPositionalTokens;
+        }
+        if (!serializedOptions.isEmpty()) {
+            result += QStringLiteral(" ") + serializedOptions.join(QLatin1Char(' '));
+        }
+    } else {
+        if (validationError != nullptr) {
+            *validationError = tr("This block cannot be edited in details pane.");
+        }
+        return false;
+    }
+
+    *updatedLine = result;
+    return true;
+}
+
+void TextEditorTab::refreshBlockDetailsApplyState()
+{
+    if (tearingDown_ || blockDetailsPopulating_ || blockDetailsApplyButton_ == nullptr || editor_ == nullptr) {
+        return;
+    }
+
+    QString validationError;
+    QString candidateLine;
+    const bool buildOk = buildUpdatedLineFromBlockDetails(&candidateLine, &validationError);
+
+    QString currentLine;
+    bool hasCurrentLine = false;
+    if (blockDetailsSelectedLineNumber_ > 0) {
+        QStringList lines = editor_->toPlainText().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+        for (QString &line : lines) {
+            if (line.endsWith(QLatin1Char('\r'))) {
+                line.chop(1);
+            }
+        }
+        if (blockDetailsSelectedLineNumber_ <= lines.size()) {
+            currentLine = lines.at(blockDetailsSelectedLineNumber_ - 1);
+            hasCurrentLine = true;
+        }
+    }
+
+    const bool hasChanges = buildOk && hasCurrentLine && candidateLine != currentLine;
+    blockDetailsApplyButton_->setEnabled(hasChanges);
+
+    if (blockDetailsStatusLabel_ == nullptr) {
+        return;
+    }
+    if (!validationError.isEmpty()) {
+        blockDetailsStatusLabel_->setStyleSheet(QStringLiteral("color: #c0392b;"));
+        blockDetailsStatusLabel_->setText(QStringLiteral("%1 — %2").arg(blockDetailsBaseStatusText_, validationError));
+        return;
+    }
+    blockDetailsStatusLabel_->setStyleSheet(QString());
+    blockDetailsStatusLabel_->setText(blockDetailsBaseStatusText_);
+}
+
+void TextEditorTab::applyBlockDetailsChanges()
+{
+    if (tearingDown_) {
+        return;
+    }
+    QString updatedLine;
+    QString validationError;
+    if (!buildUpdatedLineFromBlockDetails(&updatedLine, &validationError)) {
+        if (!validationError.isEmpty()) {
+            QMessageBox::warning(this, tr("Configure Block"), validationError);
+        }
+        return;
+    }
+
+    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(blockDetailsSelectedLineNumber_ - 1);
+    if (!targetBlock.isValid()) {
+        return;
+    }
+
+    QTextCursor editCursor(targetBlock);
+    editCursor.beginEditBlock();
+    editCursor.movePosition(QTextCursor::StartOfBlock);
+    editCursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+    editCursor.insertText(updatedLine);
+    editCursor.endEditBlock();
+    editor_->setTextCursor(editCursor);
+
+    selectBlockInCanvasAndDetails(blockDetailsSelectedLineNumber_);
+    refreshBlockDetailsApplyState();
 }
 
 bool TextEditorTab::insertLinesBefore(int lineNumber,
@@ -2722,221 +3743,361 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
 
     const QString normalizedKind = kind.toLower();
 
-    auto buildInsertableCommandsForContext = [this](const QString &context, const QString &currentDirective) {
-        QStringList actions = contextCommandTokens_.value(context);
-        const QString normalizedCurrentDirective = normalizeDirective(currentDirective);
-        const QString currentClosingDirective = completionClosingDirectiveForOpening(normalizedCurrentDirective);
-        actions.removeAll(normalizedCurrentDirective);
-        if (!currentClosingDirective.isEmpty()) {
-            actions.removeAll(currentClosingDirective);
-        }
-        actions.removeAll(QStringLiteral("all"));
-        actions.removeAll(QStringLiteral("none"));
-        actions.removeAll(QStringLiteral("centreline"));
-        actions.removeAll(QStringLiteral("endcentreline"));
-        actions.removeAll(QStringLiteral("centerline"));
-        actions.removeAll(QStringLiteral("endcenterline"));
-
-        QStringList filtered;
-        for (const QString &action : actions) {
-            const QString normalizedAction = normalizeDirective(action);
-            if (normalizedAction.isEmpty() || normalizedAction.startsWith(QStringLiteral("end"))) {
-                continue;
-            }
-            appendUnique(filtered, normalizedAction);
-        }
-        std::sort(filtered.begin(), filtered.end(), [](const QString &a, const QString &b) {
-            return QString::compare(a, b, Qt::CaseInsensitive) < 0;
-        });
-        return filtered;
+    enum class IdFieldMode
+    {
+        None,
+        Optional,
+        Required,
     };
 
-    auto buildInsertionTemplate = [this](const QString &commandToken,
-                                         const QString &childIndent) {
-        QStringList linesToInsert;
-        const QString normalizedCommand = normalizeDirective(commandToken.trimmed().toLower());
-        if (normalizedCommand.isEmpty()) {
-            return linesToInsert;
+    auto configureCommandOptionsDialog = [this, &contents, &lines](const QString &commandName,
+                                                                    int commandLineNumber,
+                                                                    IdFieldMode idFieldMode) {
+        if (commandLineNumber <= 0 || commandLineNumber > lines.size()) {
+            return;
         }
 
-        if (normalizedCommand == QStringLiteral("data")) {
-            linesToInsert << QStringLiteral("%1data normal from to compass clino tape").arg(childIndent)
-                          << QStringLiteral("%1  1 2 0 0 1").arg(childIndent);
-            return linesToInsert;
+        const TherionParsedLine commandParsedLine = TherionDocumentParser::parseLine(lines.at(commandLineNumber - 1), commandLineNumber);
+        if (commandParsedLine.tokens.isEmpty()) {
+            return;
         }
 
-        if (normalizedCommand == QStringLiteral("team")) {
-            linesToInsert << QStringLiteral("%1team \"Team Name\"").arg(childIndent);
-            return linesToInsert;
+        const QRegularExpression indentPattern(QStringLiteral(R"(^[ \t]*)"));
+        const auto match = indentPattern.match(lines.at(commandLineNumber - 1));
+        const QString indent = match.hasMatch() ? match.captured(0) : QString();
+        const bool hasIdField = idFieldMode != IdFieldMode::None;
+        const bool requiresId = idFieldMode == IdFieldMode::Required;
+
+        QString currentId;
+        int optionsStartIndex = 1;
+        if (hasIdField
+            && commandParsedLine.tokens.size() > 1
+            && !commandParsedLine.tokens.at(1).trimmed().startsWith(QLatin1Char('-'))) {
+            currentId = commandParsedLine.tokens.at(1).trimmed();
+            optionsStartIndex = 2;
         }
 
-        if (normalizedCommand == QStringLiteral("explo-date")
-            || normalizedCommand == QStringLiteral("date")) {
-            linesToInsert << QStringLiteral("%1%2 2000").arg(childIndent, normalizedCommand);
-            return linesToInsert;
+        struct OptionEntry
+        {
+            QString key;
+            QString value;
+        };
+
+        QStringList extraPositionalTokens;
+        QVector<OptionEntry> optionEntries;
+        for (int index = optionsStartIndex; index < commandParsedLine.tokens.size();) {
+            const QString token = commandParsedLine.tokens.at(index).trimmed();
+            if (token.startsWith(QLatin1Char('-'))) {
+                int nextOptionIndex = commandParsedLine.tokens.size();
+                for (int scan = index + 1; scan < commandParsedLine.tokens.size(); ++scan) {
+                    if (commandParsedLine.tokens.at(scan).trimmed().startsWith(QLatin1Char('-'))) {
+                        nextOptionIndex = scan;
+                        break;
+                    }
+                }
+                optionEntries.append(OptionEntry{
+                    token,
+                    commandParsedLine.tokens.mid(index + 1, nextOptionIndex - index - 1).join(QLatin1Char(' ')),
+                });
+                index = nextOptionIndex;
+                continue;
+            }
+
+            extraPositionalTokens.append(token);
+            ++index;
         }
 
-        if (normalizedCommand == QStringLiteral("group")
-            || normalizedCommand == QStringLiteral("endgroup")
-            || normalizedCommand == QStringLiteral("break")) {
-            linesToInsert << QStringLiteral("%1%2").arg(childIndent, normalizedCommand);
-            return linesToInsert;
+        const QString currentAdditionalPositionalTokens = extraPositionalTokens.join(QLatin1Char(' '));
+
+        QDialog dialog(this);
+        dialog.setWindowTitle(tr("Configure %1").arg(commandName));
+        dialog.setModal(true);
+        auto *layout = new QVBoxLayout(&dialog);
+        layout->setContentsMargins(12, 12, 12, 12);
+        layout->setSpacing(8);
+
+        auto *formLayout = new QFormLayout;
+        QLineEdit *idEdit = nullptr;
+        if (hasIdField) {
+            idEdit = new QLineEdit(currentId, &dialog);
+            idEdit->setPlaceholderText(requiresId ? tr("required") : tr("optional"));
+            formLayout->addRow(tr("ID"), idEdit);
+        }
+        QLineEdit *additionalPositionalTokensEdit = nullptr;
+        if (!currentAdditionalPositionalTokens.isEmpty()) {
+            additionalPositionalTokensEdit = new QLineEdit(currentAdditionalPositionalTokens, &dialog);
+            additionalPositionalTokensEdit->setToolTip(
+                tr("Preserved positional tokens that are not parsed as options. "
+                   "Prefer using explicit options whenever possible."));
+            formLayout->addRow(tr("Additional Positional Tokens"), additionalPositionalTokensEdit);
+        }
+        layout->addLayout(formLayout);
+
+        auto *optionsLabel = new QLabel(tr("Options (key/value pairs)"), &dialog);
+        layout->addWidget(optionsLabel);
+
+        auto *optionsActionsLayout = new QHBoxLayout;
+        optionsActionsLayout->setContentsMargins(0, 0, 0, 0);
+        optionsActionsLayout->setSpacing(6);
+        auto *addOptionButton = new QPushButton(tr("Add Option"), &dialog);
+        auto *removeOptionButton = new QPushButton(tr("Remove Option"), &dialog);
+        addOptionButton->setAutoDefault(false);
+        removeOptionButton->setAutoDefault(false);
+        optionsActionsLayout->addWidget(addOptionButton);
+        optionsActionsLayout->addWidget(removeOptionButton);
+        optionsActionsLayout->addStretch(1);
+        layout->addLayout(optionsActionsLayout);
+
+        auto *optionsTable = new QTableWidget(&dialog);
+        optionsTable->setColumnCount(2);
+        optionsTable->setHorizontalHeaderLabels({tr("Option"), tr("Value")});
+        optionsTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+        optionsTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+        optionsTable->verticalHeader()->setVisible(false);
+        optionsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+        optionsTable->setSelectionMode(QAbstractItemView::SingleSelection);
+        optionsTable->setAlternatingRowColors(true);
+        optionsTable->setMinimumHeight(160);
+        optionsTable->setRowCount(optionEntries.size());
+        for (int row = 0; row < optionEntries.size(); ++row) {
+            const OptionEntry &entry = optionEntries.at(row);
+            optionsTable->setItem(row, 0, new QTableWidgetItem(entry.key));
+            optionsTable->setItem(row, 1, new QTableWidgetItem(entry.value));
+        }
+        layout->addWidget(optionsTable, 1);
+
+        auto *helpLabel = new QLabel(tr("Contextual Help"), &dialog);
+        QFont helpLabelFont = helpLabel->font();
+        helpLabelFont.setBold(true);
+        helpLabel->setFont(helpLabelFont);
+        layout->addWidget(helpLabel);
+
+        auto *helpBrowser = new QTextBrowser(&dialog);
+        helpBrowser->setOpenLinks(false);
+        helpBrowser->setOpenExternalLinks(false);
+        helpBrowser->setMinimumHeight(160);
+        layout->addWidget(helpBrowser, 1);
+
+        const TherionHelpEntry commandHelpEntry = helpEntries_.value(commandName);
+        const QString commandHelpHtml = renderHelpHtml(commandName, commandHelpEntry);
+
+        QString idHelpHtml;
+        if (hasIdField) {
+            QString idArgumentLine;
+            for (const QString &argumentLine : commandHelpEntry.arguments) {
+                if (argumentLine.contains(QStringLiteral("<id>"), Qt::CaseInsensitive)) {
+                    idArgumentLine = argumentLine.trimmed();
+                    break;
+                }
+            }
+            if (idArgumentLine.isEmpty()) {
+                for (const QString &argumentLine : commandHelpEntry.arguments) {
+                    if (isRequiredArgumentSignature(argumentLine.section(QLatin1Char('='), 0, 0).trimmed())) {
+                        idArgumentLine = argumentLine.trimmed();
+                        break;
+                    }
+                }
+            }
+            if (idArgumentLine.isEmpty() && !commandHelpEntry.arguments.isEmpty()) {
+                idArgumentLine = commandHelpEntry.arguments.first().trimmed();
+            }
+
+            QString signature = idArgumentLine;
+            QString description;
+            const int equalsIndex = idArgumentLine.indexOf(QLatin1Char('='));
+            if (equalsIndex >= 0) {
+                signature = idArgumentLine.left(equalsIndex).trimmed();
+                description = idArgumentLine.mid(equalsIndex + 1).trimmed();
+            }
+
+            QStringList html;
+            html << QStringLiteral("<p><b>Parameter:</b> %1</p>").arg(signature.isEmpty()
+                                                                           ? QStringLiteral("&lt;id&gt;")
+                                                                           : signature.toHtmlEscaped());
+            if (!description.isEmpty()) {
+                html << QStringLiteral("<p><b>Description:</b> %1</p>").arg(description.toHtmlEscaped());
+            }
+            idHelpHtml = html.join(QString());
         }
 
-        const int requiredArgumentCount = qMax(0, commandRequiredPositionalCount_.value(normalizedCommand));
-        QStringList placeholderTokens;
-        for (int argumentIndex = 0; argumentIndex < requiredArgumentCount; ++argumentIndex) {
-            placeholderTokens.append(QStringLiteral("value%1").arg(argumentIndex + 1));
+        const auto updateHelpForCurrentOption = [this, helpBrowser, optionsTable, commandName, commandHelpHtml]() {
+            if (helpBrowser == nullptr || optionsTable == nullptr) {
+                return;
+            }
+
+            const int row = optionsTable->currentRow();
+            const QString optionToken = row >= 0 && optionsTable->item(row, 0) != nullptr
+                ? optionsTable->item(row, 0)->text().trimmed().toLower()
+                : QString();
+            const QString optionHelp = commandOptionHelpHtmlByKey_.value(commandOptionHelpKey(commandName, optionToken));
+            if (!optionHelp.trimmed().isEmpty()) {
+                helpBrowser->setHtml(optionHelp);
+                return;
+            }
+
+            helpBrowser->setHtml(commandHelpHtml);
+        };
+        const auto updateHelpForId = [helpBrowser, idHelpHtml, commandHelpHtml]() {
+            if (helpBrowser == nullptr) {
+                return;
+            }
+            helpBrowser->setHtml(!idHelpHtml.isEmpty() ? idHelpHtml : commandHelpHtml);
+        };
+        const auto updateHelpForAdditionalPositionalTokens = [helpBrowser, commandHelpHtml]() {
+            if (helpBrowser == nullptr) {
+                return;
+            }
+            const QString html = QStringLiteral("<p><b>Additional positional tokens</b> keep unsupported tokens intact.</p>"
+                                                "<p>Prefer explicit key/value options where available.</p>%1")
+                                     .arg(commandHelpHtml);
+            helpBrowser->setHtml(html);
+        };
+        if (hasIdField) {
+            updateHelpForId();
+        } else {
+            updateHelpForCurrentOption();
         }
-        if (placeholderTokens.isEmpty()) {
-            const QStringList suggestedValues = commandValueTokens_.value(normalizedCommand);
-            if (!suggestedValues.isEmpty()) {
-                placeholderTokens.append(suggestedValues.first());
+
+        connect(optionsTable, &QTableWidget::currentCellChanged, &dialog, [updateHelpForCurrentOption](int, int, int, int) {
+            updateHelpForCurrentOption();
+        });
+        connect(optionsTable, &QTableWidget::itemChanged, &dialog, [updateHelpForCurrentOption](QTableWidgetItem *) {
+            updateHelpForCurrentOption();
+        });
+        if (idEdit != nullptr) {
+            connect(idEdit, &QLineEdit::selectionChanged, &dialog, [updateHelpForId]() {
+                updateHelpForId();
+            });
+            connect(idEdit, &QLineEdit::textEdited, &dialog, [updateHelpForId](const QString &) {
+                updateHelpForId();
+            });
+        }
+        if (additionalPositionalTokensEdit != nullptr) {
+            connect(additionalPositionalTokensEdit, &QLineEdit::selectionChanged, &dialog, [updateHelpForAdditionalPositionalTokens]() {
+                updateHelpForAdditionalPositionalTokens();
+            });
+            connect(additionalPositionalTokensEdit, &QLineEdit::textEdited, &dialog, [updateHelpForAdditionalPositionalTokens](const QString &) {
+                updateHelpForAdditionalPositionalTokens();
+            });
+        }
+
+        connect(addOptionButton, &QPushButton::clicked, &dialog, [this, optionsTable, commandName, updateHelpForCurrentOption]() {
+            if (optionsTable == nullptr) {
+                return;
+            }
+            const int row = optionsTable->rowCount();
+            optionsTable->insertRow(row);
+            const QString defaultOption = !commandOptionTokens_.value(commandName).isEmpty()
+                ? commandOptionTokens_.value(commandName).first()
+                : QStringLiteral("-option");
+            optionsTable->setItem(row, 0, new QTableWidgetItem(defaultOption));
+            optionsTable->setItem(row, 1, new QTableWidgetItem(QString()));
+            optionsTable->setCurrentCell(row, 0);
+            optionsTable->editItem(optionsTable->item(row, 0));
+            updateHelpForCurrentOption();
+        });
+
+        connect(removeOptionButton, &QPushButton::clicked, &dialog, [optionsTable, updateHelpForCurrentOption]() {
+            if (optionsTable == nullptr || optionsTable->rowCount() == 0) {
+                return;
+            }
+            const int row = optionsTable->currentRow() >= 0 ? optionsTable->currentRow() : optionsTable->rowCount() - 1;
+            optionsTable->removeRow(row);
+            updateHelpForCurrentOption();
+        });
+        if (optionsTable->rowCount() > 0) {
+            optionsTable->setCurrentCell(0, 0);
+        }
+
+        auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        layout->addWidget(buttonBox);
+        connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+        if (dialog.exec() != QDialog::Accepted) {
+            return;
+        }
+
+        const QString updatedId = hasIdField && idEdit != nullptr ? idEdit->text().trimmed() : QString();
+        if (requiresId && updatedId.isEmpty()) {
+            QMessageBox::warning(this, tr("Configure Block"), tr("ID cannot be empty."));
+            return;
+        }
+
+        QStringList serializedOptions;
+        for (int row = 0; row < optionsTable->rowCount(); ++row) {
+            const QString key = (optionsTable->item(row, 0) != nullptr
+                                     ? optionsTable->item(row, 0)->text()
+                                     : QString())
+                                    .trimmed();
+            const QString value = (optionsTable->item(row, 1) != nullptr
+                                       ? optionsTable->item(row, 1)->text()
+                                       : QString())
+                                      .trimmed();
+            if (key.isEmpty()) {
+                continue;
+            }
+            if (!key.startsWith(QLatin1Char('-'))) {
+                QMessageBox::warning(this,
+                                     tr("Configure Block"),
+                                     tr("Option key `%1` must start with '-' in row %2.").arg(key).arg(row + 1));
+                return;
+            }
+            const QString normalizedKey = key.toLower();
+            const QString arity = commandOptionValueArityTokens_.value(commandOptionValueKey(commandName, normalizedKey));
+            const bool arityRequiresValue = arity == QStringLiteral("EXACTLY_ONE")
+                || arity == QStringLiteral("ONE_OR_MORE");
+            const bool arityForbidsValue = arity == QStringLiteral("NONE");
+            if (arityRequiresValue && value.isEmpty()) {
+                QMessageBox::warning(this,
+                                     tr("Configure Block"),
+                                     tr("Option `%1` in row %2 requires a value.")
+                                         .arg(key)
+                                         .arg(row + 1));
+                return;
+            }
+            if (arityForbidsValue && !value.isEmpty()) {
+                QMessageBox::warning(this,
+                                     tr("Configure Block"),
+                                     tr("Option `%1` in row %2 does not accept a value.")
+                                         .arg(key)
+                                         .arg(row + 1));
+                return;
+            }
+            serializedOptions.append(key);
+            if (!value.isEmpty()) {
+                serializedOptions.append(value);
             }
         }
 
-        QString line = QStringLiteral("%1%2").arg(childIndent, normalizedCommand);
-        if (!placeholderTokens.isEmpty()) {
-            line += QStringLiteral(" ") + placeholderTokens.join(QLatin1Char(' '));
+        QString updatedLine = QStringLiteral("%1%2").arg(indent, commandName);
+        if (hasIdField && !updatedId.isEmpty()) {
+            updatedLine += QStringLiteral(" ") + updatedId;
         }
-        linesToInsert << line;
-
-        const QString closingDirective = completionClosingDirectiveForOpening(normalizedCommand);
-        if (!closingDirective.isEmpty()) {
-            linesToInsert << QStringLiteral("%1%2").arg(childIndent, closingDirective);
+        const QString updatedAdditionalPositionalTokens = additionalPositionalTokensEdit != nullptr
+            ? additionalPositionalTokensEdit->text().trimmed()
+            : QString();
+        if (!updatedAdditionalPositionalTokens.isEmpty()) {
+            updatedLine += QStringLiteral(" ") + updatedAdditionalPositionalTokens;
+        }
+        if (!serializedOptions.isEmpty()) {
+            updatedLine += QStringLiteral(" ") + serializedOptions.join(QLatin1Char(' '));
         }
 
-        return linesToInsert;
+        lines[commandLineNumber - 1] = updatedLine;
+        const QString lineEnding = contents.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+        replaceTextForCommand(lines.join(lineEnding));
     };
 
     if (normalizedKind == QStringLiteral("survey")
         || normalizedKind == QStringLiteral("map")
         || normalizedKind == QStringLiteral("scrap")) {
-        const QStringList operations = {
-            tr("Rename"),
-            tr("Insert Command"),
-        };
-        bool ok = false;
-        const QString selectedOperation = QInputDialog::getItem(this,
-                                                                tr("Configure Block"),
-                                                                tr("Action"),
-                                                                operations,
-                                                                0,
-                                                                false,
-                                                                &ok);
-        if (!ok || selectedOperation.isEmpty()) {
-            return;
-        }
-
-        if (selectedOperation == operations.at(0)) {
-            bool renameOk = false;
-            const QString currentName = parsedLine.tokens.value(1);
-            const QString updatedName = QInputDialog::getText(this,
-                                                              tr("Configure Block"),
-                                                              tr("Name"),
-                                                              QLineEdit::Normal,
-                                                              currentName,
-                                                              &renameOk);
-            if (!renameOk || updatedName.trimmed().isEmpty()) {
-                return;
-            }
-            const QString category = normalizedKind == QStringLiteral("survey")
-                ? QStringLiteral("surveys")
-                : (normalizedKind == QStringLiteral("map") ? QStringLiteral("maps") : QStringLiteral("scraps"));
-            QString errorMessage;
-            if (!rewriteStructureEntryName(lineNumber, category, updatedName, &errorMessage)) {
-                QMessageBox::warning(this, tr("Update Failed"), errorMessage);
-            }
-            return;
-        }
-
-        const QStringList actions = buildInsertableCommandsForContext(normalizedKind, normalizedKind);
-        if (actions.isEmpty()) {
-            QMessageBox::information(this,
-                                     tr("Configure Block"),
-                                     tr("No catalog-driven insert commands are available for this context."));
-            return;
-        }
-
-        bool selectOk = false;
-        const QString selectedAction = QInputDialog::getItem(this,
-                                                             tr("Configure %1").arg(normalizedKind),
-                                                             tr("Insert Command"),
-                                                             actions,
-                                                             0,
-                                                             false,
-                                                             &selectOk);
-        if (!selectOk || selectedAction.isEmpty()) {
-            return;
-        }
-
-        const QRegularExpression indentPattern(QStringLiteral(R"(^[ \t]*)"));
-        const auto match = indentPattern.match(lines.at(lineNumber - 1));
-        const QString indent = match.hasMatch() ? match.captured(0) : QString();
-        const QString childIndent = indent + QStringLiteral("  ");
-        const QStringList linesToInsert = buildInsertionTemplate(selectedAction, childIndent);
-        if (linesToInsert.isEmpty()) {
-            return;
-        }
-
-        const QString containerClosingDirective = closingDirectiveFor(normalizedKind);
-        const int insertBeforeLine = findMatchingBlockEndLine(lines,
-                                                              lineNumber,
-                                                              normalizedKind,
-                                                              containerClosingDirective);
-        if (insertBeforeLine <= lineNumber) {
-            QMessageBox::warning(this, tr("Configure Block"), tr("Unable to resolve closing directive for this block."));
-            return;
-        }
-
-        QString errorMessage;
-        if (!insertLinesBefore(insertBeforeLine, linesToInsert, &errorMessage)) {
-            QMessageBox::warning(this, tr("Update Failed"), errorMessage);
-        }
+        configureCommandOptionsDialog(normalizedKind, lineNumber, IdFieldMode::Required);
         return;
     }
 
     if (normalizedKind == QStringLiteral("centerline")) {
-        const int centerlineEndLine = findMatchingBlockEndLine(lines,
-                                                               lineNumber,
-                                                               QStringLiteral("centerline"),
-                                                               QStringLiteral("endcenterline"));
-        if (centerlineEndLine <= lineNumber) {
-            QMessageBox::warning(this, tr("Configure Block"), tr("Unable to resolve endcenterline for this block."));
-            return;
-        }
-
-        QStringList actions = buildInsertableCommandsForContext(QStringLiteral("centerline"), normalizedKind);
-        if (actions.isEmpty()) {
-            actions = {QStringLiteral("team"), QStringLiteral("explo-date"), QStringLiteral("data")};
-        }
-
-        bool ok = false;
-        const QString selectedAction = QInputDialog::getItem(this,
-                                                             tr("Configure Centerline"),
-                                                             tr("Insert Command"),
-                                                             actions,
-                                                             0,
-                                                             false,
-                                                             &ok);
-        if (!ok || selectedAction.isEmpty()) {
-            return;
-        }
-
-        const QRegularExpression indentPattern(QStringLiteral(R"(^[ \t]*)"));
-        const auto match = indentPattern.match(lines.at(lineNumber - 1));
-        const QString indent = match.hasMatch() ? match.captured(0) : QString();
-        const QString childIndent = indent + QStringLiteral("  ");
-
-        const QStringList linesToInsert = buildInsertionTemplate(selectedAction, childIndent);
-        if (linesToInsert.isEmpty()) {
-            return;
-        }
-
-        QString errorMessage;
-        if (!insertLinesBefore(centerlineEndLine, linesToInsert, &errorMessage)) {
-            QMessageBox::warning(this, tr("Update Failed"), errorMessage);
-        }
+        configureCommandOptionsDialog(normalizedKind, lineNumber, IdFieldMode::Optional);
         return;
     }
 
@@ -3393,17 +4554,59 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
     if (!isContainerBlockDirective(normalizedKind)
         && normalizedKind != QStringLiteral("data")
         && !hasCatalogOptions) {
-        bool ok = false;
         const QString currentValue = parsedLine.tokens.size() > 1
             ? parsedLine.tokens.mid(1).join(QLatin1Char(' '))
             : QString();
-        const QString updatedValue = QInputDialog::getText(this,
-                                                           tr("Configure Block"),
-                                                           tr("Value"),
-                                                           QLineEdit::Normal,
-                                                           currentValue,
-                                                           &ok);
-        if (!ok || updatedValue.trimmed().isEmpty()) {
+
+        QDialog dialog(this);
+        dialog.setWindowTitle(tr("Configure Block"));
+        dialog.setModal(true);
+
+        auto *layout = new QVBoxLayout(&dialog);
+        layout->setContentsMargins(12, 12, 12, 12);
+        layout->setSpacing(8);
+
+        auto *formLayout = new QFormLayout;
+        auto *valueEdit = new QLineEdit(currentValue, &dialog);
+        formLayout->addRow(tr("Value"), valueEdit);
+        layout->addLayout(formLayout);
+
+        TherionHelpEntry helpEntry = helpEntries_.value(normalizedKind);
+        if (helpEntry.summary.trimmed().isEmpty()
+            && helpEntry.syntax.trimmed().isEmpty()
+            && helpEntry.arguments.isEmpty()
+            && helpEntry.options.isEmpty()
+            && helpEntry.acceptedValues.isEmpty()) {
+            const QString openingDirective = completionOpeningDirectiveForClosing(normalizedKind);
+            if (!openingDirective.isEmpty()) {
+                helpEntry = helpEntries_.value(openingDirective);
+            }
+        }
+
+        auto *helpLabel = new QLabel(tr("Contextual Help"), &dialog);
+        QFont helpLabelFont = helpLabel->font();
+        helpLabelFont.setBold(true);
+        helpLabel->setFont(helpLabelFont);
+        layout->addWidget(helpLabel);
+
+        auto *helpBrowser = new QTextBrowser(&dialog);
+        helpBrowser->setOpenLinks(false);
+        helpBrowser->setOpenExternalLinks(false);
+        helpBrowser->setMinimumHeight(140);
+        helpBrowser->setHtml(renderHelpHtml(normalizedKind, helpEntry));
+        layout->addWidget(helpBrowser, 1);
+
+        auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        layout->addWidget(buttonBox);
+        connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+        if (dialog.exec() != QDialog::Accepted) {
+            return;
+        }
+        const QString updatedValue = valueEdit->text();
+        if (updatedValue.trimmed().isEmpty()) {
+            QMessageBox::warning(this, tr("Configure Block"), tr("Value cannot be empty."));
             return;
         }
         QString updatedLine = QStringLiteral("%1 %2").arg(normalizedKind, updatedValue.trimmed());
@@ -3761,6 +4964,7 @@ void TextEditorTab::loadHelpMetadata()
     commandArgumentValueTokens_.clear();
     commandOptionValueTokens_.clear();
     commandOptionValueArityTokens_.clear();
+    commandOptionHelpHtmlByKey_.clear();
     commandTypeValueTokens_.clear();
     commandSubtypeByTypeTokens_.clear();
     commandRequiredPositionalCount_.clear();
@@ -3848,10 +5052,31 @@ void TextEditorTab::loadHelpMetadataFromCommandCatalog()
                 const QString normalizedValue = optionValue.toString().trimmed();
                 appendUnique(normalizedOptionValues, normalizedValue);
             }
+            QString optionHelpHtml;
+            {
+                QStringList html;
+                html << QStringLiteral("<p><b>Option:</b> %1</p>").arg(signature.toHtmlEscaped());
+                if (!description.isEmpty()) {
+                    html << QStringLiteral("<p><b>Description:</b> %1</p>").arg(description.toHtmlEscaped());
+                }
+                if (!valueArity.isEmpty()) {
+                    html << QStringLiteral("<p><b>Value Arity:</b> %1</p>").arg(valueArity.toHtmlEscaped());
+                }
+                if (!normalizedOptionValues.isEmpty()) {
+                    html << QStringLiteral("<p><b>Accepted Values:</b> %1</p>")
+                                .arg(normalizedOptionValues.join(QStringLiteral(", ")).toHtmlEscaped());
+                }
+                optionHelpHtml = html.join(QString());
+            }
             if (!normalizedOptionValues.isEmpty()) {
                 for (const QString &normalizedOptionKey : normalizedOptionKeys) {
                     appendUniqueList(commandOptionValueTokens_[commandOptionValueKey(commandName, normalizedOptionKey)],
                                      normalizedOptionValues);
+                }
+            }
+            if (!optionHelpHtml.isEmpty()) {
+                for (const QString &normalizedOptionKey : normalizedOptionKeys) {
+                    commandOptionHelpHtmlByKey_.insert(commandOptionHelpKey(commandName, normalizedOptionKey), optionHelpHtml);
                 }
             }
         }
@@ -3957,6 +5182,10 @@ void TextEditorTab::loadHelpMetadataFromCommandCatalog()
                 const QString valueArity = commandOptionValueArityTokens_.value(key);
                 if (!valueArity.isEmpty()) {
                     commandOptionValueArityTokens_.insert(aliasKey, valueArity);
+                }
+                const QString optionHelpHtml = commandOptionHelpHtmlByKey_.value(commandOptionHelpKey(commandName, optionKey));
+                if (!optionHelpHtml.isEmpty()) {
+                    commandOptionHelpHtmlByKey_.insert(commandOptionHelpKey(alias, optionKey), optionHelpHtml);
                 }
             }
             const QHash<QString, QStringList> subtypeByType = commandSubtypeByTypeTokens_.value(commandName);

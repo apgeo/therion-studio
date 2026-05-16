@@ -4,12 +4,20 @@
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QFile>
+#include <QGraphicsItem>
+#include <QGraphicsScene>
+#include <QGraphicsView>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPlainTextEdit>
+#include <QPushButton>
+#include <QLineEdit>
+#include <QLabel>
+#include <QListWidget>
 #include <QTemporaryDir>
 #include <QTextBlock>
 #include <QTextCursor>
+#include <QTextEdit>
 
 #include <iostream>
 
@@ -61,6 +69,74 @@ void sendKey(QWidget *widget,
     QCoreApplication::sendEvent(widget, &event);
 }
 
+QPushButton *findButtonByText(QWidget *root, const QString &text)
+{
+    if (root == nullptr) {
+        return nullptr;
+    }
+    const QList<QPushButton *> buttons = root->findChildren<QPushButton *>();
+    for (QPushButton *button : buttons) {
+        if (button != nullptr && button->text().trimmed() == text) {
+            return button;
+        }
+    }
+    return nullptr;
+}
+
+bool selectBlockAtScenePoint(QGraphicsView *view, const QPointF &scenePoint)
+{
+    if (view == nullptr || view->scene() == nullptr) {
+        return false;
+    }
+
+    const QPoint viewportPoint = view->mapFromScene(scenePoint);
+    QWidget *viewport = view->viewport();
+    if (viewport == nullptr) {
+        return false;
+    }
+
+    sendMouse(viewport, QEvent::MouseButtonPress, viewportPoint, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(viewport, QEvent::MouseButtonRelease, viewportPoint, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    return !view->scene()->selectedItems().isEmpty();
+}
+
+bool selectBlockByKind(QGraphicsView *view, QLabel *statusLabel, const QString &kindToken)
+{
+    if (view == nullptr || statusLabel == nullptr) {
+        return false;
+    }
+
+    for (int y = 24; y <= 360; y += 22) {
+        if (!selectBlockAtScenePoint(view, QPointF(84.0, y))) {
+            continue;
+        }
+        const QString statusText = statusLabel->text().toLower();
+        if (statusText.contains(kindToken.toLower())) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QListWidgetItem *findToolboxCommandItem(QListWidget *toolboxList, const QString &commandToken)
+{
+    if (toolboxList == nullptr) {
+        return nullptr;
+    }
+    const QString normalizedToken = commandToken.trimmed().toLower();
+    for (int row = 0; row < toolboxList->count(); ++row) {
+        QListWidgetItem *item = toolboxList->item(row);
+        if (item == nullptr) {
+            continue;
+        }
+        if (item->data(Qt::UserRole).toString().trimmed().toLower() == normalizedToken) {
+            return item;
+        }
+    }
+    return nullptr;
+}
+
 }
 
 int main(int argc, char *argv[])
@@ -77,7 +153,7 @@ int main(int argc, char *argv[])
     if (!expect(file.open(QIODevice::WriteOnly | QIODevice::Text), "Failed to create test file.")) {
         return 1;
     }
-    file.write("survey demo\ncenterline\nstation 1\nendsurvey\n");
+    file.write("survey demo -title old\ncenterline\nteam oldteam\ndata normal from to tape compass clino\n  1 2 3 4 5 6\nendcenterline\nendsurvey\n");
     file.close();
 
     TextEditorTab tab;
@@ -157,6 +233,124 @@ int main(int argc, char *argv[])
     if (!expect(!afterTabText.contains(QLatin1Char('\t')),
                 "Document should not contain tab characters after Tab insertion.")) {
         return 1;
+    }
+
+    QPushButton *blocksModeButton = findButtonByText(&tab, QStringLiteral("Blocks"));
+    if (!expect(blocksModeButton != nullptr, "Failed to find Blocks mode button.")) {
+        return 1;
+    }
+    blocksModeButton->click();
+    pumpEvents();
+
+    auto *blockView = tab.findChild<QGraphicsView *>();
+    if (!expect(blockView != nullptr, "Failed to find block canvas view.")) {
+        return 1;
+    }
+    auto *detailsStatus = tab.findChild<QLabel *>(QStringLiteral("blockDetailsStatusLabel"));
+    if (!expect(detailsStatus != nullptr, "Failed to find block details status label.")) {
+        return 1;
+    }
+    auto *detailsHelp = tab.findChild<QTextEdit *>();
+    if (!expect(detailsHelp != nullptr, "Failed to find block details help browser.")) {
+        return 1;
+    }
+    auto *toolboxList = tab.findChild<QListWidget *>();
+    if (!expect(toolboxList != nullptr, "Failed to find block toolbox list.")) {
+        return 1;
+    }
+    auto *primaryEdit = tab.findChild<QLineEdit *>(QStringLiteral("blockDetailsPrimaryEdit"));
+    auto *applyButton = tab.findChild<QPushButton *>(QStringLiteral("blockDetailsApplyButton"));
+    if (!expect(primaryEdit != nullptr && applyButton != nullptr,
+                "Failed to find block details primary edit/apply button.")) {
+        return 1;
+    }
+
+    QListWidgetItem *toolboxDataItem = findToolboxCommandItem(toolboxList, QStringLiteral("data"));
+    if (!expect(toolboxDataItem != nullptr, "Failed to find `data` command in block toolbox list.")) {
+        return 1;
+    }
+    toolboxList->setCurrentItem(toolboxDataItem);
+    pumpEvents();
+    if (!expect(!primaryEdit->isVisible(),
+                "Selecting toolbox command should hide editable Block Details section.")) {
+        return 1;
+    }
+    if (!expect(detailsHelp->toPlainText().toLower().contains(QStringLiteral("syntax")),
+                "Selecting toolbox command should show command contextual help in third column.")) {
+        return 1;
+    }
+
+    if (!expect(selectBlockByKind(blockView, detailsStatus, QStringLiteral("survey")),
+                "Failed to select survey block in blocks view.")) {
+        return 1;
+    }
+    if (!expect(primaryEdit->isVisible(),
+                "Selecting a canvas block should show editable Block Details section.")) {
+        return 1;
+    }
+    primaryEdit->setText(QStringLiteral("demo2"));
+    applyButton->click();
+    pumpEvents();
+    if (!expect(editor->toPlainText().contains(QStringLiteral("survey demo2 -title old")),
+                "Applying details for survey block should update survey id.")) {
+        return 1;
+    }
+
+    if (!expect(selectBlockByKind(blockView, detailsStatus, QStringLiteral("team")),
+                "Failed to select team block in blocks view.")) {
+        return 1;
+    }
+    primaryEdit->setText(QStringLiteral("newteam"));
+    applyButton->click();
+    pumpEvents();
+    if (!expect(editor->toPlainText().contains(QStringLiteral("team newteam")),
+                "Applying details for team block should update team value.")) {
+        return 1;
+    }
+
+    if (!expect(selectBlockByKind(blockView, detailsStatus, QStringLiteral("data")),
+                "Failed to select data block in blocks view.")) {
+        return 1;
+    }
+    primaryEdit->setText(QStringLiteral("normal from to length compass clino"));
+    applyButton->click();
+    pumpEvents();
+    if (!expect(editor->toPlainText().contains(QStringLiteral("data normal from to length compass clino")),
+                "Applying details for data block should update data header columns.")) {
+        return 1;
+    }
+    if (!expect(editor->toPlainText().contains(QStringLiteral("  1 2 3 4 5 6")),
+                "Applying data header edit should preserve existing data rows.")) {
+        return 1;
+    }
+
+    {
+        auto *crashGuardTab = new TextEditorTab;
+        if (!expect(crashGuardTab->loadFile(filePath, &errorMessage),
+                    "Failed to load crash-guard tab instance.")) {
+            delete crashGuardTab;
+            return 1;
+        }
+        crashGuardTab->resize(960, 640);
+        crashGuardTab->show();
+        pumpEvents();
+
+        QPushButton *guardBlocksButton = findButtonByText(crashGuardTab, QStringLiteral("Blocks"));
+        if (guardBlocksButton != nullptr) {
+            guardBlocksButton->click();
+            pumpEvents();
+        }
+        auto *guardView = crashGuardTab->findChild<QGraphicsView *>();
+        auto *guardStatus = crashGuardTab->findChild<QLabel *>(QStringLiteral("blockDetailsStatusLabel"));
+        if (guardView != nullptr) {
+            selectBlockByKind(guardView, guardStatus, QStringLiteral("survey"));
+        }
+        auto *guardPrimaryEdit = crashGuardTab->findChild<QLineEdit *>(QStringLiteral("blockDetailsPrimaryEdit"));
+        if (guardPrimaryEdit != nullptr) {
+            guardPrimaryEdit->setText(QStringLiteral("discard-change"));
+        }
+        delete crashGuardTab;
+        pumpEvents();
     }
 
     return 0;

@@ -176,18 +176,31 @@ Text editor includes:
 - left toolbox provides draggable Therion command entries grouped by context
 - toolbox has a live filter field (`Filter commands...`) for narrowing large command lists by keyword
 - toolbox sections are catalog-context driven (`Top-level`, `Inside Survey`, `Inside Centerline`) using `resources/therion_command_catalog.json` command context metadata, and now list supported draggable commands from catalog scope metadata (excluding unsupported block-pair families not yet modeled in canvas)
+- selecting a command item in toolbox shows that command’s contextual help in the `Block Details` pane (third column), even before inserting it
+- the editable `Block Details` section is visible only when a canvas block is selected; toolbox-command preview keeps only contextual help visible
 - right canvas renders parsed block hierarchy from current source and keeps order by source line
 - right canvas also renders catalog-recognized leaf directives in-scope (for example `input`), not only the previously hardcoded centerline leaf pair
+- right `Block Details` pane edits parameters of the selected block directly (no modal dialog for supported block kinds)
+- blocks view uses a 3-column horizontal splitter (`Toolbox | Canvas | Block Details`), so `Block Details` can be resized wider for multi-column option/value editing
 - dragging a toolbox item to the canvas inserts source templates at compatible positions
 - dragging an existing block card in canvas reorders source blocks (whole block is moved, including nested content for container blocks)
 - dropping onto a compatible container (for example `survey`) moves the block inside that container near its end
-- block cards use icon actions in the top-right corner: configure icon (edit) and trash icon (delete)
+- block cards use a trash icon action in the top-right corner for delete
+- selecting a block card focuses it in `Block Details` for editing
 - delete icon asks for confirmation and removes the full logical block span (`survey`/`map`/`scrap`/`centerline` with matching end directive, `data` with its measured rows, or single-line leaf directives)
-- `Configure` icon on block cards currently supports:
-- `Survey` / `Map` / `Scrap`: `Rename` and catalog-driven `Insert Command` actions in container context
-- centerline insert actions are catalog-driven from `centerline` command metadata (command list comes from command-catalog contexts); `data` keeps a starter multi-line template, and other commands use a generated placeholder/value template
-- value edit for `Team` and `Explo Date`
-- value edit path is now generic for simple leaf directives without catalog options (catalog-driven, not command-name hardcoded)
+- selecting a `Survey` / `Map` / `Scrap` / `Centerline` block enables structured header editing in details pane:
+- `ID` field (`required` for `survey/map/scrap`, `optional` for `centerline`)
+- option key/value table
+- optional `Additional Positional Tokens` preservation field
+- `Apply` writes the updated command line back to source as one undoable edit step
+- `Apply` is enabled only when there is a valid change against current source line
+- validation errors (for example required ID/value missing or invalid option key/value arity) are shown inline in details status and block `Apply`
+- contextual help in details pane follows the currently active field/row (`ID` help or selected option help)
+- selecting `Team`, `Date`, or `Explo Date` enables direct value editing in details pane (`Value` field + `Apply`)
+- selecting `Data` enables header-column editing in details pane (`Columns` field + `Apply`), while `Edit Data Rows...` opens the full mixed-row data editor for body rows/directives
+- most in-scope command cards now edit directly in details pane; unsupported kinds keep a `Legacy Configure...` fallback button
+- `Apply` / `Legacy Configure...` actions are placed above `Contextual Help` in a stable row to keep commit actions in a fixed position while help content changes/scrolls
+- nested commands should be inserted through toolbox drag/drop, not through block-parameter editing
 - `Data` block editor dialog:
 - edit header columns (`data normal from to ...`)
 - measurement rows are shown in a table generated from the current column definition

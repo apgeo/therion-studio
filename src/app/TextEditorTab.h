@@ -21,9 +21,11 @@ class QStackedWidget;
 class QSplitter;
 class QSplitterHandle;
 class QTextBrowser;
+class QTextEdit;
 class QCompleter;
 class QStringListModel;
 class QEvent;
+class QTableWidget;
 
 namespace TherionStudio
 {
@@ -45,6 +47,7 @@ class TextEditorTab final : public QWidget
 
 public:
     explicit TextEditorTab(QWidget *parent = nullptr);
+    ~TextEditorTab() override;
 
     bool loadFile(const QString &filePath, QString *errorMessage = nullptr);
     bool save(QString *errorMessage = nullptr);
@@ -121,6 +124,15 @@ private slots:
     void handleBlocksModeRequested();
 
 private:
+    enum class BlockDetailsMode
+    {
+        None,
+        StructuredOptions,
+        SimpleValue,
+        DataHeader,
+        Unsupported,
+    };
+
     bool eventFilter(QObject *watched, QEvent *event) override;
     void refreshCurrentLineHighlight();
     void refreshTitle();
@@ -155,6 +167,16 @@ private:
     void handleCanvasDrop(const QString &kind, const QPointF &scenePos);
     void handleBlockMoveRequest(int lineNumber, const QPointF &scenePos);
     void handleBlockConfigureRequest(const QString &kind, int lineNumber);
+    void selectBlockInCanvasAndDetails(int lineNumber);
+    void clearBlockDetailsPane();
+    void showBlockDetailsForToolboxCommand(const QString &commandToken);
+    void refreshBlockDetailsSelectionFromScene();
+    bool loadBlockDetailsForSelection(const QString &kind, int lineNumber);
+    void updateBlockDetailsHelpForCurrentFocus();
+    void refreshBlockDetailsApplyState();
+    bool buildUpdatedLineFromBlockDetails(QString *updatedLine, QString *validationError = nullptr) const;
+    void applyBlockDetailsChanges();
+    bool supportsDetailsPaneForKind(const QString &kind) const;
     void handleBlockDeleteRequest(int lineNumber);
     bool insertLinesBefore(int lineNumber,
                            const QStringList &newLines,
@@ -199,6 +221,19 @@ private:
     QListWidget *blockToolboxList_ = nullptr;
     QGraphicsView *blockCanvasView_ = nullptr;
     QGraphicsScene *blockCanvasScene_ = nullptr;
+    QWidget *blockDetailsPanel_ = nullptr;
+    QWidget *blockDetailsEditPanel_ = nullptr;
+    QLabel *blockDetailsStatusLabel_ = nullptr;
+    QLabel *blockDetailsPrimaryFieldLabel_ = nullptr;
+    QLabel *blockDetailsSecondaryFieldLabel_ = nullptr;
+    QLineEdit *blockDetailsIdEdit_ = nullptr;
+    QLineEdit *blockDetailsAdditionalPositionalEdit_ = nullptr;
+    QTableWidget *blockDetailsOptionsTable_ = nullptr;
+    QTextEdit *blockDetailsHelpBrowser_ = nullptr;
+    QPushButton *blockDetailsAddOptionButton_ = nullptr;
+    QPushButton *blockDetailsRemoveOptionButton_ = nullptr;
+    QPushButton *blockDetailsApplyButton_ = nullptr;
+    QPushButton *blockDetailsLegacyConfigureButton_ = nullptr;
     QPlainTextEdit *editor_ = nullptr;
     TherionSyntaxHighlighter *highlighter_ = nullptr;
     QString filePath_;
@@ -214,6 +249,7 @@ private:
     QHash<QString, QStringList> commandArgumentValueTokens_;
     QHash<QString, QStringList> commandOptionValueTokens_;
     QHash<QString, QString> commandOptionValueArityTokens_;
+    QHash<QString, QString> commandOptionHelpHtmlByKey_;
     QHash<QString, QStringList> commandTypeValueTokens_;
     QHash<QString, QHash<QString, QStringList>> commandSubtypeByTypeTokens_;
     QHash<QString, int> commandRequiredPositionalCount_;
@@ -229,6 +265,12 @@ private:
     bool replaceMode_ = false;
     bool inlineStatusRequestedVisible_ = true;
     bool blocksModeActive_ = false;
+    bool tearingDown_ = false;
+    bool blockDetailsPopulating_ = false;
+    BlockDetailsMode blockDetailsMode_ = BlockDetailsMode::None;
+    int blockDetailsSelectedLineNumber_ = 0;
+    QString blockDetailsSelectedKind_;
+    QString blockDetailsBaseStatusText_;
     QString fileEncodingName_ = QStringLiteral("UTF-8");
     QString fileEncodingLabel_ = QStringLiteral("UTF-8");
     QString cleanEncodingNameSnapshot_ = QStringLiteral("UTF-8");

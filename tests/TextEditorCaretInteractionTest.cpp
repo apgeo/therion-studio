@@ -21,6 +21,7 @@
 #include <QTextBlock>
 #include <QTextCursor>
 #include <QTextEdit>
+#include <QToolButton>
 
 #include <iostream>
 
@@ -146,6 +147,60 @@ QListWidgetItem *findToolboxCommandItem(QListWidget *toolboxList, const QString 
         }
     }
     return nullptr;
+}
+
+QStringList readingsOrderTagTokens(QWidget *root)
+{
+    if (root == nullptr) {
+        return {};
+    }
+    QWidget *tagEditor = root->findChild<QWidget *>(QStringLiteral("blockDetailsReadingsTagEditor"));
+    if (tagEditor == nullptr) {
+        return {};
+    }
+    QStringList tokens;
+    const QList<QToolButton *> chips = tagEditor->findChildren<QToolButton *>();
+    for (QToolButton *chip : chips) {
+        if (chip == nullptr) {
+            continue;
+        }
+        QString text = chip->text();
+        const int crossIndex = text.lastIndexOf(QChar(0x2715)); // ✕
+        if (crossIndex >= 0) {
+            text = text.left(crossIndex);
+        }
+        text = text.trimmed();
+        if (!text.isEmpty()) {
+            tokens.append(text);
+        }
+    }
+    return tokens;
+}
+
+void clearReadingsOrderTagTokens(QWidget *root)
+{
+    if (root == nullptr) {
+        return;
+    }
+    QWidget *tagEditor = root->findChild<QWidget *>(QStringLiteral("blockDetailsReadingsTagEditor"));
+    if (tagEditor == nullptr) {
+        return;
+    }
+
+    int safetyCounter = 0;
+    while (safetyCounter < 64) {
+        ++safetyCounter;
+        const QList<QToolButton *> chips = tagEditor->findChildren<QToolButton *>();
+        if (chips.isEmpty()) {
+            break;
+        }
+        QToolButton *chip = chips.first();
+        if (chip == nullptr) {
+            break;
+        }
+        chip->click();
+        pumpEvents();
+    }
 }
 
 }
@@ -292,6 +347,7 @@ int main(int argc, char *argv[])
     }
     auto *primaryEdit = tab.findChild<QLineEdit *>(QStringLiteral("blockDetailsPrimaryEdit"));
     auto *secondaryEdit = tab.findChild<QLineEdit *>(QStringLiteral("blockDetailsSecondaryEdit"));
+    auto *readingsTagInput = tab.findChild<QLineEdit *>(QStringLiteral("tokenTagEditorInput"));
     auto *commentEdit = tab.findChild<QLineEdit *>(QStringLiteral("blockDetailsCommentEdit"));
     auto *primaryLabel = tab.findChild<QLabel *>(QStringLiteral("blockDetailsPrimaryLabel"));
     auto *secondaryLabel = tab.findChild<QLabel *>(QStringLiteral("blockDetailsSecondaryLabel"));
@@ -306,6 +362,9 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (!expect(commentEdit != nullptr, "Failed to find blockDetailsCommentEdit.")) {
+        return 1;
+    }
+    if (!expect(readingsTagInput != nullptr, "Failed to find tokenTagEditorInput.")) {
         return 1;
     }
     if (!expect(primaryLabel != nullptr, "Failed to find blockDetailsPrimaryLabel.")) {
@@ -532,14 +591,22 @@ int main(int argc, char *argv[])
                 "Data block secondary field should be visible and labeled Readings Order.")) {
         return 1;
     }
-    if (!expect(secondaryEdit->isVisible()
-                    && secondaryEdit->text().trimmed().compare(QStringLiteral("from to tape compass clino"),
-                                                               Qt::CaseInsensitive) == 0,
-                "Data block should parse existing readings order into secondary field.")) {
+    if (!expect(readingsOrderTagTokens(&tab)
+                    == QStringList({QStringLiteral("from"),
+                                    QStringLiteral("to"),
+                                    QStringLiteral("tape"),
+                                    QStringLiteral("compass"),
+                                    QStringLiteral("clino")}),
+                "Data block should parse existing readings order into tag chips.")) {
         return 1;
     }
     primaryEdit->setText(QStringLiteral("normal"));
-    secondaryEdit->setText(QStringLiteral("from to length compass clino"));
+    clearReadingsOrderTagTokens(&tab);
+    readingsTagInput->setFocus();
+    readingsTagInput->setText(QStringLiteral("from to length compass clino"));
+    sendKey(readingsTagInput, QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier, QStringLiteral("\n"));
+    sendKey(readingsTagInput, QEvent::KeyRelease, Qt::Key_Return);
+    pumpEvents();
     applyButton->click();
     pumpEvents();
     if (!expect(editor->toPlainText().contains(QStringLiteral("data normal from to length compass clino")),

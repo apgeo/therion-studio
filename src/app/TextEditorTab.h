@@ -253,7 +253,9 @@ private:
     QLabel *blockDetailsOptionsLabel_ = nullptr;
     QLabel *blockDetailsOptionArgsLabel_ = nullptr;
     QLineEdit *blockDetailsIdEdit_ = nullptr;
+    QStackedWidget *blockDetailsSecondaryFieldStack_ = nullptr;
     QLineEdit *blockDetailsAdditionalPositionalEdit_ = nullptr;
+    QWidget *blockDetailsReadingsTagEditor_ = nullptr;
     QLineEdit *blockDetailsCommentEdit_ = nullptr;
     QTableWidget *blockDetailsOptionsTable_ = nullptr;
     QWidget *blockDetailsOptionArgsPanel_ = nullptr;

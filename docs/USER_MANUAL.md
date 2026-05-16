@@ -239,6 +239,7 @@ Text editor includes:
 - for `Team`/`Explo Team`, `Apply` auto-quotes the person value when needed (for example names with spaces), preserving valid Therion tokenization
 - simple command fields are argument-aware: Block Details labels positional fields from command argument metadata and parses current raw-line tokens back into those fields
 - selecting `Data` enables split header editing in details pane (`Style` + `Readings Order` fields + `Apply`, serialized as `data <style> <readings order>`), while `Edit Data Rows...` opens the full mixed-row data editor for body rows/directives
+- `Readings Order` in `Data` header mode is tag-based: type a token and confirm with `Enter`/`Space` (or choose from suggestions) to create a chip; remove a token via its `✕` chip control; duplicate tokens are ignored
 - inserting a new `Data` command from the Blocks toolbox creates a bare `data` header line; fill `Style` and `Readings Order` in Block Details
 - most in-scope command cards now edit directly in details pane; unsupported kinds keep a `Legacy Configure...` fallback button
 - `Apply` / `Legacy Configure...` actions are placed above `Contextual Help` in a stable row to keep commit actions in a fixed position while help content changes/scrolls

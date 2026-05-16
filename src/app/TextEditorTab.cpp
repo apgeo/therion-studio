@@ -42,6 +42,7 @@
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QToolTip>
+#include <QToolButton>
 #include <QHeaderView>
 #include <QScreen>
 #include <QScrollBar>
@@ -639,6 +640,288 @@ void installLineEditCompleter(QLineEdit *lineEdit, const QStringList &values)
     lineEdit->setCompleter(completer);
 }
 
+class TokenTagEditorWidget final : public QWidget
+{
+public:
+    explicit TokenTagEditorWidget(QWidget *parent = nullptr)
+        : QWidget(parent)
+    {
+        auto *layout = new QHBoxLayout(this);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(4);
+
+        input_ = new QLineEdit(this);
+        input_->setObjectName(QStringLiteral("tokenTagEditorInput"));
+        input_->installEventFilter(this);
+        layout->addWidget(input_, 1);
+
+        connect(input_, &QLineEdit::returnPressed, this, [this]() {
+            commitInputTokens();
+        });
+        connect(input_, &QLineEdit::selectionChanged, this, [this]() {
+            if (onFocusContextChanged) {
+                onFocusContextChanged();
+            }
+        });
+        connect(input_, &QLineEdit::cursorPositionChanged, this, [this](int, int) {
+            if (onFocusContextChanged) {
+                onFocusContextChanged();
+            }
+        });
+    }
+
+    std::function<void()> onTokensChanged;
+    std::function<void()> onFocusContextChanged;
+
+    void setPlaceholderText(const QString &text)
+    {
+        placeholderText_ = text;
+        refreshInputPlaceholder();
+    }
+
+    void setSuggestions(const QStringList &values)
+    {
+        suggestions_.clear();
+        for (const QString &value : values) {
+            const QString normalized = value.trimmed();
+            if (!normalized.isEmpty()) {
+                suggestions_.append(normalized);
+            }
+        }
+        suggestions_.removeDuplicates();
+        std::sort(suggestions_.begin(), suggestions_.end(), [](const QString &left, const QString &right) {
+            return QString::compare(left, right, Qt::CaseInsensitive) < 0;
+        });
+        rebuildCompleter();
+    }
+
+    void setTokens(const QStringList &tokens)
+    {
+        QStringList normalized;
+        for (const QString &token : tokens) {
+            const QString trimmed = token.trimmed();
+            if (!trimmed.isEmpty() && !containsTokenCaseInsensitive(normalized, trimmed)) {
+                normalized.append(trimmed);
+            }
+        }
+        tokens_ = normalized;
+        rebuildChips();
+        refreshInputPlaceholder();
+    }
+
+    QStringList tokens() const
+    {
+        return tokens_;
+    }
+
+    bool hasEditorFocus() const
+    {
+        if (input_ != nullptr && input_->hasFocus()) {
+            return true;
+        }
+        for (QToolButton *chip : chipButtons_) {
+            if (chip != nullptr && chip->hasFocus()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+private:
+    static bool containsTokenCaseInsensitive(const QStringList &tokens, const QString &token)
+    {
+        for (const QString &existing : tokens) {
+            if (QString::compare(existing.trimmed(), token.trimmed(), Qt::CaseInsensitive) == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void rebuildCompleter()
+    {
+        if (input_ == nullptr) {
+            return;
+        }
+        if (suggestions_.isEmpty()) {
+            input_->setCompleter(nullptr);
+            return;
+        }
+        auto *completer = new QCompleter(suggestions_, input_);
+        completer->setCaseSensitivity(Qt::CaseInsensitive);
+        completer->setFilterMode(Qt::MatchContains);
+        completer->setCompletionMode(QCompleter::PopupCompletion);
+        input_->setCompleter(completer);
+        connect(completer,
+                QOverload<const QString &>::of(&QCompleter::activated),
+                input_,
+                [this](const QString &choice) {
+                    const QString normalized = choice.trimmed();
+                    if (normalized.isEmpty()) {
+                        return;
+                    }
+                    appendToken(normalized);
+                    // Clear after Qt finishes completer insertion to avoid stale token text.
+                    QTimer::singleShot(0, this, [this]() {
+                        if (input_ != nullptr) {
+                            input_->clear();
+                        }
+                    });
+                });
+    }
+
+    void refreshInputPlaceholder()
+    {
+        if (input_ == nullptr) {
+            return;
+        }
+        input_->setPlaceholderText(tokens_.isEmpty() ? placeholderText_ : QString());
+    }
+
+    bool appendToken(const QString &token)
+    {
+        const QString normalized = token.trimmed();
+        if (normalized.isEmpty()) {
+            return false;
+        }
+        if (containsTokenCaseInsensitive(tokens_, normalized)) {
+            return false;
+        }
+        tokens_.append(normalized);
+        rebuildChips();
+        refreshInputPlaceholder();
+        if (onTokensChanged) {
+            onTokensChanged();
+        }
+        return true;
+    }
+
+    bool commitInputTokens()
+    {
+        if (input_ == nullptr) {
+            return false;
+        }
+        const QString rawInput = input_->text().trimmed();
+        if (rawInput.isEmpty()) {
+            return false;
+        }
+        QStringList parsedTokens = TherionStudio::TherionDocumentParser::tokenizeLine(rawInput);
+        if (parsedTokens.isEmpty()) {
+            parsedTokens = rawInput.split(QRegularExpression(QStringLiteral(R"(\s+)")), Qt::SkipEmptyParts);
+        }
+        if (parsedTokens.isEmpty()) {
+            return false;
+        }
+        for (const QString &token : parsedTokens) {
+            const QString normalized = token.trimmed();
+            if (!normalized.isEmpty()) {
+                appendToken(normalized);
+            }
+        }
+        input_->clear();
+        return true;
+    }
+
+    void rebuildChips()
+    {
+        auto *layout = qobject_cast<QHBoxLayout *>(this->layout());
+        if (layout == nullptr || input_ == nullptr) {
+            return;
+        }
+        for (QToolButton *chip : chipButtons_) {
+            if (chip == nullptr) {
+                continue;
+            }
+            layout->removeWidget(chip);
+            chip->deleteLater();
+        }
+        chipButtons_.clear();
+
+        for (int index = 0; index < tokens_.size(); ++index) {
+            const QString token = tokens_.at(index);
+            auto *chip = new QToolButton(this);
+            chip->setText(QStringLiteral("%1  ✕").arg(token));
+            chip->setProperty("token_index", index);
+            chip->setAutoRaise(true);
+            chip->setFocusPolicy(Qt::StrongFocus);
+            connect(chip, &QToolButton::clicked, this, [this, chip]() {
+                const int tokenIndex = chip->property("token_index").toInt();
+                if (tokenIndex < 0 || tokenIndex >= tokens_.size()) {
+                    return;
+                }
+                tokens_.removeAt(tokenIndex);
+                rebuildChips();
+                refreshInputPlaceholder();
+                if (onTokensChanged) {
+                    onTokensChanged();
+                }
+            });
+            connect(chip, &QToolButton::pressed, this, [this]() {
+                if (onFocusContextChanged) {
+                    onFocusContextChanged();
+                }
+            });
+            layout->insertWidget(layout->count() - 1, chip);
+            chipButtons_.append(chip);
+        }
+    }
+
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        if (watched != input_ || event == nullptr) {
+            return QWidget::eventFilter(watched, event);
+        }
+        if (event->type() == QEvent::KeyPress) {
+            auto *keyEvent = static_cast<QKeyEvent *>(event);
+            if (keyEvent == nullptr) {
+                return QWidget::eventFilter(watched, event);
+            }
+            if (keyEvent->key() == Qt::Key_Space
+                || keyEvent->key() == Qt::Key_Comma
+                || keyEvent->key() == Qt::Key_Return
+                || keyEvent->key() == Qt::Key_Enter
+                || keyEvent->key() == Qt::Key_Tab) {
+                const bool isCompletionAcceptKey = keyEvent->key() == Qt::Key_Return
+                    || keyEvent->key() == Qt::Key_Enter
+                    || keyEvent->key() == Qt::Key_Tab;
+                if (isCompletionAcceptKey) {
+                    if (QCompleter *completer = input_->completer();
+                        completer != nullptr && completer->popup() != nullptr && completer->popup()->isVisible()) {
+                        return QWidget::eventFilter(watched, event);
+                    }
+                }
+                if (commitInputTokens()) {
+                    return true;
+                }
+            } else if (keyEvent->key() == Qt::Key_Backspace && input_->text().isEmpty() && !tokens_.isEmpty()) {
+                tokens_.removeLast();
+                rebuildChips();
+                refreshInputPlaceholder();
+                if (onTokensChanged) {
+                    onTokensChanged();
+                }
+                return true;
+            }
+        } else if (event->type() == QEvent::FocusIn) {
+            if (onFocusContextChanged) {
+                onFocusContextChanged();
+            }
+        }
+        return QWidget::eventFilter(watched, event);
+    }
+
+    QLineEdit *input_ = nullptr;
+    QString placeholderText_;
+    QStringList suggestions_;
+    QStringList tokens_;
+    QList<QToolButton *> chipButtons_;
+};
+
+TokenTagEditorWidget *asTokenTagEditor(QWidget *widget)
+{
+    return dynamic_cast<TokenTagEditorWidget *>(widget);
+}
+
 void installTokenCompleter(QLineEdit *lineEdit, const QStringList &values)
 {
     if (lineEdit == nullptr) {
@@ -667,6 +950,16 @@ void installTokenCompleter(QLineEdit *lineEdit, const QStringList &values)
     completer->setFilterMode(Qt::MatchContains);
     completer->setCompletionMode(QCompleter::PopupCompletion);
     lineEdit->setCompleter(completer);
+    const char *kTokenCompleterTextSnapshotProperty = "_tokenCompleterTextSnapshot";
+    const char *kTokenCompleterCursorSnapshotProperty = "_tokenCompleterCursorSnapshot";
+
+    auto snapshotEditorState = [lineEdit,
+                                kTokenCompleterTextSnapshotProperty,
+                                kTokenCompleterCursorSnapshotProperty]() {
+        lineEdit->setProperty(kTokenCompleterTextSnapshotProperty, lineEdit->text());
+        lineEdit->setProperty(kTokenCompleterCursorSnapshotProperty, lineEdit->cursorPosition());
+    };
+    snapshotEditorState();
 
     auto currentTokenAtCursor = [lineEdit]() -> QString {
         const QString text = lineEdit->text();
@@ -690,14 +983,24 @@ void installTokenCompleter(QLineEdit *lineEdit, const QStringList &values)
         }
     };
 
-    auto scheduleRefresh = [lineEdit, completer, refreshCompletionPopup]() {
-        QTimer::singleShot(0, lineEdit, [lineEdit, completer, refreshCompletionPopup]() {
+    auto scheduleRefresh = [lineEdit,
+                            completer,
+                            refreshCompletionPopup,
+                            kTokenCompleterTextSnapshotProperty,
+                            kTokenCompleterCursorSnapshotProperty]() {
+        QTimer::singleShot(0, lineEdit, [lineEdit,
+                                         completer,
+                                         refreshCompletionPopup,
+                                         kTokenCompleterTextSnapshotProperty,
+                                         kTokenCompleterCursorSnapshotProperty]() {
             if (lineEdit == nullptr || completer == nullptr) {
                 return;
             }
             if (lineEdit->completer() != completer) {
                 return;
             }
+            lineEdit->setProperty(kTokenCompleterTextSnapshotProperty, lineEdit->text());
+            lineEdit->setProperty(kTokenCompleterCursorSnapshotProperty, lineEdit->cursorPosition());
             refreshCompletionPopup();
         });
     };
@@ -711,9 +1014,16 @@ void installTokenCompleter(QLineEdit *lineEdit, const QStringList &values)
     QObject::connect(completer,
                      QOverload<const QString &>::of(&QCompleter::activated),
                      lineEdit,
-                     [lineEdit](const QString &choice) {
-                         QString text = lineEdit->text();
-                         int cursor = qBound(0, lineEdit->cursorPosition(), text.size());
+                     [lineEdit,
+                      snapshotEditorState,
+                      kTokenCompleterTextSnapshotProperty,
+                      kTokenCompleterCursorSnapshotProperty](const QString &choice) {
+                         QString text = lineEdit->property(kTokenCompleterTextSnapshotProperty).toString();
+                         if (text.isNull()) {
+                             text = lineEdit->text();
+                         }
+                         int cursor = lineEdit->property(kTokenCompleterCursorSnapshotProperty).toInt();
+                         cursor = qBound(0, cursor, text.size());
                          int tokenStart = cursor;
                          while (tokenStart > 0 && !text.at(tokenStart - 1).isSpace()) {
                              --tokenStart;
@@ -725,6 +1035,7 @@ void installTokenCompleter(QLineEdit *lineEdit, const QStringList &values)
                          text.replace(tokenStart, tokenEnd - tokenStart, choice);
                          lineEdit->setText(text);
                          lineEdit->setCursorPosition(tokenStart + choice.size());
+                         snapshotEditorState();
                      });
 }
 
@@ -1804,12 +2115,19 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     blockDetailsFormLayout->addRow(blockDetailsPrimaryFieldLabel_, blockDetailsIdEdit_);
     blockDetailsSecondaryFieldLabel_ = new QLabel(tr("Extra Arguments (Advanced)"), blockDetailsEditPanel_);
     blockDetailsSecondaryFieldLabel_->setObjectName(QStringLiteral("blockDetailsSecondaryLabel"));
-    blockDetailsAdditionalPositionalEdit_ = new QLineEdit(blockDetailsEditPanel_);
+    blockDetailsSecondaryFieldStack_ = new QStackedWidget(blockDetailsEditPanel_);
+    blockDetailsSecondaryFieldStack_->setObjectName(QStringLiteral("blockDetailsSecondaryFieldStack"));
+    blockDetailsAdditionalPositionalEdit_ = new QLineEdit(blockDetailsSecondaryFieldStack_);
     blockDetailsAdditionalPositionalEdit_->setObjectName(QStringLiteral("blockDetailsSecondaryEdit"));
     blockDetailsAdditionalPositionalEdit_->setToolTip(
         tr("Rare fallback for unsupported positional tokens. Prefer explicit options where available."));
     blockDetailsAdditionalPositionalEdit_->setPlaceholderText(tr("shown only when present in source"));
-    blockDetailsFormLayout->addRow(blockDetailsSecondaryFieldLabel_, blockDetailsAdditionalPositionalEdit_);
+    blockDetailsSecondaryFieldStack_->addWidget(blockDetailsAdditionalPositionalEdit_);
+    blockDetailsReadingsTagEditor_ = new TokenTagEditorWidget(blockDetailsSecondaryFieldStack_);
+    blockDetailsReadingsTagEditor_->setObjectName(QStringLiteral("blockDetailsReadingsTagEditor"));
+    blockDetailsSecondaryFieldStack_->addWidget(blockDetailsReadingsTagEditor_);
+    blockDetailsSecondaryFieldStack_->setCurrentWidget(blockDetailsAdditionalPositionalEdit_);
+    blockDetailsFormLayout->addRow(blockDetailsSecondaryFieldLabel_, blockDetailsSecondaryFieldStack_);
     blockDetailsCommentFieldLabel_ = new QLabel(tr("Comment"), blockDetailsEditPanel_);
     blockDetailsCommentFieldLabel_->setObjectName(QStringLiteral("blockDetailsCommentLabel"));
     blockDetailsCommentEdit_ = new QLineEdit(blockDetailsEditPanel_);
@@ -2011,6 +2329,18 @@ TextEditorTab::TextEditorTab(QWidget *parent)
         updateBlockDetailsHelpForCurrentFocus();
         refreshBlockDetailsApplyState();
     });
+    if (auto *readingsTagEditor = asTokenTagEditor(blockDetailsReadingsTagEditor_); readingsTagEditor != nullptr) {
+        readingsTagEditor->onTokensChanged = [this, readingsTagEditor]() {
+            if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+                blockDetailsAdditionalPositionalEdit_->setText(readingsTagEditor->tokens().join(QLatin1Char(' ')));
+            }
+            updateBlockDetailsHelpForCurrentFocus();
+            refreshBlockDetailsApplyState();
+        };
+        readingsTagEditor->onFocusContextChanged = [this]() {
+            updateBlockDetailsHelpForCurrentFocus();
+        };
+    }
     connect(blockDetailsCommentEdit_, &QLineEdit::selectionChanged, this, [this]() {
         updateBlockDetailsHelpForCurrentFocus();
     });
@@ -3953,6 +4283,15 @@ void TextEditorTab::clearBlockDetailsPane()
         blockDetailsAdditionalPositionalEdit_->setEnabled(false);
         blockDetailsAdditionalPositionalEdit_->setVisible(true);
     }
+    if (blockDetailsSecondaryFieldStack_ != nullptr) {
+        blockDetailsSecondaryFieldStack_->setVisible(true);
+        if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+            blockDetailsSecondaryFieldStack_->setCurrentWidget(blockDetailsAdditionalPositionalEdit_);
+        }
+    }
+    if (auto *readingsTagEditor = asTokenTagEditor(blockDetailsReadingsTagEditor_); readingsTagEditor != nullptr) {
+        readingsTagEditor->setTokens({});
+    }
     if (blockDetailsCommentEdit_ != nullptr) {
         blockDetailsCommentEdit_->clear();
         blockDetailsCommentEdit_->setEnabled(false);
@@ -4052,6 +4391,12 @@ void TextEditorTab::showBlockDetailsForToolboxCommand(const QString &commandToke
         blockDetailsAdditionalPositionalEdit_->clear();
         blockDetailsAdditionalPositionalEdit_->setEnabled(false);
         blockDetailsAdditionalPositionalEdit_->setVisible(false);
+    }
+    if (blockDetailsSecondaryFieldStack_ != nullptr) {
+        blockDetailsSecondaryFieldStack_->setVisible(false);
+        if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+            blockDetailsSecondaryFieldStack_->setCurrentWidget(blockDetailsAdditionalPositionalEdit_);
+        }
     }
     if (blockDetailsCommentEdit_ != nullptr) {
         blockDetailsCommentEdit_->clear();
@@ -4264,6 +4609,15 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
             blockDetailsAdditionalPositionalEdit_->setEnabled(false);
             blockDetailsAdditionalPositionalEdit_->setVisible(false);
         }
+        if (blockDetailsSecondaryFieldStack_ != nullptr) {
+            blockDetailsSecondaryFieldStack_->setVisible(false);
+            if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+                blockDetailsSecondaryFieldStack_->setCurrentWidget(blockDetailsAdditionalPositionalEdit_);
+            }
+        }
+        if (auto *readingsTagEditor = asTokenTagEditor(blockDetailsReadingsTagEditor_); readingsTagEditor != nullptr) {
+            readingsTagEditor->setTokens({});
+        }
         if (blockDetailsCommentEdit_ != nullptr) {
             blockDetailsCommentEdit_->clear();
             blockDetailsCommentEdit_->setEnabled(false);
@@ -4324,6 +4678,12 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
         blockDetailsAdditionalPositionalEdit_->setVisible(true);
         installLineEditCompleter(blockDetailsAdditionalPositionalEdit_, {});
     }
+    if (blockDetailsSecondaryFieldStack_ != nullptr) {
+        blockDetailsSecondaryFieldStack_->setVisible(true);
+        if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+            blockDetailsSecondaryFieldStack_->setCurrentWidget(blockDetailsAdditionalPositionalEdit_);
+        }
+    }
     if (blockDetailsCommentEdit_ != nullptr) {
         blockDetailsCommentEdit_->setVisible(true);
         blockDetailsCommentEdit_->setEnabled(true);
@@ -4380,6 +4740,9 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
         if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
             blockDetailsAdditionalPositionalEdit_->clear();
             blockDetailsAdditionalPositionalEdit_->setEnabled(false);
+        }
+        if (auto *readingsTagEditor = asTokenTagEditor(blockDetailsReadingsTagEditor_); readingsTagEditor != nullptr) {
+            readingsTagEditor->setTokens({});
         }
         if (blockDetailsHelpBrowser_ != nullptr) {
             const TherionHelpEntry entry = helpEntries_.value(normalizedKind);
@@ -4468,6 +4831,15 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
                                                                ? extraPositionalTokens.join(QLatin1Char(' '))
                                                                : QString());
         }
+        if (blockDetailsSecondaryFieldStack_ != nullptr) {
+            blockDetailsSecondaryFieldStack_->setVisible(showExtraArguments);
+            if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+                blockDetailsSecondaryFieldStack_->setCurrentWidget(blockDetailsAdditionalPositionalEdit_);
+            }
+        }
+        if (auto *readingsTagEditor = asTokenTagEditor(blockDetailsReadingsTagEditor_); readingsTagEditor != nullptr) {
+            readingsTagEditor->setTokens({});
+        }
         const bool showOptionsSection = hasCatalogOptions || !optionEntries.isEmpty();
         if (blockDetailsOptionsLabel_ != nullptr) {
             blockDetailsOptionsLabel_->setVisible(showOptionsSection);
@@ -4548,6 +4920,15 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
                 blockDetailsAdditionalPositionalEdit_->setVisible(false);
             }
         }
+        if (blockDetailsSecondaryFieldStack_ != nullptr) {
+            blockDetailsSecondaryFieldStack_->setVisible(hasSecondaryArgument);
+            if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+                blockDetailsSecondaryFieldStack_->setCurrentWidget(blockDetailsAdditionalPositionalEdit_);
+            }
+        }
+        if (auto *readingsTagEditor = asTokenTagEditor(blockDetailsReadingsTagEditor_); readingsTagEditor != nullptr) {
+            readingsTagEditor->setTokens({});
+        }
         if (blockDetailsIdEdit_ != nullptr) {
             blockDetailsIdEdit_->setEnabled(true);
             blockDetailsIdEdit_->setPlaceholderText(tr("required"));
@@ -4578,14 +4959,23 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
         }
         if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
             blockDetailsAdditionalPositionalEdit_->setEnabled(true);
-            blockDetailsAdditionalPositionalEdit_->setVisible(true);
-            blockDetailsAdditionalPositionalEdit_->setPlaceholderText(tr("from to length compass clino"));
+            blockDetailsAdditionalPositionalEdit_->setVisible(false);
             blockDetailsAdditionalPositionalEdit_->setText(components.readingsOrder);
-            installTokenCompleter(blockDetailsAdditionalPositionalEdit_, readingSuggestions);
+        }
+        if (blockDetailsSecondaryFieldStack_ != nullptr) {
+            blockDetailsSecondaryFieldStack_->setVisible(true);
+            if (blockDetailsReadingsTagEditor_ != nullptr) {
+                blockDetailsSecondaryFieldStack_->setCurrentWidget(blockDetailsReadingsTagEditor_);
+            }
+        }
+        if (auto *readingsTagEditor = asTokenTagEditor(blockDetailsReadingsTagEditor_); readingsTagEditor != nullptr) {
+            readingsTagEditor->setPlaceholderText(tr("Type token and press Enter/Space"));
+            readingsTagEditor->setSuggestions(readingSuggestions);
+            readingsTagEditor->setTokens(TherionDocumentParser::tokenizeLine(components.readingsOrder));
         }
         if (blockDetailsIdEdit_ != nullptr) {
             blockDetailsIdEdit_->setEnabled(true);
-            blockDetailsIdEdit_->setPlaceholderText(tr("normal"));
+            blockDetailsIdEdit_->setPlaceholderText(tr("required"));
             blockDetailsIdEdit_->setText(components.style);
             installLineEditCompleter(blockDetailsIdEdit_, styleSuggestions);
         }
@@ -4889,6 +5279,17 @@ void TextEditorTab::updateBlockDetailsHelpForCurrentFocus()
         blockDetailsHelpBrowser_->setHtml(html);
         return;
     }
+    if (blockDetailsMode_ == BlockDetailsMode::DataHeader) {
+        if (auto *readingsTagEditor = asTokenTagEditor(blockDetailsReadingsTagEditor_);
+            readingsTagEditor != nullptr && readingsTagEditor->hasEditorFocus()) {
+            const QString html = QStringLiteral("<p><b>Style:</b> first token after <code>data</code> (for example <code>normal</code>).</p>"
+                                                "<p><b>Readings order:</b> tokenized column order. Add a token and confirm with Enter/Space; remove via chip <code>✕</code>.</p>"
+                                                "<p>Use `Edit Data Rows...` to modify measurement rows and directives.</p>%1")
+                                     .arg(commandHelpHtml);
+            blockDetailsHelpBrowser_->setHtml(html);
+            return;
+        }
+    }
     if ((blockDetailsMode_ == BlockDetailsMode::StructuredOptions
          || blockDetailsMode_ == BlockDetailsMode::SimpleValue
          || blockDetailsMode_ == BlockDetailsMode::DataHeader)
@@ -4980,9 +5381,12 @@ bool TextEditorTab::buildUpdatedLineFromBlockDetails(QString *updatedLine, QStri
             }
             return false;
         }
-        const QString updatedReadingsOrder = blockDetailsAdditionalPositionalEdit_ != nullptr
-            ? blockDetailsAdditionalPositionalEdit_->text().trimmed()
-            : QString();
+        QString updatedReadingsOrder;
+        if (auto *readingsTagEditor = asTokenTagEditor(blockDetailsReadingsTagEditor_); readingsTagEditor != nullptr) {
+            updatedReadingsOrder = readingsTagEditor->tokens().join(QLatin1Char(' ')).trimmed();
+        } else if (blockDetailsAdditionalPositionalEdit_ != nullptr) {
+            updatedReadingsOrder = blockDetailsAdditionalPositionalEdit_->text().trimmed();
+        }
         if (updatedReadingsOrder.isEmpty()) {
             if (validationError != nullptr) {
                 *validationError = tr("Readings order cannot be empty.");
@@ -6692,9 +7096,11 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
         auto *buttonRow = new QHBoxLayout;
         auto *addDataRowButton = new QPushButton(tr("Add Data Row"), dialog);
         auto *addDirectiveRowButton = new QPushButton(tr("Add Directive Row"), dialog);
+        auto *addCommentRowButton = new QPushButton(tr("Add Comment Row"), dialog);
         auto *removeRowButton = new QPushButton(tr("Remove Row"), dialog);
         buttonRow->addWidget(addDataRowButton);
         buttonRow->addWidget(addDirectiveRowButton);
+        buttonRow->addWidget(addCommentRowButton);
         buttonRow->addWidget(removeRowButton);
         buttonRow->addStretch(1);
         layout->addLayout(buttonRow);
@@ -6890,6 +7296,13 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
             rowsTable->insertRow(row);
             rowsTable->setItem(row, 0, new QTableWidgetItem(QStringLiteral("Directive")));
             rowsTable->setCurrentCell(row, 0);
+        });
+
+        QObject::connect(addCommentRowButton, &QPushButton::clicked, dialog, [rowsTable]() {
+            const int row = rowsTable->rowCount();
+            rowsTable->insertRow(row);
+            rowsTable->setItem(row, 0, new QTableWidgetItem(QStringLiteral("Comment")));
+            rowsTable->setCurrentCell(row, rowsTable->columnCount() - 1);
         });
 
         QObject::connect(removeRowButton, &QPushButton::clicked, dialog, [rowsTable]() {

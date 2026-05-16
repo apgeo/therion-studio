@@ -96,6 +96,8 @@ Structured block-canvas requirements:
 - centerline-oriented configuration flows should support quick insertion of common child commands (for example `team`, `explo-date`, and empty `data` header skeletons) without requiring manual raw-text typing
 - data-block configuration should separate header editing and row editing: Block Details edits the `data ...` header (`style` + `readings order`), while the row editor dialog focuses on body rows/directives using the active header as schema
 - data-block header editing in the Block Details pane should expose separate `style` and `readings order` fields and shall serialize them back as `data <style> <readings order>`
+- data-block `readings order` editing should use tokenized tag semantics (add token chips, remove individual chips) so completion accepts/replaces only the active token and preserves previously entered readings tokens
+- data-block `readings order` tag editing shall prevent duplicate chips and shall not double-insert a token when completion popup acceptance keys (`Enter`/`Tab`) are used
 - Block Details option editing should provide catalog-backed suggestions for option keys/values while remaining free-form to allow unknown but valid Therion options.
 - when catalog metadata defines explicit allowed values for an option, Block Details validation shall reject values outside that set before apply.
 - when catalog metadata defines fixed option value arity greater than one, Block Details shall present one parameter field per required value label and shall enforce exact value count validation before apply.

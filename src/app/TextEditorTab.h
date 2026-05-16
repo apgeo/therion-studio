@@ -27,6 +27,7 @@ class QCompleter;
 class QStringListModel;
 class QEvent;
 class QTableWidget;
+class QFormLayout;
 
 namespace TherionStudio
 {
@@ -180,6 +181,7 @@ private:
     void showBlockDetailsForToolboxCommand(const QString &commandToken);
     void refreshBlockDetailsSelectionFromScene();
     bool loadBlockDetailsForSelection(const QString &kind, int lineNumber);
+    void refreshBlockDetailsOptionArgumentEditors();
     void updateBlockDetailsHelpForCurrentFocus();
     void refreshBlockDetailsApplyState();
     bool buildUpdatedLineFromBlockDetails(QString *updatedLine, QString *validationError = nullptr) const;
@@ -246,10 +248,14 @@ private:
     QLabel *blockDetailsSecondaryFieldLabel_ = nullptr;
     QLabel *blockDetailsCommentFieldLabel_ = nullptr;
     QLabel *blockDetailsOptionsLabel_ = nullptr;
+    QLabel *blockDetailsOptionArgsLabel_ = nullptr;
     QLineEdit *blockDetailsIdEdit_ = nullptr;
     QLineEdit *blockDetailsAdditionalPositionalEdit_ = nullptr;
     QLineEdit *blockDetailsCommentEdit_ = nullptr;
     QTableWidget *blockDetailsOptionsTable_ = nullptr;
+    QWidget *blockDetailsOptionArgsPanel_ = nullptr;
+    QFormLayout *blockDetailsOptionArgsFormLayout_ = nullptr;
+    QList<QLineEdit *> blockDetailsOptionArgEditors_;
     QTextBrowser *blockDetailsHelpBrowser_ = nullptr;
     QPushButton *blockDetailsAddOptionButton_ = nullptr;
     QPushButton *blockDetailsRemoveOptionButton_ = nullptr;
@@ -270,6 +276,8 @@ private:
     QHash<QString, QStringList> commandArgumentValueTokens_;
     QHash<QString, QStringList> commandOptionValueTokens_;
     QHash<QString, QString> commandOptionValueArityTokens_;
+    QHash<QString, QStringList> commandOptionArgumentLabelsByKey_;
+    QHash<QString, int> commandOptionFixedArityByKey_;
     QHash<QString, QString> commandOptionHelpHtmlByKey_;
     QHash<QString, QStringList> commandTypeValueTokens_;
     QHash<QString, QHash<QString, QStringList>> commandSubtypeByTypeTokens_;
@@ -291,6 +299,7 @@ private:
     bool enforcingEncodingRootDirective_ = false;
     bool tearingDown_ = false;
     bool blockDetailsPopulating_ = false;
+    bool blockDetailsOptionArgsSyncing_ = false;
     BlockDetailsMode blockDetailsMode_ = BlockDetailsMode::None;
     int blockDetailsSelectedLineNumber_ = 0;
     QString blockDetailsSelectedKind_;

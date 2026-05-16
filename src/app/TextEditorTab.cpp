@@ -771,6 +771,89 @@ QString serializeTherionArgumentToken(const QString &value)
     return value;
 }
 
+QString canonicalOptionArityToken(const QString &rawArityToken)
+{
+    const QString normalized = rawArityToken.trimmed().toUpper();
+    if (normalized == QStringLiteral("0") || normalized == QStringLiteral("NONE")) {
+        return QStringLiteral("NONE");
+    }
+    if (normalized == QStringLiteral("1") || normalized == QStringLiteral("EXACTLY_ONE")) {
+        return QStringLiteral("EXACTLY_ONE");
+    }
+    if (normalized == QStringLiteral("N") || normalized == QStringLiteral("ONE_OR_MORE")) {
+        return QStringLiteral("ONE_OR_MORE");
+    }
+    if (normalized == QStringLiteral("*") || normalized == QStringLiteral("ZERO_OR_MORE")) {
+        return QStringLiteral("ZERO_OR_MORE");
+    }
+    return normalized;
+}
+
+bool optionArityRequiresValue(const QString &rawArityToken)
+{
+    const QString arity = canonicalOptionArityToken(rawArityToken);
+    return arity == QStringLiteral("EXACTLY_ONE") || arity == QStringLiteral("ONE_OR_MORE");
+}
+
+bool optionArityForbidsValue(const QString &rawArityToken)
+{
+    return canonicalOptionArityToken(rawArityToken) == QStringLiteral("NONE");
+}
+
+QStringList parseOptionValuesFromEditor(const QString &rawValue, const QString &rawArityToken, int fixedArity)
+{
+    const QString value = rawValue.trimmed();
+    if (value.isEmpty()) {
+        return {};
+    }
+
+    const QString arity = canonicalOptionArityToken(rawArityToken);
+    const bool singleValueExpected = fixedArity == 1
+        || (fixedArity < 0 && arity == QStringLiteral("EXACTLY_ONE"));
+
+    if (singleValueExpected) {
+        // In UI, a single-value option cell represents one logical value even when it contains spaces.
+        // If user entered an explicitly quoted token, prefer parser-unquoted token.
+        const QStringList tokenized = TherionStudio::TherionDocumentParser::tokenizeLine(value);
+        if (tokenized.size() == 1 && tokenized.first() != value) {
+            return tokenized;
+        }
+        return {value};
+    }
+
+    QStringList values = TherionStudio::TherionDocumentParser::tokenizeLine(value);
+    if (values.isEmpty()) {
+        values.append(value);
+    }
+    return values;
+}
+
+QStringList optionArgumentLabelsFromSignature(const QString &signature)
+{
+    QStringList labels;
+    static const QRegularExpression placeholderPattern(QStringLiteral(R"(<([^>]+)>)"));
+    QRegularExpressionMatchIterator iterator = placeholderPattern.globalMatch(signature);
+    while (iterator.hasNext()) {
+        const QRegularExpressionMatch match = iterator.next();
+        const QString placeholder = match.captured(1).trimmed();
+        if (placeholder.isEmpty()) {
+            continue;
+        }
+        QString label = placeholder.toLower();
+        QStringList words = label.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        for (QString &word : words) {
+            if (!word.isEmpty()) {
+                word[0] = word.at(0).toUpper();
+            }
+        }
+        label = words.join(QLatin1Char(' '));
+        if (!label.isEmpty()) {
+            labels.append(label);
+        }
+    }
+    return labels;
+}
+
 constexpr const char *kBlockMimeType = "application/x-therion-block-kind";
 
 class BlockToolboxList final : public QListWidget
@@ -1715,14 +1798,27 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     blockDetailsFormLayout->addRow(blockDetailsCommentFieldLabel_, blockDetailsCommentEdit_);
     blockDetailsEditLayout->addLayout(blockDetailsFormLayout);
 
-    blockDetailsOptionsLabel_ = new QLabel(tr("Options (key/value pairs)"), blockDetailsEditPanel_);
-    blockDetailsOptionsLabel_->setObjectName(QStringLiteral("blockDetailsOptionsLabel"));
-    blockDetailsEditLayout->addWidget(blockDetailsOptionsLabel_);
-
-    blockDetailsAddOptionButton_ = new QPushButton(tr("Add Option"), blockDetailsEditPanel_);
-    blockDetailsRemoveOptionButton_ = new QPushButton(tr("Remove Option"), blockDetailsEditPanel_);
+    blockDetailsAddOptionButton_ = new QPushButton(QStringLiteral("+"), blockDetailsEditPanel_);
+    blockDetailsRemoveOptionButton_ = new QPushButton(QStringLiteral("-"), blockDetailsEditPanel_);
+    blockDetailsAddOptionButton_->setObjectName(QStringLiteral("blockDetailsAddOptionButton"));
+    blockDetailsRemoveOptionButton_->setObjectName(QStringLiteral("blockDetailsRemoveOptionButton"));
     blockDetailsAddOptionButton_->setAutoDefault(false);
     blockDetailsRemoveOptionButton_->setAutoDefault(false);
+    blockDetailsAddOptionButton_->setToolTip(tr("Add option"));
+    blockDetailsRemoveOptionButton_->setToolTip(tr("Remove selected option"));
+    blockDetailsAddOptionButton_->setFixedWidth(28);
+    blockDetailsRemoveOptionButton_->setFixedWidth(28);
+
+    auto *blockDetailsOptionsHeaderRow = new QHBoxLayout;
+    blockDetailsOptionsHeaderRow->setContentsMargins(0, 0, 0, 0);
+    blockDetailsOptionsHeaderRow->setSpacing(6);
+    blockDetailsOptionsLabel_ = new QLabel(tr("Options"), blockDetailsEditPanel_);
+    blockDetailsOptionsLabel_->setObjectName(QStringLiteral("blockDetailsOptionsLabel"));
+    blockDetailsOptionsHeaderRow->addWidget(blockDetailsOptionsLabel_);
+    blockDetailsOptionsHeaderRow->addStretch(1);
+    blockDetailsOptionsHeaderRow->addWidget(blockDetailsAddOptionButton_);
+    blockDetailsOptionsHeaderRow->addWidget(blockDetailsRemoveOptionButton_);
+    blockDetailsEditLayout->addLayout(blockDetailsOptionsHeaderRow);
 
     blockDetailsOptionsTable_ = new QTableWidget(blockDetailsEditPanel_);
     blockDetailsOptionsTable_->setObjectName(QStringLiteral("blockDetailsOptionsTable"));
@@ -1761,6 +1857,19 @@ TextEditorTab::TextEditorTab(QWidget *parent)
             blockDetailsOptionsTable_));
     blockDetailsEditLayout->addWidget(blockDetailsOptionsTable_, 1);
 
+    blockDetailsOptionArgsLabel_ = new QLabel(tr("Selected Option Parameters"), blockDetailsEditPanel_);
+    blockDetailsOptionArgsLabel_->setObjectName(QStringLiteral("blockDetailsOptionArgsLabel"));
+    blockDetailsEditLayout->addWidget(blockDetailsOptionArgsLabel_);
+
+    blockDetailsOptionArgsPanel_ = new QWidget(blockDetailsEditPanel_);
+    blockDetailsOptionArgsPanel_->setObjectName(QStringLiteral("blockDetailsOptionArgsPanel"));
+    blockDetailsOptionArgsFormLayout_ = new QFormLayout(blockDetailsOptionArgsPanel_);
+    blockDetailsOptionArgsFormLayout_->setContentsMargins(0, 0, 0, 0);
+    blockDetailsOptionArgsFormLayout_->setSpacing(6);
+    blockDetailsOptionArgsLabel_->setVisible(false);
+    blockDetailsOptionArgsPanel_->setVisible(false);
+    blockDetailsEditLayout->addWidget(blockDetailsOptionArgsPanel_);
+
     auto *blockDetailsButtonsRow = new QHBoxLayout;
     blockDetailsButtonsRow->setContentsMargins(0, 0, 0, 0);
     blockDetailsButtonsRow->setSpacing(6);
@@ -1770,8 +1879,6 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     blockDetailsApplyButton_ = new QPushButton(tr("Apply"), blockDetailsEditPanel_);
     blockDetailsApplyButton_->setObjectName(QStringLiteral("blockDetailsApplyButton"));
     blockDetailsApplyButton_->setAutoDefault(false);
-    blockDetailsButtonsRow->addWidget(blockDetailsAddOptionButton_);
-    blockDetailsButtonsRow->addWidget(blockDetailsRemoveOptionButton_);
     blockDetailsButtonsRow->addStretch(1);
     blockDetailsButtonsRow->addWidget(blockDetailsLegacyConfigureButton_);
     blockDetailsButtonsRow->addWidget(blockDetailsApplyButton_);
@@ -1852,11 +1959,20 @@ TextEditorTab::TextEditorTab(QWidget *parent)
         showBlockDetailsForToolboxCommand(commandToken);
     });
     connect(blockDetailsOptionsTable_, &QTableWidget::currentCellChanged, this, [this](int, int, int, int) {
+        if (blockDetailsRemoveOptionButton_ != nullptr && blockDetailsOptionsTable_ != nullptr) {
+            const bool canRemove = blockDetailsOptionsTable_->isVisible()
+                && blockDetailsOptionsTable_->isEnabled()
+                && blockDetailsOptionsTable_->currentRow() >= 0
+                && blockDetailsOptionsTable_->rowCount() > 0;
+            blockDetailsRemoveOptionButton_->setEnabled(canRemove);
+        }
+        refreshBlockDetailsOptionArgumentEditors();
         updateBlockDetailsHelpForCurrentFocus();
         refreshBlockDetailsApplyState();
     });
     connect(blockDetailsOptionsTable_, &QTableWidget::itemChanged, this, [this](QTableWidgetItem *) {
-        if (!blockDetailsPopulating_) {
+        if (!blockDetailsPopulating_ && !blockDetailsOptionArgsSyncing_) {
+            refreshBlockDetailsOptionArgumentEditors();
             updateBlockDetailsHelpForCurrentFocus();
             refreshBlockDetailsApplyState();
         }
@@ -1894,6 +2010,10 @@ TextEditorTab::TextEditorTab(QWidget *parent)
         blockDetailsOptionsTable_->setItem(row, 1, new QTableWidgetItem(QString()));
         blockDetailsOptionsTable_->setCurrentCell(row, 0);
         blockDetailsOptionsTable_->editItem(blockDetailsOptionsTable_->item(row, 0));
+        if (blockDetailsRemoveOptionButton_ != nullptr) {
+            blockDetailsRemoveOptionButton_->setEnabled(true);
+        }
+        refreshBlockDetailsOptionArgumentEditors();
         updateBlockDetailsHelpForCurrentFocus();
         refreshBlockDetailsApplyState();
     });
@@ -1908,6 +2028,10 @@ TextEditorTab::TextEditorTab(QWidget *parent)
             ? blockDetailsOptionsTable_->currentRow()
             : blockDetailsOptionsTable_->rowCount() - 1;
         blockDetailsOptionsTable_->removeRow(row);
+        if (blockDetailsRemoveOptionButton_ != nullptr) {
+            blockDetailsRemoveOptionButton_->setEnabled(blockDetailsOptionsTable_->rowCount() > 0);
+        }
+        refreshBlockDetailsOptionArgumentEditors();
         updateBlockDetailsHelpForCurrentFocus();
         refreshBlockDetailsApplyState();
     });
@@ -3308,6 +3432,12 @@ void TextEditorTab::clearBlockDetailsPane()
         blockDetailsOptionsTable_->setEnabled(false);
         blockDetailsOptionsTable_->setVisible(true);
     }
+    if (blockDetailsOptionArgsLabel_ != nullptr) {
+        blockDetailsOptionArgsLabel_->setVisible(false);
+    }
+    if (blockDetailsOptionArgsPanel_ != nullptr) {
+        blockDetailsOptionArgsPanel_->setVisible(false);
+    }
     if (blockDetailsAddOptionButton_ != nullptr) {
         blockDetailsAddOptionButton_->setEnabled(false);
         blockDetailsAddOptionButton_->setVisible(true);
@@ -3326,6 +3456,7 @@ void TextEditorTab::clearBlockDetailsPane()
     if (blockDetailsHelpBrowser_ != nullptr) {
         blockDetailsHelpBrowser_->setHtml(tr("<p>Select a block parameter to see contextual help.</p>"));
     }
+    refreshBlockDetailsOptionArgumentEditors();
     blockDetailsPopulating_ = false;
 }
 
@@ -3403,6 +3534,12 @@ void TextEditorTab::showBlockDetailsForToolboxCommand(const QString &commandToke
         blockDetailsRemoveOptionButton_->setEnabled(false);
         blockDetailsRemoveOptionButton_->setVisible(false);
     }
+    if (blockDetailsOptionArgsLabel_ != nullptr) {
+        blockDetailsOptionArgsLabel_->setVisible(false);
+    }
+    if (blockDetailsOptionArgsPanel_ != nullptr) {
+        blockDetailsOptionArgsPanel_->setVisible(false);
+    }
     if (blockDetailsLegacyConfigureButton_ != nullptr) {
         blockDetailsLegacyConfigureButton_->setVisible(false);
         blockDetailsLegacyConfigureButton_->setEnabled(false);
@@ -3414,6 +3551,7 @@ void TextEditorTab::showBlockDetailsForToolboxCommand(const QString &commandToke
         const TherionHelpEntry entry = helpEntries_.value(normalizedCommand);
         blockDetailsHelpBrowser_->setHtml(renderHelpSummaryHtml(normalizedCommand, entry));
     }
+    refreshBlockDetailsOptionArgumentEditors();
     blockDetailsPopulating_ = false;
 }
 
@@ -3609,10 +3747,17 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
             blockDetailsLegacyConfigureButton_->setEnabled(false);
             blockDetailsLegacyConfigureButton_->setVisible(false);
         }
+        if (blockDetailsOptionArgsLabel_ != nullptr) {
+            blockDetailsOptionArgsLabel_->setVisible(false);
+        }
+        if (blockDetailsOptionArgsPanel_ != nullptr) {
+            blockDetailsOptionArgsPanel_->setVisible(false);
+        }
         if (blockDetailsApplyButton_ != nullptr) {
             blockDetailsApplyButton_->setEnabled(false);
         }
         blockDetailsPopulating_ = false;
+        refreshBlockDetailsOptionArgumentEditors();
         updateBlockDetailsHelpForCurrentFocus();
         refreshBlockDetailsApplyState();
         return true;
@@ -3649,6 +3794,12 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
         blockDetailsOptionsTable_->setEnabled(false);
         blockDetailsOptionsTable_->setRowCount(0);
         blockDetailsOptionsTable_->setVisible(false);
+    }
+    if (blockDetailsOptionArgsLabel_ != nullptr) {
+        blockDetailsOptionArgsLabel_->setVisible(false);
+    }
+    if (blockDetailsOptionArgsPanel_ != nullptr) {
+        blockDetailsOptionArgsPanel_->setVisible(false);
     }
     if (blockDetailsAddOptionButton_ != nullptr) {
         blockDetailsAddOptionButton_->setEnabled(false);
@@ -3726,9 +3877,22 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
                         break;
                     }
                 }
+                const QStringList rawOptionValues =
+                    parsedLine.tokens.mid(index + 1, nextOptionIndex - index - 1);
+                QString optionDisplayValue = rawOptionValues.join(QLatin1Char(' '));
+                const int fixedArity = commandOptionFixedArityByKey_.value(
+                    commandOptionValueKey(normalizedKind, token.toLower().trimmed()), -1);
+                if (fixedArity > 1 && !rawOptionValues.isEmpty()) {
+                    QStringList serializedValues;
+                    serializedValues.reserve(rawOptionValues.size());
+                    for (const QString &rawOptionValue : rawOptionValues) {
+                        serializedValues.append(serializeTherionArgumentToken(rawOptionValue));
+                    }
+                    optionDisplayValue = serializedValues.join(QLatin1Char(' '));
+                }
                 optionEntries.append(OptionEntry{
                     token,
-                    parsedLine.tokens.mid(index + 1, nextOptionIndex - index - 1).join(QLatin1Char(' ')),
+                    optionDisplayValue,
                 });
                 index = nextOptionIndex;
                 continue;
@@ -3785,7 +3949,7 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
         }
         if (blockDetailsRemoveOptionButton_ != nullptr) {
             blockDetailsRemoveOptionButton_->setVisible(showOptionsSection);
-            blockDetailsRemoveOptionButton_->setEnabled(showOptionsSection);
+            blockDetailsRemoveOptionButton_->setEnabled(showOptionsSection && !optionEntries.isEmpty());
         }
     } else if (simpleValueMode) {
         const TherionHelpEntry helpEntry = helpEntries_.value(normalizedKind);
@@ -3897,9 +4061,197 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
     }
 
     blockDetailsPopulating_ = false;
+    refreshBlockDetailsOptionArgumentEditors();
     updateBlockDetailsHelpForCurrentFocus();
     refreshBlockDetailsApplyState();
     return true;
+}
+
+void TextEditorTab::refreshBlockDetailsOptionArgumentEditors()
+{
+    if (blockDetailsOptionArgsLabel_ == nullptr
+        || blockDetailsOptionArgsPanel_ == nullptr
+        || blockDetailsOptionArgsFormLayout_ == nullptr
+        || blockDetailsOptionsTable_ == nullptr) {
+        return;
+    }
+
+    auto clearEditors = [this]() {
+        blockDetailsOptionArgsSyncing_ = true;
+        blockDetailsOptionArgEditors_.clear();
+        while (blockDetailsOptionArgsFormLayout_->rowCount() > 0) {
+            QFormLayout::TakeRowResult row = blockDetailsOptionArgsFormLayout_->takeRow(0);
+            if (row.labelItem != nullptr) {
+                if (QWidget *widget = row.labelItem->widget(); widget != nullptr) {
+                    widget->deleteLater();
+                }
+                delete row.labelItem;
+            }
+            if (row.fieldItem != nullptr) {
+                if (QWidget *widget = row.fieldItem->widget(); widget != nullptr) {
+                    widget->deleteLater();
+                }
+                delete row.fieldItem;
+            }
+        }
+        blockDetailsOptionArgsSyncing_ = false;
+    };
+
+    const bool supportedMode = blockDetailsMode_ == BlockDetailsMode::StructuredOptions
+        && blockDetailsOptionsTable_->isVisible()
+        && blockDetailsOptionsTable_->isEnabled();
+    if (!supportedMode) {
+        clearEditors();
+        blockDetailsOptionArgsLabel_->setVisible(false);
+        blockDetailsOptionArgsPanel_->setVisible(false);
+        return;
+    }
+
+    auto updateOptionValueCellEditability = [this]() {
+        if (blockDetailsOptionsTable_ == nullptr) {
+            return;
+        }
+        QSignalBlocker tableSignalBlocker(blockDetailsOptionsTable_);
+        const QString commandToken = normalizeDirective(blockDetailsSelectedKind_);
+        const QString multiValueToolTip
+            = tr("Use Selected Option Parameters below to edit this multi-value option.");
+        for (int optionRow = 0; optionRow < blockDetailsOptionsTable_->rowCount(); ++optionRow) {
+            QTableWidgetItem *valueItem = blockDetailsOptionsTable_->item(optionRow, 1);
+            if (valueItem == nullptr) {
+                valueItem = new QTableWidgetItem(QString());
+                blockDetailsOptionsTable_->setItem(optionRow, 1, valueItem);
+            }
+            const QString optionToken = (blockDetailsOptionsTable_->item(optionRow, 0) != nullptr
+                                             ? blockDetailsOptionsTable_->item(optionRow, 0)->text()
+                                             : QString())
+                                            .trimmed()
+                                            .toLower();
+            const int fixedArity = commandOptionFixedArityByKey_.value(
+                commandOptionValueKey(commandToken, optionToken), -1);
+            Qt::ItemFlags flags = valueItem->flags();
+            if (fixedArity > 1) {
+                flags &= ~Qt::ItemIsEditable;
+                if (valueItem->toolTip() != multiValueToolTip) {
+                    valueItem->setToolTip(multiValueToolTip);
+                }
+            } else {
+                flags |= Qt::ItemIsEditable;
+                if (!valueItem->toolTip().isEmpty()) {
+                    valueItem->setToolTip(QString());
+                }
+            }
+            if (valueItem->flags() != flags) {
+                valueItem->setFlags(flags);
+            }
+        }
+    };
+
+    updateOptionValueCellEditability();
+
+    const int row = blockDetailsOptionsTable_->currentRow();
+    if (row < 0 || row >= blockDetailsOptionsTable_->rowCount()) {
+        clearEditors();
+        blockDetailsOptionArgsLabel_->setVisible(false);
+        blockDetailsOptionArgsPanel_->setVisible(false);
+        return;
+    }
+
+    const QString commandToken = normalizeDirective(blockDetailsSelectedKind_);
+    const QString optionToken = (blockDetailsOptionsTable_->item(row, 0) != nullptr
+                                     ? blockDetailsOptionsTable_->item(row, 0)->text()
+                                     : QString())
+                                    .trimmed()
+                                    .toLower();
+    if (optionToken.isEmpty()) {
+        clearEditors();
+        blockDetailsOptionArgsLabel_->setVisible(false);
+        blockDetailsOptionArgsPanel_->setVisible(false);
+        return;
+    }
+
+    const QString optionKey = commandOptionValueKey(commandToken, optionToken);
+    const int fixedArity = commandOptionFixedArityByKey_.value(optionKey, -1);
+    if (fixedArity <= 1) {
+        clearEditors();
+        blockDetailsOptionArgsLabel_->setVisible(false);
+        blockDetailsOptionArgsPanel_->setVisible(false);
+        return;
+    }
+
+    QStringList argumentLabels = commandOptionArgumentLabelsByKey_.value(optionKey);
+    while (argumentLabels.size() < fixedArity) {
+        argumentLabels.append(tr("Value %1").arg(argumentLabels.size() + 1));
+    }
+    if (argumentLabels.size() > fixedArity) {
+        argumentLabels = argumentLabels.mid(0, fixedArity);
+    }
+
+    QStringList valueTokens;
+    const QString valueText = (blockDetailsOptionsTable_->item(row, 1) != nullptr
+                                   ? blockDetailsOptionsTable_->item(row, 1)->text()
+                                   : QString())
+                                  .trimmed();
+    if (!valueText.isEmpty()) {
+        valueTokens = TherionDocumentParser::tokenizeLine(valueText);
+        if (valueTokens.isEmpty()) {
+            valueTokens.append(valueText);
+        }
+    }
+
+    clearEditors();
+    blockDetailsOptionArgsSyncing_ = true;
+    for (int index = 0; index < fixedArity; ++index) {
+        auto *edit = new QLineEdit(blockDetailsOptionArgsPanel_);
+        edit->setPlaceholderText(tr("required"));
+        edit->setText(index < valueTokens.size() ? valueTokens.at(index) : QString());
+        blockDetailsOptionArgsFormLayout_->addRow(argumentLabels.at(index), edit);
+        blockDetailsOptionArgEditors_.append(edit);
+
+        connect(edit, &QLineEdit::textChanged, this, [this, optionKey, row](const QString &) {
+            if (blockDetailsOptionArgsSyncing_
+                || blockDetailsOptionsTable_ == nullptr
+                || row < 0
+                || row >= blockDetailsOptionsTable_->rowCount()) {
+                return;
+            }
+
+            const QString selectedOptionToken = (blockDetailsOptionsTable_->item(row, 0) != nullptr
+                                                     ? blockDetailsOptionsTable_->item(row, 0)->text()
+                                                     : QString())
+                                                    .trimmed()
+                                                    .toLower();
+            if (commandOptionValueKey(normalizeDirective(blockDetailsSelectedKind_), selectedOptionToken) != optionKey) {
+                return;
+            }
+
+            QStringList serializedValues;
+            serializedValues.reserve(blockDetailsOptionArgEditors_.size());
+            for (QLineEdit *valueEdit : blockDetailsOptionArgEditors_) {
+                const QString rawValue = valueEdit != nullptr ? valueEdit->text().trimmed() : QString();
+                serializedValues.append(serializeTherionArgumentToken(rawValue));
+            }
+
+            QSignalBlocker blocker(blockDetailsOptionsTable_);
+            blockDetailsOptionArgsSyncing_ = true;
+            QTableWidgetItem *valueItem = blockDetailsOptionsTable_->item(row, 1);
+            if (valueItem == nullptr) {
+                valueItem = new QTableWidgetItem;
+                blockDetailsOptionsTable_->setItem(row, 1, valueItem);
+            }
+            valueItem->setText(serializedValues.join(QLatin1Char(' ')));
+            blockDetailsOptionArgsSyncing_ = false;
+
+            refreshBlockDetailsApplyState();
+            updateBlockDetailsHelpForCurrentFocus();
+        });
+        connect(edit, &QLineEdit::selectionChanged, this, [this]() {
+            updateBlockDetailsHelpForCurrentFocus();
+        });
+    }
+    blockDetailsOptionArgsSyncing_ = false;
+
+    blockDetailsOptionArgsLabel_->setVisible(true);
+    blockDetailsOptionArgsPanel_->setVisible(true);
 }
 
 void TextEditorTab::updateBlockDetailsHelpForCurrentFocus()
@@ -4129,9 +4481,8 @@ bool TextEditorTab::buildUpdatedLineFromBlockDetails(QString *updatedLine, QStri
 
                 const QString normalizedKey = key.toLower();
                 const QString arity = commandOptionValueArityTokens_.value(commandOptionValueKey(commandToken, normalizedKey));
-                const bool arityRequiresValue = arity == QStringLiteral("EXACTLY_ONE")
-                    || arity == QStringLiteral("ONE_OR_MORE");
-                const bool arityForbidsValue = arity == QStringLiteral("NONE");
+                const bool arityRequiresValue = optionArityRequiresValue(arity);
+                const bool arityForbidsValue = optionArityForbidsValue(arity);
                 if (arityRequiresValue && value.isEmpty()) {
                     if (validationError != nullptr) {
                         *validationError = tr("Option `%1` requires a value.").arg(key);
@@ -4145,13 +4496,59 @@ bool TextEditorTab::buildUpdatedLineFromBlockDetails(QString *updatedLine, QStri
                     return false;
                 }
 
+                const QString optionKey = commandOptionValueKey(commandToken, normalizedKey);
+                const int fixedArity = commandOptionFixedArityByKey_.value(optionKey, -1);
+                const QStringList providedValues = parseOptionValuesFromEditor(value, arity, fixedArity);
+                if (fixedArity >= 0) {
+                    if (providedValues.size() != fixedArity) {
+                        if (blockDetailsOptionsTable_ != nullptr
+                            && row >= 0
+                            && row < blockDetailsOptionsTable_->rowCount()) {
+                            blockDetailsOptionsTable_->setCurrentCell(row, 0);
+                        }
+                        if (validationError != nullptr) {
+                            const QStringList argumentLabels = commandOptionArgumentLabelsByKey_.value(optionKey);
+                            if (!argumentLabels.isEmpty()) {
+                                *validationError = tr("Option `%1` requires exactly %2 value(s): %3.")
+                                                       .arg(key)
+                                                       .arg(fixedArity)
+                                                       .arg(argumentLabels.join(QStringLiteral(", ")));
+                            } else {
+                                *validationError = tr("Option `%1` requires exactly %2 value(s).")
+                                                       .arg(key)
+                                                       .arg(fixedArity);
+                            }
+                        }
+                        return false;
+                    }
+                } else if (canonicalOptionArityToken(arity) == QStringLiteral("EXACTLY_ONE")
+                           && !providedValues.isEmpty()
+                           && providedValues.size() != 1) {
+                    if (blockDetailsOptionsTable_ != nullptr
+                        && row >= 0
+                        && row < blockDetailsOptionsTable_->rowCount()) {
+                        blockDetailsOptionsTable_->setCurrentCell(row, 0);
+                    }
+                    if (validationError != nullptr) {
+                        *validationError = tr("Option `%1` requires exactly one value.").arg(key);
+                    }
+                    return false;
+                } else if (canonicalOptionArityToken(arity) == QStringLiteral("ONE_OR_MORE")
+                           && providedValues.isEmpty()) {
+                    if (blockDetailsOptionsTable_ != nullptr
+                        && row >= 0
+                        && row < blockDetailsOptionsTable_->rowCount()) {
+                        blockDetailsOptionsTable_->setCurrentCell(row, 0);
+                    }
+                    if (validationError != nullptr) {
+                        *validationError = tr("Option `%1` requires at least one value.").arg(key);
+                    }
+                    return false;
+                }
+
                 const QStringList allowedValues =
                     commandOptionValueTokens_.value(commandOptionValueKey(commandToken, normalizedKey));
                 if (!allowedValues.isEmpty() && !value.isEmpty()) {
-                    QStringList providedValues = TherionDocumentParser::tokenizeLine(value);
-                    if (providedValues.isEmpty()) {
-                        providedValues.append(value);
-                    }
                     for (const QString &providedValue : providedValues) {
                         if (allowedValues.contains(providedValue, Qt::CaseInsensitive)) {
                             continue;
@@ -4166,8 +4563,13 @@ bool TextEditorTab::buildUpdatedLineFromBlockDetails(QString *updatedLine, QStri
                 }
 
                 serializedOptions.append(key);
-                if (!value.isEmpty()) {
-                    serializedOptions.append(value);
+                if (!providedValues.isEmpty()) {
+                    QStringList serializedValues;
+                    serializedValues.reserve(providedValues.size());
+                    for (const QString &providedValue : providedValues) {
+                        serializedValues.append(serializeTherionArgumentToken(providedValue.trimmed()));
+                    }
+                    serializedOptions.append(serializedValues.join(QLatin1Char(' ')));
                 }
             }
         }
@@ -5183,9 +5585,22 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
                         break;
                     }
                 }
+                const QStringList rawOptionValues =
+                    commandParsedLine.tokens.mid(index + 1, nextOptionIndex - index - 1);
+                QString optionDisplayValue = rawOptionValues.join(QLatin1Char(' '));
+                const int fixedArity = commandOptionFixedArityByKey_.value(
+                    commandOptionValueKey(commandName, token.toLower().trimmed()), -1);
+                if (fixedArity > 1 && !rawOptionValues.isEmpty()) {
+                    QStringList serializedValues;
+                    serializedValues.reserve(rawOptionValues.size());
+                    for (const QString &rawOptionValue : rawOptionValues) {
+                        serializedValues.append(serializeTherionArgumentToken(rawOptionValue));
+                    }
+                    optionDisplayValue = serializedValues.join(QLatin1Char(' '));
+                }
                 optionEntries.append(OptionEntry{
                     token,
-                    commandParsedLine.tokens.mid(index + 1, nextOptionIndex - index - 1).join(QLatin1Char(' ')),
+                    optionDisplayValue,
                 });
                 index = nextOptionIndex;
                 continue;
@@ -5221,13 +5636,13 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
         }
         layout->addLayout(formLayout);
 
-        auto *optionsLabel = new QLabel(tr("Options (key/value pairs)"), &dialog);
+        auto *optionsLabel = new QLabel(tr("Options"), &dialog);
         layout->addWidget(optionsLabel);
 
         auto *optionsActionsLayout = new QHBoxLayout;
         optionsActionsLayout->setContentsMargins(0, 0, 0, 0);
         optionsActionsLayout->setSpacing(6);
-        auto *addOptionButton = new QPushButton(tr("Add Option"), &dialog);
+        auto *addOptionButton = new QPushButton(tr("Add New Option"), &dialog);
         auto *removeOptionButton = new QPushButton(tr("Remove Option"), &dialog);
         addOptionButton->setAutoDefault(false);
         removeOptionButton->setAutoDefault(false);
@@ -5433,9 +5848,8 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
             }
             const QString normalizedKey = key.toLower();
             const QString arity = commandOptionValueArityTokens_.value(commandOptionValueKey(commandName, normalizedKey));
-            const bool arityRequiresValue = arity == QStringLiteral("EXACTLY_ONE")
-                || arity == QStringLiteral("ONE_OR_MORE");
-            const bool arityForbidsValue = arity == QStringLiteral("NONE");
+            const bool arityRequiresValue = optionArityRequiresValue(arity);
+            const bool arityForbidsValue = optionArityForbidsValue(arity);
             if (arityRequiresValue && value.isEmpty()) {
                 QMessageBox::warning(this,
                                      tr("Configure Block"),
@@ -5452,9 +5866,48 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
                                          .arg(row + 1));
                 return;
             }
+            const QString optionKey = commandOptionValueKey(commandName, normalizedKey);
+            const int fixedArity = commandOptionFixedArityByKey_.value(optionKey, -1);
+            const QStringList providedValues = parseOptionValuesFromEditor(value, arity, fixedArity);
+            if (fixedArity >= 0 && providedValues.size() != fixedArity) {
+                QString detail = tr("Option `%1` in row %2 requires exactly %3 value(s).")
+                                     .arg(key)
+                                     .arg(row + 1)
+                                     .arg(fixedArity);
+                const QStringList labels = commandOptionArgumentLabelsByKey_.value(optionKey);
+                if (!labels.isEmpty()) {
+                    detail += QStringLiteral(" ") + tr("Parameters: %1.").arg(labels.join(QStringLiteral(", ")));
+                }
+                QMessageBox::warning(this, tr("Configure Block"), detail);
+                return;
+            }
+            if (canonicalOptionArityToken(arity) == QStringLiteral("EXACTLY_ONE")
+                && !providedValues.isEmpty()
+                && providedValues.size() != 1) {
+                QMessageBox::warning(this,
+                                     tr("Configure Block"),
+                                     tr("Option `%1` in row %2 requires exactly one value.")
+                                         .arg(key)
+                                         .arg(row + 1));
+                return;
+            }
+            if (canonicalOptionArityToken(arity) == QStringLiteral("ONE_OR_MORE")
+                && providedValues.isEmpty()) {
+                QMessageBox::warning(this,
+                                     tr("Configure Block"),
+                                     tr("Option `%1` in row %2 requires at least one value.")
+                                         .arg(key)
+                                         .arg(row + 1));
+                return;
+            }
             serializedOptions.append(key);
-            if (!value.isEmpty()) {
-                serializedOptions.append(value);
+            if (!providedValues.isEmpty()) {
+                QStringList serializedValues;
+                serializedValues.reserve(providedValues.size());
+                for (const QString &providedValue : providedValues) {
+                    serializedValues.append(serializeTherionArgumentToken(providedValue.trimmed()));
+                }
+                serializedOptions.append(serializedValues.join(QLatin1Char(' ')));
             }
         }
 
@@ -6466,6 +6919,8 @@ void TextEditorTab::loadHelpMetadata()
     commandArgumentValueTokens_.clear();
     commandOptionValueTokens_.clear();
     commandOptionValueArityTokens_.clear();
+    commandOptionArgumentLabelsByKey_.clear();
+    commandOptionFixedArityByKey_.clear();
     commandOptionHelpHtmlByKey_.clear();
     commandTypeValueTokens_.clear();
     commandSubtypeByTypeTokens_.clear();
@@ -6554,16 +7009,37 @@ void TextEditorTab::loadHelpMetadataFromCommandCatalog()
             const QString signature = optionObject.value(QStringLiteral("signature")).toString().trimmed();
             const QString description = optionObject.value(QStringLiteral("description")).toString().trimmed();
             const QString optionKey = optionObject.value(QStringLiteral("option_key")).toString().trimmed();
-            const QString valueArity = optionObject.value(QStringLiteral("value_arity")).toString().trimmed().toUpper();
+            const QString valueArity = canonicalOptionArityToken(
+                optionObject.value(QStringLiteral("value_arity")).toString());
             const QString optionLine = description.isEmpty() ? signature : QStringLiteral("%1 = %2").arg(signature, description);
             appendUnique(entry.options, optionLine);
             const QStringList normalizedOptionKeys = extractOptionKeys(optionKey);
+            const QStringList optionArgumentLabels = optionArgumentLabelsFromSignature(signature);
+            const bool signatureHasEllipsis = signature.contains(QStringLiteral("..."));
+            int fixedArity = -1;
+            if (valueArity == QStringLiteral("NONE")) {
+                fixedArity = 0;
+            } else if (valueArity == QStringLiteral("EXACTLY_ONE")) {
+                fixedArity = 1;
+            } else if (valueArity == QStringLiteral("ONE_OR_MORE")
+                       && !signatureHasEllipsis
+                       && optionArgumentLabels.size() >= 2) {
+                fixedArity = optionArgumentLabels.size();
+            }
             QStringList normalizedOptionValues;
             for (const QString &normalizedOptionKey : normalizedOptionKeys) {
                 appendUnique(entry.relatedKeywords, normalizedOptionKey);
                 appendUnique(commandOptionTokens_[commandName], normalizedOptionKey);
                 if (!valueArity.isEmpty()) {
                     commandOptionValueArityTokens_.insert(commandOptionValueKey(commandName, normalizedOptionKey), valueArity);
+                }
+                if (!optionArgumentLabels.isEmpty()) {
+                    commandOptionArgumentLabelsByKey_.insert(commandOptionValueKey(commandName, normalizedOptionKey),
+                                                             optionArgumentLabels);
+                }
+                if (fixedArity >= 0) {
+                    commandOptionFixedArityByKey_.insert(commandOptionValueKey(commandName, normalizedOptionKey),
+                                                         fixedArity);
                 }
                 registerCompletionToken(normalizedOptionKey);
             }
@@ -6716,6 +7192,14 @@ void TextEditorTab::loadHelpMetadataFromCommandCatalog()
                 const QString valueArity = commandOptionValueArityTokens_.value(key);
                 if (!valueArity.isEmpty()) {
                     commandOptionValueArityTokens_.insert(aliasKey, valueArity);
+                }
+                const QStringList optionArgumentLabels = commandOptionArgumentLabelsByKey_.value(key);
+                if (!optionArgumentLabels.isEmpty()) {
+                    commandOptionArgumentLabelsByKey_.insert(aliasKey, optionArgumentLabels);
+                }
+                const int fixedArity = commandOptionFixedArityByKey_.value(key, -1);
+                if (fixedArity >= 0) {
+                    commandOptionFixedArityByKey_.insert(aliasKey, fixedArity);
                 }
                 const QString optionHelpHtml = commandOptionHelpHtmlByKey_.value(commandOptionHelpKey(commandName, optionKey));
                 if (!optionHelpHtml.isEmpty()) {
@@ -7434,8 +7918,10 @@ QStringList TextEditorTab::buildCompletionSuggestionsForCursor(const QString &pr
                             && !(cursorInsideToken && currentToken.trimmed().startsWith(QLatin1Char('-')));
                         if (cursorWithinValueRange) {
                             const int valueOrdinal = tokenIndexAtCursor - optionIndex;
-                            const bool multiValueOption = arity == QStringLiteral("N");
-                            const bool singleValueOption = arity == QStringLiteral("1");
+                            const QString normalizedArity = canonicalOptionArityToken(arity);
+                            const bool multiValueOption = normalizedArity == QStringLiteral("ONE_OR_MORE")
+                                || normalizedArity == QStringLiteral("ZERO_OR_MORE");
+                            const bool singleValueOption = normalizedArity == QStringLiteral("EXACTLY_ONE");
                             if (multiValueOption || (singleValueOption && valueOrdinal == 1)) {
                                 activeValueContext.active = true;
                                 activeValueContext.optionToken = optionToken;
@@ -7508,7 +7994,7 @@ QStringList TextEditorTab::buildCompletionSuggestionsForCursor(const QString &pr
                 candidates = commandOptionValueTokens_.value(commandOptionValueKey(command, valueOptionToken));
             }
 
-            if (activeValueContext.arity == QStringLiteral("N")
+            if (canonicalOptionArityToken(activeValueContext.arity) == QStringLiteral("ONE_OR_MORE")
                 && activeValueContext.optionIndex >= 0
                 && !candidates.isEmpty()) {
                 QSet<QString> usedValues;
@@ -7894,7 +8380,7 @@ QString TextEditorTab::validationHelpHtmlForCursor(QString *tooltipText, QString
             .trimmed()
             .toUpper();
         const int valueOrdinal = tokenIndexAtCursor - optionIndex;
-        if (arity == QStringLiteral("1") && valueOrdinal != 1) {
+        if (canonicalOptionArityToken(arity) == QStringLiteral("EXACTLY_ONE") && valueOrdinal != 1) {
             return QString();
         }
 

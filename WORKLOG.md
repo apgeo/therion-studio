@@ -10,13 +10,13 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 
 - Phase 6: encoding detection/conversion and encoding-preserving save semantics.
 - Phase 10: interactive map drawing/insertion workflow implementation (first slice active).
-- Phase 11: text-editor structured block-canvas authoring PoC.
+- Phase 11: text-editor structured block-canvas authoring.
 
 ### Next up
 
 - Start Phase 9 map-editor parity polish and interaction refinement.
 - Continue Phase 10 interactive map drawing/insertion workflow (smart trace and mode-aware undo polish).
-- Continue Phase 11 structured block-canvas authoring PoC (richer block configuration, safer insertion guards, and broader directive coverage).
+- Continue Phase 11 structured block-canvas authoring (richer block configuration, safer insertion guards, and broader directive coverage).
 - Map editor selection behavior polish: in `Select` mode, clicking an area border should select the referenced `line`; clicking inside area fill should select the `area` object.
 - Files sidebar refresh fix: after delete (file/folder via context menu), refresh the tree/model view immediately so removed items disappear without manual re-open/refresh.
 - Continue implementation work; defer Phase 6 manual verification pass.
@@ -210,6 +210,16 @@ Legend:
 - ~~Improved `data` table ergonomics: visible table width/columns now auto-size from active `data ...` fields, and pressing Enter in the last column creates/advances to a new row at first column for faster entry flow.~~
 - ~~Added generic editable non-tabular directive rows in `data` block dialog: users can add/remove/edit rows such as `extend ...` without raw-mode switch and without command-specific hardcoded buttons.~~
 - ~~Added drag-based block reorder in `Blocks` mode canvas: dragging a card now reorders source lines, supports whole-span container moves (including nested lines), and supports drop-into-compatible-container behavior.~~
+- ~~Implemented multi-parameter option editing in Block Details for structured-option commands: catalog option metadata now drives fixed-arity parameter forms (`Selected Option Parameters`), exact-arity validation, and safe Therion token serialization for multi-value options such as `survey -person-rename \"old\" \"new\"`.~~
+- ~~Fixed structured-option value parsing for single-value options with spaces (for example `-title`): Block Details now treats the full value cell as one logical value for `EXACTLY_ONE`/fixed-1 options, while still tokenizing true multi-value options such as `-person-rename`. Also clarified action intent by renaming `Add Option` to `Add New Option`.~~
+- ~~Simplified option-section label wording in Block Details and legacy configure dialog from `Options (key/value pairs)` to `Options` to reduce UI noise.~~
+- ~~Moved option row actions into the `Options` header as compact `+` / `-` controls in Block Details and removed them from the footer action row; `-` is now selection-aware (disabled when no option row is selected).~~
+- ~~Fixed structured-options UX bug for multi-parameter options (`-person-rename` etc.): fixed-arity `>1` option value cells in the options table are now read-only and must be edited via `Selected Option Parameters`; validation errors now focus the offending option row automatically.~~
+- ~~Fixed false arity errors on `Apply` after editing `Selected Option Parameters`: structured-options loader now preserves multi-value token boundaries when populating options table (re-serializes fixed-arity `>1` values with Therion-safe quoting), so revalidation no longer mis-splits names containing spaces.~~
+- ~~Fixed `Blocks`-mode crash when selecting `survey` (and other structured-option blocks): `refreshBlockDetailsOptionArgumentEditors()` now blocks options-table signals while toggling per-row editability/tooltips, preventing recursive `itemChanged -> refresh -> setFlags` stack overflows.~~
+- ~~Updated `QtReimplementationSpecification.md` structured-block requirements to explicitly mandate catalog-driven fixed multi-value option arity handling in Block Details (one field per required value label), exact-arity validation before apply, and token-boundary-preserving serialization for spaced values.~~
+- ~~Added missing Phase 11 spec alignment for implemented Blocks UX behavior: toolbox scope filter requirements (`Auto` default + selected-block-derived context + persistent manual scope), hidden editable Block Details when no canvas block is selected, and command-level contextual help focus retention while editing options.~~
+- ~~Promoted Blocks terminology from PoC/experimental to standard structured block-canvas wording in active docs: updated spec section heading/requirements, user manual mode labels, and current worklog Phase 11 focus wording.~~
 - Planned focus:
 - Expand configurable block coverage (including additional centerline command families and richer command parameters).
 - Improve insertion anchoring rules and validation feedback for complex nested source structures.

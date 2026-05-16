@@ -1,6 +1,6 @@
 # Therion Studio User Manual
 
-Last updated: 2026-05-15
+Last updated: 2026-05-16
 
 This manual describes the currently implemented behavior.
 Update this file whenever UI layout, workflows, keyboard shortcuts, or settings behavior changes.
@@ -144,7 +144,7 @@ Text editor includes:
 - command keyword highlighting is augmented from the generated Therion command catalog (`resources/therion_command_catalog.json`)
 - left gutter with 1-based line numbers that scroll with the document
 - active-line highlight that follows the text cursor (including map-driven source navigation)
-- editor mode toggle: `Raw` and experimental `Blocks` (currently available for `.th` files only)
+- editor mode toggle: `Raw` and `Blocks` (currently available for `.th` files only)
 - find/replace bar with `Whole word` and `Case sensitive` options
 - completion popup is shown while typing (commands/options/values), sourced from command catalog metadata; `Ctrl+Space` remains available as manual trigger
 - when completion popup is visible, confirm a suggestion with `Enter`, `Tab`, or mouse click; `Esc` closes the popup
@@ -171,7 +171,7 @@ Text editor includes:
 - directive aliases such as `encoding cp1250` are supported via codec-name normalization (`cpNNNN` -> `windows-NNNN` candidate), and `encoding latin2` is normalized to an `iso-8859-2` candidate path
 - unsupported `encoding ...` directive tokens fall back to normal encoding detection/decode order instead of failing the file open
 
-`Blocks` mode (experimental PoC):
+`Blocks` mode:
 
 - left toolbox provides draggable Therion command entries grouped by context
 - `encoding` is not offered in toolbox (it is managed as a fixed document-root directive)
@@ -212,9 +212,12 @@ Text editor includes:
 - `ID` field (`required` for `survey/map/scrap`, `optional` for `centerline`)
 - option key/value table
 - options section is shown only when the command supports options (or when option tokens already exist on that source line)
-- option list actions (`Add Option`, `Remove Option`) are placed in the bottom action row directly beneath the options table, together with `Apply`, to keep edit/commit actions in one stable area
-- `Add Option` appends an empty option row (no forced default), so custom options can still be entered
+- option list actions are inline with the `Options` section header as compact `+` and `-` controls (scope is explicit to the options table)
+- `+` appends an empty option row (no forced default), so custom options can still be entered
+- `-` removes the currently selected option row and is disabled when no option row is selected
+- for fixed multi-parameter options, the table `Value` cell is read-only and editing is done via `Selected Option Parameters` fields (prevents ambiguous token splitting)
 - option/value cells support inline completion from catalog metadata while remaining editable as free text
+- when an option has fixed multi-value arity from catalog metadata (for example `-person-rename`), Block Details shows a `Selected Option Parameters` subform with one field per parameter and validates exact parameter count on `Apply`
 - when catalog defines enum-like allowed values for an option, invalid values are rejected by Block Details validation (`Apply` stays disabled and inline status explains the issue)
 - every editable block exposes an always-visible optional inline `Comment` field for end-of-line comments (`... # comment`)
 - block cards show a comment badge when inline comment exists; hover shows comment text tooltip

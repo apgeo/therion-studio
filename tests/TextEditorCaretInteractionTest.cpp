@@ -297,13 +297,33 @@ int main(int argc, char *argv[])
     auto *secondaryLabel = tab.findChild<QLabel *>(QStringLiteral("blockDetailsSecondaryLabel"));
     auto *optionsLabel = tab.findChild<QLabel *>(QStringLiteral("blockDetailsOptionsLabel"));
     auto *optionsTable = tab.findChild<QTableWidget *>(QStringLiteral("blockDetailsOptionsTable"));
-    auto *addOptionButton = findButtonByText(&tab, QStringLiteral("Add Option"));
+    auto *addOptionButton = tab.findChild<QPushButton *>(QStringLiteral("blockDetailsAddOptionButton"));
     auto *applyButton = tab.findChild<QPushButton *>(QStringLiteral("blockDetailsApplyButton"));
-    if (!expect(primaryEdit != nullptr && secondaryEdit != nullptr && commentEdit != nullptr
-                    && primaryLabel != nullptr && secondaryLabel != nullptr
-                    && optionsLabel != nullptr && optionsTable != nullptr
-                    && addOptionButton != nullptr && applyButton != nullptr,
-                "Failed to find block details controls.")) {
+    if (!expect(primaryEdit != nullptr, "Failed to find blockDetailsPrimaryEdit.")) {
+        return 1;
+    }
+    if (!expect(secondaryEdit != nullptr, "Failed to find blockDetailsSecondaryEdit.")) {
+        return 1;
+    }
+    if (!expect(commentEdit != nullptr, "Failed to find blockDetailsCommentEdit.")) {
+        return 1;
+    }
+    if (!expect(primaryLabel != nullptr, "Failed to find blockDetailsPrimaryLabel.")) {
+        return 1;
+    }
+    if (!expect(secondaryLabel != nullptr, "Failed to find blockDetailsSecondaryLabel.")) {
+        return 1;
+    }
+    if (!expect(optionsLabel != nullptr, "Failed to find blockDetailsOptionsLabel.")) {
+        return 1;
+    }
+    if (!expect(optionsTable != nullptr, "Failed to find blockDetailsOptionsTable.")) {
+        return 1;
+    }
+    if (!expect(addOptionButton != nullptr, "Failed to find blockDetails add option button.")) {
+        return 1;
+    }
+    if (!expect(applyButton != nullptr, "Failed to find blockDetailsApplyButton.")) {
         return 1;
     }
 
@@ -399,12 +419,12 @@ int main(int argc, char *argv[])
     addOptionButton->click();
     pumpEvents();
     if (!expect(optionsTable->rowCount() == surveyOptionRowCount + 1,
-                "Add Option should append a new option row.")) {
+                "Add-option header button should append a new option row.")) {
         return 1;
     }
     QTableWidgetItem *newOptionItem = optionsTable->item(optionsTable->rowCount() - 1, 0);
     if (!expect(newOptionItem != nullptr && newOptionItem->text().trimmed().isEmpty(),
-                "Add Option should keep new option key empty (no prepopulated placeholder).")) {
+                "Add-option header button should keep new option key empty (no prepopulated placeholder).")) {
         return 1;
     }
     optionsTable->removeRow(optionsTable->rowCount() - 1);

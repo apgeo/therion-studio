@@ -73,23 +73,28 @@ Required capabilities:
 - provide an editor-surface mode switch between raw text editing and a structured block-canvas view for supported Therion source files
 - keep raw text as the canonical source of truth; any structured-view mutation shall be applied through source edits with immediate source synchronization
 
-Structured block-canvas PoC requirements:
+Structured block-canvas requirements:
 
-- the structured mode shall be explicitly marked as experimental and shall be optional per file type
+- the structured mode shall be available for supported file types and shall remain optional per file type
 - initial scope shall support `.th` documents
 - the structured mode shall expose a toolbox of compatible Therion block/command templates that can be inserted via drag and drop into the canvas
+- the structured-mode toolbox shall provide a scope filter with `Auto` as default; `Auto` shall derive insertion scope from the currently selected canvas block context and manual scope selection shall persist until changed by the user.
 - the structured-mode toolbox shall include a first-class `comment` insertion item that inserts full-line comments in source
 - the structured mode shall render parsed structure cards in source order with parent-child nesting for supported directives
 - in structured mode for `.th` documents, `encoding` shall be treated as a fixed document-root directive: exactly one `encoding ...` line shall exist at line 1, it shall be auto-inserted when missing based on the detected document encoding, it shall not be insertable from toolbox, and its card shall not be movable or deletable
 - Block Details for editable blocks shall expose an always-visible optional inline comment field that maps to end-of-line Therion comments and preserves comments on line rewrites.
 - structured block cards should visually indicate presence of inline comment and expose the comment text on hover.
 - selecting or configuring a structure card shall mutate the underlying source text through the same safe-edit pipeline used by raw mode
+- when no canvas block is selected, the editable Block Details section shall be hidden and the third column shall show toolbox-command contextual preview only.
+- in Blocks mode, contextual help focus shall stay at command/parameter level while editing options; selecting an option row shall not permanently replace command-level help with option-only help.
 - dragging a structure card in the canvas should reorder the corresponding source block; for container directives, reordering shall move the full block span including nested lines
 - centerline-oriented configuration flows should support quick insertion of common child commands (for example `team`, `explo-date`, and starter `data` definitions) without requiring manual raw-text typing
 - data-block configuration should separate header editing and row editing: Block Details edits the `data ...` header (`style` + `readings order`), while the row editor dialog focuses on body rows/directives using the active header as schema
 - data-block header editing in the Block Details pane should expose separate `style` and `readings order` fields and shall serialize them back as `data <style> <readings order>`
 - Block Details option editing should provide catalog-backed suggestions for option keys/values while remaining free-form to allow unknown but valid Therion options.
 - when catalog metadata defines explicit allowed values for an option, Block Details validation shall reject values outside that set before apply.
+- when catalog metadata defines fixed option value arity greater than one, Block Details shall present one parameter field per required value label and shall enforce exact value count validation before apply.
+- when a fixed-arity option is edited through parameter fields, serialization shall preserve Therion token boundaries (including quoting of values containing spaces) so round-tripped options remain arity-correct.
 - data-block configuration should render measurement rows in a table derived from the active `data ...` field definition so row editing follows the declared column schema
 - data-block row editor should not duplicate a second editable header/column-definition input; it should use the currently active `data ...` header as the single source of row-column schema
 - data-block row editor should expose a trailing `Comment` column for every row (measurement or directive) so inline row comments are first-class editable data

@@ -4,12 +4,15 @@
 
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QColor>
 #include <QDesktopServices>
 #include <QDir>
+#include <QEvent>
 #include <QFile>
 #include <QFileSystemModel>
 #include <QFileInfo>
 #include <QFrame>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QInputDialog>
 #include <QItemSelectionModel>
@@ -25,11 +28,13 @@
 #include <QStyle>
 #include <QStyledItemDelegate>
 #include <QStyleOptionViewItem>
+#include <QSvgRenderer>
 #include <QTimer>
 #include <QToolButton>
 #include <QTreeView>
 #include <QUrl>
 #include <QVBoxLayout>
+#include <functional>
 
 namespace
 {
@@ -123,6 +128,34 @@ private:
     mutable QIcon therionFileIcon_;
 };
 
+class PaletteEventFilter final : public QObject
+{
+public:
+    explicit PaletteEventFilter(std::function<void()> callback, QObject *parent = nullptr)
+        : QObject(parent)
+        , callback_(std::move(callback))
+    {
+    }
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        if (watched == qApp
+            && event != nullptr
+            && (event->type() == QEvent::ApplicationPaletteChange
+                || event->type() == QEvent::PaletteChange
+                || event->type() == QEvent::StyleChange)) {
+            if (callback_) {
+                callback_();
+            }
+        }
+        return QObject::eventFilter(watched, event);
+    }
+
+private:
+    std::function<void()> callback_;
+};
+
 bool isTherionProjectFilePath(const QString &filePath)
 {
     const QFileInfo info(filePath);
@@ -181,6 +214,47 @@ int sidebarAutoSnapThreshold(int railWidth)
 {
     // Keep a small-but-usable content width below which the sidebar snaps to rail.
     return qMax(240, railWidth + 180);
+}
+
+QString rgbaColorCss(const QColor &color, qreal alpha)
+{
+    const qreal clampedAlpha = std::clamp(alpha, 0.0, 1.0);
+    return QStringLiteral("rgba(%1, %2, %3, %4)")
+        .arg(color.red())
+        .arg(color.green())
+        .arg(color.blue())
+        .arg(clampedAlpha, 0, 'f', 3);
+}
+
+QPixmap renderLucidePixmap(const QString &iconName, const QColor &color, int extent)
+{
+    QFile file(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+
+    QByteArray svg = file.readAll();
+    svg.replace("currentColor", color.name(QColor::HexRgb).toUtf8());
+
+    QSvgRenderer renderer(svg);
+    if (!renderer.isValid()) {
+        return {};
+    }
+
+    QPixmap pixmap(extent, extent);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    renderer.render(&painter, QRectF(0.0, 0.0, extent, extent));
+    return pixmap;
+}
+
+QIcon themedLucideIcon(const QString &iconName, const QPalette &palette, int extent)
+{
+    QIcon icon;
+    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::ButtonText), extent), QIcon::Normal);
+    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::Disabled, QPalette::ButtonText), extent), QIcon::Disabled);
+    return icon;
 }
 
 void prepareSidebarContentPane(QWidget *contentWidget)
@@ -645,17 +719,30 @@ void MainWindow::buildStructureSidebar()
     auto *activityBar = new QFrame;
     sidebarContainer_ = activityBar;
     activityBar->setObjectName(QStringLiteral("SidebarActivityRail"));
-    activityBar->setFrameShape(QFrame::StyledPanel);
+    activityBar->setFrameShape(QFrame::NoFrame);
     activityBar->setFixedWidth(sidebarRailWidth_);
     activityBar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
     auto *activityLayout = new QVBoxLayout(activityBar);
-    activityLayout->setContentsMargins(6, 8, 6, 8);
-    activityLayout->setSpacing(6);
+    activityLayout->setContentsMargins(6, 10, 6, 10);
+    activityLayout->setSpacing(7);
 
-    const QIcon filesIcon = style()->standardIcon(QStyle::SP_DirIcon);
-    const QIcon structureIcon = style()->standardIcon(QStyle::SP_FileDialogDetailedView);
-    const QIcon mapIcon = style()->standardIcon(QStyle::SP_FileIcon);
-    const QIcon consoleIcon = style()->standardIcon(QStyle::SP_ComputerIcon);
+    const QString filesIconName = QStringLiteral("folder-open");
+    const QString structureIconName = QStringLiteral("network");
+    const QString mapIconName = QStringLiteral("map");
+    const QString consoleIconName = QStringLiteral("cog");
+    const QSize activityIconSize(20, 20);
+    const QSize activityButtonSize(34, 34);
+    const auto configureActivityButton = [&](QToolButton *button, const QString &iconName, const QString &toolTip) {
+        if (button == nullptr) {
+            return;
+        }
+        button->setToolTip(toolTip);
+        button->setIconSize(activityIconSize);
+        button->setFixedSize(activityButtonSize);
+        button->setAutoRaise(true);
+        button->setCheckable(true);
+        button->setFocusPolicy(Qt::NoFocus);
+    };
     const auto isSidebarEffectivelyCollapsed = [this]() -> bool {
         if (sidebarCollapsed_) {
             return true;
@@ -693,40 +780,94 @@ void MainWindow::buildStructureSidebar()
     };
 
     sidebarFilesButton_ = new QToolButton(activityBar);
-    sidebarFilesButton_->setIcon(filesIcon);
-    sidebarFilesButton_->setToolTip(tr("Files"));
-    sidebarFilesButton_->setCheckable(true);
+    configureActivityButton(sidebarFilesButton_, filesIconName, tr("Files"));
     connect(sidebarFilesButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
         handleActivityButtonClick(SidebarPane::FileBrowser);
     });
     activityLayout->addWidget(sidebarFilesButton_);
 
     sidebarStructureButton_ = new QToolButton(activityBar);
-    sidebarStructureButton_->setIcon(structureIcon);
-    sidebarStructureButton_->setToolTip(tr("Structure"));
-    sidebarStructureButton_->setCheckable(true);
+    configureActivityButton(sidebarStructureButton_, structureIconName, tr("Structure"));
     connect(sidebarStructureButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
         handleActivityButtonClick(SidebarPane::StructureBrowser);
     });
     activityLayout->addWidget(sidebarStructureButton_);
 
     sidebarMapButton_ = new QToolButton(activityBar);
-    sidebarMapButton_->setIcon(mapIcon);
-    sidebarMapButton_->setToolTip(tr("Map"));
-    sidebarMapButton_->setCheckable(true);
+    configureActivityButton(sidebarMapButton_, mapIconName, tr("Map"));
     connect(sidebarMapButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
         handleActivityButtonClick(SidebarPane::MapEditor);
     });
     activityLayout->addWidget(sidebarMapButton_);
 
     sidebarConsoleButton_ = new QToolButton(activityBar);
-    sidebarConsoleButton_->setIcon(consoleIcon);
-    sidebarConsoleButton_->setToolTip(tr("Console"));
-    sidebarConsoleButton_->setCheckable(true);
+    configureActivityButton(sidebarConsoleButton_, consoleIconName, tr("Compiler"));
     connect(sidebarConsoleButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
         handleActivityButtonClick(SidebarPane::Console);
     });
     activityLayout->addWidget(sidebarConsoleButton_);
+
+    const auto applyActivityRailTheme = [activityBar,
+                                         filesButton = sidebarFilesButton_,
+                                         structureButton = sidebarStructureButton_,
+                                         mapButton = sidebarMapButton_,
+                                         compilerButton = sidebarConsoleButton_,
+                                         filesIconName,
+                                         structureIconName,
+                                         mapIconName,
+                                         consoleIconName,
+                                         activityIconSize]() {
+        if (activityBar == nullptr) {
+            return;
+        }
+
+        const QPalette palette = activityBar->palette();
+        const QColor railBase = palette.color(QPalette::Window);
+        const QColor railBorder = palette.color(QPalette::Mid);
+        const QColor railHover = palette.color(QPalette::Highlight);
+        const QColor railChecked = palette.color(QPalette::Highlight);
+        activityBar->setStyleSheet(QStringLiteral(
+                                       "#SidebarActivityRail {"
+                                       "background-color: %1;"
+                                       "border-right: 1px solid %2;"
+                                       "}"
+                                       "#SidebarActivityRail QToolButton {"
+                                       "border: none;"
+                                       "background: transparent;"
+                                       "border-radius: 9px;"
+                                       "padding: 0px;"
+                                       "}"
+                                       "#SidebarActivityRail QToolButton:hover {"
+                                       "background-color: %3;"
+                                       "}"
+                                       "#SidebarActivityRail QToolButton:checked {"
+                                       "background-color: %4;"
+                                       "}")
+                                       .arg(rgbaColorCss(railBase, 0.78))
+                                       .arg(rgbaColorCss(railBorder, 0.55))
+                                       .arg(rgbaColorCss(railHover, 0.24))
+                                       .arg(rgbaColorCss(railChecked, 0.34)));
+
+        const int extent = activityIconSize.width();
+        if (filesButton != nullptr) {
+            filesButton->setIcon(themedLucideIcon(filesIconName, palette, extent));
+        }
+        if (structureButton != nullptr) {
+            structureButton->setIcon(themedLucideIcon(structureIconName, palette, extent));
+        }
+        if (mapButton != nullptr) {
+            mapButton->setIcon(themedLucideIcon(mapIconName, palette, extent));
+        }
+        if (compilerButton != nullptr) {
+            compilerButton->setIcon(themedLucideIcon(consoleIconName, palette, extent));
+        }
+    };
+    applyActivityRailTheme();
+    if (qApp != nullptr) {
+        auto *paletteEventFilter = new PaletteEventFilter(applyActivityRailTheme, activityBar);
+        qApp->installEventFilter(paletteEventFilter);
+    }
+
     activityLayout->addStretch(1);
 
     // Keep the activity rail width driven by icon/button metrics to avoid extra blank gutter.

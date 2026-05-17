@@ -512,8 +512,8 @@ void MainWindow::buildMenus()
         }
         restoreSidebarWidth();
     });
-    QAction *showConsolePaneAction = viewMenu->addAction(tr("Show Console"));
-    showConsolePaneAction->setStatusTip(tr("Switch the sidebar to the console pane"));
+    QAction *showConsolePaneAction = viewMenu->addAction(tr("Show Compiler"));
+    showConsolePaneAction->setStatusTip(tr("Switch the sidebar to the compiler pane"));
     connect(showConsolePaneAction, &QAction::triggered, this, [this]() {
         if (sidebarContainer_ != nullptr) {
             sidebarContainer_->setVisible(true);

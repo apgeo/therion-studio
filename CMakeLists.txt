@@ -59,11 +59,16 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/therion_syntax_palette.json
     resources/icons/lucide/LICENSE
     resources/icons/lucide/check.svg
+    resources/icons/lucide/cog.svg
     resources/icons/lucide/external-link.svg
+    resources/icons/lucide/folder-open.svg
     resources/icons/lucide/hand.svg
     resources/icons/lucide/image.svg
     resources/icons/lucide/map-pin.svg
+    resources/icons/lucide/locate-fixed.svg
+    resources/icons/lucide/map.svg
     resources/icons/lucide/mouse-pointer-2.svg
+    resources/icons/lucide/network.svg
     resources/icons/lucide/pencil-line.svg
     resources/icons/lucide/pentagon.svg
     resources/icons/lucide/puzzle.svg

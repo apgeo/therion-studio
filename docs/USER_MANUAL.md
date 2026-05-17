@@ -31,7 +31,7 @@ The sidebar has an always-visible activity rail with 4 panes:
 - `Files`
 - `Structure`
 - `Map`
-- `Console`
+- `Compiler`
 
 Behavior:
 
@@ -40,6 +40,7 @@ Behavior:
 - Clicking any icon while collapsed expands sidebar and opens that pane.
 - Dragging the sidebar content resize handle below the minimum usable width snaps the content pane closed while keeping the activity rail fixed and visible.
 - `Map` pane is enabled only when the active tab is a `.th2` document.
+- Activity-rail buttons use larger borderless icon buttons with hover/active highlight states tuned for both light and dark appearances.
 
 ### 2.2 Central Tabs
 
@@ -75,7 +76,7 @@ If no documents are open, a Welcome tab is shown.
 ### 3.4 View Menu
 
 - `Show Sidebar`
-- `Show Console` (switches sidebar to Console pane)
+- `Show Compiler` (switches sidebar to Compiler pane)
 
 ### 3.5 Help Menu
 
@@ -401,9 +402,9 @@ Persistence:
 - layer stack, visibility, position, opacity, gamma are persisted per document in session settings.
 - map editor also attempts to load layers from XTherion metadata in source text.
 
-### 5.8 Run Therion (Console Pane)
+### 5.8 Run Therion (Compiler Pane)
 
-Console pane fields:
+Compiler pane fields:
 
 - `Executable`
 - `Working Directory`
@@ -424,7 +425,7 @@ Behavior:
 
 - parallel runs are rejected while process is active
 - if config is auto-detected and no explicit `-c/--config` is provided, working directory may auto-switch to config file directory
-- output streams to console pane
+- output streams to compiler pane
 
 ## 6. Settings and Session Persistence
 

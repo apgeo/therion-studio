@@ -714,3 +714,11 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Expanded `TherionDocumentEditorTest` rewrite coverage for mixed `%` comments, CRLF preservation, quoted numeric noise, and option-heavy multi-line line/area vertex blocks.~~
 - ~~Verified `TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, and `TherionXviParserTest` after rewrite-coverage expansion.~~
 - ~~Verified `cmake --build build --target TherionStudio TherionDocumentEditorTest` plus current regression binaries (`TherionDocumentEditorTest`, `TherionProjectStructureIndexTest`, `MapBackgroundPlacementTest`, `TherionBackgroundMetadataTest`, `TherionXviParserTest`).~~
+
+### 2026-05-17
+
+- ~~Updated the left sidebar activity-rail icons to Lucide assets: `Files -> folder-open`, `Structure -> network`, `Map -> map`, and `Console/Compiler -> cog`.~~
+- ~~Renamed the sidebar rail/menu-facing `Console` pane label to `Compiler` (`Show Compiler` view action, rail tooltip, and user-manual terminology updates).~~
+- ~~Refined sidebar activity-rail visuals for dark mode: switched to borderless/flat icon buttons, increased icon/button size for readability, and added palette-aware hover/active highlights with a subtler rail surface.~~
+- ~~Made sidebar activity-rail Lucide icons palette-aware by rendering SVG `currentColor` with Qt palette text colors, so icons respect dark/light theme contrast instead of appearing black in dark mode.~~
+- ~~Added runtime palette-change handling for activity-rail theming so icon tint and rail hover/active/background colors refresh immediately when the app theme changes.~~

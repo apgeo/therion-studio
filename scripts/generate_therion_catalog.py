@@ -35,6 +35,24 @@ CONTEXT_ORDER = [
     "layout",
     "lookup",
 ]
+PROCESSING_DATA_TOP_LEVEL_DIRECTIVES = {
+    "cs",
+    "export",
+    "language",
+    "layout",
+    "log",
+    "lookup",
+    "maps",
+    "maps-offset",
+    "select",
+    "setup3d",
+    "sketch-colors",
+    "sketch-warp",
+    "source",
+    "system",
+    "text",
+    "unselect",
+}
 CENTERLINE_INLINE_COMMAND_NAMES = {
     "date",
     "explo-date",
@@ -559,6 +577,7 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
         command_name = normalize_whitespace(match.group(1))
         if "xtherion" in command_name.lower():
             continue
+        command_directive = normalize_directive_token(command_name)
 
         start = match.start()
         end = matches[index + 1].start() if index + 1 < len(matches) else len(tex_text)
@@ -569,6 +588,8 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
         option_blocks = extract_block(section_text, "options")
         comopt_blocks = extract_block(section_text, "comopt")
         contexts = extract_contexts(section_text)
+        if not contexts and command_directive in PROCESSING_DATA_TOP_LEVEL_DIRECTIVES:
+            contexts = ["none"]
         description = extract_section_description(section_text)
 
         arguments = []
@@ -582,7 +603,6 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
             comopt_items.extend(parse_item_block(block))
 
         normalized_command_name = command_name.strip().lower()
-        command_directive = normalize_directive_token(command_name)
         if normalized_command_name not in {"centreline", "centerline"}:
             options.extend(comopt_items)
         deduped_options = []

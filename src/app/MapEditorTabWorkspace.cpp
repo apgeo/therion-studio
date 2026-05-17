@@ -1,5 +1,6 @@
 #include "MapEditorTab.h"
 
+#include <QApplication>
 #include <QGuiApplication>
 #include <QFileInfo>
 #include <QFrame>
@@ -69,6 +70,9 @@ MapEditorTab::MapEditorTab(QWidget *parent)
         connect(styleHints, &QStyleHints::colorSchemeChanged, this, [this](Qt::ColorScheme) {
             handleApplicationAppearanceChanged();
         });
+    }
+    if (qApp != nullptr) {
+        qApp->installEventFilter(this);
     }
     handleApplicationAppearanceChanged();
 }

@@ -80,6 +80,8 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         import_contexts = self.commands_by_name["import"].get("contexts", [])
         self.assertIn("all", import_contexts)
         self.assertIn("survey", import_contexts)
+        self.assertEqual(self.commands_by_name["select"].get("contexts", []), ["none"])
+        self.assertEqual(self.commands_by_name["export"].get("contexts", []), ["none"])
 
     def test_context_values_use_known_enums(self) -> None:
         allowed = {

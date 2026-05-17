@@ -81,6 +81,8 @@ Structured block-canvas requirements:
 - the structured-mode toolbox shall provide a scope filter with `Auto` as default; `Auto` shall derive insertion scope from the currently selected canvas block context and manual scope selection shall persist until changed by the user.
 - the structured-mode toolbox shall include a first-class `comment` insertion item that inserts full-line comments in source
 - the structured mode shall render parsed structure cards in source order with parent-child nesting for supported directives
+- in `.thconfig` structured mode, top-level configuration directives such as `select`, `export`, and `unselect` shall be rendered as leaf cards at document root when present in source.
+- directives that support both inline and block forms (for example `source`) shall open nested scope only in explicit block form; inline single-line form shall remain a leaf card.
 - in structured mode for `.th` and `.thconfig` documents, `encoding` shall be treated as a fixed document-root directive: exactly one `encoding ...` line shall exist at line 1, it shall be auto-inserted when missing based on the detected document encoding, it shall not be insertable from toolbox, and its card shall not be movable or deletable
 - Block Details for editable blocks shall expose an always-visible optional inline comment field that maps to end-of-line Therion comments and preserves comments on line rewrites.
 - structured block cards should visually indicate presence of inline comment and expose the comment text on hover.

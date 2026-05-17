@@ -192,6 +192,8 @@ Text editor includes:
 - encoding card is sticky (not movable) and has no delete action
 - all non-`encoding` cards are visually indented one level to reinforce `encoding` as document root
 - right canvas also renders catalog-recognized leaf directives in-scope (for example `input`), not only the previously hardcoded centerline leaf pair
+- `.thconfig` root-level directives like `select`, `export`, and `unselect` are rendered as top-level cards in Blocks mode
+- `source` is context-sensitive in Blocks mode: `source file.th` stays a leaf card, while explicit `source` ... `endsource` is rendered as a container block
 - right `Block Details` pane edits parameters of the selected block directly (no modal dialog for supported block kinds)
 - blocks view uses a 3-column horizontal splitter (`Toolbox | Canvas | Block Details`), so `Block Details` can be resized wider for multi-column option/value editing
 - dragging a toolbox item to the canvas inserts source templates at compatible positions

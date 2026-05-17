@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generated_at_utc": "2026-05-16T18:07:01.947346+00:00",
+    "generated_at_utc": "2026-05-17T00:58:28.913691+00:00",
     "generator_version": "2",
     "source_repository": "snapshot-copy",
     "source_reference": "snapshot-copy",
@@ -401,10 +401,14 @@
       "syntax": [
         "* |cs <coordinate system>|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "leaf"
@@ -791,7 +795,9 @@
       "syntax": [
         "* |export <type> [OPTIONS]|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [
         {
           "raw": "|<type>| = The following export types are supported: |model| = 3D model of the cave |map| = one page 2D map |atlas| = 2D atlas in more pages |cave-list| = summary table of caves |survey-list| = summary table of surveys |continuation-list| = list of possible continuations |database| = SQL database with centreline",
@@ -1174,7 +1180,9 @@
           "dependencies": []
         }
       ],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "leaf"
@@ -1692,10 +1700,14 @@
       "syntax": [
         "* |language <xx_[YY]>|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "leaf"
@@ -1712,7 +1724,9 @@
       "syntax": [
         "|layout <id> [OPTIONS] copy <source layout id> cs <coordinate system> north <true/grid> scale <picture length> <real length> base-scale <picture length> <real length> units <metric/imperial> rotate <number> symbol-set <symbol-set> symbol-assign <point/line/area/group/special> <symbol-type> \\ <symbol-set> symbol-hide <point/line/area/group/special> <symbol-type> symbol-show <point/line/area/group/special> <symbol-type> symbol-colour <point/line/area/group/special> <symbol-type> <colour> min-symbol-scale <scale> fonts-setup <tinysize> <smallsize> <normalsize> <largesize> <hugesize> size <width> <height> <units> overlap <value> <units> page-setup <dimensions> <units> page-numbers <on/off> exclude-pages <on/off> <list> title-pages <on/off> nav-factor <factor> nav-size <x-size> <y-size> transparency <on/off> opacity <value> surface <top/bottom/off> surface-opacity <value> sketches <on/off> layers <on/off> grid <off/top/bottom> grid-origin <x> <y> <z> <units> grid-size <x> <y> <z> <units> grid-coords <off/border/all> origin <x> <y> <z> <units> origin-label <x-label> <y-label> own-pages <number> page-grid <on/off> legend <on/off/all> legend-columns <number> legend-width <n> <units> colour-legend <smooth/discrete/off/on> map-comment <string> map-header <x> <y> <off/n/s/e/w/ne/nw/se/sw/center> map-header-bg <on/off> map-image <x> <y> <n/s/e/w/ne/nw/se/sw/center> <filename> statistics <explo/topo/carto/copyright all/off/number> <explo/topo-length on/hide/off> <carto/copyright-count on/hide/off> scale-bar <length> <units> survey-level <N/all> language <xx[_YY]> colo[u]r-model <cmyk/rgb/grayscale> colo[u]r <item> <colour> smooth-shading <off/quick> debug <on/all/first/second/scrap-names/station-names/off> geospatial <on/off> doc-author <string> doc-keywords <string> doc-subject <string> doc-title <string> code <metapost/tex-map/tex-atlas> endcode endlayout|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [],
       "options": [
         {
@@ -2537,7 +2551,9 @@
           "dependencies": []
         }
       ],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "container_open",
@@ -3026,10 +3042,14 @@
       "syntax": [
         "|log extend|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "leaf"
@@ -3046,7 +3066,9 @@
       "syntax": [
         "|lookup <type>[:<index>] [-title \"custom title text\"] <parameter(s)> [colour] [\"text in legend\"] ... endlookup|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [
         {
           "raw": "|<type>| = May be |altitude|, |explo-date|, |topo-date|, |map| or |scrap|.",
@@ -3105,7 +3127,9 @@
         }
       ],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "container_open",
@@ -3262,10 +3286,14 @@
       "syntax": [
         "|maps <on/off>|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "leaf"
@@ -3282,10 +3310,14 @@
       "syntax": [
         "|maps-offset <on/off>|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "leaf"
@@ -4021,7 +4053,9 @@
       "syntax": [
         "|select <object> [OPTIONS]|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [
         {
           "raw": "|<object>| = any survey or map, identified by its ID.",
@@ -4080,6 +4114,7 @@
         }
       ],
       "dependencies": [
+        "context: none",
         "valid only when a survey is selected. If set on (by default) all subsurveys of the given survey are recursively selected/unselected.",
         "valid only when a map is selected. Determines the level at which map expansion for atlas export is stopped. By default 0 is used; if `basic' is specified, expansion is done up to the basic maps. {\\it Note:} Map previews are displayed only as specified in maps in the current |map-level|.",
         "valid only when a map is selected. Determines the level at which chapter expansion for atlas export is stopped. By default 0 is used, if `|-|' or `|.|' is specified, no chapter is exported for this map. If |title-pages| option in |layout| is on, each chapter starts with a title page."
@@ -4100,10 +4135,14 @@
       "syntax": [
         "* |setup3d <value>|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "leaf"
@@ -4120,10 +4159,14 @@
       "syntax": [
         "* |sketch-colors <number-of-colors>|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "leaf"
@@ -4140,10 +4183,14 @@
       "syntax": [
         "* |sketch-warp <algorithm>|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "leaf"
@@ -4160,7 +4207,9 @@
       "syntax": [
         "|source <file-name>| or |source| therion commands |endsource|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [
         {
           "raw": "|<file-name>|",
@@ -4175,7 +4224,9 @@
         }
       ],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "container_open",
@@ -4497,10 +4548,14 @@
       },
       "summary": "Allows to execute system commands during Therion compilation. (E.g. to open or refresh external PDF viewer.) Normally Therion waits until the subprocess is finished. If you want to continue compilation without break, use |<command> &| syntax on Linux and |start <command>| syntax on Windows.",
       "syntax": [],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "leaf"
@@ -4564,7 +4619,9 @@
       "syntax": [
         "|text <language ID> <therion text> <my text>|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [
         {
           "raw": "|<language ID>| = standard ISO language identifier (e.g. |en| or |en_GB|)",
@@ -4590,7 +4647,9 @@
         }
       ],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "leaf"
@@ -4665,10 +4724,14 @@
       "syntax": [
         "|unselect <object> [OPTIONS]|"
       ],
-      "contexts": [],
+      "contexts": [
+        "none"
+      ],
       "arguments": [],
       "options": [],
-      "dependencies": [],
+      "dependencies": [
+        "context: none"
+      ],
       "allowed_values": [],
       "block": {
         "role": "leaf"

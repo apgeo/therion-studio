@@ -1,5 +1,6 @@
 #include "MapEditorTab.h"
 
+#include <QApplication>
 #include <QFrame>
 #include <QEvent>
 #include <QCursor>
@@ -51,51 +52,63 @@ namespace TherionStudio
 {
 namespace
 {
+void syncPanelSurfaceToPalette(QWidget *panelWidget, const QPalette &sourcePalette);
+void syncTextBrowserPaletteToPalette(QWidget *browserWidget, const QPalette &sourcePalette);
+
 void syncPanelSurfaceToBaseTone(QWidget *panelWidget)
+{
+    syncPanelSurfaceToPalette(panelWidget, QApplication::palette(panelWidget));
+}
+
+void syncPanelSurfaceToPalette(QWidget *panelWidget, const QPalette &sourcePalette)
 {
     if (panelWidget == nullptr) {
         return;
     }
 
-    QPalette panelPalette = panelWidget->palette();
-    QColor surfaceColor = panelPalette.color(QPalette::Base);
+    QPalette panelPalette = sourcePalette;
+    QColor surfaceColor = sourcePalette.color(QPalette::Base);
     if (!surfaceColor.isValid()) {
-        surfaceColor = panelPalette.color(QPalette::Window);
+        surfaceColor = sourcePalette.color(QPalette::Window);
     }
     panelPalette.setColor(QPalette::Window, surfaceColor);
     panelPalette.setColor(QPalette::Base, surfaceColor);
     panelPalette.setColor(QPalette::AlternateBase, surfaceColor);
     panelWidget->setPalette(panelPalette);
     panelWidget->setAutoFillBackground(true);
+    panelWidget->setStyleSheet(QStringLiteral("background-color: %1; color: %2;")
+                                   .arg(surfaceColor.name(QColor::HexRgb),
+                                        panelPalette.color(QPalette::Text).name(QColor::HexRgb)));
 }
 
 void syncTextBrowserPaletteToParent(QWidget *browserWidget)
+{
+    QWidget *parent = browserWidget != nullptr ? browserWidget->parentWidget() : nullptr;
+    syncTextBrowserPaletteToPalette(browserWidget,
+                                    parent != nullptr ? parent->palette() : QApplication::palette(browserWidget));
+}
+
+void syncTextBrowserPaletteToPalette(QWidget *browserWidget, const QPalette &sourcePalette)
 {
     auto *browser = qobject_cast<QTextBrowser *>(browserWidget);
     if (browser == nullptr) {
         return;
     }
 
-    const QWidget *parent = browser->parentWidget();
-    if (parent == nullptr) {
-        return;
-    }
-
-    const QPalette parentPalette = parent->palette();
-    QColor surfaceColor = parentPalette.color(QPalette::Base);
+    QColor surfaceColor = sourcePalette.color(QPalette::Base);
     if (!surfaceColor.isValid()) {
-        surfaceColor = parentPalette.color(QPalette::Window);
+        surfaceColor = sourcePalette.color(QPalette::Window);
     }
-    QColor textColor = parentPalette.color(QPalette::Text);
+    QColor textColor = sourcePalette.color(QPalette::Text);
     if (!textColor.isValid()) {
-        textColor = parentPalette.color(QPalette::WindowText);
+        textColor = sourcePalette.color(QPalette::WindowText);
     }
-    QColor linkColor = parentPalette.color(QPalette::Link);
+    QColor linkColor = sourcePalette.color(QPalette::Link);
     if (!linkColor.isValid()) {
         linkColor = textColor;
     }
 
-    QPalette browserPalette = browser->palette();
+    QPalette browserPalette = sourcePalette;
     browserPalette.setColor(QPalette::Base, surfaceColor);
     browserPalette.setColor(QPalette::Window, surfaceColor);
     browserPalette.setColor(QPalette::AlternateBase, surfaceColor);
@@ -105,9 +118,19 @@ void syncTextBrowserPaletteToParent(QWidget *browserWidget)
     browserPalette.setColor(QPalette::Link, linkColor);
     browser->setPalette(browserPalette);
     browser->setAutoFillBackground(true);
+    browser->setStyleSheet(QStringLiteral(
+                                "QTextBrowser {"
+                                " background-color: %1;"
+                                " color: %2;"
+                                " border: none;"
+                                "}"
+                                "QTextBrowser:viewport {"
+                                " background-color: %1;"
+                                "}").arg(surfaceColor.name(QColor::HexRgb),
+                                          textColor.name(QColor::HexRgb)));
 
     if (QWidget *viewport = browser->viewport(); viewport != nullptr) {
-        QPalette viewportPalette = viewport->palette();
+        QPalette viewportPalette = sourcePalette;
         viewportPalette.setColor(QPalette::Base, surfaceColor);
         viewportPalette.setColor(QPalette::Window, surfaceColor);
         viewportPalette.setColor(QPalette::AlternateBase, surfaceColor);
@@ -117,6 +140,9 @@ void syncTextBrowserPaletteToParent(QWidget *browserWidget)
         viewportPalette.setColor(QPalette::Link, linkColor);
         viewport->setPalette(viewportPalette);
         viewport->setAutoFillBackground(true);
+        viewport->setStyleSheet(QStringLiteral("background-color: %1; color: %2;")
+                                     .arg(surfaceColor.name(QColor::HexRgb),
+                                          textColor.name(QColor::HexRgb)));
     }
 
     if (QTextDocument *document = browser->document(); document != nullptr) {
@@ -1144,6 +1170,19 @@ MapEditableGeometryVertexItem *findGeometryVertexItem(QGraphicsScene *scene,
 
 bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
 {
+    if (event != nullptr && watched == qApp) {
+        switch (event->type()) {
+        case QEvent::ApplicationPaletteChange:
+        case QEvent::PaletteChange:
+        case QEvent::StyleChange:
+            handleApplicationAppearanceChanged();
+            break;
+        default:
+            break;
+        }
+        return QWidget::eventFilter(watched, event);
+    }
+
     if (mapView_ == nullptr || event == nullptr) {
         return QWidget::eventFilter(watched, event);
     }
@@ -1727,8 +1766,9 @@ void MapEditorTab::handleApplicationAppearanceChanged()
         }
     }
 
-    syncPanelSurfaceToBaseTone(helpPanel_);
-    syncTextBrowserPaletteToParent(helpBrowser_);
+    const QPalette mapSurfacePalette = mapView_ != nullptr ? mapView_->palette() : palette();
+    syncPanelSurfaceToPalette(helpPanel_, mapSurfacePalette);
+    syncTextBrowserPaletteToPalette(helpBrowser_, mapSurfacePalette);
 
     if (mapScene_ != nullptr) {
         refreshMapScenePreservingUndoStack();

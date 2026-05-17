@@ -111,8 +111,8 @@ bool selectBlockByKind(QGraphicsView *view, QLabel *statusLabel, const QString &
         return false;
     }
 
-    const QVector<qreal> xCandidates = {36.0, 72.0, 108.0, 144.0};
-    for (int y = 8; y <= 560; y += 12) {
+    const QVector<qreal> xCandidates = {36.0, 72.0, 108.0, 144.0, 220.0, 320.0, 420.0, 520.0, 640.0};
+    for (int y = 8; y <= 1400; y += 12) {
         for (qreal x : xCandidates) {
             if (!selectBlockAtScenePoint(view, QPointF(x, y))) {
                 continue;
@@ -662,6 +662,112 @@ int main(int argc, char *argv[])
             guardPrimaryEdit->setText(QStringLiteral("discard-change"));
         }
         delete crashGuardTab;
+        pumpEvents();
+    }
+
+    const QString configPath = tempDir.path() + QStringLiteral("/thconfig");
+    QFile configFile(configPath);
+    if (!expect(configFile.open(QIODevice::WriteOnly | QIODevice::Text),
+                "Failed to create thconfig test file.")) {
+        return 1;
+    }
+    configFile.write("encoding utf-8\nsource index.th\nselect 1302.m@1302\nexport map -output _output/1302_plan.pdf -projection plan\n");
+    configFile.close();
+
+    {
+        auto *configTab = new TextEditorTab;
+        if (!expect(configTab->loadFile(configPath, &errorMessage),
+                    "Failed to load thconfig test file in TextEditorTab.")) {
+            std::cerr << errorMessage.toStdString() << '\n';
+            delete configTab;
+            return 1;
+        }
+        configTab->resize(960, 640);
+        configTab->show();
+        pumpEvents();
+
+        QPushButton *configBlocksButton = findButtonByText(configTab, QStringLiteral("Blocks"));
+        if (!expect(configBlocksButton != nullptr, "Failed to find Blocks mode button for thconfig tab.")) {
+            delete configTab;
+            return 1;
+        }
+        configBlocksButton->click();
+        pumpEvents();
+
+        auto *configView = configTab->findChild<QGraphicsView *>();
+        auto *configStatus = configTab->findChild<QLabel *>(QStringLiteral("blockDetailsStatusLabel"));
+        auto *configToolboxList = configTab->findChild<QListWidget *>();
+        QComboBox *configScopeCombo = nullptr;
+        const QList<QComboBox *> configCombos = configTab->findChildren<QComboBox *>();
+        for (QComboBox *combo : configCombos) {
+            if (combo == nullptr) {
+                continue;
+            }
+            bool hasAutoScope = false;
+            for (int row = 0; row < combo->count(); ++row) {
+                if (combo->itemData(row).toString() == QStringLiteral("__auto__")) {
+                    hasAutoScope = true;
+                    break;
+                }
+            }
+            if (hasAutoScope) {
+                configScopeCombo = combo;
+                break;
+            }
+        }
+        if (!expect(configView != nullptr, "Failed to find block canvas view for thconfig tab.")) {
+            delete configTab;
+            return 1;
+        }
+        if (!expect(configStatus != nullptr, "Failed to find block details status for thconfig tab.")) {
+            delete configTab;
+            return 1;
+        }
+        if (!expect(configToolboxList != nullptr, "Failed to find block toolbox list for thconfig tab.")) {
+            delete configTab;
+            return 1;
+        }
+        if (!expect(configScopeCombo != nullptr, "Failed to find scope combo for thconfig tab.")) {
+            delete configTab;
+            return 1;
+        }
+
+        if (!expect(findToolboxCommandItem(configToolboxList, QStringLiteral("select")) != nullptr,
+                    "Top-level toolbox commands for thconfig should include `select`.")) {
+            delete configTab;
+            return 1;
+        }
+        if (!expect(findToolboxCommandItem(configToolboxList, QStringLiteral("export")) != nullptr,
+                    "Top-level toolbox commands for thconfig should include `export`.")) {
+            delete configTab;
+            return 1;
+        }
+
+        if (!expect(selectBlockByKind(configView, configStatus, QStringLiteral("select")),
+                    "Blocks view should render top-level `select` command cards for thconfig files.")) {
+            delete configTab;
+            return 1;
+        }
+        if (!expect(selectBlockByKind(configView, configStatus, QStringLiteral("export")),
+                    "Blocks view should render top-level `export` command cards for thconfig files.")) {
+            delete configTab;
+            return 1;
+        }
+        if (!expect(selectBlockByKind(configView, configStatus, QStringLiteral("source")),
+                    "Blocks view should render `source` command card for thconfig files.")) {
+            delete configTab;
+            return 1;
+        }
+        configScopeCombo->setCurrentIndex(configScopeCombo->findData(QStringLiteral("__auto__")));
+        pumpEvents();
+        const QString autoScopeTooltip = configScopeCombo->toolTip().toLower();
+        if (!expect(autoScopeTooltip.contains(QStringLiteral("top-level")),
+                    "Inline `source file` should behave as leaf (Auto scope should resolve to top-level when selected).")) {
+            delete configTab;
+            return 1;
+        }
+
+        delete configTab;
         pumpEvents();
     }
 

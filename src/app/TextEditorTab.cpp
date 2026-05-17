@@ -50,6 +50,7 @@
 #include <QScopeGuard>
 #include <QStyledItemDelegate>
 #include <QStyle>
+#include <QStyleHints>
 #include <QStringListModel>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -82,7 +83,9 @@ constexpr int kBlocksSidePaneMaxWidth = 460;
 constexpr int kBlockEndHintContainerLineDataRole = 0x42554e44; // "BUND"
 QColor blockBaseColorForDirective(const QString &directive);
 void syncPanelSurfaceToBaseTone(QWidget *panelWidget);
+void syncPanelSurfaceToPalette(QWidget *panelWidget, const QPalette &sourcePalette);
 void syncTextBrowserSurfaceToParent(QWidget *browserWidget);
+void syncTextBrowserSurfaceToPalette(QWidget *browserWidget, const QPalette &sourcePalette);
 
 class HighlightPlainTextEdit;
 
@@ -1343,6 +1346,7 @@ public:
                     int lineNumber,
                     bool deletable = true,
                     bool movable = true,
+                    bool isContainerOpen = false,
                     QGraphicsItem *parent = nullptr)
         : QGraphicsObject(parent)
         , kind_(kind)
@@ -1351,6 +1355,7 @@ public:
         , lineNumber_(lineNumber)
         , deletable_(deletable)
         , movable_(movable)
+        , isContainerOpen_(isContainerOpen)
     {
         setFlag(QGraphicsItem::ItemIsSelectable, true);
         setFlag(QGraphicsItem::ItemIsMovable, movable_);
@@ -1393,6 +1398,11 @@ public:
     void setLineNumber(int lineNumber)
     {
         lineNumber_ = lineNumber;
+    }
+
+    bool isContainerOpen() const
+    {
+        return isContainerOpen_;
     }
 
 protected:
@@ -1544,6 +1554,7 @@ private:
     int lineNumber_ = 0;
     bool deletable_ = true;
     bool movable_ = true;
+    bool isContainerOpen_ = false;
     QPointF dragStartScenePos_;
     QPointF dragStartItemPos_;
     bool dragging_ = false;
@@ -1747,47 +1758,91 @@ QColor blockBaseColorForDirective(const QString &directive)
 
 void syncTextBrowserSurfaceToParent(QWidget *browserWidget)
 {
+    QWidget *parent = browserWidget != nullptr ? browserWidget->parentWidget() : nullptr;
+    syncTextBrowserSurfaceToPalette(browserWidget,
+                                    parent != nullptr ? parent->palette() : QApplication::palette(browserWidget));
+}
+
+void syncTextBrowserSurfaceToPalette(QWidget *browserWidget, const QPalette &sourcePalette)
+{
     auto *browser = qobject_cast<QTextBrowser *>(browserWidget);
     if (browser == nullptr) {
         return;
     }
 
-    const QWidget *parent = browser->parentWidget();
-    if (parent == nullptr) {
-        return;
-    }
-
-    QColor surfaceColor = parent->palette().color(QPalette::Base);
+    QColor surfaceColor = sourcePalette.color(QPalette::Base);
     if (!surfaceColor.isValid()) {
-        surfaceColor = parent->palette().color(QPalette::Window);
+        surfaceColor = sourcePalette.color(QPalette::Window);
     }
-    QPalette browserPalette = browser->palette();
+    QColor textColor = sourcePalette.color(QPalette::Text);
+    if (!textColor.isValid()) {
+        textColor = sourcePalette.color(QPalette::WindowText);
+    }
+    QColor linkColor = sourcePalette.color(QPalette::Link);
+    if (!linkColor.isValid()) {
+        linkColor = textColor;
+    }
+    QPalette browserPalette = sourcePalette;
     browserPalette.setColor(QPalette::Base, surfaceColor);
     browserPalette.setColor(QPalette::Window, surfaceColor);
     browserPalette.setColor(QPalette::AlternateBase, surfaceColor);
+    browserPalette.setColor(QPalette::Text, textColor);
+    browserPalette.setColor(QPalette::WindowText, textColor);
+    browserPalette.setColor(QPalette::ButtonText, textColor);
+    browserPalette.setColor(QPalette::Link, linkColor);
     browser->setPalette(browserPalette);
     browser->setAutoFillBackground(true);
+    browser->setStyleSheet(QStringLiteral(
+                                "QTextBrowser {"
+                                " background-color: %1;"
+                                " color: %2;"
+                                " border: none;"
+                                "}"
+                                "QTextBrowser:viewport {"
+                                " background-color: %1;"
+                                "}").arg(surfaceColor.name(QColor::HexRgb),
+                                          textColor.name(QColor::HexRgb)));
 
     if (QWidget *viewport = browser->viewport(); viewport != nullptr) {
-        QPalette viewportPalette = viewport->palette();
+        QPalette viewportPalette = sourcePalette;
         viewportPalette.setColor(QPalette::Base, surfaceColor);
         viewportPalette.setColor(QPalette::Window, surfaceColor);
         viewportPalette.setColor(QPalette::AlternateBase, surfaceColor);
+        viewportPalette.setColor(QPalette::Text, textColor);
+        viewportPalette.setColor(QPalette::WindowText, textColor);
+        viewportPalette.setColor(QPalette::ButtonText, textColor);
+        viewportPalette.setColor(QPalette::Link, linkColor);
         viewport->setPalette(viewportPalette);
         viewport->setAutoFillBackground(true);
+        viewport->setStyleSheet(QStringLiteral("background-color: %1; color: %2;")
+                                     .arg(surfaceColor.name(QColor::HexRgb),
+                                          textColor.name(QColor::HexRgb)));
+    }
+
+    if (QTextDocument *document = browser->document(); document != nullptr) {
+        document->setDefaultStyleSheet(
+            QStringLiteral("body { color: %1; background-color: %2; } a { color: %3; } code { color: %1; }")
+                .arg(textColor.name(QColor::HexRgb),
+                     surfaceColor.name(QColor::HexRgb),
+                     linkColor.name(QColor::HexRgb)));
     }
 }
 
 void syncPanelSurfaceToBaseTone(QWidget *panelWidget)
 {
+    syncPanelSurfaceToPalette(panelWidget, QApplication::palette(panelWidget));
+}
+
+void syncPanelSurfaceToPalette(QWidget *panelWidget, const QPalette &sourcePalette)
+{
     if (panelWidget == nullptr) {
         return;
     }
 
-    QPalette panelPalette = panelWidget->palette();
-    QColor surfaceColor = panelPalette.color(QPalette::Base);
+    QPalette panelPalette = sourcePalette;
+    QColor surfaceColor = sourcePalette.color(QPalette::Base);
     if (!surfaceColor.isValid()) {
-        surfaceColor = panelPalette.color(QPalette::Window);
+        surfaceColor = sourcePalette.color(QPalette::Window);
     }
 
     panelPalette.setColor(QPalette::Window, surfaceColor);
@@ -1795,6 +1850,9 @@ void syncPanelSurfaceToBaseTone(QWidget *panelWidget)
     panelPalette.setColor(QPalette::AlternateBase, surfaceColor);
     panelWidget->setPalette(panelPalette);
     panelWidget->setAutoFillBackground(true);
+    panelWidget->setStyleSheet(QStringLiteral("background-color: %1; color: %2;")
+                                   .arg(surfaceColor.name(QColor::HexRgb),
+                                        panelPalette.color(QPalette::Text).name(QColor::HexRgb)));
 }
 
 void resetCatalogBlockDirectiveMetadataToDefaults()
@@ -1840,6 +1898,22 @@ bool isContainerBlockDirective(const QString &directive)
 {
     const QString normalizedDirective = normalizeDirectiveToken(directive);
     return gBlockOpenToCloseMap.contains(normalizedDirective);
+}
+
+bool isContainerDirectiveInstance(const QString &directive, const TherionStudio::TherionParsedLine &parsedLine)
+{
+    const QString normalizedDirective = normalizeDirectiveToken(directive);
+    if (!gBlockOpenToCloseMap.contains(normalizedDirective)) {
+        return false;
+    }
+
+    // `source` supports both inline form (`source file.th`) and block form
+    // (`source` ... `endsource`). Only the block form opens a nested scope.
+    if (normalizedDirective == QStringLiteral("source") && parsedLine.tokens.size() > 1) {
+        return false;
+    }
+
+    return true;
 }
 
 bool isBlockClosingDirective(const QString &directive)
@@ -2476,6 +2550,16 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     refreshStatus();
     refreshCurrentLineHighlight();
     updateContextHelp();
+
+    if (QStyleHints *styleHints = QGuiApplication::styleHints()) {
+        connect(styleHints, &QStyleHints::colorSchemeChanged, this, [this](Qt::ColorScheme) {
+            handleApplicationAppearanceChanged();
+        });
+    }
+    if (qApp != nullptr) {
+        qApp->installEventFilter(this);
+    }
+    handleApplicationAppearanceChanged();
 }
 
 TextEditorTab::~TextEditorTab()
@@ -2513,12 +2597,15 @@ void TextEditorTab::handleApplicationAppearanceChanged()
         }
     }
 
-    syncPanelSurfaceToBaseTone(helpPanel_);
-    syncPanelSurfaceToBaseTone(blockDetailsPanel_);
-    syncPanelSurfaceToBaseTone(blockDetailsEditPanel_);
-    syncPanelSurfaceToBaseTone(blockDetailsHelpPanel_);
-    syncTextBrowserSurfaceToParent(helpBrowser_);
-    syncTextBrowserSurfaceToParent(blockDetailsHelpBrowser_);
+    const QPalette textSurfacePalette = editor_ != nullptr ? editor_->palette() : palette();
+    syncPanelSurfaceToPalette(helpPanel_, textSurfacePalette);
+    syncPanelSurfaceToPalette(blockDetailsPanel_, textSurfacePalette);
+    syncPanelSurfaceToPalette(blockDetailsEditPanel_, textSurfacePalette);
+    syncPanelSurfaceToPalette(blockDetailsHelpPanel_, textSurfacePalette);
+    syncTextBrowserSurfaceToPalette(helpBrowser_, textSurfacePalette);
+    syncTextBrowserSurfaceToPalette(blockDetailsHelpBrowser_, textSurfacePalette);
+    updateContextHelp();
+    updateBlockDetailsHelpForCurrentFocus();
 
     if (blocksModeActive_ && blockCanvasScene_ != nullptr) {
         rebuildBlocksCanvasFromText();
@@ -3480,7 +3567,7 @@ QString TextEditorTab::selectedBlockInsertionContextToken() const
 
     const QString selectedKind = normalizeDirective(selectedBlock->kind());
     const QString selectedContext = normalizeCompletionContext(selectedKind);
-    if (isContainerBlockDirective(selectedKind) && !selectedContext.isEmpty()) {
+    if (selectedBlock->isContainerOpen() && !selectedContext.isEmpty()) {
         return selectedContext;
     }
 
@@ -3509,7 +3596,7 @@ QString TextEditorTab::selectedBlockInsertionContextToken() const
             continue;
         }
 
-        if (isContainerBlockDirective(directive)) {
+        if (isContainerDirectiveInstance(directive, parsedLine)) {
             stack.append(directive);
         }
     }
@@ -3606,6 +3693,7 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
                                              parsedLine.lineNumber,
                                              true,
                                              true,
+                                             false,
                                              parentItem);
             item->onDelete = [this](int lineNumber) {
                 handleBlockDeleteRequest(lineNumber);
@@ -3673,12 +3761,14 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
         const QString name = blockDisplayName(parsedLine);
         const QString inlineComment = parsedLine.commentStart >= 0 ? parsedLine.commentText.trimmed() : QString();
         const bool encodingDirective = isEncodingDirective(directive);
+        const bool isContainerInstance = isContainerDirectiveInstance(directive, parsedLine);
         auto *item = new BlockCanvasItem(directive,
                                          name,
                                          inlineComment,
                                          parsedLine.lineNumber,
                                          !encodingDirective,
                                          !encodingDirective,
+                                         isContainerInstance,
                                          parentItem);
         item->onDelete = [this](int lineNumber) {
             handleBlockDeleteRequest(lineNumber);
@@ -3699,7 +3789,7 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
         }
         allItems.append(item);
 
-        if (!commandDirective && isContainerBlockDirective(directive)) {
+        if (!commandDirective && isContainerInstance) {
             stack.append(StackEntry{directive, item});
         }
     }
@@ -3903,7 +3993,7 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
     targets.reserve(allItems.size());
 
     for (BlockCanvasItem *item : allItems) {
-        if (item == nullptr || !isContainerBlockDirective(item->kind())) {
+        if (item == nullptr || !item->isContainerOpen()) {
             continue;
         }
 
@@ -4929,7 +5019,16 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
         }
 
         if (blockDetailsPrimaryFieldLabel_ != nullptr) {
-            blockDetailsPrimaryFieldLabel_->setText(explicitIdMode ? tr("ID") : tr("Primary Value"));
+            if (explicitIdMode) {
+                blockDetailsPrimaryFieldLabel_->setText(tr("ID"));
+            } else {
+                const QStringList argumentSignatures = commandArgumentSignaturesFor(normalizedKind);
+                if (!argumentSignatures.isEmpty()) {
+                    blockDetailsPrimaryFieldLabel_->setText(argumentLabelFromSignature(argumentSignatures.first()));
+                } else {
+                    blockDetailsPrimaryFieldLabel_->setText(tr("Value"));
+                }
+            }
         }
         if (blockDetailsIdEdit_ != nullptr) {
             blockDetailsIdEdit_->setEnabled(true);
@@ -5953,7 +6052,7 @@ void TextEditorTab::handleCanvasDrop(const QString &kind, const QPointF &scenePo
             entry.endLine = currentLineNumber;
             entry.parentLine = parentLine;
 
-            if (isContainerBlockDirective(directive)) {
+            if (isContainerDirectiveInstance(directive, parsedLine)) {
                 const QString closingDirective = closingDirectiveFor(directive);
                 const int endLine = findMatchingBlockEndLine(existingLines, currentLineNumber, directive, closingDirective);
                 if (endLine > currentLineNumber) {
@@ -6347,7 +6446,7 @@ void TextEditorTab::handleBlockMoveRequest(int lineNumber, const QPointF &sceneP
             entry.endLine = currentLineNumber;
             entry.parentLine = parentLine;
 
-            if (isContainerBlockDirective(directive)) {
+            if (isContainerDirectiveInstance(directive, parsedLine)) {
                 const QString closingDirective = closingDirectiveFor(directive);
                 const int endLine = findMatchingBlockEndLine(lines, currentLineNumber, directive, closingDirective);
                 if (endLine > currentLineNumber) {
@@ -7705,7 +7804,7 @@ void TextEditorTab::handleBlockDeleteRequest(int lineNumber)
     int removeStartLine = lineNumber;
     int removeEndLine = lineNumber;
 
-    if (isContainerBlockDirective(directive)) {
+    if (isContainerDirectiveInstance(directive, parsedLine)) {
         const QString closingDirective = closingDirectiveFor(directive);
         const int endLine = findMatchingBlockEndLine(lines, lineNumber, directive, closingDirective);
         if (endLine <= lineNumber) {
@@ -8384,6 +8483,19 @@ void TextEditorTab::rebuildCompletionModel()
 
 bool TextEditorTab::eventFilter(QObject *watched, QEvent *event)
 {
+    if (event != nullptr && watched == qApp) {
+        switch (event->type()) {
+        case QEvent::ApplicationPaletteChange:
+        case QEvent::PaletteChange:
+        case QEvent::StyleChange:
+            handleApplicationAppearanceChanged();
+            break;
+        default:
+            break;
+        }
+        return QWidget::eventFilter(watched, event);
+    }
+
     if (event == nullptr || completionCompleter_ == nullptr || editor_ == nullptr) {
         return QWidget::eventFilter(watched, event);
     }
@@ -8716,7 +8828,7 @@ QString TextEditorTab::resolveScopeForCommandAtLine(const QString &commandToken,
             continue;
         }
 
-        if (!completionClosingDirectiveForOpening(directive).isEmpty()) {
+        if (isContainerDirectiveInstance(directive, parsedLine)) {
             scopeStack.append(directive);
         }
     }
@@ -8768,7 +8880,7 @@ QStringList TextEditorTab::activeCompletionScopeStack() const
             continue;
         }
 
-        if (!completionClosingDirectiveForOpening(directive).isEmpty()) {
+        if (isContainerDirectiveInstance(directive, parsedLine)) {
             scopeStack.append(directive);
         }
     }

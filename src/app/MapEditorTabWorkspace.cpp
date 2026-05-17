@@ -15,7 +15,6 @@
 #include <QScopedValueRollback>
 #include <QSplitter>
 #include <QStyleHints>
-#include <QTextBrowser>
 #include <QUndoStack>
 #include <QVBoxLayout>
 #include <QCloseEvent>
@@ -189,13 +188,10 @@ void MapEditorTab::buildUi()
     connect(undoStack_, &QUndoStack::canRedoChanged, this, &MapEditorTab::updateCommandSurfaceState);
     connect(undoStack_, &QUndoStack::indexChanged, this, &MapEditorTab::updateCommandSurfaceState);
 
-    mapHelpSplitter_ = new QSplitter(Qt::Vertical, splitter_);
-    mapHelpSplitter_->setChildrenCollapsible(false);
-    mapHelpSplitter_->setHandleWidth(12);
-
-    mapPaneContainer_ = new QWidget(mapHelpSplitter_);
+    mapPaneContainer_ = new QWidget(splitter_);
+    mapPaneContainer_->setMinimumWidth(420);
     auto *mapPaneLayout = new QVBoxLayout(mapPaneContainer_);
-    mapPaneLayout->setContentsMargins(0, 0, 0, 0);
+    mapPaneLayout->setContentsMargins(12, 8, 8, 12);
     mapPaneLayout->setSpacing(0);
 
     mapView_ = new QGraphicsView(mapPaneContainer_);
@@ -213,7 +209,6 @@ void MapEditorTab::buildUi()
     }
 
     buildMapScene();
-    buildHelpPanel();
 
     cancelDrawShortcut_ = new QShortcut(this);
     cancelDrawShortcut_->setKey(QKeySequence(Qt::Key_Escape));
@@ -229,17 +224,12 @@ void MapEditorTab::buildUi()
         commitInteractiveDrawSession();
     });
 
-    splitter_->addWidget(textEditor_);
     mapPaneLayout->addWidget(mapView_);
-    mapHelpSplitter_->addWidget(mapPaneContainer_);
-    mapHelpSplitter_->addWidget(helpPanel_);
-    mapHelpSplitter_->setStretchFactor(0, 1);
-    mapHelpSplitter_->setStretchFactor(1, 0);
-    mapHelpSplitter_->setCollapsible(1, true);
-    mapHelpSplitter_->setSizes(QList<int>{1, helpPanelHeight_});
-    splitter_->addWidget(mapHelpSplitter_);
+    splitter_->addWidget(mapPaneContainer_);
+    splitter_->addWidget(textEditor_);
     splitter_->setStretchFactor(0, 1);
     splitter_->setStretchFactor(1, 1);
+    splitter_->setSizes(QList<int>{700, 900});
 
     layout->addWidget(splitter_, 1);
 
@@ -446,43 +436,17 @@ void MapEditorTab::handleTouchFriendlyControlsToggled(bool checked)
     setTouchFriendlyControlsEnabled(checked);
 }
 
-void MapEditorTab::setHelpCollapsed(bool collapsed)
-{
-    helpCollapsed_ = collapsed;
-    if (helpBrowser_ != nullptr) {
-        helpBrowser_->setVisible(!collapsed);
-    }
-    if (mapHelpSplitter_ != nullptr && helpPanel_ != nullptr) {
-        if (!collapsed && helpPanelHeight_ > 0) {
-            const QList<int> sizes = mapHelpSplitter_->sizes();
-            mapHelpSplitter_->setSizes(QList<int>{sizes.value(0, 1), helpPanelHeight_});
-        }
-
-        if (collapsed) {
-            const QList<int> sizes = mapHelpSplitter_->sizes();
-            if (sizes.size() >= 2) {
-                helpPanelHeight_ = qMax(sizes.at(1), helpPanel_->minimumSizeHint().height());
-            }
-
-            mapHelpSplitter_->setSizes(QList<int>{1, 0});
-        }
-    }
-}
-
 void MapEditorTab::updateWorkspaceVisibility()
 {
     if (mapPaneDetached_) {
         textEditor_->show();
-        if (mapHelpSplitter_ != nullptr) {
-            mapHelpSplitter_->hide();
-        }
         refreshStatus();
         return;
     }
 
     textEditor_->show();
-    if (mapHelpSplitter_ != nullptr) {
-        mapHelpSplitter_->show();
+    if (mapPaneContainer_ != nullptr) {
+        mapPaneContainer_->show();
     }
 
     refreshStatus();
@@ -523,7 +487,7 @@ void MapEditorTab::handleDetachPaneTriggered()
 
 void MapEditorTab::detachMapPaneToWindow()
 {
-    if (mapPaneDetached_ || mapPaneContainer_ == nullptr || mapHelpSplitter_ == nullptr) {
+    if (mapPaneDetached_ || mapPaneContainer_ == nullptr || splitter_ == nullptr) {
         return;
     }
 
@@ -549,7 +513,7 @@ void MapEditorTab::detachMapPaneToWindow()
 
 void MapEditorTab::reattachMapPaneFromWindow()
 {
-    if (!mapPaneDetached_ || mapPaneContainer_ == nullptr || mapHelpSplitter_ == nullptr || reattachingMapPane_) {
+    if (!mapPaneDetached_ || mapPaneContainer_ == nullptr || splitter_ == nullptr || reattachingMapPane_) {
         return;
     }
 
@@ -559,8 +523,8 @@ void MapEditorTab::reattachMapPaneFromWindow()
         detachedMapPaneWindow_->takeCentralWidget();
     }
 
-    mapPaneContainer_->setParent(mapHelpSplitter_);
-    mapHelpSplitter_->insertWidget(0, mapPaneContainer_);
+    mapPaneContainer_->setParent(splitter_);
+    splitter_->insertWidget(0, mapPaneContainer_);
 
     mapPaneDetached_ = false;
     detachedMapPaneWindow_ = nullptr;

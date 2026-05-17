@@ -15,16 +15,13 @@
 #include <optional>
 
 class QLabel;
-class QFrame;
 class QGraphicsScene;
 class QGraphicsView;
 class QSplitter;
-class QSplitterHandle;
 class QPushButton;
 class QGraphicsRectItem;
 class QGraphicsPixmapItem;
 class QGraphicsPathItem;
-class QTextBrowser;
 class QUndoStack;
 class QMainWindow;
 class QGraphicsItem;
@@ -145,7 +142,6 @@ private slots:
 private:
     void buildUi();
     void buildMapScene();
-    void buildHelpPanel();
     void refreshMapScene();
     void refreshMapScenePreservingUndoStack();
     void flushPendingMapSceneRefreshAfterCommand();
@@ -229,7 +225,6 @@ private:
     void addDraftGeometryItem(QGraphicsRectItem *item, const QPointF &position);
     void removeDraftGeometryItem(QGraphicsRectItem *item);
     void updateHelpPanel();
-    void setHelpCollapsed(bool collapsed);
     void updateWorkspaceVisibility();
     void updateGeometrySelectionPresentation();
     void syncMapSelectionFromTextCursor(int lineNumber, int columnNumber);
@@ -248,10 +243,7 @@ private:
     QGraphicsScene *mapScene_ = nullptr;
     QWidget *mapPaneContainer_ = nullptr;
     QSplitter *splitter_ = nullptr;
-    QSplitter *mapHelpSplitter_ = nullptr;
-    QFrame *helpPanel_ = nullptr;
     QLabel *summaryLabel_ = nullptr;
-    QTextBrowser *helpBrowser_ = nullptr;
     QPushButton *detachButton_ = nullptr;
     QPushButton *undoButton_ = nullptr;
     QPushButton *redoButton_ = nullptr;
@@ -296,8 +288,6 @@ private:
     bool nativeZoomGestureActive_ = false;
     QDateTime lastNativeZoomGestureUtc_;
     bool touchFriendlyControlsEnabled_ = false;
-    bool helpCollapsed_ = false;
-    int helpPanelHeight_ = 180;
     int selectedBackgroundLayerIndex_ = -1;
     bool mapCommandApplyInProgress_ = false;
     bool mapSceneRefreshPending_ = false;

@@ -292,11 +292,12 @@ Selecting an entry:
 
 ### 5.5 Use Map Workspace (`.th2`)
 
-Map tab uses a split text+map workspace by default.
+Map tab uses a split map+text workspace by default. The embedded pane order is graphical map editor, synchronized source text editor, then the source contextual help inspector. The map pane is dedicated to graphical editing; there is no separate persistent `Map Help` pane below the canvas.
 
 Map canvas appearance:
 
 - canvas and geometry contrast adapts to current system light/dark appearance so lines, handles, labels, and grid stay readable
+- canvas outer padding follows the same panel spacing rhythm as the adjacent source editor and contextual help inspector
 - switching system light/dark appearance updates the map workspace and sidebar/status separators live, without restarting the app
 
 Toolbar actions:
@@ -348,12 +349,6 @@ Detached map-pane behavior:
 - The text editor stays in the main tab.
 - Closing the detached map window (or clicking `Return Map Pane`) reattaches the same map pane back to the tab.
 - While detached, the embedded map pane area in the main tab is hidden.
-
-Map help pane:
-
-- shown below map canvas
-- resizable via splitter handle
-- line-vertex shortcut reminder includes split (`Insert`/`I`), remove (`Delete`/`Backspace`), and smooth toggle (`S`)
 
 Line-handle behavior:
 

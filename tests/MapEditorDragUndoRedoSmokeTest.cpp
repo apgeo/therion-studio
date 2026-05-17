@@ -544,6 +544,9 @@ bool dragItemBySceneDelta(QGraphicsView *view, QGraphicsItem *item, const QPoint
         return false;
     }
 
+    view->centerOn(item);
+    pumpEvents();
+
     const QRectF visibleSceneRect = view->mapToScene(view->viewport()->rect()).boundingRect();
     QPointF sceneDelta = requestedSceneDelta;
     QPointF sceneStart = item->scenePos();
@@ -759,7 +762,9 @@ int runDragUndoRedoSmoke()
 
     QPushButton *undoButton = findButtonByText(*mapTab, QStringLiteral("Undo"));
     QPushButton *redoButton = findButtonByText(*mapTab, QStringLiteral("Redo"));
-    if (!expect(undoButton != nullptr && redoButton != nullptr, "Undo/Redo buttons were not found.")) {
+    QPushButton *selectButton = findButtonByText(*mapTab, QStringLiteral("Select"));
+    if (!expect(undoButton != nullptr && redoButton != nullptr && selectButton != nullptr,
+                "Select/Undo/Redo buttons were not found.")) {
         return 1;
     }
 
@@ -768,7 +773,17 @@ int runDragUndoRedoSmoke()
         return 1;
     }
 
-    if (!expect(dragItemBySceneDelta(mapView, anchorItem, QPointF(36.0, -24.0)),
+    const QRectF dragVisibleSceneRect = mapView->mapToScene(mapView->viewport()->rect()).boundingRect();
+    auto *dragAnchorItem = findCenteredLineAnchor(mapView->scene(), dragVisibleSceneRect);
+    if (!expect(dragAnchorItem != nullptr, "No visible editable line anchor was found before drag edit.")) {
+        return 1;
+    }
+    dragAnchorItem->setSelected(true);
+    pumpEvents();
+    selectButton->click();
+    pumpEvents();
+
+    if (!expect(dragItemBySceneDelta(mapView, dragAnchorItem, QPointF(36.0, -24.0)),
                 "Failed to drag editable map anchor during smoke test.")) {
         return 1;
     }

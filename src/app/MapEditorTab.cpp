@@ -1,7 +1,6 @@
 #include "MapEditorTab.h"
 
 #include <QApplication>
-#include <QFrame>
 #include <QEvent>
 #include <QCursor>
 #include <QGraphicsEllipseItem>
@@ -11,7 +10,6 @@
 #include <QGraphicsRectItem>
 #include <QGraphicsScene>
 #include <QGraphicsView>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QKeyEvent>
 #include <QLineF>
@@ -24,17 +22,12 @@
 #include <QScopedValueRollback>
 #include <QScrollBar>
 #include <QShortcut>
-#include <QSplitterHandle>
 #include <QTabletEvent>
-#include <QTextBrowser>
-#include <QTextDocument>
 #include <QPointer>
 #include <QUndoCommand>
 #include <QUndoStack>
-#include <QVBoxLayout>
 #include <QWheelEvent>
 #include <QTouchEvent>
-#include <QFont>
 #include <QPainterPath>
 
 #include <algorithm>
@@ -52,108 +45,6 @@ namespace TherionStudio
 {
 namespace
 {
-void syncPanelSurfaceToPalette(QWidget *panelWidget, const QPalette &sourcePalette);
-void syncTextBrowserPaletteToPalette(QWidget *browserWidget, const QPalette &sourcePalette);
-
-void syncPanelSurfaceToBaseTone(QWidget *panelWidget)
-{
-    syncPanelSurfaceToPalette(panelWidget, QApplication::palette(panelWidget));
-}
-
-void syncPanelSurfaceToPalette(QWidget *panelWidget, const QPalette &sourcePalette)
-{
-    if (panelWidget == nullptr) {
-        return;
-    }
-
-    QPalette panelPalette = sourcePalette;
-    QColor surfaceColor = sourcePalette.color(QPalette::Base);
-    if (!surfaceColor.isValid()) {
-        surfaceColor = sourcePalette.color(QPalette::Window);
-    }
-    panelPalette.setColor(QPalette::Window, surfaceColor);
-    panelPalette.setColor(QPalette::Base, surfaceColor);
-    panelPalette.setColor(QPalette::AlternateBase, surfaceColor);
-    panelWidget->setPalette(panelPalette);
-    panelWidget->setAutoFillBackground(true);
-    panelWidget->setStyleSheet(QStringLiteral("background-color: %1; color: %2;")
-                                   .arg(surfaceColor.name(QColor::HexRgb),
-                                        panelPalette.color(QPalette::Text).name(QColor::HexRgb)));
-}
-
-void syncTextBrowserPaletteToParent(QWidget *browserWidget)
-{
-    QWidget *parent = browserWidget != nullptr ? browserWidget->parentWidget() : nullptr;
-    syncTextBrowserPaletteToPalette(browserWidget,
-                                    parent != nullptr ? parent->palette() : QApplication::palette(browserWidget));
-}
-
-void syncTextBrowserPaletteToPalette(QWidget *browserWidget, const QPalette &sourcePalette)
-{
-    auto *browser = qobject_cast<QTextBrowser *>(browserWidget);
-    if (browser == nullptr) {
-        return;
-    }
-
-    QColor surfaceColor = sourcePalette.color(QPalette::Base);
-    if (!surfaceColor.isValid()) {
-        surfaceColor = sourcePalette.color(QPalette::Window);
-    }
-    QColor textColor = sourcePalette.color(QPalette::Text);
-    if (!textColor.isValid()) {
-        textColor = sourcePalette.color(QPalette::WindowText);
-    }
-    QColor linkColor = sourcePalette.color(QPalette::Link);
-    if (!linkColor.isValid()) {
-        linkColor = textColor;
-    }
-
-    QPalette browserPalette = sourcePalette;
-    browserPalette.setColor(QPalette::Base, surfaceColor);
-    browserPalette.setColor(QPalette::Window, surfaceColor);
-    browserPalette.setColor(QPalette::AlternateBase, surfaceColor);
-    browserPalette.setColor(QPalette::Text, textColor);
-    browserPalette.setColor(QPalette::WindowText, textColor);
-    browserPalette.setColor(QPalette::ButtonText, textColor);
-    browserPalette.setColor(QPalette::Link, linkColor);
-    browser->setPalette(browserPalette);
-    browser->setAutoFillBackground(true);
-    browser->setStyleSheet(QStringLiteral(
-                                "QTextBrowser {"
-                                " background-color: %1;"
-                                " color: %2;"
-                                " border: none;"
-                                "}"
-                                "QTextBrowser:viewport {"
-                                " background-color: %1;"
-                                "}").arg(surfaceColor.name(QColor::HexRgb),
-                                          textColor.name(QColor::HexRgb)));
-
-    if (QWidget *viewport = browser->viewport(); viewport != nullptr) {
-        QPalette viewportPalette = sourcePalette;
-        viewportPalette.setColor(QPalette::Base, surfaceColor);
-        viewportPalette.setColor(QPalette::Window, surfaceColor);
-        viewportPalette.setColor(QPalette::AlternateBase, surfaceColor);
-        viewportPalette.setColor(QPalette::Text, textColor);
-        viewportPalette.setColor(QPalette::WindowText, textColor);
-        viewportPalette.setColor(QPalette::ButtonText, textColor);
-        viewportPalette.setColor(QPalette::Link, linkColor);
-        viewport->setPalette(viewportPalette);
-        viewport->setAutoFillBackground(true);
-        viewport->setStyleSheet(QStringLiteral("background-color: %1; color: %2;")
-                                     .arg(surfaceColor.name(QColor::HexRgb),
-                                          textColor.name(QColor::HexRgb)));
-    }
-
-    if (QTextDocument *document = browser->document(); document != nullptr) {
-        document->setDefaultStyleSheet(
-            QStringLiteral("body { color: %1; background-color: %2; } a { color: %3; } code { color: %1; }")
-                .arg(textColor.name(QColor::HexRgb),
-                     surfaceColor.name(QColor::HexRgb),
-                     linkColor.name(QColor::HexRgb)));
-    }
-}
-
 constexpr int kMapItemRole = Qt::UserRole + 120;
 constexpr int kMapItemGeometryValue = 1;
 
@@ -1766,10 +1657,6 @@ void MapEditorTab::handleApplicationAppearanceChanged()
         }
     }
 
-    const QPalette mapSurfacePalette = mapView_ != nullptr ? mapView_->palette() : palette();
-    syncPanelSurfaceToPalette(helpPanel_, mapSurfacePalette);
-    syncTextBrowserPaletteToPalette(helpBrowser_, mapSurfacePalette);
-
     if (mapScene_ != nullptr) {
         refreshMapScenePreservingUndoStack();
     }
@@ -1780,39 +1667,6 @@ void MapEditorTab::buildMapScene()
     mapScene_ = new QGraphicsScene(this);
     mapView_->setScene(mapScene_);
     connect(mapScene_, &QGraphicsScene::selectionChanged, this, &MapEditorTab::handleMapSceneSelectionChanged);
-}
-
-void MapEditorTab::buildHelpPanel()
-{
-    helpPanel_ = new QFrame(this);
-    helpPanel_->setFrameShape(QFrame::StyledPanel);
-    syncPanelSurfaceToBaseTone(helpPanel_);
-
-    auto *panelLayout = new QVBoxLayout(helpPanel_);
-    panelLayout->setContentsMargins(8, 8, 8, 8);
-    panelLayout->setSpacing(6);
-
-    auto *headerRow = new QHBoxLayout;
-    headerRow->setContentsMargins(0, 0, 0, 0);
-
-    auto *headerLabel = new QLabel(tr("Map Help"), helpPanel_);
-    QFont headerFont = headerLabel->font();
-    headerFont.setBold(true);
-    headerLabel->setFont(headerFont);
-
-    headerRow->addWidget(headerLabel);
-    headerRow->addStretch(1);
-
-    helpBrowser_ = new QTextBrowser(helpPanel_);
-    helpBrowser_->setFrameShape(QFrame::NoFrame);
-    helpBrowser_->setOpenLinks(false);
-    helpBrowser_->setOpenExternalLinks(false);
-    helpBrowser_->setMinimumHeight(120);
-    syncTextBrowserPaletteToParent(helpBrowser_);
-    helpBrowser_->setHtml(mapWorkspaceHelpHtml());
-
-    panelLayout->addLayout(headerRow);
-    panelLayout->addWidget(helpBrowser_, 1);
 }
 
 void MapEditorTab::refreshMapScene()
@@ -3071,45 +2925,7 @@ void MapEditorTab::updateCommandSurfaceState()
 
 void MapEditorTab::updateHelpPanel()
 {
-    if (helpBrowser_ == nullptr) {
-        return;
-    }
-
-    if (helpPanel_ != nullptr) {
-        helpPanel_->setToolTip(helpCollapsed_ ? tr("Expand map help") : tr("Map help and selection guidance"));
-    }
-
-    if (mapScene_ == nullptr) {
-        helpBrowser_->setHtml(mapWorkspaceHelpHtml());
-        return;
-    }
-
-    const QList<QGraphicsItem *> selectedItems = mapScene_->selectedItems();
-    if (selectedItems.isEmpty()) {
-        helpBrowser_->setHtml(mapWorkspaceHelpHtml());
-        return;
-    }
-
-    if (auto *draftItem = dynamic_cast<MapDraftGeometryItem *>(selectedItems.first())) {
-        QString html;
-        html += QStringLiteral("<h3 style='margin:0 0 6px 0;'>Draft Geometry</h3>");
-        html += QStringLiteral("<p style='margin:0 0 4px 0;'><strong>Kind:</strong> %1</p>").arg(draftGeometryLabel(draftItem->kind()).toHtmlEscaped());
-        html += QStringLiteral("<p style='margin:0 0 4px 0;'><strong>Status:</strong> %1</p>").arg(draftItem->isDraftComplete() ? tr("Complete") : tr("Draft"));
-        html += QStringLiteral("<p style='margin:8px 0 0 0;'>Drag the item to reposition it, or use Complete Draft to finish it.</p>");
-        helpBrowser_->setHtml(html);
-        return;
-    }
-
-    if (auto *card = dynamic_cast<MapCardItem *>(selectedItems.first())) {
-        QString html;
-        html += QStringLiteral("<h3 style='margin:0 0 6px 0;'>%1</h3>").arg(card->category().toHtmlEscaped());
-        html += QStringLiteral("<p style='margin:0 0 4px 0;'><strong>Source line:</strong> %1</p>").arg(card->lineNumber());
-        html += QStringLiteral("<p style='margin:8px 0 0 0;'>Select a card to jump to the source line and keep the text and map in sync.</p>");
-        helpBrowser_->setHtml(html);
-        return;
-    }
-
-    helpBrowser_->setHtml(mapWorkspaceHelpHtml());
+    // Map-specific help was removed; source contextual help is owned by the embedded TextEditorTab.
 }
 
 void MapEditorTab::clearMapScene()

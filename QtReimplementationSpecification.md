@@ -263,6 +263,9 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The map editor shall render the currently open TH2 document as an editable two-dimensional workspace.
 - The map workspace shall maintain sufficient contrast for geometry strokes, handles, labels, and grid lines in both light and dark system appearance modes.
 - When a TH2 document is active in the main window, the workspace shall provide synchronized text+map editing in a split or functionally equivalent embedded arrangement.
+- In the embedded TH2 map workspace, the primary pane order shall be graphical map editor, synchronized source text editor, and contextual help inspector.
+- The embedded map canvas shall use the same outer padding rhythm as adjacent editor and inspector panes.
+- The embedded graphical map pane shall stay dedicated to map editing and shall not include a separate persistent map-help panel.
 - The user shall be able to detach the current TH2 session into a dedicated map editor window without creating a separate document state.
 - Embedded and detached map presentations shall remain synchronized with the same selection, undo history, and underlying text document.
 - On first display, scrap nodes shall default to expanded state.
@@ -783,6 +786,9 @@ The criteria below are intended for implementation verification and QA.
 
 - The map editor renders the currently open TH2 file as a 2D editable workspace.
 - A TH2 document is shown in a synchronized embedded text+map workspace or an equivalent arrangement.
+- The embedded TH2 workspace presents panes left-to-right as graphical map editor, synchronized source text editor, and contextual help inspector.
+- The embedded map canvas outer padding is visually consistent with adjacent editor and inspector panes.
+- The graphical map pane does not show a separate persistent map-help panel.
 - The same TH2 session can be shown in an embedded workspace and a detached map pane window without diverging document state.
 - Scrap nodes start expanded on first display.
 - Selecting an object in the map editor updates the selected object state in the rest of the application.

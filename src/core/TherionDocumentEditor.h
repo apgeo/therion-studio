@@ -47,6 +47,17 @@ public:
                                         const QString &optionName,
                                         bool enabled,
                                         QString *errorMessage = nullptr);
+    static bool rewritePointOrientation(QString *contents,
+                                        int lineNumber,
+                                        bool enabled,
+                                        qreal orientationDegrees,
+                                        QString *errorMessage = nullptr);
+    static bool rewriteLinePointOrientation(QString *contents,
+                                            int lineNumber,
+                                            int sourceVertexIndex,
+                                            bool enabled,
+                                            qreal orientationDegrees,
+                                            QString *errorMessage = nullptr);
     static bool rewriteLineCoordinateRows(QString *contents,
                                           int lineNumber,
                                           const QStringList &coordinateRows,

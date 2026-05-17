@@ -112,6 +112,62 @@ void documentShowFindBarForWidget(QWidget *widget, bool replaceMode)
     }
 }
 
+bool documentCanUndoForWidget(QWidget *widget)
+{
+    if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(widget)) {
+        return textTab->canUndo();
+    }
+
+    if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(widget)) {
+        return mapTab->canUndo();
+    }
+
+    return false;
+}
+
+bool documentCanRedoForWidget(QWidget *widget)
+{
+    if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(widget)) {
+        return textTab->canRedo();
+    }
+
+    if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(widget)) {
+        return mapTab->canRedo();
+    }
+
+    return false;
+}
+
+bool documentUndoForWidget(QWidget *widget)
+{
+    if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(widget)) {
+        textTab->triggerUndo();
+        return true;
+    }
+
+    if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(widget)) {
+        mapTab->triggerUndo();
+        return true;
+    }
+
+    return false;
+}
+
+bool documentRedoForWidget(QWidget *widget)
+{
+    if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(widget)) {
+        textTab->triggerRedo();
+        return true;
+    }
+
+    if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(widget)) {
+        mapTab->triggerRedo();
+        return true;
+    }
+
+    return false;
+}
+
 void updateSidebarModeTabIcons(QTabBar *tabBar, int)
 {
     if (tabBar == nullptr) {

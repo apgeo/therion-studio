@@ -482,7 +482,9 @@ void MainWindow::rebuildMapObjectsTree()
         parentStack.append(entryItem);
     }
 
-    mapObjectsTree_->expandAll();
+    if (mapObjectsTree_ != nullptr) {
+        mapObjectsTree_->expandAll();
+    }
     updateMapObjectSelectionFromEditorLocation(filePath, documentCurrentLineNumberForWidget(tabWidget));
     refreshMapBackgroundPanel();
 }
@@ -545,14 +547,6 @@ void MainWindow::updateMapEditorActionState()
 
     if (openMapEditorAction_ != nullptr) {
         openMapEditorAction_->setEnabled(hasTh2Document);
-    }
-
-    if (sidebarMapButton_ != nullptr) {
-        sidebarMapButton_->setEnabled(hasTh2Document);
-        if (!hasTh2Document && activeSidebarPane_ == SidebarPane::MapEditor) {
-            setSidebarPane(lastNonMapSidebarPane_);
-            return;
-        }
     }
 
     refreshMapBackgroundPanel();

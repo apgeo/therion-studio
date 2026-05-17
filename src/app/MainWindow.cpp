@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include <QAction>
+#include <QColor>
 #include <QDockWidget>
 #include <QCoreApplication>
 #include <QFile>
@@ -9,7 +10,9 @@
 #include <QFileDialog>
 #include <QFont>
 #include <QDir>
+#include <QFrame>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QVBoxLayout>
 #include <QCloseEvent>
 #include <QStandardPaths>
@@ -28,9 +31,11 @@
 #include <QStandardItemModel>
 #include <QStringList>
 #include <QStatusBar>
+#include <QTabBar>
 #include <QTabWidget>
 #include <QTimer>
 #include <QTextBrowser>
+#include <QToolButton>
 #include <QTreeView>
 #include <QKeySequence>
 #include <QWidget>
@@ -44,6 +49,22 @@
 #include "MapEditorTab.h"
 #include "MainWindowDocumentHelpers.h"
 #include "../core/SessionStore.h"
+
+namespace
+{
+QString workspaceCommandBarStyleSheet(const QColor &backgroundColor)
+{
+    return QStringLiteral(
+               "QWidget#workspaceCommandBar {"
+               " border-bottom: 1px solid palette(mid);"
+               " background-color: %1;"
+               "}"
+               "QFrame#workspaceToolbarSeparator {"
+               " color: palette(mid);"
+               "}")
+        .arg(backgroundColor.name(QColor::HexRgb));
+}
+} // namespace
 
 QHash<QString, QString> loadStructureNameOverridesFromJson(const QString &json)
 {
@@ -129,6 +150,68 @@ QWidget *createCenteredMessage(const QString &title, const QString &body)
     return widget;
 }
 
+QPushButton *createWorkspaceToolbarButton(QWidget *parent,
+                                          const QString &text,
+                                          const QString &iconName)
+{
+    auto *button = new QPushButton(text, parent);
+    button->setAutoDefault(false);
+    button->setIcon(QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName)));
+    button->setIconSize(QSize(16, 16));
+    button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    return button;
+}
+
+QToolButton *createWorkspaceIconButton(QWidget *parent,
+                                       const QString &toolTip,
+                                       const QString &iconName)
+{
+    auto *button = new QToolButton(parent);
+    button->setAutoRaise(false);
+    button->setIcon(QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName)));
+    button->setIconSize(QSize(16, 16));
+    button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    button->setToolTip(toolTip);
+    button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    return button;
+}
+
+QFrame *createWorkspaceToolbarSeparator(QWidget *parent)
+{
+    auto *separator = new QFrame(parent);
+    separator->setFrameShape(QFrame::VLine);
+    separator->setFrameShadow(QFrame::Sunken);
+    separator->setObjectName(QStringLiteral("workspaceToolbarSeparator"));
+    return separator;
+}
+
+void applyThinSplitterStyle(QSplitter *splitter, const QString &objectName)
+{
+    if (splitter == nullptr) {
+        return;
+    }
+
+    splitter->setObjectName(objectName);
+    splitter->setFrameShape(QFrame::NoFrame);
+    splitter->setHandleWidth(10);
+    splitter->setStyleSheet(QString());
+}
+
+void applyWorkspaceButtonMinimumWidth(QPushButton *button)
+{
+    if (button == nullptr) {
+        return;
+    }
+
+    QString text = button->text();
+    text.remove(QLatin1Char('&'));
+    const QFontMetrics metrics(button->font());
+    const int textWidth = metrics.horizontalAdvance(text);
+    const int iconWidth = button->icon().isNull() ? 0 : (button->iconSize().width() + 8);
+    const int framePadding = 28;
+    button->setMinimumWidth(textWidth + iconWidth + framePadding);
+}
+
 QString quickUserManualMarkdown()
 {
     return QStringLiteral(
@@ -144,15 +227,15 @@ QString quickUserManualMarkdown()
         "\n"
         "## Text workspace essentials\n"
         "\n"
-        "- `.th` / `.thconfig`: `Mode` switcher (`Raw`/`Blocks`) lives at tab-strip top-right\n"
+        "- `.th` / `.thconfig`: use the document toolbar row under tabs for `Raw`/`Blocks` mode switching\n"
         "\n"
         "## Map workspace essentials\n"
         "\n"
-        "- `Visual` and `Raw` workspace modes for TH2 tabs (`Mode` switcher at tab-strip top-right)\n"
-        "- `Separate Map` / `Return Map` in the same top-right workspace controls\n"
+        "- `Visual` and `Raw` workspace modes for TH2 tabs are in the document toolbar row under tabs\n"
+        "- `Separate Map` / `Return Map` is available in the same document toolbar row\n"
+        "- For TH2 tabs, map view controls `Zoom In`, `Zoom Out`, `Fit`, `Fit + BG` are in the same top toolbar (after `Undo`/`Redo`)\n"
         "- `Select`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`\n"
         "- `Insert Scrap`, `Complete Draft`, `Undo`, `Redo`\n"
-        "- `Zoom -`, `Zoom +`, `Fit`, `Fit + BG`\n"
         "\n"
         "### Line-vertex shortcuts\n"
         "\n"
@@ -316,14 +399,15 @@ void MainWindow::buildUi()
         refreshMapBackgroundPanel();
         refreshDocumentStatusWidgets();
         refreshWorkspaceModeSwitcher();
+        refreshWorkspaceModeSwitcherGeometry();
     });
-    initializeWorkspaceModeSwitcher();
 
     auto *mainContentHost = new QWidget(this);
     mainContentLayout_ = new QHBoxLayout(mainContentHost);
     mainContentLayout_->setContentsMargins(0, 0, 0, 0);
     mainContentLayout_->setSpacing(0);
     mainContentSplitter_ = new QSplitter(Qt::Horizontal, mainContentHost);
+    applyThinSplitterStyle(mainContentSplitter_, QStringLiteral("mainContentSplitter"));
     mainContentSplitter_->setChildrenCollapsible(true);
     setCentralWidget(mainContentHost);
 
@@ -336,54 +420,146 @@ void MainWindow::buildUi()
     mainContentSplitter_->setStretchFactor(1, 1);
     buildConsole();
     buildMenus();
+    initializeWorkspaceModeSwitcher();
 
     initializeDocumentStatusWidgets();
+    refreshWorkspaceModeSwitcher();
+    refreshWorkspaceModeSwitcherGeometry();
+    QTimer::singleShot(0, this, [this]() {
+        refreshWorkspaceModeSwitcherGeometry();
+    });
     statusBar()->showMessage(tr("Ready"));
 }
 
 void MainWindow::initializeWorkspaceModeSwitcher()
 {
-    workspaceModeSwitcher_ = new QWidget(editorTabs_);
+    if (editorTabs_ != nullptr) {
+        editorTabs_->setObjectName(QStringLiteral("mainEditorTabs"));
+        if (!editorTabs_->property("baseStyleSheet").isValid()) {
+            editorTabs_->setProperty("baseStyleSheet", editorTabs_->styleSheet());
+        }
+    }
+
+    QWidget *workspaceHost = centralWidget();
+    if (workspaceHost == nullptr) {
+        workspaceHost = editorTabs_;
+    }
+    workspaceModeSwitcher_ = new QWidget(workspaceHost);
+    workspaceModeSwitcher_->setObjectName(QStringLiteral("workspaceCommandBar"));
+    workspaceModeSwitcher_->setAttribute(Qt::WA_StyledBackground, true);
+    workspaceModeSwitcher_->setStyleSheet(workspaceCommandBarStyleSheet(palette().color(QPalette::Base)));
     auto *hostLayout = new QHBoxLayout(workspaceModeSwitcher_);
-    hostLayout->setContentsMargins(8, 0, 8, 0);
-    hostLayout->setSpacing(0);
+    hostLayout->setContentsMargins(8, 4, 8, 4);
+    hostLayout->setSpacing(4);
+
+    workspaceSaveButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Save"), QStringLiteral("save"));
+    workspaceUndoButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Undo"), QStringLiteral("undo-2"));
+    workspaceRedoButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Redo"), QStringLiteral("redo-2"));
+    hostLayout->addWidget(workspaceSaveButton_);
+    hostLayout->addWidget(createWorkspaceToolbarSeparator(workspaceModeSwitcher_));
+    hostLayout->addWidget(workspaceUndoButton_);
+    hostLayout->addWidget(workspaceRedoButton_);
+    workspaceHistorySeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
+    hostLayout->addWidget(workspaceHistorySeparator_);
+    workspaceZoomGroup_ = new QWidget(workspaceModeSwitcher_);
+    auto *zoomLayout = new QHBoxLayout(workspaceZoomGroup_);
+    zoomLayout->setContentsMargins(0, 0, 0, 0);
+    zoomLayout->setSpacing(4);
+    workspaceZoomInButton_ = createWorkspaceIconButton(workspaceZoomGroup_, tr("Zoom In"), QStringLiteral("zoom-in"));
+    workspaceZoomOutButton_ = createWorkspaceIconButton(workspaceZoomGroup_, tr("Zoom Out"), QStringLiteral("zoom-out"));
+    workspaceFitButton_ = createWorkspaceIconButton(workspaceZoomGroup_, tr("Fit"), QStringLiteral("scan"));
+    workspaceFitBackgroundButton_ = createWorkspaceIconButton(workspaceZoomGroup_, tr("Fit With Background"), QStringLiteral("image"));
+    zoomLayout->addWidget(workspaceZoomInButton_);
+    zoomLayout->addWidget(workspaceZoomOutButton_);
+    zoomLayout->addWidget(workspaceFitButton_);
+    zoomLayout->addWidget(workspaceFitBackgroundButton_);
+    hostLayout->addWidget(workspaceZoomGroup_);
+    workspaceZoomSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
+    hostLayout->addWidget(workspaceZoomSeparator_);
+    workspaceMapToolsGroup_ = new QWidget(workspaceModeSwitcher_);
+    auto *mapToolsLayout = new QHBoxLayout(workspaceMapToolsGroup_);
+    mapToolsLayout->setContentsMargins(0, 0, 0, 0);
+    mapToolsLayout->setSpacing(4);
+    workspaceSelectButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Select"), QStringLiteral("mouse-pointer-2"));
+    workspaceCompleteDraftButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Complete Draft"), QStringLiteral("check"));
+    workspaceInsertScrapButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Insert Scrap"), QStringLiteral("puzzle"));
+    workspacePointButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Point"), QStringLiteral("locate-fixed"));
+    workspaceLineButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Line"), QStringLiteral("spline"));
+    workspaceFreehandLineButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Freehand"), QStringLiteral("pencil-line"));
+    workspaceSmartTraceLineButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Smart Trace"), QStringLiteral("wand-sparkles"));
+    workspaceAreaButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Area"), QStringLiteral("pentagon"));
+    workspaceTouchControlsButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Touch Controls"), QStringLiteral("hand"));
+    workspaceSelectButton_->setCheckable(true);
+    workspacePointButton_->setCheckable(true);
+    workspaceLineButton_->setCheckable(true);
+    workspaceFreehandLineButton_->setCheckable(true);
+    workspaceSmartTraceLineButton_->setCheckable(true);
+    workspaceAreaButton_->setCheckable(true);
+    workspaceTouchControlsButton_->setCheckable(true);
+    mapToolsLayout->addWidget(workspaceSelectButton_);
+    mapToolsLayout->addWidget(workspaceCompleteDraftButton_);
+    mapToolsLayout->addWidget(workspaceInsertScrapButton_);
+    mapToolsLayout->addWidget(workspacePointButton_);
+    mapToolsLayout->addWidget(workspaceLineButton_);
+    mapToolsLayout->addWidget(workspaceFreehandLineButton_);
+    mapToolsLayout->addWidget(workspaceSmartTraceLineButton_);
+    mapToolsLayout->addWidget(workspaceAreaButton_);
+    mapToolsLayout->addWidget(workspaceTouchControlsButton_);
+    hostLayout->addWidget(workspaceMapToolsGroup_);
+    workspaceMapToolsSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
+    hostLayout->addWidget(workspaceMapToolsSeparator_);
+    hostLayout->addStretch(1);
 
     workspaceMapModeSwitcher_ = new QWidget(workspaceModeSwitcher_);
     auto *mapLayout = new QHBoxLayout(workspaceMapModeSwitcher_);
     mapLayout->setContentsMargins(0, 0, 0, 0);
-    mapLayout->setSpacing(6);
-    mapLayout->addWidget(new QLabel(tr("Mode:"), workspaceMapModeSwitcher_));
-    workspaceVisualModeButton_ = new QPushButton(tr("Visual"), workspaceMapModeSwitcher_);
-    workspaceRawModeButton_ = new QPushButton(tr("Raw"), workspaceMapModeSwitcher_);
+    mapLayout->setSpacing(4);
+    workspaceVisualModeButton_ = createWorkspaceToolbarButton(workspaceMapModeSwitcher_, tr("Visual"), QStringLiteral("pen-tool"));
+    workspaceRawModeButton_ = createWorkspaceToolbarButton(workspaceMapModeSwitcher_, tr("Raw"), QStringLiteral("code"));
     workspaceVisualModeButton_->setCheckable(true);
     workspaceRawModeButton_->setCheckable(true);
-    workspaceVisualModeButton_->setAutoDefault(false);
-    workspaceRawModeButton_->setAutoDefault(false);
-    workspaceMapPaneWindowButton_ = new QPushButton(workspaceMapModeSwitcher_);
-    workspaceMapPaneWindowButton_->setAutoDefault(false);
+    workspaceMapPaneWindowButton_ = createWorkspaceToolbarButton(workspaceMapModeSwitcher_, tr("Separate Map"), QStringLiteral("external-link"));
+    workspaceMapPaneWindowButton_->setObjectName(QStringLiteral("workspaceMapPaneWindowButton"));
     mapLayout->addWidget(workspaceVisualModeButton_);
     mapLayout->addWidget(workspaceRawModeButton_);
-    mapLayout->addSpacing(6);
     mapLayout->addWidget(workspaceMapPaneWindowButton_);
+    applyWorkspaceButtonMinimumWidth(workspaceVisualModeButton_);
+    applyWorkspaceButtonMinimumWidth(workspaceRawModeButton_);
+    applyWorkspaceButtonMinimumWidth(workspaceMapPaneWindowButton_);
 
     workspaceTextModeSwitcher_ = new QWidget(workspaceModeSwitcher_);
     auto *textLayout = new QHBoxLayout(workspaceTextModeSwitcher_);
     textLayout->setContentsMargins(0, 0, 0, 0);
-    textLayout->setSpacing(6);
-    textLayout->addWidget(new QLabel(tr("Mode:"), workspaceTextModeSwitcher_));
-    workspaceTextRawModeButton_ = new QPushButton(tr("Raw"), workspaceTextModeSwitcher_);
-    workspaceBlocksModeButton_ = new QPushButton(tr("Blocks"), workspaceTextModeSwitcher_);
+    textLayout->setSpacing(4);
+    workspaceTextRawModeButton_ = createWorkspaceToolbarButton(workspaceTextModeSwitcher_, tr("Raw"), QStringLiteral("code"));
+    workspaceBlocksModeButton_ = createWorkspaceToolbarButton(workspaceTextModeSwitcher_, tr("Blocks"), QStringLiteral("toy-brick"));
     workspaceTextRawModeButton_->setCheckable(true);
     workspaceBlocksModeButton_->setCheckable(true);
-    workspaceTextRawModeButton_->setAutoDefault(false);
-    workspaceBlocksModeButton_->setAutoDefault(false);
     workspaceBlocksModeButton_->setToolTip(tr("Structured block canvas for .th and .thconfig files."));
+    applyWorkspaceButtonMinimumWidth(workspaceTextRawModeButton_);
+    applyWorkspaceButtonMinimumWidth(workspaceBlocksModeButton_);
     textLayout->addWidget(workspaceTextRawModeButton_);
     textLayout->addWidget(workspaceBlocksModeButton_);
 
     hostLayout->addWidget(workspaceMapModeSwitcher_);
     hostLayout->addWidget(workspaceTextModeSwitcher_);
 
+    connect(workspaceSaveButton_, &QToolButton::clicked, this, &MainWindow::saveActiveDocument);
+    connect(workspaceUndoButton_, &QToolButton::clicked, this, &MainWindow::triggerUndoForActiveDocument);
+    connect(workspaceRedoButton_, &QToolButton::clicked, this, &MainWindow::triggerRedoForActiveDocument);
+    connect(workspaceZoomInButton_, &QToolButton::clicked, this, &MainWindow::triggerZoomInForActiveDocument);
+    connect(workspaceZoomOutButton_, &QToolButton::clicked, this, &MainWindow::triggerZoomOutForActiveDocument);
+    connect(workspaceFitButton_, &QToolButton::clicked, this, &MainWindow::triggerFitForActiveDocument);
+    connect(workspaceFitBackgroundButton_, &QToolButton::clicked, this, &MainWindow::triggerFitWithBackgroundForActiveDocument);
+    connect(workspaceSelectButton_, &QToolButton::clicked, this, &MainWindow::triggerSelectForActiveDocument);
+    connect(workspaceCompleteDraftButton_, &QToolButton::clicked, this, &MainWindow::triggerCompleteDraftForActiveDocument);
+    connect(workspaceInsertScrapButton_, &QToolButton::clicked, this, &MainWindow::triggerInsertScrapForActiveDocument);
+    connect(workspacePointButton_, &QToolButton::clicked, this, &MainWindow::triggerPointForActiveDocument);
+    connect(workspaceLineButton_, &QToolButton::clicked, this, &MainWindow::triggerLineForActiveDocument);
+    connect(workspaceFreehandLineButton_, &QToolButton::clicked, this, &MainWindow::triggerFreehandLineForActiveDocument);
+    connect(workspaceSmartTraceLineButton_, &QToolButton::clicked, this, &MainWindow::triggerSmartTraceLineForActiveDocument);
+    connect(workspaceAreaButton_, &QToolButton::clicked, this, &MainWindow::triggerAreaForActiveDocument);
+    connect(workspaceTouchControlsButton_, &QToolButton::toggled, this, &MainWindow::toggleTouchControlsForActiveDocument);
     connect(workspaceVisualModeButton_, &QPushButton::clicked, this, [this]() {
         if (workspaceModeSwitcherSyncInProgress_) {
             return;
@@ -425,10 +601,15 @@ void MainWindow::initializeWorkspaceModeSwitcher()
         }
     });
 
-    editorTabs_->setCornerWidget(workspaceModeSwitcher_, Qt::TopRightCorner);
+    workspaceModeSwitcher_->raise();
     workspaceMapModeSwitcher_->setVisible(false);
     workspaceTextModeSwitcher_->setVisible(false);
-    workspaceModeSwitcher_->setVisible(false);
+    workspaceZoomGroup_->setVisible(false);
+    workspaceMapToolsGroup_->setVisible(false);
+    workspaceHistorySeparator_->setVisible(false);
+    workspaceZoomSeparator_->setVisible(false);
+    workspaceMapToolsSeparator_->setVisible(false);
+    workspaceModeSwitcher_->setVisible(true);
 }
 
 void MainWindow::refreshWorkspaceModeSwitcher()
@@ -439,29 +620,93 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceVisualModeButton_ == nullptr
         || workspaceRawModeButton_ == nullptr
         || workspaceMapPaneWindowButton_ == nullptr
+        || workspaceSaveButton_ == nullptr
+        || workspaceUndoButton_ == nullptr
+        || workspaceRedoButton_ == nullptr
+        || workspaceZoomGroup_ == nullptr
+        || workspaceZoomInButton_ == nullptr
+        || workspaceZoomOutButton_ == nullptr
+        || workspaceFitButton_ == nullptr
+        || workspaceFitBackgroundButton_ == nullptr
+        || workspaceMapToolsGroup_ == nullptr
+        || workspaceSelectButton_ == nullptr
+        || workspaceCompleteDraftButton_ == nullptr
+        || workspaceInsertScrapButton_ == nullptr
+        || workspacePointButton_ == nullptr
+        || workspaceLineButton_ == nullptr
+        || workspaceFreehandLineButton_ == nullptr
+        || workspaceSmartTraceLineButton_ == nullptr
+        || workspaceAreaButton_ == nullptr
+        || workspaceTouchControlsButton_ == nullptr
+        || workspaceHistorySeparator_ == nullptr
+        || workspaceZoomSeparator_ == nullptr
+        || workspaceMapToolsSeparator_ == nullptr
         || workspaceTextRawModeButton_ == nullptr
         || workspaceBlocksModeButton_ == nullptr) {
         return;
     }
 
-    auto *mapTab = currentMapEditorTab();
-    auto *textTab = currentTextTab();
+    QWidget *tabWidget = currentDocumentWidget();
+    auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(tabWidget);
+    auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget);
     const bool showMapModes = mapTab != nullptr;
-    const bool showTextModes = textTab != nullptr && textTab->isBlocksModeAvailable();
-    const bool showAnyModes = showMapModes || showTextModes;
+    const bool showTextModes = textTab != nullptr;
+    const bool showZoomTools = showMapModes;
+    const bool showMapTools = showMapModes;
+    QColor commandBarBackground = palette().color(QPalette::Base);
+    if (showTextModes && textTab != nullptr) {
+        const QColor sourceSurface = textTab->sourceSurfaceColor();
+        if (sourceSurface.isValid()) {
+            commandBarBackground = sourceSurface;
+        }
+    }
+    workspaceModeSwitcher_->setStyleSheet(workspaceCommandBarStyleSheet(commandBarBackground));
 
-    workspaceModeSwitcher_->setVisible(showAnyModes);
+    workspaceModeSwitcher_->setVisible(true);
     workspaceMapModeSwitcher_->setVisible(showMapModes);
     workspaceTextModeSwitcher_->setVisible(showTextModes);
-    if (!showAnyModes) {
-        return;
-    }
+    workspaceHistorySeparator_->setVisible(showZoomTools);
+    workspaceZoomGroup_->setVisible(showZoomTools);
+    workspaceZoomSeparator_->setVisible(showZoomTools);
+    workspaceMapToolsGroup_->setVisible(showMapTools);
+    workspaceMapToolsSeparator_->setVisible(showMapTools);
+    workspaceSaveButton_->setEnabled(tabWidget != nullptr);
+    workspaceUndoButton_->setEnabled(documentCanUndoForWidget(tabWidget));
+    workspaceRedoButton_->setEnabled(documentCanRedoForWidget(tabWidget));
+    workspaceZoomInButton_->setEnabled(showZoomTools);
+    workspaceZoomOutButton_->setEnabled(showZoomTools);
+    workspaceFitButton_->setEnabled(showZoomTools);
+    workspaceFitBackgroundButton_->setEnabled(showZoomTools && mapTab != nullptr && mapTab->backgroundLayerCount() > 0);
+    workspaceSelectButton_->setEnabled(showMapTools);
+    workspaceCompleteDraftButton_->setEnabled(showMapTools && mapTab != nullptr && mapTab->canCompleteDraftAction());
+    workspaceInsertScrapButton_->setEnabled(showMapTools);
+    workspacePointButton_->setEnabled(showMapTools);
+    workspaceLineButton_->setEnabled(showMapTools);
+    workspaceFreehandLineButton_->setEnabled(showMapTools);
+    workspaceSmartTraceLineButton_->setEnabled(showMapTools);
+    workspaceAreaButton_->setEnabled(showMapTools);
+    workspaceTouchControlsButton_->setEnabled(showMapTools);
 
     workspaceModeSwitcherSyncInProgress_ = true;
     if (showMapModes) {
+        const QSignalBlocker selectBlocker(workspaceSelectButton_);
+        const QSignalBlocker pointBlocker(workspacePointButton_);
+        const QSignalBlocker lineBlocker(workspaceLineButton_);
+        const QSignalBlocker freehandBlocker(workspaceFreehandLineButton_);
+        const QSignalBlocker smartTraceBlocker(workspaceSmartTraceLineButton_);
+        const QSignalBlocker areaBlocker(workspaceAreaButton_);
+        const QSignalBlocker touchBlocker(workspaceTouchControlsButton_);
         const QSignalBlocker visualBlocker(workspaceVisualModeButton_);
         const QSignalBlocker rawBlocker(workspaceRawModeButton_);
         const QSignalBlocker mapWindowBlocker(workspaceMapPaneWindowButton_);
+        const TherionStudio::MapEditorTab::InteractiveDrawMode drawMode = mapTab->interactiveDrawMode();
+        workspaceSelectButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::None);
+        workspacePointButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Point);
+        workspaceLineButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Line);
+        workspaceFreehandLineButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Freehand);
+        workspaceSmartTraceLineButton_->setChecked(false);
+        workspaceAreaButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Area);
+        workspaceTouchControlsButton_->setChecked(mapTab->isTouchFriendlyControlsEnabled());
         workspaceVisualModeButton_->setChecked(mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Visual);
         workspaceRawModeButton_->setChecked(mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Raw);
         workspaceVisualModeButton_->setEnabled(!mapTab->isMapPaneDetached());
@@ -469,6 +714,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         workspaceMapPaneWindowButton_->setEnabled(true);
         workspaceMapPaneWindowButton_->setText(mapTab->mapPaneWindowActionText());
         workspaceMapPaneWindowButton_->setToolTip(mapTab->mapPaneWindowActionToolTip());
+        applyWorkspaceButtonMinimumWidth(workspaceMapPaneWindowButton_);
         workspaceModeSwitcher_->setToolTip(mapTab->isMapPaneDetached()
                                                ? tr("Map pane is detached: raw editor remains in this tab while visual map stays in the detached window.")
                                                : QString());
@@ -481,8 +727,171 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         workspaceTextRawModeButton_->setEnabled(true);
         workspaceBlocksModeButton_->setEnabled(textTab->isBlocksModeAvailable());
         workspaceModeSwitcher_->setToolTip(QString());
+    } else {
+        workspaceModeSwitcher_->setToolTip(QString());
     }
     workspaceModeSwitcherSyncInProgress_ = false;
+    refreshWorkspaceModeSwitcherGeometry();
+}
+
+void MainWindow::refreshWorkspaceModeSwitcherGeometry()
+{
+    if (workspaceModeSwitcher_ == nullptr
+        || workspaceModeSwitcher_->parentWidget() == nullptr
+        || editorTabs_ == nullptr
+        || editorTabs_->tabBar() == nullptr) {
+        return;
+    }
+
+    const int tabBarTopInset = 4;
+    const int tabBarTop = tabBarTopInset;
+    const int tabBarHeight = editorTabs_->tabBar()->height();
+    const int commandBarHeight = workspaceModeSwitcher_->sizeHint().height();
+    const int paneTop = commandBarHeight + tabBarTopInset;
+    const QString baseStyleSheet = editorTabs_->property("baseStyleSheet").toString();
+    const QString tabLayoutStyleSheet = QStringLiteral(
+        "QTabWidget#mainEditorTabs QTabBar { qproperty-drawBase: 0; }\n"
+        "QTabWidget#mainEditorTabs {"
+        " border-left: 1px solid palette(mid);"
+        " border-right: none;"
+        " border-top: none;"
+        " border-bottom: none;"
+        "}\n"
+        "QTabWidget#mainEditorTabs::pane { top: %1px; border: none; }\n"
+        "QTabWidget#mainEditorTabs::tab-bar { left: 0px; top: %2px; }\n").arg(paneTop).arg(tabBarTopInset);
+    const QString combinedStyleSheet = baseStyleSheet.trimmed().isEmpty()
+        ? tabLayoutStyleSheet
+        : baseStyleSheet + QLatin1Char('\n') + tabLayoutStyleSheet;
+    if (editorTabs_->styleSheet() != combinedStyleSheet) {
+        editorTabs_->setStyleSheet(combinedStyleSheet);
+    }
+
+    const QPoint commandBarTopLeft = editorTabs_->mapTo(workspaceModeSwitcher_->parentWidget(),
+                                                        QPoint(0, tabBarTop + tabBarHeight));
+    workspaceModeSwitcher_->setGeometry(commandBarTopLeft.x(),
+                                        commandBarTopLeft.y(),
+                                        editorTabs_->width(),
+                                        commandBarHeight);
+    workspaceModeSwitcher_->raise();
+}
+
+void MainWindow::triggerUndoForActiveDocument()
+{
+    QWidget *tabWidget = currentDocumentWidget();
+    if (tabWidget == nullptr) {
+        return;
+    }
+
+    if (documentUndoForWidget(tabWidget)) {
+        refreshWorkspaceModeSwitcher();
+    }
+}
+
+void MainWindow::triggerRedoForActiveDocument()
+{
+    QWidget *tabWidget = currentDocumentWidget();
+    if (tabWidget == nullptr) {
+        return;
+    }
+
+    if (documentRedoForWidget(tabWidget)) {
+        refreshWorkspaceModeSwitcher();
+    }
+}
+
+void MainWindow::triggerZoomInForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerZoomIn();
+    }
+}
+
+void MainWindow::triggerZoomOutForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerZoomOut();
+    }
+}
+
+void MainWindow::triggerFitForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerFit();
+    }
+}
+
+void MainWindow::triggerFitWithBackgroundForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerFitWithBackground();
+    }
+}
+
+void MainWindow::triggerSelectForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerSelectMode();
+    }
+}
+
+void MainWindow::triggerCompleteDraftForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerCompleteDraft();
+    }
+}
+
+void MainWindow::triggerInsertScrapForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerInsertScrap();
+    }
+}
+
+void MainWindow::triggerPointForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerAddPoint();
+    }
+}
+
+void MainWindow::triggerLineForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerAddLine();
+    }
+}
+
+void MainWindow::triggerFreehandLineForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerAddFreehandLine();
+    }
+}
+
+void MainWindow::triggerSmartTraceLineForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerAddSmartTraceLine();
+    }
+}
+
+void MainWindow::triggerAreaForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerAddArea();
+    }
+}
+
+void MainWindow::toggleTouchControlsForActiveDocument(bool checked)
+{
+    if (workspaceModeSwitcherSyncInProgress_) {
+        return;
+    }
+
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->setTouchControlsEnabled(checked);
+    }
 }
 
 void MainWindow::initializeDocumentStatusWidgets()
@@ -586,6 +995,7 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
     refreshDocumentStatusWidgets();
+    refreshWorkspaceModeSwitcherGeometry();
 }
 
 void MainWindow::buildMenus()
@@ -858,6 +1268,7 @@ void MainWindow::addWelcomeTab()
                                              tr("Open a project to begin working with Therion documents, maps, and structure views.")),
                         tr("Welcome"));
     refreshDocumentStatusWidgets();
+    refreshWorkspaceModeSwitcher();
 }
 
 void MainWindow::createNewWindow()
@@ -1209,6 +1620,7 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath)
         updateTabTitle(tab);
         if (currentDocumentWidget() == tab) {
             refreshDocumentStatusWidgets();
+            refreshWorkspaceModeSwitcher();
         }
     });
 
@@ -1221,6 +1633,7 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath)
         }
         if (currentDocumentWidget() == tab) {
             rebuildMapObjectsTree();
+            refreshWorkspaceModeSwitcher();
         }
     });
     connect(tab, &TherionStudio::TextEditorTab::editorModeChanged, this, [this, tab](TherionStudio::TextEditorTab::EditorMode) {
@@ -1282,6 +1695,15 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
                         }
                     },
                     Qt::UniqueConnection);
+            connect(existingTab,
+                    &TherionStudio::MapEditorTab::commandSurfaceStateChanged,
+                    this,
+                    [this, existingTab]() {
+                        if (currentDocumentWidget() == existingTab) {
+                            refreshWorkspaceModeSwitcher();
+                        }
+                    },
+                    Qt::UniqueConnection);
             refreshDocumentStatusWidgets();
             refreshWorkspaceModeSwitcher();
             return existingTab;
@@ -1311,6 +1733,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         updateTabTitle(tab);
         if (currentDocumentWidget() == tab) {
             refreshDocumentStatusWidgets();
+            refreshWorkspaceModeSwitcher();
         }
     });
     connect(tab, &TherionStudio::MapEditorTab::currentLineChanged, this, [this, tab](int lineNumber) {
@@ -1322,6 +1745,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         }
         if (currentDocumentWidget() == tab) {
             rebuildMapObjectsTree();
+            refreshWorkspaceModeSwitcher();
         }
     });
     connect(tab, &TherionStudio::MapEditorTab::backgroundLayersChanged, this, [this, tab]() {
@@ -1347,6 +1771,11 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
     connect(tab, &TherionStudio::MapEditorTab::mapPaneDetachStateChanged, this, [this, tab](bool) {
         if (currentDocumentWidget() == tab) {
             refreshDocumentStatusWidgets();
+            refreshWorkspaceModeSwitcher();
+        }
+    });
+    connect(tab, &TherionStudio::MapEditorTab::commandSurfaceStateChanged, this, [this, tab]() {
+        if (currentDocumentWidget() == tab) {
             refreshWorkspaceModeSwitcher();
         }
     });
@@ -1723,6 +2152,7 @@ void MainWindow::clearDocumentTabs()
     addWelcomeTab();
     clearingDocumentTabs_ = false;
     refreshDocumentStatusWidgets();
+    refreshWorkspaceModeSwitcher();
 }
 
 void MainWindow::updateProjectActionState()

@@ -7,6 +7,7 @@
 #include <QHash>
 #include <QPointF>
 #include <QVector>
+#include <QColor>
 
 class QLabel;
 class QCheckBox;
@@ -94,9 +95,19 @@ public:
                                  const QString &optionName,
                                  bool enabled,
                                  QString *errorMessage = nullptr);
+    bool rewritePointOrientation(int lineNumber,
+                                 bool enabled,
+                                 qreal orientationDegrees,
+                                 QString *errorMessage = nullptr);
+    bool rewriteLinePointOrientation(int lineNumber,
+                                     int sourceVertexIndex,
+                                     bool enabled,
+                                     qreal orientationDegrees,
+                                     QString *errorMessage = nullptr);
     bool rewriteLineCoordinateRows(int lineNumber,
                                    const QStringList &coordinateRows,
                                    QString *errorMessage = nullptr);
+    bool configureCommandAtLine(const QString &kind, int lineNumber);
     void replaceTextForCommand(const QString &contents);
 
     QString filePath() const;
@@ -105,8 +116,13 @@ public:
     int currentLineNumber() const;
     int currentColumnNumber() const;
     QString text() const;
+    QColor sourceSurfaceColor() const;
     QString statusPathText() const;
     QString statusEncodingText() const;
+    bool canUndo() const;
+    bool canRedo() const;
+    void triggerUndo();
+    void triggerRedo();
     void setInlineStatusVisible(bool visible);
     void setModeSelectorVisible(bool visible);
     EditorMode editorMode() const;
@@ -319,6 +335,7 @@ private:
     bool loading_ = false;
     bool replaceMode_ = false;
     bool inlineStatusRequestedVisible_ = true;
+    bool modeSelectorRequestedVisible_ = true;
     bool blocksModeActive_ = false;
     bool enforcingEncodingRootDirective_ = false;
     bool tearingDown_ = false;

@@ -72,7 +72,7 @@ Required capabilities:
 - preserve unsaved edits and document state across tab changes
 - provide an editor-surface mode switch between raw text editing and a structured block-canvas view for supported Therion source files
 - keep raw text as the canonical source of truth; any structured-view mutation shall be applied through source edits with immediate source synchronization
-- when the active document supports structured Blocks mode (`.th`/`.thconfig`) in the main window, the `Raw`/`Blocks` mode selector shall be hosted in the editor tab strip top-right corner adjacent to document tabs
+- when the active document supports structured Blocks mode (`.th`/`.thconfig`) in the main window, the `Raw`/`Blocks` mode selector shall be hosted in the full-width document command toolbar row directly beneath the tab strip
 
 Structured block-canvas requirements:
 
@@ -169,9 +169,12 @@ Required capabilities:
 - inspect and edit line properties
 - inspect and edit point properties
 - inspect and edit area properties
+- inspector fields for `scrap`, `point`, `line`, and `area` shall be metadata-driven from the Therion command catalog (same option schema used by structured block details) rather than hardcoded per-command forms
 - show object-specific identifiers and metadata
 - reflect the current selection in the settings panel
 - validate required fields and prevent invalid edits where necessary
+- for point symbols and selected line-point anchors, the inspector shall provide explicit orientation override controls with enable/disable state and degree input constrained to canonical `0..<360`
+- orientation controls shall be gated by command-metadata applicability (type/subtype constraints from the Therion command catalog) and shall not be shown for unsupported object variants
 
 ### 3.5 Structure Sidebar
 
@@ -249,7 +252,11 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The search bar shall support next, previous, replace current, replace all, whole-word matching, and case-sensitive matching.
 - The user shall be able to hide the search bar without closing the current document.
 - The editor shall display 1-based source line numbers in a left gutter that stays synchronized with document scroll position.
-- For `.th` and `.thconfig` documents, the `Raw`/`Blocks` mode selector shall be shown in the main tab-strip top-right corner instead of a dedicated in-content mode row.
+- For active document tabs, the application shall show a full-width document command toolbar directly beneath the tab strip.
+- The document command toolbar shall include, from the left, `Save`, a visual separator, `Undo` and `Redo`.
+- `Save`, `Undo`, and `Redo` in the document command toolbar shall be represented as icon-only controls with accessible names/tooltips.
+- When a TH2 document is active, the document command toolbar shall include these left-side groups in order: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`; then `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`; then a visual separator before right-aligned mode controls.
+- For `.th` and `.thconfig` documents, the `Raw`/`Blocks` mode selector shall be shown in this document command toolbar instead of a dedicated in-content mode row.
 - The application shall show the active document path and current text encoding in a status area tied to the active document context.
 - When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
 - When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8.
@@ -265,15 +272,17 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The map editor shall render the currently open TH2 document as an editable two-dimensional workspace.
 - The map workspace shall maintain sufficient contrast for geometry strokes, handles, labels, and grid lines in both light and dark system appearance modes.
 - When a TH2 document is active in the main window, the embedded workspace shall provide explicit `Visual` and `Raw` modes.
-- When a TH2 document is active in the main window, the `Visual`/`Raw` mode selector shall be hosted in the editor tab strip at the top-right edge (adjacent to document tabs) rather than in a dedicated row inside the tab content.
-- When a TH2 document is active in the main window, map-pane detach/reattach (`Separate Map` / `Return Map`) shall be provided in the same top-right workspace control area as the `Visual`/`Raw` mode selector.
-- When a TH2 map editor is presented outside the main tab strip (for example in a detached dedicated map-editor window), an equivalent in-window mode selector shall remain available.
-- In embedded `Visual` mode, the workspace shall present the graphical map canvas together with a right-side object-details panel used for map object attribute editing.
+- When a TH2 document is active in the main window, the `Visual`/`Raw` mode selector shall be hosted in the right-aligned controls of the full-width document command toolbar beneath the tab strip rather than in a dedicated row inside the tab content.
+- When a TH2 document is active in the main window, map-pane detach/reattach (`Separate Map` / `Return Map`) shall be provided in the same document command toolbar control area as the `Visual`/`Raw` mode selector.
+- When a TH2 map editor is presented outside the main tab strip (for example in a detached dedicated map-editor window), the top command toolbar shall omit `Visual`/`Raw` mode switching and keep only actions relevant to the detached visual workspace.
+- In embedded `Visual` mode, the workspace shall present the graphical map canvas together with a right-side map inspector.
+- The right-side map inspector in `Visual` mode shall provide at least two tabs: `Objects` and `Backgrounds`.
+- The `Objects` tab shall combine source-linked object-tree navigation (grouped by scrap) with selection details/settings editing for the currently selected map object.
 - In embedded `Raw` mode, the workspace shall present the source text editor together with the contextual help inspector and no embedded map pane.
 - The embedded graphical map pane shall stay dedicated to map editing and shall not include a separate persistent map-help panel.
 - The user shall be able to detach the current TH2 session into a dedicated map editor window without creating a separate document state.
 - Embedded and detached map presentations shall remain synchronized with the same selection, undo history, and underlying text document.
-- When the map pane is detached, the main tab shall continue showing the raw source editor while the detached map window presents the graphical map plus the object-details panel for the same TH2 session.
+- When the map pane is detached, the main tab shall continue showing the raw source editor while the detached map window presents the graphical map plus the same right-side map inspector for the same TH2 session.
 - When the map pane is detached, map zoom and Select/Insert mode indicators shall be shown in the detached map window status bar and shall not remain duplicated in the main-window status area.
 - On first display, scrap nodes shall default to expanded state.
 - If a map object is selected elsewhere in the application, the corresponding scrap shall expand automatically so the object remains visible in the list.
@@ -284,11 +293,10 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Dropping onto a scrap target shall move the object into that scrap when the object type supports it.
 - The list shall show a visual drop indicator for the current drag target.
 - All map mutations shall support undo and redo.
-- The map toolbar or equivalent command surface shall expose zoom in, zoom out, fit geometry, fit background plus geometry, undo, redo, selection mode, draft completion, scrap insertion, point insertion, line insertion, freehand line drawing, smart trace, area insertion, and touch-controls toggle.
-- The embedded map toolbar shall be hosted as a compact floating overlay inside the graphical map pane, centered against the top of the map canvas in a rounded container, rather than occupying a global full-width row above all panes or reserving a separate layout row.
-- The embedded map toolbar shall group these controls with visual separators in this order: zoom controls, history controls, selection/draft completion, insertion/drawing tools, and touch controls.
-- The embedded map toolbar shall wrap controls onto additional rows when the map canvas is too narrow for a single row, preserving control order and group separators.
-- The embedded map toolbar should present these actions as compact flat icon buttons, with text equivalents available through tooltips, accessibility names, and automation-stable identifiers.
+- The map command surface shall expose zoom in, zoom out, fit geometry, fit background plus geometry, undo, redo, selection mode, draft completion, scrap insertion, point insertion, line insertion, freehand line drawing, smart trace, area insertion, and touch-controls toggle.
+- In the main window, map command actions shall be hosted in the shared full-width document command toolbar beneath the tab strip; the graphical map canvas shall not host a floating in-canvas map toolbar overlay.
+- In detached map windows, an equivalent top command toolbar shall be shown above the map canvas and inspector.
+- Toolbar actions should present compact icon-first controls, with text equivalents available through tooltips, accessibility names, and automation-stable identifiers.
 - When a map editor tab is active, the status bar shall show the current map zoom before the Select/Insert mode badge.
 - The status bar shall not show the active document file name or path; persistent document identity remains available in the tab title and tooltips.
 - Bundled map toolbar icons shall be permissively licensed, shall include their license notice in the repository, and shall adapt to the active light/dark application palette.
@@ -362,6 +370,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - For files currently open in editor tabs, structure indexing shall use in-memory document text so unsaved edits are reflected immediately in the structure tree.
 - The structure sidebar shall provide explicit user controls to collapse and re-expand the panel.
 - The sidebar shall use a fixed-width activity rail plus a resizable content pane so the rail remains available when content is collapsed.
+- The activity rail shall provide `Files`, `Structure`, and `Compiler` entries; map-object/background workflows shall be available in the TH2 Visual-mode inspector rather than a dedicated `Map` rail entry.
 - Resizing the sidebar content pane to its collapsed threshold shall automatically collapse the content pane, leave the activity rail visible, and shall not resize the rail itself.
 
 #### 3.8.7 Therion Runner and Console Behavior
@@ -790,7 +799,7 @@ The criteria below are intended for implementation verification and QA.
 - Find and Replace show an inline search bar with next, previous, replace, replace all, whole-word, and match-case controls.
 - The editor shows a contextual help/documentation panel for Therion commands and options when metadata is available.
 - In raw text-editing mode, the contextual help panel appears in a resizable right-side inspector column (not a bottom strip), and editor/help spacing remains visually consistent with Blocks mode.
-- For `.th` and `.thconfig` documents, `Raw`/`Blocks` mode controls appear in the tab-strip top-right corner.
+- For `.th` and `.thconfig` documents, `Raw`/`Blocks` mode controls appear in the full-width document command toolbar row below the tab strip.
 - The application shows the active file path and encoding in a status area for the active document.
 - For map-editor documents, the status area shows a color mode badge (`Select` green, `Insert` red) and updates when the mode changes.
 - Non-UTF-8 files can be explicitly converted to UTF-8.
@@ -801,21 +810,22 @@ The criteria below are intended for implementation verification and QA.
 
 - The map editor renders the currently open TH2 file as a 2D editable workspace.
 - A TH2 document exposes an embedded mode selector with `Visual` and `Raw` modes.
-- In the main window, the TH2 `Visual`/`Raw` mode selector is anchored in the tab-strip top-right corner, next to document tabs.
-- In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same tab-strip top-right workspace control area.
-- In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window mode selector remains available.
-- In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side object-details panel for selected map objects.
+- In the main window, the TH2 `Visual`/`Raw` mode selector is shown in the right-aligned controls of the full-width document command toolbar row below the tab strip.
+- In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same document command toolbar control area, after `Raw`.
+- In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`) after `Undo`/`Redo`.
+- In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window top command toolbar remains available.
+- In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side map inspector (`Objects`, `Backgrounds` tabs).
 - In embedded `Raw` mode, the tab shows the source text editor plus contextual help inspector.
 - The graphical map pane does not show a separate persistent map-help panel.
 - The same TH2 session can be shown in an embedded workspace and a detached map pane window without diverging document state.
-- While the map pane is detached, the main tab keeps the raw text editor visible and the detached map window keeps map/object-details editing visible.
+- While the map pane is detached, the main tab keeps the raw text editor visible and the detached map window keeps map/inspector editing visible.
 - Scrap nodes start expanded on first display.
 - Selecting an object in the map editor updates the selected object state in the rest of the application.
 - Clicking a map object row reveals the corresponding source line when it exists.
 - Visibility toggles affect only the selected object visibility state and do not change selection.
 - Dragging and dropping map objects reorders or moves them according to the drop target.
 - Undo and redo work for map mutations.
-- The map toolbar or equivalent command surface exposes drawing, fitting, zoom, undo/redo, and draft-completion actions.
+- The map command surface exposes drawing, fitting, zoom, undo/redo, and draft-completion actions in the top toolbar (main and detached map windows).
 - Freehand line drawing and smart-trace-assisted line creation are supported.
 - Background layers support persisted position, visibility, gamma, opacity, and `.xvi` rendering where applicable.
 - A touch-friendly controls mode is available for pen-first workflows.
@@ -825,6 +835,7 @@ The criteria below are intended for implementation verification and QA.
 
 - The inspector always matches the current selected object.
 - Changing selection updates the visible object settings immediately.
+- For `scrap`, `point`, `line`, and `area`, inspector configuration uses the same catalog-driven option workflow as structured block selection.
 - Required fields are validated before commit.
 - Station points use station name as their required name field.
 - Non-station points do not expose station-name editing as a generic field.
@@ -835,6 +846,7 @@ The criteria below are intended for implementation verification and QA.
 - The structure tree does not include synthetic project-root or summary rows.
 - Sidebar selection changes the active document context.
 - The sidebar remains synchronized with the open project when the underlying structure changes.
+- The activity rail exposes `Files`, `Structure`, and `Compiler`; no dedicated `Map` rail pane is required.
 - The sidebar can be collapsed and re-expanded through explicit UI controls.
 
 #### 8.1.6 Therion Runner / Console
@@ -1179,7 +1191,7 @@ Required parity scope:
 
 - project files sidebar
 - project structure sidebar
-- map object list sidebar with selection-coupled behavior
+- map inspector `Objects` tab with selection-coupled behavior
 - object settings inspector for scrap/line/point/area
 - line-point options editing (orientation and l-size)
 - debug sidebar and inspector diagnostic surfaces

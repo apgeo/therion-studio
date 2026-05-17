@@ -81,6 +81,18 @@ constexpr int kPanelSpacing = 8;
 constexpr int kBlocksSidePaneMinWidth = 320;
 constexpr int kBlocksSidePaneMaxWidth = 460;
 constexpr int kBlockEndHintContainerLineDataRole = 0x42554e44; // "BUND"
+
+void applyThinSplitterStyle(QSplitter *splitter, const QString &objectName)
+{
+    if (splitter == nullptr) {
+        return;
+    }
+
+    splitter->setObjectName(objectName);
+    splitter->setHandleWidth(10);
+    splitter->setStyleSheet(QString());
+}
+
 QColor blockBaseColorForDirective(const QString &directive);
 void syncPanelSurfaceToBaseTone(QWidget *panelWidget);
 void syncPanelSurfaceToPalette(QWidget *panelWidget, const QPalette &sourcePalette);
@@ -1850,6 +1862,25 @@ void syncPanelSurfaceToPalette(QWidget *panelWidget, const QPalette &sourcePalet
     panelPalette.setColor(QPalette::AlternateBase, surfaceColor);
     panelWidget->setPalette(panelPalette);
     panelWidget->setAutoFillBackground(true);
+    if (panelWidget->property("leftBorderOnly").toBool()) {
+        if (panelWidget->objectName().isEmpty()) {
+            panelWidget->setObjectName(QStringLiteral("leftBorderPanel"));
+        }
+        panelWidget->setStyleSheet(QStringLiteral(
+                                       "QWidget#%1 {"
+                                       " background-color: %2;"
+                                       " color: %3;"
+                                       " border-left: 1px solid palette(mid);"
+                                       " border-right: none;"
+                                       " border-top: none;"
+                                       " border-bottom: none;"
+                                       "}")
+                                       .arg(panelWidget->objectName(),
+                                            surfaceColor.name(QColor::HexRgb),
+                                            panelPalette.color(QPalette::Text).name(QColor::HexRgb)));
+        return;
+    }
+
     panelWidget->setStyleSheet(QStringLiteral("background-color: %1; color: %2;")
                                    .arg(surfaceColor.name(QColor::HexRgb),
                                         panelPalette.color(QPalette::Text).name(QColor::HexRgb)));
@@ -2100,6 +2131,15 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     connect(closeSearchButton_, &QPushButton::clicked, this, &TextEditorTab::handleCloseSearchTriggered);
 
     editor_ = new HighlightPlainTextEdit(this);
+    editor_->setFrameShape(QFrame::NoFrame);
+    editor_->setObjectName(QStringLiteral("rawTextEditorCanvas"));
+    editor_->setStyleSheet(QStringLiteral(
+        "QPlainTextEdit#rawTextEditorCanvas {"
+        " border-left: 1px solid palette(mid);"
+        " border-right: 1px solid palette(mid);"
+        " border-top: none;"
+        " border-bottom: none;"
+        "}"));
     editor_->setTabChangesFocus(false);
     editor_->setTabStopDistance(QFontMetricsF(editor_->font()).horizontalAdvance(QLatin1Char(' ')) * 4.0);
     editor_->setPlaceholderText(tr("Open a Therion text file to begin editing."));
@@ -2144,7 +2184,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 
     editorHelpSplitter_ = new QSplitter(Qt::Horizontal, this);
     editorHelpSplitter_->setChildrenCollapsible(false);
-    editorHelpSplitter_->setHandleWidth(12);
+    applyThinSplitterStyle(editorHelpSplitter_, QStringLiteral("textEditorHelpSplitter"));
     editorHelpSplitter_->addWidget(editor_);
 
     buildHelpPanel();
@@ -2158,7 +2198,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 
     rawEditorPanel_ = new QWidget(this);
     auto *rawEditorLayout = new QHBoxLayout(rawEditorPanel_);
-    rawEditorLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);
+    rawEditorLayout->setContentsMargins(0, 0, 0, 0);
     rawEditorLayout->setSpacing(kPanelSpacing);
     rawEditorLayout->addWidget(editorHelpSplitter_, 1);
 
@@ -2175,18 +2215,29 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     modeLayout->addWidget(rawModeButton_);
     modeLayout->addWidget(blocksModeButton_);
     modeLayout->addStretch(1);
+    modeRow_->setMaximumHeight(modeSelectorRequestedVisible_ ? QWIDGETSIZE_MAX : 0);
 
     blocksPanel_ = new QWidget(this);
     auto *blocksLayout = new QHBoxLayout(blocksPanel_);
-    blocksLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);
+    blocksLayout->setContentsMargins(0, 0, 0, 0);
     blocksLayout->setSpacing(kPanelSpacing);
 
     auto *blocksSplitter = new QSplitter(Qt::Horizontal, blocksPanel_);
     blocksSplitter->setChildrenCollapsible(false);
+    applyThinSplitterStyle(blocksSplitter, QStringLiteral("textBlocksSplitter"));
 
     auto *toolboxColumn = new QWidget(blocksSplitter);
+    toolboxColumn->setObjectName(QStringLiteral("blocksToolboxPane"));
+    toolboxColumn->setAttribute(Qt::WA_StyledBackground, true);
+    toolboxColumn->setStyleSheet(QStringLiteral(
+        "QWidget#blocksToolboxPane {"
+        " border-left: 1px solid palette(mid);"
+        " border-right: none;"
+        " border-top: none;"
+        " border-bottom: none;"
+        "}"));
     auto *toolboxColumnLayout = new QVBoxLayout(toolboxColumn);
-    toolboxColumnLayout->setContentsMargins(0, 0, 0, 0);
+    toolboxColumnLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);
     toolboxColumnLayout->setSpacing(kPanelSpacing);
     blockToolboxScopeCombo_ = new QComboBox(toolboxColumn);
     populateBlockToolboxScopeCombo();
@@ -2209,6 +2260,15 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 
     blockCanvasScene_ = new QGraphicsScene(blocksSplitter);
     auto *typedCanvasView = new BlockCanvasView(blocksSplitter);
+    typedCanvasView->setFrameShape(QFrame::NoFrame);
+    typedCanvasView->setObjectName(QStringLiteral("blocksCanvasView"));
+    typedCanvasView->setStyleSheet(QStringLiteral(
+        "QGraphicsView#blocksCanvasView {"
+        " border-left: 1px solid palette(mid);"
+        " border-right: 1px solid palette(mid);"
+        " border-top: none;"
+        " border-bottom: none;"
+        "}"));
     typedCanvasView->setScene(blockCanvasScene_);
     typedCanvasView->setSceneRect(QRectF(0.0, 0.0, 1400.0, 2000.0));
     typedCanvasView->setBackgroundBrush(palette().color(QPalette::Base));
@@ -2225,7 +2285,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     blockCanvasView_ = typedCanvasView;
 
     blockDetailsPanel_ = new QFrame(blocksSplitter);
-    blockDetailsPanel_->setFrameShape(QFrame::StyledPanel);
+    blockDetailsPanel_->setFrameShape(QFrame::NoFrame);
     blockDetailsPanel_->setMinimumWidth(kBlocksSidePaneMinWidth);
     blockDetailsPanel_->setMaximumWidth(kBlocksSidePaneMaxWidth);
     syncPanelSurfaceToBaseTone(blockDetailsPanel_);
@@ -2375,6 +2435,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     if (blockDetailsHelpFrame != nullptr) {
         blockDetailsHelpFrame->setFrameShape(QFrame::NoFrame);
     }
+    blockDetailsHelpPanel_->setObjectName(QStringLiteral("blocksContextHelpPanel"));
     syncPanelSurfaceToBaseTone(blockDetailsHelpPanel_);
     auto *blockDetailsHelpPanelLayout = new QVBoxLayout(blockDetailsHelpPanel_);
     blockDetailsHelpPanelLayout->setContentsMargins(0, 0, 0, 0);
@@ -2597,7 +2658,11 @@ void TextEditorTab::handleApplicationAppearanceChanged()
         }
     }
 
-    const QPalette textSurfacePalette = editor_ != nullptr ? editor_->palette() : palette();
+    QPalette textSurfacePalette = editor_ != nullptr ? editor_->palette() : palette();
+    const QColor sourceSurface = sourceSurfaceColor();
+    textSurfacePalette.setColor(QPalette::Window, sourceSurface);
+    textSurfacePalette.setColor(QPalette::Base, sourceSurface);
+    textSurfacePalette.setColor(QPalette::AlternateBase, sourceSurface);
     syncPanelSurfaceToPalette(helpPanel_, textSurfacePalette);
     syncPanelSurfaceToPalette(blockDetailsPanel_, textSurfacePalette);
     syncPanelSurfaceToPalette(blockDetailsEditPanel_, textSurfacePalette);
@@ -3122,6 +3187,88 @@ bool TextEditorTab::rewriteLineOptionToggle(int lineNumber,
     return true;
 }
 
+bool TextEditorTab::rewritePointOrientation(int lineNumber,
+                                            bool enabled,
+                                            qreal orientationDegrees,
+                                            QString *errorMessage)
+{
+    QString contents = editor_->toPlainText();
+    if (!TherionDocumentEditor::rewritePointOrientation(&contents,
+                                                        lineNumber,
+                                                        enabled,
+                                                        orientationDegrees,
+                                                        errorMessage)) {
+        return false;
+    }
+
+    const QTextCursor previousCursor = editor_->textCursor();
+    const int previousLine = previousCursor.blockNumber();
+    const int previousColumn = previousCursor.positionInBlock();
+
+    loading_ = true;
+    editor_->setPlainText(contents);
+
+    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
+    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
+    if (targetBlock.isValid()) {
+        QTextCursor restoredCursor(targetBlock);
+        restoredCursor.movePosition(QTextCursor::StartOfBlock);
+        restoredCursor.movePosition(QTextCursor::Right,
+                                    QTextCursor::MoveAnchor,
+                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
+        editor_->setTextCursor(restoredCursor);
+    }
+
+    loading_ = false;
+    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
+    applyDirtyStateFromCurrentState();
+    emit documentTextChanged();
+    updateContextHelp();
+    return true;
+}
+
+bool TextEditorTab::rewriteLinePointOrientation(int lineNumber,
+                                                int sourceVertexIndex,
+                                                bool enabled,
+                                                qreal orientationDegrees,
+                                                QString *errorMessage)
+{
+    QString contents = editor_->toPlainText();
+    if (!TherionDocumentEditor::rewriteLinePointOrientation(&contents,
+                                                            lineNumber,
+                                                            sourceVertexIndex,
+                                                            enabled,
+                                                            orientationDegrees,
+                                                            errorMessage)) {
+        return false;
+    }
+
+    const QTextCursor previousCursor = editor_->textCursor();
+    const int previousLine = previousCursor.blockNumber();
+    const int previousColumn = previousCursor.positionInBlock();
+
+    loading_ = true;
+    editor_->setPlainText(contents);
+
+    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
+    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
+    if (targetBlock.isValid()) {
+        QTextCursor restoredCursor(targetBlock);
+        restoredCursor.movePosition(QTextCursor::StartOfBlock);
+        restoredCursor.movePosition(QTextCursor::Right,
+                                    QTextCursor::MoveAnchor,
+                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
+        editor_->setTextCursor(restoredCursor);
+    }
+
+    loading_ = false;
+    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
+    applyDirtyStateFromCurrentState();
+    emit documentTextChanged();
+    updateContextHelp();
+    return true;
+}
+
 bool TextEditorTab::rewriteLineCoordinateRows(int lineNumber,
                                               const QStringList &coordinateRows,
                                               QString *errorMessage)
@@ -3154,6 +3301,16 @@ bool TextEditorTab::rewriteLineCoordinateRows(int lineNumber,
     applyDirtyStateFromCurrentState();
     emit documentTextChanged();
     updateContextHelp();
+    return true;
+}
+
+bool TextEditorTab::configureCommandAtLine(const QString &kind, int lineNumber)
+{
+    if (lineNumber <= 0 || editor_ == nullptr) {
+        return false;
+    }
+
+    handleBlockConfigureRequest(kind, lineNumber);
     return true;
 }
 
@@ -3228,6 +3385,37 @@ QString TextEditorTab::text() const
     return editor_->toPlainText();
 }
 
+QColor TextEditorTab::sourceSurfaceColor() const
+{
+    if (blocksModeActive_ && blockCanvasView_ != nullptr) {
+        const QColor blocksSurface = blockCanvasView_->backgroundBrush().color();
+        if (blocksSurface.isValid()) {
+            return blocksSurface;
+        }
+        const QColor blocksBase = blockCanvasView_->palette().color(QPalette::Base);
+        if (blocksBase.isValid()) {
+            return blocksBase;
+        }
+    }
+
+    if (editor_ != nullptr) {
+        const QColor editorBase = editor_->palette().color(QPalette::Base);
+        if (editorBase.isValid()) {
+            return editorBase;
+        }
+        const QColor editorWindow = editor_->palette().color(QPalette::Window);
+        if (editorWindow.isValid()) {
+            return editorWindow;
+        }
+    }
+
+    const QColor widgetBase = palette().color(QPalette::Base);
+    if (widgetBase.isValid()) {
+        return widgetBase;
+    }
+    return palette().color(QPalette::Window);
+}
+
 QString TextEditorTab::statusPathText() const
 {
     return displayPath();
@@ -3238,6 +3426,30 @@ QString TextEditorTab::statusEncodingText() const
     return fileEncodingLabel_;
 }
 
+bool TextEditorTab::canUndo() const
+{
+    return editor_ != nullptr && editor_->document() != nullptr && editor_->document()->isUndoAvailable();
+}
+
+bool TextEditorTab::canRedo() const
+{
+    return editor_ != nullptr && editor_->document() != nullptr && editor_->document()->isRedoAvailable();
+}
+
+void TextEditorTab::triggerUndo()
+{
+    if (editor_ != nullptr) {
+        editor_->undo();
+    }
+}
+
+void TextEditorTab::triggerRedo()
+{
+    if (editor_ != nullptr) {
+        editor_->redo();
+    }
+}
+
 void TextEditorTab::setInlineStatusVisible(bool visible)
 {
     inlineStatusRequestedVisible_ = visible;
@@ -3246,8 +3458,19 @@ void TextEditorTab::setInlineStatusVisible(bool visible)
 
 void TextEditorTab::setModeSelectorVisible(bool visible)
 {
+    modeSelectorRequestedVisible_ = visible;
     if (modeRow_ != nullptr) {
-        modeRow_->setVisible(visible);
+        modeRow_->setVisible(modeSelectorRequestedVisible_);
+        modeRow_->setMaximumHeight(modeSelectorRequestedVisible_ ? QWIDGETSIZE_MAX : 0);
+        if (!modeSelectorRequestedVisible_) {
+            modeRow_->setMinimumHeight(0);
+        } else {
+            modeRow_->setMinimumHeight(modeRow_->sizeHint().height());
+        }
+    }
+    if (QLayout *rootLayout = layout(); rootLayout != nullptr) {
+        rootLayout->invalidate();
+        rootLayout->activate();
     }
 }
 
@@ -8109,8 +8332,9 @@ void TextEditorTab::refreshStatus()
 void TextEditorTab::buildHelpPanel()
 {
     auto *framedHelpPanel = new QFrame(this);
-    framedHelpPanel->setFrameShape(QFrame::StyledPanel);
+    framedHelpPanel->setFrameShape(QFrame::NoFrame);
     helpPanel_ = framedHelpPanel;
+    helpPanel_->setObjectName(QStringLiteral("textContextHelpPanel"));
     syncPanelSurfaceToBaseTone(helpPanel_);
     auto *panelLayout = new QVBoxLayout(helpPanel_);
     panelLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);

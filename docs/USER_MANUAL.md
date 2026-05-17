@@ -23,14 +23,15 @@ The main window is organized into:
 - Left sidebar with activity rail and switchable panes
 - Central tab area (text tabs and map-editor tabs)
 - Status bar (global app status)
+- Splitter handles use a consistent native visible grab-handle style across sidebar/content, raw-help, blocks columns, and map inspector splits
+- Main sidebar/content splitter panes use inner-only seam borders (no border on the outer window edges)
 
 ### 2.1 Sidebar Activity Rail and Panes
 
-The sidebar has an always-visible activity rail with 4 panes:
+The sidebar has an always-visible activity rail with 3 panes:
 
 - `Files`
 - `Structure`
-- `Map`
 - `Compiler`
 
 Behavior:
@@ -39,7 +40,7 @@ Behavior:
 - Clicking the active icon again collapses the sidebar to the rail.
 - Clicking any icon while collapsed expands sidebar and opens that pane.
 - Dragging the sidebar content resize handle below the minimum usable width snaps the content pane closed while keeping the activity rail fixed and visible.
-- `Map` pane is enabled only when the active tab is a `.th2` document.
+- Map-object/background workflows are handled directly in TH2 Visual-mode right-side Inspector (`Objects` and `Backgrounds` tabs), not in a dedicated rail pane.
 - Activity-rail buttons use larger borderless icon buttons with hover/active highlight states tuned for both light and dark appearances.
 
 ### 2.2 Central Tabs
@@ -146,10 +147,11 @@ Text editor includes:
 - left gutter with 1-based line numbers that scroll with the document
 - active-line highlight that follows the text cursor (including map-driven source navigation)
 - editor mode toggle: `Raw` and `Blocks` (available for `.th` and `.thconfig` files)
-- for `.th`/`.thconfig`, the `Mode` switcher is in the document tab strip top-right (next to tabs), not in an extra row inside editor content
+- for `.th`/`.thconfig`, the `Mode` switcher is in the full-width document toolbar row directly under tabs, not in an extra row inside editor content
 - find/replace bar with `Whole word` and `Case sensitive` options
 - completion popup is shown while typing (commands/options/values), sourced from command catalog metadata; `Ctrl+Space` remains available as manual trigger
 - when completion popup is visible, confirm a suggestion with `Enter`, `Tab`, or mouse click; `Esc` closes the popup
+- raw editor and contextual-help inspector are separated by a thin divider handle (no wide gutter)
 - when completion popup is not visible, pressing `Tab` inserts four spaces (no literal tab character)
 - when confirming a block-opening command completion on an otherwise empty command line (for example `survey`, `map`, `scrap`, `centerline`, `line`, `area`), editor auto-inserts the matching `end...` line
 - completion suggestions are context-aware: command position favors commands, `-` option position favors command options, and value position after an option favors allowed values
@@ -163,7 +165,7 @@ Text editor includes:
 - syntax highlighting also validates option values where catalog enum/type metadata is available (for example `-close`, `-reverse`, and type-scoped `-subtype` on `line`/`point`/`area`), and marks incompatible values as invalid
 - when caret is on an invalid option or invalid enum/subtype value, contextual help switches to a `Validation` panel with reason and allowed values
 - when caret lands on an invalid token, an inline tooltip is also shown near the cursor with a short validation reason and allowed values
-- Raw mode uses a right-column contextual help pane, resizable via splitter handle
+- Raw mode uses a right-column contextual help pane, resizable via the same native visible splitter handle style used in all views
 - contextual help resolution is driven by `therion_command_catalog.json` only
 - bottom status row for encoding notes and conversion action
 - explicit `Convert to UTF-8` action shown when a file is opened with a non-UTF-8 encoding
@@ -209,7 +211,7 @@ Text editor includes:
 - toolbox drop insertion now uses boundary zones: before/after target near edges, or inside compatible container in middle zone
 - if drop context is incompatible, insertion is auto-promoted to the nearest valid ancestor scope (or root) to avoid hard failure dialogs in common workflows
 - dragging an existing block card in canvas reorders source blocks (whole block is moved, including nested content for container blocks)
-- blocks-mode right-column contextual help now uses the same framed header/body style and internal padding as Raw mode contextual help for consistent spacing
+- blocks-mode contextual help keeps internal padding parity with Raw mode and no additional inner border treatment
 - full-line source comments (`# ...`) are rendered as `comment` cards in canvas and can be moved/deleted like other leaf cards
 - while dragging a canvas card, a dashed horizontal placement guide line shows the current insertion boundary between blocks
 - when dragging over a container card, dropping near the card top/bottom edge inserts before/after that block; dropping in the middle keeps container-child insertion behavior
@@ -217,9 +219,10 @@ Text editor includes:
 - dropping onto a compatible container (for example `survey`) moves the block inside that container near its end
 - block canvas updates live when application/system appearance changes (light/dark), including immediate canvas background and boundary-guide redraw
 - Blocks mode panel chrome uses consistent padding/spacing so toolbox, canvas, and details borders align more cleanly with surrounding window panes
+- Blocks-mode toolbox splitter pane uses a left-side divider only (no top/right/bottom border) and padded content inset consistent with contextual-help spacing
 - Raw mode uses the same 12/8 panel padding/spacing rhythm as Blocks mode, and keeps contextual help in a bounded right-side column for layout consistency
 - Blocks Details/Contextual Help side pane keeps a bounded width, so wide windows allocate surplus space to the canvas instead of a mostly-empty help column
-- Blocks right pane uses a single framed surface (no nested double-frame around help), keeping border weight and inner padding consistent between `Block Details` and `Contextual Help`
+- Blocks right pane uses a single details surface (no nested double-frame around help); contextual help section is visually separated by a left divider
 - in dark/light modes, contextual-help panes in both Raw and Blocks modes use a unified base-surface tone across panel and text area (no mixed dark patches in the same help pane)
 - block cards use a trash icon action in the top-right corner for delete
 - selecting a block card focuses it in `Block Details` for editing
@@ -296,34 +299,48 @@ Selecting an entry:
 
 Map tab uses explicit workspace modes:
 
-- `Visual`: graphical map editor + right-side `Object Details` panel
+- `Visual`: graphical map editor + right-side `Inspector` tabs (`Objects`, `Backgrounds`)
 - `Raw`: source text editor + right-side contextual help inspector
-- when a `.th2` map tab is active in the main window, the `Mode` switcher is in the document tab strip (top-right, next to tabs) to save vertical space
-- the same top-right workspace controls include `Separate Map` / `Return Map` for detaching/reattaching the map pane
-- when a map editor is shown outside the main tab strip (for example a dedicated detached map-editor window), the same `Mode` switcher is shown inline inside that window as fallback
+- the full-width document toolbar row is shown under tabs for all document types
+- from left, the toolbar defaults to `Save`, divider, `Undo`/`Redo`, divider
+- `Save`, `Undo`, and `Redo` are icon-only buttons (with tooltips) in both main and detached map toolbars
+- when a `.th2` map tab is active, the next left-side toolbar groups are:
+- `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
+- `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`
+- when a `.th2` map tab is active in the main window, the right side of that toolbar shows `Visual`, `Raw`, and `Separate Map` / `Return Map` (in that order)
+- when a map editor is shown outside the main tab strip (detached map window), an equivalent top command toolbar is shown above the map canvas and inspector, but `Visual`/`Raw` buttons are omitted there
 
 The map pane is dedicated to graphical editing; there is no separate persistent `Map Help` pane below the canvas.
 
 Map canvas appearance:
 
 - canvas and geometry contrast adapts to current system light/dark appearance so lines, handles, labels, and grid stay readable
-- canvas outer padding follows the same panel spacing rhythm as the adjacent source editor and contextual help inspector
+- map, raw-editor, and blocks-canvas surfaces are edge-aligned with no extra outer margin around the main content area
 - switching system light/dark appearance updates the map workspace and sidebar/status separators live, without restarting the app
 
-Object details panel (`Visual` mode):
+Inspector panel (`Visual` mode):
 
-- updates from current map selection
+- `Objects` tab combines:
+- TH2 objects grouped by scrap (source-line-linked tree)
+- selection details/editing controls (formerly standalone `Object Details` / `Selection` panel)
+- `Backgrounds` tab hosts background-layer controls that were previously in the left sidebar `Map` pane
+
+- in `Objects`:
 - shows selected object line/kind summary
-- supports attribute updates for selected map geometry (for example line `-close`/`-reverse` toggles and coordinate edits for selected point/vertex items)
+- supports coordinate edits for selected point/vertex geometry items
+- for point symbols and selected line anchor vertices, orientation controls appear only when catalog metadata marks `-orientation` as supported for the current command type/subtype:
+- `Orientation override (-orientation)` enable/disable
+- degree input constrained to `0..359.999`
+- `Apply Orientation` writes/removes per-object or per-line-point orientation in source
+- includes `Edit Object Settings...` for `scrap`, `point`, `line`, and `area`; this opens the same catalog-driven option editor used by structured block selection
+- if no map geometry item is selected, `Edit Object Settings...` can target the command under the current text cursor line when that line is `scrap`, `point`, `line`, or `area`
 - edits update TH2 source text immediately and stay in the same undo/redo workflow
 
 Toolbar actions:
 
-- toolbar commands are shown as compact flat Lucide icon buttons; hover any icon to see the text label
-- the toolbar floats inside the graphical map pane, centered at the top of the map canvas in a rounded overlay instead of spanning the whole editor tab
-- toolbar groups are separated visually in this order: view controls, history controls, selection/draft completion, insertion/drawing tools, and touch controls
-- the floating toolbar wraps onto additional rows when the map canvas is too narrow for one row
-- view actions: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
+- map toolbar commands are shown in the top command row (not as a floating in-canvas overlay)
+- controls are compact icon-first Lucide buttons; hover any icon to see the text label
+- top document-toolbar view actions (TH2): `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
 - current map zoom is shown in the main status bar before the `Select`/`Insert` mode badge
 - history actions: `Undo`, `Redo`
 - selection/draft actions: `Select`, `Complete Draft`
@@ -365,8 +382,8 @@ Interactive drawing (current):
 
 Detached map-pane behavior:
 
-- `Separate Map` (top-right workspace controls) detaches the graphical map pane into its own top-level window (useful for a second monitor).
-- Detached map window keeps the same `Object Details` panel as `Visual` mode.
+- `Separate Map` (document toolbar row under tabs) detaches the graphical map pane into its own top-level window (useful for a second monitor).
+- Detached map window keeps the same top command toolbar groups and right-side `Inspector` tabs as embedded `Visual` mode, except detached toolbar omits `Visual`/`Raw`.
 - The main tab keeps the raw text editor visible while detached.
 - Detached map window shows its own status bar for map zoom and `Select`/`Insert` mode.
 - Main-window map zoom/mode badges are hidden while detached, so map status lives with the detached map window.
@@ -404,9 +421,9 @@ Zoom constraints:
 
 - zoom is clamped to `0.1 .. 50.0`
 
-### 5.7 Background Image Management (Map Sidebar)
+### 5.7 Background Image Management (Inspector `Backgrounds` Tab)
 
-In sidebar `Map` pane, the `Background Images` panel provides:
+In `Visual` mode `Inspector -> Backgrounds`, the `Background Images` controls provide:
 
 - layer list with selection
 - add (`+`) button (multi-file picker)
@@ -519,11 +536,11 @@ Fix:
 - pass explicit `-c` / `--config` argument, or
 - open a `.thconfig` file and rerun.
 
-### 9.3 Map pane unavailable
+### 9.3 Open in Map Editor unavailable
 
 Symptom:
 
-- Map sidebar pane disabled.
+- `Map -> Open Current Document in Map Editor` is disabled.
 
 Fix:
 

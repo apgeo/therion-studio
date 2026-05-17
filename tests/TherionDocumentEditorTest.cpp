@@ -1137,6 +1137,77 @@ int runCorpusStyleRewriteFixtureTest()
 
     return 0;
 }
+
+int runRewriteOrientationOptionsTest()
+{
+    QString errorMessage;
+
+    QString contents = QStringLiteral("point 10 20 station -name a1\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewritePointOrientation(&contents, 1, true, 370.0, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 10 20 station -name a1 -orientation 10\n"),
+                "rewritePointOrientation should append normalized orientation in 0..<360 range.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewritePointOrientation(&contents, 1, false, 0.0, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 10 20 station -name a1\n"),
+                "rewritePointOrientation should remove orientation option when disabled.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line slope\n"
+                              "  10 20 -orientation 45\n"
+                              "  30 40\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLinePointOrientation(&contents, 1, 0, true, -15.0, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line slope\n"
+                                           "  10 20 -orientation 345\n"
+                                           "  30 40\n"
+                                           "endline\n"),
+                "rewriteLinePointOrientation should rewrite orientation for selected source vertex row.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLinePointOrientation(&contents, 1, 1, true, 90.0, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line slope\n"
+                                           "  10 20 -orientation 345\n"
+                                           "  30 40 -orientation 90\n"
+                                           "endline\n"),
+                "rewriteLinePointOrientation should append orientation after coordinates when missing.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLinePointOrientation(&contents, 1, 1, false, 0.0, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line slope\n"
+                                           "  10 20 -orientation 345\n"
+                                           "  30 40\n"
+                                           "endline\n"),
+                "rewriteLinePointOrientation should remove orientation option from selected row when disabled.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -1169,6 +1240,11 @@ int main()
     const int rewriteLineOptionToggleResult = runRewriteLineOptionToggleTest();
     if (rewriteLineOptionToggleResult != 0) {
         return rewriteLineOptionToggleResult;
+    }
+
+    const int rewriteOrientationOptionsResult = runRewriteOrientationOptionsTest();
+    if (rewriteOrientationOptionsResult != 0) {
+        return rewriteOrientationOptionsResult;
     }
 
     const int rewriteLineCoordinateRowsResult = runRewriteLineCoordinateRowsTest();

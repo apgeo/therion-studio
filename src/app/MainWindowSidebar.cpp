@@ -693,6 +693,7 @@ void MainWindow::buildStructureSidebar()
         if (updatingSidebarSplitter_) {
             return;
         }
+        refreshWorkspaceModeSwitcherGeometry();
         if (sidebarContainer_ == nullptr || sidebarContentContainer_ == nullptr || !sidebarContainer_->isVisible()) {
             return;
         }
@@ -728,7 +729,6 @@ void MainWindow::buildStructureSidebar()
 
     const QString filesIconName = QStringLiteral("folder-open");
     const QString structureIconName = QStringLiteral("network");
-    const QString mapIconName = QStringLiteral("map");
     const QString consoleIconName = QStringLiteral("cog");
     const QSize activityIconSize(20, 20);
     const QSize activityButtonSize(34, 34);
@@ -793,13 +793,6 @@ void MainWindow::buildStructureSidebar()
     });
     activityLayout->addWidget(sidebarStructureButton_);
 
-    sidebarMapButton_ = new QToolButton(activityBar);
-    configureActivityButton(sidebarMapButton_, mapIconName, tr("Map"));
-    connect(sidebarMapButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
-        handleActivityButtonClick(SidebarPane::MapEditor);
-    });
-    activityLayout->addWidget(sidebarMapButton_);
-
     sidebarConsoleButton_ = new QToolButton(activityBar);
     configureActivityButton(sidebarConsoleButton_, consoleIconName, tr("Compiler"));
     connect(sidebarConsoleButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
@@ -810,11 +803,9 @@ void MainWindow::buildStructureSidebar()
     const auto applyActivityRailTheme = [activityBar,
                                          filesButton = sidebarFilesButton_,
                                          structureButton = sidebarStructureButton_,
-                                         mapButton = sidebarMapButton_,
                                          compilerButton = sidebarConsoleButton_,
                                          filesIconName,
                                          structureIconName,
-                                         mapIconName,
                                          consoleIconName,
                                          activityIconSize]() {
         if (activityBar == nullptr) {
@@ -823,13 +814,11 @@ void MainWindow::buildStructureSidebar()
 
         const QPalette palette = activityBar->palette();
         const QColor railBase = palette.color(QPalette::Window);
-        const QColor railBorder = palette.color(QPalette::Mid);
         const QColor railHover = palette.color(QPalette::Highlight);
         const QColor railChecked = palette.color(QPalette::Highlight);
         activityBar->setStyleSheet(QStringLiteral(
                                        "#SidebarActivityRail {"
                                        "background-color: %1;"
-                                       "border-right: 1px solid %2;"
                                        "}"
                                        "#SidebarActivityRail QToolButton {"
                                        "border: none;"
@@ -838,13 +827,12 @@ void MainWindow::buildStructureSidebar()
                                        "padding: 0px;"
                                        "}"
                                        "#SidebarActivityRail QToolButton:hover {"
-                                       "background-color: %3;"
+                                       "background-color: %2;"
                                        "}"
                                        "#SidebarActivityRail QToolButton:checked {"
-                                       "background-color: %4;"
+                                       "background-color: %3;"
                                        "}")
                                        .arg(rgbaColorCss(railBase, 0.78))
-                                       .arg(rgbaColorCss(railBorder, 0.55))
                                        .arg(rgbaColorCss(railHover, 0.24))
                                        .arg(rgbaColorCss(railChecked, 0.34)));
 
@@ -854,9 +842,6 @@ void MainWindow::buildStructureSidebar()
         }
         if (structureButton != nullptr) {
             structureButton->setIcon(themedLucideIcon(structureIconName, palette, extent));
-        }
-        if (mapButton != nullptr) {
-            mapButton->setIcon(themedLucideIcon(mapIconName, palette, extent));
         }
         if (compilerButton != nullptr) {
             compilerButton->setIcon(themedLucideIcon(consoleIconName, palette, extent));
@@ -878,8 +863,17 @@ void MainWindow::buildStructureSidebar()
     mainContentLayout_->addWidget(sidebarContainer_, 0);
 
     sidebarContentContainer_ = new QWidget(mainContentSplitter_);
+    sidebarContentContainer_->setObjectName(QStringLiteral("mainSidebarSplitterPane"));
     sidebarContentContainer_->setMinimumWidth(0);
     sidebarContentContainer_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
+    sidebarContentContainer_->setAttribute(Qt::WA_StyledBackground, true);
+    sidebarContentContainer_->setStyleSheet(QStringLiteral(
+        "QWidget#mainSidebarSplitterPane {"
+        " border-left: none;"
+        " border-right: 1px solid palette(mid);"
+        " border-top: none;"
+        " border-bottom: none;"
+        "}"));
     auto *sidebarContentLayout = new QVBoxLayout(sidebarContentContainer_);
     sidebarContentLayout->setContentsMargins(0, 0, 0, 0);
     sidebarContentLayout->setSpacing(0);
@@ -917,49 +911,6 @@ void MainWindow::buildStructureSidebar()
     structureLayout->addWidget(structureTree_, 1);
     sidebarPages_->addWidget(structurePage);
 
-    auto *mapObjectsPage = new QWidget(sidebarPages_);
-    auto *mapObjectsLayout = new QVBoxLayout(mapObjectsPage);
-    mapObjectsLayout->setContentsMargins(12, 12, 12, 12);
-    mapObjectsLayout->setSpacing(8);
-
-    auto *mapObjectsDescription = new QLabel(tr("Objects in the active TH2 file are grouped by scrap."), mapObjectsPage);
-    mapObjectsDescription->setWordWrap(true);
-    mapObjectsLayout->addWidget(mapObjectsDescription);
-
-    mapObjectsTree_ = new QTreeView(mapObjectsPage);
-    mapObjectsTree_->setMinimumWidth(0);
-    mapObjectsTree_->setModel(mapObjectsModel_);
-    mapObjectsTree_->setRootIsDecorated(true);
-    mapObjectsTree_->setAnimated(true);
-    mapObjectsTree_->setSelectionBehavior(QAbstractItemView::SelectRows);
-    mapObjectsTree_->setSelectionMode(QAbstractItemView::SingleSelection);
-    mapObjectsTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    mapObjectsTree_->setAlternatingRowColors(true);
-    connect(mapObjectsTree_->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex &current, const QModelIndex &previous) {
-        handleStructureSelectionChanged(current, previous, mapObjectsTree_);
-    });
-    connect(mapObjectsTree_, &QTreeView::activated, this, [this](const QModelIndex &index) {
-        handleStructureItemActivated(index, mapObjectsTree_);
-    });
-
-    auto *mapPageSplitter = new QSplitter(Qt::Vertical, mapObjectsPage);
-    mapPageSplitter->setChildrenCollapsible(false);
-    mapPageSplitter->addWidget(mapObjectsTree_);
-
-    auto *backgroundContainer = new QWidget(mapPageSplitter);
-    auto *backgroundContainerLayout = new QVBoxLayout(backgroundContainer);
-    backgroundContainerLayout->setContentsMargins(0, 0, 0, 0);
-    backgroundContainerLayout->setSpacing(0);
-    buildMapBackgroundPanel(backgroundContainer, backgroundContainerLayout);
-
-    mapPageSplitter->addWidget(backgroundContainer);
-    mapPageSplitter->setStretchFactor(0, 3);
-    mapPageSplitter->setStretchFactor(1, 2);
-    mapPageSplitter->setCollapsible(1, true);
-
-    mapObjectsLayout->addWidget(mapPageSplitter, 1);
-    sidebarPages_->addWidget(mapObjectsPage);
-
     consoleSidebarPage_ = new QWidget(sidebarPages_);
     consoleSidebarPageLayout_ = new QVBoxLayout(consoleSidebarPage_);
     consoleSidebarPageLayout_->setContentsMargins(12, 12, 12, 12);
@@ -968,7 +919,6 @@ void MainWindow::buildStructureSidebar()
 
     updateSidebarCollapseButton();
     setSidebarPane(activeSidebarPane_);
-    refreshMapBackgroundPanel();
 }
 
 void MainWindow::setSidebarPane(SidebarPane pane)
@@ -977,24 +927,13 @@ void MainWindow::setSidebarPane(SidebarPane pane)
         return;
     }
 
-    if (pane == SidebarPane::MapEditor && !currentDocumentSupportsMapPane()) {
-        pane = lastNonMapSidebarPane_;
-    }
-
     activeSidebarPane_ = pane;
-    if (pane != SidebarPane::MapEditor) {
-        lastNonMapSidebarPane_ = pane;
-    }
-
     sidebarPages_->setCurrentIndex(static_cast<int>(pane));
     if (sidebarFilesButton_ != nullptr) {
         sidebarFilesButton_->setChecked(pane == SidebarPane::FileBrowser);
     }
     if (sidebarStructureButton_ != nullptr) {
         sidebarStructureButton_->setChecked(pane == SidebarPane::StructureBrowser);
-    }
-    if (sidebarMapButton_ != nullptr) {
-        sidebarMapButton_->setChecked(pane == SidebarPane::MapEditor);
     }
     if (sidebarConsoleButton_ != nullptr) {
         sidebarConsoleButton_->setChecked(pane == SidebarPane::Console);
@@ -1037,6 +976,7 @@ void MainWindow::restoreSidebarWidth()
         updatingSidebarSplitter_ = true;
         mainContentSplitter_->setSizes({targetContentWidth, editorWidth});
         updatingSidebarSplitter_ = false;
+        refreshWorkspaceModeSwitcherGeometry();
     };
 
     if (mainContentSplitter_->width() <= 0) {
@@ -1076,6 +1016,7 @@ void MainWindow::setSidebarCollapsed(bool collapsed)
             updatingSidebarSplitter_ = true;
             mainContentSplitter_->setSizes({0, qMax(240, totalWidth)});
             updatingSidebarSplitter_ = false;
+            refreshWorkspaceModeSwitcherGeometry();
         };
 
         if (mainContentSplitter_->width() <= 0) {

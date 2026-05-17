@@ -27,6 +27,52 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 - Non-UTF decoding is now implemented with Qt-supported codecs, but broader legacy-encoding coverage still needs corpus validation.
 - Most map behaviors are covered by unit/smoke checks; broader cross-platform GUI automation is still limited beyond focused smoke coverage.
 
+### Completed
+
+- ~~Added a shared full-width document toolbar row under the tab strip for all document tabs with left-aligned `Save`, divider, `Undo`/`Redo`, divider, plus right-aligned mode controls (`Visual`/`Raw`/`Blocks`) using Lucide `pen-tool`, `code`, and `toy-brick` icons as applicable to the active tab type.~~
+- ~~Styled the main content splitter as a persistent 1px vertical divider so the separator between sidebar content and editor content runs continuously from the top content edge down to the status-bar border.~~
+- ~~Added left inset for the document tab bar (`QTabWidget::tab-bar { left: 8px; }`) so the first tab has visible margin from the vertical content separator.~~
+- ~~Replaced hardcoded tab-pane offset with dynamic tab layout styling: `QTabWidget#mainEditorTabs::pane` now uses runtime `tabBarHeight + commandBarHeight`, preventing command-bar clipping/squashing across themes and DPI scales.~~
+- ~~Added runtime metric-based minimum widths for command-bar buttons (`Save`, `Undo`, `Redo`, mode buttons, and `Separate Map` / `Return Map`) so icon+text labels remain fully visible across platform themes and DPI/font scaling.~~
+- ~~Re-anchored the shared command bar from `QTabWidget` internals to the central content host and positioned it via mapped `editorTabs_` coordinates, ensuring the bar spans the full editor width during splitter moves and theme/layout changes.~~
+- ~~Fixed command-bar horizontal placement after programmatic splitter sizing by forcing geometry refresh after sidebar `setSizes(...)` operations and adding a deferred startup refresh (`QTimer::singleShot(0, ...)`), so the bar aligns to the editor pane and never overlays the left sidebar.~~
+- ~~Refined command-row framing to match tab integration: strengthened top/bottom command-bar separators (`palette(mid)`), disabled tab-bar base line (`qproperty-drawBase: 0`), and applied `QTabBar::tab { margin-bottom: -1px; }` so tabs visually break into the top separator line.~~
+- ~~Improved document-tab readability and focus clarity: styled inactive tabs with subdued contrast and hover feedback, and styled the active tab with stronger border contrast, base background integration, and bold label so the focused file is immediately obvious.~~
+- ~~Reverted custom QTabBar skinning back to native/default tab rendering (kept only tab-strip left inset and pane-top layout offset), because the platform-default tab look provided better visual quality and clearer overall UX.~~
+- ~~Added extra vertical breathing room between window title bar and tabs by applying a small tab-bar top inset (`top: 4px`) and updating pane/command-bar geometry math to account for runtime tab-bar Y offset.~~
+- ~~Moved TH2 zoom controls (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`) from the floating map-canvas toolbar into the shared top document command toolbar as the next group after `Undo`/`Redo`; kept floating map toolbar focused on history, draw, selection/draft, and touch controls. Updated specification/manual wording accordingly.~~
+- ~~Moved all remaining TH2 map actions (`Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`) from the in-canvas floating map toolbar into the top command toolbar, removed the floating map-canvas toolbar entirely, reordered right-side map controls to `Visual`, `Raw`, then `Separate Map` (with `external-link` icon), and added an equivalent top command toolbar to detached map windows. Updated specification/manual wording accordingly.~~
+- ~~Removed redundant `Visual`/`Raw` buttons from detached map-window toolbar; detached window now keeps only context-relevant commands plus `Return Map`. Updated specification/manual wording accordingly.~~
+- ~~Changed `Save`, `Undo`, and `Redo` in main and detached top command toolbars to icon-only controls (tooltips retained for discoverability). Updated specification/manual wording accordingly.~~
+- ~~Removed the `Map` entry from the left activity rail and removed the associated sidebar pane, since map object/background workflows now live in TH2 Visual-mode inspector panels. Updated specification/manual wording accordingly.~~
+- ~~Removed residual vertical spacer under the shared top command toolbar by collapsing hidden inline mode rows to zero height and tightening top panel padding for raw/blocks editor surfaces so map/text/block canvases start directly below the toolbar.~~
+- ~~Fixed persistent post-toolbar vertical gap caused by tab geometry feedback: `refreshWorkspaceModeSwitcherGeometry()` now anchors tab-bar top to a fixed inset baseline instead of reading live `tabBar()->geometry().top()`, preventing oversized pane offset growth.~~
+- ~~Corrected `QTabWidget::pane` vertical offset math to avoid double-counting tab-bar height; pane top is now derived from command-bar height (+ inset) so content starts immediately under the toolbar without an extra blank band.~~
+- ~~Removed remaining outer margins around main editing surfaces by setting map-pane, raw-editor, and blocks-panel container margins to zero so map canvas, text editor, and block canvas are edge-aligned. Updated user manual wording accordingly.~~
+- ~~Reduced the raw-editor/contextual-help splitter gutter from a wide handle to a thin 1px divider to remove the large apparent gap between editor and help panel.~~
+- ~~Standardized splitter-handle visuals across all major views (main sidebar/content, raw editor/help, blocks toolbox/canvas/details, and map workspace/details) to the same thin 1px divider style for consistent resizing affordance. Updated user manual wording accordingly.~~
+- ~~Adjusted splitter handles to a wider native visible grab style (matching the requested reference look) across all major views: main sidebar/content, raw help split, blocks columns, and map splits. Updated user manual wording accordingly.~~
+- ~~Applied splitter-pane inner seam borders for the main (non-nested) sidebar/content split only: sidebar pane uses right border, editor pane uses left border, and outer window edges stay borderless. Nested splitters intentionally deferred. Updated user manual wording accordingly.~~
+- ~~Removed default raw text-editor viewport frame (`QPlainTextEdit` frame shape set to `NoFrame`) so the raw canvas no longer shows extra top/bottom border lines while preserving splitter seam styling.~~
+- ~~Restored raw text-canvas left/right borders after frame removal by applying explicit side-only borders on the editor widget (`border-left`/`border-right`, no top/bottom).~~
+- ~~Applied matching side-only border treatment to map canvas (`QGraphicsView`): keep left/right borders and remove top/bottom borders.~~
+- ~~Changed contextual-help pane chrome to left-border-only (no top/bottom/right) by setting help panel frame to `NoFrame` and applying palette-synced left-only border styling.~~
+- ~~Removed the top border on the shared workspace icon command bar (main window and detached map window), so there is no extra line above the toolbar icons.~~
+- ~~Removed the visual line above document tabs by disabling tab-bar base drawing for `mainEditorTabs` and removing pane border in the runtime tab-layout stylesheet.~~
+- ~~Removed the tab-strip left inset so the first tab starts flush at the content edge (`QTabWidget#mainEditorTabs::tab-bar { left: 0px; }`).~~
+- ~~Restored main document-tab base line (`qproperty-drawBase: 1`) so tabs match inspector-style bottom border treatment.~~
+- ~~Forced main tab-row bottom line to match inspector tabs by adding explicit `QTabWidget#mainEditorTabs::pane { border-top: 1px solid palette(mid); }` in runtime tab-layout stylesheet.~~
+- ~~Reverted the main-tab border experiment after visual mismatch feedback: `mainEditorTabs` returned to no pane border and `QTabBar` base drawing disabled (`qproperty-drawBase: 0`).~~
+- ~~Removed left-divider border from Raw contextual-help panel (Blocks contextual-help left divider kept as requested).~~
+- ~~Removed left-divider border from Blocks contextual-help panel as well, matching Raw contextual-help borderless style.~~
+- ~~Removed the remaining border on the Blocks-mode contextual-help/details splitter pane by setting the right pane container frame to `NoFrame`.~~
+- ~~Fine-tuned Blocks splitter left pane (toolbox): applied left-border-only pane chrome and contextual-help-like inner padding on toolbox contents.~~
+- ~~Updated Blocks mode chrome: block canvas now uses side-only borders (left/right only), and block-editor contextual help uses left-border-only separation. Updated user manual wording accordingly.~~
+- ~~Aligned dark-mode surface tones for structured-authoring workspace: contextual-help/details panels now inherit the active source surface color, and the shared top command bar now mirrors the active text-tab source surface to avoid tone mismatch between toolbar/help and source area. Verified with `cmake --build build --target TherionStudio`.~~
+- ~~Removed the right-edge border from the left activity rail (`SidebarActivityRail`) so the rail no longer draws a vertical divider line on its outer seam. Verified with `cmake --build build --target TherionStudio`.~~
+- ~~Removed the residual seam line next to the activity rail by disabling the `QFrame` border on the main content splitter (`mainContentSplitter_`), eliminating the splitter-frame left edge line while preserving resize handles. Verified with `cmake --build build --target TherionStudio`.~~
+- ~~Removed the remaining global rail-right seam rule from application-wide chrome stylesheet (`src/main.cpp`): dropped `QFrame#SidebarActivityRail border-right`, so no global stylesheet reintroduces that divider after local sidebar styling. Verified with `cmake --build build --target TherionStudio`.~~
+
 ### Manual QA Runs
 
 - Encoding checklist pass (`docs/ENCODING_QA_CHECKLIST.md`):
@@ -185,6 +231,8 @@ Legend:
 - ~~Point mode click-to-place insertion with immediate source writeback.~~
 - ~~Line/area click-by-click vertex capture with `Enter`/`Complete Draft` commit.~~
 - ~~Line/area draft session controls: `Backspace`/`Delete` removes last vertex, `Esc` cancels active draft.~~
+- ~~Map object details now expose `Edit Object Settings...` in Visual mode and route `scrap`/`point`/`line`/`area` edits through the same catalog-driven configuration workflow used by structured block selection (with cursor-line fallback when no geometry item is selected).~~
+- ~~Map object details now provide inline orientation controls (enable + `0..359.999` degrees) for point symbols and selected line anchor vertices, with source-synchronized `-orientation` rewrite/remove behavior and catalog-driven type/subtype applicability gating.~~
 - Planned focus:
 - Point mode click-to-place insertion in map coordinates with immediate source writeback.
 - Line/area click-by-click draft construction in canvas with explicit finish/cancel behavior and preview feedback.
@@ -269,6 +317,7 @@ Automated tests currently in-tree and used as regression baseline:
 
 ### 2026-05-17
 
+- ~~Unified TH2 `Visual`-mode right-side editing surface into an Inspector tab set inside `MapEditorTab`: finalized two-tab structure (`Objects`, `Backgrounds`), with `Objects` combining source-linked TH2 object tree (grouped by scrap) and selection details/settings editing in one panel. Wired object-tree selection sync to current source line and row-activation navigation back to source, and wired background controls to existing map-layer APIs/signals. Simplified the left sidebar `Map` page to an informational handoff message so map-object/background editing is no longer duplicated there. Updated `QtReimplementationSpecification.md` and `docs/USER_MANUAL.md`. Verified with `cmake --build build --target TherionStudio -j4`.~~
 - ~~Removed the nonessential `Zoom 100%` map toolbar action, moved current map zoom into the main status bar before the `Select`/`Insert` mode badge, and removed active document path display from the status bar. Updated `QtReimplementationSpecification.md` and `docs/USER_MANUAL.md`. Verified with `cmake --build build --target TherionStudio MapEditorDetachedPaneTest MapEditorDragUndoRedoSmokeTest -j4`, `QT_QPA_PLATFORM=offscreen ./build/MapEditorDetachedPaneTest`, and `QT_QPA_PLATFORM=offscreen ./build/MapEditorDragUndoRedoSmokeTest`.~~
 - ~~Fixed accidental wrapping of the map toolbar detach icon by making the wrapping layout use fixed item sizes and layout-aware separator width instead of stylesheet-only separator margins. Verified with `cmake --build build --target TherionStudio MapEditorDetachedPaneTest MapEditorDragUndoRedoSmokeTest -j4`, `QT_QPA_PLATFORM=offscreen ./build/MapEditorDetachedPaneTest`, and `QT_QPA_PLATFORM=offscreen ./build/MapEditorDragUndoRedoSmokeTest`.~~
 - ~~Changed the map editor toolbar from an in-pane layout row to a compact floating overlay centered at the top of the map canvas, with a rounded palette-aware container and resize/theme repositioning. Updated `QtReimplementationSpecification.md` and `docs/USER_MANUAL.md`. Verified with `cmake --build build --target TherionStudio MapEditorDetachedPaneTest MapEditorDragUndoRedoSmokeTest -j4`, `QT_QPA_PLATFORM=offscreen ./build/MapEditorDetachedPaneTest`, and `QT_QPA_PLATFORM=offscreen ./build/MapEditorDragUndoRedoSmokeTest`.~~

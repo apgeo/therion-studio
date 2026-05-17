@@ -76,8 +76,7 @@ private:
     {
         FileBrowser = 0,
         StructureBrowser = 1,
-        MapEditor = 2,
-        Console = 3
+        Console = 2
     };
 
     void buildUi();
@@ -148,6 +147,22 @@ private:
     void refreshDocumentStatusWidgets();
     void initializeWorkspaceModeSwitcher();
     void refreshWorkspaceModeSwitcher();
+    void refreshWorkspaceModeSwitcherGeometry();
+    void triggerUndoForActiveDocument();
+    void triggerRedoForActiveDocument();
+    void triggerZoomInForActiveDocument();
+    void triggerZoomOutForActiveDocument();
+    void triggerFitForActiveDocument();
+    void triggerFitWithBackgroundForActiveDocument();
+    void triggerSelectForActiveDocument();
+    void triggerCompleteDraftForActiveDocument();
+    void triggerInsertScrapForActiveDocument();
+    void triggerPointForActiveDocument();
+    void triggerLineForActiveDocument();
+    void triggerFreehandLineForActiveDocument();
+    void triggerSmartTraceLineForActiveDocument();
+    void triggerAreaForActiveDocument();
+    void toggleTouchControlsForActiveDocument(bool checked);
 
     QHBoxLayout *mainContentLayout_ = nullptr;
     QTabWidget *editorTabs_ = nullptr;
@@ -176,7 +191,6 @@ private:
     QWidget *sidebarContentContainer_ = nullptr;
     QToolButton *sidebarFilesButton_ = nullptr;
     QToolButton *sidebarStructureButton_ = nullptr;
-    QToolButton *sidebarMapButton_ = nullptr;
     QToolButton *sidebarConsoleButton_ = nullptr;
     QStackedWidget *sidebarPages_ = nullptr;
     QWidget *consoleSidebarPage_ = nullptr;
@@ -207,6 +221,27 @@ private:
     QWidget *workspaceModeSwitcher_ = nullptr;
     QWidget *workspaceMapModeSwitcher_ = nullptr;
     QWidget *workspaceTextModeSwitcher_ = nullptr;
+    QWidget *workspaceZoomGroup_ = nullptr;
+    QWidget *workspaceMapToolsGroup_ = nullptr;
+    QToolButton *workspaceSaveButton_ = nullptr;
+    QToolButton *workspaceUndoButton_ = nullptr;
+    QToolButton *workspaceRedoButton_ = nullptr;
+    QToolButton *workspaceZoomInButton_ = nullptr;
+    QToolButton *workspaceZoomOutButton_ = nullptr;
+    QToolButton *workspaceFitButton_ = nullptr;
+    QToolButton *workspaceFitBackgroundButton_ = nullptr;
+    QToolButton *workspaceSelectButton_ = nullptr;
+    QToolButton *workspaceCompleteDraftButton_ = nullptr;
+    QToolButton *workspaceInsertScrapButton_ = nullptr;
+    QToolButton *workspacePointButton_ = nullptr;
+    QToolButton *workspaceLineButton_ = nullptr;
+    QToolButton *workspaceFreehandLineButton_ = nullptr;
+    QToolButton *workspaceSmartTraceLineButton_ = nullptr;
+    QToolButton *workspaceAreaButton_ = nullptr;
+    QToolButton *workspaceTouchControlsButton_ = nullptr;
+    QFrame *workspaceHistorySeparator_ = nullptr;
+    QFrame *workspaceZoomSeparator_ = nullptr;
+    QFrame *workspaceMapToolsSeparator_ = nullptr;
     QPushButton *workspaceVisualModeButton_ = nullptr;
     QPushButton *workspaceRawModeButton_ = nullptr;
     QPushButton *workspaceMapPaneWindowButton_ = nullptr;
@@ -221,7 +256,6 @@ private:
     QHash<QString, QString> structureNameOverrides_;
     QString autoResolvedTherionWorkingDirectory_;
     SidebarPane activeSidebarPane_ = SidebarPane::FileBrowser;
-    SidebarPane lastNonMapSidebarPane_ = SidebarPane::FileBrowser;
     int sidebarExpandedWidth_ = 320;
     int sidebarRailWidth_ = 56;
     int consoleExpandedHeight_ = 240;

@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QEvent>
 #include <QCursor>
+#include <QFile>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
 #include <QGraphicsPathItem>
@@ -12,23 +13,32 @@
 #include <QGraphicsView>
 #include <QCheckBox>
 #include <QDoubleSpinBox>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLabel>
 #include <QKeyEvent>
 #include <QLineF>
+#include <QListWidget>
 #include <QMouseEvent>
 #include <QNativeGestureEvent>
 #include <QPalette>
 #include <QRegularExpression>
+#include <QSlider>
 #include <QSet>
 #include <QScopedValueRollback>
+#include <QSignalBlocker>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QPushButton>
+#include <QTreeView>
 #include <QTabletEvent>
 #include <QToolButton>
 #include <QPointer>
 #include <QUndoCommand>
 #include <QUndoStack>
+#include <QStandardItem>
+#include <QStandardItemModel>
 #include <QWheelEvent>
 #include <QTouchEvent>
 #include <QPainterPath>
@@ -41,6 +51,7 @@
 #include "MapEditorSceneInternals.h"
 #include "MapEditorInputPolicy.h"
 #include "TextEditorTab.h"
+#include "../core/ProjectStructureIndex.h"
 #include "../core/TherionBackgroundMetadata.h"
 #include "../core/TherionDocumentParser.h"
 
@@ -50,10 +61,435 @@ namespace
 {
 constexpr int kMapItemRole = Qt::UserRole + 120;
 constexpr int kMapItemGeometryValue = 1;
+constexpr int kInspectorSourceLineRole = Qt::UserRole + 700;
+constexpr int kInspectorSourceFileRole = Qt::UserRole + 701;
+
+QString inspectorObjectKindLabel(const QString &category)
+{
+    if (category == QStringLiteral("Stations")) {
+        return QObject::tr("Station Point");
+    }
+    if (category == QStringLiteral("Points")) {
+        return QObject::tr("Point");
+    }
+    if (category == QStringLiteral("Lines")) {
+        return QObject::tr("Line");
+    }
+    if (category == QStringLiteral("Areas")) {
+        return QObject::tr("Area");
+    }
+    if (category == QStringLiteral("Scraps")) {
+        return QObject::tr("Scrap");
+    }
+    return category;
+}
+
+QString inspectorMapObjectItemText(const ProjectStructureEntry &entry)
+{
+    if (entry.category == QStringLiteral("Scraps")) {
+        return entry.name;
+    }
+    return QStringLiteral("%1: %2").arg(inspectorObjectKindLabel(entry.category), entry.name);
+}
 
 bool sourcePointsDifferForCommands(const QPointF &a, const QPointF &b)
 {
     return (a - b).manhattanLength() > 0.01;
+}
+
+bool isConfigurableMapObjectKind(const QString &kind)
+{
+    const QString normalized = kind.trimmed().toLower();
+    return normalized == QStringLiteral("scrap")
+        || normalized == QStringLiteral("point")
+        || normalized == QStringLiteral("line")
+        || normalized == QStringLiteral("area");
+}
+
+QString objectKindForDirective(const QString &directiveToken)
+{
+    const QString directive = directiveToken.trimmed().toLower();
+    if (directive == QStringLiteral("scrap")
+        || directive == QStringLiteral("point")
+        || directive == QStringLiteral("line")
+        || directive == QStringLiteral("area")) {
+        return directive;
+    }
+    return QString();
+}
+
+bool tokenLooksNumericForMapDetails(const QString &token)
+{
+    if (token.isEmpty()) {
+        return false;
+    }
+    static const QRegularExpression numericPattern(
+        QStringLiteral(R"(^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$)"));
+    return numericPattern.match(token).hasMatch();
+}
+
+bool isOrientationOptionTokenForMapDetails(const QString &token)
+{
+    const QString normalized = token.trimmed().toLower();
+    return normalized == QStringLiteral("-orientation") || normalized == QStringLiteral("-orient");
+}
+
+qreal normalizeOrientationDegreesForMapDetails(qreal value)
+{
+    qreal normalized = std::fmod(value, 360.0);
+    if (normalized < 0.0) {
+        normalized += 360.0;
+    }
+    if (normalized >= 360.0) {
+        normalized -= 360.0;
+    }
+    return normalized;
+}
+
+QString normalizeSymbolTypeTokenForMapDetails(const QString &token)
+{
+    QString normalized = token.trimmed().toLower();
+    if (normalized.isEmpty() || normalized.startsWith(QLatin1Char('-'))) {
+        return QString();
+    }
+    const int separatorIndex = normalized.indexOf(QLatin1Char(':'));
+    if (separatorIndex > 0) {
+        normalized = normalized.left(separatorIndex).trimmed();
+    }
+    return normalized;
+}
+
+QString lineTypeTokenForMapDetails(const TherionParsedLine &parsedLine)
+{
+    if (parsedLine.directive != QStringLiteral("line")) {
+        return QString();
+    }
+    return normalizeSymbolTypeTokenForMapDetails(parsedLine.tokens.value(1));
+}
+
+QString pointTypeTokenForMapDetails(const TherionParsedLine &parsedLine)
+{
+    if (parsedLine.directive != QStringLiteral("point")) {
+        return QString();
+    }
+
+    int numericCoordinateTokens = 0;
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        const QString token = parsedLine.tokens.at(index).trimmed();
+        if (token.isEmpty()) {
+            continue;
+        }
+        if (token.startsWith(QLatin1Char('-')) && !tokenLooksNumericForMapDetails(token)) {
+            break;
+        }
+        if (tokenLooksNumericForMapDetails(token)) {
+            ++numericCoordinateTokens;
+            continue;
+        }
+        if (numericCoordinateTokens < 2) {
+            continue;
+        }
+        return normalizeSymbolTypeTokenForMapDetails(token);
+    }
+
+    return QString();
+}
+
+QSet<QString> parseOrientationRestrictedTypesFromText(const QString &text)
+{
+    QSet<QString> restrictedTypes;
+    if (text.trimmed().isEmpty()) {
+        return restrictedTypes;
+    }
+
+    static const QRegularExpression onlyWithTypePattern(
+        QStringLiteral(R"(only[^.\n\r]{0,200}?\b([a-z][a-z0-9_-]*)\s+type\b)"),
+        QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatchIterator onlyWithMatches = onlyWithTypePattern.globalMatch(text);
+    while (onlyWithMatches.hasNext()) {
+        const QRegularExpressionMatch match = onlyWithMatches.next();
+        const QString typeToken = normalizeSymbolTypeTokenForMapDetails(match.captured(1));
+        if (!typeToken.isEmpty()) {
+            restrictedTypes.insert(typeToken);
+        }
+    }
+
+    static const QRegularExpression quotedSymbolTypePattern(
+        QStringLiteral(R"((?:`|'|\|)([a-z][a-z0-9_-]*)(?:`|'|\|)\s+symbol\s+type\b)"),
+        QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatchIterator quotedMatches = quotedSymbolTypePattern.globalMatch(text);
+    while (quotedMatches.hasNext()) {
+        const QRegularExpressionMatch match = quotedMatches.next();
+        const QString typeToken = normalizeSymbolTypeTokenForMapDetails(match.captured(1));
+        if (!typeToken.isEmpty()) {
+            restrictedTypes.insert(typeToken);
+        }
+    }
+
+    return restrictedTypes;
+}
+
+QHash<QString, QSet<QString>> loadOrientationTypeRestrictionsFromCatalog()
+{
+    QHash<QString, QSet<QString>> restrictionsByCommand;
+
+    QFile catalogFile(QStringLiteral(":/resources/therion_command_catalog.json"));
+    if (!catalogFile.open(QIODevice::ReadOnly)) {
+        return restrictionsByCommand;
+    }
+
+    const QJsonDocument catalogDocument = QJsonDocument::fromJson(catalogFile.readAll());
+    if (!catalogDocument.isObject()) {
+        return restrictionsByCommand;
+    }
+
+    const QJsonArray commands = catalogDocument.object().value(QStringLiteral("commands")).toArray();
+    for (const QJsonValue &commandValue : commands) {
+        const QJsonObject commandObject = commandValue.toObject();
+        const QString commandName = commandObject.value(QStringLiteral("name")).toString().trimmed().toLower();
+        if (commandName.isEmpty()) {
+            continue;
+        }
+
+        const QJsonArray options = commandObject.value(QStringLiteral("options")).toArray();
+        for (const QJsonValue &optionValue : options) {
+            const QJsonObject optionObject = optionValue.toObject();
+            const QString optionKey = optionObject.value(QStringLiteral("option_key")).toString().trimmed().toLower();
+            if (optionKey != QStringLiteral("-orientation")) {
+                continue;
+            }
+
+            QStringList metadataTexts;
+            metadataTexts.append(optionObject.value(QStringLiteral("description")).toString());
+            metadataTexts.append(optionObject.value(QStringLiteral("raw")).toString());
+            metadataTexts.append(optionObject.value(QStringLiteral("name")).toString());
+            metadataTexts.append(optionObject.value(QStringLiteral("signature")).toString());
+            const QJsonArray dependencies = optionObject.value(QStringLiteral("dependencies")).toArray();
+            for (const QJsonValue &dependencyValue : dependencies) {
+                metadataTexts.append(dependencyValue.toString());
+            }
+
+            QSet<QString> restrictedTypes;
+            for (const QString &metadataText : metadataTexts) {
+                restrictedTypes.unite(parseOrientationRestrictedTypesFromText(metadataText));
+            }
+
+            restrictionsByCommand.insert(commandName, restrictedTypes);
+            break;
+        }
+    }
+
+    return restrictionsByCommand;
+}
+
+const QHash<QString, QSet<QString>> &orientationTypeRestrictionsByCommand()
+{
+    static const QHash<QString, QSet<QString>> restrictions = loadOrientationTypeRestrictionsFromCatalog();
+    return restrictions;
+}
+
+bool isOrientationSupportedForParsedLine(const TherionParsedLine &parsedLine)
+{
+    const QString commandName = parsedLine.directive.trimmed().toLower();
+    if (commandName != QStringLiteral("point") && commandName != QStringLiteral("line")) {
+        return false;
+    }
+
+    const QHash<QString, QSet<QString>> &restrictionsByCommand = orientationTypeRestrictionsByCommand();
+    if (!restrictionsByCommand.contains(commandName)) {
+        return true;
+    }
+
+    const QSet<QString> restrictedTypes = restrictionsByCommand.value(commandName);
+    if (restrictedTypes.isEmpty()) {
+        return true;
+    }
+
+    const QString symbolType = commandName == QStringLiteral("point")
+        ? pointTypeTokenForMapDetails(parsedLine)
+        : lineTypeTokenForMapDetails(parsedLine);
+    if (symbolType.isEmpty()) {
+        return false;
+    }
+
+    return restrictedTypes.contains(symbolType);
+}
+
+QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &parsedLine, int startTokenIndex)
+{
+    QVector<QPair<int, int>> pairs;
+    QVector<int> numericIndices;
+    numericIndices.reserve(parsedLine.tokens.size());
+
+    const int firstTokenIndex = qMax(0, startTokenIndex);
+    if (firstTokenIndex == 0) {
+        int firstNonQuotedIndex = -1;
+        for (int index = firstTokenIndex; index < parsedLine.tokens.size(); ++index) {
+            if (index < parsedLine.tokenSpans.size()
+                && parsedLine.tokenSpans.at(index).type == TherionTokenType::QuotedString) {
+                continue;
+            }
+            firstNonQuotedIndex = index;
+            break;
+        }
+
+        if (firstNonQuotedIndex >= 0 && !tokenLooksNumericForMapDetails(parsedLine.tokens.at(firstNonQuotedIndex))) {
+            return pairs;
+        }
+    }
+
+    if (firstTokenIndex < parsedLine.tokens.size()) {
+        const QString firstToken = parsedLine.tokens.at(firstTokenIndex);
+        if (firstTokenIndex == 0
+            && firstToken.startsWith(QLatin1Char('-'))
+            && !tokenLooksNumericForMapDetails(firstToken)) {
+            return pairs;
+        }
+    }
+
+    bool sawCoordinateToken = false;
+    bool skipOptionValueToken = false;
+    for (int index = firstTokenIndex; index < parsedLine.tokens.size(); ++index) {
+        if (skipOptionValueToken && !sawCoordinateToken) {
+            skipOptionValueToken = false;
+            continue;
+        }
+
+        const QString token = parsedLine.tokens.at(index);
+        if (!sawCoordinateToken
+            && firstTokenIndex > 0
+            && token.startsWith(QLatin1Char('-'))
+            && !tokenLooksNumericForMapDetails(token)) {
+            if (index + 1 < parsedLine.tokens.size()) {
+                const QString nextToken = parsedLine.tokens.at(index + 1);
+                if (!nextToken.startsWith(QLatin1Char('-')) || tokenLooksNumericForMapDetails(nextToken)) {
+                    skipOptionValueToken = true;
+                }
+            }
+            continue;
+        }
+
+        const bool numeric = tokenLooksNumericForMapDetails(token);
+        if (!numeric) {
+            if (sawCoordinateToken) {
+                break;
+            }
+            continue;
+        }
+
+        if (index < parsedLine.tokenSpans.size()
+            && parsedLine.tokenSpans.at(index).type == TherionTokenType::QuotedString) {
+            continue;
+        }
+
+        numericIndices.append(index);
+        sawCoordinateToken = true;
+    }
+
+    for (int index = 0; index + 1 < numericIndices.size(); index += 2) {
+        pairs.append(qMakePair(numericIndices.at(index), numericIndices.at(index + 1)));
+    }
+    return pairs;
+}
+
+std::optional<qreal> pointOrientationFromParsedLine(const TherionParsedLine &parsedLine)
+{
+    std::optional<qreal> orientation;
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        if (!isOrientationOptionTokenForMapDetails(parsedLine.tokens.at(index))) {
+            continue;
+        }
+        if (index + 1 >= parsedLine.tokens.size()) {
+            continue;
+        }
+        const QString valueToken = parsedLine.tokens.at(index + 1).trimmed();
+        if (valueToken.startsWith(QLatin1Char('-')) && !tokenLooksNumericForMapDetails(valueToken)) {
+            continue;
+        }
+        bool ok = false;
+        const qreal value = valueToken.toDouble(&ok);
+        if (!ok) {
+            continue;
+        }
+        orientation = normalizeOrientationDegreesForMapDetails(value);
+    }
+    return orientation;
+}
+
+std::optional<qreal> linePointOrientationForSourceVertex(const QString &documentText,
+                                                         int lineNumber,
+                                                         int sourceVertexIndex)
+{
+    if (lineNumber <= 0 || sourceVertexIndex < 0) {
+        return std::nullopt;
+    }
+
+    QStringList lines = documentText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    for (QString &line : lines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+    if (lineNumber > lines.size()) {
+        return std::nullopt;
+    }
+
+    const int blockStartLineIndex = lineNumber - 1;
+    const TherionParsedLine startLine = TherionDocumentParser::parseLine(lines.at(blockStartLineIndex), lineNumber);
+    if (startLine.directive != QStringLiteral("line")) {
+        return std::nullopt;
+    }
+
+    int blockEndLineIndex = -1;
+    for (int candidateIndex = blockStartLineIndex + 1; candidateIndex < lines.size(); ++candidateIndex) {
+        const TherionParsedLine candidateLine = TherionDocumentParser::parseLine(lines.at(candidateIndex), candidateIndex + 1);
+        if (candidateLine.directive == QStringLiteral("endline")) {
+            blockEndLineIndex = candidateIndex;
+            break;
+        }
+    }
+    if (blockEndLineIndex < 0) {
+        return std::nullopt;
+    }
+
+    int nextSourceIndex = 0;
+    for (int rowIndex = blockStartLineIndex; rowIndex < blockEndLineIndex; ++rowIndex) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(rowIndex), rowIndex + 1);
+        const int startTokenIndex = rowIndex == blockStartLineIndex ? 1 : 0;
+        const QVector<QPair<int, int>> coordinatePairs = coordinateTokenPairsForLine(parsedLine, startTokenIndex);
+        if (coordinatePairs.isEmpty()) {
+            continue;
+        }
+        const int localPairCount = coordinatePairs.size();
+
+        const int firstSourceIndex = nextSourceIndex;
+        nextSourceIndex += localPairCount;
+        if (sourceVertexIndex < firstSourceIndex || sourceVertexIndex >= nextSourceIndex) {
+            continue;
+        }
+
+        std::optional<qreal> orientation;
+        for (int optionIndex = startTokenIndex; optionIndex < parsedLine.tokens.size(); ++optionIndex) {
+            if (!isOrientationOptionTokenForMapDetails(parsedLine.tokens.at(optionIndex))) {
+                continue;
+            }
+            if (optionIndex + 1 >= parsedLine.tokens.size()) {
+                continue;
+            }
+            const QString valueToken = parsedLine.tokens.at(optionIndex + 1).trimmed();
+            if (valueToken.startsWith(QLatin1Char('-')) && !tokenLooksNumericForMapDetails(valueToken)) {
+                continue;
+            }
+            bool ok = false;
+            const qreal value = valueToken.toDouble(&ok);
+            if (ok) {
+                orientation = normalizeOrientationDegreesForMapDetails(value);
+            }
+        }
+        return orientation;
+    }
+
+    return std::nullopt;
 }
 
 bool wheelEventHasPreciseScrollingDeltas(const QWheelEvent *event)
@@ -1554,7 +1990,6 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             }
             break;
         case QEvent::Resize:
-            positionMapToolbarOverlay();
             if (autoFitEnabled_ && mapView_->isVisible()) {
                 fitMapToView(fitBackgroundRequested_);
             }
@@ -1626,7 +2061,6 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             break;
         }
     } else if (watched == mapView_ && event->type() == QEvent::Resize) {
-        positionMapToolbarOverlay();
         if (autoFitEnabled_ && mapView_->isVisible()) {
             fitMapToView(fitBackgroundRequested_);
         }
@@ -1655,9 +2089,6 @@ void MapEditorTab::changeEvent(QEvent *event)
 
 void MapEditorTab::handleApplicationAppearanceChanged()
 {
-    refreshToolbarIcons();
-    positionMapToolbarOverlay();
-
     if (mapView_ != nullptr) {
         mapView_->setBackgroundBrush(mapView_->palette().color(QPalette::Window));
         if (QWidget *viewport = mapView_->viewport(); viewport != nullptr) {
@@ -2938,35 +3369,6 @@ bool MapEditorTab::cancelInteractiveDrawingToSelectMode()
 
 void MapEditorTab::updateCommandSurfaceState()
 {
-    if (undoButton_ != nullptr) {
-        undoButton_->setEnabled(undoStack_ != nullptr && undoStack_->canUndo());
-    }
-    if (redoButton_ != nullptr) {
-        redoButton_->setEnabled(undoStack_ != nullptr && undoStack_->canRedo());
-    }
-    if (pointButton_ != nullptr) {
-        const bool mapReady = mapScene_ != nullptr;
-        selectButton_->setEnabled(mapReady);
-        pointButton_->setEnabled(mapReady);
-        lineButton_->setEnabled(mapReady);
-        freehandLineButton_->setEnabled(mapReady);
-        smartTraceLineButton_->setEnabled(mapReady);
-        areaButton_->setEnabled(mapReady);
-        insertScrapButton_->setEnabled(mapReady);
-        completeDraftButton_->setEnabled(mapReady
-                                         && (selectedDraftGeometryItem() != nullptr
-                                             || hasCompletableInteractiveDrawSession()));
-        fitBackgroundButton_->setEnabled(mapReady);
-    }
-    if (touchControlsButton_ != nullptr) {
-        touchControlsButton_->setChecked(touchFriendlyControlsEnabled_);
-        touchControlsButton_->setText(touchFriendlyControlsEnabled_
-                                          ? tr("Touch Controls: On")
-                                          : tr("Touch Controls: Off"));
-        touchControlsButton_->setToolTip(touchFriendlyControlsEnabled_
-                                             ? tr("Disable touch-friendly map controls.")
-                                             : tr("Enable touch-friendly map controls for pen-first workflows."));
-    }
     if (cancelDrawShortcut_ != nullptr) {
         cancelDrawShortcut_->setEnabled(interactiveDrawMode_ != InteractiveDrawMode::None);
     }
@@ -2976,11 +3378,166 @@ void MapEditorTab::updateCommandSurfaceState()
     }
     refreshBackgroundLayerControls();
     refreshToolbarSummary();
+    emit commandSurfaceStateChanged();
 }
 
 void MapEditorTab::updateHelpPanel()
 {
     // Map-specific help was removed; source contextual help is owned by the embedded TextEditorTab.
+}
+
+void MapEditorTab::rebuildInspectorObjectsTree()
+{
+    if (mapObjectsModel_ == nullptr) {
+        return;
+    }
+
+    mapObjectsModel_->clear();
+    mapObjectsModel_->setHorizontalHeaderLabels({tr("Objects")});
+
+    const QString th2Path = filePath();
+    if (textEditor_ == nullptr || !th2Path.endsWith(QStringLiteral(".th2"), Qt::CaseInsensitive)) {
+        auto *placeholderItem = new QStandardItem(tr("Open a TH2 document to browse its objects by scrap"));
+        placeholderItem->setEditable(false);
+        mapObjectsModel_->appendRow(placeholderItem);
+        return;
+    }
+
+    const QVector<ProjectStructureEntry> entries = ProjectStructureIndex::scanTh2Objects(th2Path, textEditor_->text());
+    if (entries.isEmpty()) {
+        auto *placeholderItem = new QStandardItem(tr("No TH2 scraps, points, lines, or areas were found in the current document"));
+        placeholderItem->setEditable(false);
+        mapObjectsModel_->appendRow(placeholderItem);
+        return;
+    }
+
+    QVector<QStandardItem *> parentStack;
+    for (const ProjectStructureEntry &entry : entries) {
+        while (parentStack.size() > entry.depth) {
+            parentStack.removeLast();
+        }
+
+        auto *entryItem = new QStandardItem(inspectorMapObjectItemText(entry));
+        entryItem->setEditable(false);
+        entryItem->setData(entry.sourceFile, kInspectorSourceFileRole);
+        entryItem->setData(entry.lineNumber, kInspectorSourceLineRole);
+        QStandardItem *parentItem = parentStack.isEmpty() ? mapObjectsModel_->invisibleRootItem() : parentStack.last();
+        parentItem->appendRow(entryItem);
+        parentStack.append(entryItem);
+    }
+
+    if (mapObjectsTree_ != nullptr) {
+        mapObjectsTree_->expandAll();
+    }
+    syncInspectorObjectSelectionToLine(currentLineNumber());
+}
+
+QModelIndex MapEditorTab::findInspectorObjectIndexForLine(int lineNumber) const
+{
+    if (mapObjectsModel_ == nullptr || lineNumber <= 0) {
+        return QModelIndex();
+    }
+
+    QModelIndex bestIndex;
+    int bestLineNumber = -1;
+    std::function<void(const QModelIndex &)> visitNode = [&](const QModelIndex &parentIndex) {
+        const int rowCount = mapObjectsModel_->rowCount(parentIndex);
+        for (int row = 0; row < rowCount; ++row) {
+            const QModelIndex childIndex = mapObjectsModel_->index(row, 0, parentIndex);
+            if (!childIndex.isValid()) {
+                continue;
+            }
+
+            const int candidateLineNumber = childIndex.data(kInspectorSourceLineRole).toInt();
+            if (candidateLineNumber > 0 && candidateLineNumber <= lineNumber && candidateLineNumber >= bestLineNumber) {
+                bestIndex = childIndex;
+                bestLineNumber = candidateLineNumber;
+            }
+
+            visitNode(childIndex);
+        }
+    };
+    visitNode(QModelIndex());
+    return bestIndex;
+}
+
+void MapEditorTab::syncInspectorObjectSelectionToLine(int lineNumber)
+{
+    if (mapObjectsTree_ == nullptr || mapObjectsTree_->selectionModel() == nullptr || lineNumber <= 0) {
+        return;
+    }
+
+    const QModelIndex targetIndex = findInspectorObjectIndexForLine(lineNumber);
+    if (!targetIndex.isValid() || targetIndex == mapObjectsTree_->currentIndex()) {
+        return;
+    }
+
+    const QScopedValueRollback<bool> guard(updatingMapInspectorObjectSelection_, true);
+    QSignalBlocker blocker(mapObjectsTree_->selectionModel());
+    mapObjectsTree_->setCurrentIndex(targetIndex);
+    mapObjectsTree_->scrollTo(targetIndex, QAbstractItemView::PositionAtCenter);
+}
+
+void MapEditorTab::handleInspectorObjectSelectionChanged(const QModelIndex &current)
+{
+    if (updatingMapInspectorObjectSelection_ || !current.isValid() || textEditor_ == nullptr) {
+        return;
+    }
+
+    const int lineNumber = current.data(kInspectorSourceLineRole).toInt();
+    if (lineNumber > 0) {
+        textEditor_->goToLine(lineNumber);
+    }
+}
+
+void MapEditorTab::refreshInspectorBackgroundPanel()
+{
+    if (mapBackgroundLayersList_ == nullptr) {
+        return;
+    }
+
+    const QScopedValueRollback<bool> guard(updatingMapInspectorBackgroundUi_, true);
+    mapBackgroundLayersList_->clear();
+
+    const int layerCount = backgroundLayerCount();
+    for (int index = 0; index < layerCount; ++index) {
+        const QString visibility = isBackgroundLayerVisible(index) ? tr("shown") : tr("hidden");
+        mapBackgroundLayersList_->addItem(tr("%1 (%2)").arg(backgroundLayerLabel(index), visibility));
+    }
+    mapBackgroundLayersList_->setCurrentRow(selectedBackgroundLayerIndex());
+
+    const int selectedIndex = selectedBackgroundLayerIndex();
+    const bool hasLayer = selectedIndex >= 0 && selectedIndex < layerCount;
+    mapBackgroundRemoveButton_->setEnabled(hasLayer);
+    mapBackgroundMoveUpButton_->setEnabled(hasLayer && selectedIndex > 0);
+    mapBackgroundMoveDownButton_->setEnabled(hasLayer && selectedIndex >= 0 && selectedIndex < layerCount - 1);
+    mapBackgroundVisibilityButton_->setEnabled(hasLayer);
+    mapBackgroundPosXSpin_->setEnabled(hasLayer);
+    mapBackgroundPosYSpin_->setEnabled(hasLayer);
+    mapBackgroundNudgeLeftButton_->setEnabled(hasLayer);
+    mapBackgroundNudgeRightButton_->setEnabled(hasLayer);
+    mapBackgroundNudgeUpButton_->setEnabled(hasLayer);
+    mapBackgroundNudgeDownButton_->setEnabled(hasLayer);
+    mapBackgroundOpacitySlider_->setEnabled(hasLayer);
+    mapBackgroundGammaSlider_->setEnabled(hasLayer);
+    mapBackgroundOpacityResetButton_->setEnabled(hasLayer);
+    mapBackgroundGammaResetButton_->setEnabled(hasLayer);
+
+    if (!hasLayer) {
+        mapBackgroundVisibilityButton_->setText(tr("Hide"));
+        mapBackgroundPosXSpin_->setValue(0.0);
+        mapBackgroundPosYSpin_->setValue(0.0);
+        mapBackgroundOpacitySlider_->setValue(58);
+        mapBackgroundGammaSlider_->setValue(100);
+        return;
+    }
+
+    mapBackgroundVisibilityButton_->setText(isBackgroundLayerVisible(selectedIndex) ? tr("Hide") : tr("Show"));
+    const QPointF position = backgroundLayerPosition(selectedIndex);
+    mapBackgroundPosXSpin_->setValue(position.x());
+    mapBackgroundPosYSpin_->setValue(position.y());
+    mapBackgroundOpacitySlider_->setValue(qBound(5, qRound(backgroundLayerOpacity(selectedIndex) * 100.0), 100));
+    mapBackgroundGammaSlider_->setValue(qBound(20, qRound(backgroundLayerGamma(selectedIndex) * 100.0), 250));
 }
 
 void MapEditorTab::refreshObjectDetailsPanel()
@@ -2989,28 +3546,66 @@ void MapEditorTab::refreshObjectDetailsPanel()
         || objectDetailsLineLabel_ == nullptr
         || objectDetailsKindLabel_ == nullptr
         || objectCoordinateEditor_ == nullptr
+        || objectOrientationEditor_ == nullptr
+        || objectOrientationEnabledCheck_ == nullptr
+        || objectOrientationSpin_ == nullptr
+        || objectOrientationApplyButton_ == nullptr
         || lineOptionsEditor_ == nullptr
         || lineClosedCheck_ == nullptr
-        || lineReversedCheck_ == nullptr) {
+        || lineReversedCheck_ == nullptr
+        || objectConfigureButton_ == nullptr) {
         return;
     }
 
     const QScopedValueRollback<bool> uiGuard(updatingObjectDetailsUi_, true);
 
-    if (selectedObjectLineNumber_ <= 0 || selectedObjectKind_.isEmpty()) {
+    int effectiveLineNumber = selectedObjectLineNumber_;
+    QString effectiveKind = selectedObjectKind_.trimmed().toLower();
+    bool usingCursorFallback = false;
+
+    if (!(effectiveLineNumber > 0 && isConfigurableMapObjectKind(effectiveKind)) && textEditor_ != nullptr) {
+        const int cursorLineNumber = textEditor_->currentLineNumber();
+        if (cursorLineNumber > 0) {
+            QStringList lines = textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+            for (QString &line : lines) {
+                if (line.endsWith(QLatin1Char('\r'))) {
+                    line.chop(1);
+                }
+            }
+            if (cursorLineNumber <= lines.size()) {
+                const TherionParsedLine parsedLine =
+                    TherionDocumentParser::parseLine(lines.at(cursorLineNumber - 1), cursorLineNumber);
+                const QString cursorKind = objectKindForDirective(parsedLine.directive);
+                if (!cursorKind.isEmpty()) {
+                    effectiveLineNumber = cursorLineNumber;
+                    effectiveKind = cursorKind;
+                    usingCursorFallback = true;
+                }
+            }
+        }
+    }
+
+    if (effectiveLineNumber <= 0 || effectiveKind.isEmpty()) {
         objectDetailsSelectionLabel_->setText(tr("No map object selected."));
         objectDetailsLineLabel_->setText(QStringLiteral("—"));
         objectDetailsKindLabel_->setText(QStringLiteral("—"));
         objectCoordinateEditor_->setVisible(false);
+        objectOrientationEditor_->setVisible(false);
         lineOptionsEditor_->setVisible(false);
+        objectConfigureButton_->setVisible(false);
+        objectConfigureButton_->setEnabled(false);
         lineClosedCheck_->setChecked(false);
         lineReversedCheck_->setChecked(false);
         return;
     }
 
-    objectDetailsSelectionLabel_->setText(tr("Selected object attributes update the TH2 source text immediately."));
-    objectDetailsLineLabel_->setText(QString::number(selectedObjectLineNumber_));
-    objectDetailsKindLabel_->setText(selectedObjectKind_);
+    objectDetailsSelectionLabel_->setText(usingCursorFallback
+                                              ? tr("Editing settings for the command at the current text cursor line.")
+                                              : tr("Selected object attributes update the TH2 source text immediately."));
+    objectDetailsLineLabel_->setText(QString::number(effectiveLineNumber));
+    objectDetailsKindLabel_->setText(effectiveKind);
+    objectConfigureButton_->setVisible(true);
+    objectConfigureButton_->setEnabled(isConfigurableMapObjectKind(effectiveKind));
 
     const bool coordinateEditable = selectedObjectCoordinate_.has_value()
         && (selectedObjectKind_ == QStringLiteral("point")
@@ -3038,6 +3633,67 @@ void MapEditorTab::refreshObjectDetailsPanel()
     } else {
         lineClosedCheck_->setChecked(false);
         lineReversedCheck_->setChecked(false);
+    }
+
+    bool orientationApplicable = false;
+    std::optional<qreal> orientationDegrees;
+    if (textEditor_ != nullptr && selectedObjectLineNumber_ > 0) {
+        if (selectedObjectKind_ == QStringLiteral("point")) {
+            QStringList lines = textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+            for (QString &line : lines) {
+                if (line.endsWith(QLatin1Char('\r'))) {
+                    line.chop(1);
+                }
+            }
+            if (selectedObjectLineNumber_ <= lines.size()) {
+                const TherionParsedLine parsedLine =
+                    TherionDocumentParser::parseLine(lines.at(selectedObjectLineNumber_ - 1), selectedObjectLineNumber_);
+                if (parsedLine.directive == QStringLiteral("point")
+                    && isOrientationSupportedForParsedLine(parsedLine)) {
+                    orientationApplicable = true;
+                    orientationDegrees = pointOrientationFromParsedLine(parsedLine);
+                }
+            }
+        } else if (selectedObjectKind_ == QStringLiteral("line") && selectedObjectVertexIndex_ >= 0) {
+            if (const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(textEditor_->text(), selectedObjectLineNumber_);
+                lineFeature.has_value() && lineFeature->kind == MapGeometryFeature::Kind::Line) {
+                if (lineVertexIndexForSourceVertex(lineFeature.value(), selectedObjectVertexIndex_) >= 0) {
+                    QStringList lines = textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+                    for (QString &line : lines) {
+                        if (line.endsWith(QLatin1Char('\r'))) {
+                            line.chop(1);
+                        }
+                    }
+                    if (selectedObjectLineNumber_ > lines.size()) {
+                        orientationApplicable = false;
+                    } else {
+                        const TherionParsedLine parsedLine =
+                            TherionDocumentParser::parseLine(lines.at(selectedObjectLineNumber_ - 1), selectedObjectLineNumber_);
+                        if (!isOrientationSupportedForParsedLine(parsedLine)) {
+                            orientationApplicable = false;
+                        } else {
+                            orientationApplicable = true;
+                            orientationDegrees = linePointOrientationForSourceVertex(textEditor_->text(),
+                                                                                    selectedObjectLineNumber_,
+                                                                                    selectedObjectVertexIndex_);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    objectOrientationEditor_->setVisible(orientationApplicable);
+    if (orientationApplicable) {
+        objectOrientationEnabledCheck_->setChecked(orientationDegrees.has_value());
+        objectOrientationSpin_->setEnabled(objectOrientationEnabledCheck_->isChecked());
+        objectOrientationApplyButton_->setEnabled(true);
+        objectOrientationSpin_->setValue(orientationDegrees.value_or(0.0));
+    } else {
+        objectOrientationEnabledCheck_->setChecked(false);
+        objectOrientationSpin_->setEnabled(false);
+        objectOrientationSpin_->setValue(0.0);
+        objectOrientationApplyButton_->setEnabled(false);
     }
 }
 
@@ -3073,6 +3729,136 @@ void MapEditorTab::applyObjectCoordinateEdits()
     }
 
     selectedObjectCoordinate_ = newPoint;
+    refreshObjectDetailsPanel();
+}
+
+void MapEditorTab::applyObjectOrientationEdits()
+{
+    if (updatingObjectDetailsUi_ || textEditor_ == nullptr || selectedObjectLineNumber_ <= 0) {
+        return;
+    }
+    if (objectOrientationEnabledCheck_ == nullptr || objectOrientationSpin_ == nullptr) {
+        return;
+    }
+    if (selectedObjectKind_ != QStringLiteral("point") && selectedObjectKind_ != QStringLiteral("line")) {
+        return;
+    }
+
+    const bool enabled = objectOrientationEnabledCheck_->isChecked();
+    const qreal orientation = normalizeOrientationDegreesForMapDetails(objectOrientationSpin_->value());
+    QStringList documentLines = textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    for (QString &line : documentLines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+    QString errorMessage;
+    bool rewritten = false;
+    if (selectedObjectKind_ == QStringLiteral("point")) {
+        if (selectedObjectLineNumber_ > documentLines.size()) {
+            return;
+        }
+        const TherionParsedLine parsedLine =
+            TherionDocumentParser::parseLine(documentLines.at(selectedObjectLineNumber_ - 1), selectedObjectLineNumber_);
+        if (!isOrientationSupportedForParsedLine(parsedLine)) {
+            toolbarStatusNote_ = tr("Orientation is not supported for this point type.");
+            refreshToolbarSummary();
+            refreshObjectDetailsPanel();
+            return;
+        }
+        rewritten = textEditor_->rewritePointOrientation(selectedObjectLineNumber_,
+                                                         enabled,
+                                                         orientation,
+                                                         &errorMessage);
+    } else {
+        if (selectedObjectVertexIndex_ < 0) {
+            return;
+        }
+
+        const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(textEditor_->text(), selectedObjectLineNumber_);
+        if (!lineFeature.has_value()
+            || lineFeature->kind != MapGeometryFeature::Kind::Line
+            || lineVertexIndexForSourceVertex(lineFeature.value(), selectedObjectVertexIndex_) < 0) {
+            toolbarStatusNote_ = tr("Orientation editing is available only for selected line anchor vertices.");
+            refreshToolbarSummary();
+            refreshObjectDetailsPanel();
+            return;
+        }
+        if (selectedObjectLineNumber_ > documentLines.size()) {
+            return;
+        }
+        const TherionParsedLine parsedLine =
+            TherionDocumentParser::parseLine(documentLines.at(selectedObjectLineNumber_ - 1), selectedObjectLineNumber_);
+        if (!isOrientationSupportedForParsedLine(parsedLine)) {
+            toolbarStatusNote_ = tr("Orientation is not supported for this line type.");
+            refreshToolbarSummary();
+            refreshObjectDetailsPanel();
+            return;
+        }
+
+        rewritten = textEditor_->rewriteLinePointOrientation(selectedObjectLineNumber_,
+                                                             selectedObjectVertexIndex_,
+                                                             enabled,
+                                                             orientation,
+                                                             &errorMessage);
+    }
+
+    if (!rewritten) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Failed to update orientation.")
+            : tr("Failed to update orientation: %1").arg(errorMessage);
+        refreshToolbarSummary();
+        refreshObjectDetailsPanel();
+        return;
+    }
+
+    toolbarStatusNote_ = enabled
+        ? tr("Updated orientation to %1 degrees.").arg(QString::number(orientation, 'f', 3))
+        : tr("Cleared orientation override.");
+    refreshToolbarSummary();
+    refreshObjectDetailsPanel();
+}
+
+void MapEditorTab::handleObjectOrientationEnabledToggled(bool checked)
+{
+    if (updatingObjectDetailsUi_ || objectOrientationSpin_ == nullptr) {
+        return;
+    }
+    objectOrientationSpin_->setEnabled(checked);
+}
+
+void MapEditorTab::handleConfigureObjectSettingsTriggered()
+{
+    if (textEditor_ == nullptr) {
+        return;
+    }
+
+    int targetLineNumber = selectedObjectLineNumber_;
+    QString targetKind = selectedObjectKind_.trimmed().toLower();
+    if (!(targetLineNumber > 0 && isConfigurableMapObjectKind(targetKind))) {
+        targetLineNumber = textEditor_->currentLineNumber();
+        if (targetLineNumber > 0) {
+            QStringList lines = textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+            for (QString &line : lines) {
+                if (line.endsWith(QLatin1Char('\r'))) {
+                    line.chop(1);
+                }
+            }
+            if (targetLineNumber <= lines.size()) {
+                const TherionParsedLine parsedLine =
+                    TherionDocumentParser::parseLine(lines.at(targetLineNumber - 1), targetLineNumber);
+                targetKind = objectKindForDirective(parsedLine.directive);
+            }
+        }
+    }
+
+    if (targetLineNumber <= 0 || !isConfigurableMapObjectKind(targetKind)) {
+        toolbarStatusNote_ = tr("Object settings are available for scrap, point, line, and area commands.");
+        refreshToolbarSummary();
+        return;
+    }
+
+    textEditor_->configureCommandAtLine(targetKind, targetLineNumber);
     refreshObjectDetailsPanel();
 }
 
@@ -3283,27 +4069,7 @@ void MapEditorTab::applyZoomAtViewportPosition(qreal factor, const QPointF &view
 
 void MapEditorTab::refreshToolbarSummary()
 {
-    if (summaryLabel_ == nullptr) {
-        return;
-    }
-
-    QString summary = toolbarStatusNote_.trimmed();
-    if (summary.isEmpty()) {
-        summary = tr("Ready");
-    }
-
-    if (fitBackgroundRequested_) {
-        summary += tr(" (fit includes background layers)");
-    }
-
-    if (!backgroundImageItems_.isEmpty()) {
-        summary += tr(" | Backgrounds: %1").arg(backgroundImageItems_.size());
-    }
-    if (touchFriendlyControlsEnabled_) {
-        summary += tr(" | Touch Controls: On");
-    }
-
-    summaryLabel_->setText(summary);
+    // Status text is retained for future command-surface summaries.
 }
 
 QRectF MapEditorTab::mapGeometryFitBounds() const

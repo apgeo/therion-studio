@@ -64,7 +64,6 @@ QString applicationChromeStyleSheet()
         "}"
         "QFrame#SidebarActivityRail {"
         "  border: 0px;"
-        "  border-right: 1px solid palette(mid);"
         "}"
         "QStatusBar {"
         "  border-top: 1px solid palette(mid);"

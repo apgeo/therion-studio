@@ -48,6 +48,12 @@ class TextEditorTab final : public QWidget
     Q_OBJECT
 
 public:
+    enum class EditorMode
+    {
+        Raw,
+        Blocks
+    };
+
     explicit TextEditorTab(QWidget *parent = nullptr);
     ~TextEditorTab() override;
 
@@ -102,6 +108,12 @@ public:
     QString statusPathText() const;
     QString statusEncodingText() const;
     void setInlineStatusVisible(bool visible);
+    void setModeSelectorVisible(bool visible);
+    EditorMode editorMode() const;
+    bool isBlocksModeAvailable() const;
+
+public slots:
+    void setEditorMode(EditorMode mode);
 
 signals:
     void titleChanged();
@@ -109,6 +121,7 @@ signals:
     void currentLineChanged(int lineNumber);
     void cursorPositionChanged(int lineNumber, int columnNumber);
     void documentTextChanged();
+    void editorModeChanged(TherionStudio::TextEditorTab::EditorMode mode);
 
 protected:
     void changeEvent(QEvent *event) override;

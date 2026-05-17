@@ -3244,6 +3244,28 @@ void TextEditorTab::setInlineStatusVisible(bool visible)
     refreshStatus();
 }
 
+void TextEditorTab::setModeSelectorVisible(bool visible)
+{
+    if (modeRow_ != nullptr) {
+        modeRow_->setVisible(visible);
+    }
+}
+
+TextEditorTab::EditorMode TextEditorTab::editorMode() const
+{
+    return blocksModeActive_ ? EditorMode::Blocks : EditorMode::Raw;
+}
+
+bool TextEditorTab::isBlocksModeAvailable() const
+{
+    return isBlocksModeSupportedForCurrentFile();
+}
+
+void TextEditorTab::setEditorMode(EditorMode mode)
+{
+    setBlocksModeActive(mode == EditorMode::Blocks);
+}
+
 bool TextEditorTab::isBlocksModeSupportedForCurrentFile() const
 {
     if (filePath_.trimmed().isEmpty()) {
@@ -3288,6 +3310,7 @@ void TextEditorTab::setBlocksModeActive(bool active)
         editor_->setFocus();
     }
     refreshEditorModeUi();
+    emit editorModeChanged(editorMode());
 }
 
 bool TextEditorTab::ensureEncodingRootDirectiveForBlocks()

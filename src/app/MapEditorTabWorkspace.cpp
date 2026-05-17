@@ -1,9 +1,12 @@
 #include "MapEditorTab.h"
 
 #include <QApplication>
+#include <QCheckBox>
+#include <QDoubleSpinBox>
 #include <QFile>
 #include <QGuiApplication>
 #include <QFileInfo>
+#include <QFormLayout>
 #include <QFrame>
 #include <QGraphicsView>
 #include <QHBoxLayout>
@@ -13,9 +16,11 @@
 #include <QLayoutItem>
 #include <QMainWindow>
 #include <QPainter>
+#include <QPushButton>
 #include <QShortcut>
 #include <QScopedValueRollback>
 #include <QSplitter>
+#include <QStatusBar>
 #include <QStyleHints>
 #include <QSvgRenderer>
 #include <QToolButton>
@@ -318,6 +323,39 @@ public:
         : QMainWindow(parent, Qt::Window)
     {
         setAttribute(Qt::WA_DeleteOnClose, true);
+        zoomLabel_ = new QLabel(statusBar());
+        zoomLabel_->setAlignment(Qt::AlignCenter);
+        zoomLabel_->setMinimumWidth(56);
+        modeLabel_ = new QLabel(statusBar());
+        modeLabel_->setAlignment(Qt::AlignCenter);
+        modeLabel_->setMinimumWidth(78);
+        statusBar()->addPermanentWidget(zoomLabel_, 0);
+        statusBar()->addPermanentWidget(modeLabel_, 0);
+    }
+
+    void setMapStatus(int zoomPercent, bool insertMode, const QString &modeText)
+    {
+        if (zoomLabel_ != nullptr) {
+            zoomLabel_->setText(QObject::tr("%1%").arg(zoomPercent));
+            zoomLabel_->setToolTip(QObject::tr("Map zoom"));
+        }
+        if (modeLabel_ != nullptr) {
+            const QString badgeText = insertMode ? QObject::tr("Insert") : QObject::tr("Select");
+            const QString background = insertMode
+                ? QStringLiteral("#d34a4a")
+                : QStringLiteral("#2e9f5c");
+            modeLabel_->setText(badgeText);
+            modeLabel_->setToolTip(modeText);
+            modeLabel_->setStyleSheet(QStringLiteral(
+                                          "QLabel {"
+                                          " color: white;"
+                                          " font-weight: 700;"
+                                          " background-color: %1;"
+                                          " border-radius: 4px;"
+                                          " padding: 1px 8px;"
+                                          " min-height: 18px;"
+                                          "}").arg(background));
+        }
     }
 
     void setCloseCallback(std::function<void()> callback)
@@ -335,6 +373,8 @@ protected:
     }
 
 private:
+    QLabel *zoomLabel_ = nullptr;
+    QLabel *modeLabel_ = nullptr;
     std::function<void()> closeCallback_;
 };
 }
@@ -343,9 +383,15 @@ MapEditorTab::MapEditorTab(QWidget *parent)
     : QWidget(parent)
 {
     undoStack_ = new QUndoStack(this);
-    workspaceMode_ = WorkspaceMode::Split;
+    workspaceMode_ = WorkspaceMode::Visual;
     touchFriendlyControlsEnabled_ = SessionStore::therionMapTouchFriendlyControlsEnabled();
     buildUi();
+    connect(this, &MapEditorTab::zoomStatusChanged, this, [this](int) {
+        refreshStatus();
+    });
+    connect(this, &MapEditorTab::modeStatusChanged, this, [this]() {
+        refreshStatus();
+    });
     updateWorkspaceVisibility();
     setTouchFriendlyControlsEnabled(touchFriendlyControlsEnabled_);
 
@@ -373,6 +419,27 @@ void MapEditorTab::buildUi()
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
+
+    workspaceModeRow_ = new QWidget(this);
+    auto *workspaceModeLayout = new QHBoxLayout(workspaceModeRow_);
+    workspaceModeLayout->setContentsMargins(12, 10, 12, 8);
+    workspaceModeLayout->setSpacing(8);
+    workspaceModeLayout->addWidget(new QLabel(tr("Mode:"), workspaceModeRow_));
+    visualModeButton_ = new QPushButton(tr("Visual"), workspaceModeRow_);
+    visualModeButton_->setCheckable(true);
+    rawModeButton_ = new QPushButton(tr("Raw"), workspaceModeRow_);
+    rawModeButton_->setCheckable(true);
+    workspaceModeLayout->addWidget(visualModeButton_);
+    workspaceModeLayout->addWidget(rawModeButton_);
+    workspaceModeLayout->addStretch(1);
+
+    connect(visualModeButton_, &QPushButton::clicked, this, [this]() {
+        setWorkspaceMode(WorkspaceMode::Visual);
+    });
+    connect(rawModeButton_, &QPushButton::clicked, this, [this]() {
+        setWorkspaceMode(WorkspaceMode::Raw);
+    });
+    workspaceModeRow_->setVisible(inlineWorkspaceModeSelectorVisible_);
 
     auto *toolbar = new QWidget(this);
     toolbar->setObjectName(QStringLiteral("mapToolbarOverlay"));
@@ -465,6 +532,7 @@ void MapEditorTab::buildUi()
 
     textEditor_ = new TextEditorTab(splitter_);
     textEditor_->setInlineStatusVisible(false);
+    textEditor_->setModeSelectorVisible(false);
     connect(textEditor_, &TextEditorTab::titleChanged, this, &MapEditorTab::titleChanged);
     connect(textEditor_, &TextEditorTab::dirtyStateChanged, this, &MapEditorTab::dirtyStateChanged);
     connect(textEditor_, &TextEditorTab::currentLineChanged, this, &MapEditorTab::handleTextEditorCurrentLineChanged);
@@ -482,7 +550,11 @@ void MapEditorTab::buildUi()
     mapPaneLayout->setContentsMargins(4, 0, 4, 4);
     mapPaneLayout->setSpacing(0);
 
-    mapView_ = new QGraphicsView(mapPaneContainer_);
+    mapDetailsSplitter_ = new QSplitter(Qt::Horizontal, mapPaneContainer_);
+    mapDetailsSplitter_->setChildrenCollapsible(false);
+    mapDetailsSplitter_->setHandleWidth(6);
+
+    mapView_ = new QGraphicsView(mapDetailsSplitter_);
     mapView_->setFrameShape(QFrame::NoFrame);
     mapView_->setDragMode(QGraphicsView::NoDrag);
     mapView_->setTransformationAnchor(QGraphicsView::AnchorViewCenter);
@@ -512,7 +584,69 @@ void MapEditorTab::buildUi()
         commitInteractiveDrawSession();
     });
 
-    mapPaneLayout->addWidget(mapView_, 1);
+    objectDetailsPanel_ = new QFrame(mapDetailsSplitter_);
+    objectDetailsPanel_->setObjectName(QStringLiteral("mapObjectDetailsPanel"));
+    objectDetailsPanel_->setMinimumWidth(280);
+    auto *objectDetailsLayout = new QVBoxLayout(objectDetailsPanel_);
+    objectDetailsLayout->setContentsMargins(12, 12, 12, 12);
+    objectDetailsLayout->setSpacing(8);
+
+    auto *objectDetailsHeader = new QLabel(tr("Object Details"), objectDetailsPanel_);
+    QFont objectDetailsHeaderFont = objectDetailsHeader->font();
+    objectDetailsHeaderFont.setBold(true);
+    objectDetailsHeader->setFont(objectDetailsHeaderFont);
+    objectDetailsLayout->addWidget(objectDetailsHeader);
+
+    objectDetailsSelectionLabel_ = new QLabel(tr("No map object selected."), objectDetailsPanel_);
+    objectDetailsSelectionLabel_->setWordWrap(true);
+    objectDetailsLayout->addWidget(objectDetailsSelectionLabel_);
+
+    auto *objectDetailsForm = new QFormLayout;
+    objectDetailsForm->setContentsMargins(0, 0, 0, 0);
+    objectDetailsForm->setSpacing(6);
+    objectDetailsLineLabel_ = new QLabel(QStringLiteral("—"), objectDetailsPanel_);
+    objectDetailsKindLabel_ = new QLabel(QStringLiteral("—"), objectDetailsPanel_);
+    objectDetailsForm->addRow(tr("Source Line"), objectDetailsLineLabel_);
+    objectDetailsForm->addRow(tr("Kind"), objectDetailsKindLabel_);
+    objectDetailsLayout->addLayout(objectDetailsForm);
+
+    objectCoordinateEditor_ = new QWidget(objectDetailsPanel_);
+    auto *coordinateForm = new QFormLayout(objectCoordinateEditor_);
+    coordinateForm->setContentsMargins(0, 0, 0, 0);
+    coordinateForm->setSpacing(6);
+    objectCoordinateXSpin_ = new QDoubleSpinBox(objectCoordinateEditor_);
+    objectCoordinateXSpin_->setDecimals(6);
+    objectCoordinateXSpin_->setRange(-10000000.0, 10000000.0);
+    objectCoordinateYSpin_ = new QDoubleSpinBox(objectCoordinateEditor_);
+    objectCoordinateYSpin_->setDecimals(6);
+    objectCoordinateYSpin_->setRange(-10000000.0, 10000000.0);
+    objectCoordinateApplyButton_ = new QPushButton(tr("Apply Coordinates"), objectCoordinateEditor_);
+    objectCoordinateApplyButton_->setAutoDefault(false);
+    connect(objectCoordinateApplyButton_, &QPushButton::clicked, this, &MapEditorTab::applyObjectCoordinateEdits);
+    coordinateForm->addRow(tr("X"), objectCoordinateXSpin_);
+    coordinateForm->addRow(tr("Y"), objectCoordinateYSpin_);
+    coordinateForm->addRow(QString(), objectCoordinateApplyButton_);
+    objectDetailsLayout->addWidget(objectCoordinateEditor_);
+
+    lineOptionsEditor_ = new QWidget(objectDetailsPanel_);
+    auto *lineOptionsLayout = new QVBoxLayout(lineOptionsEditor_);
+    lineOptionsLayout->setContentsMargins(0, 0, 0, 0);
+    lineOptionsLayout->setSpacing(6);
+    lineClosedCheck_ = new QCheckBox(tr("Closed (-close)"), lineOptionsEditor_);
+    lineReversedCheck_ = new QCheckBox(tr("Reversed (-reverse)"), lineOptionsEditor_);
+    connect(lineClosedCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLineClosedToggled);
+    connect(lineReversedCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLineReversedToggled);
+    lineOptionsLayout->addWidget(lineClosedCheck_);
+    lineOptionsLayout->addWidget(lineReversedCheck_);
+    objectDetailsLayout->addWidget(lineOptionsEditor_);
+    objectDetailsLayout->addStretch(1);
+
+    mapDetailsSplitter_->addWidget(mapView_);
+    mapDetailsSplitter_->addWidget(objectDetailsPanel_);
+    mapDetailsSplitter_->setStretchFactor(0, 1);
+    mapDetailsSplitter_->setStretchFactor(1, 0);
+    mapDetailsSplitter_->setSizes(QList<int>{980, 320});
+    mapPaneLayout->addWidget(mapDetailsSplitter_, 1);
     toolbar->setParent(mapView_);
     toolbar->show();
     positionMapToolbarOverlay();
@@ -522,9 +656,12 @@ void MapEditorTab::buildUi()
     splitter_->setStretchFactor(1, 1);
     splitter_->setSizes(QList<int>{700, 900});
 
+    layout->addWidget(workspaceModeRow_);
     layout->addWidget(splitter_, 1);
 
     refreshMapScene();
+    refreshWorkspaceModeUi();
+    refreshObjectDetailsPanel();
     refreshDetachButtonState();
     refreshToolbarIcons();
     updateCommandSurfaceState();
@@ -658,17 +795,45 @@ bool MapEditorTab::isInsertModeActive() const
     return interactiveDrawMode_ != InteractiveDrawMode::None;
 }
 
+bool MapEditorTab::isMapPaneDetached() const
+{
+    return mapPaneDetached_;
+}
+
 MapEditorTab::WorkspaceMode MapEditorTab::workspaceMode() const
 {
     return workspaceMode_;
 }
 
+void MapEditorTab::setInlineWorkspaceModeSelectorVisible(bool visible)
+{
+    inlineWorkspaceModeSelectorVisible_ = visible;
+    if (workspaceModeRow_ != nullptr) {
+        workspaceModeRow_->setVisible(inlineWorkspaceModeSelectorVisible_);
+    }
+}
+
 void MapEditorTab::setWorkspaceMode(WorkspaceMode mode)
 {
-    Q_UNUSED(mode);
-    workspaceMode_ = WorkspaceMode::Split;
+    if (workspaceMode_ == mode) {
+        refreshWorkspaceModeUi();
+        return;
+    }
+
+    workspaceMode_ = mode;
+    refreshWorkspaceModeUi();
     updateWorkspaceVisibility();
-    refreshMapScene();
+    emit workspaceModeChanged(workspaceMode_);
+}
+
+void MapEditorTab::refreshWorkspaceModeUi()
+{
+    if (visualModeButton_ == nullptr || rawModeButton_ == nullptr) {
+        return;
+    }
+
+    visualModeButton_->setChecked(workspaceMode_ == WorkspaceMode::Visual);
+    rawModeButton_->setChecked(workspaceMode_ == WorkspaceMode::Raw);
 }
 
 void MapEditorTab::handleTextEditorCurrentLineChanged(int lineNumber)
@@ -735,15 +900,38 @@ void MapEditorTab::handleTouchFriendlyControlsToggled(bool checked)
 
 void MapEditorTab::updateWorkspaceVisibility()
 {
+    if (textEditor_ == nullptr) {
+        refreshStatus();
+        return;
+    }
+
     if (mapPaneDetached_) {
+        if (workspaceModeRow_ != nullptr) {
+            workspaceModeRow_->setEnabled(false);
+            workspaceModeRow_->setToolTip(tr("Map pane is detached: raw editor remains in this tab while visual map stays in the detached window."));
+        }
         textEditor_->show();
         refreshStatus();
         return;
     }
 
-    textEditor_->show();
+    if (workspaceModeRow_ != nullptr) {
+        workspaceModeRow_->setEnabled(true);
+        workspaceModeRow_->setToolTip(QString());
+    }
+
+    const bool visualMode = workspaceMode_ == WorkspaceMode::Visual;
+    textEditor_->setVisible(!visualMode);
     if (mapPaneContainer_ != nullptr) {
-        mapPaneContainer_->show();
+        mapPaneContainer_->setVisible(visualMode);
+    }
+
+    if (splitter_ != nullptr) {
+        if (visualMode) {
+            splitter_->setSizes(QList<int>{1, 0});
+        } else {
+            splitter_->setSizes(QList<int>{0, 1});
+        }
     }
 
     refreshStatus();
@@ -759,6 +947,9 @@ void MapEditorTab::refreshStatus()
     if (detachedMapPaneWindow_ != nullptr) {
         detachedMapPaneWindow_->setWindowTitle(tr("%1 — Map").arg(displayName()));
         detachedMapPaneWindow_->setWindowFilePath(filePath());
+        if (auto *window = dynamic_cast<DetachedMapPaneWindow *>(detachedMapPaneWindow_.data())) {
+            window->setMapStatus(zoomPercent(), isInsertModeActive(), statusModeText());
+        }
     }
 }
 

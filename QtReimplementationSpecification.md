@@ -72,6 +72,7 @@ Required capabilities:
 - preserve unsaved edits and document state across tab changes
 - provide an editor-surface mode switch between raw text editing and a structured block-canvas view for supported Therion source files
 - keep raw text as the canonical source of truth; any structured-view mutation shall be applied through source edits with immediate source synchronization
+- when the active document supports structured Blocks mode (`.th`/`.thconfig`) in the main window, the `Raw`/`Blocks` mode selector shall be hosted in the editor tab strip top-right corner adjacent to document tabs
 
 Structured block-canvas requirements:
 
@@ -127,7 +128,7 @@ Required capabilities:
 
 - render the current TH2 document as an editable 2D map
 - support an embedded map workspace inside the main editor for TH2 files
-- support a synchronized split text+map TH2 workspace in the main editor
+- support a mode-based TH2 workspace in the main editor with explicit `Visual` and `Raw` modes
 - support detaching and reattaching the map pane into a dedicated top-level window without losing synchronization with the source document
 - support the main TH2 object types:
   - scraps
@@ -248,6 +249,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The search bar shall support next, previous, replace current, replace all, whole-word matching, and case-sensitive matching.
 - The user shall be able to hide the search bar without closing the current document.
 - The editor shall display 1-based source line numbers in a left gutter that stays synchronized with document scroll position.
+- For `.th` and `.thconfig` documents, the `Raw`/`Blocks` mode selector shall be shown in the main tab-strip top-right corner instead of a dedicated in-content mode row.
 - The application shall show the active document path and current text encoding in a status area tied to the active document context.
 - When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
 - When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8.
@@ -262,12 +264,16 @@ The rules below define the expected day-to-day interaction model. If a later req
 
 - The map editor shall render the currently open TH2 document as an editable two-dimensional workspace.
 - The map workspace shall maintain sufficient contrast for geometry strokes, handles, labels, and grid lines in both light and dark system appearance modes.
-- When a TH2 document is active in the main window, the workspace shall provide synchronized text+map editing in a split or functionally equivalent embedded arrangement.
-- In the embedded TH2 map workspace, the primary pane order shall be graphical map editor, synchronized source text editor, and contextual help inspector.
-- The embedded map canvas shall use the same outer padding rhythm as adjacent editor and inspector panes.
+- When a TH2 document is active in the main window, the embedded workspace shall provide explicit `Visual` and `Raw` modes.
+- When a TH2 document is active in the main window, the `Visual`/`Raw` mode selector shall be hosted in the editor tab strip at the top-right edge (adjacent to document tabs) rather than in a dedicated row inside the tab content.
+- When a TH2 map editor is presented outside the main tab strip (for example in a detached dedicated map-editor window), an equivalent in-window mode selector shall remain available.
+- In embedded `Visual` mode, the workspace shall present the graphical map canvas together with a right-side object-details panel used for map object attribute editing.
+- In embedded `Raw` mode, the workspace shall present the source text editor together with the contextual help inspector and no embedded map pane.
 - The embedded graphical map pane shall stay dedicated to map editing and shall not include a separate persistent map-help panel.
 - The user shall be able to detach the current TH2 session into a dedicated map editor window without creating a separate document state.
 - Embedded and detached map presentations shall remain synchronized with the same selection, undo history, and underlying text document.
+- When the map pane is detached, the main tab shall continue showing the raw source editor while the detached map window presents the graphical map plus the object-details panel for the same TH2 session.
+- When the map pane is detached, map zoom and Select/Insert mode indicators shall be shown in the detached map window status bar and shall not remain duplicated in the main-window status area.
 - On first display, scrap nodes shall default to expanded state.
 - If a map object is selected elsewhere in the application, the corresponding scrap shall expand automatically so the object remains visible in the list.
 - Clicking a map object row shall select that object, update the map selection, and reveal the corresponding source location in the text editor when the source line is known.
@@ -416,11 +422,11 @@ The Qt application may add additional platform-standard shortcuts only if they d
 The Qt application shall define a consistent window and document model.
 
 - The main application window shall present the project browser, tabbed text editor, structure sidebar, and console-related views used for project work.
-- The main application window shall support a text workspace for all supported text files and, for TH2 files, a synchronized embedded text+map presentation.
+- The main application window shall support a text workspace for all supported text files and, for TH2 files, an embedded mode-based `Visual`/`Raw` workspace presentation.
 - The text editor shall provide a collapsible contextual help/documentation inspector below the editor or in an equivalent persistent surface.
 - The Qt implementation shall use an equivalent persistent right-side help inspector surface for raw text editing to keep editor/help spatial structure consistent with the Blocks workspace.
 - A TH2 map shall open in a dedicated map editor window or equivalent dedicated top-level surface that remains associated with the same document session.
-- A TH2 map may also be embedded in the main application window as part of a split or map-focused workspace.
+- A TH2 map may also be embedded in the main application window as part of a mode-focused workspace and detached into a dedicated map window.
 - Opening the same TH2 document again shall prefer focusing the existing map editor window or session rather than creating a duplicate map editor, where the platform and implementation allow it.
 - The application shall provide a dedicated Therion console window or equivalent dedicated console surface that can remain open independently of the active editor tab.
 - A text editor tab shall own one document identity and one dirty state.
@@ -783,6 +789,7 @@ The criteria below are intended for implementation verification and QA.
 - Find and Replace show an inline search bar with next, previous, replace, replace all, whole-word, and match-case controls.
 - The editor shows a contextual help/documentation panel for Therion commands and options when metadata is available.
 - In raw text-editing mode, the contextual help panel appears in a resizable right-side inspector column (not a bottom strip), and editor/help spacing remains visually consistent with Blocks mode.
+- For `.th` and `.thconfig` documents, `Raw`/`Blocks` mode controls appear in the tab-strip top-right corner.
 - The application shows the active file path and encoding in a status area for the active document.
 - For map-editor documents, the status area shows a color mode badge (`Select` green, `Insert` red) and updates when the mode changes.
 - Non-UTF-8 files can be explicitly converted to UTF-8.
@@ -792,11 +799,14 @@ The criteria below are intended for implementation verification and QA.
 #### 8.1.3 TH2 Map Editor
 
 - The map editor renders the currently open TH2 file as a 2D editable workspace.
-- A TH2 document is shown in a synchronized embedded text+map workspace or an equivalent arrangement.
-- The embedded TH2 workspace presents panes left-to-right as graphical map editor, synchronized source text editor, and contextual help inspector.
-- The embedded map canvas outer padding is visually consistent with adjacent editor and inspector panes.
+- A TH2 document exposes an embedded mode selector with `Visual` and `Raw` modes.
+- In the main window, the TH2 `Visual`/`Raw` mode selector is anchored in the tab-strip top-right corner, next to document tabs.
+- In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window mode selector remains available.
+- In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side object-details panel for selected map objects.
+- In embedded `Raw` mode, the tab shows the source text editor plus contextual help inspector.
 - The graphical map pane does not show a separate persistent map-help panel.
 - The same TH2 session can be shown in an embedded workspace and a detached map pane window without diverging document state.
+- While the map pane is detached, the main tab keeps the raw text editor visible and the detached map window keeps map/object-details editing visible.
 - Scrap nodes start expanded on first display.
 - Selecting an object in the map editor updates the selected object state in the rest of the application.
 - Clicking a map object row reveals the corresponding source line when it exists.
@@ -1130,7 +1140,7 @@ Required parity scope:
 
 Required parity scope:
 
-- embedded map workspace plus detachable map window for the same TH2 session
+- embedded TH2 workspace with `Visual`/`Raw` modes plus detachable map window for the same TH2 session
 - selection, hover, visibility toggles, and object-focused editing
 - viewport controls: pan, zoom, fit geometry, fit geometry+background
 - input-mode-aware navigation behavior for touchpad, mouse, and stylus workflows

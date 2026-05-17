@@ -146,6 +146,8 @@ private:
     bool confirmCloseDocumentWidget(QWidget *documentWidget);
     void initializeDocumentStatusWidgets();
     void refreshDocumentStatusWidgets();
+    void initializeWorkspaceModeSwitcher();
+    void refreshWorkspaceModeSwitcher();
 
     QHBoxLayout *mainContentLayout_ = nullptr;
     QTabWidget *editorTabs_ = nullptr;
@@ -202,6 +204,14 @@ private:
     QLabel *statusMapZoomLabel_ = nullptr;
     QLabel *statusMapModeLabel_ = nullptr;
     QLabel *statusDocumentEncodingLabel_ = nullptr;
+    QWidget *workspaceModeSwitcher_ = nullptr;
+    QWidget *workspaceMapModeSwitcher_ = nullptr;
+    QWidget *workspaceTextModeSwitcher_ = nullptr;
+    QPushButton *workspaceVisualModeButton_ = nullptr;
+    QPushButton *workspaceRawModeButton_ = nullptr;
+    QPushButton *workspaceTextRawModeButton_ = nullptr;
+    QPushButton *workspaceBlocksModeButton_ = nullptr;
+    bool workspaceModeSwitcherSyncInProgress_ = false;
     QFileSystemModel *projectModel_ = nullptr;
     QStandardItemModel *structureModel_ = nullptr;
     QStandardItemModel *mapObjectsModel_ = nullptr;

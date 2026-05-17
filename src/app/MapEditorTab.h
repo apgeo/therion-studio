@@ -19,6 +19,9 @@ class QGraphicsScene;
 class QGraphicsView;
 class QSplitter;
 class QToolButton;
+class QPushButton;
+class QCheckBox;
+class QDoubleSpinBox;
 class QGraphicsRectItem;
 class QGraphicsPixmapItem;
 class QGraphicsPathItem;
@@ -44,9 +47,8 @@ class MapEditorTab final : public QWidget
 public:
     enum class WorkspaceMode
     {
-        TextOnly,
-        MapOnly,
-        Split
+        Visual,
+        Raw
     };
     enum class InteractiveDrawMode
     {
@@ -81,7 +83,9 @@ public:
     QString statusModeText() const;
     int zoomPercent() const;
     bool isInsertModeActive() const;
+    bool isMapPaneDetached() const;
     WorkspaceMode workspaceMode() const;
+    void setInlineWorkspaceModeSelectorVisible(bool visible);
     int backgroundLayerCount() const;
     QString backgroundLayerLabel(int index) const;
     bool isBackgroundLayerVisible(int index) const;
@@ -112,6 +116,7 @@ signals:
     void documentTextChanged();
     void backgroundLayersChanged();
     void modeStatusChanged();
+    void workspaceModeChanged(TherionStudio::MapEditorTab::WorkspaceMode mode);
     void zoomStatusChanged(int zoomPercent);
     void openDedicatedWindowRequested(TherionStudio::MapEditorTab *tab);
 
@@ -241,11 +246,36 @@ private:
     QString displayPath() const;
     void setTouchFriendlyControlsEnabled(bool enabled);
     void handleApplicationAppearanceChanged();
+    void refreshWorkspaceModeUi();
+    void refreshObjectDetailsPanel();
+    void applyObjectCoordinateEdits();
+    void handleLineClosedToggled(bool checked);
+    void handleLineReversedToggled(bool checked);
 
+    QWidget *workspaceModeRow_ = nullptr;
+    QPushButton *visualModeButton_ = nullptr;
+    QPushButton *rawModeButton_ = nullptr;
     TextEditorTab *textEditor_ = nullptr;
     QGraphicsView *mapView_ = nullptr;
     QGraphicsScene *mapScene_ = nullptr;
     QWidget *mapPaneContainer_ = nullptr;
+    QSplitter *mapDetailsSplitter_ = nullptr;
+    QWidget *objectDetailsPanel_ = nullptr;
+    QLabel *objectDetailsSelectionLabel_ = nullptr;
+    QLabel *objectDetailsLineLabel_ = nullptr;
+    QLabel *objectDetailsKindLabel_ = nullptr;
+    QWidget *objectCoordinateEditor_ = nullptr;
+    QDoubleSpinBox *objectCoordinateXSpin_ = nullptr;
+    QDoubleSpinBox *objectCoordinateYSpin_ = nullptr;
+    QPushButton *objectCoordinateApplyButton_ = nullptr;
+    QWidget *lineOptionsEditor_ = nullptr;
+    QCheckBox *lineClosedCheck_ = nullptr;
+    QCheckBox *lineReversedCheck_ = nullptr;
+    bool updatingObjectDetailsUi_ = false;
+    int selectedObjectLineNumber_ = 0;
+    int selectedObjectVertexIndex_ = -1;
+    QString selectedObjectKind_;
+    std::optional<QPointF> selectedObjectCoordinate_;
     QWidget *mapToolbar_ = nullptr;
     QSplitter *splitter_ = nullptr;
     QLabel *summaryLabel_ = nullptr;
@@ -272,7 +302,7 @@ private:
     QVector<QGraphicsPixmapItem *> backgroundImageItems_;
     QUndoStack *undoStack_ = nullptr;
     int nextDraftGeometryId_ = 1;
-    WorkspaceMode workspaceMode_ = WorkspaceMode::Split;
+    WorkspaceMode workspaceMode_ = WorkspaceMode::Visual;
     QString projectRootPath_;
     QString toolbarStatusNote_;
     bool updatingSelection_ = false;
@@ -297,6 +327,7 @@ private:
     bool mapSceneRefreshPending_ = false;
     QPointer<QMainWindow> detachedMapPaneWindow_;
     bool mapPaneDetached_ = false;
+    bool inlineWorkspaceModeSelectorVisible_ = true;
     bool reattachingMapPane_ = false;
     bool mapSelectionDrivenTextNavigationInProgress_ = false;
     int lastCursorSyncedLine_ = -1;

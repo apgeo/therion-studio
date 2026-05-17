@@ -722,3 +722,9 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Refined sidebar activity-rail visuals for dark mode: switched to borderless/flat icon buttons, increased icon/button size for readability, and added palette-aware hover/active highlights with a subtler rail surface.~~
 - ~~Made sidebar activity-rail Lucide icons palette-aware by rendering SVG `currentColor` with Qt palette text colors, so icons respect dark/light theme contrast instead of appearing black in dark mode.~~
 - ~~Added runtime palette-change handling for activity-rail theming so icon tint and rail hover/active/background colors refresh immediately when the app theme changes.~~
+- ~~Refactored embedded TH2 workspace to explicit `Visual` and `Raw` modes: `Visual` now shows map canvas + right-side object-details panel, `Raw` now shows source text + contextual help, and detached-map workflows keep visual editing in the detached window while the main tab keeps raw editing visible.~~
+- ~~Added initial map object-details editing surface in `Visual` mode (selection summary, line `-close`/`-reverse` toggles, and coordinate apply for selected point/vertex geometry), wired through existing TH2 rewrite/undo paths.~~
+- ~~Updated `QtReimplementationSpecification.md`, `docs/USER_MANUAL.md`, and quick in-app manual copy for the new TH2 mode model and detached-window behavior.~~
+- ~~Added a detached-map window status bar with local map zoom and Select/Insert indicators, and hid duplicate map zoom/mode badges in the main-window status bar while the map pane is detached.~~
+- ~~Moved the TH2 `Visual/Raw` mode switcher to the main document tab strip (top-right corner) for better vertical space usage, while keeping an inline fallback selector for detached dedicated map-editor windows that do not share the main tab strip.~~
+- ~~Moved `.th`/`.thconfig` `Raw/Blocks` mode switching to the same tab-strip top-right corner control and hid the in-content mode row in regular text tabs.~~

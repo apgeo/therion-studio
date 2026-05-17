@@ -10,6 +10,8 @@
 #include <QGraphicsRectItem>
 #include <QGraphicsScene>
 #include <QGraphicsView>
+#include <QCheckBox>
+#include <QDoubleSpinBox>
 #include <QLabel>
 #include <QKeyEvent>
 #include <QLineF>
@@ -21,6 +23,7 @@
 #include <QScopedValueRollback>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QPushButton>
 #include <QTabletEvent>
 #include <QToolButton>
 #include <QPointer>
@@ -1744,6 +1747,7 @@ void MapEditorTab::refreshMapScenePreservingUndoStack()
     refreshStatus();
     updateCommandSurfaceState();
     updateHelpPanel();
+    refreshObjectDetailsPanel();
 }
 
 void MapEditorTab::flushPendingMapSceneRefreshAfterCommand()
@@ -1760,13 +1764,19 @@ void MapEditorTab::handleMapSceneSelectionChanged()
 {
     if (updatingSelection_ || mapScene_ == nullptr) {
         updateHelpPanel();
+        refreshObjectDetailsPanel();
         return;
     }
 
     const QList<QGraphicsItem *> selectedItems = mapScene_->selectedItems();
     if (selectedItems.isEmpty()) {
+        selectedObjectLineNumber_ = 0;
+        selectedObjectVertexIndex_ = -1;
+        selectedObjectKind_.clear();
+        selectedObjectCoordinate_.reset();
         updateGeometrySelectionPresentation();
         updateHelpPanel();
+        refreshObjectDetailsPanel();
         return;
     }
 
@@ -1880,6 +1890,7 @@ void MapEditorTab::handleMapSceneSelectionChanged()
         }
     }
 
+    int selectedSourceLineNumber = selectedLineNumber;
     if (selectedLineNumber > 0 && textEditor_ != nullptr) {
         const QScopedValueRollback<bool> syncGuard(mapSelectionDrivenTextNavigationInProgress_, true);
         if (selectedPointSource.has_value()) {
@@ -1887,6 +1898,7 @@ void MapEditorTab::handleMapSceneSelectionChanged()
             const std::optional<int> pointLineNumber =
                 sourcePointLineNumberForSelection(parsedLines, selectedPointSource.value());
             if (pointLineNumber.has_value()) {
+                selectedSourceLineNumber = pointLineNumber.value();
                 textEditor_->goToLineColumn(pointLineNumber.value(), 1);
             } else if (selectedLineNumber != currentLineNumber()) {
                 textEditor_->goToLine(selectedLineNumber);
@@ -1911,16 +1923,54 @@ void MapEditorTab::handleMapSceneSelectionChanged()
         }
     }
 
+    selectedObjectLineNumber_ = selectedSourceLineNumber;
+    selectedObjectVertexIndex_ = selectedSourceVertexIndex;
+    selectedObjectCoordinate_.reset();
+    if (selectedPointSource.has_value()) {
+        selectedObjectKind_ = QStringLiteral("point");
+        selectedObjectCoordinate_ = selectedPointSource.value();
+    } else if (selectedSourceVertexIndex >= 0) {
+        const QString normalizedGeometryKind = selectedGeometryKind.trimmed().toLower();
+        if (normalizedGeometryKind.startsWith(QStringLiteral("line"))) {
+            selectedObjectKind_ = QStringLiteral("line");
+        } else if (normalizedGeometryKind.startsWith(QStringLiteral("area"))) {
+            selectedObjectKind_ = QStringLiteral("area");
+        } else {
+            selectedObjectKind_ = normalizedGeometryKind;
+        }
+        if (auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(primarySelectedItem)) {
+            selectedObjectCoordinate_ = sourcePointFromScenePosition(vertexItem->pos());
+        }
+    } else if (selectedLineNumber > 0 && textEditor_ != nullptr) {
+        if (const std::optional<MapGeometryFeature> feature = lineFeatureForLineNumber(textEditor_->text(), selectedLineNumber);
+            feature.has_value()) {
+            if (feature->kind == MapGeometryFeature::Kind::Line) {
+                selectedObjectKind_ = QStringLiteral("line");
+            } else if (feature->kind == MapGeometryFeature::Kind::Area) {
+                selectedObjectKind_ = QStringLiteral("area");
+            } else if (feature->kind == MapGeometryFeature::Kind::Point) {
+                selectedObjectKind_ = QStringLiteral("point");
+            }
+        }
+        if (selectedObjectKind_.isEmpty()) {
+            selectedObjectKind_ = QStringLiteral("object");
+        }
+    } else {
+        selectedObjectKind_.clear();
+    }
+
     if (selectedCard != nullptr) {
         updateGeometrySelectionPresentation();
         updateCommandSurfaceState();
         updateHelpPanel();
+        refreshObjectDetailsPanel();
         return;
     }
 
     updateGeometrySelectionPresentation();
     updateCommandSurfaceState();
     updateHelpPanel();
+    refreshObjectDetailsPanel();
 }
 
 void MapEditorTab::syncMapSelectionFromTextCursor(int lineNumber, int columnNumber)
@@ -2931,6 +2981,137 @@ void MapEditorTab::updateCommandSurfaceState()
 void MapEditorTab::updateHelpPanel()
 {
     // Map-specific help was removed; source contextual help is owned by the embedded TextEditorTab.
+}
+
+void MapEditorTab::refreshObjectDetailsPanel()
+{
+    if (objectDetailsSelectionLabel_ == nullptr
+        || objectDetailsLineLabel_ == nullptr
+        || objectDetailsKindLabel_ == nullptr
+        || objectCoordinateEditor_ == nullptr
+        || lineOptionsEditor_ == nullptr
+        || lineClosedCheck_ == nullptr
+        || lineReversedCheck_ == nullptr) {
+        return;
+    }
+
+    const QScopedValueRollback<bool> uiGuard(updatingObjectDetailsUi_, true);
+
+    if (selectedObjectLineNumber_ <= 0 || selectedObjectKind_.isEmpty()) {
+        objectDetailsSelectionLabel_->setText(tr("No map object selected."));
+        objectDetailsLineLabel_->setText(QStringLiteral("—"));
+        objectDetailsKindLabel_->setText(QStringLiteral("—"));
+        objectCoordinateEditor_->setVisible(false);
+        lineOptionsEditor_->setVisible(false);
+        lineClosedCheck_->setChecked(false);
+        lineReversedCheck_->setChecked(false);
+        return;
+    }
+
+    objectDetailsSelectionLabel_->setText(tr("Selected object attributes update the TH2 source text immediately."));
+    objectDetailsLineLabel_->setText(QString::number(selectedObjectLineNumber_));
+    objectDetailsKindLabel_->setText(selectedObjectKind_);
+
+    const bool coordinateEditable = selectedObjectCoordinate_.has_value()
+        && (selectedObjectKind_ == QStringLiteral("point")
+            || selectedObjectKind_ == QStringLiteral("line")
+            || selectedObjectKind_ == QStringLiteral("area"));
+    objectCoordinateEditor_->setVisible(coordinateEditable);
+    if (coordinateEditable && objectCoordinateXSpin_ != nullptr && objectCoordinateYSpin_ != nullptr) {
+        objectCoordinateXSpin_->setValue(selectedObjectCoordinate_->x());
+        objectCoordinateYSpin_->setValue(selectedObjectCoordinate_->y());
+    }
+
+    const bool lineOptionsVisible = selectedObjectLineNumber_ > 0
+        && selectedObjectKind_ == QStringLiteral("line")
+        && textEditor_ != nullptr;
+    lineOptionsEditor_->setVisible(lineOptionsVisible);
+    if (lineOptionsVisible) {
+        if (const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(textEditor_->text(), selectedObjectLineNumber_);
+            lineFeature.has_value() && lineFeature->kind == MapGeometryFeature::Kind::Line) {
+            lineClosedCheck_->setChecked(lineFeature->closed);
+            lineReversedCheck_->setChecked(lineFeature->reversed);
+        } else {
+            lineClosedCheck_->setChecked(false);
+            lineReversedCheck_->setChecked(false);
+        }
+    } else {
+        lineClosedCheck_->setChecked(false);
+        lineReversedCheck_->setChecked(false);
+    }
+}
+
+void MapEditorTab::applyObjectCoordinateEdits()
+{
+    if (updatingObjectDetailsUi_ || textEditor_ == nullptr || selectedObjectLineNumber_ <= 0) {
+        return;
+    }
+    if (objectCoordinateXSpin_ == nullptr || objectCoordinateYSpin_ == nullptr) {
+        return;
+    }
+    if (selectedObjectKind_ != QStringLiteral("point")
+        && selectedObjectKind_ != QStringLiteral("line")
+        && selectedObjectKind_ != QStringLiteral("area")) {
+        return;
+    }
+
+    const QPointF newPoint(objectCoordinateXSpin_->value(), objectCoordinateYSpin_->value());
+    if (!selectedObjectCoordinate_.has_value()) {
+        return;
+    }
+
+    if (selectedObjectKind_ == QStringLiteral("point")) {
+        recordPointGeometryMove(selectedObjectLineNumber_, selectedObjectCoordinate_.value(), newPoint);
+    } else if (selectedObjectVertexIndex_ >= 0) {
+        recordLineAreaVertexMove(selectedObjectLineNumber_,
+                                 selectedObjectKind_,
+                                 selectedObjectVertexIndex_,
+                                 selectedObjectCoordinate_.value(),
+                                 newPoint);
+    } else {
+        return;
+    }
+
+    selectedObjectCoordinate_ = newPoint;
+    refreshObjectDetailsPanel();
+}
+
+void MapEditorTab::handleLineClosedToggled(bool checked)
+{
+    if (updatingObjectDetailsUi_
+        || textEditor_ == nullptr
+        || selectedObjectLineNumber_ <= 0
+        || selectedObjectKind_ != QStringLiteral("line")) {
+        return;
+    }
+
+    QString errorMessage;
+    if (!rewriteLineOptionToggle(selectedObjectLineNumber_, QStringLiteral("close"), checked, &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Failed to update line closed state.")
+            : tr("Failed to update line closed state: %1").arg(errorMessage);
+        refreshToolbarSummary();
+        refreshObjectDetailsPanel();
+    }
+}
+
+void MapEditorTab::handleLineReversedToggled(bool checked)
+{
+    if (updatingObjectDetailsUi_
+        || textEditor_ == nullptr
+        || selectedObjectLineNumber_ <= 0
+        || selectedObjectKind_ != QStringLiteral("line")) {
+        return;
+    }
+
+    QString errorMessage;
+    if (!rewriteLineOptionToggle(selectedObjectLineNumber_, QStringLiteral("reverse"), checked, &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Failed to update line reverse state.")
+            : tr("Failed to update line reverse state: %1").arg(errorMessage);
+        refreshToolbarSummary();
+        refreshObjectDetailsPanel();
+    }
 }
 
 void MapEditorTab::clearMapScene()

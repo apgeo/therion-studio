@@ -146,6 +146,7 @@ Text editor includes:
 - left gutter with 1-based line numbers that scroll with the document
 - active-line highlight that follows the text cursor (including map-driven source navigation)
 - editor mode toggle: `Raw` and `Blocks` (available for `.th` and `.thconfig` files)
+- for `.th`/`.thconfig`, the `Mode` switcher is in the document tab strip top-right (next to tabs), not in an extra row inside editor content
 - find/replace bar with `Whole word` and `Case sensitive` options
 - completion popup is shown while typing (commands/options/values), sourced from command catalog metadata; `Ctrl+Space` remains available as manual trigger
 - when completion popup is visible, confirm a suggestion with `Enter`, `Tab`, or mouse click; `Esc` closes the popup
@@ -293,13 +294,27 @@ Selecting an entry:
 
 ### 5.5 Use Map Workspace (`.th2`)
 
-Map tab uses a split map+text workspace by default. The embedded pane order is graphical map editor, synchronized source text editor, then the source contextual help inspector. The map pane is dedicated to graphical editing; there is no separate persistent `Map Help` pane below the canvas.
+Map tab uses explicit workspace modes:
+
+- `Visual`: graphical map editor + right-side `Object Details` panel
+- `Raw`: source text editor + right-side contextual help inspector
+- when a `.th2` map tab is active in the main window, the `Mode` switcher is in the document tab strip (top-right, next to tabs) to save vertical space
+- when a map editor is shown outside the main tab strip (for example a dedicated detached map-editor window), the same `Mode` switcher is shown inline inside that window as fallback
+
+The map pane is dedicated to graphical editing; there is no separate persistent `Map Help` pane below the canvas.
 
 Map canvas appearance:
 
 - canvas and geometry contrast adapts to current system light/dark appearance so lines, handles, labels, and grid stay readable
 - canvas outer padding follows the same panel spacing rhythm as the adjacent source editor and contextual help inspector
 - switching system light/dark appearance updates the map workspace and sidebar/status separators live, without restarting the app
+
+Object details panel (`Visual` mode):
+
+- updates from current map selection
+- shows selected object line/kind summary
+- supports attribute updates for selected map geometry (for example line `-close`/`-reverse` toggles and coordinate edits for selected point/vertex items)
+- edits update TH2 source text immediately and stay in the same undo/redo workflow
 
 Toolbar actions:
 
@@ -350,9 +365,12 @@ Interactive drawing (current):
 Detached map-pane behavior:
 
 - `Open Map in Window` detaches the graphical map pane into its own top-level window (useful for a second monitor).
-- The text editor stays in the main tab.
+- Detached map window keeps the same `Object Details` panel as `Visual` mode.
+- The main tab keeps the raw text editor visible while detached.
+- Detached map window shows its own status bar for map zoom and `Select`/`Insert` mode.
+- Main-window map zoom/mode badges are hidden while detached, so map status lives with the detached map window.
 - Closing the detached map window (or clicking `Return Map Pane`) reattaches the same map pane back to the tab.
-- While detached, the embedded map pane area in the main tab is hidden.
+- While detached, map and source remain synchronized as one TH2 session.
 
 Line-handle behavior:
 

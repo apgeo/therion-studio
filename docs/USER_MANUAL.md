@@ -144,7 +144,7 @@ Text editor includes:
 - command keyword highlighting is augmented from the generated Therion command catalog (`resources/therion_command_catalog.json`)
 - left gutter with 1-based line numbers that scroll with the document
 - active-line highlight that follows the text cursor (including map-driven source navigation)
-- editor mode toggle: `Raw` and `Blocks` (currently available for `.th` files only)
+- editor mode toggle: `Raw` and `Blocks` (available for `.th` and `.thconfig` files)
 - find/replace bar with `Whole word` and `Case sensitive` options
 - completion popup is shown while typing (commands/options/values), sourced from command catalog metadata; `Ctrl+Space` remains available as manual trigger
 - when completion popup is visible, confirm a suggestion with `Enter`, `Tab`, or mouse click; `Esc` closes the popup

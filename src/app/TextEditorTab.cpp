@@ -2097,7 +2097,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     rawModeButton_->setCheckable(true);
     blocksModeButton_ = new QPushButton(tr("Blocks"), modeRow_);
     blocksModeButton_->setCheckable(true);
-    blocksModeButton_->setToolTip(tr("Structured block canvas for .th files."));
+    blocksModeButton_->setToolTip(tr("Structured block canvas for .th and .thconfig files."));
     modeLayout->addWidget(rawModeButton_);
     modeLayout->addWidget(blocksModeButton_);
     modeLayout->addStretch(1);
@@ -3163,8 +3163,12 @@ bool TextEditorTab::isBlocksModeSupportedForCurrentFile() const
         return false;
     }
 
-    const QString suffix = QFileInfo(filePath_).suffix().toLower();
-    return suffix == QStringLiteral("th");
+    const QFileInfo fileInfo(filePath_);
+    const QString suffix = fileInfo.suffix().trimmed().toLower();
+    const QString fileName = fileInfo.fileName().trimmed().toLower();
+    return suffix == QStringLiteral("th")
+        || suffix == QStringLiteral("thconfig")
+        || fileName == QStringLiteral("thconfig");
 }
 
 void TextEditorTab::refreshBlocksModeAvailability()
@@ -3561,7 +3565,7 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
 
     if (!isBlocksModeSupportedForCurrentFile()) {
         auto *note = blockCanvasScene_->addText(
-            tr("Blocks mode is currently available only for .th files."));
+            tr("Blocks mode is currently available only for .th and .thconfig files."));
         note->setPos(16.0, 16.0);
         return;
     }
@@ -5814,7 +5818,9 @@ bool TextEditorTab::insertLinesBefore(int lineNumber,
 void TextEditorTab::handleCanvasDrop(const QString &kind, const QPointF &scenePos)
 {
     if (!isBlocksModeSupportedForCurrentFile()) {
-        QMessageBox::information(this, tr("Blocks Mode"), tr("Blocks mode is available only for .th files."));
+        QMessageBox::information(this,
+                                 tr("Blocks Mode"),
+                                 tr("Blocks mode is available only for .th and .thconfig files."));
         return;
     }
 

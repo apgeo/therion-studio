@@ -728,3 +728,5 @@ Automated tests currently in-tree and used as regression baseline:
 - ~~Added a detached-map window status bar with local map zoom and Select/Insert indicators, and hid duplicate map zoom/mode badges in the main-window status bar while the map pane is detached.~~
 - ~~Moved the TH2 `Visual/Raw` mode switcher to the main document tab strip (top-right corner) for better vertical space usage, while keeping an inline fallback selector for detached dedicated map-editor windows that do not share the main tab strip.~~
 - ~~Moved `.th`/`.thconfig` `Raw/Blocks` mode switching to the same tab-strip top-right corner control and hid the in-content mode row in regular text tabs.~~
+- ~~Moved TH2 map-pane detach/reattach action (`Separate Map` / `Return Map`) from the map toolbar into the same top-right workspace controls as TH2 mode switching; map toolbar now remains focused on editing/navigation tools.~~
+- ~~Fixed detached-map blank-window regression when detaching from TH2 `Raw` mode: detached window now always forces visual map pane visible while main tab remains in raw editor view.~~

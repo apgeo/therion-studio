@@ -84,6 +84,8 @@ public:
     int zoomPercent() const;
     bool isInsertModeActive() const;
     bool isMapPaneDetached() const;
+    QString mapPaneWindowActionText() const;
+    QString mapPaneWindowActionToolTip() const;
     WorkspaceMode workspaceMode() const;
     void setInlineWorkspaceModeSelectorVisible(bool visible);
     int backgroundLayerCount() const;
@@ -108,6 +110,7 @@ public:
 
 public slots:
     void setWorkspaceMode(WorkspaceMode mode);
+    void toggleMapPaneWindow();
 
 signals:
     void titleChanged();
@@ -117,6 +120,7 @@ signals:
     void backgroundLayersChanged();
     void modeStatusChanged();
     void workspaceModeChanged(TherionStudio::MapEditorTab::WorkspaceMode mode);
+    void mapPaneDetachStateChanged(bool detached);
     void zoomStatusChanged(int zoomPercent);
     void openDedicatedWindowRequested(TherionStudio::MapEditorTab *tab);
 
@@ -144,7 +148,6 @@ private slots:
     void handleFitWithBackgroundTriggered();
     void handleTouchFriendlyControlsToggled(bool checked);
     void updateCommandSurfaceState();
-    void handleDetachPaneTriggered();
 
 private:
     void buildUi();
@@ -238,7 +241,6 @@ private:
     void detachMapPaneToWindow();
     void reattachMapPaneFromWindow();
     void focusDetachedMapPaneWindow();
-    void refreshDetachButtonState();
     void refreshToolbarIcons();
     void positionMapToolbarOverlay();
     void refreshTitle();
@@ -279,7 +281,6 @@ private:
     QWidget *mapToolbar_ = nullptr;
     QSplitter *splitter_ = nullptr;
     QLabel *summaryLabel_ = nullptr;
-    QToolButton *detachButton_ = nullptr;
     QToolButton *undoButton_ = nullptr;
     QToolButton *redoButton_ = nullptr;
     QToolButton *pointButton_ = nullptr;

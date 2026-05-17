@@ -299,6 +299,7 @@ Map tab uses explicit workspace modes:
 - `Visual`: graphical map editor + right-side `Object Details` panel
 - `Raw`: source text editor + right-side contextual help inspector
 - when a `.th2` map tab is active in the main window, the `Mode` switcher is in the document tab strip (top-right, next to tabs) to save vertical space
+- the same top-right workspace controls include `Separate Map` / `Return Map` for detaching/reattaching the map pane
 - when a map editor is shown outside the main tab strip (for example a dedicated detached map-editor window), the same `Mode` switcher is shown inline inside that window as fallback
 
 The map pane is dedicated to graphical editing; there is no separate persistent `Map Help` pane below the canvas.
@@ -320,14 +321,14 @@ Toolbar actions:
 
 - toolbar commands are shown as compact flat Lucide icon buttons; hover any icon to see the text label
 - the toolbar floats inside the graphical map pane, centered at the top of the map canvas in a rounded overlay instead of spanning the whole editor tab
-- toolbar groups are separated visually in this order: view controls, history controls, selection/draft completion, insertion/drawing tools, and touch/detach controls
+- toolbar groups are separated visually in this order: view controls, history controls, selection/draft completion, insertion/drawing tools, and touch controls
 - the floating toolbar wraps onto additional rows when the map canvas is too narrow for one row
 - view actions: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
 - current map zoom is shown in the main status bar before the `Select`/`Insert` mode badge
 - history actions: `Undo`, `Redo`
 - selection/draft actions: `Select`, `Complete Draft`
 - insertion/drawing tools: `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`
-- workflow actions: `Touch Controls`, `Open Map in Window` / `Return Map Pane`
+- workflow actions: `Touch Controls`
 - icons recolor with the active light/dark application palette
 
 Interactive drawing (current):
@@ -364,12 +365,12 @@ Interactive drawing (current):
 
 Detached map-pane behavior:
 
-- `Open Map in Window` detaches the graphical map pane into its own top-level window (useful for a second monitor).
+- `Separate Map` (top-right workspace controls) detaches the graphical map pane into its own top-level window (useful for a second monitor).
 - Detached map window keeps the same `Object Details` panel as `Visual` mode.
 - The main tab keeps the raw text editor visible while detached.
 - Detached map window shows its own status bar for map zoom and `Select`/`Insert` mode.
 - Main-window map zoom/mode badges are hidden while detached, so map status lives with the detached map window.
-- Closing the detached map window (or clicking `Return Map Pane`) reattaches the same map pane back to the tab.
+- Closing the detached map window (or clicking `Return Map`) reattaches the same map pane back to the tab.
 - While detached, map and source remain synchronized as one TH2 session.
 
 Line-handle behavior:

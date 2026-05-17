@@ -149,10 +149,10 @@ QString quickUserManualMarkdown()
         "## Map workspace essentials\n"
         "\n"
         "- `Visual` and `Raw` workspace modes for TH2 tabs (`Mode` switcher at tab-strip top-right)\n"
+        "- `Separate Map` / `Return Map` in the same top-right workspace controls\n"
         "- `Select`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`\n"
         "- `Insert Scrap`, `Complete Draft`, `Undo`, `Redo`\n"
         "- `Zoom -`, `Zoom +`, `Fit`, `Fit + BG`\n"
-        "- `Open Map in Window` to detach the map pane\n"
         "\n"
         "### Line-vertex shortcuts\n"
         "\n"
@@ -359,8 +359,12 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceRawModeButton_->setCheckable(true);
     workspaceVisualModeButton_->setAutoDefault(false);
     workspaceRawModeButton_->setAutoDefault(false);
+    workspaceMapPaneWindowButton_ = new QPushButton(workspaceMapModeSwitcher_);
+    workspaceMapPaneWindowButton_->setAutoDefault(false);
     mapLayout->addWidget(workspaceVisualModeButton_);
     mapLayout->addWidget(workspaceRawModeButton_);
+    mapLayout->addSpacing(6);
+    mapLayout->addWidget(workspaceMapPaneWindowButton_);
 
     workspaceTextModeSwitcher_ = new QWidget(workspaceModeSwitcher_);
     auto *textLayout = new QHBoxLayout(workspaceTextModeSwitcher_);
@@ -396,6 +400,14 @@ void MainWindow::initializeWorkspaceModeSwitcher()
             mapTab->setWorkspaceMode(TherionStudio::MapEditorTab::WorkspaceMode::Raw);
         }
     });
+    connect(workspaceMapPaneWindowButton_, &QPushButton::clicked, this, [this]() {
+        if (workspaceModeSwitcherSyncInProgress_) {
+            return;
+        }
+        if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+            mapTab->toggleMapPaneWindow();
+        }
+    });
     connect(workspaceTextRawModeButton_, &QPushButton::clicked, this, [this]() {
         if (workspaceModeSwitcherSyncInProgress_) {
             return;
@@ -426,6 +438,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceTextModeSwitcher_ == nullptr
         || workspaceVisualModeButton_ == nullptr
         || workspaceRawModeButton_ == nullptr
+        || workspaceMapPaneWindowButton_ == nullptr
         || workspaceTextRawModeButton_ == nullptr
         || workspaceBlocksModeButton_ == nullptr) {
         return;
@@ -448,10 +461,14 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     if (showMapModes) {
         const QSignalBlocker visualBlocker(workspaceVisualModeButton_);
         const QSignalBlocker rawBlocker(workspaceRawModeButton_);
+        const QSignalBlocker mapWindowBlocker(workspaceMapPaneWindowButton_);
         workspaceVisualModeButton_->setChecked(mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Visual);
         workspaceRawModeButton_->setChecked(mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Raw);
         workspaceVisualModeButton_->setEnabled(!mapTab->isMapPaneDetached());
         workspaceRawModeButton_->setEnabled(!mapTab->isMapPaneDetached());
+        workspaceMapPaneWindowButton_->setEnabled(true);
+        workspaceMapPaneWindowButton_->setText(mapTab->mapPaneWindowActionText());
+        workspaceMapPaneWindowButton_->setToolTip(mapTab->mapPaneWindowActionToolTip());
         workspaceModeSwitcher_->setToolTip(mapTab->isMapPaneDetached()
                                                ? tr("Map pane is detached: raw editor remains in this tab while visual map stays in the detached window.")
                                                : QString());
@@ -1255,6 +1272,16 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
                         }
                     },
                     Qt::UniqueConnection);
+            connect(existingTab,
+                    &TherionStudio::MapEditorTab::mapPaneDetachStateChanged,
+                    this,
+                    [this, existingTab](bool) {
+                        if (currentDocumentWidget() == existingTab) {
+                            refreshDocumentStatusWidgets();
+                            refreshWorkspaceModeSwitcher();
+                        }
+                    },
+                    Qt::UniqueConnection);
             refreshDocumentStatusWidgets();
             refreshWorkspaceModeSwitcher();
             return existingTab;
@@ -1314,6 +1341,12 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
     });
     connect(tab, &TherionStudio::MapEditorTab::workspaceModeChanged, this, [this, tab](TherionStudio::MapEditorTab::WorkspaceMode) {
         if (currentDocumentWidget() == tab) {
+            refreshWorkspaceModeSwitcher();
+        }
+    });
+    connect(tab, &TherionStudio::MapEditorTab::mapPaneDetachStateChanged, this, [this, tab](bool) {
+        if (currentDocumentWidget() == tab) {
+            refreshDocumentStatusWidgets();
             refreshWorkspaceModeSwitcher();
         }
     });
@@ -1490,6 +1523,16 @@ void MainWindow::reattachDetachedMapEditorTab(TherionStudio::MapEditorTab *tab, 
             this,
             [this, tab](TherionStudio::MapEditorTab::WorkspaceMode) {
                 if (currentDocumentWidget() == tab) {
+                    refreshWorkspaceModeSwitcher();
+                }
+            },
+            Qt::UniqueConnection);
+    connect(tab,
+            &TherionStudio::MapEditorTab::mapPaneDetachStateChanged,
+            this,
+            [this, tab](bool) {
+                if (currentDocumentWidget() == tab) {
+                    refreshDocumentStatusWidgets();
                     refreshWorkspaceModeSwitcher();
                 }
             },

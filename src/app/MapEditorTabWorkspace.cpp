@@ -487,13 +487,6 @@ void MapEditorTab::buildUi()
     connect(fitBackgroundButton_, &QToolButton::clicked, this, &MapEditorTab::handleFitWithBackgroundTriggered);
     connect(touchControlsButton_, &QToolButton::toggled, this, &MapEditorTab::handleTouchFriendlyControlsToggled);
 
-    detachButton_ = createMapToolbarButton(toolbar,
-                                           QStringLiteral("mapToolbarDetachButton"),
-                                           tr("Open Map in Window"),
-                                           QStringLiteral("external-link"));
-    detachButton_->setEnabled(true);
-    connect(detachButton_, &QToolButton::clicked, this, &MapEditorTab::handleDetachPaneTriggered);
-
     summaryLabel_ = new QLabel(tr("Ready"), toolbar);
     summaryLabel_->setWordWrap(true);
     summaryLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -520,7 +513,6 @@ void MapEditorTab::buildUi()
     toolbarLayout->addWidget(areaButton_);
     toolbarLayout->addWidget(createMapToolbarSeparator(toolbar));
     toolbarLayout->addWidget(touchControlsButton_);
-    toolbarLayout->addWidget(detachButton_);
     toolbar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     toolbar->setPalette(mapToolbarPalette());
     toolbar->setStyleSheet(mapToolbarStyleSheet(mapToolbarPalette()));
@@ -662,7 +654,6 @@ void MapEditorTab::buildUi()
     refreshMapScene();
     refreshWorkspaceModeUi();
     refreshObjectDetailsPanel();
-    refreshDetachButtonState();
     refreshToolbarIcons();
     updateCommandSurfaceState();
 }
@@ -800,6 +791,18 @@ bool MapEditorTab::isMapPaneDetached() const
     return mapPaneDetached_;
 }
 
+QString MapEditorTab::mapPaneWindowActionText() const
+{
+    return mapPaneDetached_ ? tr("Return Map") : tr("Separate Map");
+}
+
+QString MapEditorTab::mapPaneWindowActionToolTip() const
+{
+    return mapPaneDetached_
+        ? tr("Return the map pane from the detached window into this tab.")
+        : tr("Open the map pane in a separate window (for multi-monitor workflows).");
+}
+
 MapEditorTab::WorkspaceMode MapEditorTab::workspaceMode() const
 {
     return workspaceMode_;
@@ -911,6 +914,10 @@ void MapEditorTab::updateWorkspaceVisibility()
             workspaceModeRow_->setToolTip(tr("Map pane is detached: raw editor remains in this tab while visual map stays in the detached window."));
         }
         textEditor_->show();
+        if (mapPaneContainer_ != nullptr) {
+            // Detached window always hosts the visual map pane, even if main-tab mode is Raw.
+            mapPaneContainer_->show();
+        }
         refreshStatus();
         return;
     }
@@ -958,7 +965,7 @@ QString MapEditorTab::displayPath() const
     return textEditor_->filePath();
 }
 
-void MapEditorTab::handleDetachPaneTriggered()
+void MapEditorTab::toggleMapPaneWindow()
 {
     if (mapPaneDetached_) {
         if (detachedMapPaneWindow_ != nullptr) {
@@ -989,7 +996,7 @@ void MapEditorTab::detachMapPaneToWindow()
 
     detachedMapPaneWindow_ = window;
     mapPaneDetached_ = true;
-    refreshDetachButtonState();
+    emit mapPaneDetachStateChanged(true);
     updateWorkspaceVisibility();
 
     const QSize mapSize = mapView_ != nullptr ? mapView_->size() : QSize();
@@ -1016,7 +1023,7 @@ void MapEditorTab::reattachMapPaneFromWindow()
 
     mapPaneDetached_ = false;
     detachedMapPaneWindow_ = nullptr;
-    refreshDetachButtonState();
+    emit mapPaneDetachStateChanged(false);
     updateWorkspaceVisibility();
     if (mapView_ != nullptr) {
         mapView_->setFocus(Qt::OtherFocusReason);
@@ -1034,21 +1041,6 @@ void MapEditorTab::focusDetachedMapPaneWindow()
     detachedMapPaneWindow_->showNormal();
     detachedMapPaneWindow_->raise();
     detachedMapPaneWindow_->activateWindow();
-}
-
-void MapEditorTab::refreshDetachButtonState()
-{
-    if (detachButton_ == nullptr) {
-        return;
-    }
-
-    if (mapPaneDetached_) {
-        detachButton_->setText(tr("Return Map Pane"));
-        detachButton_->setToolTip(tr("Return the map pane from the detached window into this tab."));
-    } else {
-        detachButton_->setText(tr("Open Map in Window"));
-        detachButton_->setToolTip(tr("Open the map pane in a separate window (for multi-monitor workflows)."));
-    }
 }
 
 void MapEditorTab::refreshToolbarIcons()

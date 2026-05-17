@@ -266,6 +266,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The map workspace shall maintain sufficient contrast for geometry strokes, handles, labels, and grid lines in both light and dark system appearance modes.
 - When a TH2 document is active in the main window, the embedded workspace shall provide explicit `Visual` and `Raw` modes.
 - When a TH2 document is active in the main window, the `Visual`/`Raw` mode selector shall be hosted in the editor tab strip at the top-right edge (adjacent to document tabs) rather than in a dedicated row inside the tab content.
+- When a TH2 document is active in the main window, map-pane detach/reattach (`Separate Map` / `Return Map`) shall be provided in the same top-right workspace control area as the `Visual`/`Raw` mode selector.
 - When a TH2 map editor is presented outside the main tab strip (for example in a detached dedicated map-editor window), an equivalent in-window mode selector shall remain available.
 - In embedded `Visual` mode, the workspace shall present the graphical map canvas together with a right-side object-details panel used for map object attribute editing.
 - In embedded `Raw` mode, the workspace shall present the source text editor together with the contextual help inspector and no embedded map pane.
@@ -283,9 +284,9 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Dropping onto a scrap target shall move the object into that scrap when the object type supports it.
 - The list shall show a visual drop indicator for the current drag target.
 - All map mutations shall support undo and redo.
-- The map toolbar or equivalent command surface shall expose zoom in, zoom out, fit geometry, fit background plus geometry, undo, redo, selection mode, draft completion, scrap insertion, point insertion, line insertion, freehand line drawing, smart trace, area insertion, touch-controls toggle, and map detach/reattach.
+- The map toolbar or equivalent command surface shall expose zoom in, zoom out, fit geometry, fit background plus geometry, undo, redo, selection mode, draft completion, scrap insertion, point insertion, line insertion, freehand line drawing, smart trace, area insertion, and touch-controls toggle.
 - The embedded map toolbar shall be hosted as a compact floating overlay inside the graphical map pane, centered against the top of the map canvas in a rounded container, rather than occupying a global full-width row above all panes or reserving a separate layout row.
-- The embedded map toolbar shall group these controls with visual separators in this order: zoom controls, history controls, selection/draft completion, insertion/drawing tools, and touch/detach controls.
+- The embedded map toolbar shall group these controls with visual separators in this order: zoom controls, history controls, selection/draft completion, insertion/drawing tools, and touch controls.
 - The embedded map toolbar shall wrap controls onto additional rows when the map canvas is too narrow for a single row, preserving control order and group separators.
 - The embedded map toolbar should present these actions as compact flat icon buttons, with text equivalents available through tooltips, accessibility names, and automation-stable identifiers.
 - When a map editor tab is active, the status bar shall show the current map zoom before the Select/Insert mode badge.
@@ -801,6 +802,7 @@ The criteria below are intended for implementation verification and QA.
 - The map editor renders the currently open TH2 file as a 2D editable workspace.
 - A TH2 document exposes an embedded mode selector with `Visual` and `Raw` modes.
 - In the main window, the TH2 `Visual`/`Raw` mode selector is anchored in the tab-strip top-right corner, next to document tabs.
+- In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same tab-strip top-right workspace control area.
 - In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window mode selector remains available.
 - In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side object-details panel for selected map objects.
 - In embedded `Raw` mode, the tab shows the source text editor plus contextual help inspector.

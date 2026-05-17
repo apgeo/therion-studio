@@ -209,6 +209,7 @@ private:
     QWidget *workspaceTextModeSwitcher_ = nullptr;
     QPushButton *workspaceVisualModeButton_ = nullptr;
     QPushButton *workspaceRawModeButton_ = nullptr;
+    QPushButton *workspaceMapPaneWindowButton_ = nullptr;
     QPushButton *workspaceTextRawModeButton_ = nullptr;
     QPushButton *workspaceBlocksModeButton_ = nullptr;
     bool workspaceModeSwitcherSyncInProgress_ = false;

@@ -2894,9 +2894,6 @@ void MapEditorTab::updateCommandSurfaceState()
     if (redoButton_ != nullptr) {
         redoButton_->setEnabled(undoStack_ != nullptr && undoStack_->canRedo());
     }
-    if (zoomLabel_ != nullptr) {
-        zoomLabel_->setText(tr("%1%").arg(qRound(zoomFactor_ * 100.0)));
-    }
     if (pointButton_ != nullptr) {
         const bool mapReady = mapScene_ != nullptr;
         selectButton_->setEnabled(mapReady);
@@ -3068,12 +3065,14 @@ void MapEditorTab::syncZoomFactorFromView()
 {
     if (mapView_ == nullptr) {
         zoomFactor_ = 1.0;
+        emit zoomStatusChanged(zoomPercent());
         return;
     }
 
     const QTransform viewTransform = mapView_->transform();
     const qreal scaleX = std::hypot(viewTransform.m11(), viewTransform.m21());
     zoomFactor_ = scaleX > 0.0 ? scaleX : 1.0;
+    emit zoomStatusChanged(zoomPercent());
 }
 
 void MapEditorTab::applyZoomAtViewportPosition(qreal factor, const QPointF &viewportPosition)

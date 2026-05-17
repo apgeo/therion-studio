@@ -66,6 +66,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/mouse-pointer-2.svg
     resources/icons/lucide/pencil-line.svg
     resources/icons/lucide/pentagon.svg
+    resources/icons/lucide/puzzle.svg
     resources/icons/lucide/redo-2.svg
     resources/icons/lucide/scan.svg
     resources/icons/lucide/spline.svg

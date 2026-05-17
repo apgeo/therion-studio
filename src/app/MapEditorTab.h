@@ -79,6 +79,7 @@ public:
     QString statusPathText() const;
     QString statusEncodingText() const;
     QString statusModeText() const;
+    int zoomPercent() const;
     bool isInsertModeActive() const;
     WorkspaceMode workspaceMode() const;
     int backgroundLayerCount() const;
@@ -111,6 +112,7 @@ signals:
     void documentTextChanged();
     void backgroundLayersChanged();
     void modeStatusChanged();
+    void zoomStatusChanged(int zoomPercent);
     void openDedicatedWindowRequested(TherionStudio::MapEditorTab *tab);
 
 protected:
@@ -263,7 +265,6 @@ private:
     QToolButton *fitButton_ = nullptr;
     QToolButton *fitBackgroundButton_ = nullptr;
     QToolButton *touchControlsButton_ = nullptr;
-    QLabel *zoomLabel_ = nullptr;
     QShortcut *cancelDrawShortcut_ = nullptr;
     QShortcut *commitDrawShortcut_ = nullptr;
     QHash<int, QGraphicsItem *> mapItemsByLine_;

@@ -35,7 +35,6 @@
 #include <QKeySequence>
 #include <QWidget>
 #include <QResizeEvent>
-#include <QFontMetrics>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <functional>
@@ -337,22 +336,22 @@ void MainWindow::buildUi()
 void MainWindow::initializeDocumentStatusWidgets()
 {
     if (statusBar() == nullptr
-        || statusDocumentPathLabel_ != nullptr
+        || statusMapZoomLabel_ != nullptr
         || statusMapModeLabel_ != nullptr
         || statusDocumentEncodingLabel_ != nullptr) {
         return;
     }
 
-    statusDocumentPathLabel_ = new QLabel(statusBar());
-    statusDocumentPathLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    statusDocumentPathLabel_->setMinimumWidth(200);
-    statusDocumentPathLabel_->setMaximumWidth(560);
-    statusDocumentPathLabel_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-
     statusDocumentEncodingLabel_ = new QLabel(statusBar());
     statusDocumentEncodingLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     statusDocumentEncodingLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     statusDocumentEncodingLabel_->setMinimumWidth(130);
+
+    statusMapZoomLabel_ = new QLabel(statusBar());
+    statusMapZoomLabel_->setTextInteractionFlags(Qt::NoTextInteraction);
+    statusMapZoomLabel_->setAlignment(Qt::AlignCenter);
+    statusMapZoomLabel_->setMinimumWidth(52);
+    statusMapZoomLabel_->setVisible(false);
 
     statusMapModeLabel_ = new QLabel(statusBar());
     statusMapModeLabel_->setTextInteractionFlags(Qt::NoTextInteraction);
@@ -360,7 +359,7 @@ void MainWindow::initializeDocumentStatusWidgets()
     statusMapModeLabel_->setMinimumWidth(78);
     statusMapModeLabel_->setVisible(false);
 
-    statusBar()->addPermanentWidget(statusDocumentPathLabel_, 0);
+    statusBar()->addPermanentWidget(statusMapZoomLabel_, 0);
     statusBar()->addPermanentWidget(statusMapModeLabel_, 0);
     statusBar()->addPermanentWidget(statusDocumentEncodingLabel_, 0);
     refreshDocumentStatusWidgets();
@@ -368,35 +367,29 @@ void MainWindow::initializeDocumentStatusWidgets()
 
 void MainWindow::refreshDocumentStatusWidgets()
 {
-    if (statusDocumentPathLabel_ == nullptr
+    if (statusMapZoomLabel_ == nullptr
         || statusMapModeLabel_ == nullptr
         || statusDocumentEncodingLabel_ == nullptr) {
         return;
     }
 
     QWidget *tabWidget = currentDocumentWidget();
-    QString pathText = tr("No file open");
     QString encodingText;
     QString mapModeText;
+    QString mapZoomText;
     bool mapModeVisible = false;
     bool mapModeInsertActive = false;
 
     if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget)) {
-        pathText = textTab->statusPathText();
         encodingText = textTab->statusEncodingText();
     } else if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(tabWidget)) {
-        pathText = mapTab->statusPathText();
         encodingText = mapTab->statusEncodingText();
         mapModeText = mapTab->statusModeText();
+        mapZoomText = tr("%1%").arg(mapTab->zoomPercent());
         mapModeVisible = true;
         mapModeInsertActive = mapTab->isInsertModeActive();
     }
 
-    const int maxPathWidth = statusDocumentPathLabel_->maximumWidth();
-    const QFontMetrics metrics(statusDocumentPathLabel_->fontMetrics());
-    const QString elidedPathText = metrics.elidedText(pathText, Qt::ElideMiddle, maxPathWidth);
-    statusDocumentPathLabel_->setText(elidedPathText);
-    statusDocumentPathLabel_->setToolTip(pathText);
     if (encodingText.trimmed().isEmpty()) {
         statusDocumentEncodingLabel_->clear();
     } else {
@@ -404,11 +397,18 @@ void MainWindow::refreshDocumentStatusWidgets()
     }
 
     if (!mapModeVisible) {
+        statusMapZoomLabel_->clear();
+        statusMapZoomLabel_->setToolTip(QString());
+        statusMapZoomLabel_->setVisible(false);
         statusMapModeLabel_->clear();
         statusMapModeLabel_->setToolTip(QString());
         statusMapModeLabel_->setStyleSheet(QString());
         statusMapModeLabel_->setVisible(false);
     } else {
+        statusMapZoomLabel_->setText(mapZoomText);
+        statusMapZoomLabel_->setToolTip(tr("Map zoom"));
+        statusMapZoomLabel_->setVisible(true);
+
         const QString badgeText = mapModeInsertActive ? tr("Insert") : tr("Select");
         const QString background = mapModeInsertActive
             ? QStringLiteral("#d34a4a")
@@ -1143,6 +1143,11 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         }
     });
     connect(tab, &TherionStudio::MapEditorTab::modeStatusChanged, this, [this, tab]() {
+        if (currentDocumentWidget() == tab) {
+            refreshDocumentStatusWidgets();
+        }
+    });
+    connect(tab, &TherionStudio::MapEditorTab::zoomStatusChanged, this, [this, tab](int) {
         if (currentDocumentWidget() == tab) {
             refreshDocumentStatusWidgets();
         }

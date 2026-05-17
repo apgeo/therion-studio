@@ -275,9 +275,9 @@ Text editor includes:
 Main window status bar shows:
 
 - left: transient app status (`Ready`, operation results)
-- center/right: active document path and encoding
-- when a `.th2` map editor tab is active: a color mode badge is shown in status bar (`Select` in green, `Insert` in red)
-- long paths are middle-elided in visible text and preserved as full path in tooltip
+- right: active document encoding
+- when a `.th2` map editor tab is active: current zoom appears before the color mode badge (`Select` in green, `Insert` in red)
+- active document file names and paths are intentionally kept out of the status bar; use the tab title for document identity
 
 ### 5.4 Use Structure Sidebar
 
@@ -304,10 +304,13 @@ Toolbar actions:
 
 - toolbar commands are shown as compact flat Lucide icon buttons; hover any icon to see the text label
 - the toolbar floats inside the graphical map pane, centered at the top of the map canvas in a rounded overlay instead of spanning the whole editor tab
-- mode tools: `Select`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`
-- draft/object actions: `Insert Scrap`, `Complete Draft`
+- toolbar groups are separated visually in this order: view controls, history controls, selection/draft completion, insertion/drawing tools, and touch/detach controls
+- the floating toolbar wraps onto additional rows when the map canvas is too narrow for one row
+- view actions: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
+- current map zoom is shown in the main status bar before the `Select`/`Insert` mode badge
 - history actions: `Undo`, `Redo`
-- view actions: `Zoom Out`, `Zoom In`, `Fit`, `Fit With Background`
+- selection/draft actions: `Select`, `Complete Draft`
+- insertion/drawing tools: `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`
 - workflow actions: `Touch Controls`, `Open Map in Window` / `Return Map Pane`
 - icons recolor with the active light/dark application palette
 

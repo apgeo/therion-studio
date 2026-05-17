@@ -199,7 +199,7 @@ private:
     QPushButton *therionResetWorkingDirectoryButton_ = nullptr;
     QPushButton *therionCopyOutputButton_ = nullptr;
     QProcess *therionProcess_ = nullptr;
-    QLabel *statusDocumentPathLabel_ = nullptr;
+    QLabel *statusMapZoomLabel_ = nullptr;
     QLabel *statusMapModeLabel_ = nullptr;
     QLabel *statusDocumentEncodingLabel_ = nullptr;
     QFileSystemModel *projectModel_ = nullptr;

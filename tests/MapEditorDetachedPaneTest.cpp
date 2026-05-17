@@ -1,10 +1,10 @@
 #include "../src/app/MapEditorTab.h"
 
 #include <QApplication>
+#include <QAbstractButton>
 #include <QEventLoop>
 #include <QGraphicsView>
 #include <QMainWindow>
-#include <QPushButton>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -29,23 +29,9 @@ void pumpEvents()
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
 }
 
-QPushButton *findDetachButton(const MapEditorTab &tab)
+QAbstractButton *findDetachButton(const MapEditorTab &tab)
 {
-    const auto buttons = tab.findChildren<QPushButton *>();
-    for (QPushButton *button : buttons) {
-        if (button == nullptr) {
-            continue;
-        }
-
-        const QString text = button->text();
-        if (text.contains(QStringLiteral("Map"), Qt::CaseInsensitive)
-            && (text.contains(QStringLiteral("Window"), Qt::CaseInsensitive)
-                || text.contains(QStringLiteral("Pane"), Qt::CaseInsensitive))) {
-            return button;
-        }
-    }
-
-    return nullptr;
+    return tab.findChild<QAbstractButton *>(QStringLiteral("mapToolbarDetachButton"));
 }
 
 int countDetachedMapWindows(const QWidget *hostWindow)

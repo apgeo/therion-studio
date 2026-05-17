@@ -3,6 +3,7 @@
 #include "../src/app/MapEditorSceneSupport.h"
 #include "../src/app/TextEditorTab.h"
 
+#include <QAbstractButton>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QEventLoop>
@@ -12,7 +13,6 @@
 #include <QMainWindow>
 #include <QKeyEvent>
 #include <QMouseEvent>
-#include <QPushButton>
 #include <QRegularExpression>
 #include <QSet>
 #include <QTemporaryDir>
@@ -380,16 +380,9 @@ void pumpEvents()
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
 }
 
-QPushButton *findButtonByText(const MapEditorTab &tab, const QString &text)
+QAbstractButton *findToolbarButton(const MapEditorTab &tab, const QString &objectName)
 {
-    const auto buttons = tab.findChildren<QPushButton *>();
-    for (QPushButton *button : buttons) {
-        if (button != nullptr && button->text().compare(text, Qt::CaseInsensitive) == 0) {
-            return button;
-        }
-    }
-
-    return nullptr;
+    return tab.findChild<QAbstractButton *>(objectName);
 }
 
 MapEditableGeometryVertexItem *findCenteredLineAnchor(QGraphicsScene *scene, const QRectF &visibleSceneRect)
@@ -760,9 +753,9 @@ int runDragUndoRedoSmoke()
         return 1;
     }
 
-    QPushButton *undoButton = findButtonByText(*mapTab, QStringLiteral("Undo"));
-    QPushButton *redoButton = findButtonByText(*mapTab, QStringLiteral("Redo"));
-    QPushButton *selectButton = findButtonByText(*mapTab, QStringLiteral("Select"));
+    QAbstractButton *undoButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarUndoButton"));
+    QAbstractButton *redoButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarRedoButton"));
+    QAbstractButton *selectButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarSelectButton"));
     if (!expect(undoButton != nullptr && redoButton != nullptr && selectButton != nullptr,
                 "Select/Undo/Redo buttons were not found.")) {
         return 1;
@@ -823,11 +816,11 @@ int runDragUndoRedoSmoke()
     const int pointDirectivesBefore = countDirectiveLines(textBeforeInteractiveDrawing, QStringLiteral("point"));
     const int lineDirectivesBefore = countDirectiveLines(textBeforeInteractiveDrawing, QStringLiteral("line"));
     const int areaDirectivesBefore = countDirectiveLines(textBeforeInteractiveDrawing, QStringLiteral("area"));
-    auto *pointModeButton = findButtonByText(*mapTab, QStringLiteral("Point"));
-    auto *lineModeButton = findButtonByText(*mapTab, QStringLiteral("Line"));
-    auto *freehandModeButton = findButtonByText(*mapTab, QStringLiteral("Freehand"));
-    auto *areaModeButton = findButtonByText(*mapTab, QStringLiteral("Area"));
-    auto *completeDraftButton = findButtonByText(*mapTab, QStringLiteral("Complete Draft"));
+    auto *pointModeButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarPointButton"));
+    auto *lineModeButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarLineButton"));
+    auto *freehandModeButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarFreehandButton"));
+    auto *areaModeButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarAreaButton"));
+    auto *completeDraftButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarCompleteDraftButton"));
     if (!expect(pointModeButton != nullptr
                 && lineModeButton != nullptr
                 && freehandModeButton != nullptr

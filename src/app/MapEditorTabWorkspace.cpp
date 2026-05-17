@@ -1,23 +1,26 @@
 #include "MapEditorTab.h"
 
 #include <QApplication>
+#include <QFile>
 #include <QGuiApplication>
 #include <QFileInfo>
 #include <QFrame>
 #include <QGraphicsView>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QLabel>
 #include <QMainWindow>
 #include <QPainter>
-#include <QPushButton>
 #include <QShortcut>
-#include <QScrollArea>
 #include <QScopedValueRollback>
 #include <QSplitter>
 #include <QStyleHints>
+#include <QSvgRenderer>
+#include <QToolButton>
 #include <QUndoStack>
 #include <QVBoxLayout>
 #include <QCloseEvent>
+#include <algorithm>
 #include <functional>
 
 #include "TextEditorTab.h"
@@ -27,6 +30,112 @@ namespace TherionStudio
 {
 namespace
 {
+constexpr int kToolbarIconExtent = 14;
+constexpr int kToolbarButtonExtent = 22;
+const char *kLucideIconNameProperty = "lucideIconName";
+
+QString rgbaCss(const QColor &color, qreal alpha)
+{
+    const qreal clampedAlpha = std::clamp(alpha, 0.0, 1.0);
+    return QStringLiteral("rgba(%1, %2, %3, %4)")
+        .arg(color.red())
+        .arg(color.green())
+        .arg(color.blue())
+        .arg(clampedAlpha, 0, 'f', 2);
+}
+
+QString mapToolbarStyleSheet(const QPalette &palette)
+{
+    const QColor panel = palette.color(QPalette::Window);
+    const QColor border = palette.color(QPalette::Mid);
+    const QColor hover = palette.color(QPalette::Highlight);
+    const QColor text = palette.color(QPalette::ButtonText);
+
+    return QStringLiteral(
+               "#mapToolbarOverlay {"
+               "background: %1;"
+               "border: 1px solid %2;"
+               "border-radius: 10px;"
+               "}"
+               "#mapToolbarOverlay QToolButton {"
+               "background: transparent;"
+               "border: none;"
+               "border-radius: 5px;"
+               "padding: 0px;"
+               "color: %3;"
+               "}"
+               "#mapToolbarOverlay QToolButton:hover {"
+               "background: %4;"
+               "}"
+               "#mapToolbarOverlay QToolButton:checked {"
+               "background: %5;"
+               "}"
+               "#mapToolbarOverlay QLabel {"
+               "color: %3;"
+               "}")
+        .arg(rgbaCss(panel, 0.92),
+             border.name(QColor::HexRgb),
+             text.name(QColor::HexRgb),
+             rgbaCss(hover, 0.16),
+             rgbaCss(hover, 0.24));
+}
+
+QPalette mapToolbarPalette()
+{
+    return qApp != nullptr ? qApp->palette() : QPalette();
+}
+
+QPixmap renderLucidePixmap(const QString &iconName, const QColor &color)
+{
+    QFile file(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+
+    QByteArray svg = file.readAll();
+    svg.replace("currentColor", color.name(QColor::HexRgb).toUtf8());
+
+    QSvgRenderer renderer(svg);
+    if (!renderer.isValid()) {
+        return {};
+    }
+
+    QPixmap pixmap(kToolbarIconExtent, kToolbarIconExtent);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    renderer.render(&painter, QRectF(0.0, 0.0, kToolbarIconExtent, kToolbarIconExtent));
+    return pixmap;
+}
+
+QIcon lucideIcon(const QString &iconName, const QPalette &palette)
+{
+    QIcon icon;
+    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::ButtonText)), QIcon::Normal);
+    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::Disabled, QPalette::ButtonText)), QIcon::Disabled);
+    return icon;
+}
+
+QToolButton *createMapToolbarButton(QWidget *parent,
+                                    const QString &objectName,
+                                    const QString &label,
+                                    const QString &iconName,
+                                    const QString &toolTip = {})
+{
+    auto *button = new QToolButton(parent);
+    button->setObjectName(objectName);
+    button->setText(label);
+    button->setAccessibleName(label);
+    button->setToolTip(toolTip.isEmpty() ? label : toolTip);
+    button->setProperty(kLucideIconNameProperty, iconName);
+    button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    button->setIconSize(QSize(kToolbarIconExtent, kToolbarIconExtent));
+    button->setFixedSize(QSize(kToolbarButtonExtent, kToolbarButtonExtent));
+    button->setAutoRaise(true);
+    button->setFocusPolicy(Qt::StrongFocus);
+    return button;
+}
+
 class DetachedMapPaneWindow final : public QMainWindow
 {
 public:
@@ -91,57 +200,66 @@ void MapEditorTab::buildUi()
     layout->setSpacing(0);
 
     auto *toolbar = new QWidget(this);
+    toolbar->setObjectName(QStringLiteral("mapToolbarOverlay"));
+    toolbar->setAttribute(Qt::WA_StyledBackground, true);
     auto *toolbarLayout = new QHBoxLayout(toolbar);
-    toolbarLayout->setContentsMargins(12, 12, 12, 8);
-    toolbarLayout->setSpacing(8);
+    toolbarLayout->setContentsMargins(7, 3, 7, 3);
+    toolbarLayout->setSpacing(2);
 
-    selectButton_ = new QPushButton(tr("Select"), toolbar);
-    pointButton_ = new QPushButton(tr("Point"), toolbar);
-    lineButton_ = new QPushButton(tr("Line"), toolbar);
-    freehandLineButton_ = new QPushButton(tr("Freehand"), toolbar);
-    smartTraceLineButton_ = new QPushButton(tr("Smart Trace"), toolbar);
-    areaButton_ = new QPushButton(tr("Area"), toolbar);
-    insertScrapButton_ = new QPushButton(tr("Insert Scrap"), toolbar);
-    completeDraftButton_ = new QPushButton(tr("Complete Draft"), toolbar);
+    selectButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarSelectButton"), tr("Select"), QStringLiteral("mouse-pointer-2"));
+    pointButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarPointButton"), tr("Point"), QStringLiteral("map-pin"));
+    lineButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarLineButton"), tr("Line"), QStringLiteral("spline"));
+    freehandLineButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarFreehandButton"), tr("Freehand"), QStringLiteral("pencil-line"));
+    smartTraceLineButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarSmartTraceButton"), tr("Smart Trace"), QStringLiteral("wand-sparkles"));
+    areaButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarAreaButton"), tr("Area"), QStringLiteral("pentagon"));
+    insertScrapButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarInsertScrapButton"), tr("Insert Scrap"), QStringLiteral("square-plus"));
+    completeDraftButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarCompleteDraftButton"), tr("Complete Draft"), QStringLiteral("check"));
 
-    connect(selectButton_, &QPushButton::clicked, this, &MapEditorTab::handleSelectModeTriggered);
-    connect(pointButton_, &QPushButton::clicked, this, &MapEditorTab::handleAddPointTriggered);
-    connect(lineButton_, &QPushButton::clicked, this, &MapEditorTab::handleAddLineTriggered);
-    connect(freehandLineButton_, &QPushButton::clicked, this, &MapEditorTab::handleAddFreehandLineTriggered);
-    connect(smartTraceLineButton_, &QPushButton::clicked, this, &MapEditorTab::handleAddSmartTraceLineTriggered);
-    connect(areaButton_, &QPushButton::clicked, this, &MapEditorTab::handleAddAreaTriggered);
-    connect(insertScrapButton_, &QPushButton::clicked, this, &MapEditorTab::handleInsertScrapTriggered);
-    connect(completeDraftButton_, &QPushButton::clicked, this, &MapEditorTab::handleCompleteDraftTriggered);
+    connect(selectButton_, &QToolButton::clicked, this, &MapEditorTab::handleSelectModeTriggered);
+    connect(pointButton_, &QToolButton::clicked, this, &MapEditorTab::handleAddPointTriggered);
+    connect(lineButton_, &QToolButton::clicked, this, &MapEditorTab::handleAddLineTriggered);
+    connect(freehandLineButton_, &QToolButton::clicked, this, &MapEditorTab::handleAddFreehandLineTriggered);
+    connect(smartTraceLineButton_, &QToolButton::clicked, this, &MapEditorTab::handleAddSmartTraceLineTriggered);
+    connect(areaButton_, &QToolButton::clicked, this, &MapEditorTab::handleAddAreaTriggered);
+    connect(insertScrapButton_, &QToolButton::clicked, this, &MapEditorTab::handleInsertScrapTriggered);
+    connect(completeDraftButton_, &QToolButton::clicked, this, &MapEditorTab::handleCompleteDraftTriggered);
 
-    undoButton_ = new QPushButton(tr("Undo"), toolbar);
-    redoButton_ = new QPushButton(tr("Redo"), toolbar);
-    zoomOutButton_ = new QPushButton(tr("Zoom -"), toolbar);
-    zoomInButton_ = new QPushButton(tr("Zoom +"), toolbar);
-    fitButton_ = new QPushButton(tr("Fit"), toolbar);
-    fitBackgroundButton_ = new QPushButton(tr("Fit + BG"), toolbar);
-    touchControlsButton_ = new QPushButton(tr("Touch Controls"), toolbar);
+    undoButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarUndoButton"), tr("Undo"), QStringLiteral("undo-2"));
+    redoButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarRedoButton"), tr("Redo"), QStringLiteral("redo-2"));
+    zoomOutButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarZoomOutButton"), tr("Zoom Out"), QStringLiteral("zoom-out"));
+    zoomInButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarZoomInButton"), tr("Zoom In"), QStringLiteral("zoom-in"));
+    fitButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarFitButton"), tr("Fit"), QStringLiteral("scan"));
+    fitBackgroundButton_ = createMapToolbarButton(toolbar, QStringLiteral("mapToolbarFitBackgroundButton"), tr("Fit With Background"), QStringLiteral("image"));
+    touchControlsButton_ = createMapToolbarButton(toolbar,
+                                                  QStringLiteral("mapToolbarTouchControlsButton"),
+                                                  tr("Touch Controls"),
+                                                  QStringLiteral("hand"),
+                                                  tr("Enable touch-friendly map controls for pen-first workflows."));
     touchControlsButton_->setCheckable(true);
-    touchControlsButton_->setToolTip(tr("Enable touch-friendly map controls for pen-first workflows."));
     zoomLabel_ = new QLabel(tr("100%"), toolbar);
-    zoomLabel_->setMinimumWidth(52);
+    zoomLabel_->setMinimumWidth(42);
     zoomLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-    connect(undoButton_, &QPushButton::clicked, this, &MapEditorTab::handleUndoTriggered);
-    connect(redoButton_, &QPushButton::clicked, this, &MapEditorTab::handleRedoTriggered);
-    connect(zoomOutButton_, &QPushButton::clicked, this, &MapEditorTab::handleZoomOutTriggered);
-    connect(zoomInButton_, &QPushButton::clicked, this, &MapEditorTab::handleZoomInTriggered);
-    connect(fitButton_, &QPushButton::clicked, this, &MapEditorTab::handleFitTriggered);
-    connect(fitBackgroundButton_, &QPushButton::clicked, this, &MapEditorTab::handleFitWithBackgroundTriggered);
-    connect(touchControlsButton_, &QPushButton::toggled, this, &MapEditorTab::handleTouchFriendlyControlsToggled);
+    connect(undoButton_, &QToolButton::clicked, this, &MapEditorTab::handleUndoTriggered);
+    connect(redoButton_, &QToolButton::clicked, this, &MapEditorTab::handleRedoTriggered);
+    connect(zoomOutButton_, &QToolButton::clicked, this, &MapEditorTab::handleZoomOutTriggered);
+    connect(zoomInButton_, &QToolButton::clicked, this, &MapEditorTab::handleZoomInTriggered);
+    connect(fitButton_, &QToolButton::clicked, this, &MapEditorTab::handleFitTriggered);
+    connect(fitBackgroundButton_, &QToolButton::clicked, this, &MapEditorTab::handleFitWithBackgroundTriggered);
+    connect(touchControlsButton_, &QToolButton::toggled, this, &MapEditorTab::handleTouchFriendlyControlsToggled);
 
-    detachButton_ = new QPushButton(tr("Open Map in Window"), toolbar);
+    detachButton_ = createMapToolbarButton(toolbar,
+                                           QStringLiteral("mapToolbarDetachButton"),
+                                           tr("Open Map in Window"),
+                                           QStringLiteral("external-link"));
     detachButton_->setEnabled(true);
-    connect(detachButton_, &QPushButton::clicked, this, &MapEditorTab::handleDetachPaneTriggered);
+    connect(detachButton_, &QToolButton::clicked, this, &MapEditorTab::handleDetachPaneTriggered);
 
     summaryLabel_ = new QLabel(tr("Ready"), toolbar);
     summaryLabel_->setWordWrap(true);
     summaryLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
     summaryLabel_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    summaryLabel_->setVisible(false);
     toolbarStatusNote_ = summaryLabel_->text();
 
     toolbarLayout->addWidget(selectButton_);
@@ -161,15 +279,11 @@ void MapEditorTab::buildUi()
     toolbarLayout->addWidget(touchControlsButton_);
     toolbarLayout->addWidget(zoomLabel_);
     toolbarLayout->addWidget(detachButton_);
-    toolbarLayout->addWidget(summaryLabel_, 1);
-
-    auto *toolbarScrollArea = new QScrollArea(this);
-    toolbarScrollArea->setFrameShape(QFrame::NoFrame);
-    toolbarScrollArea->setWidgetResizable(false);
-    toolbarScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    toolbarScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    toolbarScrollArea->setWidget(toolbar);
-    layout->addWidget(toolbarScrollArea);
+    toolbar->setFixedHeight(kToolbarButtonExtent + 8);
+    toolbar->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    toolbar->setPalette(mapToolbarPalette());
+    toolbar->setStyleSheet(mapToolbarStyleSheet(mapToolbarPalette()));
+    mapToolbar_ = toolbar;
 
     splitter_ = new QSplitter(Qt::Horizontal, this);
     splitter_->setChildrenCollapsible(false);
@@ -191,7 +305,7 @@ void MapEditorTab::buildUi()
     mapPaneContainer_ = new QWidget(splitter_);
     mapPaneContainer_->setMinimumWidth(420);
     auto *mapPaneLayout = new QVBoxLayout(mapPaneContainer_);
-    mapPaneLayout->setContentsMargins(12, 8, 8, 12);
+    mapPaneLayout->setContentsMargins(4, 0, 4, 4);
     mapPaneLayout->setSpacing(0);
 
     mapView_ = new QGraphicsView(mapPaneContainer_);
@@ -224,7 +338,10 @@ void MapEditorTab::buildUi()
         commitInteractiveDrawSession();
     });
 
-    mapPaneLayout->addWidget(mapView_);
+    mapPaneLayout->addWidget(mapView_, 1);
+    toolbar->setParent(mapView_);
+    toolbar->show();
+    positionMapToolbarOverlay();
     splitter_->addWidget(mapPaneContainer_);
     splitter_->addWidget(textEditor_);
     splitter_->setStretchFactor(0, 1);
@@ -235,6 +352,7 @@ void MapEditorTab::buildUi()
 
     refreshMapScene();
     refreshDetachButtonState();
+    refreshToolbarIcons();
     updateCommandSurfaceState();
 }
 
@@ -561,6 +679,66 @@ void MapEditorTab::refreshDetachButtonState()
         detachButton_->setText(tr("Open Map in Window"));
         detachButton_->setToolTip(tr("Open the map pane in a separate window (for multi-monitor workflows)."));
     }
+}
+
+void MapEditorTab::refreshToolbarIcons()
+{
+    const QPalette toolbarPalette = mapToolbarPalette();
+    if (mapToolbar_ != nullptr) {
+        mapToolbar_->setPalette(toolbarPalette);
+        mapToolbar_->setStyleSheet(mapToolbarStyleSheet(toolbarPalette));
+    }
+
+    const QList<QToolButton *> buttons = findChildren<QToolButton *>();
+    for (QToolButton *button : buttons) {
+        if (button == nullptr) {
+            continue;
+        }
+
+        const QString iconName = button->property(kLucideIconNameProperty).toString();
+        if (iconName.isEmpty()) {
+            continue;
+        }
+
+        button->setPalette(toolbarPalette);
+        button->setIcon(lucideIcon(iconName, toolbarPalette));
+    }
+
+    if (zoomLabel_ != nullptr) {
+        zoomLabel_->setPalette(toolbarPalette);
+    }
+
+    positionMapToolbarOverlay();
+}
+
+void MapEditorTab::positionMapToolbarOverlay()
+{
+    if (mapToolbar_ == nullptr || mapView_ == nullptr) {
+        return;
+    }
+
+    const QWidget *viewport = mapView_->viewport();
+    if (viewport == nullptr) {
+        return;
+    }
+
+    if (mapToolbar_->parentWidget() != mapView_) {
+        mapToolbar_->setParent(mapView_);
+    }
+
+    mapToolbar_->adjustSize();
+    const QSize hint = mapToolbar_->sizeHint();
+    constexpr int kToolbarMargin = 8;
+    const QRect viewportGeometry = viewport->geometry();
+    const int availableWidth = std::max(0, viewportGeometry.width() - (kToolbarMargin * 2));
+    const int toolbarWidth = std::min(hint.width(), availableWidth);
+    const int toolbarHeight = hint.height();
+    const int x = viewportGeometry.x() + std::max(kToolbarMargin, (viewportGeometry.width() - toolbarWidth) / 2);
+    const int y = viewportGeometry.y() + kToolbarMargin;
+
+    mapToolbar_->setGeometry(x, y, toolbarWidth, toolbarHeight);
+    mapToolbar_->raise();
+    mapToolbar_->show();
 }
 
 void MapEditorTab::setTouchFriendlyControlsEnabled(bool enabled)

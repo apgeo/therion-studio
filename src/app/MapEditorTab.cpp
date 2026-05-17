@@ -16,13 +16,13 @@
 #include <QMouseEvent>
 #include <QNativeGestureEvent>
 #include <QPalette>
-#include <QPushButton>
 #include <QRegularExpression>
 #include <QSet>
 #include <QScopedValueRollback>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTabletEvent>
+#include <QToolButton>
 #include <QPointer>
 #include <QUndoCommand>
 #include <QUndoStack>
@@ -1551,6 +1551,7 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             }
             break;
         case QEvent::Resize:
+            positionMapToolbarOverlay();
             if (autoFitEnabled_ && mapView_->isVisible()) {
                 fitMapToView(fitBackgroundRequested_);
             }
@@ -1622,6 +1623,7 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             break;
         }
     } else if (watched == mapView_ && event->type() == QEvent::Resize) {
+        positionMapToolbarOverlay();
         if (autoFitEnabled_ && mapView_->isVisible()) {
             fitMapToView(fitBackgroundRequested_);
         }
@@ -1650,6 +1652,9 @@ void MapEditorTab::changeEvent(QEvent *event)
 
 void MapEditorTab::handleApplicationAppearanceChanged()
 {
+    refreshToolbarIcons();
+    positionMapToolbarOverlay();
+
     if (mapView_ != nullptr) {
         mapView_->setBackgroundBrush(mapView_->palette().color(QPalette::Window));
         if (QWidget *viewport = mapView_->viewport(); viewport != nullptr) {
@@ -2911,6 +2916,9 @@ void MapEditorTab::updateCommandSurfaceState()
         touchControlsButton_->setText(touchFriendlyControlsEnabled_
                                           ? tr("Touch Controls: On")
                                           : tr("Touch Controls: Off"));
+        touchControlsButton_->setToolTip(touchFriendlyControlsEnabled_
+                                             ? tr("Disable touch-friendly map controls.")
+                                             : tr("Enable touch-friendly map controls for pen-first workflows."));
     }
     if (cancelDrawShortcut_ != nullptr) {
         cancelDrawShortcut_->setEnabled(interactiveDrawMode_ != InteractiveDrawMode::None);

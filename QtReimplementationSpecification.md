@@ -278,6 +278,9 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The list shall show a visual drop indicator for the current drag target.
 - All map mutations shall support undo and redo.
 - The map toolbar or equivalent command surface shall expose undo, redo, zoom in, zoom out, fit geometry, fit background plus geometry, selection mode, scrap insertion, point insertion, line insertion, freehand line drawing, smart trace, area insertion, and completion of the current draft object.
+- The embedded map toolbar shall be hosted as a compact floating overlay inside the graphical map pane, centered against the top of the map canvas in a rounded container, rather than occupying a global full-width row above all panes or reserving a separate layout row.
+- The embedded map toolbar should present these actions as compact flat icon buttons, with text equivalents available through tooltips, accessibility names, and automation-stable identifiers.
+- Bundled map toolbar icons shall be permissively licensed, shall include their license notice in the repository, and shall adapt to the active light/dark application palette.
 - Placement tools that require a scrap context shall be disabled or unavailable until a valid scrap target exists.
 - Zoom and pan shall be editable and shall persist per document session.
 - Input-device behavior shall be deterministic and mode-aware:

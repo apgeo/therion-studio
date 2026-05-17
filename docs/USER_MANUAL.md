@@ -302,14 +302,14 @@ Map canvas appearance:
 
 Toolbar actions:
 
-- mode buttons: `Select`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`
-- `Insert Scrap`
-- `Complete Draft`
-- `Undo`, `Redo`
-- `Zoom -`, `Zoom +`
-- `Fit`
-- `Fit + BG`
-- `Open Map in Window` / `Return Map Pane`
+- toolbar commands are shown as compact flat Lucide icon buttons; hover any icon to see the text label
+- the toolbar floats inside the graphical map pane, centered at the top of the map canvas in a rounded overlay instead of spanning the whole editor tab
+- mode tools: `Select`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`
+- draft/object actions: `Insert Scrap`, `Complete Draft`
+- history actions: `Undo`, `Redo`
+- view actions: `Zoom Out`, `Zoom In`, `Fit`, `Fit With Background`
+- workflow actions: `Touch Controls`, `Open Map in Window` / `Return Map Pane`
+- icons recolor with the active light/dark application palette
 
 Interactive drawing (current):
 

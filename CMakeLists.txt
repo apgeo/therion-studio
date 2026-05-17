@@ -7,7 +7,7 @@ project(TherionStudio
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets Svg)
 
 qt_standard_project_setup()
 
@@ -53,12 +53,32 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/editor/TherionSyntaxHighlighter.h
     src/main.cpp)
 
+set(THERION_STUDIO_RESOURCE_FILES
+    resources/therion_command_catalog.json
+    resources/therion_command_catalog.overrides.json
+    resources/therion_syntax_palette.json
+    resources/icons/lucide/LICENSE
+    resources/icons/lucide/check.svg
+    resources/icons/lucide/external-link.svg
+    resources/icons/lucide/hand.svg
+    resources/icons/lucide/image.svg
+    resources/icons/lucide/map-pin.svg
+    resources/icons/lucide/mouse-pointer-2.svg
+    resources/icons/lucide/pencil-line.svg
+    resources/icons/lucide/pentagon.svg
+    resources/icons/lucide/redo-2.svg
+    resources/icons/lucide/scan.svg
+    resources/icons/lucide/spline.svg
+    resources/icons/lucide/square-plus.svg
+    resources/icons/lucide/undo-2.svg
+    resources/icons/lucide/wand-sparkles.svg
+    resources/icons/lucide/zoom-in.svg
+    resources/icons/lucide/zoom-out.svg)
+
 qt_add_resources(TherionStudio "TherionStudioResources"
     PREFIX "/"
     FILES
-        resources/therion_command_catalog.json
-        resources/therion_command_catalog.overrides.json
-        resources/therion_syntax_palette.json)
+        ${THERION_STUDIO_RESOURCE_FILES})
 
 if(APPLE)
     set_target_properties(TherionStudio PROPERTIES
@@ -68,7 +88,7 @@ if(APPLE)
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
 endif()
 
-target_link_libraries(TherionStudio PRIVATE Qt6::Widgets)
+target_link_libraries(TherionStudio PRIVATE Qt6::Widgets Qt6::Svg)
 
 target_compile_definitions(TherionStudio PRIVATE
     QT_NO_CAST_FROM_ASCII
@@ -226,7 +246,12 @@ qt_add_executable(MapEditorDetachedPaneTest
     src/editor/TherionSyntaxHighlighter.cpp
     src/editor/TherionSyntaxHighlighter.h)
 
-target_link_libraries(MapEditorDetachedPaneTest PRIVATE Qt6::Widgets)
+target_link_libraries(MapEditorDetachedPaneTest PRIVATE Qt6::Widgets Qt6::Svg)
+
+qt_add_resources(MapEditorDetachedPaneTest "MapEditorDetachedPaneResources"
+    PREFIX "/"
+    FILES
+        ${THERION_STUDIO_RESOURCE_FILES})
 
 qt_add_executable(MapEditorDragUndoRedoSmokeTest
     tests/MapEditorDragUndoRedoSmokeTest.cpp
@@ -259,4 +284,9 @@ qt_add_executable(MapEditorDragUndoRedoSmokeTest
     src/editor/TherionSyntaxHighlighter.cpp
     src/editor/TherionSyntaxHighlighter.h)
 
-target_link_libraries(MapEditorDragUndoRedoSmokeTest PRIVATE Qt6::Widgets)
+target_link_libraries(MapEditorDragUndoRedoSmokeTest PRIVATE Qt6::Widgets Qt6::Svg)
+
+qt_add_resources(MapEditorDragUndoRedoSmokeTest "MapEditorDragUndoRedoSmokeResources"
+    PREFIX "/"
+    FILES
+        ${THERION_STUDIO_RESOURCE_FILES})

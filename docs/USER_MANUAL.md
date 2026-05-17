@@ -1,6 +1,6 @@
 # Therion Studio User Manual
 
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 This manual describes the currently implemented behavior.
 Update this file whenever UI layout, workflows, keyboard shortcuts, or settings behavior changes.
@@ -212,6 +212,10 @@ Text editor includes:
 - for container-compatible child blocks (for example comment under `survey`), dropping near container bottom edge inserts at the beginning of the container body (before first child), enabling direct placement between container header and first child
 - dropping onto a compatible container (for example `survey`) moves the block inside that container near its end
 - block canvas updates live when application/system appearance changes (light/dark), including immediate canvas background and boundary-guide redraw
+- Blocks mode panel chrome uses consistent padding/spacing so toolbox, canvas, and details borders align more cleanly with surrounding window panes
+- Blocks Details/Contextual Help side pane keeps a bounded width, so wide windows allocate surplus space to the canvas instead of a mostly-empty help column
+- Blocks right pane uses a single framed surface (no nested double-frame around help), keeping border weight and inner padding consistent between `Block Details` and `Contextual Help`
+- in dark/light modes, contextual-help panes in both Raw and Blocks modes use a unified base-surface tone across panel and text area (no mixed dark patches in the same help pane)
 - block cards use a trash icon action in the top-right corner for delete
 - selecting a block card focuses it in `Block Details` for editing
 - delete icon asks for confirmation and removes the full logical block span (`survey`/`map`/`scrap`/`centerline` with matching end directive, `data` with its measured rows, or single-line leaf directives)

@@ -248,8 +248,9 @@ private:
     QGraphicsLineItem *blockMovePreviewLine_ = nullptr;
     QList<QGraphicsLineItem *> blockContainerBoundaryGuideItems_;
     QHash<int, qreal> blockContainerBoundaryEndYByLine_;
-    QWidget *blockDetailsPanel_ = nullptr;
+    QFrame *blockDetailsPanel_ = nullptr;
     QWidget *blockDetailsEditPanel_ = nullptr;
+    QWidget *blockDetailsHelpPanel_ = nullptr;
     QLabel *blockDetailsStatusLabel_ = nullptr;
     QLabel *blockDetailsPrimaryFieldLabel_ = nullptr;
     QLabel *blockDetailsSecondaryFieldLabel_ = nullptr;

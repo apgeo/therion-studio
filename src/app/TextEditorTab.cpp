@@ -75,8 +75,14 @@
 
 namespace
 {
+constexpr int kPanelPadding = 12;
+constexpr int kPanelSpacing = 8;
+constexpr int kBlocksSidePaneMinWidth = 320;
+constexpr int kBlocksSidePaneMaxWidth = 460;
 constexpr int kBlockEndHintContainerLineDataRole = 0x42554e44; // "BUND"
 QColor blockBaseColorForDirective(const QString &directive);
+void syncPanelSurfaceToBaseTone(QWidget *panelWidget);
+void syncTextBrowserSurfaceToParent(QWidget *browserWidget);
 
 class HighlightPlainTextEdit;
 
@@ -1739,6 +1745,58 @@ QColor blockBaseColorForDirective(const QString &directive)
     return QColor(QStringLiteral("#d8e9ff"));
 }
 
+void syncTextBrowserSurfaceToParent(QWidget *browserWidget)
+{
+    auto *browser = qobject_cast<QTextBrowser *>(browserWidget);
+    if (browser == nullptr) {
+        return;
+    }
+
+    const QWidget *parent = browser->parentWidget();
+    if (parent == nullptr) {
+        return;
+    }
+
+    QColor surfaceColor = parent->palette().color(QPalette::Base);
+    if (!surfaceColor.isValid()) {
+        surfaceColor = parent->palette().color(QPalette::Window);
+    }
+    QPalette browserPalette = browser->palette();
+    browserPalette.setColor(QPalette::Base, surfaceColor);
+    browserPalette.setColor(QPalette::Window, surfaceColor);
+    browserPalette.setColor(QPalette::AlternateBase, surfaceColor);
+    browser->setPalette(browserPalette);
+    browser->setAutoFillBackground(true);
+
+    if (QWidget *viewport = browser->viewport(); viewport != nullptr) {
+        QPalette viewportPalette = viewport->palette();
+        viewportPalette.setColor(QPalette::Base, surfaceColor);
+        viewportPalette.setColor(QPalette::Window, surfaceColor);
+        viewportPalette.setColor(QPalette::AlternateBase, surfaceColor);
+        viewport->setPalette(viewportPalette);
+        viewport->setAutoFillBackground(true);
+    }
+}
+
+void syncPanelSurfaceToBaseTone(QWidget *panelWidget)
+{
+    if (panelWidget == nullptr) {
+        return;
+    }
+
+    QPalette panelPalette = panelWidget->palette();
+    QColor surfaceColor = panelPalette.color(QPalette::Base);
+    if (!surfaceColor.isValid()) {
+        surfaceColor = panelPalette.color(QPalette::Window);
+    }
+
+    panelPalette.setColor(QPalette::Window, surfaceColor);
+    panelPalette.setColor(QPalette::Base, surfaceColor);
+    panelPalette.setColor(QPalette::AlternateBase, surfaceColor);
+    panelWidget->setPalette(panelPalette);
+    panelWidget->setAutoFillBackground(true);
+}
+
 void resetCatalogBlockDirectiveMetadataToDefaults()
 {
     gBlockOpenToCloseMap = defaultBlockOpenToCloseMap();
@@ -1905,11 +1963,11 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     searchBar_->setVisible(false);
 
     auto *searchLayout = new QVBoxLayout(searchBar_);
-    searchLayout->setContentsMargins(8, 8, 8, 8);
-    searchLayout->setSpacing(6);
+    searchLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);
+    searchLayout->setSpacing(kPanelSpacing);
 
     auto *findRow = new QHBoxLayout;
-    findRow->setSpacing(6);
+    findRow->setSpacing(kPanelSpacing);
 
     findEdit_ = new QLineEdit(searchBar_);
     findEdit_->setPlaceholderText(tr("Find"));
@@ -1930,7 +1988,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     findRow->addWidget(searchStatusLabel_);
 
     auto *optionRow = new QHBoxLayout;
-    optionRow->setSpacing(6);
+    optionRow->setSpacing(kPanelSpacing);
 
     wholeWordCheck_ = new QCheckBox(tr("Whole word"), searchBar_);
     caseSensitiveCheck_ = new QCheckBox(tr("Case sensitive"), searchBar_);
@@ -1942,7 +2000,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     replaceRow_ = new QWidget(searchBar_);
     auto *replaceLayout = new QHBoxLayout(replaceRow_);
     replaceLayout->setContentsMargins(0, 0, 0, 0);
-    replaceLayout->setSpacing(6);
+    replaceLayout->setSpacing(kPanelSpacing);
 
     replaceEdit_ = new QLineEdit(replaceRow_);
     replaceEdit_->setPlaceholderText(tr("Replace with"));
@@ -1994,8 +2052,8 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 
     statusRow_ = new QWidget(this);
     auto *statusLayout = new QHBoxLayout(statusRow_);
-    statusLayout->setContentsMargins(8, 0, 8, 8);
-    statusLayout->setSpacing(12);
+    statusLayout->setContentsMargins(kPanelPadding, 0, kPanelPadding, kPanelPadding);
+    statusLayout->setSpacing(kPanelSpacing);
 
     encodingNoteLabel_ = new QLabel(statusRow_);
     encodingNoteLabel_->setWordWrap(true);
@@ -2023,8 +2081,8 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 
     modeRow_ = new QWidget(this);
     auto *modeLayout = new QHBoxLayout(modeRow_);
-    modeLayout->setContentsMargins(8, 6, 8, 6);
-    modeLayout->setSpacing(6);
+    modeLayout->setContentsMargins(kPanelPadding, kPanelSpacing, kPanelPadding, kPanelSpacing);
+    modeLayout->setSpacing(kPanelSpacing);
     modeLayout->addWidget(new QLabel(tr("Mode:"), modeRow_));
     rawModeButton_ = new QPushButton(tr("Raw"), modeRow_);
     rawModeButton_->setCheckable(true);
@@ -2037,8 +2095,8 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 
     blocksPanel_ = new QWidget(this);
     auto *blocksLayout = new QHBoxLayout(blocksPanel_);
-    blocksLayout->setContentsMargins(8, 8, 8, 8);
-    blocksLayout->setSpacing(8);
+    blocksLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);
+    blocksLayout->setSpacing(kPanelSpacing);
 
     auto *blocksSplitter = new QSplitter(Qt::Horizontal, blocksPanel_);
     blocksSplitter->setChildrenCollapsible(false);
@@ -2046,7 +2104,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     auto *toolboxColumn = new QWidget(blocksSplitter);
     auto *toolboxColumnLayout = new QVBoxLayout(toolboxColumn);
     toolboxColumnLayout->setContentsMargins(0, 0, 0, 0);
-    toolboxColumnLayout->setSpacing(6);
+    toolboxColumnLayout->setSpacing(kPanelSpacing);
     blockToolboxScopeCombo_ = new QComboBox(toolboxColumn);
     populateBlockToolboxScopeCombo();
     blockToolboxFilterEdit_ = new QLineEdit(toolboxColumn);
@@ -2084,15 +2142,19 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     blockCanvasView_ = typedCanvasView;
 
     blockDetailsPanel_ = new QFrame(blocksSplitter);
-    blockDetailsPanel_->setMinimumWidth(320);
+    blockDetailsPanel_->setFrameShape(QFrame::StyledPanel);
+    blockDetailsPanel_->setMinimumWidth(kBlocksSidePaneMinWidth);
+    blockDetailsPanel_->setMaximumWidth(kBlocksSidePaneMaxWidth);
+    syncPanelSurfaceToBaseTone(blockDetailsPanel_);
     auto *blockDetailsLayout = new QVBoxLayout(blockDetailsPanel_);
-    blockDetailsLayout->setContentsMargins(8, 8, 8, 8);
-    blockDetailsLayout->setSpacing(6);
+    blockDetailsLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);
+    blockDetailsLayout->setSpacing(kPanelSpacing);
 
     blockDetailsEditPanel_ = new QWidget(blockDetailsPanel_);
+    syncPanelSurfaceToBaseTone(blockDetailsEditPanel_);
     auto *blockDetailsEditLayout = new QVBoxLayout(blockDetailsEditPanel_);
     blockDetailsEditLayout->setContentsMargins(0, 0, 0, 0);
-    blockDetailsEditLayout->setSpacing(6);
+    blockDetailsEditLayout->setSpacing(kPanelSpacing);
 
     auto *blockDetailsHeader = new QLabel(tr("Block Details"), blockDetailsEditPanel_);
     QFont blockDetailsHeaderFont = blockDetailsHeader->font();
@@ -2107,7 +2169,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 
     auto *blockDetailsFormLayout = new QFormLayout;
     blockDetailsFormLayout->setContentsMargins(0, 0, 0, 0);
-    blockDetailsFormLayout->setSpacing(6);
+    blockDetailsFormLayout->setSpacing(kPanelSpacing);
     blockDetailsPrimaryFieldLabel_ = new QLabel(tr("ID"), blockDetailsEditPanel_);
     blockDetailsPrimaryFieldLabel_->setObjectName(QStringLiteral("blockDetailsPrimaryLabel"));
     blockDetailsIdEdit_ = new QLineEdit(blockDetailsEditPanel_);
@@ -2149,7 +2211,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 
     auto *blockDetailsOptionsHeaderRow = new QHBoxLayout;
     blockDetailsOptionsHeaderRow->setContentsMargins(0, 0, 0, 0);
-    blockDetailsOptionsHeaderRow->setSpacing(6);
+    blockDetailsOptionsHeaderRow->setSpacing(kPanelSpacing);
     blockDetailsOptionsLabel_ = new QLabel(tr("Options"), blockDetailsEditPanel_);
     blockDetailsOptionsLabel_->setObjectName(QStringLiteral("blockDetailsOptionsLabel"));
     blockDetailsOptionsHeaderRow->addWidget(blockDetailsOptionsLabel_);
@@ -2203,14 +2265,14 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     blockDetailsOptionArgsPanel_->setObjectName(QStringLiteral("blockDetailsOptionArgsPanel"));
     blockDetailsOptionArgsFormLayout_ = new QFormLayout(blockDetailsOptionArgsPanel_);
     blockDetailsOptionArgsFormLayout_->setContentsMargins(0, 0, 0, 0);
-    blockDetailsOptionArgsFormLayout_->setSpacing(6);
+    blockDetailsOptionArgsFormLayout_->setSpacing(kPanelSpacing);
     blockDetailsOptionArgsLabel_->setVisible(false);
     blockDetailsOptionArgsPanel_->setVisible(false);
     blockDetailsEditLayout->addWidget(blockDetailsOptionArgsPanel_);
 
     auto *blockDetailsButtonsRow = new QHBoxLayout;
     blockDetailsButtonsRow->setContentsMargins(0, 0, 0, 0);
-    blockDetailsButtonsRow->setSpacing(6);
+    blockDetailsButtonsRow->setSpacing(kPanelSpacing);
     blockDetailsLegacyConfigureButton_ = new QPushButton(tr("Legacy Configure..."), blockDetailsEditPanel_);
     blockDetailsLegacyConfigureButton_->setObjectName(QStringLiteral("blockDetailsLegacyButton"));
     blockDetailsLegacyConfigureButton_->setAutoDefault(false);
@@ -2225,31 +2287,36 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 
     blockDetailsLayout->addWidget(blockDetailsEditPanel_);
 
-    auto *blockDetailsHelpPanel = new QFrame(blockDetailsPanel_);
-    blockDetailsHelpPanel->setFrameShape(QFrame::StyledPanel);
-    auto *blockDetailsHelpPanelLayout = new QVBoxLayout(blockDetailsHelpPanel);
-    blockDetailsHelpPanelLayout->setContentsMargins(8, 8, 8, 8);
-    blockDetailsHelpPanelLayout->setSpacing(6);
+    blockDetailsHelpPanel_ = new QFrame(blockDetailsPanel_);
+    auto *blockDetailsHelpFrame = qobject_cast<QFrame *>(blockDetailsHelpPanel_);
+    if (blockDetailsHelpFrame != nullptr) {
+        blockDetailsHelpFrame->setFrameShape(QFrame::NoFrame);
+    }
+    syncPanelSurfaceToBaseTone(blockDetailsHelpPanel_);
+    auto *blockDetailsHelpPanelLayout = new QVBoxLayout(blockDetailsHelpPanel_);
+    blockDetailsHelpPanelLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);
+    blockDetailsHelpPanelLayout->setSpacing(kPanelSpacing);
 
     auto *blockDetailsHelpHeaderRow = new QHBoxLayout;
     blockDetailsHelpHeaderRow->setContentsMargins(0, 0, 0, 0);
-    auto *blockDetailsHelpLabel = new QLabel(tr("Contextual Help"), blockDetailsHelpPanel);
+    auto *blockDetailsHelpLabel = new QLabel(tr("Contextual Help"), blockDetailsHelpPanel_);
     QFont blockDetailsHelpLabelFont = blockDetailsHelpLabel->font();
     blockDetailsHelpLabelFont.setBold(true);
     blockDetailsHelpLabel->setFont(blockDetailsHelpLabelFont);
     blockDetailsHelpHeaderRow->addWidget(blockDetailsHelpLabel);
     blockDetailsHelpHeaderRow->addStretch(1);
 
-    blockDetailsHelpBrowser_ = new QTextBrowser(blockDetailsHelpPanel);
+    blockDetailsHelpBrowser_ = new QTextBrowser(blockDetailsHelpPanel_);
     blockDetailsHelpBrowser_->setObjectName(QStringLiteral("blockDetailsHelpBrowser"));
     blockDetailsHelpBrowser_->setFrameShape(QFrame::NoFrame);
     blockDetailsHelpBrowser_->setOpenLinks(false);
     blockDetailsHelpBrowser_->setOpenExternalLinks(false);
     blockDetailsHelpBrowser_->setMinimumHeight(140);
+    syncTextBrowserSurfaceToParent(blockDetailsHelpBrowser_);
 
     blockDetailsHelpPanelLayout->addLayout(blockDetailsHelpHeaderRow);
     blockDetailsHelpPanelLayout->addWidget(blockDetailsHelpBrowser_, 1);
-    blockDetailsLayout->addWidget(blockDetailsHelpPanel, 1);
+    blockDetailsLayout->addWidget(blockDetailsHelpPanel_, 1);
 
     blocksSplitter->addWidget(toolboxColumn);
     blocksSplitter->addWidget(blockCanvasView_);
@@ -2257,7 +2324,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     blocksSplitter->setStretchFactor(0, 0);
     blocksSplitter->setStretchFactor(1, 1);
     blocksSplitter->setStretchFactor(2, 0);
-    blocksSplitter->setSizes({220, 860, 520});
+    blocksSplitter->setSizes({220, 980, 380});
     blocksLayout->addWidget(blocksSplitter, 1);
 
     editorModeStack_ = new QStackedWidget(this);
@@ -2436,6 +2503,13 @@ void TextEditorTab::handleApplicationAppearanceChanged()
             viewport->update();
         }
     }
+
+    syncPanelSurfaceToBaseTone(helpPanel_);
+    syncPanelSurfaceToBaseTone(blockDetailsPanel_);
+    syncPanelSurfaceToBaseTone(blockDetailsEditPanel_);
+    syncPanelSurfaceToBaseTone(blockDetailsHelpPanel_);
+    syncTextBrowserSurfaceToParent(helpBrowser_);
+    syncTextBrowserSurfaceToParent(blockDetailsHelpBrowser_);
 
     if (blocksModeActive_ && blockCanvasScene_ != nullptr) {
         rebuildBlocksCanvasFromText();
@@ -7898,9 +7972,10 @@ void TextEditorTab::buildHelpPanel()
     auto *framedHelpPanel = new QFrame(this);
     framedHelpPanel->setFrameShape(QFrame::StyledPanel);
     helpPanel_ = framedHelpPanel;
+    syncPanelSurfaceToBaseTone(helpPanel_);
     auto *panelLayout = new QVBoxLayout(helpPanel_);
-    panelLayout->setContentsMargins(8, 8, 8, 8);
-    panelLayout->setSpacing(6);
+    panelLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);
+    panelLayout->setSpacing(kPanelSpacing);
 
     auto *headerRow = new QHBoxLayout;
     headerRow->setContentsMargins(0, 0, 0, 0);
@@ -7918,6 +7993,7 @@ void TextEditorTab::buildHelpPanel()
     helpBrowser_->setOpenLinks(false);
     helpBrowser_->setOpenExternalLinks(false);
     helpBrowser_->setMinimumHeight(120);
+    syncTextBrowserSurfaceToParent(helpBrowser_);
     helpBrowser_->setHtml(tr("<p>Select a Therion command or item to see contextual help.</p>"));
 
     panelLayout->addLayout(headerRow);

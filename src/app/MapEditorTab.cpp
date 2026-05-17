@@ -26,6 +26,7 @@
 #include <QSplitterHandle>
 #include <QTabletEvent>
 #include <QTextBrowser>
+#include <QTextDocument>
 #include <QPointer>
 #include <QUndoCommand>
 #include <QUndoStack>
@@ -50,6 +51,83 @@ namespace TherionStudio
 {
 namespace
 {
+void syncPanelSurfaceToBaseTone(QWidget *panelWidget)
+{
+    if (panelWidget == nullptr) {
+        return;
+    }
+
+    QPalette panelPalette = panelWidget->palette();
+    QColor surfaceColor = panelPalette.color(QPalette::Base);
+    if (!surfaceColor.isValid()) {
+        surfaceColor = panelPalette.color(QPalette::Window);
+    }
+    panelPalette.setColor(QPalette::Window, surfaceColor);
+    panelPalette.setColor(QPalette::Base, surfaceColor);
+    panelPalette.setColor(QPalette::AlternateBase, surfaceColor);
+    panelWidget->setPalette(panelPalette);
+    panelWidget->setAutoFillBackground(true);
+}
+
+void syncTextBrowserPaletteToParent(QWidget *browserWidget)
+{
+    auto *browser = qobject_cast<QTextBrowser *>(browserWidget);
+    if (browser == nullptr) {
+        return;
+    }
+
+    const QWidget *parent = browser->parentWidget();
+    if (parent == nullptr) {
+        return;
+    }
+
+    const QPalette parentPalette = parent->palette();
+    QColor surfaceColor = parentPalette.color(QPalette::Base);
+    if (!surfaceColor.isValid()) {
+        surfaceColor = parentPalette.color(QPalette::Window);
+    }
+    QColor textColor = parentPalette.color(QPalette::Text);
+    if (!textColor.isValid()) {
+        textColor = parentPalette.color(QPalette::WindowText);
+    }
+    QColor linkColor = parentPalette.color(QPalette::Link);
+    if (!linkColor.isValid()) {
+        linkColor = textColor;
+    }
+
+    QPalette browserPalette = browser->palette();
+    browserPalette.setColor(QPalette::Base, surfaceColor);
+    browserPalette.setColor(QPalette::Window, surfaceColor);
+    browserPalette.setColor(QPalette::AlternateBase, surfaceColor);
+    browserPalette.setColor(QPalette::Text, textColor);
+    browserPalette.setColor(QPalette::WindowText, textColor);
+    browserPalette.setColor(QPalette::ButtonText, textColor);
+    browserPalette.setColor(QPalette::Link, linkColor);
+    browser->setPalette(browserPalette);
+    browser->setAutoFillBackground(true);
+
+    if (QWidget *viewport = browser->viewport(); viewport != nullptr) {
+        QPalette viewportPalette = viewport->palette();
+        viewportPalette.setColor(QPalette::Base, surfaceColor);
+        viewportPalette.setColor(QPalette::Window, surfaceColor);
+        viewportPalette.setColor(QPalette::AlternateBase, surfaceColor);
+        viewportPalette.setColor(QPalette::Text, textColor);
+        viewportPalette.setColor(QPalette::WindowText, textColor);
+        viewportPalette.setColor(QPalette::ButtonText, textColor);
+        viewportPalette.setColor(QPalette::Link, linkColor);
+        viewport->setPalette(viewportPalette);
+        viewport->setAutoFillBackground(true);
+    }
+
+    if (QTextDocument *document = browser->document(); document != nullptr) {
+        document->setDefaultStyleSheet(
+            QStringLiteral("body { color: %1; background-color: %2; } a { color: %3; } code { color: %1; }")
+                .arg(textColor.name(QColor::HexRgb),
+                     surfaceColor.name(QColor::HexRgb),
+                     linkColor.name(QColor::HexRgb)));
+    }
+}
+
 constexpr int kMapItemRole = Qt::UserRole + 120;
 constexpr int kMapItemGeometryValue = 1;
 
@@ -1649,6 +1727,9 @@ void MapEditorTab::handleApplicationAppearanceChanged()
         }
     }
 
+    syncPanelSurfaceToBaseTone(helpPanel_);
+    syncTextBrowserPaletteToParent(helpBrowser_);
+
     if (mapScene_ != nullptr) {
         refreshMapScenePreservingUndoStack();
     }
@@ -1665,6 +1746,7 @@ void MapEditorTab::buildHelpPanel()
 {
     helpPanel_ = new QFrame(this);
     helpPanel_->setFrameShape(QFrame::StyledPanel);
+    syncPanelSurfaceToBaseTone(helpPanel_);
 
     auto *panelLayout = new QVBoxLayout(helpPanel_);
     panelLayout->setContentsMargins(8, 8, 8, 8);
@@ -1686,6 +1768,7 @@ void MapEditorTab::buildHelpPanel()
     helpBrowser_->setOpenLinks(false);
     helpBrowser_->setOpenExternalLinks(false);
     helpBrowser_->setMinimumHeight(120);
+    syncTextBrowserPaletteToParent(helpBrowser_);
     helpBrowser_->setHtml(mapWorkspaceHelpHtml());
 
     panelLayout->addLayout(headerRow);

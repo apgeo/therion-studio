@@ -251,6 +251,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8.
 - The text editor shall provide a contextual help/documentation panel that shows Therion command summaries, arguments, accepted values, options, and related keywords when metadata is available for the token or item at the caret.
 - The help/documentation panel shall be collapsible and resizable and shall not disturb the active editor selection when it is shown or hidden.
+- In the text-editor workspace, the contextual help panel shall be presented as a persistent right-side inspector column with spacing/padding consistent with the structured Blocks workspace side inspector.
 - When a TH2 file is open, the text editor selection shall stay synchronized with the graphical map selection.
 - When map/object selection reveals a source location in the text editor, the corresponding source line shall be visibly highlighted in the editor viewport.
 - When the text cursor is on a `scrap` or `endscrap` directive, the map selection shall include all selectable map objects that belong to that scrap block.
@@ -405,6 +406,7 @@ The Qt application shall define a consistent window and document model.
 - The main application window shall present the project browser, tabbed text editor, structure sidebar, and console-related views used for project work.
 - The main application window shall support a text workspace for all supported text files and, for TH2 files, a synchronized embedded text+map presentation.
 - The text editor shall provide a collapsible contextual help/documentation inspector below the editor or in an equivalent persistent surface.
+- The Qt implementation shall use an equivalent persistent right-side help inspector surface for raw text editing to keep editor/help spatial structure consistent with the Blocks workspace.
 - A TH2 map shall open in a dedicated map editor window or equivalent dedicated top-level surface that remains associated with the same document session.
 - A TH2 map may also be embedded in the main application window as part of a split or map-focused workspace.
 - Opening the same TH2 document again shall prefer focusing the existing map editor window or session rather than creating a duplicate map editor, where the platform and implementation allow it.
@@ -768,6 +770,7 @@ The criteria below are intended for implementation verification and QA.
 - The editor supports syntax highlighting, completion, and code folding for Therion syntax.
 - Find and Replace show an inline search bar with next, previous, replace, replace all, whole-word, and match-case controls.
 - The editor shows a contextual help/documentation panel for Therion commands and options when metadata is available.
+- In raw text-editing mode, the contextual help panel appears in a resizable right-side inspector column (not a bottom strip), and editor/help spacing remains visually consistent with Blocks mode.
 - The application shows the active file path and encoding in a status area for the active document.
 - For map-editor documents, the status area shows a color mode badge (`Select` green, `Insert` red) and updates when the mode changes.
 - Non-UTF-8 files can be explicitly converted to UTF-8.

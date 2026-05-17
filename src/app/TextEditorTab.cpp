@@ -2068,16 +2068,25 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     statusLayout->addWidget(encodingNoteLabel_, 1);
     statusLayout->addWidget(convertEncodingButton_);
 
-    editorHelpSplitter_ = new QSplitter(Qt::Vertical, this);
+    editorHelpSplitter_ = new QSplitter(Qt::Horizontal, this);
     editorHelpSplitter_->setChildrenCollapsible(false);
     editorHelpSplitter_->setHandleWidth(12);
     editorHelpSplitter_->addWidget(editor_);
 
     buildHelpPanel();
+    helpPanel_->setMinimumWidth(kBlocksSidePaneMinWidth);
+    helpPanel_->setMaximumWidth(kBlocksSidePaneMaxWidth);
     editorHelpSplitter_->addWidget(helpPanel_);
     editorHelpSplitter_->setStretchFactor(0, 1);
     editorHelpSplitter_->setStretchFactor(1, 0);
     editorHelpSplitter_->setCollapsible(1, true);
+    editorHelpSplitter_->setSizes({980, 380});
+
+    rawEditorPanel_ = new QWidget(this);
+    auto *rawEditorLayout = new QHBoxLayout(rawEditorPanel_);
+    rawEditorLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);
+    rawEditorLayout->setSpacing(kPanelSpacing);
+    rawEditorLayout->addWidget(editorHelpSplitter_, 1);
 
     modeRow_ = new QWidget(this);
     auto *modeLayout = new QHBoxLayout(modeRow_);
@@ -2294,7 +2303,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     }
     syncPanelSurfaceToBaseTone(blockDetailsHelpPanel_);
     auto *blockDetailsHelpPanelLayout = new QVBoxLayout(blockDetailsHelpPanel_);
-    blockDetailsHelpPanelLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);
+    blockDetailsHelpPanelLayout->setContentsMargins(0, 0, 0, 0);
     blockDetailsHelpPanelLayout->setSpacing(kPanelSpacing);
 
     auto *blockDetailsHelpHeaderRow = new QHBoxLayout;
@@ -2328,7 +2337,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     blocksLayout->addWidget(blocksSplitter, 1);
 
     editorModeStack_ = new QStackedWidget(this);
-    editorModeStack_->addWidget(editorHelpSplitter_);
+    editorModeStack_->addWidget(rawEditorPanel_);
     editorModeStack_->addWidget(blocksPanel_);
 
     layout->addWidget(searchBar_);
@@ -3252,7 +3261,9 @@ void TextEditorTab::refreshEditorModeUi()
     if (blocksModeActive_) {
         editorModeStack_->setCurrentWidget(blocksPanel_);
     } else {
-        editorModeStack_->setCurrentWidget(editorHelpSplitter_);
+        if (rawEditorPanel_ != nullptr) {
+            editorModeStack_->setCurrentWidget(rawEditorPanel_);
+        }
     }
 }
 
@@ -9615,13 +9626,16 @@ void TextEditorTab::setHelpCollapsed(bool collapsed)
         helpBrowser_->setVisible(!collapsed);
     }
     if (editorHelpSplitter_ != nullptr) {
-        if (!collapsed && helpPanelHeight_ > 0) {
+        if (!collapsed && helpPanelExtent_ > 0) {
             const QList<int> sizes = editorHelpSplitter_->sizes();
-            editorHelpSplitter_->setSizes(QList<int>{sizes.value(0, 1), helpPanelHeight_});
+            editorHelpSplitter_->setSizes(QList<int>{sizes.value(0, 1), helpPanelExtent_});
         } else if (collapsed) {
             const QList<int> sizes = editorHelpSplitter_->sizes();
             if (sizes.size() >= 2) {
-                helpPanelHeight_ = qMax(sizes.at(1), helpPanel_->minimumSizeHint().height());
+                const int minimumExtent = helpPanel_ != nullptr
+                    ? qMax(helpPanel_->minimumSizeHint().width(), helpPanel_->minimumWidth())
+                    : 1;
+                helpPanelExtent_ = qMax(sizes.at(1), minimumExtent);
             }
             editorHelpSplitter_->setSizes(QList<int>{1, 0});
         }

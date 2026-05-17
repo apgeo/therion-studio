@@ -239,6 +239,7 @@ private:
     QPushButton *rawModeButton_ = nullptr;
     QPushButton *blocksModeButton_ = nullptr;
     QStackedWidget *editorModeStack_ = nullptr;
+    QWidget *rawEditorPanel_ = nullptr;
     QWidget *blocksPanel_ = nullptr;
     QLineEdit *blockToolboxFilterEdit_ = nullptr;
     QComboBox *blockToolboxScopeCombo_ = nullptr;
@@ -299,7 +300,7 @@ private:
     QCompleter *completionCompleter_ = nullptr;
     QStringListModel *completionModel_ = nullptr;
     QString lastValidationTooltipKey_;
-    int helpPanelHeight_ = 200;
+    int helpPanelExtent_ = 380;
     bool helpCollapsed_ = false;
     bool dirty_ = false;
     bool loading_ = false;

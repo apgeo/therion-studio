@@ -161,7 +161,7 @@ Text editor includes:
 - syntax highlighting also validates option values where catalog enum/type metadata is available (for example `-close`, `-reverse`, and type-scoped `-subtype` on `line`/`point`/`area`), and marks incompatible values as invalid
 - when caret is on an invalid option or invalid enum/subtype value, contextual help switches to a `Validation` panel with reason and allowed values
 - when caret lands on an invalid token, an inline tooltip is also shown near the cursor with a short validation reason and allowed values
-- contextual help pane below the editor, resizable via splitter handle
+- Raw mode uses a right-column contextual help pane, resizable via splitter handle
 - contextual help resolution is driven by `therion_command_catalog.json` only
 - bottom status row for encoding notes and conversion action
 - explicit `Convert to UTF-8` action shown when a file is opened with a non-UTF-8 encoding
@@ -213,6 +213,7 @@ Text editor includes:
 - dropping onto a compatible container (for example `survey`) moves the block inside that container near its end
 - block canvas updates live when application/system appearance changes (light/dark), including immediate canvas background and boundary-guide redraw
 - Blocks mode panel chrome uses consistent padding/spacing so toolbox, canvas, and details borders align more cleanly with surrounding window panes
+- Raw mode uses the same 12/8 panel padding/spacing rhythm as Blocks mode, and keeps contextual help in a bounded right-side column for layout consistency
 - Blocks Details/Contextual Help side pane keeps a bounded width, so wide windows allocate surplus space to the canvas instead of a mostly-empty help column
 - Blocks right pane uses a single framed surface (no nested double-frame around help), keeping border weight and inner padding consistent between `Block Details` and `Contextual Help`
 - in dark/light modes, contextual-help panes in both Raw and Blocks modes use a unified base-surface tone across panel and text area (no mixed dark patches in the same help pane)

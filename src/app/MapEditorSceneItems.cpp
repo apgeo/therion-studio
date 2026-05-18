@@ -7,6 +7,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QFont>
+#include <QLineF>
 #include <QStyle>
 #include <QStyleOptionGraphicsItem>
 #include <QUndoCommand>
@@ -66,6 +67,55 @@ bool tokenLooksNumeric(const QString &token)
     static const QRegularExpression numericPattern(
         QStringLiteral(R"(^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$)"));
     return numericPattern.match(token).hasMatch();
+}
+
+QString normalizedScaleUnitToken(const QString &token)
+{
+    QString normalized;
+    normalized.reserve(token.size());
+    for (const QChar character : token.trimmed()) {
+        if (character.isLetter()) {
+            normalized.append(character.toLower());
+        }
+    }
+    return normalized;
+}
+
+std::optional<qreal> metersPerScaleUnit(const QString &unitToken)
+{
+    if (unitToken.isEmpty()
+        || unitToken == QStringLiteral("m")
+        || unitToken == QStringLiteral("meter")
+        || unitToken == QStringLiteral("meters")
+        || unitToken == QStringLiteral("metre")
+        || unitToken == QStringLiteral("metres")) {
+        return 1.0;
+    }
+    if (unitToken == QStringLiteral("cm")
+        || unitToken == QStringLiteral("centimeter")
+        || unitToken == QStringLiteral("centimeters")
+        || unitToken == QStringLiteral("centimetre")
+        || unitToken == QStringLiteral("centimetres")) {
+        return 0.01;
+    }
+    if (unitToken == QStringLiteral("mm")
+        || unitToken == QStringLiteral("millimeter")
+        || unitToken == QStringLiteral("millimeters")
+        || unitToken == QStringLiteral("millimetre")
+        || unitToken == QStringLiteral("millimetres")) {
+        return 0.001;
+    }
+    if (unitToken == QStringLiteral("ft")
+        || unitToken == QStringLiteral("foot")
+        || unitToken == QStringLiteral("feet")) {
+        return 0.3048;
+    }
+    if (unitToken == QStringLiteral("in")
+        || unitToken == QStringLiteral("inch")
+        || unitToken == QStringLiteral("inches")) {
+        return 0.0254;
+    }
+    return std::nullopt;
 }
 
 enum class LineVertexRole
@@ -350,6 +400,54 @@ qreal sceneCoordsScaleFactor(const QRectF &sourceBounds, const QRectF &previewBo
     const qreal targetWidth = qMax(1.0, previewBounds.width());
     const qreal targetHeight = qMax(1.0, previewBounds.height());
     return qMin(targetWidth / sourceWidth, targetHeight / sourceHeight);
+}
+
+std::optional<qreal> sourceUnitsPerMeterFromScrapScale(const QStringList &tokens)
+{
+    const int scaleOptionIndex = tokens.indexOf(QStringLiteral("-scale"));
+    if (scaleOptionIndex < 0) {
+        return std::nullopt;
+    }
+
+    QVector<qreal> numbers;
+    numbers.reserve(8);
+    QString unitToken;
+    for (int index = scaleOptionIndex + 1; index < tokens.size(); ++index) {
+        qreal parsedValue = 0.0;
+        if (parseScaleNumber(tokens.at(index), &parsedValue)) {
+            numbers.append(parsedValue);
+            continue;
+        }
+
+        if (numbers.size() >= 8 && unitToken.isEmpty()) {
+            unitToken = normalizedScaleUnitToken(tokens.at(index));
+        }
+    }
+
+    if (numbers.size() < 8) {
+        return std::nullopt;
+    }
+
+    const QPointF sourcePoint1(numbers.at(0), numbers.at(1));
+    const QPointF sourcePoint2(numbers.at(2), numbers.at(3));
+    const QPointF scalePoint1(numbers.at(4), numbers.at(5));
+    const QPointF scalePoint2(numbers.at(6), numbers.at(7));
+    const qreal sourceLength = QLineF(sourcePoint1, sourcePoint2).length();
+    const qreal scaleLength = QLineF(scalePoint1, scalePoint2).length();
+    if (sourceLength < 1e-6 || scaleLength < 1e-6) {
+        return std::nullopt;
+    }
+
+    const std::optional<qreal> metersPerUnit = metersPerScaleUnit(unitToken);
+    if (!metersPerUnit.has_value()) {
+        return std::nullopt;
+    }
+
+    const qreal metersPerSourceUnit = (scaleLength * metersPerUnit.value()) / sourceLength;
+    if (metersPerSourceUnit < 1e-9) {
+        return std::nullopt;
+    }
+    return 1.0 / metersPerSourceUnit;
 }
 
 CoordinateTransform coordinateTransformFromScrapScale(const QStringList &tokens)

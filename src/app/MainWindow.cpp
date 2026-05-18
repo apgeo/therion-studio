@@ -18,6 +18,7 @@
 #include <QStandardPaths>
 #include <QLabel>
 #include <QMessageBox>
+#include <QPainter>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QMenu>
@@ -50,6 +51,45 @@
 #include "MainWindowDocumentHelpers.h"
 #include "../core/SessionStore.h"
 
+class WorkspaceTopSeparator final : public QWidget
+{
+public:
+    explicit WorkspaceTopSeparator(QWidget *parent = nullptr)
+        : QWidget(parent)
+    {
+        setAttribute(Qt::WA_TransparentForMouseEvents, true);
+        setAttribute(Qt::WA_NoSystemBackground, true);
+    }
+
+    void setGap(const QRect &gap)
+    {
+        if (gap_ == gap) {
+            return;
+        }
+        gap_ = gap;
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        painter.setPen(palette().color(QPalette::Mid));
+        const int y = 0;
+        const int gapLeft = qBound(0, gap_.left(), width());
+        const int gapRight = qBound(0, gap_.right() + 1, width());
+        if (gapLeft > 0) {
+            painter.drawLine(0, y, gapLeft - 1, y);
+        }
+        if (gapRight < width()) {
+            painter.drawLine(gapRight, y, width() - 1, y);
+        }
+    }
+
+private:
+    QRect gap_;
+};
+
 namespace
 {
 QString workspaceCommandBarStyleSheet(const QColor &backgroundColor)
@@ -57,14 +97,48 @@ QString workspaceCommandBarStyleSheet(const QColor &backgroundColor)
     return QStringLiteral(
                "QWidget#workspaceCommandBar {"
                " border-bottom: 1px solid palette(mid);"
+               " border-top: none;"
+               " border-left: none;"
+               " border-right: none;"
                " background-color: %1;"
                "}"
                "QFrame#workspaceToolbarSeparator {"
                " color: palette(mid);"
+               " margin-left: 4px;"
+               " margin-right: 4px;"
+               "}"
+               "QWidget#workspaceCommandBar QToolButton {"
+               " min-width: 30px;"
+               " min-height: 28px;"
+               " border: 1px solid palette(mid);"
+               " border-radius: 6px;"
+               " padding: 0px;"
+               " background-color: palette(button);"
+               "}"
+               "QWidget#workspaceCommandBar QPushButton {"
+               " min-height: 28px;"
+               " border: 1px solid palette(mid);"
+               " border-radius: 6px;"
+               " padding: 0 10px;"
+               " background-color: palette(button);"
+               "}"
+               "QWidget#workspaceCommandBar QToolButton:hover,"
+               "QWidget#workspaceCommandBar QPushButton:hover {"
+               " background-color: palette(light);"
+               "}"
+               "QWidget#workspaceCommandBar QToolButton:pressed,"
+               "QWidget#workspaceCommandBar QToolButton:checked,"
+               "QWidget#workspaceCommandBar QPushButton:pressed,"
+               "QWidget#workspaceCommandBar QPushButton:checked {"
+               " background-color: palette(midlight);"
+               "}"
+               "QWidget#workspaceCommandBar QToolButton:disabled,"
+               "QWidget#workspaceCommandBar QPushButton:disabled {"
+               " color: palette(mid);"
+               " border-color: palette(mid);"
                "}")
         .arg(backgroundColor.name(QColor::HexRgb));
 }
-} // namespace
 
 QHash<QString, QString> loadStructureNameOverridesFromJson(const QString &json)
 {
@@ -361,6 +435,8 @@ private:
     std::function<void(TherionStudio::MapEditorTab *)> closeCallback_;
 };
 
+} // namespace
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , editorTabs_(new QTabWidget(this))
@@ -448,6 +524,8 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceModeSwitcher_->setObjectName(QStringLiteral("workspaceCommandBar"));
     workspaceModeSwitcher_->setAttribute(Qt::WA_StyledBackground, true);
     workspaceModeSwitcher_->setStyleSheet(workspaceCommandBarStyleSheet(palette().color(QPalette::Base)));
+    workspaceModeSwitcherTopSeparator_ = new WorkspaceTopSeparator(workspaceHost);
+    workspaceModeSwitcherTopSeparator_->setFixedHeight(1);
     auto *hostLayout = new QHBoxLayout(workspaceModeSwitcher_);
     hostLayout->setContentsMargins(8, 4, 8, 4);
     hostLayout->setSpacing(4);
@@ -737,22 +815,24 @@ void MainWindow::refreshWorkspaceModeSwitcher()
 void MainWindow::refreshWorkspaceModeSwitcherGeometry()
 {
     if (workspaceModeSwitcher_ == nullptr
+        || workspaceModeSwitcherTopSeparator_ == nullptr
         || workspaceModeSwitcher_->parentWidget() == nullptr
         || editorTabs_ == nullptr
         || editorTabs_->tabBar() == nullptr) {
         return;
     }
 
-    const int tabBarTopInset = 4;
+    const int tabBarTopInset = 6;
+    const int tabToToolbarOverlap = 3;
     const int tabBarTop = tabBarTopInset;
     const int tabBarHeight = editorTabs_->tabBar()->height();
     const int commandBarHeight = workspaceModeSwitcher_->sizeHint().height();
-    const int paneTop = commandBarHeight + tabBarTopInset;
+    const int paneTop = commandBarHeight + tabBarTopInset - tabToToolbarOverlap;
     const QString baseStyleSheet = editorTabs_->property("baseStyleSheet").toString();
     const QString tabLayoutStyleSheet = QStringLiteral(
         "QTabWidget#mainEditorTabs QTabBar { qproperty-drawBase: 0; }\n"
         "QTabWidget#mainEditorTabs {"
-        " border-left: 1px solid palette(mid);"
+        " border-left: none;"
         " border-right: none;"
         " border-top: none;"
         " border-bottom: none;"
@@ -767,12 +847,48 @@ void MainWindow::refreshWorkspaceModeSwitcherGeometry()
     }
 
     const QPoint commandBarTopLeft = editorTabs_->mapTo(workspaceModeSwitcher_->parentWidget(),
-                                                        QPoint(0, tabBarTop + tabBarHeight));
+                                                        QPoint(0, tabBarTop + tabBarHeight - tabToToolbarOverlap));
     workspaceModeSwitcher_->setGeometry(commandBarTopLeft.x(),
                                         commandBarTopLeft.y(),
                                         editorTabs_->width(),
                                         commandBarHeight);
+    workspaceModeSwitcherTopSeparator_->setGeometry(commandBarTopLeft.x(),
+                                                    commandBarTopLeft.y(),
+                                                    editorTabs_->width(),
+                                                    1);
+    refreshWorkspaceModeSwitcherSeparator();
     workspaceModeSwitcher_->raise();
+    workspaceModeSwitcherTopSeparator_->raise();
+}
+
+void MainWindow::refreshWorkspaceModeSwitcherSeparator()
+{
+    if (workspaceModeSwitcherTopSeparator_ == nullptr
+        || editorTabs_ == nullptr
+        || editorTabs_->tabBar() == nullptr
+        || workspaceModeSwitcherTopSeparator_->parentWidget() == nullptr) {
+        return;
+    }
+
+    const int currentIndex = editorTabs_->currentIndex();
+    if (currentIndex < 0 || currentIndex >= editorTabs_->tabBar()->count()) {
+        workspaceModeSwitcherTopSeparator_->setGap(QRect());
+        return;
+    }
+
+    const QRect activeTabRect = editorTabs_->tabBar()->tabRect(currentIndex);
+    if (!activeTabRect.isValid()) {
+        workspaceModeSwitcherTopSeparator_->setGap(QRect());
+        return;
+    }
+
+    const QPoint activeTabTopLeft = editorTabs_->tabBar()->mapTo(workspaceModeSwitcherTopSeparator_,
+                                                                 activeTabRect.topLeft());
+    constexpr int activeTabSeparatorGapPadding = 14;
+    workspaceModeSwitcherTopSeparator_->setGap(QRect(activeTabTopLeft.x() - activeTabSeparatorGapPadding,
+                                                     0,
+                                                     activeTabRect.width() + (activeTabSeparatorGapPadding * 2),
+                                                     1));
 }
 
 void MainWindow::triggerUndoForActiveDocument()

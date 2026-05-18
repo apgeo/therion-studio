@@ -121,10 +121,45 @@ public:
         commandBar_->setStyleSheet(QStringLiteral(
             "QWidget#workspaceCommandBar {"
             " border-bottom: 1px solid palette(mid);"
-            " background: palette(base);"
+            " border-top: 1px solid palette(mid);"
+            " border-left: none;"
+            " border-right: none;"
+            " background-color: palette(base);"
             "}"
             "QFrame#workspaceToolbarSeparator {"
             " color: palette(mid);"
+            " margin-left: 4px;"
+            " margin-right: 4px;"
+            "}"
+            "QWidget#workspaceCommandBar QToolButton {"
+            " min-width: 30px;"
+            " min-height: 28px;"
+            " border: 1px solid palette(mid);"
+            " border-radius: 6px;"
+            " padding: 0px;"
+            " background-color: palette(button);"
+            "}"
+            "QWidget#workspaceCommandBar QPushButton {"
+            " min-height: 28px;"
+            " border: 1px solid palette(mid);"
+            " border-radius: 6px;"
+            " padding: 0 10px;"
+            " background-color: palette(button);"
+            "}"
+            "QWidget#workspaceCommandBar QToolButton:hover,"
+            "QWidget#workspaceCommandBar QPushButton:hover {"
+            " background-color: palette(light);"
+            "}"
+            "QWidget#workspaceCommandBar QToolButton:pressed,"
+            "QWidget#workspaceCommandBar QToolButton:checked,"
+            "QWidget#workspaceCommandBar QPushButton:pressed,"
+            "QWidget#workspaceCommandBar QPushButton:checked {"
+            " background-color: palette(midlight);"
+            "}"
+            "QWidget#workspaceCommandBar QToolButton:disabled,"
+            "QWidget#workspaceCommandBar QPushButton:disabled {"
+            " color: palette(mid);"
+            " border-color: palette(mid);"
             "}"));
         auto *commandLayout = new QHBoxLayout(commandBar_);
         commandLayout->setContentsMargins(8, 4, 8, 4);
@@ -425,6 +460,7 @@ void MapEditorTab::buildUi()
     connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::refreshMapScene);
     connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::rebuildInspectorObjectsTree);
     connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::documentTextChanged);
+    connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::updateCommandSurfaceState);
     connect(this, &MapEditorTab::backgroundLayersChanged, this, &MapEditorTab::refreshInspectorBackgroundPanel);
 
     connect(undoStack_, &QUndoStack::canUndoChanged, this, &MapEditorTab::updateCommandSurfaceState);
@@ -483,7 +519,7 @@ void MapEditorTab::buildUi()
     objectDetailsPanel_->setObjectName(QStringLiteral("mapObjectDetailsPanel"));
     objectDetailsPanel_->setMinimumWidth(280);
     auto *objectDetailsLayout = new QVBoxLayout(objectDetailsPanel_);
-    objectDetailsLayout->setContentsMargins(12, 12, 12, 12);
+    objectDetailsLayout->setContentsMargins(8, 8, 8, 8);
     objectDetailsLayout->setSpacing(8);
 
     auto *objectDetailsHeader = new QLabel(tr("Inspector"), objectDetailsPanel_);
@@ -497,12 +533,9 @@ void MapEditorTab::buildUi()
 
     auto *objectsTab = new QWidget(mapInspectorTabs_);
     auto *objectsLayout = new QVBoxLayout(objectsTab);
-    objectsLayout->setContentsMargins(0, 0, 0, 0);
+    objectsLayout->setContentsMargins(4, 4, 4, 4);
     objectsLayout->setSpacing(8);
 
-    auto *objectsDescription = new QLabel(tr("Objects in the active TH2 file are grouped by scrap."), objectsTab);
-    objectsDescription->setWordWrap(true);
-    objectsLayout->addWidget(objectsDescription);
     mapObjectsTree_ = new QTreeView(objectsTab);
     mapObjectsTree_->setRootIsDecorated(true);
     mapObjectsTree_->setAnimated(true);
@@ -511,8 +544,11 @@ void MapEditorTab::buildUi()
     mapObjectsTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     mapObjectsTree_->setAlternatingRowColors(true);
     mapObjectsTree_->setHeaderHidden(true);
+    mapObjectsTree_->setIconSize(QSize(16, 16));
     mapObjectsModel_ = new QStandardItemModel(mapObjectsTree_);
     mapObjectsTree_->setModel(mapObjectsModel_);
+    configureInspectorObjectTreeColumns();
+    connect(mapObjectsTree_, &QTreeView::clicked, this, &MapEditorTab::handleInspectorObjectClicked);
     objectsLayout->addWidget(mapObjectsTree_, 1);
     if (mapObjectsTree_->selectionModel() != nullptr) {
         connect(mapObjectsTree_->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex &current, const QModelIndex &) {
@@ -602,8 +638,8 @@ void MapEditorTab::buildUi()
 
     auto *backgroundTab = new QWidget(mapInspectorTabs_);
     auto *backgroundLayout = new QVBoxLayout(backgroundTab);
-    backgroundLayout->setContentsMargins(0, 0, 0, 0);
-    backgroundLayout->setSpacing(8);
+    backgroundLayout->setContentsMargins(4, 4, 4, 4);
+    backgroundLayout->setSpacing(10);
     auto *layersRow = new QHBoxLayout;
     auto *layersLabel = new QLabel(tr("Layers"), backgroundTab);
     sectionFont = layersLabel->font();
@@ -617,22 +653,27 @@ void MapEditorTab::buildUi()
     layersRow->addWidget(mapBackgroundAddButton_);
     backgroundLayout->addLayout(layersRow);
 
-    mapBackgroundLayersList_ = new QListWidget(backgroundTab);
-    mapBackgroundLayersList_->setSelectionMode(QAbstractItemView::SingleSelection);
-    mapBackgroundLayersList_->setMinimumHeight(88);
-    backgroundLayout->addWidget(mapBackgroundLayersList_);
+    mapBackgroundLayersTree_ = new QTreeView(backgroundTab);
+    mapBackgroundLayersTree_->setRootIsDecorated(false);
+    mapBackgroundLayersTree_->setAnimated(false);
+    mapBackgroundLayersTree_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    mapBackgroundLayersTree_->setSelectionMode(QAbstractItemView::SingleSelection);
+    mapBackgroundLayersTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    mapBackgroundLayersTree_->setAlternatingRowColors(true);
+    mapBackgroundLayersTree_->setHeaderHidden(true);
+    mapBackgroundLayersTree_->setIconSize(QSize(16, 16));
+    mapBackgroundLayersTree_->setMinimumHeight(88);
+    mapBackgroundLayersModel_ = new QStandardItemModel(mapBackgroundLayersTree_);
+    mapBackgroundLayersTree_->setModel(mapBackgroundLayersModel_);
+    configureInspectorBackgroundLayerTreeColumns();
+    connect(mapBackgroundLayersTree_, &QTreeView::clicked, this, &MapEditorTab::handleInspectorBackgroundLayerClicked);
+    backgroundLayout->addWidget(mapBackgroundLayersTree_);
 
     auto *layerActionsRow = new QHBoxLayout;
-    mapBackgroundRemoveButton_ = new QPushButton(tr("Remove"), backgroundTab);
-    mapBackgroundVisibilityButton_ = new QPushButton(tr("Hide"), backgroundTab);
     mapBackgroundMoveUpButton_ = new QPushButton(tr("Up"), backgroundTab);
     mapBackgroundMoveDownButton_ = new QPushButton(tr("Down"), backgroundTab);
-    mapBackgroundRemoveButton_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    mapBackgroundVisibilityButton_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     mapBackgroundMoveUpButton_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     mapBackgroundMoveDownButton_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    layerActionsRow->addWidget(mapBackgroundRemoveButton_);
-    layerActionsRow->addWidget(mapBackgroundVisibilityButton_);
     layerActionsRow->addWidget(mapBackgroundMoveUpButton_);
     layerActionsRow->addWidget(mapBackgroundMoveDownButton_);
     backgroundLayout->addLayout(layerActionsRow);
@@ -644,8 +685,8 @@ void MapEditorTab::buildUi()
     auto *positionFrame = new QFrame(backgroundTab);
     positionFrame->setFrameShape(QFrame::StyledPanel);
     auto *positionLayout = new QVBoxLayout(positionFrame);
-    positionLayout->setContentsMargins(8, 8, 8, 8);
-    positionLayout->setSpacing(6);
+    positionLayout->setContentsMargins(12, 12, 12, 12);
+    positionLayout->setSpacing(8);
 
     auto *xRow = new QHBoxLayout;
     xRow->addWidget(new QLabel(tr("X"), positionFrame));
@@ -663,51 +704,71 @@ void MapEditorTab::buildUi()
     yRow->addWidget(mapBackgroundPosYSpin_, 1);
     positionLayout->addLayout(yRow);
 
-    auto *nudgeRow = new QHBoxLayout;
-    mapBackgroundNudgeLeftButton_ = new QPushButton(QStringLiteral("←"), positionFrame);
-    mapBackgroundNudgeRightButton_ = new QPushButton(QStringLiteral("→"), positionFrame);
-    mapBackgroundNudgeUpButton_ = new QPushButton(QStringLiteral("↑"), positionFrame);
-    mapBackgroundNudgeDownButton_ = new QPushButton(QStringLiteral("↓"), positionFrame);
-    nudgeRow->addWidget(mapBackgroundNudgeLeftButton_);
-    nudgeRow->addWidget(mapBackgroundNudgeRightButton_);
-    nudgeRow->addWidget(mapBackgroundNudgeUpButton_);
-    nudgeRow->addWidget(mapBackgroundNudgeDownButton_);
-    positionLayout->addLayout(nudgeRow);
     backgroundLayout->addWidget(positionFrame);
 
     auto *adjustmentsLabel = new QLabel(tr("Adjustments"), backgroundTab);
     adjustmentsLabel->setFont(sectionFont);
     backgroundLayout->addWidget(adjustmentsLabel);
 
-    auto *opacityRow = new QHBoxLayout;
-    opacityRow->addWidget(new QLabel(tr("Opacity"), backgroundTab));
-    opacityRow->addStretch(1);
-    mapBackgroundOpacityResetButton_ = new QPushButton(tr("Reset"), backgroundTab);
-    opacityRow->addWidget(mapBackgroundOpacityResetButton_);
-    backgroundLayout->addLayout(opacityRow);
+    auto *adjustmentsFrame = new QFrame(backgroundTab);
+    adjustmentsFrame->setFrameShape(QFrame::StyledPanel);
+    auto *adjustmentsLayout = new QVBoxLayout(adjustmentsFrame);
+    adjustmentsLayout->setContentsMargins(12, 12, 12, 12);
+    adjustmentsLayout->setSpacing(8);
 
-    mapBackgroundOpacitySlider_ = new QSlider(Qt::Horizontal, backgroundTab);
+    auto *opacityRow = new QHBoxLayout;
+    opacityRow->addWidget(new QLabel(tr("Opacity"), adjustmentsFrame));
+    opacityRow->addStretch(1);
+    mapBackgroundOpacityResetButton_ = new QPushButton(tr("Reset"), adjustmentsFrame);
+    opacityRow->addWidget(mapBackgroundOpacityResetButton_);
+    adjustmentsLayout->addLayout(opacityRow);
+
+    mapBackgroundOpacitySlider_ = new QSlider(Qt::Horizontal, adjustmentsFrame);
     mapBackgroundOpacitySlider_->setRange(5, 100);
-    backgroundLayout->addWidget(mapBackgroundOpacitySlider_);
+    adjustmentsLayout->addWidget(mapBackgroundOpacitySlider_);
 
     auto *gammaRow = new QHBoxLayout;
-    gammaRow->addWidget(new QLabel(tr("Gamma"), backgroundTab));
+    gammaRow->addWidget(new QLabel(tr("Gamma"), adjustmentsFrame));
     gammaRow->addStretch(1);
-    mapBackgroundGammaResetButton_ = new QPushButton(tr("Reset"), backgroundTab);
+    mapBackgroundGammaResetButton_ = new QPushButton(tr("Reset"), adjustmentsFrame);
     gammaRow->addWidget(mapBackgroundGammaResetButton_);
-    backgroundLayout->addLayout(gammaRow);
+    adjustmentsLayout->addLayout(gammaRow);
 
-    mapBackgroundGammaSlider_ = new QSlider(Qt::Horizontal, backgroundTab);
+    mapBackgroundGammaSlider_ = new QSlider(Qt::Horizontal, adjustmentsFrame);
     mapBackgroundGammaSlider_->setRange(20, 250);
-    backgroundLayout->addWidget(mapBackgroundGammaSlider_);
+    adjustmentsLayout->addWidget(mapBackgroundGammaSlider_);
+    backgroundLayout->addWidget(adjustmentsFrame);
+
+    auto *gridLabel = new QLabel(tr("Grid"), backgroundTab);
+    gridLabel->setFont(sectionFont);
+    backgroundLayout->addWidget(gridLabel);
+
+    auto *gridFrame = new QFrame(backgroundTab);
+    gridFrame->setFrameShape(QFrame::StyledPanel);
+    auto *gridLayout = new QVBoxLayout(gridFrame);
+    gridLayout->setContentsMargins(12, 12, 12, 12);
+    gridLayout->setSpacing(8);
+
+    mapGridVisibleCheck_ = new QCheckBox(tr("Show grid"), gridFrame);
+    mapGridVisibleCheck_->setChecked(mapGridVisible_);
+    gridLayout->addWidget(mapGridVisibleCheck_);
+
+    auto *gridSpacingRow = new QHBoxLayout;
+    gridSpacingRow->addWidget(new QLabel(tr("Spacing (m)"), gridFrame));
+    mapGridSpacingSpin_ = new QDoubleSpinBox(gridFrame);
+    mapGridSpacingSpin_->setRange(0.1, 10000.0);
+    mapGridSpacingSpin_->setDecimals(1);
+    mapGridSpacingSpin_->setSingleStep(1.0);
+    mapGridSpacingSpin_->setSuffix(tr(" m"));
+    mapGridSpacingSpin_->setValue(mapGridSpacingMeters_);
+    gridSpacingRow->addWidget(mapGridSpacingSpin_, 1);
+    gridLayout->addLayout(gridSpacingRow);
+    backgroundLayout->addWidget(gridFrame);
     backgroundLayout->addStretch(1);
     mapInspectorTabs_->addTab(backgroundTab, tr("Backgrounds"));
 
     connect(mapBackgroundAddButton_, &QToolButton::clicked, this, [this]() {
         browseAndAddBackgroundImages();
-    });
-    connect(mapBackgroundRemoveButton_, &QPushButton::clicked, this, [this]() {
-        removeSelectedBackgroundLayer();
     });
     connect(mapBackgroundMoveUpButton_, &QPushButton::clicked, this, [this]() {
         moveSelectedBackgroundLayerUp();
@@ -715,15 +776,11 @@ void MapEditorTab::buildUi()
     connect(mapBackgroundMoveDownButton_, &QPushButton::clicked, this, [this]() {
         moveSelectedBackgroundLayerDown();
     });
-    connect(mapBackgroundVisibilityButton_, &QPushButton::clicked, this, [this]() {
-        toggleSelectedBackgroundLayerVisibility();
-    });
-    connect(mapBackgroundLayersList_, &QListWidget::currentRowChanged, this, [this](int row) {
-        if (updatingMapInspectorBackgroundUi_) {
-            return;
-        }
-        setSelectedBackgroundLayerIndex(row);
-    });
+    if (mapBackgroundLayersTree_->selectionModel() != nullptr) {
+        connect(mapBackgroundLayersTree_->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex &current, const QModelIndex &) {
+            handleInspectorBackgroundLayerSelectionChanged(current);
+        });
+    }
     connect(mapBackgroundPosXSpin_, &QDoubleSpinBox::valueChanged, this, [this](double x) {
         if (updatingMapInspectorBackgroundUi_ || mapBackgroundPosYSpin_ == nullptr) {
             return;
@@ -735,18 +792,6 @@ void MapEditorTab::buildUi()
             return;
         }
         setSelectedBackgroundLayerPosition(QPointF(mapBackgroundPosXSpin_->value(), y));
-    });
-    connect(mapBackgroundNudgeLeftButton_, &QPushButton::clicked, this, [this]() {
-        nudgeSelectedBackgroundLayer(QPointF(-10.0, 0.0));
-    });
-    connect(mapBackgroundNudgeRightButton_, &QPushButton::clicked, this, [this]() {
-        nudgeSelectedBackgroundLayer(QPointF(10.0, 0.0));
-    });
-    connect(mapBackgroundNudgeUpButton_, &QPushButton::clicked, this, [this]() {
-        nudgeSelectedBackgroundLayer(QPointF(0.0, -10.0));
-    });
-    connect(mapBackgroundNudgeDownButton_, &QPushButton::clicked, this, [this]() {
-        nudgeSelectedBackgroundLayer(QPointF(0.0, 10.0));
     });
     connect(mapBackgroundOpacitySlider_, &QSlider::valueChanged, this, [this](int value) {
         if (updatingMapInspectorBackgroundUi_) {
@@ -766,6 +811,8 @@ void MapEditorTab::buildUi()
     connect(mapBackgroundGammaResetButton_, &QPushButton::clicked, this, [this]() {
         resetSelectedBackgroundLayerGamma();
     });
+    connect(mapGridVisibleCheck_, &QCheckBox::toggled, this, &MapEditorTab::setMapGridVisible);
+    connect(mapGridSpacingSpin_, &QDoubleSpinBox::valueChanged, this, &MapEditorTab::setMapGridSpacingMeters);
 
     mapDetailsSplitter_->addWidget(mapView_);
     mapDetailsSplitter_->addWidget(objectDetailsPanel_);
@@ -917,12 +964,14 @@ int MapEditorTab::zoomPercent() const
 
 bool MapEditorTab::canUndo() const
 {
-    return undoStack_ != nullptr && undoStack_->canUndo();
+    return (undoStack_ != nullptr && undoStack_->canUndo())
+        || (textEditor_ != nullptr && textEditor_->canUndo());
 }
 
 bool MapEditorTab::canRedo() const
 {
-    return undoStack_ != nullptr && undoStack_->canRedo();
+    return (undoStack_ != nullptr && undoStack_->canRedo())
+        || (textEditor_ != nullptr && textEditor_->canRedo());
 }
 
 MapEditorTab::InteractiveDrawMode MapEditorTab::interactiveDrawMode() const
@@ -1108,19 +1157,27 @@ void MapEditorTab::handleTextEditorCursorPositionChanged(int lineNumber, int col
 
 void MapEditorTab::handleUndoTriggered()
 {
-    if (undoStack_ != nullptr) {
+    if (undoStack_ != nullptr && undoStack_->canUndo()) {
         const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
         undoStack_->undo();
         flushPendingMapSceneRefreshAfterCommand();
+        return;
+    }
+    if (textEditor_ != nullptr && textEditor_->canUndo()) {
+        textEditor_->triggerUndo();
     }
 }
 
 void MapEditorTab::handleRedoTriggered()
 {
-    if (undoStack_ != nullptr) {
+    if (undoStack_ != nullptr && undoStack_->canRedo()) {
         const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
         undoStack_->redo();
         flushPendingMapSceneRefreshAfterCommand();
+        return;
+    }
+    if (textEditor_ != nullptr && textEditor_->canRedo()) {
+        textEditor_->triggerRedo();
     }
 }
 

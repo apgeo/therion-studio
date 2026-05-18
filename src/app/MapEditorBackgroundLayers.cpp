@@ -524,6 +524,27 @@ void MapEditorTab::nudgeSelectedBackgroundLayer(const QPointF &delta)
     refreshBackgroundLayerControls();
 }
 
+void MapEditorTab::setMapGridVisible(bool visible)
+{
+    if (mapGridVisible_ == visible) {
+        return;
+    }
+
+    mapGridVisible_ = visible;
+    refreshMapScenePreservingUndoStack();
+}
+
+void MapEditorTab::setMapGridSpacingMeters(qreal spacingMeters)
+{
+    const qreal normalizedSpacing = qBound(0.1, spacingMeters, 10000.0);
+    if (qFuzzyCompare(mapGridSpacingMeters_, normalizedSpacing)) {
+        return;
+    }
+
+    mapGridSpacingMeters_ = normalizedSpacing;
+    refreshMapScenePreservingUndoStack();
+}
+
 void MapEditorTab::handleFitWithBackgroundTriggered()
 {
     fitBackgroundRequested_ = !backgroundImageItems_.isEmpty();

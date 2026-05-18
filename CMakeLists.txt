@@ -62,6 +62,8 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/code.svg
     resources/icons/lucide/cog.svg
     resources/icons/lucide/external-link.svg
+    resources/icons/lucide/eye.svg
+    resources/icons/lucide/eye-off.svg
     resources/icons/lucide/folder-open.svg
     resources/icons/lucide/hand.svg
     resources/icons/lucide/image.svg
@@ -80,6 +82,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/spline.svg
     resources/icons/lucide/square-plus.svg
     resources/icons/lucide/toy-brick.svg
+    resources/icons/lucide/trash-2.svg
     resources/icons/lucide/undo-2.svg
     resources/icons/lucide/wand-sparkles.svg
     resources/icons/lucide/zoom-in.svg

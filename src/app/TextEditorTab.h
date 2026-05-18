@@ -108,6 +108,7 @@ public:
                                    const QStringList &coordinateRows,
                                    QString *errorMessage = nullptr);
     bool configureCommandAtLine(const QString &kind, int lineNumber);
+    bool deleteCommandAtLine(int lineNumber);
     void replaceTextForCommand(const QString &contents);
 
     QString filePath() const;
@@ -221,7 +222,8 @@ private:
     bool buildUpdatedLineFromBlockDetails(QString *updatedLine, QString *validationError = nullptr) const;
     void applyBlockDetailsChanges();
     bool supportsDetailsPaneForKind(const QString &kind) const;
-    void handleBlockDeleteRequest(int lineNumber);
+    bool handleBlockDeleteRequest(int lineNumber);
+    bool removeSourceLineRange(int startLine, int endLine);
     bool insertLinesBefore(int lineNumber,
                            const QStringList &newLines,
                            QString *errorMessage = nullptr);

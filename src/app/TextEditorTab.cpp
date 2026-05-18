@@ -1833,7 +1833,19 @@ void syncTextBrowserSurfaceToPalette(QWidget *browserWidget, const QPalette &sou
 
     if (QTextDocument *document = browser->document(); document != nullptr) {
         document->setDefaultStyleSheet(
-            QStringLiteral("body { color: %1; background-color: %2; } a { color: %3; } code { color: %1; }")
+            QStringLiteral(
+                "body {"
+                " color: %1;"
+                " background-color: %2;"
+                " margin: 0;"
+                " line-height: 1.35;"
+                "}"
+                "h1, h2, h3, h4 { margin: 0 0 8px 0; }"
+                "p { margin: 0 0 10px 0; }"
+                "ul, ol { margin: 0 0 10px 20px; }"
+                "li { margin: 0 0 4px 0; }"
+                "a { color: %3; }"
+                "code { color: %1; }")
                 .arg(textColor.name(QColor::HexRgb),
                      surfaceColor.name(QColor::HexRgb),
                      linkColor.name(QColor::HexRgb)));
@@ -3312,6 +3324,11 @@ bool TextEditorTab::configureCommandAtLine(const QString &kind, int lineNumber)
 
     handleBlockConfigureRequest(kind, lineNumber);
     return true;
+}
+
+bool TextEditorTab::deleteCommandAtLine(int lineNumber)
+{
+    return handleBlockDeleteRequest(lineNumber);
 }
 
 void TextEditorTab::replaceTextForCommand(const QString &contents)
@@ -8003,10 +8020,42 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
                                  .arg(kind));
 }
 
-void TextEditorTab::handleBlockDeleteRequest(int lineNumber)
+bool TextEditorTab::removeSourceLineRange(int startLine, int endLine)
+{
+    if (editor_ == nullptr || editor_->document() == nullptr || startLine <= 0 || endLine < startLine) {
+        return false;
+    }
+
+    QTextDocument *document = editor_->document();
+    const QTextBlock startBlock = document->findBlockByLineNumber(startLine - 1);
+    const QTextBlock endBlock = document->findBlockByLineNumber(endLine - 1);
+    if (!startBlock.isValid() || !endBlock.isValid()) {
+        return false;
+    }
+
+    const QTextBlock afterEndBlock = endBlock.next();
+    const int selectionStart = startBlock.position();
+    const int selectionEnd = afterEndBlock.isValid()
+        ? afterEndBlock.position()
+        : endBlock.position() + qMax(0, endBlock.length() - 1);
+    if (selectionEnd < selectionStart) {
+        return false;
+    }
+
+    QTextCursor cursor(document);
+    cursor.beginEditBlock();
+    cursor.setPosition(selectionStart);
+    cursor.setPosition(selectionEnd, QTextCursor::KeepAnchor);
+    cursor.removeSelectedText();
+    cursor.endEditBlock();
+    editor_->setTextCursor(cursor);
+    return true;
+}
+
+bool TextEditorTab::handleBlockDeleteRequest(int lineNumber)
 {
     if (lineNumber <= 0) {
-        return;
+        return false;
     }
 
     QString contents = editor_->toPlainText();
@@ -8017,7 +8066,7 @@ void TextEditorTab::handleBlockDeleteRequest(int lineNumber)
         }
     }
     if (lineNumber > lines.size()) {
-        return;
+        return false;
     }
 
     const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineNumber - 1), lineNumber);
@@ -8030,21 +8079,18 @@ void TextEditorTab::handleBlockDeleteRequest(int lineNumber)
             QMessageBox::Yes | QMessageBox::No,
             QMessageBox::No);
         if (answer != QMessageBox::Yes) {
-            return;
+            return false;
         }
-        lines.removeAt(lineNumber - 1);
-        const QString lineEnding = contents.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-        replaceTextForCommand(lines.join(lineEnding));
-        return;
+        return removeSourceLineRange(lineNumber, lineNumber);
     }
     if (directive.isEmpty()) {
-        return;
+        return false;
     }
     if (directive == QStringLiteral("encoding")) {
         QMessageBox::information(this,
                                  tr("Delete Block"),
                                  tr("`encoding` is fixed as the document root in Blocks mode and cannot be deleted."));
-        return;
+        return false;
     }
 
     int removeStartLine = lineNumber;
@@ -8057,7 +8103,7 @@ void TextEditorTab::handleBlockDeleteRequest(int lineNumber)
             QMessageBox::warning(this,
                                  tr("Delete Block"),
                                  tr("Unable to resolve closing directive for `%1`.").arg(directive));
-            return;
+            return false;
         }
         removeEndLine = endLine;
     } else if (directive == QStringLiteral("data")) {
@@ -8065,7 +8111,7 @@ void TextEditorTab::handleBlockDeleteRequest(int lineNumber)
         const QString dataScopeClosing = completionClosingDirectiveForOpening(dataScope);
         if (dataScopeClosing.isEmpty()) {
             QMessageBox::warning(this, tr("Delete Block"), tr("Unable to resolve parent data scope."));
-            return;
+            return false;
         }
 
         int dataScopeStartLine = -1;
@@ -8089,7 +8135,7 @@ void TextEditorTab::handleBlockDeleteRequest(int lineNumber)
 
         if (dataScopeStartLine <= 0) {
             QMessageBox::warning(this, tr("Delete Block"), tr("Unable to resolve parent data scope block."));
-            return;
+            return false;
         }
 
         const int dataScopeEndLine = findMatchingBlockEndLine(lines,
@@ -8098,7 +8144,7 @@ void TextEditorTab::handleBlockDeleteRequest(int lineNumber)
                                                               dataScopeClosing);
         if (dataScopeEndLine <= lineNumber) {
             QMessageBox::warning(this, tr("Delete Block"), tr("Unable to resolve end of parent data scope block."));
-            return;
+            return false;
         }
 
         int dataBodyLastLine = dataScopeEndLine - 1;
@@ -8129,17 +8175,10 @@ void TextEditorTab::handleBlockDeleteRequest(int lineNumber)
         QMessageBox::Yes | QMessageBox::No,
         QMessageBox::No);
     if (answer != QMessageBox::Yes) {
-        return;
+        return false;
     }
 
-    const int removeStartIndex = removeStartLine - 1;
-    const int removeEndIndex = qMin(lines.size() - 1, removeEndLine - 1);
-    for (int index = removeEndIndex; index >= removeStartIndex; --index) {
-        lines.removeAt(index);
-    }
-
-    const QString lineEnding = contents.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    replaceTextForCommand(lines.join(lineEnding));
+    return removeSourceLineRange(removeStartLine, removeEndLine);
 }
 
 bool TextEditorTab::isCurrentStateDirty() const

@@ -1,6 +1,6 @@
 # Therion Studio User Manual
 
-Last updated: 2026-05-17
+Last updated: 2026-05-18
 
 This manual describes the currently implemented behavior.
 Update this file whenever UI layout, workflows, keyboard shortcuts, or settings behavior changes.
@@ -25,6 +25,7 @@ The main window is organized into:
 - Status bar (global app status)
 - Splitter handles use a consistent native visible grab-handle style across sidebar/content, raw-help, blocks columns, and map inspector splits
 - Main sidebar/content splitter panes use inner-only seam borders (no border on the outer window edges)
+- Main document chrome uses a unified spacing/contrast system: tabs, top command toolbar, sidebar panels, and contextual-help panels share consistent separator tone, control sizing, and surface hierarchy in light/dark modes
 
 ### 2.1 Sidebar Activity Rail and Panes
 
@@ -166,6 +167,7 @@ Text editor includes:
 - when caret is on an invalid option or invalid enum/subtype value, contextual help switches to a `Validation` panel with reason and allowed values
 - when caret lands on an invalid token, an inline tooltip is also shown near the cursor with a short validation reason and allowed values
 - Raw mode uses a right-column contextual help pane, resizable via the same native visible splitter handle style used in all views
+- contextual-help text presentation uses consistent paragraph/list spacing and line height in both Raw and Blocks panes for improved readability
 - contextual help resolution is driven by `therion_command_catalog.json` only
 - bottom status row for encoding notes and conversion action
 - explicit `Convert to UTF-8` action shown when a file is opened with a non-UTF-8 encoding
@@ -302,6 +304,8 @@ Map tab uses explicit workspace modes:
 - `Visual`: graphical map editor + right-side `Inspector` tabs (`Objects`, `Backgrounds`)
 - `Raw`: source text editor + right-side contextual help inspector
 - the full-width document toolbar row is shown under tabs for all document types
+- the top command toolbar row is framed with subtle separators above and below for clearer visual separation from tabs and editor/map content
+- main document tabs keep native platform styling; the toolbar top separator is drawn with a gap under the active tab so the active tab visually connects to the toolbar without tab-shape overrides
 - from left, the toolbar defaults to `Save`, divider, `Undo`/`Redo`, divider
 - `Save`, `Undo`, and `Redo` are icon-only buttons (with tooltips) in both main and detached map toolbars
 - when a `.th2` map tab is active, the next left-side toolbar groups are:
@@ -324,8 +328,14 @@ Inspector panel (`Visual` mode):
 - TH2 objects grouped by scrap (source-line-linked tree)
 - selection details/editing controls (formerly standalone `Object Details` / `Selection` panel)
 - `Backgrounds` tab hosts background-layer controls that were previously in the left sidebar `Map` pane
+- Visual-mode Inspector uses compact outer margins; the `Objects` tree starts directly under its tab, and background `Position` / `Adjustments` controls use padded inner groups
+- in the `Backgrounds` tab, layer add uses a compact `+` button in the `Layers` header; per-layer visibility and removal use right-aligned row icons, while reorder actions remain below the layer list
 
 - in `Objects`:
+- each source-linked tree row includes compact visibility and delete icon actions
+- clicking an already selected object row again clears the object selection
+- the visibility icon (`eye` / `eye-off`) hides or shows the corresponding map object in the current editor view without changing the source file
+- the delete icon (`trash`) asks for confirmation and removes the corresponding source command span; block objects such as `line`, `area`, and `scrap` remove their full matching `end...` block, and the removal is available through document undo/redo
 - shows selected object line/kind summary
 - supports coordinate edits for selected point/vertex geometry items
 - for point symbols and selected line anchor vertices, orientation controls appear only when catalog metadata marks `-orientation` as supported for the current command type/subtype:
@@ -427,11 +437,13 @@ In `Visual` mode `Inspector -> Backgrounds`, the `Background Images` controls pr
 
 - layer list with selection
 - add (`+`) button (multi-file picker)
-- `Remove`, `Hide/Show`, `Up`, `Down`
+- per-layer visibility icon (`eye` / `eye-off`) in the list row
+- per-layer delete icon (`trash`) in the list row
+- `Up`, `Down`
 - position `X`, `Y` fields
-- nudge arrows (`←`, `→`, `↑`, `↓`) with step 10 units
 - opacity slider with reset
 - gamma slider with reset
+- square metric grid controls (`Show grid`, `Spacing (m)`) for the visual map canvas; when the TH2 scrap has `-scale`, the spacing is converted from meters to TH2 source units so it can be used as a real-world scale reference
 
 Persistence:
 

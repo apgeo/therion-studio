@@ -287,7 +287,10 @@ The rules below define the expected day-to-day interaction model. If a later req
 - On first display, scrap nodes shall default to expanded state.
 - If a map object is selected elsewhere in the application, the corresponding scrap shall expand automatically so the object remains visible in the list.
 - Clicking a map object row shall select that object, update the map selection, and reveal the corresponding source location in the text editor when the source line is known.
+- Clicking an already selected map object row again shall clear the current map/object selection.
 - Clicking the visibility icon on a map object row shall toggle that object's visibility without changing the current selection.
+- Each source-linked map object row shall expose compact visibility and delete icon actions.
+- Delete actions from the object tree shall ask for confirmation, shall remove the corresponding source command span through the same safe source-edit path used by structured block deletion, and shall participate in document undo/redo.
 - Dragging the handle on a map object row shall start a move or reorder operation.
 - Dropping onto another object shall insert the dragged object before or after the target depending on the drop placement.
 - Dropping onto a scrap target shall move the object into that scrap when the object type supports it.
@@ -310,6 +313,8 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Pen-plus-touch workflows shall not accidentally trigger zoom when the user performs a pan gesture.
 - Background image position, opacity, gamma, and visibility shall be editable per session.
 - Background layers shall support insertion, selection, visibility toggles, opacity adjustment, gamma adjustment, and persisted positioning.
+- The `Backgrounds` inspector layer list shall expose per-row visibility and delete icon actions aligned with the object-list action pattern.
+- The `Backgrounds` inspector shall expose visual map-grid controls for showing/hiding a square metric grid and setting its spacing in meters; when a scrap `-scale` is available, the spacing shall be converted from meters to TH2 source coordinates through that scale.
 - Background sketch or image layers shall be restorable when reopening the document.
 - `.xvi` vector background references shall render as background layers when present.
 - The map editor shall support an explicit touch-friendly controls mode for pen-first workflows rather than relying only on device heuristics.
@@ -822,12 +827,15 @@ The criteria below are intended for implementation verification and QA.
 - Scrap nodes start expanded on first display.
 - Selecting an object in the map editor updates the selected object state in the rest of the application.
 - Clicking a map object row reveals the corresponding source line when it exists.
+- Clicking an already selected object row again clears the current object selection.
 - Visibility toggles affect only the selected object visibility state and do not change selection.
+- Object-tree delete icon actions remove the corresponding source-backed object span after confirmation and can be reverted through undo/redo.
 - Dragging and dropping map objects reorders or moves them according to the drop target.
 - Undo and redo work for map mutations.
 - The map command surface exposes drawing, fitting, zoom, undo/redo, and draft-completion actions in the top toolbar (main and detached map windows).
 - Freehand line drawing and smart-trace-assisted line creation are supported.
 - Background layers support persisted position, visibility, gamma, opacity, and `.xvi` rendering where applicable.
+- Background grid controls can toggle the grid and set a metric spacing; rendered grid cells remain square and use scrap `-scale` metadata to match real-world meters where available.
 - A touch-friendly controls mode is available for pen-first workflows.
 - Zoom, pan, and background-image adjustments persist for the session.
 

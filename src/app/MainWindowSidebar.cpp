@@ -869,10 +869,24 @@ void MainWindow::buildStructureSidebar()
     sidebarContentContainer_->setAttribute(Qt::WA_StyledBackground, true);
     sidebarContentContainer_->setStyleSheet(QStringLiteral(
         "QWidget#mainSidebarSplitterPane {"
+        " background-color: palette(base);"
+        " color: palette(windowText);"
         " border-left: none;"
         " border-right: 1px solid palette(mid);"
         " border-top: none;"
         " border-bottom: none;"
+        "}"
+        "QWidget#mainSidebarSplitterPane QTreeView {"
+        " background-color: palette(base);"
+        " alternate-background-color: palette(window);"
+        " border: 1px solid palette(mid);"
+        "}"
+        "QWidget#mainSidebarSplitterPane QHeaderView::section {"
+        " background-color: palette(window);"
+        " border: none;"
+        " border-bottom: 1px solid palette(mid);"
+        " padding: 4px 8px;"
+        " font-weight: 600;"
         "}"));
     auto *sidebarContentLayout = new QVBoxLayout(sidebarContentContainer_);
     sidebarContentLayout->setContentsMargins(0, 0, 0, 0);

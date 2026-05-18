@@ -10,6 +10,7 @@
 #include <QRectF>
 #include <QDateTime>
 #include <QElapsedTimer>
+#include <QSet>
 #include <QVector>
 #include <QPointer>
 #include <optional>
@@ -133,6 +134,8 @@ public:
     void resetSelectedBackgroundLayerGamma();
     void setSelectedBackgroundLayerPosition(const QPointF &position);
     void nudgeSelectedBackgroundLayer(const QPointF &delta);
+    void setMapGridVisible(bool visible);
+    void setMapGridSpacingMeters(qreal spacingMeters);
 
 public slots:
     void setWorkspaceMode(WorkspaceMode mode);
@@ -277,7 +280,14 @@ private:
     void rebuildInspectorObjectsTree();
     QModelIndex findInspectorObjectIndexForLine(int lineNumber) const;
     void syncInspectorObjectSelectionToLine(int lineNumber);
+    void configureInspectorObjectTreeColumns();
+    void clearInspectorObjectSelection();
     void handleInspectorObjectSelectionChanged(const QModelIndex &current);
+    void handleInspectorObjectClicked(const QModelIndex &index);
+    void applyInspectorObjectVisibility();
+    void configureInspectorBackgroundLayerTreeColumns();
+    void handleInspectorBackgroundLayerSelectionChanged(const QModelIndex &current);
+    void handleInspectorBackgroundLayerClicked(const QModelIndex &index);
     void refreshInspectorBackgroundPanel();
     void refreshObjectDetailsPanel();
     void applyObjectCoordinateEdits();
@@ -299,24 +309,23 @@ private:
     QTabWidget *mapInspectorTabs_ = nullptr;
     QTreeView *mapObjectsTree_ = nullptr;
     QStandardItemModel *mapObjectsModel_ = nullptr;
-    QListWidget *mapBackgroundLayersList_ = nullptr;
+    QTreeView *mapBackgroundLayersTree_ = nullptr;
+    QStandardItemModel *mapBackgroundLayersModel_ = nullptr;
     QToolButton *mapBackgroundAddButton_ = nullptr;
-    QPushButton *mapBackgroundRemoveButton_ = nullptr;
     QPushButton *mapBackgroundMoveUpButton_ = nullptr;
     QPushButton *mapBackgroundMoveDownButton_ = nullptr;
-    QPushButton *mapBackgroundVisibilityButton_ = nullptr;
     QDoubleSpinBox *mapBackgroundPosXSpin_ = nullptr;
     QDoubleSpinBox *mapBackgroundPosYSpin_ = nullptr;
-    QPushButton *mapBackgroundNudgeLeftButton_ = nullptr;
-    QPushButton *mapBackgroundNudgeRightButton_ = nullptr;
-    QPushButton *mapBackgroundNudgeUpButton_ = nullptr;
-    QPushButton *mapBackgroundNudgeDownButton_ = nullptr;
     QSlider *mapBackgroundOpacitySlider_ = nullptr;
     QSlider *mapBackgroundGammaSlider_ = nullptr;
     QPushButton *mapBackgroundOpacityResetButton_ = nullptr;
     QPushButton *mapBackgroundGammaResetButton_ = nullptr;
+    QCheckBox *mapGridVisibleCheck_ = nullptr;
+    QDoubleSpinBox *mapGridSpacingSpin_ = nullptr;
     bool updatingMapInspectorBackgroundUi_ = false;
     bool updatingMapInspectorObjectSelection_ = false;
+    QSet<int> hiddenInspectorObjectLines_;
+    int lastInspectorClickedObjectLineNumber_ = 0;
     QLabel *objectDetailsSelectionLabel_ = nullptr;
     QLabel *objectDetailsLineLabel_ = nullptr;
     QLabel *objectDetailsKindLabel_ = nullptr;
@@ -363,6 +372,8 @@ private:
     QPointF touchPanLastPosition_;
     QDateTime lastTabletInteractionUtc_;
     bool nativeZoomGestureActive_ = false;
+    bool mapGridVisible_ = true;
+    qreal mapGridSpacingMeters_ = 10.0;
     QDateTime lastNativeZoomGestureUtc_;
     bool touchFriendlyControlsEnabled_ = false;
     int selectedBackgroundLayerIndex_ = -1;

@@ -17,6 +17,9 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
+#include <QHeaderView>
+#include <QIcon>
+#include <QItemSelectionModel>
 #include <QKeyEvent>
 #include <QLineF>
 #include <QListWidget>
@@ -63,6 +66,15 @@ constexpr int kMapItemRole = Qt::UserRole + 120;
 constexpr int kMapItemGeometryValue = 1;
 constexpr int kInspectorSourceLineRole = Qt::UserRole + 700;
 constexpr int kInspectorSourceFileRole = Qt::UserRole + 701;
+constexpr int kInspectorObjectNameColumn = 0;
+constexpr int kInspectorObjectVisibilityColumn = 1;
+constexpr int kInspectorObjectDeleteColumn = 2;
+constexpr int kInspectorObjectColumnCount = 3;
+constexpr int kInspectorBackgroundNameColumn = 0;
+constexpr int kInspectorBackgroundVisibilityColumn = 1;
+constexpr int kInspectorBackgroundDeleteColumn = 2;
+constexpr int kInspectorBackgroundColumnCount = 3;
+constexpr int kInspectorBackgroundLayerIndexRole = Qt::UserRole + 730;
 
 QString inspectorObjectKindLabel(const QString &category)
 {
@@ -90,6 +102,33 @@ QString inspectorMapObjectItemText(const ProjectStructureEntry &entry)
         return entry.name;
     }
     return QStringLiteral("%1: %2").arg(inspectorObjectKindLabel(entry.category), entry.name);
+}
+
+QIcon inspectorActionIcon(const QString &iconName)
+{
+    return QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
+}
+
+qreal mapSourceUnitsPerMeterFromParsedLines(const QVector<TherionParsedLine> &parsedLines)
+{
+    QVector<qreal> candidates;
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        if (parsedLine.directive != QStringLiteral("scrap")) {
+            continue;
+        }
+
+        const std::optional<qreal> sourceUnitsPerMeter = sourceUnitsPerMeterFromScrapScale(parsedLine.tokens);
+        if (sourceUnitsPerMeter.has_value()) {
+            candidates.append(sourceUnitsPerMeter.value());
+        }
+    }
+
+    if (candidates.isEmpty()) {
+        return 1.0;
+    }
+
+    std::sort(candidates.begin(), candidates.end());
+    return candidates.at(candidates.size() / 2);
 }
 
 bool sourcePointsDifferForCommands(const QPointF &a, const QPointF &b)
@@ -2150,6 +2189,9 @@ void MapEditorTab::refreshMapScenePreservingUndoStack()
                             entries,
                             geometryFeatures,
                             sourceBoundsOverride,
+                            MapGridOptions{mapGridVisible_,
+                                           mapGridSpacingMeters_,
+                                           mapSourceUnitsPerMeterFromParsedLines(parsedLines)},
                             &mapItemsByLine_,
                             [this](int lineNumber, const QPointF &oldPosition, const QPointF &newPosition) {
                                 recordCardMove(lineNumber, oldPosition, newPosition);
@@ -2168,6 +2210,7 @@ void MapEditorTab::refreshMapScenePreservingUndoStack()
     reprojectMetadataBackgroundLayersForCurrentDocument();
     restoreDraftGeometryItems();
     selectMapLine(textEditor_->currentLineNumber());
+    applyInspectorObjectVisibility();
     updateGeometrySelectionPresentation();
     if (autoFitEnabled_) {
         fitMapToView(fitBackgroundRequested_);
@@ -3393,13 +3436,15 @@ void MapEditorTab::rebuildInspectorObjectsTree()
     }
 
     mapObjectsModel_->clear();
-    mapObjectsModel_->setHorizontalHeaderLabels({tr("Objects")});
+    mapObjectsModel_->setColumnCount(kInspectorObjectColumnCount);
+    mapObjectsModel_->setHorizontalHeaderLabels({tr("Objects"), QString(), QString()});
+    configureInspectorObjectTreeColumns();
 
     const QString th2Path = filePath();
     if (textEditor_ == nullptr || !th2Path.endsWith(QStringLiteral(".th2"), Qt::CaseInsensitive)) {
         auto *placeholderItem = new QStandardItem(tr("Open a TH2 document to browse its objects by scrap"));
         placeholderItem->setEditable(false);
-        mapObjectsModel_->appendRow(placeholderItem);
+        mapObjectsModel_->appendRow({placeholderItem, new QStandardItem, new QStandardItem});
         return;
     }
 
@@ -3407,10 +3452,11 @@ void MapEditorTab::rebuildInspectorObjectsTree()
     if (entries.isEmpty()) {
         auto *placeholderItem = new QStandardItem(tr("No TH2 scraps, points, lines, or areas were found in the current document"));
         placeholderItem->setEditable(false);
-        mapObjectsModel_->appendRow(placeholderItem);
+        mapObjectsModel_->appendRow({placeholderItem, new QStandardItem, new QStandardItem});
         return;
     }
 
+    QSet<int> currentObjectLines;
     QVector<QStandardItem *> parentStack;
     for (const ProjectStructureEntry &entry : entries) {
         while (parentStack.size() > entry.depth) {
@@ -3421,15 +3467,70 @@ void MapEditorTab::rebuildInspectorObjectsTree()
         entryItem->setEditable(false);
         entryItem->setData(entry.sourceFile, kInspectorSourceFileRole);
         entryItem->setData(entry.lineNumber, kInspectorSourceLineRole);
+        if (entry.lineNumber > 0) {
+            currentObjectLines.insert(entry.lineNumber);
+        }
+
+        auto *visibilityItem = new QStandardItem;
+        visibilityItem->setEditable(false);
+        visibilityItem->setTextAlignment(Qt::AlignCenter);
+        visibilityItem->setData(entry.sourceFile, kInspectorSourceFileRole);
+        visibilityItem->setData(entry.lineNumber, kInspectorSourceLineRole);
+        if (entry.lineNumber > 0) {
+            const bool visible = !hiddenInspectorObjectLines_.contains(entry.lineNumber);
+            visibilityItem->setIcon(inspectorActionIcon(visible ? QStringLiteral("eye") : QStringLiteral("eye-off")));
+            visibilityItem->setToolTip(visible ? tr("Hide object") : tr("Show object"));
+        }
+
+        auto *deleteItem = new QStandardItem;
+        deleteItem->setEditable(false);
+        deleteItem->setTextAlignment(Qt::AlignCenter);
+        deleteItem->setData(entry.sourceFile, kInspectorSourceFileRole);
+        deleteItem->setData(entry.lineNumber, kInspectorSourceLineRole);
+        if (entry.lineNumber > 0) {
+            deleteItem->setIcon(inspectorActionIcon(QStringLiteral("trash-2")));
+            deleteItem->setToolTip(tr("Delete object from source"));
+        }
+
         QStandardItem *parentItem = parentStack.isEmpty() ? mapObjectsModel_->invisibleRootItem() : parentStack.last();
-        parentItem->appendRow(entryItem);
+        parentItem->appendRow({entryItem, visibilityItem, deleteItem});
         parentStack.append(entryItem);
+    }
+    for (auto it = hiddenInspectorObjectLines_.begin(); it != hiddenInspectorObjectLines_.end();) {
+        if (!currentObjectLines.contains(*it)) {
+            it = hiddenInspectorObjectLines_.erase(it);
+        } else {
+            ++it;
+        }
     }
 
     if (mapObjectsTree_ != nullptr) {
         mapObjectsTree_->expandAll();
     }
+    applyInspectorObjectVisibility();
     syncInspectorObjectSelectionToLine(currentLineNumber());
+}
+
+void MapEditorTab::configureInspectorObjectTreeColumns()
+{
+    if (mapObjectsTree_ == nullptr) {
+        return;
+    }
+
+    if (mapObjectsModel_ != nullptr && mapObjectsModel_->columnCount() < kInspectorObjectColumnCount) {
+        mapObjectsModel_->setColumnCount(kInspectorObjectColumnCount);
+    }
+    mapObjectsTree_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    if (QHeaderView *header = mapObjectsTree_->header(); header != nullptr) {
+        header->setStretchLastSection(false);
+        header->setSectionsMovable(false);
+        header->setMinimumSectionSize(22);
+        header->setSectionResizeMode(kInspectorObjectNameColumn, QHeaderView::Stretch);
+        header->setSectionResizeMode(kInspectorObjectVisibilityColumn, QHeaderView::Fixed);
+        header->setSectionResizeMode(kInspectorObjectDeleteColumn, QHeaderView::Fixed);
+        header->resizeSection(kInspectorObjectVisibilityColumn, 26);
+        header->resizeSection(kInspectorObjectDeleteColumn, 26);
+    }
 }
 
 QModelIndex MapEditorTab::findInspectorObjectIndexForLine(int lineNumber) const
@@ -3472,10 +3573,34 @@ void MapEditorTab::syncInspectorObjectSelectionToLine(int lineNumber)
         return;
     }
 
+    lastInspectorClickedObjectLineNumber_ = 0;
     const QScopedValueRollback<bool> guard(updatingMapInspectorObjectSelection_, true);
     QSignalBlocker blocker(mapObjectsTree_->selectionModel());
     mapObjectsTree_->setCurrentIndex(targetIndex);
     mapObjectsTree_->scrollTo(targetIndex, QAbstractItemView::PositionAtCenter);
+}
+
+void MapEditorTab::clearInspectorObjectSelection()
+{
+    lastInspectorClickedObjectLineNumber_ = 0;
+    if (mapObjectsTree_ != nullptr && mapObjectsTree_->selectionModel() != nullptr) {
+        const QScopedValueRollback<bool> guard(updatingMapInspectorObjectSelection_, true);
+        QSignalBlocker blocker(mapObjectsTree_->selectionModel());
+        mapObjectsTree_->selectionModel()->clearSelection();
+        mapObjectsTree_->setCurrentIndex(QModelIndex());
+    }
+
+    if (mapScene_ != nullptr) {
+        mapScene_->clearSelection();
+        return;
+    }
+
+    selectedObjectLineNumber_ = 0;
+    selectedObjectVertexIndex_ = -1;
+    selectedObjectKind_.clear();
+    selectedObjectCoordinate_.reset();
+    refreshObjectDetailsPanel();
+    updateCommandSurfaceState();
 }
 
 void MapEditorTab::handleInspectorObjectSelectionChanged(const QModelIndex &current)
@@ -3484,47 +3609,221 @@ void MapEditorTab::handleInspectorObjectSelectionChanged(const QModelIndex &curr
         return;
     }
 
-    const int lineNumber = current.data(kInspectorSourceLineRole).toInt();
+    const QModelIndex objectIndex = current.sibling(current.row(), kInspectorObjectNameColumn);
+    const int lineNumber = objectIndex.data(kInspectorSourceLineRole).toInt();
     if (lineNumber > 0) {
         textEditor_->goToLine(lineNumber);
     }
 }
 
+void MapEditorTab::handleInspectorObjectClicked(const QModelIndex &index)
+{
+    if (!index.isValid() || mapObjectsModel_ == nullptr || textEditor_ == nullptr) {
+        return;
+    }
+
+    if (index.column() != kInspectorObjectNameColumn
+        && index.column() != kInspectorObjectVisibilityColumn
+        && index.column() != kInspectorObjectDeleteColumn) {
+        return;
+    }
+
+    const QModelIndex objectIndex = index.sibling(index.row(), kInspectorObjectNameColumn);
+    const int lineNumber = objectIndex.data(kInspectorSourceLineRole).toInt();
+    if (lineNumber <= 0) {
+        return;
+    }
+
+    if (index.column() == kInspectorObjectNameColumn) {
+        if (lastInspectorClickedObjectLineNumber_ == lineNumber) {
+            clearInspectorObjectSelection();
+            return;
+        }
+        lastInspectorClickedObjectLineNumber_ = lineNumber;
+        return;
+    }
+
+    if (index.column() == kInspectorObjectDeleteColumn) {
+        if (textEditor_->deleteCommandAtLine(lineNumber)) {
+            hiddenInspectorObjectLines_.remove(lineNumber);
+            lastInspectorClickedObjectLineNumber_ = 0;
+        }
+        return;
+    }
+
+    lastInspectorClickedObjectLineNumber_ = 0;
+    QVector<int> subtreeLineNumbers;
+    std::function<void(const QModelIndex &)> collectLineNumbers = [&](const QModelIndex &parentIndex) {
+        const int sourceLine = parentIndex.data(kInspectorSourceLineRole).toInt();
+        if (sourceLine > 0) {
+            subtreeLineNumbers.append(sourceLine);
+        }
+
+        const int rowCount = mapObjectsModel_->rowCount(parentIndex);
+        for (int row = 0; row < rowCount; ++row) {
+            collectLineNumbers(mapObjectsModel_->index(row, kInspectorObjectNameColumn, parentIndex));
+        }
+    };
+    collectLineNumbers(objectIndex);
+
+    if (subtreeLineNumbers.isEmpty()) {
+        return;
+    }
+
+    const bool shouldShow = hiddenInspectorObjectLines_.contains(lineNumber);
+    for (int sourceLine : subtreeLineNumbers) {
+        if (shouldShow) {
+            hiddenInspectorObjectLines_.remove(sourceLine);
+        } else {
+            hiddenInspectorObjectLines_.insert(sourceLine);
+        }
+    }
+
+    rebuildInspectorObjectsTree();
+    applyInspectorObjectVisibility();
+}
+
+void MapEditorTab::applyInspectorObjectVisibility()
+{
+    if (mapScene_ == nullptr) {
+        return;
+    }
+
+    for (QGraphicsItem *item : mapScene_->items()) {
+        if (item == nullptr) {
+            continue;
+        }
+
+        bool ok = false;
+        const int lineNumber = item->data(kMapSceneLineNumberRole).toInt(&ok);
+        if (!ok || lineNumber <= 0) {
+            continue;
+        }
+        item->setVisible(!hiddenInspectorObjectLines_.contains(lineNumber));
+    }
+}
+
+void MapEditorTab::configureInspectorBackgroundLayerTreeColumns()
+{
+    if (mapBackgroundLayersTree_ == nullptr) {
+        return;
+    }
+
+    if (mapBackgroundLayersModel_ != nullptr && mapBackgroundLayersModel_->columnCount() < kInspectorBackgroundColumnCount) {
+        mapBackgroundLayersModel_->setColumnCount(kInspectorBackgroundColumnCount);
+    }
+    mapBackgroundLayersTree_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    if (QHeaderView *header = mapBackgroundLayersTree_->header(); header != nullptr) {
+        header->setStretchLastSection(false);
+        header->setSectionsMovable(false);
+        header->setMinimumSectionSize(22);
+        header->setSectionResizeMode(kInspectorBackgroundNameColumn, QHeaderView::Stretch);
+        header->setSectionResizeMode(kInspectorBackgroundVisibilityColumn, QHeaderView::Fixed);
+        header->setSectionResizeMode(kInspectorBackgroundDeleteColumn, QHeaderView::Fixed);
+        header->resizeSection(kInspectorBackgroundVisibilityColumn, 26);
+        header->resizeSection(kInspectorBackgroundDeleteColumn, 26);
+    }
+}
+
+void MapEditorTab::handleInspectorBackgroundLayerSelectionChanged(const QModelIndex &current)
+{
+    if (updatingMapInspectorBackgroundUi_ || !current.isValid()) {
+        return;
+    }
+    if (current.column() == kInspectorBackgroundVisibilityColumn
+        || current.column() == kInspectorBackgroundDeleteColumn) {
+        return;
+    }
+
+    const QModelIndex layerIndex = current.sibling(current.row(), kInspectorBackgroundNameColumn);
+    const int backgroundLayerIndex = layerIndex.data(kInspectorBackgroundLayerIndexRole).toInt();
+    setSelectedBackgroundLayerIndex(backgroundLayerIndex);
+}
+
+void MapEditorTab::handleInspectorBackgroundLayerClicked(const QModelIndex &index)
+{
+    if (!index.isValid() || mapBackgroundLayersModel_ == nullptr) {
+        return;
+    }
+    if (index.column() != kInspectorBackgroundVisibilityColumn && index.column() != kInspectorBackgroundDeleteColumn) {
+        return;
+    }
+
+    const QModelIndex layerIndex = index.sibling(index.row(), kInspectorBackgroundNameColumn);
+    const int backgroundLayerIndex = layerIndex.data(kInspectorBackgroundLayerIndexRole).toInt();
+    if (backgroundLayerIndex < 0 || backgroundLayerIndex >= backgroundLayerCount()) {
+        return;
+    }
+
+    setSelectedBackgroundLayerIndex(backgroundLayerIndex);
+    if (index.column() == kInspectorBackgroundDeleteColumn) {
+        removeSelectedBackgroundLayer();
+        return;
+    }
+    toggleSelectedBackgroundLayerVisibility();
+}
+
 void MapEditorTab::refreshInspectorBackgroundPanel()
 {
-    if (mapBackgroundLayersList_ == nullptr) {
+    if (mapBackgroundLayersModel_ == nullptr) {
         return;
     }
 
     const QScopedValueRollback<bool> guard(updatingMapInspectorBackgroundUi_, true);
-    mapBackgroundLayersList_->clear();
+    mapBackgroundLayersModel_->clear();
+    mapBackgroundLayersModel_->setColumnCount(kInspectorBackgroundColumnCount);
+    mapBackgroundLayersModel_->setHorizontalHeaderLabels({tr("Layers"), QString(), QString()});
+    configureInspectorBackgroundLayerTreeColumns();
 
     const int layerCount = backgroundLayerCount();
     for (int index = 0; index < layerCount; ++index) {
-        const QString visibility = isBackgroundLayerVisible(index) ? tr("shown") : tr("hidden");
-        mapBackgroundLayersList_->addItem(tr("%1 (%2)").arg(backgroundLayerLabel(index), visibility));
+        auto *layerItem = new QStandardItem(backgroundLayerLabel(index));
+        layerItem->setEditable(false);
+        layerItem->setData(index, kInspectorBackgroundLayerIndexRole);
+
+        auto *visibilityItem = new QStandardItem;
+        visibilityItem->setEditable(false);
+        visibilityItem->setTextAlignment(Qt::AlignCenter);
+        visibilityItem->setData(index, kInspectorBackgroundLayerIndexRole);
+        const bool visible = isBackgroundLayerVisible(index);
+        visibilityItem->setIcon(inspectorActionIcon(visible ? QStringLiteral("eye") : QStringLiteral("eye-off")));
+        visibilityItem->setToolTip(visible ? tr("Hide background layer") : tr("Show background layer"));
+
+        auto *deleteItem = new QStandardItem;
+        deleteItem->setEditable(false);
+        deleteItem->setTextAlignment(Qt::AlignCenter);
+        deleteItem->setData(index, kInspectorBackgroundLayerIndexRole);
+        deleteItem->setIcon(inspectorActionIcon(QStringLiteral("trash-2")));
+        deleteItem->setToolTip(tr("Remove background layer"));
+
+        mapBackgroundLayersModel_->appendRow({layerItem, visibilityItem, deleteItem});
     }
-    mapBackgroundLayersList_->setCurrentRow(selectedBackgroundLayerIndex());
+    if (mapBackgroundLayersTree_ != nullptr && mapBackgroundLayersTree_->selectionModel() != nullptr) {
+        const int selectedLayer = selectedBackgroundLayerIndex();
+        const QModelIndex selectedIndex = selectedLayer >= 0
+            ? mapBackgroundLayersModel_->index(selectedLayer, kInspectorBackgroundNameColumn)
+            : QModelIndex();
+        mapBackgroundLayersTree_->setCurrentIndex(selectedIndex);
+        if (selectedIndex.isValid()) {
+            mapBackgroundLayersTree_->selectionModel()->select(selectedIndex,
+                                                               QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        } else {
+            mapBackgroundLayersTree_->selectionModel()->clearSelection();
+        }
+    }
 
     const int selectedIndex = selectedBackgroundLayerIndex();
     const bool hasLayer = selectedIndex >= 0 && selectedIndex < layerCount;
-    mapBackgroundRemoveButton_->setEnabled(hasLayer);
     mapBackgroundMoveUpButton_->setEnabled(hasLayer && selectedIndex > 0);
     mapBackgroundMoveDownButton_->setEnabled(hasLayer && selectedIndex >= 0 && selectedIndex < layerCount - 1);
-    mapBackgroundVisibilityButton_->setEnabled(hasLayer);
     mapBackgroundPosXSpin_->setEnabled(hasLayer);
     mapBackgroundPosYSpin_->setEnabled(hasLayer);
-    mapBackgroundNudgeLeftButton_->setEnabled(hasLayer);
-    mapBackgroundNudgeRightButton_->setEnabled(hasLayer);
-    mapBackgroundNudgeUpButton_->setEnabled(hasLayer);
-    mapBackgroundNudgeDownButton_->setEnabled(hasLayer);
     mapBackgroundOpacitySlider_->setEnabled(hasLayer);
     mapBackgroundGammaSlider_->setEnabled(hasLayer);
     mapBackgroundOpacityResetButton_->setEnabled(hasLayer);
     mapBackgroundGammaResetButton_->setEnabled(hasLayer);
 
     if (!hasLayer) {
-        mapBackgroundVisibilityButton_->setText(tr("Hide"));
         mapBackgroundPosXSpin_->setValue(0.0);
         mapBackgroundPosYSpin_->setValue(0.0);
         mapBackgroundOpacitySlider_->setValue(58);
@@ -3532,7 +3831,6 @@ void MapEditorTab::refreshInspectorBackgroundPanel()
         return;
     }
 
-    mapBackgroundVisibilityButton_->setText(isBackgroundLayerVisible(selectedIndex) ? tr("Hide") : tr("Show"));
     const QPointF position = backgroundLayerPosition(selectedIndex);
     mapBackgroundPosXSpin_->setValue(position.x());
     mapBackgroundPosYSpin_->setValue(position.y());

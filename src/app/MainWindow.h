@@ -29,6 +29,7 @@ class QHBoxLayout;
 class QVBoxLayout;
 class QModelIndex;
 class QResizeEvent;
+class WorkspaceTopSeparator;
 
 namespace TherionStudio
 {
@@ -148,6 +149,7 @@ private:
     void initializeWorkspaceModeSwitcher();
     void refreshWorkspaceModeSwitcher();
     void refreshWorkspaceModeSwitcherGeometry();
+    void refreshWorkspaceModeSwitcherSeparator();
     void triggerUndoForActiveDocument();
     void triggerRedoForActiveDocument();
     void triggerZoomInForActiveDocument();
@@ -219,6 +221,7 @@ private:
     QLabel *statusMapModeLabel_ = nullptr;
     QLabel *statusDocumentEncodingLabel_ = nullptr;
     QWidget *workspaceModeSwitcher_ = nullptr;
+    WorkspaceTopSeparator *workspaceModeSwitcherTopSeparator_ = nullptr;
     QWidget *workspaceMapModeSwitcher_ = nullptr;
     QWidget *workspaceTextModeSwitcher_ = nullptr;
     QWidget *workspaceZoomGroup_ = nullptr;

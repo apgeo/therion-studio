@@ -117,6 +117,13 @@ struct MapLineSecondaryMove
     QPointF newPoint;
 };
 
+struct MapGridOptions
+{
+    bool visible = true;
+    qreal spacingMeters = 10.0;
+    qreal sourceUnitsPerMeter = 1.0;
+};
+
 class MapCardItem final : public QGraphicsRectItem
 {
 public:
@@ -198,6 +205,7 @@ QColor mapEntryAccentForCategory(const QString &category);
 QVector<MapSceneEntry> collectMapSceneEntries(const QVector<TherionParsedLine> &parsedLines);
 
 QRectF geometryBoundsForFeatures(const QVector<MapGeometryFeature> &features);
+std::optional<qreal> sourceUnitsPerMeterFromScrapScale(const QStringList &tokens);
 QPointF mapGeometryPointToPreview(const QPointF &point, const QRectF &sourceBounds, const QRectF &targetBounds);
 QPointF mapGeometryPreviewToSource(const QPointF &point, const QRectF &sourceBounds, const QRectF &targetBounds);
 QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedLine> &parsedLines);
@@ -228,6 +236,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const QVector<MapSceneEntry> &entries,
                              const QVector<MapGeometryFeature> &geometryFeatures,
                              const std::optional<QRectF> &sourceBoundsOverride,
+                             const MapGridOptions &gridOptions,
                              QHash<int, QGraphicsItem *> *mapItemsByLine,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,
                              const std::function<void(int, bool, bool)> &recordCardVisibility,

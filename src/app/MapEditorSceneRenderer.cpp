@@ -12,6 +12,7 @@
 
 #include "../core/TherionDocumentParser.h"
 
+#include <cmath>
 #include <memory>
 
 namespace TherionStudio {
@@ -660,6 +661,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const QVector<MapSceneEntry> &entries,
                              const QVector<MapGeometryFeature> &geometryFeatures,
                              const std::optional<QRectF> &sourceBoundsOverride,
+                             const MapGridOptions &gridOptions,
                              QHash<int, QGraphicsItem *> *mapItemsByLine,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,
                              const std::function<void(int, bool, bool)> &recordCardVisibility,
@@ -701,13 +703,29 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
         }
     };
 
-    for (int index = 0; index < 6; ++index) {
-        const qreal y = previewBounds.top() + (index * previewBounds.height() / 5.0);
-        makeMouseTransparent(scene->addLine(previewBounds.left(), y, previewBounds.right(), y, QPen(canvasTheme.gridLine, gridLineWidth, Qt::SolidLine)));
-    }
-    for (int index = 0; index < 8; ++index) {
-        const qreal x = previewBounds.left() + (index * previewBounds.width() / 7.0);
-        makeMouseTransparent(scene->addLine(x, previewBounds.top(), x, previewBounds.bottom(), QPen(canvasTheme.gridLine, gridLineWidth, Qt::SolidLine)));
+    if (gridOptions.visible && sourceBounds.isValid()) {
+        const QRectF fittedPreviewBounds = sceneCoordsPreviewBounds(sourceBounds, previewBounds);
+        const qreal sourceUnitsPerMeter = qBound(1e-6, gridOptions.sourceUnitsPerMeter, 1e9);
+        const qreal spacing = qBound(0.1, gridOptions.spacingMeters * sourceUnitsPerMeter, 1e9);
+        constexpr int maxGridLinesPerAxis = 1000;
+
+        const qreal firstX = std::floor(sourceBounds.left() / spacing) * spacing;
+        const qreal lastX = std::ceil(sourceBounds.right() / spacing) * spacing;
+        int verticalLineCount = 0;
+        for (qreal sourceX = firstX; sourceX <= lastX + (spacing * 0.5) && verticalLineCount < maxGridLinesPerAxis; sourceX += spacing, ++verticalLineCount) {
+            const QPointF topPoint = mapGeometryPointToPreview(QPointF(sourceX, sourceBounds.top()), sourceBounds, previewBounds);
+            const QPointF bottomPoint = mapGeometryPointToPreview(QPointF(sourceX, sourceBounds.bottom()), sourceBounds, previewBounds);
+            makeMouseTransparent(scene->addLine(topPoint.x(), fittedPreviewBounds.top(), bottomPoint.x(), fittedPreviewBounds.bottom(), QPen(canvasTheme.gridLine, gridLineWidth, Qt::SolidLine)));
+        }
+
+        const qreal firstY = std::floor(sourceBounds.top() / spacing) * spacing;
+        const qreal lastY = std::ceil(sourceBounds.bottom() / spacing) * spacing;
+        int horizontalLineCount = 0;
+        for (qreal sourceY = firstY; sourceY <= lastY + (spacing * 0.5) && horizontalLineCount < maxGridLinesPerAxis; sourceY += spacing, ++horizontalLineCount) {
+            const QPointF leftPoint = mapGeometryPointToPreview(QPointF(sourceBounds.left(), sourceY), sourceBounds, previewBounds);
+            const QPointF rightPoint = mapGeometryPointToPreview(QPointF(sourceBounds.right(), sourceY), sourceBounds, previewBounds);
+            makeMouseTransparent(scene->addLine(fittedPreviewBounds.left(), leftPoint.y(), fittedPreviewBounds.right(), rightPoint.y(), QPen(canvasTheme.gridLine, gridLineWidth, Qt::SolidLine)));
+        }
     }
 
     if (geometryFeatures.isEmpty()) {

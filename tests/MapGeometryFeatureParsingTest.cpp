@@ -669,6 +669,35 @@ int runLinePreviewCommitParityTest()
 
     return 0;
 }
+
+int runScrapScaleSourceUnitsPerMeterTest()
+{
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(
+        QStringLiteral("scrap clopy01 -projection plan -scale [-128 -1152 851 -1152 0.0 0.0 24.8666 0.0 m]"),
+        1);
+    const std::optional<qreal> sourceUnitsPerMeter = sourceUnitsPerMeterFromScrapScale(parsedLine.tokens);
+    if (!expect(sourceUnitsPerMeter.has_value(), "Expected source-units-per-meter ratio to parse from scrap scale.")) {
+        return 1;
+    }
+    if (!expect(std::abs(sourceUnitsPerMeter.value() - 39.3698) < 0.01,
+                "Expected TH2 source units per meter to account for scrap -scale length.")) {
+        return 1;
+    }
+
+    const TherionParsedLine centimeterScaleLine = TherionDocumentParser::parseLine(
+        QStringLiteral("scrap cm -scale [0 0 100 0 0 0 1000 0 cm]"),
+        1);
+    const std::optional<qreal> centimeterSourceUnitsPerMeter = sourceUnitsPerMeterFromScrapScale(centimeterScaleLine.tokens);
+    if (!expect(centimeterSourceUnitsPerMeter.has_value(), "Expected centimeter scrap scale unit to parse.")) {
+        return 1;
+    }
+    if (!expect(std::abs(centimeterSourceUnitsPerMeter.value() - 10.0) < 0.001,
+                "Expected centimeter unit conversion to produce source units per meter.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -713,6 +742,9 @@ int main()
         return rc;
     }
     if (const int rc = runLinePreviewCommitParityTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runScrapScaleSourceUnitsPerMeterTest(); rc != 0) {
         return rc;
     }
 

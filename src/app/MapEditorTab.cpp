@@ -1552,7 +1552,51 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         return QWidget::eventFilter(watched, event);
     }
 
-    if (mapView_ == nullptr || event == nullptr) {
+    if (event == nullptr) {
+        return QWidget::eventFilter(watched, event);
+    }
+
+    if (mapObjectsTree_ != nullptr && watched == mapObjectsTree_->viewport()) {
+        if (event->type() == QEvent::MouseButtonRelease) {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (mouseEvent->button() == Qt::LeftButton) {
+                const QModelIndex index = mapObjectsTree_->indexAt(mouseEvent->pos());
+                if (index.isValid()
+                    && (index.column() == kInspectorObjectNameColumn
+                        || index.column() == kInspectorObjectVisibilityColumn
+                        || index.column() == kInspectorObjectDeleteColumn)) {
+                    event->accept();
+                    return true;
+                }
+            }
+        }
+
+        if (event->type() == QEvent::MouseButtonPress) {
+            inspectorObjectPressedNameIndex_ = QPersistentModelIndex();
+            inspectorObjectPressedWasSelected_ = false;
+
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (mouseEvent->button() == Qt::LeftButton && mapObjectsTree_->selectionModel() != nullptr) {
+                const QModelIndex index = mapObjectsTree_->indexAt(mouseEvent->pos());
+                if (index.isValid()
+                    && (index.column() == kInspectorObjectNameColumn
+                        || index.column() == kInspectorObjectVisibilityColumn
+                        || index.column() == kInspectorObjectDeleteColumn)) {
+                    if (index.column() == kInspectorObjectNameColumn) {
+                        const QModelIndex objectIndex = index.sibling(index.row(), kInspectorObjectNameColumn);
+                        inspectorObjectPressedNameIndex_ = QPersistentModelIndex(objectIndex);
+                        inspectorObjectPressedWasSelected_ = mapObjectsTree_->selectionModel()->isSelected(objectIndex);
+                    }
+                    handleInspectorObjectClicked(index);
+                    event->accept();
+                    return true;
+                }
+            }
+        }
+        return QWidget::eventFilter(watched, event);
+    }
+
+    if (mapView_ == nullptr) {
         return QWidget::eventFilter(watched, event);
     }
 
@@ -2455,6 +2499,12 @@ void MapEditorTab::syncMapSelectionFromTextCursor(int lineNumber, int columnNumb
     if (mapScene_ == nullptr || textEditor_ == nullptr || lineNumber <= 0) {
         return;
     }
+    if (suppressedInspectorAutoReselectLineNumbers_.contains(lineNumber)) {
+        return;
+    }
+    if (!suppressedInspectorAutoReselectLineNumbers_.isEmpty()) {
+        suppressedInspectorAutoReselectLineNumbers_.clear();
+    }
 
     const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_->text());
     if (const std::optional<QSet<int>> scrapLines = scrapObjectLinesForCursor(parsedLines, lineNumber);
@@ -2580,7 +2630,9 @@ void MapEditorTab::updateGeometrySelectionPresentation()
         }
 
         const int lineNumber = item->data(kMapSceneLineNumberRole).toInt();
-        bool visible = lineNumber > 0 && selectedLines.contains(lineNumber);
+        bool visible = lineNumber > 0
+            && !hiddenInspectorObjectLines_.contains(lineNumber)
+            && selectedLines.contains(lineNumber);
         if (visible) {
             const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
             if (subtype == kMapSceneSelectionSubtypeLineControl
@@ -3435,6 +3487,8 @@ void MapEditorTab::rebuildInspectorObjectsTree()
         return;
     }
 
+    inspectorObjectPressedNameIndex_ = QPersistentModelIndex();
+    inspectorObjectPressedWasSelected_ = false;
     mapObjectsModel_->clear();
     mapObjectsModel_->setColumnCount(kInspectorObjectColumnCount);
     mapObjectsModel_->setHorizontalHeaderLabels({tr("Objects"), QString(), QString()});
@@ -3564,25 +3618,57 @@ QModelIndex MapEditorTab::findInspectorObjectIndexForLine(int lineNumber) const
 
 void MapEditorTab::syncInspectorObjectSelectionToLine(int lineNumber)
 {
+    syncInspectorObjectSelectionToLine(lineNumber, true);
+}
+
+void MapEditorTab::syncInspectorObjectSelectionToLine(int lineNumber, bool scrollToSelection)
+{
     if (mapObjectsTree_ == nullptr || mapObjectsTree_->selectionModel() == nullptr || lineNumber <= 0) {
         return;
     }
+    if (suppressedInspectorAutoReselectLineNumbers_.contains(lineNumber)) {
+        return;
+    }
+    if (!suppressedInspectorAutoReselectLineNumbers_.isEmpty()) {
+        suppressedInspectorAutoReselectLineNumbers_.clear();
+    }
 
     const QModelIndex targetIndex = findInspectorObjectIndexForLine(lineNumber);
-    if (!targetIndex.isValid() || targetIndex == mapObjectsTree_->currentIndex()) {
+    if (!targetIndex.isValid()) {
         return;
     }
 
     lastInspectorClickedObjectLineNumber_ = 0;
     const QScopedValueRollback<bool> guard(updatingMapInspectorObjectSelection_, true);
     QSignalBlocker blocker(mapObjectsTree_->selectionModel());
-    mapObjectsTree_->setCurrentIndex(targetIndex);
-    mapObjectsTree_->scrollTo(targetIndex, QAbstractItemView::PositionAtCenter);
+    setInspectorObjectCurrentIndex(targetIndex);
+    if (scrollToSelection) {
+        mapObjectsTree_->scrollTo(targetIndex, QAbstractItemView::EnsureVisible);
+    }
 }
 
-void MapEditorTab::clearInspectorObjectSelection()
+void MapEditorTab::setInspectorObjectCurrentIndex(const QModelIndex &index)
 {
+    if (!index.isValid() || mapObjectsTree_ == nullptr || mapObjectsTree_->selectionModel() == nullptr) {
+        return;
+    }
+
+    QItemSelectionModel *selectionModel = mapObjectsTree_->selectionModel();
+    selectionModel->clear();
+    mapObjectsTree_->setCurrentIndex(QModelIndex());
+    selectionModel->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    selectionModel->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
+    if (QWidget *viewport = mapObjectsTree_->viewport(); viewport != nullptr) {
+        viewport->update();
+    }
+}
+
+void MapEditorTab::clearInspectorObjectSelection(const QSet<int> &suppressAutoReselectLineNumbers)
+{
+    inspectorObjectPressedNameIndex_ = QPersistentModelIndex();
+    inspectorObjectPressedWasSelected_ = false;
     lastInspectorClickedObjectLineNumber_ = 0;
+    suppressedInspectorAutoReselectLineNumbers_ = suppressAutoReselectLineNumbers;
     if (mapObjectsTree_ != nullptr && mapObjectsTree_->selectionModel() != nullptr) {
         const QScopedValueRollback<bool> guard(updatingMapInspectorObjectSelection_, true);
         QSignalBlocker blocker(mapObjectsTree_->selectionModel());
@@ -3635,14 +3721,42 @@ void MapEditorTab::handleInspectorObjectClicked(const QModelIndex &index)
     }
 
     if (index.column() == kInspectorObjectNameColumn) {
-        if (lastInspectorClickedObjectLineNumber_ == lineNumber) {
-            clearInspectorObjectSelection();
+        const bool repeatedClickOnSelectedRow = inspectorObjectPressedWasSelected_
+            && inspectorObjectPressedNameIndex_.isValid()
+            && inspectorObjectPressedNameIndex_ == objectIndex;
+        inspectorObjectPressedNameIndex_ = QPersistentModelIndex();
+        inspectorObjectPressedWasSelected_ = false;
+        if (repeatedClickOnSelectedRow) {
+            QSet<int> suppressedLines;
+            std::function<void(const QModelIndex &)> collectSuppressedLines = [&](const QModelIndex &parentIndex) {
+                const int sourceLine = parentIndex.data(kInspectorSourceLineRole).toInt();
+                if (sourceLine > 0) {
+                    suppressedLines.insert(sourceLine);
+                }
+
+                const int rowCount = mapObjectsModel_->rowCount(parentIndex);
+                for (int row = 0; row < rowCount; ++row) {
+                    collectSuppressedLines(mapObjectsModel_->index(row, kInspectorObjectNameColumn, parentIndex));
+                }
+            };
+            collectSuppressedLines(objectIndex);
+            clearInspectorObjectSelection(suppressedLines);
             return;
         }
+
+        suppressedInspectorAutoReselectLineNumbers_.clear();
+        if (mapObjectsTree_ != nullptr && mapObjectsTree_->selectionModel() != nullptr) {
+            setInspectorObjectCurrentIndex(objectIndex);
+        }
+        textEditor_->goToLine(lineNumber);
+        syncMapSelectionFromTextCursor(lineNumber, textEditor_->currentColumnNumber());
         lastInspectorClickedObjectLineNumber_ = lineNumber;
         return;
     }
 
+    inspectorObjectPressedNameIndex_ = QPersistentModelIndex();
+    inspectorObjectPressedWasSelected_ = false;
+    suppressedInspectorAutoReselectLineNumbers_.clear();
     if (index.column() == kInspectorObjectDeleteColumn) {
         if (textEditor_->deleteCommandAtLine(lineNumber)) {
             hiddenInspectorObjectLines_.remove(lineNumber);
@@ -3681,6 +3795,10 @@ void MapEditorTab::handleInspectorObjectClicked(const QModelIndex &index)
 
     rebuildInspectorObjectsTree();
     applyInspectorObjectVisibility();
+    syncInspectorObjectSelectionToLine(lineNumber, false);
+    if (shouldShow) {
+        selectMapLines(QSet<int>(subtreeLineNumbers.begin(), subtreeLineNumbers.end()), false);
+    }
 }
 
 void MapEditorTab::applyInspectorObjectVisibility()
@@ -3699,8 +3817,19 @@ void MapEditorTab::applyInspectorObjectVisibility()
         if (!ok || lineNumber <= 0) {
             continue;
         }
-        item->setVisible(!hiddenInspectorObjectLines_.contains(lineNumber));
+
+        const bool hidden = hiddenInspectorObjectLines_.contains(lineNumber);
+        if (item->data(kMapSceneSelectionGatedRole).toBool()) {
+            if (hidden) {
+                item->setVisible(false);
+            }
+            continue;
+        }
+
+        item->setVisible(!hidden);
     }
+
+    updateGeometrySelectionPresentation();
 }
 
 void MapEditorTab::configureInspectorBackgroundLayerTreeColumns()
@@ -4873,7 +5002,7 @@ void MapEditorTab::recordDraftVisibility(QGraphicsRectItem *item, bool oldVisibl
     undoStack_->push(createMapDraftVisibilityCommand(draftItem, oldVisible, newVisible));
 }
 
-void MapEditorTab::selectMapLine(int lineNumber)
+void MapEditorTab::selectMapLine(int lineNumber, bool centerOnSelection)
 {
     if (mapScene_ == nullptr) {
         return;
@@ -4889,7 +5018,7 @@ void MapEditorTab::selectMapLine(int lineNumber)
     auto selectedItemIt = mapItemsByLine_.find(lineNumber);
     if (selectedItemIt != mapItemsByLine_.end() && selectedItemIt.value() != nullptr) {
         selectedItemIt.value()->setSelected(true);
-        if (!autoFitEnabled_) {
+        if (centerOnSelection && !autoFitEnabled_) {
             mapView_->centerOn(selectedItemIt.value());
         }
     }
@@ -4898,7 +5027,7 @@ void MapEditorTab::selectMapLine(int lineNumber)
     updateGeometrySelectionPresentation();
 }
 
-void MapEditorTab::selectMapLines(const QSet<int> &lineNumbers)
+void MapEditorTab::selectMapLines(const QSet<int> &lineNumbers, bool centerOnSelection)
 {
     if (mapScene_ == nullptr) {
         return;
@@ -4925,7 +5054,7 @@ void MapEditorTab::selectMapLines(const QSet<int> &lineNumbers)
         }
     }
 
-    if (firstSelectedItem != nullptr && !autoFitEnabled_ && mapView_ != nullptr) {
+    if (centerOnSelection && firstSelectedItem != nullptr && !autoFitEnabled_ && mapView_ != nullptr) {
         mapView_->centerOn(firstSelectedItem);
     }
 

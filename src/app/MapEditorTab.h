@@ -13,6 +13,7 @@
 #include <QSet>
 #include <QVector>
 #include <QPointer>
+#include <QPersistentModelIndex>
 #include <optional>
 
 class QLabel;
@@ -190,8 +191,8 @@ private:
     void clearBackgroundImageItems();
     void restoreDraftGeometryItems();
     void restoreBackgroundImageItems();
-    void selectMapLine(int lineNumber);
-    void selectMapLines(const QSet<int> &lineNumbers);
+    void selectMapLine(int lineNumber, bool centerOnSelection = true);
+    void selectMapLines(const QSet<int> &lineNumbers, bool centerOnSelection = true);
     void setInteractiveDrawMode(InteractiveDrawMode mode);
     bool handleInteractiveDrawClick(const QPointF &scenePosition);
     bool commitInteractiveDrawSession();
@@ -280,8 +281,10 @@ private:
     void rebuildInspectorObjectsTree();
     QModelIndex findInspectorObjectIndexForLine(int lineNumber) const;
     void syncInspectorObjectSelectionToLine(int lineNumber);
+    void syncInspectorObjectSelectionToLine(int lineNumber, bool scrollToSelection);
+    void setInspectorObjectCurrentIndex(const QModelIndex &index);
     void configureInspectorObjectTreeColumns();
-    void clearInspectorObjectSelection();
+    void clearInspectorObjectSelection(const QSet<int> &suppressAutoReselectLineNumbers = {});
     void handleInspectorObjectSelectionChanged(const QModelIndex &current);
     void handleInspectorObjectClicked(const QModelIndex &index);
     void applyInspectorObjectVisibility();
@@ -325,7 +328,10 @@ private:
     bool updatingMapInspectorBackgroundUi_ = false;
     bool updatingMapInspectorObjectSelection_ = false;
     QSet<int> hiddenInspectorObjectLines_;
+    QPersistentModelIndex inspectorObjectPressedNameIndex_;
+    bool inspectorObjectPressedWasSelected_ = false;
     int lastInspectorClickedObjectLineNumber_ = 0;
+    QSet<int> suppressedInspectorAutoReselectLineNumbers_;
     QLabel *objectDetailsSelectionLabel_ = nullptr;
     QLabel *objectDetailsLineLabel_ = nullptr;
     QLabel *objectDetailsKindLabel_ = nullptr;

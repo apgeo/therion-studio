@@ -548,6 +548,9 @@ void MapEditorTab::buildUi()
     mapObjectsModel_ = new QStandardItemModel(mapObjectsTree_);
     mapObjectsTree_->setModel(mapObjectsModel_);
     configureInspectorObjectTreeColumns();
+    if (mapObjectsTree_->viewport() != nullptr) {
+        mapObjectsTree_->viewport()->installEventFilter(this);
+    }
     connect(mapObjectsTree_, &QTreeView::clicked, this, &MapEditorTab::handleInspectorObjectClicked);
     objectsLayout->addWidget(mapObjectsTree_, 1);
     if (mapObjectsTree_->selectionModel() != nullptr) {

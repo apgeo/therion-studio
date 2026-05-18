@@ -505,11 +505,13 @@ There is currently no dedicated Settings dialog; settings are updated through no
 
 - `Insert` key may be missing on many Mac keyboards; map vertex insertion supports `I` as fallback.
 - Homebrew Therion auto-detection is supported for common paths (`/opt/homebrew/bin/therion`, `/usr/local/bin/therion`, and `$HOMEBREW_PREFIX/bin/therion`).
+- macOS distribution is intended to use a Homebrew formula. Qt is provided by formula dependencies rather than bundled inside `TherionStudio.app`.
 
 ### 7.2 Windows
 
 - Cross-platform shortcuts are designed to work via Qt standard key-sequence mapping.
 - Map insertion supports both `Insert` and `I`.
+- Windows distribution is intended to use an installer that includes Therion Studio and the required Qt runtime only. The external `therion.exe` runner is configured separately.
 
 ### 7.3 Linux
 

@@ -681,11 +681,14 @@ Requirements:
 - the packaging policy shall distinguish between internal preview builds and public production releases
 - each production release shall publish a support matrix that identifies supported operating-system versions, supported CPU architectures, and provided package formats for macOS, Windows, and Linux
 - internal preview builds may be unsigned or ad hoc signed and may use simplified packaging, provided the build is clearly marked as non-production and the installation steps are documented for testers
-- the MVP shall provide end-user release artifacts for macOS, Windows, and Linux; users shall not be required to install Qt or build the application from source in order to run the product
-- macOS production releases shall be delivered as a signed application bundle in a standard distribution container such as `.dmg` or `.pkg`, and they shall be notarized for normal end-user installation
-- Windows production releases shall be delivered as a signed installer or signed portable distribution; an installer is preferred for the primary release artifact
+- the MVP shall provide end-user release artifacts for macOS, Windows, and Linux; users shall not be required to install a local Qt SDK or build the application manually in order to run the product
+- macOS Homebrew releases shall build and install the application through a formula, declare Qt as formula dependencies, and shall not bundle Qt frameworks inside the app bundle
+- signed and notarized macOS `.dmg` or `.pkg` artifacts may be added as a later production distribution path when signing credentials are available
+- Windows releases shall be delivered as an installer that bundles Therion Studio and the Qt runtime required by the application
+- Windows release installers shall not bundle the external Therion command-line executable; users shall configure or install Therion separately through the existing runner settings
+- Windows signed installers are preferred for production releases; unsigned installers may be used only for clearly documented internal preview builds
 - Linux production releases shall provide at least one broadly portable distribution format, such as AppImage or an equivalent self-contained bundle; distro-specific packages may be added in addition to the primary artifact
-- required Qt libraries and other non-system runtime dependencies shall be bundled with the application or installed by the package so that first launch does not depend on a local Qt SDK or developer toolchain
+- required Qt libraries and other non-system runtime dependencies shall be bundled with the application or installed by the package manager package so that first launch does not depend on a local Qt SDK or developer toolchain
 - packaged releases shall store user settings, recent-project state, session data, and logs in standard user-writable per-platform locations rather than inside the installation directory
 - updating from one released version to another shall preserve user settings and persisted session data where the stored data format remains compatible
 - automatic update delivery is not required for the MVP, but the release process shall support a documented manual update path for each platform
@@ -955,8 +958,9 @@ The criteria below are intended for implementation verification and QA.
 
 - A documented support matrix exists for each release, covering operating-system versions, CPU architectures, and package formats.
 - Internal preview builds are explicitly identified as non-production when they are not fully signed or notarized.
-- macOS release artifacts install normally on supported systems without Gatekeeper rejection caused by missing signing or notarization.
-- Windows release artifacts install or launch without requiring a local Qt runtime installation.
+- macOS Homebrew releases install normally through the formula and run against Qt dependencies installed by Homebrew.
+- Windows installer artifacts install Therion Studio and the required Qt runtime without requiring a local Qt SDK or preinstalled Qt runtime.
+- Windows installer artifacts do not install the external Therion command-line executable; the runner remains configurable by path.
 - Linux release artifacts launch on the supported target environments using the documented package format.
 - Updating the application preserves user settings and recent-project/session data when the release notes do not declare a breaking migration.
 - End users can install and run the released product without building from source.

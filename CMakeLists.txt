@@ -107,6 +107,30 @@ target_compile_definitions(TherionStudio PRIVATE
     QT_NO_CAST_FROM_ASCII
     QT_NO_CAST_TO_ASCII)
 
+install(TARGETS TherionStudio
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION .)
+
+if(WIN32)
+    qt_generate_deploy_app_script(
+        TARGET TherionStudio
+        OUTPUT_SCRIPT THERION_STUDIO_QT_DEPLOY_SCRIPT
+        NO_UNSUPPORTED_PLATFORM_ERROR)
+    install(SCRIPT ${THERION_STUDIO_QT_DEPLOY_SCRIPT})
+
+    set(CPACK_GENERATOR "NSIS")
+    set(CPACK_PACKAGE_NAME "Therion Studio")
+    set(CPACK_PACKAGE_VENDOR "Therion Studio")
+    set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+    set(CPACK_PACKAGE_INSTALL_DIRECTORY "Therion Studio")
+    set(CPACK_PACKAGE_EXECUTABLES "TherionStudio" "Therion Studio")
+    set(CPACK_CREATE_DESKTOP_LINKS "TherionStudio")
+    set(CPACK_NSIS_DISPLAY_NAME "Therion Studio")
+    set(CPACK_NSIS_PACKAGE_NAME "Therion Studio")
+    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    include(CPack)
+endif()
+
 qt_add_executable(TherionDocumentEditorTest
     tests/TherionDocumentEditorTest.cpp
     src/core/TherionDocumentEditor.cpp

@@ -12,6 +12,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -56,6 +57,7 @@
 #include "TextEditorTab.h"
 #include "../core/ProjectStructureIndex.h"
 #include "../core/TherionBackgroundMetadata.h"
+#include "../core/TherionDocumentEditor.h"
 #include "../core/TherionDocumentParser.h"
 
 namespace TherionStudio
@@ -300,6 +302,144 @@ QString xtherionDefaultScrapScaleOption(const QRectF &sourceBounds)
              formatTherionScaleNumber(right),
              formatTherionScaleNumber(top),
              formatTherionScaleNumber(realLengthMeters));
+}
+
+struct InspectorScrapScale
+{
+    QPointF sourcePoint1;
+    QPointF sourcePoint2;
+    QPointF realPoint1;
+    QPointF realPoint2;
+    QString unitToken = QStringLiteral("m");
+};
+
+QString cleanedScaleToken(QString token)
+{
+    token = token.trimmed();
+    while (token.startsWith(QLatin1Char('['))) {
+        token.remove(0, 1);
+    }
+    while (token.endsWith(QLatin1Char(']'))) {
+        token.chop(1);
+    }
+    return token.trimmed();
+}
+
+bool parseInspectorScaleNumber(const QString &token, qreal *value)
+{
+    if (value == nullptr) {
+        return false;
+    }
+
+    const QString cleaned = cleanedScaleToken(token);
+    if (cleaned.isEmpty()) {
+        return false;
+    }
+
+    bool ok = false;
+    const qreal parsed = cleaned.toDouble(&ok);
+    if (!ok) {
+        return false;
+    }
+
+    *value = parsed;
+    return true;
+}
+
+QString normalizedInspectorScaleUnit(QString token)
+{
+    token = cleanedScaleToken(token).toLower();
+    if (token == QStringLiteral("meter") || token == QStringLiteral("meters") || token == QStringLiteral("metre") || token == QStringLiteral("metres")) {
+        return QStringLiteral("m");
+    }
+    if (token == QStringLiteral("centimeter") || token == QStringLiteral("centimeters") || token == QStringLiteral("centimetre") || token == QStringLiteral("centimetres")) {
+        return QStringLiteral("cm");
+    }
+    if (token == QStringLiteral("millimeter") || token == QStringLiteral("millimeters") || token == QStringLiteral("millimetre") || token == QStringLiteral("millimetres")) {
+        return QStringLiteral("mm");
+    }
+    if (token == QStringLiteral("foot") || token == QStringLiteral("feet")) {
+        return QStringLiteral("ft");
+    }
+    if (token == QStringLiteral("inch") || token == QStringLiteral("inches")) {
+        return QStringLiteral("in");
+    }
+    if (token == QStringLiteral("m") || token == QStringLiteral("cm") || token == QStringLiteral("mm") || token == QStringLiteral("ft") || token == QStringLiteral("in")) {
+        return token;
+    }
+    return QStringLiteral("m");
+}
+
+std::optional<InspectorScrapScale> inspectorScrapScaleFromTokens(const QStringList &tokens)
+{
+    const int scaleOptionIndex = tokens.indexOf(QStringLiteral("-scale"));
+    if (scaleOptionIndex < 0 || scaleOptionIndex + 1 >= tokens.size()) {
+        return std::nullopt;
+    }
+
+    QVector<qreal> numbers;
+    numbers.reserve(8);
+    QString unitToken = QStringLiteral("m");
+    const bool bracketed = tokens.at(scaleOptionIndex + 1).contains(QLatin1Char('['));
+    for (int index = scaleOptionIndex + 1; index < tokens.size(); ++index) {
+        const QString token = tokens.at(index);
+        if (!bracketed && token.startsWith(QLatin1Char('-')) && !inspectorTokenLooksNumeric(token)) {
+            break;
+        }
+
+        qreal parsedNumber = 0.0;
+        if (parseInspectorScaleNumber(token, &parsedNumber)) {
+            numbers.append(parsedNumber);
+        } else {
+            unitToken = normalizedInspectorScaleUnit(token);
+        }
+
+        if (!bracketed || token.contains(QLatin1Char(']'))) {
+            break;
+        }
+    }
+
+    if (numbers.size() < 8) {
+        return std::nullopt;
+    }
+
+    InspectorScrapScale scale;
+    scale.sourcePoint1 = QPointF(numbers.at(0), numbers.at(1));
+    scale.sourcePoint2 = QPointF(numbers.at(2), numbers.at(3));
+    scale.realPoint1 = QPointF(numbers.at(4), numbers.at(5));
+    scale.realPoint2 = QPointF(numbers.at(6), numbers.at(7));
+    scale.unitToken = unitToken;
+    return scale;
+}
+
+QString scrapScaleExpression(const InspectorScrapScale &scale)
+{
+    return QStringLiteral("[%1 %2 %3 %4 %5 %6 %7 %8 %9]")
+        .arg(formatTherionScaleNumber(scale.sourcePoint1.x()),
+             formatTherionScaleNumber(scale.sourcePoint1.y()),
+             formatTherionScaleNumber(scale.sourcePoint2.x()),
+             formatTherionScaleNumber(scale.sourcePoint2.y()),
+             formatTherionScaleNumber(scale.realPoint1.x()),
+             formatTherionScaleNumber(scale.realPoint1.y()),
+             formatTherionScaleNumber(scale.realPoint2.x()),
+             formatTherionScaleNumber(scale.realPoint2.y()),
+             scale.unitToken.isEmpty() ? QStringLiteral("m") : scale.unitToken);
+}
+
+InspectorScrapScale defaultInspectorScrapScale(const QRectF &sourceBounds)
+{
+    QRectF bounds = sourceBounds.normalized();
+    if (!bounds.isValid() || bounds.width() < 1e-6) {
+        bounds = QRectF(0.0, 0.0, 1600.0, 1200.0);
+    }
+
+    InspectorScrapScale scale;
+    scale.sourcePoint1 = QPointF(bounds.left(), bounds.top());
+    scale.sourcePoint2 = QPointF(bounds.right(), bounds.top());
+    scale.realPoint1 = QPointF(0.0, 0.0);
+    scale.realPoint2 = QPointF((bounds.right() - bounds.left()) * 0.0254, 0.0);
+    scale.unitToken = QStringLiteral("m");
+    return scale;
 }
 
 bool sourcePointsDifferForCommands(const QPointF &a, const QPointF &b)
@@ -4268,6 +4408,16 @@ void MapEditorTab::refreshObjectDetailsPanel()
         || lineOptionsEditor_ == nullptr
         || lineClosedCheck_ == nullptr
         || lineReversedCheck_ == nullptr
+        || scrapScaleEditor_ == nullptr
+        || scrapScaleSourceX1Spin_ == nullptr
+        || scrapScaleSourceY1Spin_ == nullptr
+        || scrapScaleSourceX2Spin_ == nullptr
+        || scrapScaleSourceY2Spin_ == nullptr
+        || scrapScaleRealX1Spin_ == nullptr
+        || scrapScaleRealY1Spin_ == nullptr
+        || scrapScaleRealX2Spin_ == nullptr
+        || scrapScaleRealY2Spin_ == nullptr
+        || scrapScaleUnitCombo_ == nullptr
         || objectConfigureButton_ == nullptr) {
         return;
     }
@@ -4307,6 +4457,7 @@ void MapEditorTab::refreshObjectDetailsPanel()
         objectCoordinateEditor_->setVisible(false);
         objectOrientationEditor_->setVisible(false);
         lineOptionsEditor_->setVisible(false);
+        scrapScaleEditor_->setVisible(false);
         objectConfigureButton_->setVisible(false);
         objectConfigureButton_->setEnabled(false);
         lineClosedCheck_->setChecked(false);
@@ -4348,6 +4499,54 @@ void MapEditorTab::refreshObjectDetailsPanel()
     } else {
         lineClosedCheck_->setChecked(false);
         lineReversedCheck_->setChecked(false);
+    }
+
+    const bool scrapScaleVisible = effectiveLineNumber > 0
+        && effectiveKind == QStringLiteral("scrap")
+        && textEditor_ != nullptr;
+    scrapScaleEditor_->setVisible(scrapScaleVisible);
+    if (scrapScaleVisible) {
+        auto configureScaleSpin = [](QDoubleSpinBox *spin, int decimals) {
+            if (spin == nullptr) {
+                return;
+            }
+            spin->setDecimals(decimals);
+            spin->setSingleStep(decimals == 0 ? 1.0 : 0.1);
+        };
+        configureScaleSpin(scrapScaleSourceX1Spin_, 0);
+        configureScaleSpin(scrapScaleSourceY1Spin_, 0);
+        configureScaleSpin(scrapScaleSourceX2Spin_, 0);
+        configureScaleSpin(scrapScaleSourceY2Spin_, 0);
+        configureScaleSpin(scrapScaleRealX1Spin_, 4);
+        configureScaleSpin(scrapScaleRealY1Spin_, 4);
+        configureScaleSpin(scrapScaleRealX2Spin_, 4);
+        configureScaleSpin(scrapScaleRealY2Spin_, 4);
+
+        InspectorScrapScale scale = defaultInspectorScrapScale(mapSourceBoundsForCurrentDocument());
+        QStringList lines = textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+        for (QString &line : lines) {
+            if (line.endsWith(QLatin1Char('\r'))) {
+                line.chop(1);
+            }
+        }
+        if (effectiveLineNumber <= lines.size()) {
+            const TherionParsedLine parsedLine =
+                TherionDocumentParser::parseLine(lines.at(effectiveLineNumber - 1), effectiveLineNumber);
+            if (const std::optional<InspectorScrapScale> parsedScale = inspectorScrapScaleFromTokens(parsedLine.tokens)) {
+                scale = parsedScale.value();
+            }
+        }
+
+        scrapScaleSourceX1Spin_->setValue(scale.sourcePoint1.x());
+        scrapScaleSourceY1Spin_->setValue(scale.sourcePoint1.y());
+        scrapScaleSourceX2Spin_->setValue(scale.sourcePoint2.x());
+        scrapScaleSourceY2Spin_->setValue(scale.sourcePoint2.y());
+        scrapScaleRealX1Spin_->setValue(scale.realPoint1.x());
+        scrapScaleRealY1Spin_->setValue(scale.realPoint1.y());
+        scrapScaleRealX2Spin_->setValue(scale.realPoint2.x());
+        scrapScaleRealY2Spin_->setValue(scale.realPoint2.y());
+        const int unitIndex = scrapScaleUnitCombo_->findText(scale.unitToken);
+        scrapScaleUnitCombo_->setCurrentIndex(unitIndex >= 0 ? unitIndex : 0);
     }
 
     bool orientationApplicable = false;
@@ -4540,6 +4739,128 @@ void MapEditorTab::handleObjectOrientationEnabledToggled(bool checked)
         return;
     }
     objectOrientationSpin_->setEnabled(checked);
+}
+
+void MapEditorTab::populateScrapScaleFromSourceBounds()
+{
+    if (updatingObjectDetailsUi_
+        || scrapScaleSourceX1Spin_ == nullptr
+        || scrapScaleSourceY1Spin_ == nullptr
+        || scrapScaleSourceX2Spin_ == nullptr
+        || scrapScaleSourceY2Spin_ == nullptr
+        || scrapScaleRealX1Spin_ == nullptr
+        || scrapScaleRealY1Spin_ == nullptr
+        || scrapScaleRealX2Spin_ == nullptr
+        || scrapScaleRealY2Spin_ == nullptr
+        || scrapScaleUnitCombo_ == nullptr) {
+        return;
+    }
+
+    scrapScaleSourceX1Spin_->setDecimals(0);
+    scrapScaleSourceY1Spin_->setDecimals(0);
+    scrapScaleSourceX2Spin_->setDecimals(0);
+    scrapScaleSourceY2Spin_->setDecimals(0);
+    scrapScaleRealX1Spin_->setDecimals(4);
+    scrapScaleRealY1Spin_->setDecimals(4);
+    scrapScaleRealX2Spin_->setDecimals(4);
+    scrapScaleRealY2Spin_->setDecimals(4);
+
+    const InspectorScrapScale scale = defaultInspectorScrapScale(mapSourceBoundsForCurrentDocument());
+    scrapScaleSourceX1Spin_->setValue(scale.sourcePoint1.x());
+    scrapScaleSourceY1Spin_->setValue(scale.sourcePoint1.y());
+    scrapScaleSourceX2Spin_->setValue(scale.sourcePoint2.x());
+    scrapScaleSourceY2Spin_->setValue(scale.sourcePoint2.y());
+    scrapScaleRealX1Spin_->setValue(scale.realPoint1.x());
+    scrapScaleRealY1Spin_->setValue(scale.realPoint1.y());
+    scrapScaleRealX2Spin_->setValue(scale.realPoint2.x());
+    scrapScaleRealY2Spin_->setValue(scale.realPoint2.y());
+    const int unitIndex = scrapScaleUnitCombo_->findText(scale.unitToken);
+    scrapScaleUnitCombo_->setCurrentIndex(unitIndex >= 0 ? unitIndex : 0);
+}
+
+void MapEditorTab::applyScrapScaleEdits()
+{
+    if (updatingObjectDetailsUi_
+        || textEditor_ == nullptr
+        || scrapScaleSourceX1Spin_ == nullptr
+        || scrapScaleSourceY1Spin_ == nullptr
+        || scrapScaleSourceX2Spin_ == nullptr
+        || scrapScaleSourceY2Spin_ == nullptr
+        || scrapScaleRealX1Spin_ == nullptr
+        || scrapScaleRealY1Spin_ == nullptr
+        || scrapScaleRealX2Spin_ == nullptr
+        || scrapScaleRealY2Spin_ == nullptr
+        || scrapScaleUnitCombo_ == nullptr) {
+        return;
+    }
+
+    int targetLineNumber = 0;
+    if (selectedObjectLineNumber_ > 0 && selectedObjectKind_ == QStringLiteral("scrap")) {
+        targetLineNumber = selectedObjectLineNumber_;
+    } else {
+        const int cursorLineNumber = textEditor_->currentLineNumber();
+        QStringList lines = textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+        for (QString &line : lines) {
+            if (line.endsWith(QLatin1Char('\r'))) {
+                line.chop(1);
+            }
+        }
+        if (cursorLineNumber > 0 && cursorLineNumber <= lines.size()) {
+            const TherionParsedLine parsedLine =
+                TherionDocumentParser::parseLine(lines.at(cursorLineNumber - 1), cursorLineNumber);
+            if (parsedLine.directive == QStringLiteral("scrap")) {
+                targetLineNumber = cursorLineNumber;
+            }
+        }
+    }
+
+    if (targetLineNumber <= 0) {
+        toolbarStatusNote_ = tr("Select a scrap to edit its scale.");
+        refreshToolbarSummary();
+        return;
+    }
+
+    InspectorScrapScale scale;
+    scale.sourcePoint1 = QPointF(scrapScaleSourceX1Spin_->value(), scrapScaleSourceY1Spin_->value());
+    scale.sourcePoint2 = QPointF(scrapScaleSourceX2Spin_->value(), scrapScaleSourceY2Spin_->value());
+    scale.realPoint1 = QPointF(scrapScaleRealX1Spin_->value(), scrapScaleRealY1Spin_->value());
+    scale.realPoint2 = QPointF(scrapScaleRealX2Spin_->value(), scrapScaleRealY2Spin_->value());
+    scale.unitToken = scrapScaleUnitCombo_->currentText().trimmed();
+    if (scale.unitToken.isEmpty()) {
+        scale.unitToken = QStringLiteral("m");
+    }
+
+    if (QLineF(scale.sourcePoint1, scale.sourcePoint2).length() <= 1e-6
+        || QLineF(scale.realPoint1, scale.realPoint2).length() <= 1e-6) {
+        toolbarStatusNote_ = tr("Scrap scale requires two distinct picture points and two distinct real points.");
+        refreshToolbarSummary();
+        return;
+    }
+
+    const QString beforeText = textEditor_->text();
+    QString afterText = beforeText;
+    QString errorMessage;
+    if (!TherionDocumentEditor::rewriteScrapScale(&afterText,
+                                                  targetLineNumber,
+                                                  scrapScaleExpression(scale),
+                                                  &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Failed to update scrap scale.")
+            : tr("Failed to update scrap scale: %1").arg(errorMessage);
+        refreshToolbarSummary();
+        return;
+    }
+
+    if (afterText == beforeText) {
+        return;
+    }
+
+    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
+    textEditor_->replaceTextForCommand(afterText);
+    recordSourceTextSnapshot(tr("Set Scrap Scale"), beforeText, afterText, targetLineNumber);
+    toolbarStatusNote_ = tr("Updated scrap scale.");
+    refreshToolbarSummary();
+    refreshObjectDetailsPanel();
 }
 
 void MapEditorTab::handleConfigureObjectSettingsTriggered()

@@ -59,6 +59,10 @@ public:
                                             bool enabled,
                                             qreal orientationDegrees,
                                             QString *errorMessage = nullptr);
+    static bool rewriteScrapScale(QString *contents,
+                                  int lineNumber,
+                                  const QString &scaleExpression,
+                                  QString *errorMessage = nullptr);
     static bool rewriteLineCoordinateRows(QString *contents,
                                           int lineNumber,
                                           const QStringList &coordinateRows,

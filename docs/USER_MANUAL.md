@@ -343,7 +343,13 @@ Inspector panel (`Visual` mode):
 - `Orientation override (-orientation)` enable/disable
 - degree input constrained to `0..359.999`
 - `Apply Orientation` writes/removes per-object or per-line-point orientation in source
+- when a `scrap` is selected, shows `Scrap Scale` controls for picture point 1/2 in pixels, real point 1/2, and unit (`m`, `cm`, `mm`, `ft`, `in`)
+- picture point fields are displayed as whole pixels; real point fields use compact decimal precision
+- `Scrap Scale` uses stacked coordinate rows with compact X/Y fields so it remains usable in narrow inspectors
+- `Use Source Bounds` fills the scrap scale form from the current map source bounds using the XTherion default inch-to-meter convention
+- `Apply Scale` writes an XTherion-compatible 8-parameter `-scale [...]` option to the selected scrap command
 - includes `Edit Object Settings...` for `scrap`, `point`, `line`, and `area`; this opens the same catalog-driven option editor used by structured block selection
+- option editors keep bracketed multi-token values such as scrap `-scale [...]` in one value cell, including negative picture coordinates
 - if no map geometry item is selected, `Edit Object Settings...` can target the command under the current text cursor line when that line is `scrap`, `point`, `line`, or `area`
 - edits update TH2 source text immediately and stay in the same undo/redo workflow
 
@@ -382,6 +388,7 @@ Interactive drawing (current):
 - The generated border line id for area commits uses `line-X` naming and increments to stay unique in the current scrap (`line-1`, `line-2`, ...).
 - Auto-created scraps use `scrap-X` naming (`scrap-1`, `scrap-2`, ...).
 - Scraps inserted from `Visual` mode include an XTherion-compatible default `-scale` derived from the current map source bounds. This matches XTherion's convention of mapping the source-bounds width to inches converted to meters (`width * 0.0254 m`).
+- Existing scrap scale can be manually edited from `Inspector -> Selection` after selecting the scrap; the editor rewrites the scrap `-scale` option in XTherion-compatible 8-point calibration form.
 - Area object `-id` is not auto-forced; only the referenced border `line` id is mandatory in generated output.
 - If the file contains `##XTHERION## xth_me_area_adjust`, map insertion/render projection uses that rectangle as stable model bounds to keep hidden-background insertions and later unhide aligned.
 - Line/area commit preserves all captured vertices from the current draft session.

@@ -2,7 +2,9 @@
 
 #include <QApplication>
 #include <QAbstractItemView>
+#include <QAbstractSpinBox>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFile>
 #include <QGuiApplication>
@@ -23,6 +25,7 @@
 #include <QPushButton>
 #include <QShortcut>
 #include <QScopedValueRollback>
+#include <QSizePolicy>
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QSplitter>
@@ -633,6 +636,88 @@ void MapEditorTab::buildUi()
     lineOptionsLayout->addWidget(lineClosedCheck_);
     lineOptionsLayout->addWidget(lineReversedCheck_);
     selectionLayout->addWidget(lineOptionsEditor_);
+
+    scrapScaleEditor_ = new QFrame(selectionPanel);
+    static_cast<QFrame *>(scrapScaleEditor_)->setFrameShape(QFrame::StyledPanel);
+    auto *scrapScaleLayout = new QVBoxLayout(scrapScaleEditor_);
+    scrapScaleLayout->setContentsMargins(8, 8, 8, 8);
+    scrapScaleLayout->setSpacing(6);
+    auto *scrapScaleTitle = new QLabel(tr("Scrap Scale"), scrapScaleEditor_);
+    QFont scrapScaleTitleFont = scrapScaleTitle->font();
+    scrapScaleTitleFont.setBold(true);
+    scrapScaleTitle->setFont(scrapScaleTitleFont);
+    scrapScaleLayout->addWidget(scrapScaleTitle);
+
+    auto createScrapScaleSpin = [](QWidget *parent, int decimals) {
+        auto *spin = new QDoubleSpinBox(parent);
+        spin->setDecimals(decimals);
+        spin->setRange(-10000000.0, 10000000.0);
+        spin->setSingleStep(decimals == 0 ? 1.0 : 0.1);
+        spin->setButtonSymbols(QAbstractSpinBox::NoButtons);
+        spin->setMinimumWidth(72);
+        return spin;
+    };
+    auto createScrapScalePointBlock = [](QWidget *parent,
+                                         const QString &title,
+                                         QDoubleSpinBox *xSpin,
+                                         QDoubleSpinBox *ySpin) {
+        auto *block = new QWidget(parent);
+        auto *blockLayout = new QVBoxLayout(block);
+        blockLayout->setContentsMargins(0, 0, 0, 0);
+        blockLayout->setSpacing(3);
+
+        auto *titleLabel = new QLabel(title, block);
+        titleLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        blockLayout->addWidget(titleLabel);
+
+        auto *row = new QWidget(block);
+        auto *rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(0, 0, 0, 0);
+        rowLayout->setSpacing(4);
+        rowLayout->addWidget(new QLabel(QStringLiteral("X"), row));
+        rowLayout->addWidget(xSpin, 1);
+        rowLayout->addWidget(new QLabel(QStringLiteral("Y"), row));
+        rowLayout->addWidget(ySpin, 1);
+        blockLayout->addWidget(row);
+        return block;
+    };
+
+    scrapScaleSourceX1Spin_ = createScrapScaleSpin(scrapScaleEditor_, 0);
+    scrapScaleSourceY1Spin_ = createScrapScaleSpin(scrapScaleEditor_, 0);
+    scrapScaleSourceX2Spin_ = createScrapScaleSpin(scrapScaleEditor_, 0);
+    scrapScaleSourceY2Spin_ = createScrapScaleSpin(scrapScaleEditor_, 0);
+    scrapScaleRealX1Spin_ = createScrapScaleSpin(scrapScaleEditor_, 4);
+    scrapScaleRealY1Spin_ = createScrapScaleSpin(scrapScaleEditor_, 4);
+    scrapScaleRealX2Spin_ = createScrapScaleSpin(scrapScaleEditor_, 4);
+    scrapScaleRealY2Spin_ = createScrapScaleSpin(scrapScaleEditor_, 4);
+    scrapScaleLayout->addWidget(createScrapScalePointBlock(scrapScaleEditor_, tr("Picture point 1 (px)"), scrapScaleSourceX1Spin_, scrapScaleSourceY1Spin_));
+    scrapScaleLayout->addWidget(createScrapScalePointBlock(scrapScaleEditor_, tr("Picture point 2 (px)"), scrapScaleSourceX2Spin_, scrapScaleSourceY2Spin_));
+    scrapScaleLayout->addWidget(createScrapScalePointBlock(scrapScaleEditor_, tr("Real point 1"), scrapScaleRealX1Spin_, scrapScaleRealY1Spin_));
+    scrapScaleLayout->addWidget(createScrapScalePointBlock(scrapScaleEditor_, tr("Real point 2"), scrapScaleRealX2Spin_, scrapScaleRealY2Spin_));
+
+    auto *scrapScaleUnitRow = new QWidget(scrapScaleEditor_);
+    auto *scrapScaleUnitLayout = new QHBoxLayout(scrapScaleUnitRow);
+    scrapScaleUnitLayout->setContentsMargins(0, 0, 0, 0);
+    scrapScaleUnitLayout->setSpacing(6);
+    scrapScaleUnitLayout->addWidget(new QLabel(tr("Unit"), scrapScaleUnitRow));
+    scrapScaleUnitCombo_ = new QComboBox(scrapScaleEditor_);
+    scrapScaleUnitCombo_->addItems({QStringLiteral("m"), QStringLiteral("cm"), QStringLiteral("mm"), QStringLiteral("ft"), QStringLiteral("in")});
+    scrapScaleUnitLayout->addWidget(scrapScaleUnitCombo_, 1);
+    scrapScaleLayout->addWidget(scrapScaleUnitRow);
+
+    auto *scrapScaleButtons = new QHBoxLayout;
+    scrapScaleButtons->setContentsMargins(0, 0, 0, 0);
+    scrapScaleUseBoundsButton_ = new QPushButton(tr("Use Bounds"), scrapScaleEditor_);
+    scrapScaleUseBoundsButton_->setAutoDefault(false);
+    scrapScaleUseBoundsButton_->setToolTip(tr("Use current source bounds as the XTherion default scrap scale."));
+    scrapScaleApplyButton_ = new QPushButton(tr("Apply Scale"), scrapScaleEditor_);
+    scrapScaleApplyButton_->setAutoDefault(false);
+    connect(scrapScaleUseBoundsButton_, &QPushButton::clicked, this, &MapEditorTab::populateScrapScaleFromSourceBounds);
+    connect(scrapScaleApplyButton_, &QPushButton::clicked, this, &MapEditorTab::applyScrapScaleEdits);
+    scrapScaleButtons->addWidget(scrapScaleUseBoundsButton_);
+    scrapScaleButtons->addWidget(scrapScaleApplyButton_);
+    scrapScaleLayout->addLayout(scrapScaleButtons);
+    selectionLayout->addWidget(scrapScaleEditor_);
 
     objectConfigureButton_ = new QPushButton(tr("Edit Object Settings..."), selectionPanel);
     objectConfigureButton_->setAutoDefault(false);

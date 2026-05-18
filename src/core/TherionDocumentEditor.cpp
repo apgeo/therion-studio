@@ -403,6 +403,71 @@ bool removeOptionAtTokenIndex(QString *lineText,
     return true;
 }
 
+int optionTokenIndex(const TherionParsedLine &parsedLine, const QString &optionName)
+{
+    const QString normalizedOption = optionName.trimmed().toLower();
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        if (parsedLine.tokens.at(index).trimmed().toLower() == normalizedOption) {
+            return index;
+        }
+    }
+
+    return -1;
+}
+
+QPair<int, int> optionRangeWithBracketedValue(const TherionParsedLine &parsedLine, int optionIndex, const QString &lineText)
+{
+    if (optionIndex < 0 || optionIndex >= parsedLine.tokenSpans.size()) {
+        return qMakePair(-1, -1);
+    }
+
+    const TherionParsedToken optionToken = parsedLine.tokenSpans.at(optionIndex);
+    int rangeStart = optionToken.start;
+    int rangeEnd = optionToken.start + optionToken.length;
+    if (rangeStart < 0 || rangeEnd < rangeStart || rangeEnd > lineText.size()) {
+        return qMakePair(-1, -1);
+    }
+
+    int valueEndTokenIndex = -1;
+    if (optionIndex + 1 < parsedLine.tokens.size()) {
+        valueEndTokenIndex = optionIndex + 1;
+        const QString firstValueToken = parsedLine.tokens.at(valueEndTokenIndex);
+        if (firstValueToken.contains(QLatin1Char('[')) && !firstValueToken.contains(QLatin1Char(']'))) {
+            for (int index = valueEndTokenIndex + 1; index < parsedLine.tokens.size(); ++index) {
+                const QString token = parsedLine.tokens.at(index);
+                if (token.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(token)) {
+                    break;
+                }
+                valueEndTokenIndex = index;
+                if (token.contains(QLatin1Char(']'))) {
+                    break;
+                }
+            }
+        } else if (!firstValueToken.contains(QLatin1Char('['))) {
+            for (int index = valueEndTokenIndex + 1; index < parsedLine.tokens.size(); ++index) {
+                const QString token = parsedLine.tokens.at(index);
+                if (token.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(token)) {
+                    break;
+                }
+                valueEndTokenIndex = index;
+            }
+        }
+    }
+
+    if (valueEndTokenIndex >= 0 && valueEndTokenIndex < parsedLine.tokenSpans.size()) {
+        const TherionParsedToken valueToken = parsedLine.tokenSpans.at(valueEndTokenIndex);
+        rangeEnd = valueToken.start + valueToken.length;
+    }
+
+    if (rangeStart > 0 && lineText.at(rangeStart - 1).isSpace()) {
+        --rangeStart;
+    } else if (rangeEnd < lineText.size() && lineText.at(rangeEnd).isSpace()) {
+        ++rangeEnd;
+    }
+
+    return qMakePair(rangeStart, rangeEnd);
+}
+
 QPair<int, int> coordinateTokenPair(const TherionParsedLine &parsedLine)
 {
     int firstIndex = -1;
@@ -1688,6 +1753,84 @@ bool TherionDocumentEditor::rewriteLinePointOrientation(QString *contents,
     }
 
     lines[targetLineIndex] = lineText;
+    *contents = lines.join(lineEnding);
+    return true;
+}
+
+bool TherionDocumentEditor::rewriteScrapScale(QString *contents,
+                                              int lineNumber,
+                                              const QString &scaleExpression,
+                                              QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+
+    if (lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line number is invalid.");
+        }
+        return false;
+    }
+
+    const QString normalizedScale = scaleExpression.trimmed();
+    if (normalizedScale.isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The scrap scale expression is empty.");
+        }
+        return false;
+    }
+
+    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = splitLinesNormalized(*contents);
+    if (lineNumber > lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line no longer exists.");
+        }
+        return false;
+    }
+
+    const int lineIndex = lineNumber - 1;
+    QString lineText = lines.at(lineIndex);
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    if (parsedLine.directive != QStringLiteral("scrap")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line is not a scrap command.");
+        }
+        return false;
+    }
+
+    const QString replacement = QStringLiteral("-scale %1").arg(normalizedScale);
+    const int scaleOptionIndex = optionTokenIndex(parsedLine, QStringLiteral("-scale"));
+    if (scaleOptionIndex >= 0) {
+        const QPair<int, int> range = optionRangeWithBracketedValue(parsedLine, scaleOptionIndex, lineText);
+        if (range.first < 0 || range.second < range.first || range.second > lineText.size()) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QStringLiteral("The existing scrap scale option could not be rewritten.");
+            }
+            return false;
+        }
+
+        const bool includesLeadingSpace = range.first < parsedLine.tokenSpans.at(scaleOptionIndex).start;
+        lineText.replace(range.first,
+                         range.second - range.first,
+                         includesLeadingSpace ? QStringLiteral(" ") + replacement : replacement);
+    } else {
+        if (parsedLine.commentStart >= 0) {
+            int insertIndex = parsedLine.commentStart;
+            while (insertIndex > 0 && lineText.at(insertIndex - 1).isSpace()) {
+                --insertIndex;
+            }
+            lineText.insert(insertIndex, QStringLiteral(" ") + replacement);
+        } else {
+            lineText += QStringLiteral(" ") + replacement;
+        }
+    }
+
+    lines[lineIndex] = lineText;
     *contents = lines.join(lineEnding);
     return true;
 }

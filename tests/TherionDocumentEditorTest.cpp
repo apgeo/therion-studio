@@ -1224,6 +1224,82 @@ int runRewriteOrientationOptionsTest()
 
     return 0;
 }
+
+int runRewriteScrapScaleTest()
+{
+    QString errorMessage;
+    QString contents = QStringLiteral("scrap s1 -projection plan\nendscrap\n");
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteScrapScale(&contents,
+                                                         1,
+                                                         QStringLiteral("[0 0 100 0 0 0 10 0 m]"),
+                                                         &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap s1 -projection plan -scale [0 0 100 0 0 0 10 0 m]\nendscrap\n"),
+                "rewriteScrapScale should append a missing scrap scale option.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap s1 -scale [-128 -1152 851 -1152 0.0 0.0 24.8666 0.0 m] -projection plan\r\nendscrap\r\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteScrapScale(&contents,
+                                                         1,
+                                                         QStringLiteral("[1 2 3 4 5 6 7 8 m]"),
+                                                         &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap s1 -scale [1 2 3 4 5 6 7 8 m] -projection plan\r\nendscrap\r\n"),
+                "rewriteScrapScale should replace bracketed XTherion/Therion scale and preserve CRLF.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap s1 -projection plan -scale 100 10 m -author 2026.01.01 Test\nendscrap\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteScrapScale(&contents,
+                                                         1,
+                                                         QStringLiteral("[0 0 100 0 0 0 10 0 m]"),
+                                                         &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap s1 -projection plan -scale [0 0 100 0 0 0 10 0 m] -author 2026.01.01 Test\nendscrap\n"),
+                "rewriteScrapScale should replace non-bracketed multi-token scale values without consuming following options.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap s1 -projection plan # keep comment\nendscrap\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteScrapScale(&contents,
+                                                         1,
+                                                         QStringLiteral("[0 0 1 0 0 0 1 0 m]"),
+                                                         &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap s1 -projection plan -scale [0 0 1 0 0 0 1 0 m] # keep comment\nendscrap\n"),
+                "rewriteScrapScale should insert the scale option before an inline comment.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall\nendline\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteScrapScale(&contents,
+                                                          1,
+                                                          QStringLiteral("[0 0 1 0 0 0 1 0 m]"),
+                                                          &errorMessage),
+                "rewriteScrapScale should reject non-scrap commands.")) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\nendline\n"), "rewriteScrapScale should not mutate rejected commands.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -1261,6 +1337,11 @@ int main()
     const int rewriteOrientationOptionsResult = runRewriteOrientationOptionsTest();
     if (rewriteOrientationOptionsResult != 0) {
         return rewriteOrientationOptionsResult;
+    }
+
+    const int rewriteScrapScaleResult = runRewriteScrapScaleTest();
+    if (rewriteScrapScaleResult != 0) {
+        return rewriteScrapScaleResult;
     }
 
     const int rewriteLineCoordinateRowsResult = runRewriteLineCoordinateRowsTest();

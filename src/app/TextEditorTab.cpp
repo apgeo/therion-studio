@@ -1099,8 +1099,19 @@ bool shouldQuoteTherionArgument(const QString &value)
     return requiresQuotePattern.match(value).hasMatch();
 }
 
+bool isBracketedTherionValueGroup(const QString &value)
+{
+    const QString trimmed = value.trimmed();
+    return trimmed.size() >= 2
+        && trimmed.startsWith(QLatin1Char('['))
+        && trimmed.endsWith(QLatin1Char(']'));
+}
+
 QString serializeTherionArgumentToken(const QString &value)
 {
+    if (isBracketedTherionValueGroup(value)) {
+        return value.trimmed();
+    }
     if (shouldQuoteTherionArgument(value)) {
         return quoteTherionArgument(value);
     }
@@ -1134,6 +1145,56 @@ bool optionArityRequiresValue(const QString &rawArityToken)
 bool optionArityForbidsValue(const QString &rawArityToken)
 {
     return canonicalOptionArityToken(rawArityToken) == QStringLiteral("NONE");
+}
+
+bool configureOptionTokenLooksNumeric(QString token)
+{
+    token = token.trimmed();
+    while (token.startsWith(QLatin1Char('['))) {
+        token.remove(0, 1);
+    }
+    while (token.endsWith(QLatin1Char(']'))) {
+        token.chop(1);
+    }
+    if (token.isEmpty()) {
+        return false;
+    }
+
+    bool ok = false;
+    token.toDouble(&ok);
+    return ok;
+}
+
+bool configureTokenStartsNewOption(const QString &token)
+{
+    const QString trimmed = token.trimmed();
+    return trimmed.startsWith(QLatin1Char('-'))
+        && !configureOptionTokenLooksNumeric(trimmed);
+}
+
+int nextConfigureOptionIndex(const QStringList &tokens, int optionIndex)
+{
+    bool inBracketedValue = false;
+    for (int scan = optionIndex + 1; scan < tokens.size(); ++scan) {
+        const QString token = tokens.at(scan).trimmed();
+        if (inBracketedValue) {
+            if (token.contains(QLatin1Char(']'))) {
+                inBracketedValue = false;
+            }
+            continue;
+        }
+
+        if (scan == optionIndex + 1 && token.contains(QLatin1Char('[')) && !token.contains(QLatin1Char(']'))) {
+            inBracketedValue = true;
+            continue;
+        }
+
+        if (configureTokenStartsNewOption(token)) {
+            return scan;
+        }
+    }
+
+    return tokens.size();
 }
 
 QStringList parseOptionValuesFromEditor(const QString &rawValue, const QString &rawArityToken, int fixedArity)
@@ -5250,14 +5311,8 @@ bool TextEditorTab::loadBlockDetailsForSelection(const QString &kind, int lineNu
         QVector<OptionEntry> optionEntries;
         for (int index = optionsStartIndex; index < parsedLine.tokens.size();) {
             const QString token = parsedLine.tokens.at(index).trimmed();
-            if (token.startsWith(QLatin1Char('-'))) {
-                int nextOptionIndex = parsedLine.tokens.size();
-                for (int scan = index + 1; scan < parsedLine.tokens.size(); ++scan) {
-                    if (parsedLine.tokens.at(scan).trimmed().startsWith(QLatin1Char('-'))) {
-                        nextOptionIndex = scan;
-                        break;
-                    }
-                }
+            if (configureTokenStartsNewOption(token)) {
+                const int nextOptionIndex = nextConfigureOptionIndex(parsedLine.tokens, index);
                 const QStringList rawOptionValues =
                     parsedLine.tokens.mid(index + 1, nextOptionIndex - index - 1);
                 QString optionDisplayValue = rawOptionValues.join(QLatin1Char(' '));
@@ -7037,14 +7092,8 @@ void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNum
         QVector<OptionEntry> optionEntries;
         for (int index = optionsStartIndex; index < commandParsedLine.tokens.size();) {
             const QString token = commandParsedLine.tokens.at(index).trimmed();
-            if (token.startsWith(QLatin1Char('-'))) {
-                int nextOptionIndex = commandParsedLine.tokens.size();
-                for (int scan = index + 1; scan < commandParsedLine.tokens.size(); ++scan) {
-                    if (commandParsedLine.tokens.at(scan).trimmed().startsWith(QLatin1Char('-'))) {
-                        nextOptionIndex = scan;
-                        break;
-                    }
-                }
+            if (configureTokenStartsNewOption(token)) {
+                const int nextOptionIndex = nextConfigureOptionIndex(commandParsedLine.tokens, index);
                 const QStringList rawOptionValues =
                     commandParsedLine.tokens.mid(index + 1, nextOptionIndex - index - 1);
                 QString optionDisplayValue = rawOptionValues.join(QLatin1Char(' '));

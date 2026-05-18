@@ -279,6 +279,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The right-side map inspector in `Visual` mode shall provide tabs for `Selection`, `Objects`, and `Backgrounds`, in that order.
 - The `Objects` tab shall provide source-linked object-tree navigation grouped by scrap.
 - The `Selection` tab shall provide selection details/settings editing for the currently selected map object.
+- When the selected object is a `scrap`, the `Selection` tab shall expose manual scrap scale editing for XTherion/Therion-compatible 8-parameter `-scale` calibration values, including picture point 1/2 in pixels, real point 1/2, unit, and an action that writes the resulting `-scale [...]` option to the selected scrap command.
 - In embedded `Raw` mode, the workspace shall present the source text editor together with the contextual help inspector and no embedded map pane.
 - The embedded graphical map pane shall stay dedicated to map editing and shall not include a separate persistent map-help panel.
 - The user shall be able to detach the current TH2 session into a dedicated map editor window without creating a separate document state.
@@ -321,6 +322,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The `Backgrounds` inspector layer list shall expose per-row visibility and delete icon actions aligned with the object-list action pattern.
 - The `Backgrounds` inspector shall expose visual map-grid controls for showing/hiding a square metric grid and setting its spacing in meters; when a scrap `-scale` is available, the spacing shall be converted from meters to TH2 source coordinates through that scale.
 - The map editor shall read Therion scrap `-scale` in numeric, unit, ratio, and 8/9-parameter calibration forms so grid spacing and geometry transforms remain compatible with Therion and XTherion-authored files.
+- Manual edits to a selected scrap scale shall write XTherion-compatible 8-parameter `-scale [x1 y1 x2 y2 rx1 ry1 rx2 ry2 unit]` metadata and shall preserve other scrap options/comments where practical.
 - Background sketch or image layers shall be restorable when reopening the document.
 - `.xvi` vector background references shall render as background layers when present.
 - The map editor shall support an explicit touch-friendly controls mode for pen-first workflows rather than relying only on device heuristics.
@@ -848,6 +850,7 @@ The criteria below are intended for implementation verification and QA.
 - Raster background image add/move/show-hide/gamma/remove operations write and maintain XTherion-compatible `xth_me_area_adjust`, `xth_me_area_zoom_to`, and `xth_me_image_insert` metadata in the TH2 source.
 - Background grid controls can toggle the grid and set a metric spacing; rendered grid cells remain square and use scrap `-scale` metadata to match real-world meters where available.
 - Map-driven scrap insertion writes XTherion-compatible default `-scale` metadata, while existing Therion/XTherion `-scale` forms are preserved unless explicitly edited.
+- Selecting a scrap in `Selection` exposes manual scale calibration controls and writes XTherion-compatible 8-parameter `-scale [...]` metadata to the scrap command.
 - A touch-friendly controls mode is available for pen-first workflows.
 - Zoom, pan, and background-image adjustments persist for the session.
 
@@ -856,6 +859,8 @@ The criteria below are intended for implementation verification and QA.
 - The inspector always matches the current selected object.
 - Changing selection updates the visible object settings immediately.
 - For `scrap`, `point`, `line`, and `area`, inspector configuration uses the same catalog-driven option workflow as structured block selection.
+- For `scrap`, the inspector provides dedicated manual scale calibration fields for picture points in pixels, real points, and unit, and applies them by rewriting the scrap `-scale` option.
+- Catalog-driven option editors shall treat bracketed multi-token values such as scrap `-scale [...]` as one logical option value and shall not interpret negative numbers inside that value as option keys.
 - Required fields are validated before commit.
 - Station points use station name as their required name field.
 - Non-station points do not expose station-name editing as a generic field.

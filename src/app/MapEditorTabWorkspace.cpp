@@ -559,13 +559,15 @@ void MapEditorTab::buildUi()
         });
     }
 
-    auto *selectionSectionLabel = new QLabel(tr("Selection"), objectsTab);
-    QFont sectionFont = selectionSectionLabel->font();
+    QFont sectionFont = objectsTab->font();
     sectionFont.setBold(true);
-    selectionSectionLabel->setFont(sectionFont);
-    objectsLayout->addWidget(selectionSectionLabel);
 
-    auto *selectionPanel = new QWidget(objectsTab);
+    auto *selectionTab = new QWidget(mapInspectorTabs_);
+    auto *selectionTabLayout = new QVBoxLayout(selectionTab);
+    selectionTabLayout->setContentsMargins(4, 4, 4, 4);
+    selectionTabLayout->setSpacing(8);
+
+    auto *selectionPanel = new QWidget(selectionTab);
     auto *selectionLayout = new QVBoxLayout(selectionPanel);
     selectionLayout->setContentsMargins(0, 0, 0, 0);
     selectionLayout->setSpacing(8);
@@ -636,7 +638,9 @@ void MapEditorTab::buildUi()
     objectConfigureButton_->setAutoDefault(false);
     connect(objectConfigureButton_, &QPushButton::clicked, this, &MapEditorTab::handleConfigureObjectSettingsTriggered);
     selectionLayout->addWidget(objectConfigureButton_);
-    objectsLayout->addWidget(selectionPanel);
+    selectionTabLayout->addWidget(selectionPanel);
+    selectionTabLayout->addStretch(1);
+    mapInspectorTabs_->addTab(selectionTab, tr("Selection"));
     mapInspectorTabs_->addTab(objectsTab, tr("Objects"));
 
     auto *backgroundTab = new QWidget(mapInspectorTabs_);

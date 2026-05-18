@@ -276,8 +276,9 @@ The rules below define the expected day-to-day interaction model. If a later req
 - When a TH2 document is active in the main window, map-pane detach/reattach (`Separate Map` / `Return Map`) shall be provided in the same document command toolbar control area as the `Visual`/`Raw` mode selector.
 - When a TH2 map editor is presented outside the main tab strip (for example in a detached dedicated map-editor window), the top command toolbar shall omit `Visual`/`Raw` mode switching and keep only actions relevant to the detached visual workspace.
 - In embedded `Visual` mode, the workspace shall present the graphical map canvas together with a right-side map inspector.
-- The right-side map inspector in `Visual` mode shall provide at least two tabs: `Objects` and `Backgrounds`.
-- The `Objects` tab shall combine source-linked object-tree navigation (grouped by scrap) with selection details/settings editing for the currently selected map object.
+- The right-side map inspector in `Visual` mode shall provide tabs for `Selection`, `Objects`, and `Backgrounds`, in that order.
+- The `Objects` tab shall provide source-linked object-tree navigation grouped by scrap.
+- The `Selection` tab shall provide selection details/settings editing for the currently selected map object.
 - In embedded `Raw` mode, the workspace shall present the source text editor together with the contextual help inspector and no embedded map pane.
 - The embedded graphical map pane shall stay dedicated to map editing and shall not include a separate persistent map-help panel.
 - The user shall be able to detach the current TH2 session into a dedicated map editor window without creating a separate document state.
@@ -822,7 +823,7 @@ The criteria below are intended for implementation verification and QA.
 - In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same document command toolbar control area, after `Raw`.
 - In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`) after `Undo`/`Redo`.
 - In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window top command toolbar remains available.
-- In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side map inspector (`Objects`, `Backgrounds` tabs).
+- In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side map inspector (`Selection`, `Objects`, `Backgrounds` tabs).
 - In embedded `Raw` mode, the tab shows the source text editor plus contextual help inspector.
 - The graphical map pane does not show a separate persistent map-help panel.
 - The same TH2 session can be shown in an embedded workspace and a detached map pane window without diverging document state.

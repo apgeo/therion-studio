@@ -3,7 +3,6 @@
 #include "../src/app/MapEditorSceneSupport.h"
 #include "../src/app/TextEditorTab.h"
 
-#include <QAbstractButton>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QEventLoop>
@@ -380,11 +379,6 @@ void pumpEvents()
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
 }
 
-QAbstractButton *findToolbarButton(const MapEditorTab &tab, const QString &objectName)
-{
-    return tab.findChild<QAbstractButton *>(objectName);
-}
-
 MapEditableGeometryVertexItem *findCenteredLineAnchor(QGraphicsScene *scene, const QRectF &visibleSceneRect)
 {
     if (scene == nullptr) {
@@ -753,14 +747,6 @@ int runDragUndoRedoSmoke()
         return 1;
     }
 
-    QAbstractButton *undoButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarUndoButton"));
-    QAbstractButton *redoButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarRedoButton"));
-    QAbstractButton *selectButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarSelectButton"));
-    if (!expect(undoButton != nullptr && redoButton != nullptr && selectButton != nullptr,
-                "Select/Undo/Redo buttons were not found.")) {
-        return 1;
-    }
-
     const QString originalText = mapTab->text();
     if (!expect(!originalText.isEmpty(), "Loaded TH2 text should not be empty.")) {
         return 1;
@@ -773,7 +759,7 @@ int runDragUndoRedoSmoke()
     }
     dragAnchorItem->setSelected(true);
     pumpEvents();
-    selectButton->click();
+    mapTab->triggerSelectMode();
     pumpEvents();
 
     if (!expect(dragItemBySceneDelta(mapView, dragAnchorItem, QPointF(36.0, -24.0)),
@@ -785,11 +771,11 @@ int runDragUndoRedoSmoke()
     if (!expect(changedText != originalText, "Drag did not change TH2 text content.")) {
         return 1;
     }
-    if (!expect(undoButton->isEnabled(), "Undo should be enabled after a map drag edit.")) {
+    if (!expect(mapTab->canUndo(), "Undo should be enabled after a map drag edit.")) {
         return 1;
     }
 
-    undoButton->click();
+    mapTab->triggerUndo();
     pumpEvents();
 
     if (!expect(mapTab->text() == originalText, "Undo did not restore original TH2 text.")) {
@@ -798,11 +784,11 @@ int runDragUndoRedoSmoke()
     if (!expect(!mapTab->isDirty(), "Map tab should be clean after undo to baseline.")) {
         return 1;
     }
-    if (!expect(redoButton->isEnabled(), "Redo should be enabled after undoing map drag edit.")) {
+    if (!expect(mapTab->canRedo(), "Redo should be enabled after undoing map drag edit.")) {
         return 1;
     }
 
-    redoButton->click();
+    mapTab->triggerRedo();
     pumpEvents();
 
     if (!expect(mapTab->text() == changedText, "Redo did not restore edited TH2 text.")) {
@@ -816,22 +802,9 @@ int runDragUndoRedoSmoke()
     const int pointDirectivesBefore = countDirectiveLines(textBeforeInteractiveDrawing, QStringLiteral("point"));
     const int lineDirectivesBefore = countDirectiveLines(textBeforeInteractiveDrawing, QStringLiteral("line"));
     const int areaDirectivesBefore = countDirectiveLines(textBeforeInteractiveDrawing, QStringLiteral("area"));
-    auto *pointModeButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarPointButton"));
-    auto *lineModeButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarLineButton"));
-    auto *freehandModeButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarFreehandButton"));
-    auto *areaModeButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarAreaButton"));
-    auto *completeDraftButton = findToolbarButton(*mapTab, QStringLiteral("mapToolbarCompleteDraftButton"));
-    if (!expect(pointModeButton != nullptr
-                && lineModeButton != nullptr
-                && freehandModeButton != nullptr
-                && areaModeButton != nullptr
-                && completeDraftButton != nullptr,
-                "Point/Line/Freehand/Area/Complete Draft buttons were not found for interactive drawing checks.")) {
-        return 1;
-    }
-
     const QPoint viewportCenter = mapView->viewport()->rect().center();
-    pointModeButton->click();
+    const QString textBeforePointInsert = mapTab->text();
+    mapTab->triggerAddPoint();
     pumpEvents();
     sendMouse(mapView->viewport(), QEvent::MouseButtonPress, viewportCenter, Qt::LeftButton, Qt::LeftButton);
     sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, viewportCenter, Qt::LeftButton, Qt::NoButton);
@@ -840,9 +813,56 @@ int runDragUndoRedoSmoke()
                 "Point mode click-to-place should insert one new point directive.")) {
         return 1;
     }
+    const QString textAfterPointInsert = mapTab->text();
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textBeforePointInsert,
+                "Undo after Point mode insertion should remove the newly inserted point directive.")) {
+        return 1;
+    }
+    mapTab->triggerRedo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterPointInsert,
+                "Redo after undoing Point mode insertion should restore the point directive.")) {
+        return 1;
+    }
+    const QPoint secondPointPosition(viewportCenter.x() + 18, viewportCenter.y() + 12);
+    const QString textAfterFirstPointInsert = mapTab->text();
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, secondPointPosition, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, secondPointPosition, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    const QString textAfterSecondPointInsert = mapTab->text();
+    if (!expect(countDirectiveLines(textAfterSecondPointInsert, QStringLiteral("point")) == pointDirectivesBefore + 2,
+                "A second Point mode click should insert a second point directive.")) {
+        return 1;
+    }
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterFirstPointInsert,
+                "First Undo after two Point mode insertions should remove only the second point directive.")) {
+        return 1;
+    }
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textBeforePointInsert,
+                "Second Undo after two Point mode insertions should remove the first point directive too.")) {
+        return 1;
+    }
+    mapTab->triggerRedo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterFirstPointInsert,
+                "First Redo after two point undos should restore the first point directive.")) {
+        return 1;
+    }
+    mapTab->triggerRedo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterSecondPointInsert,
+                "Second Redo after two point undos should restore the second point directive.")) {
+        return 1;
+    }
 
     const int pointDirectivesBeforeEscCancel = countDirectiveLines(mapTab->text(), QStringLiteral("point"));
-    pointModeButton->click();
+    mapTab->triggerAddPoint();
     pumpEvents();
     textEditor->setFocus(Qt::OtherFocusReason);
     pumpEvents();
@@ -857,8 +877,9 @@ int runDragUndoRedoSmoke()
         return 1;
     }
 
-    lineModeButton->click();
+    mapTab->triggerAddLine();
     pumpEvents();
+    const QString textBeforeLineInsert = mapTab->text();
     const QPoint firstLineVertex(viewportCenter.x() - 20, viewportCenter.y() - 12);
     const QPoint secondLineVertex(viewportCenter.x() + 24, viewportCenter.y() - 8);
     const QPoint thirdLineVertex(viewportCenter.x() + 18, viewportCenter.y() + 18);
@@ -884,6 +905,19 @@ int runDragUndoRedoSmoke()
                 "Committing a 4-vertex line draft should preserve all captured vertices in source text.")) {
         return 1;
     }
+    const QString textAfterLineInsert = mapTab->text();
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textBeforeLineInsert,
+                "Undo after Line mode completion should remove the newly inserted line block.")) {
+        return 1;
+    }
+    mapTab->triggerRedo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterLineInsert,
+                "Redo after undoing Line mode completion should restore the line block.")) {
+        return 1;
+    }
 
     const int lineDirectivesBeforeModePersistenceCheck = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
     const QPoint fifthLineVertex(viewportCenter.x() - 14, viewportCenter.y() + 26);
@@ -893,7 +927,7 @@ int runDragUndoRedoSmoke()
     sendMouse(mapView->viewport(), QEvent::MouseButtonPress, sixthLineVertex, Qt::LeftButton, Qt::LeftButton);
     sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, sixthLineVertex, Qt::LeftButton, Qt::NoButton);
     pumpEvents();
-    completeDraftButton->click();
+    mapTab->triggerCompleteDraft();
     pumpEvents();
     if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeModePersistenceCheck + 1,
                 "After Enter commit, Line mode should stay active so a new line can be inserted without reselecting Line mode.")) {
@@ -901,7 +935,7 @@ int runDragUndoRedoSmoke()
     }
 
     const int lineDirectivesBeforeBezierInsert = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
-    lineModeButton->click();
+    mapTab->triggerAddLine();
     pumpEvents();
     const QPoint bezierAnchor1(viewportCenter.x() - 60, viewportCenter.y() - 30);
     const QPoint bezierAnchor2(viewportCenter.x() + 60, viewportCenter.y() - 22);
@@ -912,7 +946,7 @@ int runDragUndoRedoSmoke()
     sendMouse(mapView->viewport(), QEvent::MouseMove, bezierDrag, Qt::NoButton, Qt::LeftButton);
     sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, bezierDrag, Qt::LeftButton, Qt::NoButton);
     pumpEvents();
-    completeDraftButton->click();
+    mapTab->triggerCompleteDraft();
     pumpEvents();
     if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeBezierInsert + 1,
                 "Line mode click+drag should insert a new line directive.")) {
@@ -929,7 +963,7 @@ int runDragUndoRedoSmoke()
     }
 
     const int lineDirectivesBeforeBezierAdjustInsert = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
-    lineModeButton->click();
+    mapTab->triggerAddLine();
     pumpEvents();
     const QPoint adjustedBezierAnchor1(viewportCenter.x() - 62, viewportCenter.y() + 42);
     const QPoint adjustedBezierAnchor2(viewportCenter.x() + 58, viewportCenter.y() + 50);
@@ -951,7 +985,7 @@ int runDragUndoRedoSmoke()
     sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, controlDrag, Qt::LeftButton, Qt::NoButton);
     pumpEvents();
 
-    completeDraftButton->click();
+    mapTab->triggerCompleteDraft();
     pumpEvents();
     if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeBezierAdjustInsert + 1,
                 "Dragging a bezier control handle in Line mode should still commit as a new line.")) {
@@ -969,7 +1003,7 @@ int runDragUndoRedoSmoke()
     }
 
     const int lineDirectivesBeforeBezierAnchorMirrorInsert = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
-    lineModeButton->click();
+    mapTab->triggerAddLine();
     pumpEvents();
     const QPoint anchorMirror1(viewportCenter.x() - 88, viewportCenter.y() - 28);
     const QPoint anchorMirror2(viewportCenter.x() - 18, viewportCenter.y() - 14);
@@ -985,7 +1019,7 @@ int runDragUndoRedoSmoke()
     sendMouse(mapView->viewport(), QEvent::MouseMove, anchorMirrorDrag3, Qt::NoButton, Qt::LeftButton);
     sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, anchorMirrorDrag3, Qt::LeftButton, Qt::NoButton);
     pumpEvents();
-    completeDraftButton->click();
+    mapTab->triggerCompleteDraft();
     pumpEvents();
     if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeBezierAnchorMirrorInsert + 1,
                 "Placing consecutive curved anchors should still commit as a new line.")) {
@@ -1019,7 +1053,7 @@ int runDragUndoRedoSmoke()
     }
 
     const int lineDirectivesBeforeBezierMirrorInsert = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
-    lineModeButton->click();
+    mapTab->triggerAddLine();
     pumpEvents();
     const QPoint mirroredAnchor1(viewportCenter.x() - 70, viewportCenter.y() + 58);
     const QPoint mirroredAnchor2(viewportCenter.x() - 8, viewportCenter.y() + 46);
@@ -1047,7 +1081,7 @@ int runDragUndoRedoSmoke()
     sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, mirroredControlDrag, Qt::LeftButton, Qt::NoButton);
     pumpEvents();
 
-    completeDraftButton->click();
+    mapTab->triggerCompleteDraft();
     pumpEvents();
     if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeBezierMirrorInsert + 1,
                 "Dragging one control on a smooth draft vertex should still commit as a new line.")) {
@@ -1079,7 +1113,7 @@ int runDragUndoRedoSmoke()
     }
 
     const int lineDirectivesBeforeEscCancel = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
-    lineModeButton->click();
+    mapTab->triggerAddLine();
     pumpEvents();
     sendMouse(mapView->viewport(), QEvent::MouseButtonPress, firstLineVertex, Qt::LeftButton, Qt::LeftButton);
     sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, firstLineVertex, Qt::LeftButton, Qt::NoButton);
@@ -1091,7 +1125,7 @@ int runDragUndoRedoSmoke()
     sendKey(textEditor, QEvent::KeyPress, Qt::Key_Escape);
     sendKey(textEditor, QEvent::KeyRelease, Qt::Key_Escape);
     pumpEvents();
-    completeDraftButton->click();
+    mapTab->triggerCompleteDraft();
     pumpEvents();
     if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeEscCancel + 1,
                 "Esc in Line mode should commit captured vertices and return to Select mode.")) {
@@ -1100,7 +1134,7 @@ int runDragUndoRedoSmoke()
 
     const int areaDirectivesBeforeEscCommit = countDirectiveLines(mapTab->text(), QStringLiteral("area"));
     const int lineDirectivesBeforeAreaEscCommit = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
-    areaModeButton->click();
+    mapTab->triggerAddArea();
     pumpEvents();
     const QPoint firstAreaVertex(viewportCenter.x() - 22, viewportCenter.y() + 18);
     const QPoint secondAreaVertex(viewportCenter.x() + 14, viewportCenter.y() + 18);
@@ -1119,7 +1153,7 @@ int runDragUndoRedoSmoke()
     sendKey(textEditor, QEvent::KeyPress, Qt::Key_Escape);
     sendKey(textEditor, QEvent::KeyRelease, Qt::Key_Escape);
     pumpEvents();
-    completeDraftButton->click();
+    mapTab->triggerCompleteDraft();
     pumpEvents();
     if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("area")) == areaDirectivesBeforeEscCommit + 1,
                 "Esc in Area mode should commit captured vertices and return to Select mode.")) {
@@ -1161,7 +1195,7 @@ int runDragUndoRedoSmoke()
     }
 
     const int lineDirectivesBeforeFreehand = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
-    freehandModeButton->click();
+    mapTab->triggerAddFreehandLine();
     pumpEvents();
     const QPoint strokeStart(viewportCenter.x() - 30, viewportCenter.y() + 20);
     const QPoint strokeMid1(viewportCenter.x() - 10, viewportCenter.y() + 8);

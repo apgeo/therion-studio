@@ -1024,6 +1024,67 @@ private:
     std::optional<QString> afterTextSnapshot_;
 };
 
+class MapSourceTextSnapshotCommand final : public QUndoCommand
+{
+public:
+    MapSourceTextSnapshotCommand(TextEditorTab *textEditor,
+                                 QString label,
+                                 QString beforeText,
+                                 QString afterText,
+                                 int insertedLineNumber,
+                                 std::function<void(const QString &)> statusCallback)
+        : textEditor_(textEditor)
+        , beforeText_(std::move(beforeText))
+        , afterText_(std::move(afterText))
+        , insertedLineNumber_(insertedLineNumber)
+        , statusCallback_(std::move(statusCallback))
+    {
+        setText(std::move(label));
+    }
+
+    void undo() override
+    {
+        if (textEditor_ == nullptr) {
+            setObsolete(true);
+            return;
+        }
+
+        textEditor_->replaceTextForCommand(beforeText_);
+        if (statusCallback_ != nullptr) {
+            statusCallback_(insertedLineNumber_ > 0
+                                ? QStringLiteral("Removed inserted map object at source line %1.").arg(insertedLineNumber_)
+                                : QStringLiteral("Removed inserted map object."));
+        }
+    }
+
+    void redo() override
+    {
+        if (firstRedo_) {
+            firstRedo_ = false;
+            return;
+        }
+        if (textEditor_ == nullptr) {
+            setObsolete(true);
+            return;
+        }
+
+        textEditor_->replaceTextForCommand(afterText_);
+        if (statusCallback_ != nullptr) {
+            statusCallback_(insertedLineNumber_ > 0
+                                ? QStringLiteral("Restored inserted map object at source line %1.").arg(insertedLineNumber_)
+                                : QStringLiteral("Restored inserted map object."));
+        }
+    }
+
+private:
+    QPointer<TextEditorTab> textEditor_;
+    QString beforeText_;
+    QString afterText_;
+    int insertedLineNumber_ = 0;
+    std::function<void(const QString &)> statusCallback_;
+    bool firstRedo_ = true;
+};
+
 struct CoupledLineMove
 {
     QVector<MapLineAreaVertexMoveCommand::SecondaryMove> secondaryMoves;
@@ -2857,6 +2918,8 @@ void MapEditorTab::handleInsertScrapTriggered()
 
     QString errorMessage;
     int insertedLineNumber = 0;
+    const QString beforeText = textEditor_->text();
+    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
     if (!textEditor_->insertScrapBlock(QStringLiteral("new-scrap"), &insertedLineNumber, &errorMessage)) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Insert Scrap failed.")
@@ -2864,6 +2927,7 @@ void MapEditorTab::handleInsertScrapTriggered()
         refreshToolbarSummary();
         return;
     }
+    recordSourceTextSnapshot(tr("Insert Scrap"), beforeText, textEditor_->text(), insertedLineNumber);
 
     toolbarStatusNote_ = insertedLineNumber > 0
         ? tr("Inserted scrap block at line %1.").arg(insertedLineNumber)
@@ -2911,6 +2975,8 @@ void MapEditorTab::handleCompleteDraftTriggered()
 
     QString errorMessage;
     int insertedLineNumber = 0;
+    const QString beforeText = textEditor_->text();
+    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
     if (!textEditor_->insertDraftGeometry(geometryKind, vertices, &insertedLineNumber, &errorMessage)) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Complete Draft failed.")
@@ -2918,6 +2984,7 @@ void MapEditorTab::handleCompleteDraftTriggered()
         refreshToolbarSummary();
         return;
     }
+    recordSourceTextSnapshot(tr("Complete Draft"), beforeText, textEditor_->text(), insertedLineNumber);
 
     const QString geometryLabel = draftGeometryLabel(draftItem->kind());
     removeDraftGeometryItem(draftRectItem);
@@ -2956,11 +3023,14 @@ bool MapEditorTab::handleInteractiveDrawClick(const QPointF &scenePosition)
         QString errorMessage;
         int insertedLineNumber = 0;
         const QVector<QPointF> vertices{sourcePointFromScenePosition(scenePosition)};
+        const QString beforeText = textEditor_->text();
+        const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
         if (!textEditor_->insertDraftGeometry(QStringLiteral("point"), vertices, &insertedLineNumber, &errorMessage)) {
             toolbarStatusNote_ = errorMessage.isEmpty()
                 ? tr("Point insert failed.")
                 : tr("Point insert failed: %1").arg(errorMessage);
         } else {
+            recordSourceTextSnapshot(tr("Insert Point"), beforeText, textEditor_->text(), insertedLineNumber);
             toolbarStatusNote_ = insertedLineNumber > 0
                 ? tr("Inserted point at source line %1.").arg(insertedLineNumber)
                 : tr("Inserted point.");
@@ -3010,6 +3080,8 @@ bool MapEditorTab::commitInteractiveDrawSession()
         QString errorMessage;
         int insertedLineNumber = 0;
         const QStringList coordinateRows = lineCoordinateRowsForInteractiveDraft();
+        const QString beforeText = textEditor_->text();
+        const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
         if (!textEditor_->insertDraftLineGeometry(coordinateRows, &insertedLineNumber, &errorMessage)) {
             toolbarStatusNote_ = errorMessage.isEmpty()
                 ? tr("Complete Draft failed.")
@@ -3017,12 +3089,15 @@ bool MapEditorTab::commitInteractiveDrawSession()
             refreshToolbarSummary();
             return true;
         }
+        recordSourceTextSnapshot(tr("Insert Line"), beforeText, textEditor_->text(), insertedLineNumber);
         toolbarStatusNote_ = insertedLineNumber > 0
             ? tr("Complete Draft wrote line geometry at source line %1.").arg(insertedLineNumber)
             : tr("Complete Draft wrote line geometry to source.");
     } else {
         QString errorMessage;
         int insertedLineNumber = 0;
+        const QString beforeText = textEditor_->text();
+        const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
         if (!textEditor_->insertDraftAreaGeometry(areaCoordinateRowsForInteractiveDraft(),
                                                   &insertedLineNumber,
                                                   &errorMessage)) {
@@ -3032,6 +3107,7 @@ bool MapEditorTab::commitInteractiveDrawSession()
             refreshToolbarSummary();
             return true;
         }
+        recordSourceTextSnapshot(tr("Insert Area"), beforeText, textEditor_->text(), insertedLineNumber);
         toolbarStatusNote_ = insertedLineNumber > 0
             ? tr("Complete Draft wrote area geometry at source line %1.").arg(insertedLineNumber)
             : tr("Complete Draft wrote area geometry to source.");
@@ -3539,12 +3615,15 @@ bool MapEditorTab::commitInteractiveDrawVertices(const QString &geometryKind,
 
     QString errorMessage;
     int insertedLineNumber = 0;
+    const QString beforeText = textEditor_->text();
+    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
     if (!textEditor_->insertDraftGeometry(geometryKind, vertices, &insertedLineNumber, &errorMessage)) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Complete Draft failed.")
             : tr("Complete Draft failed: %1").arg(errorMessage);
         return false;
     }
+    recordSourceTextSnapshot(tr("Complete Draft"), beforeText, textEditor_->text(), insertedLineNumber);
 
     toolbarStatusNote_ = insertedLineNumber > 0
         ? tr("Complete Draft wrote %1 geometry at source line %2.").arg(successLabel, QString::number(insertedLineNumber))
@@ -3566,6 +3645,8 @@ bool MapEditorTab::cancelInteractiveDrawingToSelectMode()
         if (modeAtCancel == InteractiveDrawMode::Line) {
             QString errorMessage;
             int insertedLineNumber = 0;
+            const QString beforeText = textEditor_->text();
+            const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
             if (!textEditor_->insertDraftLineGeometry(lineCoordinateRowsForInteractiveDraft(),
                                                       &insertedLineNumber,
                                                       &errorMessage)) {
@@ -3577,9 +3658,12 @@ bool MapEditorTab::cancelInteractiveDrawingToSelectMode()
                 updateHelpPanel();
                 return false;
             }
+            recordSourceTextSnapshot(tr("Insert Line"), beforeText, textEditor_->text(), insertedLineNumber);
         } else {
             QString errorMessage;
             int insertedLineNumber = 0;
+            const QString beforeText = textEditor_->text();
+            const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
             if (!textEditor_->insertDraftAreaGeometry(areaCoordinateRowsForInteractiveDraft(),
                                                       &insertedLineNumber,
                                                       &errorMessage)) {
@@ -3591,6 +3675,7 @@ bool MapEditorTab::cancelInteractiveDrawingToSelectMode()
                 updateHelpPanel();
                 return false;
             }
+            recordSourceTextSnapshot(tr("Insert Area"), beforeText, textEditor_->text(), insertedLineNumber);
         }
         committedLineOrAreaDraft = true;
     }
@@ -4845,6 +4930,32 @@ void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
                                                statusCallback);
     directCommand.redo();
     flushPendingMapSceneRefreshAfterCommand();
+}
+
+void MapEditorTab::recordSourceTextSnapshot(const QString &label,
+                                            const QString &beforeText,
+                                            const QString &afterText,
+                                            int insertedLineNumber)
+{
+    if (textEditor_ == nullptr || beforeText == afterText) {
+        return;
+    }
+
+    auto statusCallback = [this](const QString &statusMessage) {
+        toolbarStatusNote_ = statusMessage;
+        refreshToolbarSummary();
+    };
+
+    if (undoStack_ != nullptr) {
+        const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
+        undoStack_->push(new MapSourceTextSnapshotCommand(textEditor_,
+                                                          label,
+                                                          beforeText,
+                                                          afterText,
+                                                          insertedLineNumber,
+                                                          statusCallback));
+        flushPendingMapSceneRefreshAfterCommand();
+    }
 }
 
 bool MapEditorTab::insertLineVertexFromSelection()

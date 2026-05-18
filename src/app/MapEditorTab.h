@@ -256,6 +256,10 @@ private:
                                   int vertexIndex,
                                   const QPointF &oldPoint,
                                   const QPointF &newPoint);
+    void recordSourceTextSnapshot(const QString &label,
+                                  const QString &beforeText,
+                                  const QString &afterText,
+                                  int insertedLineNumber);
     bool insertLineVertexFromSelection();
     bool removeLineVertexFromSelection();
     bool toggleLineVertexSmoothFromSelection();

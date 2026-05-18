@@ -1,7 +1,6 @@
 #include "../src/app/MapEditorTab.h"
 
 #include <QApplication>
-#include <QAbstractButton>
 #include <QEventLoop>
 #include <QGraphicsView>
 #include <QMainWindow>
@@ -27,11 +26,6 @@ void pumpEvents()
 {
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-}
-
-QAbstractButton *findDetachButton(const MapEditorTab &tab)
-{
-    return tab.findChild<QAbstractButton *>(QStringLiteral("mapToolbarDetachButton"));
 }
 
 int countDetachedMapWindows(const QWidget *hostWindow)
@@ -79,13 +73,8 @@ int runDetachedPaneLifecycleTest()
         return 1;
     }
 
-    auto *detachButton = findDetachButton(*mapTab);
-    if (!expect(detachButton != nullptr, "Detach/reattach map button was not found.")) {
-        return 1;
-    }
-
-    if (!expect(detachButton->text().contains(QStringLiteral("Window"), Qt::CaseInsensitive),
-                "Initial detach button text should indicate opening map in window.")) {
+    if (!expect(mapTab->mapPaneWindowActionText().contains(QStringLiteral("Separate"), Qt::CaseInsensitive),
+                "Initial detach action text should indicate separating the map.")) {
         return 1;
     }
 
@@ -94,11 +83,11 @@ int runDetachedPaneLifecycleTest()
         return 1;
     }
 
-    detachButton->click();
+    mapTab->toggleMapPaneWindow();
     pumpEvents();
 
-    if (!expect(detachButton->text().contains(QStringLiteral("Pane"), Qt::CaseInsensitive),
-                "After detaching, button should switch to return-map-pane state.")) {
+    if (!expect(mapTab->mapPaneWindowActionText().contains(QStringLiteral("Return"), Qt::CaseInsensitive),
+                "After detaching, action text should switch to return-map state.")) {
         return 1;
     }
 
@@ -112,12 +101,12 @@ int runDetachedPaneLifecycleTest()
         return 1;
     }
 
-    // Reattaches by closing the detached window through the same toggle button.
-    detachButton->click();
+    // Reattaches by closing the detached window through the same toggle action.
+    mapTab->toggleMapPaneWindow();
     pumpEvents();
 
-    if (!expect(detachButton->text().contains(QStringLiteral("Window"), Qt::CaseInsensitive),
-                "After reattaching, button should switch back to open-map-window state.")) {
+    if (!expect(mapTab->mapPaneWindowActionText().contains(QStringLiteral("Separate"), Qt::CaseInsensitive),
+                "After reattaching, action text should switch back to separate-map state.")) {
         return 1;
     }
 

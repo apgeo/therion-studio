@@ -270,6 +270,8 @@ qt_add_executable(MapEditorDetachedPaneTest
     src/core/DocumentFile.h
     src/core/MapBackgroundPlacement.cpp
     src/core/MapBackgroundPlacement.h
+    src/core/ProjectStructureIndex.cpp
+    src/core/ProjectStructureIndex.h
     src/core/SessionStore.cpp
     src/core/SessionStore.h
     src/core/TherionBackgroundMetadata.cpp
@@ -308,6 +310,8 @@ qt_add_executable(MapEditorDragUndoRedoSmokeTest
     src/core/DocumentFile.h
     src/core/MapBackgroundPlacement.cpp
     src/core/MapBackgroundPlacement.h
+    src/core/ProjectStructureIndex.cpp
+    src/core/ProjectStructureIndex.h
     src/core/SessionStore.cpp
     src/core/SessionStore.h
     src/core/TherionBackgroundMetadata.cpp

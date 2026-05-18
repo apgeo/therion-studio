@@ -41,7 +41,7 @@ Behavior:
 - Clicking the active icon again collapses the sidebar to the rail.
 - Clicking any icon while collapsed expands sidebar and opens that pane.
 - Dragging the sidebar content resize handle below the minimum usable width snaps the content pane closed while keeping the activity rail fixed and visible.
-- Map-object/background workflows are handled directly in TH2 Visual-mode right-side Inspector (`Objects` and `Backgrounds` tabs), not in a dedicated rail pane.
+- Selection/map-object/background workflows are handled directly in TH2 Visual-mode right-side Inspector (`Selection`, `Objects`, and `Backgrounds` tabs), not in a dedicated rail pane.
 - Activity-rail buttons use larger borderless icon buttons with hover/active highlight states tuned for both light and dark appearances.
 
 ### 2.2 Central Tabs
@@ -301,7 +301,7 @@ Selecting an entry:
 
 Map tab uses explicit workspace modes:
 
-- `Visual`: graphical map editor + right-side `Inspector` tabs (`Objects`, `Backgrounds`)
+- `Visual`: graphical map editor + right-side `Inspector` tabs (`Selection`, `Objects`, `Backgrounds`)
 - `Raw`: source text editor + right-side contextual help inspector
 - the full-width document toolbar row is shown under tabs for all document types
 - the top command toolbar row is framed with subtle separators above and below for clearer visual separation from tabs and editor/map content
@@ -324,11 +324,10 @@ Map canvas appearance:
 
 Inspector panel (`Visual` mode):
 
-- `Objects` tab combines:
-- TH2 objects grouped by scrap (source-line-linked tree)
-- selection details/editing controls (formerly standalone `Object Details` / `Selection` panel)
+- `Selection` tab contains details and editing controls for the currently selected map object
+- `Objects` tab contains TH2 objects grouped by scrap in a source-line-linked tree
 - `Backgrounds` tab starts with visual grid controls, followed by background-layer controls that were previously in the left sidebar `Map` pane
-- Visual-mode Inspector uses compact outer margins; the `Objects` tree starts directly under its tab, and background `Position` / `Adjustments` controls use padded inner groups
+- Visual-mode Inspector uses compact outer margins; the `Objects` tree starts directly under its tab, and selection/background controls use padded inner groups where needed
 - in the `Backgrounds` tab, grid controls are first; layer add uses a compact `+` button in the `Layers` header; per-layer visibility and removal use right-aligned row icons, while reorder actions remain below the layer list
 
 - in `Objects`:
@@ -337,6 +336,7 @@ Inspector panel (`Visual` mode):
 - clicking an already selected object row again clears the object selection
 - the visibility icon (`eye` / `eye-off`) hides or shows the corresponding map object in the current editor view without changing the source file
 - the delete icon (`trash`) asks for confirmation and removes the corresponding source command span; block objects such as `line`, `area`, and `scrap` remove their full matching `end...` block, and the removal is available through document undo/redo
+- in `Selection`:
 - shows selected object line/kind summary
 - supports coordinate edits for selected point/vertex geometry items
 - for point symbols and selected line anchor vertices, orientation controls appear only when catalog metadata marks `-orientation` as supported for the current command type/subtype:

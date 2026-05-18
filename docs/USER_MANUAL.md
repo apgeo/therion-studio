@@ -327,12 +327,13 @@ Inspector panel (`Visual` mode):
 - `Objects` tab combines:
 - TH2 objects grouped by scrap (source-line-linked tree)
 - selection details/editing controls (formerly standalone `Object Details` / `Selection` panel)
-- `Backgrounds` tab hosts background-layer controls that were previously in the left sidebar `Map` pane
+- `Backgrounds` tab starts with visual grid controls, followed by background-layer controls that were previously in the left sidebar `Map` pane
 - Visual-mode Inspector uses compact outer margins; the `Objects` tree starts directly under its tab, and background `Position` / `Adjustments` controls use padded inner groups
-- in the `Backgrounds` tab, layer add uses a compact `+` button in the `Layers` header; per-layer visibility and removal use right-aligned row icons, while reorder actions remain below the layer list
+- in the `Backgrounds` tab, grid controls are first; layer add uses a compact `+` button in the `Layers` header; per-layer visibility and removal use right-aligned row icons, while reorder actions remain below the layer list
 
 - in `Objects`:
 - each source-linked tree row includes compact visibility and delete icon actions
+- map-object rows use the same command-kind icons as the map toolbar (`Scrap`, `Point`, `Line`, `Area`), with row text formatted from the Therion symbol type/subtype and optional id/name, e.g. `wall blocks: wall-1` or `station fixed: 4@hp`
 - clicking an already selected object row again clears the object selection
 - the visibility icon (`eye` / `eye-off`) hides or shows the corresponding map object in the current editor view without changing the source file
 - the delete icon (`trash`) asks for confirmation and removes the corresponding source command span; block objects such as `line`, `area`, and `scrap` remove their full matching `end...` block, and the removal is available through document undo/redo
@@ -435,6 +436,7 @@ Zoom constraints:
 
 In `Visual` mode `Inspector -> Backgrounds`, the `Background Images` controls provide:
 
+- square metric grid controls (`Show grid`, `Spacing (m)`) for the visual map canvas; when the TH2 scrap has `-scale`, the spacing is converted from meters to TH2 source units so it can be used as a real-world scale reference
 - layer list with selection
 - add (`+`) button (multi-file picker)
 - per-layer visibility icon (`eye` / `eye-off`) in the list row
@@ -443,7 +445,6 @@ In `Visual` mode `Inspector -> Backgrounds`, the `Background Images` controls pr
 - position `X`, `Y` fields
 - opacity slider with reset
 - gamma slider with reset
-- square metric grid controls (`Show grid`, `Spacing (m)`) for the visual map canvas; when the TH2 scrap has `-scale`, the spacing is converted from meters to TH2 source units so it can be used as a real-world scale reference
 
 Persistence:
 

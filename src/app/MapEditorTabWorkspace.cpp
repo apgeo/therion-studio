@@ -643,6 +643,33 @@ void MapEditorTab::buildUi()
     auto *backgroundLayout = new QVBoxLayout(backgroundTab);
     backgroundLayout->setContentsMargins(4, 4, 4, 4);
     backgroundLayout->setSpacing(10);
+
+    auto *gridLabel = new QLabel(tr("Grid"), backgroundTab);
+    gridLabel->setFont(sectionFont);
+    backgroundLayout->addWidget(gridLabel);
+
+    auto *gridFrame = new QFrame(backgroundTab);
+    gridFrame->setFrameShape(QFrame::StyledPanel);
+    auto *gridLayout = new QVBoxLayout(gridFrame);
+    gridLayout->setContentsMargins(12, 12, 12, 12);
+    gridLayout->setSpacing(8);
+
+    mapGridVisibleCheck_ = new QCheckBox(tr("Show grid"), gridFrame);
+    mapGridVisibleCheck_->setChecked(mapGridVisible_);
+    gridLayout->addWidget(mapGridVisibleCheck_);
+
+    auto *gridSpacingRow = new QHBoxLayout;
+    gridSpacingRow->addWidget(new QLabel(tr("Spacing (m)"), gridFrame));
+    mapGridSpacingSpin_ = new QDoubleSpinBox(gridFrame);
+    mapGridSpacingSpin_->setRange(0.1, 10000.0);
+    mapGridSpacingSpin_->setDecimals(1);
+    mapGridSpacingSpin_->setSingleStep(1.0);
+    mapGridSpacingSpin_->setSuffix(tr(" m"));
+    mapGridSpacingSpin_->setValue(mapGridSpacingMeters_);
+    gridSpacingRow->addWidget(mapGridSpacingSpin_, 1);
+    gridLayout->addLayout(gridSpacingRow);
+    backgroundLayout->addWidget(gridFrame);
+
     auto *layersRow = new QHBoxLayout;
     auto *layersLabel = new QLabel(tr("Layers"), backgroundTab);
     sectionFont = layersLabel->font();
@@ -742,31 +769,6 @@ void MapEditorTab::buildUi()
     adjustmentsLayout->addWidget(mapBackgroundGammaSlider_);
     backgroundLayout->addWidget(adjustmentsFrame);
 
-    auto *gridLabel = new QLabel(tr("Grid"), backgroundTab);
-    gridLabel->setFont(sectionFont);
-    backgroundLayout->addWidget(gridLabel);
-
-    auto *gridFrame = new QFrame(backgroundTab);
-    gridFrame->setFrameShape(QFrame::StyledPanel);
-    auto *gridLayout = new QVBoxLayout(gridFrame);
-    gridLayout->setContentsMargins(12, 12, 12, 12);
-    gridLayout->setSpacing(8);
-
-    mapGridVisibleCheck_ = new QCheckBox(tr("Show grid"), gridFrame);
-    mapGridVisibleCheck_->setChecked(mapGridVisible_);
-    gridLayout->addWidget(mapGridVisibleCheck_);
-
-    auto *gridSpacingRow = new QHBoxLayout;
-    gridSpacingRow->addWidget(new QLabel(tr("Spacing (m)"), gridFrame));
-    mapGridSpacingSpin_ = new QDoubleSpinBox(gridFrame);
-    mapGridSpacingSpin_->setRange(0.1, 10000.0);
-    mapGridSpacingSpin_->setDecimals(1);
-    mapGridSpacingSpin_->setSingleStep(1.0);
-    mapGridSpacingSpin_->setSuffix(tr(" m"));
-    mapGridSpacingSpin_->setValue(mapGridSpacingMeters_);
-    gridSpacingRow->addWidget(mapGridSpacingSpin_, 1);
-    gridLayout->addLayout(gridSpacingRow);
-    backgroundLayout->addWidget(gridFrame);
     backgroundLayout->addStretch(1);
     mapInspectorTabs_->addTab(backgroundTab, tr("Backgrounds"));
 

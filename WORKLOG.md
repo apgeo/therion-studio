@@ -19,6 +19,7 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 - Continue Phase 11 structured block-canvas authoring (richer block configuration, safer insertion guards, and broader directive coverage).
 - Map editor selection behavior polish: in `Select` mode, clicking an area border should select the referenced `line`; clicking inside area fill should select the `area` object.
 - Files sidebar refresh fix: after delete (file/folder via context menu), refresh the tree/model view immediately so removed items disappear without manual re-open/refresh.
+- Nice-to-have: TH2 Visual grid fallback for documents without parseable geometry or valid source bounds, e.g. user-defined grid origin/extent so the grid can be shown before map objects/backgrounds exist.
 - Continue implementation work; defer Phase 6 manual verification pass.
 
 ### Risks / blockers
@@ -29,6 +30,12 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 
 ### Completed
 
+- ~~Fixed TH2 Visual `Inspector -> Objects` scrap expand/collapse after custom click handling by letting clicks in the tree branch/disclosure area pass through to native `QTreeView`, and corrected station row labels so positional station names are treated as identifiers rather than duplicated as symbol type. Verified with `cmake --build build --target TherionStudio`.~~
+- ~~Corrected TH2 Visual `Inspector -> Objects` row text semantics so `type` means the Therion symbol type (for example `wall`, `station`, `altitude`) and `subtype` comes from `-subtype` or inline `type:subtype`, with optional `-id`/station `-name` after `:`. Updated user manual wording. Verified with `cmake --build build --target TherionStudio`.~~
+- ~~Adjusted TH2 Visual `Inspector -> Objects` row text to `type subtype: id/name` where available while keeping object type icons in the name column. Updated user manual wording. Verified with `cmake --build build --target TherionStudio`.~~
+- ~~Changed TH2 Visual `Inspector -> Objects` type presentation from textual `Scrap`/`Point`/`Line`/`Area` prefixes to the same toolbar icons (`puzzle`, `locate-fixed`, `spline`, `pentagon`), leaving row text for subtype/name content such as `wall`, `altitude`, or `station 13@hp`. Updated user manual wording. Verified with `cmake --build build --target TherionStudio`.~~
+- ~~Standardized TH2 Visual `Inspector -> Objects` labels to `Scrap: name`, `Point: type`, `Line: type`, and `Area: type`, with station points shown as `Point: station name`. Updated user manual wording. Verified with `cmake --build build --target TherionStudio`.~~
+- ~~Moved TH2 Visual `Inspector -> Backgrounds` grid controls to the top of the tab before `Layers`, so grid visibility/spacing is the first background-related setting. Updated user manual wording. Verified with `cmake --build build --target TherionStudio`.~~
 - ~~Fixed TH2 Visual `Inspector -> Objects` scrap deselection reselect loop by suppressing automatic reselect for every source line in the deselected inspector subtree and consuming the corresponding tree-view mouse release event so native release handling cannot restore selection. Verified with `cmake --build build --target TherionStudio`.~~
 - ~~Fixed TH2 Visual `Inspector -> Objects` repeat-click deselection flicker/reselect loop by suppressing automatic inspector/map cursor resynchronization for the source line that was just manually deselected until the user selects another object or moves to another source line. Verified with `cmake --build build --target TherionStudio`.~~
 - ~~Made TH2 Visual `Inspector -> Objects` visibility re-show restore map highlighting for multi-line selections and scrap subtrees as well as single objects by reselecting the full inspector subtree without centering the map view. Verified with `cmake --build build --target TherionStudio`.~~

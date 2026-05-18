@@ -76,32 +76,169 @@ constexpr int kInspectorBackgroundDeleteColumn = 2;
 constexpr int kInspectorBackgroundColumnCount = 3;
 constexpr int kInspectorBackgroundLayerIndexRole = Qt::UserRole + 730;
 
-QString inspectorObjectKindLabel(const QString &category)
+bool inspectorTokenLooksNumeric(const QString &token)
 {
-    if (category == QStringLiteral("Stations")) {
-        return QObject::tr("Station Point");
+    if (token.isEmpty()) {
+        return false;
     }
-    if (category == QStringLiteral("Points")) {
-        return QObject::tr("Point");
-    }
-    if (category == QStringLiteral("Lines")) {
-        return QObject::tr("Line");
-    }
-    if (category == QStringLiteral("Areas")) {
-        return QObject::tr("Area");
-    }
-    if (category == QStringLiteral("Scraps")) {
-        return QObject::tr("Scrap");
-    }
-    return category;
+
+    bool ok = false;
+    token.toDouble(&ok);
+    return ok;
 }
 
-QString inspectorMapObjectItemText(const ProjectStructureEntry &entry)
+QString inspectorOptionValue(const QStringList &tokens, const QString &option)
+{
+    for (int index = 0; index + 1 < tokens.size(); ++index) {
+        if (tokens.at(index) == option) {
+            return tokens.at(index + 1);
+        }
+    }
+
+    return QString();
+}
+
+QString inspectorPointTypeToken(const TherionParsedLine &parsedLine)
+{
+    bool skipOptionValue = false;
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        const QString token = parsedLine.tokens.at(index);
+        if (skipOptionValue) {
+            skipOptionValue = false;
+            continue;
+        }
+        if (token.startsWith(QLatin1Char('-'))) {
+            skipOptionValue = index + 1 < parsedLine.tokens.size();
+            continue;
+        }
+        if (inspectorTokenLooksNumeric(token)) {
+            continue;
+        }
+
+        return token;
+    }
+
+    return QString();
+}
+
+QString inspectorStationNameToken(const TherionParsedLine &parsedLine)
+{
+    bool skipOptionValue = false;
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        const QString token = parsedLine.tokens.at(index);
+        if (skipOptionValue) {
+            skipOptionValue = false;
+            continue;
+        }
+        if (token.startsWith(QLatin1Char('-'))) {
+            skipOptionValue = index + 1 < parsedLine.tokens.size();
+            continue;
+        }
+        if (token.compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0 || inspectorTokenLooksNumeric(token)) {
+            continue;
+        }
+
+        return token;
+    }
+
+    return QString();
+}
+
+QString inspectorObjectTextWithOptionalIdentifier(const QString &type, const QString &subtype, const QString &identifier)
+{
+    const QString normalizedType = type.trimmed();
+    const QString normalizedSubtype = subtype.trimmed();
+    const QString normalizedIdentifier = identifier.trimmed();
+
+    QString text = normalizedSubtype.isEmpty()
+        ? normalizedType
+        : QStringLiteral("%1 %2").arg(normalizedType, normalizedSubtype);
+    if (!normalizedIdentifier.isEmpty()) {
+        text = QStringLiteral("%1: %2").arg(text, normalizedIdentifier);
+    }
+
+    return text;
+}
+
+QString inspectorTypePart(const QString &typeToken)
+{
+    return typeToken.section(QLatin1Char(':'), 0, 0).trimmed();
+}
+
+QString inspectorInlineSubtypePart(const QString &typeToken)
+{
+    return typeToken.section(QLatin1Char(':'), 1).trimmed();
+}
+
+QString inspectorObjectSubtype(const TherionParsedLine &parsedLine, const QString &typeToken)
+{
+    const QString optionSubtype = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-subtype"));
+    if (!optionSubtype.isEmpty()) {
+        return optionSubtype;
+    }
+
+    return inspectorInlineSubtypePart(typeToken);
+}
+
+QString inspectorMapObjectIconName(const ProjectStructureEntry &entry)
+{
+    if (entry.category == QStringLiteral("Scraps")) {
+        return QStringLiteral("puzzle");
+    }
+    if (entry.category == QStringLiteral("Stations") || entry.category == QStringLiteral("Points")) {
+        return QStringLiteral("locate-fixed");
+    }
+    if (entry.category == QStringLiteral("Lines")) {
+        return QStringLiteral("spline");
+    }
+    if (entry.category == QStringLiteral("Areas")) {
+        return QStringLiteral("pentagon");
+    }
+
+    return QString();
+}
+
+QString inspectorMapObjectItemText(const ProjectStructureEntry &entry, const TherionParsedLine *parsedLine)
 {
     if (entry.category == QStringLiteral("Scraps")) {
         return entry.name;
     }
-    return QStringLiteral("%1: %2").arg(inspectorObjectKindLabel(entry.category), entry.name);
+
+    if (parsedLine == nullptr) {
+        return entry.name;
+    }
+
+    if (entry.category == QStringLiteral("Stations") || entry.category == QStringLiteral("Points")) {
+        const QString pointTypeToken = inspectorPointTypeToken(*parsedLine);
+        const QString pointType = entry.category == QStringLiteral("Stations")
+            ? QStringLiteral("station")
+            : inspectorTypePart(pointTypeToken);
+        const QString pointSubtype = inspectorObjectSubtype(*parsedLine, pointTypeToken);
+        const QString stationName = inspectorOptionValue(parsedLine->tokens, QStringLiteral("-name"));
+        QString identifier = stationName.isEmpty() ? inspectorOptionValue(parsedLine->tokens, QStringLiteral("-id")) : stationName;
+        if (entry.category == QStringLiteral("Stations") && identifier.isEmpty()) {
+            identifier = inspectorStationNameToken(*parsedLine);
+        }
+        return inspectorObjectTextWithOptionalIdentifier(pointType.isEmpty() ? entry.name : pointType,
+                                                         pointSubtype,
+                                                         identifier);
+    }
+
+    if (entry.category == QStringLiteral("Lines")) {
+        const QString lineTypeToken = parsedLine->tokens.value(1, entry.name);
+        return inspectorObjectTextWithOptionalIdentifier(inspectorTypePart(lineTypeToken),
+                                                         inspectorObjectSubtype(*parsedLine, lineTypeToken),
+                                                         inspectorOptionValue(parsedLine->tokens, QStringLiteral("-id")));
+    }
+
+    if (entry.category == QStringLiteral("Areas")) {
+        const QString areaTypeToken = parsedLine->tokens.value(1, entry.name);
+        return inspectorObjectTextWithOptionalIdentifier(inspectorTypePart(areaTypeToken),
+                                                         inspectorObjectSubtype(*parsedLine, areaTypeToken),
+                                                         inspectorOptionValue(parsedLine->tokens, QStringLiteral("-id")));
+    }
+
+    return entry.name;
 }
 
 QIcon inspectorActionIcon(const QString &iconName)
@@ -1561,6 +1698,14 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
             if (mouseEvent->button() == Qt::LeftButton) {
                 const QModelIndex index = mapObjectsTree_->indexAt(mouseEvent->pos());
+                const QModelIndex objectIndex = index.sibling(index.row(), kInspectorObjectNameColumn);
+                if (index.column() == kInspectorObjectNameColumn
+                    && objectIndex.isValid()
+                    && mapObjectsModel_ != nullptr
+                    && mapObjectsModel_->rowCount(objectIndex) > 0
+                    && mouseEvent->pos().x() < mapObjectsTree_->visualRect(objectIndex).left() + mapObjectsTree_->indentation()) {
+                    return QWidget::eventFilter(watched, event);
+                }
                 if (index.isValid()
                     && (index.column() == kInspectorObjectNameColumn
                         || index.column() == kInspectorObjectVisibilityColumn
@@ -1578,12 +1723,19 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
             if (mouseEvent->button() == Qt::LeftButton && mapObjectsTree_->selectionModel() != nullptr) {
                 const QModelIndex index = mapObjectsTree_->indexAt(mouseEvent->pos());
+                const QModelIndex objectIndex = index.sibling(index.row(), kInspectorObjectNameColumn);
+                if (index.column() == kInspectorObjectNameColumn
+                    && objectIndex.isValid()
+                    && mapObjectsModel_ != nullptr
+                    && mapObjectsModel_->rowCount(objectIndex) > 0
+                    && mouseEvent->pos().x() < mapObjectsTree_->visualRect(objectIndex).left() + mapObjectsTree_->indentation()) {
+                    return QWidget::eventFilter(watched, event);
+                }
                 if (index.isValid()
                     && (index.column() == kInspectorObjectNameColumn
                         || index.column() == kInspectorObjectVisibilityColumn
                         || index.column() == kInspectorObjectDeleteColumn)) {
                     if (index.column() == kInspectorObjectNameColumn) {
-                        const QModelIndex objectIndex = index.sibling(index.row(), kInspectorObjectNameColumn);
                         inspectorObjectPressedNameIndex_ = QPersistentModelIndex(objectIndex);
                         inspectorObjectPressedWasSelected_ = mapObjectsTree_->selectionModel()->isSelected(objectIndex);
                     }
@@ -3502,12 +3654,20 @@ void MapEditorTab::rebuildInspectorObjectsTree()
         return;
     }
 
-    const QVector<ProjectStructureEntry> entries = ProjectStructureIndex::scanTh2Objects(th2Path, textEditor_->text());
+    const QString currentText = textEditor_->text();
+    const QVector<ProjectStructureEntry> entries = ProjectStructureIndex::scanTh2Objects(th2Path, currentText);
     if (entries.isEmpty()) {
         auto *placeholderItem = new QStandardItem(tr("No TH2 scraps, points, lines, or areas were found in the current document"));
         placeholderItem->setEditable(false);
         mapObjectsModel_->appendRow({placeholderItem, new QStandardItem, new QStandardItem});
         return;
+    }
+
+    QHash<int, TherionParsedLine> parsedLinesByLineNumber;
+    for (const TherionParsedLine &parsedLine : TherionDocumentParser::parseText(currentText)) {
+        if (parsedLine.lineNumber > 0) {
+            parsedLinesByLineNumber.insert(parsedLine.lineNumber, parsedLine);
+        }
     }
 
     QSet<int> currentObjectLines;
@@ -3517,7 +3677,15 @@ void MapEditorTab::rebuildInspectorObjectsTree()
             parentStack.removeLast();
         }
 
-        auto *entryItem = new QStandardItem(inspectorMapObjectItemText(entry));
+        const auto parsedLineIt = parsedLinesByLineNumber.constFind(entry.lineNumber);
+        const TherionParsedLine *parsedLine = parsedLineIt == parsedLinesByLineNumber.constEnd()
+            ? nullptr
+            : &parsedLineIt.value();
+        auto *entryItem = new QStandardItem(inspectorMapObjectItemText(entry, parsedLine));
+        const QString iconName = inspectorMapObjectIconName(entry);
+        if (!iconName.isEmpty()) {
+            entryItem->setIcon(inspectorActionIcon(iconName));
+        }
         entryItem->setEditable(false);
         entryItem->setData(entry.sourceFile, kInspectorSourceFileRole);
         entryItem->setData(entry.lineNumber, kInspectorSourceLineRole);

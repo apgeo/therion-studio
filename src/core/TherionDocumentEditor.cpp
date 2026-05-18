@@ -699,7 +699,8 @@ bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
 bool TherionDocumentEditor::appendScrapBlock(QString *contents,
                                              const QString &preferredName,
                                              int *insertedLineNumber,
-                                             QString *errorMessage)
+                                             QString *errorMessage,
+                                             const QString &options)
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
@@ -743,6 +744,11 @@ bool TherionDocumentEditor::appendScrapBlock(QString *contents,
 
     const int scrapLineNumber = lineCountForText(updated) + 1;
     updated += QStringLiteral("scrap %1").arg(resolvedName);
+    const QString normalizedOptions = options.trimmed();
+    if (!normalizedOptions.isEmpty()) {
+        updated += QLatin1Char(' ');
+        updated += normalizedOptions;
+    }
     updated += lineEnding;
     updated += QStringLiteral("endscrap");
     updated += lineEnding;

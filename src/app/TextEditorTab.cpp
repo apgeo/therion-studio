@@ -2944,11 +2944,12 @@ bool TextEditorTab::rewriteStructureEntryName(int lineNumber, const QString &cat
 
 bool TextEditorTab::insertScrapBlock(const QString &preferredName,
                                      int *insertedLineNumber,
-                                     QString *errorMessage)
+                                     QString *errorMessage,
+                                     const QString &options)
 {
     QString contents = editor_->toPlainText();
     int resolvedLineNumber = 0;
-    if (!TherionDocumentEditor::appendScrapBlock(&contents, preferredName, &resolvedLineNumber, errorMessage)) {
+    if (!TherionDocumentEditor::appendScrapBlock(&contents, preferredName, &resolvedLineNumber, errorMessage, options)) {
         return false;
     }
 

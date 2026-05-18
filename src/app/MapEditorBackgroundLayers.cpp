@@ -13,6 +13,8 @@
 #include <QLineF>
 #include <QPainter>
 #include <QPixmap>
+#include <QRegularExpression>
+#include <QScopedValueRollback>
 #include <QSet>
 #include <QtMath>
 
@@ -23,6 +25,7 @@
 #include "../core/MapBackgroundPlacement.h"
 #include "../core/SessionStore.h"
 #include "../core/TherionBackgroundMetadata.h"
+#include "../core/TherionDocumentParser.h"
 #include "../core/TherionXviParser.h"
 
 namespace TherionStudio
@@ -97,6 +100,25 @@ QPointF modelToPreviewPoint(const QPointF &modelPoint, const QRectF &modelBounds
                    panY - (modelPoint.y() * zoom));
 }
 
+QPointF previewToModelPoint(const QPointF &previewPoint, const QRectF &modelBounds, const QRectF &previewBounds)
+{
+    if (!modelBounds.isValid() || !previewBounds.isValid()) {
+        return previewPoint;
+    }
+
+    const QRectF fitted = fittedModelBoundsInPreview(modelBounds, previewBounds);
+    const qreal zoom = qMin(fitted.width() / qMax(1.0, modelBounds.width()),
+                            fitted.height() / qMax(1.0, modelBounds.height()));
+    if (zoom < 1e-9) {
+        return previewPoint;
+    }
+
+    const qreal panX = fitted.left() - (modelBounds.left() * zoom);
+    const qreal panY = fitted.top() + (modelBounds.bottom() * zoom);
+    return QPointF((previewPoint.x() - panX) / zoom,
+                   (panY - previewPoint.y()) / zoom);
+}
+
 QSizeF rasterModelSize(const QString &layerPath, qreal imageScale)
 {
     Q_UNUSED(imageScale);
@@ -113,6 +135,221 @@ QSizeF rasterModelSize(const QString &layerPath, qreal imageScale)
     }
 
     return QSizeF(imageSize.width(), imageSize.height());
+}
+
+QString formatXtherionNumber(qreal value)
+{
+    if (std::fabs(value) < 1e-9) {
+        return QStringLiteral("0");
+    }
+
+    const qreal nearestInteger = std::round(value);
+    if (std::fabs(value - nearestInteger) < 1e-9) {
+        return QString::number(static_cast<qlonglong>(nearestInteger));
+    }
+
+    return QString::number(value, 'g', 15);
+}
+
+QString xtherionPathToken(const QString &absolutePath, const QString &documentPath)
+{
+    QString path = absolutePath;
+    const QString baseDirectory = QFileInfo(documentPath).absolutePath();
+    if (!baseDirectory.isEmpty()) {
+        path = QDir(baseDirectory).relativeFilePath(absolutePath);
+    }
+    path = QDir::fromNativeSeparators(path);
+    if (path.contains(QRegularExpression(QStringLiteral(R"(\s|[{}])")))) {
+        QString escaped = path;
+        escaped.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
+        escaped.replace(QLatin1Char('{'), QStringLiteral("\\{"));
+        escaped.replace(QLatin1Char('}'), QStringLiteral("\\}"));
+        return QStringLiteral("{%1}").arg(escaped);
+    }
+    return path;
+}
+
+QString xtherionImageInsertLine(const QString &absolutePath,
+                                const QString &documentPath,
+                                const QPointF &basePosition,
+                                bool visible,
+                                qreal gamma)
+{
+    return QStringLiteral("##XTHERION## xth_me_image_insert {%1 %2 %3} {%4 {}} %5 0 {}")
+        .arg(formatXtherionNumber(basePosition.x()),
+             visible ? QStringLiteral("1") : QStringLiteral("0"),
+             formatXtherionNumber(qBound<qreal>(0.2, gamma, 2.5)),
+             formatXtherionNumber(basePosition.y()),
+             xtherionPathToken(absolutePath, documentPath));
+}
+
+QString xtherionAreaAdjustLine(const QRectF &modelRect)
+{
+    const QRectF rect = modelRect.normalized();
+    return QStringLiteral("##XTHERION## xth_me_area_adjust %1 %2 %3 %4")
+        .arg(formatXtherionNumber(rect.left()),
+             formatXtherionNumber(rect.top()),
+             formatXtherionNumber(rect.right()),
+             formatXtherionNumber(rect.bottom()));
+}
+
+QString xtherionAreaZoomLine()
+{
+    return QStringLiteral("##XTHERION## xth_me_area_zoom_to 100");
+}
+
+QString lineEndingForText(const QString &text)
+{
+    return text.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+}
+
+int insertionIndexAfterEncoding(const QStringList &lines)
+{
+    for (int index = 0; index < lines.size(); ++index) {
+        QString line = lines.at(index);
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+        if (line.trimmed().startsWith(QStringLiteral("encoding "))) {
+            return index + 1;
+        }
+    }
+    return 0;
+}
+
+int insertionIndexForXtherionImageMetadata(const QStringList &lines)
+{
+    int insertionIndex = 0;
+    for (int index = 0; index < lines.size(); ++index) {
+        QString line = lines.at(index);
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+
+        const QString trimmed = line.trimmed();
+        if (trimmed.isEmpty()) {
+            continue;
+        }
+        if (trimmed.startsWith(QStringLiteral("encoding "))
+            || trimmed.startsWith(QStringLiteral("##XTHERION##"))) {
+            insertionIndex = index + 1;
+            continue;
+        }
+        break;
+    }
+    return insertionIndex;
+}
+
+QString upsertXtherionSimpleCommandLine(const QString &documentText,
+                                        const QString &command,
+                                        const QString &metadataLine)
+{
+    const QString lineEnding = lineEndingForText(documentText);
+    QStringList lines = documentText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    if (!lines.isEmpty() && lines.last().isEmpty()) {
+        lines.removeLast();
+    }
+    for (QString &line : lines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+
+    for (int index = 0; index < lines.size(); ++index) {
+        if (lines.at(index).contains(QStringLiteral("##XTHERION##")) && lines.at(index).contains(command)) {
+            lines[index] = metadataLine;
+            QString updated = lines.join(lineEnding);
+            if (documentText.endsWith(QLatin1Char('\n')) || !updated.isEmpty()) {
+                updated += lineEnding;
+            }
+            return updated;
+        }
+    }
+
+    int insertionIndex = insertionIndexAfterEncoding(lines);
+    if (command == QStringLiteral("xth_me_area_zoom_to")) {
+        for (int index = 0; index < lines.size(); ++index) {
+            if (lines.at(index).contains(QStringLiteral("##XTHERION##"))
+                && lines.at(index).contains(QStringLiteral("xth_me_area_adjust"))) {
+                insertionIndex = index + 1;
+                break;
+            }
+        }
+    }
+
+    lines.insert(insertionIndex, metadataLine);
+    QString updated = lines.join(lineEnding);
+    if (documentText.endsWith(QLatin1Char('\n')) || !updated.isEmpty()) {
+        updated += lineEnding;
+    }
+    return updated;
+}
+
+QString upsertXtherionImageMetadataLine(const QString &documentText,
+                                        const QString &documentPath,
+                                        const QString &absolutePath,
+                                        const QString &metadataLine,
+                                        bool remove)
+{
+    const QString lineEnding = lineEndingForText(documentText);
+    QStringList lines = documentText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    if (!lines.isEmpty() && lines.last().isEmpty()) {
+        lines.removeLast();
+    }
+    for (QString &line : lines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+
+    const QVector<XtherionBackgroundReference> references = parseXtherionBackgroundReferences(documentText, documentPath);
+    const QString targetPathKey = normalizedPathKey(absolutePath);
+    int existingIndex = -1;
+    for (const XtherionBackgroundReference &reference : references) {
+        if (reference.lineNumber <= 0 || reference.lineNumber > lines.size()) {
+            continue;
+        }
+        if (normalizedPathKey(reference.absolutePath) == targetPathKey) {
+            existingIndex = reference.lineNumber - 1;
+            break;
+        }
+    }
+
+    if (existingIndex >= 0) {
+        if (remove) {
+            lines.removeAt(existingIndex);
+        } else {
+            lines[existingIndex] = metadataLine;
+        }
+    } else if (!remove) {
+        lines.insert(insertionIndexForXtherionImageMetadata(lines), metadataLine);
+    }
+
+    QString updated = lines.join(lineEnding);
+    if (documentText.endsWith(QLatin1Char('\n')) || !updated.isEmpty()) {
+        updated += lineEnding;
+    }
+    return updated;
+}
+
+QRectF rasterModelRectForItem(const QGraphicsPixmapItem *item, const QRectF &sourceBounds, const QRectF &previewBounds)
+{
+    if (item == nullptr) {
+        return QRectF();
+    }
+
+    const QString layerPath = item->data(0).toString();
+    const QSizeF modelSize = rasterModelSize(layerPath, 1.0);
+    if (!modelSize.isValid() || modelSize.width() <= 0.0 || modelSize.height() <= 0.0) {
+        return QRectF();
+    }
+
+    if (!sourceBounds.isValid() || !previewBounds.isValid()) {
+        return QRectF(QPointF(0.0, -modelSize.height()), modelSize);
+    }
+
+    const QPointF modelTopLeft = previewToModelPoint(item->pos(), sourceBounds, previewBounds);
+    return QRectF(modelTopLeft, modelSize);
 }
 
 bool placeRasterLayerByModelRect(QGraphicsPixmapItem *item,
@@ -395,7 +632,7 @@ void MapEditorTab::browseAndAddBackgroundImages()
 
     const int previousLayerCount = backgroundImageItems_.size();
     for (const QString &imagePath : imagePaths) {
-        addBackgroundImage(imagePath);
+        addBackgroundImage(imagePath, true);
     }
 
     const int addedLayerCount = backgroundImageItems_.size() - previousLayerCount;
@@ -416,6 +653,7 @@ void MapEditorTab::removeSelectedBackgroundLayer()
     }
 
     QGraphicsPixmapItem *item = backgroundImageItems_.takeAt(selectedBackgroundLayerIndex_);
+    const QString layerPath = item != nullptr ? item->data(0).toString() : QString();
     if (item != nullptr && mapScene_ != nullptr) {
         mapScene_->removeItem(item);
     }
@@ -424,6 +662,7 @@ void MapEditorTab::removeSelectedBackgroundLayer()
     applyBackgroundLayerStackingOrder();
     setSelectedBackgroundLayerIndexInternal(selectedBackgroundLayerIndex_);
     toolbarStatusNote_ = tr("Removed selected background layer.");
+    removeBackgroundLayerXtherionMetadata(layerPath, tr("Remove Background Image"));
     saveBackgroundLayersToSession();
     updateCommandSurfaceState();
 }
@@ -462,6 +701,7 @@ void MapEditorTab::toggleSelectedBackgroundLayerVisibility()
     }
 
     item->setVisible(!item->isVisible());
+    syncBackgroundLayerXtherionMetadata(item, tr("Toggle Background Visibility"));
     saveBackgroundLayersToSession();
     refreshBackgroundLayerControls();
 }
@@ -491,6 +731,7 @@ void MapEditorTab::setSelectedBackgroundLayerGamma(qreal gamma)
     }
 
     applyBackgroundLayerGamma(item, qBound(0.2, gamma, 2.5));
+    syncBackgroundLayerXtherionMetadata(item, tr("Set Background Gamma"));
     saveBackgroundLayersToSession();
     refreshBackgroundLayerControls();
 }
@@ -508,6 +749,7 @@ void MapEditorTab::setSelectedBackgroundLayerPosition(const QPointF &position)
     }
 
     item->setPos(position);
+    syncBackgroundLayerXtherionMetadata(item, tr("Move Background Image"));
     saveBackgroundLayersToSession();
     refreshBackgroundLayerControls();
 }
@@ -520,6 +762,7 @@ void MapEditorTab::nudgeSelectedBackgroundLayer(const QPointF &delta)
     }
 
     item->setPos(item->pos() + delta);
+    syncBackgroundLayerXtherionMetadata(item, tr("Move Background Image"));
     saveBackgroundLayersToSession();
     refreshBackgroundLayerControls();
 }
@@ -798,7 +1041,9 @@ void MapEditorTab::loadBackgroundLayersFromSession()
         }
 
         QGraphicsPixmapItem *item = backgroundImageItems_.last();
-        item->setVisible(layerObject.value(QStringLiteral("visible")).toBool(true));
+        item->setVisible(hasMetadata && metadataReference->hasVisibility
+                             ? metadataReference->visible
+                             : layerObject.value(QStringLiteral("visible")).toBool(true));
         const qreal opacity = layerObject.value(QStringLiteral("opacity")).toDouble(0.58);
         item->setOpacity(qBound(0.05, opacity, 1.0));
         if (hasMetadata && metadataReference->hasBasePosition && !metadataReference->xviReference) {
@@ -878,6 +1123,9 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
                                          sourceBounds,
                                          previewBounds);
             existingLayer->setData(4, true);
+            if (existingMetadata->hasVisibility) {
+                existingLayer->setVisible(existingMetadata->visible);
+            }
         }
     }
 
@@ -916,6 +1164,9 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
             backgroundItem->setData(4, true);
             backgroundItem->setToolTip(QFileInfo(referencePath).fileName());
             backgroundItem->setPos(topLeft);
+            if (reference.hasVisibility) {
+                backgroundItem->setVisible(reference.visible);
+            }
             mapScene_->addItem(backgroundItem);
             backgroundImageItems_.append(backgroundItem);
             applyBackgroundLayerStackingOrder();
@@ -940,6 +1191,9 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
         }
 
         item->setData(4, true);
+        if (reference.hasVisibility) {
+            item->setVisible(reference.visible);
+        }
         if (reference.hasBasePosition && sourceBounds.isValid() && previewBounds.isValid()) {
             placeRasterLayerFromMetadata(item,
                                          reference,
@@ -1026,6 +1280,9 @@ void MapEditorTab::reprojectMetadataBackgroundLayersForCurrentDocument()
             existingLayer->setPixmap(pixmap);
             existingLayer->setPos(topLeft);
             existingLayer->setData(4, true);
+            if (metadataReference->hasVisibility) {
+                existingLayer->setVisible(metadataReference->visible);
+            }
             updatedAnyLayer = true;
             continue;
         }
@@ -1036,6 +1293,9 @@ void MapEditorTab::reprojectMetadataBackgroundLayersForCurrentDocument()
                                          sourceBounds,
                                          previewBounds)) {
             existingLayer->setData(4, true);
+            if (metadataReference->hasVisibility) {
+                existingLayer->setVisible(metadataReference->visible);
+            }
             updatedAnyLayer = true;
         }
     }
@@ -1046,7 +1306,129 @@ void MapEditorTab::reprojectMetadataBackgroundLayersForCurrentDocument()
     }
 }
 
-void MapEditorTab::addBackgroundImage(const QString &imagePath)
+QRectF MapEditorTab::xtherionAutoAreaAdjustRect() const
+{
+    QRectF limits;
+    bool hasLimits = false;
+
+    auto includeRect = [&](const QRectF &rect) {
+        if (!rect.isValid()) {
+            return;
+        }
+        if (!hasLimits) {
+            limits = rect.normalized();
+            hasLimits = true;
+            return;
+        }
+        limits = limits.united(rect.normalized());
+    };
+
+    const QRectF currentSourceBounds = textEditor_ != nullptr
+        ? parseXtherionAreaAdjust(textEditor_->text()).modelRect
+        : QRectF();
+    const QRectF previewBounds = mapPreviewBounds();
+    for (QGraphicsPixmapItem *item : backgroundImageItems_) {
+        if (item == nullptr || item->data(0).toString().endsWith(QStringLiteral(".xvi"), Qt::CaseInsensitive)) {
+            continue;
+        }
+        includeRect(rasterModelRectForItem(item, currentSourceBounds, previewBounds));
+    }
+
+    if (textEditor_ != nullptr) {
+        const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_->text());
+        includeRect(geometryBoundsForFeatures(collectGeometryFeatures(parsedLines)));
+    }
+
+    if (!hasLimits) {
+        limits = QRectF(QPointF(128.0, 128.0), QSizeF(0.0, 0.0));
+    }
+
+    return limits.adjusted(-128.0, -128.0, 128.0, 128.0);
+}
+
+void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item, const QString &label)
+{
+    if (item == nullptr || textEditor_ == nullptr) {
+        return;
+    }
+
+    const QString layerPath = QFileInfo(item->data(0).toString()).absoluteFilePath();
+    if (layerPath.isEmpty() || layerPath.endsWith(QStringLiteral(".xvi"), Qt::CaseInsensitive)) {
+        return;
+    }
+
+    QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
+    const QRectF previewBounds = mapPreviewBounds();
+    if (!sourceBounds.isValid()) {
+        sourceBounds = xtherionAutoAreaAdjustRect();
+    }
+    if (!sourceBounds.isValid() || !previewBounds.isValid()) {
+        return;
+    }
+
+    const QSizeF modelSize = rasterModelSize(layerPath, 1.0);
+    if (!modelSize.isValid() || modelSize.width() <= 0.0 || modelSize.height() <= 0.0) {
+        return;
+    }
+
+    const QPointF modelTopLeft = previewToModelPoint(item->pos(), sourceBounds, previewBounds);
+    const QPointF basePosition(modelTopLeft.x(), modelTopLeft.y() + modelSize.height());
+    const QString metadataLine = xtherionImageInsertLine(layerPath,
+                                                        filePath(),
+                                                        basePosition,
+                                                        item->isVisible(),
+                                                        backgroundLayerGammaValue(item));
+
+    const QString beforeText = textEditor_->text();
+    const QString afterAreaText = upsertXtherionSimpleCommandLine(beforeText,
+                                                                  QStringLiteral("xth_me_area_adjust"),
+                                                                  xtherionAreaAdjustLine(xtherionAutoAreaAdjustRect()));
+    const QString afterZoomText = upsertXtherionSimpleCommandLine(afterAreaText,
+                                                                  QStringLiteral("xth_me_area_zoom_to"),
+                                                                  xtherionAreaZoomLine());
+    const QString afterText = upsertXtherionImageMetadataLine(afterZoomText,
+                                                             filePath(),
+                                                             layerPath,
+                                                             metadataLine,
+                                                             false);
+    if (afterText == beforeText) {
+        return;
+    }
+
+    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
+    textEditor_->replaceTextForCommand(afterText);
+    recordSourceTextSnapshot(label, beforeText, afterText, 0);
+}
+
+void MapEditorTab::removeBackgroundLayerXtherionMetadata(const QString &layerPath, const QString &label)
+{
+    if (textEditor_ == nullptr || layerPath.isEmpty()) {
+        return;
+    }
+
+    const QString absolutePath = QFileInfo(layerPath).absoluteFilePath();
+    const QString beforeText = textEditor_->text();
+    const QString afterRemoveText = upsertXtherionImageMetadataLine(beforeText,
+                                                                    filePath(),
+                                                                    absolutePath,
+                                                                    QString(),
+                                                                    true);
+    const QString afterAreaText = upsertXtherionSimpleCommandLine(afterRemoveText,
+                                                                  QStringLiteral("xth_me_area_adjust"),
+                                                                  xtherionAreaAdjustLine(xtherionAutoAreaAdjustRect()));
+    const QString afterText = upsertXtherionSimpleCommandLine(afterAreaText,
+                                                              QStringLiteral("xth_me_area_zoom_to"),
+                                                              xtherionAreaZoomLine());
+    if (afterText == beforeText) {
+        return;
+    }
+
+    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
+    textEditor_->replaceTextForCommand(afterText);
+    recordSourceTextSnapshot(label, beforeText, afterText, 0);
+}
+
+void MapEditorTab::addBackgroundImage(const QString &imagePath, bool writeXtherionMetadata)
 {
     if (mapScene_ == nullptr || imagePath.isEmpty()) {
         return;
@@ -1084,10 +1466,19 @@ void MapEditorTab::addBackgroundImage(const QString &imagePath)
     const QPointF topLeft(previewBounds.center().x() - (pixmap.width() / 2.0),
                           previewBounds.center().y() - (pixmap.height() / 2.0));
     backgroundItem->setPos(topLeft);
+    if (writeXtherionMetadata && !mapSourceBoundsForCurrentDocument().isValid()) {
+        const QSizeF modelSize = rasterModelSize(imagePath, 1.0);
+        const QRectF modelRect(QPointF(0.0, -modelSize.height()), modelSize);
+        const QRectF modelBounds = modelRect.adjusted(-128.0, -128.0, 128.0, 128.0);
+        placeRasterLayerByModelRect(backgroundItem, modelRect, modelBounds, previewBounds);
+    }
     mapScene_->addItem(backgroundItem);
     backgroundImageItems_.append(backgroundItem);
     applyBackgroundLayerStackingOrder();
     setSelectedBackgroundLayerIndexInternal(backgroundImageItems_.size() - 1);
+    if (writeXtherionMetadata) {
+        syncBackgroundLayerXtherionMetadata(backgroundItem, tr("Add Background Image"));
+    }
     refreshBackgroundLayerControls();
 }
 

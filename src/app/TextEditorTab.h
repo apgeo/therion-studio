@@ -72,7 +72,8 @@ public:
     bool rewriteStructureEntryName(int lineNumber, const QString &category, const QString &newName, QString *errorMessage = nullptr);
     bool insertScrapBlock(const QString &preferredName = QString(),
                           int *insertedLineNumber = nullptr,
-                          QString *errorMessage = nullptr);
+                          QString *errorMessage = nullptr,
+                          const QString &options = QString());
     bool insertDraftGeometry(const QString &kind,
                              const QVector<QPointF> &vertices,
                              int *insertedLineNumber = nullptr,

@@ -232,7 +232,7 @@ private:
     QRectF mapGeometryFitBounds() const;
     QRectF mapBackgroundFitBounds() const;
     QRectF mapPreviewBounds() const;
-    void addBackgroundImage(const QString &imagePath);
+    void addBackgroundImage(const QString &imagePath, bool writeXtherionMetadata = false);
     void refreshBackgroundLayerControls();
     void applyBackgroundLayerStackingOrder();
     void saveBackgroundLayersToSession() const;
@@ -240,6 +240,9 @@ private:
     void loadBackgroundLayersFromDocumentMetadata();
     void syncAutoBackgroundLayersFromCurrentDocument();
     void reprojectMetadataBackgroundLayersForCurrentDocument();
+    QRectF xtherionAutoAreaAdjustRect() const;
+    void syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item, const QString &label);
+    void removeBackgroundLayerXtherionMetadata(const QString &layerPath, const QString &label);
     QGraphicsPixmapItem *backgroundLayerItemAt(int index) const;
     QGraphicsPixmapItem *selectedBackgroundLayerItem() const;
     qreal backgroundLayerGammaValue(const QGraphicsPixmapItem *item) const;

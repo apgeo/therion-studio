@@ -268,6 +268,40 @@ qreal mapSourceUnitsPerMeterFromParsedLines(const QVector<TherionParsedLine> &pa
     return candidates.at(candidates.size() / 2);
 }
 
+QString formatTherionScaleNumber(qreal value)
+{
+    if (std::fabs(value) < 1e-9) {
+        return QStringLiteral("0.0");
+    }
+
+    const qreal nearestInteger = std::round(value);
+    if (std::fabs(value - nearestInteger) < 1e-9) {
+        return QString::number(static_cast<qlonglong>(nearestInteger));
+    }
+
+    return QString::number(value, 'g', 12);
+}
+
+QString xtherionDefaultScrapScaleOption(const QRectF &sourceBounds)
+{
+    QRectF bounds = sourceBounds.normalized();
+    if (!bounds.isValid() || bounds.width() < 1e-6) {
+        bounds = QRectF(0.0, 0.0, 1600.0, 1200.0);
+    }
+
+    const qreal left = bounds.left();
+    const qreal right = bounds.right();
+    const qreal top = bounds.top();
+    const qreal realLengthMeters = 0.0254 * (right - left);
+
+    return QStringLiteral("-scale [%1 %2 %3 %4 0.0 0.0 %5 0.0 m]")
+        .arg(formatTherionScaleNumber(left),
+             formatTherionScaleNumber(top),
+             formatTherionScaleNumber(right),
+             formatTherionScaleNumber(top),
+             formatTherionScaleNumber(realLengthMeters));
+}
+
 bool sourcePointsDifferForCommands(const QPointF &a, const QPointF &b)
 {
     return (a - b).manhattanLength() > 0.01;
@@ -2920,7 +2954,8 @@ void MapEditorTab::handleInsertScrapTriggered()
     int insertedLineNumber = 0;
     const QString beforeText = textEditor_->text();
     const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
-    if (!textEditor_->insertScrapBlock(QStringLiteral("new-scrap"), &insertedLineNumber, &errorMessage)) {
+    const QString scrapScaleOption = xtherionDefaultScrapScaleOption(mapSourceBoundsForCurrentDocument());
+    if (!textEditor_->insertScrapBlock(QStringLiteral("new-scrap"), &insertedLineNumber, &errorMessage, scrapScaleOption)) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Insert Scrap failed.")
             : tr("Insert Scrap failed: %1").arg(errorMessage);

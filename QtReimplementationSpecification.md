@@ -314,8 +314,13 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Pen-plus-touch workflows shall not accidentally trigger zoom when the user performs a pan gesture.
 - Background image position, opacity, gamma, and visibility shall be editable per session.
 - Background layers shall support insertion, selection, visibility toggles, opacity adjustment, gamma adjustment, and persisted positioning.
+- Adding a raster background image from the TH2 Visual map editor shall write XTherion-compatible `##XTHERION## xth_me_image_insert` metadata to the TH2 source, using document-relative paths where possible.
+- Adding or removing raster background images from the TH2 Visual map editor shall maintain XTherion-compatible `##XTHERION## xth_me_area_adjust` and `##XTHERION## xth_me_area_zoom_to` header metadata.
+- Editing a raster background layer's position, visibility, or gamma in the TH2 Visual map editor shall update the corresponding `xth_me_image_insert` metadata so reopening in XTherion or Therion Studio restores the same background reference.
+- Removing a raster background layer that is backed by `xth_me_image_insert` metadata shall remove that metadata line from the TH2 source.
 - The `Backgrounds` inspector layer list shall expose per-row visibility and delete icon actions aligned with the object-list action pattern.
 - The `Backgrounds` inspector shall expose visual map-grid controls for showing/hiding a square metric grid and setting its spacing in meters; when a scrap `-scale` is available, the spacing shall be converted from meters to TH2 source coordinates through that scale.
+- The map editor shall read Therion scrap `-scale` in numeric, unit, ratio, and 8/9-parameter calibration forms so grid spacing and geometry transforms remain compatible with Therion and XTherion-authored files.
 - Background sketch or image layers shall be restorable when reopening the document.
 - `.xvi` vector background references shall render as background layers when present.
 - The map editor shall support an explicit touch-friendly controls mode for pen-first workflows rather than relying only on device heuristics.
@@ -336,6 +341,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - When `##XTHERION## xth_me_area_adjust` metadata is present, map render projection, interactive scene-to-source coordinate mapping, and metadata-background reprojection shall use that model rectangle as stable source bounds to avoid edge-insertion remap drift.
 - During interactive area insertion, the generated border line identifier shall use `line-X` naming and shall be unique among explicitly assigned `-id` values inside the owning scrap.
 - During map-driven scrap insertion, auto-generated scrap identifiers shall use `scrap-X` naming and shall be unique within the document.
+- During map-driven scrap insertion, generated scrap commands shall include an XTherion-compatible default `-scale` using the current map source bounds: the first picture point at `(xmin, ymin)`, the second at `(xmax, ymin)`, and the real length as `(xmax - xmin) * 0.0254 m`.
 - Object identifiers shall remain optional for most map objects, but when an identifier is explicitly set inside a scrap it should be unique within that scrap; generated border lines referenced by area blocks shall always include an explicit `-id`.
 - Vertex overlays should be shown only for the currently selected map object, and line-control handles/connectors shall be shown only for the currently selected line vertex, to reduce visual clutter while preserving editability.
 - Selecting a line or area vertex/control point in the map editor shall reveal the corresponding source coordinate token in the text editor when that source token can be resolved.
@@ -839,7 +845,9 @@ The criteria below are intended for implementation verification and QA.
 - The map command surface exposes drawing, fitting, zoom, undo/redo, and draft-completion actions in the top toolbar (main and detached map windows).
 - Freehand line drawing and smart-trace-assisted line creation are supported.
 - Background layers support persisted position, visibility, gamma, opacity, and `.xvi` rendering where applicable.
+- Raster background image add/move/show-hide/gamma/remove operations write and maintain XTherion-compatible `xth_me_area_adjust`, `xth_me_area_zoom_to`, and `xth_me_image_insert` metadata in the TH2 source.
 - Background grid controls can toggle the grid and set a metric spacing; rendered grid cells remain square and use scrap `-scale` metadata to match real-world meters where available.
+- Map-driven scrap insertion writes XTherion-compatible default `-scale` metadata, while existing Therion/XTherion `-scale` forms are preserved unless explicitly edited.
 - A touch-friendly controls mode is available for pen-first workflows.
 - Zoom, pan, and background-image adjustments persist for the session.
 

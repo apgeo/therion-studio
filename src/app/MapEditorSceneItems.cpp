@@ -118,6 +118,94 @@ std::optional<qreal> metersPerScaleUnit(const QString &unitToken)
     return std::nullopt;
 }
 
+QStringList scrapScaleValueTokens(const QStringList &tokens)
+{
+    const int scaleOptionIndex = tokens.indexOf(QStringLiteral("-scale"));
+    if (scaleOptionIndex < 0 || scaleOptionIndex + 1 >= tokens.size()) {
+        return {};
+    }
+
+    QStringList values;
+    const QString firstValue = tokens.at(scaleOptionIndex + 1);
+    const bool bracketed = firstValue.contains(QLatin1Char('['));
+    for (int index = scaleOptionIndex + 1; index < tokens.size(); ++index) {
+        const QString token = tokens.at(index);
+        if (!bracketed && token.startsWith(QLatin1Char('-'))) {
+            break;
+        }
+
+        values.append(token);
+        if (!bracketed || token.contains(QLatin1Char(']'))) {
+            break;
+        }
+    }
+
+    return values;
+}
+
+struct ScrapScaleDefinition
+{
+    bool valid = false;
+    QVector<qreal> numbers;
+    QString unitToken;
+    qreal metersPerSourceUnit = 1.0;
+};
+
+std::optional<ScrapScaleDefinition> parseScrapScaleDefinition(const QStringList &tokens)
+{
+    const QStringList scaleTokens = scrapScaleValueTokens(tokens);
+    if (scaleTokens.isEmpty()) {
+        return std::nullopt;
+    }
+
+    ScrapScaleDefinition definition;
+    definition.numbers.reserve(8);
+    for (const QString &token : scaleTokens) {
+        qreal parsedValue = 0.0;
+        if (parseScaleNumber(token, &parsedValue)) {
+            definition.numbers.append(parsedValue);
+            continue;
+        }
+
+        if (definition.unitToken.isEmpty()) {
+            definition.unitToken = normalizedScaleUnitToken(token);
+        }
+    }
+
+    const std::optional<qreal> metersPerUnit = metersPerScaleUnit(definition.unitToken);
+    if (!metersPerUnit.has_value()) {
+        return std::nullopt;
+    }
+
+    if (definition.numbers.size() == 1) {
+        definition.metersPerSourceUnit = definition.numbers.at(0) * metersPerUnit.value();
+        definition.valid = definition.metersPerSourceUnit > 1e-9;
+    } else if (definition.numbers.size() == 2 && !definition.unitToken.isEmpty()) {
+        const qreal drawingUnits = definition.numbers.at(0);
+        const qreal realLength = definition.numbers.at(1);
+        if (std::fabs(drawingUnits) > 1e-9 && std::fabs(realLength) > 1e-9) {
+            definition.metersPerSourceUnit = (realLength / drawingUnits) * metersPerUnit.value();
+            definition.valid = definition.metersPerSourceUnit > 1e-9;
+        }
+    } else if (definition.numbers.size() >= 8) {
+        const QPointF sourcePoint1(definition.numbers.at(0), definition.numbers.at(1));
+        const QPointF sourcePoint2(definition.numbers.at(2), definition.numbers.at(3));
+        const QPointF scalePoint1(definition.numbers.at(4), definition.numbers.at(5));
+        const QPointF scalePoint2(definition.numbers.at(6), definition.numbers.at(7));
+        const qreal sourceLength = QLineF(sourcePoint1, sourcePoint2).length();
+        const qreal scaleLength = QLineF(scalePoint1, scalePoint2).length();
+        if (sourceLength > 1e-6 && scaleLength > 1e-6) {
+            definition.metersPerSourceUnit = (scaleLength * metersPerUnit.value()) / sourceLength;
+            definition.valid = definition.metersPerSourceUnit > 1e-9;
+        }
+    }
+
+    if (!definition.valid) {
+        return std::nullopt;
+    }
+    return definition;
+}
+
 enum class LineVertexRole
 {
     None,
@@ -404,82 +492,46 @@ qreal sceneCoordsScaleFactor(const QRectF &sourceBounds, const QRectF &previewBo
 
 std::optional<qreal> sourceUnitsPerMeterFromScrapScale(const QStringList &tokens)
 {
-    const int scaleOptionIndex = tokens.indexOf(QStringLiteral("-scale"));
-    if (scaleOptionIndex < 0) {
+    const std::optional<ScrapScaleDefinition> definition = parseScrapScaleDefinition(tokens);
+    if (!definition.has_value()) {
         return std::nullopt;
     }
-
-    QVector<qreal> numbers;
-    numbers.reserve(8);
-    QString unitToken;
-    for (int index = scaleOptionIndex + 1; index < tokens.size(); ++index) {
-        qreal parsedValue = 0.0;
-        if (parseScaleNumber(tokens.at(index), &parsedValue)) {
-            numbers.append(parsedValue);
-            continue;
-        }
-
-        if (numbers.size() >= 8 && unitToken.isEmpty()) {
-            unitToken = normalizedScaleUnitToken(tokens.at(index));
-        }
-    }
-
-    if (numbers.size() < 8) {
-        return std::nullopt;
-    }
-
-    const QPointF sourcePoint1(numbers.at(0), numbers.at(1));
-    const QPointF sourcePoint2(numbers.at(2), numbers.at(3));
-    const QPointF scalePoint1(numbers.at(4), numbers.at(5));
-    const QPointF scalePoint2(numbers.at(6), numbers.at(7));
-    const qreal sourceLength = QLineF(sourcePoint1, sourcePoint2).length();
-    const qreal scaleLength = QLineF(scalePoint1, scalePoint2).length();
-    if (sourceLength < 1e-6 || scaleLength < 1e-6) {
-        return std::nullopt;
-    }
-
-    const std::optional<qreal> metersPerUnit = metersPerScaleUnit(unitToken);
-    if (!metersPerUnit.has_value()) {
-        return std::nullopt;
-    }
-
-    const qreal metersPerSourceUnit = (scaleLength * metersPerUnit.value()) / sourceLength;
-    if (metersPerSourceUnit < 1e-9) {
-        return std::nullopt;
-    }
-    return 1.0 / metersPerSourceUnit;
+    return 1.0 / definition->metersPerSourceUnit;
 }
 
 CoordinateTransform coordinateTransformFromScrapScale(const QStringList &tokens)
 {
     CoordinateTransform transform;
 
-    const int scaleOptionIndex = tokens.indexOf(QStringLiteral("-scale"));
-    if (scaleOptionIndex < 0) {
+    const std::optional<ScrapScaleDefinition> definition = parseScrapScaleDefinition(tokens);
+    if (!definition.has_value()) {
         return transform;
     }
 
-    QVector<qreal> numbers;
-    numbers.reserve(8);
-    for (int index = scaleOptionIndex + 1; index < tokens.size(); ++index) {
-        qreal parsedValue = 0.0;
-        if (!parseScaleNumber(tokens.at(index), &parsedValue)) {
-            continue;
+    if (definition->numbers.size() < 8) {
+        const qreal scale = definition->metersPerSourceUnit;
+        const QTransform sourceToMap(scale, 0.0, 0.0, scale, 0.0, 0.0);
+        bool invertible = false;
+        const QTransform mapToSource = sourceToMap.inverted(&invertible);
+        if (!invertible) {
+            return transform;
         }
-        numbers.append(parsedValue);
-        if (numbers.size() >= 8) {
-            break;
-        }
-    }
-
-    if (numbers.size() < 8) {
+        transform.valid = true;
+        transform.sourceToMap = sourceToMap;
+        transform.mapToSource = mapToSource;
         return transform;
     }
 
+    const std::optional<qreal> metersPerUnit = metersPerScaleUnit(definition->unitToken);
+    if (!metersPerUnit.has_value()) {
+        return transform;
+    }
+
+    const QVector<qreal> &numbers = definition->numbers;
     const QPointF sourcePoint1(numbers.at(0), numbers.at(1));
     const QPointF sourcePoint2(numbers.at(2), numbers.at(3));
-    const QPointF mapPoint1(numbers.at(4), numbers.at(5));
-    const QPointF mapPoint2(numbers.at(6), numbers.at(7));
+    const QPointF mapPoint1(numbers.at(4) * metersPerUnit.value(), numbers.at(5) * metersPerUnit.value());
+    const QPointF mapPoint2(numbers.at(6) * metersPerUnit.value(), numbers.at(7) * metersPerUnit.value());
 
     const QPointF sourceVector = sourcePoint2 - sourcePoint1;
     const QPointF mapVector = mapPoint2 - mapPoint1;

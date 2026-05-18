@@ -18,7 +18,8 @@ public:
     static bool appendScrapBlock(QString *contents,
                                  const QString &preferredName = QString(),
                                  int *insertedLineNumber = nullptr,
-                                 QString *errorMessage = nullptr);
+                                 QString *errorMessage = nullptr,
+                                 const QString &options = QString());
     static bool appendDraftGeometry(QString *contents,
                                     const QString &kind,
                                     const QVector<QPointF> &vertices,

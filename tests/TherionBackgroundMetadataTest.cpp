@@ -46,6 +46,13 @@ int runRasterInsertParsingTest()
                 "Expected raster image scale to parse from first metadata group.")) {
         return 1;
     }
+    if (!expect(reference.hasVisibility && reference.visible,
+                "Expected raster visibility to parse from first metadata group.")) {
+        return 1;
+    }
+    if (!expect(reference.lineNumber == 2, "Expected raster metadata source line to be reported.")) {
+        return 1;
+    }
     if (!expect(!reference.xviReference, "Expected PNG reference to be marked as raster.")) {
         return 1;
     }
@@ -56,6 +63,42 @@ int runRasterInsertParsingTest()
     const QString expectedPath = QDir::cleanPath(QStringLiteral("/tmp/project/data/clopy01.png"));
     if (!expect(QDir::cleanPath(reference.absolutePath) == expectedPath,
                 "Expected relative raster path to resolve against TH2 document directory.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runBracedRasterPathParsingTest()
+{
+    const QString documentPath = QDir::cleanPath(QStringLiteral("/tmp/project/data/map.th2"));
+    const QString text =
+        QStringLiteral("##XTHERION## xth_me_image_insert {-12.5 0 1.25} {40 {}} {background scans/clopy 01.png} 0 {}\n");
+
+    const QVector<TherionBackgroundReference> references = parseTherionBackgroundReferences(text, documentPath);
+    if (!expect(references.size() == 1, "Expected braced raster background path to parse.")) {
+        return 1;
+    }
+
+    const TherionBackgroundReference &reference = references.first();
+    if (!expect(reference.hasBasePosition
+                && nearlyEqual(reference.basePosition.x(), -12.5)
+                && nearlyEqual(reference.basePosition.y(), 40.0),
+                "Expected braced raster metadata coordinates to parse.")) {
+        return 1;
+    }
+    if (!expect(reference.hasVisibility && !reference.visible,
+                "Expected hidden raster visibility to parse from first metadata group.")) {
+        return 1;
+    }
+    if (!expect(reference.hasImageScale && nearlyEqual(reference.imageScale, 1.25),
+                "Expected braced raster gamma/scale value to parse.")) {
+        return 1;
+    }
+
+    const QString expectedPath = QDir::cleanPath(QStringLiteral("/tmp/project/data/background scans/clopy 01.png"));
+    if (!expect(QDir::cleanPath(reference.absolutePath) == expectedPath,
+                "Expected braced raster path with spaces to resolve against document directory.")) {
         return 1;
     }
 
@@ -143,6 +186,9 @@ int runMalformedMetadataIgnoredTest()
 int main()
 {
     if (const int rc = runRasterInsertParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runBracedRasterPathParsingTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runXviInsertParsingTest(); rc != 0) {

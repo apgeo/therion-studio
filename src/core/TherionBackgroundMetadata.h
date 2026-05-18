@@ -12,11 +12,14 @@ struct TherionBackgroundReference
     QString absolutePath;
     QPointF basePosition;
     bool hasBasePosition = false;
+    bool visible = true;
+    bool hasVisibility = false;
     qreal imageScale = 1.0;
     bool hasImageScale = false;
     QString rootStationName;
     bool metadataTopEdgeAnchor = false;
     bool xviReference = false;
+    int lineNumber = 0;
 };
 
 struct TherionAreaAdjust
@@ -29,4 +32,3 @@ QVector<TherionBackgroundReference> parseTherionBackgroundReferences(const QStri
                                                                      const QString &documentPath);
 TherionAreaAdjust parseTherionAreaAdjust(const QString &documentText);
 }
-

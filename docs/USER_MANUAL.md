@@ -381,6 +381,7 @@ Interactive drawing (current):
 - Area commits are serialized in Therion border-reference form: a closed `line border -id ... -close on` block is written first, then the `area ...` block references that border line id.
 - The generated border line id for area commits uses `line-X` naming and increments to stay unique in the current scrap (`line-1`, `line-2`, ...).
 - Auto-created scraps use `scrap-X` naming (`scrap-1`, `scrap-2`, ...).
+- Scraps inserted from `Visual` mode include an XTherion-compatible default `-scale` derived from the current map source bounds. This matches XTherion's convention of mapping the source-bounds width to inches converted to meters (`width * 0.0254 m`).
 - Area object `-id` is not auto-forced; only the referenced border `line` id is mandatory in generated output.
 - If the file contains `##XTHERION## xth_me_area_adjust`, map insertion/render projection uses that rectangle as stable model bounds to keep hidden-background insertions and later unhide aligned.
 - Line/area commit preserves all captured vertices from the current draft session.
@@ -436,13 +437,14 @@ Zoom constraints:
 
 In `Visual` mode `Inspector -> Backgrounds`, the `Background Images` controls provide:
 
-- square metric grid controls (`Show grid`, `Spacing (m)`) for the visual map canvas; when the TH2 scrap has `-scale`, the spacing is converted from meters to TH2 source units so it can be used as a real-world scale reference
+- square metric grid controls (`Show grid`, `Spacing (m)`) for the visual map canvas; when the TH2 scrap has `-scale`, numeric, unit, ratio, and XTherion-style calibration forms are converted from meters to TH2 source units so the grid can be used as a real-world scale reference
 - layer list with selection
-- add (`+`) button (multi-file picker)
+- add (`+`) button (multi-file picker); adding raster images writes XTherion header metadata (`xth_me_area_adjust`, `xth_me_area_zoom_to`, and `xth_me_image_insert`) to the TH2 source using document-relative paths where possible
 - per-layer visibility icon (`eye` / `eye-off`) in the list row
 - per-layer delete icon (`trash`) in the list row
 - `Up`, `Down`
 - position `X`, `Y` fields
+- raster layer position, visibility, and gamma edits update the matching XTherion metadata line; deleting a metadata-backed raster layer removes that line from the TH2 source
 - opacity slider with reset
 - gamma slider with reset
 

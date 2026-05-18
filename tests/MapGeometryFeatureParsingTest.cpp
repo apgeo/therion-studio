@@ -696,6 +696,42 @@ int runScrapScaleSourceUnitsPerMeterTest()
         return 1;
     }
 
+    const TherionParsedLine numericScaleLine = TherionDocumentParser::parseLine(
+        QStringLiteral("scrap numeric -scale 0.0254"),
+        1);
+    const std::optional<qreal> numericSourceUnitsPerMeter = sourceUnitsPerMeterFromScrapScale(numericScaleLine.tokens);
+    if (!expect(numericSourceUnitsPerMeter.has_value(), "Expected numeric scrap scale to parse.")) {
+        return 1;
+    }
+    if (!expect(std::abs(numericSourceUnitsPerMeter.value() - 39.3700787) < 0.001,
+                "Expected numeric scrap scale to convert meters per source unit.")) {
+        return 1;
+    }
+
+    const TherionParsedLine unitScaleLine = TherionDocumentParser::parseLine(
+        QStringLiteral("scrap unit -scale [2.54 cm]"),
+        1);
+    const std::optional<qreal> unitSourceUnitsPerMeter = sourceUnitsPerMeterFromScrapScale(unitScaleLine.tokens);
+    if (!expect(unitSourceUnitsPerMeter.has_value(), "Expected two-token unit scrap scale to parse.")) {
+        return 1;
+    }
+    if (!expect(std::abs(unitSourceUnitsPerMeter.value() - 39.3700787) < 0.001,
+                "Expected unit scrap scale to convert length units.")) {
+        return 1;
+    }
+
+    const TherionParsedLine ratioScaleLine = TherionDocumentParser::parseLine(
+        QStringLiteral("scrap ratio -scale [100 1 m]"),
+        1);
+    const std::optional<qreal> ratioSourceUnitsPerMeter = sourceUnitsPerMeterFromScrapScale(ratioScaleLine.tokens);
+    if (!expect(ratioSourceUnitsPerMeter.has_value(), "Expected ratio scrap scale to parse.")) {
+        return 1;
+    }
+    if (!expect(std::abs(ratioSourceUnitsPerMeter.value() - 100.0) < 0.001,
+                "Expected ratio scrap scale to convert drawing units per real length.")) {
+        return 1;
+    }
+
     return 0;
 }
 }

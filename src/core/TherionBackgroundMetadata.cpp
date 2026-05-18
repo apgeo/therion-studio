@@ -68,6 +68,14 @@ QString readSimpleToken(const QString &text, int *position)
     }
 
     const QChar first = text.at(*position);
+    if (first == QLatin1Char('{')) {
+        QString groupText;
+        if (readBracedGroup(text, position, &groupText)) {
+            return groupText;
+        }
+        return QString();
+    }
+
     if (first == QLatin1Char('"') || first == QLatin1Char('\'')) {
         const QChar quote = first;
         ++(*position);
@@ -150,7 +158,8 @@ QVector<TherionBackgroundReference> parseTherionBackgroundReferences(const QStri
     QVector<TherionBackgroundReference> references;
     const QString baseDirectory = QFileInfo(documentPath).absolutePath();
     const QStringList lines = documentText.split(QLatin1Char('\n'));
-    for (QString line : lines) {
+    for (int lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
+        QString line = lines.at(lineIndex);
         if (line.endsWith(QLatin1Char('\r'))) {
             line.chop(1);
         }
@@ -190,6 +199,7 @@ QVector<TherionBackgroundReference> parseTherionBackgroundReferences(const QStri
         reference.absolutePath = absolutePath;
         reference.xviReference = reference.absolutePath.endsWith(QStringLiteral(".xvi"), Qt::CaseInsensitive);
         reference.metadataTopEdgeAnchor = !reference.xviReference;
+        reference.lineNumber = lineIndex + 1;
 
         const QStringList firstParts = tokenizeWhitespace(firstGroup);
         const QStringList secondParts = tokenizeWhitespace(secondGroup);
@@ -200,6 +210,14 @@ QVector<TherionBackgroundReference> parseTherionBackgroundReferences(const QStri
                 && tryParseLeadingNumber(secondParts.first(), &baseY)) {
                 reference.basePosition = QPointF(baseX, baseY);
                 reference.hasBasePosition = true;
+            }
+        }
+
+        if (firstParts.size() >= 2) {
+            qreal visibility = 0.0;
+            if (tryParseLeadingNumber(firstParts.at(1), &visibility)) {
+                reference.visible = visibility > 0.0;
+                reference.hasVisibility = true;
             }
         }
 
@@ -269,4 +287,3 @@ TherionAreaAdjust parseTherionAreaAdjust(const QString &documentText)
     return TherionAreaAdjust{};
 }
 }
-

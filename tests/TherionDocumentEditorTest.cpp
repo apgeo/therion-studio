@@ -301,6 +301,22 @@ int runAppendScrapBlockTest()
         return 1;
     }
 
+    contents.clear();
+    lineNumber = 0;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::appendScrapBlock(&contents,
+                                                        QStringLiteral("scaled"),
+                                                        &lineNumber,
+                                                        &errorMessage,
+                                                        QStringLiteral("-projection plan -scale [0 0 1600 0 0.0 0.0 40.64 0.0 m]")),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap scaled -projection plan -scale [0 0 1600 0 0.0 0.0 40.64 0.0 m]\nendscrap\n"),
+                "appendScrapBlock should preserve caller-provided scrap options for map-editor compatible writes.")) {
+        return 1;
+    }
+
     return 0;
 }
 

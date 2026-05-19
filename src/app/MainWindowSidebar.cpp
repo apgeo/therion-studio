@@ -872,7 +872,7 @@ void MainWindow::buildStructureSidebar()
         " background-color: palette(base);"
         " color: palette(windowText);"
         " border-left: none;"
-        " border-right: 1px solid palette(mid);"
+        " border-right: none;"
         " border-top: none;"
         " border-bottom: none;"
         "}"

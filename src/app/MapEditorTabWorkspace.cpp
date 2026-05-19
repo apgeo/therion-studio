@@ -124,7 +124,7 @@ public:
         commandBar_->setAttribute(Qt::WA_StyledBackground, true);
         commandBar_->setStyleSheet(QStringLiteral(
             "QWidget#workspaceCommandBar {"
-            " border-bottom: 1px solid palette(mid);"
+            " border-bottom: none;"
             " border-top: 1px solid palette(mid);"
             " border-left: none;"
             " border-right: none;"
@@ -477,6 +477,16 @@ void MapEditorTab::buildUi()
     mapPaneLayout->setContentsMargins(0, 0, 0, 0);
     mapPaneLayout->setSpacing(0);
 
+    mapPaneTopSeparator_ = new QFrame(mapPaneContainer_);
+    mapPaneTopSeparator_->setObjectName(QStringLiteral("mapPaneTopSeparator"));
+    mapPaneTopSeparator_->setFrameShape(QFrame::NoFrame);
+    mapPaneTopSeparator_->setFixedHeight(1);
+    mapPaneTopSeparator_->setStyleSheet(QStringLiteral(
+        "QFrame#mapPaneTopSeparator {"
+        " background-color: palette(mid);"
+        " border: none;"
+        "}"));
+
     mapDetailsSplitter_ = new QSplitter(Qt::Horizontal, mapPaneContainer_);
     mapDetailsSplitter_->setChildrenCollapsible(false);
     applyThinSplitterStyle(mapDetailsSplitter_, QStringLiteral("mapEditorDetailsSplitter"));
@@ -486,7 +496,7 @@ void MapEditorTab::buildUi()
     mapView_->setObjectName(QStringLiteral("mapCanvasView"));
     mapView_->setStyleSheet(QStringLiteral(
         "QGraphicsView#mapCanvasView {"
-        " border-left: 1px solid palette(mid);"
+        " border-left: none;"
         " border-right: 1px solid palette(mid);"
         " border-top: none;"
         " border-bottom: none;"
@@ -521,6 +531,13 @@ void MapEditorTab::buildUi()
 
     objectDetailsPanel_ = new QFrame(mapDetailsSplitter_);
     objectDetailsPanel_->setObjectName(QStringLiteral("mapObjectDetailsPanel"));
+    objectDetailsPanel_->setFrameShape(QFrame::NoFrame);
+    objectDetailsPanel_->setAttribute(Qt::WA_StyledBackground, true);
+    objectDetailsPanel_->setStyleSheet(QStringLiteral(
+        "QFrame#mapObjectDetailsPanel {"
+        " background-color: palette(base);"
+        " border: none;"
+        "}"));
     objectDetailsPanel_->setMinimumWidth(280);
     auto *objectDetailsLayout = new QVBoxLayout(objectDetailsPanel_);
     objectDetailsLayout->setContentsMargins(8, 8, 8, 8);
@@ -976,6 +993,7 @@ void MapEditorTab::buildUi()
     mapDetailsSplitter_->setStretchFactor(0, 1);
     mapDetailsSplitter_->setStretchFactor(1, 0);
     mapDetailsSplitter_->setSizes(QList<int>{980, 320});
+    mapPaneLayout->addWidget(mapPaneTopSeparator_);
     mapPaneLayout->addWidget(mapDetailsSplitter_, 1);
     splitter_->addWidget(mapPaneContainer_);
     splitter_->addWidget(textEditor_);
@@ -1378,6 +1396,9 @@ void MapEditorTab::updateWorkspaceVisibility()
             // Detached window always hosts the visual map pane, even if main-tab mode is Raw.
             mapPaneContainer_->show();
         }
+        if (mapPaneTopSeparator_ != nullptr) {
+            mapPaneTopSeparator_->hide();
+        }
         refreshStatus();
         return;
     }
@@ -1391,6 +1412,9 @@ void MapEditorTab::updateWorkspaceVisibility()
     textEditor_->setVisible(!visualMode);
     if (mapPaneContainer_ != nullptr) {
         mapPaneContainer_->setVisible(visualMode);
+    }
+    if (mapPaneTopSeparator_ != nullptr) {
+        mapPaneTopSeparator_->setVisible(visualMode);
     }
 
     if (splitter_ != nullptr) {
@@ -1456,6 +1480,9 @@ void MapEditorTab::detachMapPaneToWindow()
 
     detachedMapPaneWindow_ = window;
     mapPaneDetached_ = true;
+    if (mapPaneTopSeparator_ != nullptr) {
+        mapPaneTopSeparator_->hide();
+    }
     emit mapPaneDetachStateChanged(true);
     updateWorkspaceVisibility();
 
@@ -1476,6 +1503,9 @@ void MapEditorTab::reattachMapPaneFromWindow()
 
     mapPaneContainer_->setParent(splitter_);
     splitter_->insertWidget(0, mapPaneContainer_);
+    if (mapPaneTopSeparator_ != nullptr) {
+        mapPaneTopSeparator_->setVisible(workspaceMode_ == WorkspaceMode::Visual);
+    }
 
     mapPaneDetached_ = false;
     detachedMapPaneWindow_ = nullptr;

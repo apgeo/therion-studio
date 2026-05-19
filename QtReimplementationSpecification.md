@@ -72,7 +72,7 @@ Required capabilities:
 - preserve unsaved edits and document state across tab changes
 - provide an editor-surface mode switch between raw text editing and a structured block-canvas view for supported Therion source files
 - keep raw text as the canonical source of truth; any structured-view mutation shall be applied through source edits with immediate source synchronization
-- when the active document supports structured Blocks mode (`.th`/`.thconfig`) in the main window, the `Raw`/`Blocks` mode selector shall be hosted in the full-width document command toolbar row directly beneath the tab strip
+- when the active document supports structured Blocks mode (`.th`/`.thconfig`) in the main window, the `Raw`/`Blocks` mode selector shall be hosted in the full-width document command toolbar row directly above the tab strip
 
 Structured block-canvas requirements:
 
@@ -252,9 +252,12 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The search bar shall support next, previous, replace current, replace all, whole-word matching, and case-sensitive matching.
 - The user shall be able to hide the search bar without closing the current document.
 - The editor shall display 1-based source line numbers in a left gutter that stays synchronized with document scroll position.
-- For active document tabs, the application shall show a full-width document command toolbar directly beneath the tab strip.
+- For active document tabs, the application shall show a full-width document command toolbar directly above the tab strip.
 - The document command toolbar shall include, from the left, `Save`, a visual separator, `Undo` and `Redo`.
 - `Save`, `Undo`, and `Redo` in the document command toolbar shall be represented as icon-only controls with accessible names/tooltips.
+- Main-window document command toolbars shall not draw their own bottom border; separation below the toolbar shall come from the native tab/content frame or the embedded editor content separator.
+- Main-window document chrome shall use one continuous left divider between sidebar content and the editor area; the document command toolbar, file tabs, and document content shall align to that divider without duplicate embedded-canvas left borders.
+- Main-window file tabs shall use native platform tab rendering and shall sit on the `QTabWidget` editor/canvas frame without custom tab-bar geometry overrides.
 - When a TH2 document is active, the document command toolbar shall include these left-side groups in order: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`; then `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`; then a visual separator before right-aligned mode controls.
 - For `.th` and `.thconfig` documents, the `Raw`/`Blocks` mode selector shall be shown in this document command toolbar instead of a dedicated in-content mode row.
 - The application shall show the active document path and current text encoding in a status area tied to the active document context.
@@ -272,8 +275,10 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The map editor shall render the currently open TH2 document as an editable two-dimensional workspace.
 - The map workspace shall maintain sufficient contrast for geometry strokes, handles, labels, and grid lines in both light and dark system appearance modes.
 - When a TH2 document is active in the main window, the embedded workspace shall provide explicit `Visual` and `Raw` modes.
-- When a TH2 document is active in the main window, the `Visual`/`Raw` mode selector shall be hosted in the right-aligned controls of the full-width document command toolbar beneath the tab strip rather than in a dedicated row inside the tab content.
+- When a TH2 document is active in the main window, the `Visual`/`Raw` mode selector shall be hosted in the right-aligned controls of the full-width document command toolbar above the tab strip rather than in a dedicated row inside the tab content.
 - When a TH2 document is active in the main window, map-pane detach/reattach (`Separate Map` / `Return Map`) shall be provided in the same document command toolbar control area as the `Visual`/`Raw` mode selector.
+- Embedded TH2 `Visual` mode shall align its canvas/inspector content edge with the same thin top separator used by Raw and Blocks editor content under the main file tabs.
+- TH2 `Visual` inspector tabs shall use native `QTabWidget` rendering and shall not override platform tab geometry or tab shape.
 - When a TH2 map editor is presented outside the main tab strip (for example in a detached dedicated map-editor window), the top command toolbar shall omit `Visual`/`Raw` mode switching and keep only actions relevant to the detached visual workspace.
 - In embedded `Visual` mode, the workspace shall present the graphical map canvas together with a right-side map inspector.
 - The right-side map inspector in `Visual` mode shall provide tabs for `Selection`, `Objects`, and `Backgrounds`, in that order.
@@ -299,7 +304,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The list shall show a visual drop indicator for the current drag target.
 - All map mutations shall support undo and redo.
 - The map command surface shall expose zoom in, zoom out, fit geometry, fit background plus geometry, undo, redo, selection mode, draft completion, scrap insertion, point insertion, line insertion, freehand line drawing, smart trace, area insertion, and touch-controls toggle.
-- In the main window, map command actions shall be hosted in the shared full-width document command toolbar beneath the tab strip; the graphical map canvas shall not host a floating in-canvas map toolbar overlay.
+- In the main window, map command actions shall be hosted in the shared full-width document command toolbar above the tab strip; the graphical map canvas shall not host a floating in-canvas map toolbar overlay.
 - In detached map windows, an equivalent top command toolbar shall be shown above the map canvas and inspector.
 - Toolbar actions should present compact icon-first controls, with text equivalents available through tooltips, accessibility names, and automation-stable identifiers.
 - When a map editor tab is active, the status bar shall show the current map zoom before the Select/Insert mode badge.
@@ -816,7 +821,7 @@ The criteria below are intended for implementation verification and QA.
 - Find and Replace show an inline search bar with next, previous, replace, replace all, whole-word, and match-case controls.
 - The editor shows a contextual help/documentation panel for Therion commands and options when metadata is available.
 - In raw text-editing mode, the contextual help panel appears in a resizable right-side inspector column (not a bottom strip), and editor/help spacing remains visually consistent with Blocks mode.
-- For `.th` and `.thconfig` documents, `Raw`/`Blocks` mode controls appear in the full-width document command toolbar row below the tab strip.
+- For `.th` and `.thconfig` documents, `Raw`/`Blocks` mode controls appear in the full-width document command toolbar row above the tab strip.
 - The application shows the active file path and encoding in a status area for the active document.
 - For map-editor documents, the status area shows a color mode badge (`Select` green, `Insert` red) and updates when the mode changes.
 - Non-UTF-8 files can be explicitly converted to UTF-8.
@@ -827,7 +832,7 @@ The criteria below are intended for implementation verification and QA.
 
 - The map editor renders the currently open TH2 file as a 2D editable workspace.
 - A TH2 document exposes an embedded mode selector with `Visual` and `Raw` modes.
-- In the main window, the TH2 `Visual`/`Raw` mode selector is shown in the right-aligned controls of the full-width document command toolbar row below the tab strip.
+- In the main window, the TH2 `Visual`/`Raw` mode selector is shown in the right-aligned controls of the full-width document command toolbar row above the tab strip.
 - In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same document command toolbar control area, after `Raw`.
 - In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`) after `Undo`/`Redo`.
 - In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window top command toolbar remains available.

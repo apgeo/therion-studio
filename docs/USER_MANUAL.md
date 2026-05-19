@@ -24,7 +24,7 @@ The main window is organized into:
 - Central tab area (text tabs and map-editor tabs)
 - Status bar (global app status)
 - Splitter handles use a consistent native visible grab-handle style across sidebar/content, raw-help, blocks columns, and map inspector splits
-- Main sidebar/content splitter panes use inner-only seam borders (no border on the outer window edges)
+- Main sidebar/content/editor seams avoid double borders; the editor area owns the continuous left seam and embedded canvases do not duplicate it
 - Main document chrome uses a unified spacing/contrast system: tabs, top command toolbar, sidebar panels, and contextual-help panels share consistent separator tone, control sizing, and surface hierarchy in light/dark modes
 
 ### 2.1 Sidebar Activity Rail and Panes
@@ -148,7 +148,7 @@ Text editor includes:
 - left gutter with 1-based line numbers that scroll with the document
 - active-line highlight that follows the text cursor (including map-driven source navigation)
 - editor mode toggle: `Raw` and `Blocks` (available for `.th` and `.thconfig` files)
-- for `.th`/`.thconfig`, the `Mode` switcher is in the full-width document toolbar row directly under tabs, not in an extra row inside editor content
+- for `.th`/`.thconfig`, the `Mode` switcher is in the full-width document toolbar row above the file tabs, not in an extra row inside editor content
 - find/replace bar with `Whole word` and `Case sensitive` options
 - completion popup is shown while typing (commands/options/values), sourced from command catalog metadata; `Ctrl+Space` remains available as manual trigger
 - when completion popup is visible, confirm a suggestion with `Enter`, `Tab`, or mouse click; `Esc` closes the popup
@@ -303,9 +303,13 @@ Map tab uses explicit workspace modes:
 
 - `Visual`: graphical map editor + right-side `Inspector` tabs (`Selection`, `Objects`, `Backgrounds`)
 - `Raw`: source text editor + right-side contextual help inspector
-- the full-width document toolbar row is shown under tabs for all document types
-- the top command toolbar row is framed with subtle separators above and below for clearer visual separation from tabs and editor/map content
-- main document tabs keep native platform styling; the toolbar top separator is drawn with a gap under the active tab so the active tab visually connects to the toolbar without tab-shape overrides
+- the full-width document toolbar row is shown above the file tabs for all document types
+- the command toolbar sits directly above the native file tabs without an extra bottom border
+- file tabs use native platform tab rendering and sit on the `QTabWidget` editor/canvas frame below them
+- file tabs use native platform tab insets; the command toolbar keeps its own internal button padding
+- embedded Visual mode uses the same thin top content separator under the file tabs as Raw/Blocks mode
+- Visual inspector tabs use native `QTabWidget` rendering and sit in a borderless panel matching the other editor side panes
+- the editor area uses a single dedicated left divider between sidebar content and document chrome; embedded canvases do not duplicate that divider
 - from left, the toolbar defaults to `Save`, divider, `Undo`/`Redo`, divider
 - `Save`, `Undo`, and `Redo` are icon-only buttons (with tooltips) in both main and detached map toolbars
 - when a `.th2` map tab is active, the next left-side toolbar groups are:
@@ -407,7 +411,7 @@ Interactive drawing (current):
 
 Detached map-pane behavior:
 
-- `Separate Map` (document toolbar row under tabs) detaches the graphical map pane into its own top-level window (useful for a second monitor).
+- `Separate Map` (document toolbar row above tabs) detaches the graphical map pane into its own top-level window (useful for a second monitor).
 - Detached map window keeps the same top command toolbar groups and right-side `Inspector` tabs as embedded `Visual` mode, except detached toolbar omits `Visual`/`Raw`.
 - The main tab keeps the raw text editor visible while detached.
 - Detached map window shows its own status bar for map zoom and `Select`/`Insert` mode.

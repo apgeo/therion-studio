@@ -17,6 +17,7 @@
 #include <optional>
 
 class QLabel;
+class QFrame;
 class QGraphicsScene;
 class QGraphicsView;
 class QLineEdit;
@@ -323,8 +324,9 @@ private:
     QGraphicsView *mapView_ = nullptr;
     QGraphicsScene *mapScene_ = nullptr;
     QWidget *mapPaneContainer_ = nullptr;
+    QFrame *mapPaneTopSeparator_ = nullptr;
     QSplitter *mapDetailsSplitter_ = nullptr;
-    QWidget *objectDetailsPanel_ = nullptr;
+    QFrame *objectDetailsPanel_ = nullptr;
     QTabWidget *mapInspectorTabs_ = nullptr;
     QTreeView *mapObjectsTree_ = nullptr;
     QStandardItemModel *mapObjectsModel_ = nullptr;

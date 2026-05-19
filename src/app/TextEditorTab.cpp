@@ -2208,7 +2208,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     editor_->setObjectName(QStringLiteral("rawTextEditorCanvas"));
     editor_->setStyleSheet(QStringLiteral(
         "QPlainTextEdit#rawTextEditorCanvas {"
-        " border-left: 1px solid palette(mid);"
+        " border-left: none;"
         " border-right: 1px solid palette(mid);"
         " border-top: none;"
         " border-bottom: none;"
@@ -2304,7 +2304,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     toolboxColumn->setAttribute(Qt::WA_StyledBackground, true);
     toolboxColumn->setStyleSheet(QStringLiteral(
         "QWidget#blocksToolboxPane {"
-        " border-left: 1px solid palette(mid);"
+        " border-left: none;"
         " border-right: none;"
         " border-top: none;"
         " border-bottom: none;"
@@ -2337,7 +2337,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     typedCanvasView->setObjectName(QStringLiteral("blocksCanvasView"));
     typedCanvasView->setStyleSheet(QStringLiteral(
         "QGraphicsView#blocksCanvasView {"
-        " border-left: 1px solid palette(mid);"
+        " border-left: none;"
         " border-right: 1px solid palette(mid);"
         " border-top: none;"
         " border-bottom: none;"
@@ -2548,8 +2548,14 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     editorModeStack_->addWidget(rawEditorPanel_);
     editorModeStack_->addWidget(blocksPanel_);
 
+    auto *toolbarSeparator = new QFrame(this);
+    toolbarSeparator->setFrameShape(QFrame::NoFrame);
+    toolbarSeparator->setFixedHeight(1);
+    toolbarSeparator->setStyleSheet(QStringLiteral("background-color: palette(mid);"));
+
     layout->addWidget(searchBar_);
     layout->addWidget(modeRow_);
+    layout->addWidget(toolbarSeparator);
     layout->addWidget(editorModeStack_, 1);
     layout->addWidget(statusRow_);
 

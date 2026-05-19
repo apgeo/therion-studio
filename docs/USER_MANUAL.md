@@ -337,8 +337,14 @@ Inspector panel (`Visual` mode):
 - the visibility icon (`eye` / `eye-off`) hides or shows the corresponding map object in the current editor view without changing the source file
 - the delete icon (`trash`) asks for confirmation and removes the corresponding source command span; block objects such as `line`, `area`, and `scrap` remove their full matching `end...` block, and the removal is available through document undo/redo
 - in `Selection`:
-- shows selected object line/kind summary
-- supports coordinate edits for selected point/vertex geometry items
+- groups editing controls into `Object`, `Point / Vertex`, `Geometry`, and `Advanced` sections
+- `Object` shows selected object line/kind values and object-level controls such as source navigation, deletion, quick identity fields, or scrap scale
+- `Object` provides `Show in Source` to switch to Raw mode at the selected source line and `Delete` to remove the selected source-backed object through the confirmed source-delete workflow
+- `Object` also provides quick-edit fields for common identity values: scrap ID, point/line/area type, subtype, and applicable ID/name; `Apply Object Fields` rewrites the selected command line while preserving unrelated options/comments where practical
+- `Point / Vertex` appears when a point, vertex, or control point is selected and contains orientation controls and vertex actions where applicable; exact coordinate edits remain in Raw mode
+- selected line vertices expose `Insert Vertex`, `Delete Vertex`, and `Toggle Smooth` actions using the same source rewrite path as keyboard vertex editing
+- `Geometry` appears when geometry state controls such as `Closed (-close)` and `Reversed (-reverse)` are available
+- `Advanced` contains catalog-driven `Edit Object Settings...`
 - for point symbols and selected line anchor vertices, orientation controls appear only when catalog metadata marks `-orientation` as supported for the current command type/subtype:
 - `Orientation override (-orientation)` enable/disable
 - degree input constrained to `0..359.999`

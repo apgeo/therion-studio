@@ -858,6 +858,11 @@ The criteria below are intended for implementation verification and QA.
 
 - The inspector always matches the current selected object.
 - Changing selection updates the visible object settings immediately.
+- The `Selection` inspector shall group controls into `Object`, `Point / Vertex`, `Geometry`, and `Advanced` sections so object-level edits, point/vertex actions, geometry state controls, and catalog-driven option editing remain visually distinct.
+- The `Object` section shall provide direct actions to reveal the selected object in source text and to delete the selected source-backed object through the standard confirmed source-delete workflow.
+- The `Object` section shall expose quick-edit fields for common map-object identity attributes: scrap ID, point/line/area type, subtype, and applicable ID/name. Applying these fields shall rewrite the selected command line through the safe source-edit path and preserve unrelated options/comments where practical.
+- The `Point / Vertex` section shall not expose coordinate text fields; exact point, vertex, and control-point coordinates shall remain editable in Raw mode.
+- For selected editable line vertices, the `Point / Vertex` section shall expose insert-vertex, delete-vertex, and toggle-smooth actions using the same source rewrite behavior as the corresponding keyboard commands.
 - For `scrap`, `point`, `line`, and `area`, inspector configuration uses the same catalog-driven option workflow as structured block selection.
 - For `scrap`, the inspector provides dedicated manual scale calibration fields for picture points in pixels, real points, and unit, and applies them by rewriting the scrap `-scale` option.
 - Catalog-driven option editors shall treat bracketed multi-token values such as scrap `-scale [...]` as one logical option value and shall not interpret negative numbers inside that value as option keys.

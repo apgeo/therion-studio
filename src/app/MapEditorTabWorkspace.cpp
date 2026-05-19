@@ -19,6 +19,7 @@
 #include <QLayout>
 #include <QLayoutItem>
 #include <QListWidget>
+#include <QLineEdit>
 #include <QItemSelectionModel>
 #include <QMainWindow>
 #include <QPainter>
@@ -579,6 +580,39 @@ void MapEditorTab::buildUi()
     objectDetailsSelectionLabel_->setWordWrap(true);
     selectionLayout->addWidget(objectDetailsSelectionLabel_);
 
+    auto createSelectionSection = [selectionPanel](const QString &title, QVBoxLayout **contentLayout) {
+        auto *section = new QFrame(selectionPanel);
+        section->setFrameShape(QFrame::StyledPanel);
+        auto *sectionLayout = new QVBoxLayout(section);
+        sectionLayout->setContentsMargins(8, 8, 8, 8);
+        sectionLayout->setSpacing(6);
+        auto *titleLabel = new QLabel(title, section);
+        QFont titleFont = titleLabel->font();
+        titleFont.setBold(true);
+        titleLabel->setFont(titleFont);
+        sectionLayout->addWidget(titleLabel);
+        if (contentLayout != nullptr) {
+            *contentLayout = sectionLayout;
+        }
+        return section;
+    };
+
+    QVBoxLayout *objectSelectionLayout = nullptr;
+    objectSelectionSection_ = createSelectionSection(tr("Object"), &objectSelectionLayout);
+
+    auto *objectActionsLayout = new QHBoxLayout;
+    objectActionsLayout->setContentsMargins(0, 0, 0, 0);
+    objectActionsLayout->setSpacing(6);
+    objectShowSourceButton_ = new QPushButton(tr("Show in Source"), objectSelectionSection_);
+    objectShowSourceButton_->setAutoDefault(false);
+    objectDeleteButton_ = new QPushButton(tr("Delete"), objectSelectionSection_);
+    objectDeleteButton_->setAutoDefault(false);
+    connect(objectShowSourceButton_, &QPushButton::clicked, this, &MapEditorTab::showSelectedObjectInSource);
+    connect(objectDeleteButton_, &QPushButton::clicked, this, &MapEditorTab::deleteSelectedObjectFromSelection);
+    objectActionsLayout->addWidget(objectShowSourceButton_);
+    objectActionsLayout->addWidget(objectDeleteButton_);
+    objectSelectionLayout->addLayout(objectActionsLayout);
+
     auto *objectDetailsForm = new QFormLayout;
     objectDetailsForm->setContentsMargins(0, 0, 0, 0);
     objectDetailsForm->setSpacing(6);
@@ -586,27 +620,30 @@ void MapEditorTab::buildUi()
     objectDetailsKindLabel_ = new QLabel(QStringLiteral("—"), selectionPanel);
     objectDetailsForm->addRow(tr("Source Line"), objectDetailsLineLabel_);
     objectDetailsForm->addRow(tr("Kind"), objectDetailsKindLabel_);
-    selectionLayout->addLayout(objectDetailsForm);
+    objectSelectionLayout->addLayout(objectDetailsForm);
 
-    objectCoordinateEditor_ = new QWidget(selectionPanel);
-    auto *coordinateForm = new QFormLayout(objectCoordinateEditor_);
-    coordinateForm->setContentsMargins(0, 0, 0, 0);
-    coordinateForm->setSpacing(6);
-    objectCoordinateXSpin_ = new QDoubleSpinBox(objectCoordinateEditor_);
-    objectCoordinateXSpin_->setDecimals(6);
-    objectCoordinateXSpin_->setRange(-10000000.0, 10000000.0);
-    objectCoordinateYSpin_ = new QDoubleSpinBox(objectCoordinateEditor_);
-    objectCoordinateYSpin_->setDecimals(6);
-    objectCoordinateYSpin_->setRange(-10000000.0, 10000000.0);
-    objectCoordinateApplyButton_ = new QPushButton(tr("Apply Coordinates"), objectCoordinateEditor_);
-    objectCoordinateApplyButton_->setAutoDefault(false);
-    connect(objectCoordinateApplyButton_, &QPushButton::clicked, this, &MapEditorTab::applyObjectCoordinateEdits);
-    coordinateForm->addRow(tr("X"), objectCoordinateXSpin_);
-    coordinateForm->addRow(tr("Y"), objectCoordinateYSpin_);
-    coordinateForm->addRow(QString(), objectCoordinateApplyButton_);
-    selectionLayout->addWidget(objectCoordinateEditor_);
+    objectQuickFieldsEditor_ = new QWidget(objectSelectionSection_);
+    auto *objectQuickForm = new QFormLayout(objectQuickFieldsEditor_);
+    objectQuickForm->setContentsMargins(0, 0, 0, 0);
+    objectQuickForm->setSpacing(6);
+    objectQuickTypeEdit_ = new QLineEdit(objectQuickFieldsEditor_);
+    objectQuickSubtypeEdit_ = new QLineEdit(objectQuickFieldsEditor_);
+    objectQuickIdentifierEdit_ = new QLineEdit(objectQuickFieldsEditor_);
+    objectQuickIdentifierLabel_ = new QLabel(tr("ID"), objectQuickFieldsEditor_);
+    objectQuickApplyButton_ = new QPushButton(tr("Apply Object Fields"), objectQuickFieldsEditor_);
+    objectQuickApplyButton_->setAutoDefault(false);
+    connect(objectQuickApplyButton_, &QPushButton::clicked, this, &MapEditorTab::applyObjectQuickFieldEdits);
+    objectQuickForm->addRow(tr("Type"), objectQuickTypeEdit_);
+    objectQuickForm->addRow(tr("Subtype"), objectQuickSubtypeEdit_);
+    objectQuickForm->addRow(objectQuickIdentifierLabel_, objectQuickIdentifierEdit_);
+    objectQuickForm->addRow(QString(), objectQuickApplyButton_);
+    objectSelectionLayout->addWidget(objectQuickFieldsEditor_);
+    selectionLayout->addWidget(objectSelectionSection_);
 
-    objectOrientationEditor_ = new QWidget(selectionPanel);
+    QVBoxLayout *vertexSelectionLayout = nullptr;
+    vertexSelectionSection_ = createSelectionSection(tr("Point / Vertex"), &vertexSelectionLayout);
+
+    objectOrientationEditor_ = new QWidget(vertexSelectionSection_);
     auto *orientationLayout = new QVBoxLayout(objectOrientationEditor_);
     orientationLayout->setContentsMargins(0, 0, 0, 0);
     orientationLayout->setSpacing(6);
@@ -623,9 +660,31 @@ void MapEditorTab::buildUi()
     orientationLayout->addWidget(objectOrientationEnabledCheck_);
     orientationLayout->addWidget(objectOrientationSpin_);
     orientationLayout->addWidget(objectOrientationApplyButton_);
-    selectionLayout->addWidget(objectOrientationEditor_);
+    vertexSelectionLayout->addWidget(objectOrientationEditor_);
 
-    lineOptionsEditor_ = new QWidget(selectionPanel);
+    vertexActionsEditor_ = new QWidget(vertexSelectionSection_);
+    auto *vertexActionsLayout = new QHBoxLayout(vertexActionsEditor_);
+    vertexActionsLayout->setContentsMargins(0, 0, 0, 0);
+    vertexActionsLayout->setSpacing(6);
+    vertexInsertButton_ = new QPushButton(tr("Insert Vertex"), vertexActionsEditor_);
+    vertexDeleteButton_ = new QPushButton(tr("Delete Vertex"), vertexActionsEditor_);
+    vertexToggleSmoothButton_ = new QPushButton(tr("Toggle Smooth"), vertexActionsEditor_);
+    vertexInsertButton_->setAutoDefault(false);
+    vertexDeleteButton_->setAutoDefault(false);
+    vertexToggleSmoothButton_->setAutoDefault(false);
+    connect(vertexInsertButton_, &QPushButton::clicked, this, &MapEditorTab::insertVertexFromSelectionPanel);
+    connect(vertexDeleteButton_, &QPushButton::clicked, this, &MapEditorTab::deleteVertexFromSelectionPanel);
+    connect(vertexToggleSmoothButton_, &QPushButton::clicked, this, &MapEditorTab::toggleVertexSmoothFromSelectionPanel);
+    vertexActionsLayout->addWidget(vertexInsertButton_);
+    vertexActionsLayout->addWidget(vertexDeleteButton_);
+    vertexActionsLayout->addWidget(vertexToggleSmoothButton_);
+    vertexSelectionLayout->addWidget(vertexActionsEditor_);
+    selectionLayout->addWidget(vertexSelectionSection_);
+
+    QVBoxLayout *geometrySelectionLayout = nullptr;
+    geometrySelectionSection_ = createSelectionSection(tr("Geometry"), &geometrySelectionLayout);
+
+    lineOptionsEditor_ = new QWidget(geometrySelectionSection_);
     auto *lineOptionsLayout = new QVBoxLayout(lineOptionsEditor_);
     lineOptionsLayout->setContentsMargins(0, 0, 0, 0);
     lineOptionsLayout->setSpacing(6);
@@ -635,9 +694,10 @@ void MapEditorTab::buildUi()
     connect(lineReversedCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLineReversedToggled);
     lineOptionsLayout->addWidget(lineClosedCheck_);
     lineOptionsLayout->addWidget(lineReversedCheck_);
-    selectionLayout->addWidget(lineOptionsEditor_);
+    geometrySelectionLayout->addWidget(lineOptionsEditor_);
+    selectionLayout->addWidget(geometrySelectionSection_);
 
-    scrapScaleEditor_ = new QFrame(selectionPanel);
+    scrapScaleEditor_ = new QFrame(objectSelectionSection_);
     static_cast<QFrame *>(scrapScaleEditor_)->setFrameShape(QFrame::StyledPanel);
     auto *scrapScaleLayout = new QVBoxLayout(scrapScaleEditor_);
     scrapScaleLayout->setContentsMargins(8, 8, 8, 8);
@@ -717,12 +777,15 @@ void MapEditorTab::buildUi()
     scrapScaleButtons->addWidget(scrapScaleUseBoundsButton_);
     scrapScaleButtons->addWidget(scrapScaleApplyButton_);
     scrapScaleLayout->addLayout(scrapScaleButtons);
-    selectionLayout->addWidget(scrapScaleEditor_);
+    objectSelectionLayout->addWidget(scrapScaleEditor_);
 
-    objectConfigureButton_ = new QPushButton(tr("Edit Object Settings..."), selectionPanel);
+    QVBoxLayout *advancedSelectionLayout = nullptr;
+    advancedSelectionSection_ = createSelectionSection(tr("Advanced"), &advancedSelectionLayout);
+    objectConfigureButton_ = new QPushButton(tr("Edit Object Settings..."), advancedSelectionSection_);
     objectConfigureButton_->setAutoDefault(false);
     connect(objectConfigureButton_, &QPushButton::clicked, this, &MapEditorTab::handleConfigureObjectSettingsTriggered);
-    selectionLayout->addWidget(objectConfigureButton_);
+    advancedSelectionLayout->addWidget(objectConfigureButton_);
+    selectionLayout->addWidget(advancedSelectionSection_);
     selectionTabLayout->addWidget(selectionPanel);
     selectionTabLayout->addStretch(1);
     mapInspectorTabs_->addTab(selectionTab, tr("Selection"));

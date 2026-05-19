@@ -23,6 +23,7 @@
 #include <QItemSelectionModel>
 #include <QKeyEvent>
 #include <QLineF>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QMouseEvent>
 #include <QNativeGestureEvent>
@@ -440,6 +441,69 @@ InspectorScrapScale defaultInspectorScrapScale(const QRectF &sourceBounds)
     scale.realPoint2 = QPointF((bounds.right() - bounds.left()) * 0.0254, 0.0);
     scale.unitToken = QStringLiteral("m");
     return scale;
+}
+
+struct InspectorObjectQuickFields
+{
+    QString type;
+    QString subtype;
+    QString identifier;
+    QString identifierOption;
+    QString identifierLabel;
+    bool typeEditable = true;
+};
+
+std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLine(const TherionParsedLine &parsedLine)
+{
+    if (parsedLine.directive == QStringLiteral("scrap")) {
+        if (parsedLine.tokens.size() < 2) {
+            return std::nullopt;
+        }
+
+        InspectorObjectQuickFields fields;
+        fields.identifier = parsedLine.tokens.at(1);
+        fields.identifierLabel = QStringLiteral("ID");
+        fields.typeEditable = false;
+        return fields;
+    }
+
+    if (parsedLine.directive == QStringLiteral("point")) {
+        const QString pointTypeToken = inspectorPointTypeToken(parsedLine);
+        if (pointTypeToken.isEmpty()) {
+            return std::nullopt;
+        }
+
+        InspectorObjectQuickFields fields;
+        fields.type = inspectorTypePart(pointTypeToken);
+        fields.subtype = inspectorObjectSubtype(parsedLine, pointTypeToken);
+        const bool station = fields.type.compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0;
+        const QString nameValue = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-name"));
+        fields.identifierOption = (station || !nameValue.isEmpty()) ? QStringLiteral("-name") : QStringLiteral("-id");
+        fields.identifierLabel = fields.identifierOption == QStringLiteral("-name") ? QStringLiteral("Name") : QStringLiteral("ID");
+        fields.identifier = !nameValue.isEmpty()
+            ? nameValue
+            : (fields.identifierOption == QStringLiteral("-id")
+                   ? inspectorOptionValue(parsedLine.tokens, QStringLiteral("-id"))
+                   : inspectorStationNameToken(parsedLine));
+        return fields;
+    }
+
+    if (parsedLine.directive == QStringLiteral("line") || parsedLine.directive == QStringLiteral("area")) {
+        if (parsedLine.tokens.size() < 2) {
+            return std::nullopt;
+        }
+
+        const QString typeToken = parsedLine.tokens.at(1);
+        InspectorObjectQuickFields fields;
+        fields.type = inspectorTypePart(typeToken);
+        fields.subtype = inspectorObjectSubtype(parsedLine, typeToken);
+        fields.identifier = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-id"));
+        fields.identifierOption = QStringLiteral("-id");
+        fields.identifierLabel = QStringLiteral("ID");
+        return fields;
+    }
+
+    return std::nullopt;
 }
 
 bool sourcePointsDifferForCommands(const QPointF &a, const QPointF &b)
@@ -4398,9 +4462,24 @@ void MapEditorTab::refreshInspectorBackgroundPanel()
 void MapEditorTab::refreshObjectDetailsPanel()
 {
     if (objectDetailsSelectionLabel_ == nullptr
+        || objectSelectionSection_ == nullptr
+        || vertexSelectionSection_ == nullptr
+        || geometrySelectionSection_ == nullptr
+        || advancedSelectionSection_ == nullptr
+        || objectShowSourceButton_ == nullptr
+        || objectDeleteButton_ == nullptr
+        || objectQuickFieldsEditor_ == nullptr
+        || objectQuickIdentifierLabel_ == nullptr
+        || objectQuickTypeEdit_ == nullptr
+        || objectQuickSubtypeEdit_ == nullptr
+        || objectQuickIdentifierEdit_ == nullptr
+        || objectQuickApplyButton_ == nullptr
+        || vertexActionsEditor_ == nullptr
+        || vertexInsertButton_ == nullptr
+        || vertexDeleteButton_ == nullptr
+        || vertexToggleSmoothButton_ == nullptr
         || objectDetailsLineLabel_ == nullptr
         || objectDetailsKindLabel_ == nullptr
-        || objectCoordinateEditor_ == nullptr
         || objectOrientationEditor_ == nullptr
         || objectOrientationEnabledCheck_ == nullptr
         || objectOrientationSpin_ == nullptr
@@ -4426,7 +4505,6 @@ void MapEditorTab::refreshObjectDetailsPanel()
 
     int effectiveLineNumber = selectedObjectLineNumber_;
     QString effectiveKind = selectedObjectKind_.trimmed().toLower();
-    bool usingCursorFallback = false;
 
     if (!(effectiveLineNumber > 0 && isConfigurableMapObjectKind(effectiveKind)) && textEditor_ != nullptr) {
         const int cursorLineNumber = textEditor_->currentLineNumber();
@@ -4444,7 +4522,6 @@ void MapEditorTab::refreshObjectDetailsPanel()
                 if (!cursorKind.isEmpty()) {
                     effectiveLineNumber = cursorLineNumber;
                     effectiveKind = cursorKind;
-                    usingCursorFallback = true;
                 }
             }
         }
@@ -4452,9 +4529,18 @@ void MapEditorTab::refreshObjectDetailsPanel()
 
     if (effectiveLineNumber <= 0 || effectiveKind.isEmpty()) {
         objectDetailsSelectionLabel_->setText(tr("No map object selected."));
+        objectDetailsSelectionLabel_->setVisible(true);
+        objectSelectionSection_->setVisible(false);
+        vertexSelectionSection_->setVisible(false);
+        geometrySelectionSection_->setVisible(false);
+        advancedSelectionSection_->setVisible(false);
+        objectShowSourceButton_->setEnabled(false);
+        objectDeleteButton_->setEnabled(false);
+        objectQuickFieldsEditor_->setVisible(false);
+        objectQuickIdentifierOption_.clear();
+        vertexActionsEditor_->setVisible(false);
         objectDetailsLineLabel_->setText(QStringLiteral("—"));
         objectDetailsKindLabel_->setText(QStringLiteral("—"));
-        objectCoordinateEditor_->setVisible(false);
         objectOrientationEditor_->setVisible(false);
         lineOptionsEditor_->setVisible(false);
         scrapScaleEditor_->setVisible(false);
@@ -4465,23 +4551,49 @@ void MapEditorTab::refreshObjectDetailsPanel()
         return;
     }
 
-    objectDetailsSelectionLabel_->setText(usingCursorFallback
-                                              ? tr("Editing settings for the command at the current text cursor line.")
-                                              : tr("Selected object attributes update the TH2 source text immediately."));
+    objectDetailsSelectionLabel_->setVisible(false);
+    objectSelectionSection_->setVisible(true);
+    advancedSelectionSection_->setVisible(true);
     objectDetailsLineLabel_->setText(QString::number(effectiveLineNumber));
     objectDetailsKindLabel_->setText(effectiveKind);
+    objectShowSourceButton_->setEnabled(effectiveLineNumber > 0);
+    objectDeleteButton_->setEnabled(effectiveLineNumber > 0);
+
+    objectQuickFieldsEditor_->setVisible(false);
+    objectQuickIdentifierOption_.clear();
+    if (textEditor_ != nullptr && effectiveLineNumber > 0) {
+        QStringList lines = textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+        for (QString &line : lines) {
+            if (line.endsWith(QLatin1Char('\r'))) {
+                line.chop(1);
+            }
+        }
+        if (effectiveLineNumber <= lines.size()) {
+            const TherionParsedLine parsedLine =
+                TherionDocumentParser::parseLine(lines.at(effectiveLineNumber - 1), effectiveLineNumber);
+            if (const std::optional<InspectorObjectQuickFields> fields = inspectorObjectQuickFieldsFromParsedLine(parsedLine)) {
+                objectQuickFieldsEditor_->setVisible(true);
+                objectQuickTypeEdit_->setEnabled(fields->typeEditable);
+                objectQuickSubtypeEdit_->setEnabled(fields->typeEditable);
+                objectQuickTypeEdit_->setText(fields->type);
+                objectQuickSubtypeEdit_->setText(fields->subtype);
+                objectQuickIdentifierEdit_->setText(fields->identifier);
+                objectQuickIdentifierLabel_->setText(fields->identifierLabel.isEmpty() ? tr("ID") : fields->identifierLabel);
+                objectQuickIdentifierOption_ = fields->identifierOption;
+                objectQuickApplyButton_->setEnabled(true);
+            }
+        }
+    }
     objectConfigureButton_->setVisible(true);
     objectConfigureButton_->setEnabled(isConfigurableMapObjectKind(effectiveKind));
 
-    const bool coordinateEditable = selectedObjectCoordinate_.has_value()
-        && (selectedObjectKind_ == QStringLiteral("point")
-            || selectedObjectKind_ == QStringLiteral("line")
-            || selectedObjectKind_ == QStringLiteral("area"));
-    objectCoordinateEditor_->setVisible(coordinateEditable);
-    if (coordinateEditable && objectCoordinateXSpin_ != nullptr && objectCoordinateYSpin_ != nullptr) {
-        objectCoordinateXSpin_->setValue(selectedObjectCoordinate_->x());
-        objectCoordinateYSpin_->setValue(selectedObjectCoordinate_->y());
-    }
+    const bool lineVertexActionsAvailable = selectedObjectKind_ == QStringLiteral("line")
+        && selectedObjectVertexIndex_ >= 0
+        && textEditor_ != nullptr;
+    vertexActionsEditor_->setVisible(lineVertexActionsAvailable);
+    vertexInsertButton_->setEnabled(lineVertexActionsAvailable);
+    vertexDeleteButton_->setEnabled(lineVertexActionsAvailable);
+    vertexToggleSmoothButton_->setEnabled(lineVertexActionsAvailable);
 
     const bool lineOptionsVisible = selectedObjectLineNumber_ > 0
         && selectedObjectKind_ == QStringLiteral("line")
@@ -4500,6 +4612,8 @@ void MapEditorTab::refreshObjectDetailsPanel()
         lineClosedCheck_->setChecked(false);
         lineReversedCheck_->setChecked(false);
     }
+
+    geometrySelectionSection_->setVisible(lineOptionsVisible);
 
     const bool scrapScaleVisible = effectiveLineNumber > 0
         && effectiveKind == QStringLiteral("scrap")
@@ -4609,41 +4723,7 @@ void MapEditorTab::refreshObjectDetailsPanel()
         objectOrientationSpin_->setValue(0.0);
         objectOrientationApplyButton_->setEnabled(false);
     }
-}
-
-void MapEditorTab::applyObjectCoordinateEdits()
-{
-    if (updatingObjectDetailsUi_ || textEditor_ == nullptr || selectedObjectLineNumber_ <= 0) {
-        return;
-    }
-    if (objectCoordinateXSpin_ == nullptr || objectCoordinateYSpin_ == nullptr) {
-        return;
-    }
-    if (selectedObjectKind_ != QStringLiteral("point")
-        && selectedObjectKind_ != QStringLiteral("line")
-        && selectedObjectKind_ != QStringLiteral("area")) {
-        return;
-    }
-
-    const QPointF newPoint(objectCoordinateXSpin_->value(), objectCoordinateYSpin_->value());
-    if (!selectedObjectCoordinate_.has_value()) {
-        return;
-    }
-
-    if (selectedObjectKind_ == QStringLiteral("point")) {
-        recordPointGeometryMove(selectedObjectLineNumber_, selectedObjectCoordinate_.value(), newPoint);
-    } else if (selectedObjectVertexIndex_ >= 0) {
-        recordLineAreaVertexMove(selectedObjectLineNumber_,
-                                 selectedObjectKind_,
-                                 selectedObjectVertexIndex_,
-                                 selectedObjectCoordinate_.value(),
-                                 newPoint);
-    } else {
-        return;
-    }
-
-    selectedObjectCoordinate_ = newPoint;
-    refreshObjectDetailsPanel();
+    vertexSelectionSection_->setVisible(lineVertexActionsAvailable || orientationApplicable);
 }
 
 void MapEditorTab::applyObjectOrientationEdits()
@@ -4739,6 +4819,113 @@ void MapEditorTab::handleObjectOrientationEnabledToggled(bool checked)
         return;
     }
     objectOrientationSpin_->setEnabled(checked);
+}
+
+void MapEditorTab::showSelectedObjectInSource()
+{
+    if (textEditor_ == nullptr) {
+        return;
+    }
+
+    int targetLineNumber = selectedObjectLineNumber_;
+    if (targetLineNumber <= 0) {
+        targetLineNumber = textEditor_->currentLineNumber();
+    }
+    if (targetLineNumber <= 0) {
+        return;
+    }
+
+    textEditor_->goToLine(targetLineNumber);
+    setWorkspaceMode(WorkspaceMode::Raw);
+}
+
+void MapEditorTab::deleteSelectedObjectFromSelection()
+{
+    if (textEditor_ == nullptr) {
+        return;
+    }
+
+    int targetLineNumber = selectedObjectLineNumber_;
+    if (targetLineNumber <= 0) {
+        targetLineNumber = textEditor_->currentLineNumber();
+    }
+    if (targetLineNumber <= 0) {
+        return;
+    }
+
+    if (textEditor_->deleteCommandAtLine(targetLineNumber)) {
+        hiddenInspectorObjectLines_.remove(targetLineNumber);
+        lastInspectorClickedObjectLineNumber_ = 0;
+        clearInspectorObjectSelection();
+        toolbarStatusNote_ = tr("Deleted selected object from source.");
+        refreshToolbarSummary();
+    }
+}
+
+void MapEditorTab::applyObjectQuickFieldEdits()
+{
+    if (updatingObjectDetailsUi_
+        || textEditor_ == nullptr
+        || objectQuickTypeEdit_ == nullptr
+        || objectQuickSubtypeEdit_ == nullptr
+        || objectQuickIdentifierEdit_ == nullptr) {
+        return;
+    }
+
+    int targetLineNumber = selectedObjectLineNumber_;
+    if (targetLineNumber <= 0) {
+        targetLineNumber = textEditor_->currentLineNumber();
+    }
+    if (targetLineNumber <= 0) {
+        return;
+    }
+
+    const QString beforeText = textEditor_->text();
+    QString afterText = beforeText;
+    QString errorMessage;
+    if (!TherionDocumentEditor::rewriteMapObjectQuickFields(&afterText,
+                                                            targetLineNumber,
+                                                            objectQuickTypeEdit_->text(),
+                                                            objectQuickSubtypeEdit_->text(),
+                                                            objectQuickIdentifierEdit_->text(),
+                                                            objectQuickIdentifierOption_,
+                                                            &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Failed to update object fields.")
+            : tr("Failed to update object fields: %1").arg(errorMessage);
+        refreshToolbarSummary();
+        refreshObjectDetailsPanel();
+        return;
+    }
+
+    if (afterText == beforeText) {
+        return;
+    }
+
+    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
+    textEditor_->replaceTextForCommand(afterText);
+    recordSourceTextSnapshot(tr("Edit Object Fields"), beforeText, afterText, targetLineNumber);
+    toolbarStatusNote_ = tr("Updated object fields.");
+    refreshToolbarSummary();
+    refreshObjectDetailsPanel();
+}
+
+void MapEditorTab::insertVertexFromSelectionPanel()
+{
+    insertLineVertexFromSelection();
+    refreshObjectDetailsPanel();
+}
+
+void MapEditorTab::deleteVertexFromSelectionPanel()
+{
+    removeLineVertexFromSelection();
+    refreshObjectDetailsPanel();
+}
+
+void MapEditorTab::toggleVertexSmoothFromSelectionPanel()
+{
+    toggleLineVertexSmoothFromSelection();
+    refreshObjectDetailsPanel();
 }
 
 void MapEditorTab::populateScrapScaleFromSourceBounds()

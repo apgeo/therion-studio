@@ -146,6 +146,20 @@ QString replacementTokenForLine(const QString &newName, const QString &lineText,
     return quoteToken(trimmedName, quoteCharacter);
 }
 
+QString serializedInlineToken(const QString &value)
+{
+    const QString trimmed = value.trimmed();
+    if (trimmed.isEmpty()) {
+        return QString();
+    }
+
+    if (!trimmed.contains(QRegularExpression(QStringLiteral(R"([\s#%\\'\"])")))) {
+        return trimmed;
+    }
+
+    return quoteToken(trimmed, QLatin1Char('"'));
+}
+
 QString sanitizeScrapName(const QString &preferredName)
 {
     QString source = preferredName.trimmed().toLower();
@@ -413,6 +427,72 @@ int optionTokenIndex(const TherionParsedLine &parsedLine, const QString &optionN
     }
 
     return -1;
+}
+
+bool replaceTokenText(QString *lineText, const TherionParsedLine &parsedLine, int tokenIndex, const QString &replacement)
+{
+    if (lineText == nullptr
+        || tokenIndex < 0
+        || tokenIndex >= parsedLine.tokenSpans.size()) {
+        return false;
+    }
+
+    const TherionParsedToken token = parsedLine.tokenSpans.at(tokenIndex);
+    if (token.start < 0 || token.length < 0 || token.start + token.length > lineText->size()) {
+        return false;
+    }
+
+    lineText->replace(token.start, token.length, replacement);
+    return true;
+}
+
+bool upsertSingleValueOption(QString *lineText, const QString &optionName, const QString &value)
+{
+    if (lineText == nullptr || optionName.trimmed().isEmpty()) {
+        return false;
+    }
+
+    const QString normalizedOption = optionName.trimmed().startsWith(QLatin1Char('-'))
+        ? optionName.trimmed()
+        : QStringLiteral("-%1").arg(optionName.trimmed());
+    TherionParsedLine parsedLine = TherionDocumentParser::parseLine(*lineText);
+    const int existingOptionIndex = optionTokenIndex(parsedLine, normalizedOption);
+    const QString serializedValue = serializedInlineToken(value);
+    if (serializedValue.isEmpty()) {
+        if (existingOptionIndex < 0) {
+            return true;
+        }
+        return removeOptionAtTokenIndex(lineText, parsedLine, existingOptionIndex);
+    }
+
+    if (existingOptionIndex >= 0) {
+        if (existingOptionIndex + 1 < parsedLine.tokens.size()
+            && existingOptionIndex + 1 < parsedLine.tokenSpans.size()
+            && !parsedLine.tokens.at(existingOptionIndex + 1).startsWith(QLatin1Char('-'))) {
+            return replaceTokenText(lineText, parsedLine, existingOptionIndex + 1, serializedValue);
+        }
+        if (existingOptionIndex >= parsedLine.tokenSpans.size()) {
+            return false;
+        }
+        const TherionParsedToken optionToken = parsedLine.tokenSpans.at(existingOptionIndex);
+        if (optionToken.start < 0 || optionToken.length < 0 || optionToken.start + optionToken.length > lineText->size()) {
+            return false;
+        }
+        lineText->insert(optionToken.start + optionToken.length, QStringLiteral(" ") + serializedValue);
+        return true;
+    }
+
+    const QString insertionText = QStringLiteral("%1 %2").arg(normalizedOption, serializedValue);
+    if (parsedLine.commentStart >= 0) {
+        int insertIndex = parsedLine.commentStart;
+        while (insertIndex > 0 && lineText->at(insertIndex - 1).isSpace()) {
+            --insertIndex;
+        }
+        lineText->insert(insertIndex, QStringLiteral(" ") + insertionText);
+    } else {
+        *lineText += QStringLiteral(" ") + insertionText;
+    }
+    return true;
 }
 
 QPair<int, int> optionRangeWithBracketedValue(const TherionParsedLine &parsedLine, int optionIndex, const QString &lineText)
@@ -1828,6 +1908,129 @@ bool TherionDocumentEditor::rewriteScrapScale(QString *contents,
         } else {
             lineText += QStringLiteral(" ") + replacement;
         }
+    }
+
+    lines[lineIndex] = lineText;
+    *contents = lines.join(lineEnding);
+    return true;
+}
+
+bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
+                                                        int lineNumber,
+                                                        const QString &type,
+                                                        const QString &subtype,
+                                                        const QString &identifier,
+                                                        const QString &identifierOption,
+                                                        QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+
+    if (lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line number is invalid.");
+        }
+        return false;
+    }
+
+    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = splitLinesNormalized(*contents);
+    if (lineNumber > lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line no longer exists.");
+        }
+        return false;
+    }
+
+    const int lineIndex = lineNumber - 1;
+    QString lineText = lines.at(lineIndex);
+    TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    if (parsedLine.directive.isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line is not a map object command.");
+        }
+        return false;
+    }
+
+    const QString directive = parsedLine.directive;
+    if (directive == QStringLiteral("scrap")) {
+        const QString normalizedIdentifier = identifier.trimmed();
+        if (normalizedIdentifier.isEmpty()) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QStringLiteral("Scrap ID cannot be empty.");
+            }
+            return false;
+        }
+        if (parsedLine.tokens.size() < 2 || parsedLine.tokenSpans.size() < 2) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QStringLiteral("The selected scrap command has no writable ID token.");
+            }
+            return false;
+        }
+        const QString replacement = replacementTokenForLine(normalizedIdentifier, lineText, parsedLine.tokenSpans.at(1));
+        if (!replaceTokenText(&lineText, parsedLine, 1, replacement)) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QStringLiteral("The selected scrap ID could not be rewritten.");
+            }
+            return false;
+        }
+        lines[lineIndex] = lineText;
+        *contents = lines.join(lineEnding);
+        return true;
+    }
+
+    if (directive != QStringLiteral("point")
+        && directive != QStringLiteral("line")
+        && directive != QStringLiteral("area")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Quick object fields are available only for scrap, point, line, and area commands.");
+        }
+        return false;
+    }
+
+    const QString normalizedType = type.trimmed();
+    if (normalizedType.isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Object type cannot be empty.");
+        }
+        return false;
+    }
+
+    const int typeTokenIndex = directive == QStringLiteral("point")
+        ? pointTypeTokenIndex(parsedLine)
+        : 1;
+    if (typeTokenIndex <= 0 || typeTokenIndex >= parsedLine.tokenSpans.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected %1 command has no writable type token.").arg(directive);
+        }
+        return false;
+    }
+
+    if (!replaceTokenText(&lineText, parsedLine, typeTokenIndex, serializedInlineToken(normalizedType))) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected object type could not be rewritten.");
+        }
+        return false;
+    }
+
+    if (!upsertSingleValueOption(&lineText, QStringLiteral("-subtype"), subtype)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected object subtype could not be rewritten.");
+        }
+        return false;
+    }
+
+    const QString normalizedIdentifierOption = identifierOption.trimmed();
+    if (!normalizedIdentifierOption.isEmpty()
+        && !upsertSingleValueOption(&lineText, normalizedIdentifierOption, identifier)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected object identifier could not be rewritten.");
+        }
+        return false;
     }
 
     lines[lineIndex] = lineText;

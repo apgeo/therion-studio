@@ -244,11 +244,11 @@ private:
     QFrame *workspaceHistorySeparator_ = nullptr;
     QFrame *workspaceZoomSeparator_ = nullptr;
     QFrame *workspaceMapToolsSeparator_ = nullptr;
-    QPushButton *workspaceVisualModeButton_ = nullptr;
-    QPushButton *workspaceRawModeButton_ = nullptr;
-    QPushButton *workspaceMapPaneWindowButton_ = nullptr;
-    QPushButton *workspaceTextRawModeButton_ = nullptr;
-    QPushButton *workspaceBlocksModeButton_ = nullptr;
+    QToolButton *workspaceVisualModeButton_ = nullptr;
+    QToolButton *workspaceRawModeButton_ = nullptr;
+    QToolButton *workspaceMapPaneWindowButton_ = nullptr;
+    QToolButton *workspaceTextRawModeButton_ = nullptr;
+    QToolButton *workspaceBlocksModeButton_ = nullptr;
     bool workspaceModeSwitcherSyncInProgress_ = false;
     QFileSystemModel *projectModel_ = nullptr;
     QStandardItemModel *structureModel_ = nullptr;

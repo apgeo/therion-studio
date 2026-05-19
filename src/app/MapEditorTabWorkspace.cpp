@@ -55,7 +55,7 @@ QPushButton *createDetachedToolbarButton(QWidget *parent, const QString &text, c
     auto *button = new QPushButton(text, parent);
     button->setAutoDefault(false);
     button->setIcon(QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName)));
-    button->setIconSize(QSize(16, 16));
+    button->setIconSize(QSize(14, 14));
     button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     return button;
 }
@@ -65,9 +65,11 @@ QToolButton *createDetachedIconButton(QWidget *parent, const QString &toolTip, c
     auto *button = new QToolButton(parent);
     button->setAutoRaise(false);
     button->setIcon(QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName)));
-    button->setIconSize(QSize(16, 16));
+    button->setIconSize(QSize(14, 14));
     button->setToolButtonStyle(Qt::ToolButtonIconOnly);
     button->setToolTip(toolTip);
+    button->setAccessibleName(toolTip);
+    button->setFixedSize(QSize(26, 26));
     button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     return button;
 }
@@ -136,15 +138,17 @@ public:
             " margin-right: 4px;"
             "}"
             "QWidget#workspaceCommandBar QToolButton {"
-            " min-width: 30px;"
-            " min-height: 28px;"
+            " min-width: 26px;"
+            " max-width: 26px;"
+            " min-height: 26px;"
+            " max-height: 26px;"
             " border: 1px solid palette(mid);"
             " border-radius: 6px;"
             " padding: 0px;"
             " background-color: palette(button);"
             "}"
             "QWidget#workspaceCommandBar QPushButton {"
-            " min-height: 28px;"
+            " min-height: 26px;"
             " border: 1px solid palette(mid);"
             " border-radius: 6px;"
             " padding: 0 10px;"
@@ -166,7 +170,7 @@ public:
             " border-color: palette(mid);"
             "}"));
         auto *commandLayout = new QHBoxLayout(commandBar_);
-        commandLayout->setContentsMargins(8, 4, 8, 4);
+        commandLayout->setContentsMargins(4, 4, 8, 4);
         commandLayout->setSpacing(4);
 
         saveButton_ = createDetachedIconButton(commandBar_, QObject::tr("Save"), QStringLiteral("save"));

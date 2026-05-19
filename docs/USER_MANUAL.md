@@ -306,7 +306,7 @@ Map tab uses explicit workspace modes:
 - the full-width document toolbar row is shown above the file tabs for all document types
 - the command toolbar sits directly above the native file tabs without an extra bottom border
 - file tabs use native platform tab rendering and sit on the `QTabWidget` editor/canvas frame below them
-- file tabs use native platform tab insets; the command toolbar keeps its own internal button padding
+- file tabs use native platform tab insets; the command toolbar keeps compact internal padding with matching top/bottom/left spacing at the leading edge
 - embedded Visual mode uses the same thin top content separator under the file tabs as Raw/Blocks mode
 - Visual inspector tabs use native `QTabWidget` rendering and sit in a borderless panel matching the other editor side panes
 - the editor area uses a single dedicated left divider between sidebar content and document chrome; embedded canvases do not duplicate that divider
@@ -315,7 +315,8 @@ Map tab uses explicit workspace modes:
 - when a `.th2` map tab is active, the next left-side toolbar groups are:
 - `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
 - `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`
-- when a `.th2` map tab is active in the main window, the right side of that toolbar shows `Visual`, `Raw`, and `Separate Map` / `Return Map` (in that order)
+- when a `.th2` map tab is active in the main window, the right side of that toolbar shows compact square icon-only controls for `Visual`, `Raw`, and `Separate Map` / `Return Map` (in that order)
+- `.th` / `.thconfig` right-side `Raw` / `Blocks` mode controls are also compact square icon-only controls, with tooltips and accessible names
 - when a map editor is shown outside the main tab strip (detached map window), an equivalent top command toolbar is shown above the map canvas and inspector, but `Visual`/`Raw` buttons are omitted there
 
 The map pane is dedicated to graphical editing; there is no separate persistent `Map Help` pane below the canvas.

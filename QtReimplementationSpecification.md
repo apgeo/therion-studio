@@ -277,6 +277,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - When a TH2 document is active in the main window, the embedded workspace shall provide explicit `Visual` and `Raw` modes.
 - When a TH2 document is active in the main window, the `Visual`/`Raw` mode selector shall be hosted in the right-aligned controls of the full-width document command toolbar above the tab strip rather than in a dedicated row inside the tab content.
 - When a TH2 document is active in the main window, map-pane detach/reattach (`Separate Map` / `Return Map`) shall be provided in the same document command toolbar control area as the `Visual`/`Raw` mode selector.
+- Right-aligned document command toolbar controls such as `Visual`, `Raw`, `Blocks`, and map-pane detach/reattach shall be compact square icon-only controls with accessible names and tooltips.
 - Embedded TH2 `Visual` mode shall align its canvas/inspector content edge with the same thin top separator used by Raw and Blocks editor content under the main file tabs.
 - TH2 `Visual` inspector tabs shall use native `QTabWidget` rendering and shall not override platform tab geometry or tab shape.
 - When a TH2 map editor is presented outside the main tab strip (for example in a detached dedicated map-editor window), the top command toolbar shall omit `Visual`/`Raw` mode switching and keep only actions relevant to the detached visual workspace.

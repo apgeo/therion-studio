@@ -67,15 +67,17 @@ QString workspaceCommandBarStyleSheet(const QColor &backgroundColor)
                " margin-right: 4px;"
                "}"
                "QWidget#workspaceCommandBar QToolButton {"
-               " min-width: 30px;"
-               " min-height: 28px;"
+               " min-width: 26px;"
+               " max-width: 26px;"
+               " min-height: 26px;"
+               " max-height: 26px;"
                " border: 1px solid palette(mid);"
                " border-radius: 6px;"
                " padding: 0px;"
                " background-color: palette(button);"
                "}"
                "QWidget#workspaceCommandBar QPushButton {"
-               " min-height: 28px;"
+               " min-height: 26px;"
                " border: 1px solid palette(mid);"
                " border-radius: 6px;"
                " padding: 0 10px;"
@@ -183,18 +185,6 @@ QWidget *createCenteredMessage(const QString &title, const QString &body)
     return widget;
 }
 
-QPushButton *createWorkspaceToolbarButton(QWidget *parent,
-                                          const QString &text,
-                                          const QString &iconName)
-{
-    auto *button = new QPushButton(text, parent);
-    button->setAutoDefault(false);
-    button->setIcon(QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName)));
-    button->setIconSize(QSize(16, 16));
-    button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    return button;
-}
-
 QToolButton *createWorkspaceIconButton(QWidget *parent,
                                        const QString &toolTip,
                                        const QString &iconName)
@@ -202,9 +192,11 @@ QToolButton *createWorkspaceIconButton(QWidget *parent,
     auto *button = new QToolButton(parent);
     button->setAutoRaise(false);
     button->setIcon(QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName)));
-    button->setIconSize(QSize(16, 16));
+    button->setIconSize(QSize(14, 14));
     button->setToolButtonStyle(Qt::ToolButtonIconOnly);
     button->setToolTip(toolTip);
+    button->setAccessibleName(toolTip);
+    button->setFixedSize(QSize(26, 26));
     button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     return button;
 }
@@ -228,21 +220,6 @@ void applyThinSplitterStyle(QSplitter *splitter, const QString &objectName)
     splitter->setFrameShape(QFrame::NoFrame);
     splitter->setHandleWidth(10);
     splitter->setStyleSheet(QString());
-}
-
-void applyWorkspaceButtonMinimumWidth(QPushButton *button)
-{
-    if (button == nullptr) {
-        return;
-    }
-
-    QString text = button->text();
-    text.remove(QLatin1Char('&'));
-    const QFontMetrics metrics(button->font());
-    const int textWidth = metrics.horizontalAdvance(text);
-    const int iconWidth = button->icon().isNull() ? 0 : (button->iconSize().width() + 8);
-    const int framePadding = 28;
-    button->setMinimumWidth(textWidth + iconWidth + framePadding);
 }
 
 QString quickUserManualMarkdown()
@@ -526,7 +503,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceModeSwitcher_->setAttribute(Qt::WA_StyledBackground, true);
     workspaceModeSwitcher_->setStyleSheet(workspaceCommandBarStyleSheet(palette().color(QPalette::Base)));
     auto *hostLayout = new QHBoxLayout(workspaceModeSwitcher_);
-    hostLayout->setContentsMargins(8, 4, 8, 4);
+    hostLayout->setContentsMargins(4, 4, 8, 4);
     hostLayout->setSpacing(4);
 
     workspaceSaveButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Save"), QStringLiteral("save"));
@@ -591,30 +568,26 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     auto *mapLayout = new QHBoxLayout(workspaceMapModeSwitcher_);
     mapLayout->setContentsMargins(0, 0, 0, 0);
     mapLayout->setSpacing(4);
-    workspaceVisualModeButton_ = createWorkspaceToolbarButton(workspaceMapModeSwitcher_, tr("Visual"), QStringLiteral("pen-tool"));
-    workspaceRawModeButton_ = createWorkspaceToolbarButton(workspaceMapModeSwitcher_, tr("Raw"), QStringLiteral("code"));
+    workspaceVisualModeButton_ = createWorkspaceIconButton(workspaceMapModeSwitcher_, tr("Visual"), QStringLiteral("pen-tool"));
+    workspaceRawModeButton_ = createWorkspaceIconButton(workspaceMapModeSwitcher_, tr("Raw"), QStringLiteral("code"));
     workspaceVisualModeButton_->setCheckable(true);
     workspaceRawModeButton_->setCheckable(true);
-    workspaceMapPaneWindowButton_ = createWorkspaceToolbarButton(workspaceMapModeSwitcher_, tr("Separate Map"), QStringLiteral("external-link"));
+    workspaceMapPaneWindowButton_ = createWorkspaceIconButton(workspaceMapModeSwitcher_, tr("Separate Map"), QStringLiteral("external-link"));
     workspaceMapPaneWindowButton_->setObjectName(QStringLiteral("workspaceMapPaneWindowButton"));
     mapLayout->addWidget(workspaceVisualModeButton_);
     mapLayout->addWidget(workspaceRawModeButton_);
     mapLayout->addWidget(workspaceMapPaneWindowButton_);
-    applyWorkspaceButtonMinimumWidth(workspaceVisualModeButton_);
-    applyWorkspaceButtonMinimumWidth(workspaceRawModeButton_);
-    applyWorkspaceButtonMinimumWidth(workspaceMapPaneWindowButton_);
 
     workspaceTextModeSwitcher_ = new QWidget(workspaceModeSwitcher_);
     auto *textLayout = new QHBoxLayout(workspaceTextModeSwitcher_);
     textLayout->setContentsMargins(0, 0, 0, 0);
     textLayout->setSpacing(4);
-    workspaceTextRawModeButton_ = createWorkspaceToolbarButton(workspaceTextModeSwitcher_, tr("Raw"), QStringLiteral("code"));
-    workspaceBlocksModeButton_ = createWorkspaceToolbarButton(workspaceTextModeSwitcher_, tr("Blocks"), QStringLiteral("toy-brick"));
+    workspaceTextRawModeButton_ = createWorkspaceIconButton(workspaceTextModeSwitcher_, tr("Raw"), QStringLiteral("code"));
+    workspaceBlocksModeButton_ = createWorkspaceIconButton(workspaceTextModeSwitcher_, tr("Blocks"), QStringLiteral("toy-brick"));
     workspaceTextRawModeButton_->setCheckable(true);
     workspaceBlocksModeButton_->setCheckable(true);
     workspaceBlocksModeButton_->setToolTip(tr("Structured block canvas for .th and .thconfig files."));
-    applyWorkspaceButtonMinimumWidth(workspaceTextRawModeButton_);
-    applyWorkspaceButtonMinimumWidth(workspaceBlocksModeButton_);
+    workspaceBlocksModeButton_->setAccessibleName(tr("Blocks"));
     textLayout->addWidget(workspaceTextRawModeButton_);
     textLayout->addWidget(workspaceBlocksModeButton_);
 
@@ -637,7 +610,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     connect(workspaceSmartTraceLineButton_, &QToolButton::clicked, this, &MainWindow::triggerSmartTraceLineForActiveDocument);
     connect(workspaceAreaButton_, &QToolButton::clicked, this, &MainWindow::triggerAreaForActiveDocument);
     connect(workspaceTouchControlsButton_, &QToolButton::toggled, this, &MainWindow::toggleTouchControlsForActiveDocument);
-    connect(workspaceVisualModeButton_, &QPushButton::clicked, this, [this]() {
+    connect(workspaceVisualModeButton_, &QToolButton::clicked, this, [this]() {
         if (workspaceModeSwitcherSyncInProgress_) {
             return;
         }
@@ -645,7 +618,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
             mapTab->setWorkspaceMode(TherionStudio::MapEditorTab::WorkspaceMode::Visual);
         }
     });
-    connect(workspaceRawModeButton_, &QPushButton::clicked, this, [this]() {
+    connect(workspaceRawModeButton_, &QToolButton::clicked, this, [this]() {
         if (workspaceModeSwitcherSyncInProgress_) {
             return;
         }
@@ -653,7 +626,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
             mapTab->setWorkspaceMode(TherionStudio::MapEditorTab::WorkspaceMode::Raw);
         }
     });
-    connect(workspaceMapPaneWindowButton_, &QPushButton::clicked, this, [this]() {
+    connect(workspaceMapPaneWindowButton_, &QToolButton::clicked, this, [this]() {
         if (workspaceModeSwitcherSyncInProgress_) {
             return;
         }
@@ -661,7 +634,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
             mapTab->toggleMapPaneWindow();
         }
     });
-    connect(workspaceTextRawModeButton_, &QPushButton::clicked, this, [this]() {
+    connect(workspaceTextRawModeButton_, &QToolButton::clicked, this, [this]() {
         if (workspaceModeSwitcherSyncInProgress_) {
             return;
         }
@@ -669,7 +642,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
             textTab->setEditorMode(TherionStudio::TextEditorTab::EditorMode::Raw);
         }
     });
-    connect(workspaceBlocksModeButton_, &QPushButton::clicked, this, [this]() {
+    connect(workspaceBlocksModeButton_, &QToolButton::clicked, this, [this]() {
         if (workspaceModeSwitcherSyncInProgress_) {
             return;
         }
@@ -792,9 +765,8 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         workspaceVisualModeButton_->setEnabled(!mapTab->isMapPaneDetached());
         workspaceRawModeButton_->setEnabled(!mapTab->isMapPaneDetached());
         workspaceMapPaneWindowButton_->setEnabled(true);
-        workspaceMapPaneWindowButton_->setText(mapTab->mapPaneWindowActionText());
         workspaceMapPaneWindowButton_->setToolTip(mapTab->mapPaneWindowActionToolTip());
-        applyWorkspaceButtonMinimumWidth(workspaceMapPaneWindowButton_);
+        workspaceMapPaneWindowButton_->setAccessibleName(mapTab->mapPaneWindowActionText());
         workspaceModeSwitcher_->setToolTip(mapTab->isMapPaneDetached()
                                                ? tr("Map pane is detached: raw editor remains in this tab while visual map stays in the detached window.")
                                                : QString());

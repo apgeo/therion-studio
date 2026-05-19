@@ -79,6 +79,8 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/redo-2.svg
     resources/icons/lucide/save.svg
     resources/icons/lucide/scan.svg
+    resources/icons/lucide/screen-share.svg
+    resources/icons/lucide/screen-share-off.svg
     resources/icons/lucide/spline.svg
     resources/icons/lucide/square-plus.svg
     resources/icons/lucide/toy-brick.svg

@@ -315,9 +315,10 @@ Map tab uses explicit workspace modes:
 - when a `.th2` map tab is active, the next left-side toolbar groups are:
 - `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
 - `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`
-- when a `.th2` map tab is active in the main window, the right side of that toolbar shows compact square icon-only controls for `Visual`, `Raw`, and `Separate Map` / `Return Map` (in that order)
+- when a `.th2` map tab is active in the main window, the right side of that toolbar shows compact square icon-only controls for `Visual`, `Raw`, and `Separate Map` / `Return Map` (in that order); `Separate Map` uses the screen-share icon and `Return Map` uses the screen-share-off icon
 - `.th` / `.thconfig` right-side `Raw` / `Blocks` mode controls are also compact square icon-only controls, with tooltips and accessible names
 - when a map editor is shown outside the main tab strip (detached map window), an equivalent top command toolbar is shown above the map canvas and inspector, but `Visual`/`Raw` buttons are omitted there
+- detached map windows draw one separator below the window titlebar and one separator below their command toolbar above the canvas/inspector content
 
 The map pane is dedicated to graphical editing; there is no separate persistent `Map Help` pane below the canvas.
 
@@ -332,6 +333,9 @@ Inspector panel (`Visual` mode):
 - `Selection` tab contains details and editing controls for the currently selected map object
 - `Objects` tab contains TH2 objects grouped by scrap in a source-line-linked tree
 - `Backgrounds` tab starts with visual grid controls, followed by background-layer controls that were previously in the left sidebar `Map` pane
+- The tab labels are the inspector heading; there is no extra standalone `Inspector` title above them
+- The inspector tab pane only reinforces the left edge when needed; the remaining tab pane borders keep native styling
+- `Selection` and `Backgrounds` use the same framed section style, with section headings inside their boxes
 - Visual-mode Inspector uses compact outer margins; the `Objects` tree starts directly under its tab, and selection/background controls use padded inner groups where needed
 - in the `Backgrounds` tab, grid controls are first; layer add uses a compact `+` button in the `Layers` header; per-layer visibility and removal use right-aligned row icons, while reorder actions remain below the layer list
 
@@ -413,8 +417,9 @@ Interactive drawing (current):
 Detached map-pane behavior:
 
 - `Separate Map` (document toolbar row above tabs) detaches the graphical map pane into its own top-level window (useful for a second monitor).
-- Detached map window keeps the same top command toolbar groups and right-side `Inspector` tabs as embedded `Visual` mode, except detached toolbar omits `Visual`/`Raw`.
+- Detached map window keeps the same top command toolbar groups and right-side `Inspector` tabs as embedded `Visual` mode, except detached toolbar omits `Visual`/`Raw` and shows icon-only `Return Map` with the screen-share-off icon.
 - The main tab keeps the raw text editor visible while detached.
+- While detached, the main-window toolbar hides map zoom/drawing/selection groups for that TH2 tab; use the detached map window toolbar for map commands.
 - Detached map window shows its own status bar for map zoom and `Select`/`Insert` mode.
 - Main-window map zoom/mode badges are hidden while detached, so map status lives with the detached map window.
 - Closing the detached map window (or clicking `Return Map`) reattaches the same map pane back to the tab.

@@ -572,7 +572,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceRawModeButton_ = createWorkspaceIconButton(workspaceMapModeSwitcher_, tr("Raw"), QStringLiteral("code"));
     workspaceVisualModeButton_->setCheckable(true);
     workspaceRawModeButton_->setCheckable(true);
-    workspaceMapPaneWindowButton_ = createWorkspaceIconButton(workspaceMapModeSwitcher_, tr("Separate Map"), QStringLiteral("external-link"));
+    workspaceMapPaneWindowButton_ = createWorkspaceIconButton(workspaceMapModeSwitcher_, tr("Separate Map"), QStringLiteral("screen-share"));
     workspaceMapPaneWindowButton_->setObjectName(QStringLiteral("workspaceMapPaneWindowButton"));
     mapLayout->addWidget(workspaceVisualModeButton_);
     mapLayout->addWidget(workspaceRawModeButton_);
@@ -704,8 +704,9 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget);
     const bool showMapModes = mapTab != nullptr;
     const bool showTextModes = textTab != nullptr;
-    const bool showZoomTools = showMapModes;
-    const bool showMapTools = showMapModes;
+    const bool mapPaneDetached = mapTab != nullptr && mapTab->isMapPaneDetached();
+    const bool showZoomTools = showMapModes && !mapPaneDetached;
+    const bool showMapTools = showMapModes && !mapPaneDetached;
     QColor commandBarBackground = palette().color(QPalette::Base);
     if (showTextModes && textTab != nullptr) {
         const QColor sourceSurface = textTab->sourceSurfaceColor();
@@ -762,12 +763,16 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         workspaceTouchControlsButton_->setChecked(mapTab->isTouchFriendlyControlsEnabled());
         workspaceVisualModeButton_->setChecked(mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Visual);
         workspaceRawModeButton_->setChecked(mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Raw);
-        workspaceVisualModeButton_->setEnabled(!mapTab->isMapPaneDetached());
-        workspaceRawModeButton_->setEnabled(!mapTab->isMapPaneDetached());
+        workspaceVisualModeButton_->setEnabled(!mapPaneDetached);
+        workspaceRawModeButton_->setEnabled(!mapPaneDetached);
         workspaceMapPaneWindowButton_->setEnabled(true);
+        workspaceMapPaneWindowButton_->setIcon(QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg")
+                                                         .arg(mapPaneDetached
+                                                                  ? QStringLiteral("screen-share-off")
+                                                                  : QStringLiteral("screen-share"))));
         workspaceMapPaneWindowButton_->setToolTip(mapTab->mapPaneWindowActionToolTip());
         workspaceMapPaneWindowButton_->setAccessibleName(mapTab->mapPaneWindowActionText());
-        workspaceModeSwitcher_->setToolTip(mapTab->isMapPaneDetached()
+        workspaceModeSwitcher_->setToolTip(mapPaneDetached
                                                ? tr("Map pane is detached: raw editor remains in this tab while visual map stays in the detached window.")
                                                : QString());
     } else if (showTextModes) {

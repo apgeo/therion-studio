@@ -1992,6 +1992,20 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         return QWidget::eventFilter(watched, event);
     }
 
+    if (watched == mapInspectorTabs_) {
+        switch (event->type()) {
+        case QEvent::Resize:
+        case QEvent::Show:
+        case QEvent::StyleChange:
+        case QEvent::PaletteChange:
+            updateMapInspectorLeftEdgeGeometry();
+            break;
+        default:
+            break;
+        }
+        return QWidget::eventFilter(watched, event);
+    }
+
     if (mapObjectsTree_ != nullptr && watched == mapObjectsTree_->viewport()) {
         if (event->type() == QEvent::MouseButtonRelease) {
             auto *mouseEvent = static_cast<QMouseEvent *>(event);

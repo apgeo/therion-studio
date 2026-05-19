@@ -9,7 +9,6 @@
 #include <QFile>
 #include <QGuiApplication>
 #include <QFileInfo>
-#include <QFontMetrics>
 #include <QFormLayout>
 #include <QFrame>
 #include <QGraphicsView>
@@ -34,6 +33,7 @@
 #include <QStatusBar>
 #include <QStyleHints>
 #include <QSvgRenderer>
+#include <QTabBar>
 #include <QTabWidget>
 #include <QToolButton>
 #include <QTreeView>
@@ -50,16 +50,6 @@ namespace TherionStudio
 {
 namespace
 {
-QPushButton *createDetachedToolbarButton(QWidget *parent, const QString &text, const QString &iconName)
-{
-    auto *button = new QPushButton(text, parent);
-    button->setAutoDefault(false);
-    button->setIcon(QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName)));
-    button->setIconSize(QSize(14, 14));
-    button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    return button;
-}
-
 QToolButton *createDetachedIconButton(QWidget *parent, const QString &toolTip, const QString &iconName)
 {
     auto *button = new QToolButton(parent);
@@ -81,21 +71,6 @@ QFrame *createDetachedToolbarSeparator(QWidget *parent)
     separator->setFrameShadow(QFrame::Sunken);
     separator->setObjectName(QStringLiteral("workspaceToolbarSeparator"));
     return separator;
-}
-
-void applyDetachedButtonMinimumWidth(QPushButton *button)
-{
-    if (button == nullptr) {
-        return;
-    }
-
-    QString text = button->text();
-    text.remove(QLatin1Char('&'));
-    const QFontMetrics metrics(button->font());
-    const int textWidth = metrics.horizontalAdvance(text);
-    const int iconWidth = button->icon().isNull() ? 0 : (button->iconSize().width() + 8);
-    const int framePadding = 28;
-    button->setMinimumWidth(textWidth + iconWidth + framePadding);
 }
 
 void applyThinSplitterStyle(QSplitter *splitter, const QString &objectName)
@@ -126,8 +101,8 @@ public:
         commandBar_->setAttribute(Qt::WA_StyledBackground, true);
         commandBar_->setStyleSheet(QStringLiteral(
             "QWidget#workspaceCommandBar {"
-            " border-bottom: none;"
-            " border-top: 1px solid palette(mid);"
+            " border-bottom: 1px solid palette(mid);"
+            " border-top: 1px solid palette(midlight);"
             " border-left: none;"
             " border-right: none;"
             " background-color: palette(base);"
@@ -220,8 +195,7 @@ public:
         commandLayout->addWidget(createDetachedToolbarSeparator(commandBar_));
         commandLayout->addStretch(1);
 
-        mapWindowButton_ = createDetachedToolbarButton(commandBar_, QObject::tr("Return Map"), QStringLiteral("external-link"));
-        applyDetachedButtonMinimumWidth(mapWindowButton_);
+        mapWindowButton_ = createDetachedIconButton(commandBar_, QObject::tr("Return Map"), QStringLiteral("screen-share-off"));
         commandLayout->addWidget(mapWindowButton_);
 
         centralLayout->addWidget(commandBar_);
@@ -248,7 +222,7 @@ public:
             connect(smartTraceLineButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddSmartTraceLine);
             connect(areaButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddArea);
             connect(touchControlsButton_, &QToolButton::toggled, mapTab_, &MapEditorTab::setTouchControlsEnabled);
-            connect(mapWindowButton_, &QPushButton::clicked, mapTab_, &MapEditorTab::toggleMapPaneWindow);
+            connect(mapWindowButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::toggleMapPaneWindow);
             connect(mapTab_, &MapEditorTab::mapPaneDetachStateChanged, this, [this](bool) {
                 refreshCommandBarState();
             });
@@ -350,9 +324,8 @@ private:
         redoButton_->setEnabled(mapTab_->canRedo());
         fitBackgroundButton_->setEnabled(mapTab_->backgroundLayerCount() > 0);
         completeDraftButton_->setEnabled(mapTab_->canCompleteDraftAction());
-        mapWindowButton_->setText(mapTab_->mapPaneWindowActionText());
-        mapWindowButton_->setToolTip(mapTab_->mapPaneWindowActionToolTip());
-        applyDetachedButtonMinimumWidth(mapWindowButton_);
+        mapWindowButton_->setToolTip(QObject::tr("Return Map"));
+        mapWindowButton_->setAccessibleName(QObject::tr("Return Map"));
 
         const MapEditorTab::InteractiveDrawMode drawMode = mapTab_->interactiveDrawMode();
         selectButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::None);
@@ -382,7 +355,7 @@ private:
     QToolButton *smartTraceLineButton_ = nullptr;
     QToolButton *areaButton_ = nullptr;
     QToolButton *touchControlsButton_ = nullptr;
-    QPushButton *mapWindowButton_ = nullptr;
+    QToolButton *mapWindowButton_ = nullptr;
     QLabel *zoomLabel_ = nullptr;
     QLabel *modeLabel_ = nullptr;
     std::function<void()> closeCallback_;
@@ -547,13 +520,19 @@ void MapEditorTab::buildUi()
     objectDetailsLayout->setContentsMargins(8, 8, 8, 8);
     objectDetailsLayout->setSpacing(8);
 
-    auto *objectDetailsHeader = new QLabel(tr("Inspector"), objectDetailsPanel_);
-    QFont objectDetailsHeaderFont = objectDetailsHeader->font();
-    objectDetailsHeaderFont.setBold(true);
-    objectDetailsHeader->setFont(objectDetailsHeaderFont);
-    objectDetailsLayout->addWidget(objectDetailsHeader);
-
     mapInspectorTabs_ = new QTabWidget(objectDetailsPanel_);
+    mapInspectorTabs_->installEventFilter(this);
+    mapInspectorLeftEdge_ = new QFrame(mapInspectorTabs_);
+    mapInspectorLeftEdge_->setObjectName(QStringLiteral("mapInspectorLeftEdge"));
+    mapInspectorLeftEdge_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+    mapInspectorLeftEdge_->setFrameShape(QFrame::NoFrame);
+    mapInspectorLeftEdge_->setFixedWidth(1);
+    mapInspectorLeftEdge_->setStyleSheet(QStringLiteral(
+        "QFrame#mapInspectorLeftEdge {"
+        " background-color: palette(mid);"
+        " border: none;"
+        "}"));
+    mapInspectorLeftEdge_->raise();
     objectDetailsLayout->addWidget(mapInspectorTabs_, 1);
 
     auto *objectsTab = new QWidget(mapInspectorTabs_);
@@ -815,17 +794,27 @@ void MapEditorTab::buildUi()
     auto *backgroundTab = new QWidget(mapInspectorTabs_);
     auto *backgroundLayout = new QVBoxLayout(backgroundTab);
     backgroundLayout->setContentsMargins(4, 4, 4, 4);
-    backgroundLayout->setSpacing(10);
+    backgroundLayout->setSpacing(8);
 
-    auto *gridLabel = new QLabel(tr("Grid"), backgroundTab);
-    gridLabel->setFont(sectionFont);
-    backgroundLayout->addWidget(gridLabel);
+    auto createBackgroundSection = [backgroundTab](const QString &title, QVBoxLayout **contentLayout) {
+        auto *section = new QFrame(backgroundTab);
+        section->setFrameShape(QFrame::StyledPanel);
+        auto *sectionLayout = new QVBoxLayout(section);
+        sectionLayout->setContentsMargins(8, 8, 8, 8);
+        sectionLayout->setSpacing(6);
+        auto *titleLabel = new QLabel(title, section);
+        QFont titleFont = titleLabel->font();
+        titleFont.setBold(true);
+        titleLabel->setFont(titleFont);
+        sectionLayout->addWidget(titleLabel);
+        if (contentLayout != nullptr) {
+            *contentLayout = sectionLayout;
+        }
+        return section;
+    };
 
-    auto *gridFrame = new QFrame(backgroundTab);
-    gridFrame->setFrameShape(QFrame::StyledPanel);
-    auto *gridLayout = new QVBoxLayout(gridFrame);
-    gridLayout->setContentsMargins(12, 12, 12, 12);
-    gridLayout->setSpacing(8);
+    QVBoxLayout *gridLayout = nullptr;
+    auto *gridFrame = createBackgroundSection(tr("Grid"), &gridLayout);
 
     mapGridVisibleCheck_ = new QCheckBox(tr("Show grid"), gridFrame);
     mapGridVisibleCheck_->setChecked(mapGridVisible_);
@@ -843,20 +832,26 @@ void MapEditorTab::buildUi()
     gridLayout->addLayout(gridSpacingRow);
     backgroundLayout->addWidget(gridFrame);
 
+    auto *layersFrame = new QFrame(backgroundTab);
+    layersFrame->setFrameShape(QFrame::StyledPanel);
+    auto *layersLayout = new QVBoxLayout(layersFrame);
+    layersLayout->setContentsMargins(8, 8, 8, 8);
+    layersLayout->setSpacing(6);
+
     auto *layersRow = new QHBoxLayout;
-    auto *layersLabel = new QLabel(tr("Layers"), backgroundTab);
+    auto *layersLabel = new QLabel(tr("Layers"), layersFrame);
     sectionFont = layersLabel->font();
     sectionFont.setBold(true);
     layersLabel->setFont(sectionFont);
     layersRow->addWidget(layersLabel);
     layersRow->addStretch(1);
-    mapBackgroundAddButton_ = new QToolButton(backgroundTab);
+    mapBackgroundAddButton_ = new QToolButton(layersFrame);
     mapBackgroundAddButton_->setText(QStringLiteral("+"));
     mapBackgroundAddButton_->setToolTip(tr("Add background images"));
     layersRow->addWidget(mapBackgroundAddButton_);
-    backgroundLayout->addLayout(layersRow);
+    layersLayout->addLayout(layersRow);
 
-    mapBackgroundLayersTree_ = new QTreeView(backgroundTab);
+    mapBackgroundLayersTree_ = new QTreeView(layersFrame);
     mapBackgroundLayersTree_->setRootIsDecorated(false);
     mapBackgroundLayersTree_->setAnimated(false);
     mapBackgroundLayersTree_->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -870,26 +865,20 @@ void MapEditorTab::buildUi()
     mapBackgroundLayersTree_->setModel(mapBackgroundLayersModel_);
     configureInspectorBackgroundLayerTreeColumns();
     connect(mapBackgroundLayersTree_, &QTreeView::clicked, this, &MapEditorTab::handleInspectorBackgroundLayerClicked);
-    backgroundLayout->addWidget(mapBackgroundLayersTree_);
+    layersLayout->addWidget(mapBackgroundLayersTree_);
 
     auto *layerActionsRow = new QHBoxLayout;
-    mapBackgroundMoveUpButton_ = new QPushButton(tr("Up"), backgroundTab);
-    mapBackgroundMoveDownButton_ = new QPushButton(tr("Down"), backgroundTab);
+    mapBackgroundMoveUpButton_ = new QPushButton(tr("Up"), layersFrame);
+    mapBackgroundMoveDownButton_ = new QPushButton(tr("Down"), layersFrame);
     mapBackgroundMoveUpButton_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     mapBackgroundMoveDownButton_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     layerActionsRow->addWidget(mapBackgroundMoveUpButton_);
     layerActionsRow->addWidget(mapBackgroundMoveDownButton_);
-    backgroundLayout->addLayout(layerActionsRow);
+    layersLayout->addLayout(layerActionsRow);
+    backgroundLayout->addWidget(layersFrame);
 
-    auto *positionLabel = new QLabel(tr("Position"), backgroundTab);
-    positionLabel->setFont(sectionFont);
-    backgroundLayout->addWidget(positionLabel);
-
-    auto *positionFrame = new QFrame(backgroundTab);
-    positionFrame->setFrameShape(QFrame::StyledPanel);
-    auto *positionLayout = new QVBoxLayout(positionFrame);
-    positionLayout->setContentsMargins(12, 12, 12, 12);
-    positionLayout->setSpacing(8);
+    QVBoxLayout *positionLayout = nullptr;
+    auto *positionFrame = createBackgroundSection(tr("Position"), &positionLayout);
 
     auto *xRow = new QHBoxLayout;
     xRow->addWidget(new QLabel(tr("X"), positionFrame));
@@ -909,15 +898,8 @@ void MapEditorTab::buildUi()
 
     backgroundLayout->addWidget(positionFrame);
 
-    auto *adjustmentsLabel = new QLabel(tr("Adjustments"), backgroundTab);
-    adjustmentsLabel->setFont(sectionFont);
-    backgroundLayout->addWidget(adjustmentsLabel);
-
-    auto *adjustmentsFrame = new QFrame(backgroundTab);
-    adjustmentsFrame->setFrameShape(QFrame::StyledPanel);
-    auto *adjustmentsLayout = new QVBoxLayout(adjustmentsFrame);
-    adjustmentsLayout->setContentsMargins(12, 12, 12, 12);
-    adjustmentsLayout->setSpacing(8);
+    QVBoxLayout *adjustmentsLayout = nullptr;
+    auto *adjustmentsFrame = createBackgroundSection(tr("Adjustments"), &adjustmentsLayout);
 
     auto *opacityRow = new QHBoxLayout;
     opacityRow->addWidget(new QLabel(tr("Opacity"), adjustmentsFrame));
@@ -944,6 +926,7 @@ void MapEditorTab::buildUi()
 
     backgroundLayout->addStretch(1);
     mapInspectorTabs_->addTab(backgroundTab, tr("Backgrounds"));
+    updateMapInspectorLeftEdgeGeometry();
 
     connect(mapBackgroundAddButton_, &QToolButton::clicked, this, [this]() {
         browseAndAddBackgroundImages();
@@ -1014,6 +997,23 @@ void MapEditorTab::buildUi()
     refreshInspectorBackgroundPanel();
     refreshObjectDetailsPanel();
     updateCommandSurfaceState();
+}
+
+void MapEditorTab::updateMapInspectorLeftEdgeGeometry()
+{
+    if (mapInspectorTabs_ == nullptr || mapInspectorLeftEdge_ == nullptr) {
+        return;
+    }
+
+    int paneTop = 0;
+    if (QTabBar *tabBar = mapInspectorTabs_->tabBar(); tabBar != nullptr) {
+        paneTop = qMax(0, tabBar->geometry().bottom());
+    }
+
+    const int paneHeight = qMax(0, mapInspectorTabs_->height() - paneTop);
+    mapInspectorLeftEdge_->setGeometry(0, paneTop, 1, paneHeight);
+    mapInspectorLeftEdge_->raise();
+    mapInspectorLeftEdge_->setVisible(paneHeight > 0);
 }
 
 bool MapEditorTab::loadFile(const QString &filePath, QString *errorMessage)

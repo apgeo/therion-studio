@@ -278,6 +278,7 @@ private:
     void updateHelpPanel();
     void updateWorkspaceVisibility();
     void updateGeometrySelectionPresentation();
+    void updateMapInspectorLeftEdgeGeometry();
     void syncMapSelectionFromTextCursor(int lineNumber, int columnNumber);
     void detachMapPaneToWindow();
     void reattachMapPaneFromWindow();
@@ -328,6 +329,7 @@ private:
     QSplitter *mapDetailsSplitter_ = nullptr;
     QFrame *objectDetailsPanel_ = nullptr;
     QTabWidget *mapInspectorTabs_ = nullptr;
+    QFrame *mapInspectorLeftEdge_ = nullptr;
     QTreeView *mapObjectsTree_ = nullptr;
     QStandardItemModel *mapObjectsModel_ = nullptr;
     QTreeView *mapBackgroundLayersTree_ = nullptr;

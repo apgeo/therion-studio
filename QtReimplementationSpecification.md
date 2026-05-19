@@ -277,12 +277,16 @@ The rules below define the expected day-to-day interaction model. If a later req
 - When a TH2 document is active in the main window, the embedded workspace shall provide explicit `Visual` and `Raw` modes.
 - When a TH2 document is active in the main window, the `Visual`/`Raw` mode selector shall be hosted in the right-aligned controls of the full-width document command toolbar above the tab strip rather than in a dedicated row inside the tab content.
 - When a TH2 document is active in the main window, map-pane detach/reattach (`Separate Map` / `Return Map`) shall be provided in the same document command toolbar control area as the `Visual`/`Raw` mode selector.
-- Right-aligned document command toolbar controls such as `Visual`, `Raw`, `Blocks`, and map-pane detach/reattach shall be compact square icon-only controls with accessible names and tooltips.
+- Right-aligned document command toolbar controls such as `Visual`, `Raw`, `Blocks`, and map-pane detach/reattach shall be compact square icon-only controls with accessible names and tooltips; map-pane detach shall use the screen-share icon and map-pane return shall use the screen-share-off icon.
 - Embedded TH2 `Visual` mode shall align its canvas/inspector content edge with the same thin top separator used by Raw and Blocks editor content under the main file tabs.
 - TH2 `Visual` inspector tabs shall use native `QTabWidget` rendering and shall not override platform tab geometry or tab shape.
 - When a TH2 map editor is presented outside the main tab strip (for example in a detached dedicated map-editor window), the top command toolbar shall omit `Visual`/`Raw` mode switching and keep only actions relevant to the detached visual workspace.
+- Detached map-window command toolbars shall draw a top separator below the native titlebar area and one bottom separator above the detached map canvas/inspector content.
 - In embedded `Visual` mode, the workspace shall present the graphical map canvas together with a right-side map inspector.
 - The right-side map inspector in `Visual` mode shall provide tabs for `Selection`, `Objects`, and `Backgrounds`, in that order.
+- The right-side map inspector shall use the tab labels as its primary heading and shall not add a redundant standalone `Inspector` title above the tab bar.
+- The right-side map inspector may reinforce only the left edge of the tab pane when needed for visual consistency; other tab pane borders shall remain native.
+- The `Selection` and `Backgrounds` tabs shall use the same framed-section pattern, with each section heading placed inside its box rather than as a standalone label above the box.
 - The `Objects` tab shall provide source-linked object-tree navigation grouped by scrap.
 - The `Selection` tab shall provide selection details/settings editing for the currently selected map object.
 - When the selected object is a `scrap`, the `Selection` tab shall expose manual scrap scale editing for XTherion/Therion-compatible 8-parameter `-scale` calibration values, including picture point 1/2 in pixels, real point 1/2, unit, and an action that writes the resulting `-scale [...]` option to the selected scrap command.
@@ -291,6 +295,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The user shall be able to detach the current TH2 session into a dedicated map editor window without creating a separate document state.
 - Embedded and detached map presentations shall remain synchronized with the same selection, undo history, and underlying text document.
 - When the map pane is detached, the main tab shall continue showing the raw source editor while the detached map window presents the graphical map plus the same right-side map inspector for the same TH2 session.
+- When the map pane is detached, main-window TH2 map zoom/drawing/selection tool groups shall be hidden because those commands apply to the detached map window; the main document toolbar shall retain only document-level actions and the map-pane return/focus control.
 - When the map pane is detached, map zoom and Select/Insert mode indicators shall be shown in the detached map window status bar and shall not remain duplicated in the main-window status area.
 - On first display, scrap nodes shall default to expanded state.
 - If a map object is selected elsewhere in the application, the corresponding scrap shall expand automatically so the object remains visible in the list.
@@ -834,7 +839,7 @@ The criteria below are intended for implementation verification and QA.
 - The map editor renders the currently open TH2 file as a 2D editable workspace.
 - A TH2 document exposes an embedded mode selector with `Visual` and `Raw` modes.
 - In the main window, the TH2 `Visual`/`Raw` mode selector is shown in the right-aligned controls of the full-width document command toolbar row above the tab strip.
-- In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same document command toolbar control area, after `Raw`.
+- In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same document command toolbar control area, after `Raw`, using screen-share/screen-share-off icons for detach/return state.
 - In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`) after `Undo`/`Redo`.
 - In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window top command toolbar remains available.
 - In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side map inspector (`Selection`, `Objects`, `Backgrounds` tabs).

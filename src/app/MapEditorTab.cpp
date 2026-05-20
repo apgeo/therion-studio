@@ -3,7 +3,6 @@
 #include <QApplication>
 #include <QEvent>
 #include <QCursor>
-#include <QFile>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
 #include <QGraphicsPathItem>
@@ -15,7 +14,6 @@
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QJsonArray>
-#include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QLabel>
@@ -58,6 +56,7 @@
 #include "MapEditorSceneInternals.h"
 #include "MapEditorInputPolicy.h"
 #include "TextEditorTab.h"
+#include "../core/CommandCatalogService.h"
 #include "../core/ProjectStructureIndex.h"
 #include "../core/TherionBackgroundMetadata.h"
 #include "../core/TherionDocumentEditor.h"
@@ -518,19 +517,13 @@ InspectorSymbolCatalog loadInspectorSymbolCatalog()
 {
     InspectorSymbolCatalog catalog;
 
-    QFile catalogFile(QStringLiteral(":/resources/therion_command_catalog.json"));
-    if (!catalogFile.open(QIODevice::ReadOnly)) {
+    const QJsonObject catalogObject = CommandCatalogService::catalogObject();
+    if (catalogObject.isEmpty()) {
         catalog.projectionValues = defaultInspectorProjectionValues();
         return catalog;
     }
 
-    const QJsonDocument document = QJsonDocument::fromJson(catalogFile.readAll());
-    if (!document.isObject()) {
-        catalog.projectionValues = defaultInspectorProjectionValues();
-        return catalog;
-    }
-
-    const QJsonArray commands = document.object().value(QStringLiteral("commands")).toArray();
+    const QJsonArray commands = catalogObject.value(QStringLiteral("commands")).toArray();
     for (const QJsonValue &commandValue : commands) {
         const QJsonObject commandObject = commandValue.toObject();
         const QString commandName = commandObject.value(QStringLiteral("name")).toString().trimmed().toLower();
@@ -816,17 +809,12 @@ QHash<QString, QSet<QString>> loadOrientationTypeRestrictionsFromCatalog()
 {
     QHash<QString, QSet<QString>> restrictionsByCommand;
 
-    QFile catalogFile(QStringLiteral(":/resources/therion_command_catalog.json"));
-    if (!catalogFile.open(QIODevice::ReadOnly)) {
+    const QJsonObject catalogObject = CommandCatalogService::catalogObject();
+    if (catalogObject.isEmpty()) {
         return restrictionsByCommand;
     }
 
-    const QJsonDocument catalogDocument = QJsonDocument::fromJson(catalogFile.readAll());
-    if (!catalogDocument.isObject()) {
-        return restrictionsByCommand;
-    }
-
-    const QJsonArray commands = catalogDocument.object().value(QStringLiteral("commands")).toArray();
+    const QJsonArray commands = catalogObject.value(QStringLiteral("commands")).toArray();
     for (const QJsonValue &commandValue : commands) {
         const QJsonObject commandObject = commandValue.toObject();
         const QString commandName = commandObject.value(QStringLiteral("name")).toString().trimmed().toLower();

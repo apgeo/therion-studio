@@ -33,6 +33,8 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/MapEditorTab.h
     src/app/TextEditorTab.cpp
     src/app/TextEditorTab.h
+    src/core/CommandCatalogService.cpp
+    src/core/CommandCatalogService.h
     src/core/DocumentFile.cpp
     src/core/DocumentFile.h
     src/core/MapBackgroundPlacement.cpp
@@ -214,6 +216,8 @@ qt_add_executable(TextEditorCaretInteractionTest
     tests/TextEditorCaretInteractionTest.cpp
     src/app/TextEditorTab.cpp
     src/app/TextEditorTab.h
+    src/core/CommandCatalogService.cpp
+    src/core/CommandCatalogService.h
     src/core/DocumentFile.cpp
     src/core/DocumentFile.h
     src/core/TherionDocumentEditor.cpp
@@ -236,6 +240,8 @@ qt_add_executable(TextEditorCompletionHighlightTest
     tests/TextEditorCompletionHighlightTest.cpp
     src/app/TextEditorTab.cpp
     src/app/TextEditorTab.h
+    src/core/CommandCatalogService.cpp
+    src/core/CommandCatalogService.h
     src/core/DocumentFile.cpp
     src/core/DocumentFile.h
     src/core/TherionDocumentEditor.cpp
@@ -268,6 +274,8 @@ qt_add_executable(MapEditorDetachedPaneTest
     src/app/MapEditorTab.h
     src/app/TextEditorTab.cpp
     src/app/TextEditorTab.h
+    src/core/CommandCatalogService.cpp
+    src/core/CommandCatalogService.h
     src/core/DocumentFile.cpp
     src/core/DocumentFile.h
     src/core/MapBackgroundPlacement.cpp
@@ -308,6 +316,8 @@ qt_add_executable(MapEditorDragUndoRedoSmokeTest
     src/app/MapEditorTab.h
     src/app/TextEditorTab.cpp
     src/app/TextEditorTab.h
+    src/core/CommandCatalogService.cpp
+    src/core/CommandCatalogService.h
     src/core/DocumentFile.cpp
     src/core/DocumentFile.h
     src/core/MapBackgroundPlacement.cpp

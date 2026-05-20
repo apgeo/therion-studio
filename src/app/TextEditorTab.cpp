@@ -59,9 +59,7 @@
 #include <QResizeEvent>
 
 #include <QJsonArray>
-#include <QJsonDocument>
 #include <QJsonObject>
-#include <QFile>
 #include <QTextBlock>
 #include <QPen>
 
@@ -69,6 +67,7 @@
 #include <functional>
 #include <limits>
 
+#include "../core/CommandCatalogService.h"
 #include "../core/DocumentFile.h"
 #include "../core/TherionDocumentEditor.h"
 #include "../core/TherionDocumentParser.h"
@@ -8529,17 +8528,10 @@ void TextEditorTab::loadHelpMetadataFromCommandCatalog()
 {
     resetCatalogBlockDirectiveMetadataToDefaults();
 
-    QFile catalogFile(QStringLiteral(":/resources/therion_command_catalog.json"));
-    if (!catalogFile.open(QIODevice::ReadOnly)) {
+    const QJsonObject catalogObject = CommandCatalogService::catalogObject();
+    if (catalogObject.isEmpty()) {
         return;
     }
-
-    const QJsonDocument document = QJsonDocument::fromJson(catalogFile.readAll());
-    if (!document.isObject()) {
-        return;
-    }
-
-    const QJsonObject catalogObject = document.object();
     applyCatalogBlockDirectiveMetadata(catalogObject);
     const QJsonArray commands = catalogObject.value(QStringLiteral("commands")).toArray();
     for (const QJsonValue &commandValue : commands) {

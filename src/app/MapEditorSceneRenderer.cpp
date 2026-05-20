@@ -412,6 +412,63 @@ QPainterPath linePathForFeature(const MapGeometryFeature &feature, const QRectF 
     return path;
 }
 
+std::optional<QLineF> lineDirectionTickLine(const QPointF &firstAnchorPreview,
+                                            const std::optional<QPointF> &outgoingControlPreview,
+                                            const QPointF &secondAnchorPreview,
+                                            bool reversed,
+                                            qreal tickLength)
+{
+    QPointF tangentTarget = secondAnchorPreview;
+    if (outgoingControlPreview.has_value()) {
+        const QPointF outgoingDelta = outgoingControlPreview.value() - firstAnchorPreview;
+        if (std::hypot(outgoingDelta.x(), outgoingDelta.y()) > 0.001) {
+            tangentTarget = outgoingControlPreview.value();
+        }
+    }
+
+    const QPointF tangent = tangentTarget - firstAnchorPreview;
+    const qreal tangentLength = std::hypot(tangent.x(), tangent.y());
+    if (tangentLength <= 0.001) {
+        return std::nullopt;
+    }
+
+    QPointF normal(tangent.y(), -tangent.x());
+    const qreal normalLength = std::hypot(normal.x(), normal.y());
+    if (normalLength <= 0.001) {
+        return std::nullopt;
+    }
+
+    if (reversed) {
+        normal = -normal;
+    }
+    normal *= tickLength / normalLength;
+    return QLineF(firstAnchorPreview, firstAnchorPreview + normal);
+}
+
+std::optional<QLineF> lineDirectionTickLineForFeature(const MapGeometryFeature &feature,
+                                                      const QRectF &sourceBounds,
+                                                      const QRectF &previewBounds,
+                                                      qreal tickLength)
+{
+    if (feature.lineVertices.size() < 2) {
+        return std::nullopt;
+    }
+
+    const MapGeometryFeature::TH2LineVertex &firstVertex = feature.lineVertices.first();
+    const MapGeometryFeature::TH2LineVertex &secondVertex = feature.lineVertices.at(1);
+    const QPointF firstAnchorPreview = mapGeometryPointToPreview(firstVertex.anchor, sourceBounds, previewBounds);
+    std::optional<QPointF> outgoingControlPreview;
+    if (firstVertex.outgoingControl.has_value()) {
+        outgoingControlPreview = mapGeometryPointToPreview(firstVertex.outgoingControl.value(), sourceBounds, previewBounds);
+    }
+    const QPointF secondAnchorPreview = mapGeometryPointToPreview(secondVertex.anchor, sourceBounds, previewBounds);
+    return lineDirectionTickLine(firstAnchorPreview,
+                                 outgoingControlPreview,
+                                 secondAnchorPreview,
+                                 feature.reversed,
+                                 tickLength);
+}
+
 QString optionValue(const QStringList &tokens, const QString &option)
 {
     const QString normalizedOption = option.toLower();
@@ -797,6 +854,27 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 detailItem->setData(kMapSceneSelectionGatedRole, true);
                 detailItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineDetail);
                 detailItem->setVisible(false);
+                const qreal lineDirectionTickLength = qBound(12.0, 18.0 * mapScale, 24.0);
+                auto *directionTickItem = new QGraphicsLineItem;
+                directionTickItem->setPen(QPen(QColor(QStringLiteral("#ffda00")),
+                                               qBound(2.0, 2.8 * mapScale, 4.0),
+                                               Qt::SolidLine,
+                                               Qt::RoundCap,
+                                               Qt::RoundJoin));
+                directionTickItem->setZValue(4.8);
+                markGeometryItem(directionTickItem);
+                makeMouseTransparent(directionTickItem);
+                directionTickItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                directionTickItem->setData(kMapSceneSelectionGatedRole, true);
+                directionTickItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineDetail);
+                directionTickItem->setVisible(false);
+                if (const std::optional<QLineF> tickLine = lineDirectionTickLineForFeature(feature,
+                                                                                           sourceBounds,
+                                                                                           previewBounds,
+                                                                                           lineDirectionTickLength)) {
+                    directionTickItem->setLine(tickLine.value());
+                }
+                scene->addItem(directionTickItem);
                 if (mapItemsByLine != nullptr && feature.lineNumber > 0) {
                     mapItemsByLine->insert(feature.lineNumber, lineItem);
                 }
@@ -934,6 +1012,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 auto couplingGuard = std::make_shared<bool>(false);
                 const auto updateInteractiveLinePreview = [lineItem,
                                                            detailItem,
+                                                           directionTickItem,
+                                                           lineDirectionTickLength,
                                                            feature,
                                                            sourceBounds,
                                                            previewBounds,
@@ -994,6 +1074,27 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                     lineItem->setPath(interactivePath);
                     detailItem->setPath(interactivePath);
+
+                    std::optional<QPointF> outgoingControlPreview;
+                    const MapGeometryFeature::TH2LineVertex &firstVertex = feature.lineVertices.first();
+                    if (firstVertex.outgoingSourceVertexIndex >= 0 && controlItemsBySourceVertex != nullptr) {
+                        if (MapEditableGeometryVertexItem *control = controlItemsBySourceVertex->value(firstVertex.outgoingSourceVertexIndex, nullptr)) {
+                            outgoingControlPreview = control->pos();
+                        }
+                    } else if (firstVertex.outgoingControl.has_value()) {
+                        outgoingControlPreview = mapGeometryPointToPreview(firstVertex.outgoingControl.value(), sourceBounds, previewBounds);
+                    }
+                    if (directionTickItem != nullptr) {
+                        if (const std::optional<QLineF> tickLine = lineDirectionTickLine(anchorPreviewAt(0),
+                                                                                        outgoingControlPreview,
+                                                                                        anchorPreviewAt(1),
+                                                                                        feature.reversed,
+                                                                                        lineDirectionTickLength)) {
+                            directionTickItem->setLine(tickLine.value());
+                        } else {
+                            directionTickItem->setLine(QLineF(anchorPreviewAt(0), anchorPreviewAt(0)));
+                        }
+                    }
 
                     if (controlConnectors != nullptr) {
                         for (const LineControlConnectorBinding &binding : *controlConnectors) {

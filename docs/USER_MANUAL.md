@@ -430,6 +430,9 @@ Line-handle behavior:
 - line and area edit vertices are shown only for the currently selected map object
 - line control handles/connectors are shown only for the currently selected line vertex (or its selected control handle)
 - line accent/highlight overlay is shown only for the currently selected line object
+- selecting a line also shows a yellow XTherion-style direction tick at the first vertex; the tick is perpendicular to the first segment tangent and marks the left side of the oriented line
+- `Reversed (-reverse)` flips the line's effective orientation, so the tick and orientation-dependent symbols move to the opposite side
+- for pitch/pit-style teeth, the teeth are on the tick side; this follows Therion's general rule that free space is on the left side of an oriented line and rock is on the right
 - selecting a map object (card or geometry) moves the text editor cursor to that object's source line
 - selecting a map line/area vertex (including line control points) moves the text cursor to that specific vertex coordinate token
 - moving the text cursor onto a line/area coordinate token selects the corresponding map vertex/control point

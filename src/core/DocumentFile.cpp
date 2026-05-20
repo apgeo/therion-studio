@@ -2,6 +2,7 @@
 
 #include <QFile>
 #include <QFileInfo>
+#include <QSaveFile>
 #include <QByteArrayView>
 #include <QRegularExpression>
 #include <QStringList>
@@ -236,14 +237,6 @@ bool DocumentFile::writeTextFile(const QString &filePath,
                                  const QString &encodingName,
                                  QString *errorMessage)
 {
-    QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unable to open %1 for writing.").arg(QFileInfo(filePath).fileName());
-        }
-        return false;
-    }
-
     const QString resolvedEncodingName = encodingName.trimmed().isEmpty()
         ? QStringLiteral("UTF-8")
         : encodingName.trimmed();
@@ -266,7 +259,23 @@ bool DocumentFile::writeTextFile(const QString &filePath,
         return false;
     }
 
-    if (file.write(encoded) == -1) {
+    QSaveFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Unable to open %1 for writing.").arg(QFileInfo(filePath).fileName());
+        }
+        return false;
+    }
+
+    if (file.write(encoded) != encoded.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Unable to write %1.").arg(QFileInfo(filePath).fileName());
+        }
+        file.cancelWriting();
+        return false;
+    }
+
+    if (!file.commit()) {
         if (errorMessage != nullptr) {
             *errorMessage = QStringLiteral("Unable to write %1.").arg(QFileInfo(filePath).fileName());
         }

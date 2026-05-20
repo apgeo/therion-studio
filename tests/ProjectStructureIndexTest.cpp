@@ -11,6 +11,13 @@ using namespace TherionStudio;
 
 namespace
 {
+QString normalizedPathForComparison(const QString &path)
+{
+    const QFileInfo info(path);
+    const QString canonicalPath = info.canonicalFilePath();
+    return canonicalPath.isEmpty() ? info.absoluteFilePath() : canonicalPath;
+}
+
 bool expect(bool condition, const char *message)
 {
     if (!condition) {
@@ -66,6 +73,7 @@ int runProjectStructureHierarchyTest()
                            QStringLiteral(
                                "scrap s1\n"
                                "point 10 20 station -name 1@cave\n"
+                               "point 1e2 -2.5E-1 altitude\n"
                                "line wall\n"
                                "endline\n"
                                "endscrap\n")),
@@ -79,7 +87,7 @@ int runProjectStructureHierarchyTest()
         return 1;
     }
 
-    if (!expect(entries.size() == 6, "The survey hierarchy scan returned an unexpected number of entries.")) {
+    if (!expect(entries.size() == 7, "The survey hierarchy scan returned an unexpected number of entries.")) {
         return 1;
     }
 
@@ -99,7 +107,8 @@ int runProjectStructureHierarchyTest()
         {QStringLiteral("Centrelines"), QStringLiteral("centreline"), 2, projectDir.filePath(QStringLiteral("branch.th")), 2, true},
         {QStringLiteral("Scraps"), QStringLiteral("s1"), 1, projectDir.filePath(QStringLiteral("maps/map.th2")), 1, true},
         {QStringLiteral("Stations"), QStringLiteral("1@cave"), 2, projectDir.filePath(QStringLiteral("maps/map.th2")), 2, true},
-        {QStringLiteral("Lines"), QStringLiteral("wall"), 2, projectDir.filePath(QStringLiteral("maps/map.th2")), 3, true},
+        {QStringLiteral("Points"), QStringLiteral("altitude"), 2, projectDir.filePath(QStringLiteral("maps/map.th2")), 3, true},
+        {QStringLiteral("Lines"), QStringLiteral("wall"), 2, projectDir.filePath(QStringLiteral("maps/map.th2")), 4, true},
     };
 
     for (int index = 0; index < expectedEntries.size(); ++index) {
@@ -115,7 +124,7 @@ int runProjectStructureHierarchyTest()
         if (!expect(entry.depth == expected.depth, "The survey hierarchy nesting depth is incorrect.")) {
             return 1;
         }
-        if (!expect(QFileInfo(entry.sourceFile).absoluteFilePath() == QFileInfo(expected.sourceFile).absoluteFilePath(), "The survey hierarchy source file is incorrect.")) {
+        if (!expect(normalizedPathForComparison(entry.sourceFile) == normalizedPathForComparison(expected.sourceFile), "The survey hierarchy source file is incorrect.")) {
             return 1;
         }
         if (!expect(entry.lineNumber == expected.lineNumber, "The survey hierarchy line number is incorrect.")) {

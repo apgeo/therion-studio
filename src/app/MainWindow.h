@@ -1,11 +1,15 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QFutureWatcher>
 #include <QHash>
 #include <QList>
 #include <QPointer>
 #include <QProcess>
 #include <QPoint>
+#include <QTimer>
+
+#include "../core/ProjectStructureIndex.h"
 
 class QLabel;
 class QFileSystemModel;
@@ -92,6 +96,10 @@ private:
     void resetProjectBrowser();
     void refreshProjectBrowserView(const QString &focusPath = QString());
     void rebuildStructureSidebar();
+    void requestStructureSidebarRebuild();
+    void runStructureSidebarScan();
+    void handleStructureSidebarScanFinished();
+    void applyStructureSidebarEntries(const QVector<TherionStudio::ProjectStructureEntry> &entries);
     void rebuildMapObjectsTree();
     void setSidebarPane(SidebarPane pane);
     void syncOpenDocumentsToProjectRoot();
@@ -270,4 +278,17 @@ private:
 
     QHash<QString, QPointer<QMainWindow>> detachedMapWindowsByPath_;
     QHash<TherionStudio::MapEditorTab *, QString> detachedMapPathsByTab_;
+
+    struct StructureSidebarScanResult
+    {
+        quint64 generation = 0;
+        QString projectRootPath;
+        QString errorMessage;
+        QVector<TherionStudio::ProjectStructureEntry> entries;
+    };
+
+    QTimer *structureSidebarRebuildTimer_ = nullptr;
+    QFutureWatcher<StructureSidebarScanResult> *structureSidebarScanWatcher_ = nullptr;
+    quint64 structureSidebarScanGeneration_ = 0;
+    bool structureSidebarScanQueued_ = false;
 };

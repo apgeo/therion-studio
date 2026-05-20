@@ -42,6 +42,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSignalBlocker>
+#include <QtConcurrent>
 #include <functional>
 
 #include "TextEditorTab.h"
@@ -379,11 +380,18 @@ MainWindow::MainWindow(QWidget *parent)
     , projectModel_(new QFileSystemModel(this))
     , structureModel_(new QStandardItemModel(this))
     , mapObjectsModel_(new QStandardItemModel(this))
+    , structureSidebarRebuildTimer_(new QTimer(this))
+    , structureSidebarScanWatcher_(new QFutureWatcher<StructureSidebarScanResult>(this))
 {
     setWindowTitle(tr("Therion Studio"));
     setDockOptions(QMainWindow::AllowNestedDocks | QMainWindow::AnimatedDocks);
 
     projectModel_->setRootPath(QDir::rootPath());
+
+    structureSidebarRebuildTimer_->setSingleShot(true);
+    structureSidebarRebuildTimer_->setInterval(180);
+    connect(structureSidebarRebuildTimer_, &QTimer::timeout, this, &MainWindow::runStructureSidebarScan);
+    connect(structureSidebarScanWatcher_, &QFutureWatcher<StructureSidebarScanResult>::finished, this, &MainWindow::handleStructureSidebarScanFinished);
 
     buildUi();
     restoreSessionState();

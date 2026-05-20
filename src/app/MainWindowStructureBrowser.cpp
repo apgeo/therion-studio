@@ -20,6 +20,7 @@
 #include <QTreeView>
 
 #include <functional>
+#include <QtConcurrent>
 
 #include "TextEditorTab.h"
 #include "MapEditorTab.h"
@@ -235,17 +236,26 @@ QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(const QVector<TherionSt
 }
 }
 
-void MainWindow::rebuildStructureSidebar()
+void MainWindow::requestStructureSidebarRebuild()
 {
-    structureModel_->clear();
-    structureModel_->setHorizontalHeaderLabels({tr("Name")});
+    if (structureSidebarRebuildTimer_ == nullptr) {
+        return;
+    }
 
+    structureSidebarRebuildTimer_->start();
+}
+
+void MainWindow::runStructureSidebarScan()
+{
     if (projectRootPath_.isEmpty() || !QDir(projectRootPath_).exists()) {
-        auto *rootItem = new QStandardItem(tr("Open a project to populate the survey hierarchy"));
-        rootItem->setEditable(false);
-        structureModel_->appendRow(rootItem);
-        projectStructureSummary_ = tr("Open a project to view its survey hierarchy summary.");
-        structureTree_->expandAll();
+        return;
+    }
+
+    if (structureSidebarScanWatcher_ == nullptr) {
+        return;
+    }
+    if (structureSidebarScanWatcher_->isRunning()) {
+        structureSidebarScanQueued_ = true;
         return;
     }
 
@@ -281,12 +291,65 @@ void MainWindow::rebuildStructureSidebar()
         captureInMemoryStructureSource(detachedTab);
     }
 
-    QString errorMessage;
-    const QVector<TherionStudio::ProjectStructureEntry> entries
-        = TherionStudio::ProjectStructureIndex::scanProject(projectRootPath_, inMemoryProjectContentsByPath, &errorMessage);
-    if (!errorMessage.isEmpty()) {
-        appendConsoleLine(errorMessage);
+    const QString projectRootPathSnapshot = projectRootPath_;
+    const quint64 generation = ++structureSidebarScanGeneration_;
+
+    auto future = QtConcurrent::run([projectRootPathSnapshot, inMemoryProjectContentsByPath, generation]() {
+        StructureSidebarScanResult result;
+        result.generation = generation;
+        result.projectRootPath = projectRootPathSnapshot;
+        result.entries = TherionStudio::ProjectStructureIndex::scanProject(projectRootPathSnapshot,
+                                                                           inMemoryProjectContentsByPath,
+                                                                           &result.errorMessage);
+        return result;
+    });
+    structureSidebarScanWatcher_->setFuture(future);
+}
+
+void MainWindow::handleStructureSidebarScanFinished()
+{
+    if (structureSidebarScanWatcher_ == nullptr) {
+        return;
     }
+
+    const StructureSidebarScanResult result = structureSidebarScanWatcher_->result();
+    if (!result.errorMessage.isEmpty()) {
+        appendConsoleLine(result.errorMessage);
+    }
+
+    if (result.projectRootPath == projectRootPath_
+        && !projectRootPath_.isEmpty()
+        && QDir(projectRootPath_).exists()) {
+        applyStructureSidebarEntries(result.entries);
+    }
+
+    if (structureSidebarScanQueued_) {
+        structureSidebarScanQueued_ = false;
+        runStructureSidebarScan();
+    }
+}
+
+void MainWindow::rebuildStructureSidebar()
+{
+    structureModel_->clear();
+    structureModel_->setHorizontalHeaderLabels({tr("Name")});
+
+    if (projectRootPath_.isEmpty() || !QDir(projectRootPath_).exists()) {
+        auto *rootItem = new QStandardItem(tr("Open a project to populate the survey hierarchy"));
+        rootItem->setEditable(false);
+        structureModel_->appendRow(rootItem);
+        projectStructureSummary_ = tr("Open a project to view its survey hierarchy summary.");
+        structureTree_->expandAll();
+        return;
+    }
+
+    requestStructureSidebarRebuild();
+}
+
+void MainWindow::applyStructureSidebarEntries(const QVector<TherionStudio::ProjectStructureEntry> &entries)
+{
+    structureModel_->clear();
+    structureModel_->setHorizontalHeaderLabels({tr("Name")});
 
     QHash<QString, int> categoryCounts;
     int totalItems = 0;
@@ -425,7 +488,7 @@ void MainWindow::rebuildStructureSidebar()
             if (parentItem != nullptr) {
                 parentItem->appendRow(node.item);
             } else {
-                structureModel_->appendRow(node.item);
+            structureModel_->appendRow(node.item);
             }
 
             visibleNodeIndexByDepth[node.entry.depth] = nodeIndex;

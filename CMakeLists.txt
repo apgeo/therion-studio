@@ -7,7 +7,7 @@ project(TherionStudio
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets Svg)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets Svg Concurrent)
 
 qt_standard_project_setup()
 
@@ -103,7 +103,7 @@ if(APPLE)
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
 endif()
 
-target_link_libraries(TherionStudio PRIVATE Qt6::Widgets Qt6::Svg)
+target_link_libraries(TherionStudio PRIVATE Qt6::Widgets Qt6::Svg Qt6::Concurrent)
 
 target_compile_definitions(TherionStudio PRIVATE
     QT_NO_CAST_FROM_ASCII
@@ -333,3 +333,41 @@ qt_add_resources(MapEditorDragUndoRedoSmokeTest "MapEditorDragUndoRedoSmokeResou
     PREFIX "/"
     FILES
         ${THERION_STUDIO_RESOURCE_FILES})
+
+enable_testing()
+
+add_test(NAME TherionDocumentEditorTest COMMAND TherionDocumentEditorTest)
+add_test(NAME TherionProjectStructureIndexTest COMMAND TherionProjectStructureIndexTest)
+add_test(NAME MapBackgroundPlacementTest COMMAND MapBackgroundPlacementTest)
+add_test(NAME TherionBackgroundMetadataTest COMMAND TherionBackgroundMetadataTest)
+add_test(NAME TherionXviParserTest COMMAND TherionXviParserTest)
+add_test(NAME MapGeometryFeatureParsingTest COMMAND MapGeometryFeatureParsingTest)
+add_test(NAME DocumentFileEncodingTest COMMAND DocumentFileEncodingTest)
+add_test(NAME MapEditorInputPolicyTest COMMAND MapEditorInputPolicyTest)
+add_test(NAME SessionStoreTest COMMAND SessionStoreTest)
+add_test(NAME TextEditorCaretInteractionTest COMMAND TextEditorCaretInteractionTest)
+add_test(NAME TextEditorCompletionHighlightTest COMMAND TextEditorCompletionHighlightTest)
+add_test(NAME MapEditorDetachedPaneTest COMMAND MapEditorDetachedPaneTest)
+add_test(NAME MapEditorDragUndoRedoSmokeTest COMMAND MapEditorDragUndoRedoSmokeTest)
+
+set_tests_properties(
+    TherionDocumentEditorTest
+    TherionProjectStructureIndexTest
+    MapBackgroundPlacementTest
+    TherionBackgroundMetadataTest
+    TherionXviParserTest
+    MapGeometryFeatureParsingTest
+    DocumentFileEncodingTest
+    MapEditorInputPolicyTest
+    SessionStoreTest
+    MapEditorDetachedPaneTest
+    MapEditorDragUndoRedoSmokeTest
+    PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+set_tests_properties(
+    TextEditorCaretInteractionTest
+    TextEditorCompletionHighlightTest
+    PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+        DISABLED TRUE)

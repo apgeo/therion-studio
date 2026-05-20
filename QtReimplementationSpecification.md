@@ -175,6 +175,8 @@ Required capabilities:
 - validate required fields and prevent invalid edits where necessary
 - for point symbols and selected line-point anchors, the inspector shall provide explicit orientation override controls with enable/disable state and degree input constrained to canonical `0..<360`
 - orientation controls shall be gated by command-metadata applicability (type/subtype constraints from the Therion command catalog) and shall not be shown for unsupported object variants
+- selecting a point symbol that supports `-orientation` shall show a draggable orientation handle in the map canvas; dragging the handle shall write the point command's `-orientation` option using the same source rewrite path as the inspector
+- for selected `line slope` anchor vertices, the inspector shall provide `l-size` controls with enable/disable state and positive numeric input, and shall serialize the option as an XTherion-compatible line-point row attached to the selected coordinate
 
 ### 3.5 Structure Sidebar
 
@@ -358,6 +360,8 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Object identifiers shall remain optional for most map objects, but when an identifier is explicitly set inside a scrap it should be unique within that scrap; generated border lines referenced by area blocks shall always include an explicit `-id`.
 - Vertex overlays should be shown only for the currently selected map object, and line-control handles/connectors shall be shown only for the currently selected line vertex, to reduce visual clutter while preserving editability.
 - Selecting a line object shall show an XTherion-compatible direction tick at the first line vertex; the tick shall be perpendicular to the first segment tangent, shall prefer the first outgoing control handle when present, and shall flip direction when the line has `-reverse on`.
+- Selecting an orientable point object shall show a compact orientation handle in the map canvas; dragging the handle shall update the point's `-orientation` source option and preserve the point selection after the scene refresh.
+- Selecting a `line slope` anchor vertex shall show an XTherion-style left line-point handle in the map canvas; dragging the handle shall update the selected point's `orientation` and `l-size` source options using the same XTherion line-point row serialization as the inspector.
 - Selecting a line or area vertex/control point in the map editor shall reveal the corresponding source coordinate token in the text editor when that source token can be resolved.
 - Placing the text cursor on a line or area coordinate token shall select the corresponding map vertex/control point when that map geometry is resolvable.
 - Placing the text cursor on vertex-related line option rows (for example `smooth off`) shall select the corresponding current line vertex when that map geometry is resolvable.
@@ -876,6 +880,7 @@ The criteria below are intended for implementation verification and QA.
 - The `Actions` section shall provide catalog-driven object settings and selected-object deletion through the standard confirmed source-delete workflow.
 - The `Point / Vertex` section shall not expose coordinate text fields; exact point, vertex, and control-point coordinates shall remain editable in Raw mode.
 - For selected editable line vertices, the `Point / Vertex` section shall expose insert-vertex, delete-vertex, and toggle-smooth actions using the same source rewrite behavior as the corresponding keyboard commands.
+- For selected line-point anchors, the `Point / Vertex` section shall read and write XTherion-compatible per-point line options. `orientation` shall be available only when the selected line type supports orientation; `l-size` shall be available for `line slope`. New line-point options shall be written as separate indented rows (`orientation ...`, `l-size ...`) before the next coordinate row or `endline`.
 - For `scrap`, `point`, `line`, and `area`, inspector configuration uses the same catalog-driven option workflow as structured block selection.
 - For `scrap`, the inspector provides dedicated manual scale calibration fields for picture points in pixels, real points, and unit, and applies them by rewriting the scrap `-scale` option.
 - Catalog-driven option editors shall treat bracketed multi-token values such as scrap `-scale [...]` as one logical option value and shall not interpret negative numbers inside that value as option keys.

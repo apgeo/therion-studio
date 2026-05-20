@@ -1,21 +1,26 @@
 #pragma once
 
 #include <QColor>
+#include <QCoreApplication>
 #include <QCursor>
 #include <QGraphicsEllipseItem>
+#include <QGraphicsItem>
 #include <QGraphicsSceneHoverEvent>
 #include <QGraphicsSceneMouseEvent>
 #include <QPainter>
+#include <QPainterPathStroker>
 #include <QPointF>
 #include <QRectF>
 #include <QObject>
 #include <QStringList>
 #include <QStyle>
 #include <QStyleOptionGraphicsItem>
+#include <QTimer>
 #include <QTransform>
 #include <QVariant>
 #include <QVector>
 #include <functional>
+#include <cmath>
 
 namespace TherionStudio {
 
@@ -383,6 +388,415 @@ private:
     std::function<QPointF(const QPointF &)> displayToSourceMapper_;
     std::function<void(MapEditableGeometryVertexItem *, const QPointF &, const QPointF &, bool)> movePreviewCallback_;
     std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> moveCommittedCallback_;
+};
+
+class MapLinePointSizeHandleItem final : public QGraphicsItem
+{
+public:
+    MapLinePointSizeHandleItem(int lineNumber,
+                               int sourceVertexIndex,
+                               const QPointF &anchorPreview,
+                               qreal orientationDegrees,
+                               qreal leftSize,
+                               qreal previewScale)
+        : lineNumber_(lineNumber)
+        , sourceVertexIndex_(sourceVertexIndex)
+        , anchorPreview_(anchorPreview)
+        , orientationDegrees_(normalizeDegrees(orientationDegrees))
+        , leftSize_(qMax<qreal>(0.1, leftSize))
+        , previewScale_(qMax<qreal>(1e-6, previewScale))
+    {
+        setFlag(QGraphicsItem::ItemIsSelectable, true);
+        setAcceptHoverEvents(true);
+        setAcceptedMouseButtons(Qt::LeftButton);
+        setCursor(Qt::OpenHandCursor);
+        setToolTip(QObject::tr("Line point orientation / l-size handle (line %1)").arg(lineNumber_));
+        handlePreview_ = handlePointForValues(orientationDegrees_, leftSize_);
+    }
+
+    void setChangeCommittedCallback(std::function<void(int, int, qreal, qreal)> callback)
+    {
+        changeCommittedCallback_ = std::move(callback);
+    }
+
+    QRectF boundingRect() const override
+    {
+        return QRectF(anchorPreview_, handlePreview_).normalized().adjusted(-10.0, -10.0, 10.0, 10.0);
+    }
+
+    QPainterPath shape() const override
+    {
+        QPainterPath path;
+        path.moveTo(anchorPreview_);
+        path.lineTo(handlePreview_);
+        path.addEllipse(handlePreview_, 6.0, 6.0);
+
+        QPainterPathStroker stroker;
+        stroker.setWidth(12.0);
+        stroker.setCapStyle(Qt::RoundCap);
+        stroker.setJoinStyle(Qt::RoundJoin);
+        return stroker.createStroke(path).united(path);
+    }
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
+    {
+        Q_UNUSED(option);
+        Q_UNUSED(widget);
+        if (painter == nullptr) {
+            return;
+        }
+
+        QColor color = (hoverActive_ || dragActive_) ? QColor(QStringLiteral("#ffda00")) : QColor(QStringLiteral("#ff0000"));
+        color.setAlpha(dragActive_ ? 230 : (hoverActive_ ? 210 : 175));
+        painter->setRenderHint(QPainter::Antialiasing, true);
+        const QPointF vector = handlePreview_ - anchorPreview_;
+        const qreal length = std::hypot(vector.x(), vector.y());
+        if (length > 1e-6) {
+            const QPointF direction(vector.x() / length, vector.y() / length);
+            const QPointF normal(-direction.y(), direction.x());
+            const QPointF arrowTip = handlePreview_;
+            const qreal arrowLength = qMin<qreal>(7.0, length);
+            const QPointF arrowBase = arrowTip - (direction * arrowLength);
+            painter->setPen(QPen(color, dragActive_ ? 3.0 : 2.2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter->drawLine(anchorPreview_, arrowBase);
+
+            QPainterPath arrow;
+            arrow.moveTo(arrowTip);
+            arrow.lineTo(arrowBase + (normal * 3.5));
+            arrow.lineTo(arrowBase - (normal * 3.5));
+            arrow.closeSubpath();
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(color);
+            painter->drawPath(arrow);
+        }
+    }
+
+protected:
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        if (event == nullptr || event->button() != Qt::LeftButton) {
+            QGraphicsItem::mousePressEvent(event);
+            return;
+        }
+
+        pressOrientationDegrees_ = orientationDegrees_;
+        pressLeftSize_ = leftSize_;
+        dragActive_ = true;
+        setCursor(Qt::ClosedHandCursor);
+        event->accept();
+        updateHandleFromScenePoint(event->scenePos());
+    }
+
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        if (event == nullptr || !dragActive_) {
+            QGraphicsItem::mouseMoveEvent(event);
+            return;
+        }
+
+        updateHandleFromScenePoint(event->scenePos());
+        event->accept();
+    }
+
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        if (event == nullptr || event->button() != Qt::LeftButton) {
+            QGraphicsItem::mouseReleaseEvent(event);
+            return;
+        }
+
+        if (dragActive_) {
+            updateHandleFromScenePoint(event->scenePos());
+        }
+        dragActive_ = false;
+        setCursor(Qt::OpenHandCursor);
+        event->accept();
+
+        const bool changed = std::fabs(orientationDegrees_ - pressOrientationDegrees_) > 0.05
+            || std::fabs(leftSize_ - pressLeftSize_) > 0.05;
+        if (changed && changeCommittedCallback_ != nullptr) {
+            const std::function<void(int, int, qreal, qreal)> callback = changeCommittedCallback_;
+            const int lineNumber = lineNumber_;
+            const int sourceVertexIndex = sourceVertexIndex_;
+            const qreal orientationDegrees = orientationDegrees_;
+            const qreal leftSize = leftSize_;
+            if (QCoreApplication::instance() != nullptr) {
+                QTimer::singleShot(0,
+                                   QCoreApplication::instance(),
+                                   [callback, lineNumber, sourceVertexIndex, orientationDegrees, leftSize]() {
+                                       callback(lineNumber, sourceVertexIndex, orientationDegrees, leftSize);
+                                   });
+            } else {
+                callback(lineNumber, sourceVertexIndex, orientationDegrees, leftSize);
+            }
+            return;
+        }
+        update();
+    }
+
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override
+    {
+        hoverActive_ = true;
+        QGraphicsItem::hoverEnterEvent(event);
+        update();
+    }
+
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override
+    {
+        hoverActive_ = false;
+        QGraphicsItem::hoverLeaveEvent(event);
+        update();
+    }
+
+private:
+    static qreal normalizeDegrees(qreal value)
+    {
+        qreal normalized = std::fmod(value, 360.0);
+        if (normalized < 0.0) {
+            normalized += 360.0;
+        }
+        if (normalized >= 360.0) {
+            normalized -= 360.0;
+        }
+        return normalized;
+    }
+
+    QPointF handlePointForValues(qreal orientationDegrees, qreal leftSize) const
+    {
+        constexpr qreal pi = 3.14159265358979323846;
+        const qreal radians = normalizeDegrees(orientationDegrees) * pi / 180.0;
+        const qreal displayLength = qMax<qreal>(12.0, qMax<qreal>(0.1, leftSize) * previewScale_);
+        return anchorPreview_ + QPointF(std::sin(radians) * displayLength,
+                                        -std::cos(radians) * displayLength);
+    }
+
+    void updateHandleFromScenePoint(const QPointF &scenePoint)
+    {
+        const QPointF vector = scenePoint - anchorPreview_;
+        const qreal displayLength = std::hypot(vector.x(), vector.y());
+        if (displayLength <= 1e-6) {
+            return;
+        }
+
+        prepareGeometryChange();
+        handlePreview_ = scenePoint;
+        constexpr qreal pi = 3.14159265358979323846;
+        orientationDegrees_ = normalizeDegrees(std::atan2(vector.x(), -vector.y()) * 180.0 / pi);
+        leftSize_ = qMax<qreal>(0.1, displayLength / previewScale_);
+        update();
+    }
+
+    int lineNumber_ = 0;
+    int sourceVertexIndex_ = -1;
+    QPointF anchorPreview_;
+    QPointF handlePreview_;
+    qreal orientationDegrees_ = 0.0;
+    qreal leftSize_ = 40.0;
+    qreal previewScale_ = 1.0;
+    qreal pressOrientationDegrees_ = 0.0;
+    qreal pressLeftSize_ = 40.0;
+    bool hoverActive_ = false;
+    bool dragActive_ = false;
+    std::function<void(int, int, qreal, qreal)> changeCommittedCallback_;
+};
+
+class MapPointOrientationHandleItem final : public QGraphicsItem
+{
+public:
+    MapPointOrientationHandleItem(int lineNumber,
+                                  const QPointF &anchorPreview,
+                                  qreal orientationDegrees,
+                                  qreal displayLength = 28.0)
+        : lineNumber_(lineNumber)
+        , anchorPreview_(anchorPreview)
+        , orientationDegrees_(normalizeDegrees(orientationDegrees))
+        , displayLength_(qMax<qreal>(12.0, displayLength))
+    {
+        setFlag(QGraphicsItem::ItemIsSelectable, true);
+        setAcceptHoverEvents(true);
+        setAcceptedMouseButtons(Qt::LeftButton);
+        setCursor(Qt::OpenHandCursor);
+        setToolTip(QObject::tr("Point orientation handle (line %1)").arg(lineNumber_));
+        handlePreview_ = handlePointForOrientation(orientationDegrees_);
+    }
+
+    void setChangeCommittedCallback(std::function<void(int, qreal)> callback)
+    {
+        changeCommittedCallback_ = std::move(callback);
+    }
+
+    QRectF boundingRect() const override
+    {
+        return QRectF(anchorPreview_, handlePreview_).normalized().adjusted(-10.0, -10.0, 10.0, 10.0);
+    }
+
+    QPainterPath shape() const override
+    {
+        QPainterPath path;
+        path.moveTo(anchorPreview_);
+        path.lineTo(handlePreview_);
+        path.addEllipse(handlePreview_, 6.0, 6.0);
+
+        QPainterPathStroker stroker;
+        stroker.setWidth(12.0);
+        stroker.setCapStyle(Qt::RoundCap);
+        stroker.setJoinStyle(Qt::RoundJoin);
+        return stroker.createStroke(path).united(path);
+    }
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
+    {
+        Q_UNUSED(option);
+        Q_UNUSED(widget);
+        if (painter == nullptr) {
+            return;
+        }
+
+        QColor color = (hoverActive_ || dragActive_) ? QColor(QStringLiteral("#ffda00")) : QColor(QStringLiteral("#ff0000"));
+        color.setAlpha(dragActive_ ? 220 : (hoverActive_ ? 200 : 165));
+        painter->setRenderHint(QPainter::Antialiasing, true);
+
+        const QPointF vector = handlePreview_ - anchorPreview_;
+        const qreal length = std::hypot(vector.x(), vector.y());
+        if (length <= 1e-6) {
+            return;
+        }
+
+        const QPointF direction(vector.x() / length, vector.y() / length);
+        const QPointF normal(-direction.y(), direction.x());
+        const QPointF arrowTip = handlePreview_;
+        const qreal arrowLength = qMin<qreal>(7.0, length);
+        const QPointF arrowBase = arrowTip - (direction * arrowLength);
+        painter->setPen(QPen(color, dragActive_ ? 3.0 : 2.2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter->drawLine(anchorPreview_, arrowBase);
+
+        QPainterPath arrow;
+        arrow.moveTo(arrowTip);
+        arrow.lineTo(arrowBase + (normal * 3.5));
+        arrow.lineTo(arrowBase - (normal * 3.5));
+        arrow.closeSubpath();
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(color);
+        painter->drawPath(arrow);
+    }
+
+protected:
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        if (event == nullptr || event->button() != Qt::LeftButton) {
+            QGraphicsItem::mousePressEvent(event);
+            return;
+        }
+
+        pressOrientationDegrees_ = orientationDegrees_;
+        dragActive_ = true;
+        setCursor(Qt::ClosedHandCursor);
+        event->accept();
+        updateHandleFromScenePoint(event->scenePos());
+    }
+
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        if (event == nullptr || !dragActive_) {
+            QGraphicsItem::mouseMoveEvent(event);
+            return;
+        }
+
+        updateHandleFromScenePoint(event->scenePos());
+        event->accept();
+    }
+
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        if (event == nullptr || event->button() != Qt::LeftButton) {
+            QGraphicsItem::mouseReleaseEvent(event);
+            return;
+        }
+
+        if (dragActive_) {
+            updateHandleFromScenePoint(event->scenePos());
+        }
+        dragActive_ = false;
+        setCursor(Qt::OpenHandCursor);
+        event->accept();
+
+        const bool changed = std::fabs(orientationDegrees_ - pressOrientationDegrees_) > 0.05;
+        if (changed && changeCommittedCallback_ != nullptr) {
+            const std::function<void(int, qreal)> callback = changeCommittedCallback_;
+            const int lineNumber = lineNumber_;
+            const qreal orientationDegrees = orientationDegrees_;
+            if (QCoreApplication::instance() != nullptr) {
+                QTimer::singleShot(0,
+                                   QCoreApplication::instance(),
+                                   [callback, lineNumber, orientationDegrees]() {
+                                       callback(lineNumber, orientationDegrees);
+                                   });
+            } else {
+                callback(lineNumber, orientationDegrees);
+            }
+            return;
+        }
+        update();
+    }
+
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override
+    {
+        hoverActive_ = true;
+        QGraphicsItem::hoverEnterEvent(event);
+        update();
+    }
+
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override
+    {
+        hoverActive_ = false;
+        QGraphicsItem::hoverLeaveEvent(event);
+        update();
+    }
+
+private:
+    static qreal normalizeDegrees(qreal value)
+    {
+        qreal normalized = std::fmod(value, 360.0);
+        if (normalized < 0.0) {
+            normalized += 360.0;
+        }
+        if (normalized >= 360.0) {
+            normalized -= 360.0;
+        }
+        return normalized;
+    }
+
+    QPointF handlePointForOrientation(qreal orientationDegrees) const
+    {
+        constexpr qreal pi = 3.14159265358979323846;
+        const qreal radians = normalizeDegrees(orientationDegrees) * pi / 180.0;
+        return anchorPreview_ + QPointF(std::sin(radians) * displayLength_,
+                                        -std::cos(radians) * displayLength_);
+    }
+
+    void updateHandleFromScenePoint(const QPointF &scenePoint)
+    {
+        const QPointF vector = scenePoint - anchorPreview_;
+        if (std::hypot(vector.x(), vector.y()) <= 1e-6) {
+            return;
+        }
+
+        constexpr qreal pi = 3.14159265358979323846;
+        orientationDegrees_ = normalizeDegrees(std::atan2(vector.x(), -vector.y()) * 180.0 / pi);
+        prepareGeometryChange();
+        handlePreview_ = handlePointForOrientation(orientationDegrees_);
+        update();
+    }
+
+    int lineNumber_ = 0;
+    QPointF anchorPreview_;
+    QPointF handlePreview_;
+    qreal orientationDegrees_ = 0.0;
+    qreal displayLength_ = 28.0;
+    qreal pressOrientationDegrees_ = 0.0;
+    bool hoverActive_ = false;
+    bool dragActive_ = false;
+    std::function<void(int, qreal)> changeCommittedCallback_;
 };
 
 } // namespace TherionStudio

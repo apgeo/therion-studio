@@ -1203,9 +1203,10 @@ int runRewriteOrientationOptionsTest()
     }
     if (!expect(contents == QStringLiteral("line slope\n"
                                            "  10 20 -orientation 345\n"
-                                           "  30 40 -orientation 90\n"
+                                           "  30 40\n"
+                                           "  orientation 90\n"
                                            "endline\n"),
-                "rewriteLinePointOrientation should append orientation after coordinates when missing.")) {
+                "rewriteLinePointOrientation should append XTherion-style orientation row when missing.")) {
         return 1;
     }
 
@@ -1218,7 +1219,71 @@ int runRewriteOrientationOptionsTest()
                                            "  10 20 -orientation 345\n"
                                            "  30 40\n"
                                            "endline\n"),
-                "rewriteLinePointOrientation should remove orientation option from selected row when disabled.")) {
+                "rewriteLinePointOrientation should remove orientation option row when disabled.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line slope\n"
+                              "  10 20\n"
+                              "  orientation 45\n"
+                              "  30 40\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLinePointOrientation(&contents, 1, 0, true, 180.0, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line slope\n"
+                                           "  10 20\n"
+                                           "  orientation 180\n"
+                                           "  30 40\n"
+                                           "endline\n"),
+                "rewriteLinePointOrientation should rewrite standalone XTherion orientation rows.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line slope\n"
+                              "  10 20\n"
+                              "  30 40\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 1, 0, true, 40.0, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line slope\n"
+                                           "  10 20\n"
+                                           "  l-size 40.0\n"
+                                           "  30 40\n"
+                                           "endline\n"),
+                "rewriteLinePointLeftSize should append XTherion-style l-size rows.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 1, 0, true, 12.5, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line slope\n"
+                                           "  10 20\n"
+                                           "  l-size 12.5\n"
+                                           "  30 40\n"
+                                           "endline\n"),
+                "rewriteLinePointLeftSize should rewrite existing l-size rows.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 1, 0, false, 0.0, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line slope\n"
+                                           "  10 20\n"
+                                           "  30 40\n"
+                                           "endline\n"),
+                "rewriteLinePointLeftSize should remove standalone l-size rows.")) {
         return 1;
     }
 

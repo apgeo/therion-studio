@@ -262,6 +262,13 @@ private:
                                   int vertexIndex,
                                   const QPointF &oldPoint,
                                   const QPointF &newPoint);
+    void recordPointOrientationHandleChange(int lineNumber, qreal orientationDegrees);
+    void recordLinePointLeftHandleChange(int lineNumber,
+                                         int sourceVertexIndex,
+                                         qreal orientationDegrees,
+                                         qreal leftSize);
+    void restorePointSelection(int lineNumber);
+    void restoreLineAnchorSelection(int lineNumber, int sourceVertexIndex);
     void recordSourceTextSnapshot(const QString &label,
                                   const QString &beforeText,
                                   const QString &afterText,
@@ -316,6 +323,7 @@ private:
     void applyScrapScaleEdits();
     void handleConfigureObjectSettingsTriggered();
     void handleObjectOrientationEnabledToggled(bool checked);
+    void handleLinePointLeftSizeEnabledToggled(bool checked);
     void handleLineClosedToggled(bool checked);
     void handleLineReversedToggled(bool checked);
 
@@ -395,6 +403,8 @@ private:
     QWidget *objectOrientationEditor_ = nullptr;
     QCheckBox *objectOrientationEnabledCheck_ = nullptr;
     QDoubleSpinBox *objectOrientationSpin_ = nullptr;
+    QCheckBox *linePointLeftSizeEnabledCheck_ = nullptr;
+    QDoubleSpinBox *linePointLeftSizeSpin_ = nullptr;
     QPushButton *objectOrientationApplyButton_ = nullptr;
     QPushButton *objectConfigureButton_ = nullptr;
     bool updatingObjectDetailsUi_ = false;

@@ -105,6 +105,11 @@ public:
                                      bool enabled,
                                      qreal orientationDegrees,
                                      QString *errorMessage = nullptr);
+    bool rewriteLinePointLeftSize(int lineNumber,
+                                  int sourceVertexIndex,
+                                  bool enabled,
+                                  qreal sizeValue,
+                                  QString *errorMessage = nullptr);
     bool rewriteLineCoordinateRows(int lineNumber,
                                    const QStringList &coordinateRows,
                                    QString *errorMessage = nullptr);

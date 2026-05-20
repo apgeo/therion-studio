@@ -36,7 +36,8 @@ enum MapSceneSelectionSubtype
     kMapSceneSelectionSubtypeLineAnchor = 2,
     kMapSceneSelectionSubtypeLineControl = 3,
     kMapSceneSelectionSubtypeLineControlConnector = 4,
-    kMapSceneSelectionSubtypeAreaVertex = 5
+    kMapSceneSelectionSubtypeAreaVertex = 5,
+    kMapSceneSelectionSubtypePointOrientationHandle = 6
 };
 
 struct TherionParsedLine;
@@ -82,6 +83,8 @@ struct MapGeometryFeature
         QPointF anchor;
         std::optional<QPointF> incomingControl;
         std::optional<QPointF> outgoingControl;
+        std::optional<qreal> orientationDegrees;
+        std::optional<qreal> leftSize;
         bool isSmooth = true;
         int anchorSourceVertexIndex = -1;
         int incomingSourceVertexIndex = -1;
@@ -99,6 +102,8 @@ struct MapGeometryFeature
     QPointF sourceAnchor;
     bool hasAnchor = false;
     bool hasSourceAnchor = false;
+    bool orientationSupported = false;
+    std::optional<qreal> orientationDegrees;
     bool closed = false;
     bool reversed = false;
     bool stationPoint = false;
@@ -241,7 +246,9 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,
                              const std::function<void(int, bool, bool)> &recordCardVisibility,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordPointGeometryMove,
-                             const std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> &recordLineAreaVertexMove);
+                             const std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> &recordLineAreaVertexMove,
+                             const std::function<void(int, qreal)> &recordPointOrientationHandleChange,
+                             const std::function<void(int, int, qreal, qreal)> &recordLinePointLeftHandleChange);
 
 QUndoCommand *createMapCardMoveCommand(MapCardItem *item, const QPointF &oldPosition, const QPointF &newPosition);
 QUndoCommand *createMapCardVisibilityCommand(MapCardItem *item, bool oldVisible, bool newVisible);

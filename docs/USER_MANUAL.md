@@ -357,7 +357,10 @@ Inspector panel (`Visual` mode):
 - for point symbols and selected line anchor vertices, orientation controls appear only when catalog metadata marks `-orientation` as supported for the current command type/subtype:
 - `Orientation override (-orientation)` enable/disable
 - degree input constrained to `0..359.999`
-- `Apply Orientation` writes/removes per-object or per-line-point orientation in source
+- for selected `line slope` anchor vertices, `Left size (-l-size)` can be enabled and edited with a positive numeric value
+- `Apply Orientation` / `Apply Line Point Options` writes or removes per-object or per-line-point options in source; new line-point values are written in XTherion-compatible indented rows such as `orientation 90` and `l-size 40.0`
+- selecting an orientable point in the map canvas shows a compact red orientation handle; drag it to set the point's `-orientation` directly from the map
+- selecting a `line slope` anchor in the map canvas also shows a red XTherion-style line-point handle; drag it to set both `orientation` and `l-size` directly from the map
 - when a `scrap` is selected, shows `Scrap Scale` controls for picture point 1/2 in pixels, real point 1/2, and unit (`m`, `cm`, `mm`, `ft`, `in`)
 - picture point fields are displayed as whole pixels; real point fields use compact decimal precision
 - `Scrap Scale` uses stacked coordinate rows with compact X/Y fields so it remains usable in narrow inspectors

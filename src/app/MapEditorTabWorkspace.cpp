@@ -671,12 +671,20 @@ void MapEditorTab::buildUi()
     objectOrientationSpin_->setRange(0.0, 359.999);
     objectOrientationSpin_->setSingleStep(1.0);
     objectOrientationSpin_->setSuffix(tr(" deg"));
-    objectOrientationApplyButton_ = new QPushButton(tr("Apply Orientation"), objectOrientationEditor_);
+    linePointLeftSizeEnabledCheck_ = new QCheckBox(tr("Left size (-l-size)"), objectOrientationEditor_);
+    linePointLeftSizeSpin_ = new QDoubleSpinBox(objectOrientationEditor_);
+    linePointLeftSizeSpin_->setDecimals(1);
+    linePointLeftSizeSpin_->setRange(0.1, 100000.0);
+    linePointLeftSizeSpin_->setSingleStep(1.0);
+    objectOrientationApplyButton_ = new QPushButton(tr("Apply Point Options"), objectOrientationEditor_);
     objectOrientationApplyButton_->setAutoDefault(false);
     connect(objectOrientationEnabledCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleObjectOrientationEnabledToggled);
+    connect(linePointLeftSizeEnabledCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLinePointLeftSizeEnabledToggled);
     connect(objectOrientationApplyButton_, &QPushButton::clicked, this, &MapEditorTab::applyObjectOrientationEdits);
     orientationLayout->addWidget(objectOrientationEnabledCheck_);
     orientationLayout->addWidget(objectOrientationSpin_);
+    orientationLayout->addWidget(linePointLeftSizeEnabledCheck_);
+    orientationLayout->addWidget(linePointLeftSizeSpin_);
     orientationLayout->addWidget(objectOrientationApplyButton_);
     vertexSelectionLayout->addWidget(objectOrientationEditor_);
 

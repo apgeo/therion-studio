@@ -469,6 +469,127 @@ std::optional<QLineF> lineDirectionTickLineForFeature(const MapGeometryFeature &
                                  tickLength);
 }
 
+qreal normalizedSceneOrientationDegrees(qreal value)
+{
+    qreal normalized = std::fmod(value, 360.0);
+    if (normalized < 0.0) {
+        normalized += 360.0;
+    }
+    if (normalized >= 360.0) {
+        normalized -= 360.0;
+    }
+    return normalized;
+}
+
+qreal defaultLinePointOrientationDegrees(const MapGeometryFeature &feature, int vertexIndex)
+{
+    if (vertexIndex < 0 || vertexIndex >= feature.lineVertices.size()) {
+        return 0.0;
+    }
+
+    const MapGeometryFeature::TH2LineVertex &vertex = feature.lineVertices.at(vertexIndex);
+    QPointF previous = vertex.incomingControl.value_or(vertex.anchor);
+    QPointF next = vertex.outgoingControl.value_or(vertex.anchor);
+
+    qreal previousDistance = std::hypot(previous.x() - vertex.anchor.x(), previous.y() - vertex.anchor.y());
+    qreal nextDistance = std::hypot(next.x() - vertex.anchor.x(), next.y() - vertex.anchor.y());
+    if (previousDistance <= 1e-6 && vertexIndex > 0) {
+        previous = feature.lineVertices.at(vertexIndex - 1).anchor;
+        previousDistance = std::hypot(previous.x() - vertex.anchor.x(), previous.y() - vertex.anchor.y());
+    }
+    if (nextDistance <= 1e-6 && vertexIndex + 1 < feature.lineVertices.size()) {
+        next = feature.lineVertices.at(vertexIndex + 1).anchor;
+        nextDistance = std::hypot(next.x() - vertex.anchor.x(), next.y() - vertex.anchor.y());
+    }
+
+    if (previousDistance > 1e-6 && nextDistance > 1e-6) {
+        if (previousDistance > nextDistance) {
+            const QPointF delta = next - vertex.anchor;
+            next = vertex.anchor + (delta * (previousDistance / nextDistance));
+        } else {
+            const QPointF delta = previous - vertex.anchor;
+            previous = vertex.anchor + (delta * (nextDistance / previousDistance));
+        }
+    } else if (previousDistance <= 1e-6 && nextDistance <= 1e-6) {
+        return 0.0;
+    }
+
+    const QPointF tangent = next - previous;
+    if (std::hypot(tangent.x(), tangent.y()) <= 1e-6) {
+        return 0.0;
+    }
+
+    constexpr qreal pi = 3.14159265358979323846;
+    qreal orientation = 360.0 - (std::atan2(tangent.y(), tangent.x()) * 180.0 / pi);
+    if (feature.reversed) {
+        orientation += 180.0;
+    }
+    return normalizedSceneOrientationDegrees(orientation);
+}
+
+bool linePointOptionTokenMatches(const QString &token, const QStringList &names)
+{
+    const QString normalized = token.trimmed().toLower();
+    for (const QString &name : names) {
+        if (normalized == name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::optional<qreal> linePointNumericOptionValue(const TherionParsedLine &parsedLine, const QStringList &names)
+{
+    std::optional<qreal> value;
+    for (int index = 0; index + 1 < parsedLine.tokens.size(); ++index) {
+        if (!linePointOptionTokenMatches(parsedLine.tokens.at(index), names)) {
+            continue;
+        }
+
+        const QString valueToken = parsedLine.tokens.at(index + 1).trimmed();
+        if (valueToken.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(valueToken)) {
+            continue;
+        }
+
+        bool ok = false;
+        const qreal parsedValue = valueToken.toDouble(&ok);
+        if (ok) {
+            value = parsedValue;
+        }
+    }
+    return value;
+}
+
+void applyLinePointOptionsFromLine(const TherionParsedLine &parsedLine, MapGeometryFeature *feature)
+{
+    if (feature == nullptr || feature->lineVertices.isEmpty()) {
+        return;
+    }
+
+    MapGeometryFeature::TH2LineVertex &vertex = feature->lineVertices.last();
+    if (const std::optional<qreal> orientation =
+            linePointNumericOptionValue(parsedLine,
+                                        QStringList{QStringLiteral("-orientation"),
+                                                    QStringLiteral("orientation"),
+                                                    QStringLiteral("-orient"),
+                                                    QStringLiteral("orient")})) {
+        vertex.orientationDegrees = normalizedSceneOrientationDegrees(orientation.value());
+    }
+
+    if (feature->label.trimmed().toLower() == QStringLiteral("slope")) {
+        if (const std::optional<qreal> leftSize =
+                linePointNumericOptionValue(parsedLine,
+                                            QStringList{QStringLiteral("-size"),
+                                                        QStringLiteral("size"),
+                                                        QStringLiteral("-l-size"),
+                                                        QStringLiteral("l-size")})) {
+            if (leftSize.value() > 0.0) {
+                vertex.leftSize = leftSize.value();
+            }
+        }
+    }
+}
+
 QString optionValue(const QStringList &tokens, const QString &option)
 {
     const QString normalizedOption = option.toLower();
@@ -723,7 +844,9 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,
                              const std::function<void(int, bool, bool)> &recordCardVisibility,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordPointGeometryMove,
-                             const std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> &recordLineAreaVertexMove)
+                             const std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> &recordLineAreaVertexMove,
+                             const std::function<void(int, qreal)> &recordPointOrientationHandleChange,
+                             const std::function<void(int, int, qreal, qreal)> &recordLinePointLeftHandleChange)
 {
     Q_UNUSED(documentPath);
     Q_UNUSED(recordCardMove);
@@ -809,6 +932,21 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 pointItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
                 if (mapItemsByLine != nullptr && feature.lineNumber > 0) {
                     mapItemsByLine->insert(feature.lineNumber, pointItem);
+                }
+
+                if (feature.orientationSupported && recordPointOrientationHandleChange) {
+                    auto *orientationHandle = new MapPointOrientationHandleItem(feature.lineNumber,
+                                                                                previewPoint,
+                                                                                feature.orientationDegrees.value_or(0.0),
+                                                                                qBound<qreal>(18.0, 28.0 * mapScale, 34.0));
+                    orientationHandle->setChangeCommittedCallback(recordPointOrientationHandleChange);
+                    scene->addItem(orientationHandle);
+                    orientationHandle->setZValue(4.6);
+                    markGeometryItem(orientationHandle);
+                    orientationHandle->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                    orientationHandle->setData(kMapSceneSelectionGatedRole, true);
+                    orientationHandle->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypePointOrientationHandle);
+                    orientationHandle->setVisible(false);
                 }
 
                 if (feature.stationPoint) {
@@ -909,6 +1047,34 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     vertexItem->setData(kMapSceneOwnerVertexRole, anchorSourceVertexIndex);
                     vertexItem->setVisible(false);
                     anchorItemsByOrder->operator[](vertexIndex) = vertexItem;
+                }
+
+                const bool slopeLine = feature.label.trimmed().toLower() == QStringLiteral("slope");
+                if (slopeLine && recordLinePointLeftHandleChange) {
+                    for (int vertexIndex = 0; vertexIndex < feature.lineVertices.size(); ++vertexIndex) {
+                        const MapGeometryFeature::TH2LineVertex &vertex = feature.lineVertices.at(vertexIndex);
+                        const int anchorSourceVertexIndex = vertex.anchorSourceVertexIndex >= 0
+                            ? vertex.anchorSourceVertexIndex
+                            : vertexIndex;
+                        const QPointF anchorPreview = mapGeometryPointToPreview(vertex.anchor, sourceBounds, previewBounds);
+                        const qreal orientationDegrees = vertex.orientationDegrees.value_or(defaultLinePointOrientationDegrees(feature, vertexIndex));
+                        const qreal leftSize = vertex.leftSize.value_or(40.0);
+                        auto *leftHandle = new MapLinePointSizeHandleItem(feature.lineNumber,
+                                                                          anchorSourceVertexIndex,
+                                                                          anchorPreview,
+                                                                          orientationDegrees,
+                                                                          leftSize,
+                                                                          mapScale);
+                        leftHandle->setChangeCommittedCallback(recordLinePointLeftHandleChange);
+                        scene->addItem(leftHandle);
+                        leftHandle->setZValue(4.7);
+                        markGeometryItem(leftHandle);
+                        leftHandle->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                        leftHandle->setData(kMapSceneSelectionGatedRole, true);
+                        leftHandle->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineControlConnector);
+                        leftHandle->setData(kMapSceneOwnerVertexRole, anchorSourceVertexIndex);
+                        leftHandle->setVisible(false);
+                    }
                 }
 
                 const qreal controlRadius = qBound(1.8, 3.0 * mapScale, 4.0);
@@ -1405,6 +1571,14 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             feature.anchor = feature.sourceAnchor;
             feature.hasAnchor = true;
             feature.hasSourceAnchor = true;
+            if (const std::optional<qreal> orientation =
+                    linePointNumericOptionValue(parsedLine,
+                                                QStringList{QStringLiteral("-orientation"),
+                                                            QStringLiteral("orientation"),
+                                                            QStringLiteral("-orient"),
+                                                            QStringLiteral("orient")})) {
+                feature.orientationDegrees = normalizedSceneOrientationDegrees(orientation.value());
+            }
             feature.stationPoint = false;
             features.append(feature);
             continue;
@@ -1444,6 +1618,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.reversed = lineOptionToggleValue(parsedLine, QStringLiteral("-reverse")).value_or(false);
             currentLineIdentifier = optionValue(parsedLine.tokens, QStringLiteral("-id"));
             appendLineDataPoints(&currentFeature, sourceCoordinatePointsFromLine(parsedLine, 1, &lineSourceVertexIndex));
+            applyLinePointOptionsFromLine(parsedLine, &currentFeature);
             inLineBlock = true;
             continue;
         }
@@ -1473,6 +1648,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             }
 
             appendLineDataPoints(&currentFeature, sourceCoordinatePointsFromLine(parsedLine, 0, &lineSourceVertexIndex));
+            applyLinePointOptionsFromLine(parsedLine, &currentFeature);
             continue;
         }
 

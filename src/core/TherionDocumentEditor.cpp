@@ -353,6 +353,37 @@ bool isOrientationOptionToken(const QString &token)
     return normalized == QStringLiteral("-orientation") || normalized == QStringLiteral("-orient");
 }
 
+bool isLinePointOptionToken(const QString &token, const QString &canonicalOption)
+{
+    const QString normalized = token.trimmed().toLower();
+    const QString canonical = canonicalOption.trimmed().toLower();
+    if (canonical == QStringLiteral("-orientation")) {
+        return normalized == QStringLiteral("-orientation")
+            || normalized == QStringLiteral("orientation")
+            || normalized == QStringLiteral("-orient")
+            || normalized == QStringLiteral("orient");
+    }
+    if (canonical == QStringLiteral("-l-size")) {
+        return normalized == QStringLiteral("-l-size")
+            || normalized == QStringLiteral("l-size")
+            || normalized == QStringLiteral("-size")
+            || normalized == QStringLiteral("size");
+    }
+    return normalized == canonical;
+}
+
+QString linePointOptionOutputToken(const QString &canonicalOption)
+{
+    const QString normalized = canonicalOption.trimmed().toLower();
+    if (normalized == QStringLiteral("-orientation")) {
+        return QStringLiteral("orientation");
+    }
+    if (normalized == QStringLiteral("-l-size")) {
+        return QStringLiteral("l-size");
+    }
+    return normalized.startsWith(QLatin1Char('-')) ? normalized.mid(1) : normalized;
+}
+
 qreal normalizedOrientationDegrees(qreal value)
 {
     qreal normalized = std::fmod(value, 360.0);
@@ -383,6 +414,28 @@ QString formatOrientationDegrees(qreal value)
     return text;
 }
 
+QString formatLinePointSize(qreal value)
+{
+    const qreal size = qMax(0.1, value);
+    QString text = QString::number(size, 'f', 1);
+    while (text.contains(QLatin1Char('.')) && text.endsWith(QLatin1Char('0')) && !text.endsWith(QStringLiteral(".0"))) {
+        text.chop(1);
+    }
+    return text;
+}
+
+bool isOptionValueToken(const QString &token)
+{
+    const QString trimmed = token.trimmed();
+    if (!trimmed.startsWith(QLatin1Char('-'))) {
+        return true;
+    }
+
+    bool numeric = false;
+    trimmed.toDouble(&numeric);
+    return numeric;
+}
+
 bool removeOptionAtTokenIndex(QString *lineText,
                               const TherionParsedLine &parsedLine,
                               int optionTokenIndex)
@@ -396,7 +449,7 @@ bool removeOptionAtTokenIndex(QString *lineText,
     int valueTokenIndex = -1;
     if (optionTokenIndex + 1 < parsedLine.tokens.size()) {
         const QString nextToken = parsedLine.tokens.at(optionTokenIndex + 1).trimmed();
-        if (!nextToken.startsWith(QLatin1Char('-'))) {
+        if (isOptionValueToken(nextToken)) {
             valueTokenIndex = optionTokenIndex + 1;
         }
     }
@@ -423,6 +476,247 @@ bool removeOptionAtTokenIndex(QString *lineText,
     }
 
     lineText->remove(removeStart, removeEnd - removeStart);
+    return true;
+}
+
+struct LinePointOptionReference
+{
+    int lineIndex = -1;
+    int optionTokenIndex = -1;
+    int valueTokenIndex = -1;
+};
+
+struct LinePointOptionTarget
+{
+    int coordinateLineIndex = -1;
+    int optionBlockEndLineIndex = -1;
+    int lastCoordinateTokenIndex = -1;
+    LinePointOptionReference existingOption;
+};
+
+QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &parsedLine, int startTokenIndex);
+QStringList splitLinesNormalized(const QString &contents);
+
+std::optional<LinePointOptionTarget> linePointOptionTarget(QStringList *lines,
+                                                          int blockStartLineIndex,
+                                                          int blockEndLineIndex,
+                                                          int sourceVertexIndex,
+                                                          const QString &canonicalOption)
+{
+    if (lines == nullptr
+        || blockStartLineIndex < 0
+        || blockEndLineIndex <= blockStartLineIndex
+        || sourceVertexIndex < 0) {
+        return std::nullopt;
+    }
+
+    int nextSourceIndex = 0;
+    int coordinateLineIndex = -1;
+    int lastCoordinateTokenIndex = -1;
+    for (int rowIndex = blockStartLineIndex; rowIndex < blockEndLineIndex; ++rowIndex) {
+        const TherionParsedLine rowLine = TherionDocumentParser::parseLine(lines->at(rowIndex), rowIndex + 1);
+        const int startTokenIndex = rowIndex == blockStartLineIndex ? 1 : 0;
+        const QVector<QPair<int, int>> pairs = coordinateTokenPairsForLine(rowLine, startTokenIndex);
+        for (const QPair<int, int> &pair : pairs) {
+            const int currentSourceIndex = nextSourceIndex++;
+            if (currentSourceIndex == sourceVertexIndex) {
+                coordinateLineIndex = rowIndex;
+                lastCoordinateTokenIndex = pair.second;
+            }
+        }
+        if (coordinateLineIndex >= 0) {
+            break;
+        }
+    }
+
+    if (coordinateLineIndex < 0) {
+        return std::nullopt;
+    }
+
+    int optionBlockEndLineIndex = blockEndLineIndex;
+    for (int rowIndex = coordinateLineIndex + 1; rowIndex < blockEndLineIndex; ++rowIndex) {
+        const TherionParsedLine rowLine = TherionDocumentParser::parseLine(lines->at(rowIndex), rowIndex + 1);
+        if (!coordinateTokenPairsForLine(rowLine, 0).isEmpty()) {
+            optionBlockEndLineIndex = rowIndex;
+            break;
+        }
+    }
+
+    LinePointOptionTarget target;
+    target.coordinateLineIndex = coordinateLineIndex;
+    target.optionBlockEndLineIndex = optionBlockEndLineIndex;
+    target.lastCoordinateTokenIndex = lastCoordinateTokenIndex;
+
+    for (int rowIndex = coordinateLineIndex; rowIndex < optionBlockEndLineIndex; ++rowIndex) {
+        const TherionParsedLine rowLine = TherionDocumentParser::parseLine(lines->at(rowIndex), rowIndex + 1);
+        const int startTokenIndex = rowIndex == blockStartLineIndex ? 1 : 0;
+        for (int tokenIndex = startTokenIndex; tokenIndex < rowLine.tokens.size(); ++tokenIndex) {
+            if (!isLinePointOptionToken(rowLine.tokens.at(tokenIndex), canonicalOption)) {
+                continue;
+            }
+            target.existingOption.lineIndex = rowIndex;
+            target.existingOption.optionTokenIndex = tokenIndex;
+            target.existingOption.valueTokenIndex = -1;
+            if (tokenIndex + 1 < rowLine.tokens.size()
+                && isOptionValueToken(rowLine.tokens.at(tokenIndex + 1))) {
+                target.existingOption.valueTokenIndex = tokenIndex + 1;
+            }
+        }
+    }
+
+    return target;
+}
+
+bool rewriteLinePointNumericOption(QString *contents,
+                                   int lineNumber,
+                                   int sourceVertexIndex,
+                                   const QString &canonicalOption,
+                                   bool enabled,
+                                   qreal value,
+                                   QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+    if (lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line number is invalid.");
+        }
+        return false;
+    }
+    if (sourceVertexIndex < 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected source vertex index is invalid.");
+        }
+        return false;
+    }
+
+    const QString normalizedOption = canonicalOption.trimmed().toLower();
+    if (normalizedOption != QStringLiteral("-orientation") && normalizedOption != QStringLiteral("-l-size")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("Unsupported line-point option.");
+        }
+        return false;
+    }
+
+    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = splitLinesNormalized(*contents);
+    if (lineNumber > lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line no longer exists.");
+        }
+        return false;
+    }
+
+    const int blockStartLineIndex = lineNumber - 1;
+    const TherionParsedLine startLine = TherionDocumentParser::parseLine(lines.at(blockStartLineIndex), lineNumber);
+    if (startLine.directive != QStringLiteral("line")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line is not a writable line block.");
+        }
+        return false;
+    }
+
+    int blockEndLineIndex = -1;
+    for (int candidateIndex = blockStartLineIndex + 1; candidateIndex < lines.size(); ++candidateIndex) {
+        const TherionParsedLine candidateLine = TherionDocumentParser::parseLine(lines.at(candidateIndex), candidateIndex + 1);
+        if (candidateLine.directive == QStringLiteral("endline")) {
+            blockEndLineIndex = candidateIndex;
+            break;
+        }
+    }
+    if (blockEndLineIndex < 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line block is missing endline.");
+        }
+        return false;
+    }
+
+    const std::optional<LinePointOptionTarget> target =
+        linePointOptionTarget(&lines, blockStartLineIndex, blockEndLineIndex, sourceVertexIndex, normalizedOption);
+    if (!target.has_value()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line block does not contain the requested vertex.");
+        }
+        return false;
+    }
+
+    const LinePointOptionReference existing = target->existingOption;
+    if (!enabled) {
+        if (existing.lineIndex < 0) {
+            return true;
+        }
+        QString lineText = lines.at(existing.lineIndex);
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, existing.lineIndex + 1);
+        if (!removeOptionAtTokenIndex(&lineText, parsedLine, existing.optionTokenIndex)) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QStringLiteral("Line-point option could not be removed.");
+            }
+            return false;
+        }
+        if (lineText.trimmed().isEmpty()
+            && coordinateTokenPairsForLine(parsedLine, existing.lineIndex == blockStartLineIndex ? 1 : 0).isEmpty()) {
+            lines.removeAt(existing.lineIndex);
+        } else {
+            lines[existing.lineIndex] = lineText;
+        }
+        *contents = lines.join(lineEnding);
+        return true;
+    }
+
+    const QString formattedValue = normalizedOption == QStringLiteral("-orientation")
+        ? formatOrientationDegrees(value)
+        : formatLinePointSize(value);
+    if (existing.lineIndex >= 0) {
+        QString lineText = lines.at(existing.lineIndex);
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, existing.lineIndex + 1);
+        if (existing.valueTokenIndex >= 0 && existing.valueTokenIndex < parsedLine.tokenSpans.size()) {
+            const TherionParsedToken valueToken = parsedLine.tokenSpans.at(existing.valueTokenIndex);
+            if (valueToken.start < 0
+                || valueToken.length < 0
+                || valueToken.start + valueToken.length > lineText.size()) {
+                if (errorMessage != nullptr) {
+                    *errorMessage = QStringLiteral("Line-point option value could not be rewritten.");
+                }
+                return false;
+            }
+            lineText.replace(valueToken.start, valueToken.length, formattedValue);
+        } else {
+            if (existing.optionTokenIndex < 0 || existing.optionTokenIndex >= parsedLine.tokenSpans.size()) {
+                if (errorMessage != nullptr) {
+                    *errorMessage = QStringLiteral("Line-point option could not be rewritten.");
+                }
+                return false;
+            }
+            const TherionParsedToken optionToken = parsedLine.tokenSpans.at(existing.optionTokenIndex);
+            if (optionToken.start < 0
+                || optionToken.length < 0
+                || optionToken.start + optionToken.length > lineText.size()) {
+                if (errorMessage != nullptr) {
+                    *errorMessage = QStringLiteral("Line-point option could not be rewritten.");
+                }
+                return false;
+            }
+            lineText.insert(optionToken.start + optionToken.length,
+                            QStringLiteral(" %1").arg(formattedValue));
+        }
+        lines[existing.lineIndex] = lineText;
+        *contents = lines.join(lineEnding);
+        return true;
+    }
+
+    const QString coordinateLine = lines.at(target->coordinateLineIndex);
+    const QRegularExpression leadingWhitespacePattern(QStringLiteral(R"(^\s*)"));
+    const QRegularExpressionMatch indentMatch = leadingWhitespacePattern.match(coordinateLine);
+    const QString indent = indentMatch.hasMatch() && !indentMatch.captured(0).isEmpty()
+        ? indentMatch.captured(0)
+        : QStringLiteral("  ");
+    lines.insert(target->optionBlockEndLineIndex,
+                 QStringLiteral("%1%2 %3").arg(indent, linePointOptionOutputToken(normalizedOption), formattedValue));
+    *contents = lines.join(lineEnding);
     return true;
 }
 
@@ -1643,207 +1937,29 @@ bool TherionDocumentEditor::rewriteLinePointOrientation(QString *contents,
                                                         qreal orientationDegrees,
                                                         QString *errorMessage)
 {
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
-        }
-        return false;
-    }
-    if (lineNumber <= 0) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line number is invalid.");
-        }
-        return false;
-    }
-    if (sourceVertexIndex < 0) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected source vertex index is invalid.");
-        }
-        return false;
-    }
+    return rewriteLinePointNumericOption(contents,
+                                         lineNumber,
+                                         sourceVertexIndex,
+                                         QStringLiteral("-orientation"),
+                                         enabled,
+                                         orientationDegrees,
+                                         errorMessage);
+}
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(*contents);
-    if (lineNumber > lines.size()) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line no longer exists.");
-        }
-        return false;
-    }
-
-    const int blockStartLineIndex = lineNumber - 1;
-    const TherionParsedLine startLine = TherionDocumentParser::parseLine(lines.at(blockStartLineIndex), lineNumber);
-    if (startLine.directive != QStringLiteral("line")) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line is not a writable line block.");
-        }
-        return false;
-    }
-
-    int blockEndLineIndex = -1;
-    for (int candidateIndex = blockStartLineIndex + 1; candidateIndex < lines.size(); ++candidateIndex) {
-        const TherionParsedLine candidateLine = TherionDocumentParser::parseLine(lines.at(candidateIndex), candidateIndex + 1);
-        if (candidateLine.directive == QStringLiteral("endline")) {
-            blockEndLineIndex = candidateIndex;
-            break;
-        }
-    }
-    if (blockEndLineIndex < 0) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line block is missing endline.");
-        }
-        return false;
-    }
-
-    struct CoordinateReference
-    {
-        int lineIndex = -1;
-        int sourceIndex = -1;
-    };
-    QVector<CoordinateReference> references;
-    int nextSourceIndex = 0;
-    for (int rowIndex = blockStartLineIndex; rowIndex < blockEndLineIndex; ++rowIndex) {
-        const TherionParsedLine rowLine = TherionDocumentParser::parseLine(lines.at(rowIndex), rowIndex + 1);
-        const int startTokenIndex = rowIndex == blockStartLineIndex ? 1 : 0;
-        const QVector<QPair<int, int>> pairs = coordinateTokenPairsForLine(rowLine, startTokenIndex);
-        for (const QPair<int, int> &pair : pairs) {
-            CoordinateReference reference;
-            reference.lineIndex = rowIndex;
-            reference.sourceIndex = nextSourceIndex++;
-            references.append(reference);
-        }
-    }
-
-    int targetLineIndex = -1;
-    for (const CoordinateReference &reference : std::as_const(references)) {
-        if (reference.sourceIndex == sourceVertexIndex) {
-            targetLineIndex = reference.lineIndex;
-            break;
-        }
-    }
-    if (targetLineIndex < 0 || targetLineIndex >= lines.size()) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line block does not contain the requested vertex.");
-        }
-        return false;
-    }
-
-    QString lineText = lines.at(targetLineIndex);
-    const TherionParsedLine targetParsedLine = TherionDocumentParser::parseLine(lineText, targetLineIndex + 1);
-    const int targetStartTokenIndex = targetLineIndex == blockStartLineIndex ? 1 : 0;
-    const QVector<QPair<int, int>> targetPairs = coordinateTokenPairsForLine(targetParsedLine, targetStartTokenIndex);
-    if (targetPairs.isEmpty()) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unable to locate writable line coordinates for orientation.");
-        }
-        return false;
-    }
-
-    const int firstCoordinateTokenIndex = targetPairs.first().first;
-    if (firstCoordinateTokenIndex < targetStartTokenIndex
-        || firstCoordinateTokenIndex > targetParsedLine.tokens.size()) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unable to resolve line-point option range for orientation.");
-        }
-        return false;
-    }
-    const int lastCoordinateTokenIndex = targetPairs.last().second;
-
-    int optionTokenIndex = -1;
-    int valueTokenIndex = -1;
-    for (int index = targetStartTokenIndex; index < targetParsedLine.tokens.size(); ++index) {
-        if (!isOrientationOptionToken(targetParsedLine.tokens.at(index))) {
-            continue;
-        }
-        optionTokenIndex = index;
-        valueTokenIndex = -1;
-        if (index + 1 < targetParsedLine.tokens.size()) {
-            const QString nextToken = targetParsedLine.tokens.at(index + 1).trimmed();
-            if (!nextToken.startsWith(QLatin1Char('-'))) {
-                valueTokenIndex = index + 1;
-            }
-        }
-    }
-
-    if (!enabled) {
-        if (optionTokenIndex < 0) {
-            return true;
-        }
-        if (!removeOptionAtTokenIndex(&lineText, targetParsedLine, optionTokenIndex)) {
-            if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("Line-point orientation could not be removed.");
-            }
-            return false;
-        }
-        lines[targetLineIndex] = lineText;
-        *contents = lines.join(lineEnding);
-        return true;
-    }
-
-    const QString orientationValue = formatOrientationDegrees(orientationDegrees);
-    if (optionTokenIndex >= 0) {
-        if (valueTokenIndex >= 0 && valueTokenIndex < targetParsedLine.tokenSpans.size()) {
-            const TherionParsedToken valueToken = targetParsedLine.tokenSpans.at(valueTokenIndex);
-            if (valueToken.start < 0
-                || valueToken.length < 0
-                || valueToken.start + valueToken.length > lineText.size()) {
-                if (errorMessage != nullptr) {
-                    *errorMessage = QStringLiteral("Line-point orientation value could not be rewritten.");
-                }
-                return false;
-            }
-            lineText.replace(valueToken.start, valueToken.length, orientationValue);
-        } else {
-            if (optionTokenIndex >= targetParsedLine.tokenSpans.size()) {
-                if (errorMessage != nullptr) {
-                    *errorMessage = QStringLiteral("Line-point orientation option could not be rewritten.");
-                }
-                return false;
-            }
-            const TherionParsedToken optionToken = targetParsedLine.tokenSpans.at(optionTokenIndex);
-            if (optionToken.start < 0
-                || optionToken.length < 0
-                || optionToken.start + optionToken.length > lineText.size()) {
-                if (errorMessage != nullptr) {
-                    *errorMessage = QStringLiteral("Line-point orientation option could not be rewritten.");
-                }
-                return false;
-            }
-            lineText.insert(optionToken.start + optionToken.length,
-                            QStringLiteral(" %1").arg(orientationValue));
-        }
-    } else {
-        if (lastCoordinateTokenIndex < 0 || lastCoordinateTokenIndex >= targetParsedLine.tokenSpans.size()) {
-            if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("Line-point orientation insertion target is invalid.");
-            }
-            return false;
-        }
-        const TherionParsedToken lastCoordinateToken = targetParsedLine.tokenSpans.at(lastCoordinateTokenIndex);
-        const int insertionIndex = targetParsedLine.commentStart >= 0
-            ? targetParsedLine.commentStart
-            : (lastCoordinateToken.start + lastCoordinateToken.length);
-        if (insertionIndex < 0 || insertionIndex > lineText.size()) {
-            if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("Line-point orientation insertion target is invalid.");
-            }
-            return false;
-        }
-        const bool needsLeadingSpace = insertionIndex > 0 && !lineText.at(insertionIndex - 1).isSpace();
-        const bool needsTrailingSpace = insertionIndex < lineText.size() && !lineText.at(insertionIndex).isSpace();
-        QString insertionText = QStringLiteral("-orientation %1").arg(orientationValue);
-        if (needsLeadingSpace) {
-            insertionText.prepend(QLatin1Char(' '));
-        }
-        if (needsTrailingSpace) {
-            insertionText.append(QLatin1Char(' '));
-        }
-        lineText.insert(insertionIndex, insertionText);
-    }
-
-    lines[targetLineIndex] = lineText;
-    *contents = lines.join(lineEnding);
-    return true;
+bool TherionDocumentEditor::rewriteLinePointLeftSize(QString *contents,
+                                                     int lineNumber,
+                                                     int sourceVertexIndex,
+                                                     bool enabled,
+                                                     qreal sizeValue,
+                                                     QString *errorMessage)
+{
+    return rewriteLinePointNumericOption(contents,
+                                         lineNumber,
+                                         sourceVertexIndex,
+                                         QStringLiteral("-l-size"),
+                                         enabled,
+                                         sizeValue,
+                                         errorMessage);
 }
 
 bool TherionDocumentEditor::rewriteScrapScale(QString *contents,

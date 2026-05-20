@@ -59,6 +59,12 @@ public:
                                             bool enabled,
                                             qreal orientationDegrees,
                                             QString *errorMessage = nullptr);
+    static bool rewriteLinePointLeftSize(QString *contents,
+                                         int lineNumber,
+                                         int sourceVertexIndex,
+                                         bool enabled,
+                                         qreal sizeValue,
+                                         QString *errorMessage = nullptr);
     static bool rewriteScrapScale(QString *contents,
                                   int lineNumber,
                                   const QString &scaleExpression,

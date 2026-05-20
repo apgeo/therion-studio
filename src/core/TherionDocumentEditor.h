@@ -63,12 +63,17 @@ public:
                                   int lineNumber,
                                   const QString &scaleExpression,
                                   QString *errorMessage = nullptr);
+    static bool rewriteScrapProjection(QString *contents,
+                                       int lineNumber,
+                                       const QString &projectionExpression,
+                                       QString *errorMessage = nullptr);
     static bool rewriteMapObjectQuickFields(QString *contents,
                                             int lineNumber,
                                             const QString &type,
                                             const QString &subtype,
                                             const QString &identifier,
-                                            const QString &identifierOption,
+                                            const QString &name,
+                                            bool nameEnabled,
                                             QString *errorMessage = nullptr);
     static bool rewriteLineCoordinateRows(QString *contents,
                                           int lineNumber,

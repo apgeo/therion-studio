@@ -346,14 +346,14 @@ Inspector panel (`Visual` mode):
 - the visibility icon (`eye` / `eye-off`) hides or shows the corresponding map object in the current editor view without changing the source file
 - the delete icon (`trash`) asks for confirmation and removes the corresponding source command span; block objects such as `line`, `area`, and `scrap` remove their full matching `end...` block, and the removal is available through document undo/redo
 - in `Selection`:
-- groups editing controls into `Object`, `Point / Vertex`, `Geometry`, and `Advanced` sections
-- `Object` shows selected object line/kind values and object-level controls such as source navigation, deletion, quick identity fields, or scrap scale
-- `Object` provides `Show in Source` to switch to Raw mode at the selected source line and `Delete` to remove the selected source-backed object through the confirmed source-delete workflow
-- `Object` also provides quick-edit fields for common identity values: scrap ID, point/line/area type, subtype, and applicable ID/name; `Apply Object Fields` rewrites the selected command line while preserving unrelated options/comments where practical
+- groups editing controls into a selected-object section (`Scrap`, `Point`, `Line`, or `Area`), `Point / Vertex`, `Geometry`, and `Actions` sections
+- the selected-object section shows `Source line N` and object-level quick fields
+- the selected-object section also provides quick-edit fields in a stable command-focused order; scraps show ID and `Projection (-projection)` because scraps do not have type/subtype
+- point, line, and area selections show `ID (-id)`, type, and subtype where supported; station points also show separate `Name (-name)` below subtype, so station name is no longer shown in place of ID
 - `Point / Vertex` appears when a point, vertex, or control point is selected and contains orientation controls and vertex actions where applicable; exact coordinate edits remain in Raw mode
 - selected line vertices expose `Insert Vertex`, `Delete Vertex`, and `Toggle Smooth` actions using the same source rewrite path as keyboard vertex editing
 - `Geometry` appears when geometry state controls such as `Closed (-close)` and `Reversed (-reverse)` are available
-- `Advanced` contains catalog-driven `Edit Object Settings...`
+- `Actions` contains catalog-driven `Edit Object Settings...` and `Delete Object`; switch to `Raw` when source navigation/editing is needed
 - for point symbols and selected line anchor vertices, orientation controls appear only when catalog metadata marks `-orientation` as supported for the current command type/subtype:
 - `Orientation override (-orientation)` enable/disable
 - degree input constrained to `0..359.999`
@@ -403,7 +403,7 @@ Interactive drawing (current):
 - The generated border line id for area commits uses `line-X` naming and increments to stay unique in the current scrap (`line-1`, `line-2`, ...).
 - Auto-created scraps use `scrap-X` naming (`scrap-1`, `scrap-2`, ...).
 - Scraps inserted from `Visual` mode include an XTherion-compatible default `-scale` derived from the current map source bounds. This matches XTherion's convention of mapping the source-bounds width to inches converted to meters (`width * 0.0254 m`).
-- Existing scrap scale can be manually edited from `Inspector -> Selection` after selecting the scrap; the editor rewrites the scrap `-scale` option in XTherion-compatible 8-point calibration form.
+- Existing scrap projection and scale can be manually edited from `Inspector -> Selection` after selecting the scrap; projection rewrites the scrap `-projection` option, and scale rewrites the scrap `-scale` option in XTherion-compatible 8-point calibration form.
 - Area object `-id` is not auto-forced; only the referenced border `line` id is mandatory in generated output.
 - If the file contains `##XTHERION## xth_me_area_adjust`, map insertion/render projection uses that rectangle as stable model bounds to keep hidden-background insertions and later unhide aligned.
 - Line/area commit preserves all captured vertices from the current draft session.

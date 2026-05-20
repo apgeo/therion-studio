@@ -17,6 +17,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonValue>
 #include <QLabel>
 #include <QHeaderView>
 #include <QIcon>
@@ -101,6 +102,36 @@ QString inspectorOptionValue(const QStringList &tokens, const QString &option)
     return QString();
 }
 
+QString inspectorBracketedOptionValue(const QStringList &tokens, const QString &option)
+{
+    for (int index = 0; index + 1 < tokens.size(); ++index) {
+        if (tokens.at(index) != option) {
+            continue;
+        }
+
+        const QString firstValue = tokens.at(index + 1);
+        if (!firstValue.contains(QLatin1Char('[')) || firstValue.contains(QLatin1Char(']'))) {
+            return firstValue;
+        }
+
+        QStringList valueTokens;
+        valueTokens.append(firstValue);
+        for (int valueIndex = index + 2; valueIndex < tokens.size(); ++valueIndex) {
+            const QString token = tokens.at(valueIndex);
+            if (token.startsWith(QLatin1Char('-')) && !inspectorTokenLooksNumeric(token)) {
+                break;
+            }
+            valueTokens.append(token);
+            if (token.contains(QLatin1Char(']'))) {
+                break;
+            }
+        }
+        return valueTokens.join(QLatin1Char(' '));
+    }
+
+    return QString();
+}
+
 QString inspectorPointTypeToken(const TherionParsedLine &parsedLine)
 {
     bool skipOptionValue = false;
@@ -110,11 +141,11 @@ QString inspectorPointTypeToken(const TherionParsedLine &parsedLine)
             skipOptionValue = false;
             continue;
         }
-        if (token.startsWith(QLatin1Char('-'))) {
-            skipOptionValue = index + 1 < parsedLine.tokens.size();
+        if (inspectorTokenLooksNumeric(token)) {
             continue;
         }
-        if (inspectorTokenLooksNumeric(token)) {
+        if (token.startsWith(QLatin1Char('-'))) {
+            skipOptionValue = index + 1 < parsedLine.tokens.size();
             continue;
         }
 
@@ -445,13 +476,152 @@ InspectorScrapScale defaultInspectorScrapScale(const QRectF &sourceBounds)
 
 struct InspectorObjectQuickFields
 {
+    QString commandKind;
     QString type;
     QString subtype;
+    QString projection;
     QString identifier;
-    QString identifierOption;
-    QString identifierLabel;
+    QString name;
+    bool nameVisible = false;
     bool typeEditable = true;
 };
+
+struct InspectorSymbolCatalog
+{
+    QHash<QString, QStringList> typeValuesByCommand;
+    QHash<QString, QHash<QString, QStringList>> subtypeValuesByCommandAndType;
+    QStringList projectionValues;
+};
+
+void appendInspectorCatalogToken(QStringList &tokens, const QString &token)
+{
+    const QString normalized = token.trimmed().toLower();
+    if (normalized.isEmpty() || normalized == QStringLiteral("*") || tokens.contains(normalized)) {
+        return;
+    }
+
+    tokens.append(normalized);
+}
+
+QStringList defaultInspectorProjectionValues()
+{
+    return {
+        QStringLiteral("plan"),
+        QStringLiteral("extended"),
+        QStringLiteral("elevation"),
+        QStringLiteral("none"),
+    };
+}
+
+InspectorSymbolCatalog loadInspectorSymbolCatalog()
+{
+    InspectorSymbolCatalog catalog;
+
+    QFile catalogFile(QStringLiteral(":/resources/therion_command_catalog.json"));
+    if (!catalogFile.open(QIODevice::ReadOnly)) {
+        catalog.projectionValues = defaultInspectorProjectionValues();
+        return catalog;
+    }
+
+    const QJsonDocument document = QJsonDocument::fromJson(catalogFile.readAll());
+    if (!document.isObject()) {
+        catalog.projectionValues = defaultInspectorProjectionValues();
+        return catalog;
+    }
+
+    const QJsonArray commands = document.object().value(QStringLiteral("commands")).toArray();
+    for (const QJsonValue &commandValue : commands) {
+        const QJsonObject commandObject = commandValue.toObject();
+        const QString commandName = commandObject.value(QStringLiteral("name")).toString().trimmed().toLower();
+        if (commandName == QStringLiteral("scrap")) {
+            const QJsonArray options = commandObject.value(QStringLiteral("options")).toArray();
+            for (const QJsonValue &optionValue : options) {
+                const QJsonObject optionObject = optionValue.toObject();
+                if (optionObject.value(QStringLiteral("option_key")).toString().trimmed().toLower()
+                    != QStringLiteral("-projection")) {
+                    continue;
+                }
+                const QJsonArray allowedValues = optionObject.value(QStringLiteral("allowed_values")).toArray();
+                for (const QJsonValue &allowedValue : allowedValues) {
+                    appendInspectorCatalogToken(catalog.projectionValues, allowedValue.toString());
+                }
+            }
+        }
+
+        if (commandName != QStringLiteral("point")
+            && commandName != QStringLiteral("line")
+            && commandName != QStringLiteral("area")) {
+            continue;
+        }
+
+        const QJsonArray typeValues = commandObject.value(QStringLiteral("type_values")).toArray();
+        for (const QJsonValue &typeValue : typeValues) {
+            appendInspectorCatalogToken(catalog.typeValuesByCommand[commandName], typeValue.toString());
+        }
+
+        const QJsonObject subtypeByType = commandObject.value(QStringLiteral("subtype_by_type")).toObject();
+        for (auto subtypeIterator = subtypeByType.begin(); subtypeIterator != subtypeByType.end(); ++subtypeIterator) {
+            const QString typeKey = subtypeIterator.key().trimmed().toLower();
+            if (typeKey.isEmpty()) {
+                continue;
+            }
+
+            const QJsonArray subtypeValues = subtypeIterator.value().toArray();
+            for (const QJsonValue &subtypeValue : subtypeValues) {
+                appendInspectorCatalogToken(catalog.subtypeValuesByCommandAndType[commandName][typeKey],
+                                            subtypeValue.toString());
+            }
+        }
+    }
+
+    if (catalog.projectionValues.isEmpty()) {
+        catalog.projectionValues = defaultInspectorProjectionValues();
+    }
+
+    return catalog;
+}
+
+const InspectorSymbolCatalog &inspectorSymbolCatalog()
+{
+    static const InspectorSymbolCatalog catalog = loadInspectorSymbolCatalog();
+    return catalog;
+}
+
+QStringList inspectorTypeValuesForCommand(const QString &commandKind)
+{
+    return inspectorSymbolCatalog().typeValuesByCommand.value(commandKind.trimmed().toLower());
+}
+
+QStringList inspectorSubtypeValuesForCommandType(const QString &commandKind, const QString &type)
+{
+    return inspectorSymbolCatalog()
+        .subtypeValuesByCommandAndType
+        .value(commandKind.trimmed().toLower())
+        .value(type.trimmed().toLower());
+}
+
+QStringList inspectorProjectionValues()
+{
+    return inspectorSymbolCatalog().projectionValues;
+}
+
+void setEditableComboValues(QComboBox *combo, const QStringList &values, const QString &currentText)
+{
+    if (combo == nullptr) {
+        return;
+    }
+
+    const bool comboSignalsBlocked = combo->blockSignals(true);
+    QLineEdit *lineEdit = combo->lineEdit();
+    const bool lineEditSignalsBlocked = lineEdit != nullptr ? lineEdit->blockSignals(true) : false;
+    combo->clear();
+    combo->addItems(values);
+    combo->setCurrentText(currentText);
+    if (lineEdit != nullptr) {
+        lineEdit->blockSignals(lineEditSignalsBlocked);
+    }
+    combo->blockSignals(comboSignalsBlocked);
+}
 
 std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLine(const TherionParsedLine &parsedLine)
 {
@@ -461,30 +631,26 @@ std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLi
         }
 
         InspectorObjectQuickFields fields;
+        fields.commandKind = parsedLine.directive;
         fields.identifier = parsedLine.tokens.at(1);
-        fields.identifierLabel = QStringLiteral("ID");
+        fields.projection = inspectorBracketedOptionValue(parsedLine.tokens, QStringLiteral("-projection"));
         fields.typeEditable = false;
         return fields;
     }
 
     if (parsedLine.directive == QStringLiteral("point")) {
         const QString pointTypeToken = inspectorPointTypeToken(parsedLine);
-        if (pointTypeToken.isEmpty()) {
-            return std::nullopt;
-        }
-
         InspectorObjectQuickFields fields;
+        fields.commandKind = parsedLine.directive;
         fields.type = inspectorTypePart(pointTypeToken);
         fields.subtype = inspectorObjectSubtype(parsedLine, pointTypeToken);
         const bool station = fields.type.compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0;
-        const QString nameValue = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-name"));
-        fields.identifierOption = (station || !nameValue.isEmpty()) ? QStringLiteral("-name") : QStringLiteral("-id");
-        fields.identifierLabel = fields.identifierOption == QStringLiteral("-name") ? QStringLiteral("Name") : QStringLiteral("ID");
-        fields.identifier = !nameValue.isEmpty()
-            ? nameValue
-            : (fields.identifierOption == QStringLiteral("-id")
-                   ? inspectorOptionValue(parsedLine.tokens, QStringLiteral("-id"))
-                   : inspectorStationNameToken(parsedLine));
+        fields.identifier = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-id"));
+        fields.name = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-name"));
+        if (fields.name.isEmpty() && station) {
+            fields.name = inspectorStationNameToken(parsedLine);
+        }
+        fields.nameVisible = station || !fields.name.isEmpty();
         return fields;
     }
 
@@ -495,11 +661,10 @@ std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLi
 
         const QString typeToken = parsedLine.tokens.at(1);
         InspectorObjectQuickFields fields;
+        fields.commandKind = parsedLine.directive;
         fields.type = inspectorTypePart(typeToken);
         fields.subtype = inspectorObjectSubtype(parsedLine, typeToken);
         fields.identifier = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-id"));
-        fields.identifierOption = QStringLiteral("-id");
-        fields.identifierLabel = QStringLiteral("ID");
         return fields;
     }
 
@@ -4477,23 +4642,27 @@ void MapEditorTab::refreshObjectDetailsPanel()
 {
     if (objectDetailsSelectionLabel_ == nullptr
         || objectSelectionSection_ == nullptr
+        || objectSelectionTitleLabel_ == nullptr
         || vertexSelectionSection_ == nullptr
         || geometrySelectionSection_ == nullptr
         || advancedSelectionSection_ == nullptr
-        || objectShowSourceButton_ == nullptr
         || objectDeleteButton_ == nullptr
         || objectQuickFieldsEditor_ == nullptr
         || objectQuickIdentifierLabel_ == nullptr
-        || objectQuickTypeEdit_ == nullptr
-        || objectQuickSubtypeEdit_ == nullptr
+        || objectQuickNameLabel_ == nullptr
+        || objectQuickProjectionLabel_ == nullptr
+        || objectQuickTypeLabel_ == nullptr
+        || objectQuickSubtypeLabel_ == nullptr
+        || objectQuickTypeCombo_ == nullptr
+        || objectQuickSubtypeCombo_ == nullptr
+        || objectQuickProjectionCombo_ == nullptr
         || objectQuickIdentifierEdit_ == nullptr
-        || objectQuickApplyButton_ == nullptr
+        || objectQuickNameEdit_ == nullptr
         || vertexActionsEditor_ == nullptr
         || vertexInsertButton_ == nullptr
         || vertexDeleteButton_ == nullptr
         || vertexToggleSmoothButton_ == nullptr
-        || objectDetailsLineLabel_ == nullptr
-        || objectDetailsKindLabel_ == nullptr
+        || objectDetailsMetadataLabel_ == nullptr
         || objectOrientationEditor_ == nullptr
         || objectOrientationEnabledCheck_ == nullptr
         || objectOrientationSpin_ == nullptr
@@ -4544,17 +4713,16 @@ void MapEditorTab::refreshObjectDetailsPanel()
     if (effectiveLineNumber <= 0 || effectiveKind.isEmpty()) {
         objectDetailsSelectionLabel_->setText(tr("No map object selected."));
         objectDetailsSelectionLabel_->setVisible(true);
+        objectSelectionTitleLabel_->setText(tr("Object"));
         objectSelectionSection_->setVisible(false);
         vertexSelectionSection_->setVisible(false);
         geometrySelectionSection_->setVisible(false);
         advancedSelectionSection_->setVisible(false);
-        objectShowSourceButton_->setEnabled(false);
         objectDeleteButton_->setEnabled(false);
         objectQuickFieldsEditor_->setVisible(false);
-        objectQuickIdentifierOption_.clear();
+        objectQuickCommandKind_.clear();
         vertexActionsEditor_->setVisible(false);
-        objectDetailsLineLabel_->setText(QStringLiteral("—"));
-        objectDetailsKindLabel_->setText(QStringLiteral("—"));
+        objectDetailsMetadataLabel_->setText(QStringLiteral("-"));
         objectOrientationEditor_->setVisible(false);
         lineOptionsEditor_->setVisible(false);
         scrapScaleEditor_->setVisible(false);
@@ -4568,13 +4736,22 @@ void MapEditorTab::refreshObjectDetailsPanel()
     objectDetailsSelectionLabel_->setVisible(false);
     objectSelectionSection_->setVisible(true);
     advancedSelectionSection_->setVisible(true);
-    objectDetailsLineLabel_->setText(QString::number(effectiveLineNumber));
-    objectDetailsKindLabel_->setText(effectiveKind);
-    objectShowSourceButton_->setEnabled(effectiveLineNumber > 0);
+    QString objectSectionTitle = effectiveKind;
+    if (effectiveKind == QStringLiteral("line")) {
+        objectSectionTitle = tr("Line");
+    } else if (effectiveKind == QStringLiteral("area")) {
+        objectSectionTitle = tr("Area");
+    } else if (effectiveKind == QStringLiteral("point")) {
+        objectSectionTitle = tr("Point");
+    } else if (effectiveKind == QStringLiteral("scrap")) {
+        objectSectionTitle = tr("Scrap");
+    }
+    objectSelectionTitleLabel_->setText(objectSectionTitle);
+    objectDetailsMetadataLabel_->setText(tr("Source line %1").arg(effectiveLineNumber));
     objectDeleteButton_->setEnabled(effectiveLineNumber > 0);
 
     objectQuickFieldsEditor_->setVisible(false);
-    objectQuickIdentifierOption_.clear();
+    objectQuickCommandKind_.clear();
     if (textEditor_ != nullptr && effectiveLineNumber > 0) {
         QStringList lines = textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
         for (QString &line : lines) {
@@ -4586,15 +4763,30 @@ void MapEditorTab::refreshObjectDetailsPanel()
             const TherionParsedLine parsedLine =
                 TherionDocumentParser::parseLine(lines.at(effectiveLineNumber - 1), effectiveLineNumber);
             if (const std::optional<InspectorObjectQuickFields> fields = inspectorObjectQuickFieldsFromParsedLine(parsedLine)) {
+                const bool typeFieldsVisible = fields->commandKind != QStringLiteral("scrap");
+                const bool projectionFieldVisible = fields->commandKind == QStringLiteral("scrap");
                 objectQuickFieldsEditor_->setVisible(true);
-                objectQuickTypeEdit_->setEnabled(fields->typeEditable);
-                objectQuickSubtypeEdit_->setEnabled(fields->typeEditable);
-                objectQuickTypeEdit_->setText(fields->type);
-                objectQuickSubtypeEdit_->setText(fields->subtype);
+                objectQuickNameLabel_->setVisible(fields->nameVisible);
+                objectQuickProjectionLabel_->setVisible(projectionFieldVisible);
+                objectQuickTypeLabel_->setVisible(typeFieldsVisible);
+                objectQuickSubtypeLabel_->setVisible(typeFieldsVisible);
+                objectQuickNameEdit_->setVisible(fields->nameVisible);
+                objectQuickProjectionCombo_->setVisible(projectionFieldVisible);
+                objectQuickTypeCombo_->setVisible(typeFieldsVisible);
+                objectQuickSubtypeCombo_->setVisible(typeFieldsVisible);
+                objectQuickProjectionCombo_->setEnabled(projectionFieldVisible);
+                objectQuickTypeCombo_->setEnabled(typeFieldsVisible && fields->typeEditable);
+                objectQuickSubtypeCombo_->setEnabled(typeFieldsVisible && fields->typeEditable);
+                setEditableComboValues(objectQuickTypeCombo_, inspectorTypeValuesForCommand(fields->commandKind), fields->type);
+                setEditableComboValues(objectQuickProjectionCombo_, inspectorProjectionValues(), fields->projection);
                 objectQuickIdentifierEdit_->setText(fields->identifier);
-                objectQuickIdentifierLabel_->setText(fields->identifierLabel.isEmpty() ? tr("ID") : fields->identifierLabel);
-                objectQuickIdentifierOption_ = fields->identifierOption;
-                objectQuickApplyButton_->setEnabled(true);
+                objectQuickIdentifierLabel_->setText(tr("ID"));
+                objectQuickNameEdit_->setText(fields->name);
+                objectQuickCommandKind_ = fields->commandKind;
+                updateObjectQuickSubtypeChoices();
+                setEditableComboValues(objectQuickSubtypeCombo_,
+                                       inspectorSubtypeValuesForCommandType(fields->commandKind, fields->type),
+                                       fields->subtype);
             }
         }
     }
@@ -4835,24 +5027,6 @@ void MapEditorTab::handleObjectOrientationEnabledToggled(bool checked)
     objectOrientationSpin_->setEnabled(checked);
 }
 
-void MapEditorTab::showSelectedObjectInSource()
-{
-    if (textEditor_ == nullptr) {
-        return;
-    }
-
-    int targetLineNumber = selectedObjectLineNumber_;
-    if (targetLineNumber <= 0) {
-        targetLineNumber = textEditor_->currentLineNumber();
-    }
-    if (targetLineNumber <= 0) {
-        return;
-    }
-
-    textEditor_->goToLine(targetLineNumber);
-    setWorkspaceMode(WorkspaceMode::Raw);
-}
-
 void MapEditorTab::deleteSelectedObjectFromSelection()
 {
     if (textEditor_ == nullptr) {
@@ -4880,9 +5054,10 @@ void MapEditorTab::applyObjectQuickFieldEdits()
 {
     if (updatingObjectDetailsUi_
         || textEditor_ == nullptr
-        || objectQuickTypeEdit_ == nullptr
-        || objectQuickSubtypeEdit_ == nullptr
-        || objectQuickIdentifierEdit_ == nullptr) {
+        || objectQuickTypeCombo_ == nullptr
+        || objectQuickSubtypeCombo_ == nullptr
+        || objectQuickIdentifierEdit_ == nullptr
+        || objectQuickNameEdit_ == nullptr) {
         return;
     }
 
@@ -4899,10 +5074,11 @@ void MapEditorTab::applyObjectQuickFieldEdits()
     QString errorMessage;
     if (!TherionDocumentEditor::rewriteMapObjectQuickFields(&afterText,
                                                             targetLineNumber,
-                                                            objectQuickTypeEdit_->text(),
-                                                            objectQuickSubtypeEdit_->text(),
+                                                            objectQuickTypeCombo_->currentText(),
+                                                            objectQuickSubtypeCombo_->currentText(),
                                                             objectQuickIdentifierEdit_->text(),
-                                                            objectQuickIdentifierOption_,
+                                                            objectQuickNameEdit_->text(),
+                                                            objectQuickNameEdit_->isVisible(),
                                                             &errorMessage)) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Failed to update object fields.")
@@ -4922,6 +5098,61 @@ void MapEditorTab::applyObjectQuickFieldEdits()
     toolbarStatusNote_ = tr("Updated object fields.");
     refreshToolbarSummary();
     refreshObjectDetailsPanel();
+}
+
+void MapEditorTab::applyScrapProjectionEdit()
+{
+    if (updatingObjectDetailsUi_
+        || textEditor_ == nullptr
+        || objectQuickProjectionCombo_ == nullptr) {
+        return;
+    }
+
+    int targetLineNumber = selectedObjectLineNumber_;
+    if (targetLineNumber <= 0) {
+        targetLineNumber = textEditor_->currentLineNumber();
+    }
+    if (targetLineNumber <= 0) {
+        return;
+    }
+
+    const QString beforeText = textEditor_->text();
+    QString afterText = beforeText;
+    QString errorMessage;
+    if (!TherionDocumentEditor::rewriteScrapProjection(&afterText,
+                                                       targetLineNumber,
+                                                       objectQuickProjectionCombo_->currentText(),
+                                                       &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Failed to update scrap projection.")
+            : tr("Failed to update scrap projection: %1").arg(errorMessage);
+        refreshToolbarSummary();
+        refreshObjectDetailsPanel();
+        return;
+    }
+
+    if (afterText == beforeText) {
+        return;
+    }
+
+    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
+    textEditor_->replaceTextForCommand(afterText);
+    recordSourceTextSnapshot(tr("Edit Scrap Projection"), beforeText, afterText, targetLineNumber);
+    toolbarStatusNote_ = tr("Updated scrap projection.");
+    refreshToolbarSummary();
+    refreshObjectDetailsPanel();
+}
+
+void MapEditorTab::updateObjectQuickSubtypeChoices()
+{
+    if (objectQuickSubtypeCombo_ == nullptr || objectQuickTypeCombo_ == nullptr) {
+        return;
+    }
+
+    const QString currentSubtype = objectQuickSubtypeCombo_->currentText();
+    setEditableComboValues(objectQuickSubtypeCombo_,
+                           inspectorSubtypeValuesForCommandType(objectQuickCommandKind_, objectQuickTypeCombo_->currentText()),
+                           currentSubtype);
 }
 
 void MapEditorTab::insertVertexFromSelectionPanel()

@@ -1311,6 +1311,7 @@ int runRewriteMapObjectQuickFieldsTest()
                                                                    QString(),
                                                                    QStringLiteral("new-scrap"),
                                                                    QString(),
+                                                                   false,
                                                                    &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
@@ -1327,7 +1328,8 @@ int runRewriteMapObjectQuickFieldsTest()
                                                                    QStringLiteral("border"),
                                                                    QStringLiteral("invisible"),
                                                                    QStringLiteral("line-1"),
-                                                                   QStringLiteral("-id"),
+                                                                   QString(),
+                                                                   false,
                                                                    &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
@@ -1343,14 +1345,69 @@ int runRewriteMapObjectQuickFieldsTest()
                                                                    1,
                                                                    QStringLiteral("station"),
                                                                    QString(),
+                                                                   QStringLiteral("point-1"),
                                                                    QStringLiteral("1@hp"),
-                                                                   QStringLiteral("-name"),
+                                                                   true,
                                                                    &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(contents == QStringLiteral("point 10 20 station -name 1@hp\n"),
-                "rewriteMapObjectQuickFields should rewrite point station name.")) {
+    if (!expect(contents == QStringLiteral("point 10 20 station -name 1@hp -id point-1\n"),
+                "rewriteMapObjectQuickFields should rewrite point ID separately from station name.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("point 10 20 -id old\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+                                                                   1,
+                                                                   QStringLiteral("station"),
+                                                                   QString(),
+                                                                   QStringLiteral("point-2"),
+                                                                   QString(),
+                                                                   false,
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 10 20 station -id point-2\n"),
+                "rewriteMapObjectQuickFields should insert a missing point type after coordinates.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("point 463.0 -495.75 station-name -id old\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+                                                                   1,
+                                                                   QStringLiteral("station"),
+                                                                   QStringLiteral("fixed"),
+                                                                   QStringLiteral("point-3"),
+                                                                   QString(),
+                                                                   false,
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 463.0 -495.75 station -id point-3 -subtype fixed\n"),
+                "rewriteMapObjectQuickFields should treat negative point coordinates as coordinates, not options.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("area water -id a1 -subtype temporary\nendarea\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+                                                                   1,
+                                                                   QStringLiteral("sand"),
+                                                                   QStringLiteral("blocks"),
+                                                                   QStringLiteral("area-1"),
+                                                                   QString(),
+                                                                   false,
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("area sand -id area-1 -subtype blocks\nendarea\n"),
+                "rewriteMapObjectQuickFields should rewrite area type, subtype, and ID.")) {
         return 1;
     }
 
@@ -1361,13 +1418,75 @@ int runRewriteMapObjectQuickFieldsTest()
                                                                    QStringLiteral("sand"),
                                                                    QString(),
                                                                    QString(),
-                                                                   QStringLiteral("-id"),
+                                                                   QString(),
+                                                                   false,
                                                                    &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
     if (!expect(contents == QStringLiteral("area sand\nendarea\n"),
-                "rewriteMapObjectQuickFields should remove cleared subtype and id options.")) {
+                "rewriteMapObjectQuickFields should remove cleared area subtype and ID options.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runRewriteScrapProjectionTest()
+{
+    QString errorMessage;
+    QString contents = QStringLiteral("scrap s1 # keep\nendscrap\n");
+    if (!expect(TherionDocumentEditor::rewriteScrapProjection(&contents,
+                                                              1,
+                                                              QStringLiteral("plan"),
+                                                              &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap s1 -projection plan # keep\nendscrap\n"),
+                "rewriteScrapProjection should append a missing projection before comments.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap s1 -projection [elevation 10 deg] -scale [0 0 1 0 0 0 1 0 m]\r\nendscrap\r\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteScrapProjection(&contents,
+                                                              1,
+                                                              QStringLiteral("extended"),
+                                                              &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap s1 -projection extended -scale [0 0 1 0 0 0 1 0 m]\r\nendscrap\r\n"),
+                "rewriteScrapProjection should replace bracketed projections and preserve CRLF.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap s1 -projection plan -author 2026.01.01 Test # keep\nendscrap\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteScrapProjection(&contents,
+                                                              1,
+                                                              QString(),
+                                                              &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap s1 -author 2026.01.01 Test # keep\nendscrap\n"),
+                "rewriteScrapProjection should remove a cleared projection without consuming following options.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall\nendline\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteScrapProjection(&contents,
+                                                               1,
+                                                               QStringLiteral("plan"),
+                                                               &errorMessage),
+                "rewriteScrapProjection should reject non-scrap commands.")) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\nendline\n"),
+                "rewriteScrapProjection should not mutate rejected commands.")) {
         return 1;
     }
 
@@ -1415,6 +1534,11 @@ int main()
     const int rewriteScrapScaleResult = runRewriteScrapScaleTest();
     if (rewriteScrapScaleResult != 0) {
         return rewriteScrapScaleResult;
+    }
+
+    const int rewriteScrapProjectionResult = runRewriteScrapProjectionTest();
+    if (rewriteScrapProjectionResult != 0) {
+        return rewriteScrapProjectionResult;
     }
 
     const int rewriteMapObjectQuickFieldsResult = runRewriteMapObjectQuickFieldsTest();

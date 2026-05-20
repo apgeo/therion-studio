@@ -580,7 +580,9 @@ void MapEditorTab::buildUi()
     objectDetailsSelectionLabel_->setWordWrap(true);
     selectionLayout->addWidget(objectDetailsSelectionLabel_);
 
-    auto createSelectionSection = [selectionPanel](const QString &title, QVBoxLayout **contentLayout) {
+    auto createSelectionSection = [selectionPanel](const QString &title,
+                                                   QVBoxLayout **contentLayout,
+                                                   QLabel **titleLabelOut = nullptr) {
         auto *section = new QFrame(selectionPanel);
         section->setFrameShape(QFrame::StyledPanel);
         auto *sectionLayout = new QVBoxLayout(section);
@@ -591,6 +593,9 @@ void MapEditorTab::buildUi()
         titleFont.setBold(true);
         titleLabel->setFont(titleFont);
         sectionLayout->addWidget(titleLabel);
+        if (titleLabelOut != nullptr) {
+            *titleLabelOut = titleLabel;
+        }
         if (contentLayout != nullptr) {
             *contentLayout = sectionLayout;
         }
@@ -598,45 +603,58 @@ void MapEditorTab::buildUi()
     };
 
     QVBoxLayout *objectSelectionLayout = nullptr;
-    objectSelectionSection_ = createSelectionSection(tr("Object"), &objectSelectionLayout);
+    objectSelectionSection_ = createSelectionSection(tr("Object"), &objectSelectionLayout, &objectSelectionTitleLabel_);
 
-    auto *objectActionsLayout = new QHBoxLayout;
-    objectActionsLayout->setContentsMargins(0, 0, 0, 0);
-    objectActionsLayout->setSpacing(6);
-    objectShowSourceButton_ = new QPushButton(tr("Show in Source"), objectSelectionSection_);
-    objectShowSourceButton_->setAutoDefault(false);
-    objectDeleteButton_ = new QPushButton(tr("Delete"), objectSelectionSection_);
-    objectDeleteButton_->setAutoDefault(false);
-    connect(objectShowSourceButton_, &QPushButton::clicked, this, &MapEditorTab::showSelectedObjectInSource);
-    connect(objectDeleteButton_, &QPushButton::clicked, this, &MapEditorTab::deleteSelectedObjectFromSelection);
-    objectActionsLayout->addWidget(objectShowSourceButton_);
-    objectActionsLayout->addWidget(objectDeleteButton_);
-    objectSelectionLayout->addLayout(objectActionsLayout);
-
-    auto *objectDetailsForm = new QFormLayout;
-    objectDetailsForm->setContentsMargins(0, 0, 0, 0);
-    objectDetailsForm->setSpacing(6);
-    objectDetailsLineLabel_ = new QLabel(QStringLiteral("—"), selectionPanel);
-    objectDetailsKindLabel_ = new QLabel(QStringLiteral("—"), selectionPanel);
-    objectDetailsForm->addRow(tr("Source Line"), objectDetailsLineLabel_);
-    objectDetailsForm->addRow(tr("Kind"), objectDetailsKindLabel_);
-    objectSelectionLayout->addLayout(objectDetailsForm);
+    objectDetailsMetadataLabel_ = new QLabel(QStringLiteral("-"), objectSelectionSection_);
+    objectDetailsMetadataLabel_->setTextFormat(Qt::PlainText);
+    objectDetailsMetadataLabel_->setStyleSheet(QStringLiteral("QLabel { color: palette(mid); }"));
+    objectSelectionLayout->addWidget(objectDetailsMetadataLabel_);
 
     objectQuickFieldsEditor_ = new QWidget(objectSelectionSection_);
     auto *objectQuickForm = new QFormLayout(objectQuickFieldsEditor_);
     objectQuickForm->setContentsMargins(0, 0, 0, 0);
     objectQuickForm->setSpacing(6);
-    objectQuickTypeEdit_ = new QLineEdit(objectQuickFieldsEditor_);
-    objectQuickSubtypeEdit_ = new QLineEdit(objectQuickFieldsEditor_);
+    objectQuickTypeCombo_ = new QComboBox(objectQuickFieldsEditor_);
+    objectQuickTypeCombo_->setEditable(true);
+    objectQuickTypeCombo_->setInsertPolicy(QComboBox::NoInsert);
+    objectQuickSubtypeCombo_ = new QComboBox(objectQuickFieldsEditor_);
+    objectQuickSubtypeCombo_->setEditable(true);
+    objectQuickSubtypeCombo_->setInsertPolicy(QComboBox::NoInsert);
+    objectQuickProjectionCombo_ = new QComboBox(objectQuickFieldsEditor_);
+    objectQuickProjectionCombo_->setEditable(true);
+    objectQuickProjectionCombo_->setInsertPolicy(QComboBox::NoInsert);
     objectQuickIdentifierEdit_ = new QLineEdit(objectQuickFieldsEditor_);
+    objectQuickNameEdit_ = new QLineEdit(objectQuickFieldsEditor_);
     objectQuickIdentifierLabel_ = new QLabel(tr("ID"), objectQuickFieldsEditor_);
-    objectQuickApplyButton_ = new QPushButton(tr("Apply Object Fields"), objectQuickFieldsEditor_);
-    objectQuickApplyButton_->setAutoDefault(false);
-    connect(objectQuickApplyButton_, &QPushButton::clicked, this, &MapEditorTab::applyObjectQuickFieldEdits);
-    objectQuickForm->addRow(tr("Type"), objectQuickTypeEdit_);
-    objectQuickForm->addRow(tr("Subtype"), objectQuickSubtypeEdit_);
+    objectQuickNameLabel_ = new QLabel(tr("Name"), objectQuickFieldsEditor_);
+    objectQuickProjectionLabel_ = new QLabel(tr("Projection"), objectQuickFieldsEditor_);
+    objectQuickTypeLabel_ = new QLabel(tr("Type"), objectQuickFieldsEditor_);
+    objectQuickSubtypeLabel_ = new QLabel(tr("Subtype"), objectQuickFieldsEditor_);
+    connect(objectQuickIdentifierEdit_, &QLineEdit::editingFinished, this, &MapEditorTab::applyObjectQuickFieldEdits);
+    connect(objectQuickNameEdit_, &QLineEdit::editingFinished, this, &MapEditorTab::applyObjectQuickFieldEdits);
+    connect(objectQuickTypeCombo_, qOverload<int>(&QComboBox::activated), this, [this]() {
+        updateObjectQuickSubtypeChoices();
+        applyObjectQuickFieldEdits();
+    });
+    connect(objectQuickSubtypeCombo_, qOverload<int>(&QComboBox::activated), this, &MapEditorTab::applyObjectQuickFieldEdits);
+    connect(objectQuickProjectionCombo_, qOverload<int>(&QComboBox::activated), this, &MapEditorTab::applyScrapProjectionEdit);
+    if (objectQuickTypeCombo_->lineEdit() != nullptr) {
+        connect(objectQuickTypeCombo_->lineEdit(), &QLineEdit::editingFinished, this, [this]() {
+            updateObjectQuickSubtypeChoices();
+            applyObjectQuickFieldEdits();
+        });
+    }
+    if (objectQuickSubtypeCombo_->lineEdit() != nullptr) {
+        connect(objectQuickSubtypeCombo_->lineEdit(), &QLineEdit::editingFinished, this, &MapEditorTab::applyObjectQuickFieldEdits);
+    }
+    if (objectQuickProjectionCombo_->lineEdit() != nullptr) {
+        connect(objectQuickProjectionCombo_->lineEdit(), &QLineEdit::editingFinished, this, &MapEditorTab::applyScrapProjectionEdit);
+    }
     objectQuickForm->addRow(objectQuickIdentifierLabel_, objectQuickIdentifierEdit_);
-    objectQuickForm->addRow(QString(), objectQuickApplyButton_);
+    objectQuickForm->addRow(objectQuickProjectionLabel_, objectQuickProjectionCombo_);
+    objectQuickForm->addRow(objectQuickTypeLabel_, objectQuickTypeCombo_);
+    objectQuickForm->addRow(objectQuickSubtypeLabel_, objectQuickSubtypeCombo_);
+    objectQuickForm->addRow(objectQuickNameLabel_, objectQuickNameEdit_);
     objectSelectionLayout->addWidget(objectQuickFieldsEditor_);
     selectionLayout->addWidget(objectSelectionSection_);
 
@@ -780,11 +798,15 @@ void MapEditorTab::buildUi()
     objectSelectionLayout->addWidget(scrapScaleEditor_);
 
     QVBoxLayout *advancedSelectionLayout = nullptr;
-    advancedSelectionSection_ = createSelectionSection(tr("Advanced"), &advancedSelectionLayout);
+    advancedSelectionSection_ = createSelectionSection(tr("Actions"), &advancedSelectionLayout);
     objectConfigureButton_ = new QPushButton(tr("Edit Object Settings..."), advancedSelectionSection_);
     objectConfigureButton_->setAutoDefault(false);
     connect(objectConfigureButton_, &QPushButton::clicked, this, &MapEditorTab::handleConfigureObjectSettingsTriggered);
     advancedSelectionLayout->addWidget(objectConfigureButton_);
+    objectDeleteButton_ = new QPushButton(tr("Delete Object"), advancedSelectionSection_);
+    objectDeleteButton_->setAutoDefault(false);
+    connect(objectDeleteButton_, &QPushButton::clicked, this, &MapEditorTab::deleteSelectedObjectFromSelection);
+    advancedSelectionLayout->addWidget(objectDeleteButton_);
     selectionLayout->addWidget(advancedSelectionSection_);
     selectionTabLayout->addWidget(selectionPanel);
     selectionTabLayout->addStretch(1);

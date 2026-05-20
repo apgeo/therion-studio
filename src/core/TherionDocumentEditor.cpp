@@ -44,9 +44,18 @@ int optionValueTokenIndex(const TherionParsedLine &parsedLine, const QString &op
 
 int pointTypeTokenIndex(const TherionParsedLine &parsedLine)
 {
+    bool skipOptionValue = false;
     for (int index = 1; index < parsedLine.tokens.size(); ++index) {
         const QString token = parsedLine.tokens.at(index);
-        if (token.startsWith(QLatin1Char('-')) || tokenLooksNumeric(token)) {
+        if (skipOptionValue) {
+            skipOptionValue = false;
+            continue;
+        }
+        if (tokenLooksNumeric(token)) {
+            continue;
+        }
+        if (token.startsWith(QLatin1Char('-'))) {
+            skipOptionValue = index + 1 < parsedLine.tokens.size();
             continue;
         }
 
@@ -1915,12 +1924,92 @@ bool TherionDocumentEditor::rewriteScrapScale(QString *contents,
     return true;
 }
 
+bool TherionDocumentEditor::rewriteScrapProjection(QString *contents,
+                                                   int lineNumber,
+                                                   const QString &projectionExpression,
+                                                   QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+
+    if (lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line number is invalid.");
+        }
+        return false;
+    }
+
+    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = splitLinesNormalized(*contents);
+    if (lineNumber > lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line no longer exists.");
+        }
+        return false;
+    }
+
+    const int lineIndex = lineNumber - 1;
+    QString lineText = lines.at(lineIndex);
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    if (parsedLine.directive != QStringLiteral("scrap")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected line is not a scrap command.");
+        }
+        return false;
+    }
+
+    const int projectionOptionIndex = optionTokenIndex(parsedLine, QStringLiteral("-projection"));
+    const QString normalizedProjection = projectionExpression.trimmed();
+    if (projectionOptionIndex >= 0) {
+        const QPair<int, int> range = optionRangeWithBracketedValue(parsedLine, projectionOptionIndex, lineText);
+        if (range.first < 0 || range.second < range.first || range.second > lineText.size()) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QStringLiteral("The existing scrap projection option could not be rewritten.");
+            }
+            return false;
+        }
+
+        if (normalizedProjection.isEmpty()) {
+            lineText.remove(range.first, range.second - range.first);
+        } else {
+            const bool includesLeadingSpace = range.first < parsedLine.tokenSpans.at(projectionOptionIndex).start;
+            const QString replacement = QStringLiteral("-projection %1").arg(normalizedProjection);
+            lineText.replace(range.first,
+                             range.second - range.first,
+                             includesLeadingSpace ? QStringLiteral(" ") + replacement : replacement);
+        }
+    } else {
+        if (normalizedProjection.isEmpty()) {
+            return true;
+        }
+        const QString insertionText = QStringLiteral("-projection %1").arg(normalizedProjection);
+        if (parsedLine.commentStart >= 0) {
+            int insertIndex = parsedLine.commentStart;
+            while (insertIndex > 0 && lineText.at(insertIndex - 1).isSpace()) {
+                --insertIndex;
+            }
+            lineText.insert(insertIndex, QStringLiteral(" ") + insertionText);
+        } else {
+            lineText += QStringLiteral(" ") + insertionText;
+        }
+    }
+
+    lines[lineIndex] = lineText;
+    *contents = lines.join(lineEnding);
+    return true;
+}
+
 bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
                                                         int lineNumber,
                                                         const QString &type,
                                                         const QString &subtype,
                                                         const QString &identifier,
-                                                        const QString &identifierOption,
+                                                        const QString &name,
+                                                        bool nameEnabled,
                                                         QString *errorMessage)
 {
     if (contents == nullptr) {
@@ -2003,14 +2092,32 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
     const int typeTokenIndex = directive == QStringLiteral("point")
         ? pointTypeTokenIndex(parsedLine)
         : 1;
-    if (typeTokenIndex <= 0 || typeTokenIndex >= parsedLine.tokenSpans.size()) {
+    if (directive == QStringLiteral("point") && typeTokenIndex < 0) {
+        const QPair<int, int> coordinatePair = coordinateTokenPair(parsedLine);
+        const int insertAfterTokenIndex = coordinatePair.second;
+        if (insertAfterTokenIndex < 0 || insertAfterTokenIndex >= parsedLine.tokenSpans.size()) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QStringLiteral("The selected point command has no writable coordinate pair for inserting type.");
+            }
+            return false;
+        }
+        const TherionParsedToken coordinateToken = parsedLine.tokenSpans.at(insertAfterTokenIndex);
+        if (coordinateToken.start < 0
+            || coordinateToken.length < 0
+            || coordinateToken.start + coordinateToken.length > lineText.size()) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QStringLiteral("The selected point type insertion target is invalid.");
+            }
+            return false;
+        }
+        lineText.insert(coordinateToken.start + coordinateToken.length,
+                        QStringLiteral(" ") + serializedInlineToken(normalizedType));
+    } else if (typeTokenIndex <= 0 || typeTokenIndex >= parsedLine.tokenSpans.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QStringLiteral("The selected %1 command has no writable type token.").arg(directive);
         }
         return false;
-    }
-
-    if (!replaceTokenText(&lineText, parsedLine, typeTokenIndex, serializedInlineToken(normalizedType))) {
+    } else if (!replaceTokenText(&lineText, parsedLine, typeTokenIndex, serializedInlineToken(normalizedType))) {
         if (errorMessage != nullptr) {
             *errorMessage = QStringLiteral("The selected object type could not be rewritten.");
         }
@@ -2024,11 +2131,18 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
         return false;
     }
 
-    const QString normalizedIdentifierOption = identifierOption.trimmed();
-    if (!normalizedIdentifierOption.isEmpty()
-        && !upsertSingleValueOption(&lineText, normalizedIdentifierOption, identifier)) {
+    if (!upsertSingleValueOption(&lineText, QStringLiteral("-id"), identifier)) {
         if (errorMessage != nullptr) {
             *errorMessage = QStringLiteral("The selected object identifier could not be rewritten.");
+        }
+        return false;
+    }
+
+    if (directive == QStringLiteral("point")
+        && nameEnabled
+        && !upsertSingleValueOption(&lineText, QStringLiteral("-name"), name)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("The selected point name could not be rewritten.");
         }
         return false;
     }

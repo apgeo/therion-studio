@@ -34,7 +34,7 @@ These instructions apply to the whole repository.
   - services own external interactions such as file access, process execution, and metadata loading
 - Favor straightforward, testable designs over speculative abstractions.
 - Do not introduce new uses of deprecated functions or APIs. Prefer supported, current equivalents and update existing deprecated usages when touching related code.
-- Keep files and translation units focused and reasonably sized. There is no hard line limit, but once a file starts mixing multiple responsibilities or becomes difficult to scan in one pass, split it by responsibility. Try to avoid files with >3000 lines if possible.
+- Keep files and translation units focused and reasonably sized. There is no hard line limit, but once a file starts mixing multiple responsibilities or becomes difficult to scan in one pass, split it by responsibility. Try to avoid files with >2000 lines if possible.
 - Prefer splitting large features into focused types or files such as model, parser, serializer, widget, controller, scene item, or service components rather than accumulating unrelated behavior in one class.
 - Avoid generic catch-all modules or class names such as Helpers, Utils, Misc, or Manager unless the code is genuinely cohesive.
 - Do not introduce dependencies outside Qt and the standard library without explicit justification.

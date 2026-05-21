@@ -77,7 +77,7 @@ bool BlockEditorLineBuildService::buildUpdatedLine(QString *updatedLine, QString
             }
             return false;
         }
-        if (owner_->commandPrimaryValueIsPerson_.value(normalizedKind, false)) {
+        if (owner_->commandMetadata().commandPrimaryValueIsPerson.value(normalizedKind, false)) {
             result += QStringLiteral(" ") + serializeTherionArgumentToken(updatedValue);
         } else {
             result += QStringLiteral(" ") + updatedValue;
@@ -139,10 +139,10 @@ bool BlockEditorLineBuildService::buildUpdatedLine(QString *updatedLine, QString
             const TextEditorOptionValidationResult validation = validateAndSerializeCommandOptions(
                 commandToken,
                 optionRows,
-                owner_->commandOptionValueArityTokens_,
-                owner_->commandOptionFixedArityByKey_,
-                owner_->commandOptionArgumentLabelsByKey_,
-                owner_->commandOptionValueTokens_,
+                owner_->commandMetadata().commandOptionValueArityTokens,
+                owner_->commandMetadata().commandOptionFixedArityByKey,
+                owner_->commandMetadata().commandOptionArgumentLabelsByKey,
+                owner_->commandMetadata().commandOptionValueTokens,
                 true);
             if (!validation.ok) {
                 if (owner_->blockDetailsOptionsTable_ != nullptr

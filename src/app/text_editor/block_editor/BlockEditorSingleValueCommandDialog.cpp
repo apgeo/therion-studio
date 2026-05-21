@@ -55,7 +55,7 @@ std::optional<QString> BlockEditorSingleValueCommandDialog::configureLine(
     formLayout->addRow(TextEditorTab::tr("Value"), valueEdit);
     layout->addLayout(formLayout);
 
-    TherionHelpEntry helpEntry = owner_->helpEntries_.value(commandName);
+    TherionHelpEntry helpEntry = owner_->commandMetadata().helpEntries.value(commandName);
     if (helpEntry.summary.trimmed().isEmpty()
         && helpEntry.syntax.trimmed().isEmpty()
         && helpEntry.arguments.isEmpty()
@@ -63,7 +63,7 @@ std::optional<QString> BlockEditorSingleValueCommandDialog::configureLine(
         && helpEntry.acceptedValues.isEmpty()) {
         const QString openingDirective = BlockEditorDirectiveRules::completionOpeningDirectiveForClosing(commandName);
         if (!openingDirective.isEmpty()) {
-            helpEntry = owner_->helpEntries_.value(openingDirective);
+            helpEntry = owner_->commandMetadata().helpEntries.value(openingDirective);
         }
     }
 

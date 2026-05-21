@@ -80,7 +80,7 @@ void BlockEditorOptionArgsController::refreshOptionArgumentEditors()
                                              : QString())
                                             .trimmed()
                                             .toLower();
-            const int fixedArity = owner_->commandOptionFixedArityByKey_.value(
+            const int fixedArity = owner_->commandMetadata().commandOptionFixedArityByKey.value(
                 commandOptionValueKey(commandToken, optionToken), -1);
             Qt::ItemFlags flags = valueItem->flags();
             if (fixedArity > 1) {
@@ -124,7 +124,7 @@ void BlockEditorOptionArgsController::refreshOptionArgumentEditors()
     }
 
     const QString optionKey = commandOptionValueKey(commandToken, optionToken);
-    const int fixedArity = owner_->commandOptionFixedArityByKey_.value(optionKey, -1);
+    const int fixedArity = owner_->commandMetadata().commandOptionFixedArityByKey.value(optionKey, -1);
     if (fixedArity <= 1) {
         clearEditors();
         owner_->blockDetailsOptionArgsLabel_->setVisible(false);
@@ -132,7 +132,7 @@ void BlockEditorOptionArgsController::refreshOptionArgumentEditors()
         return;
     }
 
-    QStringList argumentLabels = owner_->commandOptionArgumentLabelsByKey_.value(optionKey);
+    QStringList argumentLabels = owner_->commandMetadata().commandOptionArgumentLabelsByKey.value(optionKey);
     while (argumentLabels.size() < fixedArity) {
         argumentLabels.append(TextEditorTab::tr("Value %1").arg(argumentLabels.size() + 1));
     }

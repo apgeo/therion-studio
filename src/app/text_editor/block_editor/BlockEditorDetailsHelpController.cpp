@@ -28,7 +28,7 @@ void BlockEditorDetailsHelpController::updateHelpForCurrentFocus()
     }
 
     const QString normalizedKind = owner_->normalizedDirectiveToken(owner_->blockDetailsSelectedKind_);
-    const TherionHelpEntry commandHelpEntry = owner_->helpEntries_.value(normalizedKind);
+    const TherionHelpEntry commandHelpEntry = owner_->commandMetadata().helpEntries.value(normalizedKind);
     const QString commandHelpHtml = ContextHelpController::renderHelpHtml(normalizedKind,
                                                                            commandHelpEntry.summary,
                                                                            commandHelpEntry.syntax,

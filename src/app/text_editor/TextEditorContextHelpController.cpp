@@ -103,24 +103,7 @@ void TextEditorContextHelpController::loadHelpMetadata()
         return;
     }
 
-    owner_->helpEntries_.clear();
-    owner_->completionTokens_.clear();
-    owner_->commandCompletionTokens_.clear();
-    owner_->commandOptionTokens_.clear();
-    owner_->commandValueTokens_.clear();
-    owner_->commandArgumentValueTokens_.clear();
-    owner_->commandOptionValueTokens_.clear();
-    owner_->commandOptionValueArityTokens_.clear();
-    owner_->commandOptionArgumentLabelsByKey_.clear();
-    owner_->commandOptionFixedArityByKey_.clear();
-    owner_->commandOptionHelpHtmlByKey_.clear();
-    owner_->commandTypeValueTokens_.clear();
-    owner_->commandSubtypeByTypeTokens_.clear();
-    owner_->commandRequiredPositionalCount_.clear();
-    owner_->commandArgumentSignaturesByToken_.clear();
-    owner_->commandPrimaryValueIsPerson_.clear();
-    owner_->contextCommandTokens_.clear();
-    owner_->blockCommandContextsByKind_.clear();
+    owner_->mutableCommandMetadata().clear();
     loadHelpMetadataFromCommandCatalog();
     if (owner_->rawEditorCompletionController_ != nullptr) {
         owner_->rawEditorCompletionController_->rebuildCompletionModel();
@@ -187,8 +170,8 @@ void TextEditorContextHelpController::updateContextHelp()
 
     const QStringList candidates = helpCandidateTokens();
     for (const QString &candidate : candidates) {
-        const auto entryIt = owner_->helpEntries_.constFind(candidate.toLower());
-        if (entryIt == owner_->helpEntries_.constEnd()) {
+        const auto entryIt = owner_->commandMetadata().helpEntries.constFind(candidate.toLower());
+        if (entryIt == owner_->commandMetadata().helpEntries.constEnd()) {
             continue;
         }
 
@@ -317,7 +300,7 @@ QString TextEditorContextHelpController::validationHelpHtmlForCursor(QString *to
     }
 
     const QString command = owner_->normalizedDirectiveToken(parsedLine.directive.toLower());
-    if (command.isEmpty() || !owner_->commandOptionTokens_.contains(command)) {
+    if (command.isEmpty() || !owner_->commandMetadata().commandOptionTokens.contains(command)) {
         return QString();
     }
 
@@ -348,7 +331,7 @@ QString TextEditorContextHelpController::validationHelpHtmlForCursor(QString *to
     QString issueKey;
 
     if (looksLikeOptionToken(cursorToken)) {
-        const QStringList knownOptions = owner_->commandOptionTokens_.value(command);
+        const QStringList knownOptions = owner_->commandMetadata().commandOptionTokens.value(command);
         if (knownOptions.contains(normalizedCursorToken, Qt::CaseInsensitive)) {
             return QString();
         }
@@ -375,7 +358,7 @@ QString TextEditorContextHelpController::validationHelpHtmlForCursor(QString *to
         }
 
         const QString optionToken = parsedLine.tokens.at(optionIndex).trimmed().toLower();
-        const QString arity = owner_->commandOptionValueArityTokens_
+        const QString arity = owner_->commandMetadata().commandOptionValueArityTokens
             .value(commandOptionValueKey(command, optionToken))
             .trimmed()
             .toUpper();
@@ -386,7 +369,7 @@ QString TextEditorContextHelpController::validationHelpHtmlForCursor(QString *to
 
         if (optionToken == QStringLiteral("-subtype")) {
             const QString symbolTypeToken = symbolTypeForSubtypeLookup(command, parsedLine);
-            const QHash<QString, QStringList> subtypeByType = owner_->commandSubtypeByTypeTokens_.value(command);
+            const QHash<QString, QStringList> subtypeByType = owner_->commandMetadata().commandSubtypeByTypeTokens.value(command);
             allowedValues = subtypeByType.value(symbolTypeToken);
             if (allowedValues.contains(QStringLiteral("*"), Qt::CaseInsensitive)) {
                 return QString();
@@ -402,7 +385,7 @@ QString TextEditorContextHelpController::validationHelpHtmlForCursor(QString *to
                     .arg(command, symbolTypeToken, normalizedCursorToken);
             }
         } else {
-            allowedValues = owner_->commandOptionValueTokens_.value(commandOptionValueKey(command, optionToken));
+            allowedValues = owner_->commandMetadata().commandOptionValueTokens.value(commandOptionValueKey(command, optionToken));
             if (allowedValues.isEmpty()
                 || allowedValues.contains(normalizedCursorToken, Qt::CaseInsensitive)) {
                 return QString();

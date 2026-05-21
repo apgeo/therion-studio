@@ -1,13 +1,13 @@
 #include "BlockEditorSelectionDetailsController.h"
 
 #include "BlockEditorCommandOptionParser.h"
+#include "BlockEditorDetailsSupport.h"
 #include "BlockEditorSourceController.h"
 #include "../ContextHelpController.h"
 #include "../TextEditorTab.h"
 
 #include <QLabel>
 #include <QLineEdit>
-#include <QObject>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QTextBrowser>
@@ -17,58 +17,6 @@
 
 #include "../../../core/TherionCommandSyntax.h"
 #include "../../../core/TherionDocumentParser.h"
-
-namespace
-{
-struct DataHeaderComponents
-{
-    QString style;
-    QString readingsOrder;
-};
-
-DataHeaderComponents parseDataHeaderComponents(const QStringList &tokens)
-{
-    DataHeaderComponents components;
-    if (tokens.size() <= 1) {
-        return components;
-    }
-
-    components.style = tokens.at(1).trimmed();
-    if (tokens.size() > 2) {
-        components.readingsOrder = tokens.mid(2).join(QLatin1Char(' ')).trimmed();
-    }
-    return components;
-}
-
-QString argumentSignatureFromHelpLine(const QString &argumentLine)
-{
-    const int equalsIndex = argumentLine.indexOf(QLatin1Char('='));
-    if (equalsIndex >= 0) {
-        return argumentLine.left(equalsIndex).trimmed();
-    }
-    return argumentLine.trimmed();
-}
-
-QString argumentLabelFromSignature(const QString &signature)
-{
-    QString label = signature.trimmed();
-    label.remove(QLatin1Char('|'));
-    label.remove(QLatin1Char('['));
-    label.remove(QLatin1Char(']'));
-    label.remove(QLatin1Char('<'));
-    label.remove(QLatin1Char('>'));
-    label.replace(QLatin1Char('_'), QLatin1Char(' '));
-    label.replace(QLatin1Char('-'), QLatin1Char(' '));
-    label = label.simplified();
-    label = label.trimmed();
-    if (label.isEmpty()) {
-        return QObject::tr("Value");
-    }
-    label = label.toLower();
-    label[0] = label.at(0).toUpper();
-    return label;
-}
-}
 
 namespace TherionStudio
 {
@@ -116,7 +64,7 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
     owner_->blockDetailsPopulating_ = true;
 
     const bool supported = owner_->supportsDetailsPaneForKind(normalizedKind);
-    const bool hasCatalogOptions = !owner_->commandOptionTokens_.value(normalizedKind).isEmpty();
+    const bool hasCatalogOptions = !owner_->commandMetadata().commandOptionTokens.value(normalizedKind).isEmpty();
     const bool structuredOptionsMode = owner_->isContainerBlockDirectiveForBlocks(normalizedKind) || hasCatalogOptions;
     const bool simpleValueMode = !structuredOptionsMode && normalizedKind != QStringLiteral("data");
     const bool dataHeaderMode = normalizedKind == QStringLiteral("data");
@@ -293,7 +241,7 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         }
         owner_->setBlockDetailsReadingsTagEditor(QString(), {}, {});
         if (owner_->blockDetailsHelpBrowser_ != nullptr) {
-            const TherionHelpEntry entry = owner_->helpEntries_.value(normalizedKind);
+            const TherionHelpEntry entry = owner_->commandMetadata().helpEntries.value(normalizedKind);
             QString html = TextEditorTab::tr("<p>This block currently uses legacy dialog-based configuration.</p>");
             html += ContextHelpController::renderHelpHtml(normalizedKind,
                                                           entry.summary,
@@ -315,7 +263,7 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         const BlockEditorParsedCommandOptions parsedOptions =
             parseBlockEditorCommandOptions(normalizedKind,
                                            parsedLine.tokens,
-                                           owner_->commandOptionFixedArityByKey_,
+                                           owner_->commandMetadata().commandOptionFixedArityByKey,
                                            true);
 
         if (owner_->blockDetailsPrimaryFieldLabel_ != nullptr) {
@@ -324,7 +272,7 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             } else {
                 const QStringList argumentSignatures = owner_->commandArgumentSignaturesFor(normalizedKind);
                 if (!argumentSignatures.isEmpty()) {
-                    owner_->blockDetailsPrimaryFieldLabel_->setText(argumentLabelFromSignature(argumentSignatures.first()));
+                    owner_->blockDetailsPrimaryFieldLabel_->setText(blockArgumentLabelFromSignature(argumentSignatures.first()));
                 } else {
                     owner_->blockDetailsPrimaryFieldLabel_->setText(TextEditorTab::tr("Value"));
                 }
@@ -386,10 +334,10 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             owner_->blockDetailsRemoveOptionButton_->setEnabled(showOptionsSection && !parsedOptions.optionEntries.isEmpty());
         }
     } else if (simpleValueMode) {
-        const TherionHelpEntry helpEntry = owner_->helpEntries_.value(normalizedKind);
+        const TherionHelpEntry helpEntry = owner_->commandMetadata().helpEntries.value(normalizedKind);
         QStringList argumentSignatures;
         for (const QString &argumentLine : helpEntry.arguments) {
-            const QString signature = argumentSignatureFromHelpLine(argumentLine);
+            const QString signature = blockArgumentSignatureFromHelpLine(argumentLine);
             if (!signature.isEmpty()) {
                 argumentSignatures.append(signature);
             }
@@ -407,10 +355,10 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         }
 
         if (owner_->blockDetailsPrimaryFieldLabel_ != nullptr) {
-            if (owner_->commandPrimaryValueIsPerson_.value(normalizedKind, false)) {
+            if (owner_->commandMetadata().commandPrimaryValueIsPerson.value(normalizedKind, false)) {
                 owner_->blockDetailsPrimaryFieldLabel_->setText(TextEditorTab::tr("Person"));
             } else if (!argumentSignatures.isEmpty()) {
-                owner_->blockDetailsPrimaryFieldLabel_->setText(argumentLabelFromSignature(argumentSignatures.first()));
+                owner_->blockDetailsPrimaryFieldLabel_->setText(blockArgumentLabelFromSignature(argumentSignatures.first()));
             } else {
                 owner_->blockDetailsPrimaryFieldLabel_->setText(TextEditorTab::tr("Value"));
             }
@@ -418,7 +366,7 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         if (owner_->blockDetailsSecondaryFieldLabel_ != nullptr) {
             if (hasSecondaryArgument) {
                 if (argumentSignatures.size() > 1) {
-                    owner_->blockDetailsSecondaryFieldLabel_->setText(argumentLabelFromSignature(argumentSignatures.at(1)));
+                    owner_->blockDetailsSecondaryFieldLabel_->setText(blockArgumentLabelFromSignature(argumentSignatures.at(1)));
                 } else {
                     owner_->blockDetailsSecondaryFieldLabel_->setText(TextEditorTab::tr("Value 2"));
                 }
@@ -464,9 +412,9 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             owner_->blockDetailsRemoveOptionButton_->setVisible(false);
         }
     } else if (dataHeaderMode) {
-        const DataHeaderComponents components = parseDataHeaderComponents(parsedLine.tokens);
-        const QStringList styleSuggestions = owner_->commandArgumentValueTokens_.value(commandArgumentValueKey(QStringLiteral("data"), 0));
-        const QStringList readingSuggestions = owner_->commandArgumentValueTokens_.value(commandArgumentValueKey(QStringLiteral("data"), 1));
+        const BlockEditorDataHeaderComponents components = parseBlockEditorDataHeaderComponents(parsedLine.tokens);
+        const QStringList styleSuggestions = owner_->commandMetadata().commandArgumentValueTokens.value(commandArgumentValueKey(QStringLiteral("data"), 0));
+        const QStringList readingSuggestions = owner_->commandMetadata().commandArgumentValueTokens.value(commandArgumentValueKey(QStringLiteral("data"), 1));
         if (owner_->blockDetailsPrimaryFieldLabel_ != nullptr) {
             owner_->blockDetailsPrimaryFieldLabel_->setText(TextEditorTab::tr("Style"));
         }

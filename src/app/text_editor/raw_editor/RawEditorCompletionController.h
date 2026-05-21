@@ -9,7 +9,7 @@ class QJsonObject;
 namespace TherionStudio
 {
 class TextEditorTab;
-struct TherionHelpEntry;
+struct TextEditorCommandMetadata;
 
 class RawEditorCompletionController final
 {
@@ -38,30 +38,7 @@ public:
     QString resolveScopeForCommandAtLine(const QString &commandToken,
                                          const QStringList &lines,
                                          int lineNumber) const;
-    void applyCommandArgumentMetadata(const QString &commandName,
-                                      const QJsonObject &commandObject,
-                                      TherionHelpEntry *entry,
-                                      int *requiredPositionalCount,
-                                      bool *primaryValueIsPerson,
-                                      QStringList *commandArgumentSignatures) const;
-    void applyCommandContextMetadata(const QString &commandName,
-                                     const QJsonObject &commandObject,
-                                     QStringList *normalizedCommandContexts) const;
-    void applyCommandOptionCatalogMetadata(const QString &commandName,
-                                           const QJsonObject &commandObject,
-                                           TherionHelpEntry *entry) const;
-    void applyCommandRegistrationMetadata(const QString &commandName,
-                                          const TherionHelpEntry &entry,
-                                          int requiredPositionalCount,
-                                          bool primaryValueIsPerson,
-                                          const QStringList &commandArgumentSignatures) const;
-    void applyCommandAliasMetadata(const QString &commandName,
-                                   const QJsonObject &commandObject,
-                                   const TherionHelpEntry &entry,
-                                   const QStringList &normalizedCommandContexts) const;
     void applyCatalogCommandsMetadata(const QJsonObject &catalogObject) const;
-    void mergeHelpEntry(const QString &token, const TherionHelpEntry &entry) const;
-    void registerCompletionToken(const QString &token) const;
     void rebuildCompletionModel() const;
     QStringList projectInputFileCompletionCandidates() const;
     QStringList buildCompletionSuggestionsForCursor(const QString &prefix) const;
@@ -69,6 +46,9 @@ public:
     void insertCompletionToken(const QString &completion);
 
 private:
+    const TextEditorCommandMetadata &commandMetadata() const;
+    TextEditorCommandMetadata &mutableCommandMetadata() const;
+
     TextEditorTab *owner_ = nullptr;
 };
 }

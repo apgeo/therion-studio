@@ -1,5 +1,7 @@
 #pragma once
 
+#include "TextEditorCommandMetadata.h"
+
 #include <QString>
 #include <QStringList>
 #include <QWidget>
@@ -37,10 +39,13 @@ class TherionSyntaxHighlighter;
 class TextEditorAppearanceController;
 class TextEditorContextHelpController;
 class TextEditorCursorController;
+class TextEditorEncodingController;
 class TextEditorModeController;
 class TextEditorSourceRewriteController;
 class TextEditorStatusController;
 class RawEditorFindController;
+class RawEditorCommandMetadataLoader;
+class RawEditorCompletionContextAnalyzer;
 class RawEditorCompletionController;
 class BlockEditorOptionArgsController;
 class BlockEditorDetailsHelpController;
@@ -68,16 +73,6 @@ class BlockEditorCommandOptionsDialog;
 class BlockEditorSingleValueCommandDialog;
 class BlockEditorSourceController;
 struct TherionParsedLine;
-
-struct TherionHelpEntry
-{
-    QString summary;
-    QString syntax;
-    QStringList arguments;
-    QStringList acceptedValues;
-    QStringList options;
-    QStringList relatedKeywords;
-};
 
 class TextEditorTab final : public QWidget
 {
@@ -202,11 +197,14 @@ private slots:
 private:
     friend class TextEditorContextHelpController;
     friend class TextEditorCursorController;
+    friend class TextEditorEncodingController;
     friend class TextEditorAppearanceController;
     friend class TextEditorModeController;
     friend class TextEditorSourceRewriteController;
     friend class TextEditorStatusController;
     friend class RawEditorFindController;
+    friend class RawEditorCommandMetadataLoader;
+    friend class RawEditorCompletionContextAnalyzer;
     friend class RawEditorCompletionController;
     friend class BlockEditorOptionArgsController;
     friend class BlockEditorDetailsHelpController;
@@ -249,8 +247,12 @@ private:
     void refreshStatus();
     bool isCurrentStateDirty() const;
     void applyDirtyStateFromCurrentState();
+    const TextEditorCommandMetadata &commandMetadata() const { return commandMetadata_; }
+    TextEditorCommandMetadata &mutableCommandMetadata() { return commandMetadata_; }
     QString displayPath() const;
     void buildHelpPanel();
+    void buildRawEditorPanel();
+    void buildBlockEditorPanel();
     void loadHelpMetadata();
     void loadHelpMetadataFromCommandCatalog();
     void updateContextHelp();
@@ -384,24 +386,7 @@ private:
     int currentLineNumber_ = 0;
     int currentColumnNumber_ = 1;
     int highlightedLineNumber_ = 0;
-    QHash<QString, TherionHelpEntry> helpEntries_;
-    QStringList completionTokens_;
-    QStringList commandCompletionTokens_;
-    QHash<QString, QStringList> commandOptionTokens_;
-    QHash<QString, QStringList> commandValueTokens_;
-    QHash<QString, QStringList> commandArgumentValueTokens_;
-    QHash<QString, QStringList> commandOptionValueTokens_;
-    QHash<QString, QString> commandOptionValueArityTokens_;
-    QHash<QString, QStringList> commandOptionArgumentLabelsByKey_;
-    QHash<QString, int> commandOptionFixedArityByKey_;
-    QHash<QString, QString> commandOptionHelpHtmlByKey_;
-    QHash<QString, QStringList> commandTypeValueTokens_;
-    QHash<QString, QHash<QString, QStringList>> commandSubtypeByTypeTokens_;
-    QHash<QString, int> commandRequiredPositionalCount_;
-    QHash<QString, QStringList> commandArgumentSignaturesByToken_;
-    QHash<QString, bool> commandPrimaryValueIsPerson_;
-    QHash<QString, QStringList> contextCommandTokens_;
-    QHash<QString, QStringList> blockCommandContextsByKind_;
+    TextEditorCommandMetadata commandMetadata_;
     QCompleter *completionCompleter_ = nullptr;
     QStringListModel *completionModel_ = nullptr;
     QString lastValidationTooltipKey_;
@@ -430,6 +415,7 @@ private:
     std::unique_ptr<TextEditorAppearanceController> appearanceController_;
     std::unique_ptr<TextEditorContextHelpController> contextHelpController_;
     std::unique_ptr<TextEditorCursorController> cursorController_;
+    std::unique_ptr<TextEditorEncodingController> encodingController_;
     std::unique_ptr<TextEditorModeController> editorModeController_;
     std::unique_ptr<TextEditorSourceRewriteController> sourceRewriteController_;
     std::unique_ptr<TextEditorStatusController> statusController_;

@@ -56,7 +56,7 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     const BlockEditorParsedCommandOptions parsedOptions =
         parseBlockEditorCommandOptions(commandName,
                                        commandParsedLine.tokens,
-                                       owner_->commandOptionFixedArityByKey_,
+                                       owner_->commandMetadata().commandOptionFixedArityByKey,
                                        hasIdField);
     const QString currentAdditionalPositionalTokens = parsedOptions.extraPositionalTokens.join(QLatin1Char(' '));
 
@@ -129,7 +129,7 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     helpBrowser->setMinimumHeight(160);
     layout->addWidget(helpBrowser, 1);
 
-    const TherionHelpEntry commandHelpEntry = owner_->helpEntries_.value(commandName);
+    const TherionHelpEntry commandHelpEntry = owner_->commandMetadata().helpEntries.value(commandName);
     const QString commandHelpHtml = ContextHelpController::renderHelpHtml(commandName,
                                                                            commandHelpEntry.summary,
                                                                            commandHelpEntry.syntax,
@@ -186,7 +186,7 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
         const QString optionToken = row >= 0 && optionsTable->item(row, 0) != nullptr
             ? optionsTable->item(row, 0)->text().trimmed().toLower()
             : QString();
-        const QString optionHelp = owner_->commandOptionHelpHtmlByKey_.value(commandOptionHelpKey(commandName, optionToken));
+        const QString optionHelp = owner_->commandMetadata().commandOptionHelpHtmlByKey.value(commandOptionHelpKey(commandName, optionToken));
         if (!optionHelp.trimmed().isEmpty()) {
             helpBrowser->setHtml(optionHelp);
             return;
@@ -244,8 +244,8 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
         }
         const int row = optionsTable->rowCount();
         optionsTable->insertRow(row);
-        const QString defaultOption = !owner_->commandOptionTokens_.value(commandName).isEmpty()
-            ? owner_->commandOptionTokens_.value(commandName).first()
+        const QString defaultOption = !owner_->commandMetadata().commandOptionTokens.value(commandName).isEmpty()
+            ? owner_->commandMetadata().commandOptionTokens.value(commandName).first()
             : QStringLiteral("-option");
         optionsTable->setItem(row, 0, new QTableWidgetItem(defaultOption));
         optionsTable->setItem(row, 1, new QTableWidgetItem(QString()));
@@ -297,10 +297,10 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     const TextEditorOptionValidationResult validation = validateAndSerializeCommandOptions(
         commandName,
         optionRows,
-        owner_->commandOptionValueArityTokens_,
-        owner_->commandOptionFixedArityByKey_,
-        owner_->commandOptionArgumentLabelsByKey_,
-        owner_->commandOptionValueTokens_,
+        owner_->commandMetadata().commandOptionValueArityTokens,
+        owner_->commandMetadata().commandOptionFixedArityByKey,
+        owner_->commandMetadata().commandOptionArgumentLabelsByKey,
+        owner_->commandMetadata().commandOptionValueTokens,
         false);
     if (!validation.ok) {
         if (validation.failingRow >= 0 && validation.failingRow < optionsTable->rowCount()) {

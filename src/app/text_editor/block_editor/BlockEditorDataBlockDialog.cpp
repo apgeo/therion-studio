@@ -340,16 +340,16 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
     const QString dataIndent = dataIndentMatch.hasMatch() ? dataIndentMatch.captured(0) : QString();
     const QString rowIndent = dataIndent + QStringLiteral("  ");
 
-    const QStringList dataStyleValues = owner_->commandArgumentValueTokens_.value(commandArgumentValueKey(QStringLiteral("data"), 0));
+    const QStringList dataStyleValues = owner_->commandMetadata().commandArgumentValueTokens.value(commandArgumentValueKey(QStringLiteral("data"), 0));
     const QStringList currentFieldNames = parseDataFields(currentColumns, dataStyleValues);
     const int currentFieldCount = currentFieldNames.size();
 
-    QStringList directiveSuggestions = owner_->contextCommandTokens_.value(dataScope);
+    QStringList directiveSuggestions = owner_->commandMetadata().contextCommandTokens.value(dataScope);
     directiveSuggestions.removeAll(QStringLiteral("data"));
     if (!dataScopeClosing.isEmpty()) {
         directiveSuggestions.removeAll(dataScopeClosing);
     }
-    const QStringList extendValues = owner_->commandArgumentValueTokens_.value(commandArgumentValueKey(QStringLiteral("extend"), 0));
+    const QStringList extendValues = owner_->commandMetadata().commandArgumentValueTokens.value(commandArgumentValueKey(QStringLiteral("extend"), 0));
     if (extendValues.isEmpty()) {
         appendUnique(directiveSuggestions, QStringLiteral("extend right"));
         appendUnique(directiveSuggestions, QStringLiteral("extend left"));

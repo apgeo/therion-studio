@@ -87,7 +87,7 @@ void BlockEditorToolboxController::populateBlockToolbox()
     if (effectiveScope == QStringLiteral("all")) {
         appendUnique(contextsToShow, QStringLiteral("none"));
         QStringList remainingContexts;
-        for (auto it = owner_->contextCommandTokens_.cbegin(); it != owner_->contextCommandTokens_.cend(); ++it) {
+        for (auto it = owner_->commandMetadata().contextCommandTokens.cbegin(); it != owner_->commandMetadata().contextCommandTokens.cend(); ++it) {
             const QString normalizedContext = owner_->normalizeCompletionContext(it.key());
             if (normalizedContext.isEmpty()
                 || normalizedContext == QStringLiteral("all")
@@ -107,22 +107,22 @@ void BlockEditorToolboxController::populateBlockToolbox()
     contextsToShow.erase(std::remove_if(contextsToShow.begin(),
                                         contextsToShow.end(),
                                         [this](const QString &contextToken) {
-                                            QStringList candidates = owner_->contextCommandTokens_.value(contextToken);
+                                            QStringList candidates = owner_->commandMetadata().contextCommandTokens.value(contextToken);
                                             if (contextToken == QStringLiteral("none")) {
-                                                appendUniqueList(candidates, owner_->contextCommandTokens_.value(QStringLiteral("none")));
+                                                appendUniqueList(candidates, owner_->commandMetadata().contextCommandTokens.value(QStringLiteral("none")));
                                             }
-                                            appendUniqueList(candidates, owner_->contextCommandTokens_.value(QStringLiteral("all")));
+                                            appendUniqueList(candidates, owner_->commandMetadata().contextCommandTokens.value(QStringLiteral("all")));
                                             return candidates.isEmpty();
                                         }),
                          contextsToShow.end());
 
     int insertedRows = 0;
     for (const QString &contextToken : contextsToShow) {
-        QStringList sectionCommands = owner_->contextCommandTokens_.value(contextToken);
+        QStringList sectionCommands = owner_->commandMetadata().contextCommandTokens.value(contextToken);
         if (contextToken == QStringLiteral("none")) {
-            appendUniqueList(sectionCommands, owner_->contextCommandTokens_.value(QStringLiteral("none")));
+            appendUniqueList(sectionCommands, owner_->commandMetadata().contextCommandTokens.value(QStringLiteral("none")));
         }
-        appendUniqueList(sectionCommands, owner_->contextCommandTokens_.value(QStringLiteral("all")));
+        appendUniqueList(sectionCommands, owner_->commandMetadata().contextCommandTokens.value(QStringLiteral("all")));
         appendUnique(sectionCommands, QStringLiteral("comment"));
 
         QStringList visibleCommands;
@@ -200,7 +200,7 @@ void BlockEditorToolboxController::populateBlockToolboxScopeCombo()
     owner_->blockToolboxScopeCombo_->addItem(TextEditorTab::tr("Top-level"), QStringLiteral("none"));
 
     QStringList dynamicContexts;
-    for (auto contextIterator = owner_->contextCommandTokens_.cbegin(); contextIterator != owner_->contextCommandTokens_.cend(); ++contextIterator) {
+    for (auto contextIterator = owner_->commandMetadata().contextCommandTokens.cbegin(); contextIterator != owner_->commandMetadata().contextCommandTokens.cend(); ++contextIterator) {
         const QString normalizedContext = owner_->normalizeCompletionContext(contextIterator.key());
         if (normalizedContext.isEmpty()
             || normalizedContext == QStringLiteral("all")

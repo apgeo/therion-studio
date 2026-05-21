@@ -41,7 +41,7 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
     const QString normalizedKind = kind.toLower();
 
     if (normalizedKind != QStringLiteral("data")) {
-        if (!owner_->commandOptionTokens_.value(normalizedKind).isEmpty()
+        if (!owner_->commandMetadata().commandOptionTokens.value(normalizedKind).isEmpty()
             || owner_->commandSupportsInlineIdField(normalizedKind)) {
             const BlockEditorCommandIdFieldMode idFieldMode = owner_->commandHasRequiredIdArgument(normalizedKind)
                 ? BlockEditorCommandIdFieldMode::Required
@@ -90,7 +90,7 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
         return;
     }
 
-    const bool hasCatalogOptions = !owner_->commandOptionTokens_.value(normalizedKind).isEmpty();
+    const bool hasCatalogOptions = !owner_->commandMetadata().commandOptionTokens.value(normalizedKind).isEmpty();
     if (!BlockEditorDirectiveRules::isContainerBlockDirective(normalizedKind)
         && normalizedKind != QStringLiteral("data")
         && !hasCatalogOptions) {

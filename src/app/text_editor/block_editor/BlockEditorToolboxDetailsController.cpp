@@ -105,7 +105,7 @@ void BlockEditorToolboxDetailsController::showToolboxCommandDetails(const QStrin
         owner_->blockDetailsApplyButton_->setEnabled(false);
     }
     if (owner_->blockDetailsHelpBrowser_ != nullptr) {
-        const TherionHelpEntry entry = owner_->helpEntries_.value(normalizedCommand);
+        const TherionHelpEntry entry = owner_->commandMetadata().helpEntries.value(normalizedCommand);
         owner_->blockDetailsHelpBrowser_->setHtml(
             ContextHelpController::renderHelpSummaryHtml(
                 normalizedCommand,

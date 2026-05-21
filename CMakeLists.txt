@@ -24,9 +24,11 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/ContextHelpController.cpp
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
+    src/app/text_editor/TextEditorCommandMetadata.h
     src/app/text_editor/TextEditorOptionValidation.h
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
+    src/app/text_editor/block_editor/BlockEditorPanelBuilder.cpp
 src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
@@ -60,6 +62,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.cpp
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.h
+    src/app/text_editor/block_editor/BlockEditorDetailsSupport.cpp
+    src/app/text_editor/block_editor/BlockEditorDetailsSupport.h
     src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
     src/app/text_editor/block_editor/BlockEditorConfigureController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp
@@ -100,6 +104,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
     src/app/text_editor/TextEditorCursorController.cpp
     src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorEncodingController.cpp
+    src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
     src/app/text_editor/TextEditorAppearanceController.h
     src/app/text_editor/TextEditorSourceRewriteController.cpp
@@ -110,10 +116,15 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorModeController.h
     src/app/text_editor/TextEditorSurfaceStyler.cpp
     src/app/text_editor/TextEditorSurfaceStyler.h
+    src/app/text_editor/raw_editor/RawEditorPanelBuilder.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
+    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.cpp
+    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
+    src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.h
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
@@ -314,9 +325,11 @@ qt_add_executable(TextEditorCaretInteractionTest
     src/app/text_editor/ContextHelpController.cpp
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
+    src/app/text_editor/TextEditorCommandMetadata.h
     src/app/text_editor/TextEditorOptionValidation.h
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
+    src/app/text_editor/block_editor/BlockEditorPanelBuilder.cpp
 src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
@@ -350,6 +363,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.cpp
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.h
+    src/app/text_editor/block_editor/BlockEditorDetailsSupport.cpp
+    src/app/text_editor/block_editor/BlockEditorDetailsSupport.h
     src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
     src/app/text_editor/block_editor/BlockEditorConfigureController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp
@@ -390,6 +405,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
     src/app/text_editor/TextEditorCursorController.cpp
     src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorEncodingController.cpp
+    src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
     src/app/text_editor/TextEditorAppearanceController.h
     src/app/text_editor/TextEditorSourceRewriteController.cpp
@@ -400,10 +417,15 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorModeController.h
     src/app/text_editor/TextEditorSurfaceStyler.cpp
     src/app/text_editor/TextEditorSurfaceStyler.h
+    src/app/text_editor/raw_editor/RawEditorPanelBuilder.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
+    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.cpp
+    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
+    src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.h
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/TextEditorTab.cpp
@@ -435,9 +457,11 @@ qt_add_executable(TextEditorCompletionHighlightTest
     src/app/text_editor/ContextHelpController.cpp
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
+    src/app/text_editor/TextEditorCommandMetadata.h
     src/app/text_editor/TextEditorOptionValidation.h
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
+    src/app/text_editor/block_editor/BlockEditorPanelBuilder.cpp
 src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
@@ -471,6 +495,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.cpp
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.h
+    src/app/text_editor/block_editor/BlockEditorDetailsSupport.cpp
+    src/app/text_editor/block_editor/BlockEditorDetailsSupport.h
     src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
     src/app/text_editor/block_editor/BlockEditorConfigureController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp
@@ -511,6 +537,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
     src/app/text_editor/TextEditorCursorController.cpp
     src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorEncodingController.cpp
+    src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
     src/app/text_editor/TextEditorAppearanceController.h
     src/app/text_editor/TextEditorSourceRewriteController.cpp
@@ -521,10 +549,15 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorModeController.h
     src/app/text_editor/TextEditorSurfaceStyler.cpp
     src/app/text_editor/TextEditorSurfaceStyler.h
+    src/app/text_editor/raw_editor/RawEditorPanelBuilder.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
+    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.cpp
+    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
+    src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.h
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/TextEditorTab.cpp
@@ -556,9 +589,11 @@ qt_add_executable(MapEditorDetachedPaneTest
     src/app/text_editor/ContextHelpController.cpp
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
+    src/app/text_editor/TextEditorCommandMetadata.h
     src/app/text_editor/TextEditorOptionValidation.h
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
+    src/app/text_editor/block_editor/BlockEditorPanelBuilder.cpp
 src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
@@ -592,6 +627,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.cpp
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.h
+    src/app/text_editor/block_editor/BlockEditorDetailsSupport.cpp
+    src/app/text_editor/block_editor/BlockEditorDetailsSupport.h
     src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
     src/app/text_editor/block_editor/BlockEditorConfigureController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp
@@ -632,6 +669,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
     src/app/text_editor/TextEditorCursorController.cpp
     src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorEncodingController.cpp
+    src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
     src/app/text_editor/TextEditorAppearanceController.h
     src/app/text_editor/TextEditorSourceRewriteController.cpp
@@ -642,10 +681,15 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorModeController.h
     src/app/text_editor/TextEditorSurfaceStyler.cpp
     src/app/text_editor/TextEditorSurfaceStyler.h
+    src/app/text_editor/raw_editor/RawEditorPanelBuilder.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
+    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.cpp
+    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
+    src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.h
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
@@ -695,9 +739,11 @@ qt_add_executable(MapEditorDragUndoRedoSmokeTest
     src/app/text_editor/ContextHelpController.cpp
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
+    src/app/text_editor/TextEditorCommandMetadata.h
     src/app/text_editor/TextEditorOptionValidation.h
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
+    src/app/text_editor/block_editor/BlockEditorPanelBuilder.cpp
 src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
@@ -731,6 +777,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.cpp
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.h
+    src/app/text_editor/block_editor/BlockEditorDetailsSupport.cpp
+    src/app/text_editor/block_editor/BlockEditorDetailsSupport.h
     src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
     src/app/text_editor/block_editor/BlockEditorConfigureController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp
@@ -771,6 +819,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
     src/app/text_editor/TextEditorCursorController.cpp
     src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorEncodingController.cpp
+    src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
     src/app/text_editor/TextEditorAppearanceController.h
     src/app/text_editor/TextEditorSourceRewriteController.cpp
@@ -781,10 +831,15 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorModeController.h
     src/app/text_editor/TextEditorSurfaceStyler.cpp
     src/app/text_editor/TextEditorSurfaceStyler.h
+    src/app/text_editor/raw_editor/RawEditorPanelBuilder.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
+    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.cpp
+    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
+    src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.h
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp

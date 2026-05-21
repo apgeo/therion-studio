@@ -1,5 +1,7 @@
 #include "RawEditorCompletionController.h"
 
+#include "RawEditorCompletionContextAnalyzer.h"
+#include "RawEditorCommandMetadataLoader.h"
 #include "../TextEditorTab.h"
 
 #include <QAbstractItemView>
@@ -7,13 +9,10 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QFileInfo>
-#include <QJsonArray>
 #include <QJsonObject>
-#include <QJsonValue>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPlainTextEdit>
-#include <QRegularExpression>
 #include <QScrollBar>
 #include <QSet>
 #include <QStringListModel>
@@ -79,28 +78,6 @@ bool isRequiredArgumentSignature(const QString &signature)
     return trimmed.contains(QLatin1Char('<')) && trimmed.contains(QLatin1Char('>'));
 }
 
-QString normalizedCompletionContextToken(const QString &token)
-{
-    QString normalized = token.trimmed().toLower();
-    if (normalized == QStringLiteral("centreline")) {
-        normalized = QStringLiteral("centerline");
-    }
-    if (normalized == QStringLiteral("endcentreline")) {
-        normalized = QStringLiteral("endcenterline");
-    }
-    if (normalized == QStringLiteral("all")) {
-        return QStringLiteral("all");
-    }
-    if (normalized == QStringLiteral("none")) {
-        return QStringLiteral("none");
-    }
-    static const QRegularExpression contextTokenPattern(QStringLiteral("^[a-z][a-z0-9-]*$"));
-    if (contextTokenPattern.match(normalized).hasMatch()) {
-        return normalized;
-    }
-    return QString();
-}
-
 QString normalizeInputSuggestionPath(QString path)
 {
     path = QDir::fromNativeSeparators(path).trimmed();
@@ -114,31 +91,6 @@ QString normalizeInputSuggestionPath(QString path)
     return path;
 }
 
-QStringList optionArgumentLabelsFromSignature(const QString &signature)
-{
-    QStringList labels;
-    static const QRegularExpression placeholderPattern(QStringLiteral(R"(<([^>]+)>)"));
-    QRegularExpressionMatchIterator iterator = placeholderPattern.globalMatch(signature);
-    while (iterator.hasNext()) {
-        const QRegularExpressionMatch match = iterator.next();
-        const QString placeholder = match.captured(1).trimmed();
-        if (placeholder.isEmpty()) {
-            continue;
-        }
-        QString label = placeholder.toLower();
-        QStringList words = label.split(QLatin1Char(' '), Qt::SkipEmptyParts);
-        for (QString &word : words) {
-            if (!word.isEmpty()) {
-                word[0] = word.at(0).toUpper();
-            }
-        }
-        label = words.join(QLatin1Char(' '));
-        if (!label.isEmpty()) {
-            labels.append(label);
-        }
-    }
-    return labels;
-}
 }
 
 namespace TherionStudio
@@ -148,8 +100,18 @@ RawEditorCompletionController::RawEditorCompletionController(TextEditorTab *owne
 {
 }
 
+const TextEditorCommandMetadata &RawEditorCompletionController::commandMetadata() const
+{
+    return owner_->commandMetadata();
+}
+
+TextEditorCommandMetadata &RawEditorCompletionController::mutableCommandMetadata() const
+{
+    return owner_->mutableCommandMetadata();
+}
+
 RawEditorCompletionController::EventHandling RawEditorCompletionController::handleEventFilter(QObject *watched,
-                                                                                               QEvent *event)
+                                                                                             QEvent *event)
 {
     if (owner_ == nullptr || event == nullptr || owner_->completionCompleter_ == nullptr || owner_->editor_ == nullptr) {
         return EventHandling::NotHandled;
@@ -324,182 +286,38 @@ RawEditorCompletionController::EventHandling RawEditorCompletionController::hand
 
 QString RawEditorCompletionController::currentCompletionPrefix() const
 {
-    if (owner_ == nullptr || owner_->editor_ == nullptr) {
-        return QString();
-    }
-
-    const QTextCursor cursor = owner_->editor_->textCursor();
-    const QTextBlock block = cursor.block();
-    if (!block.isValid()) {
-        return QString();
-    }
-
-    const QString blockText = block.text();
-    int start = cursor.positionInBlock();
-    int end = cursor.positionInBlock();
-
-    auto isCompletionCharacter = [](QChar ch) {
-        return ch.isLetterOrNumber() || ch == QLatin1Char('-') || ch == QLatin1Char('_');
-    };
-
-    while (start > 0 && isCompletionCharacter(blockText.at(start - 1))) {
-        --start;
-    }
-    while (end < blockText.length() && isCompletionCharacter(blockText.at(end))) {
-        ++end;
-    }
-
-    return blockText.mid(start, end - start).trimmed();
+    return RawEditorCompletionContextAnalyzer(owner_).currentCompletionPrefix();
 }
 
 QStringList RawEditorCompletionController::activeCompletionScopeStack() const
 {
-    QStringList scopeStack;
-    if (owner_ == nullptr || owner_->editor_ == nullptr) {
-        return scopeStack;
-    }
-
-    const QTextCursor cursor = owner_->editor_->textCursor();
-    const int currentBlockNumber = cursor.block().blockNumber();
-    if (currentBlockNumber <= 0) {
-        return scopeStack;
-    }
-
-    const QStringList lines = owner_->editor_->toPlainText().split(QLatin1Char('\n'));
-    const int lastLine = qMin(currentBlockNumber, lines.size());
-    for (int lineIndex = 0; lineIndex < lastLine; ++lineIndex) {
-        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineIndex), lineIndex + 1);
-        if (parsedLine.directive.isEmpty()) {
-            continue;
-        }
-
-        const QString directive = owner_->normalizedDirectiveToken(parsedLine.directive);
-        const QString openingFromClosing = owner_->openingDirectiveForClosingToken(directive);
-        if (!openingFromClosing.isEmpty()) {
-            for (int stackIndex = scopeStack.size() - 1; stackIndex >= 0; --stackIndex) {
-                if (scopeStack.at(stackIndex) == openingFromClosing) {
-                    scopeStack.removeAt(stackIndex);
-                    break;
-                }
-            }
-            continue;
-        }
-
-        if (owner_->isContainerDirectiveInstanceForParsedLine(directive, parsedLine)) {
-            scopeStack.append(directive);
-        }
-    }
-
-    return scopeStack;
+    return RawEditorCompletionContextAnalyzer(owner_).activeCompletionScopeStack();
 }
 
 QString RawEditorCompletionController::currentCompletionCommand() const
 {
-    if (owner_ == nullptr || owner_->editor_ == nullptr) {
-        return QString();
-    }
-
-    const QTextCursor cursor = owner_->editor_->textCursor();
-    const QTextBlock block = cursor.block();
-    if (!block.isValid()) {
-        return QString();
-    }
-
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(block.text(), block.blockNumber() + 1);
-    if (parsedLine.tokens.isEmpty()) {
-        return QString();
-    }
-
-    const QString directive = owner_->normalizedDirectiveToken(parsedLine.directive.toLower());
-    if (owner_->commandCompletionTokens_.contains(directive, Qt::CaseInsensitive)
-        || owner_->commandOptionTokens_.contains(directive)
-        || owner_->commandValueTokens_.contains(directive)) {
-        return directive;
-    }
-
-    const QStringList scopeStack = activeCompletionScopeStack();
-    for (int index = scopeStack.size() - 1; index >= 0; --index) {
-        const QString scopeDirective = scopeStack.at(index);
-        if (owner_->commandCompletionTokens_.contains(scopeDirective, Qt::CaseInsensitive)) {
-            return scopeDirective;
-        }
-    }
-    return QString();
+    return RawEditorCompletionContextAnalyzer(owner_).currentCompletionCommand();
 }
 
 QString RawEditorCompletionController::currentCompletionScopeLabel() const
 {
-    const QStringList scopeStack = activeCompletionScopeStack();
-    if (scopeStack.isEmpty()) {
-        return owner_ != nullptr ? owner_->tr("top-level") : QStringLiteral("top-level");
-    }
-
-    return scopeStack.constLast();
+    return RawEditorCompletionContextAnalyzer(owner_).currentCompletionScopeLabel();
 }
 
 QString RawEditorCompletionController::normalizeCompletionContext(const QString &contextToken) const
 {
-    return normalizedCompletionContextToken(contextToken);
+    return RawEditorCompletionContextAnalyzer(owner_).normalizeCompletionContext(contextToken);
 }
 
 bool RawEditorCompletionController::isCompatibleChildKindForBlocks(const QString &parentKind,
                                                                    const QString &childKind) const
 {
-    if (owner_ == nullptr) {
-        return false;
-    }
-
-    const QString normalizedParent = owner_->normalizedDirectiveToken(parentKind.trimmed().toLower());
-    const QString normalizedChild = owner_->normalizedDirectiveToken(childKind.trimmed().toLower());
-    if (normalizedChild.isEmpty()) {
-        return false;
-    }
-    if (normalizedChild == QStringLiteral("encoding") || normalizedParent == QStringLiteral("encoding")) {
-        return false;
-    }
-    if (normalizedChild == QStringLiteral("comment")) {
-        return true;
-    }
-
-    const QString parentContext = normalizedParent.isEmpty()
-        ? QStringLiteral("none")
-        : normalizeCompletionContext(normalizedParent);
-    const QStringList childContexts = owner_->blockCommandContextsByKind_.value(normalizedChild);
-    if (!childContexts.isEmpty()) {
-        if (childContexts.contains(QStringLiteral("all"), Qt::CaseInsensitive)) {
-            return true;
-        }
-        if (!parentContext.isEmpty() && childContexts.contains(parentContext, Qt::CaseInsensitive)) {
-            return true;
-        }
-        return false;
-    }
-
-    return normalizedParent.isEmpty();
+    return RawEditorCompletionContextAnalyzer(owner_).isCompatibleChildKindForBlocks(parentKind, childKind);
 }
 
 bool RawEditorCompletionController::isCommandDirectiveInScope(const QString &directive, const QString &scopeToken) const
 {
-    if (owner_ == nullptr) {
-        return false;
-    }
-
-    const QString normalizedDirective = owner_->normalizedDirectiveToken(directive.trimmed());
-    if (normalizedDirective.isEmpty()) {
-        return false;
-    }
-
-    QString normalizedScope = normalizeCompletionContext(scopeToken);
-    if (normalizedScope.isEmpty()) {
-        normalizedScope = QStringLiteral("none");
-    }
-
-    QStringList candidates = owner_->contextCommandTokens_.value(normalizedScope);
-    appendUniqueList(candidates, owner_->contextCommandTokens_.value(QStringLiteral("all")));
-    if (normalizedScope == QStringLiteral("none")) {
-        appendUniqueList(candidates, owner_->contextCommandTokens_.value(QStringLiteral("none")));
-    }
-    return candidates.contains(normalizedDirective, Qt::CaseInsensitive);
+    return RawEditorCompletionContextAnalyzer(owner_).isCommandDirectiveInScope(directive, scopeToken);
 }
 
 QStringList RawEditorCompletionController::commandArgumentSignaturesFor(const QString &commandToken) const
@@ -507,7 +325,7 @@ QStringList RawEditorCompletionController::commandArgumentSignaturesFor(const QS
     if (owner_ == nullptr) {
         return {};
     }
-    return owner_->commandArgumentSignaturesByToken_.value(owner_->normalizedDirectiveToken(commandToken.trimmed()));
+    return mutableCommandMetadata().commandArgumentSignaturesByToken.value(owner_->normalizedDirectiveToken(commandToken.trimmed()));
 }
 
 bool RawEditorCompletionController::commandHasRequiredIdArgument(const QString &commandToken) const
@@ -533,494 +351,29 @@ bool RawEditorCompletionController::commandSupportsInlineIdField(const QString &
     if (commandHasRequiredIdArgument(normalizedCommand)) {
         return true;
     }
-    return owner_->commandOptionTokens_.value(normalizedCommand).contains(QStringLiteral("-id"), Qt::CaseInsensitive);
-}
-
-void RawEditorCompletionController::applyCommandArgumentMetadata(const QString &commandName,
-                                                                 const QJsonObject &commandObject,
-                                                                 TherionHelpEntry *entry,
-                                                                 int *requiredPositionalCount,
-                                                                 bool *primaryValueIsPerson,
-                                                                 QStringList *commandArgumentSignatures) const
-{
-    if (owner_ == nullptr || entry == nullptr || requiredPositionalCount == nullptr || primaryValueIsPerson == nullptr
-        || commandArgumentSignatures == nullptr) {
-        return;
-    }
-
-    const QJsonArray argumentsArray = commandObject.value(QStringLiteral("arguments")).toArray();
-    for (int argumentIndex = 0; argumentIndex < argumentsArray.size(); ++argumentIndex) {
-        const QJsonValue value = argumentsArray.at(argumentIndex);
-        const QJsonObject argumentObject = value.toObject();
-        const QString signature = argumentObject.value(QStringLiteral("signature")).toString().trimmed();
-        if (!signature.isEmpty()) {
-            commandArgumentSignatures->append(signature);
-        }
-        const QString description = argumentObject.value(QStringLiteral("description")).toString().trimmed();
-        const QString argumentLine = description.isEmpty() ? signature : QStringLiteral("%1 = %2").arg(signature, description);
-        appendUnique(entry->arguments, argumentLine);
-        if (isRequiredArgumentSignature(signature)) {
-            ++(*requiredPositionalCount);
-        }
-        if (!(*primaryValueIsPerson)) {
-            const QString normalizedSignature = signature.trimmed().toLower();
-            if (normalizedSignature.contains(QStringLiteral("<person>"))) {
-                *primaryValueIsPerson = true;
-            }
-        }
-
-        QStringList argumentAllowedValues;
-        const QJsonArray argumentAllowedValuesArray = argumentObject.value(QStringLiteral("allowed_values")).toArray();
-        for (const QJsonValue &argumentAllowedValue : argumentAllowedValuesArray) {
-            appendUnique(argumentAllowedValues, argumentAllowedValue.toString().trimmed().toLower());
-        }
-        if (!argumentAllowedValues.isEmpty()) {
-            appendUniqueList(owner_->commandArgumentValueTokens_[commandArgumentValueKey(commandName, argumentIndex)],
-                             argumentAllowedValues);
-        }
-    }
-}
-
-void RawEditorCompletionController::applyCommandContextMetadata(const QString &commandName,
-                                                                const QJsonObject &commandObject,
-                                                                QStringList *normalizedCommandContexts) const
-{
-    if (owner_ == nullptr || normalizedCommandContexts == nullptr) {
-        return;
-    }
-
-    normalizedCommandContexts->clear();
-    const QJsonArray contextsArray = commandObject.value(QStringLiteral("contexts")).toArray();
-    for (const QJsonValue &contextValue : contextsArray) {
-        const QString contextToken = normalizeCompletionContext(contextValue.toString());
-        if (contextToken.isEmpty()) {
-            continue;
-        }
-        appendUnique(*normalizedCommandContexts, contextToken);
-        appendUnique(owner_->contextCommandTokens_[contextToken], commandName);
-    }
-    appendUniqueList(owner_->blockCommandContextsByKind_[owner_->normalizedDirectiveToken(commandName)],
-                     *normalizedCommandContexts);
-
-    QStringList inlineCommands;
-    const QJsonArray inlineCommandArray = commandObject.value(QStringLiteral("inline_commands")).toArray();
-    for (const QJsonValue &inlineCommandValue : inlineCommandArray) {
-        appendUnique(inlineCommands, inlineCommandValue.toString());
-    }
-    if (inlineCommands.isEmpty()) {
-        return;
-    }
-
-    QStringList targetContexts = *normalizedCommandContexts;
-    if (targetContexts.isEmpty()) {
-        appendUnique(targetContexts, QStringLiteral("all"));
-    }
-    for (const QString &inlineCommand : inlineCommands) {
-        const QString normalizedInlineCommand = owner_->normalizedDirectiveToken(inlineCommand);
-        if (normalizedInlineCommand.isEmpty()) {
-            continue;
-        }
-        for (const QString &contextToken : targetContexts) {
-            appendUnique(owner_->contextCommandTokens_[contextToken], normalizedInlineCommand);
-        }
-        registerCompletionToken(inlineCommand);
-    }
-}
-
-void RawEditorCompletionController::applyCommandOptionCatalogMetadata(const QString &commandName,
-                                                                      const QJsonObject &commandObject,
-                                                                      TherionHelpEntry *entry) const
-{
-    if (owner_ == nullptr || entry == nullptr) {
-        return;
-    }
-
-    const QJsonArray optionsArray = commandObject.value(QStringLiteral("options")).toArray();
-    for (const QJsonValue &value : optionsArray) {
-        const QJsonObject optionObject = value.toObject();
-        const QString signature = optionObject.value(QStringLiteral("signature")).toString().trimmed();
-        const QString description = optionObject.value(QStringLiteral("description")).toString().trimmed();
-        const QString optionKey = optionObject.value(QStringLiteral("option_key")).toString().trimmed();
-        const QString valueArity = canonicalOptionArityToken(
-            optionObject.value(QStringLiteral("value_arity")).toString());
-        const QString optionLine = description.isEmpty() ? signature : QStringLiteral("%1 = %2").arg(signature, description);
-        appendUnique(entry->options, optionLine);
-        const QStringList normalizedOptionKeys = extractOptionKeys(optionKey);
-        const QStringList optionArgumentLabels = optionArgumentLabelsFromSignature(signature);
-        const bool signatureHasEllipsis = signature.contains(QStringLiteral("..."));
-        int fixedArity = -1;
-        if (valueArity == QStringLiteral("NONE")) {
-            fixedArity = 0;
-        } else if (valueArity == QStringLiteral("EXACTLY_ONE")) {
-            fixedArity = 1;
-        } else if (valueArity == QStringLiteral("ONE_OR_MORE")
-                   && !signatureHasEllipsis
-                   && optionArgumentLabels.size() >= 2) {
-            fixedArity = optionArgumentLabels.size();
-        }
-        QStringList normalizedOptionValues;
-        for (const QString &normalizedOptionKey : normalizedOptionKeys) {
-            appendUnique(entry->relatedKeywords, normalizedOptionKey);
-            appendUnique(owner_->commandOptionTokens_[commandName], normalizedOptionKey);
-            if (!valueArity.isEmpty()) {
-                owner_->commandOptionValueArityTokens_.insert(commandOptionValueKey(commandName, normalizedOptionKey), valueArity);
-            }
-            if (!optionArgumentLabels.isEmpty()) {
-                owner_->commandOptionArgumentLabelsByKey_.insert(commandOptionValueKey(commandName, normalizedOptionKey),
-                                                                 optionArgumentLabels);
-            }
-            if (fixedArity >= 0) {
-                owner_->commandOptionFixedArityByKey_.insert(commandOptionValueKey(commandName, normalizedOptionKey),
-                                                             fixedArity);
-            }
-            registerCompletionToken(normalizedOptionKey);
-        }
-        const QJsonArray optionValues = optionObject.value(QStringLiteral("allowed_values")).toArray();
-        for (const QJsonValue &optionValue : optionValues) {
-            const QString normalizedValue = optionValue.toString().trimmed();
-            appendUnique(normalizedOptionValues, normalizedValue);
-        }
-        QString optionHelpHtml;
-        {
-            QStringList html;
-            html << QStringLiteral("<p><b>Option:</b> %1</p>").arg(signature.toHtmlEscaped());
-            if (!description.isEmpty()) {
-                html << QStringLiteral("<p><b>Description:</b> %1</p>").arg(description.toHtmlEscaped());
-            }
-            if (!valueArity.isEmpty()) {
-                html << QStringLiteral("<p><b>Value Arity:</b> %1</p>").arg(valueArity.toHtmlEscaped());
-            }
-            if (!normalizedOptionValues.isEmpty()) {
-                html << QStringLiteral("<p><b>Accepted Values:</b> %1</p>")
-                            .arg(normalizedOptionValues.join(QStringLiteral(", ")).toHtmlEscaped());
-            }
-            optionHelpHtml = html.join(QString());
-        }
-        if (!normalizedOptionValues.isEmpty()) {
-            for (const QString &normalizedOptionKey : normalizedOptionKeys) {
-                appendUniqueList(owner_->commandOptionValueTokens_[commandOptionValueKey(commandName, normalizedOptionKey)],
-                                 normalizedOptionValues);
-            }
-        }
-        if (!optionHelpHtml.isEmpty()) {
-            for (const QString &normalizedOptionKey : normalizedOptionKeys) {
-                owner_->commandOptionHelpHtmlByKey_.insert(commandOptionHelpKey(commandName, normalizedOptionKey), optionHelpHtml);
-            }
-        }
-    }
-
-    const QJsonArray allowedValuesArray = commandObject.value(QStringLiteral("allowed_values")).toArray();
-    for (const QJsonValue &value : allowedValuesArray) {
-        appendUnique(entry->acceptedValues, value.toString());
-    }
-
-    const QJsonArray typeValuesArray = commandObject.value(QStringLiteral("type_values")).toArray();
-    for (const QJsonValue &value : typeValuesArray) {
-        appendUnique(owner_->commandTypeValueTokens_[commandName], value.toString().trimmed().toLower());
-    }
-
-    const QJsonObject subtypeByTypeObject = commandObject.value(QStringLiteral("subtype_by_type")).toObject();
-    for (auto subtypeIterator = subtypeByTypeObject.begin(); subtypeIterator != subtypeByTypeObject.end(); ++subtypeIterator) {
-        const QString typeKey = subtypeIterator.key().trimmed().toLower();
-        if (typeKey.isEmpty()) {
-            continue;
-        }
-
-        const QJsonArray subtypeArray = subtypeIterator.value().toArray();
-        for (const QJsonValue &subtypeValue : subtypeArray) {
-            appendUnique(owner_->commandSubtypeByTypeTokens_[commandName][typeKey],
-                         subtypeValue.toString().trimmed().toLower());
-        }
-    }
-}
-
-void RawEditorCompletionController::applyCommandRegistrationMetadata(const QString &commandName,
-                                                                     const TherionHelpEntry &entry,
-                                                                     int requiredPositionalCount,
-                                                                     bool primaryValueIsPerson,
-                                                                     const QStringList &commandArgumentSignatures) const
-{
-    if (owner_ == nullptr) {
-        return;
-    }
-
-    appendUnique(owner_->commandCompletionTokens_, commandName);
-    owner_->commandRequiredPositionalCount_.insert(commandName, requiredPositionalCount);
-    if (!commandArgumentSignatures.isEmpty()) {
-        owner_->commandArgumentSignaturesByToken_.insert(commandName, commandArgumentSignatures);
-    }
-    owner_->commandPrimaryValueIsPerson_.insert(commandName, primaryValueIsPerson);
-    registerCompletionToken(commandName);
-    for (const QString &keyword : entry.relatedKeywords) {
-        registerCompletionToken(keyword);
-    }
-    for (const QString &acceptedValue : entry.acceptedValues) {
-        registerCompletionToken(acceptedValue);
-        appendUnique(owner_->commandValueTokens_[commandName], acceptedValue);
-    }
-
-    mergeHelpEntry(commandName, entry);
-}
-
-void RawEditorCompletionController::applyCommandAliasMetadata(const QString &commandName,
-                                                              const QJsonObject &commandObject,
-                                                              const TherionHelpEntry &entry,
-                                                              const QStringList &normalizedCommandContexts) const
-{
-    if (owner_ == nullptr) {
-        return;
-    }
-
-    const QJsonArray aliasesArray = commandObject.value(QStringLiteral("aliases")).toArray();
-    for (const QJsonValue &aliasValue : aliasesArray) {
-        const QString alias = aliasValue.toString().trimmed().toLower();
-        if (alias.isEmpty()) {
-            continue;
-        }
-        appendUnique(owner_->commandCompletionTokens_, alias);
-        owner_->commandRequiredPositionalCount_.insert(alias, owner_->commandRequiredPositionalCount_.value(commandName));
-        appendUniqueList(owner_->commandArgumentSignaturesByToken_[alias],
-                         owner_->commandArgumentSignaturesByToken_.value(commandName));
-        owner_->commandPrimaryValueIsPerson_.insert(alias, owner_->commandPrimaryValueIsPerson_.value(commandName));
-        registerCompletionToken(alias);
-        TherionHelpEntry aliasEntry = entry;
-        appendUnique(aliasEntry.relatedKeywords, commandName);
-        mergeHelpEntry(alias, aliasEntry);
-        appendUniqueList(owner_->commandOptionTokens_[alias], owner_->commandOptionTokens_.value(commandName));
-        appendUniqueList(owner_->commandValueTokens_[alias], owner_->commandValueTokens_.value(commandName));
-        const QString argumentPrefix = commandName + QStringLiteral("\x1farg\x1f");
-        QStringList commandArgumentKeys;
-        for (auto argumentIterator = owner_->commandArgumentValueTokens_.cbegin();
-             argumentIterator != owner_->commandArgumentValueTokens_.cend();
-             ++argumentIterator) {
-            if (argumentIterator.key().startsWith(argumentPrefix)) {
-                commandArgumentKeys.append(argumentIterator.key());
-            }
-        }
-        for (const QString &key : commandArgumentKeys) {
-            const QString suffix = key.mid(commandName.size());
-            appendUniqueList(owner_->commandArgumentValueTokens_[alias + suffix],
-                             owner_->commandArgumentValueTokens_.value(key));
-        }
-        appendUniqueList(owner_->commandTypeValueTokens_[alias], owner_->commandTypeValueTokens_.value(commandName));
-        for (const QString &optionKey : owner_->commandOptionTokens_.value(commandName)) {
-            appendUniqueList(owner_->commandOptionValueTokens_[commandOptionValueKey(alias, optionKey)],
-                             owner_->commandOptionValueTokens_.value(commandOptionValueKey(commandName, optionKey)));
-            const QString key = commandOptionValueKey(commandName, optionKey);
-            const QString aliasKey = commandOptionValueKey(alias, optionKey);
-            const QString valueArity = owner_->commandOptionValueArityTokens_.value(key);
-            if (!valueArity.isEmpty()) {
-                owner_->commandOptionValueArityTokens_.insert(aliasKey, valueArity);
-            }
-            const QStringList optionArgumentLabels = owner_->commandOptionArgumentLabelsByKey_.value(key);
-            if (!optionArgumentLabels.isEmpty()) {
-                owner_->commandOptionArgumentLabelsByKey_.insert(aliasKey, optionArgumentLabels);
-            }
-            const int fixedArity = owner_->commandOptionFixedArityByKey_.value(key, -1);
-            if (fixedArity >= 0) {
-                owner_->commandOptionFixedArityByKey_.insert(aliasKey, fixedArity);
-            }
-            const QString optionHelpHtml = owner_->commandOptionHelpHtmlByKey_.value(commandOptionHelpKey(commandName, optionKey));
-            if (!optionHelpHtml.isEmpty()) {
-                owner_->commandOptionHelpHtmlByKey_.insert(commandOptionHelpKey(alias, optionKey), optionHelpHtml);
-            }
-        }
-        const QHash<QString, QStringList> subtypeByType = owner_->commandSubtypeByTypeTokens_.value(commandName);
-        for (auto subtypeIterator = subtypeByType.begin(); subtypeIterator != subtypeByType.end(); ++subtypeIterator) {
-            appendUniqueList(owner_->commandSubtypeByTypeTokens_[alias][subtypeIterator.key()], subtypeIterator.value());
-        }
-        for (auto contextIterator = owner_->contextCommandTokens_.begin();
-             contextIterator != owner_->contextCommandTokens_.end();
-             ++contextIterator) {
-            if (contextIterator.value().contains(commandName, Qt::CaseInsensitive)) {
-                appendUnique(contextIterator.value(), alias);
-            }
-        }
-        appendUniqueList(owner_->blockCommandContextsByKind_[owner_->normalizedDirectiveToken(alias)],
-                         normalizedCommandContexts);
-    }
+    return mutableCommandMetadata().commandOptionTokens.value(normalizedCommand).contains(QStringLiteral("-id"), Qt::CaseInsensitive);
 }
 
 void RawEditorCompletionController::applyCatalogCommandsMetadata(const QJsonObject &catalogObject) const
 {
-    if (owner_ == nullptr || catalogObject.isEmpty()) {
-        return;
-    }
-
-    const QJsonArray commands = catalogObject.value(QStringLiteral("commands")).toArray();
-    for (const QJsonValue &commandValue : commands) {
-        const QJsonObject commandObject = commandValue.toObject();
-        const QString commandName = commandObject.value(QStringLiteral("name")).toString().trimmed().toLower();
-        if (commandName.isEmpty()) {
-            continue;
-        }
-
-        TherionHelpEntry entry;
-        entry.summary = commandObject.value(QStringLiteral("summary")).toString().trimmed();
-        int requiredPositionalCount = 0;
-        QStringList commandArgumentSignatures;
-        bool primaryValueIsPerson = false;
-
-        const QJsonArray syntaxArray = commandObject.value(QStringLiteral("syntax")).toArray();
-        QStringList syntaxRows;
-        for (const QJsonValue &value : syntaxArray) {
-            appendUnique(syntaxRows, value.toString());
-        }
-        entry.syntax = syntaxRows.join(QStringLiteral("\n"));
-
-        applyCommandArgumentMetadata(commandName,
-                                     commandObject,
-                                     &entry,
-                                     &requiredPositionalCount,
-                                     &primaryValueIsPerson,
-                                     &commandArgumentSignatures);
-
-        applyCommandOptionCatalogMetadata(commandName, commandObject, &entry);
-        appendUnique(entry.relatedKeywords, commandName);
-
-        QStringList normalizedCommandContexts;
-        applyCommandContextMetadata(commandName, commandObject, &normalizedCommandContexts);
-        applyCommandRegistrationMetadata(commandName,
-                                         entry,
-                                         requiredPositionalCount,
-                                         primaryValueIsPerson,
-                                         commandArgumentSignatures);
-        applyCommandAliasMetadata(commandName, commandObject, entry, normalizedCommandContexts);
-    }
-}
-
-void RawEditorCompletionController::mergeHelpEntry(const QString &token, const TherionHelpEntry &entry) const
-{
-    if (owner_ == nullptr || token.trimmed().isEmpty()) {
-        return;
-    }
-
-    const QString normalizedToken = token.toLower();
-    TherionHelpEntry merged = owner_->helpEntries_.value(normalizedToken);
-    if (merged.summary.trimmed().isEmpty() && !entry.summary.trimmed().isEmpty()) {
-        merged.summary = entry.summary.trimmed();
-    }
-    if (merged.syntax.trimmed().isEmpty() && !entry.syntax.trimmed().isEmpty()) {
-        merged.syntax = entry.syntax.trimmed();
-    }
-    appendUniqueList(merged.arguments, entry.arguments);
-    appendUniqueList(merged.acceptedValues, entry.acceptedValues);
-    appendUniqueList(merged.options, entry.options);
-    appendUniqueList(merged.relatedKeywords, entry.relatedKeywords);
-    owner_->helpEntries_.insert(normalizedToken, merged);
-}
-
-void RawEditorCompletionController::registerCompletionToken(const QString &token) const
-{
-    if (owner_ == nullptr) {
-        return;
-    }
-    const QString normalized = token.trimmed();
-    if (normalized.isEmpty()) {
-        return;
-    }
-    if (normalized.startsWith(QLatin1Char('<')) && normalized.endsWith(QLatin1Char('>'))) {
-        return;
-    }
-    if (normalized.contains(QLatin1Char(' '))) {
-        return;
-    }
-    if (owner_->completionTokens_.contains(normalized, Qt::CaseInsensitive)) {
-        return;
-    }
-    owner_->completionTokens_.append(normalized);
+    RawEditorCommandMetadataLoader(owner_).applyCatalogCommandsMetadata(catalogObject);
 }
 
 void RawEditorCompletionController::rebuildCompletionModel() const
 {
-    if (owner_ == nullptr || owner_->completionModel_ == nullptr) {
-        return;
-    }
-
-    QStringList sortedTokens = owner_->completionTokens_;
-    std::sort(sortedTokens.begin(),
-              sortedTokens.end(),
-              [](const QString &a, const QString &b) {
-                  return QString::compare(a, b, Qt::CaseInsensitive) < 0;
-              });
-    owner_->completionModel_->setStringList(sortedTokens);
+    RawEditorCommandMetadataLoader(owner_).rebuildCompletionModel();
 }
 
 QString RawEditorCompletionController::primaryInsertionScopeForCommand(const QString &commandToken) const
 {
-    if (owner_ == nullptr) {
-        return QString();
-    }
-
-    const QString normalizedCommand = owner_->normalizedDirectiveToken(commandToken.trimmed());
-    const QStringList contexts = owner_->blockCommandContextsByKind_.value(normalizedCommand);
-    for (const QString &context : contexts) {
-        const QString normalizedContext = normalizeCompletionContext(context);
-        if (normalizedContext.isEmpty()
-            || normalizedContext == QStringLiteral("all")
-            || normalizedContext == QStringLiteral("none")) {
-            continue;
-        }
-        return normalizedContext;
-    }
-    return QString();
+    return RawEditorCompletionContextAnalyzer(owner_).primaryInsertionScopeForCommand(commandToken);
 }
 
 QString RawEditorCompletionController::resolveScopeForCommandAtLine(const QString &commandToken,
                                                                     const QStringList &lines,
                                                                     int lineNumber) const
 {
-    if (owner_ == nullptr) {
-        return QString();
-    }
-
-    const QString normalizedCommand = owner_->normalizedDirectiveToken(commandToken.trimmed());
-    if (normalizedCommand.isEmpty()) {
-        return QString();
-    }
-
-    const QString preferredScope = primaryInsertionScopeForCommand(normalizedCommand);
-    if (!preferredScope.isEmpty()) {
-        return preferredScope;
-    }
-
-    const int lastLine = qBound(0, lineNumber - 1, lines.size());
-    QStringList scopeStack;
-    for (int lineIndex = 0; lineIndex < lastLine; ++lineIndex) {
-        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineIndex), lineIndex + 1);
-        const QString directive = owner_->normalizedDirectiveToken(parsedLine.directive);
-        if (directive.isEmpty()) {
-            continue;
-        }
-
-        const QString openingFromClosing = owner_->openingDirectiveForClosingToken(directive);
-        if (!openingFromClosing.isEmpty()) {
-            for (int stackIndex = scopeStack.size() - 1; stackIndex >= 0; --stackIndex) {
-                if (scopeStack.at(stackIndex) == openingFromClosing) {
-                    scopeStack.removeAt(stackIndex);
-                    break;
-                }
-            }
-            continue;
-        }
-
-        if (owner_->isContainerDirectiveInstanceForParsedLine(directive, parsedLine)) {
-            scopeStack.append(directive);
-        }
-    }
-
-    for (int stackIndex = scopeStack.size() - 1; stackIndex >= 0; --stackIndex) {
-        const QString scopeDirective = scopeStack.at(stackIndex);
-        if (isCommandDirectiveInScope(normalizedCommand, scopeDirective)) {
-            return scopeDirective;
-        }
-    }
-
-    if (isCommandDirectiveInScope(normalizedCommand, QStringLiteral("none"))) {
-        return QStringLiteral("none");
-    }
-
-    return QString();
+    return RawEditorCompletionContextAnalyzer(owner_).resolveScopeForCommandAtLine(commandToken, lines, lineNumber);
 }
 
 QStringList RawEditorCompletionController::projectInputFileCompletionCandidates() const
@@ -1177,15 +530,15 @@ QStringList RawEditorCompletionController::buildCompletionSuggestionsForCursor(c
         const bool strictScopedCommandContext = !scopeStack.isEmpty();
 
         if (scopeStack.isEmpty()) {
-            appendUniqueList(candidates, owner_->contextCommandTokens_.value(QStringLiteral("none")));
-            appendUniqueList(candidates, owner_->contextCommandTokens_.value(QStringLiteral("all")));
+            appendUniqueList(candidates, mutableCommandMetadata().contextCommandTokens.value(QStringLiteral("none")));
+            appendUniqueList(candidates, mutableCommandMetadata().contextCommandTokens.value(QStringLiteral("all")));
         } else {
-            appendUniqueList(candidates, owner_->contextCommandTokens_.value(activeScope));
-            appendUniqueList(candidates, owner_->contextCommandTokens_.value(QStringLiteral("all")));
+            appendUniqueList(candidates, mutableCommandMetadata().contextCommandTokens.value(activeScope));
+            appendUniqueList(candidates, mutableCommandMetadata().contextCommandTokens.value(QStringLiteral("all")));
         }
 
         if (candidates.isEmpty() && !strictScopedCommandContext) {
-            candidates = owner_->commandCompletionTokens_;
+            candidates = mutableCommandMetadata().commandCompletionTokens;
         }
     } else if (!command.isEmpty()) {
         const bool optionContext = currentToken.startsWith(QLatin1Char('-'))
@@ -1196,7 +549,7 @@ QStringList RawEditorCompletionController::buildCompletionSuggestionsForCursor(c
             if (normalizedPreviousToken.startsWith(QLatin1Char('-'))) {
                 activeValueContext.active = true;
                 activeValueContext.optionToken = normalizedPreviousToken;
-                activeValueContext.arity = owner_->commandOptionValueArityTokens_
+                activeValueContext.arity = mutableCommandMetadata().commandOptionValueArityTokens
                     .value(commandOptionValueKey(command, activeValueContext.optionToken))
                     .trimmed()
                     .toUpper();
@@ -1223,7 +576,7 @@ QStringList RawEditorCompletionController::buildCompletionSuggestionsForCursor(c
                         }
 
                         const QString optionToken = parsedLine.tokens.at(optionIndex).trimmed().toLower();
-                        const QString arity = owner_->commandOptionValueArityTokens_
+                        const QString arity = mutableCommandMetadata().commandOptionValueArityTokens
                             .value(commandOptionValueKey(command, optionToken))
                             .trimmed()
                             .toUpper();
@@ -1259,7 +612,7 @@ QStringList RawEditorCompletionController::buildCompletionSuggestionsForCursor(c
             }
         } else if (optionContext) {
             allowGlobalFallback = false;
-            candidates = owner_->commandOptionTokens_.value(command);
+            candidates = mutableCommandMetadata().commandOptionTokens.value(command);
             QSet<QString> usedOptionTokens;
             for (const QString &lineToken : parsedLine.tokens) {
                 const QString normalizedLineToken = lineToken.trimmed().toLower();
@@ -1292,7 +645,7 @@ QStringList RawEditorCompletionController::buildCompletionSuggestionsForCursor(c
             const QString valueOptionToken = activeValueContext.optionToken;
             if (valueOptionToken == QStringLiteral("-subtype")) {
                 const QString symbolTypeToken = symbolTypeForSubtypeLookup(command, parsedLine);
-                const QHash<QString, QStringList> subtypeByType = owner_->commandSubtypeByTypeTokens_.value(command);
+                const QHash<QString, QStringList> subtypeByType = mutableCommandMetadata().commandSubtypeByTypeTokens.value(command);
 
                 if (!symbolTypeToken.isEmpty()) {
                     appendConcreteSubtypeValues(candidates, subtypeByType.value(symbolTypeToken));
@@ -1306,7 +659,7 @@ QStringList RawEditorCompletionController::buildCompletionSuggestionsForCursor(c
             }
 
             if (candidates.isEmpty()) {
-                candidates = owner_->commandOptionValueTokens_.value(commandOptionValueKey(command, valueOptionToken));
+                candidates = mutableCommandMetadata().commandOptionValueTokens.value(commandOptionValueKey(command, valueOptionToken));
             }
 
             if (canonicalOptionArityToken(activeValueContext.arity) == QStringLiteral("ONE_OR_MORE")
@@ -1329,20 +682,20 @@ QStringList RawEditorCompletionController::buildCompletionSuggestionsForCursor(c
                 candidates = filteredCandidates;
             }
         } else {
-            const int requiredPositionalCount = qMax(0, owner_->commandRequiredPositionalCount_.value(command));
+            const int requiredPositionalCount = qMax(0, mutableCommandMetadata().commandRequiredPositionalCount.value(command));
             const int positionalCountBeforeCursor = positionalTokenCountBeforeCursor(parsedLine, tokenIndexAtCursor);
             if (requiredPositionalCount > 0 && positionalCountBeforeCursor < requiredPositionalCount) {
                 allowGlobalFallback = false;
-                candidates = owner_->commandValueTokens_.value(command);
+                candidates = mutableCommandMetadata().commandValueTokens.value(command);
             } else {
-                candidates = owner_->commandValueTokens_.value(command);
-                appendUniqueList(candidates, owner_->commandOptionTokens_.value(command));
+                candidates = mutableCommandMetadata().commandValueTokens.value(command);
+                appendUniqueList(candidates, mutableCommandMetadata().commandOptionTokens.value(command));
             }
         }
     }
 
     if (candidates.isEmpty() && allowGlobalFallback) {
-        candidates = owner_->completionTokens_;
+        candidates = mutableCommandMetadata().completionTokens;
     }
 
     QStringList filtered;
@@ -1430,7 +783,7 @@ void RawEditorCompletionController::triggerCompletionPopup()
             owner_->completionCompleter_->popup()->hide();
         }
 
-        const int requiredPositionalCount = qMax(0, owner_->commandRequiredPositionalCount_.value(command));
+        const int requiredPositionalCount = qMax(0, mutableCommandMetadata().commandRequiredPositionalCount.value(command));
         if (!command.isEmpty() && requiredPositionalCount > 0) {
             const QTextCursor cursor = owner_->editor_->textCursor();
             const QTextBlock block = cursor.block();

@@ -139,10 +139,10 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         }
 
         auto isCommandDirectiveInScope = [this](const QString &commandToken, const QString &scope) {
-            QStringList candidates = owner_->contextCommandTokens_.value(scope);
-            appendUniqueList(candidates, owner_->contextCommandTokens_.value(QStringLiteral("all")));
+            QStringList candidates = owner_->commandMetadata().contextCommandTokens.value(scope);
+            appendUniqueList(candidates, owner_->commandMetadata().contextCommandTokens.value(QStringLiteral("all")));
             if (scope == QStringLiteral("none")) {
-                appendUniqueList(candidates, owner_->contextCommandTokens_.value(QStringLiteral("none")));
+                appendUniqueList(candidates, owner_->commandMetadata().contextCommandTokens.value(QStringLiteral("none")));
             }
             return candidates.contains(commandToken, Qt::CaseInsensitive);
         };

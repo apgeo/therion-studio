@@ -1,4 +1,4 @@
-#include "../src/app/MapEditorSceneSupport.h"
+#include "../src/app/text_editor/map_editor/MapEditorSceneSupport.h"
 #include "../src/core/TherionDocumentParser.h"
 
 #include <iostream>

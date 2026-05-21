@@ -45,8 +45,8 @@
 #include <QtConcurrent>
 #include <functional>
 
-#include "TextEditorTab.h"
-#include "MapEditorTab.h"
+#include "text_editor/TextEditorTab.h"
+#include "text_editor/map_editor/MapEditorTab.h"
 #include "MainWindowDocumentHelpers.h"
 #include "../core/SessionStore.h"
 

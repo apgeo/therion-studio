@@ -10,7 +10,7 @@
 #include <QRegularExpression>
 #include <QStyleHints>
 
-#include "../core/TherionDocumentParser.h"
+#include "../../../core/TherionDocumentParser.h"
 
 #include <cmath>
 #include <memory>

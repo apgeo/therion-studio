@@ -1,7 +1,7 @@
-#include "../src/app/MapEditorTab.h"
-#include "../src/app/MapEditorSceneInternals.h"
-#include "../src/app/MapEditorSceneSupport.h"
-#include "../src/app/TextEditorTab.h"
+#include "../src/app/text_editor/map_editor/MapEditorTab.h"
+#include "../src/app/text_editor/map_editor/MapEditorSceneInternals.h"
+#include "../src/app/text_editor/map_editor/MapEditorSceneSupport.h"
+#include "../src/app/text_editor/TextEditorTab.h"
 
 #include <QApplication>
 #include <QCoreApplication>

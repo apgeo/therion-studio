@@ -8,6 +8,7 @@
 #include <QPointF>
 #include <QVector>
 #include <QColor>
+#include <memory>
 
 class QLabel;
 class QCheckBox;
@@ -17,6 +18,7 @@ class QLineEdit;
 class QComboBox;
 class QPushButton;
 class QPlainTextEdit;
+class QGraphicsItem;
 class QGraphicsScene;
 class QGraphicsView;
 class QGraphicsLineItem;
@@ -33,6 +35,25 @@ class QFormLayout;
 namespace TherionStudio
 {
 class TherionSyntaxHighlighter;
+class TextEditorContextHelpController;
+class RawEditorFindController;
+class RawEditorCompletionController;
+class BlockEditorOptionArgsController;
+class BlockEditorDetailsHelpController;
+class BlockEditorLineBuildService;
+class BlockEditorApplyStateController;
+class BlockEditorApplyExecutor;
+class BlockEditorSelectionDetailsController;
+class BlockEditorDetailsPaneController;
+class BlockEditorToolboxDetailsController;
+class BlockEditorCanvasSelectionController;
+class BlockEditorMovePreviewController;
+class BlockEditorCanvasBoundaryController;
+class BlockEditorDocumentOutlineBuilder;
+class BlockEditorDropTargetResolver;
+class BlockEditorInsertionPlanner;
+class BlockEditorMovePlanner;
+struct TherionParsedLine;
 
 struct TherionHelpEntry
 {
@@ -165,6 +186,25 @@ private slots:
     void handleBlocksModeRequested();
 
 private:
+    friend class TextEditorContextHelpController;
+    friend class RawEditorFindController;
+    friend class RawEditorCompletionController;
+    friend class BlockEditorOptionArgsController;
+    friend class BlockEditorDetailsHelpController;
+    friend class BlockEditorLineBuildService;
+    friend class BlockEditorApplyStateController;
+    friend class BlockEditorApplyExecutor;
+    friend class BlockEditorSelectionDetailsController;
+    friend class BlockEditorDetailsPaneController;
+    friend class BlockEditorToolboxDetailsController;
+    friend class BlockEditorCanvasSelectionController;
+    friend class BlockEditorMovePreviewController;
+    friend class BlockEditorCanvasBoundaryController;
+    friend class BlockEditorDocumentOutlineBuilder;
+    friend class BlockEditorDropTargetResolver;
+    friend class BlockEditorInsertionPlanner;
+    friend class BlockEditorMovePlanner;
+
     enum class BlockDetailsMode
     {
         None,
@@ -184,23 +224,15 @@ private:
     void buildHelpPanel();
     void loadHelpMetadata();
     void loadHelpMetadataFromCommandCatalog();
-    void mergeHelpEntry(const QString &token, const TherionHelpEntry &entry);
     void updateContextHelp();
     void updateValidationTooltipForCursor();
-    QStringList helpCandidateTokens() const;
-    QString currentHelpTokenForCursor() const;
-    QString validationHelpHtmlForCursor(QString *tooltipText = nullptr,
-                                        QString *tooltipKey = nullptr) const;
+    QString normalizedDirectiveToken(const QString &directive) const;
+    QString openingDirectiveForClosingToken(const QString &directive) const;
+    QString closingDirectiveForOpeningToken(const QString &directive) const;
+    bool isContainerDirectiveInstanceForParsedLine(const QString &directive,
+                                                   const TherionParsedLine &parsedLine) const;
     void setHelpCollapsed(bool collapsed);
     void handleApplicationAppearanceChanged();
-    QString renderHelpHtml(const QString &token, const TherionHelpEntry &entry, bool includeSyntax = true) const;
-    QString renderHelpSummaryHtml(const QString &token, const TherionHelpEntry &entry) const;
-    void updateSearchResults(const QString &message, bool error = false);
-    void updateSearchVisibility(bool replaceMode);
-    bool performFind(bool forward, bool wrapSearch);
-    QTextDocument::FindFlags findFlags() const;
-    QString currentFindText() const;
-    QString currentReplaceText() const;
     void refreshEditorModeUi();
     bool isBlocksModeSupportedForCurrentFile() const;
     void refreshBlocksModeAvailability();
@@ -224,6 +256,19 @@ private:
     bool loadBlockDetailsForSelection(const QString &kind, int lineNumber);
     void refreshBlockDetailsOptionArgumentEditors();
     void updateBlockDetailsHelpForCurrentFocus();
+    QGraphicsItem *resolveBlockCanvasItem(QGraphicsItem *item) const;
+    int blockCanvasItemLineNumber(const QGraphicsItem *item) const;
+    QString blockCanvasItemKind(const QGraphicsItem *item) const;
+    void selectBlockCanvasItem(QGraphicsItem *item, bool centerView);
+    bool blockDetailsReadingsTagEditorHasEditorFocus() const;
+    QString blockDetailsReadingsOrderTextForBuild() const;
+    void setBlockDetailsReadingsTagEditor(const QString &placeholderText,
+                                          const QStringList &suggestions,
+                                          const QStringList &tokens);
+    void installBlockDetailsLineEditCompleter(QLineEdit *lineEdit,
+                                              const QStringList &values) const;
+    bool isContainerBlockDirectiveForBlocks(const QString &directive) const;
+    bool isRequiredArgumentSignatureForBlocks(const QString &signature) const;
     void refreshBlockDetailsApplyState();
     bool buildUpdatedLineFromBlockDetails(QString *updatedLine, QString *validationError = nullptr) const;
     void applyBlockDetailsChanges();
@@ -233,8 +278,6 @@ private:
     bool insertLinesBefore(int lineNumber,
                            const QStringList &newLines,
                            QString *errorMessage = nullptr);
-    void registerCompletionToken(const QString &token);
-    void rebuildCompletionModel();
     QString currentCompletionPrefix() const;
     void triggerCompletionPopup();
     void insertCompletionToken(const QString &completion);
@@ -359,5 +402,19 @@ private:
     QString cleanEncodingNameSnapshot_ = QStringLiteral("UTF-8");
     QString cleanTextSnapshot_;
     QString encodingStatusNote_;
+    std::unique_ptr<TextEditorContextHelpController> contextHelpController_;
+    std::unique_ptr<RawEditorFindController> rawEditorFindController_;
+    std::unique_ptr<RawEditorCompletionController> rawEditorCompletionController_;
+    std::unique_ptr<BlockEditorOptionArgsController> blockDetailsOptionArgsController_;
+    std::unique_ptr<BlockEditorDetailsHelpController> blockDetailsHelpController_;
+    std::unique_ptr<BlockEditorLineBuildService> blockDetailsLineBuildService_;
+    std::unique_ptr<BlockEditorApplyStateController> blockDetailsApplyStateController_;
+    std::unique_ptr<BlockEditorApplyExecutor> blockDetailsApplyExecutor_;
+    std::unique_ptr<BlockEditorSelectionDetailsController> blockDetailsSelectionDetailsController_;
+    std::unique_ptr<BlockEditorDetailsPaneController> blockDetailsPaneController_;
+    std::unique_ptr<BlockEditorToolboxDetailsController> blockDetailsToolboxDetailsController_;
+    std::unique_ptr<BlockEditorCanvasSelectionController> blockDetailsCanvasSelectionController_;
+    std::unique_ptr<BlockEditorMovePreviewController> blockDetailsMovePreviewController_;
+    std::unique_ptr<BlockEditorCanvasBoundaryController> blockDetailsCanvasBoundaryController_;
 };
 }

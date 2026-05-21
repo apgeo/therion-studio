@@ -14,7 +14,7 @@
 #include <QWidget>
 #include <QSizePolicy>
 
-#include "MapEditorTab.h"
+#include "text_editor/map_editor/MapEditorTab.h"
 
 TherionStudio::MapEditorTab *MainWindow::currentMapEditorTab() const
 {

@@ -48,6 +48,35 @@ These instructions apply to the whole repository.
 - When extracting behavior that affects user-visible workflows, add or update focused tests for the extracted logic before treating the split as complete.
 - Preserve the spec-first boundary: if a split changes ownership or behavior, confirm the specification still describes the result or update it in the same change.
 
+## Naming Conventions
+
+- Treat `Raw`, `Block`, and `Map` as peer editor-mode domains over the same underlying document model.
+- Use mode/domain-prefixed names for mode-specific implementation types:
+  - `RawEditor*` for raw-text mode specific behavior
+  - `BlockEditor*` for structured block-canvas mode specific behavior
+  - `MapEditor*` for map/visual mode specific behavior
+- Use container/shell-prefixed names for orchestration and hosting types:
+  - `TextEditorTab*`, `MainWindow*`, and similar shell-level coordinators
+- Use neutral/shared names only for logic that is intentionally cross-mode:
+  - examples: `*Service`, `*Validation`, `*Controller` without mode prefix only when genuinely shared
+- Keep filename and primary type name aligned exactly (for example, `BlockEditorOptionArgsController` in `BlockEditorOptionArgsController.h/.cpp`).
+- Avoid near-duplicate names that differ only by a vague suffix while owning different responsibilities (for example, action execution vs. state computation). Names shall make the distinction explicit with concrete responsibility terms such as `*Executor`, `*StateController`, `*Model`, or `*View`.
+- When introducing a new type in an area that already has similarly named types, prefer the most specific role word available over generic `Controller` naming.
+
+## Directory Structure Stability
+
+- The current editor-mode directory layout is stable and shall be treated as a repository contract:
+  - `src/app/text_editor/` for raw editor shell and shared text-editor orchestration
+  - `src/app/text_editor/raw_editor/` for raw-mode specific components (`RawEditor*`)
+  - `src/app/text_editor/block_editor/` for block-mode specific components (`BlockEditor*`)
+  - `src/app/text_editor/map_editor/` for map/visual-mode specific components (`MapEditor*`)
+- Do not introduce new editor-mode implementation files back into legacy top-level `src/app/` paths when they belong to the stable layout above.
+- Do not move or rename these stable directories unless explicitly requested; such a change shall be handled as an intentional architecture migration.
+- Any approved migration of this layout shall update in the same change:
+  - build wiring (`CMakeLists.txt` and target source lists),
+  - structure guardrails/tests (for example `scripts/check_structure_constraints.py` / `StructureConstraintsTest`),
+  - relevant documentation (`AGENTS.md`, `WORKLOG.md`, and specification/manual where applicable).
+
 ## Data Integrity Rules
 
 - Round-trip safety is a core requirement. Changes must not cause semantic loss in supported Therion documents.

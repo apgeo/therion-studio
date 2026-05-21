@@ -1,4 +1,4 @@
-#include "../src/app/TextEditorTab.h"
+#include "../src/app/text_editor/TextEditorTab.h"
 #include "../src/core/TherionDocumentParser.h"
 
 #include <QAbstractItemView>

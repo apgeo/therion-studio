@@ -22,8 +22,8 @@
 #include <functional>
 #include <QtConcurrent>
 
-#include "TextEditorTab.h"
-#include "MapEditorTab.h"
+#include "text_editor/TextEditorTab.h"
+#include "text_editor/map_editor/MapEditorTab.h"
 #include "../core/ProjectStructureIndex.h"
 #include "../core/DocumentFile.h"
 #include "../core/TherionDocumentParser.h"

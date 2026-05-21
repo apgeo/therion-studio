@@ -4,8 +4,8 @@
 #include <QStyle>
 #include <QWidget>
 
-#include "TextEditorTab.h"
-#include "MapEditorTab.h"
+#include "text_editor/TextEditorTab.h"
+#include "text_editor/map_editor/MapEditorTab.h"
 
 QString documentPathForWidget(QWidget *widget)
 {

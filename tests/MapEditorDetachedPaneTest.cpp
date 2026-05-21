@@ -1,4 +1,4 @@
-#include "../src/app/MapEditorTab.h"
+#include "../src/app/text_editor/map_editor/MapEditorTab.h"
 
 #include <QApplication>
 #include <QEventLoop>

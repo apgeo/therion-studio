@@ -36,6 +36,14 @@ The application is primarily used to:
 - review survey structure and map object relationships
 - run the Therion command-line tool and inspect its output
 
+### 2.1 Editing Model Principles
+
+- Therion project artifacts shall remain plain-text source documents (`.th`, `.th2`, `thconfig`) as the canonical source of truth.
+- All editor surfaces shall serialize user-visible changes back into plain-text Therion source without introducing a separate binary/project-only model.
+- The TH2 visual map workspace shall be treated as a specialized editing surface for geometry-intensive `.th2` workflows that are difficult to author directly in raw text.
+- The structured Blocks workspace should prioritize approachability and guided editing for newer users by reducing syntax burden while preserving explicit source round-trip behavior.
+- Raw text editing shall remain available for expert/direct editing and for operations that require exact line/token-level control.
+
 ## 3. Functional Scope
 
 ### 3.1 Project Browser

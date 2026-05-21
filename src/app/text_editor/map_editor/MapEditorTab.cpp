@@ -55,12 +55,12 @@
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSceneInternals.h"
 #include "MapEditorInputPolicy.h"
-#include "TextEditorTab.h"
-#include "../core/CommandCatalogService.h"
-#include "../core/ProjectStructureIndex.h"
-#include "../core/TherionBackgroundMetadata.h"
-#include "../core/TherionDocumentEditor.h"
-#include "../core/TherionDocumentParser.h"
+#include "../TextEditorTab.h"
+#include "../../../core/CommandCatalogService.h"
+#include "../../../core/ProjectStructureIndex.h"
+#include "../../../core/TherionBackgroundMetadata.h"
+#include "../../../core/TherionDocumentEditor.h"
+#include "../../../core/TherionDocumentParser.h"
 
 namespace TherionStudio
 {

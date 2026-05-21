@@ -43,8 +43,8 @@
 #include <algorithm>
 #include <functional>
 
-#include "TextEditorTab.h"
-#include "../core/SessionStore.h"
+#include "../TextEditorTab.h"
+#include "../../../core/SessionStore.h"
 
 namespace TherionStudio
 {

@@ -21,12 +21,12 @@
 #include <cmath>
 
 #include "MapEditorSceneSupport.h"
-#include "TextEditorTab.h"
-#include "../core/MapBackgroundPlacement.h"
-#include "../core/SessionStore.h"
-#include "../core/TherionBackgroundMetadata.h"
-#include "../core/TherionDocumentParser.h"
-#include "../core/TherionXviParser.h"
+#include "../TextEditorTab.h"
+#include "../../../core/MapBackgroundPlacement.h"
+#include "../../../core/SessionStore.h"
+#include "../../../core/TherionBackgroundMetadata.h"
+#include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionXviParser.h"
 
 namespace TherionStudio
 {

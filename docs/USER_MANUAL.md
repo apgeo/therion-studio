@@ -15,6 +15,13 @@ Therion Studio is a Qt desktop editor for Therion projects with:
 - TH2 map workspace with source-linked geometry editing
 - integrated Therion runner console
 
+Editing model principles:
+
+- Therion files remain plain-text source files (`.th`, `.th2`, `thconfig`); all editor modes write back to source text.
+- `Raw` mode is the canonical expert surface for exact token/line-level editing.
+- `Blocks` mode is a guided, lower-barrier structured editor intended to reduce syntax complexity for newer users while preserving source fidelity.
+- TH2 `Visual` mode is a specialized map-editing surface for `.th2` geometry workflows that are cumbersome in raw text alone.
+
 ## 2. Main Window Layout
 
 The main window is organized into:

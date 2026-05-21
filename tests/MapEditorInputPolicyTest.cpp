@@ -1,4 +1,4 @@
-#include "../src/app/MapEditorInputPolicy.h"
+#include "../src/app/text_editor/map_editor/MapEditorInputPolicy.h"
 
 #include <iostream>
 

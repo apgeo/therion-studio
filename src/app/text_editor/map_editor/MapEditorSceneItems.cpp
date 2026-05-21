@@ -15,7 +15,7 @@
 
 #include <cmath>
 
-#include "../core/TherionDocumentParser.h"
+#include "../../../core/TherionDocumentParser.h"
 
 namespace TherionStudio {
 

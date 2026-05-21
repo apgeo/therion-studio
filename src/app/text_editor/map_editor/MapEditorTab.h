@@ -16,6 +16,8 @@
 #include <QPersistentModelIndex>
 #include <optional>
 
+#include "MapEditorInteractiveDrawLogic.h"
+
 class QLabel;
 class QFrame;
 class QGraphicsScene;
@@ -50,10 +52,30 @@ enum class DraftGeometryKind;
 namespace TherionStudio
 {
 class TextEditorTab;
+class MapEditorCanvasEditController;
+class MapEditorInteractiveDrawController;
+class MapEditorInspectorBackgroundController;
+class MapEditorInspectorObjectController;
+class MapEditorObjectDetailsEditController;
+class MapEditorObjectDetailsPanelController;
+class MapEditorSceneLifecycleController;
+class MapEditorSceneRefreshController;
+class MapEditorSelectionController;
+class MapEditorViewportInputController;
 
 class MapEditorTab final : public QWidget
 {
     Q_OBJECT
+    friend class MapEditorCanvasEditController;
+    friend class MapEditorInteractiveDrawController;
+    friend class MapEditorInspectorBackgroundController;
+    friend class MapEditorInspectorObjectController;
+    friend class MapEditorObjectDetailsEditController;
+    friend class MapEditorObjectDetailsPanelController;
+    friend class MapEditorSceneLifecycleController;
+    friend class MapEditorSceneRefreshController;
+    friend class MapEditorSelectionController;
+    friend class MapEditorViewportInputController;
 
 public:
     enum class WorkspaceMode
@@ -212,20 +234,9 @@ private:
     QStringList areaCoordinateRowsForInteractiveDraft() const;
     void captureInteractiveLineAnchor(const QPointF &anchorScenePoint,
                                       const std::optional<QPointF> &dragScenePoint);
-    struct InteractiveLineControlHandleRef
-    {
-        enum class Kind
-        {
-            Incoming,
-            Outgoing
-        };
-
-        int vertexIndex = -1;
-        Kind kind = Kind::Incoming;
-    };
-    std::optional<InteractiveLineControlHandleRef> interactiveLineControlAt(const QPointF &scenePosition,
-                                                                            qreal sceneRadius) const;
-    bool setInteractiveLineControlScenePoint(const InteractiveLineControlHandleRef &handle,
+    std::optional<MapEditorInteractiveLineControlHandleRef> interactiveLineControlAt(const QPointF &scenePosition,
+                                                                                     qreal sceneRadius) const;
+    bool setInteractiveLineControlScenePoint(const MapEditorInteractiveLineControlHandleRef &handle,
                                              const QPointF &scenePoint);
     void fitMapToView(bool includeBackgroundImages = false);
     void syncZoomFactorFromView();
@@ -461,23 +472,14 @@ private:
     InteractiveDrawMode interactiveDrawMode_ = InteractiveDrawMode::None;
     QVector<QPointF> interactiveDrawSourceVertices_;
     QVector<QPointF> interactiveDrawSceneVertices_;
-    struct InteractiveLineDraftVertex
-    {
-        QPointF anchorSource;
-        QPointF anchorScene;
-        std::optional<QPointF> incomingControlSource;
-        std::optional<QPointF> incomingControlScene;
-        std::optional<QPointF> outgoingControlSource;
-        std::optional<QPointF> outgoingControlScene;
-    };
-    QVector<InteractiveLineDraftVertex> interactiveDrawLineVertices_;
+    QVector<MapEditorInteractiveLineDraftVertex> interactiveDrawLineVertices_;
     bool interactiveDrawStrokeActive_ = false;
     bool interactiveDrawAnchorPressActive_ = false;
     QPointF interactiveDrawAnchorPressScenePoint_;
     bool interactiveDrawAnchorDragActive_ = false;
     QPointF interactiveDrawAnchorDragScenePoint_;
     bool interactiveDrawControlDragActive_ = false;
-    InteractiveLineControlHandleRef interactiveDrawControlDragHandle_;
+    MapEditorInteractiveLineControlHandleRef interactiveDrawControlDragHandle_;
     bool interactiveDrawHoverActive_ = false;
     QPointF interactiveDrawHoverScenePoint_;
     QGraphicsPathItem *interactiveDrawPreviewPath_ = nullptr;

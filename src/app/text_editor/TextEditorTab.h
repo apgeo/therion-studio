@@ -39,6 +39,7 @@ class TherionSyntaxHighlighter;
 class TextEditorAppearanceController;
 class TextEditorContextHelpController;
 class TextEditorCursorController;
+class TextEditorDocumentController;
 class TextEditorEncodingController;
 class TextEditorModeController;
 class TextEditorSourceRewriteController;
@@ -46,6 +47,9 @@ class TextEditorStatusController;
 class RawEditorFindController;
 class RawEditorCommandMetadataLoader;
 class RawEditorCompletionContextAnalyzer;
+class RawEditorCompletionSuggestionBuilder;
+class RawEditorCompletionPopupController;
+class RawEditorCompletionInsertionController;
 class RawEditorCompletionController;
 class BlockEditorOptionArgsController;
 class BlockEditorDetailsHelpController;
@@ -197,6 +201,7 @@ private slots:
 private:
     friend class TextEditorContextHelpController;
     friend class TextEditorCursorController;
+    friend class TextEditorDocumentController;
     friend class TextEditorEncodingController;
     friend class TextEditorAppearanceController;
     friend class TextEditorModeController;
@@ -205,6 +210,9 @@ private:
     friend class RawEditorFindController;
     friend class RawEditorCommandMetadataLoader;
     friend class RawEditorCompletionContextAnalyzer;
+    friend class RawEditorCompletionSuggestionBuilder;
+    friend class RawEditorCompletionPopupController;
+    friend class RawEditorCompletionInsertionController;
     friend class RawEditorCompletionController;
     friend class BlockEditorOptionArgsController;
     friend class BlockEditorDetailsHelpController;
@@ -305,24 +313,17 @@ private:
     void applyBlockDetailsChanges();
     bool supportsDetailsPaneForKind(const QString &kind) const;
     bool handleBlockDeleteRequest(int lineNumber);
-    QString currentCompletionPrefix() const;
-    void triggerCompletionPopup();
     void insertCompletionToken(const QString &completion);
-    QStringList buildCompletionSuggestionsForCursor(const QString &prefix) const;
-    QStringList projectInputFileCompletionCandidates() const;
     bool isCompatibleChildKindForBlocks(const QString &parentKind, const QString &childKind) const;
     bool isCommandDirectiveInScope(const QString &directive, const QString &scopeToken) const;
     QStringList commandArgumentSignaturesFor(const QString &commandToken) const;
     bool commandHasRequiredIdArgument(const QString &commandToken) const;
     bool commandSupportsInlineIdField(const QString &commandToken) const;
-    QString primaryInsertionScopeForCommand(const QString &commandToken) const;
     QString resolveScopeForCommandAtLine(const QString &commandToken,
                                          const QStringList &lines,
                                          int lineNumber) const;
     QString currentCompletionCommand() const;
-    QStringList activeCompletionScopeStack() const;
     QString normalizeCompletionContext(const QString &contextToken) const;
-    QString currentCompletionScopeLabel() const;
 
     QLabel *encodingNoteLabel_ = nullptr;
     QPushButton *convertEncodingButton_ = nullptr;
@@ -415,6 +416,7 @@ private:
     std::unique_ptr<TextEditorAppearanceController> appearanceController_;
     std::unique_ptr<TextEditorContextHelpController> contextHelpController_;
     std::unique_ptr<TextEditorCursorController> cursorController_;
+    std::unique_ptr<TextEditorDocumentController> documentController_;
     std::unique_ptr<TextEditorEncodingController> encodingController_;
     std::unique_ptr<TextEditorModeController> editorModeController_;
     std::unique_ptr<TextEditorSourceRewriteController> sourceRewriteController_;

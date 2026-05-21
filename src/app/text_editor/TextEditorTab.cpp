@@ -29,6 +29,7 @@
 #include "TextEditorAppearanceController.h"
 #include "TextEditorContextHelpController.h"
 #include "TextEditorCursorController.h"
+#include "TextEditorDocumentController.h"
 #include "TextEditorEncodingController.h"
 #include "TextEditorModeController.h"
 #include "TextEditorSourceRewriteController.h"
@@ -48,13 +49,11 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QStackedWidget>
-#include <QTextCursor>
 #include <QStyleHints>
 #include <QVBoxLayout>
 
 #include <QPen>
 
-#include "../../core/DocumentFile.h"
 #include "../../core/TherionCommandSyntax.h"
 #include "../../editor/TherionSyntaxHighlighter.h"
 
@@ -75,6 +74,7 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     appearanceController_ = std::make_unique<TextEditorAppearanceController>(this);
     contextHelpController_ = std::make_unique<TextEditorContextHelpController>(this);
     cursorController_ = std::make_unique<TextEditorCursorController>(this);
+    documentController_ = std::make_unique<TextEditorDocumentController>(this);
     encodingController_ = std::make_unique<TextEditorEncodingController>(this);
     rawEditorFindController_ = std::make_unique<RawEditorFindController>(this);
     rawEditorCompletionController_ = std::make_unique<RawEditorCompletionController>(this);
@@ -192,81 +192,21 @@ void TextEditorTab::handleApplicationAppearanceChanged()
 
 bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)
 {
-    QString contents;
-    QString loadedEncoding = QStringLiteral("UTF-8");
-    QString loadedEncodingLabel;
-    if (!DocumentFile::readTextFile(filePath, &contents, &loadedEncoding, &loadedEncodingLabel, errorMessage)) {
-        return false;
-    }
-
-    filePath_ = filePath;
-    fileEncodingName_ = loadedEncoding.trimmed().isEmpty() ? QStringLiteral("UTF-8") : loadedEncoding.trimmed();
-    fileEncodingLabel_ = loadedEncodingLabel.isEmpty() ? QStringLiteral("UTF-8") : loadedEncodingLabel;
-    if (fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
-        encodingStatusNote_.clear();
-    } else {
-        encodingStatusNote_ = tr("Opened as %1. Save keeps this encoding unless you convert to UTF-8.")
-                                  .arg(fileEncodingLabel_);
-    }
-    loading_ = true;
-    editor_->setPlainText(contents);
-    loading_ = false;
-    const QTextCursor cursor = editor_->textCursor();
-    currentLineNumber_ = cursor.blockNumber() + 1;
-    currentColumnNumber_ = cursor.positionInBlock() + 1;
-    highlightedLineNumber_ = currentLineNumber_;
-    cleanTextSnapshot_ = editor_->toPlainText();
-    cleanEncodingNameSnapshot_ = fileEncodingName_;
-    editor_->document()->setModified(false);
-    dirty_ = false;
-    refreshBlocksModeAvailability();
-    if (blocksModeActive_ && !isBlocksModeSupportedForCurrentFile()) {
-        setBlocksModeActive(false);
-    }
-    blockDetailsSelectedLineNumber_ = 0;
-    blockDetailsSelectedKind_.clear();
-    rebuildBlocksCanvasFromText();
-    clearBlockDetailsPane();
-    populateBlockToolbox();
-    refreshEditorModeUi();
-    refreshTitle();
-    refreshCurrentLineHighlight();
-    emit dirtyStateChanged(false);
-    updateContextHelp();
-    return true;
+    return documentController_ != nullptr
+        && documentController_->loadFile(filePath, errorMessage);
 }
 
 void TextEditorTab::setProjectRootPath(const QString &projectRootPath)
 {
-    projectRootPath_ = projectRootPath;
-    refreshStatus();
+    if (documentController_ != nullptr) {
+        documentController_->setProjectRootPath(projectRootPath);
+    }
 }
 
 bool TextEditorTab::save(QString *errorMessage)
 {
-    if (filePath_.isEmpty()) {
-        if (errorMessage != nullptr) {
-            *errorMessage = tr("This document does not have a file path yet.");
-        }
-        return false;
-    }
-
-    if (!DocumentFile::writeTextFile(filePath_, editor_->toPlainText(), fileEncodingName_, errorMessage)) {
-        return false;
-    }
-
-    cleanTextSnapshot_ = editor_->toPlainText();
-    cleanEncodingNameSnapshot_ = fileEncodingName_;
-    editor_->document()->setModified(false);
-    dirty_ = false;
-    if (fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
-        encodingStatusNote_.clear();
-    } else {
-        encodingStatusNote_ = tr("Saved using %1 encoding.").arg(fileEncodingLabel_);
-    }
-    refreshTitle();
-    emit dirtyStateChanged(false);
-    return true;
+    return documentController_ != nullptr
+        && documentController_->save(errorMessage);
 }
 
 void TextEditorTab::goToLine(int lineNumber)
@@ -1025,14 +965,6 @@ bool TextEditorTab::eventFilter(QObject *watched, QEvent *event)
     }
 }
 
-QString TextEditorTab::currentCompletionPrefix() const
-{
-    if (rawEditorCompletionController_ == nullptr) {
-        return QString();
-    }
-    return rawEditorCompletionController_->currentCompletionPrefix();
-}
-
 QString TextEditorTab::normalizeCompletionContext(const QString &contextToken) const
 {
     if (rawEditorCompletionController_ == nullptr) {
@@ -1081,14 +1013,6 @@ bool TextEditorTab::commandSupportsInlineIdField(const QString &commandToken) co
     return rawEditorCompletionController_->commandSupportsInlineIdField(commandToken);
 }
 
-QString TextEditorTab::primaryInsertionScopeForCommand(const QString &commandToken) const
-{
-    if (rawEditorCompletionController_ == nullptr) {
-        return QString();
-    }
-    return rawEditorCompletionController_->primaryInsertionScopeForCommand(commandToken);
-}
-
 QString TextEditorTab::resolveScopeForCommandAtLine(const QString &commandToken,
                                                     const QStringList &lines,
                                                     int lineNumber) const
@@ -1099,52 +1023,12 @@ QString TextEditorTab::resolveScopeForCommandAtLine(const QString &commandToken,
     return rawEditorCompletionController_->resolveScopeForCommandAtLine(commandToken, lines, lineNumber);
 }
 
-QStringList TextEditorTab::activeCompletionScopeStack() const
-{
-    if (rawEditorCompletionController_ == nullptr) {
-        return QStringList();
-    }
-    return rawEditorCompletionController_->activeCompletionScopeStack();
-}
-
 QString TextEditorTab::currentCompletionCommand() const
 {
     if (rawEditorCompletionController_ == nullptr) {
         return QString();
     }
     return rawEditorCompletionController_->currentCompletionCommand();
-}
-
-QString TextEditorTab::currentCompletionScopeLabel() const
-{
-    if (rawEditorCompletionController_ == nullptr) {
-        return tr("top-level");
-    }
-    return rawEditorCompletionController_->currentCompletionScopeLabel();
-}
-
-QStringList TextEditorTab::projectInputFileCompletionCandidates() const
-{
-    if (rawEditorCompletionController_ == nullptr) {
-        return {};
-    }
-    return rawEditorCompletionController_->projectInputFileCompletionCandidates();
-}
-
-QStringList TextEditorTab::buildCompletionSuggestionsForCursor(const QString &prefix) const
-{
-    if (rawEditorCompletionController_ == nullptr) {
-        return QStringList();
-    }
-    return rawEditorCompletionController_->buildCompletionSuggestionsForCursor(prefix);
-}
-
-void TextEditorTab::triggerCompletionPopup()
-{
-    if (rawEditorCompletionController_ == nullptr) {
-        return;
-    }
-    rawEditorCompletionController_->triggerCompletionPopup();
 }
 
 void TextEditorTab::insertCompletionToken(const QString &completion)

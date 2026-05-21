@@ -104,6 +104,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
     src/app/text_editor/TextEditorCursorController.cpp
     src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorDocumentController.cpp
+    src/app/text_editor/TextEditorDocumentController.h
     src/app/text_editor/TextEditorEncodingController.cpp
     src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
@@ -125,11 +127,47 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
     src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.h
+    src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.h
+    src/app/text_editor/raw_editor/RawEditorCompletionPopupController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionPopupController.h
+    src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.h
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
+    src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp
+    src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.h
+    src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp
+    src/app/text_editor/map_editor/MapEditorCanvasEditController.h
+    src/app/text_editor/map_editor/MapEditorInspectorBackgroundController.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorBackgroundController.h
+    src/app/text_editor/map_editor/MapEditorInspectorData.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorData.h
+    src/app/text_editor/map_editor/MapEditorInspectorObjectController.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorObjectController.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
+    src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
+    src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawController.cpp
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawController.h
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.cpp
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.h
     src/app/text_editor/map_editor/MapEditorInputPolicy.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.h
+    src/app/text_editor/map_editor/MapEditorViewportInputController.cpp
+    src/app/text_editor/map_editor/MapEditorViewportInputController.h
+    src/app/text_editor/map_editor/MapEditorSceneLifecycleController.cpp
+    src/app/text_editor/map_editor/MapEditorSceneLifecycleController.h
+    src/app/text_editor/map_editor/MapEditorSceneRefreshController.cpp
+    src/app/text_editor/map_editor/MapEditorSceneRefreshController.h
+    src/app/text_editor/map_editor/MapEditorSelectionController.cpp
+    src/app/text_editor/map_editor/MapEditorSelectionController.h
     src/app/text_editor/map_editor/MapEditorSceneInternals.h
     src/app/text_editor/map_editor/MapEditorSceneItems.cpp
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
@@ -405,6 +443,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
     src/app/text_editor/TextEditorCursorController.cpp
     src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorDocumentController.cpp
+    src/app/text_editor/TextEditorDocumentController.h
     src/app/text_editor/TextEditorEncodingController.cpp
     src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
@@ -426,6 +466,12 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
     src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.h
+    src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.h
+    src/app/text_editor/raw_editor/RawEditorCompletionPopupController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionPopupController.h
+    src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.h
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/TextEditorTab.cpp
@@ -537,6 +583,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
     src/app/text_editor/TextEditorCursorController.cpp
     src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorDocumentController.cpp
+    src/app/text_editor/TextEditorDocumentController.h
     src/app/text_editor/TextEditorEncodingController.cpp
     src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
@@ -558,6 +606,12 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
     src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.h
+    src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.h
+    src/app/text_editor/raw_editor/RawEditorCompletionPopupController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionPopupController.h
+    src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.h
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/TextEditorTab.cpp
@@ -669,6 +723,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
     src/app/text_editor/TextEditorCursorController.cpp
     src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorDocumentController.cpp
+    src/app/text_editor/TextEditorDocumentController.h
     src/app/text_editor/TextEditorEncodingController.cpp
     src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
@@ -690,11 +746,47 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
     src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.h
+    src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.h
+    src/app/text_editor/raw_editor/RawEditorCompletionPopupController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionPopupController.h
+    src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.h
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
+    src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp
+    src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.h
+    src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp
+    src/app/text_editor/map_editor/MapEditorCanvasEditController.h
+    src/app/text_editor/map_editor/MapEditorInspectorBackgroundController.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorBackgroundController.h
+    src/app/text_editor/map_editor/MapEditorInspectorData.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorData.h
+    src/app/text_editor/map_editor/MapEditorInspectorObjectController.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorObjectController.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
+    src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
+    src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawController.cpp
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawController.h
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.cpp
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.h
     src/app/text_editor/map_editor/MapEditorInputPolicy.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.h
+    src/app/text_editor/map_editor/MapEditorViewportInputController.cpp
+    src/app/text_editor/map_editor/MapEditorViewportInputController.h
+    src/app/text_editor/map_editor/MapEditorSceneLifecycleController.cpp
+    src/app/text_editor/map_editor/MapEditorSceneLifecycleController.h
+    src/app/text_editor/map_editor/MapEditorSceneRefreshController.cpp
+    src/app/text_editor/map_editor/MapEditorSceneRefreshController.h
+    src/app/text_editor/map_editor/MapEditorSelectionController.cpp
+    src/app/text_editor/map_editor/MapEditorSelectionController.h
     src/app/text_editor/map_editor/MapEditorSceneInternals.h
     src/app/text_editor/map_editor/MapEditorSceneItems.cpp
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
@@ -819,6 +911,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
     src/app/text_editor/TextEditorCursorController.cpp
     src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorDocumentController.cpp
+    src/app/text_editor/TextEditorDocumentController.h
     src/app/text_editor/TextEditorEncodingController.cpp
     src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
@@ -840,11 +934,47 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
     src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.h
+    src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.h
+    src/app/text_editor/raw_editor/RawEditorCompletionPopupController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionPopupController.h
+    src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.h
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
+    src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp
+    src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.h
+    src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp
+    src/app/text_editor/map_editor/MapEditorCanvasEditController.h
+    src/app/text_editor/map_editor/MapEditorInspectorBackgroundController.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorBackgroundController.h
+    src/app/text_editor/map_editor/MapEditorInspectorData.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorData.h
+    src/app/text_editor/map_editor/MapEditorInspectorObjectController.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorObjectController.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
+    src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
+    src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawController.cpp
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawController.h
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.cpp
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.h
     src/app/text_editor/map_editor/MapEditorInputPolicy.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.h
+    src/app/text_editor/map_editor/MapEditorViewportInputController.cpp
+    src/app/text_editor/map_editor/MapEditorViewportInputController.h
+    src/app/text_editor/map_editor/MapEditorSceneLifecycleController.cpp
+    src/app/text_editor/map_editor/MapEditorSceneLifecycleController.h
+    src/app/text_editor/map_editor/MapEditorSceneRefreshController.cpp
+    src/app/text_editor/map_editor/MapEditorSceneRefreshController.h
+    src/app/text_editor/map_editor/MapEditorSelectionController.cpp
+    src/app/text_editor/map_editor/MapEditorSelectionController.h
     src/app/text_editor/map_editor/MapEditorSceneInternals.h
     src/app/text_editor/map_editor/MapEditorSceneItems.cpp
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp

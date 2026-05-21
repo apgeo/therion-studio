@@ -12,9 +12,9 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # Ratchet baseline: keep current large files from growing while extraction work continues.
 LINE_LIMITS = {
-    "src/app/text_editor/TextEditorTab.cpp": 1205,
-    "src/app/text_editor/raw_editor/RawEditorCompletionController.cpp": 920,
-    "src/app/text_editor/map_editor/MapEditorTab.cpp": 6468,
+    "src/app/text_editor/TextEditorTab.cpp": 1089,
+    "src/app/text_editor/raw_editor/RawEditorCompletionController.cpp": 338,
+    "src/app/text_editor/map_editor/MapEditorTab.cpp": 860,
     "src/app/MainWindow.cpp": 2203,
 }
 

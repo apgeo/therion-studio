@@ -36,7 +36,7 @@ These instructions apply to the whole repository.
 - Do not introduce new uses of deprecated functions or APIs. Prefer supported, current equivalents and update existing deprecated usages when touching related code.
 - Keep files and translation units focused and reasonably sized. There is no hard line limit, but once a file starts mixing multiple responsibilities or becomes difficult to scan in one pass, split it by responsibility. Try to avoid files with >2000 lines if possible.
 - Prefer splitting large features into focused types or files such as model, parser, serializer, widget, controller, scene item, or service components rather than accumulating unrelated behavior in one class.
-- Avoid generic catch-all modules or class names such as Helpers, Utils, Misc, or Manager unless the code is genuinely cohesive.
+- Avoid generic catch-all modules or class names such as Helpers, Utils, Misc, Support, or Manager unless the code is genuinely cohesive and no clearer responsibility word exists.
 - Do not introduce dependencies outside Qt and the standard library without explicit justification.
 
 ## Source File Splitting
@@ -62,6 +62,7 @@ These instructions apply to the whole repository.
 - Keep filename and primary type name aligned exactly (for example, `BlockEditorOptionArgsController` in `BlockEditorOptionArgsController.h/.cpp`).
 - Avoid near-duplicate names that differ only by a vague suffix while owning different responsibilities (for example, action execution vs. state computation). Names shall make the distinction explicit with concrete responsibility terms such as `*Executor`, `*StateController`, `*Model`, or `*View`.
 - When introducing a new type in an area that already has similarly named types, prefer the most specific role word available over generic `Controller` naming.
+- Avoid `*Support` for newly extracted modules when a concrete responsibility suffix such as `*Data`, `*Logic`, `*Resolver`, `*Parser`, `*Serializer`, `*Index`, or `*Renderer` describes the role more precisely.
 
 ## Directory Structure Stability
 

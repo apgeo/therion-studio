@@ -7,20 +7,72 @@ project(TherionStudio
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets Svg Concurrent)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Svg Concurrent)
 
 qt_standard_project_setup()
+
+set(THERION_CORE_SOURCES
+    src/core/CommandCatalogService.cpp
+    src/core/CommandCatalogService.h
+    src/core/TherionCommandSyntax.cpp
+    src/core/TherionCommandSyntax.h
+    src/core/DocumentFile.cpp
+    src/core/DocumentFile.h
+    src/core/MapBackgroundPlacement.cpp
+    src/core/MapBackgroundPlacement.h
+    src/core/TherionBackgroundMetadata.cpp
+    src/core/TherionBackgroundMetadata.h
+    src/core/TherionXviParser.cpp
+    src/core/TherionXviParser.h
+    src/core/TherionDocumentEditor.cpp
+    src/core/TherionDocumentEditor.h
+    src/core/ProjectStructureIndex.cpp
+    src/core/ProjectStructureIndex.h
+    src/core/TherionDocumentParser.cpp
+    src/core/TherionDocumentParser.h
+    src/core/SessionStore.cpp
+    src/core/SessionStore.h)
+
+add_library(therion_core STATIC
+    ${THERION_CORE_SOURCES})
+
+target_link_libraries(therion_core
+    PUBLIC
+        Qt6::Core)
 
 qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/MainWindow.cpp
     src/app/MainWindow.h
+    src/app/MainWindowTherionConsoleBootstrapper.cpp
+    src/app/MainWindowTherionConsoleBootstrapper.h
+    src/app/MainWindowTherionConsoleBuilder.cpp
+    src/app/MainWindowTherionConsoleBuilder.h
+    src/app/MainWindowTherionConsoleWiring.cpp
+    src/app/MainWindowTherionConsoleWiring.h
     src/app/MainWindowDocumentHelpers.cpp
     src/app/MainWindowDocumentHelpers.h
+    src/app/TherionExecutableSelectionController.cpp
+    src/app/TherionExecutableSelectionController.h
     src/app/MainWindowMapBackground.cpp
     src/app/MainWindowSidebar.cpp
     src/app/MainWindowStructureBrowser.cpp
     src/app/MainWindowStructureRoles.h
+    src/app/MainWindowTherionConsoleController.h
+    src/app/ProjectStructureScanner.cpp
+    src/app/ProjectStructureScanner.h
+    src/app/TherionRunnerConfigDisplayController.cpp
+    src/app/TherionRunnerConfigDisplayController.h
+    src/app/TherionRunnerConfigResolver.cpp
+    src/app/TherionRunnerConfigResolver.h
+    src/app/TherionRunnerLifecyclePresenter.cpp
+    src/app/TherionRunnerLifecyclePresenter.h
     src/app/MainWindowTherionRunner.cpp
+    src/app/TherionRunnerStartResultPresenter.cpp
+    src/app/TherionRunnerStartResultPresenter.h
+    src/app/TherionRunnerStartSuccessPresenter.cpp
+    src/app/TherionRunnerStartSuccessPresenter.h
+    src/app/TherionRunnerService.cpp
+    src/app/TherionRunnerService.h
     src/app/text_editor/ContextHelpController.cpp
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
@@ -177,26 +229,6 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTab.h
-    src/core/CommandCatalogService.cpp
-    src/core/CommandCatalogService.h
-    src/core/TherionCommandSyntax.cpp
-    src/core/TherionCommandSyntax.h
-    src/core/DocumentFile.cpp
-    src/core/DocumentFile.h
-    src/core/MapBackgroundPlacement.cpp
-    src/core/MapBackgroundPlacement.h
-    src/core/TherionBackgroundMetadata.cpp
-    src/core/TherionBackgroundMetadata.h
-    src/core/TherionXviParser.cpp
-    src/core/TherionXviParser.h
-    src/core/TherionDocumentEditor.cpp
-    src/core/TherionDocumentEditor.h
-    src/core/ProjectStructureIndex.cpp
-    src/core/ProjectStructureIndex.h
-    src/core/TherionDocumentParser.cpp
-    src/core/TherionDocumentParser.h
-    src/core/SessionStore.cpp
-    src/core/SessionStore.h
     src/editor/TherionSyntaxHighlighter.cpp
     src/editor/TherionSyntaxHighlighter.h
     src/main.cpp)
@@ -251,7 +283,7 @@ if(APPLE)
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
 endif()
 
-target_link_libraries(TherionStudio PRIVATE Qt6::Widgets Qt6::Svg Qt6::Concurrent)
+target_link_libraries(TherionStudio PRIVATE therion_core Qt6::Widgets Qt6::Svg Qt6::Concurrent)
 
 target_compile_definitions(TherionStudio PRIVATE
     QT_NO_CAST_FROM_ASCII
@@ -282,67 +314,43 @@ if(WIN32)
 endif()
 
 qt_add_executable(TherionDocumentEditorTest
-    tests/TherionDocumentEditorTest.cpp
-    src/core/TherionDocumentEditor.cpp
-    src/core/TherionDocumentEditor.h
-    src/core/TherionDocumentParser.cpp
-    src/core/TherionDocumentParser.h)
+    tests/TherionDocumentEditorTest.cpp)
 
-target_link_libraries(TherionDocumentEditorTest PRIVATE Qt6::Widgets)
+target_link_libraries(TherionDocumentEditorTest PRIVATE therion_core)
 
 qt_add_executable(TherionProjectStructureIndexTest
-    tests/ProjectStructureIndexTest.cpp
-    src/core/DocumentFile.cpp
-    src/core/DocumentFile.h
-    src/core/ProjectStructureIndex.cpp
-    src/core/ProjectStructureIndex.h
-    src/core/TherionDocumentParser.cpp
-    src/core/TherionDocumentParser.h)
+    tests/ProjectStructureIndexTest.cpp)
 
-target_link_libraries(TherionProjectStructureIndexTest PRIVATE Qt6::Widgets)
+target_link_libraries(TherionProjectStructureIndexTest PRIVATE therion_core)
 
 qt_add_executable(MapBackgroundPlacementTest
-    tests/MapBackgroundPlacementTest.cpp
-    src/core/MapBackgroundPlacement.cpp
-    src/core/MapBackgroundPlacement.h)
+    tests/MapBackgroundPlacementTest.cpp)
 
-target_link_libraries(MapBackgroundPlacementTest PRIVATE Qt6::Widgets)
+target_link_libraries(MapBackgroundPlacementTest PRIVATE therion_core)
 
 qt_add_executable(TherionBackgroundMetadataTest
-    tests/TherionBackgroundMetadataTest.cpp
-    src/core/TherionBackgroundMetadata.cpp
-    src/core/TherionBackgroundMetadata.h)
+    tests/TherionBackgroundMetadataTest.cpp)
 
-target_link_libraries(TherionBackgroundMetadataTest PRIVATE Qt6::Widgets)
+target_link_libraries(TherionBackgroundMetadataTest PRIVATE therion_core)
 
 qt_add_executable(TherionXviParserTest
-    tests/TherionXviParserTest.cpp
-    src/core/TherionXviParser.cpp
-    src/core/TherionXviParser.h)
+    tests/TherionXviParserTest.cpp)
 
-target_link_libraries(TherionXviParserTest PRIVATE Qt6::Widgets)
+target_link_libraries(TherionXviParserTest PRIVATE therion_core)
 
 qt_add_executable(MapGeometryFeatureParsingTest
     tests/MapGeometryFeatureParsingTest.cpp
     src/app/text_editor/map_editor/MapEditorSceneItems.cpp
     src/app/text_editor/map_editor/MapEditorSceneInternals.h
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
-    src/app/text_editor/map_editor/MapEditorSceneSupport.h
-    src/core/TherionDocumentParser.cpp
-    src/core/TherionDocumentParser.h)
+    src/app/text_editor/map_editor/MapEditorSceneSupport.h)
 
-target_link_libraries(MapGeometryFeatureParsingTest PRIVATE Qt6::Widgets)
+target_link_libraries(MapGeometryFeatureParsingTest PRIVATE therion_core Qt6::Widgets)
 
 qt_add_executable(DocumentFileEncodingTest
-    tests/DocumentFileEncodingTest.cpp
-    src/core/DocumentFile.cpp
-    src/core/DocumentFile.h
-    src/core/TherionDocumentEditor.cpp
-    src/core/TherionDocumentEditor.h
-    src/core/TherionDocumentParser.cpp
-    src/core/TherionDocumentParser.h)
+    tests/DocumentFileEncodingTest.cpp)
 
-target_link_libraries(DocumentFileEncodingTest PRIVATE Qt6::Widgets)
+target_link_libraries(DocumentFileEncodingTest PRIVATE therion_core)
 
 qt_add_executable(MapEditorInputPolicyTest
     tests/MapEditorInputPolicyTest.cpp
@@ -352,11 +360,9 @@ qt_add_executable(MapEditorInputPolicyTest
 target_link_libraries(MapEditorInputPolicyTest PRIVATE Qt6::Widgets)
 
 qt_add_executable(SessionStoreTest
-    tests/SessionStoreTest.cpp
-    src/core/SessionStore.cpp
-    src/core/SessionStore.h)
+    tests/SessionStoreTest.cpp)
 
-target_link_libraries(SessionStoreTest PRIVATE Qt6::Widgets)
+target_link_libraries(SessionStoreTest PRIVATE therion_core)
 
 qt_add_executable(TextEditorCaretInteractionTest
     tests/TextEditorCaretInteractionTest.cpp
@@ -476,20 +482,10 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTab.h
-    src/core/CommandCatalogService.cpp
-    src/core/CommandCatalogService.h
-    src/core/TherionCommandSyntax.cpp
-    src/core/TherionCommandSyntax.h
-    src/core/DocumentFile.cpp
-    src/core/DocumentFile.h
-    src/core/TherionDocumentEditor.cpp
-    src/core/TherionDocumentEditor.h
-    src/core/TherionDocumentParser.cpp
-    src/core/TherionDocumentParser.h
     src/editor/TherionSyntaxHighlighter.cpp
     src/editor/TherionSyntaxHighlighter.h)
 
-target_link_libraries(TextEditorCaretInteractionTest PRIVATE Qt6::Widgets)
+target_link_libraries(TextEditorCaretInteractionTest PRIVATE therion_core Qt6::Widgets)
 
 qt_add_resources(TextEditorCaretInteractionTest "TextEditorCaretInteractionResources"
     PREFIX "/"
@@ -616,20 +612,10 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTab.h
-    src/core/CommandCatalogService.cpp
-    src/core/CommandCatalogService.h
-    src/core/TherionCommandSyntax.cpp
-    src/core/TherionCommandSyntax.h
-    src/core/DocumentFile.cpp
-    src/core/DocumentFile.h
-    src/core/TherionDocumentEditor.cpp
-    src/core/TherionDocumentEditor.h
-    src/core/TherionDocumentParser.cpp
-    src/core/TherionDocumentParser.h
     src/editor/TherionSyntaxHighlighter.cpp
     src/editor/TherionSyntaxHighlighter.h)
 
-target_link_libraries(TextEditorCompletionHighlightTest PRIVATE Qt6::Widgets)
+target_link_libraries(TextEditorCompletionHighlightTest PRIVATE therion_core Qt6::Widgets)
 
 qt_add_resources(TextEditorCompletionHighlightTest "TextEditorCompletionHighlightResources"
     PREFIX "/"
@@ -796,30 +782,10 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTab.h
-    src/core/CommandCatalogService.cpp
-    src/core/CommandCatalogService.h
-    src/core/TherionCommandSyntax.cpp
-    src/core/TherionCommandSyntax.h
-    src/core/DocumentFile.cpp
-    src/core/DocumentFile.h
-    src/core/MapBackgroundPlacement.cpp
-    src/core/MapBackgroundPlacement.h
-    src/core/ProjectStructureIndex.cpp
-    src/core/ProjectStructureIndex.h
-    src/core/SessionStore.cpp
-    src/core/SessionStore.h
-    src/core/TherionBackgroundMetadata.cpp
-    src/core/TherionBackgroundMetadata.h
-    src/core/TherionDocumentEditor.cpp
-    src/core/TherionDocumentEditor.h
-    src/core/TherionDocumentParser.cpp
-    src/core/TherionDocumentParser.h
-    src/core/TherionXviParser.cpp
-    src/core/TherionXviParser.h
     src/editor/TherionSyntaxHighlighter.cpp
     src/editor/TherionSyntaxHighlighter.h)
 
-target_link_libraries(MapEditorDetachedPaneTest PRIVATE Qt6::Widgets Qt6::Svg)
+target_link_libraries(MapEditorDetachedPaneTest PRIVATE therion_core Qt6::Widgets Qt6::Svg)
 
 qt_add_resources(MapEditorDetachedPaneTest "MapEditorDetachedPaneResources"
     PREFIX "/"
@@ -984,35 +950,36 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTab.h
-    src/core/CommandCatalogService.cpp
-    src/core/CommandCatalogService.h
-    src/core/TherionCommandSyntax.cpp
-    src/core/TherionCommandSyntax.h
-    src/core/DocumentFile.cpp
-    src/core/DocumentFile.h
-    src/core/MapBackgroundPlacement.cpp
-    src/core/MapBackgroundPlacement.h
-    src/core/ProjectStructureIndex.cpp
-    src/core/ProjectStructureIndex.h
-    src/core/SessionStore.cpp
-    src/core/SessionStore.h
-    src/core/TherionBackgroundMetadata.cpp
-    src/core/TherionBackgroundMetadata.h
-    src/core/TherionDocumentEditor.cpp
-    src/core/TherionDocumentEditor.h
-    src/core/TherionDocumentParser.cpp
-    src/core/TherionDocumentParser.h
-    src/core/TherionXviParser.cpp
-    src/core/TherionXviParser.h
     src/editor/TherionSyntaxHighlighter.cpp
     src/editor/TherionSyntaxHighlighter.h)
 
-target_link_libraries(MapEditorDragUndoRedoSmokeTest PRIVATE Qt6::Widgets Qt6::Svg)
+target_link_libraries(MapEditorDragUndoRedoSmokeTest PRIVATE therion_core Qt6::Widgets Qt6::Svg)
 
 qt_add_resources(MapEditorDragUndoRedoSmokeTest "MapEditorDragUndoRedoSmokeResources"
     PREFIX "/"
     FILES
         ${THERION_STUDIO_RESOURCE_FILES})
+
+set(THERION_TEST_EXECUTABLE_TARGETS
+    TherionDocumentEditorTest
+    TherionProjectStructureIndexTest
+    MapBackgroundPlacementTest
+    TherionBackgroundMetadataTest
+    TherionXviParserTest
+    MapGeometryFeatureParsingTest
+    DocumentFileEncodingTest
+    MapEditorInputPolicyTest
+    SessionStoreTest
+    TextEditorCaretInteractionTest
+    TextEditorCompletionHighlightTest
+    MapEditorDetachedPaneTest
+    MapEditorDragUndoRedoSmokeTest)
+
+foreach(test_target IN LISTS THERION_TEST_EXECUTABLE_TARGETS)
+    target_compile_definitions(${test_target} PRIVATE
+        QT_NO_CAST_FROM_ASCII
+        QT_NO_CAST_TO_ASCII)
+endforeach()
 
 enable_testing()
 
@@ -1041,14 +1008,31 @@ set_tests_properties(
     DocumentFileEncodingTest
     MapEditorInputPolicyTest
     SessionStoreTest
+    TextEditorCaretInteractionTest
+    TextEditorCompletionHighlightTest
     MapEditorDetachedPaneTest
     MapEditorDragUndoRedoSmokeTest
     PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 set_tests_properties(
+    TherionDocumentEditorTest
+    TherionProjectStructureIndexTest
+    MapBackgroundPlacementTest
+    TherionBackgroundMetadataTest
+    TherionXviParserTest
+    MapGeometryFeatureParsingTest
+    DocumentFileEncodingTest
+    MapEditorInputPolicyTest
+    SessionStoreTest
+    StructureConstraintsTest
+    PROPERTIES
+        LABELS "unit")
+
+set_tests_properties(
     TextEditorCaretInteractionTest
     TextEditorCompletionHighlightTest
+    MapEditorDetachedPaneTest
+    MapEditorDragUndoRedoSmokeTest
     PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
-        DISABLED TRUE)
+        LABELS "ui")

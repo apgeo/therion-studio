@@ -43,6 +43,12 @@ void pumpEvents()
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
 }
 
+void pumpEventsFast()
+{
+    QCoreApplication::processEvents(QEventLoop::AllEvents, 1);
+    QCoreApplication::processEvents(QEventLoop::AllEvents, 1);
+}
+
 void sendMouse(QWidget *widget, QEvent::Type type, const QPoint &localPos, Qt::MouseButton button, Qt::MouseButtons buttons)
 {
     if (widget == nullptr) {
@@ -101,7 +107,7 @@ bool selectBlockAtScenePoint(QGraphicsView *view, const QPointF &scenePoint)
 
     sendMouse(viewport, QEvent::MouseButtonPress, viewportPoint, Qt::LeftButton, Qt::LeftButton);
     sendMouse(viewport, QEvent::MouseButtonRelease, viewportPoint, Qt::LeftButton, Qt::NoButton);
-    pumpEvents();
+    pumpEventsFast();
     return !view->scene()->selectedItems().isEmpty();
 }
 
@@ -111,21 +117,29 @@ bool selectBlockByKind(QGraphicsView *view, QLabel *statusLabel, const QString &
         return false;
     }
 
-    const QVector<qreal> xCandidates = {36.0, 72.0, 108.0, 144.0, 220.0, 320.0, 420.0, 520.0, 640.0};
-    for (int y = 8; y <= 1400; y += 12) {
-        for (qreal x : xCandidates) {
-            if (!selectBlockAtScenePoint(view, QPointF(x, y))) {
-                continue;
-            }
-            const QString statusText = statusLabel->text().trimmed().toLower();
-            QString commandToken = statusText;
-            const QString prefix = QStringLiteral("command:");
-            if (commandToken.startsWith(prefix)) {
-                commandToken = commandToken.mid(prefix.size()).trimmed();
-            }
-            if (commandToken == kindToken.trimmed().toLower()) {
-                return true;
-            }
+    const QList<QGraphicsItem *> sceneItems = view->scene()->items(Qt::AscendingOrder);
+    for (QGraphicsItem *item : sceneItems) {
+        if (item == nullptr || !(item->flags() & QGraphicsItem::ItemIsSelectable)) {
+            continue;
+        }
+
+        const QRectF sceneRect = item->sceneBoundingRect();
+        if (!sceneRect.isValid() || sceneRect.width() < 16.0 || sceneRect.height() < 8.0) {
+            continue;
+        }
+
+        if (!selectBlockAtScenePoint(view, sceneRect.center())) {
+            continue;
+        }
+
+        const QString statusText = statusLabel->text().trimmed().toLower();
+        QString commandToken = statusText;
+        const QString prefix = QStringLiteral("command:");
+        if (commandToken.startsWith(prefix)) {
+            commandToken = commandToken.mid(prefix.size()).trimmed();
+        }
+        if (commandToken == kindToken.trimmed().toLower()) {
+            return true;
         }
     }
     return false;

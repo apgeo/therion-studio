@@ -1,0 +1,128 @@
+#include "TherionRunnerConfigResolver.h"
+
+#include <QDir>
+#include <QFileInfo>
+
+namespace TherionStudio
+{
+QString TherionRunnerConfigResolver::resolveWorkingDirectory(const QString &typedWorkingDirectory,
+                                                             const QString &projectRootPath)
+{
+    if (!typedWorkingDirectory.trimmed().isEmpty()) {
+        return QDir(typedWorkingDirectory).absolutePath();
+    }
+
+    if (!projectRootPath.trimmed().isEmpty()) {
+        return QDir(projectRootPath).absolutePath();
+    }
+
+    return QString();
+}
+
+bool TherionRunnerConfigResolver::hasExplicitConfigArgument(const QStringList &arguments)
+{
+    for (const QString &rawToken : arguments) {
+        const QString token = rawToken.trimmed();
+        if (token == QStringLiteral("-c") || token == QStringLiteral("--config")) {
+            return true;
+        }
+        if (token.startsWith(QStringLiteral("--config=")) || token.startsWith(QStringLiteral("-c="))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+QString TherionRunnerConfigResolver::resolveConfigPath(const QStringList &arguments,
+                                                       const QString &workingDirectory,
+                                                       const QString &projectRootPath,
+                                                       const QString &activeDocumentPath)
+{
+    for (int index = 0; index < arguments.size(); ++index) {
+        const QString token = arguments.at(index).trimmed();
+        if (token == QStringLiteral("-c") || token == QStringLiteral("--config")) {
+            if (index + 1 < arguments.size()) {
+                const QString resolvedPath = resolveCandidatePath(arguments.at(index + 1),
+                                                                  workingDirectory,
+                                                                  projectRootPath);
+                if (!resolvedPath.isEmpty()) {
+                    return resolvedPath;
+                }
+            }
+            continue;
+        }
+
+        if (token.startsWith(QStringLiteral("--config="))) {
+            const QString resolvedPath = resolveCandidatePath(token.mid(QStringLiteral("--config=").size()),
+                                                              workingDirectory,
+                                                              projectRootPath);
+            if (!resolvedPath.isEmpty()) {
+                return resolvedPath;
+            }
+            continue;
+        }
+
+        if (token.startsWith(QStringLiteral("-c="))) {
+            const QString resolvedPath = resolveCandidatePath(token.mid(QStringLiteral("-c=").size()),
+                                                              workingDirectory,
+                                                              projectRootPath);
+            if (!resolvedPath.isEmpty()) {
+                return resolvedPath;
+            }
+        }
+    }
+
+    if (activeDocumentPath.endsWith(QStringLiteral(".thconfig"), Qt::CaseInsensitive)) {
+        QFileInfo activeDocumentInfo(activeDocumentPath);
+        if (activeDocumentInfo.exists()) {
+            const QString canonicalPath = activeDocumentInfo.canonicalFilePath();
+            return canonicalPath.isEmpty() ? activeDocumentInfo.absoluteFilePath() : canonicalPath;
+        }
+    }
+
+    const QString baseDirectory = workingDirectory.isEmpty() ? projectRootPath : workingDirectory;
+    if (baseDirectory.isEmpty()) {
+        return QString();
+    }
+
+    const QString defaultConfigPath = QDir(baseDirectory).absoluteFilePath(QStringLiteral("thconfig"));
+    QFileInfo defaultConfigInfo(defaultConfigPath);
+    if (!defaultConfigInfo.exists()) {
+        return QString();
+    }
+
+    const QString canonicalPath = defaultConfigInfo.canonicalFilePath();
+    return canonicalPath.isEmpty() ? defaultConfigInfo.absoluteFilePath() : canonicalPath;
+}
+
+QString TherionRunnerConfigResolver::resolveCandidatePath(const QString &candidate,
+                                                          const QString &workingDirectory,
+                                                          const QString &projectRootPath)
+{
+    const QString trimmedCandidate = candidate.trimmed();
+    if (trimmedCandidate.isEmpty()) {
+        return QString();
+    }
+
+    QFileInfo candidateInfo(trimmedCandidate);
+    QString absolutePath;
+    if (candidateInfo.isAbsolute()) {
+        absolutePath = candidateInfo.absoluteFilePath();
+    } else {
+        const QString baseDirectory = workingDirectory.isEmpty() ? projectRootPath : workingDirectory;
+        if (baseDirectory.isEmpty()) {
+            return QString();
+        }
+        absolutePath = QDir(baseDirectory).absoluteFilePath(trimmedCandidate);
+    }
+
+    QFileInfo resolvedInfo(absolutePath);
+    if (!resolvedInfo.exists()) {
+        return QString();
+    }
+
+    const QString canonicalPath = resolvedInfo.canonicalFilePath();
+    return canonicalPath.isEmpty() ? resolvedInfo.absoluteFilePath() : canonicalPath;
+}
+}

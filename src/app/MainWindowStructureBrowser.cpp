@@ -20,7 +20,6 @@
 #include <QTreeView>
 
 #include <functional>
-#include <QtConcurrent>
 
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
@@ -238,24 +237,11 @@ QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(const QVector<TherionSt
 
 void MainWindow::requestStructureSidebarRebuild()
 {
-    if (structureSidebarRebuildTimer_ == nullptr) {
+    if (structureSidebarScanner_ == nullptr) {
         return;
     }
 
-    structureSidebarRebuildTimer_->start();
-}
-
-void MainWindow::runStructureSidebarScan()
-{
     if (projectRootPath_.isEmpty() || !QDir(projectRootPath_).exists()) {
-        return;
-    }
-
-    if (structureSidebarScanWatcher_ == nullptr) {
-        return;
-    }
-    if (structureSidebarScanWatcher_->isRunning()) {
-        structureSidebarScanQueued_ = true;
         return;
     }
 
@@ -291,28 +277,11 @@ void MainWindow::runStructureSidebarScan()
         captureInMemoryStructureSource(detachedTab);
     }
 
-    const QString projectRootPathSnapshot = projectRootPath_;
-    const quint64 generation = ++structureSidebarScanGeneration_;
-
-    auto future = QtConcurrent::run([projectRootPathSnapshot, inMemoryProjectContentsByPath, generation]() {
-        StructureSidebarScanResult result;
-        result.generation = generation;
-        result.projectRootPath = projectRootPathSnapshot;
-        result.entries = TherionStudio::ProjectStructureIndex::scanProject(projectRootPathSnapshot,
-                                                                           inMemoryProjectContentsByPath,
-                                                                           &result.errorMessage);
-        return result;
-    });
-    structureSidebarScanWatcher_->setFuture(future);
+    structureSidebarScanner_->requestScan(projectRootPath_, inMemoryProjectContentsByPath);
 }
 
-void MainWindow::handleStructureSidebarScanFinished()
+void MainWindow::handleStructureSidebarScanFinished(const TherionStudio::ProjectStructureScanner::Result &result)
 {
-    if (structureSidebarScanWatcher_ == nullptr) {
-        return;
-    }
-
-    const StructureSidebarScanResult result = structureSidebarScanWatcher_->result();
     if (!result.errorMessage.isEmpty()) {
         appendConsoleLine(result.errorMessage);
     }
@@ -321,11 +290,6 @@ void MainWindow::handleStructureSidebarScanFinished()
         && !projectRootPath_.isEmpty()
         && QDir(projectRootPath_).exists()) {
         applyStructureSidebarEntries(result.entries);
-    }
-
-    if (structureSidebarScanQueued_) {
-        structureSidebarScanQueued_ = false;
-        runStructureSidebarScan();
     }
 }
 

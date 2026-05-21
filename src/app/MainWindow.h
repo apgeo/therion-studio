@@ -1,14 +1,14 @@
 #pragma once
 
-#include <QMainWindow>
-#include <QFutureWatcher>
 #include <QHash>
 #include <QList>
+#include <QMainWindow>
 #include <QPointer>
-#include <QProcess>
 #include <QPoint>
-#include <QTimer>
+#include <QProcess>
 
+#include "MainWindowTherionConsoleController.h"
+#include "ProjectStructureScanner.h"
 #include "../core/ProjectStructureIndex.h"
 
 class QLabel;
@@ -38,6 +38,7 @@ namespace TherionStudio
 class TextEditorTab;
 class MapEditorTab;
 class SessionStore;
+class TherionRunnerService;
 }
 
 class MainWindow final : public QMainWindow
@@ -67,10 +68,11 @@ private slots:
     void runTherion();
     void stopTherion();
     void browseTherionExecutable();
-    void handleTherionProcessReadyReadStandardOutput();
-    void handleTherionProcessReadyReadStandardError();
-    void handleTherionProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
-    void handleTherionProcessError(QProcess::ProcessError error);
+    void handleTherionRunnerStandardOutput(const QString &output);
+    void handleTherionRunnerStandardError(const QString &output);
+    void handleTherionRunnerFinished(int exitCode, QProcess::ExitStatus exitStatus);
+    void handleTherionRunnerError(const QString &errorText);
+    void handleTherionRunnerStateChanged(bool running);
     void showComingSoon(const QString &featureName);
     void handleMapEditorDetachRequested(TherionStudio::MapEditorTab *tab);
 
@@ -97,8 +99,7 @@ private:
     void refreshProjectBrowserView(const QString &focusPath = QString());
     void rebuildStructureSidebar();
     void requestStructureSidebarRebuild();
-    void runStructureSidebarScan();
-    void handleStructureSidebarScanFinished();
+    void handleStructureSidebarScanFinished(const TherionStudio::ProjectStructureScanner::Result &result);
     void applyStructureSidebarEntries(const QVector<TherionStudio::ProjectStructureEntry> &entries);
     void rebuildMapObjectsTree();
     void setSidebarPane(SidebarPane pane);
@@ -224,7 +225,8 @@ private:
     QPushButton *therionStopButton_ = nullptr;
     QPushButton *therionResetWorkingDirectoryButton_ = nullptr;
     QPushButton *therionCopyOutputButton_ = nullptr;
-    QProcess *therionProcess_ = nullptr;
+    TherionStudio::TherionRunnerService *therionRunnerService_ = nullptr;
+    TherionStudio::MainWindowTherionConsoleController therionConsoleController_;
     QLabel *statusMapZoomLabel_ = nullptr;
     QLabel *statusMapModeLabel_ = nullptr;
     QLabel *statusDocumentEncodingLabel_ = nullptr;
@@ -279,16 +281,5 @@ private:
     QHash<QString, QPointer<QMainWindow>> detachedMapWindowsByPath_;
     QHash<TherionStudio::MapEditorTab *, QString> detachedMapPathsByTab_;
 
-    struct StructureSidebarScanResult
-    {
-        quint64 generation = 0;
-        QString projectRootPath;
-        QString errorMessage;
-        QVector<TherionStudio::ProjectStructureEntry> entries;
-    };
-
-    QTimer *structureSidebarRebuildTimer_ = nullptr;
-    QFutureWatcher<StructureSidebarScanResult> *structureSidebarScanWatcher_ = nullptr;
-    quint64 structureSidebarScanGeneration_ = 0;
-    bool structureSidebarScanQueued_ = false;
+    TherionStudio::ProjectStructureScanner *structureSidebarScanner_ = nullptr;
 };

@@ -98,6 +98,18 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.h
     src/app/text_editor/TextEditorContextHelpController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
+    src/app/text_editor/TextEditorCursorController.cpp
+    src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorAppearanceController.cpp
+    src/app/text_editor/TextEditorAppearanceController.h
+    src/app/text_editor/TextEditorSourceRewriteController.cpp
+    src/app/text_editor/TextEditorSourceRewriteController.h
+    src/app/text_editor/TextEditorStatusController.cpp
+    src/app/text_editor/TextEditorStatusController.h
+    src/app/text_editor/TextEditorModeController.cpp
+    src/app/text_editor/TextEditorModeController.h
+    src/app/text_editor/TextEditorSurfaceStyler.cpp
+    src/app/text_editor/TextEditorSurfaceStyler.h
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
@@ -376,6 +388,18 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.h
     src/app/text_editor/TextEditorContextHelpController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
+    src/app/text_editor/TextEditorCursorController.cpp
+    src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorAppearanceController.cpp
+    src/app/text_editor/TextEditorAppearanceController.h
+    src/app/text_editor/TextEditorSourceRewriteController.cpp
+    src/app/text_editor/TextEditorSourceRewriteController.h
+    src/app/text_editor/TextEditorStatusController.cpp
+    src/app/text_editor/TextEditorStatusController.h
+    src/app/text_editor/TextEditorModeController.cpp
+    src/app/text_editor/TextEditorModeController.h
+    src/app/text_editor/TextEditorSurfaceStyler.cpp
+    src/app/text_editor/TextEditorSurfaceStyler.h
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
@@ -485,6 +509,18 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.h
     src/app/text_editor/TextEditorContextHelpController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
+    src/app/text_editor/TextEditorCursorController.cpp
+    src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorAppearanceController.cpp
+    src/app/text_editor/TextEditorAppearanceController.h
+    src/app/text_editor/TextEditorSourceRewriteController.cpp
+    src/app/text_editor/TextEditorSourceRewriteController.h
+    src/app/text_editor/TextEditorStatusController.cpp
+    src/app/text_editor/TextEditorStatusController.h
+    src/app/text_editor/TextEditorModeController.cpp
+    src/app/text_editor/TextEditorModeController.h
+    src/app/text_editor/TextEditorSurfaceStyler.cpp
+    src/app/text_editor/TextEditorSurfaceStyler.h
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
@@ -594,6 +630,18 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.h
     src/app/text_editor/TextEditorContextHelpController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
+    src/app/text_editor/TextEditorCursorController.cpp
+    src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorAppearanceController.cpp
+    src/app/text_editor/TextEditorAppearanceController.h
+    src/app/text_editor/TextEditorSourceRewriteController.cpp
+    src/app/text_editor/TextEditorSourceRewriteController.h
+    src/app/text_editor/TextEditorStatusController.cpp
+    src/app/text_editor/TextEditorStatusController.h
+    src/app/text_editor/TextEditorModeController.cpp
+    src/app/text_editor/TextEditorModeController.h
+    src/app/text_editor/TextEditorSurfaceStyler.cpp
+    src/app/text_editor/TextEditorSurfaceStyler.h
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
@@ -721,6 +769,18 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.h
     src/app/text_editor/TextEditorContextHelpController.cpp
     src/app/text_editor/TextEditorContextHelpController.h
+    src/app/text_editor/TextEditorCursorController.cpp
+    src/app/text_editor/TextEditorCursorController.h
+    src/app/text_editor/TextEditorAppearanceController.cpp
+    src/app/text_editor/TextEditorAppearanceController.h
+    src/app/text_editor/TextEditorSourceRewriteController.cpp
+    src/app/text_editor/TextEditorSourceRewriteController.h
+    src/app/text_editor/TextEditorStatusController.cpp
+    src/app/text_editor/TextEditorStatusController.h
+    src/app/text_editor/TextEditorModeController.cpp
+    src/app/text_editor/TextEditorModeController.h
+    src/app/text_editor/TextEditorSurfaceStyler.cpp
+    src/app/text_editor/TextEditorSurfaceStyler.h
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp

@@ -2,19 +2,33 @@
 
 #include "TextEditorTab.h"
 #include "ContextHelpController.h"
+#include "TextEditorSurfaceStyler.h"
+#include "block_editor/BlockEditorDirectiveRules.h"
+#include "raw_editor/RawEditorCompletionController.h"
 
+#include "../../core/CommandCatalogService.h"
 #include "../../core/TherionCommandSyntax.h"
 #include "../../core/TherionDocumentParser.h"
 
 #include <algorithm>
+#include <QFrame>
+#include <QFont>
+#include <QHBoxLayout>
+#include <QJsonObject>
+#include <QLabel>
 #include <QRect>
 #include <QPlainTextEdit>
+#include <QSplitter>
 #include <QTextBrowser>
 #include <QTextBlock>
 #include <QToolTip>
+#include <QVBoxLayout>
 
 namespace
 {
+constexpr int kHelpPanelPadding = 12;
+constexpr int kHelpPanelSpacing = 8;
+
 void appendUniqueCaseInsensitive(QStringList &target, const QString &value)
 {
     const QString trimmed = value.trimmed();
@@ -37,9 +51,126 @@ void appendUniqueListCaseInsensitive(QStringList &target, const QStringList &val
 
 namespace TherionStudio
 {
+using namespace BlockEditorDirectiveRules;
+
 TextEditorContextHelpController::TextEditorContextHelpController(TextEditorTab *owner)
     : owner_(owner)
 {
+}
+
+void TextEditorContextHelpController::buildHelpPanel()
+{
+    if (owner_ == nullptr) {
+        return;
+    }
+
+    auto *framedHelpPanel = new QFrame(owner_);
+    framedHelpPanel->setFrameShape(QFrame::NoFrame);
+    owner_->helpPanel_ = framedHelpPanel;
+    owner_->helpPanel_->setObjectName(QStringLiteral("textContextHelpPanel"));
+    syncPanelSurfaceToBaseTone(owner_->helpPanel_);
+    auto *panelLayout = new QVBoxLayout(owner_->helpPanel_);
+    panelLayout->setContentsMargins(kHelpPanelPadding, kHelpPanelPadding, kHelpPanelPadding, kHelpPanelPadding);
+    panelLayout->setSpacing(kHelpPanelSpacing);
+
+    auto *headerRow = new QHBoxLayout;
+    headerRow->setContentsMargins(0, 0, 0, 0);
+
+    auto *headerLabel = new QLabel(TextEditorTab::tr("Contextual Help"), owner_->helpPanel_);
+    QFont headerFont = headerLabel->font();
+    headerFont.setBold(true);
+    headerLabel->setFont(headerFont);
+
+    headerRow->addWidget(headerLabel);
+    headerRow->addStretch(1);
+
+    owner_->helpBrowser_ = new QTextBrowser(owner_->helpPanel_);
+    owner_->helpBrowser_->setFrameShape(QFrame::NoFrame);
+    owner_->helpBrowser_->setOpenLinks(false);
+    owner_->helpBrowser_->setOpenExternalLinks(false);
+    owner_->helpBrowser_->setMinimumHeight(120);
+    syncTextBrowserSurfaceToParent(owner_->helpBrowser_);
+    owner_->helpBrowser_->setHtml(
+        TextEditorTab::tr("<p>Select a Therion command or item to see contextual help.</p>"));
+
+    panelLayout->addLayout(headerRow);
+    panelLayout->addWidget(owner_->helpBrowser_, 1);
+}
+
+void TextEditorContextHelpController::loadHelpMetadata()
+{
+    if (owner_ == nullptr) {
+        return;
+    }
+
+    owner_->helpEntries_.clear();
+    owner_->completionTokens_.clear();
+    owner_->commandCompletionTokens_.clear();
+    owner_->commandOptionTokens_.clear();
+    owner_->commandValueTokens_.clear();
+    owner_->commandArgumentValueTokens_.clear();
+    owner_->commandOptionValueTokens_.clear();
+    owner_->commandOptionValueArityTokens_.clear();
+    owner_->commandOptionArgumentLabelsByKey_.clear();
+    owner_->commandOptionFixedArityByKey_.clear();
+    owner_->commandOptionHelpHtmlByKey_.clear();
+    owner_->commandTypeValueTokens_.clear();
+    owner_->commandSubtypeByTypeTokens_.clear();
+    owner_->commandRequiredPositionalCount_.clear();
+    owner_->commandArgumentSignaturesByToken_.clear();
+    owner_->commandPrimaryValueIsPerson_.clear();
+    owner_->contextCommandTokens_.clear();
+    owner_->blockCommandContextsByKind_.clear();
+    loadHelpMetadataFromCommandCatalog();
+    if (owner_->rawEditorCompletionController_ != nullptr) {
+        owner_->rawEditorCompletionController_->rebuildCompletionModel();
+    }
+    owner_->populateBlockToolboxScopeCombo();
+}
+
+void TextEditorContextHelpController::loadHelpMetadataFromCommandCatalog()
+{
+    if (owner_ == nullptr) {
+        return;
+    }
+
+    resetCatalogBlockDirectiveMetadataToDefaults();
+
+    const QJsonObject catalogObject = CommandCatalogService::catalogObject();
+    if (catalogObject.isEmpty()) {
+        return;
+    }
+    applyCatalogBlockDirectiveMetadata(catalogObject);
+    if (owner_->rawEditorCompletionController_ != nullptr) {
+        owner_->rawEditorCompletionController_->applyCatalogCommandsMetadata(catalogObject);
+    }
+}
+
+void TextEditorContextHelpController::setHelpCollapsed(bool collapsed)
+{
+    if (owner_ == nullptr) {
+        return;
+    }
+
+    owner_->helpCollapsed_ = collapsed;
+    if (owner_->helpBrowser_ != nullptr) {
+        owner_->helpBrowser_->setVisible(!collapsed);
+    }
+    if (owner_->editorHelpSplitter_ != nullptr) {
+        if (!collapsed && owner_->helpPanelExtent_ > 0) {
+            const QList<int> sizes = owner_->editorHelpSplitter_->sizes();
+            owner_->editorHelpSplitter_->setSizes(QList<int>{sizes.value(0, 1), owner_->helpPanelExtent_});
+        } else if (collapsed) {
+            const QList<int> sizes = owner_->editorHelpSplitter_->sizes();
+            if (sizes.size() >= 2) {
+                const int minimumExtent = owner_->helpPanel_ != nullptr
+                    ? qMax(owner_->helpPanel_->minimumSizeHint().width(), owner_->helpPanel_->minimumWidth())
+                    : 1;
+                owner_->helpPanelExtent_ = qMax(sizes.at(1), minimumExtent);
+            }
+            owner_->editorHelpSplitter_->setSizes(QList<int>{1, 0});
+        }
+    }
 }
 
 void TextEditorContextHelpController::updateContextHelp()

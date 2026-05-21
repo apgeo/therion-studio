@@ -12,6 +12,10 @@ class TextEditorContextHelpController final
 public:
     explicit TextEditorContextHelpController(TextEditorTab *owner);
 
+    void buildHelpPanel();
+    void loadHelpMetadata();
+    void loadHelpMetadataFromCommandCatalog();
+    void setHelpCollapsed(bool collapsed);
     void updateContextHelp();
     void updateValidationTooltipForCursor();
 

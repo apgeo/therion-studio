@@ -2,7 +2,6 @@
 
 #include <QString>
 #include <QStringList>
-#include <QTextDocument>
 #include <QWidget>
 #include <QHash>
 #include <QPointF>
@@ -35,7 +34,12 @@ class QFormLayout;
 namespace TherionStudio
 {
 class TherionSyntaxHighlighter;
+class TextEditorAppearanceController;
 class TextEditorContextHelpController;
+class TextEditorCursorController;
+class TextEditorModeController;
+class TextEditorSourceRewriteController;
+class TextEditorStatusController;
 class RawEditorFindController;
 class RawEditorCompletionController;
 class BlockEditorOptionArgsController;
@@ -197,6 +201,11 @@ private slots:
 
 private:
     friend class TextEditorContextHelpController;
+    friend class TextEditorCursorController;
+    friend class TextEditorAppearanceController;
+    friend class TextEditorModeController;
+    friend class TextEditorSourceRewriteController;
+    friend class TextEditorStatusController;
     friend class RawEditorFindController;
     friend class RawEditorCompletionController;
     friend class BlockEditorOptionArgsController;
@@ -418,7 +427,12 @@ private:
     QString cleanEncodingNameSnapshot_ = QStringLiteral("UTF-8");
     QString cleanTextSnapshot_;
     QString encodingStatusNote_;
+    std::unique_ptr<TextEditorAppearanceController> appearanceController_;
     std::unique_ptr<TextEditorContextHelpController> contextHelpController_;
+    std::unique_ptr<TextEditorCursorController> cursorController_;
+    std::unique_ptr<TextEditorModeController> editorModeController_;
+    std::unique_ptr<TextEditorSourceRewriteController> sourceRewriteController_;
+    std::unique_ptr<TextEditorStatusController> statusController_;
     std::unique_ptr<RawEditorFindController> rawEditorFindController_;
     std::unique_ptr<RawEditorCompletionController> rawEditorCompletionController_;
     std::unique_ptr<BlockEditorOptionArgsController> blockDetailsOptionArgsController_;

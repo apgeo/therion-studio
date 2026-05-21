@@ -28,7 +28,13 @@
 #include "raw_editor/RawEditorCompletionController.h"
 #include "raw_editor/RawEditorFindController.h"
 #include "raw_editor/RawEditorTextEdit.h"
+#include "TextEditorAppearanceController.h"
 #include "TextEditorContextHelpController.h"
+#include "TextEditorCursorController.h"
+#include "TextEditorModeController.h"
+#include "TextEditorSourceRewriteController.h"
+#include "TextEditorStatusController.h"
+#include "TextEditorSurfaceStyler.h"
 
 #include <QAbstractButton>
 #include <QAbstractItemView>
@@ -39,8 +45,6 @@
 #include <QComboBox>
 #include <QFrame>
 #include <QCompleter>
-#include <QFileInfo>
-#include <QDir>
 #include <QFont>
 #include <QFontMetricsF>
 #include <QFormLayout>
@@ -66,7 +70,6 @@
 #include <QTableWidget>
 #include <QTextBrowser>
 #include <QTextCursor>
-#include <QTextDocument>
 #include <QToolTip>
 #include <QHeaderView>
 #include <QScreen>
@@ -78,20 +81,14 @@
 #include <QVBoxLayout>
 #include <QMessageBox>
 
-#include <QJsonArray>
-#include <QJsonObject>
-#include <QTextBlock>
 #include <QPen>
 
 #include <algorithm>
 #include <functional>
 #include <limits>
 
-#include "../../core/CommandCatalogService.h"
 #include "../../core/DocumentFile.h"
 #include "../../core/TherionCommandSyntax.h"
-#include "../../core/TherionDocumentEditor.h"
-#include "../../core/TherionDocumentParser.h"
 #include "../../editor/TherionSyntaxHighlighter.h"
 
 namespace
@@ -113,11 +110,6 @@ void applyThinSplitterStyle(QSplitter *splitter, const QString &objectName)
     splitter->setHandleWidth(10);
     splitter->setStyleSheet(QString());
 }
-
-void syncPanelSurfaceToBaseTone(QWidget *panelWidget);
-void syncPanelSurfaceToPalette(QWidget *panelWidget, const QPalette &sourcePalette);
-void syncTextBrowserSurfaceToParent(QWidget *browserWidget);
-void syncTextBrowserSurfaceToPalette(QWidget *browserWidget, const QPalette &sourcePalette);
 
 void appendUnique(QStringList &target, const QString &value)
 {
@@ -260,136 +252,6 @@ QStringList optionArgumentLabelsFromSignature(const QString &signature)
     return labels;
 }
 
-void syncTextBrowserSurfaceToParent(QWidget *browserWidget)
-{
-    QWidget *parent = browserWidget != nullptr ? browserWidget->parentWidget() : nullptr;
-    syncTextBrowserSurfaceToPalette(browserWidget,
-                                    parent != nullptr ? parent->palette() : QApplication::palette(browserWidget));
-}
-
-void syncTextBrowserSurfaceToPalette(QWidget *browserWidget, const QPalette &sourcePalette)
-{
-    auto *browser = qobject_cast<QTextBrowser *>(browserWidget);
-    if (browser == nullptr) {
-        return;
-    }
-
-    QColor surfaceColor = sourcePalette.color(QPalette::Base);
-    if (!surfaceColor.isValid()) {
-        surfaceColor = sourcePalette.color(QPalette::Window);
-    }
-    QColor textColor = sourcePalette.color(QPalette::Text);
-    if (!textColor.isValid()) {
-        textColor = sourcePalette.color(QPalette::WindowText);
-    }
-    QColor linkColor = sourcePalette.color(QPalette::Link);
-    if (!linkColor.isValid()) {
-        linkColor = textColor;
-    }
-    QPalette browserPalette = sourcePalette;
-    browserPalette.setColor(QPalette::Base, surfaceColor);
-    browserPalette.setColor(QPalette::Window, surfaceColor);
-    browserPalette.setColor(QPalette::AlternateBase, surfaceColor);
-    browserPalette.setColor(QPalette::Text, textColor);
-    browserPalette.setColor(QPalette::WindowText, textColor);
-    browserPalette.setColor(QPalette::ButtonText, textColor);
-    browserPalette.setColor(QPalette::Link, linkColor);
-    browser->setPalette(browserPalette);
-    browser->setAutoFillBackground(true);
-    browser->setStyleSheet(QStringLiteral(
-                                "QTextBrowser {"
-                                " background-color: %1;"
-                                " color: %2;"
-                                " border: none;"
-                                "}"
-                                "QTextBrowser:viewport {"
-                                " background-color: %1;"
-                                "}").arg(surfaceColor.name(QColor::HexRgb),
-                                          textColor.name(QColor::HexRgb)));
-
-    if (QWidget *viewport = browser->viewport(); viewport != nullptr) {
-        QPalette viewportPalette = sourcePalette;
-        viewportPalette.setColor(QPalette::Base, surfaceColor);
-        viewportPalette.setColor(QPalette::Window, surfaceColor);
-        viewportPalette.setColor(QPalette::AlternateBase, surfaceColor);
-        viewportPalette.setColor(QPalette::Text, textColor);
-        viewportPalette.setColor(QPalette::WindowText, textColor);
-        viewportPalette.setColor(QPalette::ButtonText, textColor);
-        viewportPalette.setColor(QPalette::Link, linkColor);
-        viewport->setPalette(viewportPalette);
-        viewport->setAutoFillBackground(true);
-        viewport->setStyleSheet(QStringLiteral("background-color: %1; color: %2;")
-                                     .arg(surfaceColor.name(QColor::HexRgb),
-                                          textColor.name(QColor::HexRgb)));
-    }
-
-    if (QTextDocument *document = browser->document(); document != nullptr) {
-        document->setDefaultStyleSheet(
-            QStringLiteral(
-                "body {"
-                " color: %1;"
-                " background-color: %2;"
-                " margin: 0;"
-                " line-height: 1.35;"
-                "}"
-                "h1, h2, h3, h4 { margin: 0 0 8px 0; }"
-                "p { margin: 0 0 10px 0; }"
-                "ul, ol { margin: 0 0 10px 20px; }"
-                "li { margin: 0 0 4px 0; }"
-                "a { color: %3; }"
-                "code { color: %1; }")
-                .arg(textColor.name(QColor::HexRgb),
-                     surfaceColor.name(QColor::HexRgb),
-                     linkColor.name(QColor::HexRgb)));
-    }
-}
-
-void syncPanelSurfaceToBaseTone(QWidget *panelWidget)
-{
-    syncPanelSurfaceToPalette(panelWidget, QApplication::palette(panelWidget));
-}
-
-void syncPanelSurfaceToPalette(QWidget *panelWidget, const QPalette &sourcePalette)
-{
-    if (panelWidget == nullptr) {
-        return;
-    }
-
-    QPalette panelPalette = sourcePalette;
-    QColor surfaceColor = sourcePalette.color(QPalette::Base);
-    if (!surfaceColor.isValid()) {
-        surfaceColor = sourcePalette.color(QPalette::Window);
-    }
-
-    panelPalette.setColor(QPalette::Window, surfaceColor);
-    panelPalette.setColor(QPalette::Base, surfaceColor);
-    panelPalette.setColor(QPalette::AlternateBase, surfaceColor);
-    panelWidget->setPalette(panelPalette);
-    panelWidget->setAutoFillBackground(true);
-    if (panelWidget->property("leftBorderOnly").toBool()) {
-        if (panelWidget->objectName().isEmpty()) {
-            panelWidget->setObjectName(QStringLiteral("leftBorderPanel"));
-        }
-        panelWidget->setStyleSheet(QStringLiteral(
-                                       "QWidget#%1 {"
-                                       " background-color: %2;"
-                                       " color: %3;"
-                                       " border-left: 1px solid palette(mid);"
-                                       " border-right: none;"
-                                       " border-top: none;"
-                                       " border-bottom: none;"
-                                       "}")
-                                       .arg(panelWidget->objectName(),
-                                            surfaceColor.name(QColor::HexRgb),
-                                            panelPalette.color(QPalette::Text).name(QColor::HexRgb)));
-        return;
-    }
-
-    panelWidget->setStyleSheet(QStringLiteral("background-color: %1; color: %2;")
-                                   .arg(surfaceColor.name(QColor::HexRgb),
-                                        panelPalette.color(QPalette::Text).name(QColor::HexRgb)));
-}
-
 }
 
 namespace TherionStudio
@@ -397,9 +259,14 @@ namespace TherionStudio
 TextEditorTab::TextEditorTab(QWidget *parent)
     : QWidget(parent)
 {
+    appearanceController_ = std::make_unique<TextEditorAppearanceController>(this);
     contextHelpController_ = std::make_unique<TextEditorContextHelpController>(this);
+    cursorController_ = std::make_unique<TextEditorCursorController>(this);
     rawEditorFindController_ = std::make_unique<RawEditorFindController>(this);
     rawEditorCompletionController_ = std::make_unique<RawEditorCompletionController>(this);
+    editorModeController_ = std::make_unique<TextEditorModeController>(this);
+    sourceRewriteController_ = std::make_unique<TextEditorSourceRewriteController>(this);
+    statusController_ = std::make_unique<TextEditorStatusController>(this);
     blockDetailsOptionArgsController_ = std::make_unique<BlockEditorOptionArgsController>(this);
     blockDetailsHelpController_ = std::make_unique<BlockEditorDetailsHelpController>(this);
     blockDetailsLineBuildService_ = std::make_unique<BlockEditorLineBuildService>(this);
@@ -1012,29 +879,8 @@ void TextEditorTab::changeEvent(QEvent *event)
 
 void TextEditorTab::handleApplicationAppearanceChanged()
 {
-    if (blockCanvasView_ != nullptr) {
-        blockCanvasView_->setBackgroundBrush(blockCanvasView_->palette().color(QPalette::Base));
-        if (QWidget *viewport = blockCanvasView_->viewport(); viewport != nullptr) {
-            viewport->update();
-        }
-    }
-
-    QPalette textSurfacePalette = editor_ != nullptr ? editor_->palette() : palette();
-    const QColor sourceSurface = sourceSurfaceColor();
-    textSurfacePalette.setColor(QPalette::Window, sourceSurface);
-    textSurfacePalette.setColor(QPalette::Base, sourceSurface);
-    textSurfacePalette.setColor(QPalette::AlternateBase, sourceSurface);
-    syncPanelSurfaceToPalette(helpPanel_, textSurfacePalette);
-    syncPanelSurfaceToPalette(blockDetailsPanel_, textSurfacePalette);
-    syncPanelSurfaceToPalette(blockDetailsEditPanel_, textSurfacePalette);
-    syncPanelSurfaceToPalette(blockDetailsHelpPanel_, textSurfacePalette);
-    syncTextBrowserSurfaceToPalette(helpBrowser_, textSurfacePalette);
-    syncTextBrowserSurfaceToPalette(blockDetailsHelpBrowser_, textSurfacePalette);
-    updateContextHelp();
-    updateBlockDetailsHelpForCurrentFocus();
-
-    if (blocksModeActive_ && blockCanvasScene_ != nullptr) {
-        rebuildBlocksCanvasFromText();
+    if (appearanceController_ != nullptr) {
+        appearanceController_->handleApplicationAppearanceChanged();
     }
 }
 
@@ -1119,61 +965,15 @@ bool TextEditorTab::save(QString *errorMessage)
 
 void TextEditorTab::goToLine(int lineNumber)
 {
-    if (blocksModeActive_) {
-        setBlocksModeActive(false);
-    }
-
-    if (lineNumber <= 0) {
-        return;
-    }
-
-    const QTextBlock block = editor_->document()->findBlockByLineNumber(lineNumber - 1);
-    if (!block.isValid()) {
-        return;
-    }
-
-    QTextCursor cursor(block);
-    cursor.movePosition(QTextCursor::StartOfBlock);
-    editor_->setTextCursor(cursor);
-    highlightedLineNumber_ = lineNumber;
-    editor_->centerCursor();
-    editor_->ensureCursorVisible();
-    refreshCurrentLineHighlight();
-    updateContextHelp();
-
-    if (searchBar_->isVisible()) {
-        findEdit_->clearFocus();
+    if (cursorController_ != nullptr) {
+        cursorController_->goToLine(lineNumber);
     }
 }
 
 void TextEditorTab::goToLineColumn(int lineNumber, int columnNumber)
 {
-    if (blocksModeActive_) {
-        setBlocksModeActive(false);
-    }
-
-    if (lineNumber <= 0) {
-        return;
-    }
-
-    const QTextBlock block = editor_->document()->findBlockByLineNumber(lineNumber - 1);
-    if (!block.isValid()) {
-        return;
-    }
-
-    const int clampedColumn = qMax(1, columnNumber);
-    QTextCursor cursor(block);
-    const int offsetInBlock = qMin(clampedColumn - 1, qMax(0, block.length() - 1));
-    cursor.setPosition(block.position() + offsetInBlock);
-    editor_->setTextCursor(cursor);
-    highlightedLineNumber_ = lineNumber;
-    editor_->centerCursor();
-    editor_->ensureCursorVisible();
-    refreshCurrentLineHighlight();
-    updateContextHelp();
-
-    if (searchBar_->isVisible()) {
-        findEdit_->clearFocus();
+    if (cursorController_ != nullptr) {
+        cursorController_->goToLineColumn(lineNumber, columnNumber);
     }
 }
 
@@ -1225,32 +1025,8 @@ int TextEditorTab::replaceAll()
 
 bool TextEditorTab::rewriteStructureEntryName(int lineNumber, const QString &category, const QString &newName, QString *errorMessage)
 {
-    QString contents = editor_->toPlainText();
-    if (!TherionDocumentEditor::rewriteStructureEntryName(&contents, lineNumber, category, newName, errorMessage)) {
-        return false;
-    }
-
-    const QTextCursor previousCursor = editor_->textCursor();
-    const int previousLine = previousCursor.blockNumber();
-    const int previousColumn = previousCursor.positionInBlock();
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
-    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
-    if (targetBlock.isValid()) {
-        QTextCursor restoredCursor(targetBlock);
-        restoredCursor.movePosition(QTextCursor::StartOfBlock);
-        restoredCursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
-        editor_->setTextCursor(restoredCursor);
-    }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    updateContextHelp();
-    return true;
+    return sourceRewriteController_ != nullptr
+        && sourceRewriteController_->rewriteStructureEntryName(lineNumber, category, newName, errorMessage);
 }
 
 bool TextEditorTab::insertScrapBlock(const QString &preferredName,
@@ -1258,37 +1034,8 @@ bool TextEditorTab::insertScrapBlock(const QString &preferredName,
                                      QString *errorMessage,
                                      const QString &options)
 {
-    QString contents = editor_->toPlainText();
-    int resolvedLineNumber = 0;
-    if (!TherionDocumentEditor::appendScrapBlock(&contents, preferredName, &resolvedLineNumber, errorMessage, options)) {
-        return false;
-    }
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    if (resolvedLineNumber > 0) {
-        const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(resolvedLineNumber - 1);
-        if (targetBlock.isValid()) {
-            QTextCursor cursor(targetBlock);
-            cursor.movePosition(QTextCursor::StartOfBlock);
-            cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-            editor_->setTextCursor(cursor);
-            editor_->centerCursor();
-        }
-    }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    emit documentTextChanged();
-    updateContextHelp();
-
-    if (insertedLineNumber != nullptr) {
-        *insertedLineNumber = resolvedLineNumber;
-    }
-
-    return true;
+    return sourceRewriteController_ != nullptr
+        && sourceRewriteController_->insertScrapBlock(preferredName, insertedLineNumber, errorMessage, options);
 }
 
 bool TextEditorTab::insertDraftGeometry(const QString &kind,
@@ -1296,146 +1043,32 @@ bool TextEditorTab::insertDraftGeometry(const QString &kind,
                                         int *insertedLineNumber,
                                         QString *errorMessage)
 {
-    QString contents = editor_->toPlainText();
-    int resolvedLineNumber = 0;
-    if (!TherionDocumentEditor::appendDraftGeometry(&contents, kind, vertices, &resolvedLineNumber, errorMessage)) {
-        return false;
-    }
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    if (resolvedLineNumber > 0) {
-        const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(resolvedLineNumber - 1);
-        if (targetBlock.isValid()) {
-            QTextCursor cursor(targetBlock);
-            cursor.movePosition(QTextCursor::StartOfBlock);
-            cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-            editor_->setTextCursor(cursor);
-            editor_->centerCursor();
-        }
-    }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    emit documentTextChanged();
-    updateContextHelp();
-
-    if (insertedLineNumber != nullptr) {
-        *insertedLineNumber = resolvedLineNumber;
-    }
-
-    return true;
+    return sourceRewriteController_ != nullptr
+        && sourceRewriteController_->insertDraftGeometry(kind, vertices, insertedLineNumber, errorMessage);
 }
 
 bool TextEditorTab::insertDraftLineGeometry(const QStringList &coordinateRows,
                                             int *insertedLineNumber,
                                             QString *errorMessage)
 {
-    QString contents = editor_->toPlainText();
-    int resolvedLineNumber = 0;
-    if (!TherionDocumentEditor::appendDraftLineGeometry(&contents, coordinateRows, &resolvedLineNumber, errorMessage)) {
-        return false;
-    }
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    if (resolvedLineNumber > 0) {
-        const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(resolvedLineNumber - 1);
-        if (targetBlock.isValid()) {
-            QTextCursor cursor(targetBlock);
-            cursor.movePosition(QTextCursor::StartOfBlock);
-            cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-            editor_->setTextCursor(cursor);
-            editor_->centerCursor();
-        }
-    }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    emit documentTextChanged();
-    updateContextHelp();
-
-    if (insertedLineNumber != nullptr) {
-        *insertedLineNumber = resolvedLineNumber;
-    }
-
-    return true;
+    return sourceRewriteController_ != nullptr
+        && sourceRewriteController_->insertDraftLineGeometry(coordinateRows, insertedLineNumber, errorMessage);
 }
 
 bool TextEditorTab::insertDraftAreaGeometry(const QStringList &coordinateRows,
                                             int *insertedLineNumber,
                                             QString *errorMessage)
 {
-    QString contents = editor_->toPlainText();
-    int resolvedLineNumber = 0;
-    if (!TherionDocumentEditor::appendDraftAreaGeometry(&contents, coordinateRows, &resolvedLineNumber, errorMessage)) {
-        return false;
-    }
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    if (resolvedLineNumber > 0) {
-        const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(resolvedLineNumber - 1);
-        if (targetBlock.isValid()) {
-            QTextCursor cursor(targetBlock);
-            cursor.movePosition(QTextCursor::StartOfBlock);
-            cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-            editor_->setTextCursor(cursor);
-            editor_->centerCursor();
-        }
-    }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    emit documentTextChanged();
-    updateContextHelp();
-
-    if (insertedLineNumber != nullptr) {
-        *insertedLineNumber = resolvedLineNumber;
-    }
-
-    return true;
+    return sourceRewriteController_ != nullptr
+        && sourceRewriteController_->insertDraftAreaGeometry(coordinateRows, insertedLineNumber, errorMessage);
 }
 
 bool TextEditorTab::rewritePointCoordinates(int lineNumber,
                                             const QPointF &point,
                                             QString *errorMessage)
 {
-    QString contents = editor_->toPlainText();
-    if (!TherionDocumentEditor::rewritePointCoordinates(&contents, lineNumber, point, errorMessage)) {
-        return false;
-    }
-
-    const QTextCursor previousCursor = editor_->textCursor();
-    const int previousLine = previousCursor.blockNumber();
-    const int previousColumn = previousCursor.positionInBlock();
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
-    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
-    if (targetBlock.isValid()) {
-        QTextCursor restoredCursor(targetBlock);
-        restoredCursor.movePosition(QTextCursor::StartOfBlock);
-        restoredCursor.movePosition(QTextCursor::Right,
-                                    QTextCursor::MoveAnchor,
-                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
-        editor_->setTextCursor(restoredCursor);
-    }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    emit documentTextChanged();
-    updateContextHelp();
-    return true;
+    return sourceRewriteController_ != nullptr
+        && sourceRewriteController_->rewritePointCoordinates(lineNumber, point, errorMessage);
 }
 
 bool TextEditorTab::rewriteLineAreaVertex(int lineNumber,
@@ -1444,35 +1077,8 @@ bool TextEditorTab::rewriteLineAreaVertex(int lineNumber,
                                           const QPointF &point,
                                           QString *errorMessage)
 {
-    QString contents = editor_->toPlainText();
-    if (!TherionDocumentEditor::rewriteLineAreaVertex(&contents, lineNumber, kind, vertexIndex, point, errorMessage)) {
-        return false;
-    }
-
-    const QTextCursor previousCursor = editor_->textCursor();
-    const int previousLine = previousCursor.blockNumber();
-    const int previousColumn = previousCursor.positionInBlock();
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
-    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
-    if (targetBlock.isValid()) {
-        QTextCursor restoredCursor(targetBlock);
-        restoredCursor.movePosition(QTextCursor::StartOfBlock);
-        restoredCursor.movePosition(QTextCursor::Right,
-                                    QTextCursor::MoveAnchor,
-                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
-        editor_->setTextCursor(restoredCursor);
-    }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    emit documentTextChanged();
-    updateContextHelp();
-    return true;
+    return sourceRewriteController_ != nullptr
+        && sourceRewriteController_->rewriteLineAreaVertex(lineNumber, kind, vertexIndex, point, errorMessage);
 }
 
 bool TextEditorTab::rewriteLineOptionToggle(int lineNumber,
@@ -1480,35 +1086,8 @@ bool TextEditorTab::rewriteLineOptionToggle(int lineNumber,
                                             bool enabled,
                                             QString *errorMessage)
 {
-    QString contents = editor_->toPlainText();
-    if (!TherionDocumentEditor::rewriteLineOptionToggle(&contents, lineNumber, optionName, enabled, errorMessage)) {
-        return false;
-    }
-
-    const QTextCursor previousCursor = editor_->textCursor();
-    const int previousLine = previousCursor.blockNumber();
-    const int previousColumn = previousCursor.positionInBlock();
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
-    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
-    if (targetBlock.isValid()) {
-        QTextCursor restoredCursor(targetBlock);
-        restoredCursor.movePosition(QTextCursor::StartOfBlock);
-        restoredCursor.movePosition(QTextCursor::Right,
-                                    QTextCursor::MoveAnchor,
-                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
-        editor_->setTextCursor(restoredCursor);
-    }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    emit documentTextChanged();
-    updateContextHelp();
-    return true;
+    return sourceRewriteController_ != nullptr
+        && sourceRewriteController_->rewriteLineOptionToggle(lineNumber, optionName, enabled, errorMessage);
 }
 
 bool TextEditorTab::rewritePointOrientation(int lineNumber,
@@ -1516,39 +1095,8 @@ bool TextEditorTab::rewritePointOrientation(int lineNumber,
                                             qreal orientationDegrees,
                                             QString *errorMessage)
 {
-    QString contents = editor_->toPlainText();
-    if (!TherionDocumentEditor::rewritePointOrientation(&contents,
-                                                        lineNumber,
-                                                        enabled,
-                                                        orientationDegrees,
-                                                        errorMessage)) {
-        return false;
-    }
-
-    const QTextCursor previousCursor = editor_->textCursor();
-    const int previousLine = previousCursor.blockNumber();
-    const int previousColumn = previousCursor.positionInBlock();
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
-    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
-    if (targetBlock.isValid()) {
-        QTextCursor restoredCursor(targetBlock);
-        restoredCursor.movePosition(QTextCursor::StartOfBlock);
-        restoredCursor.movePosition(QTextCursor::Right,
-                                    QTextCursor::MoveAnchor,
-                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
-        editor_->setTextCursor(restoredCursor);
-    }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    emit documentTextChanged();
-    updateContextHelp();
-    return true;
+    return sourceRewriteController_ != nullptr
+        && sourceRewriteController_->rewritePointOrientation(lineNumber, enabled, orientationDegrees, errorMessage);
 }
 
 bool TextEditorTab::rewriteLinePointOrientation(int lineNumber,
@@ -1557,40 +1105,12 @@ bool TextEditorTab::rewriteLinePointOrientation(int lineNumber,
                                                 qreal orientationDegrees,
                                                 QString *errorMessage)
 {
-    QString contents = editor_->toPlainText();
-    if (!TherionDocumentEditor::rewriteLinePointOrientation(&contents,
-                                                            lineNumber,
-                                                            sourceVertexIndex,
-                                                            enabled,
-                                                            orientationDegrees,
-                                                            errorMessage)) {
-        return false;
-    }
-
-    const QTextCursor previousCursor = editor_->textCursor();
-    const int previousLine = previousCursor.blockNumber();
-    const int previousColumn = previousCursor.positionInBlock();
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
-    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
-    if (targetBlock.isValid()) {
-        QTextCursor restoredCursor(targetBlock);
-        restoredCursor.movePosition(QTextCursor::StartOfBlock);
-        restoredCursor.movePosition(QTextCursor::Right,
-                                    QTextCursor::MoveAnchor,
-                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
-        editor_->setTextCursor(restoredCursor);
-    }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    emit documentTextChanged();
-    updateContextHelp();
-    return true;
+    return sourceRewriteController_ != nullptr
+        && sourceRewriteController_->rewriteLinePointOrientation(lineNumber,
+                                                                 sourceVertexIndex,
+                                                                 enabled,
+                                                                 orientationDegrees,
+                                                                 errorMessage);
 }
 
 bool TextEditorTab::rewriteLinePointLeftSize(int lineNumber,
@@ -1599,75 +1119,20 @@ bool TextEditorTab::rewriteLinePointLeftSize(int lineNumber,
                                              qreal sizeValue,
                                              QString *errorMessage)
 {
-    QString contents = editor_->toPlainText();
-    if (!TherionDocumentEditor::rewriteLinePointLeftSize(&contents,
-                                                         lineNumber,
-                                                         sourceVertexIndex,
-                                                         enabled,
-                                                         sizeValue,
-                                                         errorMessage)) {
-        return false;
-    }
-
-    const QTextCursor previousCursor = editor_->textCursor();
-    const int previousLine = previousCursor.blockNumber();
-    const int previousColumn = previousCursor.positionInBlock();
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
-    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
-    if (targetBlock.isValid()) {
-        QTextCursor restoredCursor(targetBlock);
-        restoredCursor.movePosition(QTextCursor::StartOfBlock);
-        restoredCursor.movePosition(QTextCursor::Right,
-                                    QTextCursor::MoveAnchor,
-                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
-        editor_->setTextCursor(restoredCursor);
-    }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    emit documentTextChanged();
-    updateContextHelp();
-    return true;
+    return sourceRewriteController_ != nullptr
+        && sourceRewriteController_->rewriteLinePointLeftSize(lineNumber,
+                                                              sourceVertexIndex,
+                                                              enabled,
+                                                              sizeValue,
+                                                              errorMessage);
 }
 
 bool TextEditorTab::rewriteLineCoordinateRows(int lineNumber,
                                               const QStringList &coordinateRows,
                                               QString *errorMessage)
 {
-    QString contents = editor_->toPlainText();
-    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&contents, lineNumber, coordinateRows, errorMessage)) {
-        return false;
-    }
-
-    const QTextCursor previousCursor = editor_->textCursor();
-    const int previousLine = previousCursor.blockNumber();
-    const int previousColumn = previousCursor.positionInBlock();
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
-    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
-    if (targetBlock.isValid()) {
-        QTextCursor restoredCursor(targetBlock);
-        restoredCursor.movePosition(QTextCursor::StartOfBlock);
-        restoredCursor.movePosition(QTextCursor::Right,
-                                    QTextCursor::MoveAnchor,
-                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
-        editor_->setTextCursor(restoredCursor);
-    }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    emit documentTextChanged();
-    updateContextHelp();
-    return true;
+    return sourceRewriteController_ != nullptr
+        && sourceRewriteController_->rewriteLineCoordinateRows(lineNumber, coordinateRows, errorMessage);
 }
 
 bool TextEditorTab::configureCommandAtLine(const QString &kind, int lineNumber)
@@ -1687,30 +1152,9 @@ bool TextEditorTab::deleteCommandAtLine(int lineNumber)
 
 void TextEditorTab::replaceTextForCommand(const QString &contents)
 {
-    const QTextCursor previousCursor = editor_->textCursor();
-    const int previousLine = previousCursor.blockNumber();
-    const int previousColumn = previousCursor.positionInBlock();
-
-    loading_ = true;
-    editor_->setPlainText(contents);
-
-    const int targetLine = qBound(0, previousLine, qMax(0, editor_->document()->blockCount() - 1));
-    const QTextBlock targetBlock = editor_->document()->findBlockByLineNumber(targetLine);
-    if (targetBlock.isValid()) {
-        QTextCursor restoredCursor(targetBlock);
-        restoredCursor.movePosition(QTextCursor::StartOfBlock);
-        restoredCursor.movePosition(QTextCursor::Right,
-                                    QTextCursor::MoveAnchor,
-                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
-        editor_->setTextCursor(restoredCursor);
+    if (sourceRewriteController_ != nullptr) {
+        sourceRewriteController_->replaceTextForCommand(contents);
     }
-
-    loading_ = false;
-    currentLineNumber_ = editor_->textCursor().blockNumber() + 1;
-    applyDirtyStateFromCurrentState();
-    rebuildBlocksCanvasFromText();
-    emit documentTextChanged();
-    updateContextHelp();
 }
 
 QString TextEditorTab::filePath() const
@@ -1720,20 +1164,7 @@ QString TextEditorTab::filePath() const
 
 QString TextEditorTab::displayName() const
 {
-    if (filePath_.isEmpty()) {
-        return tr("Untitled");
-    }
-
-    QString name = QFileInfo(filePath_).fileName();
-    if (name.isEmpty()) {
-        name = tr("Untitled");
-    }
-
-    if (dirty_) {
-        name.prepend(QStringLiteral("*"));
-    }
-
-    return name;
+    return statusController_ != nullptr ? statusController_->displayName() : tr("Untitled");
 }
 
 bool TextEditorTab::isDirty() const
@@ -1743,12 +1174,12 @@ bool TextEditorTab::isDirty() const
 
 int TextEditorTab::currentLineNumber() const
 {
-    return editor_->textCursor().blockNumber() + 1;
+    return cursorController_ != nullptr ? cursorController_->currentLineNumber() : 1;
 }
 
 int TextEditorTab::currentColumnNumber() const
 {
-    return editor_->textCursor().positionInBlock() + 1;
+    return cursorController_ != nullptr ? cursorController_->currentColumnNumber() : 1;
 }
 
 QString TextEditorTab::text() const
@@ -1758,43 +1189,20 @@ QString TextEditorTab::text() const
 
 QColor TextEditorTab::sourceSurfaceColor() const
 {
-    if (blocksModeActive_ && blockCanvasView_ != nullptr) {
-        const QColor blocksSurface = blockCanvasView_->backgroundBrush().color();
-        if (blocksSurface.isValid()) {
-            return blocksSurface;
-        }
-        const QColor blocksBase = blockCanvasView_->palette().color(QPalette::Base);
-        if (blocksBase.isValid()) {
-            return blocksBase;
-        }
+    if (appearanceController_ == nullptr) {
+        return palette().color(QPalette::Window);
     }
-
-    if (editor_ != nullptr) {
-        const QColor editorBase = editor_->palette().color(QPalette::Base);
-        if (editorBase.isValid()) {
-            return editorBase;
-        }
-        const QColor editorWindow = editor_->palette().color(QPalette::Window);
-        if (editorWindow.isValid()) {
-            return editorWindow;
-        }
-    }
-
-    const QColor widgetBase = palette().color(QPalette::Base);
-    if (widgetBase.isValid()) {
-        return widgetBase;
-    }
-    return palette().color(QPalette::Window);
+    return appearanceController_->sourceSurfaceColor();
 }
 
 QString TextEditorTab::statusPathText() const
 {
-    return displayPath();
+    return statusController_ != nullptr ? statusController_->statusPathText() : tr("No file open");
 }
 
 QString TextEditorTab::statusEncodingText() const
 {
-    return fileEncodingLabel_;
+    return statusController_ != nullptr ? statusController_->statusEncodingText() : QStringLiteral("UTF-8");
 }
 
 bool TextEditorTab::canUndo() const
@@ -1823,8 +1231,9 @@ void TextEditorTab::triggerRedo()
 
 void TextEditorTab::setInlineStatusVisible(bool visible)
 {
-    inlineStatusRequestedVisible_ = visible;
-    refreshStatus();
+    if (statusController_ != nullptr) {
+        statusController_->setInlineStatusVisible(visible);
+    }
 }
 
 void TextEditorTab::setModeSelectorVisible(bool visible)
@@ -1862,106 +1271,34 @@ void TextEditorTab::setEditorMode(EditorMode mode)
 
 bool TextEditorTab::isBlocksModeSupportedForCurrentFile() const
 {
-    if (filePath_.trimmed().isEmpty()) {
-        return false;
-    }
-
-    const QFileInfo fileInfo(filePath_);
-    const QString suffix = fileInfo.suffix().trimmed().toLower();
-    const QString fileName = fileInfo.fileName().trimmed().toLower();
-    return suffix == QStringLiteral("th")
-        || suffix == QStringLiteral("thconfig")
-        || fileName == QStringLiteral("thconfig");
+    return editorModeController_ != nullptr
+        && editorModeController_->isBlocksModeSupportedForCurrentFile();
 }
 
 void TextEditorTab::refreshBlocksModeAvailability()
 {
-    const bool supported = isBlocksModeSupportedForCurrentFile();
-    if (blocksModeButton_ != nullptr) {
-        blocksModeButton_->setEnabled(supported);
-    }
-    if (!supported) {
-        blocksModeActive_ = false;
+    if (editorModeController_ != nullptr) {
+        editorModeController_->refreshBlocksModeAvailability();
     }
 }
 
 void TextEditorTab::setBlocksModeActive(bool active)
 {
-    const bool targetActive = active && isBlocksModeSupportedForCurrentFile();
-    if (blocksModeActive_ == targetActive) {
-        refreshEditorModeUi();
-        return;
+    if (editorModeController_ != nullptr) {
+        editorModeController_->setBlocksModeActive(active);
     }
-
-    blocksModeActive_ = targetActive;
-    if (blocksModeActive_) {
-        hideFindBar();
-        if (!ensureEncodingRootDirectiveForBlocks()) {
-            rebuildBlocksCanvasFromText();
-        }
-        populateBlockToolbox();
-    } else if (editor_ != nullptr) {
-        editor_->setFocus();
-    }
-    refreshEditorModeUi();
-    emit editorModeChanged(editorMode());
 }
 
 bool TextEditorTab::ensureEncodingRootDirectiveForBlocks()
 {
-    if (editor_ == nullptr || enforcingEncodingRootDirective_) {
-        return false;
-    }
-
-    QString contents = editor_->toPlainText();
-    QStringList lines = blockEditorNormalizedSourceLines(contents);
-    if (lines.size() == 1 && lines.first().isEmpty()) {
-        lines.clear();
-    }
-
-    QString encodingName = fileEncodingName_.trimmed();
-    if (encodingName.isEmpty()) {
-        encodingName = QStringLiteral("utf-8");
-    }
-    const QString desiredEncodingLine =
-        QStringLiteral("encoding %1").arg(encodingName.toLower());
-
-    QStringList normalizedLines;
-    normalizedLines.reserve(lines.size() + 1);
-    normalizedLines.append(desiredEncodingLine);
-    for (int lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
-        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineIndex), lineIndex + 1);
-        if (isEncodingDirective(parsedLine.directive)) {
-            continue;
-        }
-        normalizedLines.append(lines.at(lineIndex));
-    }
-
-    const QString normalizedContents = blockEditorJoinSourceLines(contents, normalizedLines);
-    if (normalizedContents == blockEditorJoinSourceLines(contents, lines)) {
-        return false;
-    }
-
-    enforcingEncodingRootDirective_ = true;
-    replaceTextForCommand(normalizedContents);
-    enforcingEncodingRootDirective_ = false;
-    return true;
+    return editorModeController_ != nullptr
+        && editorModeController_->ensureEncodingRootDirectiveForBlocks();
 }
 
 void TextEditorTab::refreshEditorModeUi()
 {
-    if (rawModeButton_ == nullptr || blocksModeButton_ == nullptr || editorModeStack_ == nullptr) {
-        return;
-    }
-
-    rawModeButton_->setChecked(!blocksModeActive_);
-    blocksModeButton_->setChecked(blocksModeActive_);
-    if (blocksModeActive_) {
-        editorModeStack_->setCurrentWidget(blocksPanel_);
-    } else {
-        if (rawEditorPanel_ != nullptr) {
-            editorModeStack_->setCurrentWidget(rawEditorPanel_);
-        }
+    if (editorModeController_ != nullptr) {
+        editorModeController_->refreshEditorModeUi();
     }
 }
 
@@ -2209,24 +1546,14 @@ bool TextEditorTab::handleBlockDeleteRequest(int lineNumber)
 
 bool TextEditorTab::isCurrentStateDirty() const
 {
-    const bool textDirty = editor_ != nullptr && editor_->toPlainText() != cleanTextSnapshot_;
-    const bool encodingDirty = fileEncodingName_.compare(cleanEncodingNameSnapshot_, Qt::CaseInsensitive) != 0;
-    return textDirty || encodingDirty;
+    return statusController_ != nullptr && statusController_->isCurrentStateDirty();
 }
 
 void TextEditorTab::applyDirtyStateFromCurrentState()
 {
-    const bool dirtyNow = isCurrentStateDirty();
-    if (editor_ != nullptr && editor_->document() != nullptr) {
-        editor_->document()->setModified(dirtyNow);
+    if (statusController_ != nullptr) {
+        statusController_->applyDirtyStateFromCurrentState();
     }
-    if (dirty_ == dirtyNow) {
-        return;
-    }
-
-    dirty_ = dirtyNow;
-    refreshTitle();
-    emit dirtyStateChanged(dirty_);
 }
 
 void TextEditorTab::handleTextChanged()
@@ -2335,141 +1662,50 @@ void TextEditorTab::handleConvertToUtf8Triggered()
 
 void TextEditorTab::handleCursorPositionChanged()
 {
-    if (loading_) {
-        return;
+    if (cursorController_ != nullptr) {
+        cursorController_->handleCursorPositionChanged();
     }
-
-    const QTextCursor cursor = editor_->textCursor();
-    const int currentLineNumber = cursor.blockNumber() + 1;
-    const int currentColumnNumber = cursor.positionInBlock() + 1;
-    const bool lineChanged = currentLineNumber != currentLineNumber_;
-    const bool columnChanged = currentColumnNumber != currentColumnNumber_;
-    if (currentLineNumber != currentLineNumber_) {
-        currentLineNumber_ = currentLineNumber;
-        emit currentLineChanged(currentLineNumber_);
-    }
-    if (columnChanged) {
-        currentColumnNumber_ = currentColumnNumber;
-    }
-    if (lineChanged || columnChanged) {
-        emit cursorPositionChanged(currentLineNumber_, currentColumnNumber_);
-    }
-
-    highlightedLineNumber_ = currentLineNumber_;
-    refreshCurrentLineHighlight();
-    updateContextHelp();
-    updateValidationTooltipForCursor();
 }
 
 void TextEditorTab::refreshCurrentLineHighlight()
 {
-    if (editor_ == nullptr || editor_->isReadOnly()) {
-        return;
-    }
-
-    if (auto *highlightEditor = dynamic_cast<RawEditorTextEdit *>(editor_)) {
-        highlightEditor->setHighlightedLineNumber(highlightedLineNumber_);
+    if (cursorController_ != nullptr) {
+        cursorController_->refreshCurrentLineHighlight();
     }
 }
 
 void TextEditorTab::refreshTitle()
 {
-    refreshStatus();
-    emit titleChanged();
+    if (statusController_ != nullptr) {
+        statusController_->refreshTitle();
+    }
 }
 
 void TextEditorTab::refreshStatus()
 {
-    if (encodingNoteLabel_ != nullptr) {
-        encodingNoteLabel_->setText(encodingStatusNote_);
-        encodingNoteLabel_->setVisible(!encodingStatusNote_.isEmpty());
-    }
-    if (convertEncodingButton_ != nullptr) {
-        const bool showConversion = fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) != 0;
-        convertEncodingButton_->setVisible(showConversion);
-        convertEncodingButton_->setEnabled(showConversion);
-    }
-
-    const bool showInlineRow = inlineStatusRequestedVisible_ && (!encodingStatusNote_.isEmpty()
-                                                                 || (convertEncodingButton_ != nullptr
-                                                                     && convertEncodingButton_->isVisible()));
-    if (statusRow_ != nullptr) {
-        statusRow_->setVisible(showInlineRow);
+    if (statusController_ != nullptr) {
+        statusController_->refreshStatus();
     }
 }
 
 void TextEditorTab::buildHelpPanel()
 {
-    auto *framedHelpPanel = new QFrame(this);
-    framedHelpPanel->setFrameShape(QFrame::NoFrame);
-    helpPanel_ = framedHelpPanel;
-    helpPanel_->setObjectName(QStringLiteral("textContextHelpPanel"));
-    syncPanelSurfaceToBaseTone(helpPanel_);
-    auto *panelLayout = new QVBoxLayout(helpPanel_);
-    panelLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);
-    panelLayout->setSpacing(kPanelSpacing);
-
-    auto *headerRow = new QHBoxLayout;
-    headerRow->setContentsMargins(0, 0, 0, 0);
-
-    auto *headerLabel = new QLabel(tr("Contextual Help"), helpPanel_);
-    QFont headerFont = headerLabel->font();
-    headerFont.setBold(true);
-    headerLabel->setFont(headerFont);
-
-    headerRow->addWidget(headerLabel);
-    headerRow->addStretch(1);
-
-    helpBrowser_ = new QTextBrowser(helpPanel_);
-    helpBrowser_->setFrameShape(QFrame::NoFrame);
-    helpBrowser_->setOpenLinks(false);
-    helpBrowser_->setOpenExternalLinks(false);
-    helpBrowser_->setMinimumHeight(120);
-    syncTextBrowserSurfaceToParent(helpBrowser_);
-    helpBrowser_->setHtml(tr("<p>Select a Therion command or item to see contextual help.</p>"));
-
-    panelLayout->addLayout(headerRow);
-    panelLayout->addWidget(helpBrowser_, 1);
+    if (contextHelpController_ != nullptr) {
+        contextHelpController_->buildHelpPanel();
+    }
 }
 
 void TextEditorTab::loadHelpMetadata()
 {
-    helpEntries_.clear();
-    completionTokens_.clear();
-    commandCompletionTokens_.clear();
-    commandOptionTokens_.clear();
-    commandValueTokens_.clear();
-    commandArgumentValueTokens_.clear();
-    commandOptionValueTokens_.clear();
-    commandOptionValueArityTokens_.clear();
-    commandOptionArgumentLabelsByKey_.clear();
-    commandOptionFixedArityByKey_.clear();
-    commandOptionHelpHtmlByKey_.clear();
-    commandTypeValueTokens_.clear();
-    commandSubtypeByTypeTokens_.clear();
-    commandRequiredPositionalCount_.clear();
-    commandArgumentSignaturesByToken_.clear();
-    commandPrimaryValueIsPerson_.clear();
-    contextCommandTokens_.clear();
-    blockCommandContextsByKind_.clear();
-    loadHelpMetadataFromCommandCatalog();
-    if (rawEditorCompletionController_ != nullptr) {
-        rawEditorCompletionController_->rebuildCompletionModel();
+    if (contextHelpController_ != nullptr) {
+        contextHelpController_->loadHelpMetadata();
     }
-    populateBlockToolboxScopeCombo();
 }
 
 void TextEditorTab::loadHelpMetadataFromCommandCatalog()
 {
-    resetCatalogBlockDirectiveMetadataToDefaults();
-
-    const QJsonObject catalogObject = CommandCatalogService::catalogObject();
-    if (catalogObject.isEmpty()) {
-        return;
-    }
-    applyCatalogBlockDirectiveMetadata(catalogObject);
-    if (rawEditorCompletionController_ != nullptr) {
-        rawEditorCompletionController_->applyCatalogCommandsMetadata(catalogObject);
+    if (contextHelpController_ != nullptr) {
+        contextHelpController_->loadHelpMetadataFromCommandCatalog();
     }
 }
 
@@ -2670,43 +1906,14 @@ void TextEditorTab::updateContextHelp()
 
 void TextEditorTab::setHelpCollapsed(bool collapsed)
 {
-    helpCollapsed_ = collapsed;
-    if (helpBrowser_ != nullptr) {
-        helpBrowser_->setVisible(!collapsed);
-    }
-    if (editorHelpSplitter_ != nullptr) {
-        if (!collapsed && helpPanelExtent_ > 0) {
-            const QList<int> sizes = editorHelpSplitter_->sizes();
-            editorHelpSplitter_->setSizes(QList<int>{sizes.value(0, 1), helpPanelExtent_});
-        } else if (collapsed) {
-            const QList<int> sizes = editorHelpSplitter_->sizes();
-            if (sizes.size() >= 2) {
-                const int minimumExtent = helpPanel_ != nullptr
-                    ? qMax(helpPanel_->minimumSizeHint().width(), helpPanel_->minimumWidth())
-                    : 1;
-                helpPanelExtent_ = qMax(sizes.at(1), minimumExtent);
-            }
-            editorHelpSplitter_->setSizes(QList<int>{1, 0});
-        }
+    if (contextHelpController_ != nullptr) {
+        contextHelpController_->setHelpCollapsed(collapsed);
     }
 }
 
 QString TextEditorTab::displayPath() const
 {
-    if (filePath_.isEmpty()) {
-        return tr("No file open");
-    }
-
-    if (projectRootPath_.isEmpty()) {
-        return filePath_;
-    }
-
-    const QString relativePath = QDir(projectRootPath_).relativeFilePath(filePath_);
-    if (relativePath.isEmpty() || relativePath.startsWith(QStringLiteral(".."))) {
-        return filePath_;
-    }
-
-    return relativePath;
+    return statusController_ != nullptr ? statusController_->displayPath() : tr("No file open");
 }
 
 }

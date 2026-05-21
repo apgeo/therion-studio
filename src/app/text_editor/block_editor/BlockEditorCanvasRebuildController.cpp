@@ -1,0 +1,618 @@
+#include "BlockEditorCanvasRebuildController.h"
+
+#include "BlockEditorCanvasItem.h"
+#include "BlockEditorDirectiveRules.h"
+#include "BlockEditorSourceText.h"
+#include "../TextEditorTab.h"
+
+#include "../../../core/TherionDocumentParser.h"
+
+#include <QGraphicsItem>
+#include <QGraphicsLineItem>
+#include <QGraphicsScene>
+#include <QPen>
+#include <QPlainTextEdit>
+#include <QSignalBlocker>
+#include <QStringList>
+
+#include <algorithm>
+#include <functional>
+#include <limits>
+
+namespace
+{
+using namespace TherionStudio::BlockEditorDirectiveRules;
+
+void appendUniqueList(QStringList &target, const QStringList &values)
+{
+    for (const QString &value : values) {
+        if (!target.contains(value, Qt::CaseInsensitive)) {
+            target.append(value);
+        }
+    }
+}
+}
+
+namespace TherionStudio
+{
+BlockEditorCanvasRebuildController::BlockEditorCanvasRebuildController(TextEditorTab *owner)
+    : owner_(owner)
+{
+}
+
+void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
+{
+    if (owner_ == nullptr || owner_->blockCanvasScene_ == nullptr || owner_->tearingDown_) {
+        return;
+    }
+
+    const int preferredSelectedLine = owner_->blockDetailsSelectedLineNumber_;
+    owner_->blockMovePreviewLine_ = nullptr;
+    owner_->blockContainerBoundaryGuideItems_.clear();
+    owner_->blockContainerBoundaryEndYByLine_.clear();
+    {
+        const QSignalBlocker sceneSignalBlocker(owner_->blockCanvasScene_);
+        owner_->blockCanvasScene_->clear();
+    }
+
+    if (!owner_->isBlocksModeSupportedForCurrentFile()) {
+        auto *note = owner_->blockCanvasScene_->addText(
+            TextEditorTab::tr("Blocks mode is currently available only for .th and .thconfig files."));
+        note->setPos(16.0, 16.0);
+        return;
+    }
+
+    if (owner_->blocksModeActive_ && owner_->ensureEncodingRootDirectiveForBlocks()) {
+        // Normalization replaced the text and triggered a fresh rebuild.
+        return;
+    }
+
+    QStringList lines = blockEditorNormalizedSourceLines(owner_->editor_->toPlainText());
+
+    struct StackEntry
+    {
+        QString directive;
+        BlockCanvasItem *item = nullptr;
+    };
+
+    QVector<StackEntry> stack;
+    QVector<BlockCanvasItem *> roots;
+    QVector<BlockCanvasItem *> allItems;
+
+    for (int lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineIndex), lineIndex + 1);
+        if (isFullLineComment(parsedLine)) {
+            BlockCanvasItem *parentItem = nullptr;
+            if (!stack.isEmpty()) {
+                parentItem = stack.last().item;
+            }
+
+            auto *item = new BlockCanvasItem(QStringLiteral("comment"),
+                                             parsedLine.commentText.trimmed(),
+                                             QString(),
+                                             parsedLine.lineNumber,
+                                             true,
+                                             true,
+                                             false,
+                                             parentItem);
+            item->onDelete = [this](int lineNumber) {
+                owner_->handleBlockDeleteRequest(lineNumber);
+            };
+            item->onMoveRequest = [this](int lineNumber, const QPointF &scenePos) {
+                owner_->handleBlockMoveRequest(lineNumber, scenePos);
+            };
+            item->onMovePreview = [this](int sourceLineNumber, const QPointF &scenePos, bool active) {
+                if (active) {
+                    owner_->updateBlockMovePreview(sourceLineNumber, scenePos);
+                } else {
+                    owner_->clearBlockMovePreview();
+                }
+            };
+            if (parentItem == nullptr) {
+                roots.append(item);
+                owner_->blockCanvasScene_->addItem(item);
+            }
+            allItems.append(item);
+            continue;
+        }
+
+        QString directive = normalizeDirective(parsedLine.directive);
+        if (directive.isEmpty()) {
+            continue;
+        }
+
+        if (isBlockClosingDirective(directive)) {
+            while (!stack.isEmpty()) {
+                const QString openingDirective = stack.last().directive;
+                const QString expectedClosing = closingDirectiveFor(openingDirective);
+                stack.removeLast();
+                if (expectedClosing == directive) {
+                    break;
+                }
+            }
+            continue;
+        }
+
+        QString activeScope = QStringLiteral("none");
+        if (!stack.isEmpty()) {
+            activeScope = normalizeDirective(stack.last().directive);
+        }
+
+        auto isCommandDirectiveInScope = [this](const QString &commandToken, const QString &scope) {
+            QStringList candidates = owner_->contextCommandTokens_.value(scope);
+            appendUniqueList(candidates, owner_->contextCommandTokens_.value(QStringLiteral("all")));
+            if (scope == QStringLiteral("none")) {
+                appendUniqueList(candidates, owner_->contextCommandTokens_.value(QStringLiteral("none")));
+            }
+            return candidates.contains(commandToken, Qt::CaseInsensitive);
+        };
+
+        const bool commandDirective = !isBlockOpeningDirective(directive)
+            && isCommandDirectiveInScope(directive, activeScope);
+        if (!isBlockOpeningDirective(directive) && !commandDirective) {
+            continue;
+        }
+
+        BlockCanvasItem *parentItem = nullptr;
+        if (!stack.isEmpty()) {
+            parentItem = stack.last().item;
+        }
+
+        const QString name = blockDisplayName(parsedLine);
+        const QString inlineComment = parsedLine.commentStart >= 0 ? parsedLine.commentText.trimmed() : QString();
+        const bool encodingDirective = isEncodingDirective(directive);
+        const bool isContainerInstance = isContainerDirectiveInstance(directive, parsedLine);
+        auto *item = new BlockCanvasItem(directive,
+                                         name,
+                                         inlineComment,
+                                         parsedLine.lineNumber,
+                                         !encodingDirective,
+                                         !encodingDirective,
+                                         isContainerInstance,
+                                         parentItem);
+        item->onDelete = [this](int lineNumber) {
+            owner_->handleBlockDeleteRequest(lineNumber);
+        };
+        item->onMoveRequest = [this](int lineNumber, const QPointF &scenePos) {
+            owner_->handleBlockMoveRequest(lineNumber, scenePos);
+        };
+        item->onMovePreview = [this](int sourceLineNumber, const QPointF &scenePos, bool active) {
+            if (active) {
+                owner_->updateBlockMovePreview(sourceLineNumber, scenePos);
+            } else {
+                owner_->clearBlockMovePreview();
+            }
+        };
+        if (parentItem == nullptr) {
+            roots.append(item);
+            owner_->blockCanvasScene_->addItem(item);
+        }
+        allItems.append(item);
+
+        if (!commandDirective && isContainerInstance) {
+            stack.append(StackEntry{directive, item});
+        }
+    }
+
+    if (allItems.isEmpty()) {
+        auto *note = owner_->blockCanvasScene_->addText(TextEditorTab::tr("No Therion directives found."));
+        note->setPos(16.0, 16.0);
+        return;
+    }
+
+    qreal y = 16.0;
+    std::function<void(BlockCanvasItem *, int)> layoutTree = [&](BlockCanvasItem *item, int depth) {
+        if (item == nullptr) {
+            return;
+        }
+        int visualDepth = depth;
+        if (!isEncodingDirective(item->kind())) {
+            // Keep `encoding` as visual document root; indent all other content one level below it.
+            ++visualDepth;
+        }
+        const QPointF scenePosition(24.0 + (visualDepth * 28.0), y);
+        if (QGraphicsItem *parent = item->parentItem(); parent != nullptr) {
+            item->setPos(parent->mapFromScene(scenePosition));
+        } else {
+            item->setPos(scenePosition);
+        }
+        y += 52.0;
+
+        QList<BlockCanvasItem *> childBlocks;
+        const QList<QGraphicsItem *> children = item->childItems();
+        for (QGraphicsItem *child : children) {
+            auto *childBlock = dynamic_cast<BlockCanvasItem *>(child);
+            if (childBlock != nullptr) {
+                childBlocks.append(childBlock);
+            }
+        }
+        std::sort(childBlocks.begin(), childBlocks.end(), [](BlockCanvasItem *left, BlockCanvasItem *right) {
+            return left->lineNumber() < right->lineNumber();
+        });
+        for (BlockCanvasItem *childBlock : childBlocks) {
+            layoutTree(childBlock, depth + 1);
+        }
+    };
+
+    for (BlockCanvasItem *root : roots) {
+        layoutTree(root, 0);
+    }
+
+    QStringList sourceLines = blockEditorNormalizedSourceLines(owner_->editor_->toPlainText());
+
+    auto visualSubtreeBottomForSpan = [&allItems](int startLine, int endLine, qreal fallbackBottom) {
+        qreal bottom = fallbackBottom;
+        for (BlockCanvasItem *blockItem : allItems) {
+            if (blockItem == nullptr) {
+                continue;
+            }
+            const int blockLine = blockItem->lineNumber();
+            if (blockLine < startLine || blockLine > endLine) {
+                continue;
+            }
+            bottom = qMax(bottom, blockItem->sceneBoundingRect().bottom());
+        }
+        return bottom;
+    };
+
+    struct ContainerBoundary
+    {
+        BlockCanvasItem *item = nullptr;
+        int closingLine = 0;
+        qreal minEndY = 0.0;
+        qreal endY = 0.0;
+        qreal maxEndY = std::numeric_limits<qreal>::max();
+        int depth = 0;
+    };
+
+    QVector<ContainerBoundary> boundaries;
+    boundaries.reserve(allItems.size());
+
+    // Keep closure lines on the same visible rhythm as block-to-block spacing.
+    // Because closure lines are thick, include half stroke width in spacing math.
+    constexpr qreal kClosureMarkerStrokeWidth = 3.4;
+    constexpr qreal kCardToCardGap = 10.0;
+    constexpr qreal kClosurePadAboveSubtree = kCardToCardGap + (kClosureMarkerStrokeWidth * 0.5);
+    constexpr qreal kClosurePadBeforeNextBlock = kCardToCardGap + (kClosureMarkerStrokeWidth * 0.5);
+    constexpr qreal kClosurePreferredOffset = kClosurePadAboveSubtree;
+
+    auto subtreeBottomForItem = [](BlockCanvasItem *root) {
+        if (root == nullptr) {
+            return 0.0;
+        }
+        qreal bottom = root->sceneBoundingRect().bottom();
+        QList<QGraphicsItem *> stack;
+        stack.append(root);
+        while (!stack.isEmpty()) {
+            QGraphicsItem *current = stack.takeLast();
+            if (current == nullptr) {
+                continue;
+            }
+            bottom = qMax(bottom, current->sceneBoundingRect().bottom());
+            for (QGraphicsItem *child : current->childItems()) {
+                stack.append(child);
+            }
+        }
+        return bottom;
+    };
+
+    auto compactImmediateChildGaps = [&allItems]() {
+        constexpr qreal kGapEpsilon = 0.5;
+        for (BlockCanvasItem *parent : allItems) {
+            if (parent == nullptr) {
+                continue;
+            }
+
+            QList<BlockCanvasItem *> childBlocks;
+            const QList<QGraphicsItem *> children = parent->childItems();
+            for (QGraphicsItem *child : children) {
+                auto *childBlock = dynamic_cast<BlockCanvasItem *>(child);
+                if (childBlock != nullptr) {
+                    childBlocks.append(childBlock);
+                }
+            }
+            std::sort(childBlocks.begin(), childBlocks.end(), [](BlockCanvasItem *left, BlockCanvasItem *right) {
+                return left->lineNumber() < right->lineNumber();
+            });
+            if (childBlocks.isEmpty()) {
+                continue;
+            }
+
+            BlockCanvasItem *firstChild = childBlocks.first();
+            if (firstChild == nullptr) {
+                continue;
+            }
+            const qreal expectedTop = parent->sceneBoundingRect().bottom() + kCardToCardGap;
+            const qreal actualTop = firstChild->sceneBoundingRect().top();
+            if (actualTop > expectedTop + kGapEpsilon) {
+                const qreal deltaY = actualTop - expectedTop;
+                // Move the whole first-child subtree by moving its root item.
+                firstChild->moveBy(0.0, -deltaY);
+            }
+        }
+    };
+
+    auto nextBlockTopAfterLine = [&allItems](int lineNumber) {
+        qreal nextTop = std::numeric_limits<qreal>::max();
+        for (BlockCanvasItem *candidate : allItems) {
+            if (candidate == nullptr || candidate->lineNumber() <= lineNumber) {
+                continue;
+            }
+            nextTop = qMin(nextTop, candidate->sceneBoundingRect().top());
+        }
+        return nextTop;
+    };
+    auto shiftBlocksAfterLine = [&allItems, &compactImmediateChildGaps](int lineNumber, qreal deltaY) {
+        if (deltaY <= 0.0) {
+            return;
+        }
+        for (BlockCanvasItem *candidate : allItems) {
+            if (candidate == nullptr || candidate->lineNumber() <= lineNumber) {
+                continue;
+            }
+            candidate->moveBy(0.0, deltaY);
+        }
+        compactImmediateChildGaps();
+    };
+    auto maxDescendantLineNumber = [](BlockCanvasItem *root) {
+        if (root == nullptr) {
+            return 0;
+        }
+        int maxLine = root->lineNumber();
+        QList<QGraphicsItem *> stack;
+        stack.append(root);
+        while (!stack.isEmpty()) {
+            QGraphicsItem *current = stack.takeLast();
+            if (current == nullptr) {
+                continue;
+            }
+            if (auto *blockItem = dynamic_cast<BlockCanvasItem *>(current)) {
+                maxLine = qMax(maxLine, blockItem->lineNumber());
+            }
+            for (QGraphicsItem *child : current->childItems()) {
+                stack.append(child);
+            }
+        }
+        return maxLine;
+    };
+
+    struct ContainerLayoutTarget
+    {
+        BlockCanvasItem *item = nullptr;
+        int openingLine = 0;
+        int closingLine = 0;
+        int depth = 0;
+    };
+
+    QVector<ContainerLayoutTarget> targets;
+    targets.reserve(allItems.size());
+
+    for (BlockCanvasItem *item : allItems) {
+        if (item == nullptr || !item->isContainerOpen()) {
+            continue;
+        }
+
+        int closureLine = item->lineNumber();
+        const QString openingDirective = normalizeDirective(item->kind());
+        const QString closingDirective = closingDirectiveFor(openingDirective);
+        if (!openingDirective.isEmpty() && !closingDirective.isEmpty()) {
+            const int openingLine = item->lineNumber();
+            const int closingLine = findMatchingBlockEndLine(sourceLines,
+                                                             openingLine,
+                                                             openingDirective,
+                                                             closingDirective);
+            if (closingLine > openingLine) {
+                closureLine = closingLine;
+            }
+        }
+        closureLine = qMax(closureLine, maxDescendantLineNumber(item));
+
+        int depth = 0;
+        for (QGraphicsItem *parent = item->parentItem(); parent != nullptr; parent = parent->parentItem()) {
+            if (dynamic_cast<BlockCanvasItem *>(parent) != nullptr) {
+                ++depth;
+            }
+        }
+
+        targets.append(ContainerLayoutTarget{item, item->lineNumber(), closureLine, depth});
+    }
+
+    std::sort(targets.begin(), targets.end(), [](const ContainerLayoutTarget &left, const ContainerLayoutTarget &right) {
+        if (left.closingLine != right.closingLine) {
+            return left.closingLine < right.closingLine;
+        }
+        return left.depth > right.depth;
+    });
+
+    for (const ContainerLayoutTarget &target : std::as_const(targets)) {
+        BlockCanvasItem *item = target.item;
+        if (item == nullptr) {
+            continue;
+        }
+
+        qreal subtreeBottom = visualSubtreeBottomForSpan(target.openingLine,
+                                                         target.closingLine,
+                                                         item->sceneBoundingRect().bottom());
+        const qreal minEndY = subtreeBottom + kClosurePadAboveSubtree;
+        qreal preferredEndY = qMax(subtreeBottom + kClosurePreferredOffset, minEndY);
+
+        qreal maxEndY = std::numeric_limits<qreal>::max();
+        const qreal nextTop = nextBlockTopAfterLine(target.closingLine);
+        if (nextTop != std::numeric_limits<qreal>::max()) {
+            maxEndY = nextTop - kClosurePadBeforeNextBlock;
+        }
+
+        if (maxEndY < minEndY) {
+            const qreal deltaY = minEndY - maxEndY;
+            shiftBlocksAfterLine(target.closingLine, deltaY);
+            maxEndY += deltaY;
+        }
+
+        boundaries.append(ContainerBoundary{item,
+                                            target.closingLine,
+                                            minEndY,
+                                            qMin(preferredEndY, maxEndY),
+                                            maxEndY,
+                                            target.depth});
+    }
+
+    std::sort(boundaries.begin(), boundaries.end(), [](const ContainerBoundary &left, const ContainerBoundary &right) {
+        if (!qFuzzyCompare(left.endY + 1.0, right.endY + 1.0)) {
+            return left.endY < right.endY;
+        }
+        return left.depth > right.depth;
+    });
+
+    // Keep nested closure markers visually distinct even when container spans end
+    // at the same rendered subtree bottom (for example `endcenterline` + `endsurvey`).
+    // Respect each boundary's [minEndY, maxEndY] corridor and back-propagate when
+    // a lower marker is clamped by available space.
+    constexpr qreal kMinClosureMarkerGap = 10.0;
+    for (int i = 0; i < boundaries.size(); ++i) {
+        ContainerBoundary &boundary = boundaries[i];
+        if (i > 0) {
+            const qreal minAllowedY = boundaries.at(i - 1).endY + kMinClosureMarkerGap;
+            if (boundary.endY < minAllowedY) {
+                boundary.endY = minAllowedY;
+            }
+        }
+        boundary.endY = qMax(boundary.endY, boundary.minEndY);
+        if (boundary.endY > boundary.maxEndY) {
+            boundary.endY = boundary.maxEndY;
+            for (int j = i - 1; j >= 0; --j) {
+                ContainerBoundary &previous = boundaries[j];
+                const qreal maxAllowedY = boundaries.at(j + 1).endY - kMinClosureMarkerGap;
+                if (previous.endY <= maxAllowedY) {
+                    break;
+                }
+                previous.endY = qMax(previous.minEndY, maxAllowedY);
+            }
+        }
+    }
+
+    // If constraints are still too tight for exact nested spacing, expand the
+    // layout by pushing subsequent blocks down so closure lines never collapse.
+    for (int i = 1; i < boundaries.size(); ++i) {
+        const qreal requiredY = boundaries.at(i - 1).endY + kMinClosureMarkerGap;
+        if (boundaries.at(i).endY >= requiredY) {
+            continue;
+        }
+
+        const qreal deltaY = requiredY - boundaries.at(i).endY;
+        shiftBlocksAfterLine(boundaries.at(i).closingLine, deltaY);
+
+        for (int j = i; j < boundaries.size(); ++j) {
+            ContainerBoundary &shifted = boundaries[j];
+            shifted.minEndY += deltaY;
+            shifted.endY += deltaY;
+            if (shifted.maxEndY < std::numeric_limits<qreal>::max()) {
+                shifted.maxEndY += deltaY;
+            }
+        }
+    }
+
+    // Compaction/shift steps above can move cards after a boundary was initially
+    // solved. Re-clamp each closure marker against current subtree/next-card
+    // geometry so end-caps never ride into the following card.
+    const qreal kInfinity = std::numeric_limits<qreal>::max();
+    for (ContainerBoundary &boundary : boundaries) {
+        BlockCanvasItem *item = boundary.item;
+        if (item == nullptr) {
+            continue;
+        }
+
+        const qreal subtreeBottom = visualSubtreeBottomForSpan(item->lineNumber(),
+                                                               boundary.closingLine,
+                                                               item->sceneBoundingRect().bottom());
+        boundary.minEndY = subtreeBottom + kClosurePadAboveSubtree;
+
+        const qreal nextTop = nextBlockTopAfterLine(boundary.closingLine);
+        boundary.maxEndY = nextTop != kInfinity
+            ? (nextTop - kClosurePadBeforeNextBlock)
+            : kInfinity;
+
+        // Prefer keeping distance from the next card over preserving a stale
+        // lower endY, even when constraints are tight.
+        if (boundary.maxEndY != kInfinity && boundary.maxEndY < boundary.minEndY) {
+            boundary.endY = boundary.maxEndY;
+            continue;
+        }
+
+        boundary.endY = qMax(boundary.endY, boundary.minEndY);
+        if (boundary.maxEndY != kInfinity) {
+            boundary.endY = qMin(boundary.endY, boundary.maxEndY);
+        }
+    }
+
+    QPen connectorPen(QColor(QStringLiteral("#4f6b86")));
+    connectorPen.setWidthF(1.2);
+    connectorPen.setStyle(Qt::SolidLine);
+
+    qreal minGuideX = std::numeric_limits<qreal>::max();
+    qreal maxGuideBottom = 0.0;
+    constexpr qreal kConnectorInsetX = 2.0;
+
+    for (const ContainerBoundary &boundary : std::as_const(boundaries)) {
+        BlockCanvasItem *item = boundary.item;
+        if (item == nullptr) {
+            continue;
+        }
+
+        const QRectF itemRect = item->sceneBoundingRect();
+        const qreal guideX = itemRect.left() + kConnectorInsetX;
+        const qreal startY = itemRect.bottom();
+        const qreal endY = boundary.endY;
+
+        auto *vertical = owner_->blockCanvasScene_->addLine(QLineF(guideX, startY, guideX, endY), connectorPen);
+        vertical->setOpacity(0.38);
+        vertical->setZValue(-100.0);
+        owner_->blockContainerBoundaryGuideItems_.append(vertical);
+
+        // Keep the closure marker aligned with the opening card width.
+        const qreal endCapStartX = itemRect.left();
+        const qreal endCapEndX = itemRect.right();
+
+        QColor closeColor = blockEditorCanvasBaseColorForDirective(item->kind()).darker(130);
+        closeColor.setAlpha(245);
+        QPen closePen(closeColor);
+        closePen.setWidthF(kClosureMarkerStrokeWidth);
+        closePen.setStyle(Qt::SolidLine);
+        auto *endCap = owner_->blockCanvasScene_->addLine(QLineF(endCapStartX, endY, endCapEndX, endY), closePen);
+        endCap->setOpacity(0.95);
+        endCap->setZValue(-99.0);
+        endCap->setData(kBlockEditorCanvasEndHintContainerLineDataRole, item->lineNumber());
+        owner_->blockContainerBoundaryGuideItems_.append(endCap);
+        owner_->blockContainerBoundaryEndYByLine_.insert(item->lineNumber(), endY);
+
+        minGuideX = qMin(minGuideX, guideX);
+        maxGuideBottom = qMax(maxGuideBottom, endY);
+    }
+
+    owner_->blockCanvasScene_->setSceneRect(0.0, 0.0, 1400.0, qMax<qreal>(y + 40.0, 600.0));
+    if (minGuideX != std::numeric_limits<qreal>::max() || maxGuideBottom > 0.0) {
+        QRectF sceneRect = owner_->blockCanvasScene_->sceneRect();
+        if (minGuideX != std::numeric_limits<qreal>::max() && minGuideX - 12.0 < sceneRect.left()) {
+            sceneRect.setLeft(minGuideX - 12.0);
+        }
+        if (maxGuideBottom + 16.0 > sceneRect.bottom()) {
+            sceneRect.setBottom(maxGuideBottom + 16.0);
+        }
+        owner_->blockCanvasScene_->setSceneRect(sceneRect);
+    }
+
+    if (preferredSelectedLine > 0) {
+        for (BlockCanvasItem *item : allItems) {
+            if (item == nullptr || item->lineNumber() != preferredSelectedLine) {
+                continue;
+            }
+            owner_->blockCanvasScene_->clearSelection();
+            item->setSelected(true);
+            owner_->blockCanvasScene_->setFocusItem(item);
+            break;
+        }
+    }
+
+    owner_->refreshBlockDetailsSelectionFromScene();
+
+}
+}

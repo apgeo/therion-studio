@@ -1,5 +1,6 @@
 #include "BlockEditorCanvasBoundaryController.h"
 
+#include "BlockEditorCanvasItem.h"
 #include "../TextEditorTab.h"
 
 #include <QGraphicsLineItem>
@@ -9,11 +10,6 @@
 #include <QLineF>
 
 #include <limits>
-
-namespace
-{
-constexpr int kBlockEndHintContainerLineDataRole = 0x42554e44; // "BUND"
-}
 
 namespace TherionStudio
 {
@@ -30,7 +26,7 @@ int BlockEditorCanvasBoundaryController::resolveEndHintContainerStartLineAtScene
 
     auto resolveFromItem = [](QGraphicsItem *item) -> int {
         while (item != nullptr) {
-            const QVariant hintValue = item->data(kBlockEndHintContainerLineDataRole);
+            const QVariant hintValue = item->data(kBlockEditorCanvasEndHintContainerLineDataRole);
             bool ok = false;
             const int lineNumber = hintValue.toInt(&ok);
             if (ok && lineNumber > 0) {
@@ -72,7 +68,7 @@ int BlockEditorCanvasBoundaryController::resolveEndHintContainerStartLineAtScene
             continue;
         }
         bool ok = false;
-        const int lineNumber = guideItem->data(kBlockEndHintContainerLineDataRole).toInt(&ok);
+        const int lineNumber = guideItem->data(kBlockEditorCanvasEndHintContainerLineDataRole).toInt(&ok);
         if (!ok || lineNumber <= 0) {
             continue;
         }

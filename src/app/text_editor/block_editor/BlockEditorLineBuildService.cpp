@@ -1,5 +1,6 @@
 #include "BlockEditorLineBuildService.h"
 
+#include "BlockEditorSourceController.h"
 #include "../TextEditorOptionValidation.h"
 #include "../TextEditorTab.h"
 
@@ -31,19 +32,15 @@ bool BlockEditorLineBuildService::buildUpdatedLine(QString *updatedLine, QString
 
     if (owner_->blockDetailsSelectedLineNumber_ <= 0
         || owner_->blockDetailsSelectedKind_.isEmpty()
-        || owner_->editor_ == nullptr) {
+        || !BlockEditorSourceController(owner_).hasEditor()) {
         if (validationError != nullptr) {
             *validationError = TextEditorTab::tr("No block is selected.");
         }
         return false;
     }
+    const BlockEditorSourceController source(owner_);
 
-    QStringList lines = owner_->editor_->toPlainText().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-    for (QString &line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-    }
+    QStringList lines = source.normalizedLines();
     if (owner_->blockDetailsSelectedLineNumber_ > lines.size()) {
         if (validationError != nullptr) {
             *validationError = TextEditorTab::tr("Selected line is out of range.");

@@ -1,5 +1,6 @@
 #include "BlockEditorApplyStateController.h"
 
+#include "BlockEditorSourceController.h"
 #include "../TextEditorTab.h"
 
 #include <QLabel>
@@ -19,9 +20,10 @@ void BlockEditorApplyStateController::refreshApplyState()
         || owner_->tearingDown_
         || owner_->blockDetailsPopulating_
         || owner_->blockDetailsApplyButton_ == nullptr
-        || owner_->editor_ == nullptr) {
+        || !BlockEditorSourceController(owner_).hasEditor()) {
         return;
     }
+    const BlockEditorSourceController source(owner_);
 
     QString validationError;
     QString candidateLine;
@@ -30,12 +32,7 @@ void BlockEditorApplyStateController::refreshApplyState()
     QString currentLine;
     bool hasCurrentLine = false;
     if (owner_->blockDetailsSelectedLineNumber_ > 0) {
-        QStringList lines = owner_->editor_->toPlainText().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-        for (QString &line : lines) {
-            if (line.endsWith(QLatin1Char('\r'))) {
-                line.chop(1);
-            }
-        }
+        QStringList lines = source.normalizedLines();
         if (owner_->blockDetailsSelectedLineNumber_ <= lines.size()) {
             currentLine = lines.at(owner_->blockDetailsSelectedLineNumber_ - 1);
             hasCurrentLine = true;

@@ -1,6 +1,7 @@
 #include "BlockEditorDocumentOutlineBuilder.h"
 
 #include "BlockEditorDirectiveRules.h"
+#include "BlockEditorSourceText.h"
 #include "../TextEditorTab.h"
 
 #include "../../../core/TherionDocumentParser.h"
@@ -36,12 +37,7 @@ BlockEditorDocumentOutlineBuilder::BlockEditorDocumentOutlineBuilder(const TextE
 BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(const QString &contents) const
 {
     BlockEditorDocumentOutline outline;
-    outline.lines = contents.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-    for (QString &line : outline.lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-    }
+    outline.lines = blockEditorNormalizedSourceLines(contents);
 
     if (owner_ == nullptr) {
         return outline;

@@ -1,11 +1,9 @@
 #include "BlockEditorApplyExecutor.h"
 
+#include "BlockEditorSourceController.h"
 #include "../TextEditorTab.h"
 
 #include <QMessageBox>
-#include <QPlainTextEdit>
-#include <QTextBlock>
-#include <QTextCursor>
 
 namespace TherionStudio
 {
@@ -29,18 +27,10 @@ void BlockEditorApplyExecutor::applyChanges()
         return;
     }
 
-    const QTextBlock targetBlock = owner_->editor_->document()->findBlockByLineNumber(owner_->blockDetailsSelectedLineNumber_ - 1);
-    if (!targetBlock.isValid()) {
+    const BlockEditorSourceController source(owner_);
+    if (!source.replaceLine(owner_->blockDetailsSelectedLineNumber_, updatedLine)) {
         return;
     }
-
-    QTextCursor editCursor(targetBlock);
-    editCursor.beginEditBlock();
-    editCursor.movePosition(QTextCursor::StartOfBlock);
-    editCursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-    editCursor.insertText(updatedLine);
-    editCursor.endEditBlock();
-    owner_->editor_->setTextCursor(editCursor);
 
     owner_->selectBlockInCanvasAndDetails(owner_->blockDetailsSelectedLineNumber_);
     owner_->refreshBlockDetailsApplyState();

@@ -25,7 +25,9 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
     src/app/text_editor/TextEditorOptionValidation.h
-    src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
+    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
+    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
+src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.h
@@ -39,12 +41,39 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsPaneController.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsPaneController.h
-    src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxController.h
+    src/app/text_editor/block_editor/BlockEditorToolboxList.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxList.h
+    src/app/text_editor/block_editor/BlockEditorTokenTagEditor.cpp
+    src/app/text_editor/block_editor/BlockEditorTokenTagEditor.h
+src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.h
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.h
+    src/app/text_editor/block_editor/BlockEditorCanvasView.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasView.h
+    src/app/text_editor/block_editor/BlockEditorDragMime.h
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.h
+    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.cpp
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.h
+    src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
+    src/app/text_editor/block_editor/BlockEditorConfigureController.h
+    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.h
+    src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorDataBlockDialog.h
+    src/app/text_editor/block_editor/BlockEditorDeleteExecutor.cpp
+    src/app/text_editor/block_editor/BlockEditorDeleteExecutor.h
+    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.h
+    src/app/text_editor/block_editor/BlockEditorSourceText.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceText.h
+    src/app/text_editor/block_editor/BlockEditorSourceController.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceController.h
     src/app/text_editor/block_editor/BlockEditorCanvasBoundaryController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasBoundaryController.h
     src/app/text_editor/block_editor/BlockEditorDirectiveRules.cpp
@@ -55,10 +84,14 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/block_editor/BlockEditorDropTargetResolver.h
     src/app/text_editor/block_editor/BlockEditorInsertionPlanner.cpp
     src/app/text_editor/block_editor/BlockEditorInsertionPlanner.h
+    src/app/text_editor/block_editor/BlockEditorInsertionController.cpp
+    src/app/text_editor/block_editor/BlockEditorInsertionController.h
     src/app/text_editor/block_editor/BlockEditorInsertionTemplateBuilder.cpp
     src/app/text_editor/block_editor/BlockEditorInsertionTemplateBuilder.h
     src/app/text_editor/block_editor/BlockEditorMovePlanner.cpp
     src/app/text_editor/block_editor/BlockEditorMovePlanner.h
+    src/app/text_editor/block_editor/BlockEditorMoveController.cpp
+    src/app/text_editor/block_editor/BlockEditorMoveController.h
     src/app/text_editor/block_editor/BlockEditorMovePreviewController.cpp
     src/app/text_editor/block_editor/BlockEditorMovePreviewController.h
     src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.cpp
@@ -69,6 +102,8 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
+    src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
+    src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.h
@@ -268,7 +303,9 @@ qt_add_executable(TextEditorCaretInteractionTest
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
     src/app/text_editor/TextEditorOptionValidation.h
-    src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
+    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
+    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
+src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.h
@@ -282,12 +319,39 @@ qt_add_executable(TextEditorCaretInteractionTest
     src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsPaneController.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsPaneController.h
-    src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxController.h
+    src/app/text_editor/block_editor/BlockEditorToolboxList.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxList.h
+    src/app/text_editor/block_editor/BlockEditorTokenTagEditor.cpp
+    src/app/text_editor/block_editor/BlockEditorTokenTagEditor.h
+src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.h
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.h
+    src/app/text_editor/block_editor/BlockEditorCanvasView.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasView.h
+    src/app/text_editor/block_editor/BlockEditorDragMime.h
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.h
+    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.cpp
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.h
+    src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
+    src/app/text_editor/block_editor/BlockEditorConfigureController.h
+    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.h
+    src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorDataBlockDialog.h
+    src/app/text_editor/block_editor/BlockEditorDeleteExecutor.cpp
+    src/app/text_editor/block_editor/BlockEditorDeleteExecutor.h
+    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.h
+    src/app/text_editor/block_editor/BlockEditorSourceText.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceText.h
+    src/app/text_editor/block_editor/BlockEditorSourceController.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceController.h
     src/app/text_editor/block_editor/BlockEditorCanvasBoundaryController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasBoundaryController.h
     src/app/text_editor/block_editor/BlockEditorDirectiveRules.cpp
@@ -298,10 +362,14 @@ qt_add_executable(TextEditorCaretInteractionTest
     src/app/text_editor/block_editor/BlockEditorDropTargetResolver.h
     src/app/text_editor/block_editor/BlockEditorInsertionPlanner.cpp
     src/app/text_editor/block_editor/BlockEditorInsertionPlanner.h
+    src/app/text_editor/block_editor/BlockEditorInsertionController.cpp
+    src/app/text_editor/block_editor/BlockEditorInsertionController.h
     src/app/text_editor/block_editor/BlockEditorInsertionTemplateBuilder.cpp
     src/app/text_editor/block_editor/BlockEditorInsertionTemplateBuilder.h
     src/app/text_editor/block_editor/BlockEditorMovePlanner.cpp
     src/app/text_editor/block_editor/BlockEditorMovePlanner.h
+    src/app/text_editor/block_editor/BlockEditorMoveController.cpp
+    src/app/text_editor/block_editor/BlockEditorMoveController.h
     src/app/text_editor/block_editor/BlockEditorMovePreviewController.cpp
     src/app/text_editor/block_editor/BlockEditorMovePreviewController.h
     src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.cpp
@@ -312,6 +380,8 @@ qt_add_executable(TextEditorCaretInteractionTest
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
+    src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
+    src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTab.h
     src/core/CommandCatalogService.cpp
@@ -342,7 +412,9 @@ qt_add_executable(TextEditorCompletionHighlightTest
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
     src/app/text_editor/TextEditorOptionValidation.h
-    src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
+    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
+    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
+src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.h
@@ -356,12 +428,39 @@ qt_add_executable(TextEditorCompletionHighlightTest
     src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsPaneController.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsPaneController.h
-    src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxController.h
+    src/app/text_editor/block_editor/BlockEditorToolboxList.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxList.h
+    src/app/text_editor/block_editor/BlockEditorTokenTagEditor.cpp
+    src/app/text_editor/block_editor/BlockEditorTokenTagEditor.h
+src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.h
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.h
+    src/app/text_editor/block_editor/BlockEditorCanvasView.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasView.h
+    src/app/text_editor/block_editor/BlockEditorDragMime.h
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.h
+    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.cpp
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.h
+    src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
+    src/app/text_editor/block_editor/BlockEditorConfigureController.h
+    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.h
+    src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorDataBlockDialog.h
+    src/app/text_editor/block_editor/BlockEditorDeleteExecutor.cpp
+    src/app/text_editor/block_editor/BlockEditorDeleteExecutor.h
+    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.h
+    src/app/text_editor/block_editor/BlockEditorSourceText.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceText.h
+    src/app/text_editor/block_editor/BlockEditorSourceController.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceController.h
     src/app/text_editor/block_editor/BlockEditorCanvasBoundaryController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasBoundaryController.h
     src/app/text_editor/block_editor/BlockEditorDirectiveRules.cpp
@@ -372,10 +471,14 @@ qt_add_executable(TextEditorCompletionHighlightTest
     src/app/text_editor/block_editor/BlockEditorDropTargetResolver.h
     src/app/text_editor/block_editor/BlockEditorInsertionPlanner.cpp
     src/app/text_editor/block_editor/BlockEditorInsertionPlanner.h
+    src/app/text_editor/block_editor/BlockEditorInsertionController.cpp
+    src/app/text_editor/block_editor/BlockEditorInsertionController.h
     src/app/text_editor/block_editor/BlockEditorInsertionTemplateBuilder.cpp
     src/app/text_editor/block_editor/BlockEditorInsertionTemplateBuilder.h
     src/app/text_editor/block_editor/BlockEditorMovePlanner.cpp
     src/app/text_editor/block_editor/BlockEditorMovePlanner.h
+    src/app/text_editor/block_editor/BlockEditorMoveController.cpp
+    src/app/text_editor/block_editor/BlockEditorMoveController.h
     src/app/text_editor/block_editor/BlockEditorMovePreviewController.cpp
     src/app/text_editor/block_editor/BlockEditorMovePreviewController.h
     src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.cpp
@@ -386,6 +489,8 @@ qt_add_executable(TextEditorCompletionHighlightTest
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
+    src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
+    src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTab.h
     src/core/CommandCatalogService.cpp
@@ -416,7 +521,9 @@ qt_add_executable(MapEditorDetachedPaneTest
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
     src/app/text_editor/TextEditorOptionValidation.h
-    src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
+    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
+    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
+src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.h
@@ -430,12 +537,39 @@ qt_add_executable(MapEditorDetachedPaneTest
     src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsPaneController.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsPaneController.h
-    src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxController.h
+    src/app/text_editor/block_editor/BlockEditorToolboxList.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxList.h
+    src/app/text_editor/block_editor/BlockEditorTokenTagEditor.cpp
+    src/app/text_editor/block_editor/BlockEditorTokenTagEditor.h
+src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.h
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.h
+    src/app/text_editor/block_editor/BlockEditorCanvasView.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasView.h
+    src/app/text_editor/block_editor/BlockEditorDragMime.h
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.h
+    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.cpp
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.h
+    src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
+    src/app/text_editor/block_editor/BlockEditorConfigureController.h
+    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.h
+    src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorDataBlockDialog.h
+    src/app/text_editor/block_editor/BlockEditorDeleteExecutor.cpp
+    src/app/text_editor/block_editor/BlockEditorDeleteExecutor.h
+    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.h
+    src/app/text_editor/block_editor/BlockEditorSourceText.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceText.h
+    src/app/text_editor/block_editor/BlockEditorSourceController.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceController.h
     src/app/text_editor/block_editor/BlockEditorCanvasBoundaryController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasBoundaryController.h
     src/app/text_editor/block_editor/BlockEditorDirectiveRules.cpp
@@ -446,10 +580,14 @@ qt_add_executable(MapEditorDetachedPaneTest
     src/app/text_editor/block_editor/BlockEditorDropTargetResolver.h
     src/app/text_editor/block_editor/BlockEditorInsertionPlanner.cpp
     src/app/text_editor/block_editor/BlockEditorInsertionPlanner.h
+    src/app/text_editor/block_editor/BlockEditorInsertionController.cpp
+    src/app/text_editor/block_editor/BlockEditorInsertionController.h
     src/app/text_editor/block_editor/BlockEditorInsertionTemplateBuilder.cpp
     src/app/text_editor/block_editor/BlockEditorInsertionTemplateBuilder.h
     src/app/text_editor/block_editor/BlockEditorMovePlanner.cpp
     src/app/text_editor/block_editor/BlockEditorMovePlanner.h
+    src/app/text_editor/block_editor/BlockEditorMoveController.cpp
+    src/app/text_editor/block_editor/BlockEditorMoveController.h
     src/app/text_editor/block_editor/BlockEditorMovePreviewController.cpp
     src/app/text_editor/block_editor/BlockEditorMovePreviewController.h
     src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.cpp
@@ -460,6 +598,8 @@ qt_add_executable(MapEditorDetachedPaneTest
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
+    src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
+    src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.h
@@ -508,7 +648,9 @@ qt_add_executable(MapEditorDragUndoRedoSmokeTest
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
     src/app/text_editor/TextEditorOptionValidation.h
-    src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
+    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
+    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
+src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.h
@@ -522,12 +664,39 @@ qt_add_executable(MapEditorDragUndoRedoSmokeTest
     src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsPaneController.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsPaneController.h
-    src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxController.h
+    src/app/text_editor/block_editor/BlockEditorToolboxList.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxList.h
+    src/app/text_editor/block_editor/BlockEditorTokenTagEditor.cpp
+    src/app/text_editor/block_editor/BlockEditorTokenTagEditor.h
+src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.h
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.h
+    src/app/text_editor/block_editor/BlockEditorCanvasView.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasView.h
+    src/app/text_editor/block_editor/BlockEditorDragMime.h
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.h
+    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.cpp
     src/app/text_editor/block_editor/BlockEditorCommandOptionParser.h
+    src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
+    src/app/text_editor/block_editor/BlockEditorConfigureController.h
+    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.h
+    src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorDataBlockDialog.h
+    src/app/text_editor/block_editor/BlockEditorDeleteExecutor.cpp
+    src/app/text_editor/block_editor/BlockEditorDeleteExecutor.h
+    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.cpp
+    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.h
+    src/app/text_editor/block_editor/BlockEditorSourceText.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceText.h
+    src/app/text_editor/block_editor/BlockEditorSourceController.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceController.h
     src/app/text_editor/block_editor/BlockEditorCanvasBoundaryController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasBoundaryController.h
     src/app/text_editor/block_editor/BlockEditorDirectiveRules.cpp
@@ -538,10 +707,14 @@ qt_add_executable(MapEditorDragUndoRedoSmokeTest
     src/app/text_editor/block_editor/BlockEditorDropTargetResolver.h
     src/app/text_editor/block_editor/BlockEditorInsertionPlanner.cpp
     src/app/text_editor/block_editor/BlockEditorInsertionPlanner.h
+    src/app/text_editor/block_editor/BlockEditorInsertionController.cpp
+    src/app/text_editor/block_editor/BlockEditorInsertionController.h
     src/app/text_editor/block_editor/BlockEditorInsertionTemplateBuilder.cpp
     src/app/text_editor/block_editor/BlockEditorInsertionTemplateBuilder.h
     src/app/text_editor/block_editor/BlockEditorMovePlanner.cpp
     src/app/text_editor/block_editor/BlockEditorMovePlanner.h
+    src/app/text_editor/block_editor/BlockEditorMoveController.cpp
+    src/app/text_editor/block_editor/BlockEditorMoveController.h
     src/app/text_editor/block_editor/BlockEditorMovePreviewController.cpp
     src/app/text_editor/block_editor/BlockEditorMovePreviewController.h
     src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.cpp
@@ -552,6 +725,8 @@ qt_add_executable(MapEditorDragUndoRedoSmokeTest
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
+    src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
+    src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.h

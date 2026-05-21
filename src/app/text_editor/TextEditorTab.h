@@ -45,14 +45,24 @@ class BlockEditorApplyStateController;
 class BlockEditorApplyExecutor;
 class BlockEditorSelectionDetailsController;
 class BlockEditorDetailsPaneController;
+class BlockEditorToolboxController;
 class BlockEditorToolboxDetailsController;
 class BlockEditorCanvasSelectionController;
+class BlockEditorConfigureController;
+class BlockEditorDataBlockDialog;
+class BlockEditorDeleteExecutor;
 class BlockEditorMovePreviewController;
 class BlockEditorCanvasBoundaryController;
+class BlockEditorCanvasRebuildController;
 class BlockEditorDocumentOutlineBuilder;
 class BlockEditorDropTargetResolver;
+class BlockEditorInsertionController;
 class BlockEditorInsertionPlanner;
+class BlockEditorMoveController;
 class BlockEditorMovePlanner;
+class BlockEditorCommandOptionsDialog;
+class BlockEditorSingleValueCommandDialog;
+class BlockEditorSourceController;
 struct TherionParsedLine;
 
 struct TherionHelpEntry
@@ -196,14 +206,24 @@ private:
     friend class BlockEditorApplyExecutor;
     friend class BlockEditorSelectionDetailsController;
     friend class BlockEditorDetailsPaneController;
+    friend class BlockEditorToolboxController;
     friend class BlockEditorToolboxDetailsController;
     friend class BlockEditorCanvasSelectionController;
+    friend class BlockEditorConfigureController;
+    friend class BlockEditorDataBlockDialog;
+    friend class BlockEditorDeleteExecutor;
     friend class BlockEditorMovePreviewController;
     friend class BlockEditorCanvasBoundaryController;
+    friend class BlockEditorCanvasRebuildController;
     friend class BlockEditorDocumentOutlineBuilder;
     friend class BlockEditorDropTargetResolver;
+    friend class BlockEditorInsertionController;
     friend class BlockEditorInsertionPlanner;
+    friend class BlockEditorMoveController;
     friend class BlockEditorMovePlanner;
+    friend class BlockEditorCommandOptionsDialog;
+    friend class BlockEditorSingleValueCommandDialog;
+    friend class BlockEditorSourceController;
 
     enum class BlockDetailsMode
     {
@@ -274,10 +294,6 @@ private:
     void applyBlockDetailsChanges();
     bool supportsDetailsPaneForKind(const QString &kind) const;
     bool handleBlockDeleteRequest(int lineNumber);
-    bool removeSourceLineRange(int startLine, int endLine);
-    bool insertLinesBefore(int lineNumber,
-                           const QStringList &newLines,
-                           QString *errorMessage = nullptr);
     QString currentCompletionPrefix() const;
     void triggerCompletionPopup();
     void insertCompletionToken(const QString &completion);
@@ -412,9 +428,11 @@ private:
     std::unique_ptr<BlockEditorApplyExecutor> blockDetailsApplyExecutor_;
     std::unique_ptr<BlockEditorSelectionDetailsController> blockDetailsSelectionDetailsController_;
     std::unique_ptr<BlockEditorDetailsPaneController> blockDetailsPaneController_;
+    std::unique_ptr<BlockEditorToolboxController> blockToolboxController_;
     std::unique_ptr<BlockEditorToolboxDetailsController> blockDetailsToolboxDetailsController_;
     std::unique_ptr<BlockEditorCanvasSelectionController> blockDetailsCanvasSelectionController_;
     std::unique_ptr<BlockEditorMovePreviewController> blockDetailsMovePreviewController_;
     std::unique_ptr<BlockEditorCanvasBoundaryController> blockDetailsCanvasBoundaryController_;
+    std::unique_ptr<BlockEditorCanvasRebuildController> blockDetailsCanvasRebuildController_;
 };
 }

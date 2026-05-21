@@ -1,5 +1,6 @@
 #include "BlockEditorCanvasSelectionController.h"
 
+#include "BlockEditorCanvasItem.h"
 #include "../TextEditorTab.h"
 
 #include <QGraphicsItem>
@@ -25,12 +26,12 @@ void BlockEditorCanvasSelectionController::selectBlockInCanvasAndDetails(int lin
 
     const QList<QGraphicsItem *> sceneItems = owner_->blockCanvasScene_->items();
     for (QGraphicsItem *item : sceneItems) {
-        QGraphicsItem *blockItem = owner_->resolveBlockCanvasItem(item);
+        QGraphicsItem *blockItem = resolveBlockCanvasItem(item);
         if (blockItem == nullptr) {
             continue;
         }
-        if (owner_->blockCanvasItemLineNumber(blockItem) == lineNumber) {
-            owner_->selectBlockCanvasItem(blockItem, true);
+        if (blockCanvasItemLineNumber(blockItem) == lineNumber) {
+            selectBlockCanvasItem(blockItem, true);
             owner_->refreshBlockDetailsSelectionFromScene();
             return;
         }
@@ -50,21 +51,61 @@ void BlockEditorCanvasSelectionController::refreshDetailsSelectionFromScene()
 
     QGraphicsItem *selectedBlock = nullptr;
     if (!owner_->blockCanvasScene_->selectedItems().isEmpty()) {
-        selectedBlock = owner_->resolveBlockCanvasItem(owner_->blockCanvasScene_->selectedItems().first());
+        selectedBlock = resolveBlockCanvasItem(owner_->blockCanvasScene_->selectedItems().first());
     }
     if (selectedBlock == nullptr) {
-        selectedBlock = owner_->resolveBlockCanvasItem(owner_->blockCanvasScene_->focusItem());
+        selectedBlock = resolveBlockCanvasItem(owner_->blockCanvasScene_->focusItem());
     }
     if (selectedBlock == nullptr) {
         owner_->clearBlockDetailsPane();
         return;
     }
 
-    const int lineNumber = owner_->blockCanvasItemLineNumber(selectedBlock);
-    const QString kind = owner_->blockCanvasItemKind(selectedBlock);
+    const int lineNumber = blockCanvasItemLineNumber(selectedBlock);
+    const QString kind = blockCanvasItemKind(selectedBlock);
     if (!owner_->loadBlockDetailsForSelection(kind, lineNumber)) {
         owner_->blockDetailsSelectedLineNumber_ = lineNumber;
         owner_->blockDetailsSelectedKind_ = owner_->normalizedDirectiveToken(kind);
+    }
+}
+
+QGraphicsItem *BlockEditorCanvasSelectionController::resolveBlockCanvasItem(QGraphicsItem *item) const
+{
+    while (item != nullptr) {
+        if (dynamic_cast<BlockCanvasItem *>(item) != nullptr) {
+            return item;
+        }
+        item = item->parentItem();
+    }
+    return nullptr;
+}
+
+int BlockEditorCanvasSelectionController::blockCanvasItemLineNumber(const QGraphicsItem *item) const
+{
+    if (const auto *blockItem = dynamic_cast<const BlockCanvasItem *>(item); blockItem != nullptr) {
+        return blockItem->lineNumber();
+    }
+    return 0;
+}
+
+QString BlockEditorCanvasSelectionController::blockCanvasItemKind(const QGraphicsItem *item) const
+{
+    if (const auto *blockItem = dynamic_cast<const BlockCanvasItem *>(item); blockItem != nullptr) {
+        return blockItem->kind();
+    }
+    return QString();
+}
+
+void BlockEditorCanvasSelectionController::selectBlockCanvasItem(QGraphicsItem *item, bool centerView)
+{
+    if (owner_ == nullptr || owner_->blockCanvasScene_ == nullptr || item == nullptr) {
+        return;
+    }
+    owner_->blockCanvasScene_->clearSelection();
+    item->setSelected(true);
+    owner_->blockCanvasScene_->setFocusItem(item);
+    if (centerView && owner_->blockCanvasView_ != nullptr) {
+        owner_->blockCanvasView_->centerOn(item);
     }
 }
 }

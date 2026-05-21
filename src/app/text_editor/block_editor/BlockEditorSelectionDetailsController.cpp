@@ -1,6 +1,7 @@
 #include "BlockEditorSelectionDetailsController.h"
 
 #include "BlockEditorCommandOptionParser.h"
+#include "BlockEditorSourceController.h"
 #include "../ContextHelpController.h"
 #include "../TextEditorTab.h"
 
@@ -81,17 +82,13 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
     if (owner_ == nullptr || owner_->tearingDown_) {
         return false;
     }
-    if (lineNumber <= 0 || owner_->editor_ == nullptr) {
+    const BlockEditorSourceController source(owner_);
+    if (lineNumber <= 0 || !source.hasEditor()) {
         owner_->clearBlockDetailsPane();
         return false;
     }
 
-    QStringList lines = owner_->editor_->toPlainText().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-    for (QString &line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-    }
+    QStringList lines = source.normalizedLines();
     if (lineNumber > lines.size()) {
         owner_->clearBlockDetailsPane();
         return false;

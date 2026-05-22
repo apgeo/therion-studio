@@ -444,6 +444,21 @@ qt_add_executable(TherionRunnerConfigDisplayControllerTest
 
 target_link_libraries(TherionRunnerConfigDisplayControllerTest PRIVATE therion_app)
 
+qt_add_executable(TherionExecutableSelectionControllerTest
+    tests/TherionExecutableSelectionControllerTest.cpp)
+
+target_link_libraries(TherionExecutableSelectionControllerTest PRIVATE therion_app)
+
+qt_add_executable(TherionRunnerPresenterTest
+    tests/TherionRunnerPresenterTest.cpp)
+
+target_link_libraries(TherionRunnerPresenterTest PRIVATE therion_app)
+
+qt_add_executable(TherionRunnerServiceTest
+    tests/TherionRunnerServiceTest.cpp)
+
+target_link_libraries(TherionRunnerServiceTest PRIVATE therion_app)
+
 qt_add_executable(TextEditorCaretInteractionTest
     tests/TextEditorCaretInteractionTest.cpp
     src/app/text_editor/ContextHelpController.cpp
@@ -1054,8 +1069,11 @@ set(THERION_TEST_EXECUTABLE_TARGETS
     DocumentFileEncodingTest
     MapEditorInputPolicyTest
     SessionStoreTest
+    TherionExecutableSelectionControllerTest
     TherionRunnerConfigDisplayControllerTest
     TherionRunnerConfigResolverTest
+    TherionRunnerPresenterTest
+    TherionRunnerServiceTest
     TextEditorCaretInteractionTest
     TextEditorCompletionHighlightTest
     MapEditorDetachedPaneTest
@@ -1078,8 +1096,11 @@ add_test(NAME MapGeometryFeatureParsingTest COMMAND MapGeometryFeatureParsingTes
 add_test(NAME DocumentFileEncodingTest COMMAND DocumentFileEncodingTest)
 add_test(NAME MapEditorInputPolicyTest COMMAND MapEditorInputPolicyTest)
 add_test(NAME SessionStoreTest COMMAND SessionStoreTest)
+add_test(NAME TherionExecutableSelectionControllerTest COMMAND TherionExecutableSelectionControllerTest)
 add_test(NAME TherionRunnerConfigDisplayControllerTest COMMAND TherionRunnerConfigDisplayControllerTest)
 add_test(NAME TherionRunnerConfigResolverTest COMMAND TherionRunnerConfigResolverTest)
+add_test(NAME TherionRunnerPresenterTest COMMAND TherionRunnerPresenterTest)
+add_test(NAME TherionRunnerServiceTest COMMAND TherionRunnerServiceTest)
 add_test(NAME StructureConstraintsTest COMMAND python3 ${CMAKE_SOURCE_DIR}/scripts/check_structure_constraints.py)
 add_test(NAME TextEditorCaretInteractionTest COMMAND TextEditorCaretInteractionTest)
 add_test(NAME TextEditorCompletionHighlightTest COMMAND TextEditorCompletionHighlightTest)
@@ -1096,8 +1117,11 @@ set_tests_properties(
     DocumentFileEncodingTest
     MapEditorInputPolicyTest
     SessionStoreTest
+    TherionExecutableSelectionControllerTest
     TherionRunnerConfigDisplayControllerTest
     TherionRunnerConfigResolverTest
+    TherionRunnerPresenterTest
+    TherionRunnerServiceTest
     TextEditorCaretInteractionTest
     TextEditorCompletionHighlightTest
     MapEditorDetachedPaneTest
@@ -1115,8 +1139,11 @@ set_tests_properties(
     DocumentFileEncodingTest
     MapEditorInputPolicyTest
     SessionStoreTest
+    TherionExecutableSelectionControllerTest
     TherionRunnerConfigDisplayControllerTest
     TherionRunnerConfigResolverTest
+    TherionRunnerPresenterTest
+    TherionRunnerServiceTest
     StructureConstraintsTest
     PROPERTIES
         LABELS "unit")

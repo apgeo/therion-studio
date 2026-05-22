@@ -1,7 +1,6 @@
 #include "RawEditorCommandMetadataLoader.h"
 
 #include "../TextEditorCommandMetadata.h"
-#include "../TextEditorTab.h"
 
 #include <QJsonArray>
 #include <QJsonObject>
@@ -97,14 +96,14 @@ QStringList optionArgumentLabelsFromSignature(const QString &signature)
 
 namespace TherionStudio
 {
-RawEditorCommandMetadataLoader::RawEditorCommandMetadataLoader(TextEditorTab *owner)
-    : owner_(owner)
+RawEditorCommandMetadataLoader::RawEditorCommandMetadataLoader(RawEditorCommandMetadataContext context)
+    : context_(std::move(context))
 {
 }
 
 TextEditorCommandMetadata &RawEditorCommandMetadataLoader::metadata() const
 {
-    return owner_->mutableCommandMetadata();
+    return *context_.metadata;
 }
 
 QString RawEditorCommandMetadataLoader::normalizeCompletionContext(const QString &contextToken) const
@@ -119,7 +118,7 @@ void RawEditorCommandMetadataLoader::applyCommandArgumentMetadata(const QString 
                                                                   bool *primaryValueIsPerson,
                                                                   QStringList *commandArgumentSignatures) const
 {
-    if (owner_ == nullptr || entry == nullptr || requiredPositionalCount == nullptr || primaryValueIsPerson == nullptr
+    if (context_.metadata == nullptr || entry == nullptr || requiredPositionalCount == nullptr || primaryValueIsPerson == nullptr
         || commandArgumentSignatures == nullptr) {
         return;
     }
@@ -161,7 +160,7 @@ void RawEditorCommandMetadataLoader::applyCommandContextMetadata(const QString &
                                                                  const QJsonObject &commandObject,
                                                                  QStringList *normalizedCommandContexts) const
 {
-    if (owner_ == nullptr || normalizedCommandContexts == nullptr) {
+    if (context_.metadata == nullptr || normalizedCommandContexts == nullptr) {
         return;
     }
 
@@ -175,7 +174,7 @@ void RawEditorCommandMetadataLoader::applyCommandContextMetadata(const QString &
         appendUnique(*normalizedCommandContexts, contextToken);
         appendUnique(metadata().contextCommandTokens[contextToken], commandName);
     }
-    appendUniqueList(metadata().blockCommandContextsByKind[owner_->normalizedDirectiveToken(commandName)],
+    appendUniqueList(metadata().blockCommandContextsByKind[context_.normalizedDirectiveToken(commandName)],
                      *normalizedCommandContexts);
 
     QStringList inlineCommands;
@@ -192,7 +191,7 @@ void RawEditorCommandMetadataLoader::applyCommandContextMetadata(const QString &
         appendUnique(targetContexts, QStringLiteral("all"));
     }
     for (const QString &inlineCommand : inlineCommands) {
-        const QString normalizedInlineCommand = owner_->normalizedDirectiveToken(inlineCommand);
+        const QString normalizedInlineCommand = context_.normalizedDirectiveToken(inlineCommand);
         if (normalizedInlineCommand.isEmpty()) {
             continue;
         }
@@ -207,7 +206,7 @@ void RawEditorCommandMetadataLoader::applyCommandOptionCatalogMetadata(const QSt
                                                                        const QJsonObject &commandObject,
                                                                        TherionHelpEntry *entry) const
 {
-    if (owner_ == nullptr || entry == nullptr) {
+    if (context_.metadata == nullptr || entry == nullptr) {
         return;
     }
 
@@ -315,7 +314,7 @@ void RawEditorCommandMetadataLoader::applyCommandRegistrationMetadata(const QStr
                                                                       bool primaryValueIsPerson,
                                                                       const QStringList &commandArgumentSignatures) const
 {
-    if (owner_ == nullptr) {
+    if (context_.metadata == nullptr) {
         return;
     }
 
@@ -342,7 +341,7 @@ void RawEditorCommandMetadataLoader::applyCommandAliasMetadata(const QString &co
                                                                const TherionHelpEntry &entry,
                                                                const QStringList &normalizedCommandContexts) const
 {
-    if (owner_ == nullptr) {
+    if (context_.metadata == nullptr) {
         return;
     }
 
@@ -411,14 +410,14 @@ void RawEditorCommandMetadataLoader::applyCommandAliasMetadata(const QString &co
                 appendUnique(contextIterator.value(), alias);
             }
         }
-        appendUniqueList(metadata().blockCommandContextsByKind[owner_->normalizedDirectiveToken(alias)],
+        appendUniqueList(metadata().blockCommandContextsByKind[context_.normalizedDirectiveToken(alias)],
                          normalizedCommandContexts);
     }
 }
 
 void RawEditorCommandMetadataLoader::applyCatalogCommandsMetadata(const QJsonObject &catalogObject) const
 {
-    if (owner_ == nullptr || catalogObject.isEmpty()) {
+    if (context_.metadata == nullptr || catalogObject.isEmpty() || !context_.normalizedDirectiveToken) {
         return;
     }
 
@@ -466,7 +465,7 @@ void RawEditorCommandMetadataLoader::applyCatalogCommandsMetadata(const QJsonObj
 
 void RawEditorCommandMetadataLoader::mergeHelpEntry(const QString &token, const TherionHelpEntry &entry) const
 {
-    if (owner_ == nullptr || token.trimmed().isEmpty()) {
+    if (context_.metadata == nullptr || token.trimmed().isEmpty()) {
         return;
     }
 
@@ -487,7 +486,7 @@ void RawEditorCommandMetadataLoader::mergeHelpEntry(const QString &token, const 
 
 void RawEditorCommandMetadataLoader::registerCompletionToken(const QString &token) const
 {
-    if (owner_ == nullptr) {
+    if (context_.metadata == nullptr) {
         return;
     }
     const QString normalized = token.trimmed();
@@ -508,7 +507,7 @@ void RawEditorCommandMetadataLoader::registerCompletionToken(const QString &toke
 
 void RawEditorCommandMetadataLoader::rebuildCompletionModel() const
 {
-    if (owner_ == nullptr || owner_->completionModel_ == nullptr) {
+    if (context_.metadata == nullptr || context_.completionModel == nullptr) {
         return;
     }
 
@@ -518,6 +517,6 @@ void RawEditorCommandMetadataLoader::rebuildCompletionModel() const
               [](const QString &a, const QString &b) {
                   return QString::compare(a, b, Qt::CaseInsensitive) < 0;
               });
-    owner_->completionModel_->setStringList(sortedTokens);
+    context_.completionModel->setStringList(sortedTokens);
 }
 }

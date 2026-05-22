@@ -26,11 +26,11 @@ void MainWindow::buildConsole()
 {
     QWidget *consoleHost = consoleSidebarPage_ != nullptr ? consoleSidebarPage_ : this;
     const QString persistedExecutablePath = TherionStudio::SessionStore::therionExecutablePath().trimmed();
-    const QString detectedHomebrewPath = TherionStudio::TherionRunnerService::suggestedDefaultExecutablePath();
+    const QString suggestedExecutablePath = TherionStudio::TherionRunnerService::suggestedDefaultExecutablePath();
     TherionStudio::MainWindowTherionConsoleBuilder::BuildInput buildInput;
     buildInput.consoleHost = consoleHost;
     buildInput.persistedExecutablePath = persistedExecutablePath;
-    buildInput.suggestedExecutablePath = detectedHomebrewPath;
+    buildInput.suggestedExecutablePath = suggestedExecutablePath;
     buildInput.persistedWorkingDirectory = TherionStudio::SessionStore::therionWorkingDirectory().trimmed();
     buildInput.persistedArguments = TherionStudio::SessionStore::therionArguments().trimmed();
     const TherionStudio::MainWindowTherionConsoleBuilder::BuildResult buildResult =

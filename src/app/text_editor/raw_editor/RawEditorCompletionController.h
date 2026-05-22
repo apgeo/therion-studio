@@ -1,15 +1,37 @@
 #pragma once
 
+#include <functional>
+
 #include <QEvent>
 #include <QString>
 #include <QStringList>
 
 class QJsonObject;
+class QObject;
+class QCompleter;
+class QPlainTextEdit;
+class QStringListModel;
 
 namespace TherionStudio
 {
-class TextEditorTab;
 struct TextEditorCommandMetadata;
+class RawEditorCompletionContextAnalyzer;
+struct TherionParsedLine;
+
+struct RawEditorCompletionControllerContext
+{
+    QObject *eventContext = nullptr;
+    QPlainTextEdit *editor = nullptr;
+    QCompleter *completionCompleter = nullptr;
+    QStringListModel *completionModel = nullptr;
+    TextEditorCommandMetadata *metadata = nullptr;
+    std::function<QString()> projectRootPath;
+    std::function<QString()> filePath;
+    std::function<QString(const QString &)> normalizedDirectiveToken;
+    std::function<QString(const QString &)> openingDirectiveForClosingToken;
+    std::function<QString(const QString &)> closingDirectiveForOpeningToken;
+    std::function<bool(const QString &, const TherionParsedLine &)> isContainerDirectiveInstance;
+};
 
 class RawEditorCompletionController final
 {
@@ -21,7 +43,7 @@ public:
         Consumed,
     };
 
-    explicit RawEditorCompletionController(TextEditorTab *owner);
+    explicit RawEditorCompletionController(RawEditorCompletionControllerContext context);
 
     EventHandling handleEventFilter(QObject *watched, QEvent *event);
     QString currentCompletionPrefix() const;
@@ -48,7 +70,8 @@ public:
 private:
     const TextEditorCommandMetadata &commandMetadata() const;
     TextEditorCommandMetadata &mutableCommandMetadata() const;
+    RawEditorCompletionContextAnalyzer contextAnalyzer() const;
 
-    TextEditorTab *owner_ = nullptr;
+    RawEditorCompletionControllerContext context_;
 };
 }

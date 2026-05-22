@@ -4,12 +4,29 @@ project(TherionStudio
     VERSION 0.1.0
     LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(THERION_ENABLE_STRICT_WARNINGS
+    "Enable warnings-as-errors for non-UI library targets"
+    OFF)
+
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Svg Concurrent)
+find_package(Qt6LinguistTools 6.5 QUIET)
 
 qt_standard_project_setup()
+
+function(therion_enable_strict_warnings target_name)
+    if(NOT THERION_ENABLE_STRICT_WARNINGS)
+        return()
+    endif()
+
+    if(MSVC)
+        target_compile_options(${target_name} PRIVATE /W4 /WX /permissive-)
+    else()
+        target_compile_options(${target_name} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
+endfunction()
 
 set(THERION_CORE_SOURCES
     src/core/CommandCatalogService.cpp
@@ -39,6 +56,28 @@ add_library(therion_core STATIC
 target_link_libraries(therion_core
     PUBLIC
         Qt6::Core)
+
+therion_enable_strict_warnings(therion_core)
+
+set(THERION_PLATFORM_SOURCES
+    src/platform/PlatformPathResolver.h)
+
+if(APPLE)
+    list(APPEND THERION_PLATFORM_SOURCES src/platform/mac/MacPlatformPathResolver.cpp)
+elseif(WIN32)
+    list(APPEND THERION_PLATFORM_SOURCES src/platform/win/WinPlatformPathResolver.cpp)
+else()
+    list(APPEND THERION_PLATFORM_SOURCES src/platform/linux/LinuxPlatformPathResolver.cpp)
+endif()
+
+add_library(therion_platform STATIC
+    ${THERION_PLATFORM_SOURCES})
+
+target_link_libraries(therion_platform
+    PUBLIC
+        Qt6::Core)
+
+therion_enable_strict_warnings(therion_platform)
 
 qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/MainWindow.cpp
@@ -174,6 +213,7 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionControllerContext.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.cpp
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
@@ -275,15 +315,30 @@ qt_add_resources(TherionStudio "TherionStudioResources"
     FILES
         ${THERION_STUDIO_RESOURCE_FILES})
 
+set(THERION_STUDIO_TRANSLATION_FILES
+    translations/therion_studio_cs.ts)
+
+if(COMMAND qt_add_translations AND Qt6LinguistTools_FOUND)
+    qt_add_translations(TherionStudio
+        TS_FILES
+            ${THERION_STUDIO_TRANSLATION_FILES}
+        RESOURCE_PREFIX "/i18n")
+else()
+    message(STATUS "Qt LinguistTools not found; translation catalog compilation is disabled")
+endif()
+
 if(APPLE)
+    set(THERION_MACOS_MINIMUM_SYSTEM_VERSION "12.0" CACHE STRING
+        "Minimum macOS version declared in the Therion Studio app bundle")
     set_target_properties(TherionStudio PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/cmake/macos/Info.plist.in"
         MACOSX_BUNDLE_BUNDLE_NAME "Therion Studio"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.therionstudio.app"
         MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
 endif()
 
-target_link_libraries(TherionStudio PRIVATE therion_core Qt6::Widgets Qt6::Svg Qt6::Concurrent)
+target_link_libraries(TherionStudio PRIVATE therion_core therion_platform Qt6::Widgets Qt6::Svg Qt6::Concurrent)
 
 target_compile_definitions(TherionStudio PRIVATE
     QT_NO_CAST_FROM_ASCII
@@ -467,6 +522,7 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionControllerContext.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.cpp
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
@@ -597,6 +653,7 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionControllerContext.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.cpp
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
@@ -727,6 +784,7 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionControllerContext.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.cpp
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
@@ -895,6 +953,7 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.cpp
     src/app/text_editor/raw_editor/RawEditorFindController.h
     src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionControllerContext.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionController.h
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.cpp
     src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h

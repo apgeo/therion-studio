@@ -956,35 +956,6 @@ QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &pa
     return pairs;
 }
 
-QString formatVerticesInline(const QVector<QPointF> &vertices)
-{
-    QStringList tokens;
-    tokens.reserve(vertices.size() * 2);
-    for (const QPointF &vertex : vertices) {
-        tokens.append(formatCoordinate(vertex.x()));
-        tokens.append(formatCoordinate(vertex.y()));
-    }
-
-    return tokens.join(QLatin1Char(' '));
-}
-
-QString optionValue(const QStringList &tokens, const QString &option)
-{
-    const QString normalizedOption = option.toLower();
-    for (int index = 0; index + 1 < tokens.size(); ++index) {
-        if (tokens.at(index).toLower() != normalizedOption) {
-            continue;
-        }
-
-        const QString candidate = tokens.at(index + 1);
-        if (!candidate.startsWith(QLatin1Char('-'))) {
-            return candidate;
-        }
-    }
-
-    return QString();
-}
-
 QString sanitizeObjectIdentifier(const QString &candidate, const QString &fallbackPrefix)
 {
     QString source = candidate.trimmed().toLower();

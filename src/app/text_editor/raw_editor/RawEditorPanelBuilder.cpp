@@ -1,5 +1,7 @@
 #include "../TextEditorTab.h"
 
+#include "RawEditorCompletionController.h"
+#include "RawEditorFindController.h"
 #include "RawEditorTextEdit.h"
 #include "../TextEditorSurfaceStyler.h"
 
@@ -142,6 +144,28 @@ void TextEditorTab::buildRawEditorPanel()
         completionCompleter_->popup()->installEventFilter(this);
     }
 
+    RawEditorCompletionControllerContext completionContext;
+    completionContext.eventContext = this;
+    completionContext.editor = editor_;
+    completionContext.completionCompleter = completionCompleter_;
+    completionContext.completionModel = completionModel_;
+    completionContext.metadata = &commandMetadata_;
+    completionContext.projectRootPath = [this]() { return projectRootPath_; };
+    completionContext.filePath = [this]() { return filePath_; };
+    completionContext.normalizedDirectiveToken = [this](const QString &directive) {
+        return normalizedDirectiveToken(directive);
+    };
+    completionContext.openingDirectiveForClosingToken = [this](const QString &directive) {
+        return openingDirectiveForClosingToken(directive);
+    };
+    completionContext.closingDirectiveForOpeningToken = [this](const QString &directive) {
+        return closingDirectiveForOpeningToken(directive);
+    };
+    completionContext.isContainerDirectiveInstance = [this](const QString &directive, const TherionParsedLine &parsedLine) {
+        return isContainerDirectiveInstanceForParsedLine(directive, parsedLine);
+    };
+    rawEditorCompletionController_ = std::make_unique<RawEditorCompletionController>(std::move(completionContext));
+
     loadHelpMetadata();
 
     statusRow_ = new QWidget(this);
@@ -181,5 +205,22 @@ void TextEditorTab::buildRawEditorPanel()
     rawEditorLayout->setContentsMargins(0, 0, 0, 0);
     rawEditorLayout->setSpacing(kPanelSpacing);
     rawEditorLayout->addWidget(editorHelpSplitter_, 1);
+
+    RawEditorFindContext findContext;
+    findContext.editor = editor_;
+    findContext.searchBar = searchBar_;
+    findContext.replaceRow = replaceRow_;
+    findContext.findEdit = findEdit_;
+    findContext.replaceEdit = replaceEdit_;
+    findContext.searchStatusLabel = searchStatusLabel_;
+    findContext.wholeWordCheck = wholeWordCheck_;
+    findContext.caseSensitiveCheck = caseSensitiveCheck_;
+    findContext.replaceButton = replaceButton_;
+    findContext.replaceAllButton = replaceAllButton_;
+    findContext.blocksModeActive = &blocksModeActive_;
+    findContext.setBlocksModeActive = [this](bool active) {
+        setBlocksModeActive(active);
+    };
+    rawEditorFindController_ = std::make_unique<RawEditorFindController>(std::move(findContext));
 }
 }

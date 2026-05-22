@@ -48,7 +48,7 @@ TherionRunnerStartResultPresenter::present(TherionRunnerService::StartCode code,
         return result;
     case TherionRunnerService::StartCode::ExecutableNotFound: {
         const QString message =
-            translate("Therion executable \"%1\" was not found or is not executable. Set Executable to a full path (for example `/opt/homebrew/bin/therion`) or install Therion in the application PATH.")
+            translate("Therion executable \"%1\" was not found or is not executable. Set Executable to a full path or install Therion in the application PATH.")
                 .arg(executableInput);
         result.isHandled = true;
         result.showWarningDialog = true;

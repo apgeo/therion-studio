@@ -2,7 +2,6 @@
 
 #include "RawEditorCompletionContextAnalyzer.h"
 #include "../TextEditorCommandMetadata.h"
-#include "../TextEditorTab.h"
 
 #include <QDir>
 #include <QDirIterator>
@@ -16,6 +15,7 @@
 #include "../../../core/TherionDocumentParser.h"
 
 #include <algorithm>
+#include <utility>
 
 namespace
 {
@@ -60,14 +60,25 @@ QString normalizeInputSuggestionPath(QString path)
 
 namespace TherionStudio
 {
-RawEditorCompletionSuggestionBuilder::RawEditorCompletionSuggestionBuilder(TextEditorTab *owner)
-    : owner_(owner)
+RawEditorCompletionSuggestionBuilder::RawEditorCompletionSuggestionBuilder(RawEditorCompletionSuggestionContext context)
+    : context_(std::move(context))
 {
 }
 
 const TextEditorCommandMetadata &RawEditorCompletionSuggestionBuilder::metadata() const
 {
-    return owner_->commandMetadata();
+    return *context_.metadata;
+}
+
+RawEditorCompletionContext RawEditorCompletionSuggestionBuilder::completionContext() const
+{
+    RawEditorCompletionContext context;
+    context.editor = context_.editor;
+    context.metadata = context_.metadata;
+    context.normalizedDirectiveToken = context_.normalizedDirectiveToken;
+    context.openingDirectiveForClosingToken = context_.openingDirectiveForClosingToken;
+    context.isContainerDirectiveInstance = context_.isContainerDirectiveInstance;
+    return context;
 }
 
 QString RawEditorCompletionSuggestionBuilder::normalizeInputCompletionPrefix(QString prefix) const
@@ -85,16 +96,16 @@ QString RawEditorCompletionSuggestionBuilder::normalizeInputCompletionPrefix(QSt
 
 QStringList RawEditorCompletionSuggestionBuilder::projectInputFileCompletionCandidates() const
 {
-    if (owner_ == nullptr) {
+    if (context_.filePath.trimmed().isEmpty() && context_.projectRootPath.trimmed().isEmpty()) {
         return {};
     }
 
-    QString rootPath = owner_->projectRootPath_.trimmed();
+    QString rootPath = context_.projectRootPath.trimmed();
     if (rootPath.isEmpty()) {
-        if (owner_->filePath_.isEmpty()) {
+        if (context_.filePath.isEmpty()) {
             return {};
         }
-        rootPath = QFileInfo(owner_->filePath_).absolutePath();
+        rootPath = QFileInfo(context_.filePath).absolutePath();
     }
 
     QDir rootDir(rootPath);
@@ -109,8 +120,8 @@ QStringList RawEditorCompletionSuggestionBuilder::projectInputFileCompletionCand
     QDir rootBaseDir(rootBasePath);
 
     QString baseDirPath = rootBasePath;
-    if (!owner_->filePath_.isEmpty()) {
-        const QFileInfo currentFileInfo(owner_->filePath_);
+    if (!context_.filePath.isEmpty()) {
+        const QFileInfo currentFileInfo(context_.filePath);
         QString candidateBasePath = currentFileInfo.absolutePath();
         const QString canonicalCandidateBasePath = QFileInfo(candidateBasePath).canonicalFilePath();
         if (!canonicalCandidateBasePath.isEmpty()) {
@@ -158,11 +169,11 @@ QStringList RawEditorCompletionSuggestionBuilder::projectInputFileCompletionCand
 
 QStringList RawEditorCompletionSuggestionBuilder::buildCompletionSuggestionsForCursor(const QString &prefix) const
 {
-    if (owner_ == nullptr || owner_->editor_ == nullptr) {
+    if (context_.editor == nullptr || context_.metadata == nullptr) {
         return QStringList();
     }
 
-    const QTextCursor cursor = owner_->editor_->textCursor();
+    const QTextCursor cursor = context_.editor->textCursor();
     const QTextBlock block = cursor.block();
     if (!block.isValid()) {
         return QStringList();
@@ -200,7 +211,7 @@ QStringList RawEditorCompletionSuggestionBuilder::buildCompletionSuggestionsForC
         ? prefix
         : (cursorInsideToken ? currentToken.trimmed() : QString());
 
-    const RawEditorCompletionContextAnalyzer contextAnalyzer(owner_);
+    const RawEditorCompletionContextAnalyzer contextAnalyzer(completionContext());
     const QString command = contextAnalyzer.currentCompletionCommand();
     int tokenStart = column;
     int tokenEnd = column;

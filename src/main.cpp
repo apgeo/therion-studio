@@ -3,9 +3,11 @@
 #include <QApplication>
 #include <QEvent>
 #include <QGuiApplication>
+#include <QLocale>
 #include <QObject>
 #include <QStyleHints>
 #include <QStyleFactory>
+#include <QTranslator>
 
 namespace
 {
@@ -107,6 +109,14 @@ int main(int argc, char *argv[])
     application.setApplicationName(QStringLiteral("Therion Studio"));
     application.setOrganizationName(QStringLiteral("Therion Studio"));
     application.setOrganizationDomain(QStringLiteral("therionstudio.example"));
+
+    QTranslator applicationTranslator;
+    if (applicationTranslator.load(QLocale(),
+                                   QStringLiteral("therion_studio"),
+                                   QStringLiteral("_"),
+                                   QStringLiteral(":/i18n"))) {
+        application.installTranslator(&applicationTranslator);
+    }
 
     applyPlatformStyle(application);
     applyApplicationChromeStyle(application);

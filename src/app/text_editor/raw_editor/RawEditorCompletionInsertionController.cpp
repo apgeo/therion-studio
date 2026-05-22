@@ -1,25 +1,26 @@
 #include "RawEditorCompletionInsertionController.h"
 
-#include "../TextEditorTab.h"
-
 #include <QPlainTextEdit>
 #include <QTextBlock>
 #include <QTextCursor>
 
+#include <utility>
+
 namespace TherionStudio
 {
-RawEditorCompletionInsertionController::RawEditorCompletionInsertionController(TextEditorTab *owner)
-    : owner_(owner)
+RawEditorCompletionInsertionController::RawEditorCompletionInsertionController(RawEditorCompletionInsertionContext context)
+    : context_(std::move(context))
 {
 }
 
 void RawEditorCompletionInsertionController::insertCompletionToken(const QString &completion)
 {
-    if (owner_ == nullptr || owner_->editor_ == nullptr || completion.trimmed().isEmpty()) {
+    if (context_.editor == nullptr || !context_.normalizedDirectiveToken || !context_.closingDirectiveForOpeningToken
+        || completion.trimmed().isEmpty()) {
         return;
     }
 
-    QTextCursor cursor = owner_->editor_->textCursor();
+    QTextCursor cursor = context_.editor->textCursor();
     const QTextBlock block = cursor.block();
     if (!block.isValid()) {
         return;
@@ -40,8 +41,8 @@ void RawEditorCompletionInsertionController::insertCompletionToken(const QString
         ++end;
     }
 
-    const QString normalizedCompletion = owner_->normalizedDirectiveToken(completion.toLower());
-    const QString closingDirective = owner_->closingDirectiveForOpeningToken(normalizedCompletion);
+    const QString normalizedCompletion = context_.normalizedDirectiveToken(completion.toLower());
+    const QString closingDirective = context_.closingDirectiveForOpeningToken(normalizedCompletion);
     const QString leftTrimmed = blockText.left(start).trimmed();
     const QString rightTrimmed = blockText.mid(end).trimmed();
     const bool firstTokenOnlyLine = leftTrimmed.isEmpty() && rightTrimmed.isEmpty();
@@ -60,7 +61,7 @@ void RawEditorCompletionInsertionController::insertCompletionToken(const QString
         const QTextBlock nextBlock = block.next();
         if (nextBlock.isValid()) {
             const QString nextText = nextBlock.text().trimmed().toLower();
-            if (owner_->normalizedDirectiveToken(nextText) == closingDirective) {
+            if (context_.normalizedDirectiveToken(nextText) == closingDirective) {
                 shouldInsertClosingPair = false;
             }
         }
@@ -78,6 +79,6 @@ void RawEditorCompletionInsertionController::insertCompletionToken(const QString
     }
 
     cursor.endEditBlock();
-    owner_->editor_->setTextCursor(cursor);
+    context_.editor->setTextCursor(cursor);
 }
 }

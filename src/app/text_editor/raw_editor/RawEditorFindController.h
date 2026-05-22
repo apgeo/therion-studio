@@ -1,16 +1,40 @@
 #pragma once
 
+#include <functional>
+
 #include <QString>
 #include <QTextDocument>
 
+class QCheckBox;
+class QFrame;
+class QLabel;
+class QLineEdit;
+class QPlainTextEdit;
+class QPushButton;
+class QWidget;
+
 namespace TherionStudio
 {
-class TextEditorTab;
+struct RawEditorFindContext
+{
+    QPlainTextEdit *editor = nullptr;
+    QFrame *searchBar = nullptr;
+    QWidget *replaceRow = nullptr;
+    QLineEdit *findEdit = nullptr;
+    QLineEdit *replaceEdit = nullptr;
+    QLabel *searchStatusLabel = nullptr;
+    QCheckBox *wholeWordCheck = nullptr;
+    QCheckBox *caseSensitiveCheck = nullptr;
+    QPushButton *replaceButton = nullptr;
+    QPushButton *replaceAllButton = nullptr;
+    bool *blocksModeActive = nullptr;
+    std::function<void(bool)> setBlocksModeActive;
+};
 
 class RawEditorFindController final
 {
 public:
-    explicit RawEditorFindController(TextEditorTab *owner);
+    explicit RawEditorFindController(RawEditorFindContext context);
 
     void showFindBar(bool replaceMode);
     void hideFindBar();
@@ -35,7 +59,8 @@ private:
     QTextDocument::FindFlags findFlags() const;
     QString currentFindText() const;
     QString currentReplaceText() const;
+    static QString trText(const char *sourceText);
 
-    TextEditorTab *owner_ = nullptr;
+    RawEditorFindContext context_;
 };
 }

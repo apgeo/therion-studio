@@ -35,8 +35,8 @@ struct TherionParsedLine
 class TherionDocumentParser final
 {
 public:
-    static TherionParsedLine parseLine(const QString &line, int lineNumber = 0);
-    static QVector<TherionParsedLine> parseText(const QString &text);
-    static QStringList tokenizeLine(const QString &line);
+    [[nodiscard]] static TherionParsedLine parseLine(const QString &line, int lineNumber = 0);
+    [[nodiscard]] static QVector<TherionParsedLine> parseText(const QString &text);
+    [[nodiscard]] static QStringList tokenizeLine(const QString &line);
 };
 }

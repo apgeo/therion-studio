@@ -1,17 +1,30 @@
 #pragma once
 
+#include <functional>
+
 #include <QString>
 #include <QStringList>
 
+class QPlainTextEdit;
+
 namespace TherionStudio
 {
-class TextEditorTab;
 struct TextEditorCommandMetadata;
+struct TherionParsedLine;
+
+struct RawEditorCompletionContext
+{
+    QPlainTextEdit *editor = nullptr;
+    const TextEditorCommandMetadata *metadata = nullptr;
+    std::function<QString(const QString &)> normalizedDirectiveToken;
+    std::function<QString(const QString &)> openingDirectiveForClosingToken;
+    std::function<bool(const QString &, const TherionParsedLine &)> isContainerDirectiveInstance;
+};
 
 class RawEditorCompletionContextAnalyzer final
 {
 public:
-    explicit RawEditorCompletionContextAnalyzer(TextEditorTab *owner);
+    explicit RawEditorCompletionContextAnalyzer(RawEditorCompletionContext context);
 
     QString currentCompletionPrefix() const;
     QStringList activeCompletionScopeStack() const;
@@ -28,6 +41,6 @@ public:
 private:
     const TextEditorCommandMetadata &metadata() const;
 
-    TextEditorTab *owner_ = nullptr;
+    RawEditorCompletionContext context_;
 };
 }

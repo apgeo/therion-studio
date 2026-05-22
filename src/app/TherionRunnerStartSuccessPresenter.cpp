@@ -20,7 +20,7 @@ TherionRunnerStartSuccessPresenter::present(const TherionRunnerService::StartRes
 {
     Presentation result;
 
-    if (startResult.usedHomebrewFallback
+    if (startResult.usedPlatformFallback
         && executableInput == QStringLiteral("therion")
         && !startResult.resolvedExecutablePath.isEmpty()) {
         result.shouldUpdateExecutableText = true;

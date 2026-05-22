@@ -1,20 +1,29 @@
 #pragma once
 
+#include <functional>
+
 #include <QString>
 #include <QStringList>
 
 class QJsonObject;
+class QStringListModel;
 
 namespace TherionStudio
 {
-class TextEditorTab;
 struct TextEditorCommandMetadata;
 struct TherionHelpEntry;
+
+struct RawEditorCommandMetadataContext
+{
+    TextEditorCommandMetadata *metadata = nullptr;
+    QStringListModel *completionModel = nullptr;
+    std::function<QString(const QString &)> normalizedDirectiveToken;
+};
 
 class RawEditorCommandMetadataLoader final
 {
 public:
-    explicit RawEditorCommandMetadataLoader(TextEditorTab *owner);
+    explicit RawEditorCommandMetadataLoader(RawEditorCommandMetadataContext context);
 
     void applyCatalogCommandsMetadata(const QJsonObject &catalogObject) const;
     void rebuildCompletionModel() const;
@@ -46,6 +55,6 @@ private:
     void mergeHelpEntry(const QString &token, const TherionHelpEntry &entry) const;
     void registerCompletionToken(const QString &token) const;
 
-    TextEditorTab *owner_ = nullptr;
+    RawEditorCommandMetadataContext context_;
 };
 }

@@ -3,10 +3,10 @@
 #include "RawEditorCompletionContextAnalyzer.h"
 #include "RawEditorCompletionSuggestionBuilder.h"
 #include "../TextEditorCommandMetadata.h"
-#include "../TextEditorTab.h"
 
 #include <QAbstractItemView>
 #include <QCompleter>
+#include <QCoreApplication>
 #include <QDir>
 #include <QPlainTextEdit>
 #include <QScrollBar>
@@ -18,29 +18,55 @@
 #include "../../../core/TherionCommandSyntax.h"
 #include "../../../core/TherionDocumentParser.h"
 
+#include <utility>
+
 namespace TherionStudio
 {
-RawEditorCompletionPopupController::RawEditorCompletionPopupController(TextEditorTab *owner)
-    : owner_(owner)
+RawEditorCompletionPopupController::RawEditorCompletionPopupController(RawEditorCompletionPopupContext context)
+    : context_(std::move(context))
 {
+}
+
+RawEditorCompletionContext RawEditorCompletionPopupController::completionContext() const
+{
+    RawEditorCompletionContext context;
+    context.editor = context_.editor;
+    context.metadata = context_.metadata;
+    context.normalizedDirectiveToken = context_.normalizedDirectiveToken;
+    context.openingDirectiveForClosingToken = context_.openingDirectiveForClosingToken;
+    context.isContainerDirectiveInstance = context_.isContainerDirectiveInstance;
+    return context;
+}
+
+RawEditorCompletionSuggestionContext RawEditorCompletionPopupController::suggestionContext() const
+{
+    RawEditorCompletionSuggestionContext context;
+    context.editor = context_.editor;
+    context.metadata = context_.metadata;
+    context.projectRootPath = context_.projectRootPath;
+    context.filePath = context_.filePath;
+    context.normalizedDirectiveToken = context_.normalizedDirectiveToken;
+    context.openingDirectiveForClosingToken = context_.openingDirectiveForClosingToken;
+    context.isContainerDirectiveInstance = context_.isContainerDirectiveInstance;
+    return context;
 }
 
 void RawEditorCompletionPopupController::triggerCompletionPopup()
 {
-    if (owner_ == nullptr
-        || owner_->editor_ == nullptr
-        || owner_->completionCompleter_ == nullptr
-        || owner_->completionModel_ == nullptr) {
+    if (context_.editor == nullptr
+        || context_.completionCompleter == nullptr
+        || context_.completionModel == nullptr
+        || context_.metadata == nullptr) {
         return;
     }
 
-    const RawEditorCompletionContextAnalyzer contextAnalyzer(owner_);
-    const RawEditorCompletionSuggestionBuilder suggestionBuilder(owner_);
+    const RawEditorCompletionContextAnalyzer contextAnalyzer(completionContext());
+    const RawEditorCompletionSuggestionBuilder suggestionBuilder(suggestionContext());
     const QString command = contextAnalyzer.currentCompletionCommand();
 
     QString rawPathPrefix;
     if (command == QStringLiteral("input")) {
-        const QTextCursor cursor = owner_->editor_->textCursor();
+        const QTextCursor cursor = context_.editor->textCursor();
         const QTextBlock block = cursor.block();
         if (block.isValid()) {
             const QString blockText = block.text();
@@ -71,13 +97,13 @@ void RawEditorCompletionPopupController::triggerCompletionPopup()
     }
 
     if (suggestions.isEmpty()) {
-        if (owner_->completionCompleter_->popup() != nullptr) {
-            owner_->completionCompleter_->popup()->hide();
+        if (context_.completionCompleter->popup() != nullptr) {
+            context_.completionCompleter->popup()->hide();
         }
 
-        const int requiredPositionalCount = qMax(0, owner_->commandMetadata().commandRequiredPositionalCount.value(command));
+        const int requiredPositionalCount = qMax(0, context_.metadata->commandRequiredPositionalCount.value(command));
         if (!command.isEmpty() && requiredPositionalCount > 0) {
-            const QTextCursor cursor = owner_->editor_->textCursor();
+            const QTextCursor cursor = context_.editor->textCursor();
             const QTextBlock block = cursor.block();
             if (block.isValid()) {
                 const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(block.text(), block.blockNumber() + 1);
@@ -103,9 +129,11 @@ void RawEditorCompletionPopupController::triggerCompletionPopup()
                 const int positionalCountBeforeCursor = positionalTokenCountBeforeCursor(parsedLine, tokenIndexAtCursor);
                 if (positionalCountBeforeCursor < requiredPositionalCount) {
                     const int nextArgumentIndex = positionalCountBeforeCursor + 1;
-                    QToolTip::showText(owner_->editor_->mapToGlobal(owner_->editor_->cursorRect().bottomLeft()),
-                                       owner_->tr("Enter required argument %1 before options.").arg(nextArgumentIndex),
-                                       owner_->editor_,
+                    QToolTip::showText(context_.editor->mapToGlobal(context_.editor->cursorRect().bottomLeft()),
+                                       QCoreApplication::translate("TherionStudio::TextEditorTab",
+                                                                   "Enter required argument %1 before options.")
+                                           .arg(nextArgumentIndex),
+                                       context_.editor,
                                        QRect(),
                                        1500);
                 }
@@ -114,29 +142,30 @@ void RawEditorCompletionPopupController::triggerCompletionPopup()
         return;
     }
 
-    owner_->completionModel_->setStringList(suggestions);
+    context_.completionModel->setStringList(suggestions);
     QString popupPrefix = prefix;
     if (command == QStringLiteral("input")) {
         popupPrefix = suggestionBuilder.normalizeInputCompletionPrefix(rawPathPrefix);
     }
-    owner_->completionCompleter_->setCompletionPrefix(popupPrefix);
-    if (owner_->completionCompleter_->completionCount() <= 0) {
+    context_.completionCompleter->setCompletionPrefix(popupPrefix);
+    if (context_.completionCompleter->completionCount() <= 0) {
         return;
     }
 
-    QRect cursorRect = owner_->editor_->cursorRect();
-    if (owner_->completionCompleter_->popup() != nullptr) {
-        const int popupWidth = owner_->completionCompleter_->popup()->sizeHintForColumn(0)
-            + owner_->completionCompleter_->popup()->verticalScrollBar()->sizeHint().width() + 12;
+    QRect cursorRect = context_.editor->cursorRect();
+    if (context_.completionCompleter->popup() != nullptr) {
+        const int popupWidth = context_.completionCompleter->popup()->sizeHintForColumn(0)
+            + context_.completionCompleter->popup()->verticalScrollBar()->sizeHint().width() + 12;
         cursorRect.setWidth(qMax(cursorRect.width(), popupWidth));
     }
-    owner_->completionCompleter_->complete(cursorRect);
+    context_.completionCompleter->complete(cursorRect);
 
     const QString scopeLabel = contextAnalyzer.currentCompletionScopeLabel();
     if (!scopeLabel.isEmpty()) {
-        QToolTip::showText(owner_->editor_->mapToGlobal(cursorRect.bottomLeft()),
-                           owner_->tr("Completion scope: %1").arg(scopeLabel),
-                           owner_->editor_,
+        QToolTip::showText(context_.editor->mapToGlobal(cursorRect.bottomLeft()),
+                           QCoreApplication::translate("TherionStudio::TextEditorTab", "Completion scope: %1")
+                               .arg(scopeLabel),
+                           context_.editor,
                            QRect(),
                            1500);
     }

@@ -1,8 +1,28 @@
 #include "TherionRunnerService.h"
 
+#include "../platform/PlatformPathResolver.h"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QStandardPaths>
+
+namespace
+{
+QString firstExecutableCandidatePath(const QStringList &candidatePaths)
+{
+    for (const QString &candidatePath : candidatePaths) {
+        const QFileInfo candidateInfo(candidatePath);
+        if (!candidateInfo.exists() || !candidateInfo.isFile() || !candidateInfo.isExecutable()) {
+            continue;
+        }
+
+        const QString canonicalPath = candidateInfo.canonicalFilePath();
+        return canonicalPath.isEmpty() ? candidateInfo.absoluteFilePath() : canonicalPath;
+    }
+
+    return QString();
+}
+}
 
 namespace TherionStudio
 {
@@ -26,7 +46,7 @@ bool TherionRunnerService::isRunning() const
 
 QString TherionRunnerService::suggestedDefaultExecutablePath()
 {
-    return detectHomebrewTherionExecutablePath();
+    return firstExecutableCandidatePath(Platform::therionExecutableCandidates());
 }
 
 TherionRunnerService::StartResult TherionRunnerService::start(const QString &executableInput,
@@ -63,7 +83,7 @@ TherionRunnerService::StartResult TherionRunnerService::start(const QString &exe
     process_.start(resolvedExecutable.path, arguments);
     result.code = StartCode::Started;
     result.resolvedExecutablePath = resolvedExecutable.path;
-    result.usedHomebrewFallback = resolvedExecutable.usedHomebrewFallback;
+    result.usedPlatformFallback = resolvedExecutable.usedPlatformFallback;
     emit runningStateChanged(isRunning());
     return result;
 }
@@ -130,33 +150,8 @@ TherionRunnerService::ResolvedExecutablePath TherionRunnerService::resolveExecut
         return resolved;
     }
 
-    resolved.path = detectHomebrewTherionExecutablePath();
-    resolved.usedHomebrewFallback = !resolved.path.isEmpty();
+    resolved.path = firstExecutableCandidatePath(Platform::therionExecutableCandidates());
+    resolved.usedPlatformFallback = !resolved.path.isEmpty();
     return resolved;
-}
-
-QString TherionRunnerService::detectHomebrewTherionExecutablePath()
-{
-    QStringList candidates;
-
-    const QString brewPrefix = qEnvironmentVariable("HOMEBREW_PREFIX").trimmed();
-    if (!brewPrefix.isEmpty()) {
-        candidates.append(QDir(brewPrefix).absoluteFilePath(QStringLiteral("bin/therion")));
-    }
-
-    candidates.append(QStringLiteral("/opt/homebrew/bin/therion"));
-    candidates.append(QStringLiteral("/usr/local/bin/therion"));
-
-    for (const QString &candidatePath : candidates) {
-        const QFileInfo candidateInfo(candidatePath);
-        if (!candidateInfo.exists() || !candidateInfo.isFile() || !candidateInfo.isExecutable()) {
-            continue;
-        }
-
-        const QString canonicalPath = candidateInfo.canonicalFilePath();
-        return canonicalPath.isEmpty() ? candidateInfo.absoluteFilePath() : canonicalPath;
-    }
-
-    return QString();
 }
 }

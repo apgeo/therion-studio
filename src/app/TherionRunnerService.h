@@ -25,7 +25,7 @@ public:
     {
         StartCode code = StartCode::Started;
         QString resolvedExecutablePath;
-        bool usedHomebrewFallback = false;
+        bool usedPlatformFallback = false;
     };
 
     explicit TherionRunnerService(QObject *parent = nullptr);
@@ -55,12 +55,11 @@ private:
     struct ResolvedExecutablePath
     {
         QString path;
-        bool usedHomebrewFallback = false;
+        bool usedPlatformFallback = false;
     };
 
     ResolvedExecutablePath resolveExecutablePath(const QString &executableInput,
                                                  const QString &workingDirectory) const;
-    static QString detectHomebrewTherionExecutablePath();
 
     QProcess process_;
 };

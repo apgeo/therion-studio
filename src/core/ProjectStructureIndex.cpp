@@ -422,32 +422,6 @@ QString objectDisplayText(const ProjectStructureEntry &entry, const TherionParse
     return entry.name;
 }
 
-QString sectionEndDirectiveForCategory(const QString &category)
-{
-    if (category == QStringLiteral("Surveys")) {
-        return QStringLiteral("endsurvey");
-    }
-    if (category == QStringLiteral("Centrelines")) {
-        return QStringLiteral("endcentreline");
-    }
-    if (category == QStringLiteral("Maps")) {
-        return QStringLiteral("endmap");
-    }
-    if (category == QStringLiteral("Scraps")) {
-        return QStringLiteral("endscrap");
-    }
-
-    return QString();
-}
-
-bool isSectionCategory(const QString &category)
-{
-    return category == QStringLiteral("Surveys")
-    || category == QStringLiteral("Centrelines")
-        || category == QStringLiteral("Maps")
-        || category == QStringLiteral("Scraps");
-}
-
 QString sectionNameFromLine(const TherionParsedLine &parsedLine)
 {
     if (parsedLine.tokens.size() >= 2) {

@@ -76,8 +76,6 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     cursorController_ = std::make_unique<TextEditorCursorController>(this);
     documentController_ = std::make_unique<TextEditorDocumentController>(this);
     encodingController_ = std::make_unique<TextEditorEncodingController>(this);
-    rawEditorFindController_ = std::make_unique<RawEditorFindController>(this);
-    rawEditorCompletionController_ = std::make_unique<RawEditorCompletionController>(this);
     editorModeController_ = std::make_unique<TextEditorModeController>(this);
     sourceRewriteController_ = std::make_unique<TextEditorSourceRewriteController>(this);
     statusController_ = std::make_unique<TextEditorStatusController>(this);

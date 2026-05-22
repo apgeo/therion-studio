@@ -2,10 +2,6 @@
 
 #include "RawEditorCompletionContextAnalyzer.h"
 #include "RawEditorCommandMetadataLoader.h"
-#include "RawEditorCompletionInsertionController.h"
-#include "RawEditorCompletionPopupController.h"
-#include "RawEditorCompletionSuggestionBuilder.h"
-#include "../TextEditorTab.h"
 
 #include <QAbstractItemView>
 #include <QCompleter>
@@ -17,48 +13,31 @@
 #include <QTextCursor>
 #include <QTimer>
 
-namespace
-{
-bool isRequiredArgumentSignature(const QString &signature)
-{
-    const QString trimmed = signature.trimmed();
-    if (trimmed.isEmpty()) {
-        return false;
-    }
-    if (trimmed.startsWith(QLatin1Char('['))) {
-        return false;
-    }
-    return trimmed.contains(QLatin1Char('<')) && trimmed.contains(QLatin1Char('>'));
-}
-
-}
+#include <utility>
 
 namespace TherionStudio
 {
-RawEditorCompletionController::RawEditorCompletionController(TextEditorTab *owner)
-    : owner_(owner)
+RawEditorCompletionController::RawEditorCompletionController(RawEditorCompletionControllerContext context)
+    : context_(std::move(context))
 {
 }
 
-const TextEditorCommandMetadata &RawEditorCompletionController::commandMetadata() const
-{
-    return owner_->commandMetadata();
-}
+const TextEditorCommandMetadata &RawEditorCompletionController::commandMetadata() const { return *context_.metadata; }
 
-TextEditorCommandMetadata &RawEditorCompletionController::mutableCommandMetadata() const
-{
-    return owner_->mutableCommandMetadata();
-}
+TextEditorCommandMetadata &RawEditorCompletionController::mutableCommandMetadata() const { return *context_.metadata; }
 
 RawEditorCompletionController::EventHandling RawEditorCompletionController::handleEventFilter(QObject *watched,
                                                                                              QEvent *event)
 {
-    if (owner_ == nullptr || event == nullptr || owner_->completionCompleter_ == nullptr || owner_->editor_ == nullptr) {
+    if (event == nullptr
+        || context_.eventContext == nullptr
+        || context_.completionCompleter == nullptr
+        || context_.editor == nullptr) {
         return EventHandling::NotHandled;
     }
 
-    const QObject *popupObject = owner_->completionCompleter_->popup();
-    const bool watchedEditor = watched == owner_->editor_ || watched == owner_->editor_->viewport();
+    const QObject *popupObject = context_.completionCompleter->popup();
+    const bool watchedEditor = watched == context_.editor || watched == context_.editor->viewport();
     const bool watchedPopup = popupObject != nullptr && watched == popupObject;
     if (!watchedEditor && !watchedPopup) {
         return EventHandling::NotHandled;
@@ -67,16 +46,16 @@ RawEditorCompletionController::EventHandling RawEditorCompletionController::hand
     if (watchedEditor
         && (event->type() == QEvent::MouseButtonPress
             || event->type() == QEvent::MouseButtonDblClick)) {
-        if (owner_->completionCompleter_->popup() != nullptr) {
-            owner_->completionCompleter_->popup()->hide();
+        if (context_.completionCompleter->popup() != nullptr) {
+            context_.completionCompleter->popup()->hide();
         }
 
         if ((event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonDblClick)
-            && watched == owner_->editor_->viewport()) {
+            && watched == context_.editor->viewport()) {
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
             if (mouseEvent->button() == Qt::LeftButton) {
-                owner_->editor_->setFocus(Qt::MouseFocusReason);
-                owner_->editor_->setTextCursor(owner_->editor_->cursorForPosition(mouseEvent->position().toPoint()));
+                context_.editor->setFocus(Qt::MouseFocusReason);
+                context_.editor->setTextCursor(context_.editor->cursorForPosition(mouseEvent->position().toPoint()));
             }
         }
 
@@ -88,27 +67,27 @@ RawEditorCompletionController::EventHandling RawEditorCompletionController::hand
     }
 
     auto *keyEvent = static_cast<QKeyEvent *>(event);
-    if (owner_->completionCompleter_->popup() != nullptr && owner_->completionCompleter_->popup()->isVisible()) {
-        auto *popup = owner_->completionCompleter_->popup();
+    if (context_.completionCompleter->popup() != nullptr && context_.completionCompleter->popup()->isVisible()) {
+        auto *popup = context_.completionCompleter->popup();
         if (watchedPopup) {
             const Qt::KeyboardModifiers modifiers = keyEvent->modifiers();
             const bool noModifiers = modifiers == Qt::NoModifier || modifiers == Qt::ShiftModifier;
             const QString text = keyEvent->text();
             const bool typedText = !text.isEmpty() && noModifiers && text.at(0).isPrint();
             if (typedText) {
-                owner_->editor_->setFocus();
-                owner_->editor_->insertPlainText(text);
-                QTimer::singleShot(0, owner_, [this]() {
+                context_.editor->setFocus();
+                context_.editor->insertPlainText(text);
+                QTimer::singleShot(0, context_.eventContext, [this]() {
                     triggerCompletionPopup();
                 });
                 return EventHandling::Consumed;
             }
             if (keyEvent->key() == Qt::Key_Backspace) {
-                owner_->editor_->setFocus();
-                QTextCursor cursor = owner_->editor_->textCursor();
+                context_.editor->setFocus();
+                QTextCursor cursor = context_.editor->textCursor();
                 cursor.deletePreviousChar();
-                owner_->editor_->setTextCursor(cursor);
-                QTimer::singleShot(0, owner_, [this]() {
+                context_.editor->setTextCursor(cursor);
+                QTimer::singleShot(0, context_.eventContext, [this]() {
                     triggerCompletionPopup();
                 });
                 return EventHandling::Consumed;
@@ -127,7 +106,7 @@ RawEditorCompletionController::EventHandling RawEditorCompletionController::hand
                 completion = currentIndex.data(Qt::DisplayRole).toString().trimmed();
             }
             if (completion.isEmpty()) {
-                completion = owner_->completionCompleter_->currentCompletion().trimmed();
+                completion = context_.completionCompleter->currentCompletion().trimmed();
             }
             if (!completion.isEmpty()) {
                 insertCompletionToken(completion);
@@ -149,9 +128,9 @@ RawEditorCompletionController::EventHandling RawEditorCompletionController::hand
 
     const Qt::KeyboardModifiers modifiers = keyEvent->modifiers();
     if (keyEvent->key() == Qt::Key_Tab && modifiers == Qt::NoModifier) {
-        QTextCursor cursor = owner_->editor_->textCursor();
+        QTextCursor cursor = context_.editor->textCursor();
         cursor.insertText(QStringLiteral("    "));
-        owner_->editor_->setTextCursor(cursor);
+        context_.editor->setTextCursor(cursor);
         return EventHandling::Consumed;
     }
 
@@ -183,8 +162,8 @@ RawEditorCompletionController::EventHandling RawEditorCompletionController::hand
             || key == Qt::Key_Enter
             || key == Qt::Key_Escape;
 
-        if (hideKey && owner_->completionCompleter_->popup() != nullptr) {
-            owner_->completionCompleter_->popup()->hide();
+        if (hideKey && context_.completionCompleter->popup() != nullptr) {
+            context_.completionCompleter->popup()->hide();
             return EventHandling::PassToBase;
         }
 
@@ -194,7 +173,7 @@ RawEditorCompletionController::EventHandling RawEditorCompletionController::hand
 
         const bool deletionKey = key == Qt::Key_Backspace || key == Qt::Key_Delete;
         if (deletionKey) {
-            const QTextCursor cursor = owner_->editor_->textCursor();
+            const QTextCursor cursor = context_.editor->textCursor();
             const QTextBlock block = cursor.block();
             if (block.isValid()) {
                 const QString blockText = block.text();
@@ -206,15 +185,15 @@ RawEditorCompletionController::EventHandling RawEditorCompletionController::hand
                 const bool leftTokenChar = cursorColumn > 0 && isCompletionCharacter(blockText.at(cursorColumn - 1));
                 const bool rightTokenChar = cursorColumn < blockText.size() && isCompletionCharacter(blockText.at(cursorColumn));
                 if (!leftTokenChar && !rightTokenChar) {
-                    if (owner_->completionCompleter_->popup() != nullptr) {
-                        owner_->completionCompleter_->popup()->hide();
+                    if (context_.completionCompleter->popup() != nullptr) {
+                        context_.completionCompleter->popup()->hide();
                     }
                     return EventHandling::PassToBase;
                 }
             }
         }
 
-        QTimer::singleShot(0, owner_, [this]() {
+        QTimer::singleShot(0, context_.eventContext, [this]() {
             triggerCompletionPopup();
         });
         return EventHandling::PassToBase;
@@ -226,113 +205,63 @@ RawEditorCompletionController::EventHandling RawEditorCompletionController::hand
 
 QString RawEditorCompletionController::currentCompletionPrefix() const
 {
-    return RawEditorCompletionContextAnalyzer(owner_).currentCompletionPrefix();
+    return contextAnalyzer().currentCompletionPrefix();
 }
 
 QStringList RawEditorCompletionController::activeCompletionScopeStack() const
 {
-    return RawEditorCompletionContextAnalyzer(owner_).activeCompletionScopeStack();
+    return contextAnalyzer().activeCompletionScopeStack();
 }
 
 QString RawEditorCompletionController::currentCompletionCommand() const
 {
-    return RawEditorCompletionContextAnalyzer(owner_).currentCompletionCommand();
+    return contextAnalyzer().currentCompletionCommand();
 }
 
 QString RawEditorCompletionController::currentCompletionScopeLabel() const
 {
-    return RawEditorCompletionContextAnalyzer(owner_).currentCompletionScopeLabel();
+    return contextAnalyzer().currentCompletionScopeLabel();
 }
 
 QString RawEditorCompletionController::normalizeCompletionContext(const QString &contextToken) const
 {
-    return RawEditorCompletionContextAnalyzer(owner_).normalizeCompletionContext(contextToken);
+    return contextAnalyzer().normalizeCompletionContext(contextToken);
 }
 
 bool RawEditorCompletionController::isCompatibleChildKindForBlocks(const QString &parentKind,
                                                                    const QString &childKind) const
 {
-    return RawEditorCompletionContextAnalyzer(owner_).isCompatibleChildKindForBlocks(parentKind, childKind);
+    return contextAnalyzer().isCompatibleChildKindForBlocks(parentKind, childKind);
 }
 
 bool RawEditorCompletionController::isCommandDirectiveInScope(const QString &directive, const QString &scopeToken) const
 {
-    return RawEditorCompletionContextAnalyzer(owner_).isCommandDirectiveInScope(directive, scopeToken);
-}
-
-QStringList RawEditorCompletionController::commandArgumentSignaturesFor(const QString &commandToken) const
-{
-    if (owner_ == nullptr) {
-        return {};
-    }
-    return mutableCommandMetadata().commandArgumentSignaturesByToken.value(owner_->normalizedDirectiveToken(commandToken.trimmed()));
-}
-
-bool RawEditorCompletionController::commandHasRequiredIdArgument(const QString &commandToken) const
-{
-    const QStringList signatures = commandArgumentSignaturesFor(commandToken);
-    for (const QString &signature : signatures) {
-        if (!isRequiredArgumentSignature(signature)) {
-            continue;
-        }
-        const QString normalizedSignature = signature.trimmed().toLower();
-        return normalizedSignature.contains(QStringLiteral("<id>"));
-    }
-    return false;
-}
-
-bool RawEditorCompletionController::commandSupportsInlineIdField(const QString &commandToken) const
-{
-    if (owner_ == nullptr) {
-        return false;
-    }
-
-    const QString normalizedCommand = owner_->normalizedDirectiveToken(commandToken.trimmed());
-    if (commandHasRequiredIdArgument(normalizedCommand)) {
-        return true;
-    }
-    return mutableCommandMetadata().commandOptionTokens.value(normalizedCommand).contains(QStringLiteral("-id"), Qt::CaseInsensitive);
+    return contextAnalyzer().isCommandDirectiveInScope(directive, scopeToken);
 }
 
 void RawEditorCompletionController::applyCatalogCommandsMetadata(const QJsonObject &catalogObject) const
 {
-    RawEditorCommandMetadataLoader(owner_).applyCatalogCommandsMetadata(catalogObject);
+    if (context_.metadata != nullptr && context_.completionModel != nullptr) {
+        RawEditorCommandMetadataLoader({&mutableCommandMetadata(), context_.completionModel, context_.normalizedDirectiveToken})
+            .applyCatalogCommandsMetadata(catalogObject);
+    }
 }
-
 void RawEditorCompletionController::rebuildCompletionModel() const
 {
-    RawEditorCommandMetadataLoader(owner_).rebuildCompletionModel();
+    if (context_.metadata != nullptr && context_.completionModel != nullptr) {
+        RawEditorCommandMetadataLoader({&mutableCommandMetadata(), context_.completionModel, {}}).rebuildCompletionModel();
+    }
 }
-
 QString RawEditorCompletionController::primaryInsertionScopeForCommand(const QString &commandToken) const
 {
-    return RawEditorCompletionContextAnalyzer(owner_).primaryInsertionScopeForCommand(commandToken);
+    return contextAnalyzer().primaryInsertionScopeForCommand(commandToken);
 }
 
 QString RawEditorCompletionController::resolveScopeForCommandAtLine(const QString &commandToken,
                                                                     const QStringList &lines,
                                                                     int lineNumber) const
 {
-    return RawEditorCompletionContextAnalyzer(owner_).resolveScopeForCommandAtLine(commandToken, lines, lineNumber);
+    return contextAnalyzer().resolveScopeForCommandAtLine(commandToken, lines, lineNumber);
 }
 
-QStringList RawEditorCompletionController::projectInputFileCompletionCandidates() const
-{
-    return RawEditorCompletionSuggestionBuilder(owner_).projectInputFileCompletionCandidates();
-}
-
-QStringList RawEditorCompletionController::buildCompletionSuggestionsForCursor(const QString &prefix) const
-{
-    return RawEditorCompletionSuggestionBuilder(owner_).buildCompletionSuggestionsForCursor(prefix);
-}
-
-void RawEditorCompletionController::triggerCompletionPopup()
-{
-    RawEditorCompletionPopupController(owner_).triggerCompletionPopup();
-}
-
-void RawEditorCompletionController::insertCompletionToken(const QString &completion)
-{
-    RawEditorCompletionInsertionController(owner_).insertCompletionToken(completion);
-}
 }

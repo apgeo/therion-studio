@@ -1,53 +1,53 @@
 #include "RawEditorFindController.h"
 
-#include "../TextEditorTab.h"
-
 #include <QCheckBox>
 #include <QFrame>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QCoreApplication>
 #include <QTextCursor>
 
 namespace TherionStudio
 {
-RawEditorFindController::RawEditorFindController(TextEditorTab *owner)
-    : owner_(owner)
+RawEditorFindController::RawEditorFindController(RawEditorFindContext context)
+    : context_(std::move(context))
 {
 }
 
 void RawEditorFindController::showFindBar(bool replaceMode)
 {
-    if (owner_ == nullptr) {
+    if (context_.editor == nullptr || context_.searchBar == nullptr || context_.findEdit == nullptr) {
         return;
     }
 
-    if (owner_->blocksModeActive_) {
-        owner_->setBlocksModeActive(false);
+    if (context_.blocksModeActive != nullptr
+        && *context_.blocksModeActive
+        && context_.setBlocksModeActive) {
+        context_.setBlocksModeActive(false);
     }
 
-    owner_->replaceMode_ = replaceMode;
     updateSearchVisibility(replaceMode);
-    owner_->searchBar_->setVisible(true);
+    context_.searchBar->setVisible(true);
 
-    if (owner_->findEdit_->text().isEmpty() && !owner_->editor_->textCursor().selectedText().isEmpty()) {
-        owner_->findEdit_->setText(owner_->editor_->textCursor().selectedText());
+    if (context_.findEdit->text().isEmpty() && !context_.editor->textCursor().selectedText().isEmpty()) {
+        context_.findEdit->setText(context_.editor->textCursor().selectedText());
     }
 
-    owner_->findEdit_->setFocus();
-    owner_->findEdit_->selectAll();
-    updateSearchResults(owner_->tr("Ready"));
+    context_.findEdit->setFocus();
+    context_.findEdit->selectAll();
+    updateSearchResults(trText("Ready"));
 }
 
 void RawEditorFindController::hideFindBar()
 {
-    if (owner_ == nullptr) {
+    if (context_.searchBar == nullptr || context_.editor == nullptr) {
         return;
     }
 
-    owner_->searchBar_->setVisible(false);
-    owner_->editor_->setFocus();
+    context_.searchBar->setVisible(false);
+    context_.editor->setFocus();
 }
 
 bool RawEditorFindController::findNext()
@@ -62,86 +62,86 @@ bool RawEditorFindController::findPrevious()
 
 bool RawEditorFindController::replaceCurrent()
 {
-    if (owner_ == nullptr) {
+    if (context_.editor == nullptr) {
         return false;
     }
 
     const QString findText = currentFindText();
     if (findText.isEmpty()) {
-        updateSearchResults(owner_->tr("Enter text to find."), true);
+        updateSearchResults(trText("Enter text to find."), true);
         return false;
     }
 
-    QTextCursor cursor = owner_->editor_->textCursor();
+    QTextCursor cursor = context_.editor->textCursor();
     if (!cursor.hasSelection() || cursor.selectedText() != findText) {
         if (!performFind(true, true)) {
             return false;
         }
 
-        cursor = owner_->editor_->textCursor();
+        cursor = context_.editor->textCursor();
     }
 
     cursor.insertText(currentReplaceText());
-    owner_->editor_->setTextCursor(cursor);
-    updateSearchResults(owner_->tr("Replaced current match."));
+    context_.editor->setTextCursor(cursor);
+    updateSearchResults(trText("Replaced current match."));
     return performFind(true, true);
 }
 
 int RawEditorFindController::replaceAll()
 {
-    if (owner_ == nullptr) {
+    if (context_.editor == nullptr) {
         return 0;
     }
 
     const QString findText = currentFindText();
     if (findText.isEmpty()) {
-        updateSearchResults(owner_->tr("Enter text to find."), true);
+        updateSearchResults(trText("Enter text to find."), true);
         return 0;
     }
 
     const QString replaceText = currentReplaceText();
-    QTextCursor cursor(owner_->editor_->document());
+    QTextCursor cursor(context_.editor->document());
     cursor.beginEditBlock();
 
     int replacements = 0;
-    cursor = owner_->editor_->document()->find(findText, cursor, findFlags());
+    cursor = context_.editor->document()->find(findText, cursor, findFlags());
     while (!cursor.isNull()) {
         cursor.insertText(replaceText);
         ++replacements;
-        cursor = owner_->editor_->document()->find(findText, cursor, findFlags());
+        cursor = context_.editor->document()->find(findText, cursor, findFlags());
     }
 
     cursor.endEditBlock();
-    owner_->editor_->moveCursor(QTextCursor::Start);
-    updateSearchResults(owner_->tr("Replaced %1 occurrence(s).").arg(replacements));
+    context_.editor->moveCursor(QTextCursor::Start);
+    updateSearchResults(trText("Replaced %1 occurrence(s).").arg(replacements));
     return replacements;
 }
 
 void RawEditorFindController::handleFindTextEdited()
 {
-    if (owner_ == nullptr || !owner_->searchBar_->isVisible()) {
+    if (context_.searchBar == nullptr || !context_.searchBar->isVisible()) {
         return;
     }
 
-    updateSearchResults(owner_->tr("Ready"));
+    updateSearchResults(trText("Ready"));
 }
 
 void RawEditorFindController::handleReplaceTextEdited()
 {
-    if (owner_ == nullptr || !owner_->searchBar_->isVisible()) {
+    if (context_.searchBar == nullptr || !context_.searchBar->isVisible()) {
         return;
     }
 
-    updateSearchResults(owner_->tr("Ready"));
+    updateSearchResults(trText("Ready"));
 }
 
 void RawEditorFindController::handleSearchOptionsChanged()
 {
-    if (owner_ == nullptr || !owner_->searchBar_->isVisible()) {
+    if (context_.searchBar == nullptr || !context_.searchBar->isVisible()) {
         return;
     }
 
-    updateSearchResults(owner_->tr("Ready"));
+    updateSearchResults(trText("Ready"));
 }
 
 void RawEditorFindController::handleFindNextTriggered()
@@ -171,34 +171,36 @@ void RawEditorFindController::handleCloseSearchTriggered()
 
 void RawEditorFindController::updateSearchResults(const QString &message, bool error) const
 {
-    if (owner_ == nullptr || owner_->searchStatusLabel_ == nullptr) {
+    if (context_.searchStatusLabel == nullptr) {
         return;
     }
 
-    owner_->searchStatusLabel_->setText(message);
-    owner_->searchStatusLabel_->setStyleSheet(error ? QStringLiteral("color: #cc6666;") : QString());
+    context_.searchStatusLabel->setText(message);
+    context_.searchStatusLabel->setStyleSheet(error ? QStringLiteral("color: #cc6666;") : QString());
 }
 
 void RawEditorFindController::updateSearchVisibility(bool replaceMode) const
 {
-    if (owner_ == nullptr) {
-        return;
+    if (context_.replaceRow != nullptr) {
+        context_.replaceRow->setVisible(replaceMode);
     }
-
-    owner_->replaceRow_->setVisible(replaceMode);
-    owner_->replaceButton_->setVisible(replaceMode);
-    owner_->replaceAllButton_->setVisible(replaceMode);
+    if (context_.replaceButton != nullptr) {
+        context_.replaceButton->setVisible(replaceMode);
+    }
+    if (context_.replaceAllButton != nullptr) {
+        context_.replaceAllButton->setVisible(replaceMode);
+    }
 }
 
 bool RawEditorFindController::performFind(bool forward, bool wrapSearch)
 {
-    if (owner_ == nullptr) {
+    if (context_.editor == nullptr) {
         return false;
     }
 
     const QString findText = currentFindText();
     if (findText.isEmpty()) {
-        updateSearchResults(owner_->tr("Enter text to find."), true);
+        updateSearchResults(trText("Enter text to find."), true);
         return false;
     }
 
@@ -207,39 +209,39 @@ bool RawEditorFindController::performFind(bool forward, bool wrapSearch)
         flags |= QTextDocument::FindBackward;
     }
 
-    QTextCursor cursor = owner_->editor_->textCursor();
+    QTextCursor cursor = context_.editor->textCursor();
     if (cursor.hasSelection()) {
         cursor.setPosition(forward ? cursor.selectionEnd() : cursor.selectionStart());
     }
 
-    QTextCursor foundCursor = owner_->editor_->document()->find(findText, cursor, flags);
+    QTextCursor foundCursor = context_.editor->document()->find(findText, cursor, flags);
     bool wrapped = false;
 
     if (foundCursor.isNull() && wrapSearch) {
         wrapped = true;
-        QTextCursor wrapCursor(owner_->editor_->document());
+        QTextCursor wrapCursor(context_.editor->document());
         wrapCursor.movePosition(forward ? QTextCursor::Start : QTextCursor::End);
-        foundCursor = owner_->editor_->document()->find(findText, wrapCursor, flags);
+        foundCursor = context_.editor->document()->find(findText, wrapCursor, flags);
     }
 
     if (foundCursor.isNull()) {
-        updateSearchResults(owner_->tr("No matches found."), true);
+        updateSearchResults(trText("No matches found."), true);
         return false;
     }
 
-    owner_->editor_->setTextCursor(foundCursor);
-    owner_->editor_->ensureCursorVisible();
-    updateSearchResults(wrapped ? owner_->tr("Wrapped search.") : owner_->tr("Match found."));
+    context_.editor->setTextCursor(foundCursor);
+    context_.editor->ensureCursorVisible();
+    updateSearchResults(wrapped ? trText("Wrapped search.") : trText("Match found."));
     return true;
 }
 
 QTextDocument::FindFlags RawEditorFindController::findFlags() const
 {
     QTextDocument::FindFlags flags;
-    if (owner_ != nullptr && owner_->wholeWordCheck_->isChecked()) {
+    if (context_.wholeWordCheck != nullptr && context_.wholeWordCheck->isChecked()) {
         flags |= QTextDocument::FindWholeWords;
     }
-    if (owner_ != nullptr && owner_->caseSensitiveCheck_->isChecked()) {
+    if (context_.caseSensitiveCheck != nullptr && context_.caseSensitiveCheck->isChecked()) {
         flags |= QTextDocument::FindCaseSensitively;
     }
     return flags;
@@ -247,17 +249,22 @@ QTextDocument::FindFlags RawEditorFindController::findFlags() const
 
 QString RawEditorFindController::currentFindText() const
 {
-    if (owner_ == nullptr || owner_->findEdit_ == nullptr) {
+    if (context_.findEdit == nullptr) {
         return QString();
     }
-    return owner_->findEdit_->text().trimmed();
+    return context_.findEdit->text().trimmed();
 }
 
 QString RawEditorFindController::currentReplaceText() const
 {
-    if (owner_ == nullptr || owner_->replaceEdit_ == nullptr) {
+    if (context_.replaceEdit == nullptr) {
         return QString();
     }
-    return owner_->replaceEdit_->text();
+    return context_.replaceEdit->text();
+}
+
+QString RawEditorFindController::trText(const char *sourceText)
+{
+    return QCoreApplication::translate("TherionStudio::TextEditorTab", sourceText);
 }
 }

@@ -1,14 +1,16 @@
 #include "RawEditorCompletionContextAnalyzer.h"
 
 #include "../TextEditorCommandMetadata.h"
-#include "../TextEditorTab.h"
 
+#include <QCoreApplication>
 #include <QPlainTextEdit>
 #include <QRegularExpression>
 #include <QTextBlock>
 #include <QTextCursor>
 
 #include "../../../core/TherionDocumentParser.h"
+
+#include <utility>
 
 namespace
 {
@@ -56,23 +58,23 @@ QString normalizedCompletionContextToken(const QString &token)
 
 namespace TherionStudio
 {
-RawEditorCompletionContextAnalyzer::RawEditorCompletionContextAnalyzer(TextEditorTab *owner)
-    : owner_(owner)
+RawEditorCompletionContextAnalyzer::RawEditorCompletionContextAnalyzer(RawEditorCompletionContext context)
+    : context_(std::move(context))
 {
 }
 
 const TextEditorCommandMetadata &RawEditorCompletionContextAnalyzer::metadata() const
 {
-    return owner_->commandMetadata();
+    return *context_.metadata;
 }
 
 QString RawEditorCompletionContextAnalyzer::currentCompletionPrefix() const
 {
-    if (owner_ == nullptr || owner_->editor_ == nullptr) {
+    if (context_.editor == nullptr) {
         return QString();
     }
 
-    const QTextCursor cursor = owner_->editor_->textCursor();
+    const QTextCursor cursor = context_.editor->textCursor();
     const QTextBlock block = cursor.block();
     if (!block.isValid()) {
         return QString();
@@ -99,17 +101,18 @@ QString RawEditorCompletionContextAnalyzer::currentCompletionPrefix() const
 QStringList RawEditorCompletionContextAnalyzer::activeCompletionScopeStack() const
 {
     QStringList scopeStack;
-    if (owner_ == nullptr || owner_->editor_ == nullptr) {
+    if (context_.editor == nullptr || !context_.normalizedDirectiveToken || !context_.openingDirectiveForClosingToken
+        || !context_.isContainerDirectiveInstance) {
         return scopeStack;
     }
 
-    const QTextCursor cursor = owner_->editor_->textCursor();
+    const QTextCursor cursor = context_.editor->textCursor();
     const int currentBlockNumber = cursor.block().blockNumber();
     if (currentBlockNumber <= 0) {
         return scopeStack;
     }
 
-    const QStringList lines = owner_->editor_->toPlainText().split(QLatin1Char('\n'));
+    const QStringList lines = context_.editor->toPlainText().split(QLatin1Char('\n'));
     const int lastLine = qMin(currentBlockNumber, lines.size());
     for (int lineIndex = 0; lineIndex < lastLine; ++lineIndex) {
         const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineIndex), lineIndex + 1);
@@ -117,8 +120,8 @@ QStringList RawEditorCompletionContextAnalyzer::activeCompletionScopeStack() con
             continue;
         }
 
-        const QString directive = owner_->normalizedDirectiveToken(parsedLine.directive);
-        const QString openingFromClosing = owner_->openingDirectiveForClosingToken(directive);
+        const QString directive = context_.normalizedDirectiveToken(parsedLine.directive);
+        const QString openingFromClosing = context_.openingDirectiveForClosingToken(directive);
         if (!openingFromClosing.isEmpty()) {
             for (int stackIndex = scopeStack.size() - 1; stackIndex >= 0; --stackIndex) {
                 if (scopeStack.at(stackIndex) == openingFromClosing) {
@@ -129,7 +132,7 @@ QStringList RawEditorCompletionContextAnalyzer::activeCompletionScopeStack() con
             continue;
         }
 
-        if (owner_->isContainerDirectiveInstanceForParsedLine(directive, parsedLine)) {
+        if (context_.isContainerDirectiveInstance(directive, parsedLine)) {
             scopeStack.append(directive);
         }
     }
@@ -139,11 +142,11 @@ QStringList RawEditorCompletionContextAnalyzer::activeCompletionScopeStack() con
 
 QString RawEditorCompletionContextAnalyzer::currentCompletionCommand() const
 {
-    if (owner_ == nullptr || owner_->editor_ == nullptr) {
+    if (context_.editor == nullptr || context_.metadata == nullptr || !context_.normalizedDirectiveToken) {
         return QString();
     }
 
-    const QTextCursor cursor = owner_->editor_->textCursor();
+    const QTextCursor cursor = context_.editor->textCursor();
     const QTextBlock block = cursor.block();
     if (!block.isValid()) {
         return QString();
@@ -154,7 +157,7 @@ QString RawEditorCompletionContextAnalyzer::currentCompletionCommand() const
         return QString();
     }
 
-    const QString directive = owner_->normalizedDirectiveToken(parsedLine.directive.toLower());
+    const QString directive = context_.normalizedDirectiveToken(parsedLine.directive.toLower());
     if (metadata().commandCompletionTokens.contains(directive, Qt::CaseInsensitive)
         || metadata().commandOptionTokens.contains(directive)
         || metadata().commandValueTokens.contains(directive)) {
@@ -175,7 +178,7 @@ QString RawEditorCompletionContextAnalyzer::currentCompletionScopeLabel() const
 {
     const QStringList scopeStack = activeCompletionScopeStack();
     if (scopeStack.isEmpty()) {
-        return owner_ != nullptr ? owner_->tr("top-level") : QStringLiteral("top-level");
+        return QCoreApplication::translate("TherionStudio::TextEditorTab", "top-level");
     }
 
     return scopeStack.constLast();
@@ -189,12 +192,12 @@ QString RawEditorCompletionContextAnalyzer::normalizeCompletionContext(const QSt
 bool RawEditorCompletionContextAnalyzer::isCompatibleChildKindForBlocks(const QString &parentKind,
                                                                         const QString &childKind) const
 {
-    if (owner_ == nullptr) {
+    if (context_.metadata == nullptr || !context_.normalizedDirectiveToken) {
         return false;
     }
 
-    const QString normalizedParent = owner_->normalizedDirectiveToken(parentKind.trimmed().toLower());
-    const QString normalizedChild = owner_->normalizedDirectiveToken(childKind.trimmed().toLower());
+    const QString normalizedParent = context_.normalizedDirectiveToken(parentKind.trimmed().toLower());
+    const QString normalizedChild = context_.normalizedDirectiveToken(childKind.trimmed().toLower());
     if (normalizedChild.isEmpty()) {
         return false;
     }
@@ -225,11 +228,11 @@ bool RawEditorCompletionContextAnalyzer::isCompatibleChildKindForBlocks(const QS
 bool RawEditorCompletionContextAnalyzer::isCommandDirectiveInScope(const QString &directive,
                                                                    const QString &scopeToken) const
 {
-    if (owner_ == nullptr) {
+    if (context_.metadata == nullptr || !context_.normalizedDirectiveToken) {
         return false;
     }
 
-    const QString normalizedDirective = owner_->normalizedDirectiveToken(directive.trimmed());
+    const QString normalizedDirective = context_.normalizedDirectiveToken(directive.trimmed());
     if (normalizedDirective.isEmpty()) {
         return false;
     }
@@ -249,11 +252,11 @@ bool RawEditorCompletionContextAnalyzer::isCommandDirectiveInScope(const QString
 
 QString RawEditorCompletionContextAnalyzer::primaryInsertionScopeForCommand(const QString &commandToken) const
 {
-    if (owner_ == nullptr) {
+    if (context_.metadata == nullptr || !context_.normalizedDirectiveToken) {
         return QString();
     }
 
-    const QString normalizedCommand = owner_->normalizedDirectiveToken(commandToken.trimmed());
+    const QString normalizedCommand = context_.normalizedDirectiveToken(commandToken.trimmed());
     const QStringList contexts = metadata().blockCommandContextsByKind.value(normalizedCommand);
     for (const QString &context : contexts) {
         const QString normalizedContext = normalizeCompletionContext(context);
@@ -271,11 +274,12 @@ QString RawEditorCompletionContextAnalyzer::resolveScopeForCommandAtLine(const Q
                                                                          const QStringList &lines,
                                                                          int lineNumber) const
 {
-    if (owner_ == nullptr) {
+    if (context_.metadata == nullptr || !context_.normalizedDirectiveToken || !context_.openingDirectiveForClosingToken
+        || !context_.isContainerDirectiveInstance) {
         return QString();
     }
 
-    const QString normalizedCommand = owner_->normalizedDirectiveToken(commandToken.trimmed());
+    const QString normalizedCommand = context_.normalizedDirectiveToken(commandToken.trimmed());
     if (normalizedCommand.isEmpty()) {
         return QString();
     }
@@ -289,12 +293,12 @@ QString RawEditorCompletionContextAnalyzer::resolveScopeForCommandAtLine(const Q
     QStringList scopeStack;
     for (int lineIndex = 0; lineIndex < lastLine; ++lineIndex) {
         const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineIndex), lineIndex + 1);
-        const QString directive = owner_->normalizedDirectiveToken(parsedLine.directive);
+        const QString directive = context_.normalizedDirectiveToken(parsedLine.directive);
         if (directive.isEmpty()) {
             continue;
         }
 
-        const QString openingFromClosing = owner_->openingDirectiveForClosingToken(directive);
+        const QString openingFromClosing = context_.openingDirectiveForClosingToken(directive);
         if (!openingFromClosing.isEmpty()) {
             for (int stackIndex = scopeStack.size() - 1; stackIndex >= 0; --stackIndex) {
                 if (scopeStack.at(stackIndex) == openingFromClosing) {
@@ -305,7 +309,7 @@ QString RawEditorCompletionContextAnalyzer::resolveScopeForCommandAtLine(const Q
             continue;
         }
 
-        if (owner_->isContainerDirectiveInstanceForParsedLine(directive, parsedLine)) {
+        if (context_.isContainerDirectiveInstance(directive, parsedLine)) {
             scopeStack.append(directive);
         }
     }

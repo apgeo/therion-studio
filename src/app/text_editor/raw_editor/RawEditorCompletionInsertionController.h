@@ -1,19 +1,28 @@
 #pragma once
 
+#include <functional>
+
 #include <QString>
+
+class QPlainTextEdit;
 
 namespace TherionStudio
 {
-class TextEditorTab;
+struct RawEditorCompletionInsertionContext
+{
+    QPlainTextEdit *editor = nullptr;
+    std::function<QString(const QString &)> normalizedDirectiveToken;
+    std::function<QString(const QString &)> closingDirectiveForOpeningToken;
+};
 
 class RawEditorCompletionInsertionController final
 {
 public:
-    explicit RawEditorCompletionInsertionController(TextEditorTab *owner);
+    explicit RawEditorCompletionInsertionController(RawEditorCompletionInsertionContext context);
 
     void insertCompletionToken(const QString &completion);
 
 private:
-    TextEditorTab *owner_ = nullptr;
+    RawEditorCompletionInsertionContext context_;
 };
 }

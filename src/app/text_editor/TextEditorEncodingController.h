@@ -1,17 +1,34 @@
 #pragma once
 
+#include <functional>
+
+class QString;
+class QWidget;
+
 namespace TherionStudio
 {
-class TextEditorTab;
+struct TextEditorEncodingContext
+{
+    QWidget *dialogParent = nullptr;
+    QString *fileEncodingName = nullptr;
+    QString *fileEncodingLabel = nullptr;
+    QString *encodingStatusNote = nullptr;
+    std::function<bool()> isBlocksModeSupportedForCurrentFile;
+    std::function<bool()> ensureEncodingRootDirectiveForBlocks;
+    std::function<void()> applyDirtyStateFromCurrentState;
+    std::function<void()> refreshStatus;
+};
 
 class TextEditorEncodingController final
 {
 public:
-    explicit TextEditorEncodingController(TextEditorTab *owner);
+    explicit TextEditorEncodingController(TextEditorEncodingContext context);
 
     void handleConvertToUtf8Triggered();
 
 private:
-    TextEditorTab *owner_ = nullptr;
+    static QString trText(const char *sourceText);
+
+    TextEditorEncodingContext context_;
 };
 }

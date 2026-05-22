@@ -1,15 +1,39 @@
 #pragma once
 
+#include <functional>
+
 #include <QString>
+
+class QLabel;
+class QPlainTextEdit;
+class QPushButton;
+class QWidget;
 
 namespace TherionStudio
 {
-class TextEditorTab;
+struct TextEditorStatusContext
+{
+    QPlainTextEdit *editor = nullptr;
+    QLabel *encodingNoteLabel = nullptr;
+    QPushButton *convertEncodingButton = nullptr;
+    QWidget *statusRow = nullptr;
+    QString *filePath = nullptr;
+    QString *projectRootPath = nullptr;
+    QString *fileEncodingName = nullptr;
+    QString *fileEncodingLabel = nullptr;
+    QString *cleanTextSnapshot = nullptr;
+    QString *cleanEncodingNameSnapshot = nullptr;
+    QString *encodingStatusNote = nullptr;
+    bool *dirty = nullptr;
+    bool *inlineStatusRequestedVisible = nullptr;
+    std::function<void()> titleChanged;
+    std::function<void(bool)> dirtyStateChanged;
+};
 
 class TextEditorStatusController final
 {
 public:
-    explicit TextEditorStatusController(TextEditorTab *owner);
+    explicit TextEditorStatusController(TextEditorStatusContext context);
 
     QString displayName() const;
     QString statusPathText() const;
@@ -22,6 +46,8 @@ public:
     QString displayPath() const;
 
 private:
-    TextEditorTab *owner_ = nullptr;
+    static QString trText(const char *sourceText);
+
+    TextEditorStatusContext context_;
 };
 }

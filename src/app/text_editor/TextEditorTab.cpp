@@ -71,14 +71,7 @@ namespace TherionStudio
 TextEditorTab::TextEditorTab(QWidget *parent)
     : QWidget(parent)
 {
-    appearanceController_ = std::make_unique<TextEditorAppearanceController>(this);
     contextHelpController_ = std::make_unique<TextEditorContextHelpController>(this);
-    cursorController_ = std::make_unique<TextEditorCursorController>(this);
-    documentController_ = std::make_unique<TextEditorDocumentController>(this);
-    encodingController_ = std::make_unique<TextEditorEncodingController>(this);
-    editorModeController_ = std::make_unique<TextEditorModeController>(this);
-    sourceRewriteController_ = std::make_unique<TextEditorSourceRewriteController>(this);
-    statusController_ = std::make_unique<TextEditorStatusController>(this);
     blockDetailsOptionArgsController_ = std::make_unique<BlockEditorOptionArgsController>(this);
     blockDetailsHelpController_ = std::make_unique<BlockEditorDetailsHelpController>(this);
     blockDetailsLineBuildService_ = std::make_unique<BlockEditorLineBuildService>(this);
@@ -98,6 +91,11 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     layout->setSpacing(0);
 
     buildRawEditorPanel();
+    buildCursorController();
+    buildDocumentController();
+    buildEncodingController();
+    buildSourceRewriteController();
+    buildStatusController();
 
     modeRow_ = new QWidget(this);
     auto *modeLayout = new QHBoxLayout(modeRow_);
@@ -115,10 +113,12 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     modeRow_->setMaximumHeight(modeSelectorRequestedVisible_ ? QWIDGETSIZE_MAX : 0);
 
     buildBlockEditorPanel();
+    buildAppearanceController();
 
     editorModeStack_ = new QStackedWidget(this);
     editorModeStack_->addWidget(rawEditorPanel_);
     editorModeStack_->addWidget(blocksPanel_);
+    buildModeController();
 
     auto *toolbarSeparator = new QFrame(this);
     toolbarSeparator->setFrameShape(QFrame::NoFrame);

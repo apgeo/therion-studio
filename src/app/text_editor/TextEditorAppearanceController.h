@@ -1,20 +1,44 @@
 #pragma once
 
+#include <functional>
+
 #include <QColor>
+
+class QGraphicsScene;
+class QGraphicsView;
+class QPlainTextEdit;
+class QTextBrowser;
+class QWidget;
 
 namespace TherionStudio
 {
-class TextEditorTab;
+struct TextEditorAppearanceContext
+{
+    QWidget *rootWidget = nullptr;
+    QPlainTextEdit *editor = nullptr;
+    QGraphicsView *blockCanvasView = nullptr;
+    QGraphicsScene *blockCanvasScene = nullptr;
+    QWidget *helpPanel = nullptr;
+    QWidget *blockDetailsPanel = nullptr;
+    QWidget *blockDetailsEditPanel = nullptr;
+    QWidget *blockDetailsHelpPanel = nullptr;
+    QTextBrowser *helpBrowser = nullptr;
+    QTextBrowser *blockDetailsHelpBrowser = nullptr;
+    bool *blocksModeActive = nullptr;
+    std::function<void()> updateContextHelp;
+    std::function<void()> updateBlockDetailsHelpForCurrentFocus;
+    std::function<void()> rebuildBlocksCanvasFromText;
+};
 
 class TextEditorAppearanceController final
 {
 public:
-    explicit TextEditorAppearanceController(TextEditorTab *owner);
+    explicit TextEditorAppearanceController(TextEditorAppearanceContext context);
 
     QColor sourceSurfaceColor() const;
     void handleApplicationAppearanceChanged();
 
 private:
-    TextEditorTab *owner_ = nullptr;
+    TextEditorAppearanceContext context_;
 };
 }

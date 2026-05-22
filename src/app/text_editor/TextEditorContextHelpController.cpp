@@ -6,11 +6,11 @@
 #include "block_editor/BlockEditorDirectiveRules.h"
 #include "raw_editor/RawEditorCompletionController.h"
 
-#include "../../core/CommandCatalogService.h"
 #include "../../core/TherionCommandSyntax.h"
 #include "../../core/TherionDocumentParser.h"
 
 #include <algorithm>
+#include <utility>
 #include <QFrame>
 #include <QFont>
 #include <QHBoxLayout>
@@ -53,8 +53,10 @@ namespace TherionStudio
 {
 using namespace BlockEditorDirectiveRules;
 
-TextEditorContextHelpController::TextEditorContextHelpController(TextEditorTab *owner)
+TextEditorContextHelpController::TextEditorContextHelpController(TextEditorTab *owner,
+                                                                 CommandCatalogStore catalogStore)
     : owner_(owner)
+    , catalogStore_(std::move(catalogStore))
 {
 }
 
@@ -119,7 +121,7 @@ void TextEditorContextHelpController::loadHelpMetadataFromCommandCatalog()
 
     resetCatalogBlockDirectiveMetadataToDefaults();
 
-    const QJsonObject catalogObject = CommandCatalogService::catalogObject();
+    const QJsonObject catalogObject = catalogStore_.catalogObject();
     if (catalogObject.isEmpty()) {
         return;
     }

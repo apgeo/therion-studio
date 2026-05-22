@@ -1,7 +1,6 @@
 #include "TextEditorStatusController.h"
 
-#include "TextEditorTab.h"
-
+#include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QLabel>
@@ -10,25 +9,27 @@
 #include <QTextDocument>
 #include <QWidget>
 
+#include <utility>
+
 namespace TherionStudio
 {
-TextEditorStatusController::TextEditorStatusController(TextEditorTab *owner)
-    : owner_(owner)
+TextEditorStatusController::TextEditorStatusController(TextEditorStatusContext context)
+    : context_(std::move(context))
 {
 }
 
 QString TextEditorStatusController::displayName() const
 {
-    if (owner_ == nullptr || owner_->filePath_.isEmpty()) {
-        return TextEditorTab::tr("Untitled");
+    if (context_.filePath == nullptr || context_.filePath->isEmpty()) {
+        return trText("Untitled");
     }
 
-    QString name = QFileInfo(owner_->filePath_).fileName();
+    QString name = QFileInfo(*context_.filePath).fileName();
     if (name.isEmpty()) {
-        name = TextEditorTab::tr("Untitled");
+        name = trText("Untitled");
     }
 
-    if (owner_->dirty_) {
+    if (context_.dirty != nullptr && *context_.dirty) {
         name.prepend(QStringLiteral("*"));
     }
 
@@ -42,101 +43,110 @@ QString TextEditorStatusController::statusPathText() const
 
 QString TextEditorStatusController::statusEncodingText() const
 {
-    if (owner_ == nullptr) {
+    if (context_.fileEncodingLabel == nullptr) {
         return QStringLiteral("UTF-8");
     }
-    return owner_->fileEncodingLabel_;
+    return *context_.fileEncodingLabel;
 }
 
 void TextEditorStatusController::setInlineStatusVisible(bool visible)
 {
-    if (owner_ == nullptr) {
+    if (context_.inlineStatusRequestedVisible == nullptr) {
         return;
     }
 
-    owner_->inlineStatusRequestedVisible_ = visible;
+    *context_.inlineStatusRequestedVisible = visible;
     refreshStatus();
 }
 
 void TextEditorStatusController::refreshTitle()
 {
-    if (owner_ == nullptr) {
-        return;
-    }
-
     refreshStatus();
-    emit owner_->titleChanged();
+    if (context_.titleChanged) {
+        context_.titleChanged();
+    }
 }
 
 void TextEditorStatusController::refreshStatus()
 {
-    if (owner_ == nullptr) {
+    if (context_.fileEncodingName == nullptr
+        || context_.encodingStatusNote == nullptr
+        || context_.inlineStatusRequestedVisible == nullptr) {
         return;
     }
 
-    if (owner_->encodingNoteLabel_ != nullptr) {
-        owner_->encodingNoteLabel_->setText(owner_->encodingStatusNote_);
-        owner_->encodingNoteLabel_->setVisible(!owner_->encodingStatusNote_.isEmpty());
+    if (context_.encodingNoteLabel != nullptr) {
+        context_.encodingNoteLabel->setText(*context_.encodingStatusNote);
+        context_.encodingNoteLabel->setVisible(!context_.encodingStatusNote->isEmpty());
     }
-    if (owner_->convertEncodingButton_ != nullptr) {
-        const bool showConversion = owner_->fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) != 0;
-        owner_->convertEncodingButton_->setVisible(showConversion);
-        owner_->convertEncodingButton_->setEnabled(showConversion);
+    if (context_.convertEncodingButton != nullptr) {
+        const bool showConversion = context_.fileEncodingName->compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) != 0;
+        context_.convertEncodingButton->setVisible(showConversion);
+        context_.convertEncodingButton->setEnabled(showConversion);
     }
 
-    const bool showInlineRow = owner_->inlineStatusRequestedVisible_
-        && (!owner_->encodingStatusNote_.isEmpty()
-            || (owner_->convertEncodingButton_ != nullptr && owner_->convertEncodingButton_->isVisible()));
-    if (owner_->statusRow_ != nullptr) {
-        owner_->statusRow_->setVisible(showInlineRow);
+    const bool showInlineRow = *context_.inlineStatusRequestedVisible
+        && (!context_.encodingStatusNote->isEmpty()
+            || (context_.convertEncodingButton != nullptr && context_.convertEncodingButton->isVisible()));
+    if (context_.statusRow != nullptr) {
+        context_.statusRow->setVisible(showInlineRow);
     }
 }
 
 bool TextEditorStatusController::isCurrentStateDirty() const
 {
-    if (owner_ == nullptr) {
+    if (context_.fileEncodingName == nullptr || context_.cleanEncodingNameSnapshot == nullptr) {
         return false;
     }
 
-    const bool textDirty = owner_->editor_ != nullptr && owner_->editor_->toPlainText() != owner_->cleanTextSnapshot_;
-    const bool encodingDirty = owner_->fileEncodingName_.compare(owner_->cleanEncodingNameSnapshot_, Qt::CaseInsensitive) != 0;
+    const bool textDirty = context_.editor != nullptr
+        && context_.cleanTextSnapshot != nullptr
+        && context_.editor->toPlainText() != *context_.cleanTextSnapshot;
+    const bool encodingDirty = context_.fileEncodingName->compare(*context_.cleanEncodingNameSnapshot, Qt::CaseInsensitive) != 0;
     return textDirty || encodingDirty;
 }
 
 void TextEditorStatusController::applyDirtyStateFromCurrentState()
 {
-    if (owner_ == nullptr) {
+    if (context_.dirty == nullptr) {
         return;
     }
 
     const bool dirtyNow = isCurrentStateDirty();
-    if (owner_->editor_ != nullptr && owner_->editor_->document() != nullptr) {
-        owner_->editor_->document()->setModified(dirtyNow);
+    if (context_.editor != nullptr && context_.editor->document() != nullptr) {
+        context_.editor->document()->setModified(dirtyNow);
     }
-    if (owner_->dirty_ == dirtyNow) {
+    if (*context_.dirty == dirtyNow) {
         return;
     }
 
-    owner_->dirty_ = dirtyNow;
+    *context_.dirty = dirtyNow;
     refreshTitle();
-    emit owner_->dirtyStateChanged(owner_->dirty_);
+    if (context_.dirtyStateChanged) {
+        context_.dirtyStateChanged(*context_.dirty);
+    }
 }
 
 QString TextEditorStatusController::displayPath() const
 {
-    if (owner_ == nullptr || owner_->filePath_.isEmpty()) {
-        return TextEditorTab::tr("No file open");
+    if (context_.filePath == nullptr || context_.filePath->isEmpty()) {
+        return trText("No file open");
     }
 
-    if (owner_->projectRootPath_.isEmpty()) {
-        return owner_->filePath_;
+    if (context_.projectRootPath == nullptr || context_.projectRootPath->isEmpty()) {
+        return *context_.filePath;
     }
 
-    const QString relativePath = QDir(owner_->projectRootPath_).relativeFilePath(owner_->filePath_);
+    const QString relativePath = QDir(*context_.projectRootPath).relativeFilePath(*context_.filePath);
     if (relativePath.isEmpty() || relativePath.startsWith(QStringLiteral(".."))) {
-        return owner_->filePath_;
+        return *context_.filePath;
     }
 
     return relativePath;
+}
+
+QString TextEditorStatusController::trText(const char *sourceText)
+{
+    return QCoreApplication::translate("TherionStudio::TextEditorTab", sourceText);
 }
 }

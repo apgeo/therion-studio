@@ -1,13 +1,38 @@
 #pragma once
 
+#include <functional>
+
+class QPlainTextEdit;
+class QPushButton;
+class QStackedWidget;
+class QString;
+class QWidget;
+
 namespace TherionStudio
 {
-class TextEditorTab;
+struct TextEditorModeContext
+{
+    const QString *filePath = nullptr;
+    const QString *fileEncodingName = nullptr;
+    bool *blocksModeActive = nullptr;
+    bool *enforcingEncodingRootDirective = nullptr;
+    QPlainTextEdit *editor = nullptr;
+    QPushButton *rawModeButton = nullptr;
+    QPushButton *blocksModeButton = nullptr;
+    QStackedWidget *editorModeStack = nullptr;
+    QWidget *rawEditorPanel = nullptr;
+    QWidget *blocksPanel = nullptr;
+    std::function<void()> hideFindBar;
+    std::function<void(const QString &)> replaceTextForCommand;
+    std::function<void()> rebuildBlocksCanvasFromText;
+    std::function<void()> populateBlockToolbox;
+    std::function<void()> editorModeChanged;
+};
 
 class TextEditorModeController final
 {
 public:
-    explicit TextEditorModeController(TextEditorTab *owner);
+    explicit TextEditorModeController(TextEditorModeContext context);
 
     bool isBlocksModeSupportedForCurrentFile() const;
     void refreshBlocksModeAvailability();
@@ -16,6 +41,6 @@ public:
     void refreshEditorModeUi();
 
 private:
-    TextEditorTab *owner_ = nullptr;
+    TextEditorModeContext context_;
 };
 }

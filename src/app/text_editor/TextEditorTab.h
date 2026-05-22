@@ -197,13 +197,6 @@ private slots:
 
 private:
     friend class TextEditorContextHelpController;
-    friend class TextEditorCursorController;
-    friend class TextEditorDocumentController;
-    friend class TextEditorEncodingController;
-    friend class TextEditorAppearanceController;
-    friend class TextEditorModeController;
-    friend class TextEditorSourceRewriteController;
-    friend class TextEditorStatusController;
     friend class BlockEditorOptionArgsController;
     friend class BlockEditorDetailsHelpController;
     friend class BlockEditorLineBuildService;
@@ -250,6 +243,13 @@ private:
     QString displayPath() const;
     void buildHelpPanel();
     void buildRawEditorPanel();
+    void buildAppearanceController();
+    void buildCursorController();
+    void buildDocumentController();
+    void buildEncodingController();
+    void buildModeController();
+    void buildSourceRewriteController();
+    void buildStatusController();
     void buildBlockEditorPanel();
     void loadHelpMetadata();
     void loadHelpMetadataFromCommandCatalog();

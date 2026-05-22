@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../core/CommandCatalogService.h"
+
 #include <QString>
 #include <QStringList>
 
@@ -10,7 +12,8 @@ class TextEditorTab;
 class TextEditorContextHelpController final
 {
 public:
-    explicit TextEditorContextHelpController(TextEditorTab *owner);
+    explicit TextEditorContextHelpController(TextEditorTab *owner,
+                                             CommandCatalogStore catalogStore = CommandCatalogStore());
 
     void buildHelpPanel();
     void loadHelpMetadata();
@@ -26,5 +29,6 @@ public:
 
 private:
     TextEditorTab *owner_ = nullptr;
+    CommandCatalogStore catalogStore_;
 };
 }

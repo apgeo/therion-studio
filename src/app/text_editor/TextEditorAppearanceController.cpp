@@ -1,7 +1,6 @@
 #include "TextEditorAppearanceController.h"
 
 #include "TextEditorSurfaceStyler.h"
-#include "TextEditorTab.h"
 
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -10,77 +9,88 @@
 #include <QTextBrowser>
 #include <QWidget>
 
+#include <utility>
+
 namespace TherionStudio
 {
-TextEditorAppearanceController::TextEditorAppearanceController(TextEditorTab *owner)
-    : owner_(owner)
+TextEditorAppearanceController::TextEditorAppearanceController(TextEditorAppearanceContext context)
+    : context_(std::move(context))
 {
 }
 
 QColor TextEditorAppearanceController::sourceSurfaceColor() const
 {
-    if (owner_ == nullptr) {
+    if (context_.rootWidget == nullptr) {
         return QColor();
     }
 
-    if (owner_->blocksModeActive_ && owner_->blockCanvasView_ != nullptr) {
-        const QColor blocksSurface = owner_->blockCanvasView_->backgroundBrush().color();
+    if (context_.blocksModeActive != nullptr
+        && *context_.blocksModeActive
+        && context_.blockCanvasView != nullptr) {
+        const QColor blocksSurface = context_.blockCanvasView->backgroundBrush().color();
         if (blocksSurface.isValid()) {
             return blocksSurface;
         }
-        const QColor blocksBase = owner_->blockCanvasView_->palette().color(QPalette::Base);
+        const QColor blocksBase = context_.blockCanvasView->palette().color(QPalette::Base);
         if (blocksBase.isValid()) {
             return blocksBase;
         }
     }
 
-    if (owner_->editor_ != nullptr) {
-        const QColor editorBase = owner_->editor_->palette().color(QPalette::Base);
+    if (context_.editor != nullptr) {
+        const QColor editorBase = context_.editor->palette().color(QPalette::Base);
         if (editorBase.isValid()) {
             return editorBase;
         }
-        const QColor editorWindow = owner_->editor_->palette().color(QPalette::Window);
+        const QColor editorWindow = context_.editor->palette().color(QPalette::Window);
         if (editorWindow.isValid()) {
             return editorWindow;
         }
     }
 
-    const QColor widgetBase = owner_->palette().color(QPalette::Base);
+    const QColor widgetBase = context_.rootWidget->palette().color(QPalette::Base);
     if (widgetBase.isValid()) {
         return widgetBase;
     }
-    return owner_->palette().color(QPalette::Window);
+    return context_.rootWidget->palette().color(QPalette::Window);
 }
 
 void TextEditorAppearanceController::handleApplicationAppearanceChanged()
 {
-    if (owner_ == nullptr) {
+    if (context_.rootWidget == nullptr) {
         return;
     }
 
-    if (owner_->blockCanvasView_ != nullptr) {
-        owner_->blockCanvasView_->setBackgroundBrush(owner_->blockCanvasView_->palette().color(QPalette::Base));
-        if (QWidget *viewport = owner_->blockCanvasView_->viewport(); viewport != nullptr) {
+    if (context_.blockCanvasView != nullptr) {
+        context_.blockCanvasView->setBackgroundBrush(context_.blockCanvasView->palette().color(QPalette::Base));
+        if (QWidget *viewport = context_.blockCanvasView->viewport(); viewport != nullptr) {
             viewport->update();
         }
     }
 
-    QPalette textSurfacePalette = owner_->editor_ != nullptr ? owner_->editor_->palette() : owner_->palette();
+    QPalette textSurfacePalette = context_.editor != nullptr ? context_.editor->palette() : context_.rootWidget->palette();
     const QColor sourceSurface = sourceSurfaceColor();
     textSurfacePalette.setColor(QPalette::Window, sourceSurface);
     textSurfacePalette.setColor(QPalette::Base, sourceSurface);
     textSurfacePalette.setColor(QPalette::AlternateBase, sourceSurface);
-    syncPanelSurfaceToPalette(owner_->helpPanel_, textSurfacePalette);
-    syncPanelSurfaceToPalette(owner_->blockDetailsPanel_, textSurfacePalette);
-    syncPanelSurfaceToPalette(owner_->blockDetailsEditPanel_, textSurfacePalette);
-    syncPanelSurfaceToPalette(owner_->blockDetailsHelpPanel_, textSurfacePalette);
-    syncTextBrowserSurfaceToPalette(owner_->helpBrowser_, textSurfacePalette);
-    syncTextBrowserSurfaceToPalette(owner_->blockDetailsHelpBrowser_, textSurfacePalette);
-    owner_->updateContextHelp();
-    owner_->updateBlockDetailsHelpForCurrentFocus();
+    syncPanelSurfaceToPalette(context_.helpPanel, textSurfacePalette);
+    syncPanelSurfaceToPalette(context_.blockDetailsPanel, textSurfacePalette);
+    syncPanelSurfaceToPalette(context_.blockDetailsEditPanel, textSurfacePalette);
+    syncPanelSurfaceToPalette(context_.blockDetailsHelpPanel, textSurfacePalette);
+    syncTextBrowserSurfaceToPalette(context_.helpBrowser, textSurfacePalette);
+    syncTextBrowserSurfaceToPalette(context_.blockDetailsHelpBrowser, textSurfacePalette);
+    if (context_.updateContextHelp) {
+        context_.updateContextHelp();
+    }
+    if (context_.updateBlockDetailsHelpForCurrentFocus) {
+        context_.updateBlockDetailsHelpForCurrentFocus();
+    }
 
-    if (owner_->blocksModeActive_ && owner_->blockCanvasScene_ != nullptr) {
-        owner_->rebuildBlocksCanvasFromText();
+    if (context_.blocksModeActive != nullptr
+        && *context_.blocksModeActive
+        && context_.blockCanvasScene != nullptr
+        && context_.rebuildBlocksCanvasFromText) {
+        context_.rebuildBlocksCanvasFromText();
     }
 }
 }

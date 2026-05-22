@@ -160,7 +160,8 @@ QHash<QString, QSet<QString>> loadOrientationTypeRestrictionsFromCatalog()
 {
     QHash<QString, QSet<QString>> restrictionsByCommand;
 
-    const QJsonObject catalogObject = CommandCatalogService::catalogObject();
+    const CommandCatalogStore catalogStore;
+    const QJsonObject catalogObject = catalogStore.catalogObject();
     if (catalogObject.isEmpty()) {
         return restrictionsByCommand;
     }

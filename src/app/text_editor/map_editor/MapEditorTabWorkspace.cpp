@@ -42,6 +42,7 @@
 #include <QCloseEvent>
 #include <algorithm>
 #include <functional>
+#include <memory>
 
 #include "../TextEditorTab.h"
 #include "../../../core/SessionStore.h"
@@ -364,10 +365,24 @@ private:
 
 MapEditorTab::MapEditorTab(QWidget *parent)
     : QWidget(parent)
+    , ownedSessionStore_(std::make_unique<SessionSettingsStore>())
+    , sessionStore_(ownedSessionStore_.get())
+{
+    initializeWorkspace();
+}
+
+MapEditorTab::MapEditorTab(SessionSettingsStore &sessionStore, QWidget *parent)
+    : QWidget(parent)
+    , sessionStore_(&sessionStore)
+{
+    initializeWorkspace();
+}
+
+void MapEditorTab::initializeWorkspace()
 {
     undoStack_ = new QUndoStack(this);
     workspaceMode_ = WorkspaceMode::Visual;
-    touchFriendlyControlsEnabled_ = SessionStore::therionMapTouchFriendlyControlsEnabled();
+    touchFriendlyControlsEnabled_ = sessionStore_->therionMapTouchFriendlyControlsEnabled();
     buildUi();
     connect(this, &MapEditorTab::zoomStatusChanged, this, [this](int) {
         refreshStatus();
@@ -1566,7 +1581,7 @@ void MapEditorTab::focusDetachedMapPaneWindow()
 void MapEditorTab::setTouchFriendlyControlsEnabled(bool enabled)
 {
     touchFriendlyControlsEnabled_ = enabled;
-    SessionStore::setTherionMapTouchFriendlyControlsEnabled(enabled);
+    sessionStore_->setTherionMapTouchFriendlyControlsEnabled(enabled);
     updateCommandSurfaceState();
 }
 }

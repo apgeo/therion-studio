@@ -1,19 +1,19 @@
 #include "TextEditorSourceRewriteController.h"
 
-#include "TextEditorTab.h"
-
 #include <QPlainTextEdit>
 #include <QTextBlock>
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QtGlobal>
 
+#include <utility>
+
 #include "../../core/TherionDocumentEditor.h"
 
 namespace TherionStudio
 {
-TextEditorSourceRewriteController::TextEditorSourceRewriteController(TextEditorTab *owner)
-    : owner_(owner)
+TextEditorSourceRewriteController::TextEditorSourceRewriteController(TextEditorSourceRewriteContext context)
+    : context_(std::move(context))
 {
 }
 
@@ -22,7 +22,11 @@ bool TextEditorSourceRewriteController::rewriteStructureEntryName(int lineNumber
                                                                   const QString &newName,
                                                                   QString *errorMessage)
 {
-    QString contents = owner_->editor_->toPlainText();
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    QString contents = context_.editor->toPlainText();
     if (!TherionDocumentEditor::rewriteStructureEntryName(&contents, lineNumber, category, newName, errorMessage)) {
         return false;
     }
@@ -36,7 +40,11 @@ bool TextEditorSourceRewriteController::insertScrapBlock(const QString &preferre
                                                          QString *errorMessage,
                                                          const QString &options)
 {
-    QString contents = owner_->editor_->toPlainText();
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    QString contents = context_.editor->toPlainText();
     int resolvedLineNumber = 0;
     if (!TherionDocumentEditor::appendScrapBlock(&contents, preferredName, &resolvedLineNumber, errorMessage, options)) {
         return false;
@@ -54,7 +62,11 @@ bool TextEditorSourceRewriteController::insertDraftGeometry(const QString &kind,
                                                             int *insertedLineNumber,
                                                             QString *errorMessage)
 {
-    QString contents = owner_->editor_->toPlainText();
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    QString contents = context_.editor->toPlainText();
     int resolvedLineNumber = 0;
     if (!TherionDocumentEditor::appendDraftGeometry(&contents, kind, vertices, &resolvedLineNumber, errorMessage)) {
         return false;
@@ -71,7 +83,11 @@ bool TextEditorSourceRewriteController::insertDraftLineGeometry(const QStringLis
                                                                 int *insertedLineNumber,
                                                                 QString *errorMessage)
 {
-    QString contents = owner_->editor_->toPlainText();
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    QString contents = context_.editor->toPlainText();
     int resolvedLineNumber = 0;
     if (!TherionDocumentEditor::appendDraftLineGeometry(&contents, coordinateRows, &resolvedLineNumber, errorMessage)) {
         return false;
@@ -88,7 +104,11 @@ bool TextEditorSourceRewriteController::insertDraftAreaGeometry(const QStringLis
                                                                 int *insertedLineNumber,
                                                                 QString *errorMessage)
 {
-    QString contents = owner_->editor_->toPlainText();
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    QString contents = context_.editor->toPlainText();
     int resolvedLineNumber = 0;
     if (!TherionDocumentEditor::appendDraftAreaGeometry(&contents, coordinateRows, &resolvedLineNumber, errorMessage)) {
         return false;
@@ -105,7 +125,11 @@ bool TextEditorSourceRewriteController::rewritePointCoordinates(int lineNumber,
                                                                 const QPointF &point,
                                                                 QString *errorMessage)
 {
-    QString contents = owner_->editor_->toPlainText();
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    QString contents = context_.editor->toPlainText();
     if (!TherionDocumentEditor::rewritePointCoordinates(&contents, lineNumber, point, errorMessage)) {
         return false;
     }
@@ -120,7 +144,11 @@ bool TextEditorSourceRewriteController::rewriteLineAreaVertex(int lineNumber,
                                                               const QPointF &point,
                                                               QString *errorMessage)
 {
-    QString contents = owner_->editor_->toPlainText();
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    QString contents = context_.editor->toPlainText();
     if (!TherionDocumentEditor::rewriteLineAreaVertex(&contents, lineNumber, kind, vertexIndex, point, errorMessage)) {
         return false;
     }
@@ -134,7 +162,11 @@ bool TextEditorSourceRewriteController::rewriteLineOptionToggle(int lineNumber,
                                                                 bool enabled,
                                                                 QString *errorMessage)
 {
-    QString contents = owner_->editor_->toPlainText();
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    QString contents = context_.editor->toPlainText();
     if (!TherionDocumentEditor::rewriteLineOptionToggle(&contents, lineNumber, optionName, enabled, errorMessage)) {
         return false;
     }
@@ -148,7 +180,11 @@ bool TextEditorSourceRewriteController::rewritePointOrientation(int lineNumber,
                                                                 qreal orientationDegrees,
                                                                 QString *errorMessage)
 {
-    QString contents = owner_->editor_->toPlainText();
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    QString contents = context_.editor->toPlainText();
     if (!TherionDocumentEditor::rewritePointOrientation(&contents,
                                                         lineNumber,
                                                         enabled,
@@ -167,7 +203,11 @@ bool TextEditorSourceRewriteController::rewriteLinePointOrientation(int lineNumb
                                                                     qreal orientationDegrees,
                                                                     QString *errorMessage)
 {
-    QString contents = owner_->editor_->toPlainText();
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    QString contents = context_.editor->toPlainText();
     if (!TherionDocumentEditor::rewriteLinePointOrientation(&contents,
                                                             lineNumber,
                                                             sourceVertexIndex,
@@ -187,7 +227,11 @@ bool TextEditorSourceRewriteController::rewriteLinePointLeftSize(int lineNumber,
                                                                  qreal sizeValue,
                                                                  QString *errorMessage)
 {
-    QString contents = owner_->editor_->toPlainText();
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    QString contents = context_.editor->toPlainText();
     if (!TherionDocumentEditor::rewriteLinePointLeftSize(&contents,
                                                          lineNumber,
                                                          sourceVertexIndex,
@@ -205,7 +249,11 @@ bool TextEditorSourceRewriteController::rewriteLineCoordinateRows(int lineNumber
                                                                   const QStringList &coordinateRows,
                                                                   QString *errorMessage)
 {
-    QString contents = owner_->editor_->toPlainText();
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    QString contents = context_.editor->toPlainText();
     if (!TherionDocumentEditor::rewriteLineCoordinateRows(&contents, lineNumber, coordinateRows, errorMessage)) {
         return false;
     }
@@ -216,6 +264,10 @@ bool TextEditorSourceRewriteController::rewriteLineCoordinateRows(int lineNumber
 
 void TextEditorSourceRewriteController::replaceTextForCommand(const QString &contents)
 {
+    if (context_.editor == nullptr) {
+        return;
+    }
+
     replaceTextPreservingCursor(contents, true, true);
 }
 
@@ -223,56 +275,86 @@ void TextEditorSourceRewriteController::replaceTextPreservingCursor(const QStrin
                                                                     bool emitDocumentTextChanged,
                                                                     bool rebuildBlocksCanvas)
 {
-    const QTextCursor previousCursor = owner_->editor_->textCursor();
+    if (context_.editor == nullptr) {
+        return;
+    }
+
+    const QTextCursor previousCursor = context_.editor->textCursor();
     const int previousLine = previousCursor.blockNumber();
     const int previousColumn = previousCursor.positionInBlock();
 
-    owner_->loading_ = true;
-    owner_->editor_->setPlainText(contents);
+    if (context_.loading != nullptr) {
+        *context_.loading = true;
+    }
+    context_.editor->setPlainText(contents);
 
-    const int targetLine = qBound(0, previousLine, qMax(0, owner_->editor_->document()->blockCount() - 1));
-    const QTextBlock targetBlock = owner_->editor_->document()->findBlockByLineNumber(targetLine);
+    const int targetLine = qBound(0, previousLine, qMax(0, context_.editor->document()->blockCount() - 1));
+    const QTextBlock targetBlock = context_.editor->document()->findBlockByLineNumber(targetLine);
     if (targetBlock.isValid()) {
         QTextCursor restoredCursor(targetBlock);
         restoredCursor.movePosition(QTextCursor::StartOfBlock);
         restoredCursor.movePosition(QTextCursor::Right,
                                     QTextCursor::MoveAnchor,
                                     qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
-        owner_->editor_->setTextCursor(restoredCursor);
+        context_.editor->setTextCursor(restoredCursor);
     }
 
-    owner_->loading_ = false;
-    owner_->currentLineNumber_ = owner_->editor_->textCursor().blockNumber() + 1;
-    owner_->applyDirtyStateFromCurrentState();
-    if (rebuildBlocksCanvas) {
-        owner_->rebuildBlocksCanvasFromText();
+    if (context_.loading != nullptr) {
+        *context_.loading = false;
     }
-    if (emitDocumentTextChanged) {
-        emit owner_->documentTextChanged();
+    if (context_.currentLineNumber != nullptr) {
+        *context_.currentLineNumber = context_.editor->textCursor().blockNumber() + 1;
     }
-    owner_->updateContextHelp();
+    if (context_.applyDirtyStateFromCurrentState) {
+        context_.applyDirtyStateFromCurrentState();
+    }
+    if (rebuildBlocksCanvas && context_.rebuildBlocksCanvasFromText) {
+        context_.rebuildBlocksCanvasFromText();
+    }
+    if (emitDocumentTextChanged && context_.documentTextChanged) {
+        context_.documentTextChanged();
+    }
+    if (context_.updateContextHelp) {
+        context_.updateContextHelp();
+    }
 }
 
 void TextEditorSourceRewriteController::replaceTextSelectingLine(const QString &contents, int lineNumber)
 {
-    owner_->loading_ = true;
-    owner_->editor_->setPlainText(contents);
+    if (context_.editor == nullptr) {
+        return;
+    }
+
+    if (context_.loading != nullptr) {
+        *context_.loading = true;
+    }
+    context_.editor->setPlainText(contents);
 
     if (lineNumber > 0) {
-        const QTextBlock targetBlock = owner_->editor_->document()->findBlockByLineNumber(lineNumber - 1);
+        const QTextBlock targetBlock = context_.editor->document()->findBlockByLineNumber(lineNumber - 1);
         if (targetBlock.isValid()) {
             QTextCursor cursor(targetBlock);
             cursor.movePosition(QTextCursor::StartOfBlock);
             cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-            owner_->editor_->setTextCursor(cursor);
-            owner_->editor_->centerCursor();
+            context_.editor->setTextCursor(cursor);
+            context_.editor->centerCursor();
         }
     }
 
-    owner_->loading_ = false;
-    owner_->currentLineNumber_ = owner_->editor_->textCursor().blockNumber() + 1;
-    owner_->applyDirtyStateFromCurrentState();
-    emit owner_->documentTextChanged();
-    owner_->updateContextHelp();
+    if (context_.loading != nullptr) {
+        *context_.loading = false;
+    }
+    if (context_.currentLineNumber != nullptr) {
+        *context_.currentLineNumber = context_.editor->textCursor().blockNumber() + 1;
+    }
+    if (context_.applyDirtyStateFromCurrentState) {
+        context_.applyDirtyStateFromCurrentState();
+    }
+    if (context_.documentTextChanged) {
+        context_.documentTextChanged();
+    }
+    if (context_.updateContextHelp) {
+        context_.updateContextHelp();
+    }
 }
 }

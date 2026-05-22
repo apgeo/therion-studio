@@ -14,6 +14,7 @@
 #include <QVector>
 #include <QPointer>
 #include <QPersistentModelIndex>
+#include <memory>
 #include <optional>
 
 #include "MapEditorInteractiveDrawLogic.h"
@@ -61,6 +62,7 @@ class MapEditorObjectDetailsPanelController;
 class MapEditorSceneLifecycleController;
 class MapEditorSceneRefreshController;
 class MapEditorSelectionController;
+class SessionSettingsStore;
 class MapEditorViewportInputController;
 
 class MapEditorTab final : public QWidget
@@ -93,6 +95,7 @@ public:
     };
 
     explicit MapEditorTab(QWidget *parent = nullptr);
+    explicit MapEditorTab(SessionSettingsStore &sessionStore, QWidget *parent = nullptr);
     ~MapEditorTab() override;
 
     bool loadFile(const QString &filePath, QString *errorMessage = nullptr);
@@ -206,6 +209,7 @@ private slots:
     void updateCommandSurfaceState();
 
 private:
+    void initializeWorkspace();
     void buildUi();
     void buildMapScene();
     void refreshMapScene();
@@ -452,6 +456,8 @@ private:
     bool mapGridVisible_ = true;
     qreal mapGridSpacingMeters_ = 10.0;
     QDateTime lastNativeZoomGestureUtc_;
+    std::unique_ptr<SessionSettingsStore> ownedSessionStore_;
+    SessionSettingsStore *sessionStore_ = nullptr;
     bool touchFriendlyControlsEnabled_ = false;
     int selectedBackgroundLayerIndex_ = -1;
     bool mapCommandApplyInProgress_ = false;

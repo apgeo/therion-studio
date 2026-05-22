@@ -1,18 +1,31 @@
 #pragma once
 
+#include <functional>
+
 #include <QPointF>
 #include <QString>
 #include <QStringList>
 #include <QVector>
 
+class QPlainTextEdit;
+
 namespace TherionStudio
 {
-class TextEditorTab;
+struct TextEditorSourceRewriteContext
+{
+    QPlainTextEdit *editor = nullptr;
+    bool *loading = nullptr;
+    int *currentLineNumber = nullptr;
+    std::function<void()> applyDirtyStateFromCurrentState;
+    std::function<void()> rebuildBlocksCanvasFromText;
+    std::function<void()> documentTextChanged;
+    std::function<void()> updateContextHelp;
+};
 
 class TextEditorSourceRewriteController final
 {
 public:
-    explicit TextEditorSourceRewriteController(TextEditorTab *owner);
+    explicit TextEditorSourceRewriteController(TextEditorSourceRewriteContext context);
 
     bool rewriteStructureEntryName(int lineNumber,
                                    const QString &category,
@@ -67,6 +80,6 @@ private:
     void replaceTextPreservingCursor(const QString &contents, bool emitDocumentTextChanged, bool rebuildBlocksCanvas);
     void replaceTextSelectingLine(const QString &contents, int lineNumber);
 
-    TextEditorTab *owner_ = nullptr;
+    TextEditorSourceRewriteContext context_;
 };
 }

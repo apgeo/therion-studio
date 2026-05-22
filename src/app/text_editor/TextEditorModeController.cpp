@@ -1,7 +1,5 @@
 #include "TextEditorModeController.h"
 
-#include "TextEditorTab.h"
-
 #include "block_editor/BlockEditorDirectiveRules.h"
 #include "block_editor/BlockEditorSourceText.h"
 
@@ -11,23 +9,26 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QStackedWidget>
+#include <QString>
+
+#include <utility>
 
 namespace TherionStudio
 {
 using namespace BlockEditorDirectiveRules;
 
-TextEditorModeController::TextEditorModeController(TextEditorTab *owner)
-    : owner_(owner)
+TextEditorModeController::TextEditorModeController(TextEditorModeContext context)
+    : context_(std::move(context))
 {
 }
 
 bool TextEditorModeController::isBlocksModeSupportedForCurrentFile() const
 {
-    if (owner_ == nullptr || owner_->filePath_.trimmed().isEmpty()) {
+    if (context_.filePath == nullptr || context_.filePath->trimmed().isEmpty()) {
         return false;
     }
 
-    const QFileInfo fileInfo(owner_->filePath_);
+    const QFileInfo fileInfo(*context_.filePath);
     const QString suffix = fileInfo.suffix().trimmed().toLower();
     const QString fileName = fileInfo.fileName().trimmed().toLower();
     return suffix == QStringLiteral("th")
@@ -37,58 +38,70 @@ bool TextEditorModeController::isBlocksModeSupportedForCurrentFile() const
 
 void TextEditorModeController::refreshBlocksModeAvailability()
 {
-    if (owner_ == nullptr) {
+    if (context_.blocksModeActive == nullptr) {
         return;
     }
 
     const bool supported = isBlocksModeSupportedForCurrentFile();
-    if (owner_->blocksModeButton_ != nullptr) {
-        owner_->blocksModeButton_->setEnabled(supported);
+    if (context_.blocksModeButton != nullptr) {
+        context_.blocksModeButton->setEnabled(supported);
     }
     if (!supported) {
-        owner_->blocksModeActive_ = false;
+        *context_.blocksModeActive = false;
     }
 }
 
 void TextEditorModeController::setBlocksModeActive(bool active)
 {
-    if (owner_ == nullptr) {
+    if (context_.blocksModeActive == nullptr) {
         return;
     }
 
     const bool targetActive = active && isBlocksModeSupportedForCurrentFile();
-    if (owner_->blocksModeActive_ == targetActive) {
+    if (*context_.blocksModeActive == targetActive) {
         refreshEditorModeUi();
         return;
     }
 
-    owner_->blocksModeActive_ = targetActive;
-    if (owner_->blocksModeActive_) {
-        owner_->hideFindBar();
-        if (!ensureEncodingRootDirectiveForBlocks()) {
-            owner_->rebuildBlocksCanvasFromText();
+    *context_.blocksModeActive = targetActive;
+    if (*context_.blocksModeActive) {
+        if (context_.hideFindBar) {
+            context_.hideFindBar();
         }
-        owner_->populateBlockToolbox();
-    } else if (owner_->editor_ != nullptr) {
-        owner_->editor_->setFocus();
+        if (!ensureEncodingRootDirectiveForBlocks()) {
+            if (context_.rebuildBlocksCanvasFromText) {
+                context_.rebuildBlocksCanvasFromText();
+            }
+        }
+        if (context_.populateBlockToolbox) {
+            context_.populateBlockToolbox();
+        }
+    } else if (context_.editor != nullptr) {
+        context_.editor->setFocus();
     }
     refreshEditorModeUi();
-    emit owner_->editorModeChanged(owner_->editorMode());
+    if (context_.editorModeChanged) {
+        context_.editorModeChanged();
+    }
 }
 
 bool TextEditorModeController::ensureEncodingRootDirectiveForBlocks()
 {
-    if (owner_ == nullptr || owner_->editor_ == nullptr || owner_->enforcingEncodingRootDirective_) {
+    if (context_.editor == nullptr
+        || context_.fileEncodingName == nullptr
+        || context_.enforcingEncodingRootDirective == nullptr
+        || *context_.enforcingEncodingRootDirective
+        || !context_.replaceTextForCommand) {
         return false;
     }
 
-    const QString contents = owner_->editor_->toPlainText();
+    const QString contents = context_.editor->toPlainText();
     QStringList lines = blockEditorNormalizedSourceLines(contents);
     if (lines.size() == 1 && lines.first().isEmpty()) {
         lines.clear();
     }
 
-    QString encodingName = owner_->fileEncodingName_.trimmed();
+    QString encodingName = context_.fileEncodingName->trimmed();
     if (encodingName.isEmpty()) {
         encodingName = QStringLiteral("utf-8");
     }
@@ -111,27 +124,27 @@ bool TextEditorModeController::ensureEncodingRootDirectiveForBlocks()
         return false;
     }
 
-    owner_->enforcingEncodingRootDirective_ = true;
-    owner_->replaceTextForCommand(normalizedContents);
-    owner_->enforcingEncodingRootDirective_ = false;
+    *context_.enforcingEncodingRootDirective = true;
+    context_.replaceTextForCommand(normalizedContents);
+    *context_.enforcingEncodingRootDirective = false;
     return true;
 }
 
 void TextEditorModeController::refreshEditorModeUi()
 {
-    if (owner_ == nullptr
-        || owner_->rawModeButton_ == nullptr
-        || owner_->blocksModeButton_ == nullptr
-        || owner_->editorModeStack_ == nullptr) {
+    if (context_.blocksModeActive == nullptr
+        || context_.rawModeButton == nullptr
+        || context_.blocksModeButton == nullptr
+        || context_.editorModeStack == nullptr) {
         return;
     }
 
-    owner_->rawModeButton_->setChecked(!owner_->blocksModeActive_);
-    owner_->blocksModeButton_->setChecked(owner_->blocksModeActive_);
-    if (owner_->blocksModeActive_) {
-        owner_->editorModeStack_->setCurrentWidget(owner_->blocksPanel_);
-    } else if (owner_->rawEditorPanel_ != nullptr) {
-        owner_->editorModeStack_->setCurrentWidget(owner_->rawEditorPanel_);
+    context_.rawModeButton->setChecked(!*context_.blocksModeActive);
+    context_.blocksModeButton->setChecked(*context_.blocksModeActive);
+    if (*context_.blocksModeActive && context_.blocksPanel != nullptr) {
+        context_.editorModeStack->setCurrentWidget(context_.blocksPanel);
+    } else if (context_.rawEditorPanel != nullptr) {
+        context_.editorModeStack->setCurrentWidget(context_.rawEditorPanel);
     }
 }
 }

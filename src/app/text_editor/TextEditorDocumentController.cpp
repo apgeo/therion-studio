@@ -1,23 +1,45 @@
 #include "TextEditorDocumentController.h"
 
-#include "TextEditorTab.h"
-
 #include "../../core/DocumentFile.h"
 
 #include <QPlainTextEdit>
 #include <QTextCursor>
 #include <QTextDocument>
 
+#include <utility>
+
 namespace TherionStudio
 {
-TextEditorDocumentController::TextEditorDocumentController(TextEditorTab *owner)
-    : owner_(owner)
+TextEditorDocumentController::TextEditorDocumentController(TextEditorDocumentContext context)
+    : context_(std::move(context))
 {
+}
+
+QString TextEditorDocumentController::tr(const char *text) const
+{
+    if (context_.translate) {
+        return context_.translate(text);
+    }
+    return QString::fromUtf8(text);
 }
 
 bool TextEditorDocumentController::loadFile(const QString &filePath, QString *errorMessage)
 {
-    if (owner_ == nullptr || owner_->editor_ == nullptr) {
+    if (context_.editor == nullptr
+        || context_.filePath == nullptr
+        || context_.fileEncodingName == nullptr
+        || context_.fileEncodingLabel == nullptr
+        || context_.encodingStatusNote == nullptr
+        || context_.loading == nullptr
+        || context_.currentLineNumber == nullptr
+        || context_.currentColumnNumber == nullptr
+        || context_.highlightedLineNumber == nullptr
+        || context_.cleanTextSnapshot == nullptr
+        || context_.cleanEncodingNameSnapshot == nullptr
+        || context_.dirty == nullptr
+        || context_.blocksModeActive == nullptr
+        || context_.blockDetailsSelectedLineNumber == nullptr
+        || context_.blockDetailsSelectedKind == nullptr) {
         return false;
     }
 
@@ -28,83 +50,117 @@ bool TextEditorDocumentController::loadFile(const QString &filePath, QString *er
         return false;
     }
 
-    owner_->filePath_ = filePath;
-    owner_->fileEncodingName_ = loadedEncoding.trimmed().isEmpty() ? QStringLiteral("UTF-8") : loadedEncoding.trimmed();
-    owner_->fileEncodingLabel_ = loadedEncodingLabel.isEmpty() ? QStringLiteral("UTF-8") : loadedEncodingLabel;
-    if (owner_->fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
-        owner_->encodingStatusNote_.clear();
+    (*context_.filePath) = filePath;
+    (*context_.fileEncodingName) = loadedEncoding.trimmed().isEmpty() ? QStringLiteral("UTF-8") : loadedEncoding.trimmed();
+    (*context_.fileEncodingLabel) = loadedEncodingLabel.isEmpty() ? QStringLiteral("UTF-8") : loadedEncodingLabel;
+    if ((*context_.fileEncodingName).compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
+        (*context_.encodingStatusNote).clear();
     } else {
-        owner_->encodingStatusNote_ = owner_->tr("Opened as %1. Save keeps this encoding unless you convert to UTF-8.")
-                                          .arg(owner_->fileEncodingLabel_);
+        (*context_.encodingStatusNote) = tr("Opened as %1. Save keeps this encoding unless you convert to UTF-8.")
+                                          .arg((*context_.fileEncodingLabel));
     }
-    owner_->loading_ = true;
-    owner_->editor_->setPlainText(contents);
-    owner_->loading_ = false;
-    const QTextCursor cursor = owner_->editor_->textCursor();
-    owner_->currentLineNumber_ = cursor.blockNumber() + 1;
-    owner_->currentColumnNumber_ = cursor.positionInBlock() + 1;
-    owner_->highlightedLineNumber_ = owner_->currentLineNumber_;
-    owner_->cleanTextSnapshot_ = owner_->editor_->toPlainText();
-    owner_->cleanEncodingNameSnapshot_ = owner_->fileEncodingName_;
-    owner_->editor_->document()->setModified(false);
-    owner_->dirty_ = false;
-    owner_->refreshBlocksModeAvailability();
-    if (owner_->blocksModeActive_ && !owner_->isBlocksModeSupportedForCurrentFile()) {
-        owner_->setBlocksModeActive(false);
+    (*context_.loading) = true;
+    context_.editor->setPlainText(contents);
+    (*context_.loading) = false;
+    const QTextCursor cursor = context_.editor->textCursor();
+    (*context_.currentLineNumber) = cursor.blockNumber() + 1;
+    (*context_.currentColumnNumber) = cursor.positionInBlock() + 1;
+    (*context_.highlightedLineNumber) = (*context_.currentLineNumber);
+    (*context_.cleanTextSnapshot) = context_.editor->toPlainText();
+    (*context_.cleanEncodingNameSnapshot) = (*context_.fileEncodingName);
+    context_.editor->document()->setModified(false);
+    (*context_.dirty) = false;
+    if (context_.refreshBlocksModeAvailability) {
+        context_.refreshBlocksModeAvailability();
     }
-    owner_->blockDetailsSelectedLineNumber_ = 0;
-    owner_->blockDetailsSelectedKind_.clear();
-    owner_->rebuildBlocksCanvasFromText();
-    owner_->clearBlockDetailsPane();
-    owner_->populateBlockToolbox();
-    owner_->refreshEditorModeUi();
-    owner_->refreshTitle();
-    owner_->refreshCurrentLineHighlight();
-    emit owner_->dirtyStateChanged(false);
-    owner_->updateContextHelp();
+    if ((*context_.blocksModeActive)
+        && context_.isBlocksModeSupportedForCurrentFile
+        && !context_.isBlocksModeSupportedForCurrentFile()
+        && context_.setBlocksModeActive) {
+        context_.setBlocksModeActive(false);
+    }
+    (*context_.blockDetailsSelectedLineNumber) = 0;
+    (*context_.blockDetailsSelectedKind).clear();
+    if (context_.rebuildBlocksCanvasFromText) {
+        context_.rebuildBlocksCanvasFromText();
+    }
+    if (context_.clearBlockDetailsPane) {
+        context_.clearBlockDetailsPane();
+    }
+    if (context_.populateBlockToolbox) {
+        context_.populateBlockToolbox();
+    }
+    if (context_.refreshEditorModeUi) {
+        context_.refreshEditorModeUi();
+    }
+    if (context_.refreshTitle) {
+        context_.refreshTitle();
+    }
+    if (context_.refreshCurrentLineHighlight) {
+        context_.refreshCurrentLineHighlight();
+    }
+    if (context_.dirtyStateChanged) {
+        context_.dirtyStateChanged(false);
+    }
+    if (context_.updateContextHelp) {
+        context_.updateContextHelp();
+    }
     return true;
 }
 
 bool TextEditorDocumentController::save(QString *errorMessage)
 {
-    if (owner_ == nullptr || owner_->editor_ == nullptr) {
+    if (context_.editor == nullptr
+        || context_.filePath == nullptr
+        || context_.fileEncodingName == nullptr
+        || context_.fileEncodingLabel == nullptr
+        || context_.encodingStatusNote == nullptr
+        || context_.cleanTextSnapshot == nullptr
+        || context_.cleanEncodingNameSnapshot == nullptr
+        || context_.dirty == nullptr) {
         return false;
     }
-    if (owner_->filePath_.isEmpty()) {
+    if ((*context_.filePath).isEmpty()) {
         if (errorMessage != nullptr) {
-            *errorMessage = owner_->tr("This document does not have a file path yet.");
+            *errorMessage = tr("This document does not have a file path yet.");
         }
         return false;
     }
 
-    if (!DocumentFile::writeTextFile(owner_->filePath_,
-                                     owner_->editor_->toPlainText(),
-                                     owner_->fileEncodingName_,
+    if (!DocumentFile::writeTextFile((*context_.filePath),
+                                     context_.editor->toPlainText(),
+                                     (*context_.fileEncodingName),
                                      errorMessage)) {
         return false;
     }
 
-    owner_->cleanTextSnapshot_ = owner_->editor_->toPlainText();
-    owner_->cleanEncodingNameSnapshot_ = owner_->fileEncodingName_;
-    owner_->editor_->document()->setModified(false);
-    owner_->dirty_ = false;
-    if (owner_->fileEncodingName_.compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
-        owner_->encodingStatusNote_.clear();
+    (*context_.cleanTextSnapshot) = context_.editor->toPlainText();
+    (*context_.cleanEncodingNameSnapshot) = (*context_.fileEncodingName);
+    context_.editor->document()->setModified(false);
+    (*context_.dirty) = false;
+    if ((*context_.fileEncodingName).compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
+        (*context_.encodingStatusNote).clear();
     } else {
-        owner_->encodingStatusNote_ = owner_->tr("Saved using %1 encoding.").arg(owner_->fileEncodingLabel_);
+        (*context_.encodingStatusNote) = tr("Saved using %1 encoding.").arg((*context_.fileEncodingLabel));
     }
-    owner_->refreshTitle();
-    emit owner_->dirtyStateChanged(false);
+    if (context_.refreshTitle) {
+        context_.refreshTitle();
+    }
+    if (context_.dirtyStateChanged) {
+        context_.dirtyStateChanged(false);
+    }
     return true;
 }
 
 void TextEditorDocumentController::setProjectRootPath(const QString &projectRootPath)
 {
-    if (owner_ == nullptr) {
+    if (context_.projectRootPath == nullptr) {
         return;
     }
 
-    owner_->projectRootPath_ = projectRootPath;
-    owner_->refreshStatus();
+    (*context_.projectRootPath) = projectRootPath;
+    if (context_.refreshStatus) {
+        context_.refreshStatus();
+    }
 }
 }

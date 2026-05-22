@@ -10,6 +10,7 @@
 #include "MainWindowTherionConsoleController.h"
 #include "ProjectStructureScanner.h"
 #include "../core/ProjectStructureIndex.h"
+#include "../core/SessionStore.h"
 
 class QLabel;
 class QFileSystemModel;
@@ -37,7 +38,6 @@ namespace TherionStudio
 {
 class TextEditorTab;
 class MapEditorTab;
-class SessionStore;
 class TherionRunnerService;
 }
 
@@ -47,6 +47,7 @@ class MainWindow final : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(TherionStudio::SessionSettingsStore sessionStore, QWidget *parent = nullptr);
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -281,5 +282,6 @@ private:
     QHash<QString, QPointer<QMainWindow>> detachedMapWindowsByPath_;
     QHash<TherionStudio::MapEditorTab *, QString> detachedMapPathsByTab_;
 
+    TherionStudio::SessionSettingsStore sessionStore_;
     TherionStudio::ProjectStructureScanner *structureSidebarScanner_ = nullptr;
 };

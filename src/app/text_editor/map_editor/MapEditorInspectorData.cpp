@@ -431,7 +431,8 @@ InspectorSymbolCatalog loadInspectorSymbolCatalog()
 {
     InspectorSymbolCatalog catalog;
 
-    const QJsonObject catalogObject = CommandCatalogService::catalogObject();
+    const CommandCatalogStore catalogStore;
+    const QJsonObject catalogObject = catalogStore.catalogObject();
     if (catalogObject.isEmpty()) {
         catalog.projectionValues = defaultInspectorProjectionValues();
         return catalog;

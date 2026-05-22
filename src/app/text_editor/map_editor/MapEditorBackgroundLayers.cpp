@@ -908,7 +908,7 @@ void MapEditorTab::saveBackgroundLayersToSession() const
     }
 
     QJsonObject rootObject;
-    const QString existingJson = SessionStore::therionMapBackgroundLayers();
+    const QString existingJson = sessionStore_->therionMapBackgroundLayers();
     if (!existingJson.isEmpty()) {
         const QJsonDocument existingDocument = QJsonDocument::fromJson(existingJson.toUtf8());
         if (existingDocument.isObject()) {
@@ -919,7 +919,7 @@ void MapEditorTab::saveBackgroundLayersToSession() const
     if (backgroundImageItems_.isEmpty()) {
         rootObject.remove(documentKey);
         const QByteArray jsonBytes = QJsonDocument(rootObject).toJson(QJsonDocument::Compact);
-        SessionStore::setTherionMapBackgroundLayers(QString::fromUtf8(jsonBytes));
+        sessionStore_->setTherionMapBackgroundLayers(QString::fromUtf8(jsonBytes));
         return;
     }
 
@@ -946,7 +946,7 @@ void MapEditorTab::saveBackgroundLayersToSession() const
 
     rootObject.insert(documentKey, layersArray);
     const QByteArray jsonBytes = QJsonDocument(rootObject).toJson(QJsonDocument::Compact);
-    SessionStore::setTherionMapBackgroundLayers(QString::fromUtf8(jsonBytes));
+    sessionStore_->setTherionMapBackgroundLayers(QString::fromUtf8(jsonBytes));
 }
 
 void MapEditorTab::loadBackgroundLayersFromSession()
@@ -960,7 +960,7 @@ void MapEditorTab::loadBackgroundLayersFromSession()
         return;
     }
 
-    const QString json = SessionStore::therionMapBackgroundLayers();
+    const QString json = sessionStore_->therionMapBackgroundLayers();
     if (json.isEmpty()) {
         return;
     }

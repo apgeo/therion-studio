@@ -1,11 +1,67 @@
 #pragma once
 
 #include <QByteArray>
+#include <QSettings>
 #include <QString>
 #include <QStringList>
 
+#include <memory>
+
 namespace TherionStudio
 {
+class SessionSettingsStore final
+{
+public:
+    SessionSettingsStore();
+    explicit SessionSettingsStore(const QString &fileName, QSettings::Format format = QSettings::IniFormat);
+    SessionSettingsStore(QSettings::Format format,
+                         QSettings::Scope scope,
+                         const QString &organization,
+                         const QString &application);
+    ~SessionSettingsStore();
+
+    SessionSettingsStore(const SessionSettingsStore &) = delete;
+    SessionSettingsStore &operator=(const SessionSettingsStore &) = delete;
+    SessionSettingsStore(SessionSettingsStore &&) noexcept;
+    SessionSettingsStore &operator=(SessionSettingsStore &&) noexcept;
+
+    QString lastProjectPath() const;
+    void setLastProjectPath(const QString &projectPath);
+
+    QByteArray mainWindowGeometry() const;
+    void setMainWindowGeometry(const QByteArray &geometry);
+
+    QByteArray mainWindowState() const;
+    void setMainWindowState(const QByteArray &state);
+
+    QStringList openDocumentPaths() const;
+    void setOpenDocumentPaths(const QStringList &documentPaths);
+
+    QString activeDocumentPath() const;
+    void setActiveDocumentPath(const QString &documentPath);
+
+    QString structureNameOverrides() const;
+    void setStructureNameOverrides(const QString &json);
+
+    QString therionExecutablePath() const;
+    void setTherionExecutablePath(const QString &path);
+
+    QString therionWorkingDirectory() const;
+    void setTherionWorkingDirectory(const QString &path);
+
+    QString therionArguments() const;
+    void setTherionArguments(const QString &arguments);
+
+    bool therionMapTouchFriendlyControlsEnabled() const;
+    void setTherionMapTouchFriendlyControlsEnabled(bool enabled);
+
+    QString therionMapBackgroundLayers() const;
+    void setTherionMapBackgroundLayers(const QString &json);
+
+private:
+    std::unique_ptr<QSettings> settings_;
+};
+
 class SessionStore final
 {
 public:

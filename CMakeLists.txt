@@ -79,6 +79,37 @@ target_link_libraries(therion_platform
 
 therion_enable_strict_warnings(therion_platform)
 
+set(THERION_APP_SOURCES
+    src/app/ProjectStructureScanner.cpp
+    src/app/ProjectStructureScanner.h
+    src/app/TherionExecutableSelectionController.cpp
+    src/app/TherionExecutableSelectionController.h
+    src/app/TherionRunnerConfigDisplayController.cpp
+    src/app/TherionRunnerConfigDisplayController.h
+    src/app/TherionRunnerConfigResolver.cpp
+    src/app/TherionRunnerConfigResolver.h
+    src/app/TherionRunnerLifecyclePresenter.cpp
+    src/app/TherionRunnerLifecyclePresenter.h
+    src/app/TherionRunnerService.cpp
+    src/app/TherionRunnerService.h
+    src/app/TherionRunnerStartResultPresenter.cpp
+    src/app/TherionRunnerStartResultPresenter.h
+    src/app/TherionRunnerStartSuccessPresenter.cpp
+    src/app/TherionRunnerStartSuccessPresenter.h)
+
+add_library(therion_app STATIC
+    ${THERION_APP_SOURCES})
+
+target_link_libraries(therion_app
+    PUBLIC
+        therion_core
+        Qt6::Core
+    PRIVATE
+        therion_platform
+        Qt6::Concurrent)
+
+therion_enable_strict_warnings(therion_app)
+
 qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/MainWindow.cpp
     src/app/MainWindow.h
@@ -90,28 +121,12 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/MainWindowTherionConsoleWiring.h
     src/app/MainWindowDocumentHelpers.cpp
     src/app/MainWindowDocumentHelpers.h
-    src/app/TherionExecutableSelectionController.cpp
-    src/app/TherionExecutableSelectionController.h
     src/app/MainWindowMapBackground.cpp
     src/app/MainWindowSidebar.cpp
     src/app/MainWindowStructureBrowser.cpp
     src/app/MainWindowStructureRoles.h
     src/app/MainWindowTherionConsoleController.h
-    src/app/ProjectStructureScanner.cpp
-    src/app/ProjectStructureScanner.h
-    src/app/TherionRunnerConfigDisplayController.cpp
-    src/app/TherionRunnerConfigDisplayController.h
-    src/app/TherionRunnerConfigResolver.cpp
-    src/app/TherionRunnerConfigResolver.h
-    src/app/TherionRunnerLifecyclePresenter.cpp
-    src/app/TherionRunnerLifecyclePresenter.h
     src/app/MainWindowTherionRunner.cpp
-    src/app/TherionRunnerStartResultPresenter.cpp
-    src/app/TherionRunnerStartResultPresenter.h
-    src/app/TherionRunnerStartSuccessPresenter.cpp
-    src/app/TherionRunnerStartSuccessPresenter.h
-    src/app/TherionRunnerService.cpp
-    src/app/TherionRunnerService.h
     src/app/text_editor/ContextHelpController.cpp
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
@@ -338,7 +353,7 @@ if(APPLE)
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
 endif()
 
-target_link_libraries(TherionStudio PRIVATE therion_core therion_platform Qt6::Widgets Qt6::Svg Qt6::Concurrent)
+target_link_libraries(TherionStudio PRIVATE therion_app therion_core therion_platform Qt6::Widgets Qt6::Svg Qt6::Concurrent)
 
 target_compile_definitions(TherionStudio PRIVATE
     QT_NO_CAST_FROM_ASCII
@@ -418,6 +433,16 @@ qt_add_executable(SessionStoreTest
     tests/SessionStoreTest.cpp)
 
 target_link_libraries(SessionStoreTest PRIVATE therion_core)
+
+qt_add_executable(TherionRunnerConfigResolverTest
+    tests/TherionRunnerConfigResolverTest.cpp)
+
+target_link_libraries(TherionRunnerConfigResolverTest PRIVATE therion_app)
+
+qt_add_executable(TherionRunnerConfigDisplayControllerTest
+    tests/TherionRunnerConfigDisplayControllerTest.cpp)
+
+target_link_libraries(TherionRunnerConfigDisplayControllerTest PRIVATE therion_app)
 
 qt_add_executable(TextEditorCaretInteractionTest
     tests/TextEditorCaretInteractionTest.cpp
@@ -1029,6 +1054,8 @@ set(THERION_TEST_EXECUTABLE_TARGETS
     DocumentFileEncodingTest
     MapEditorInputPolicyTest
     SessionStoreTest
+    TherionRunnerConfigDisplayControllerTest
+    TherionRunnerConfigResolverTest
     TextEditorCaretInteractionTest
     TextEditorCompletionHighlightTest
     MapEditorDetachedPaneTest
@@ -1051,6 +1078,8 @@ add_test(NAME MapGeometryFeatureParsingTest COMMAND MapGeometryFeatureParsingTes
 add_test(NAME DocumentFileEncodingTest COMMAND DocumentFileEncodingTest)
 add_test(NAME MapEditorInputPolicyTest COMMAND MapEditorInputPolicyTest)
 add_test(NAME SessionStoreTest COMMAND SessionStoreTest)
+add_test(NAME TherionRunnerConfigDisplayControllerTest COMMAND TherionRunnerConfigDisplayControllerTest)
+add_test(NAME TherionRunnerConfigResolverTest COMMAND TherionRunnerConfigResolverTest)
 add_test(NAME StructureConstraintsTest COMMAND python3 ${CMAKE_SOURCE_DIR}/scripts/check_structure_constraints.py)
 add_test(NAME TextEditorCaretInteractionTest COMMAND TextEditorCaretInteractionTest)
 add_test(NAME TextEditorCompletionHighlightTest COMMAND TextEditorCompletionHighlightTest)
@@ -1067,6 +1096,8 @@ set_tests_properties(
     DocumentFileEncodingTest
     MapEditorInputPolicyTest
     SessionStoreTest
+    TherionRunnerConfigDisplayControllerTest
+    TherionRunnerConfigResolverTest
     TextEditorCaretInteractionTest
     TextEditorCompletionHighlightTest
     MapEditorDetachedPaneTest
@@ -1084,6 +1115,8 @@ set_tests_properties(
     DocumentFileEncodingTest
     MapEditorInputPolicyTest
     SessionStoreTest
+    TherionRunnerConfigDisplayControllerTest
+    TherionRunnerConfigResolverTest
     StructureConstraintsTest
     PROPERTIES
         LABELS "unit")

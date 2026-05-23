@@ -18,7 +18,9 @@ public:
     void updateObjectQuickSubtypeChoices();
     void insertVertexFromSelectionPanel();
     void deleteVertexFromSelectionPanel();
-    void toggleVertexSmoothFromSelectionPanel();
+    void handleLinePointPreviousControlToggled(bool checked);
+    void handleLinePointSmoothToggled(bool checked);
+    void handleLinePointNextControlToggled(bool checked);
     void populateScrapScaleFromSourceBounds();
     void applyScrapScaleEdits();
     void handleConfigureObjectSettingsTriggered();

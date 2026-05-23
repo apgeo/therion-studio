@@ -529,9 +529,19 @@ void MapEditorTab::deleteVertexFromSelectionPanel()
     MapEditorObjectDetailsEditController(objectDetailsContext()).deleteVertexFromSelectionPanel();
 }
 
-void MapEditorTab::toggleVertexSmoothFromSelectionPanel()
+void MapEditorTab::handleLinePointPreviousControlToggled(bool checked)
 {
-    MapEditorObjectDetailsEditController(objectDetailsContext()).toggleVertexSmoothFromSelectionPanel();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleLinePointPreviousControlToggled(checked);
+}
+
+void MapEditorTab::handleLinePointSmoothToggled(bool checked)
+{
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleLinePointSmoothToggled(checked);
+}
+
+void MapEditorTab::handleLinePointNextControlToggled(bool checked)
+{
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleLinePointNextControlToggled(checked);
 }
 
 void MapEditorTab::populateScrapScaleFromSourceBounds()

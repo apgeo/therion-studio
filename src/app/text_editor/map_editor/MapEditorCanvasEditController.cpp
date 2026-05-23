@@ -58,6 +58,102 @@ int lineVertexOwnerIndexForSourceVertex(const MapGeometryFeature &lineFeature, i
     return -1;
 }
 
+std::optional<QPointF> normalizedLineControlPoint(const QPointF &anchor, const QPointF &control)
+{
+    if (!mapSourcePointsDiffer(anchor, control)) {
+        return std::nullopt;
+    }
+    return control;
+}
+
+std::optional<QPointF> defaultIncomingControlForLineVertex(const QVector<MapGeometryFeature::TH2LineVertex> &vertices, int ownerIndex)
+{
+    if (ownerIndex < 0 || ownerIndex >= vertices.size()) {
+        return std::nullopt;
+    }
+
+    const MapGeometryFeature::TH2LineVertex &target = vertices.at(ownerIndex);
+    if (target.outgoingControl.has_value()) {
+        return mirroredSmoothControlPoint(target.anchor, target.outgoingControl.value(), std::nullopt);
+    }
+    if (ownerIndex > 0) {
+        const QPointF previousAnchor = vertices.at(ownerIndex - 1).anchor;
+        return normalizedLineControlPoint(target.anchor, target.anchor + ((previousAnchor - target.anchor) / 3.0));
+    }
+    if (ownerIndex + 1 < vertices.size()) {
+        const QPointF nextAnchor = vertices.at(ownerIndex + 1).anchor;
+        return normalizedLineControlPoint(target.anchor, target.anchor - ((nextAnchor - target.anchor) / 3.0));
+    }
+    return std::nullopt;
+}
+
+std::optional<QPointF> defaultOutgoingControlForLineVertex(const QVector<MapGeometryFeature::TH2LineVertex> &vertices, int ownerIndex)
+{
+    if (ownerIndex < 0 || ownerIndex >= vertices.size()) {
+        return std::nullopt;
+    }
+
+    const MapGeometryFeature::TH2LineVertex &target = vertices.at(ownerIndex);
+    if (target.incomingControl.has_value()) {
+        return mirroredSmoothControlPoint(target.anchor, target.incomingControl.value(), std::nullopt);
+    }
+    if (ownerIndex + 1 < vertices.size()) {
+        const QPointF nextAnchor = vertices.at(ownerIndex + 1).anchor;
+        return normalizedLineControlPoint(target.anchor, target.anchor + ((nextAnchor - target.anchor) / 3.0));
+    }
+    if (ownerIndex > 0) {
+        const QPointF previousAnchor = vertices.at(ownerIndex - 1).anchor;
+        return normalizedLineControlPoint(target.anchor, target.anchor - ((previousAnchor - target.anchor) / 3.0));
+    }
+    return std::nullopt;
+}
+
+void ensureLineVertexControlHandles(QVector<MapGeometryFeature::TH2LineVertex> *vertices, int ownerIndex)
+{
+    if (vertices == nullptr || ownerIndex < 0 || ownerIndex >= vertices->size()) {
+        return;
+    }
+
+    MapGeometryFeature::TH2LineVertex &target = (*vertices)[ownerIndex];
+    if (!target.incomingControl.has_value()) {
+        target.incomingControl = defaultIncomingControlForLineVertex(*vertices, ownerIndex);
+    }
+    if (!target.outgoingControl.has_value()) {
+        target.outgoingControl = defaultOutgoingControlForLineVertex(*vertices, ownerIndex);
+    }
+}
+
+void smoothLineVertexControlHandles(MapGeometryFeature::TH2LineVertex *vertex)
+{
+    if (vertex == nullptr || !vertex->incomingControl.has_value() || !vertex->outgoingControl.has_value()) {
+        return;
+    }
+
+    constexpr qreal kEpsilon = 1e-6;
+    const QPointF anchor = vertex->anchor;
+    const QPointF incomingVector = anchor - vertex->incomingControl.value();
+    const QPointF outgoingVector = vertex->outgoingControl.value() - anchor;
+    const qreal incomingLength = std::hypot(incomingVector.x(), incomingVector.y());
+    const qreal outgoingLength = std::hypot(outgoingVector.x(), outgoingVector.y());
+    if (incomingLength <= kEpsilon || outgoingLength <= kEpsilon) {
+        return;
+    }
+
+    QPointF direction = vertex->outgoingControl.value() - vertex->incomingControl.value();
+    qreal directionLength = std::hypot(direction.x(), direction.y());
+    if (directionLength <= kEpsilon) {
+        direction = QPointF(-incomingVector.y(), incomingVector.x());
+        directionLength = std::hypot(direction.x(), direction.y());
+    }
+    if (directionLength <= kEpsilon) {
+        return;
+    }
+
+    const QPointF unit(direction.x() / directionLength, direction.y() / directionLength);
+    vertex->incomingControl = anchor - (unit * incomingLength);
+    vertex->outgoingControl = anchor + (unit * outgoingLength);
+}
+
 MapEditableGeometryVertexItem *findGeometryVertexItem(QGraphicsScene *scene,
                                                       int lineNumber,
                                                       int sourceVertexIndex,
@@ -85,6 +181,48 @@ MapEditableGeometryVertexItem *findGeometryVertexItem(QGraphicsScene *scene,
     return nullptr;
 }
 
+void restoreLineVertexOwnerSelectionForContext(const MapEditorCanvasEditContext &context,
+                                               int lineNumber,
+                                               int ownerIndex)
+{
+    if (context.scene == nullptr || context.textEditor == nullptr || lineNumber <= 0 || ownerIndex < 0) {
+        return;
+    }
+
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context.textEditor->text(), lineNumber);
+    if (!lineFeature.has_value() || ownerIndex >= lineFeature->lineVertices.size()) {
+        return;
+    }
+
+    const MapGeometryFeature::TH2LineVertex &ownerVertex = lineFeature->lineVertices.at(ownerIndex);
+    const int ownerSourceVertexIndex = ownerVertex.anchorSourceVertexIndex >= 0
+        ? ownerVertex.anchorSourceVertexIndex
+        : ownerIndex;
+    MapEditableGeometryVertexItem *ownerAnchor = findGeometryVertexItem(context.scene,
+                                                                        lineNumber,
+                                                                        ownerSourceVertexIndex,
+                                                                        QStringLiteral("line"));
+    if (ownerAnchor == nullptr) {
+        return;
+    }
+
+    {
+        const QScopedValueRollback<bool> selectionGuard((*context.updatingSelection), true);
+        context.scene->clearSelection();
+        ownerAnchor->setVisible(true);
+        ownerAnchor->setSelected(true);
+    }
+
+    (*context.selectedObjectLineNumber) = lineNumber;
+    (*context.selectedObjectVertexIndex) = ownerSourceVertexIndex;
+    (*context.selectedObjectKind) = QStringLiteral("line");
+    (*context.selectedObjectCoordinate) = context.sourcePointFromScenePosition(ownerAnchor->pos());
+    context.updateGeometrySelectionPresentation();
+    context.updateCommandSurfaceState();
+    context.updateHelpPanel();
+    context.refreshObjectDetailsPanel();
+}
+
 }
 
 QString MapEditorCanvasEditController::tr(const char *text) const
@@ -98,6 +236,11 @@ void MapEditorCanvasEditController::resetPendingClickSelection()
     (*context_.pendingClickLineNumber) = 0;
     (*context_.pendingClickSourceVertexIndex) = -1;
     (*context_.pendingClickGeometryKind).clear();
+}
+
+void MapEditorCanvasEditController::restoreLineVertexOwnerSelection(int lineNumber, int ownerIndex)
+{
+    restoreLineVertexOwnerSelectionForContext(context_, lineNumber, ownerIndex);
 }
 
 MapEditorCanvasEditController::MapEditorCanvasEditController(MapEditorCanvasEditContext context)
@@ -187,9 +330,11 @@ void MapEditorCanvasEditController::recordLineAreaVertexMove(int lineNumber,
     }
 
     QVector<MapLineAreaVertexSecondaryMove> secondaryMoves;
+    int lineOwnerIndexToRestore = -1;
     if (rewriteKind == QStringLiteral("line")) {
         const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
         if (lineFeature.has_value()) {
+            lineOwnerIndexToRestore = lineVertexOwnerIndexForSourceVertex(lineFeature.value(), vertexIndex);
             secondaryMoves = coupledLineVertexMoveSet(lineFeature.value(), vertexIndex, oldPoint, newPoint).secondaryMoves;
             for (auto it = secondaryMoves.begin(); it != secondaryMoves.end();) {
                 if (it->vertexIndex == vertexIndex) {
@@ -218,6 +363,12 @@ void MapEditorCanvasEditController::recordLineAreaVertexMove(int lineNumber,
                                                            secondaryMoves,
                                                            statusCallback));
         context_.flushPendingSceneRefreshAfterCommand();
+        if (lineOwnerIndexToRestore >= 0) {
+            restoreLineVertexOwnerSelection(lineNumber, lineOwnerIndexToRestore);
+            QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, lineOwnerIndexToRestore]() {
+                restoreLineVertexOwnerSelectionForContext(context, lineNumber, lineOwnerIndexToRestore);
+            });
+        }
         return;
     }
 
@@ -232,6 +383,12 @@ void MapEditorCanvasEditController::recordLineAreaVertexMove(int lineNumber,
                                                                              statusCallback));
     directCommand->redo();
     context_.flushPendingSceneRefreshAfterCommand();
+    if (lineOwnerIndexToRestore >= 0) {
+        restoreLineVertexOwnerSelection(lineNumber, lineOwnerIndexToRestore);
+        QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, lineOwnerIndexToRestore]() {
+            restoreLineVertexOwnerSelectionForContext(context, lineNumber, lineOwnerIndexToRestore);
+        });
+    }
 }
 
 void MapEditorCanvasEditController::recordPointOrientationHandleChange(int lineNumber, qreal orientationDegrees)
@@ -579,13 +736,8 @@ bool MapEditorCanvasEditController::toggleLineVertexSmoothFromSelection()
     MapGeometryFeature::TH2LineVertex &target = editedVertices[ownerIndex];
     target.isSmooth = !target.isSmooth;
     if (target.isSmooth) {
-        if (target.incomingControl.has_value() && !target.outgoingControl.has_value()) {
-            const QPointF vector = target.incomingControl.value() - target.anchor;
-            target.outgoingControl = target.anchor - vector;
-        } else if (target.outgoingControl.has_value() && !target.incomingControl.has_value()) {
-            const QPointF vector = target.outgoingControl.value() - target.anchor;
-            target.incomingControl = target.anchor - vector;
-        }
+        ensureLineVertexControlHandles(&editedVertices, ownerIndex);
+        smoothLineVertexControlHandles(&target);
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices);
@@ -602,6 +754,154 @@ bool MapEditorCanvasEditController::toggleLineVertexSmoothFromSelection()
         ? tr("Line vertex %1 on source line %2 set to smooth.").arg(ownerIndex + 1).arg(lineNumber)
         : tr("Line vertex %1 on source line %2 set to corner (smooth off).").arg(ownerIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
+    restoreLineVertexOwnerSelection(lineNumber, ownerIndex);
+    QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, ownerIndex]() {
+        restoreLineVertexOwnerSelectionForContext(context, lineNumber, ownerIndex);
+    });
+    return true;
+}
+
+bool MapEditorCanvasEditController::setLineVertexSmoothForSelection(bool smooth)
+{
+    if (context_.scene == nullptr || context_.textEditor == nullptr) {
+        return false;
+    }
+
+    const QList<QGraphicsItem *> selectedItems = context_.scene->selectedItems();
+    if (selectedItems.size() != 1) {
+        return false;
+    }
+
+    auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItems.first());
+    if (vertexItem == nullptr || vertexItem->geometryKind() != QStringLiteral("line")) {
+        return false;
+    }
+
+    const int lineNumber = vertexItem->lineNumber();
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
+    if (!lineFeature.has_value()) {
+        (*context_.toolbarStatusNote) = tr("Set smooth failed: line geometry could not be resolved.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    const int ownerIndex = lineVertexOwnerIndexForSourceVertex(lineFeature.value(), vertexItem->vertexIndex());
+    if (ownerIndex < 0 || ownerIndex >= lineFeature->lineVertices.size()) {
+        (*context_.toolbarStatusNote) = tr("Set smooth failed: selected line vertex could not be resolved.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
+    MapGeometryFeature::TH2LineVertex &target = editedVertices[ownerIndex];
+    if (target.isSmooth == smooth
+        && (!smooth || (target.incomingControl.has_value() && target.outgoingControl.has_value()))) {
+        return true;
+    }
+
+    target.isSmooth = smooth;
+    if (target.isSmooth) {
+        ensureLineVertexControlHandles(&editedVertices, ownerIndex);
+        smoothLineVertexControlHandles(&target);
+    }
+
+    const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices);
+    QString errorMessage;
+    if (!context_.textEditor->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+        (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+            ? tr("Set smooth failed.")
+            : tr("Set smooth failed: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    (*context_.toolbarStatusNote) = target.isSmooth
+        ? tr("Line vertex %1 on source line %2 set to smooth.").arg(ownerIndex + 1).arg(lineNumber)
+        : tr("Line vertex %1 on source line %2 set to corner (smooth off).").arg(ownerIndex + 1).arg(lineNumber);
+    context_.refreshToolbarSummary();
+    restoreLineVertexOwnerSelection(lineNumber, ownerIndex);
+    QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, ownerIndex]() {
+        restoreLineVertexOwnerSelectionForContext(context, lineNumber, ownerIndex);
+    });
+    return true;
+}
+
+bool MapEditorCanvasEditController::setLineVertexControlHandleForSelection(bool incoming, bool enabled)
+{
+    if (context_.scene == nullptr || context_.textEditor == nullptr) {
+        return false;
+    }
+
+    const QList<QGraphicsItem *> selectedItems = context_.scene->selectedItems();
+    if (selectedItems.size() != 1) {
+        return false;
+    }
+
+    auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItems.first());
+    if (vertexItem == nullptr || vertexItem->geometryKind() != QStringLiteral("line")) {
+        return false;
+    }
+
+    const int lineNumber = vertexItem->lineNumber();
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
+    if (!lineFeature.has_value()) {
+        (*context_.toolbarStatusNote) = tr("Set control handle failed: line geometry could not be resolved.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    const int ownerIndex = lineVertexOwnerIndexForSourceVertex(lineFeature.value(), vertexItem->vertexIndex());
+    if (ownerIndex < 0 || ownerIndex >= lineFeature->lineVertices.size()) {
+        (*context_.toolbarStatusNote) = tr("Set control handle failed: selected line vertex could not be resolved.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
+    MapGeometryFeature::TH2LineVertex &target = editedVertices[ownerIndex];
+    const bool smoothWasActive = target.isSmooth
+        && target.incomingControl.has_value()
+        && target.outgoingControl.has_value();
+    std::optional<QPointF> &control = incoming ? target.incomingControl : target.outgoingControl;
+    const bool currentlyEnabled = control.has_value();
+    if (currentlyEnabled == enabled) {
+        return true;
+    }
+
+    if (enabled) {
+        control = incoming
+            ? defaultIncomingControlForLineVertex(editedVertices, ownerIndex)
+            : defaultOutgoingControlForLineVertex(editedVertices, ownerIndex);
+        if (smoothWasActive) {
+            ensureLineVertexControlHandles(&editedVertices, ownerIndex);
+            smoothLineVertexControlHandles(&target);
+        } else {
+            target.isSmooth = false;
+        }
+    } else {
+        control.reset();
+        target.isSmooth = false;
+    }
+
+    const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices);
+    QString errorMessage;
+    if (!context_.textEditor->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+        (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+            ? tr("Set control handle failed.")
+            : tr("Set control handle failed: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    const QString handleLabel = incoming ? tr("previous") : tr("next");
+    (*context_.toolbarStatusNote) = enabled
+        ? tr("Line vertex %1 on source line %2 now uses %3 control handle.").arg(ownerIndex + 1).arg(lineNumber).arg(handleLabel)
+        : tr("Line vertex %1 on source line %2 no longer uses %3 control handle.").arg(ownerIndex + 1).arg(lineNumber).arg(handleLabel);
+    context_.refreshToolbarSummary();
+    restoreLineVertexOwnerSelection(lineNumber, ownerIndex);
+    QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, ownerIndex]() {
+        restoreLineVertexOwnerSelectionForContext(context, lineNumber, ownerIndex);
+    });
     return true;
 }
 

@@ -364,8 +364,11 @@ Inspector panel (`Visual` mode):
 - the selected-object section also provides quick-edit fields in a stable command-focused order; scraps show ID and `Projection (-projection)` because scraps do not have type/subtype
 - point, line, and area selections show `ID (-id)`, type, and subtype where supported; station points also show separate `Name (-name)` below subtype, so station name is no longer shown in place of ID
 - `Geometry` appears when geometry state controls such as `Closed (-close)` and `Reversed (-reverse)` are available
-- `Point / Vertex` appears when a point, vertex, or control point is selected and contains orientation controls and vertex actions where applicable; exact coordinate edits remain in Raw mode
-- selected line vertices expose `Insert Vertex`, `Delete Vertex`, and `Toggle Smooth` actions using the same source rewrite path as keyboard vertex editing
+- `Point / Vertex` appears when a point, vertex, or control point is selected and contains XTherion-compatible line-point controls, orientation controls, and vertex actions where applicable; exact coordinate edits remain in Raw mode
+- selected line vertices expose XTherion-style `<<`, `Smooth (-smooth)`, and `>>` checkboxes plus `Insert Vertex` and `Delete Vertex` actions; `<<` controls the incoming handle, `>>` controls the outgoing handle, and unchecking either handle forces smooth off
+- checking `Smooth (-smooth)` creates any missing line-point handles, aligns them into a smooth tangent, and removes `smooth off`; unchecking it keeps handles but writes `smooth off`, while the `S` shortcut still toggles the same selected-vertex state
+- converting a straight line vertex into a Bezier vertex preserves supported line-point metadata such as `orientation` and slope `l-size`
+- line-point control toggles and control-point drags keep the same logical vertex selected after the map scene refreshes
 - `Actions` contains catalog-driven `Edit Object Settings...` and `Delete Object`; switch to `Raw` when source navigation/editing is needed
 - for point symbols and selected line anchor vertices, orientation controls appear only when catalog metadata marks `-orientation` as supported for the current command type/subtype:
 - `Orientation override (-orientation)` enable/disable; checking it immediately writes an explicit orientation value so the map handle appears, and unchecking it removes the override without dropping the current point or vertex selection

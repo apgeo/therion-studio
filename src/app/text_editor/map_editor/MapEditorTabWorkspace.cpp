@@ -705,6 +705,13 @@ void MapEditorTab::buildUi()
     objectOrientationSpin_->setRange(0.0, 359.999);
     objectOrientationSpin_->setSingleStep(1.0);
     objectOrientationSpin_->setSuffix(tr(" deg"));
+    auto *linePointControlEditor = new QWidget(objectOrientationEditor_);
+    auto *linePointControlLayout = new QHBoxLayout(linePointControlEditor);
+    linePointControlLayout->setContentsMargins(0, 0, 0, 0);
+    linePointControlLayout->setSpacing(10);
+    linePointPreviousControlCheck_ = new QCheckBox(tr("<<"), linePointControlEditor);
+    linePointSmoothCheck_ = new QCheckBox(tr("Smooth (-smooth)"), linePointControlEditor);
+    linePointNextControlCheck_ = new QCheckBox(tr(">>"), linePointControlEditor);
     linePointLeftSizeEnabledCheck_ = new QCheckBox(tr("Left size (-l-size)"), objectOrientationEditor_);
     linePointLeftSizeSpin_ = new QDoubleSpinBox(objectOrientationEditor_);
     linePointLeftSizeSpin_->setDecimals(1);
@@ -713,8 +720,16 @@ void MapEditorTab::buildUi()
     objectOrientationApplyButton_ = new QPushButton(tr("Apply Point Options"), objectOrientationEditor_);
     objectOrientationApplyButton_->setAutoDefault(false);
     connect(objectOrientationEnabledCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleObjectOrientationEnabledToggled);
+    connect(linePointPreviousControlCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLinePointPreviousControlToggled);
+    connect(linePointSmoothCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLinePointSmoothToggled);
+    connect(linePointNextControlCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLinePointNextControlToggled);
     connect(linePointLeftSizeEnabledCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLinePointLeftSizeEnabledToggled);
     connect(objectOrientationApplyButton_, &QPushButton::clicked, this, &MapEditorTab::applyObjectOrientationEdits);
+    linePointControlLayout->addWidget(linePointPreviousControlCheck_);
+    linePointControlLayout->addWidget(linePointSmoothCheck_);
+    linePointControlLayout->addWidget(linePointNextControlCheck_);
+    linePointControlLayout->addStretch(1);
+    orientationLayout->addWidget(linePointControlEditor);
     orientationLayout->addWidget(objectOrientationEnabledCheck_);
     orientationLayout->addWidget(objectOrientationSpin_);
     orientationLayout->addWidget(linePointLeftSizeEnabledCheck_);
@@ -728,16 +743,12 @@ void MapEditorTab::buildUi()
     vertexActionsLayout->setSpacing(6);
     vertexInsertButton_ = new QPushButton(tr("Insert Vertex"), vertexActionsEditor_);
     vertexDeleteButton_ = new QPushButton(tr("Delete Vertex"), vertexActionsEditor_);
-    vertexToggleSmoothButton_ = new QPushButton(tr("Toggle Smooth"), vertexActionsEditor_);
     vertexInsertButton_->setAutoDefault(false);
     vertexDeleteButton_->setAutoDefault(false);
-    vertexToggleSmoothButton_->setAutoDefault(false);
     connect(vertexInsertButton_, &QPushButton::clicked, this, &MapEditorTab::insertVertexFromSelectionPanel);
     connect(vertexDeleteButton_, &QPushButton::clicked, this, &MapEditorTab::deleteVertexFromSelectionPanel);
-    connect(vertexToggleSmoothButton_, &QPushButton::clicked, this, &MapEditorTab::toggleVertexSmoothFromSelectionPanel);
     vertexActionsLayout->addWidget(vertexInsertButton_);
     vertexActionsLayout->addWidget(vertexDeleteButton_);
-    vertexActionsLayout->addWidget(vertexToggleSmoothButton_);
     vertexSelectionLayout->addWidget(vertexActionsEditor_);
     selectionLayout->addWidget(vertexSelectionSection_);
 

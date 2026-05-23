@@ -638,9 +638,30 @@ void MapEditorObjectDetailsEditController::deleteVertexFromSelectionPanel()
     context_.refreshObjectDetailsPanel();
 }
 
-void MapEditorObjectDetailsEditController::toggleVertexSmoothFromSelectionPanel()
+void MapEditorObjectDetailsEditController::handleLinePointPreviousControlToggled(bool checked)
 {
-    context_.toggleLineVertexSmoothFromSelection();
+    if (*context_.updatingUi || !context_.setLineVertexControlHandleForSelection) {
+        return;
+    }
+    context_.setLineVertexControlHandleForSelection(true, checked);
+    context_.refreshObjectDetailsPanel();
+}
+
+void MapEditorObjectDetailsEditController::handleLinePointSmoothToggled(bool checked)
+{
+    if (*context_.updatingUi || !context_.setLineVertexSmoothForSelection) {
+        return;
+    }
+    context_.setLineVertexSmoothForSelection(checked);
+    context_.refreshObjectDetailsPanel();
+}
+
+void MapEditorObjectDetailsEditController::handleLinePointNextControlToggled(bool checked)
+{
+    if (*context_.updatingUi || !context_.setLineVertexControlHandleForSelection) {
+        return;
+    }
+    context_.setLineVertexControlHandleForSelection(false, checked);
     context_.refreshObjectDetailsPanel();
 }
 }

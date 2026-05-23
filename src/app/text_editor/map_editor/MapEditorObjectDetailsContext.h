@@ -56,9 +56,11 @@ struct MapEditorObjectDetailsContext
     QWidget *vertexActionsEditor = nullptr;
     QPushButton *vertexInsertButton = nullptr;
     QPushButton *vertexDeleteButton = nullptr;
-    QPushButton *vertexToggleSmoothButton = nullptr;
     QLabel *metadataLabel = nullptr;
     QWidget *orientationEditor = nullptr;
+    QCheckBox *linePointPreviousControlCheck = nullptr;
+    QCheckBox *linePointSmoothCheck = nullptr;
+    QCheckBox *linePointNextControlCheck = nullptr;
     QCheckBox *orientationEnabledCheck = nullptr;
     QDoubleSpinBox *orientationSpin = nullptr;
     QCheckBox *linePointLeftSizeEnabledCheck = nullptr;
@@ -92,5 +94,7 @@ struct MapEditorObjectDetailsContext
     std::function<bool()> insertLineVertexFromSelection;
     std::function<bool()> removeLineVertexFromSelection;
     std::function<bool()> toggleLineVertexSmoothFromSelection;
+    std::function<bool(bool)> setLineVertexSmoothForSelection;
+    std::function<bool(bool, bool)> setLineVertexControlHandleForSelection;
 };
 }

@@ -41,6 +41,8 @@ public:
     bool insertLineVertexFromSelection();
     bool removeLineVertexFromSelection();
     bool toggleLineVertexSmoothFromSelection();
+    bool setLineVertexSmoothForSelection(bool smooth);
+    bool setLineVertexControlHandleForSelection(bool incoming, bool enabled);
     void recordDraftMove(QGraphicsRectItem *item, const QPointF &oldPosition, const QPointF &newPosition);
     void recordDraftVisibility(QGraphicsRectItem *item, bool oldVisible, bool newVisible);
     QGraphicsRectItem *selectedDraftGeometryItem() const;
@@ -53,6 +55,7 @@ public:
 private:
     QString tr(const char *text) const;
     void resetPendingClickSelection();
+    void restoreLineVertexOwnerSelection(int lineNumber, int ownerIndex);
 
     MapEditorCanvasEditContext context_;
 };

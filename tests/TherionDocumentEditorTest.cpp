@@ -996,6 +996,36 @@ int runRewriteLineCoordinateRowsTest()
         return 1;
     }
 
+    contents = QStringLiteral("line slope\n"
+                              "  0 0\n"
+                              "  l-size 40.0\n"
+                              "  100 0\n"
+                              "  orientation 90\n"
+                              "  100 100\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineCoordinateRows(&contents,
+                                                                  1,
+                                                                  {QStringLiteral("0.0 0.0"),
+                                                                   QStringLiteral("l-size 40.0"),
+                                                                   QStringLiteral("33.3 0.0 66.7 0.0 100.0 0.0"),
+                                                                   QStringLiteral("orientation 90.000"),
+                                                                   QStringLiteral("100.0 33.3 100.0 66.7 100.0 100.0")},
+                                                                  &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line slope\n"
+                                           "  0.0 0.0\n"
+                                           "  l-size 40.0\n"
+                                           "  33.3 0.0 66.7 0.0 100.0 0.0\n"
+                                           "  orientation 90.000\n"
+                                           "  100.0 33.3 100.0 66.7 100.0 100.0\n"
+                                           "endline\n"),
+                "rewriteLineCoordinateRows should allow supported standalone line-point option rows during Bezier rewrites.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("line wall -id line-1 # keep\n"
                               "  10 20 30 40\n"
                               "  50 60\n"

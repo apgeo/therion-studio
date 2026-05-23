@@ -287,6 +287,8 @@ private:
     bool insertLineVertexFromSelection();
     bool removeLineVertexFromSelection();
     bool toggleLineVertexSmoothFromSelection();
+    bool setLineVertexSmoothForSelection(bool smooth);
+    bool setLineVertexControlHandleForSelection(bool incoming, bool enabled);
     void recordDraftMove(QGraphicsRectItem *item, const QPointF &oldPosition, const QPointF &newPosition);
     void recordDraftVisibility(QGraphicsRectItem *item, bool oldVisible, bool newVisible);
     QGraphicsRectItem *selectedDraftGeometryItem() const;
@@ -332,7 +334,9 @@ private:
     void updateObjectQuickSubtypeChoices();
     void insertVertexFromSelectionPanel();
     void deleteVertexFromSelectionPanel();
-    void toggleVertexSmoothFromSelectionPanel();
+    void handleLinePointPreviousControlToggled(bool checked);
+    void handleLinePointSmoothToggled(bool checked);
+    void handleLinePointNextControlToggled(bool checked);
     void populateScrapScaleFromSourceBounds();
     void applyScrapScaleEdits();
     void handleConfigureObjectSettingsTriggered();
@@ -399,7 +403,9 @@ private:
     QWidget *vertexActionsEditor_ = nullptr;
     QPushButton *vertexInsertButton_ = nullptr;
     QPushButton *vertexDeleteButton_ = nullptr;
-    QPushButton *vertexToggleSmoothButton_ = nullptr;
+    QCheckBox *linePointPreviousControlCheck_ = nullptr;
+    QCheckBox *linePointSmoothCheck_ = nullptr;
+    QCheckBox *linePointNextControlCheck_ = nullptr;
     QLabel *objectDetailsMetadataLabel_ = nullptr;
     QWidget *lineOptionsEditor_ = nullptr;
     QCheckBox *lineClosedCheck_ = nullptr;

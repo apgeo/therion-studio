@@ -33,6 +33,32 @@ QString formatSourceCoordinate(qreal value)
     return QString::number(value, 'f', 1);
 }
 
+QString formatLinePointOrientation(qreal value)
+{
+    qreal normalized = std::fmod(value, 360.0);
+    if (normalized < 0.0) {
+        normalized += 360.0;
+    }
+    return QString::number(normalized, 'f', 3);
+}
+
+void appendLinePointOptionRows(QStringList *rows, const MapGeometryFeature::TH2LineVertex &vertex)
+{
+    if (rows == nullptr) {
+        return;
+    }
+
+    if (vertex.orientationDegrees.has_value()) {
+        rows->append(QStringLiteral("orientation %1").arg(formatLinePointOrientation(vertex.orientationDegrees.value())));
+    }
+    if (!vertex.isSmooth) {
+        rows->append(QStringLiteral("smooth off"));
+    }
+    if (vertex.leftSize.has_value()) {
+        rows->append(QStringLiteral("l-size %1").arg(formatSourceCoordinate(vertex.leftSize.value())));
+    }
+}
+
 QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2LineVertex> &lineVertices)
 {
     QStringList rows;
@@ -46,9 +72,7 @@ QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2L
     };
 
     rows.append(pointRow(lineVertices.first().anchor));
-    if (!lineVertices.first().isSmooth) {
-        rows.append(QStringLiteral("smooth off"));
-    }
+    appendLinePointOptionRows(&rows, lineVertices.first());
 
     for (int index = 1; index < lineVertices.size(); ++index) {
         const MapGeometryFeature::TH2LineVertex &previous = lineVertices.at(index - 1);
@@ -65,9 +89,7 @@ QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2L
         }
         appendPointTokens(current.anchor);
         rows.append(rowTokens.join(QLatin1Char(' ')));
-        if (!current.isSmooth) {
-            rows.append(QStringLiteral("smooth off"));
-        }
+        appendLinePointOptionRows(&rows, current);
     }
     return rows;
 }

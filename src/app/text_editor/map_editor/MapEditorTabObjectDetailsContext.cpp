@@ -41,9 +41,11 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .vertexActionsEditor = vertexActionsEditor_,
         .vertexInsertButton = vertexInsertButton_,
         .vertexDeleteButton = vertexDeleteButton_,
-        .vertexToggleSmoothButton = vertexToggleSmoothButton_,
         .metadataLabel = objectDetailsMetadataLabel_,
         .orientationEditor = objectOrientationEditor_,
+        .linePointPreviousControlCheck = linePointPreviousControlCheck_,
+        .linePointSmoothCheck = linePointSmoothCheck_,
+        .linePointNextControlCheck = linePointNextControlCheck_,
         .orientationEnabledCheck = objectOrientationEnabledCheck_,
         .orientationSpin = objectOrientationSpin_,
         .linePointLeftSizeEnabledCheck = linePointLeftSizeEnabledCheck_,
@@ -102,6 +104,12 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         },
         .toggleLineVertexSmoothFromSelection = [this]() {
             return toggleLineVertexSmoothFromSelection();
+        },
+        .setLineVertexSmoothForSelection = [this](bool smooth) {
+            return setLineVertexSmoothForSelection(smooth);
+        },
+        .setLineVertexControlHandleForSelection = [this](bool incoming, bool enabled) {
+            return setLineVertexControlHandleForSelection(incoming, enabled);
         },
     };
 }

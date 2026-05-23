@@ -73,9 +73,11 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.vertexActionsEditor == nullptr
         || context_.vertexInsertButton == nullptr
         || context_.vertexDeleteButton == nullptr
-        || context_.vertexToggleSmoothButton == nullptr
         || context_.metadataLabel == nullptr
         || context_.orientationEditor == nullptr
+        || context_.linePointPreviousControlCheck == nullptr
+        || context_.linePointSmoothCheck == nullptr
+        || context_.linePointNextControlCheck == nullptr
         || context_.orientationEnabledCheck == nullptr
         || context_.orientationSpin == nullptr
         || context_.linePointLeftSizeEnabledCheck == nullptr
@@ -141,6 +143,12 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.vertexActionsEditor->setVisible(false);
         context_.metadataLabel->setText(QStringLiteral("-"));
         context_.orientationEditor->setVisible(false);
+        context_.linePointPreviousControlCheck->setChecked(false);
+        context_.linePointPreviousControlCheck->setVisible(false);
+        context_.linePointSmoothCheck->setChecked(false);
+        context_.linePointSmoothCheck->setVisible(false);
+        context_.linePointNextControlCheck->setChecked(false);
+        context_.linePointNextControlCheck->setVisible(false);
         context_.linePointLeftSizeEnabledCheck->setChecked(false);
         context_.linePointLeftSizeSpin->setEnabled(false);
         context_.linePointLeftSizeSpin->setValue(40.0);
@@ -242,7 +250,6 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     context_.vertexActionsEditor->setVisible(lineVertexActionsAvailable);
     context_.vertexInsertButton->setEnabled(lineVertexActionsAvailable);
     context_.vertexDeleteButton->setEnabled(lineVertexActionsAvailable);
-    context_.vertexToggleSmoothButton->setEnabled(lineVertexActionsAvailable);
 
     const bool lineOptionsVisible = *context_.selectedObjectLineNumber > 0
         && *context_.selectedObjectKind == QStringLiteral("line")
@@ -314,6 +321,10 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
 
     bool orientationApplicable = false;
     bool linePointLeftSizeApplicable = false;
+    bool linePointSmoothApplicable = false;
+    bool linePointSmooth = false;
+    bool linePointPreviousControl = false;
+    bool linePointNextControl = false;
     std::optional<qreal> orientationDegrees;
     std::optional<qreal> linePointLeftSize;
     if (context_.textEditor != nullptr && *context_.selectedObjectLineNumber > 0) {
@@ -336,7 +347,13 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         } else if (*context_.selectedObjectKind == QStringLiteral("line") && *context_.selectedObjectVertexIndex >= 0) {
             if (const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), *context_.selectedObjectLineNumber);
                 lineFeature.has_value() && lineFeature->kind == MapGeometryFeature::Kind::Line) {
-                if (lineVertexIndexForSourceVertex(lineFeature.value(), *context_.selectedObjectVertexIndex) >= 0) {
+                const int lineVertexIndex = lineVertexIndexForSourceVertex(lineFeature.value(), *context_.selectedObjectVertexIndex);
+                if (lineVertexIndex >= 0) {
+                    linePointSmoothApplicable = true;
+                    const MapGeometryFeature::TH2LineVertex &lineVertex = lineFeature->lineVertices.at(lineVertexIndex);
+                    linePointPreviousControl = lineVertex.incomingControl.has_value();
+                    linePointNextControl = lineVertex.outgoingControl.has_value();
+                    linePointSmooth = lineVertex.isSmooth && linePointPreviousControl && linePointNextControl;
                     QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
                     for (QString &line : lines) {
                         if (line.endsWith(QLatin1Char('\r'))) {
@@ -366,7 +383,16 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         }
     }
 
-    context_.orientationEditor->setVisible(orientationApplicable || linePointLeftSizeApplicable);
+    context_.orientationEditor->setVisible(linePointSmoothApplicable || orientationApplicable || linePointLeftSizeApplicable);
+    context_.linePointPreviousControlCheck->setVisible(linePointSmoothApplicable);
+    context_.linePointPreviousControlCheck->setEnabled(linePointSmoothApplicable);
+    context_.linePointPreviousControlCheck->setChecked(linePointSmoothApplicable && linePointPreviousControl);
+    context_.linePointSmoothCheck->setVisible(linePointSmoothApplicable);
+    context_.linePointSmoothCheck->setEnabled(linePointSmoothApplicable);
+    context_.linePointSmoothCheck->setChecked(linePointSmoothApplicable && linePointSmooth);
+    context_.linePointNextControlCheck->setVisible(linePointSmoothApplicable);
+    context_.linePointNextControlCheck->setEnabled(linePointSmoothApplicable);
+    context_.linePointNextControlCheck->setChecked(linePointSmoothApplicable && linePointNextControl);
     context_.orientationEnabledCheck->setVisible(orientationApplicable);
     context_.orientationSpin->setVisible(orientationApplicable);
     context_.linePointLeftSizeEnabledCheck->setVisible(linePointLeftSizeApplicable);
@@ -390,7 +416,11 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.linePointLeftSizeSpin->setValue(40.0);
     }
     context_.orientationApplyButton->setText(linePointLeftSizeApplicable ? translate("Apply Line Point Options") : translate("Apply Orientation"));
+    context_.orientationApplyButton->setVisible(orientationApplicable || linePointLeftSizeApplicable);
     context_.orientationApplyButton->setEnabled(orientationApplicable || linePointLeftSizeApplicable);
-    context_.vertexSection->setVisible(lineVertexActionsAvailable || orientationApplicable || linePointLeftSizeApplicable);
+    context_.vertexSection->setVisible(lineVertexActionsAvailable
+                                       || linePointSmoothApplicable
+                                       || orientationApplicable
+                                       || linePointLeftSizeApplicable);
 }
 }

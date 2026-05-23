@@ -145,6 +145,16 @@ bool MapEditorTab::toggleLineVertexSmoothFromSelection()
     return MapEditorCanvasEditController(canvasEditContext()).toggleLineVertexSmoothFromSelection();
 }
 
+bool MapEditorTab::setLineVertexSmoothForSelection(bool smooth)
+{
+    return MapEditorCanvasEditController(canvasEditContext()).setLineVertexSmoothForSelection(smooth);
+}
+
+bool MapEditorTab::setLineVertexControlHandleForSelection(bool incoming, bool enabled)
+{
+    return MapEditorCanvasEditController(canvasEditContext()).setLineVertexControlHandleForSelection(incoming, enabled);
+}
+
 QGraphicsRectItem *MapEditorTab::selectedDraftGeometryItem() const
 {
     return MapEditorCanvasEditController(const_cast<MapEditorTab *>(this)->canvasEditContext()).selectedDraftGeometryItem();

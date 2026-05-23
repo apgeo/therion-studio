@@ -327,7 +327,8 @@ private:
     void refreshInspectorBackgroundPanel();
     MapEditorObjectDetailsContext objectDetailsContext();
     void refreshObjectDetailsPanel();
-    void applyObjectOrientationEdits();
+    void handleObjectOrientationValueChanged(double value);
+    void handleLinePointLeftSizeValueChanged(double value);
     void deleteSelectedObjectFromSelection();
     void applyObjectQuickFieldEdits();
     void applyScrapProjectionEdit();
@@ -427,7 +428,6 @@ private:
     QDoubleSpinBox *objectOrientationSpin_ = nullptr;
     QCheckBox *linePointLeftSizeEnabledCheck_ = nullptr;
     QDoubleSpinBox *linePointLeftSizeSpin_ = nullptr;
-    QPushButton *objectOrientationApplyButton_ = nullptr;
     QPushButton *objectConfigureButton_ = nullptr;
     bool updatingObjectDetailsUi_ = false;
     int selectedObjectLineNumber_ = 0;

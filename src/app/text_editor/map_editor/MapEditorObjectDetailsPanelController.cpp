@@ -82,7 +82,6 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.orientationSpin == nullptr
         || context_.linePointLeftSizeEnabledCheck == nullptr
         || context_.linePointLeftSizeSpin == nullptr
-        || context_.orientationApplyButton == nullptr
         || context_.lineOptionsEditor == nullptr
         || context_.lineClosedCheck == nullptr
         || context_.lineReversedCheck == nullptr
@@ -415,9 +414,6 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.linePointLeftSizeSpin->setEnabled(false);
         context_.linePointLeftSizeSpin->setValue(40.0);
     }
-    context_.orientationApplyButton->setText(linePointLeftSizeApplicable ? translate("Apply Line Point Options") : translate("Apply Orientation"));
-    context_.orientationApplyButton->setVisible(orientationApplicable || linePointLeftSizeApplicable);
-    context_.orientationApplyButton->setEnabled(orientationApplicable || linePointLeftSizeApplicable);
     context_.vertexSection->setVisible(lineVertexActionsAvailable
                                        || linePointSmoothApplicable
                                        || orientationApplicable

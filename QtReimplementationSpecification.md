@@ -181,10 +181,10 @@ Required capabilities:
 - show object-specific identifiers and metadata
 - reflect the current selection in the settings panel
 - validate required fields and prevent invalid edits where necessary
-- for point symbols and selected line-point anchors, the inspector shall provide explicit orientation override controls with enable/disable state and degree input constrained to canonical `0..<360`; enabling the override shall immediately create an explicit orientation value, including `0`, so the map orientation handle can appear without requiring a separate apply action, and shall preserve the currently selected point or line anchor after the source rewrite
+- for point symbols and selected line-point anchors, the inspector shall provide explicit orientation override controls with enable/disable state and degree input constrained to canonical `0..<360`; enabling the override or changing the degree value shall immediately update the source and map canvas without a separate apply action, including explicit value `0`, and shall preserve the currently selected point or line anchor after the source rewrite
 - orientation controls shall be gated by command-metadata applicability (type/subtype constraints from the Therion command catalog) and shall not be shown for unsupported object variants
 - selecting a point symbol that supports `-orientation` shall show a draggable orientation handle in the map canvas when the point has an explicit `-orientation` value, including `0`; dragging the handle shall write the point command's `-orientation` option using the same source rewrite path as the inspector
-- for selected `line slope` anchor vertices, the inspector shall provide `l-size` controls with enable/disable state and positive numeric input, and shall serialize the option as an XTherion-compatible line-point row attached to the selected coordinate
+- for selected `line slope` anchor vertices, the inspector shall provide `l-size` controls with enable/disable state and positive numeric input; changing either state or value shall immediately update the source and map canvas without a separate apply action, and shall serialize the option as an XTherion-compatible line-point row attached to the selected coordinate
 
 ### 3.5 Structure Sidebar
 

@@ -10,8 +10,10 @@ public:
     explicit MapEditorObjectDetailsEditController(MapEditorObjectDetailsContext context);
 
     void applyObjectOrientationEdits();
+    void handleObjectOrientationValueChanged(double value);
     void handleObjectOrientationEnabledToggled(bool checked);
     void handleLinePointLeftSizeEnabledToggled(bool checked);
+    void handleLinePointLeftSizeValueChanged(double value);
     void deleteSelectedObjectFromSelection();
     void applyObjectQuickFieldEdits();
     void applyScrapProjectionEdit();

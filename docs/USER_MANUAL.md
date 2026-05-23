@@ -371,10 +371,10 @@ Inspector panel (`Visual` mode):
 - line-point control toggles and control-point drags keep the same logical vertex selected after the map scene refreshes
 - `Actions` contains catalog-driven `Edit Object Settings...` and `Delete Object`; switch to `Raw` when source navigation/editing is needed
 - for point symbols and selected line anchor vertices, orientation controls appear only when catalog metadata marks `-orientation` as supported for the current command type/subtype:
-- `Orientation override (-orientation)` enable/disable; checking it immediately writes an explicit orientation value so the map handle appears, and unchecking it removes the override without dropping the current point or vertex selection
-- degree input constrained to `0..359.999`
+- `Orientation override (-orientation)` enable/disable; checking it immediately writes an explicit orientation value so the map handle appears, unchecking it removes the override, and changing the degree value updates the source/map immediately without dropping the current point or vertex selection
+- degree input constrained to `0..359.999`; value changes are applied immediately
 - for selected `line slope` anchor vertices, `Left size (-l-size)` can be enabled and edited with a positive numeric value
-- `Apply Orientation` / `Apply Line Point Options` writes or removes per-object or per-line-point options in source; new line-point values are written in XTherion-compatible indented rows such as `orientation 90` and `l-size 40.0`
+- `Left size (-l-size)` state and value changes are applied immediately; new line-point values are written in XTherion-compatible indented rows such as `orientation 90` and `l-size 40.0`
 - selecting an orientable point in the map canvas shows a compact red orientation handle when `-orientation` is explicitly set, including `0`; drag it to update the point's `-orientation` directly from the map
 - selecting a `line slope` anchor in the map canvas also shows a red XTherion-style line-point handle when that line point has an explicit orientation value, including `0`; drag it to update both `orientation` and `l-size` directly from the map
 - for line anchors without an existing orientation row, checking `Orientation override` seeds the value perpendicular to the current local line direction instead of using `0`

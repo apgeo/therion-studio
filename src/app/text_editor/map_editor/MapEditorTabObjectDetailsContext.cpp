@@ -50,7 +50,6 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .orientationSpin = objectOrientationSpin_,
         .linePointLeftSizeEnabledCheck = linePointLeftSizeEnabledCheck_,
         .linePointLeftSizeSpin = linePointLeftSizeSpin_,
-        .orientationApplyButton = objectOrientationApplyButton_,
         .lineOptionsEditor = lineOptionsEditor_,
         .lineClosedCheck = lineClosedCheck_,
         .lineReversedCheck = lineReversedCheck_,

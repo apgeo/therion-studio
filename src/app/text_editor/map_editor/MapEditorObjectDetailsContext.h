@@ -65,7 +65,6 @@ struct MapEditorObjectDetailsContext
     QDoubleSpinBox *orientationSpin = nullptr;
     QCheckBox *linePointLeftSizeEnabledCheck = nullptr;
     QDoubleSpinBox *linePointLeftSizeSpin = nullptr;
-    QPushButton *orientationApplyButton = nullptr;
     QWidget *lineOptionsEditor = nullptr;
     QCheckBox *lineClosedCheck = nullptr;
     QCheckBox *lineReversedCheck = nullptr;

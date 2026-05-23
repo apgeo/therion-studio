@@ -484,14 +484,19 @@ void MapEditorTab::refreshObjectDetailsPanel()
     MapEditorObjectDetailsPanelController(objectDetailsContext()).refreshObjectDetailsPanel();
 }
 
-void MapEditorTab::applyObjectOrientationEdits()
+void MapEditorTab::handleObjectOrientationValueChanged(double value)
 {
-    MapEditorObjectDetailsEditController(objectDetailsContext()).applyObjectOrientationEdits();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleObjectOrientationValueChanged(value);
 }
 
 void MapEditorTab::handleObjectOrientationEnabledToggled(bool checked)
 {
     MapEditorObjectDetailsEditController(objectDetailsContext()).handleObjectOrientationEnabledToggled(checked);
+}
+
+void MapEditorTab::handleLinePointLeftSizeValueChanged(double value)
+{
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleLinePointLeftSizeValueChanged(value);
 }
 
 void MapEditorTab::handleLinePointLeftSizeEnabledToggled(bool checked)

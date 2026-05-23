@@ -26,6 +26,8 @@ namespace TherionStudio
 {
 namespace
 {
+constexpr int kImmediatePointOptionApplyDelayMs = 0;
+
 int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int sourceVertexIndex)
 {
     if (sourceVertexIndex < 0) {
@@ -100,6 +102,21 @@ std::optional<qreal> defaultLinePointOrientationForSourceVertex(const QString &d
     }
 
     return defaultLinePointOrientationDegrees(lineFeature.value(), vertexIndex);
+}
+
+void scheduleObjectOrientationApply(const MapEditorObjectDetailsContext &context)
+{
+    if (context.callbackContext == nullptr) {
+        MapEditorObjectDetailsEditController(context).applyObjectOrientationEdits();
+        return;
+    }
+
+    QTimer::singleShot(kImmediatePointOptionApplyDelayMs, context.callbackContext, [context]() {
+        if (context.updatingUi == nullptr || *context.updatingUi) {
+            return;
+        }
+        MapEditorObjectDetailsEditController(context).applyObjectOrientationEdits();
+    });
 }
 }
 
@@ -463,6 +480,17 @@ void MapEditorObjectDetailsEditController::handleObjectOrientationEnabledToggled
     applyObjectOrientationEdits();
 }
 
+void MapEditorObjectDetailsEditController::handleObjectOrientationValueChanged(double value)
+{
+    Q_UNUSED(value);
+    if (*context_.updatingUi
+        || context_.orientationEnabledCheck == nullptr
+        || !context_.orientationEnabledCheck->isChecked()) {
+        return;
+    }
+    scheduleObjectOrientationApply(context_);
+}
+
 void MapEditorObjectDetailsEditController::handleLinePointLeftSizeEnabledToggled(bool checked)
 {
     if (*context_.updatingUi || context_.linePointLeftSizeSpin == nullptr) {
@@ -472,6 +500,18 @@ void MapEditorObjectDetailsEditController::handleLinePointLeftSizeEnabledToggled
     if (checked && context_.linePointLeftSizeSpin->value() <= 0.0) {
         context_.linePointLeftSizeSpin->setValue(40.0);
     }
+    applyObjectOrientationEdits();
+}
+
+void MapEditorObjectDetailsEditController::handleLinePointLeftSizeValueChanged(double value)
+{
+    Q_UNUSED(value);
+    if (*context_.updatingUi
+        || context_.linePointLeftSizeEnabledCheck == nullptr
+        || !context_.linePointLeftSizeEnabledCheck->isChecked()) {
+        return;
+    }
+    scheduleObjectOrientationApply(context_);
 }
 
 void MapEditorObjectDetailsEditController::deleteSelectedObjectFromSelection()

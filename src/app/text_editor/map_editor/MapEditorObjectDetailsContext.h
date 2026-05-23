@@ -39,6 +39,7 @@ struct MapEditorObjectDetailsContext
     QWidget *geometrySection = nullptr;
     QWidget *advancedSection = nullptr;
     QPushButton *deleteButton = nullptr;
+    QLabel *areaReferenceLabel = nullptr;
     QWidget *quickFieldsEditor = nullptr;
     QLabel *quickIdentifierLabel = nullptr;
     QLabel *quickNameLabel = nullptr;
@@ -81,6 +82,7 @@ struct MapEditorObjectDetailsContext
     std::function<void()> refreshToolbarSummary;
     std::function<void()> refreshObjectDetailsPanel;
     std::function<void()> clearInspectorObjectSelection;
+    std::function<void(int, bool)> selectMapLine;
     std::function<bool(int, const QString &, bool, QString *)> rewriteLineOptionToggle;
     std::function<void(const QString &, const QString &, const QString &, int)> recordSourceTextSnapshot;
     std::function<bool()> insertLineVertexFromSelection;

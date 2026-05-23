@@ -2,6 +2,7 @@
 
 #include "../TextEditorTab.h"
 #include "MapEditorInspectorData.h"
+#include "MapEditorAreaReferenceResolver.h"
 #include "MapEditorObjectDetailsLogic.h"
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSourceReferenceResolver.h"
@@ -57,6 +58,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.geometrySection == nullptr
         || context_.advancedSection == nullptr
         || context_.deleteButton == nullptr
+        || context_.areaReferenceLabel == nullptr
         || context_.quickFieldsEditor == nullptr
         || context_.quickIdentifierLabel == nullptr
         || context_.quickNameLabel == nullptr
@@ -131,6 +133,9 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.geometrySection->setVisible(false);
         context_.advancedSection->setVisible(false);
         context_.deleteButton->setEnabled(false);
+        context_.deleteButton->setToolTip(QString());
+        context_.areaReferenceLabel->setVisible(false);
+        context_.areaReferenceLabel->clear();
         context_.quickFieldsEditor->setVisible(false);
         context_.objectQuickCommandKind->clear();
         context_.vertexActionsEditor->setVisible(false);
@@ -163,7 +168,31 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     }
     context_.selectionTitleLabel->setText(objectSectionTitle);
     context_.metadataLabel->setText(translate("Source line %1").arg(effectiveLineNumber));
-    context_.deleteButton->setEnabled(effectiveLineNumber > 0);
+    QVector<MapEditorAreaReference> areaReferences;
+    if (context_.textEditor != nullptr
+        && effectiveLineNumber > 0
+        && effectiveKind == QStringLiteral("line")) {
+        areaReferences = mapEditorAreaReferencesForBorderLine(context_.textEditor->text(), effectiveLineNumber);
+    }
+    const bool deleteBlockedByAreaReference = !areaReferences.isEmpty();
+    context_.deleteButton->setEnabled(effectiveLineNumber > 0 && !deleteBlockedByAreaReference);
+    context_.deleteButton->setToolTip(deleteBlockedByAreaReference
+        ? translate("This line is used as an area border. Select or delete the area instead.")
+        : QString());
+    context_.areaReferenceLabel->setVisible(deleteBlockedByAreaReference);
+    if (deleteBlockedByAreaReference) {
+        QStringList areaLinks;
+        areaLinks.reserve(areaReferences.size());
+        for (const MapEditorAreaReference &reference : areaReferences) {
+            const QString label = reference.areaLabel.toHtmlEscaped();
+            areaLinks.append(QStringLiteral("<a href=\"%1\">%2</a>").arg(reference.areaLineNumber).arg(label));
+        }
+        context_.areaReferenceLabel->setText(translate("Used by area: %1").arg(areaLinks.join(QStringLiteral(", "))));
+        context_.areaReferenceLabel->setToolTip(translate("Click the area name to select the area that owns this border line."));
+    } else {
+        context_.areaReferenceLabel->clear();
+        context_.areaReferenceLabel->setToolTip(QString());
+    }
 
     context_.quickFieldsEditor->setVisible(false);
     context_.objectQuickCommandKind->clear();

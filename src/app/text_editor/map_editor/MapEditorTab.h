@@ -383,6 +383,7 @@ private:
     QWidget *geometrySelectionSection_ = nullptr;
     QWidget *advancedSelectionSection_ = nullptr;
     QPushButton *objectDeleteButton_ = nullptr;
+    QLabel *objectAreaReferenceLabel_ = nullptr;
     QWidget *objectQuickFieldsEditor_ = nullptr;
     QLabel *objectQuickIdentifierLabel_ = nullptr;
     QLabel *objectQuickNameLabel_ = nullptr;

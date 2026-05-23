@@ -351,11 +351,15 @@ Inspector panel (`Visual` mode):
 - visibility/delete icon actions use pointing-hand hover feedback; label/grip hover is reserved for row dragging
 - map-object rows use the same command-kind icons as the map toolbar (`Scrap`, `Point`, `Line`, `Area`), with row text formatted from the Therion symbol type/subtype and optional id/name, e.g. `wall blocks: wall-1` or `station fixed: 4@hp`
 - clicking an already selected object row again clears the object selection
+- selecting an area also highlights the referenced border line in the canvas, making the generated/owned boundary visible while the area remains the primary selected object
 - source-linked point, line, and area rows show a grip handle; hovering the label or grip uses an open-hand cursor, and dragging changes to a closed-hand cursor; drag the row onto another object row to move the corresponding TH2 source span before or after the target row depending on where you release, or onto a scrap row to move the object into that scrap before `endscrap`; a slim highlighted horizontal drop-target line shows the exact insertion edge for real moves, invalid targets and current-location boundaries hide the drop line and use a forbidden cursor with a status note, the tree auto-scrolls near its top/bottom edge during drag, and the move participates in the map undo/redo stack without creating a duplicate raw-text undo step
 - the visibility icon (`eye` / `eye-off`) hides or shows the corresponding map object in the current editor view without changing the source file
 - the delete icon (`trash`) asks for confirmation and removes the corresponding source command span; block objects such as `line`, `area`, and `scrap` remove their full matching `end...` block, and the removal is available through document undo/redo
+- a line referenced by an area cannot be deleted separately from the object list or selected-object actions; delete the area instead
+- deleting an area also removes its private referenced border line when that line is not used by another remaining area
 - in `Selection`:
 - groups editing controls into a selected-object section (`Scrap`, `Point`, `Line`, or `Area`), `Point / Vertex`, `Geometry`, and `Actions` sections
+- when the selected object is a line used as an area border, `Delete Object` is disabled and the Object section shows `Used by area: ...`; click the area name to select the owning area
 - the selected-object section shows `Source line N` and object-level quick fields
 - the selected-object section also provides quick-edit fields in a stable command-focused order; scraps show ID and `Projection (-projection)` because scraps do not have type/subtype
 - point, line, and area selections show `ID (-id)`, type, and subtype where supported; station points also show separate `Name (-name)` below subtype, so station name is no longer shown in place of ID

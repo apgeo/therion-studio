@@ -1,7 +1,9 @@
 #include "MapEditorObjectDetailsEditController.h"
 
 #include "../TextEditorTab.h"
+#include "MapEditorAreaReferenceResolver.h"
 #include "MapEditorInspectorData.h"
+#include "MapEditorObjectDeletePlanner.h"
 #include "MapEditorObjectDetailsLogic.h"
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSourceReferenceResolver.h"
@@ -384,13 +386,37 @@ void MapEditorObjectDetailsEditController::deleteSelectedObjectFromSelection()
         return;
     }
 
-    if (context_.textEditor->deleteCommandAtLine(targetLineNumber)) {
-        context_.hiddenInspectorObjectLines->remove(targetLineNumber);
-        *context_.lastInspectorClickedObjectLineNumber = 0;
-        context_.clearInspectorObjectSelection();
-        *context_.toolbarStatusNote = translate("Deleted selected object from source.");
+    const QVector<MapEditorAreaReference> areaReferences =
+        mapEditorAreaReferencesForBorderLine(context_.textEditor->text(), targetLineNumber);
+    if (!areaReferences.isEmpty()) {
+        *context_.toolbarStatusNote = translate("This line is used as an area border. Delete the area instead.");
         context_.refreshToolbarSummary();
+        return;
     }
+
+    const QString beforeText = context_.textEditor->text();
+    const MapEditorObjectDeletePlan deletePlan = planMapEditorObjectDelete(beforeText, targetLineNumber);
+    if (!deletePlan.resolved || !deletePlan.changed) {
+        *context_.toolbarStatusNote = deletePlan.errorMessage.isEmpty()
+            ? translate("Object deletion failed.")
+            : translate("Object deletion failed: %1").arg(deletePlan.errorMessage);
+        context_.refreshToolbarSummary();
+        return;
+    }
+
+    const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+    context_.textEditor->replaceTextForCommand(deletePlan.updatedText);
+    context_.recordSourceTextSnapshot(translate("Delete Map Object"),
+                                      beforeText,
+                                      deletePlan.updatedText,
+                                      deletePlan.focusLineAfterDelete);
+    for (int removedLineNumber : deletePlan.removedLineNumbers) {
+        context_.hiddenInspectorObjectLines->remove(removedLineNumber);
+    }
+    *context_.lastInspectorClickedObjectLineNumber = 0;
+    context_.clearInspectorObjectSelection();
+    *context_.toolbarStatusNote = translate("Deleted selected object from source.");
+    context_.refreshToolbarSummary();
 }
 
 void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()

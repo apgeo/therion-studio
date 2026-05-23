@@ -310,10 +310,14 @@ The rules below define the expected day-to-day interaction model. If a later req
 - On first display, scrap nodes shall default to expanded state.
 - If a map object is selected elsewhere in the application, the corresponding scrap shall expand automatically so the object remains visible in the list.
 - Clicking a map object row shall select that object, update the map selection, and reveal the corresponding source location in the text editor when the source line is known.
+- Selecting an `area` object shall also visually select/highlight its referenced border `line` object(s) so the area boundary ownership is visible in the canvas.
 - Clicking an already selected map object row again shall clear the current map/object selection.
 - Clicking the visibility icon on a map object row shall toggle that object's visibility without changing the current selection.
 - Each source-linked map object row shall expose compact visibility and delete icon actions.
 - Delete actions from the object tree shall ask for confirmation, shall remove the corresponding source command span through the same safe source-edit path used by structured block deletion, and shall participate in document undo/redo.
+- A `line` block referenced by an `area` block shall not be deletable as a standalone map object because that would leave the area with a dangling border reference.
+- When a referenced border `line` is selected, the selected-object details shall explain which area(s) use it, shall provide a direct select/jump affordance to the referencing area, and shall disable standalone object deletion with an explanatory tooltip/status message.
+- Deleting an `area` block shall also delete privately referenced border `line` blocks that are no longer referenced by any remaining area; border lines still referenced by another area shall be preserved.
 - Dragging the handle on a map object row shall start a move or reorder operation.
 - Dropping onto another object shall insert the dragged object before or after the target depending on the drop placement.
 - Dropping onto a scrap target shall move the object into that scrap when the object type supports it.

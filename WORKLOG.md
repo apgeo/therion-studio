@@ -7,13 +7,13 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Phase 6: finish encoding robustness work. Implementation is mostly complete; remaining work is corpus hardening and edge-case handling.
 - Phase 7: finish UX/accessibility/platform-convention work, especially shortcut and keyboard parity on macOS, Windows, and Linux.
 - Phase 8: start release readiness and packaging work for all supported platforms.
-- Phase 9: continue map-editor parity polish after the `Inspector -> Objects` row-drag batch; focus on interaction gaps found during use.
+- Phase 9: continue map-editor parity polish after the `Inspector -> Objects` row-drag/delete-rule/area-boundary-selection/reference-disclosure batch; focus on interaction gaps found during use.
 - Phase 10: continue interactive map drawing/insertion polish, especially mode-aware undo/redo semantics where one completed draw gesture maps to one undo step.
 - Phase 11: continue structured block-canvas authoring coverage, safer nested insertion behavior, and remaining BlockEditor extraction/refactor slices.
 
 ## Next Up
 
-- Continue Phase 9 with the next map-editor parity issue found during use, including bezier control handle behavior near overlapping geometry.
+- Continue Phase 9 with the next map-editor parity issue found during use, including object inspector ergonomics and any remaining area/line ownership edge cases.
 - Continue Phase 10 with Apple Pencil/freehand stroke UX, solid freehand draft preview, less-aggressive shape-sensitive bezier simplification, and point/line/area drawing workflow polish.
 - Continue Phase 11 selection/details glue consolidation without behavior changes, then ratchet structure limits after the slice is stable.
 
@@ -46,7 +46,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 ### Phase 9 - Map Editor Parity Polish (`Post-MVP`)
 
 - Status: in progress.
-- Remaining work: continue interaction parity review beyond the completed object-row drag/drop batch, including object inspector ergonomics, command-surface consistency, selection edge cases, bezier-control hit priority near overlapping geometry, and cross-platform input behavior.
+- Remaining work: continue interaction parity review beyond the completed object-row drag/drop/delete-rule/area-boundary-selection/reference-disclosure batch, including object inspector ergonomics, command-surface consistency, selection edge cases, and cross-platform input behavior.
 
 ### Phase 10 - Interactive Map Drawing and Insertion (`Post-MVP`)
 

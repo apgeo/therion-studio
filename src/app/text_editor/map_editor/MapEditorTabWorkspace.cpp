@@ -612,6 +612,22 @@ void MapEditorTab::buildUi()
     objectDetailsMetadataLabel_->setStyleSheet(QStringLiteral("QLabel { color: palette(mid); }"));
     objectSelectionLayout->addWidget(objectDetailsMetadataLabel_);
 
+    objectAreaReferenceLabel_ = new QLabel(objectSelectionSection_);
+    objectAreaReferenceLabel_->setTextFormat(Qt::RichText);
+    objectAreaReferenceLabel_->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    objectAreaReferenceLabel_->setOpenExternalLinks(false);
+    objectAreaReferenceLabel_->setWordWrap(true);
+    objectAreaReferenceLabel_->setStyleSheet(QStringLiteral("QLabel { color: palette(mid); }"));
+    connect(objectAreaReferenceLabel_, &QLabel::linkActivated, this, [this](const QString &link) {
+        bool ok = false;
+        const int areaLineNumber = link.toInt(&ok);
+        if (ok && areaLineNumber > 0) {
+            selectMapLine(areaLineNumber);
+            syncInspectorObjectSelectionToLine(areaLineNumber);
+        }
+    });
+    objectSelectionLayout->addWidget(objectAreaReferenceLabel_);
+
     objectQuickFieldsEditor_ = new QWidget(objectSelectionSection_);
     auto *objectQuickForm = new QFormLayout(objectQuickFieldsEditor_);
     objectQuickForm->setContentsMargins(0, 0, 0, 0);

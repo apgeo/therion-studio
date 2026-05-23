@@ -1,7 +1,9 @@
 #include "MapEditorInspectorObjectController.h"
 
 #include "../TextEditorTab.h"
+#include "MapEditorAreaReferenceResolver.h"
 #include "MapEditorInspectorData.h"
+#include "MapEditorObjectDeletePlanner.h"
 #include "MapEditorObjectMovePlanner.h"
 #include "MapEditorSceneSupport.h"
 #include "../../../core/ProjectStructureIndex.h"
@@ -29,6 +31,7 @@ namespace
 constexpr int kInspectorSourceLineRole = Qt::UserRole + 700;
 constexpr int kInspectorSourceFileRole = Qt::UserRole + 701;
 constexpr int kInspectorObjectCategoryRole = Qt::UserRole + 702;
+constexpr int kInspectorObjectDeleteBlockedRole = Qt::UserRole + 703;
 constexpr int kInspectorObjectNameColumn = 0;
 constexpr int kInspectorObjectDragColumn = 1;
 constexpr int kInspectorObjectVisibilityColumn = 2;
@@ -142,8 +145,15 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
         deleteItem->setData(entry.lineNumber, kInspectorSourceLineRole);
         deleteItem->setData(entry.category, kInspectorObjectCategoryRole);
         if (entry.lineNumber > 0) {
+            const QVector<MapEditorAreaReference> areaReferences =
+                mapEditorAreaReferencesForBorderLine(currentText, entry.lineNumber);
+            const bool deleteBlockedByAreaReference = !areaReferences.isEmpty();
             deleteItem->setIcon(inspectorActionIcon(QStringLiteral("trash-2")));
-            deleteItem->setToolTip(translate("Delete object from source"));
+            deleteItem->setData(deleteBlockedByAreaReference, kInspectorObjectDeleteBlockedRole);
+            deleteItem->setEnabled(!deleteBlockedByAreaReference);
+            deleteItem->setToolTip(deleteBlockedByAreaReference
+                ? translate("This line is used as an area border. Delete the area instead.")
+                : translate("Delete object from source"));
         }
 
         QStandardItem *parentItem = parentStack.isEmpty() ? context_.objectsModel->invisibleRootItem() : parentStack.last();
@@ -369,9 +379,53 @@ void MapEditorInspectorObjectController::handleInspectorObjectClicked(const QMod
     *context_.pressedWasSelected = false;
     context_.suppressedAutoReselectLineNumbers->clear();
     if (index.column() == kInspectorObjectDeleteColumn) {
-        if (context_.textEditor->deleteCommandAtLine(lineNumber)) {
-            context_.hiddenObjectLines->remove(lineNumber);
-            *context_.lastClickedLineNumber = 0;
+        if (index.data(kInspectorObjectDeleteBlockedRole).toBool()) {
+            if (context_.toolbarStatusNote != nullptr) {
+                *context_.toolbarStatusNote = translate("This line is used as an area border. Delete the area instead.");
+            }
+            if (context_.refreshToolbarSummary) {
+                context_.refreshToolbarSummary();
+            }
+            return;
+        }
+        const QString beforeText = context_.textEditor->text();
+        const MapEditorObjectDeletePlan deletePlan = planMapEditorObjectDelete(beforeText, lineNumber);
+        if (!deletePlan.resolved || !deletePlan.changed) {
+            if (context_.toolbarStatusNote != nullptr) {
+                *context_.toolbarStatusNote = deletePlan.errorMessage.isEmpty()
+                    ? translate("Object deletion failed.")
+                    : translate("Object deletion failed: %1").arg(deletePlan.errorMessage);
+            }
+            if (context_.refreshToolbarSummary) {
+                context_.refreshToolbarSummary();
+            }
+            return;
+        }
+
+        auto applyDeleteText = [&]() {
+            context_.textEditor->replaceTextForCommand(deletePlan.updatedText);
+            if (context_.recordSourceTextSnapshot) {
+                context_.recordSourceTextSnapshot(translate("Delete Map Object"),
+                                                  beforeText,
+                                                  deletePlan.updatedText,
+                                                  deletePlan.focusLineAfterDelete);
+            }
+        };
+        if (context_.commandApplyInProgress != nullptr) {
+            const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+            applyDeleteText();
+        } else {
+            applyDeleteText();
+        }
+        for (int removedLineNumber : deletePlan.removedLineNumbers) {
+            context_.hiddenObjectLines->remove(removedLineNumber);
+        }
+        *context_.lastClickedLineNumber = 0;
+        if (context_.toolbarStatusNote != nullptr) {
+            *context_.toolbarStatusNote = translate("Deleted selected object from source.");
+        }
+        if (context_.refreshToolbarSummary) {
+            context_.refreshToolbarSummary();
         }
         return;
     }

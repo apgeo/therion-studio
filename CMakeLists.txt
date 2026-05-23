@@ -257,6 +257,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
+    src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
+    src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h
     src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp
     src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.h
     src/app/text_editor/map_editor/MapEditorCanvasEditContext.h
@@ -276,6 +278,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.h
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
+    src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.h
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
@@ -470,12 +474,26 @@ qt_add_executable(MapEditorInputPolicyTest
 
 target_link_libraries(MapEditorInputPolicyTest PRIVATE Qt6::Widgets)
 
+qt_add_executable(MapEditorAreaReferenceResolverTest
+    tests/MapEditorAreaReferenceResolverTest.cpp
+    src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
+    src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h)
+
+target_link_libraries(MapEditorAreaReferenceResolverTest PRIVATE therion_core Qt6::Core)
+
 qt_add_executable(MapEditorObjectMovePlannerTest
     tests/MapEditorObjectMovePlannerTest.cpp
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h)
 
 target_link_libraries(MapEditorObjectMovePlannerTest PRIVATE therion_core Qt6::Core)
+
+qt_add_executable(MapEditorObjectDeletePlannerTest
+    tests/MapEditorObjectDeletePlannerTest.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.h)
+
+target_link_libraries(MapEditorObjectDeletePlannerTest PRIVATE therion_core Qt6::Core)
 
 therion_add_core_unit_test(SessionStoreTest
     tests/SessionStoreTest.cpp)
@@ -669,6 +687,8 @@ therion_add_text_editor_ui_test(TextEditorCompletionHighlightTest
 set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     ${THERION_EDITOR_UI_TEST_BASE_SOURCES}
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
+    src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
+    src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h
     src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp
     src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.h
     src/app/text_editor/map_editor/MapEditorCanvasEditContext.h
@@ -688,6 +708,8 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.h
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
+    src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.h
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
@@ -778,7 +800,9 @@ set(THERION_UNIT_TEST_TARGETS
     TherionXviParserTest
     MapGeometryFeatureParsingTest
     DocumentFileEncodingTest
+    MapEditorAreaReferenceResolverTest
     MapEditorInputPolicyTest
+    MapEditorObjectDeletePlannerTest
     MapEditorObjectMovePlannerTest
     ProjectStructureScannerTest
     SessionStoreTest

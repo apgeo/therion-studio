@@ -1,6 +1,7 @@
 #include "MapEditorSelectionController.h"
 
 #include "../TextEditorTab.h"
+#include "MapEditorAreaReferenceResolver.h"
 #include "MapEditorSceneInternals.h"
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSourceReferenceResolver.h"
@@ -168,6 +169,33 @@ int lineVertexOwnerIndexForSourceVertex(const MapGeometryFeature &lineFeature, i
     }
 
     return -1;
+}
+
+QSet<int> selectedAreaBorderLineNumbers(const QString &text, const QSet<int> &selectedLines)
+{
+    QSet<int> borderLineNumbers;
+    for (const int selectedLine : selectedLines) {
+        borderLineNumbers.unite(mapEditorBorderLineNumbersForArea(text, selectedLine));
+    }
+    return borderLineNumbers;
+}
+
+void selectAreaBorderLineItems(QGraphicsScene *scene,
+                               const QHash<int, QGraphicsItem *> &itemsByLine,
+                               const QString &text,
+                               int areaLineNumber)
+{
+    if (scene == nullptr || areaLineNumber <= 0) {
+        return;
+    }
+
+    const QSet<int> borderLineNumbers = mapEditorBorderLineNumbersForArea(text, areaLineNumber);
+    for (const int borderLineNumber : borderLineNumbers) {
+        const auto itemIt = itemsByLine.constFind(borderLineNumber);
+        if (itemIt != itemsByLine.constEnd() && itemIt.value() != nullptr) {
+            itemIt.value()->setSelected(true);
+        }
+    }
 }
 
 MapEditableGeometryVertexItem *findGeometryVertexItem(QGraphicsScene *scene,
@@ -449,6 +477,16 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
         return;
     }
 
+    if (selectedLineNumber > 0
+        && (*context_.selectedObjectKind) == QStringLiteral("area")
+        && context_.textEditor != nullptr) {
+        const QScopedValueRollback<bool> selectionGuard((*context_.updatingSelection), true);
+        selectAreaBorderLineItems(context_.scene,
+                                  *context_.itemsByLine,
+                                  context_.textEditor->text(),
+                                  selectedLineNumber);
+    }
+
     updateGeometrySelectionPresentation();
     context_.updateCommandSurfaceState();
     context_.updateHelpPanel();
@@ -583,6 +621,9 @@ void MapEditorSelectionController::updateGeometrySelectionPresentation()
             }
         }
     }
+    if (context_.textEditor != nullptr) {
+        selectedLines.unite(selectedAreaBorderLineNumbers(context_.textEditor->text(), selectedLines));
+    }
 
     const auto sceneItems = context_.scene->items();
     for (QGraphicsItem *item : sceneItems) {
@@ -627,6 +668,9 @@ void MapEditorSelectionController::selectMapLine(int lineNumber, bool centerOnSe
     auto selectedItemIt = (*context_.itemsByLine).find(lineNumber);
     if (selectedItemIt != (*context_.itemsByLine).end() && selectedItemIt.value() != nullptr) {
         selectedItemIt.value()->setSelected(true);
+        if (context_.textEditor != nullptr) {
+            selectAreaBorderLineItems(context_.scene, *context_.itemsByLine, context_.textEditor->text(), lineNumber);
+        }
         if (centerOnSelection && !(*context_.autoFitEnabled) && context_.view != nullptr) {
             context_.view->centerOn(selectedItemIt.value());
         }
@@ -658,6 +702,9 @@ void MapEditorSelectionController::selectMapLines(const QSet<int> &lineNumbers, 
             continue;
         }
         selectedItemIt.value()->setSelected(true);
+        if (context_.textEditor != nullptr) {
+            selectAreaBorderLineItems(context_.scene, *context_.itemsByLine, context_.textEditor->text(), lineNumber);
+        }
         if (firstSelectedItem == nullptr) {
             firstSelectedItem = selectedItemIt.value();
         }

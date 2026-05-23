@@ -25,6 +25,7 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .geometrySection = geometrySelectionSection_,
         .advancedSection = advancedSelectionSection_,
         .deleteButton = objectDeleteButton_,
+        .areaReferenceLabel = objectAreaReferenceLabel_,
         .quickFieldsEditor = objectQuickFieldsEditor_,
         .quickIdentifierLabel = objectQuickIdentifierLabel_,
         .quickNameLabel = objectQuickNameLabel_,
@@ -75,6 +76,10 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         },
         .clearInspectorObjectSelection = [this]() {
             clearInspectorObjectSelection();
+        },
+        .selectMapLine = [this](int lineNumber, bool centerOnSelection) {
+            selectMapLine(lineNumber, centerOnSelection);
+            syncInspectorObjectSelectionToLine(lineNumber);
         },
         .rewriteLineOptionToggle = [this](int lineNumber, const QString &optionName, bool enabled, QString *errorMessage) {
             return rewriteLineOptionToggle(lineNumber, optionName, enabled, errorMessage);

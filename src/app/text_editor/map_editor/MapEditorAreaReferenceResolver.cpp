@@ -1,0 +1,172 @@
+#include "MapEditorAreaReferenceResolver.h"
+
+#include "../../../core/TherionDocumentParser.h"
+
+#include <QHash>
+#include <QStringList>
+
+namespace TherionStudio
+{
+namespace
+{
+struct AreaReferenceBlock
+{
+    int lineNumber = 0;
+    QString label;
+    QSet<QString> borderLineIds;
+};
+
+bool tokenLooksReferenceId(const QString &token)
+{
+    if (token.isEmpty() || token.startsWith(QLatin1Char('-'))) {
+        return false;
+    }
+
+    bool numeric = false;
+    token.toDouble(&numeric);
+    return !numeric;
+}
+
+QString optionValue(const QStringList &tokens, const QString &optionName)
+{
+    const QString normalizedOption = optionName.toLower();
+    for (int index = 0; index + 1 < tokens.size(); ++index) {
+        if (tokens.at(index).toLower() != normalizedOption) {
+            continue;
+        }
+
+        const QString value = tokens.at(index + 1);
+        if (!value.startsWith(QLatin1Char('-'))) {
+            return value;
+        }
+    }
+    return QString();
+}
+
+QString areaLabel(const TherionParsedLine &parsedLine)
+{
+    QString label = parsedLine.tokens.value(1).trimmed();
+    const QString id = optionValue(parsedLine.tokens, QStringLiteral("-id")).trimmed();
+    if (!id.isEmpty()) {
+        label = label.isEmpty() ? id : QStringLiteral("%1 (%2)").arg(label, id);
+    }
+    return label.isEmpty() ? QStringLiteral("area at line %1").arg(parsedLine.lineNumber) : label;
+}
+
+QSet<QString> referenceIdsFromAreaBodyLine(const TherionParsedLine &parsedLine)
+{
+    QSet<QString> references;
+    for (const QString &token : parsedLine.tokens) {
+        const QString normalizedToken = token.trimmed();
+        if (tokenLooksReferenceId(normalizedToken)) {
+            references.insert(normalizedToken.toLower());
+        }
+    }
+    return references;
+}
+
+QHash<QString, int> lineNumbersById(const QVector<TherionParsedLine> &parsedLines)
+{
+    QHash<QString, int> result;
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        if (parsedLine.directive != QStringLiteral("line")) {
+            continue;
+        }
+
+        const QString lineId = optionValue(parsedLine.tokens, QStringLiteral("-id")).trimmed().toLower();
+        if (!lineId.isEmpty()) {
+            result.insert(lineId, parsedLine.lineNumber);
+        }
+    }
+    return result;
+}
+
+QVector<AreaReferenceBlock> areaReferenceBlocks(const QVector<TherionParsedLine> &parsedLines)
+{
+    QVector<AreaReferenceBlock> result;
+    AreaReferenceBlock currentArea;
+    bool inArea = false;
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        if (!inArea && parsedLine.directive == QStringLiteral("area")) {
+            currentArea = AreaReferenceBlock{};
+            currentArea.lineNumber = parsedLine.lineNumber;
+            currentArea.label = areaLabel(parsedLine);
+            inArea = true;
+            continue;
+        }
+
+        if (!inArea) {
+            continue;
+        }
+
+        if (parsedLine.directive == QStringLiteral("endarea")) {
+            result.append(currentArea);
+            currentArea = AreaReferenceBlock{};
+            inArea = false;
+            continue;
+        }
+
+        currentArea.borderLineIds.unite(referenceIdsFromAreaBodyLine(parsedLine));
+    }
+
+    if (inArea && currentArea.lineNumber > 0) {
+        result.append(currentArea);
+    }
+    return result;
+}
+}
+
+QSet<int> mapEditorBorderLineNumbersForArea(const QString &text, int areaLineNumber)
+{
+    QSet<int> borderLineNumbers;
+    if (areaLineNumber <= 0) {
+        return borderLineNumbers;
+    }
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QHash<QString, int> lineNumbers = lineNumbersById(parsedLines);
+    for (const AreaReferenceBlock &area : areaReferenceBlocks(parsedLines)) {
+        if (area.lineNumber != areaLineNumber) {
+            continue;
+        }
+
+        for (const QString &lineId : area.borderLineIds) {
+            const auto lineIt = lineNumbers.constFind(lineId);
+            if (lineIt != lineNumbers.constEnd()) {
+                borderLineNumbers.insert(lineIt.value());
+            }
+        }
+        break;
+    }
+    return borderLineNumbers;
+}
+
+QVector<MapEditorAreaReference> mapEditorAreaReferencesForBorderLine(const QString &text, int borderLineNumber)
+{
+    QVector<MapEditorAreaReference> references;
+    if (borderLineNumber <= 0) {
+        return references;
+    }
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    QString targetLineId;
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        if (parsedLine.lineNumber != borderLineNumber || parsedLine.directive != QStringLiteral("line")) {
+            continue;
+        }
+        targetLineId = optionValue(parsedLine.tokens, QStringLiteral("-id")).trimmed().toLower();
+        break;
+    }
+    if (targetLineId.isEmpty()) {
+        return references;
+    }
+
+    for (const AreaReferenceBlock &area : areaReferenceBlocks(parsedLines)) {
+        if (!area.borderLineIds.contains(targetLineId)) {
+            continue;
+        }
+        references.append(MapEditorAreaReference{area.lineNumber, area.label, targetLineId});
+    }
+    return references;
+}
+}

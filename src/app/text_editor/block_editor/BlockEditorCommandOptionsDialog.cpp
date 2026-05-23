@@ -8,26 +8,173 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFont>
-#include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
-#include <QLineEdit>
 #include <QMessageBox>
+#include <QObject>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QTextBrowser>
 #include <QVBoxLayout>
+#include <QVector>
 
 #include "../../../core/TherionCommandSyntax.h"
 #include "../../../core/TherionDocumentParser.h"
 
+#include <algorithm>
 #include <utility>
 
 namespace TherionStudio
 {
+namespace
+{
+constexpr int kRowKindRole = Qt::UserRole;
+constexpr int kPositionalIndexRole = Qt::UserRole + 1;
+
+enum class OptionsDialogRowKind
+{
+    Option = 0,
+    PositionalAttribute = 1,
+};
+
+QString normalizedArgumentSignature(QString signature)
+{
+    signature = signature.section(QLatin1Char('='), 0, 0).trimmed();
+    signature.remove(QLatin1Char('|'));
+    return signature.simplified();
+}
+
+bool commandFirstPositionalArgumentIsId(const TextEditorCommandMetadata *metadata, const QString &commandName)
+{
+    if (metadata == nullptr) {
+        return false;
+    }
+
+    const QStringList signatures = metadata->commandArgumentSignaturesByToken.value(commandName);
+    if (signatures.isEmpty()) {
+        return false;
+    }
+
+    const QString normalized = normalizedArgumentSignature(signatures.first()).toLower();
+    const QString firstToken = normalized.section(QLatin1Char(' '), 0, 0);
+    return firstToken == QStringLiteral("<id>");
+}
+
+QString mapObjectArgumentKey(const QString &commandName, int positionalIndex)
+{
+    if (commandName == QStringLiteral("point")) {
+        switch (positionalIndex) {
+        case 0:
+            return QStringLiteral("x");
+        case 1:
+            return QStringLiteral("y");
+        case 2:
+            return QStringLiteral("type");
+        default:
+            break;
+        }
+    }
+    if ((commandName == QStringLiteral("line") || commandName == QStringLiteral("area"))
+        && positionalIndex == 0) {
+        return QStringLiteral("type");
+    }
+    if (commandName == QStringLiteral("scrap") && positionalIndex == 0) {
+        return QStringLiteral("id");
+    }
+    return QString();
+}
+
+QString attributeKeyForPosition(const TextEditorCommandMetadata *metadata,
+                                const QString &commandName,
+                                int positionalIndex)
+{
+    const QString mapKey = mapObjectArgumentKey(commandName, positionalIndex);
+    if (!mapKey.isEmpty()) {
+        return mapKey;
+    }
+
+    if (metadata != nullptr) {
+        const QStringList signatures = metadata->commandArgumentSignaturesByToken.value(commandName);
+        if (positionalIndex >= 0 && positionalIndex < signatures.size()) {
+            const QString normalized = normalizedArgumentSignature(signatures.at(positionalIndex));
+            if (!normalized.isEmpty()) {
+                QString key = normalized.section(QLatin1Char(' '), 0, 0).trimmed().toLower();
+                if (key.startsWith(QLatin1Char('<')) && key.endsWith(QLatin1Char('>'))) {
+                    key = key.mid(1, key.size() - 2);
+                }
+                if (!key.isEmpty()) {
+                    return key;
+                }
+            }
+        }
+    }
+
+    return QStringLiteral("arg%1").arg(positionalIndex + 1);
+}
+
+QString argumentHelpHtml(const QString &key, const QString &signature, const QString &commandHelpHtml)
+{
+    QStringList html;
+    html << QStringLiteral("<p><b>Attribute:</b> %1</p>").arg(key.toHtmlEscaped());
+    const QString normalizedSignature = normalizedArgumentSignature(signature);
+    if (!normalizedSignature.isEmpty() && normalizedSignature != key) {
+        html << QStringLiteral("<p><b>Catalog signature:</b> %1</p>").arg(normalizedSignature.toHtmlEscaped());
+    }
+    html << commandHelpHtml;
+    return html.join(QString());
+}
+
+bool rowIsPositionalAttribute(const QTableWidget *table, int row)
+{
+    if (table == nullptr || row < 0 || row >= table->rowCount() || table->item(row, 0) == nullptr) {
+        return false;
+    }
+    return table->item(row, 0)->data(kRowKindRole).toInt() == static_cast<int>(OptionsDialogRowKind::PositionalAttribute);
+}
+
+void appendPositionalAttributeRow(QTableWidget *table, const QString &key, const QString &value, int positionalIndex)
+{
+    if (table == nullptr) {
+        return;
+    }
+
+    const int row = table->rowCount();
+    table->insertRow(row);
+
+    auto *keyItem = new QTableWidgetItem(key);
+    keyItem->setData(kRowKindRole, static_cast<int>(OptionsDialogRowKind::PositionalAttribute));
+    keyItem->setData(kPositionalIndexRole, positionalIndex);
+    keyItem->setFlags(keyItem->flags() & ~Qt::ItemIsEditable);
+    table->setItem(row, 0, keyItem);
+
+    auto *valueItem = new QTableWidgetItem(value);
+    valueItem->setData(kRowKindRole, static_cast<int>(OptionsDialogRowKind::PositionalAttribute));
+    valueItem->setData(kPositionalIndexRole, positionalIndex);
+    table->setItem(row, 1, valueItem);
+}
+
+void appendOptionRow(QTableWidget *table, const QString &key, const QString &value)
+{
+    if (table == nullptr) {
+        return;
+    }
+
+    const int row = table->rowCount();
+    table->insertRow(row);
+
+    auto *keyItem = new QTableWidgetItem(key);
+    keyItem->setData(kRowKindRole, static_cast<int>(OptionsDialogRowKind::Option));
+    table->setItem(row, 0, keyItem);
+
+    auto *valueItem = new QTableWidgetItem(value);
+    valueItem->setData(kRowKindRole, static_cast<int>(OptionsDialogRowKind::Option));
+    table->setItem(row, 1, valueItem);
+}
+}
+
 BlockEditorCommandOptionsDialog::BlockEditorCommandOptionsDialog(BlockEditorCommandOptionsDialogContext context)
     : context_(std::move(context))
 {
@@ -42,7 +189,8 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     const QString &commandName,
     const QString &sourceLine,
     int lineNumber,
-    BlockEditorCommandIdFieldMode idFieldMode)
+    BlockEditorCommandIdFieldMode idFieldMode,
+    BlockEditorCommandOptionsHelpMode helpMode)
 {
     if (context_.commandMetadata == nullptr || lineNumber <= 0) {
         return std::nullopt;
@@ -56,39 +204,25 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     const QRegularExpression indentPattern(QStringLiteral(R"(^[ \t]*)"));
     const auto match = indentPattern.match(sourceLine);
     const QString indent = match.hasMatch() ? match.captured(0) : QString();
-    const bool hasIdField = idFieldMode != BlockEditorCommandIdFieldMode::None;
-    const bool requiresId = idFieldMode == BlockEditorCommandIdFieldMode::Required;
+    const bool firstArgumentIsId = commandFirstPositionalArgumentIsId(context_.commandMetadata, commandName);
+    const bool hasIdField = idFieldMode != BlockEditorCommandIdFieldMode::None && firstArgumentIsId;
+    const bool requiresId = idFieldMode == BlockEditorCommandIdFieldMode::Required && hasIdField;
 
     const BlockEditorParsedCommandOptions parsedOptions =
         parseBlockEditorCommandOptions(commandName,
                                        commandParsedLine.tokens,
                                        context_.commandMetadata->commandOptionFixedArityByKey,
                                        hasIdField);
-    const QString currentAdditionalPositionalTokens = parsedOptions.extraPositionalTokens.join(QLatin1Char(' '));
+    const int positionalArgumentOffset = hasIdField ? 1 : 0;
 
     QDialog dialog(context_.dialogParent);
     dialog.setWindowTitle(tr("Configure %1").arg(commandName));
     dialog.setModal(true);
+    dialog.setMinimumWidth(620);
+    dialog.resize(680, 720);
     auto *layout = new QVBoxLayout(&dialog);
     layout->setContentsMargins(12, 12, 12, 12);
     layout->setSpacing(8);
-
-    auto *formLayout = new QFormLayout;
-    QLineEdit *idEdit = nullptr;
-    if (hasIdField) {
-        idEdit = new QLineEdit(parsedOptions.leadingValue, &dialog);
-        idEdit->setPlaceholderText(requiresId ? tr("required") : tr("optional"));
-        formLayout->addRow(tr("ID"), idEdit);
-    }
-    QLineEdit *additionalPositionalTokensEdit = nullptr;
-    if (!currentAdditionalPositionalTokens.isEmpty()) {
-        additionalPositionalTokensEdit = new QLineEdit(currentAdditionalPositionalTokens, &dialog);
-        additionalPositionalTokensEdit->setToolTip(
-            tr("Preserved positional tokens that are not parsed as options. "
-                              "Prefer using explicit options whenever possible."));
-        formLayout->addRow(tr("Extra Arguments (Advanced)"), additionalPositionalTokensEdit);
-    }
-    layout->addLayout(formLayout);
 
     auto *optionsLabel = new QLabel(tr("Options"), &dialog);
     layout->addWidget(optionsLabel);
@@ -108,18 +242,26 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     auto *optionsTable = new QTableWidget(&dialog);
     optionsTable->setColumnCount(2);
     optionsTable->setHorizontalHeaderLabels({tr("Option"), tr("Value")});
-    optionsTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    optionsTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Interactive);
     optionsTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    optionsTable->setColumnWidth(0, 180);
     optionsTable->verticalHeader()->setVisible(false);
     optionsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     optionsTable->setSelectionMode(QAbstractItemView::SingleSelection);
     optionsTable->setAlternatingRowColors(true);
     optionsTable->setMinimumHeight(160);
-    optionsTable->setRowCount(parsedOptions.optionEntries.size());
-    for (int row = 0; row < parsedOptions.optionEntries.size(); ++row) {
-        const BlockEditorParsedOptionEntry &entry = parsedOptions.optionEntries.at(row);
-        optionsTable->setItem(row, 0, new QTableWidgetItem(entry.key));
-        optionsTable->setItem(row, 1, new QTableWidgetItem(entry.value));
+    if (hasIdField) {
+        appendPositionalAttributeRow(optionsTable, QStringLiteral("id"), parsedOptions.leadingValue, 0);
+    }
+    for (int index = 0; index < parsedOptions.extraPositionalTokens.size(); ++index) {
+        const int positionalIndex = positionalArgumentOffset + index;
+        appendPositionalAttributeRow(optionsTable,
+                                     attributeKeyForPosition(context_.commandMetadata, commandName, positionalIndex),
+                                     parsedOptions.extraPositionalTokens.at(index),
+                                     positionalIndex);
+    }
+    for (const BlockEditorParsedOptionEntry &entry : parsedOptions.optionEntries) {
+        appendOptionRow(optionsTable, entry.key, entry.value);
     }
     layout->addWidget(optionsTable, 1);
 
@@ -144,51 +286,27 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
                                                                            commandHelpEntry.options,
                                                                            true);
 
-    QString idHelpHtml;
-    if (hasIdField) {
-        QString idArgumentLine;
-        for (const QString &argumentLine : commandHelpEntry.arguments) {
-            if (argumentLine.contains(QStringLiteral("<id>"), Qt::CaseInsensitive)) {
-                idArgumentLine = argumentLine.trimmed();
-                break;
-            }
-        }
-        if (idArgumentLine.isEmpty()) {
-            for (const QString &argumentLine : commandHelpEntry.arguments) {
-                if (context_.isRequiredArgumentSignatureForBlocks != nullptr && context_.isRequiredArgumentSignatureForBlocks(argumentLine.section(QLatin1Char('='), 0, 0).trimmed())) {
-                    idArgumentLine = argumentLine.trimmed();
-                    break;
-                }
-            }
-        }
-        if (idArgumentLine.isEmpty() && !commandHelpEntry.arguments.isEmpty()) {
-            idArgumentLine = commandHelpEntry.arguments.first().trimmed();
-        }
-
-        QString signature = idArgumentLine;
-        QString description;
-        const int equalsIndex = idArgumentLine.indexOf(QLatin1Char('='));
-        if (equalsIndex >= 0) {
-            signature = idArgumentLine.left(equalsIndex).trimmed();
-            description = idArgumentLine.mid(equalsIndex + 1).trimmed();
-        }
-
-        QStringList html;
-        html << QStringLiteral("<p><b>Parameter:</b> %1</p>").arg(signature.isEmpty()
-                                                                       ? QStringLiteral("&lt;id&gt;")
-                                                                       : signature.toHtmlEscaped());
-        if (!description.isEmpty()) {
-            html << QStringLiteral("<p><b>Description:</b> %1</p>").arg(description.toHtmlEscaped());
-        }
-        idHelpHtml = html.join(QString());
-    }
-
-    const auto updateHelpForCurrentOption = [this, helpBrowser, optionsTable, commandName, commandHelpHtml]() {
+    const auto updateHelpForCurrentOption = [this, helpBrowser, optionsTable, commandName, commandHelpHtml, helpMode]() {
         if (helpBrowser == nullptr || optionsTable == nullptr) {
+            return;
+        }
+        if (helpMode == BlockEditorCommandOptionsHelpMode::CommandOnly) {
+            helpBrowser->setHtml(commandHelpHtml);
             return;
         }
 
         const int row = optionsTable->currentRow();
+        if (rowIsPositionalAttribute(optionsTable, row)) {
+            const int positionalIndex = optionsTable->item(row, 0)->data(kPositionalIndexRole).toInt();
+            const QString key = optionsTable->item(row, 0)->text().trimmed();
+            const QStringList signatures = context_.commandMetadata->commandArgumentSignaturesByToken.value(commandName);
+            const QString signature = positionalIndex >= 0 && positionalIndex < signatures.size()
+                ? signatures.at(positionalIndex)
+                : QString();
+            helpBrowser->setHtml(argumentHelpHtml(key, signature, commandHelpHtml));
+            return;
+        }
+
         const QString optionToken = row >= 0 && optionsTable->item(row, 0) != nullptr
             ? optionsTable->item(row, 0)->text().trimmed().toLower()
             : QString();
@@ -200,61 +318,32 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
 
         helpBrowser->setHtml(commandHelpHtml);
     };
-    const auto updateHelpForId = [helpBrowser, idHelpHtml, commandHelpHtml]() {
-        if (helpBrowser == nullptr) {
+    const auto updateRemoveOptionButtonState = [optionsTable, removeOptionButton]() {
+        if (removeOptionButton == nullptr || optionsTable == nullptr) {
             return;
         }
-        helpBrowser->setHtml(!idHelpHtml.isEmpty() ? idHelpHtml : commandHelpHtml);
+        const int row = optionsTable->currentRow();
+        removeOptionButton->setEnabled(row >= 0 && !rowIsPositionalAttribute(optionsTable, row));
     };
-    const auto updateHelpForAdditionalPositionalTokens = [helpBrowser, commandHelpHtml]() {
-        if (helpBrowser == nullptr) {
-            return;
-        }
-        const QString html = QStringLiteral("<p><b>Additional positional tokens</b> keep unsupported tokens intact.</p>"
-                                            "<p>Prefer explicit key/value options where available.</p>%1")
-                                 .arg(commandHelpHtml);
-        helpBrowser->setHtml(html);
-    };
-    if (hasIdField) {
-        updateHelpForId();
-    } else {
-        updateHelpForCurrentOption();
-    }
+    updateHelpForCurrentOption();
 
-    QObject::connect(optionsTable, &QTableWidget::currentCellChanged, &dialog, [updateHelpForCurrentOption](int, int, int, int) {
+    QObject::connect(optionsTable, &QTableWidget::currentCellChanged, &dialog, [updateHelpForCurrentOption, updateRemoveOptionButtonState](int, int, int, int) {
         updateHelpForCurrentOption();
+        updateRemoveOptionButtonState();
     });
     QObject::connect(optionsTable, &QTableWidget::itemChanged, &dialog, [updateHelpForCurrentOption](QTableWidgetItem *) {
         updateHelpForCurrentOption();
     });
-    if (idEdit != nullptr) {
-        QObject::connect(idEdit, &QLineEdit::selectionChanged, &dialog, [updateHelpForId]() {
-            updateHelpForId();
-        });
-        QObject::connect(idEdit, &QLineEdit::textEdited, &dialog, [updateHelpForId](const QString &) {
-            updateHelpForId();
-        });
-    }
-    if (additionalPositionalTokensEdit != nullptr) {
-        QObject::connect(additionalPositionalTokensEdit, &QLineEdit::selectionChanged, &dialog, [updateHelpForAdditionalPositionalTokens]() {
-            updateHelpForAdditionalPositionalTokens();
-        });
-        QObject::connect(additionalPositionalTokensEdit, &QLineEdit::textEdited, &dialog, [updateHelpForAdditionalPositionalTokens](const QString &) {
-            updateHelpForAdditionalPositionalTokens();
-        });
-    }
 
     QObject::connect(addOptionButton, &QPushButton::clicked, &dialog, [this, optionsTable, commandName, updateHelpForCurrentOption]() {
         if (optionsTable == nullptr) {
             return;
         }
         const int row = optionsTable->rowCount();
-        optionsTable->insertRow(row);
         const QString defaultOption = !context_.commandMetadata->commandOptionTokens.value(commandName).isEmpty()
             ? context_.commandMetadata->commandOptionTokens.value(commandName).first()
             : QStringLiteral("-option");
-        optionsTable->setItem(row, 0, new QTableWidgetItem(defaultOption));
-        optionsTable->setItem(row, 1, new QTableWidgetItem(QString()));
+        appendOptionRow(optionsTable, defaultOption, QString());
         optionsTable->setCurrentCell(row, 0);
         optionsTable->editItem(optionsTable->item(row, 0));
         updateHelpForCurrentOption();
@@ -265,12 +354,16 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
             return;
         }
         const int row = optionsTable->currentRow() >= 0 ? optionsTable->currentRow() : optionsTable->rowCount() - 1;
+        if (rowIsPositionalAttribute(optionsTable, row)) {
+            return;
+        }
         optionsTable->removeRow(row);
         updateHelpForCurrentOption();
     });
     if (optionsTable->rowCount() > 0) {
         optionsTable->setCurrentCell(0, 0);
     }
+    updateRemoveOptionButtonState();
 
     auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     layout->addWidget(buttonBox);
@@ -281,13 +374,9 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
         return std::nullopt;
     }
 
-    const QString updatedId = hasIdField && idEdit != nullptr ? idEdit->text().trimmed() : QString();
-    if (requiresId && updatedId.isEmpty()) {
-        QMessageBox::warning(context_.dialogParent, tr("Configure Block"), tr("ID cannot be empty."));
-        return std::nullopt;
-    }
-
+    QVector<QPair<int, QString>> positionalRows;
     QVector<TextEditorOptionRow> optionRows;
+    QVector<int> optionTableRows;
     optionRows.reserve(optionsTable->rowCount());
     for (int row = 0; row < optionsTable->rowCount(); ++row) {
         const QString key = (optionsTable->item(row, 0) != nullptr
@@ -298,8 +387,29 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
                                    ? optionsTable->item(row, 1)->text()
                                    : QString())
                                   .trimmed();
+        if (rowIsPositionalAttribute(optionsTable, row)) {
+            const int positionalIndex = optionsTable->item(row, 0)->data(kPositionalIndexRole).toInt();
+            const bool optionalId = hasIdField && positionalIndex == 0 && !requiresId;
+            if (value.isEmpty() && !optionalId) {
+                optionsTable->setCurrentCell(row, 1);
+                QMessageBox::warning(context_.dialogParent,
+                                     tr("Configure Block"),
+                                     tr("Attribute `%1` cannot be empty.").arg(key));
+                return std::nullopt;
+            }
+            if (!value.isEmpty()) {
+                positionalRows.append(qMakePair(positionalIndex, value));
+            }
+            continue;
+        }
+
         optionRows.append(TextEditorOptionRow{key, value, row + 1});
+        optionTableRows.append(row);
     }
+    std::sort(positionalRows.begin(), positionalRows.end(), [](const QPair<int, QString> &left, const QPair<int, QString> &right) {
+        return left.first < right.first;
+    });
+
     const TextEditorOptionValidationResult validation = validateAndSerializeCommandOptions(
         commandName,
         optionRows,
@@ -309,22 +419,21 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
         context_.commandMetadata->commandOptionValueTokens,
         false);
     if (!validation.ok) {
-        if (validation.failingRow >= 0 && validation.failingRow < optionsTable->rowCount()) {
-            optionsTable->setCurrentCell(validation.failingRow, 0);
+        if (validation.failingRow >= 0 && validation.failingRow < optionTableRows.size()) {
+            optionsTable->setCurrentCell(optionTableRows.at(validation.failingRow), 0);
         }
         QMessageBox::warning(context_.dialogParent, tr("Configure Block"), validation.errorMessage);
         return std::nullopt;
     }
 
     QString updatedLine = QStringLiteral("%1%2").arg(indent, commandName);
-    if (hasIdField && !updatedId.isEmpty()) {
-        updatedLine += QStringLiteral(" ") + updatedId;
+    QStringList updatedPositionalArguments;
+    updatedPositionalArguments.reserve(positionalRows.size());
+    for (const QPair<int, QString> &row : positionalRows) {
+        updatedPositionalArguments.append(serializeTherionArgumentToken(row.second.trimmed()));
     }
-    const QString updatedAdditionalPositionalTokens = additionalPositionalTokensEdit != nullptr
-        ? additionalPositionalTokensEdit->text().trimmed()
-        : QString();
-    if (!updatedAdditionalPositionalTokens.isEmpty()) {
-        updatedLine += QStringLiteral(" ") + updatedAdditionalPositionalTokens;
+    if (!updatedPositionalArguments.isEmpty()) {
+        updatedLine += QStringLiteral(" ") + updatedPositionalArguments.join(QLatin1Char(' '));
     }
     if (!validation.serializedOptions.isEmpty()) {
         updatedLine += QStringLiteral(" ") + validation.serializedOptions.join(QLatin1Char(' '));

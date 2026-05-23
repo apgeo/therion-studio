@@ -379,13 +379,13 @@ bool TextEditorTab::rewriteLineCoordinateRows(int lineNumber,
         && sourceRewriteController_->rewriteLineCoordinateRows(lineNumber, coordinateRows, errorMessage);
 }
 
-bool TextEditorTab::configureCommandAtLine(const QString &kind, int lineNumber)
+bool TextEditorTab::configureCommandAtLine(const QString &kind, int lineNumber, bool showCommandHelpOnly)
 {
     if (lineNumber <= 0 || editor_ == nullptr) {
         return false;
     }
 
-    handleBlockConfigureRequest(kind, lineNumber);
+    handleBlockConfigureRequest(kind, lineNumber, showCommandHelpOnly);
     return true;
 }
 
@@ -777,9 +777,9 @@ void TextEditorTab::handleBlockMoveRequest(int lineNumber, const QPointF &sceneP
     BlockEditorMoveController(blockEditorMoveContext()).moveBlock(lineNumber, scenePos);
 }
 
-void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNumber)
+void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNumber, bool showCommandHelpOnly)
 {
-    BlockEditorConfigureController(blockEditorConfigureContext()).configureBlock(kind, lineNumber);
+    BlockEditorConfigureController(blockEditorConfigureContext()).configureBlock(kind, lineNumber, showCommandHelpOnly);
 }
 
 bool TextEditorTab::handleBlockDeleteRequest(int lineNumber)

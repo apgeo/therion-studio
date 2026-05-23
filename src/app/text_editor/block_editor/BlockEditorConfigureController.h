@@ -31,7 +31,7 @@ class BlockEditorConfigureController final
 public:
     explicit BlockEditorConfigureController(BlockEditorConfigureContext context);
 
-    void configureBlock(const QString &kind, int lineNumber);
+    void configureBlock(const QString &kind, int lineNumber, bool showCommandHelpOnly = false);
 
 private:
     QString tr(const char *text) const;

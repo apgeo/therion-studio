@@ -26,7 +26,7 @@ QString BlockEditorConfigureController::tr(const char *text) const
     return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
 }
 
-void BlockEditorConfigureController::configureBlock(const QString &kind, int lineNumber)
+void BlockEditorConfigureController::configureBlock(const QString &kind, int lineNumber, bool showCommandHelpOnly)
 {
     if (context_.sourceContext == nullptr || context_.commandMetadata == nullptr || lineNumber <= 0) {
         return;
@@ -61,7 +61,13 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
                        : BlockEditorCommandIdFieldMode::None);
             BlockEditorCommandOptionsDialog optionsDialog(context_.commandOptionsDialogContext);
             const std::optional<QString> updatedLine =
-                optionsDialog.configureLine(normalizedKind, lines.at(lineNumber - 1), lineNumber, idFieldMode);
+                optionsDialog.configureLine(normalizedKind,
+                                            lines.at(lineNumber - 1),
+                                            lineNumber,
+                                            idFieldMode,
+                                            showCommandHelpOnly
+                                                ? BlockEditorCommandOptionsHelpMode::CommandOnly
+                                                : BlockEditorCommandOptionsHelpMode::SelectedRow);
             if (!updatedLine.has_value()) {
                 return;
             }

@@ -164,7 +164,7 @@ public:
     bool rewriteLineCoordinateRows(int lineNumber,
                                    const QStringList &coordinateRows,
                                    QString *errorMessage = nullptr);
-    bool configureCommandAtLine(const QString &kind, int lineNumber);
+    bool configureCommandAtLine(const QString &kind, int lineNumber, bool showCommandHelpOnly = false);
     bool deleteCommandAtLine(int lineNumber);
     void replaceTextForCommand(const QString &contents);
 
@@ -308,7 +308,7 @@ private:
     void updateBlockMovePreview(int sourceLineNumber, const QPointF &scenePos);
     void clearBlockMovePreview();
     int resolveEndHintContainerStartLineAtScenePos(const QPointF &scenePos) const;
-    void handleBlockConfigureRequest(const QString &kind, int lineNumber);
+    void handleBlockConfigureRequest(const QString &kind, int lineNumber, bool showCommandHelpOnly = false);
     void selectBlockInCanvasAndDetails(int lineNumber);
     void clearBlockDetailsPane();
     void showBlockDetailsForToolboxCommand(const QString &commandToken);

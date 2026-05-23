@@ -266,7 +266,7 @@ void MapEditorObjectDetailsEditController::handleConfigureObjectSettingsTriggere
         return;
     }
 
-    context_.textEditor->configureCommandAtLine(targetKind, targetLineNumber);
+    context_.textEditor->configureCommandAtLine(targetKind, targetLineNumber, true);
     context_.refreshObjectDetailsPanel();
 }
 

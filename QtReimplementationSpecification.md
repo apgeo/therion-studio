@@ -404,6 +404,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Non-station points shall treat `label` as optional and shall not expose station-name editing as a primary field.
 - Validation shall prevent committing a station point without a non-empty station name.
 - Required-field validation shall be shown before the user attempts to save invalid object state.
+- `Edit Object Settings...` shall expose every parsed attribute from the selected object's command line in one option-style table: positional arguments, catalog options, and unknown-but-valid option rows. Positional argument rows such as `type`, `x`, `y`, and scrap `id` shall be protected from key editing but shall allow value editing. Commands whose first positional argument is not an ID shall not display that first positional argument as a separate ID field; object identifiers stored as `-id` shall remain editable as `-id` options. The dialog shall open at a usable width for typical option names, values, and contextual help without excessive horizontal footprint, and the option column shall not collapse to the shortest option key. For map objects, the contextual help pane shall show object/command-level help rather than switching to individual option help as rows are selected.
 
 #### 3.8.6 Structure Sidebar Behavior
 
@@ -897,7 +898,7 @@ The criteria below are intended for implementation verification and QA.
 - The `Point / Vertex` section shall not expose coordinate text fields; exact point, vertex, and control-point coordinates shall remain editable in Raw mode.
 - For selected editable line vertices, the `Point / Vertex` section shall expose insert-vertex, delete-vertex, and toggle-smooth actions using the same source rewrite behavior as the corresponding keyboard commands.
 - For selected line-point anchors, the `Point / Vertex` section shall read and write XTherion-compatible per-point line options. `orientation` shall be available only when the selected line type supports orientation; `l-size` shall be available for `line slope`. New line-point options shall be written as separate indented rows (`orientation ...`, `l-size ...`) before the next coordinate row or `endline`.
-- For `scrap`, `point`, `line`, and `area`, inspector configuration uses the same catalog-driven option workflow as structured block selection.
+- For `scrap`, `point`, `line`, and `area`, inspector configuration uses the same catalog-driven option workflow as structured block selection and shall expose parsed positional arguments as protected rows in the options table alongside parsed option rows. Point object settings shall expose `x`, `y`, and `type` rows; line and area object settings shall expose a `type` row; scrap object settings shall expose the positional `id` row. Object identifiers stored as `-id` shall remain option rows rather than being confused with positional arguments such as point X or line type.
 - For `scrap`, the inspector provides dedicated manual scale calibration fields for picture points in pixels, real points, and unit, and applies them by rewriting the scrap `-scale` option.
 - Catalog-driven option editors shall treat bracketed multi-token values such as scrap `-scale [...]` as one logical option value and shall not interpret negative numbers inside that value as option keys.
 - Required fields are validated before commit.

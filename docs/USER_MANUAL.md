@@ -381,6 +381,10 @@ Inspector panel (`Visual` mode):
 - `Use Source Bounds` fills the scrap scale form from the current map source bounds using the XTherion default inch-to-meter convention
 - `Apply Scale` writes an XTherion-compatible 8-parameter `-scale [...]` option to the selected scrap command
 - includes `Edit Object Settings...` for `scrap`, `point`, `line`, and `area`; this opens the same catalog-driven option editor used by structured block selection
+- `Edit Object Settings...` shows parsed command arguments as protected rows in the options table: point `x`/`y`/`type`, line `type`, area `type`, and scrap `id` where present
+- object identifiers stored as `-id` appear in the options table as `-id`, not as a positional ID field for commands such as `point` or `line`
+- the dialog opens at a balanced width, with a wider option column so option names and values remain readable
+- for map objects, contextual help stays on the selected object's command help instead of changing to per-option help when table rows are selected
 - option editors keep bracketed multi-token values such as scrap `-scale [...]` in one value cell, including negative picture coordinates
 - if no map geometry item is selected, `Edit Object Settings...` can target the command under the current text cursor line when that line is `scrap`, `point`, `line`, or `area`
 - edits update TH2 source text immediately and stay in the same undo/redo workflow

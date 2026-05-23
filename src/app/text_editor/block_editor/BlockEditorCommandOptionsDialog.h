@@ -26,6 +26,12 @@ enum class BlockEditorCommandIdFieldMode
     Required,
 };
 
+enum class BlockEditorCommandOptionsHelpMode
+{
+    SelectedRow,
+    CommandOnly,
+};
+
 class BlockEditorCommandOptionsDialog final
 {
 public:
@@ -34,7 +40,8 @@ public:
     std::optional<QString> configureLine(const QString &commandName,
                                          const QString &sourceLine,
                                          int lineNumber,
-                                         BlockEditorCommandIdFieldMode idFieldMode);
+                                         BlockEditorCommandIdFieldMode idFieldMode,
+                                         BlockEditorCommandOptionsHelpMode helpMode = BlockEditorCommandOptionsHelpMode::SelectedRow);
 
 private:
     QString tr(const char *text) const;

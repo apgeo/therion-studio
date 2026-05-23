@@ -13,6 +13,11 @@ class QGraphicsRectItem;
 namespace TherionStudio
 {
 enum class DraftGeometryKind;
+enum class MapEditorLineVertexInsertPlacement
+{
+    Before,
+    After
+};
 
 class MapEditorCanvasEditController final
 {
@@ -38,7 +43,8 @@ public:
                                   const QString &beforeText,
                                   const QString &afterText,
                                   int insertedLineNumber);
-    bool insertLineVertexFromSelection();
+    bool insertLineVertexFromSelection(MapEditorLineVertexInsertPlacement placement);
+    bool splitLineAtSelection();
     bool removeLineVertexFromSelection();
     bool toggleLineVertexSmoothFromSelection();
     bool setLineVertexSmoothForSelection(bool smooth);

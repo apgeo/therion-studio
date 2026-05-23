@@ -54,8 +54,10 @@ struct MapEditorObjectDetailsContext
     QLineEdit *quickIdentifierEdit = nullptr;
     QLineEdit *quickNameEdit = nullptr;
     QWidget *vertexActionsEditor = nullptr;
-    QPushButton *vertexInsertButton = nullptr;
+    QPushButton *vertexInsertBeforeButton = nullptr;
+    QPushButton *vertexInsertAfterButton = nullptr;
     QPushButton *vertexDeleteButton = nullptr;
+    QPushButton *vertexSplitButton = nullptr;
     QLabel *metadataLabel = nullptr;
     QWidget *orientationEditor = nullptr;
     QCheckBox *linePointPreviousControlCheck = nullptr;
@@ -90,7 +92,8 @@ struct MapEditorObjectDetailsContext
     std::function<void(int, int)> restoreLineAnchorSelectionLater;
     std::function<bool(int, const QString &, bool, QString *)> rewriteLineOptionToggle;
     std::function<void(const QString &, const QString &, const QString &, int)> recordSourceTextSnapshot;
-    std::function<bool()> insertLineVertexFromSelection;
+    std::function<bool(bool)> insertLineVertexFromSelection;
+    std::function<bool()> splitLineAtSelection;
     std::function<bool()> removeLineVertexFromSelection;
     std::function<bool()> toggleLineVertexSmoothFromSelection;
     std::function<bool(bool)> setLineVertexSmoothForSelection;

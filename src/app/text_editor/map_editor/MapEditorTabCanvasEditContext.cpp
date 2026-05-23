@@ -63,6 +63,9 @@ MapEditorCanvasEditContext MapEditorTab::canvasEditContext()
         .restoreLineAnchorSelectionLater = [this](int lineNumber, int sourceVertexIndex) {
             restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
         },
+        .beginLineExtensionFromSelection = [this](int lineNumber, int sourceVertexIndex, bool prepend) {
+            return beginLineExtensionFromSelection(lineNumber, sourceVertexIndex, prepend);
+        },
         .recordDraftMove = [this](QGraphicsRectItem *item, const QPointF &oldPosition, const QPointF &newPosition) {
             recordDraftMove(item, oldPosition, newPosition);
         },
@@ -130,9 +133,16 @@ void MapEditorTab::recordSourceTextSnapshot(const QString &label,
     MapEditorCanvasEditController(canvasEditContext()).recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
 }
 
-bool MapEditorTab::insertLineVertexFromSelection()
+bool MapEditorTab::insertLineVertexFromSelection(bool before)
 {
-    return MapEditorCanvasEditController(canvasEditContext()).insertLineVertexFromSelection();
+    return MapEditorCanvasEditController(canvasEditContext())
+        .insertLineVertexFromSelection(before ? MapEditorLineVertexInsertPlacement::Before
+                                              : MapEditorLineVertexInsertPlacement::After);
+}
+
+bool MapEditorTab::splitLineAtSelection()
+{
+    return MapEditorCanvasEditController(canvasEditContext()).splitLineAtSelection();
 }
 
 bool MapEditorTab::removeLineVertexFromSelection()

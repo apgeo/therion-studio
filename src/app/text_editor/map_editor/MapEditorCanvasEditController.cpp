@@ -1,17 +1,20 @@
 #include "MapEditorCanvasEditController.h"
 
 #include "../TextEditorTab.h"
+#include "MapEditorAreaReferenceResolver.h"
 #include "MapEditorCanvasEditCommandFactory.h"
 #include "MapEditorObjectDetailsLogic.h"
 #include "MapEditorSceneInternals.h"
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSourceReferenceResolver.h"
 #include "../../../core/TherionDocumentEditor.h"
+#include "../../../core/TherionDocumentParser.h"
 
 #include <QGraphicsItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsScene>
 #include <QScopedValueRollback>
+#include <QSet>
 #include <QTimer>
 #include <QObject>
 #include <QUndoCommand>
@@ -152,6 +155,104 @@ void smoothLineVertexControlHandles(MapGeometryFeature::TH2LineVertex *vertex)
     const QPointF unit(direction.x() / directionLength, direction.y() / directionLength);
     vertex->incomingControl = anchor - (unit * incomingLength);
     vertex->outgoingControl = anchor + (unit * outgoingLength);
+}
+
+QStringList splitLinesNormalized(const QString &contents)
+{
+    QString normalized = contents;
+    normalized.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
+    normalized.replace(QLatin1Char('\r'), QLatin1Char('\n'));
+    return normalized.split(QLatin1Char('\n'));
+}
+
+QString lineEndingForText(const QString &contents)
+{
+    return contents.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+}
+
+QString optionValue(const QStringList &tokens, const QString &optionName)
+{
+    const QString normalizedOption = optionName.toLower();
+    for (int index = 0; index + 1 < tokens.size(); ++index) {
+        if (tokens.at(index).toLower() != normalizedOption) {
+            continue;
+        }
+        const QString value = tokens.at(index + 1);
+        if (!value.startsWith(QLatin1Char('-'))) {
+            return value;
+        }
+    }
+    return QString();
+}
+
+QSet<QString> lineIdentifiersInDocument(const QString &text)
+{
+    QSet<QString> identifiers;
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        if (parsedLine.directive != QStringLiteral("line")) {
+            continue;
+        }
+        const QString identifier = optionValue(parsedLine.tokens, QStringLiteral("-id")).trimmed();
+        if (!identifier.isEmpty()) {
+            identifiers.insert(identifier.toLower());
+        }
+    }
+    return identifiers;
+}
+
+QString uniqueSplitLineIdentifier(const QString &originalIdentifier, const QSet<QString> &existingIdentifiers)
+{
+    QString base = originalIdentifier.trimmed();
+    if (base.isEmpty()) {
+        base = QStringLiteral("line-split");
+    }
+
+    int suffix = 1;
+    while (true) {
+        const QString candidate = QStringLiteral("%1-split-%2").arg(base).arg(suffix++);
+        if (!existingIdentifiers.contains(candidate.toLower())) {
+            return candidate;
+        }
+    }
+}
+
+QString lineStartWithReplacementIdentifier(const QString &lineText,
+                                           const TherionParsedLine &parsedLine,
+                                           const QString &identifier)
+{
+    for (int index = 0; index + 1 < parsedLine.tokens.size() && index + 1 < parsedLine.tokenSpans.size(); ++index) {
+        if (parsedLine.tokens.at(index).toLower() != QStringLiteral("-id")) {
+            continue;
+        }
+        QString rewritten = lineText;
+        const TherionParsedToken &valueSpan = parsedLine.tokenSpans.at(index + 1);
+        rewritten.replace(valueSpan.start, valueSpan.length, identifier);
+        return rewritten;
+    }
+
+    const int insertIndex = parsedLine.commentStart >= 0 ? parsedLine.commentStart : lineText.size();
+    QString rewritten = lineText;
+    const QString insertion = insertIndex > 0 && !rewritten.at(insertIndex - 1).isSpace()
+        ? QStringLiteral(" -id %1").arg(identifier)
+        : QStringLiteral("-id %1").arg(identifier);
+    rewritten.insert(insertIndex, insertion + (parsedLine.commentStart >= 0 ? QStringLiteral(" ") : QString()));
+    return rewritten;
+}
+
+QStringList lineBlockForRows(const QString &startLine, const QStringList &coordinateRows, const QString &endLine)
+{
+    QStringList block;
+    block.reserve(coordinateRows.size() + 2);
+    block.append(startLine);
+    for (const QString &row : coordinateRows) {
+        const QString trimmed = row.trimmed();
+        if (!trimmed.isEmpty()) {
+            block.append(QStringLiteral("  %1").arg(trimmed));
+        }
+    }
+    block.append(endLine);
+    return block;
 }
 
 MapEditableGeometryVertexItem *findGeometryVertexItem(QGraphicsScene *scene,
@@ -580,7 +681,7 @@ void MapEditorCanvasEditController::recordSourceTextSnapshot(const QString &labe
     }
 }
 
-bool MapEditorCanvasEditController::insertLineVertexFromSelection()
+bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineVertexInsertPlacement placement)
 {
     if (context_.scene == nullptr || context_.textEditor == nullptr) {
         return false;
@@ -611,14 +712,22 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection()
         return true;
     }
 
-    int segmentStartIndex = -1;
-    if (anchorIndex < lineFeature->lineVertices.size() - 1) {
-        segmentStartIndex = anchorIndex;
-    } else if (anchorIndex > 0) {
-        segmentStartIndex = anchorIndex - 1;
+    const bool insertBefore = placement == MapEditorLineVertexInsertPlacement::Before;
+    const bool prependExtension = insertBefore && anchorIndex == 0;
+    const bool appendExtension = !insertBefore && anchorIndex == lineFeature->lineVertices.size() - 1;
+    const bool endpointExtension = prependExtension || appendExtension;
+    if (endpointExtension) {
+        if (!context_.beginLineExtensionFromSelection
+            || !context_.beginLineExtensionFromSelection(lineNumber, vertexItem->vertexIndex(), prependExtension)) {
+            (*context_.toolbarStatusNote) = tr("Extend line failed: selected endpoint could not start continuation mode.");
+            context_.refreshToolbarSummary();
+        }
+        return true;
     }
-    if (segmentStartIndex < 0) {
-        (*context_.toolbarStatusNote) = tr("Insert vertex failed: line needs at least one editable segment.");
+
+    int segmentStartIndex = insertBefore ? anchorIndex - 1 : anchorIndex;
+    if (segmentStartIndex < 0 || segmentStartIndex + 1 >= lineFeature->lineVertices.size()) {
+        (*context_.toolbarStatusNote) = tr("Insert vertex failed: selected line vertex has no adjacent segment in that direction.");
         context_.refreshToolbarSummary();
         return true;
     }
@@ -641,10 +750,132 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection()
         return true;
     }
 
-    (*context_.toolbarStatusNote) = insertedIndex >= 0
-        ? tr("Inserted line vertex %1 on source line %2.").arg(insertedIndex + 1).arg(lineNumber)
-        : tr("Inserted line vertex on source line %1.").arg(lineNumber);
+    (*context_.toolbarStatusNote) = tr("Inserted line vertex %1 on source line %2.").arg(insertedIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
+    restoreLineVertexOwnerSelection(lineNumber, insertedIndex);
+    if (context_.callbackContext != nullptr && context_.restoreLineAnchorSelectionLater) {
+        QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, insertedIndex]() {
+            restoreLineVertexOwnerSelectionForContext(context, lineNumber, insertedIndex);
+        });
+    }
+    return true;
+}
+
+bool MapEditorCanvasEditController::splitLineAtSelection()
+{
+    if (context_.scene == nullptr || context_.textEditor == nullptr) {
+        return false;
+    }
+
+    const QList<QGraphicsItem *> selectedItems = context_.scene->selectedItems();
+    if (selectedItems.size() != 1) {
+        return false;
+    }
+
+    auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItems.first());
+    if (vertexItem == nullptr || vertexItem->geometryKind() != QStringLiteral("line")) {
+        return false;
+    }
+
+    const int lineNumber = vertexItem->lineNumber();
+    const QString beforeText = context_.textEditor->text();
+    if (!mapEditorAreaReferencesForBorderLine(beforeText, lineNumber).isEmpty()) {
+        (*context_.toolbarStatusNote) = tr("Split line failed: area border lines cannot be split yet.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(beforeText, lineNumber);
+    if (!lineFeature.has_value()) {
+        (*context_.toolbarStatusNote) = tr("Split line failed: line geometry could not be resolved.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+    if (lineFeature->closed) {
+        (*context_.toolbarStatusNote) = tr("Split line failed: closed lines cannot be split yet.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    const int anchorIndex = lineVertexIndexForSourceVertex(lineFeature.value(), vertexItem->vertexIndex());
+    if (anchorIndex <= 0 || anchorIndex >= lineFeature->lineVertices.size() - 1) {
+        (*context_.toolbarStatusNote) = tr("Split line failed: select an interior line vertex.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    QStringList lines = splitLinesNormalized(beforeText);
+    if (lineNumber <= 0 || lineNumber > lines.size()) {
+        (*context_.toolbarStatusNote) = tr("Split line failed: selected source line no longer exists.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    const int blockStartLineIndex = lineNumber - 1;
+    const TherionParsedLine startLine = TherionDocumentParser::parseLine(lines.at(blockStartLineIndex), lineNumber);
+    if (startLine.directive != QStringLiteral("line")) {
+        (*context_.toolbarStatusNote) = tr("Split line failed: selected source line is not a line block.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    int blockEndLineIndex = -1;
+    for (int candidateIndex = blockStartLineIndex + 1; candidateIndex < lines.size(); ++candidateIndex) {
+        const TherionParsedLine candidateLine = TherionDocumentParser::parseLine(lines.at(candidateIndex), candidateIndex + 1);
+        if (candidateLine.directive == QStringLiteral("endline")) {
+            blockEndLineIndex = candidateIndex;
+            break;
+        }
+    }
+    if (blockEndLineIndex < 0) {
+        (*context_.toolbarStatusNote) = tr("Split line failed: selected line block is missing endline.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    const QVector<MapGeometryFeature::TH2LineVertex> firstVertices =
+        lineFeature->lineVertices.mid(0, anchorIndex + 1);
+    const QVector<MapGeometryFeature::TH2LineVertex> secondVertices =
+        lineFeature->lineVertices.mid(anchorIndex);
+    const QStringList firstRows = coordinateRowsForLineVertices(firstVertices);
+    const QStringList secondRows = coordinateRowsForLineVertices(secondVertices);
+    if (firstRows.isEmpty() || secondRows.isEmpty()) {
+        (*context_.toolbarStatusNote) = tr("Split line failed: split produced invalid line geometry.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    const QString originalId = optionValue(startLine.tokens, QStringLiteral("-id")).trimmed();
+    QString secondStartLine = lines.at(blockStartLineIndex);
+    if (!originalId.isEmpty()) {
+        QSet<QString> existingIds = lineIdentifiersInDocument(beforeText);
+        const QString secondId = uniqueSplitLineIdentifier(originalId, existingIds);
+        secondStartLine = lineStartWithReplacementIdentifier(secondStartLine, startLine, secondId);
+    }
+
+    QStringList rewrittenBlock = lineBlockForRows(lines.at(blockStartLineIndex), firstRows, lines.at(blockEndLineIndex));
+    rewrittenBlock.append(lineBlockForRows(secondStartLine, secondRows, lines.at(blockEndLineIndex)));
+
+    const int replaceCount = (blockEndLineIndex - blockStartLineIndex) + 1;
+    for (int index = 0; index < replaceCount; ++index) {
+        lines.removeAt(blockStartLineIndex);
+    }
+    for (int index = rewrittenBlock.size() - 1; index >= 0; --index) {
+        lines.insert(blockStartLineIndex, rewrittenBlock.at(index));
+    }
+
+    const QString afterText = lines.join(lineEndingForText(beforeText));
+    context_.textEditor->replaceTextForCommand(afterText);
+    recordSourceTextSnapshot(tr("Split Line"), beforeText, afterText, lineNumber);
+
+    (*context_.toolbarStatusNote) = tr("Split line at vertex %1 on source line %2.").arg(anchorIndex + 1).arg(lineNumber);
+    context_.refreshToolbarSummary();
+    restoreLineVertexOwnerSelection(lineNumber, anchorIndex);
+    if (context_.callbackContext != nullptr && context_.restoreLineAnchorSelectionLater) {
+        QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, anchorIndex]() {
+            restoreLineVertexOwnerSelectionForContext(context, lineNumber, anchorIndex);
+        });
+    }
     return true;
 }
 
@@ -680,10 +911,19 @@ bool MapEditorCanvasEditController::removeLineVertexFromSelection()
     }
 
     QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
-    if (!removeLineVertexWithReconnect(&editedVertices, anchorIndex)) {
-        (*context_.toolbarStatusNote) = tr("Delete vertex failed: only middle anchors can be removed while keeping a valid line.");
-        context_.refreshToolbarSummary();
-        return true;
+    if (anchorIndex == 0 || anchorIndex == editedVertices.size() - 1) {
+        if (editedVertices.size() <= 2) {
+            (*context_.toolbarStatusNote) = tr("Delete vertex failed: line needs at least two vertices.");
+            context_.refreshToolbarSummary();
+            return true;
+        }
+        editedVertices.removeAt(anchorIndex);
+    } else {
+        if (!removeLineVertexWithReconnect(&editedVertices, anchorIndex)) {
+            (*context_.toolbarStatusNote) = tr("Delete vertex failed: selected anchor could not be removed while keeping a valid line.");
+            context_.refreshToolbarSummary();
+            return true;
+        }
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices);

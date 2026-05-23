@@ -666,9 +666,21 @@ void MapEditorObjectDetailsEditController::updateObjectQuickSubtypeChoices()
                            currentSubtype);
 }
 
-void MapEditorObjectDetailsEditController::insertVertexFromSelectionPanel()
+void MapEditorObjectDetailsEditController::insertVertexBeforeFromSelectionPanel()
 {
-    context_.insertLineVertexFromSelection();
+    context_.insertLineVertexFromSelection(true);
+    context_.refreshObjectDetailsPanel();
+}
+
+void MapEditorObjectDetailsEditController::insertVertexAfterFromSelectionPanel()
+{
+    context_.insertLineVertexFromSelection(false);
+    context_.refreshObjectDetailsPanel();
+}
+
+void MapEditorObjectDetailsEditController::splitLineFromSelectionPanel()
+{
+    context_.splitLineAtSelection();
     context_.refreshObjectDetailsPanel();
 }
 

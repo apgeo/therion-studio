@@ -39,8 +39,10 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .quickIdentifierEdit = objectQuickIdentifierEdit_,
         .quickNameEdit = objectQuickNameEdit_,
         .vertexActionsEditor = vertexActionsEditor_,
-        .vertexInsertButton = vertexInsertButton_,
+        .vertexInsertBeforeButton = vertexInsertBeforeButton_,
+        .vertexInsertAfterButton = vertexInsertAfterButton_,
         .vertexDeleteButton = vertexDeleteButton_,
+        .vertexSplitButton = vertexSplitButton_,
         .metadataLabel = objectDetailsMetadataLabel_,
         .orientationEditor = objectOrientationEditor_,
         .linePointPreviousControlCheck = linePointPreviousControlCheck_,
@@ -95,8 +97,11 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .recordSourceTextSnapshot = [this](const QString &label, const QString &beforeText, const QString &afterText, int insertedLineNumber) {
             recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
         },
-        .insertLineVertexFromSelection = [this]() {
-            return insertLineVertexFromSelection();
+        .insertLineVertexFromSelection = [this](bool before) {
+            return insertLineVertexFromSelection(before);
+        },
+        .splitLineAtSelection = [this]() {
+            return splitLineAtSelection();
         },
         .removeLineVertexFromSelection = [this]() {
             return removeLineVertexFromSelection();

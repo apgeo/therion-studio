@@ -12,6 +12,7 @@
 #include <QFormLayout>
 #include <QFrame>
 #include <QGraphicsView>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
@@ -736,17 +737,25 @@ void MapEditorTab::buildUi()
     vertexSelectionLayout->addWidget(objectOrientationEditor_);
 
     vertexActionsEditor_ = new QWidget(vertexSelectionSection_);
-    auto *vertexActionsLayout = new QHBoxLayout(vertexActionsEditor_);
+    auto *vertexActionsLayout = new QGridLayout(vertexActionsEditor_);
     vertexActionsLayout->setContentsMargins(0, 0, 0, 0);
     vertexActionsLayout->setSpacing(6);
-    vertexInsertButton_ = new QPushButton(tr("Insert Vertex"), vertexActionsEditor_);
+    vertexInsertBeforeButton_ = new QPushButton(tr("Insert Before"), vertexActionsEditor_);
+    vertexInsertAfterButton_ = new QPushButton(tr("Insert After"), vertexActionsEditor_);
     vertexDeleteButton_ = new QPushButton(tr("Delete Vertex"), vertexActionsEditor_);
-    vertexInsertButton_->setAutoDefault(false);
+    vertexSplitButton_ = new QPushButton(tr("Split Here"), vertexActionsEditor_);
+    vertexInsertBeforeButton_->setAutoDefault(false);
+    vertexInsertAfterButton_->setAutoDefault(false);
     vertexDeleteButton_->setAutoDefault(false);
-    connect(vertexInsertButton_, &QPushButton::clicked, this, &MapEditorTab::insertVertexFromSelectionPanel);
+    vertexSplitButton_->setAutoDefault(false);
+    connect(vertexInsertBeforeButton_, &QPushButton::clicked, this, &MapEditorTab::insertVertexBeforeFromSelectionPanel);
+    connect(vertexInsertAfterButton_, &QPushButton::clicked, this, &MapEditorTab::insertVertexAfterFromSelectionPanel);
+    connect(vertexSplitButton_, &QPushButton::clicked, this, &MapEditorTab::splitLineFromSelectionPanel);
     connect(vertexDeleteButton_, &QPushButton::clicked, this, &MapEditorTab::deleteVertexFromSelectionPanel);
-    vertexActionsLayout->addWidget(vertexInsertButton_);
-    vertexActionsLayout->addWidget(vertexDeleteButton_);
+    vertexActionsLayout->addWidget(vertexInsertBeforeButton_, 0, 0);
+    vertexActionsLayout->addWidget(vertexInsertAfterButton_, 0, 1);
+    vertexActionsLayout->addWidget(vertexDeleteButton_, 1, 0);
+    vertexActionsLayout->addWidget(vertexSplitButton_, 1, 1);
     vertexSelectionLayout->addWidget(vertexActionsEditor_);
     selectionLayout->addWidget(vertexSelectionSection_);
 

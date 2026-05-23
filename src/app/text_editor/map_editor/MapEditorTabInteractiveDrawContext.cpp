@@ -124,12 +124,20 @@ bool MapEditorTab::handleInteractiveDrawClick(const QPointF &scenePosition)
 
 bool MapEditorTab::commitInteractiveDrawSession()
 {
+    if (lineExtensionActive_) {
+        return commitLineExtensionSession();
+    }
     return MapEditorInteractiveDrawController(interactiveDrawContext()).commitInteractiveDrawSession();
 }
 
 void MapEditorTab::clearInteractiveDrawSession(bool clearMode)
 {
     MapEditorInteractiveDrawController(interactiveDrawContext()).clearInteractiveDrawSession(clearMode);
+    if (clearMode) {
+        lineExtensionActive_ = false;
+        lineExtensionLineNumber_ = 0;
+        lineExtensionPrepend_ = false;
+    }
 }
 
 void MapEditorTab::updateInteractiveDrawPreview()
@@ -139,6 +147,17 @@ void MapEditorTab::updateInteractiveDrawPreview()
 
 bool MapEditorTab::cancelInteractiveDrawingToSelectMode()
 {
+    if (lineExtensionActive_) {
+        if (hasCompletableInteractiveDrawSession()) {
+            return commitLineExtensionSession();
+        }
+        clearInteractiveDrawSession(true);
+        toolbarStatusNote_ = tr("Selection mode: line extension canceled.");
+        refreshToolbarSummary();
+        updateCommandSurfaceState();
+        updateHelpPanel();
+        return true;
+    }
     return MapEditorInteractiveDrawController(interactiveDrawContext()).cancelInteractiveDrawingToSelectMode();
 }
 }

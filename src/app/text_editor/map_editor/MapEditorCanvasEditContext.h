@@ -52,6 +52,7 @@ struct MapEditorCanvasEditContext
     std::function<QRectF()> mapSourceBoundsForCurrentDocument;
     std::function<void(int)> restorePointSelectionLater;
     std::function<void(int, int)> restoreLineAnchorSelectionLater;
+    std::function<bool(int, int, bool)> beginLineExtensionFromSelection;
     std::function<void(QGraphicsRectItem *, const QPointF &, const QPointF &)> recordDraftMove;
     std::function<void(QGraphicsRectItem *, bool, bool)> recordDraftVisibility;
 };

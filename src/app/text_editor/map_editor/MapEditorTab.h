@@ -228,6 +228,9 @@ private:
     bool commitInteractiveDrawVertices(const QString &geometryKind,
                                        const QVector<QPointF> &vertices,
                                        const QString &successLabel);
+    bool beginLineExtensionFromSelection(int lineNumber, int sourceVertexIndex, bool prepend);
+    bool commitLineExtensionSession();
+    QPointF scenePointFromSourcePosition(const QPointF &sourcePosition) const;
     bool cancelInteractiveDrawingToSelectMode();
     QStringList lineCoordinateRowsForInteractiveDraft() const;
     QStringList areaCoordinateRowsForInteractiveDraft() const;
@@ -284,7 +287,8 @@ private:
                                   const QString &beforeText,
                                   const QString &afterText,
                                   int insertedLineNumber);
-    bool insertLineVertexFromSelection();
+    bool insertLineVertexFromSelection(bool before);
+    bool splitLineAtSelection();
     bool removeLineVertexFromSelection();
     bool toggleLineVertexSmoothFromSelection();
     bool setLineVertexSmoothForSelection(bool smooth);
@@ -333,7 +337,9 @@ private:
     void applyObjectQuickFieldEdits();
     void applyScrapProjectionEdit();
     void updateObjectQuickSubtypeChoices();
-    void insertVertexFromSelectionPanel();
+    void insertVertexBeforeFromSelectionPanel();
+    void insertVertexAfterFromSelectionPanel();
+    void splitLineFromSelectionPanel();
     void deleteVertexFromSelectionPanel();
     void handleLinePointPreviousControlToggled(bool checked);
     void handleLinePointSmoothToggled(bool checked);
@@ -402,8 +408,10 @@ private:
     QLineEdit *objectQuickNameEdit_ = nullptr;
     QString objectQuickCommandKind_;
     QWidget *vertexActionsEditor_ = nullptr;
-    QPushButton *vertexInsertButton_ = nullptr;
+    QPushButton *vertexInsertBeforeButton_ = nullptr;
+    QPushButton *vertexInsertAfterButton_ = nullptr;
     QPushButton *vertexDeleteButton_ = nullptr;
+    QPushButton *vertexSplitButton_ = nullptr;
     QCheckBox *linePointPreviousControlCheck_ = nullptr;
     QCheckBox *linePointSmoothCheck_ = nullptr;
     QCheckBox *linePointNextControlCheck_ = nullptr;
@@ -483,6 +491,9 @@ private:
     int pendingMapClickSourceVertexIndex_ = -1;
     QString pendingMapClickGeometryKind_;
     InteractiveDrawMode interactiveDrawMode_ = InteractiveDrawMode::None;
+    bool lineExtensionActive_ = false;
+    int lineExtensionLineNumber_ = 0;
+    bool lineExtensionPrepend_ = false;
     QVector<QPointF> interactiveDrawSourceVertices_;
     QVector<QPointF> interactiveDrawSceneVertices_;
     QVector<MapEditorInteractiveLineDraftVertex> interactiveDrawLineVertices_;

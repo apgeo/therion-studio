@@ -71,8 +71,10 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.quickIdentifierEdit == nullptr
         || context_.quickNameEdit == nullptr
         || context_.vertexActionsEditor == nullptr
-        || context_.vertexInsertButton == nullptr
+        || context_.vertexInsertBeforeButton == nullptr
+        || context_.vertexInsertAfterButton == nullptr
         || context_.vertexDeleteButton == nullptr
+        || context_.vertexSplitButton == nullptr
         || context_.metadataLabel == nullptr
         || context_.orientationEditor == nullptr
         || context_.linePointPreviousControlCheck == nullptr
@@ -247,8 +249,49 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         && *context_.selectedObjectVertexIndex >= 0
         && context_.textEditor != nullptr;
     context_.vertexActionsEditor->setVisible(lineVertexActionsAvailable);
-    context_.vertexInsertButton->setEnabled(lineVertexActionsAvailable);
+    context_.vertexInsertBeforeButton->setEnabled(lineVertexActionsAvailable);
+    context_.vertexInsertAfterButton->setEnabled(lineVertexActionsAvailable);
     context_.vertexDeleteButton->setEnabled(lineVertexActionsAvailable);
+    context_.vertexSplitButton->setEnabled(false);
+    context_.vertexSplitButton->setToolTip(translate("Split Here is available for interior, non-area-border line vertices."));
+    if (lineVertexActionsAvailable) {
+        bool firstVertex = false;
+        bool lastVertex = false;
+        if (const std::optional<MapGeometryFeature> lineFeature =
+                lineFeatureForLineNumber(context_.textEditor->text(), *context_.selectedObjectLineNumber);
+            lineFeature.has_value() && lineFeature->kind == MapGeometryFeature::Kind::Line) {
+            const int lineVertexIndex = lineVertexIndexForSourceVertex(lineFeature.value(), *context_.selectedObjectVertexIndex);
+            firstVertex = lineVertexIndex == 0;
+            lastVertex = lineVertexIndex == lineFeature->lineVertices.size() - 1;
+            const bool interiorVertex = lineVertexIndex > 0 && lineVertexIndex < lineFeature->lineVertices.size() - 1;
+            const bool areaBorderLine = !mapEditorAreaReferencesForBorderLine(context_.textEditor->text(),
+                                                                              *context_.selectedObjectLineNumber).isEmpty();
+            context_.vertexSplitButton->setEnabled(interiorVertex && !lineFeature->closed && !areaBorderLine);
+            if (!interiorVertex) {
+                context_.vertexSplitButton->setToolTip(translate("Cannot split at the first or last vertex."));
+            } else if (lineFeature->closed) {
+                context_.vertexSplitButton->setToolTip(translate("Cannot split closed lines yet."));
+            } else if (areaBorderLine) {
+                context_.vertexSplitButton->setToolTip(translate("Cannot split area border lines yet."));
+            } else {
+                context_.vertexSplitButton->setToolTip(translate("Split the selected line at this vertex."));
+            }
+        }
+        context_.vertexInsertBeforeButton->setText(firstVertex ? translate("Extend Before") : translate("Insert Before"));
+        context_.vertexInsertAfterButton->setText(lastVertex ? translate("Extend After") : translate("Insert After"));
+        context_.vertexInsertBeforeButton->setToolTip(firstVertex
+                                                          ? translate("Extend the line before the first vertex.")
+                                                          : translate("Insert a vertex before the selected vertex."));
+        context_.vertexInsertAfterButton->setToolTip(lastVertex
+                                                         ? translate("Extend the line after the last vertex.")
+                                                         : translate("Insert a vertex after the selected vertex."));
+    } else {
+        context_.vertexInsertBeforeButton->setText(translate("Insert Before"));
+        context_.vertexInsertAfterButton->setText(translate("Insert After"));
+        context_.vertexInsertBeforeButton->setToolTip(QString());
+        context_.vertexInsertAfterButton->setToolTip(QString());
+        context_.vertexSplitButton->setToolTip(QString());
+    }
 
     const bool lineOptionsVisible = *context_.selectedObjectLineNumber > 0
         && *context_.selectedObjectKind == QStringLiteral("line")

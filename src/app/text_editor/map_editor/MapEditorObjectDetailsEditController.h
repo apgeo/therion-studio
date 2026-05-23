@@ -18,7 +18,9 @@ public:
     void applyObjectQuickFieldEdits();
     void applyScrapProjectionEdit();
     void updateObjectQuickSubtypeChoices();
-    void insertVertexFromSelectionPanel();
+    void insertVertexBeforeFromSelectionPanel();
+    void insertVertexAfterFromSelectionPanel();
+    void splitLineFromSelectionPanel();
     void deleteVertexFromSelectionPanel();
     void handleLinePointPreviousControlToggled(bool checked);
     void handleLinePointSmoothToggled(bool checked);

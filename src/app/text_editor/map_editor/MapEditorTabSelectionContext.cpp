@@ -44,6 +44,9 @@ MapEditorSelectionContext MapEditorTab::selectionContext()
         .refreshObjectDetailsPanel = [this]() {
             refreshObjectDetailsPanel();
         },
+        .clearInspectorObjectSelection = [this]() {
+            clearInspectorObjectSelection();
+        },
     };
 }
 

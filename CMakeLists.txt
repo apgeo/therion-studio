@@ -276,6 +276,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.h
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
+    src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
+    src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
     src/app/text_editor/map_editor/MapEditorInteractiveDrawContext.h
@@ -465,6 +467,13 @@ qt_add_executable(MapEditorInputPolicyTest
     src/app/text_editor/map_editor/MapEditorInputPolicy.h)
 
 target_link_libraries(MapEditorInputPolicyTest PRIVATE Qt6::Widgets)
+
+qt_add_executable(MapEditorObjectMovePlannerTest
+    tests/MapEditorObjectMovePlannerTest.cpp
+    src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
+    src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h)
+
+target_link_libraries(MapEditorObjectMovePlannerTest PRIVATE therion_core Qt6::Core)
 
 therion_add_core_unit_test(SessionStoreTest
     tests/SessionStoreTest.cpp)
@@ -677,6 +686,8 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.h
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
+    src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
+    src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
     src/app/text_editor/map_editor/MapEditorInteractiveDrawContext.h
@@ -765,6 +776,7 @@ set(THERION_UNIT_TEST_TARGETS
     MapGeometryFeatureParsingTest
     DocumentFileEncodingTest
     MapEditorInputPolicyTest
+    MapEditorObjectMovePlannerTest
     ProjectStructureScannerTest
     SessionStoreTest
     TherionExecutableSelectionControllerTest

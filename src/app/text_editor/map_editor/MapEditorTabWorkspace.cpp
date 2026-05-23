@@ -556,6 +556,7 @@ void MapEditorTab::buildUi()
     objectsLayout->setSpacing(8);
 
     mapObjectsTree_ = new QTreeView(objectsTab);
+    mapObjectsTree_->setObjectName(QStringLiteral("mapObjectsTree"));
     mapObjectsTree_->setRootIsDecorated(true);
     mapObjectsTree_->setAnimated(true);
     mapObjectsTree_->setSelectionBehavior(QAbstractItemView::SelectRows);

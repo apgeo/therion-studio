@@ -218,6 +218,7 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
         (*context_.selectedObjectVertexIndex) = -1;
         (*context_.selectedObjectKind).clear();
         (*context_.selectedObjectCoordinate).reset();
+        context_.clearInspectorObjectSelection();
         updateGeometrySelectionPresentation();
         context_.updateHelpPanel();
         context_.refreshObjectDetailsPanel();

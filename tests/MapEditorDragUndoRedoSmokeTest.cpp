@@ -16,6 +16,7 @@
 #include <QRegularExpression>
 #include <QSet>
 #include <QTemporaryDir>
+#include <QTreeView>
 #include <QVBoxLayout>
 
 #include <cmath>
@@ -663,6 +664,11 @@ int runAreaBorderHitSelectionSmoke()
                 "Map view/scene was not initialized for area hit-selection smoke test.")) {
         return 1;
     }
+    auto *objectsTree = mapTab->findChild<QTreeView *>(QStringLiteral("mapObjectsTree"));
+    if (!expect(objectsTree != nullptr && objectsTree->selectionModel() != nullptr,
+                "Objects inspector tree was not initialized for area hit-selection smoke test.")) {
+        return 1;
+    }
 
     auto *linePathItem = findPathItemForLine(mapView->scene(), 4);
     auto *areaFillItem = findPathItemForLine(mapView->scene(), 11, kMapSceneSelectionSubtypeAreaFill);
@@ -689,6 +695,10 @@ int runAreaBorderHitSelectionSmoke()
                 "Clicking a referenced area border should move the text cursor to the line directive.")) {
         return 1;
     }
+    if (!expect(!objectsTree->selectionModel()->selectedRows().isEmpty(),
+                "Map-object selection should select the corresponding row in the Objects inspector.")) {
+        return 1;
+    }
 
     const QPointF fillScenePoint = areaFillItem->mapToScene(areaFillItem->path().boundingRect().center());
     const QPoint fillViewportPoint = mapView->mapFromScene(fillScenePoint);
@@ -701,6 +711,23 @@ int runAreaBorderHitSelectionSmoke()
     }
     if (!expect(mapTab->currentLineNumber() == 11,
                 "Clicking inside a referenced area fill should move the text cursor to the area directive.")) {
+        return 1;
+    }
+    if (!expect(!objectsTree->selectionModel()->selectedRows().isEmpty(),
+                "Area fill selection should select the corresponding row in the Objects inspector.")) {
+        return 1;
+    }
+
+    const QPoint emptyViewportPoint = mapView->mapFromScene(QPointF(36.0, 36.0));
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, emptyViewportPoint, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, emptyViewportPoint, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    if (!expect(mapView->scene()->selectedItems().isEmpty(),
+                "Clicking empty map-canvas space should clear the graphical selection.")) {
+        return 1;
+    }
+    if (!expect(objectsTree->selectionModel()->selectedRows().isEmpty(),
+                "Clicking empty map-canvas space should clear the Objects inspector selection.")) {
         return 1;
     }
 

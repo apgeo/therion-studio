@@ -1,16 +1,28 @@
 # Architectural Review — Therion Studio (Qt 6 / C++17, cross-platform)
 
-**Reviewer:** Senior C++/Qt Architect  
-**Based on:** actual repository state, not a hypothetical snapshot  
-**Grounding files:** `CMakeLists.txt` (1 054 lines), `MainWindow.h/cpp` (294 / 2 203 lines), `TextEditorTab.h/cpp` (440 / 1 089 lines), `src/core/`, `src/app/`, all test targets  
+**Reviewer:** Senior C++/Qt Architect
+**Based on:** actual repository state, not a hypothetical snapshot
+**Grounding files:** `CMakeLists.txt`, `MainWindow.h/cpp`, `TextEditorTab.h/cpp`, `MapEditorTab.h/cpp`, `src/core/`, `src/app/`, all test targets
 
 ---
 
 ## Executive Summary
 
-The codebase shows meaningful, recent architectural progress — `TherionRunnerService`, `ProjectStructureScanner`, and the full suite of `TextEditor*Controller` extractions are **good engineering decisions** and demonstrate the right instinct. The remaining pain points are concentrated in three areas: the **CMake build system** (source duplication, no libraries, disabled tests), the **friend-web coupling** inside `TextEditorTab`, and the **`SessionStore` / `CommandCatalogService` static-only APIs** that resist substitution in tests.
+The codebase shows meaningful architectural progress — `TherionRunnerService`, `ProjectStructureScanner`, focused editor controllers, and the current context-object controller boundaries are **good engineering decisions** and demonstrate the right instinct. Several risks identified in the original review have now been addressed: the project has `therion_core`, `therion_platform`, and `therion_app` static libraries; tests are enabled; service state is injectable through `SessionSettingsStore` / `CommandCatalogStore`; and the `TextEditorTab` / `MapEditorTab` friend-web coupling has been eliminated for extracted controllers.
+
+The remaining high-value work is now concentrated in three areas: **MainWindow decomposition**, **CI / packaging automation**, and **feature parity polish** that exercises the new architecture through user-visible behavior.
 
 The most valuable near-term investments are ordered below by impact-per-effort ratio.
+
+### Current checkpoint — May 23, 2026
+
+- `CMakeLists.txt` is now 814 lines and defines `therion_core`, `therion_platform`, and `therion_app` static libraries.
+- `CMAKE_CXX_STANDARD` is now 20.
+- `QT_NO_CAST_FROM_ASCII` / `QT_NO_CAST_TO_ASCII` are applied to the app and test targets.
+- macOS `Info.plist` and translation scaffolding are wired.
+- `TextEditorTab.h` and `MapEditorTab.h` have no `friend class` declarations.
+- `MapEditorTab.cpp` is ratcheted to 687 lines by `StructureConstraintsTest`.
+- Full checkpoint verification passed in both normal and strict build trees: `cmake --build build`, `cmake --build build-strict`, `ctest --test-dir build --output-on-failure`, and `ctest --test-dir build-strict --output-on-failure`.
 
 ---
 
@@ -33,9 +45,9 @@ Each responsibility is wired to the others through `private` method calls in the
 
 **Pattern:** God Window / God Widget. Standard mitigation is decomposition into focused `QObject`-based sub-controllers, which the `TextEditor*Controller` extractions already prove works here.
 
-### 1.2 Friend-Web Coupling in `TextEditorTab`
+### 1.2 Resolved Risk: Friend-Web Coupling in Editor Tabs
 
-`TextEditorTab.h` lists **29 `friend` class declarations**:
+The original review found that `TextEditorTab.h` listed **29 `friend` class declarations**:
 
 ```cpp
 friend class TextEditorContextHelpController;
@@ -44,7 +56,7 @@ friend class TextEditorCursorController;
 friend class BlockEditorDeleteExecutor;
 ```
 
-This pattern appears after a structural refactoring: the controllers were extracted from the monolith but still need access to private state, so `friend` was the path of least resistance. The result is that `TextEditorTab`'s entire private section is effectively public to 29 other translation units. Adding, removing, or renaming any private member of `TextEditorTab` requires auditing 29 other files.
+This pattern appeared after a structural refactoring: the controllers were extracted from the monolith but still needed access to private state, so `friend` was the path of least resistance. The result was that `TextEditorTab`'s entire private section was effectively public to 29 other translation units. Adding, removing, or renaming any private member of `TextEditorTab` required auditing 29 other files.
 
 **Correct mitigation:** replace friend access with narrow, explicitly-typed context objects passed to each controller at construction:
 
@@ -59,7 +71,9 @@ struct RawEditorContext {
 RawEditorFindController findController(RawEditorContext{editor_, highlighter_, completionModel_}, this);
 ```
 
-Each controller documents exactly which state it touches. Changing anything else in `TextEditorTab` does not require recompiling all 29 friends.
+Each controller documents exactly which state it touches. Changing anything else in `TextEditorTab` does not require recompiling all former friends.
+
+**Current status:** implemented. `TextEditorTab.h` and `MapEditorTab.h` now have no `friend class` declarations. The converted controllers use explicit context structs, and `StructureConstraintsTest` prevents the converted BlockEditor and MapEditor controllers from regaining broad owner pointers or direct tab includes.
 
 ### 1.3 Static-Only Core APIs
 
@@ -233,7 +247,7 @@ Each sub-controller:
 class SessionStore final {
 public:
     static SessionStore &instance();  // returns the real QSettings-backed store
-    
+
     QString lastProjectPath() const;
     void setLastProjectPath(const QString &path);
     // ...
@@ -244,7 +258,7 @@ private:
 };
 
 // In tests: construct a SessionStore backed by a temp QSettings
-SessionStore testStore(QSettings::IniFormat, QSettings::UserScope, 
+SessionStore testStore(QSettings::IniFormat, QSettings::UserScope,
                        "test-org", "test-app");
 ```
 
@@ -596,6 +610,8 @@ jobs:
 
 These are pure structural changes with no product risk:
 
+**Status:** mostly complete. `therion_core` exists, tests are enabled, strict Qt ASCII conversion macros are applied, and full normal/strict CTest passes. CI wiring remains open.
+
 1. **Extract `therion_core` STATIC library** from `CMakeLists.txt`. All `src/core/*.cpp` sources. Update all test targets to link it instead of re-listing sources. Measure: `CMakeLists.txt` shrinks from ~1 050 lines to ~700.
 
 2. **Apply `QT_NO_CAST_FROM_ASCII` / `QT_NO_CAST_TO_ASCII` to all test targets** (currently missing). Fix any implicit conversions exposed.
@@ -607,6 +623,8 @@ These are pure structural changes with no product risk:
 ---
 
 ### Phase B — Platform and Service Hygiene (1–2 weeks)
+
+**Status:** mostly complete. `therion_platform` exists, platform path resolver classes are present, macOS bundle metadata is wired, translation scaffolding is present, C++20 is enabled, and injectable settings/catalog stores are present. Remaining work is deeper API annotation / modernization polish and cross-platform CI validation.
 
 5. **Extract `therion_platform`** as described in §2.2. Move `/opt/homebrew/` paths out of `TherionRunnerService` into `MacPlatformPathResolver`. `TherionRunnerService` calls `Platform::therionExecutableCandidates()` instead.
 
@@ -623,6 +641,8 @@ These are pure structural changes with no product risk:
 9. **Define narrow context structs** for each controller group (raw editor, block editor). Pass at controller construction. Eliminate `friend` declarations one group at a time. Start with `RawEditorFindController` (fewest cross-dependencies) and work toward `BlockEditor*` (most complex).
 
 10. **Extract `therion_app` STATIC library.** Move `TherionRunnerService`, `ProjectStructureScanner`, `TherionRunnerConfigResolver`, `TherionExecutableSelectionController`, and related presenters from `src/app/` into `therion_app`. Tests for these services no longer need `Qt6::Widgets`.
+
+**Status:** complete for the editor-tab friend-web milestone. `TextEditorTab.h` and `MapEditorTab.h` contain no `friend class` declarations; `therion_app` exists as a static library. The current guardrails enforce the converted controller boundaries.
 
 ---
 
@@ -652,17 +672,13 @@ These are pure structural changes with no product risk:
 
 | Priority | Action | Effort | Risk |
 |---|---|---|---|
-| 1 | Extract `therion_core` static library | 4 h | Low — pure CMake, no source changes |
-| 2 | Fix disabled tests (`DISABLED TRUE`) | 1–2 d | Low-Medium — diagnose root cause first |
-| 3 | Wire GitHub Actions CI | 4 h | Low |
-| 4 | Move Homebrew paths to platform resolver | 4 h | Low |
-| 5 | C++20 upgrade + `[[nodiscard]]` sweep | 4 h | Low |
-| 6 | macOS Info.plist + localization scaffold | 4 h | Low |
-| 7 | Remove `TextEditorTab` friend declarations | 1–2 w | Medium — test each controller after change |
-| 8 | Extract `therion_app` library | 1 w | Medium |
-| 9 | Decompose `MainWindow` into sub-controllers | 3–5 w | Medium-High — most behavior-affecting |
-| 10 | Cross-platform packaging (sign/notarize) | 2–3 w | High — platform-specific tooling |
+| 1 | Wire GitHub Actions CI | 4 h | Low |
+| 2 | Start Phase 9 map-editor parity polish | 1–3 d per slice | Medium — behavior-affecting |
+| 3 | Finish `MainWindow` decomposition into sub-controllers | 3–5 w | Medium-High — most behavior-affecting |
+| 4 | Cross-platform packaging (sign/notarize/AppImage/NSIS) | 2–3 w | High — platform-specific tooling |
+| 5 | Continue C++20 modernization / `[[nodiscard]]` sweep | 4 h | Low |
+| 6 | Broaden Linux UI test validation under X11 / Wayland | 1–2 d | Medium — platform event differences |
 
 ---
 
-*Review performed against: `CMakeLists.txt` (1 054 lines, C++17, single `qt_add_executable`, 2 disabled tests), `MainWindow.h` (294 lines, 80+ private members), `TextEditorTab.h` (29 friend declarations), `TherionRunnerService.cpp` (hardcoded Homebrew paths), `main.cpp` (correct dark-mode handling), `ProjectStructureScanner.cpp` (correct `QtConcurrent` pattern). No CI configuration exists in this repository.*
+*Original review performed against an earlier snapshot with `CMakeLists.txt` at 1 054 lines, C++17, a single executable-style source layout, disabled tests, and `TextEditorTab.h` friend declarations. Current checkpoint status is recorded above.*

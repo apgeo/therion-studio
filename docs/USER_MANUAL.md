@@ -358,14 +358,14 @@ Inspector panel (`Visual` mode):
 - a line referenced by an area cannot be deleted separately from the object list or selected-object actions; delete the area instead
 - deleting an area also removes its private referenced border line when that line is not used by another remaining area
 - in `Selection`:
-- groups editing controls into a selected-object section (`Scrap`, `Point`, `Line`, or `Area`), `Point / Vertex`, `Geometry`, and `Actions` sections
+- groups editing controls into a selected-object section (`Scrap`, `Point`, `Line`, or `Area`), `Geometry`, `Point / Vertex`, and `Actions` sections
 - when the selected object is a line used as an area border, `Delete Object` is disabled and the Object section shows `Used by area: ...`; click the area name to select the owning area
 - the selected-object section shows `Source line N` and object-level quick fields
 - the selected-object section also provides quick-edit fields in a stable command-focused order; scraps show ID and `Projection (-projection)` because scraps do not have type/subtype
 - point, line, and area selections show `ID (-id)`, type, and subtype where supported; station points also show separate `Name (-name)` below subtype, so station name is no longer shown in place of ID
+- `Geometry` appears when geometry state controls such as `Closed (-close)` and `Reversed (-reverse)` are available
 - `Point / Vertex` appears when a point, vertex, or control point is selected and contains orientation controls and vertex actions where applicable; exact coordinate edits remain in Raw mode
 - selected line vertices expose `Insert Vertex`, `Delete Vertex`, and `Toggle Smooth` actions using the same source rewrite path as keyboard vertex editing
-- `Geometry` appears when geometry state controls such as `Closed (-close)` and `Reversed (-reverse)` are available
 - `Actions` contains catalog-driven `Edit Object Settings...` and `Delete Object`; switch to `Raw` when source navigation/editing is needed
 - for point symbols and selected line anchor vertices, orientation controls appear only when catalog metadata marks `-orientation` as supported for the current command type/subtype:
 - `Orientation override (-orientation)` enable/disable; checking it immediately writes an explicit orientation value so the map handle appears, and unchecking it removes the override without dropping the current point or vertex selection

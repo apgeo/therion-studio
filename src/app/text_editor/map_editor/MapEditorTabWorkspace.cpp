@@ -676,6 +676,22 @@ void MapEditorTab::buildUi()
     objectSelectionLayout->addWidget(objectQuickFieldsEditor_);
     selectionLayout->addWidget(objectSelectionSection_);
 
+    QVBoxLayout *geometrySelectionLayout = nullptr;
+    geometrySelectionSection_ = createSelectionSection(tr("Geometry"), &geometrySelectionLayout);
+
+    lineOptionsEditor_ = new QWidget(geometrySelectionSection_);
+    auto *lineOptionsLayout = new QVBoxLayout(lineOptionsEditor_);
+    lineOptionsLayout->setContentsMargins(0, 0, 0, 0);
+    lineOptionsLayout->setSpacing(6);
+    lineClosedCheck_ = new QCheckBox(tr("Closed (-close)"), lineOptionsEditor_);
+    lineReversedCheck_ = new QCheckBox(tr("Reversed (-reverse)"), lineOptionsEditor_);
+    connect(lineClosedCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLineClosedToggled);
+    connect(lineReversedCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLineReversedToggled);
+    lineOptionsLayout->addWidget(lineClosedCheck_);
+    lineOptionsLayout->addWidget(lineReversedCheck_);
+    geometrySelectionLayout->addWidget(lineOptionsEditor_);
+    selectionLayout->addWidget(geometrySelectionSection_);
+
     QVBoxLayout *vertexSelectionLayout = nullptr;
     vertexSelectionSection_ = createSelectionSection(tr("Point / Vertex"), &vertexSelectionLayout);
 
@@ -724,22 +740,6 @@ void MapEditorTab::buildUi()
     vertexActionsLayout->addWidget(vertexToggleSmoothButton_);
     vertexSelectionLayout->addWidget(vertexActionsEditor_);
     selectionLayout->addWidget(vertexSelectionSection_);
-
-    QVBoxLayout *geometrySelectionLayout = nullptr;
-    geometrySelectionSection_ = createSelectionSection(tr("Geometry"), &geometrySelectionLayout);
-
-    lineOptionsEditor_ = new QWidget(geometrySelectionSection_);
-    auto *lineOptionsLayout = new QVBoxLayout(lineOptionsEditor_);
-    lineOptionsLayout->setContentsMargins(0, 0, 0, 0);
-    lineOptionsLayout->setSpacing(6);
-    lineClosedCheck_ = new QCheckBox(tr("Closed (-close)"), lineOptionsEditor_);
-    lineReversedCheck_ = new QCheckBox(tr("Reversed (-reverse)"), lineOptionsEditor_);
-    connect(lineClosedCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLineClosedToggled);
-    connect(lineReversedCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLineReversedToggled);
-    lineOptionsLayout->addWidget(lineClosedCheck_);
-    lineOptionsLayout->addWidget(lineReversedCheck_);
-    geometrySelectionLayout->addWidget(lineOptionsEditor_);
-    selectionLayout->addWidget(geometrySelectionSection_);
 
     scrapScaleEditor_ = new QFrame(objectSelectionSection_);
     static_cast<QFrame *>(scrapScaleEditor_)->setFrameShape(QFrame::StyledPanel);

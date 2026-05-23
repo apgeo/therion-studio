@@ -391,6 +391,7 @@ private:
     QWidget *objectSelectionSection_ = nullptr;
     QLabel *objectSelectionTitleLabel_ = nullptr;
     QWidget *vertexSelectionSection_ = nullptr;
+    QLabel *vertexSelectionTitleLabel_ = nullptr;
     QWidget *geometrySelectionSection_ = nullptr;
     QWidget *advancedSelectionSection_ = nullptr;
     QPushButton *objectDeleteButton_ = nullptr;

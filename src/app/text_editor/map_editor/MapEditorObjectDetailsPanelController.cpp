@@ -55,6 +55,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.selectionSection == nullptr
         || context_.selectionTitleLabel == nullptr
         || context_.vertexSection == nullptr
+        || context_.vertexTitleLabel == nullptr
         || context_.geometrySection == nullptr
         || context_.advancedSection == nullptr
         || context_.deleteButton == nullptr
@@ -176,6 +177,9 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         objectSectionTitle = translate("Scrap");
     }
     context_.selectionTitleLabel->setText(objectSectionTitle);
+    context_.vertexTitleLabel->setText(effectiveKind == QStringLiteral("line")
+                                           ? translate("Line Point")
+                                           : translate("Point Details"));
     context_.metadataLabel->setText(translate("Source line %1").arg(effectiveLineNumber));
     QVector<MapEditorAreaReference> areaReferences;
     if (context_.textEditor != nullptr

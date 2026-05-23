@@ -570,6 +570,95 @@ def build_argument_entries_from_signature(signature_core: str) -> list[dict[str,
     return arguments
 
 
+def strip_cpp_line_comments(text: str) -> str:
+    return re.sub(r"//[^\n]*", "", text)
+
+
+def parse_thstok_token_map(header_text: str, array_name: str) -> dict[str, str]:
+    tokens_by_enum = parse_thstok_tokens_by_enum(header_text, array_name)
+    return {enum_name: tokens[0] for enum_name, tokens in tokens_by_enum.items() if tokens}
+
+
+def parse_thstok_tokens_by_enum(header_text: str, array_name: str) -> dict[str, list[str]]:
+    cleaned = strip_cpp_line_comments(header_text)
+    array_match = re.search(
+        rf"static\s+const\s+thstok\s+{re.escape(array_name)}\[\]\s*=\s*\{{(?P<body>.*?)\n\}};",
+        cleaned,
+        re.DOTALL,
+    )
+    if array_match is None:
+        return {}
+
+    tokens_by_enum: dict[str, list[str]] = {}
+    for match in re.finditer(r'\{\s*"([^"]+)"\s*,\s*(TT_[A-Z0-9_]+)\s*\}', array_match.group("body")):
+        tokens_by_enum.setdefault(match.group(2), []).append(match.group(1))
+    return tokens_by_enum
+
+
+def parse_option_invalid_type_tokens_from_source(
+    source_text: str,
+    option_case: str,
+    token_by_enum: dict[str, str],
+) -> list[str]:
+    case_match = re.search(
+        rf"\n    case\s+{re.escape(option_case)}\s*:(?P<body>.*?)(?:\n    case\s+TT_[A-Z0-9_]+\s*:|\n    default\s*:)",
+        source_text,
+        re.DOTALL,
+    )
+    if case_match is None:
+        return []
+
+    invalid_types: list[str] = []
+    for match in re.finditer(
+        r"case\s+(TT_[A-Z0-9_]+)\s*:\s*throw\s+thexception\s*\([^;]*not valid with type",
+        case_match.group("body"),
+        re.DOTALL,
+    ):
+        token = token_by_enum.get(match.group(1))
+        if token:
+            append_unique(invalid_types, token)
+    return invalid_types
+
+
+def apply_source_derived_option_applicability(catalog: dict[str, Any], source_root: Path) -> None:
+    point_header = source_root / "thpoint.h"
+    point_source = source_root / "thpoint.cxx"
+    if not point_header.exists() or not point_source.exists():
+        return
+
+    point_header_text = point_header.read_text(encoding="utf-8", errors="replace")
+    point_source_text = point_source.read_text(encoding="utf-8", errors="replace")
+    point_type_tokens = parse_thstok_token_map(point_header_text, "thtt_point_types")
+    point_option_tokens = parse_thstok_tokens_by_enum(point_header_text, "thtt_point_opt")
+    if not point_type_tokens or not point_option_tokens:
+        return
+
+    excluded_types_by_option_key: dict[str, list[str]] = {}
+    for option_case, option_tokens in point_option_tokens.items():
+        excluded_types = parse_option_invalid_type_tokens_from_source(point_source_text, option_case, point_type_tokens)
+        if not excluded_types:
+            continue
+        for option_token in option_tokens:
+            excluded_types_by_option_key[f"-{option_token}"] = excluded_types
+    if not excluded_types_by_option_key:
+        return
+
+    for command in catalog.get("commands", []):
+        if command.get("directive") != "point":
+            continue
+        for option in command.get("options", []):
+            excluded_types = excluded_types_by_option_key.get(option.get("option_key"))
+            if not excluded_types:
+                continue
+            existing = option.get("excluded_types", [])
+            if not isinstance(existing, list):
+                existing = []
+            for type_token in excluded_types:
+                append_unique(existing, type_token)
+            option["excluded_types"] = existing
+        return
+
+
 def parse_sections(tex_text: str, source_file: str, known_command_names: set[str] | None = None) -> list[dict[str, Any]]:
     matches = list(SECTION_RE.finditer(tex_text))
     results = []
@@ -864,6 +953,11 @@ def main() -> int:
         default="snapshot",
         help="Upstream source reference metadata (tag/commit/etc.).",
     )
+    parser.add_argument(
+        "--source-root",
+        default="therion",
+        help="Therion source root used for source-derived metadata.",
+    )
     args = parser.parse_args()
 
     input_paths = [Path(p) for p in args.input] if args.input else [
@@ -876,6 +970,7 @@ def main() -> int:
             raise FileNotFoundError(f"Missing input file: {input_path}")
 
     catalog = build_catalog(input_paths, args.source_repo, args.source_ref)
+    apply_source_derived_option_applicability(catalog, Path(args.source_root))
 
     overrides_path = Path(args.overrides)
     if overrides_path.exists():

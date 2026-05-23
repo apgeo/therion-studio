@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generated_at_utc": "2026-05-17T00:58:28.913691+00:00",
+    "generated_at_utc": "2026-05-23T18:47:53.492900+00:00",
     "generator_version": "2",
     "source_repository": "snapshot-copy",
     "source_reference": "snapshot-copy",
@@ -3433,7 +3433,10 @@
           "value_domain": "number",
           "description": "defines the orientation of the symbol. If not specified, it's oriented to north. 0 $\\le$ |number| $<$ 360.",
           "allowed_values": [],
-          "dependencies": []
+          "dependencies": [],
+          "excluded_types": [
+            "station"
+          ]
         },
         {
           "raw": "|align| = alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br.",

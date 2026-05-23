@@ -122,11 +122,11 @@ QString pointTypeTokenForMapDetails(const TherionParsedLine &parsedLine)
     return QString();
 }
 
-QSet<QString> parseOrientationRestrictedTypesFromText(const QString &text)
+QSet<QString> parseOrientationAllowedTypesFromText(const QString &text)
 {
-    QSet<QString> restrictedTypes;
+    QSet<QString> allowedTypes;
     if (text.trimmed().isEmpty()) {
-        return restrictedTypes;
+        return allowedTypes;
     }
 
     static const QRegularExpression onlyWithTypePattern(
@@ -137,7 +137,7 @@ QSet<QString> parseOrientationRestrictedTypesFromText(const QString &text)
         const QRegularExpressionMatch match = onlyWithMatches.next();
         const QString typeToken = normalizeSymbolTypeTokenForMapDetails(match.captured(1));
         if (!typeToken.isEmpty()) {
-            restrictedTypes.insert(typeToken);
+            allowedTypes.insert(typeToken);
         }
     }
 
@@ -149,21 +149,39 @@ QSet<QString> parseOrientationRestrictedTypesFromText(const QString &text)
         const QRegularExpressionMatch match = quotedMatches.next();
         const QString typeToken = normalizeSymbolTypeTokenForMapDetails(match.captured(1));
         if (!typeToken.isEmpty()) {
-            restrictedTypes.insert(typeToken);
+            allowedTypes.insert(typeToken);
         }
     }
 
-    return restrictedTypes;
+    return allowedTypes;
 }
 
-QHash<QString, QSet<QString>> loadOrientationTypeRestrictionsFromCatalog()
+struct OrientationTypeApplicability
 {
-    QHash<QString, QSet<QString>> restrictionsByCommand;
+    QSet<QString> allowedTypes;
+    QSet<QString> excludedTypes;
+};
+
+QSet<QString> stringSetFromJsonArray(const QJsonArray &values)
+{
+    QSet<QString> tokens;
+    for (const QJsonValue &value : values) {
+        const QString token = normalizeSymbolTypeTokenForMapDetails(value.toString());
+        if (!token.isEmpty()) {
+            tokens.insert(token);
+        }
+    }
+    return tokens;
+}
+
+QHash<QString, OrientationTypeApplicability> loadOrientationTypeApplicabilityFromCatalog()
+{
+    QHash<QString, OrientationTypeApplicability> applicabilityByCommand;
 
     const CommandCatalogStore catalogStore;
     const QJsonObject catalogObject = catalogStore.catalogObject();
     if (catalogObject.isEmpty()) {
-        return restrictionsByCommand;
+        return applicabilityByCommand;
     }
 
     const QJsonArray commands = catalogObject.value(QStringLiteral("commands")).toArray();
@@ -192,23 +210,25 @@ QHash<QString, QSet<QString>> loadOrientationTypeRestrictionsFromCatalog()
                 metadataTexts.append(dependencyValue.toString());
             }
 
-            QSet<QString> restrictedTypes;
+            OrientationTypeApplicability applicability;
+            applicability.allowedTypes.unite(stringSetFromJsonArray(optionObject.value(QStringLiteral("applicable_types")).toArray()));
+            applicability.excludedTypes.unite(stringSetFromJsonArray(optionObject.value(QStringLiteral("excluded_types")).toArray()));
             for (const QString &metadataText : metadataTexts) {
-                restrictedTypes.unite(parseOrientationRestrictedTypesFromText(metadataText));
+                applicability.allowedTypes.unite(parseOrientationAllowedTypesFromText(metadataText));
             }
 
-            restrictionsByCommand.insert(commandName, restrictedTypes);
+            applicabilityByCommand.insert(commandName, applicability);
             break;
         }
     }
 
-    return restrictionsByCommand;
+    return applicabilityByCommand;
 }
 
-const QHash<QString, QSet<QString>> &orientationTypeRestrictionsByCommand()
+const QHash<QString, OrientationTypeApplicability> &orientationTypeApplicabilityByCommand()
 {
-    static const QHash<QString, QSet<QString>> restrictions = loadOrientationTypeRestrictionsFromCatalog();
-    return restrictions;
+    static const QHash<QString, OrientationTypeApplicability> applicability = loadOrientationTypeApplicabilityFromCatalog();
+    return applicability;
 }
 
 bool isOrientationSupportedForParsedLine(const TherionParsedLine &parsedLine)
@@ -218,13 +238,13 @@ bool isOrientationSupportedForParsedLine(const TherionParsedLine &parsedLine)
         return false;
     }
 
-    const QHash<QString, QSet<QString>> &restrictionsByCommand = orientationTypeRestrictionsByCommand();
-    if (!restrictionsByCommand.contains(commandName)) {
+    const QHash<QString, OrientationTypeApplicability> &applicabilityByCommand = orientationTypeApplicabilityByCommand();
+    if (!applicabilityByCommand.contains(commandName)) {
         return true;
     }
 
-    const QSet<QString> restrictedTypes = restrictionsByCommand.value(commandName);
-    if (restrictedTypes.isEmpty()) {
+    const OrientationTypeApplicability applicability = applicabilityByCommand.value(commandName);
+    if (applicability.allowedTypes.isEmpty() && applicability.excludedTypes.isEmpty()) {
         return true;
     }
 
@@ -235,7 +255,13 @@ bool isOrientationSupportedForParsedLine(const TherionParsedLine &parsedLine)
         return false;
     }
 
-    return restrictedTypes.contains(symbolType);
+    if (applicability.excludedTypes.contains(symbolType)) {
+        return false;
+    }
+    if (!applicability.allowedTypes.isEmpty()) {
+        return applicability.allowedTypes.contains(symbolType);
+    }
+    return true;
 }
 
 bool isLinePointLeftSizeSupportedForParsedLine(const TherionParsedLine &parsedLine)

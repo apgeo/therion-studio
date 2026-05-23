@@ -38,6 +38,7 @@ struct MapEditorObjectDetailsContext
     QWidget *selectionSection = nullptr;
     QLabel *selectionTitleLabel = nullptr;
     QWidget *vertexSection = nullptr;
+    QLabel *vertexTitleLabel = nullptr;
     QWidget *geometrySection = nullptr;
     QWidget *advancedSection = nullptr;
     QPushButton *deleteButton = nullptr;

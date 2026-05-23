@@ -358,21 +358,23 @@ Inspector panel (`Visual` mode):
 - a line referenced by an area cannot be deleted separately from the object list or selected-object actions; delete the area instead
 - deleting an area also removes its private referenced border line when that line is not used by another remaining area
 - in `Selection`:
-- groups editing controls into a selected-object section (`Scrap`, `Point`, `Line`, or `Area`), `Geometry`, `Point / Vertex`, and `Actions` sections
+- groups editing controls into a selected-object section (`Scrap`, `Point`, `Line`, or `Area`), `Geometry`, contextual point/line-point details, and `Object Actions` sections
 - when the selected object is a line used as an area border, `Delete Object` is disabled and the Object section shows `Used by area: ...`; click the area name to select the owning area
 - the selected-object section shows `Source line N` and object-level quick fields
 - the selected-object section also provides quick-edit fields in a stable command-focused order; scraps show ID and `Projection (-projection)` because scraps do not have type/subtype
 - point, line, and area selections show `ID (-id)`, type, and subtype where supported; station points also show separate `Name (-name)` below subtype, so station name is no longer shown in place of ID
 - `Geometry` appears when geometry state controls such as `Closed (-close)` and `Reversed (-reverse)` are available
-- `Point / Vertex` appears when a point, vertex, or control point is selected and contains XTherion-compatible line-point controls, orientation controls, and vertex actions where applicable; exact coordinate edits remain in Raw mode
+- `Point Details` appears when a standalone point is selected; `Line Point` appears when a line anchor or its control handle is selected
+- the contextual point/line-point details section contains XTherion-compatible line-point controls, orientation controls, and vertex actions where applicable; exact coordinate edits remain in Raw mode
 - selected line vertices expose XTherion-style `<<`, `Smooth (-smooth)`, and `>>` checkboxes plus `Insert Before`, `Insert After`, `Delete Vertex`, and `Split Here` actions; `<<` controls the incoming handle, `>>` controls the outgoing handle, and unchecking either handle forces smooth off
 - at the first vertex, `Insert Before` becomes `Extend Before`; at the last vertex, `Insert After` becomes `Extend After`; endpoint extension starts line continuation mode from the selected endpoint, and pressing Enter or `Complete Draft` writes the new continuation into the existing line
 - `Split Here` is enabled for interior vertices of non-closed lines that are not referenced as area borders; when the original line has an ID, the first split line keeps it and the second split line receives a generated `<original-id>-split-N` ID
 - checking `Smooth (-smooth)` creates any missing line-point handles, aligns them into a smooth tangent, and removes `smooth off`; unchecking it keeps handles but writes `smooth off`, while the `S` shortcut still toggles the same selected-vertex state
 - converting a straight line vertex into a Bezier vertex preserves supported line-point metadata such as `orientation` and slope `l-size`
 - line-point control toggles and control-point drags keep the same logical vertex selected after the map scene refreshes
-- `Actions` contains catalog-driven `Edit Object Settings...` and `Delete Object`; switch to `Raw` when source navigation/editing is needed
+- `Object Actions` contains catalog-driven `Edit Object Settings...` and `Delete Object`; switch to `Raw` when source navigation/editing is needed
 - for point symbols and selected line anchor vertices, orientation controls appear only when catalog metadata marks `-orientation` as supported for the current command type/subtype:
+- unsupported variants such as `point station` do not show orientation controls because the generated catalog carries Therion source-derived option exclusions
 - `Orientation override (-orientation)` enable/disable; checking it immediately writes an explicit orientation value so the map handle appears, unchecking it removes the override, and changing the degree value updates the source/map immediately without dropping the current point or vertex selection
 - degree input constrained to `0..359.999`; value changes are applied immediately
 - for selected `line slope` anchor vertices, `Left size (-l-size)` can be enabled and edited with a positive numeric value

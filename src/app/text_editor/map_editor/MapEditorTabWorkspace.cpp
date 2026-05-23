@@ -694,7 +694,7 @@ void MapEditorTab::buildUi()
     selectionLayout->addWidget(geometrySelectionSection_);
 
     QVBoxLayout *vertexSelectionLayout = nullptr;
-    vertexSelectionSection_ = createSelectionSection(tr("Point / Vertex"), &vertexSelectionLayout);
+    vertexSelectionSection_ = createSelectionSection(tr("Point Details"), &vertexSelectionLayout, &vertexSelectionTitleLabel_);
 
     objectOrientationEditor_ = new QWidget(vertexSelectionSection_);
     auto *orientationLayout = new QVBoxLayout(objectOrientationEditor_);
@@ -842,7 +842,7 @@ void MapEditorTab::buildUi()
     objectSelectionLayout->addWidget(scrapScaleEditor_);
 
     QVBoxLayout *advancedSelectionLayout = nullptr;
-    advancedSelectionSection_ = createSelectionSection(tr("Actions"), &advancedSelectionLayout);
+    advancedSelectionSection_ = createSelectionSection(tr("Object Actions"), &advancedSelectionLayout);
     objectConfigureButton_ = new QPushButton(tr("Edit Object Settings..."), advancedSelectionSection_);
     objectConfigureButton_->setAutoDefault(false);
     connect(objectConfigureButton_, &QPushButton::clicked, this, &MapEditorTab::handleConfigureObjectSettingsTriggered);

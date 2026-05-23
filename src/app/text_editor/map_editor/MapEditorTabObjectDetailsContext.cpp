@@ -23,6 +23,7 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .selectionSection = objectSelectionSection_,
         .selectionTitleLabel = objectSelectionTitleLabel_,
         .vertexSection = vertexSelectionSection_,
+        .vertexTitleLabel = vertexSelectionTitleLabel_,
         .geometrySection = geometrySelectionSection_,
         .advancedSection = advancedSelectionSection_,
         .deleteButton = objectDeleteButton_,

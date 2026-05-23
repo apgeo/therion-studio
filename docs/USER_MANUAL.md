@@ -528,7 +528,9 @@ Behavior:
 
 - parallel runs are rejected while process is active
 - if config is auto-detected and no explicit `-c/--config` is provided, working directory may auto-switch to config file directory
-- output streams to compiler pane
+- the runner augments the Therion process `PATH` with the resolved Therion executable directory, common package-manager paths, and common TeX paths so helper tools such as `cavern` and `pdftex` can be found even when the app is launched from the desktop
+- if no executable has been saved, the `Executable` field is filled with the auto-detected stable executable path, such as `/opt/homebrew/bin/therion` on Homebrew macOS
+- only Therion process stdout/stderr is written to the compiler output view; application workflow/status messages stay outside that output view
 
 ## 6. Settings and Session Persistence
 

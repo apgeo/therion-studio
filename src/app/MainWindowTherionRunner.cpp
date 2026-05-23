@@ -93,7 +93,6 @@ void MainWindow::buildConsole()
     bootstrapInput.therionArgumentsEdit = therionArgumentsEdit_;
     bootstrapInput.consoleSidebarPageLayout = consoleSidebarPageLayout_;
     bootstrapInput.rootWidget = buildResult.rootWidget;
-    bootstrapInput.appendConsoleLine = [this](const QString &line) { appendConsoleLine(line); };
     bootstrapInput.refreshTherionConfigDisplay = [this]() { refreshTherionConfigDisplay(); };
     bootstrapInput.updateTherionRunnerState = [this]() { updateTherionRunnerState(); };
     TherionStudio::MainWindowTherionConsoleBootstrapper::bootstrap(bootstrapInput);
@@ -101,7 +100,10 @@ void MainWindow::buildConsole()
 
 void MainWindow::appendConsoleLine(const QString &line)
 {
-    therionConsoleController_.appendConsoleLine(line);
+    if (line.trimmed().isEmpty() || statusBar() == nullptr) {
+        return;
+    }
+    statusBar()->showMessage(line, 3000);
 }
 
 void MainWindow::copyTherionConsoleOutput()
@@ -222,7 +224,9 @@ void MainWindow::updateTherionRunnerState()
 void MainWindow::runTherion()
 {
     if (therionRunnerService_ == nullptr) {
-        appendConsoleLine(tr("Therion runner is unavailable."));
+        if (therionStatusLabel_ != nullptr) {
+            therionStatusLabel_->setText(tr("Therion runner is unavailable."));
+        }
         return;
     }
 
@@ -243,9 +247,6 @@ void MainWindow::runTherion()
                                  startPresentation.warningDialogTitle,
                                  startPresentation.warningDialogMessage);
         }
-        if (startPresentation.appendConsoleMessage) {
-            appendConsoleLine(startPresentation.consoleMessage);
-        }
         if (startPresentation.showStatusBarMessage) {
             statusBar()->showMessage(startPresentation.statusBarMessage,
                                      startPresentation.statusBarTimeoutMs);
@@ -261,11 +262,6 @@ void MainWindow::runTherion()
                                                                    executableInput,
                                                                    argumentsText,
                                                                    workingDirectory);
-    if (successPresentation.shouldUpdateExecutableText && therionExecutableEdit_ != nullptr) {
-        therionExecutableEdit_->setText(successPresentation.updatedExecutableText);
-    }
-
-    appendConsoleLine(successPresentation.consoleMessage);
     if (therionStatusLabel_ != nullptr) {
         therionStatusLabel_->setText(successPresentation.statusLabelMessage);
     }
@@ -277,9 +273,11 @@ void MainWindow::stopTherion()
     const TherionStudio::TherionRunnerLifecyclePresenter::StopPresentation stopPresentation =
         TherionStudio::TherionRunnerLifecyclePresenter::presentStopRequest(
             therionRunnerService_ != nullptr && therionRunnerService_->isRunning());
-    appendConsoleLine(stopPresentation.consoleMessage);
 
     if (!stopPresentation.shouldStopProcess || therionRunnerService_ == nullptr) {
+        if (stopPresentation.shouldUpdateStatusLabel && therionStatusLabel_ != nullptr) {
+            therionStatusLabel_->setText(stopPresentation.statusLabelMessage);
+        }
         return;
     }
 
@@ -304,7 +302,6 @@ void MainWindow::handleTherionRunnerFinished(int exitCode, QProcess::ExitStatus 
 {
     const TherionStudio::TherionRunnerLifecyclePresenter::EventPresentation eventPresentation =
         TherionStudio::TherionRunnerLifecyclePresenter::presentFinished(exitCode, exitStatus);
-    appendConsoleLine(eventPresentation.statusText);
     if (therionStatusLabel_ != nullptr) {
         therionStatusLabel_->setText(eventPresentation.statusText);
     }
@@ -315,7 +312,6 @@ void MainWindow::handleTherionRunnerError(const QString &errorText)
 {
     const TherionStudio::TherionRunnerLifecyclePresenter::EventPresentation eventPresentation =
         TherionStudio::TherionRunnerLifecyclePresenter::presentError(errorText);
-    appendConsoleLine(eventPresentation.statusText);
     if (therionStatusLabel_ != nullptr) {
         therionStatusLabel_->setText(eventPresentation.statusText);
     }

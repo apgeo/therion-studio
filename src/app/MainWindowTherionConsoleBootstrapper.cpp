@@ -35,11 +35,6 @@ void MainWindowTherionConsoleBootstrapper::bootstrap(const BootstrapInput &input
         input.consoleSidebarPageLayout->addWidget(input.rootWidget, 1);
     }
 
-    if (input.appendConsoleLine) {
-        input.appendConsoleLine(translate("Therion Studio shell initialized."));
-        input.appendConsoleLine(translate("Run policy: reject parallel runs while a Therion process is active."));
-    }
-
     if (input.refreshTherionConfigDisplay) {
         input.refreshTherionConfigDisplay();
     }

@@ -11,8 +11,6 @@ class TherionRunnerStartSuccessPresenter final
 public:
     struct Presentation
     {
-        bool shouldUpdateExecutableText = false;
-        QString updatedExecutableText;
         QString consoleMessage;
         QString statusLabelMessage;
     };

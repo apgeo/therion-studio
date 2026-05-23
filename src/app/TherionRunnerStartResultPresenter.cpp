@@ -23,8 +23,6 @@ TherionRunnerStartResultPresenter::present(TherionRunnerService::StartCode code,
         const QString message =
             translate("Therion is already running. Parallel runs are rejected until the current run finishes.");
         result.isHandled = true;
-        result.appendConsoleMessage = true;
-        result.consoleMessage = message;
         result.showStatusBarMessage = true;
         result.statusBarMessage = message;
         result.statusBarTimeoutMs = 3000;
@@ -54,8 +52,6 @@ TherionRunnerStartResultPresenter::present(TherionRunnerService::StartCode code,
         result.showWarningDialog = true;
         result.warningDialogTitle = translate("Run Therion");
         result.warningDialogMessage = message;
-        result.appendConsoleMessage = true;
-        result.consoleMessage = message;
         result.updateStatusLabel = true;
         result.statusLabelMessage = message;
         return result;

@@ -6,4 +6,9 @@ QStringList therionExecutableCandidates()
 {
     return {};
 }
+
+QStringList externalToolSearchPathCandidates()
+{
+    return {};
+}
 }

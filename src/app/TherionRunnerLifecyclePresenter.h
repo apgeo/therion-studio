@@ -11,7 +11,6 @@ public:
     struct StopPresentation
     {
         bool shouldStopProcess = false;
-        QString consoleMessage;
         bool shouldUpdateStatusLabel = false;
         QString statusLabelMessage;
     };

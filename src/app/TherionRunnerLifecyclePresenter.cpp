@@ -18,12 +18,12 @@ TherionRunnerLifecyclePresenter::presentStopRequest(bool isRunning)
     StopPresentation result;
 
     if (!isRunning) {
-        result.consoleMessage = translate("Therion is not running.");
+        result.shouldUpdateStatusLabel = true;
+        result.statusLabelMessage = translate("Therion is not running.");
         return result;
     }
 
     result.shouldStopProcess = true;
-    result.consoleMessage = translate("Stopping Therion runner...");
     result.shouldUpdateStatusLabel = true;
     result.statusLabelMessage = translate("Stopping Therion...");
     return result;

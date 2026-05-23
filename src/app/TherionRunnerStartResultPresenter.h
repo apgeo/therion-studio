@@ -12,8 +12,6 @@ public:
     struct Presentation
     {
         bool isHandled = false;
-        bool appendConsoleMessage = false;
-        QString consoleMessage;
         bool showStatusBarMessage = false;
         QString statusBarMessage;
         int statusBarTimeoutMs = 0;

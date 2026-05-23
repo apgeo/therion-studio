@@ -5,4 +5,5 @@
 namespace TherionStudio::Platform
 {
 QStringList therionExecutableCandidates();
+QStringList externalToolSearchPathCandidates();
 }

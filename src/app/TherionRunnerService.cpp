@@ -4,6 +4,7 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QProcessEnvironment>
 #include <QStandardPaths>
 
 namespace
@@ -16,11 +17,53 @@ QString firstExecutableCandidatePath(const QStringList &candidatePaths)
             continue;
         }
 
-        const QString canonicalPath = candidateInfo.canonicalFilePath();
-        return canonicalPath.isEmpty() ? candidateInfo.absoluteFilePath() : canonicalPath;
+        return candidateInfo.absoluteFilePath();
     }
 
     return QString();
+}
+
+void appendUniquePath(QStringList *paths, const QString &path)
+{
+    if (paths == nullptr) {
+        return;
+    }
+
+    const QString trimmedPath = path.trimmed();
+    if (trimmedPath.isEmpty()) {
+        return;
+    }
+
+    const QString normalizedPath = QDir::cleanPath(trimmedPath);
+    for (const QString &existingPath : *paths) {
+        if (QDir::cleanPath(existingPath) == normalizedPath) {
+            return;
+        }
+    }
+    paths->append(trimmedPath);
+}
+
+QProcessEnvironment processEnvironmentForTherion(const QString &resolvedExecutablePath)
+{
+    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    QStringList pathEntries;
+
+    const QFileInfo executableInfo(resolvedExecutablePath);
+    if (!executableInfo.absolutePath().isEmpty()) {
+        appendUniquePath(&pathEntries, executableInfo.absolutePath());
+    }
+
+    for (const QString &candidate : TherionStudio::Platform::externalToolSearchPathCandidates()) {
+        appendUniquePath(&pathEntries, candidate);
+    }
+
+    const QString currentPath = environment.value(QStringLiteral("PATH"));
+    for (const QString &pathEntry : currentPath.split(QDir::listSeparator(), Qt::SkipEmptyParts)) {
+        appendUniquePath(&pathEntries, pathEntry);
+    }
+
+    environment.insert(QStringLiteral("PATH"), pathEntries.join(QDir::listSeparator()));
+    return environment;
 }
 }
 
@@ -80,6 +123,7 @@ TherionRunnerService::StartResult TherionRunnerService::start(const QString &exe
     }
 
     process_.setWorkingDirectory(workingDirectory);
+    process_.setProcessEnvironment(processEnvironmentForTherion(resolvedExecutable.path));
     process_.start(resolvedExecutable.path, arguments);
     result.code = StartCode::Started;
     result.resolvedExecutablePath = resolvedExecutable.path;

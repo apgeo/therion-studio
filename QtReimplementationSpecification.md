@@ -424,9 +424,12 @@ The rules below define the expected day-to-day interaction model. If a later req
 
 - Running Therion shall never freeze the UI thread.
 - Therion output shall be streamed to a console view in the order it is produced.
+- The compiler console output view shall contain Therion process output only; application status messages such as project-open events, runner setup notes, and UI workflow messages shall be shown outside the console output view.
 - The console shall capture stdout, stderr, and the exit status of each run.
 - The console surface shall show the active config name and location, the working directory, and the active command-line options.
 - The compiler sidebar surface shall remain usable at narrow widths by using stacked field labels, compact browse/reset controls, wrapped runner output, and action buttons that wrap into multiple rows instead of clipping horizontally.
+- When no user-defined Therion executable is persisted, the compiler sidebar shall populate `Executable` with a platform auto-detected stable executable path rather than a versioned package-internal canonical path when such a stable path exists.
+- The Therion process shall run with a platform-aware `PATH` that includes the resolved Therion executable directory, common package-manager locations, and common TeX tool locations before the inherited environment path so helper tools such as `cavern` and `pdftex` can be found from GUI launches.
 - The user shall be able to reset the working directory to the default project context.
 - The console shall show a visible running, success, or failure state for the most recent run.
 - The user shall be able to copy the full console output.

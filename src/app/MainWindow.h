@@ -250,7 +250,6 @@ private:
     QToolButton *workspaceAreaButton_ = nullptr;
     QFrame *workspaceHistorySeparator_ = nullptr;
     QFrame *workspaceZoomSeparator_ = nullptr;
-    QFrame *workspaceMapToolsSeparator_ = nullptr;
     QToolButton *workspaceVisualModeButton_ = nullptr;
     QToolButton *workspaceRawModeButton_ = nullptr;
     QToolButton *workspaceMapPaneWindowButton_ = nullptr;

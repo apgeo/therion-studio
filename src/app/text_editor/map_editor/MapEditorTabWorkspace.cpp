@@ -182,12 +182,12 @@ public:
         areaButton_->setCheckable(true);
         commandLayout->addWidget(selectButton_);
         commandLayout->addWidget(completeDraftButton_);
+        commandLayout->addWidget(createDetachedToolbarSeparator(commandBar_));
         commandLayout->addWidget(insertScrapButton_);
         commandLayout->addWidget(pointButton_);
         commandLayout->addWidget(lineButton_);
         commandLayout->addWidget(freehandLineButton_);
         commandLayout->addWidget(areaButton_);
-        commandLayout->addWidget(createDetachedToolbarSeparator(commandBar_));
         commandLayout->addStretch(1);
 
         mapWindowButton_ = createDetachedIconButton(commandBar_, QObject::tr("Return Map"), QStringLiteral("screen-share-off"));

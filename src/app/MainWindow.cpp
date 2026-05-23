@@ -557,14 +557,13 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceAreaButton_->setCheckable(true);
     mapToolsLayout->addWidget(workspaceSelectButton_);
     mapToolsLayout->addWidget(workspaceCompleteDraftButton_);
+    mapToolsLayout->addWidget(createWorkspaceToolbarSeparator(workspaceMapToolsGroup_));
     mapToolsLayout->addWidget(workspaceInsertScrapButton_);
     mapToolsLayout->addWidget(workspacePointButton_);
     mapToolsLayout->addWidget(workspaceLineButton_);
     mapToolsLayout->addWidget(workspaceFreehandLineButton_);
     mapToolsLayout->addWidget(workspaceAreaButton_);
     hostLayout->addWidget(workspaceMapToolsGroup_);
-    workspaceMapToolsSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
-    hostLayout->addWidget(workspaceMapToolsSeparator_);
     hostLayout->addStretch(1);
 
     workspaceMapModeSwitcher_ = new QWidget(workspaceModeSwitcher_);
@@ -659,7 +658,6 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceMapToolsGroup_->setVisible(false);
     workspaceHistorySeparator_->setVisible(false);
     workspaceZoomSeparator_->setVisible(false);
-    workspaceMapToolsSeparator_->setVisible(false);
     workspaceModeSwitcher_->setVisible(true);
     if (editorAreaLayout_ != nullptr) {
         editorAreaLayout_->insertWidget(0, workspaceModeSwitcher_);
@@ -692,7 +690,6 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceAreaButton_ == nullptr
         || workspaceHistorySeparator_ == nullptr
         || workspaceZoomSeparator_ == nullptr
-        || workspaceMapToolsSeparator_ == nullptr
         || workspaceTextRawModeButton_ == nullptr
         || workspaceBlocksModeButton_ == nullptr) {
         return;
@@ -722,7 +719,6 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceZoomGroup_->setVisible(showZoomTools);
     workspaceZoomSeparator_->setVisible(showZoomTools);
     workspaceMapToolsGroup_->setVisible(showMapTools);
-    workspaceMapToolsSeparator_->setVisible(showMapTools);
     workspaceSaveButton_->setEnabled(tabWidget != nullptr);
     workspaceUndoButton_->setEnabled(documentCanUndoForWidget(tabWidget));
     workspaceRedoButton_->setEnabled(documentCanRedoForWidget(tabWidget));

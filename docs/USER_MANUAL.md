@@ -321,7 +321,7 @@ Map tab uses explicit workspace modes:
 - `Save`, `Undo`, and `Redo` are icon-only buttons (with tooltips) in both main and detached map toolbars
 - when a `.th2` map tab is active, the next left-side toolbar groups are:
 - `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
-- `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`
+- `Select`, `Complete Draft`, divider, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`
 - when a `.th2` map tab is active in the main window, the right side of that toolbar shows compact square icon-only controls for `Visual`, `Raw`, and `Separate Map` / `Return Map` (in that order); `Separate Map` uses the screen-share icon and `Return Map` uses the screen-share-off icon
 - `.th` / `.thconfig` right-side `Raw` / `Blocks` mode controls are also compact square icon-only controls, with tooltips and accessible names
 - when a map editor is shown outside the main tab strip (detached map window), an equivalent top command toolbar is shown above the map canvas and inspector, but `Visual`/`Raw` buttons are omitted there
@@ -389,6 +389,7 @@ Toolbar actions:
 - history actions: `Undo`, `Redo`
 - selection/draft actions: `Select`, `Complete Draft`
 - insertion/drawing tools: `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`
+- a divider separates draft completion from insertion/drawing tools; there is no trailing divider after `Area`
 - icons recolor with the active light/dark application palette
 
 Interactive drawing (current):

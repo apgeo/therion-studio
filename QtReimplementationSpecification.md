@@ -268,7 +268,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Main-window document command toolbars shall not draw their own bottom border; separation below the toolbar shall come from the native tab/content frame or the embedded editor content separator.
 - Main-window document chrome shall use one continuous left divider between sidebar content and the editor area; the document command toolbar, file tabs, and document content shall align to that divider without duplicate embedded-canvas left borders.
 - Main-window file tabs shall use native platform tab rendering and shall sit on the `QTabWidget` editor/canvas frame without custom tab-bar geometry overrides.
-- When a TH2 document is active, the document command toolbar shall include these left-side groups in order: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`; then `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`; then a visual separator before right-aligned mode controls.
+- When a TH2 document is active, the document command toolbar shall include these left-side groups in order: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`; then `Select`, `Complete Draft`; then a visual separator; then `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`.
 - For `.th` and `.thconfig` documents, the `Raw`/`Blocks` mode selector shall be shown in this document command toolbar instead of a dedicated in-content mode row.
 - The application shall show the active document path and current text encoding in a status area tied to the active document context.
 - When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
@@ -856,7 +856,7 @@ The criteria below are intended for implementation verification and QA.
 - A TH2 document exposes an embedded mode selector with `Visual` and `Raw` modes.
 - In the main window, the TH2 `Visual`/`Raw` mode selector is shown in the right-aligned controls of the full-width document command toolbar row above the tab strip.
 - In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same document command toolbar control area, after `Raw`, using screen-share/screen-share-off icons for detach/return state.
-- In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`) after `Undo`/`Redo`.
+- In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, separator, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`) after `Undo`/`Redo`.
 - In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window top command toolbar remains available.
 - In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side map inspector (`Selection`, `Objects`, `Backgrounds` tabs).
 - In embedded `Raw` mode, the tab shows the source text editor plus contextual help inspector.

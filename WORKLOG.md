@@ -16,7 +16,7 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 ### Next up
 
 - Finish manual validation of the TH2 Visual `Inspector -> Objects` row-drag workflow on the running app, then commit the drag/drop batch.
-- Implement invalid-drop feedback for TH2 Visual `Inspector -> Objects` row dragging: suppress placement line on invalid targets, show an explanatory status note, and use a forbidden cursor.
+- Continue Phase 9 map-editor parity polish with the next interaction gap found during manual validation.
 - Continue Phase 10 mode-aware undo/redo polish so one completed draw gesture maps to one undo step.
 - Continue Phase 11 structured block-canvas coverage: richer block configuration, safer insertion guards, and broader directive support.
 
@@ -54,6 +54,7 @@ Detailed chronological history has been preserved in `WORKLOG_ARCHIVE_2026-05-13
 ### Completed
 
 - ~~Cleaned up active `WORKLOG.md`: consolidated current focus/backlog wording, moved the long top-level completed-history block and dated recent-completed history to `WORKLOG_ARCHIVE_2026-05-23.md`, updated Phase 9 status/highlights to reflect current map-editor parity polish, and refreshed the automated test inventory. Verified with `git diff --check`.~~
+- ~~Added invalid-drop feedback for TH2 Visual `Inspector -> Objects` row dragging: invalid targets suppress the placement line, use a forbidden cursor, and show an explanatory status note. Expanded `MapEditorDragUndoRedoSmokeTest` to exercise an invalid self-drop before restarting a valid drop. Updated the user manual. Verified with `cmake --build build --target MapEditorDragUndoRedoSmokeTest TherionStudio`, `cmake --build build-strict --target MapEditorDragUndoRedoSmokeTest TherionStudio`, `ctest --test-dir build --output-on-failure -R "MapEditorDragUndoRedoSmokeTest|StructureConstraintsTest"`, `ctest --test-dir build-strict --output-on-failure -R "MapEditorDragUndoRedoSmokeTest|StructureConstraintsTest"`, `python3 scripts/check_structure_constraints.py`, and `git diff --check`.~~
 - ~~Hardened TH2 Visual `Inspector -> Objects` row drag/drop feedback and undo routing: the drop target is now a slim highlighted line aligned to the target row edge, active row dragging uses a closed-hand cursor, object moves run under the map-command apply guard so they do not leave duplicate raw-text undo entries, and `MapEditorDragUndoRedoSmokeTest` now asserts indicator geometry, drag cursor, and clean undo/redo stack state. Updated the user manual. Verified with `cmake --build build --target MapEditorDragUndoRedoSmokeTest TherionStudio`, `cmake --build build-strict --target MapEditorDragUndoRedoSmokeTest TherionStudio`, `ctest --test-dir build --output-on-failure -R "MapEditorDragUndoRedoSmokeTest|MapEditorObjectMovePlannerTest|StructureConstraintsTest"`, `ctest --test-dir build-strict --output-on-failure -R "MapEditorDragUndoRedoSmokeTest|MapEditorObjectMovePlannerTest|StructureConstraintsTest"`, and `python3 scripts/check_structure_constraints.py`.~~
 - ~~Polished TH2 Visual `Inspector -> Objects` drag affordances: movable row labels/grips now use an open-hand hover cursor, active dragging keeps the closed-hand cursor even over non-target gaps, and dragging near the top/bottom of the object tree auto-scrolls the viewport. Expanded `MapEditorDragUndoRedoSmokeTest` to assert mouse tracking and hover cursor behavior. Updated the user manual. Verified with `cmake --build build --target MapEditorDragUndoRedoSmokeTest TherionStudio`, `cmake --build build-strict --target MapEditorDragUndoRedoSmokeTest TherionStudio`, `ctest --test-dir build --output-on-failure -R "MapEditorDragUndoRedoSmokeTest|StructureConstraintsTest"`, `ctest --test-dir build-strict --output-on-failure -R "MapEditorDragUndoRedoSmokeTest|StructureConstraintsTest"`, `python3 scripts/check_structure_constraints.py`, and `git diff --check`.~~
 - ~~Hardened TH2 Visual `Inspector -> Objects` drag cancellation state: leaving the object tree or losing the left-button drag now clears the pressed row, drop indicator, and hand cursor, and the row drag can restart cleanly afterward. Expanded `MapEditorDragUndoRedoSmokeTest` to exercise leave cancellation before a successful drop. Verified with `cmake --build build --target MapEditorDragUndoRedoSmokeTest TherionStudio`, `cmake --build build-strict --target MapEditorDragUndoRedoSmokeTest TherionStudio`, `ctest --test-dir build --output-on-failure -R "MapEditorDragUndoRedoSmokeTest|StructureConstraintsTest"`, `ctest --test-dir build-strict --output-on-failure -R "MapEditorDragUndoRedoSmokeTest|StructureConstraintsTest"`, `python3 scripts/check_structure_constraints.py`, and `git diff --check`.~~
@@ -203,12 +204,12 @@ Legend:
 - ~~Select-mode area hit disambiguation: area borders select referenced `line` objects, while interior fill clicks select the `area` object.~~
 - ~~Map/object selection parity: graphical map selection now syncs to `Inspector -> Objects`, and empty-canvas clicks clear stale inspector object selection.~~
 - ~~TH2 Visual `Inspector -> Objects` row moving foundation: `MapEditorObjectMovePlanner` handles point/line/area source-span moves before/after object targets and into scrap targets while preserving line endings and full block spans.~~
-- ~~TH2 Visual `Inspector -> Objects` row drag/drop UI: movable rows expose grip handles, hover/open-hand and drag/closed-hand cursors, a 2 px drop-target line, edge auto-scroll, leave cancellation, selection restoration, and clean map undo/redo routing.~~
+- ~~TH2 Visual `Inspector -> Objects` row drag/drop UI: movable rows expose grip handles, hover/open-hand and drag/closed-hand cursors, a 2 px drop-target line, invalid-target forbidden cursor/status feedback, edge auto-scroll, leave cancellation, selection restoration, and clean map undo/redo routing.~~
 - Planned focus:
 - Cross-platform interaction parity polish beyond MVP baseline.
 - Expanded GUI automation for map-edit workflows and regressions.
 - Residual map command-surface and ergonomics refinements identified during manual QA.
-- Invalid-drop feedback for `Inspector -> Objects` row dragging.
+- Manual cross-platform parity validation for `Inspector -> Objects` row dragging.
 - Planned verification:
 - `MapEditorDragUndoRedoSmokeTest`
 - `MapEditorObjectMovePlannerTest`

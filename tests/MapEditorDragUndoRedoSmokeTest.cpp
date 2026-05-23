@@ -661,7 +661,8 @@ bool dragObjectTreeRow(QTreeView *objectsTree,
                        int sourceLineNumber,
                        int targetLineNumber,
                        InspectorObjectDropPosition position,
-                       bool exerciseCancelBeforeDrop = false)
+                       bool exerciseCancelBeforeDrop = false,
+                       bool exerciseInvalidBeforeDrop = false)
 {
     if (objectsTree == nullptr || objectsTree->model() == nullptr || objectsTree->viewport() == nullptr) {
         std::cerr << "Objects tree, model, or viewport is unavailable for drag simulation.\n";
@@ -716,6 +717,25 @@ bool dragObjectTreeRow(QTreeView *objectsTree,
                              position == InspectorObjectDropPosition::AfterTarget
                                  ? targetRect.bottom() - 1
                                  : targetRect.top() + 1);
+    if (exerciseInvalidBeforeDrop) {
+        const QPoint invalidPoint = sourcePoint;
+        sendMouse(objectsTree->viewport(), QEvent::MouseButtonPress, sourcePoint, Qt::LeftButton, Qt::LeftButton);
+        pumpEvents();
+        sendMouse(objectsTree->viewport(), QEvent::MouseMove, invalidPoint, Qt::NoButton, Qt::LeftButton);
+        pumpEvents();
+        auto *dropIndicator = objectsTree->viewport()->findChild<QWidget *>(QStringLiteral("mapObjectsTreeDropIndicator"));
+        if ((dropIndicator != nullptr && dropIndicator->isVisible())
+            || objectsTree->viewport()->cursor().shape() != Qt::ForbiddenCursor) {
+            std::cerr << "Objects tree invalid drop target should hide indicator and use forbidden cursor.\n";
+            return false;
+        }
+        sendMouse(objectsTree->viewport(), QEvent::MouseButtonRelease, invalidPoint, Qt::LeftButton, Qt::NoButton);
+        pumpEvents();
+
+        sendMouse(objectsTree->viewport(), QEvent::MouseMove, sourcePoint, Qt::NoButton, Qt::NoButton);
+        pumpEvents();
+    }
+
     sendMouse(objectsTree->viewport(), QEvent::MouseButtonPress, sourcePoint, Qt::LeftButton, Qt::LeftButton);
     pumpEvents();
     sendMouse(objectsTree->viewport(), QEvent::MouseMove, targetPoint, Qt::NoButton, Qt::LeftButton);
@@ -833,6 +853,7 @@ int runInspectorObjectMoveScenario(const char *scenarioName,
                                   sourceLineNumber,
                                   targetLineNumber,
                                   position,
+                                  qstrcmp(scenarioName, "after_line") == 0,
                                   qstrcmp(scenarioName, "after_line") == 0),
                 "Dragging an object row onto another object row should be routed through the inspector move handler.")) {
         return 1;

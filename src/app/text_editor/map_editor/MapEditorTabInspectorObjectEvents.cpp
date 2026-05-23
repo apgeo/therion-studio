@@ -56,6 +56,14 @@ bool isMovableObjectIndex(const QModelIndex &index)
         && !isScrapCategory(index);
 }
 
+bool isValidDropTargetIndex(const QModelIndex &sourceIndex, const QModelIndex &targetIndex)
+{
+    return sourceIndex.isValid()
+        && targetIndex.isValid()
+        && targetIndex.data(kInspectorSourceLineRole).toInt() > 0
+        && targetIndex != sourceIndex;
+}
+
 bool isDragAffordanceColumn(int column)
 {
     return column == kInspectorObjectNameColumn || column == kInspectorObjectDragColumn;
@@ -85,6 +93,11 @@ QString dropIndicatorStyleSheet(const QColor &color)
         .arg(color.green())
         .arg(color.blue());
 }
+
+bool isSelfDropTarget(const QModelIndex &sourceIndex, const QModelIndex &targetIndex)
+{
+    return sourceIndex.isValid() && targetIndex.isValid() && targetIndex == sourceIndex;
+}
 }
 
 std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *event)
@@ -106,7 +119,7 @@ std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *eve
         autoscrollDragViewport(mapObjectsTree_, mouseEvent->pos());
         const QModelIndex index = mapObjectsTree_->indexAt(mouseEvent->pos());
         const QModelIndex objectIndex = index.sibling(index.row(), kInspectorObjectNameColumn);
-        if (objectIndex.isValid() && objectIndex != inspectorObjectPressedNameIndex_) {
+        if (isValidDropTargetIndex(inspectorObjectPressedNameIndex_, objectIndex)) {
             const QRect targetRect = mapObjectsTree_->visualRect(objectIndex);
             const bool targetIsScrap = isScrapCategory(objectIndex);
             const bool afterTarget = targetRect.isValid() && mouseEvent->pos().y() > targetRect.center().y();
@@ -142,7 +155,13 @@ std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *eve
         }
 
         hideDropIndicator(inspectorObjectDropIndicator_);
-        return std::nullopt;
+        mapObjectsTree_->viewport()->setCursor(Qt::ForbiddenCursor);
+        toolbarStatusNote_ = isSelfDropTarget(inspectorObjectPressedNameIndex_, objectIndex)
+            ? tr("Move object: cannot drop onto itself.")
+            : tr("Move object: release over another object or scrap row.");
+        refreshToolbarSummary();
+        event->accept();
+        return true;
     }
 
     if (event->type() == QEvent::MouseMove) {
@@ -177,6 +196,14 @@ std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *eve
         const QPersistentModelIndex sourceIndex = inspectorObjectPressedNameIndex_;
         inspectorObjectPressedNameIndex_ = QPersistentModelIndex();
         inspectorObjectPressedWasSelected_ = false;
+        if (sourceIndex.isValid() && !isValidDropTargetIndex(sourceIndex, objectIndex)) {
+            toolbarStatusNote_ = isSelfDropTarget(sourceIndex, objectIndex)
+                ? tr("Move object: cannot drop onto itself.")
+                : tr("Move object: release over another object or scrap row.");
+            refreshToolbarSummary();
+            event->accept();
+            return true;
+        }
         if (sourceIndex.isValid() && objectIndex.isValid() && sourceIndex != objectIndex) {
             const QRect targetRect = mapObjectsTree_->visualRect(objectIndex);
             const bool afterTarget = targetRect.isValid() && mouseEvent->pos().y() > targetRect.center().y();

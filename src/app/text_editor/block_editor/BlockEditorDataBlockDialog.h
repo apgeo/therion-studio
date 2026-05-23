@@ -1,12 +1,25 @@
 #pragma once
 
+#include "../TextEditorCommandMetadata.h"
+
+#include <functional>
+#include <QString>
 #include <QStringList>
 
 #include <optional>
 
+class QWidget;
+
 namespace TherionStudio
 {
-class TextEditorTab;
+struct BlockEditorDataBlockDialogContext
+{
+    QWidget *dialogParent = nullptr;
+    const TextEditorCommandMetadata *commandMetadata = nullptr;
+    std::function<QString(const QString &, const QStringList &, int)> resolveScopeForCommandAtLine;
+    std::function<bool(const QString &, const QString &)> isCommandDirectiveInScope;
+    std::function<QString(const char *)> translate;
+};
 
 struct BlockEditorDataBlockDialogResult
 {
@@ -18,12 +31,14 @@ struct BlockEditorDataBlockDialogResult
 class BlockEditorDataBlockDialog final
 {
 public:
-    explicit BlockEditorDataBlockDialog(TextEditorTab *owner);
+    explicit BlockEditorDataBlockDialog(BlockEditorDataBlockDialogContext context);
 
     std::optional<BlockEditorDataBlockDialogResult> configureRows(const QStringList &lines,
                                                                   int lineNumber);
 
 private:
-    TextEditorTab *owner_ = nullptr;
+    QString tr(const char *text) const;
+
+    BlockEditorDataBlockDialogContext context_;
 };
 }

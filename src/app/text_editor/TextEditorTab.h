@@ -58,9 +58,6 @@ class BlockEditorDetailsPaneController;
 class BlockEditorToolboxController;
 class BlockEditorToolboxDetailsController;
 class BlockEditorCanvasSelectionController;
-class BlockEditorConfigureController;
-class BlockEditorDataBlockDialog;
-class BlockEditorDeleteExecutor;
 class BlockEditorMovePreviewController;
 class BlockEditorCanvasBoundaryController;
 class BlockEditorCanvasRebuildController;
@@ -70,16 +67,32 @@ class BlockEditorInsertionController;
 class BlockEditorInsertionPlanner;
 class BlockEditorMoveController;
 class BlockEditorMovePlanner;
-class BlockEditorCommandOptionsDialog;
-class BlockEditorSingleValueCommandDialog;
 class BlockEditorSourceController;
+struct BlockEditorCommandOptionsDialogContext;
+struct BlockEditorConfigureContext;
+struct BlockEditorDataBlockDialogContext;
 struct BlockEditorDetailsHelpContext;
+struct BlockEditorDeleteContext;
+struct BlockEditorDocumentOutlineContext;
+struct BlockEditorDropTargetContext;
+struct BlockEditorInsertionContext;
+struct BlockEditorInsertionPlannerContext;
+struct BlockEditorMoveContext;
 struct BlockEditorLineBuildContext;
+struct BlockEditorMovePlannerContext;
+struct BlockEditorMovePreviewContext;
 struct BlockEditorOptionArgsContext;
+struct BlockEditorSelectionDetailsContext;
 struct BlockEditorApplyExecutorContext;
 struct BlockEditorApplyStateContext;
 struct BlockEditorCanvasBoundaryContext;
+struct BlockEditorCanvasRebuildContext;
+struct BlockEditorCanvasSelectionContext;
+struct BlockEditorDetailsPaneContext;
 struct BlockEditorSourceContext;
+struct BlockEditorSingleValueCommandDialogContext;
+struct BlockEditorToolboxContext;
+struct BlockEditorToolboxDetailsContext;
 struct TherionParsedLine;
 
 class TextEditorTab final : public QWidget
@@ -203,25 +216,6 @@ private slots:
     void handleBlocksModeRequested();
 
 private:
-    friend class BlockEditorSelectionDetailsController;
-    friend class BlockEditorDetailsPaneController;
-    friend class BlockEditorToolboxController;
-    friend class BlockEditorToolboxDetailsController;
-    friend class BlockEditorCanvasSelectionController;
-    friend class BlockEditorConfigureController;
-    friend class BlockEditorDataBlockDialog;
-    friend class BlockEditorDeleteExecutor;
-    friend class BlockEditorMovePreviewController;
-    friend class BlockEditorCanvasRebuildController;
-    friend class BlockEditorDocumentOutlineBuilder;
-    friend class BlockEditorDropTargetResolver;
-    friend class BlockEditorInsertionController;
-    friend class BlockEditorInsertionPlanner;
-    friend class BlockEditorMoveController;
-    friend class BlockEditorMovePlanner;
-    friend class BlockEditorCommandOptionsDialog;
-    friend class BlockEditorSingleValueCommandDialog;
-
     enum class BlockDetailsMode
     {
         None,
@@ -251,10 +245,20 @@ private:
     void buildSourceRewriteController();
     void buildStatusController();
     void buildBlockEditorPanel();
+    void buildBlockToolboxController();
+    BlockEditorToolboxContext blockEditorToolboxContext();
     void buildBlockDetailsHelpController();
     BlockEditorDetailsHelpContext blockEditorDetailsHelpContext();
     void buildBlockDetailsLineBuildService();
     BlockEditorLineBuildContext blockEditorLineBuildContext();
+    BlockEditorDocumentOutlineContext blockEditorDocumentOutlineContext() const;
+    BlockEditorDropTargetContext blockEditorDropTargetContext() const;
+    BlockEditorInsertionPlannerContext blockEditorInsertionPlannerContext() const;
+    BlockEditorMovePlannerContext blockEditorMovePlannerContext() const;
+    BlockEditorInsertionContext blockEditorInsertionContext();
+    BlockEditorMoveContext blockEditorMoveContext();
+    void buildBlockDetailsMovePreviewController();
+    BlockEditorMovePreviewContext blockEditorMovePreviewContext();
     void buildBlockDetailsOptionArgsController();
     BlockEditorOptionArgsContext blockEditorOptionArgsContext();
     void buildBlockDetailsApplyExecutor();
@@ -262,8 +266,22 @@ private:
     void buildBlockDetailsApplyStateController();
     BlockEditorApplyStateContext blockEditorApplyStateContext();
     BlockEditorCanvasBoundaryContext blockEditorCanvasBoundaryContext() const;
+    BlockEditorCanvasRebuildContext blockEditorCanvasRebuildContext();
+    void buildBlockDetailsSelectionDetailsController();
+    BlockEditorSelectionDetailsContext blockEditorSelectionDetailsContext();
+    void buildBlockDetailsPaneController();
+    BlockEditorDetailsPaneContext blockEditorDetailsPaneContext();
+    void buildBlockDetailsToolboxDetailsController();
+    BlockEditorToolboxDetailsContext blockEditorToolboxDetailsContext();
+    void buildBlockDetailsCanvasSelectionController();
+    BlockEditorCanvasSelectionContext blockEditorCanvasSelectionContext();
     BlockEditorSourceContext blockEditorSourceContext();
     BlockEditorSourceContext blockEditorSourceContext() const;
+    BlockEditorDeleteContext blockEditorDeleteContext();
+    BlockEditorConfigureContext blockEditorConfigureContext();
+    BlockEditorCommandOptionsDialogContext blockEditorCommandOptionsDialogContext();
+    BlockEditorDataBlockDialogContext blockEditorDataBlockDialogContext();
+    BlockEditorSingleValueCommandDialogContext blockEditorSingleValueCommandDialogContext();
     void loadHelpMetadata();
     void loadHelpMetadataFromCommandCatalog();
     void updateContextHelp();

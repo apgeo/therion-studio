@@ -1,7 +1,6 @@
 #include "BlockEditorDropTargetResolver.h"
 
 #include "BlockEditorDocumentOutlineBuilder.h"
-#include "../TextEditorTab.h"
 
 #include <QGraphicsItem>
 #include <QGraphicsScene>
@@ -9,27 +8,28 @@
 #include <QTransform>
 
 #include <limits>
+#include <utility>
 
 namespace TherionStudio
 {
-BlockEditorDropTargetResolver::BlockEditorDropTargetResolver(const TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorDropTargetResolver::BlockEditorDropTargetResolver(BlockEditorDropTargetContext context)
+    : context_(std::move(context))
 {
 }
 
 BlockEditorDropTargetResolver::SceneItemsByLine BlockEditorDropTargetResolver::collectSceneItemsByLine() const
 {
     SceneItemsByLine sceneItemsByLine;
-    if (owner_ == nullptr || owner_->blockCanvasScene_ == nullptr) {
+    if (context_.scene == nullptr || !context_.blockCanvasItemLineNumber) {
         return sceneItemsByLine;
     }
 
-    const QList<QGraphicsItem *> sceneItems = owner_->blockCanvasScene_->items();
+    const QList<QGraphicsItem *> sceneItems = context_.scene->items();
     for (QGraphicsItem *item : sceneItems) {
         if (item == nullptr) {
             continue;
         }
-        const int lineNumber = owner_->blockCanvasItemLineNumber(item);
+        const int lineNumber = context_.blockCanvasItemLineNumber(item);
         if (lineNumber <= 0) {
             continue;
         }
@@ -77,13 +77,13 @@ QGraphicsItem *BlockEditorDropTargetResolver::resolveTargetItem(
     int directExcludedLineNumber,
     const EntryPredicate &excludeEntry) const
 {
-    if (owner_ == nullptr || owner_->blockCanvasScene_ == nullptr) {
+    if (context_.scene == nullptr || !context_.resolveBlockCanvasItem || !context_.blockCanvasItemLineNumber) {
         return nullptr;
     }
 
-    QGraphicsItem *targetBlockItem = owner_->resolveBlockCanvasItem(owner_->blockCanvasScene_->itemAt(scenePos, QTransform()));
+    QGraphicsItem *targetBlockItem = context_.resolveBlockCanvasItem(context_.scene->itemAt(scenePos, QTransform()));
     if (targetBlockItem != nullptr) {
-        const int targetLine = owner_->blockCanvasItemLineNumber(targetBlockItem);
+        const int targetLine = context_.blockCanvasItemLineNumber(targetBlockItem);
         if (targetLine == directExcludedLineNumber) {
             targetBlockItem = nullptr;
         }

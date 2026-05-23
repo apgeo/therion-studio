@@ -1,30 +1,33 @@
 #include "BlockEditorCanvasSelectionController.h"
 
 #include "BlockEditorCanvasItem.h"
-#include "../TextEditorTab.h"
 
 #include <QGraphicsItem>
 #include <QGraphicsScene>
 #include <QGraphicsView>
 
+#include <utility>
+
 namespace TherionStudio
 {
-BlockEditorCanvasSelectionController::BlockEditorCanvasSelectionController(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorCanvasSelectionController::BlockEditorCanvasSelectionController(BlockEditorCanvasSelectionContext context)
+    : context_(std::move(context))
 {
 }
 
 void BlockEditorCanvasSelectionController::selectBlockInCanvasAndDetails(int lineNumber)
 {
-    if (owner_ == nullptr || owner_->tearingDown_) {
+    if (context_.tearingDown != nullptr && *context_.tearingDown) {
         return;
     }
-    if (lineNumber <= 0 || owner_->blockCanvasScene_ == nullptr) {
-        owner_->clearBlockDetailsPane();
+    if (lineNumber <= 0 || context_.scene == nullptr) {
+        if (context_.clearDetailsPane) {
+            context_.clearDetailsPane();
+        }
         return;
     }
 
-    const QList<QGraphicsItem *> sceneItems = owner_->blockCanvasScene_->items();
+    const QList<QGraphicsItem *> sceneItems = context_.scene->items();
     for (QGraphicsItem *item : sceneItems) {
         QGraphicsItem *blockItem = resolveBlockCanvasItem(item);
         if (blockItem == nullptr) {
@@ -32,40 +35,48 @@ void BlockEditorCanvasSelectionController::selectBlockInCanvasAndDetails(int lin
         }
         if (blockCanvasItemLineNumber(blockItem) == lineNumber) {
             selectBlockCanvasItem(blockItem, true);
-            owner_->refreshBlockDetailsSelectionFromScene();
+            refreshDetailsSelectionFromScene();
             return;
         }
     }
-    owner_->clearBlockDetailsPane();
+    if (context_.clearDetailsPane) {
+        context_.clearDetailsPane();
+    }
 }
 
 void BlockEditorCanvasSelectionController::refreshDetailsSelectionFromScene()
 {
-    if (owner_ == nullptr || owner_->tearingDown_) {
+    if (context_.tearingDown != nullptr && *context_.tearingDown) {
         return;
     }
-    if (owner_->blockCanvasScene_ == nullptr) {
-        owner_->clearBlockDetailsPane();
+    if (context_.scene == nullptr) {
+        if (context_.clearDetailsPane) {
+            context_.clearDetailsPane();
+        }
         return;
     }
 
     QGraphicsItem *selectedBlock = nullptr;
-    if (!owner_->blockCanvasScene_->selectedItems().isEmpty()) {
-        selectedBlock = resolveBlockCanvasItem(owner_->blockCanvasScene_->selectedItems().first());
+    if (!context_.scene->selectedItems().isEmpty()) {
+        selectedBlock = resolveBlockCanvasItem(context_.scene->selectedItems().first());
     }
     if (selectedBlock == nullptr) {
-        selectedBlock = resolveBlockCanvasItem(owner_->blockCanvasScene_->focusItem());
+        selectedBlock = resolveBlockCanvasItem(context_.scene->focusItem());
     }
     if (selectedBlock == nullptr) {
-        owner_->clearBlockDetailsPane();
+        if (context_.clearDetailsPane) {
+            context_.clearDetailsPane();
+        }
         return;
     }
 
     const int lineNumber = blockCanvasItemLineNumber(selectedBlock);
     const QString kind = blockCanvasItemKind(selectedBlock);
-    if (!owner_->loadBlockDetailsForSelection(kind, lineNumber)) {
-        owner_->blockDetailsSelectedLineNumber_ = lineNumber;
-        owner_->blockDetailsSelectedKind_ = owner_->normalizedDirectiveToken(kind);
+    const bool loaded = context_.loadDetailsForSelection
+        ? context_.loadDetailsForSelection(kind, lineNumber)
+        : false;
+    if (!loaded && context_.setDetailsSelectionFallback) {
+        context_.setDetailsSelectionFallback(lineNumber, kind);
     }
 }
 
@@ -98,14 +109,14 @@ QString BlockEditorCanvasSelectionController::blockCanvasItemKind(const QGraphic
 
 void BlockEditorCanvasSelectionController::selectBlockCanvasItem(QGraphicsItem *item, bool centerView)
 {
-    if (owner_ == nullptr || owner_->blockCanvasScene_ == nullptr || item == nullptr) {
+    if (context_.scene == nullptr || item == nullptr) {
         return;
     }
-    owner_->blockCanvasScene_->clearSelection();
+    context_.scene->clearSelection();
     item->setSelected(true);
-    owner_->blockCanvasScene_->setFocusItem(item);
-    if (centerView && owner_->blockCanvasView_ != nullptr) {
-        owner_->blockCanvasView_->centerOn(item);
+    context_.scene->setFocusItem(item);
+    if (centerView && context_.view != nullptr) {
+        context_.view->centerOn(item);
     }
 }
 }

@@ -2,7 +2,6 @@
 
 #include "BlockEditorDirectiveRules.h"
 #include "../ContextHelpController.h"
-#include "../TextEditorTab.h"
 
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -17,11 +16,18 @@
 
 #include "../../../core/TherionDocumentParser.h"
 
+#include <utility>
+
 namespace TherionStudio
 {
-BlockEditorSingleValueCommandDialog::BlockEditorSingleValueCommandDialog(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorSingleValueCommandDialog::BlockEditorSingleValueCommandDialog(BlockEditorSingleValueCommandDialogContext context)
+    : context_(std::move(context))
 {
+}
+
+QString BlockEditorSingleValueCommandDialog::tr(const char *text) const
+{
+    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
 }
 
 std::optional<QString> BlockEditorSingleValueCommandDialog::configureLine(
@@ -29,7 +35,7 @@ std::optional<QString> BlockEditorSingleValueCommandDialog::configureLine(
     const QString &sourceLine,
     int lineNumber)
 {
-    if (owner_ == nullptr || lineNumber <= 0) {
+    if (context_.commandMetadata == nullptr || lineNumber <= 0) {
         return std::nullopt;
     }
 
@@ -42,8 +48,8 @@ std::optional<QString> BlockEditorSingleValueCommandDialog::configureLine(
         ? parsedLine.tokens.mid(1).join(QLatin1Char(' '))
         : QString();
 
-    QDialog dialog(owner_);
-    dialog.setWindowTitle(TextEditorTab::tr("Configure Block"));
+    QDialog dialog(context_.dialogParent);
+    dialog.setWindowTitle(tr("Configure Block"));
     dialog.setModal(true);
 
     auto *layout = new QVBoxLayout(&dialog);
@@ -52,10 +58,10 @@ std::optional<QString> BlockEditorSingleValueCommandDialog::configureLine(
 
     auto *formLayout = new QFormLayout;
     auto *valueEdit = new QLineEdit(currentValue, &dialog);
-    formLayout->addRow(TextEditorTab::tr("Value"), valueEdit);
+    formLayout->addRow(tr("Value"), valueEdit);
     layout->addLayout(formLayout);
 
-    TherionHelpEntry helpEntry = owner_->commandMetadata().helpEntries.value(commandName);
+    TherionHelpEntry helpEntry = context_.commandMetadata->helpEntries.value(commandName);
     if (helpEntry.summary.trimmed().isEmpty()
         && helpEntry.syntax.trimmed().isEmpty()
         && helpEntry.arguments.isEmpty()
@@ -63,11 +69,11 @@ std::optional<QString> BlockEditorSingleValueCommandDialog::configureLine(
         && helpEntry.acceptedValues.isEmpty()) {
         const QString openingDirective = BlockEditorDirectiveRules::completionOpeningDirectiveForClosing(commandName);
         if (!openingDirective.isEmpty()) {
-            helpEntry = owner_->commandMetadata().helpEntries.value(openingDirective);
+            helpEntry = context_.commandMetadata->helpEntries.value(openingDirective);
         }
     }
 
-    auto *helpLabel = new QLabel(TextEditorTab::tr("Contextual Help"), &dialog);
+    auto *helpLabel = new QLabel(tr("Contextual Help"), &dialog);
     QFont helpLabelFont = helpLabel->font();
     helpLabelFont.setBold(true);
     helpLabel->setFont(helpLabelFont);
@@ -97,7 +103,7 @@ std::optional<QString> BlockEditorSingleValueCommandDialog::configureLine(
 
     const QString updatedValue = valueEdit->text();
     if (updatedValue.trimmed().isEmpty()) {
-        QMessageBox::warning(owner_, TextEditorTab::tr("Configure Block"), TextEditorTab::tr("Value cannot be empty."));
+        QMessageBox::warning(context_.dialogParent, tr("Configure Block"), tr("Value cannot be empty."));
         return std::nullopt;
     }
 

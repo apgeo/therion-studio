@@ -2,9 +2,8 @@
 
 #include "BlockEditorCommandOptionParser.h"
 #include "BlockEditorDetailsSupport.h"
-#include "BlockEditorSourceController.h"
 #include "../ContextHelpController.h"
-#include "../TextEditorTab.h"
+#include "../TextEditorCommandMetadata.h"
 
 #include <QLabel>
 #include <QLineEdit>
@@ -15,234 +14,268 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 
+#include <utility>
+
 #include "../../../core/TherionCommandSyntax.h"
 #include "../../../core/TherionDocumentParser.h"
 
 namespace TherionStudio
 {
-BlockEditorSelectionDetailsController::BlockEditorSelectionDetailsController(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorSelectionDetailsController::BlockEditorSelectionDetailsController(BlockEditorSelectionDetailsContext context)
+    : context_(std::move(context))
 {
 }
 
 bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &kind, int lineNumber)
 {
-    if (owner_ == nullptr || owner_->tearingDown_) {
+    const auto tr = [this](const char *text) {
+        return context_.translate ? context_.translate(text) : QString::fromLatin1(text);
+    };
+    if (context_.tearingDown != nullptr && *context_.tearingDown) {
         return false;
     }
-    const BlockEditorSourceController source(owner_->blockEditorSourceContext());
-    if (lineNumber <= 0 || !source.hasEditor()) {
-        owner_->clearBlockDetailsPane();
+    if (context_.detailsPopulating == nullptr
+        || context_.selectedLineNumber == nullptr
+        || context_.selectedKind == nullptr
+        || context_.baseStatusText == nullptr
+        || context_.commentMarker == nullptr
+        || context_.commandMetadata == nullptr
+        || !context_.setReadingsTagEditor
+        || !context_.installLineEditCompleter) {
+        return false;
+    }
+    if (lineNumber <= 0 || !context_.loadNormalizedLines) {
+        if (context_.clearDetailsPane) {
+            context_.clearDetailsPane();
+        }
         return false;
     }
 
-    QStringList lines = source.normalizedLines();
+    QStringList lines;
+    if (!context_.loadNormalizedLines(&lines)) {
+        if (context_.clearDetailsPane) {
+            context_.clearDetailsPane();
+        }
+        return false;
+    }
     if (lineNumber > lines.size()) {
-        owner_->clearBlockDetailsPane();
+        if (context_.clearDetailsPane) {
+            context_.clearDetailsPane();
+        }
         return false;
     }
 
-    const QString normalizedKind = owner_->normalizedDirectiveToken(kind);
+    const QString normalizedKind = context_.normalizedDirectiveToken ? context_.normalizedDirectiveToken(kind) : kind.trimmed().toLower();
     const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineNumber - 1), lineNumber);
     if (parsedLine.tokens.isEmpty()) {
-        owner_->clearBlockDetailsPane();
+        if (context_.clearDetailsPane) {
+            context_.clearDetailsPane();
+        }
         return false;
     }
     const QString inlineComment = parsedLine.commentStart >= 0 ? parsedLine.commentText.trimmed() : QString();
     if (parsedLine.commentStart >= 0 && parsedLine.commentStart < lines.at(lineNumber - 1).size()) {
-        owner_->blockDetailsCommentMarker_ = lines.at(lineNumber - 1).at(parsedLine.commentStart);
+        *context_.commentMarker = lines.at(lineNumber - 1).at(parsedLine.commentStart);
     } else {
-        owner_->blockDetailsCommentMarker_ = QLatin1Char('#');
+        *context_.commentMarker = QLatin1Char('#');
     }
 
-    owner_->blockDetailsSelectedLineNumber_ = lineNumber;
-    owner_->blockDetailsSelectedKind_ = normalizedKind;
-    if (owner_->blockDetailsEditPanel_ != nullptr) {
-        owner_->blockDetailsEditPanel_->setVisible(true);
+    *context_.selectedLineNumber = lineNumber;
+    *context_.selectedKind = normalizedKind;
+    if (context_.editPanel != nullptr) {
+        context_.editPanel->setVisible(true);
     }
 
-    owner_->blockDetailsPopulating_ = true;
+    *context_.detailsPopulating = true;
 
-    const bool supported = owner_->supportsDetailsPaneForKind(normalizedKind);
-    const bool hasCatalogOptions = !owner_->commandMetadata().commandOptionTokens.value(normalizedKind).isEmpty();
-    const bool structuredOptionsMode = owner_->isContainerBlockDirectiveForBlocks(normalizedKind) || hasCatalogOptions;
+    const bool supported = context_.supportsDetailsPaneForKind ? context_.supportsDetailsPaneForKind(normalizedKind) : false;
+    const bool hasCatalogOptions = !(*context_.commandMetadata).commandOptionTokens.value(normalizedKind).isEmpty();
+    const bool structuredOptionsMode =
+        (context_.isContainerBlockDirectiveForBlocks ? context_.isContainerBlockDirectiveForBlocks(normalizedKind) : false)
+        || hasCatalogOptions;
     const bool simpleValueMode = !structuredOptionsMode && normalizedKind != QStringLiteral("data");
     const bool dataHeaderMode = normalizedKind == QStringLiteral("data");
     if (!supported) {
-        owner_->blockDetailsMode_ = TextEditorTab::BlockDetailsMode::Unsupported;
+        if (context_.setDetailsMode) { context_.setDetailsMode(BlockEditorSelectionDetailsMode::Unsupported); }
     } else if (structuredOptionsMode) {
-        owner_->blockDetailsMode_ = TextEditorTab::BlockDetailsMode::StructuredOptions;
+        if (context_.setDetailsMode) { context_.setDetailsMode(BlockEditorSelectionDetailsMode::StructuredOptions); }
     } else if (simpleValueMode) {
-        owner_->blockDetailsMode_ = TextEditorTab::BlockDetailsMode::SimpleValue;
+        if (context_.setDetailsMode) { context_.setDetailsMode(BlockEditorSelectionDetailsMode::SimpleValue); }
     } else if (dataHeaderMode) {
-        owner_->blockDetailsMode_ = TextEditorTab::BlockDetailsMode::DataHeader;
+        if (context_.setDetailsMode) { context_.setDetailsMode(BlockEditorSelectionDetailsMode::DataHeader); }
     } else {
-        owner_->blockDetailsMode_ = TextEditorTab::BlockDetailsMode::Unsupported;
+        if (context_.setDetailsMode) { context_.setDetailsMode(BlockEditorSelectionDetailsMode::Unsupported); }
     }
 
-    owner_->blockDetailsBaseStatusText_ = TextEditorTab::tr("Command: %1").arg(normalizedKind);
-    if (owner_->blockDetailsStatusLabel_ != nullptr) {
-        owner_->blockDetailsStatusLabel_->setStyleSheet(QString());
-        owner_->blockDetailsStatusLabel_->setText(owner_->blockDetailsBaseStatusText_);
+    *context_.baseStatusText = tr("Command: %1").arg(normalizedKind);
+    if (context_.statusLabel != nullptr) {
+        context_.statusLabel->setStyleSheet(QString());
+        context_.statusLabel->setText(*context_.baseStatusText);
     }
 
     if (!supported) {
-        if (owner_->blockDetailsEditPanel_ != nullptr) {
-            owner_->blockDetailsEditPanel_->setVisible(false);
+        if (context_.editPanel != nullptr) {
+            context_.editPanel->setVisible(false);
         }
-        if (owner_->blockDetailsPrimaryFieldLabel_ != nullptr) {
-            owner_->blockDetailsPrimaryFieldLabel_->setVisible(false);
+        if (context_.primaryFieldLabel != nullptr) {
+            context_.primaryFieldLabel->setVisible(false);
         }
-        if (owner_->blockDetailsSecondaryFieldLabel_ != nullptr) {
-            owner_->blockDetailsSecondaryFieldLabel_->setVisible(false);
+        if (context_.secondaryFieldLabel != nullptr) {
+            context_.secondaryFieldLabel->setVisible(false);
         }
-        if (owner_->blockDetailsCommentFieldLabel_ != nullptr) {
-            owner_->blockDetailsCommentFieldLabel_->setVisible(false);
+        if (context_.commentFieldLabel != nullptr) {
+            context_.commentFieldLabel->setVisible(false);
         }
-        if (owner_->blockDetailsIdEdit_ != nullptr) {
-            owner_->blockDetailsIdEdit_->clear();
-            owner_->blockDetailsIdEdit_->setEnabled(false);
-            owner_->blockDetailsIdEdit_->setVisible(false);
+        if (context_.idEdit != nullptr) {
+            context_.idEdit->clear();
+            context_.idEdit->setEnabled(false);
+            context_.idEdit->setVisible(false);
         }
-        if (owner_->blockDetailsAdditionalPositionalEdit_ != nullptr) {
-            owner_->blockDetailsAdditionalPositionalEdit_->clear();
-            owner_->blockDetailsAdditionalPositionalEdit_->setEnabled(false);
-            owner_->blockDetailsAdditionalPositionalEdit_->setVisible(false);
+        if (context_.additionalPositionalEdit != nullptr) {
+            context_.additionalPositionalEdit->clear();
+            context_.additionalPositionalEdit->setEnabled(false);
+            context_.additionalPositionalEdit->setVisible(false);
         }
-        if (owner_->blockDetailsSecondaryFieldStack_ != nullptr) {
-            owner_->blockDetailsSecondaryFieldStack_->setVisible(false);
-            if (owner_->blockDetailsAdditionalPositionalEdit_ != nullptr) {
-                owner_->blockDetailsSecondaryFieldStack_->setCurrentWidget(owner_->blockDetailsAdditionalPositionalEdit_);
+        if (context_.secondaryFieldStack != nullptr) {
+            context_.secondaryFieldStack->setVisible(false);
+            if (context_.additionalPositionalEdit != nullptr) {
+                context_.secondaryFieldStack->setCurrentWidget(context_.additionalPositionalEdit);
             }
         }
-        owner_->setBlockDetailsReadingsTagEditor(QString(), {}, {});
-        if (owner_->blockDetailsCommentEdit_ != nullptr) {
-            owner_->blockDetailsCommentEdit_->clear();
-            owner_->blockDetailsCommentEdit_->setEnabled(false);
-            owner_->blockDetailsCommentEdit_->setVisible(false);
+        context_.setReadingsTagEditor(QString(), {}, {});
+        if (context_.commentEdit != nullptr) {
+            context_.commentEdit->clear();
+            context_.commentEdit->setEnabled(false);
+            context_.commentEdit->setVisible(false);
         }
-        if (owner_->blockDetailsOptionsLabel_ != nullptr) {
-            owner_->blockDetailsOptionsLabel_->setVisible(false);
+        if (context_.optionsLabel != nullptr) {
+            context_.optionsLabel->setVisible(false);
         }
-        if (owner_->blockDetailsOptionsTable_ != nullptr) {
-            owner_->blockDetailsOptionsTable_->clearSelection();
-            owner_->blockDetailsOptionsTable_->setEnabled(false);
-            owner_->blockDetailsOptionsTable_->setRowCount(0);
-            owner_->blockDetailsOptionsTable_->setVisible(false);
+        if (context_.optionsTable != nullptr) {
+            context_.optionsTable->clearSelection();
+            context_.optionsTable->setEnabled(false);
+            context_.optionsTable->setRowCount(0);
+            context_.optionsTable->setVisible(false);
         }
-        if (owner_->blockDetailsAddOptionButton_ != nullptr) {
-            owner_->blockDetailsAddOptionButton_->setEnabled(false);
-            owner_->blockDetailsAddOptionButton_->setVisible(false);
+        if (context_.addOptionButton != nullptr) {
+            context_.addOptionButton->setEnabled(false);
+            context_.addOptionButton->setVisible(false);
         }
-        if (owner_->blockDetailsRemoveOptionButton_ != nullptr) {
-            owner_->blockDetailsRemoveOptionButton_->setEnabled(false);
-            owner_->blockDetailsRemoveOptionButton_->setVisible(false);
+        if (context_.removeOptionButton != nullptr) {
+            context_.removeOptionButton->setEnabled(false);
+            context_.removeOptionButton->setVisible(false);
         }
-        if (owner_->blockDetailsLegacyConfigureButton_ != nullptr) {
-            owner_->blockDetailsLegacyConfigureButton_->setEnabled(false);
-            owner_->blockDetailsLegacyConfigureButton_->setVisible(false);
+        if (context_.legacyConfigureButton != nullptr) {
+            context_.legacyConfigureButton->setEnabled(false);
+            context_.legacyConfigureButton->setVisible(false);
         }
-        if (owner_->blockDetailsOptionArgsLabel_ != nullptr) {
-            owner_->blockDetailsOptionArgsLabel_->setVisible(false);
+        if (context_.optionArgsLabel != nullptr) {
+            context_.optionArgsLabel->setVisible(false);
         }
-        if (owner_->blockDetailsOptionArgsPanel_ != nullptr) {
-            owner_->blockDetailsOptionArgsPanel_->setVisible(false);
+        if (context_.optionArgsPanel != nullptr) {
+            context_.optionArgsPanel->setVisible(false);
         }
-        if (owner_->blockDetailsApplyButton_ != nullptr) {
-            owner_->blockDetailsApplyButton_->setEnabled(false);
+        if (context_.applyButton != nullptr) {
+            context_.applyButton->setEnabled(false);
         }
-        owner_->blockDetailsPopulating_ = false;
-        owner_->refreshBlockDetailsOptionArgumentEditors();
-        owner_->updateBlockDetailsHelpForCurrentFocus();
-        owner_->refreshBlockDetailsApplyState();
+        *context_.detailsPopulating = false;
+        if (context_.refreshOptionArgumentEditors) {
+            context_.refreshOptionArgumentEditors();
+        }
+        if (context_.updateHelpForCurrentFocus) {
+            context_.updateHelpForCurrentFocus();
+        }
+        if (context_.refreshApplyState) {
+            context_.refreshApplyState();
+        }
         return true;
     }
 
-    if (owner_->blockDetailsPrimaryFieldLabel_ != nullptr) {
-        owner_->blockDetailsPrimaryFieldLabel_->setVisible(true);
+    if (context_.primaryFieldLabel != nullptr) {
+        context_.primaryFieldLabel->setVisible(true);
     }
-    if (owner_->blockDetailsSecondaryFieldLabel_ != nullptr) {
-        owner_->blockDetailsSecondaryFieldLabel_->setVisible(true);
+    if (context_.secondaryFieldLabel != nullptr) {
+        context_.secondaryFieldLabel->setVisible(true);
     }
-    if (owner_->blockDetailsCommentFieldLabel_ != nullptr) {
-        owner_->blockDetailsCommentFieldLabel_->setText(TextEditorTab::tr("Comment"));
-        owner_->blockDetailsCommentFieldLabel_->setVisible(true);
+    if (context_.commentFieldLabel != nullptr) {
+        context_.commentFieldLabel->setText(tr("Comment"));
+        context_.commentFieldLabel->setVisible(true);
     }
-    if (owner_->blockDetailsIdEdit_ != nullptr) {
-        owner_->blockDetailsIdEdit_->setVisible(true);
-        owner_->installBlockDetailsLineEditCompleter(owner_->blockDetailsIdEdit_, {});
+    if (context_.idEdit != nullptr) {
+        context_.idEdit->setVisible(true);
+        context_.installLineEditCompleter(context_.idEdit, {});
     }
-    if (owner_->blockDetailsAdditionalPositionalEdit_ != nullptr) {
-        owner_->blockDetailsAdditionalPositionalEdit_->setVisible(true);
-        owner_->installBlockDetailsLineEditCompleter(owner_->blockDetailsAdditionalPositionalEdit_, {});
+    if (context_.additionalPositionalEdit != nullptr) {
+        context_.additionalPositionalEdit->setVisible(true);
+        context_.installLineEditCompleter(context_.additionalPositionalEdit, {});
     }
-    if (owner_->blockDetailsSecondaryFieldStack_ != nullptr) {
-        owner_->blockDetailsSecondaryFieldStack_->setVisible(true);
-        if (owner_->blockDetailsAdditionalPositionalEdit_ != nullptr) {
-            owner_->blockDetailsSecondaryFieldStack_->setCurrentWidget(owner_->blockDetailsAdditionalPositionalEdit_);
+    if (context_.secondaryFieldStack != nullptr) {
+        context_.secondaryFieldStack->setVisible(true);
+        if (context_.additionalPositionalEdit != nullptr) {
+            context_.secondaryFieldStack->setCurrentWidget(context_.additionalPositionalEdit);
         }
     }
-    if (owner_->blockDetailsCommentEdit_ != nullptr) {
-        owner_->blockDetailsCommentEdit_->setVisible(true);
-        owner_->blockDetailsCommentEdit_->setEnabled(true);
-        owner_->blockDetailsCommentEdit_->setPlaceholderText(TextEditorTab::tr("optional"));
-        owner_->blockDetailsCommentEdit_->setText(inlineComment);
+    if (context_.commentEdit != nullptr) {
+        context_.commentEdit->setVisible(true);
+        context_.commentEdit->setEnabled(true);
+        context_.commentEdit->setPlaceholderText(tr("optional"));
+        context_.commentEdit->setText(inlineComment);
     }
-    if (owner_->blockDetailsOptionsLabel_ != nullptr) {
-        owner_->blockDetailsOptionsLabel_->setVisible(false);
+    if (context_.optionsLabel != nullptr) {
+        context_.optionsLabel->setVisible(false);
     }
-    if (owner_->blockDetailsOptionsTable_ != nullptr) {
-        owner_->blockDetailsOptionsTable_->setEnabled(false);
-        owner_->blockDetailsOptionsTable_->setRowCount(0);
-        owner_->blockDetailsOptionsTable_->setVisible(false);
+    if (context_.optionsTable != nullptr) {
+        context_.optionsTable->setEnabled(false);
+        context_.optionsTable->setRowCount(0);
+        context_.optionsTable->setVisible(false);
     }
-    if (owner_->blockDetailsOptionArgsLabel_ != nullptr) {
-        owner_->blockDetailsOptionArgsLabel_->setVisible(false);
+    if (context_.optionArgsLabel != nullptr) {
+        context_.optionArgsLabel->setVisible(false);
     }
-    if (owner_->blockDetailsOptionArgsPanel_ != nullptr) {
-        owner_->blockDetailsOptionArgsPanel_->setVisible(false);
+    if (context_.optionArgsPanel != nullptr) {
+        context_.optionArgsPanel->setVisible(false);
     }
-    if (owner_->blockDetailsAddOptionButton_ != nullptr) {
-        owner_->blockDetailsAddOptionButton_->setEnabled(false);
-        owner_->blockDetailsAddOptionButton_->setVisible(false);
+    if (context_.addOptionButton != nullptr) {
+        context_.addOptionButton->setEnabled(false);
+        context_.addOptionButton->setVisible(false);
     }
-    if (owner_->blockDetailsRemoveOptionButton_ != nullptr) {
-        owner_->blockDetailsRemoveOptionButton_->setEnabled(false);
-        owner_->blockDetailsRemoveOptionButton_->setVisible(false);
+    if (context_.removeOptionButton != nullptr) {
+        context_.removeOptionButton->setEnabled(false);
+        context_.removeOptionButton->setVisible(false);
     }
-    if (owner_->blockDetailsApplyButton_ != nullptr) {
-        owner_->blockDetailsApplyButton_->setEnabled(false);
+    if (context_.applyButton != nullptr) {
+        context_.applyButton->setEnabled(false);
     }
 
-    if (owner_->blockDetailsLegacyConfigureButton_ != nullptr) {
+    if (context_.legacyConfigureButton != nullptr) {
         if (!supported) {
-            owner_->blockDetailsLegacyConfigureButton_->setText(TextEditorTab::tr("Legacy Configure..."));
-            owner_->blockDetailsLegacyConfigureButton_->setVisible(true);
-            owner_->blockDetailsLegacyConfigureButton_->setEnabled(true);
+            context_.legacyConfigureButton->setText(tr("Legacy Configure..."));
+            context_.legacyConfigureButton->setVisible(true);
+            context_.legacyConfigureButton->setEnabled(true);
         } else if (dataHeaderMode) {
-            owner_->blockDetailsLegacyConfigureButton_->setText(TextEditorTab::tr("Edit Data Rows..."));
-            owner_->blockDetailsLegacyConfigureButton_->setVisible(true);
-            owner_->blockDetailsLegacyConfigureButton_->setEnabled(true);
+            context_.legacyConfigureButton->setText(tr("Edit Data Rows..."));
+            context_.legacyConfigureButton->setVisible(true);
+            context_.legacyConfigureButton->setEnabled(true);
         } else {
-            owner_->blockDetailsLegacyConfigureButton_->setVisible(false);
-            owner_->blockDetailsLegacyConfigureButton_->setEnabled(false);
+            context_.legacyConfigureButton->setVisible(false);
+            context_.legacyConfigureButton->setEnabled(false);
         }
     }
 
     if (!supported) {
-        if (owner_->blockDetailsIdEdit_ != nullptr) {
-            owner_->blockDetailsIdEdit_->clear();
-            owner_->blockDetailsIdEdit_->setEnabled(false);
-            owner_->blockDetailsIdEdit_->setPlaceholderText(QString());
+        if (context_.idEdit != nullptr) {
+            context_.idEdit->clear();
+            context_.idEdit->setEnabled(false);
+            context_.idEdit->setPlaceholderText(QString());
         }
-        if (owner_->blockDetailsAdditionalPositionalEdit_ != nullptr) {
-            owner_->blockDetailsAdditionalPositionalEdit_->clear();
-            owner_->blockDetailsAdditionalPositionalEdit_->setEnabled(false);
+        if (context_.additionalPositionalEdit != nullptr) {
+            context_.additionalPositionalEdit->clear();
+            context_.additionalPositionalEdit->setEnabled(false);
         }
-        owner_->setBlockDetailsReadingsTagEditor(QString(), {}, {});
-        if (owner_->blockDetailsHelpBrowser_ != nullptr) {
-            const TherionHelpEntry entry = owner_->commandMetadata().helpEntries.value(normalizedKind);
-            QString html = TextEditorTab::tr("<p>This block currently uses legacy dialog-based configuration.</p>");
+        context_.setReadingsTagEditor(QString(), {}, {});
+        if (context_.helpBrowser != nullptr) {
+            const TherionHelpEntry entry = (*context_.commandMetadata).helpEntries.value(normalizedKind);
+            QString html = tr("<p>This block currently uses legacy dialog-based configuration.</p>");
             html += ContextHelpController::renderHelpHtml(normalizedKind,
                                                           entry.summary,
                                                           entry.syntax,
@@ -250,91 +283,91 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
                                                           entry.acceptedValues,
                                                           entry.options,
                                                           false);
-            owner_->blockDetailsHelpBrowser_->setHtml(html);
+            context_.helpBrowser->setHtml(html);
         }
-        owner_->blockDetailsPopulating_ = false;
+        *context_.detailsPopulating = false;
         return false;
     }
 
     if (structuredOptionsMode) {
-        const bool explicitIdMode = owner_->commandSupportsInlineIdField(normalizedKind);
-        const bool requiresId = owner_->commandHasRequiredIdArgument(normalizedKind);
+        const bool explicitIdMode = context_.commandSupportsInlineIdField ? context_.commandSupportsInlineIdField(normalizedKind) : false;
+        const bool requiresId = context_.commandHasRequiredIdArgument ? context_.commandHasRequiredIdArgument(normalizedKind) : false;
 
         const BlockEditorParsedCommandOptions parsedOptions =
             parseBlockEditorCommandOptions(normalizedKind,
                                            parsedLine.tokens,
-                                           owner_->commandMetadata().commandOptionFixedArityByKey,
+                                           (*context_.commandMetadata).commandOptionFixedArityByKey,
                                            true);
 
-        if (owner_->blockDetailsPrimaryFieldLabel_ != nullptr) {
+        if (context_.primaryFieldLabel != nullptr) {
             if (explicitIdMode) {
-                owner_->blockDetailsPrimaryFieldLabel_->setText(TextEditorTab::tr("ID"));
+                context_.primaryFieldLabel->setText(tr("ID"));
             } else {
-                const QStringList argumentSignatures = owner_->commandArgumentSignaturesFor(normalizedKind);
+                const QStringList argumentSignatures = context_.commandArgumentSignaturesFor ? context_.commandArgumentSignaturesFor(normalizedKind) : QStringList();
                 if (!argumentSignatures.isEmpty()) {
-                    owner_->blockDetailsPrimaryFieldLabel_->setText(blockArgumentLabelFromSignature(argumentSignatures.first()));
+                    context_.primaryFieldLabel->setText(blockArgumentLabelFromSignature(argumentSignatures.first()));
                 } else {
-                    owner_->blockDetailsPrimaryFieldLabel_->setText(TextEditorTab::tr("Value"));
+                    context_.primaryFieldLabel->setText(tr("Value"));
                 }
             }
         }
-        if (owner_->blockDetailsIdEdit_ != nullptr) {
-            owner_->blockDetailsIdEdit_->setEnabled(true);
+        if (context_.idEdit != nullptr) {
+            context_.idEdit->setEnabled(true);
             if (explicitIdMode) {
-                owner_->blockDetailsIdEdit_->setPlaceholderText(requiresId ? TextEditorTab::tr("required")
-                                                                           : TextEditorTab::tr("optional"));
+                context_.idEdit->setPlaceholderText(requiresId ? tr("required")
+                                                                           : tr("optional"));
             } else {
-                owner_->blockDetailsIdEdit_->setPlaceholderText(TextEditorTab::tr("optional"));
+                context_.idEdit->setPlaceholderText(tr("optional"));
             }
-            owner_->blockDetailsIdEdit_->setText(parsedOptions.leadingValue);
+            context_.idEdit->setText(parsedOptions.leadingValue);
         }
         const bool showExtraArguments = !parsedOptions.extraPositionalTokens.isEmpty();
-        if (owner_->blockDetailsSecondaryFieldLabel_ != nullptr) {
-            owner_->blockDetailsSecondaryFieldLabel_->setText(TextEditorTab::tr("Extra Arguments (Advanced)"));
-            owner_->blockDetailsSecondaryFieldLabel_->setVisible(showExtraArguments);
+        if (context_.secondaryFieldLabel != nullptr) {
+            context_.secondaryFieldLabel->setText(tr("Extra Arguments (Advanced)"));
+            context_.secondaryFieldLabel->setVisible(showExtraArguments);
         }
-        if (owner_->blockDetailsAdditionalPositionalEdit_ != nullptr) {
-            owner_->blockDetailsAdditionalPositionalEdit_->setEnabled(showExtraArguments);
-            owner_->blockDetailsAdditionalPositionalEdit_->setVisible(showExtraArguments);
-            owner_->blockDetailsAdditionalPositionalEdit_->setText(showExtraArguments
+        if (context_.additionalPositionalEdit != nullptr) {
+            context_.additionalPositionalEdit->setEnabled(showExtraArguments);
+            context_.additionalPositionalEdit->setVisible(showExtraArguments);
+            context_.additionalPositionalEdit->setText(showExtraArguments
                                                                        ? parsedOptions.extraPositionalTokens.join(QLatin1Char(' '))
                                                                        : QString());
         }
-        if (owner_->blockDetailsSecondaryFieldStack_ != nullptr) {
-            owner_->blockDetailsSecondaryFieldStack_->setVisible(showExtraArguments);
-            if (owner_->blockDetailsAdditionalPositionalEdit_ != nullptr) {
-                owner_->blockDetailsSecondaryFieldStack_->setCurrentWidget(owner_->blockDetailsAdditionalPositionalEdit_);
+        if (context_.secondaryFieldStack != nullptr) {
+            context_.secondaryFieldStack->setVisible(showExtraArguments);
+            if (context_.additionalPositionalEdit != nullptr) {
+                context_.secondaryFieldStack->setCurrentWidget(context_.additionalPositionalEdit);
             }
         }
-        owner_->setBlockDetailsReadingsTagEditor(QString(), {}, {});
+        context_.setReadingsTagEditor(QString(), {}, {});
         const bool showOptionsSection = hasCatalogOptions || !parsedOptions.optionEntries.isEmpty();
-        if (owner_->blockDetailsOptionsLabel_ != nullptr) {
-            owner_->blockDetailsOptionsLabel_->setVisible(showOptionsSection);
+        if (context_.optionsLabel != nullptr) {
+            context_.optionsLabel->setVisible(showOptionsSection);
         }
-        if (owner_->blockDetailsOptionsTable_ != nullptr) {
-            owner_->blockDetailsOptionsTable_->setVisible(showOptionsSection);
-            owner_->blockDetailsOptionsTable_->setEnabled(showOptionsSection);
-            owner_->blockDetailsOptionsTable_->setRowCount(showOptionsSection ? parsedOptions.optionEntries.size() : 0);
+        if (context_.optionsTable != nullptr) {
+            context_.optionsTable->setVisible(showOptionsSection);
+            context_.optionsTable->setEnabled(showOptionsSection);
+            context_.optionsTable->setRowCount(showOptionsSection ? parsedOptions.optionEntries.size() : 0);
             if (showOptionsSection) {
                 for (int row = 0; row < parsedOptions.optionEntries.size(); ++row) {
-                    owner_->blockDetailsOptionsTable_->setItem(row, 0, new QTableWidgetItem(parsedOptions.optionEntries.at(row).key));
-                    owner_->blockDetailsOptionsTable_->setItem(row, 1, new QTableWidgetItem(parsedOptions.optionEntries.at(row).value));
+                    context_.optionsTable->setItem(row, 0, new QTableWidgetItem(parsedOptions.optionEntries.at(row).key));
+                    context_.optionsTable->setItem(row, 1, new QTableWidgetItem(parsedOptions.optionEntries.at(row).value));
                 }
             }
             if (showOptionsSection && parsedOptions.optionEntries.size() > 0) {
-                owner_->blockDetailsOptionsTable_->setCurrentCell(0, 0);
+                context_.optionsTable->setCurrentCell(0, 0);
             }
         }
-        if (owner_->blockDetailsAddOptionButton_ != nullptr) {
-            owner_->blockDetailsAddOptionButton_->setVisible(showOptionsSection);
-            owner_->blockDetailsAddOptionButton_->setEnabled(showOptionsSection);
+        if (context_.addOptionButton != nullptr) {
+            context_.addOptionButton->setVisible(showOptionsSection);
+            context_.addOptionButton->setEnabled(showOptionsSection);
         }
-        if (owner_->blockDetailsRemoveOptionButton_ != nullptr) {
-            owner_->blockDetailsRemoveOptionButton_->setVisible(showOptionsSection);
-            owner_->blockDetailsRemoveOptionButton_->setEnabled(showOptionsSection && !parsedOptions.optionEntries.isEmpty());
+        if (context_.removeOptionButton != nullptr) {
+            context_.removeOptionButton->setVisible(showOptionsSection);
+            context_.removeOptionButton->setEnabled(showOptionsSection && !parsedOptions.optionEntries.isEmpty());
         }
     } else if (simpleValueMode) {
-        const TherionHelpEntry helpEntry = owner_->commandMetadata().helpEntries.value(normalizedKind);
+        const TherionHelpEntry helpEntry = (*context_.commandMetadata).helpEntries.value(normalizedKind);
         QStringList argumentSignatures;
         for (const QString &argumentLine : helpEntry.arguments) {
             const QString signature = blockArgumentSignatureFromHelpLine(argumentLine);
@@ -354,112 +387,118 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
                 : QString();
         }
 
-        if (owner_->blockDetailsPrimaryFieldLabel_ != nullptr) {
-            if (owner_->commandMetadata().commandPrimaryValueIsPerson.value(normalizedKind, false)) {
-                owner_->blockDetailsPrimaryFieldLabel_->setText(TextEditorTab::tr("Person"));
+        if (context_.primaryFieldLabel != nullptr) {
+            if ((*context_.commandMetadata).commandPrimaryValueIsPerson.value(normalizedKind, false)) {
+                context_.primaryFieldLabel->setText(tr("Person"));
             } else if (!argumentSignatures.isEmpty()) {
-                owner_->blockDetailsPrimaryFieldLabel_->setText(blockArgumentLabelFromSignature(argumentSignatures.first()));
+                context_.primaryFieldLabel->setText(blockArgumentLabelFromSignature(argumentSignatures.first()));
             } else {
-                owner_->blockDetailsPrimaryFieldLabel_->setText(TextEditorTab::tr("Value"));
+                context_.primaryFieldLabel->setText(tr("Value"));
             }
         }
-        if (owner_->blockDetailsSecondaryFieldLabel_ != nullptr) {
+        if (context_.secondaryFieldLabel != nullptr) {
             if (hasSecondaryArgument) {
                 if (argumentSignatures.size() > 1) {
-                    owner_->blockDetailsSecondaryFieldLabel_->setText(blockArgumentLabelFromSignature(argumentSignatures.at(1)));
+                    context_.secondaryFieldLabel->setText(blockArgumentLabelFromSignature(argumentSignatures.at(1)));
                 } else {
-                    owner_->blockDetailsSecondaryFieldLabel_->setText(TextEditorTab::tr("Value 2"));
+                    context_.secondaryFieldLabel->setText(tr("Value 2"));
                 }
-                owner_->blockDetailsSecondaryFieldLabel_->setVisible(true);
+                context_.secondaryFieldLabel->setVisible(true);
             } else {
-                owner_->blockDetailsSecondaryFieldLabel_->setVisible(false);
+                context_.secondaryFieldLabel->setVisible(false);
             }
         }
-        if (owner_->blockDetailsAdditionalPositionalEdit_ != nullptr) {
+        if (context_.additionalPositionalEdit != nullptr) {
             if (hasSecondaryArgument) {
-                owner_->blockDetailsAdditionalPositionalEdit_->setEnabled(true);
-                owner_->blockDetailsAdditionalPositionalEdit_->setVisible(true);
-                owner_->blockDetailsAdditionalPositionalEdit_->setPlaceholderText(TextEditorTab::tr("optional"));
-                owner_->blockDetailsAdditionalPositionalEdit_->setText(secondaryValue);
+                context_.additionalPositionalEdit->setEnabled(true);
+                context_.additionalPositionalEdit->setVisible(true);
+                context_.additionalPositionalEdit->setPlaceholderText(tr("optional"));
+                context_.additionalPositionalEdit->setText(secondaryValue);
             } else {
-                owner_->blockDetailsAdditionalPositionalEdit_->clear();
-                owner_->blockDetailsAdditionalPositionalEdit_->setEnabled(false);
-                owner_->blockDetailsAdditionalPositionalEdit_->setVisible(false);
+                context_.additionalPositionalEdit->clear();
+                context_.additionalPositionalEdit->setEnabled(false);
+                context_.additionalPositionalEdit->setVisible(false);
             }
         }
-        if (owner_->blockDetailsSecondaryFieldStack_ != nullptr) {
-            owner_->blockDetailsSecondaryFieldStack_->setVisible(hasSecondaryArgument);
-            if (owner_->blockDetailsAdditionalPositionalEdit_ != nullptr) {
-                owner_->blockDetailsSecondaryFieldStack_->setCurrentWidget(owner_->blockDetailsAdditionalPositionalEdit_);
+        if (context_.secondaryFieldStack != nullptr) {
+            context_.secondaryFieldStack->setVisible(hasSecondaryArgument);
+            if (context_.additionalPositionalEdit != nullptr) {
+                context_.secondaryFieldStack->setCurrentWidget(context_.additionalPositionalEdit);
             }
         }
-        owner_->setBlockDetailsReadingsTagEditor(QString(), {}, {});
-        if (owner_->blockDetailsIdEdit_ != nullptr) {
-            owner_->blockDetailsIdEdit_->setEnabled(true);
-            owner_->blockDetailsIdEdit_->setPlaceholderText(TextEditorTab::tr("required"));
-            owner_->blockDetailsIdEdit_->setText(currentValue);
+        context_.setReadingsTagEditor(QString(), {}, {});
+        if (context_.idEdit != nullptr) {
+            context_.idEdit->setEnabled(true);
+            context_.idEdit->setPlaceholderText(tr("required"));
+            context_.idEdit->setText(currentValue);
         }
-        if (owner_->blockDetailsOptionsTable_ != nullptr) {
-            owner_->blockDetailsOptionsTable_->setVisible(false);
+        if (context_.optionsTable != nullptr) {
+            context_.optionsTable->setVisible(false);
         }
-        if (owner_->blockDetailsOptionsLabel_ != nullptr) {
-            owner_->blockDetailsOptionsLabel_->setVisible(false);
+        if (context_.optionsLabel != nullptr) {
+            context_.optionsLabel->setVisible(false);
         }
-        if (owner_->blockDetailsAddOptionButton_ != nullptr) {
-            owner_->blockDetailsAddOptionButton_->setVisible(false);
+        if (context_.addOptionButton != nullptr) {
+            context_.addOptionButton->setVisible(false);
         }
-        if (owner_->blockDetailsRemoveOptionButton_ != nullptr) {
-            owner_->blockDetailsRemoveOptionButton_->setVisible(false);
+        if (context_.removeOptionButton != nullptr) {
+            context_.removeOptionButton->setVisible(false);
         }
     } else if (dataHeaderMode) {
         const BlockEditorDataHeaderComponents components = parseBlockEditorDataHeaderComponents(parsedLine.tokens);
-        const QStringList styleSuggestions = owner_->commandMetadata().commandArgumentValueTokens.value(commandArgumentValueKey(QStringLiteral("data"), 0));
-        const QStringList readingSuggestions = owner_->commandMetadata().commandArgumentValueTokens.value(commandArgumentValueKey(QStringLiteral("data"), 1));
-        if (owner_->blockDetailsPrimaryFieldLabel_ != nullptr) {
-            owner_->blockDetailsPrimaryFieldLabel_->setText(TextEditorTab::tr("Style"));
+        const QStringList styleSuggestions = (*context_.commandMetadata).commandArgumentValueTokens.value(commandArgumentValueKey(QStringLiteral("data"), 0));
+        const QStringList readingSuggestions = (*context_.commandMetadata).commandArgumentValueTokens.value(commandArgumentValueKey(QStringLiteral("data"), 1));
+        if (context_.primaryFieldLabel != nullptr) {
+            context_.primaryFieldLabel->setText(tr("Style"));
         }
-        if (owner_->blockDetailsSecondaryFieldLabel_ != nullptr) {
-            owner_->blockDetailsSecondaryFieldLabel_->setText(TextEditorTab::tr("Readings Order"));
-            owner_->blockDetailsSecondaryFieldLabel_->setVisible(true);
+        if (context_.secondaryFieldLabel != nullptr) {
+            context_.secondaryFieldLabel->setText(tr("Readings Order"));
+            context_.secondaryFieldLabel->setVisible(true);
         }
-        if (owner_->blockDetailsAdditionalPositionalEdit_ != nullptr) {
-            owner_->blockDetailsAdditionalPositionalEdit_->setEnabled(true);
-            owner_->blockDetailsAdditionalPositionalEdit_->setVisible(false);
-            owner_->blockDetailsAdditionalPositionalEdit_->setText(components.readingsOrder);
+        if (context_.additionalPositionalEdit != nullptr) {
+            context_.additionalPositionalEdit->setEnabled(true);
+            context_.additionalPositionalEdit->setVisible(false);
+            context_.additionalPositionalEdit->setText(components.readingsOrder);
         }
-        if (owner_->blockDetailsSecondaryFieldStack_ != nullptr) {
-            owner_->blockDetailsSecondaryFieldStack_->setVisible(true);
-            if (owner_->blockDetailsReadingsTagEditor_ != nullptr) {
-                owner_->blockDetailsSecondaryFieldStack_->setCurrentWidget(owner_->blockDetailsReadingsTagEditor_);
+        if (context_.secondaryFieldStack != nullptr) {
+            context_.secondaryFieldStack->setVisible(true);
+            if (context_.readingsTagEditor != nullptr) {
+                context_.secondaryFieldStack->setCurrentWidget(context_.readingsTagEditor);
             }
         }
-        owner_->setBlockDetailsReadingsTagEditor(TextEditorTab::tr("Type token and press Enter/Space"),
+        context_.setReadingsTagEditor(tr("Type token and press Enter/Space"),
                                                  readingSuggestions,
                                                  TherionDocumentParser::tokenizeLine(components.readingsOrder));
-        if (owner_->blockDetailsIdEdit_ != nullptr) {
-            owner_->blockDetailsIdEdit_->setEnabled(true);
-            owner_->blockDetailsIdEdit_->setPlaceholderText(TextEditorTab::tr("required"));
-            owner_->blockDetailsIdEdit_->setText(components.style);
-            owner_->installBlockDetailsLineEditCompleter(owner_->blockDetailsIdEdit_, styleSuggestions);
+        if (context_.idEdit != nullptr) {
+            context_.idEdit->setEnabled(true);
+            context_.idEdit->setPlaceholderText(tr("required"));
+            context_.idEdit->setText(components.style);
+            context_.installLineEditCompleter(context_.idEdit, styleSuggestions);
         }
-        if (owner_->blockDetailsOptionsTable_ != nullptr) {
-            owner_->blockDetailsOptionsTable_->setVisible(false);
+        if (context_.optionsTable != nullptr) {
+            context_.optionsTable->setVisible(false);
         }
-        if (owner_->blockDetailsOptionsLabel_ != nullptr) {
-            owner_->blockDetailsOptionsLabel_->setVisible(false);
+        if (context_.optionsLabel != nullptr) {
+            context_.optionsLabel->setVisible(false);
         }
-        if (owner_->blockDetailsAddOptionButton_ != nullptr) {
-            owner_->blockDetailsAddOptionButton_->setVisible(false);
+        if (context_.addOptionButton != nullptr) {
+            context_.addOptionButton->setVisible(false);
         }
-        if (owner_->blockDetailsRemoveOptionButton_ != nullptr) {
-            owner_->blockDetailsRemoveOptionButton_->setVisible(false);
+        if (context_.removeOptionButton != nullptr) {
+            context_.removeOptionButton->setVisible(false);
         }
     }
 
-    owner_->blockDetailsPopulating_ = false;
-    owner_->refreshBlockDetailsOptionArgumentEditors();
-    owner_->updateBlockDetailsHelpForCurrentFocus();
-    owner_->refreshBlockDetailsApplyState();
+    *context_.detailsPopulating = false;
+    if (context_.refreshOptionArgumentEditors) {
+        context_.refreshOptionArgumentEditors();
+    }
+    if (context_.updateHelpForCurrentFocus) {
+        context_.updateHelpForCurrentFocus();
+    }
+    if (context_.refreshApplyState) {
+        context_.refreshApplyState();
+    }
     return true;
 }
 }

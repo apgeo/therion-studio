@@ -5,39 +5,48 @@
 #include "BlockEditorMovePlanner.h"
 #include "BlockEditorMoveSourceRewriter.h"
 #include "BlockEditorSourceController.h"
-#include "../TextEditorTab.h"
 
 #include <QGraphicsScene>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QScopeGuard>
 
+#include <utility>
+
 namespace TherionStudio
 {
-BlockEditorMoveController::BlockEditorMoveController(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorMoveController::BlockEditorMoveController(BlockEditorMoveContext context)
+    : context_(std::move(context))
 {
+}
+
+QString BlockEditorMoveController::tr(const char *text) const
+{
+    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
 }
 
 void BlockEditorMoveController::moveBlock(int lineNumber, const QPointF &scenePos)
 {
-    if (owner_ == nullptr) {
+    if (context_.sourceContext == nullptr) {
         return;
     }
 
     const auto clearPreviewOnExit = qScopeGuard([this]() {
-        owner_->clearBlockMovePreview();
+        if (context_.clearBlockMovePreview != nullptr) {
+            context_.clearBlockMovePreview();
+        }
     });
 
-    if (!owner_->isBlocksModeSupportedForCurrentFile()) {
+    if (context_.isBlocksModeSupportedForCurrentFile == nullptr || !context_.isBlocksModeSupportedForCurrentFile()) {
         return;
     }
-    if (lineNumber <= 0 || owner_->editor_ == nullptr || owner_->blockCanvasScene_ == nullptr) {
+    const BlockEditorSourceController source(context_.sourceContext());
+    if (lineNumber <= 0 || !source.hasEditor() || context_.dropTargetContext.scene == nullptr) {
         return;
     }
 
-    const QString contents = owner_->editor_->toPlainText();
-    const BlockEditorDocumentOutlineBuilder outlineBuilder(owner_);
+    const QString contents = source.text();
+    const BlockEditorDocumentOutlineBuilder outlineBuilder(context_.documentOutlineContext);
     const BlockEditorDocumentOutline outline = outlineBuilder.buildFromContents(contents);
     QStringList lines = outline.lines;
     const QVector<BlockEditorDocumentEntry> &entries = outline.entries;
@@ -52,12 +61,14 @@ void BlockEditorMoveController::moveBlock(int lineNumber, const QPointF &scenePo
         return;
     }
 
-    const BlockEditorDropTargetResolver targetResolver(owner_);
+    const BlockEditorDropTargetResolver targetResolver(context_.dropTargetContext);
     const auto sceneItemsByLine = targetResolver.collectSceneItemsByLine();
     const BlockEditorSceneVerticalPlacement verticalPlacement =
         targetResolver.resolveVerticalPlacement(entries, sceneItemsByLine, scenePos);
-    const int explicitEndHintContainerLine = owner_->resolveEndHintContainerStartLineAtScenePos(scenePos);
-    const BlockEditorMovePlanner movePlanner(owner_);
+    const int explicitEndHintContainerLine = context_.resolveEndHintContainerStartLineAtScenePos != nullptr
+        ? context_.resolveEndHintContainerStartLineAtScenePos(scenePos)
+        : 0;
+    const BlockEditorMovePlanner movePlanner(context_.movePlannerContext);
     const BlockEditorMovePlan movePlan = movePlanner.planMove(sourceEntry,
                                                               entries,
                                                               entryIndexByStartLine,
@@ -71,7 +82,7 @@ void BlockEditorMoveController::moveBlock(int lineNumber, const QPointF &scenePo
     }
 
     if (movePlan.destinationParentLine >= sourceEntry.startLine && movePlan.destinationParentLine <= sourceEntry.endLine) {
-        QMessageBox::warning(owner_, TextEditorTab::tr("Reorder Block"), TextEditorTab::tr("Cannot move a block inside itself."));
+        QMessageBox::warning(context_.dialogParent, tr("Reorder Block"), tr("Cannot move a block inside itself."));
         return;
     }
     if (movePlan.insertBeforeLineOriginal > sourceEntry.startLine
@@ -79,12 +90,13 @@ void BlockEditorMoveController::moveBlock(int lineNumber, const QPointF &scenePo
         return;
     }
 
-    if (!owner_->isCompatibleChildKindForBlocks(movePlan.destinationParentKind, sourceEntry.kind)) {
-        QMessageBox::warning(owner_,
-                             TextEditorTab::tr("Reorder Block"),
-                             TextEditorTab::tr("`%1` cannot be moved under `%2`.")
+    if (context_.isCompatibleChildKindForBlocks == nullptr
+        || !context_.isCompatibleChildKindForBlocks(movePlan.destinationParentKind, sourceEntry.kind)) {
+        QMessageBox::warning(context_.dialogParent,
+                             tr("Reorder Block"),
+                             tr("`%1` cannot be moved under `%2`.")
                                  .arg(sourceEntry.kind,
-                                      movePlan.destinationParentKind.isEmpty() ? TextEditorTab::tr("root") : movePlan.destinationParentKind));
+                                      movePlan.destinationParentKind.isEmpty() ? tr("root") : movePlan.destinationParentKind));
         return;
     }
 
@@ -95,6 +107,6 @@ void BlockEditorMoveController::moveBlock(int lineNumber, const QPointF &scenePo
         return;
     }
 
-    BlockEditorSourceController(owner_->blockEditorSourceContext()).replaceWithLines(contents, rewriteResult.lines);
+    source.replaceWithLines(contents, rewriteResult.lines);
 }
 }

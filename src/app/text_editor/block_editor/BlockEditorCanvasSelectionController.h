@@ -3,15 +3,27 @@
 #include <QString>
 
 class QGraphicsItem;
+class QGraphicsScene;
+class QGraphicsView;
+
+#include <functional>
 
 namespace TherionStudio
 {
-class TextEditorTab;
+struct BlockEditorCanvasSelectionContext
+{
+    bool *tearingDown = nullptr;
+    QGraphicsScene *scene = nullptr;
+    QGraphicsView *view = nullptr;
+    std::function<void()> clearDetailsPane;
+    std::function<bool(const QString &, int)> loadDetailsForSelection;
+    std::function<void(int, const QString &)> setDetailsSelectionFallback;
+};
 
 class BlockEditorCanvasSelectionController final
 {
 public:
-    explicit BlockEditorCanvasSelectionController(TextEditorTab *owner);
+    explicit BlockEditorCanvasSelectionController(BlockEditorCanvasSelectionContext context);
 
     void selectBlockInCanvasAndDetails(int lineNumber);
     void refreshDetailsSelectionFromScene();
@@ -21,6 +33,6 @@ public:
     void selectBlockCanvasItem(QGraphicsItem *item, bool centerView);
 
 private:
-    TextEditorTab *owner_ = nullptr;
+    BlockEditorCanvasSelectionContext context_;
 };
 }

@@ -7,11 +7,18 @@
 #include <functional>
 
 class QGraphicsItem;
+class QGraphicsScene;
 
 namespace TherionStudio
 {
-class TextEditorTab;
 struct BlockEditorDocumentEntry;
+
+struct BlockEditorDropTargetContext
+{
+    QGraphicsScene *scene = nullptr;
+    std::function<int(const QGraphicsItem *)> blockCanvasItemLineNumber;
+    std::function<QGraphicsItem *(QGraphicsItem *)> resolveBlockCanvasItem;
+};
 
 struct BlockEditorSceneVerticalPlacement
 {
@@ -25,7 +32,7 @@ public:
     using SceneItemsByLine = QHash<int, QGraphicsItem *>;
     using EntryPredicate = std::function<bool(const BlockEditorDocumentEntry &)>;
 
-    explicit BlockEditorDropTargetResolver(const TextEditorTab *owner);
+    explicit BlockEditorDropTargetResolver(BlockEditorDropTargetContext context);
 
     SceneItemsByLine collectSceneItemsByLine() const;
     BlockEditorSceneVerticalPlacement resolveVerticalPlacement(const QVector<BlockEditorDocumentEntry> &entries,
@@ -38,6 +45,6 @@ public:
                                      const EntryPredicate &excludeEntry = EntryPredicate()) const;
 
 private:
-    const TextEditorTab *owner_ = nullptr;
+    BlockEditorDropTargetContext context_;
 };
 }

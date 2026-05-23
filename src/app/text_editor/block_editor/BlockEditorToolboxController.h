@@ -1,15 +1,38 @@
 #pragma once
 
 #include <QString>
+#include <QStringList>
+
+#include <functional>
+
+class QComboBox;
+class QGraphicsScene;
+class QLineEdit;
+class QListWidget;
+class QPlainTextEdit;
 
 namespace TherionStudio
 {
-class TextEditorTab;
+struct TextEditorCommandMetadata;
+
+struct BlockEditorToolboxContext
+{
+    bool *tearingDown = nullptr;
+    QLineEdit **filterEdit = nullptr;
+    QListWidget **toolboxList = nullptr;
+    QComboBox **scopeCombo = nullptr;
+    QGraphicsScene **canvasScene = nullptr;
+    QPlainTextEdit **editor = nullptr;
+    const TextEditorCommandMetadata *commandMetadata = nullptr;
+    std::function<QString(const QString &)> normalizeCompletionContext;
+    std::function<bool(const QString &, const QString &)> isCompatibleChildKindForBlocks;
+    std::function<QString(const char *)> translate;
+};
 
 class BlockEditorToolboxController final
 {
 public:
-    explicit BlockEditorToolboxController(TextEditorTab *owner);
+    explicit BlockEditorToolboxController(BlockEditorToolboxContext context);
 
     void populateBlockToolbox();
     void populateBlockToolboxScopeCombo();
@@ -17,6 +40,15 @@ public:
     QString selectedBlockInsertionContextToken() const;
 
 private:
-    TextEditorTab *owner_ = nullptr;
+    BlockEditorToolboxContext context_;
+
+    QLineEdit *filterEdit() const;
+    QListWidget *toolboxList() const;
+    QComboBox *scopeCombo() const;
+    QGraphicsScene *canvasScene() const;
+    QPlainTextEdit *editor() const;
+    QString normalizeCompletionContext(const QString &contextToken) const;
+    bool isCompatibleChildKindForBlocks(const QString &parentKind, const QString &childKind) const;
+    QString translate(const char *text) const;
 };
 }

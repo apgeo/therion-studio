@@ -8,10 +8,12 @@
 #include <QString>
 #include <QVector>
 
+#include <functional>
+
+class QGraphicsItem;
+
 namespace TherionStudio
 {
-class TextEditorTab;
-
 struct BlockEditorMovePlan
 {
     int destinationParentLine = 0;
@@ -20,10 +22,17 @@ struct BlockEditorMovePlan
     bool resolved = false;
 };
 
+struct BlockEditorMovePlannerContext
+{
+    BlockEditorDropTargetContext dropTargetContext;
+    std::function<int(const QGraphicsItem *)> blockCanvasItemLineNumber;
+    std::function<bool(const QString &, const QString &)> isCompatibleChildKindForBlocks;
+};
+
 class BlockEditorMovePlanner final
 {
 public:
-    explicit BlockEditorMovePlanner(const TextEditorTab *owner);
+    explicit BlockEditorMovePlanner(BlockEditorMovePlannerContext context);
 
     BlockEditorMovePlan planMove(const BlockEditorDocumentEntry &sourceEntry,
                                  const QVector<BlockEditorDocumentEntry> &entries,
@@ -35,6 +44,6 @@ public:
                                  int appendLineNumber) const;
 
 private:
-    const TextEditorTab *owner_ = nullptr;
+    BlockEditorMovePlannerContext context_;
 };
 }

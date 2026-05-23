@@ -5,9 +5,18 @@
 #include <QStringList>
 #include <QVector>
 
+#include <functional>
+
 namespace TherionStudio
 {
-class TextEditorTab;
+struct TherionParsedLine;
+
+struct BlockEditorDocumentOutlineContext
+{
+    std::function<QString(const QString &, const QStringList &, int)> resolveScopeForCommandAtLine;
+    std::function<bool(const QString &, const TherionParsedLine &)> isContainerDirectiveInstanceForParsedLine;
+    std::function<bool(const QString &, const QString &)> isCommandDirectiveInScope;
+};
 
 struct BlockEditorDocumentEntry
 {
@@ -27,11 +36,11 @@ struct BlockEditorDocumentOutline
 class BlockEditorDocumentOutlineBuilder final
 {
 public:
-    explicit BlockEditorDocumentOutlineBuilder(const TextEditorTab *owner);
+    explicit BlockEditorDocumentOutlineBuilder(BlockEditorDocumentOutlineContext context);
 
     BlockEditorDocumentOutline buildFromContents(const QString &contents) const;
 
 private:
-    const TextEditorTab *owner_ = nullptr;
+    BlockEditorDocumentOutlineContext context_;
 };
 }

@@ -2,9 +2,10 @@
 
 #include "BlockEditorDirectiveRules.h"
 #include "BlockEditorSourceText.h"
-#include "../TextEditorTab.h"
 
 #include "../../../core/TherionDocumentParser.h"
+
+#include <utility>
 
 namespace
 {
@@ -29,8 +30,8 @@ namespace TherionStudio
 {
 using namespace BlockEditorDirectiveRules;
 
-BlockEditorDocumentOutlineBuilder::BlockEditorDocumentOutlineBuilder(const TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorDocumentOutlineBuilder::BlockEditorDocumentOutlineBuilder(BlockEditorDocumentOutlineContext context)
+    : context_(std::move(context))
 {
 }
 
@@ -39,7 +40,9 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
     BlockEditorDocumentOutline outline;
     outline.lines = blockEditorNormalizedSourceLines(contents);
 
-    if (owner_ == nullptr) {
+    if (!context_.resolveScopeForCommandAtLine
+        || !context_.isContainerDirectiveInstanceForParsedLine
+        || !context_.isCommandDirectiveInScope) {
         return outline;
     }
 
@@ -51,9 +54,9 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
 
     outline.entries.reserve(parsedLines.size());
     QVector<OpenContainer> openStack;
-    const QString dataScope = owner_->resolveScopeForCommandAtLine(QStringLiteral("data"),
-                                                                    outline.lines,
-                                                                    outline.lines.size() + 1);
+    const QString dataScope = context_.resolveScopeForCommandAtLine(QStringLiteral("data"),
+                                                                     outline.lines,
+                                                                     outline.lines.size() + 1);
     const QString dataScopeClosing = completionClosingDirectiveForOpening(dataScope);
 
     for (const TherionParsedLine &parsedLine : parsedLines) {
@@ -103,7 +106,7 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
             entry.endLine = currentLineNumber;
             entry.parentLine = parentLine;
 
-            if (owner_->isContainerDirectiveInstanceForParsedLine(directive, parsedLine)) {
+            if (context_.isContainerDirectiveInstanceForParsedLine(directive, parsedLine)) {
                 const QString closingDirective = closingDirectiveFor(directive);
                 const int endLine = findMatchingBlockEndLine(outline.lines,
                                                              currentLineNumber,
@@ -136,7 +139,7 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
                     }
                     if (scanDirective == QStringLiteral("data")
                         || (!dataScopeClosing.isEmpty() && scanDirective == dataScopeClosing)
-                        || (!dataScope.isEmpty() && owner_->isCommandDirectiveInScope(scanDirective, dataScope))) {
+                        || (!dataScope.isEmpty() && context_.isCommandDirectiveInScope(scanDirective, dataScope))) {
                         dataBodyLastLine = scanLine - 1;
                         break;
                     }
@@ -158,7 +161,7 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
         }
 
         const bool commandDirective = !isBlockOpeningDirective(directive)
-            && owner_->isCommandDirectiveInScope(directive, activeScope);
+            && context_.isCommandDirectiveInScope(directive, activeScope);
         if (commandDirective) {
             BlockEditorDocumentEntry entry;
             entry.kind = directive;

@@ -1,23 +1,35 @@
 #pragma once
 
+#include "../TextEditorCommandMetadata.h"
+
+#include <functional>
 #include <QString>
 
 #include <optional>
 
+class QWidget;
+
 namespace TherionStudio
 {
-class TextEditorTab;
+struct BlockEditorSingleValueCommandDialogContext
+{
+    QWidget *dialogParent = nullptr;
+    const TextEditorCommandMetadata *commandMetadata = nullptr;
+    std::function<QString(const char *)> translate;
+};
 
 class BlockEditorSingleValueCommandDialog final
 {
 public:
-    explicit BlockEditorSingleValueCommandDialog(TextEditorTab *owner);
+    explicit BlockEditorSingleValueCommandDialog(BlockEditorSingleValueCommandDialogContext context);
 
     std::optional<QString> configureLine(const QString &commandName,
                                          const QString &sourceLine,
                                          int lineNumber);
 
 private:
-    TextEditorTab *owner_ = nullptr;
+    QString tr(const char *text) const;
+
+    BlockEditorSingleValueCommandDialogContext context_;
 };
 }

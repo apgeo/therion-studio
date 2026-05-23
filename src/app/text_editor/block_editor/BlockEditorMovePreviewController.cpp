@@ -1,28 +1,53 @@
 #include "BlockEditorMovePreviewController.h"
 
-#include "../TextEditorTab.h"
-
 #include <QGraphicsItem>
 #include <QGraphicsLineItem>
 #include <QGraphicsScene>
 #include <QPen>
 
 #include <limits>
+#include <utility>
 
 namespace TherionStudio
 {
-BlockEditorMovePreviewController::BlockEditorMovePreviewController(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorMovePreviewController::BlockEditorMovePreviewController(BlockEditorMovePreviewContext context)
+    : context_(std::move(context))
 {
+}
+
+bool BlockEditorMovePreviewController::hasRequiredContext() const
+{
+    return context_.scene != nullptr
+        && context_.previewLine != nullptr
+        && context_.containerBoundaryEndYByLine != nullptr
+        && context_.resolveBlockCanvasItem
+        && context_.blockCanvasItemLineNumber
+        && context_.resolveEndHintContainerStartLineAtScenePos;
+}
+
+void BlockEditorMovePreviewController::showPreviewLine(qreal y)
+{
+    const qreal left = 10.0;
+    const qreal right = qMax<qreal>(left + 120.0, context_.scene->sceneRect().right() - 10.0);
+    if (*context_.previewLine == nullptr) {
+        QPen guidePen(QColor(QStringLiteral("#2f6fed")));
+        guidePen.setWidthF(2.0);
+        guidePen.setStyle(Qt::DashLine);
+        *context_.previewLine = context_.scene->addLine(QLineF(left, y, right, y), guidePen);
+        (*context_.previewLine)->setZValue(10000.0);
+    } else {
+        (*context_.previewLine)->setLine(QLineF(left, y, right, y));
+        (*context_.previewLine)->show();
+    }
 }
 
 void BlockEditorMovePreviewController::updateMovePreview(int sourceLineNumber, const QPointF &scenePos)
 {
-    if (owner_ == nullptr || owner_->blockCanvasScene_ == nullptr) {
+    if (!hasRequiredContext()) {
         return;
     }
 
-    const QList<QGraphicsItem *> sceneItems = owner_->blockCanvasScene_->items();
+    const QList<QGraphicsItem *> sceneItems = context_.scene->items();
 
     auto subtreeBottomForItem = [](QGraphicsItem *rootItem) -> qreal {
         if (rootItem == nullptr) {
@@ -48,7 +73,7 @@ void BlockEditorMovePreviewController::updateMovePreview(int sourceLineNumber, c
     qreal sceneBottom = 0.0;
     bool hasSceneVerticalBounds = false;
     for (QGraphicsItem *item : sceneItems) {
-        QGraphicsItem *blockItem = owner_->resolveBlockCanvasItem(item);
+        QGraphicsItem *blockItem = context_.resolveBlockCanvasItem(item);
         if (blockItem == nullptr) {
             continue;
         }
@@ -63,34 +88,23 @@ void BlockEditorMovePreviewController::updateMovePreview(int sourceLineNumber, c
         }
     }
 
-    const int hintedContainerLine = owner_->resolveEndHintContainerStartLineAtScenePos(scenePos);
+    const int hintedContainerLine = context_.resolveEndHintContainerStartLineAtScenePos(scenePos);
     if (hintedContainerLine > 0) {
         QGraphicsItem *hintedContainerItem = nullptr;
         for (QGraphicsItem *item : sceneItems) {
-            QGraphicsItem *blockItem = owner_->resolveBlockCanvasItem(item);
-            if (blockItem == nullptr || owner_->blockCanvasItemLineNumber(blockItem) != hintedContainerLine) {
+            QGraphicsItem *blockItem = context_.resolveBlockCanvasItem(item);
+            if (blockItem == nullptr || context_.blockCanvasItemLineNumber(blockItem) != hintedContainerLine) {
                 continue;
             }
             hintedContainerItem = blockItem;
             break;
         }
-        if (hintedContainerItem != nullptr && owner_->blockCanvasItemLineNumber(hintedContainerItem) != sourceLineNumber) {
-            qreal y = owner_->blockContainerBoundaryEndYByLine_.value(
+        if (hintedContainerItem != nullptr && context_.blockCanvasItemLineNumber(hintedContainerItem) != sourceLineNumber) {
+            qreal y = context_.containerBoundaryEndYByLine->value(
                 hintedContainerLine,
                 subtreeBottomForItem(hintedContainerItem) + 10.0)
                 + 4.0;
-            const qreal left = 10.0;
-            const qreal right = qMax<qreal>(left + 120.0, owner_->blockCanvasScene_->sceneRect().right() - 10.0);
-            if (owner_->blockMovePreviewLine_ == nullptr) {
-                QPen guidePen(QColor(QStringLiteral("#2f6fed")));
-                guidePen.setWidthF(2.0);
-                guidePen.setStyle(Qt::DashLine);
-                owner_->blockMovePreviewLine_ = owner_->blockCanvasScene_->addLine(QLineF(left, y, right, y), guidePen);
-                owner_->blockMovePreviewLine_->setZValue(10000.0);
-            } else {
-                owner_->blockMovePreviewLine_->setLine(QLineF(left, y, right, y));
-                owner_->blockMovePreviewLine_->show();
-            }
+            showPreviewLine(y);
             return;
         }
     }
@@ -100,31 +114,20 @@ void BlockEditorMovePreviewController::updateMovePreview(int sourceLineNumber, c
     const bool dropAfterAllBlocks = hasSceneVerticalBounds && scenePos.y() > (sceneBottom + outerDropThreshold);
     if (dropBeforeAllBlocks || dropAfterAllBlocks) {
         const qreal y = dropBeforeAllBlocks ? (sceneTop - 4.0) : (sceneBottom + 4.0);
-        const qreal left = 10.0;
-        const qreal right = qMax<qreal>(left + 120.0, owner_->blockCanvasScene_->sceneRect().right() - 10.0);
-        if (owner_->blockMovePreviewLine_ == nullptr) {
-            QPen guidePen(QColor(QStringLiteral("#2f6fed")));
-            guidePen.setWidthF(2.0);
-            guidePen.setStyle(Qt::DashLine);
-            owner_->blockMovePreviewLine_ = owner_->blockCanvasScene_->addLine(QLineF(left, y, right, y), guidePen);
-            owner_->blockMovePreviewLine_->setZValue(10000.0);
-        } else {
-            owner_->blockMovePreviewLine_->setLine(QLineF(left, y, right, y));
-            owner_->blockMovePreviewLine_->show();
-        }
+        showPreviewLine(y);
         return;
     }
 
-    QGraphicsItem *targetBlockItem = owner_->resolveBlockCanvasItem(owner_->blockCanvasScene_->itemAt(scenePos, QTransform()));
-    if (targetBlockItem != nullptr && owner_->blockCanvasItemLineNumber(targetBlockItem) == sourceLineNumber) {
+    QGraphicsItem *targetBlockItem = context_.resolveBlockCanvasItem(context_.scene->itemAt(scenePos, QTransform()));
+    if (targetBlockItem != nullptr && context_.blockCanvasItemLineNumber(targetBlockItem) == sourceLineNumber) {
         targetBlockItem = nullptr;
     }
 
     if (targetBlockItem == nullptr) {
         qreal bestDistance = std::numeric_limits<qreal>::max();
         for (QGraphicsItem *item : sceneItems) {
-            QGraphicsItem *blockItem = owner_->resolveBlockCanvasItem(item);
-            if (blockItem == nullptr || owner_->blockCanvasItemLineNumber(blockItem) == sourceLineNumber) {
+            QGraphicsItem *blockItem = context_.resolveBlockCanvasItem(item);
+            if (blockItem == nullptr || context_.blockCanvasItemLineNumber(blockItem) == sourceLineNumber) {
                 continue;
             }
             const QRectF blockRect = blockItem->sceneBoundingRect();
@@ -146,25 +149,13 @@ void BlockEditorMovePreviewController::updateMovePreview(int sourceLineNumber, c
     const QRectF targetRect = targetBlockItem->sceneBoundingRect();
     const bool insertAfterTarget = scenePos.y() > targetRect.center().y();
     const qreal y = insertAfterTarget ? (targetRect.bottom() + 4.0) : (targetRect.top() - 4.0);
-    const qreal left = 10.0;
-    const qreal right = qMax<qreal>(left + 120.0, owner_->blockCanvasScene_->sceneRect().right() - 10.0);
-
-    if (owner_->blockMovePreviewLine_ == nullptr) {
-        QPen guidePen(QColor(QStringLiteral("#2f6fed")));
-        guidePen.setWidthF(2.0);
-        guidePen.setStyle(Qt::DashLine);
-        owner_->blockMovePreviewLine_ = owner_->blockCanvasScene_->addLine(QLineF(left, y, right, y), guidePen);
-        owner_->blockMovePreviewLine_->setZValue(10000.0);
-    } else {
-        owner_->blockMovePreviewLine_->setLine(QLineF(left, y, right, y));
-        owner_->blockMovePreviewLine_->show();
-    }
+    showPreviewLine(y);
 }
 
 void BlockEditorMovePreviewController::clearMovePreview()
 {
-    if (owner_ != nullptr && owner_->blockMovePreviewLine_ != nullptr) {
-        owner_->blockMovePreviewLine_->hide();
+    if (context_.previewLine != nullptr && *context_.previewLine != nullptr) {
+        (*context_.previewLine)->hide();
     }
 }
 }

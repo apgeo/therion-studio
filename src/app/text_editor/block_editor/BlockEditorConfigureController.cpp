@@ -6,28 +6,38 @@
 #include "BlockEditorSingleValueCommandDialog.h"
 #include "BlockEditorSourceController.h"
 #include "BlockEditorSourceText.h"
-#include "../TextEditorTab.h"
 #include "../../../core/TherionDocumentParser.h"
 
 #include <QMessageBox>
 #include <QPlainTextEdit>
 
 #include <optional>
+#include <utility>
 
 namespace TherionStudio
 {
-BlockEditorConfigureController::BlockEditorConfigureController(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorConfigureController::BlockEditorConfigureController(BlockEditorConfigureContext context)
+    : context_(std::move(context))
 {
+}
+
+QString BlockEditorConfigureController::tr(const char *text) const
+{
+    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
 }
 
 void BlockEditorConfigureController::configureBlock(const QString &kind, int lineNumber)
 {
-    if (owner_ == nullptr || owner_->editor_ == nullptr || lineNumber <= 0) {
+    if (context_.sourceContext == nullptr || context_.commandMetadata == nullptr || lineNumber <= 0) {
         return;
     }
 
-    const QString contents = owner_->editor_->toPlainText();
+    const BlockEditorSourceController source(context_.sourceContext());
+    if (!source.hasEditor()) {
+        return;
+    }
+
+    const QString contents = source.text();
     QStringList lines = blockEditorNormalizedSourceLines(contents);
     if (lineNumber > lines.size()) {
         return;
@@ -41,33 +51,34 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
     const QString normalizedKind = kind.toLower();
 
     if (normalizedKind != QStringLiteral("data")) {
-        if (!owner_->commandMetadata().commandOptionTokens.value(normalizedKind).isEmpty()
-            || owner_->commandSupportsInlineIdField(normalizedKind)) {
-            const BlockEditorCommandIdFieldMode idFieldMode = owner_->commandHasRequiredIdArgument(normalizedKind)
+        if (!context_.commandMetadata->commandOptionTokens.value(normalizedKind).isEmpty()
+            || (context_.commandSupportsInlineIdField != nullptr && context_.commandSupportsInlineIdField(normalizedKind))) {
+            const BlockEditorCommandIdFieldMode idFieldMode = context_.commandHasRequiredIdArgument != nullptr
+                    && context_.commandHasRequiredIdArgument(normalizedKind)
                 ? BlockEditorCommandIdFieldMode::Required
-                : (owner_->commandSupportsInlineIdField(normalizedKind)
+                : (context_.commandSupportsInlineIdField != nullptr && context_.commandSupportsInlineIdField(normalizedKind)
                        ? BlockEditorCommandIdFieldMode::Optional
                        : BlockEditorCommandIdFieldMode::None);
-            BlockEditorCommandOptionsDialog optionsDialog(owner_);
+            BlockEditorCommandOptionsDialog optionsDialog(context_.commandOptionsDialogContext);
             const std::optional<QString> updatedLine =
                 optionsDialog.configureLine(normalizedKind, lines.at(lineNumber - 1), lineNumber, idFieldMode);
             if (!updatedLine.has_value()) {
                 return;
             }
             lines[lineNumber - 1] = updatedLine.value();
-            BlockEditorSourceController(owner_->blockEditorSourceContext()).replaceWithLines(contents, lines);
+            source.replaceWithLines(contents, lines);
             return;
         }
     }
 
     if (normalizedKind == QStringLiteral("data")) {
-        BlockEditorDataBlockDialog dataDialog(owner_);
+        BlockEditorDataBlockDialog dataDialog(context_.dataBlockDialogContext);
         const std::optional<BlockEditorDataBlockDialogResult> dataResult = dataDialog.configureRows(lines, lineNumber);
         if (!dataResult.has_value()) {
             return;
         }
 
-        const QString nextContents = owner_->editor_->toPlainText();
+        const QString nextContents = source.text();
         QStringList nextLines = blockEditorNormalizedSourceLines(nextContents);
         if (lineNumber <= 0 || lineNumber > nextLines.size()) {
             return;
@@ -80,21 +91,21 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
             return;
         }
 
-        BlockEditorSourceController(owner_->blockEditorSourceContext()).replaceWithLines(nextContents, nextLines);
+        source.replaceWithLines(nextContents, nextLines);
 
         if (dataResult->schemaMismatchDetected) {
-            QMessageBox::information(owner_,
-                                     TextEditorTab::tr("Schema no longer matches"),
-                                     TextEditorTab::tr("Some existing data rows did not match the current columns schema and were preserved as best effort. Please review rows in Raw mode if needed."));
+            QMessageBox::information(context_.dialogParent,
+                                     tr("Schema no longer matches"),
+                                     tr("Some existing data rows did not match the current columns schema and were preserved as best effort. Please review rows in Raw mode if needed."));
         }
         return;
     }
 
-    const bool hasCatalogOptions = !owner_->commandMetadata().commandOptionTokens.value(normalizedKind).isEmpty();
+    const bool hasCatalogOptions = !context_.commandMetadata->commandOptionTokens.value(normalizedKind).isEmpty();
     if (!BlockEditorDirectiveRules::isContainerBlockDirective(normalizedKind)
         && normalizedKind != QStringLiteral("data")
         && !hasCatalogOptions) {
-        BlockEditorSingleValueCommandDialog valueDialog(owner_);
+        BlockEditorSingleValueCommandDialog valueDialog(context_.singleValueCommandDialogContext);
         const std::optional<QString> updatedLine =
             valueDialog.configureLine(normalizedKind, lines.at(lineNumber - 1), lineNumber);
         if (!updatedLine.has_value()) {
@@ -102,13 +113,13 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
         }
         lines[lineNumber - 1] = updatedLine.value();
 
-        BlockEditorSourceController(owner_->blockEditorSourceContext()).replaceWithLines(contents, lines);
+        source.replaceWithLines(contents, lines);
         return;
     }
 
-    QMessageBox::information(owner_,
-                             TextEditorTab::tr("Configure Block"),
-                             TextEditorTab::tr("Configuration for `%1` is not implemented yet.")
+    QMessageBox::information(context_.dialogParent,
+                             tr("Configure Block"),
+                             tr("Configuration for `%1` is not implemented yet.")
                                  .arg(kind));
 }
 }

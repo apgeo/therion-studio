@@ -1,7 +1,6 @@
 #include "BlockEditorDataBlockDialog.h"
 
 #include "BlockEditorDirectiveRules.h"
-#include "../TextEditorTab.h"
 
 #include <QAbstractItemView>
 #include <QAbstractItemModel>
@@ -31,6 +30,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <utility>
 
 namespace
 {
@@ -256,16 +256,25 @@ private:
 
 namespace TherionStudio
 {
-BlockEditorDataBlockDialog::BlockEditorDataBlockDialog(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorDataBlockDialog::BlockEditorDataBlockDialog(BlockEditorDataBlockDialogContext context)
+    : context_(std::move(context))
 {
+}
+
+QString BlockEditorDataBlockDialog::tr(const char *text) const
+{
+    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
 }
 
 std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::configureRows(
     const QStringList &lines,
     int lineNumber)
 {
-    if (owner_ == nullptr || lineNumber <= 0 || lineNumber > lines.size()) {
+    if (context_.commandMetadata == nullptr
+        || context_.resolveScopeForCommandAtLine == nullptr
+        || context_.isCommandDirectiveInScope == nullptr
+        || lineNumber <= 0
+        || lineNumber > lines.size()) {
         return std::nullopt;
     }
 
@@ -274,10 +283,10 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
         return std::nullopt;
     }
 
-    const QString dataScope = owner_->resolveScopeForCommandAtLine(QStringLiteral("data"), lines, lineNumber);
+    const QString dataScope = context_.resolveScopeForCommandAtLine(QStringLiteral("data"), lines, lineNumber);
     const QString dataScopeClosing = completionClosingDirectiveForOpening(dataScope);
     if (dataScopeClosing.isEmpty()) {
-        QMessageBox::warning(owner_, TextEditorTab::tr("Configure Data"), TextEditorTab::tr("Unable to resolve parent data scope."));
+        QMessageBox::warning(context_.dialogParent, tr("Configure Data"), tr("Unable to resolve parent data scope."));
         return std::nullopt;
     }
 
@@ -301,7 +310,7 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
     }
 
     if (dataScopeStartLine <= 0) {
-        QMessageBox::warning(owner_, TextEditorTab::tr("Configure Data"), TextEditorTab::tr("Unable to resolve parent data scope block."));
+        QMessageBox::warning(context_.dialogParent, tr("Configure Data"), tr("Unable to resolve parent data scope block."));
         return std::nullopt;
     }
 
@@ -310,7 +319,7 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
                                                           dataScope,
                                                           dataScopeClosing);
     if (dataScopeEndLine <= lineNumber) {
-        QMessageBox::warning(owner_, TextEditorTab::tr("Configure Data"), TextEditorTab::tr("Unable to resolve end of parent data scope block."));
+        QMessageBox::warning(context_.dialogParent, tr("Configure Data"), tr("Unable to resolve end of parent data scope block."));
         return std::nullopt;
     }
 
@@ -323,7 +332,7 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
         }
         if (directive == QStringLiteral("data")
             || directive == dataScopeClosing
-            || (!dataScope.isEmpty() && owner_->isCommandDirectiveInScope(directive, dataScope))) {
+            || (!dataScope.isEmpty() && context_.isCommandDirectiveInScope(directive, dataScope))) {
             dataBodyLastLine = currentLine - 1;
             break;
         }
@@ -340,16 +349,16 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
     const QString dataIndent = dataIndentMatch.hasMatch() ? dataIndentMatch.captured(0) : QString();
     const QString rowIndent = dataIndent + QStringLiteral("  ");
 
-    const QStringList dataStyleValues = owner_->commandMetadata().commandArgumentValueTokens.value(commandArgumentValueKey(QStringLiteral("data"), 0));
+    const QStringList dataStyleValues = context_.commandMetadata->commandArgumentValueTokens.value(commandArgumentValueKey(QStringLiteral("data"), 0));
     const QStringList currentFieldNames = parseDataFields(currentColumns, dataStyleValues);
     const int currentFieldCount = currentFieldNames.size();
 
-    QStringList directiveSuggestions = owner_->commandMetadata().contextCommandTokens.value(dataScope);
+    QStringList directiveSuggestions = context_.commandMetadata->contextCommandTokens.value(dataScope);
     directiveSuggestions.removeAll(QStringLiteral("data"));
     if (!dataScopeClosing.isEmpty()) {
         directiveSuggestions.removeAll(dataScopeClosing);
     }
-    const QStringList extendValues = owner_->commandMetadata().commandArgumentValueTokens.value(commandArgumentValueKey(QStringLiteral("extend"), 0));
+    const QStringList extendValues = context_.commandMetadata->commandArgumentValueTokens.value(commandArgumentValueKey(QStringLiteral("extend"), 0));
     if (extendValues.isEmpty()) {
         appendUnique(directiveSuggestions, QStringLiteral("extend right"));
         appendUnique(directiveSuggestions, QStringLiteral("extend left"));
@@ -401,7 +410,7 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
 
         const QString firstToken = rowTokens.isEmpty() ? QString() : rowTokens.first().trimmed().toLower();
         const bool recognizedDirective = firstToken == QStringLiteral("extend")
-            || owner_->isCommandDirectiveInScope(firstToken, dataScope);
+            || context_.isCommandDirectiveInScope(firstToken, dataScope);
         if (recognizedDirective) {
             initialRows.append(MixedRowEntry{true, false, rowText, {}, commentText, commentMarker});
             continue;
@@ -421,8 +430,8 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
         initialRows.append(MixedRowEntry{false, false, QString(), {}, QString(), QLatin1Char('#')});
     }
 
-    QDialog dialog(owner_);
-    dialog.setWindowTitle(TextEditorTab::tr("Configure Data Block"));
+    QDialog dialog(context_.dialogParent);
+    dialog.setWindowTitle(tr("Configure Data Block"));
     dialog.setModal(true);
     dialog.resize(900, 520);
 
@@ -430,14 +439,14 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
     layout->setContentsMargins(16, 16, 16, 16);
     layout->setSpacing(10);
 
-    auto *rowsLabel = new QLabel(TextEditorTab::tr("Rows (mix measurement rows, directives, and comments)"), &dialog);
+    auto *rowsLabel = new QLabel(tr("Rows (mix measurement rows, directives, and comments)"), &dialog);
     layout->addWidget(rowsLabel);
 
     auto *buttonRow = new QHBoxLayout;
-    auto *addDataRowButton = new QPushButton(TextEditorTab::tr("Add Data Row"), &dialog);
-    auto *addDirectiveRowButton = new QPushButton(TextEditorTab::tr("Add Directive Row"), &dialog);
-    auto *addCommentRowButton = new QPushButton(TextEditorTab::tr("Add Comment Row"), &dialog);
-    auto *removeRowButton = new QPushButton(TextEditorTab::tr("Remove Row"), &dialog);
+    auto *addDataRowButton = new QPushButton(tr("Add Data Row"), &dialog);
+    auto *addDirectiveRowButton = new QPushButton(tr("Add Directive Row"), &dialog);
+    auto *addCommentRowButton = new QPushButton(tr("Add Comment Row"), &dialog);
+    auto *removeRowButton = new QPushButton(tr("Remove Row"), &dialog);
     buttonRow->addWidget(addDataRowButton);
     buttonRow->addWidget(addDirectiveRowButton);
     buttonRow->addWidget(addCommentRowButton);
@@ -457,11 +466,11 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
     rowsTable->setRowCount(initialRows.size());
 
     QStringList headerLabels;
-    headerLabels << TextEditorTab::tr("Type");
+    headerLabels << tr("Type");
     for (const QString &fieldName : currentFieldNames) {
         headerLabels << dataFieldDisplayLabel(fieldName);
     }
-    headerLabels << TextEditorTab::tr("Directive") << TextEditorTab::tr("Comment");
+    headerLabels << tr("Directive") << tr("Comment");
     rowsTable->setColumnCount(headerLabels.size());
     rowsTable->setHorizontalHeaderLabels(headerLabels);
 

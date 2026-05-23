@@ -99,20 +99,20 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     modeLayout->addStretch(1);
     modeRow_->setMaximumHeight(modeSelectorRequestedVisible_ ? QWIDGETSIZE_MAX : 0);
 
-    blockToolboxController_ = std::make_unique<BlockEditorToolboxController>(this);
+    buildBlockToolboxController();
     buildBlockEditorPanel();
     buildBlockDetailsOptionArgsController();
     buildBlockDetailsHelpController();
     buildBlockDetailsLineBuildService();
     buildBlockDetailsApplyStateController();
     buildBlockDetailsApplyExecutor();
-    blockDetailsSelectionDetailsController_ = std::make_unique<BlockEditorSelectionDetailsController>(this);
-    blockDetailsPaneController_ = std::make_unique<BlockEditorDetailsPaneController>(this);
-    blockDetailsToolboxDetailsController_ = std::make_unique<BlockEditorToolboxDetailsController>(this);
-    blockDetailsCanvasSelectionController_ = std::make_unique<BlockEditorCanvasSelectionController>(this);
-    blockDetailsMovePreviewController_ = std::make_unique<BlockEditorMovePreviewController>(this);
+    buildBlockDetailsSelectionDetailsController();
+    buildBlockDetailsPaneController();
+    buildBlockDetailsToolboxDetailsController();
+    buildBlockDetailsCanvasSelectionController();
+    buildBlockDetailsMovePreviewController();
     blockDetailsCanvasBoundaryController_ = std::make_unique<BlockEditorCanvasBoundaryController>(blockEditorCanvasBoundaryContext());
-    blockDetailsCanvasRebuildController_ = std::make_unique<BlockEditorCanvasRebuildController>(this);
+    blockDetailsCanvasRebuildController_ = std::make_unique<BlockEditorCanvasRebuildController>(blockEditorCanvasRebuildContext());
     buildAppearanceController();
 
     editorModeStack_ = new QStackedWidget(this);
@@ -769,22 +769,22 @@ void TextEditorTab::applyBlockDetailsChanges()
 
 void TextEditorTab::handleCanvasDrop(const QString &kind, const QPointF &scenePos)
 {
-    BlockEditorInsertionController(this).insertFromDrop(kind, scenePos);
+    BlockEditorInsertionController(blockEditorInsertionContext()).insertFromDrop(kind, scenePos);
 }
 
 void TextEditorTab::handleBlockMoveRequest(int lineNumber, const QPointF &scenePos)
 {
-    BlockEditorMoveController(this).moveBlock(lineNumber, scenePos);
+    BlockEditorMoveController(blockEditorMoveContext()).moveBlock(lineNumber, scenePos);
 }
 
 void TextEditorTab::handleBlockConfigureRequest(const QString &kind, int lineNumber)
 {
-    BlockEditorConfigureController(this).configureBlock(kind, lineNumber);
+    BlockEditorConfigureController(blockEditorConfigureContext()).configureBlock(kind, lineNumber);
 }
 
 bool TextEditorTab::handleBlockDeleteRequest(int lineNumber)
 {
-    BlockEditorDeleteExecutor deleteExecutor(this);
+    BlockEditorDeleteExecutor deleteExecutor(blockEditorDeleteContext());
     return deleteExecutor.deleteCommandAtLine(lineNumber);
 }
 

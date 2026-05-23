@@ -3,7 +3,7 @@
 #include "BlockEditorCanvasItem.h"
 #include "BlockEditorDirectiveRules.h"
 #include "BlockEditorSourceText.h"
-#include "../TextEditorTab.h"
+#include "../TextEditorCommandMetadata.h"
 
 #include "../../../core/TherionDocumentParser.h"
 
@@ -17,6 +17,7 @@
 #include <QStringList>
 
 #include <algorithm>
+#include <utility>
 
 namespace
 {
@@ -41,20 +42,60 @@ void appendUniqueList(QStringList &target, const QStringList &values)
 
 namespace TherionStudio
 {
-BlockEditorToolboxController::BlockEditorToolboxController(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorToolboxController::BlockEditorToolboxController(BlockEditorToolboxContext context)
+    : context_(std::move(context))
 {
+}
+
+QLineEdit *BlockEditorToolboxController::filterEdit() const
+{
+    return context_.filterEdit != nullptr ? *context_.filterEdit : nullptr;
+}
+
+QListWidget *BlockEditorToolboxController::toolboxList() const
+{
+    return context_.toolboxList != nullptr ? *context_.toolboxList : nullptr;
+}
+
+QComboBox *BlockEditorToolboxController::scopeCombo() const
+{
+    return context_.scopeCombo != nullptr ? *context_.scopeCombo : nullptr;
+}
+
+QGraphicsScene *BlockEditorToolboxController::canvasScene() const
+{
+    return context_.canvasScene != nullptr ? *context_.canvasScene : nullptr;
+}
+
+QPlainTextEdit *BlockEditorToolboxController::editor() const
+{
+    return context_.editor != nullptr ? *context_.editor : nullptr;
+}
+
+QString BlockEditorToolboxController::normalizeCompletionContext(const QString &contextToken) const
+{
+    return context_.normalizeCompletionContext ? context_.normalizeCompletionContext(contextToken) : contextToken.trimmed().toLower();
+}
+
+bool BlockEditorToolboxController::isCompatibleChildKindForBlocks(const QString &parentKind, const QString &childKind) const
+{
+    return context_.isCompatibleChildKindForBlocks ? context_.isCompatibleChildKindForBlocks(parentKind, childKind) : false;
+}
+
+QString BlockEditorToolboxController::translate(const char *text) const
+{
+    return context_.translate ? context_.translate(text) : QString::fromLatin1(text);
 }
 
 void BlockEditorToolboxController::populateBlockToolbox()
 {
-    if (owner_ == nullptr || owner_->tearingDown_ || owner_->blockToolboxList_ == nullptr) {
+    if ((context_.tearingDown != nullptr && *context_.tearingDown) || toolboxList() == nullptr || context_.commandMetadata == nullptr) {
         return;
     }
 
-    owner_->blockToolboxList_->clear();
-    const QString filterText = owner_->blockToolboxFilterEdit_ != nullptr
-        ? owner_->blockToolboxFilterEdit_->text().trimmed().toLower()
+    toolboxList()->clear();
+    const QString filterText = filterEdit() != nullptr
+        ? filterEdit()->text().trimmed().toLower()
         : QString();
 
     auto labelForCommand = [](const QString &commandToken) {
@@ -68,8 +109,8 @@ void BlockEditorToolboxController::populateBlockToolbox()
     };
 
     QString selectedScope = QStringLiteral("all");
-    if (owner_->blockToolboxScopeCombo_ != nullptr) {
-        selectedScope = owner_->blockToolboxScopeCombo_->currentData().toString().trimmed().toLower();
+    if (scopeCombo() != nullptr) {
+        selectedScope = scopeCombo()->currentData().toString().trimmed().toLower();
     }
 
     QString effectiveScope = selectedScope;
@@ -77,7 +118,7 @@ void BlockEditorToolboxController::populateBlockToolbox()
         effectiveScope = selectedBlockInsertionContextToken();
     }
     if (effectiveScope != QStringLiteral("all")) {
-        effectiveScope = owner_->normalizeCompletionContext(effectiveScope);
+        effectiveScope = normalizeCompletionContext(effectiveScope);
         if (effectiveScope.isEmpty()) {
             effectiveScope = QStringLiteral("none");
         }
@@ -87,8 +128,8 @@ void BlockEditorToolboxController::populateBlockToolbox()
     if (effectiveScope == QStringLiteral("all")) {
         appendUnique(contextsToShow, QStringLiteral("none"));
         QStringList remainingContexts;
-        for (auto it = owner_->commandMetadata().contextCommandTokens.cbegin(); it != owner_->commandMetadata().contextCommandTokens.cend(); ++it) {
-            const QString normalizedContext = owner_->normalizeCompletionContext(it.key());
+        for (auto it = (*context_.commandMetadata).contextCommandTokens.cbegin(); it != (*context_.commandMetadata).contextCommandTokens.cend(); ++it) {
+            const QString normalizedContext = normalizeCompletionContext(it.key());
             if (normalizedContext.isEmpty()
                 || normalizedContext == QStringLiteral("all")
                 || normalizedContext == QStringLiteral("none")) {
@@ -107,22 +148,22 @@ void BlockEditorToolboxController::populateBlockToolbox()
     contextsToShow.erase(std::remove_if(contextsToShow.begin(),
                                         contextsToShow.end(),
                                         [this](const QString &contextToken) {
-                                            QStringList candidates = owner_->commandMetadata().contextCommandTokens.value(contextToken);
+                                            QStringList candidates = (*context_.commandMetadata).contextCommandTokens.value(contextToken);
                                             if (contextToken == QStringLiteral("none")) {
-                                                appendUniqueList(candidates, owner_->commandMetadata().contextCommandTokens.value(QStringLiteral("none")));
+                                                appendUniqueList(candidates, (*context_.commandMetadata).contextCommandTokens.value(QStringLiteral("none")));
                                             }
-                                            appendUniqueList(candidates, owner_->commandMetadata().contextCommandTokens.value(QStringLiteral("all")));
+                                            appendUniqueList(candidates, (*context_.commandMetadata).contextCommandTokens.value(QStringLiteral("all")));
                                             return candidates.isEmpty();
                                         }),
                          contextsToShow.end());
 
     int insertedRows = 0;
     for (const QString &contextToken : contextsToShow) {
-        QStringList sectionCommands = owner_->commandMetadata().contextCommandTokens.value(contextToken);
+        QStringList sectionCommands = (*context_.commandMetadata).contextCommandTokens.value(contextToken);
         if (contextToken == QStringLiteral("none")) {
-            appendUniqueList(sectionCommands, owner_->commandMetadata().contextCommandTokens.value(QStringLiteral("none")));
+            appendUniqueList(sectionCommands, (*context_.commandMetadata).contextCommandTokens.value(QStringLiteral("none")));
         }
-        appendUniqueList(sectionCommands, owner_->commandMetadata().contextCommandTokens.value(QStringLiteral("all")));
+        appendUniqueList(sectionCommands, (*context_.commandMetadata).contextCommandTokens.value(QStringLiteral("all")));
         appendUnique(sectionCommands, QStringLiteral("comment"));
 
         QStringList visibleCommands;
@@ -138,7 +179,7 @@ void BlockEditorToolboxController::populateBlockToolbox()
                 continue;
             }
             const QString parentKind = contextToken == QStringLiteral("none") ? QString() : contextToken;
-            if (!owner_->isCompatibleChildKindForBlocks(parentKind, normalizedCommand)) {
+            if (!isCompatibleChildKindForBlocks(parentKind, normalizedCommand)) {
                 continue;
             }
             const QString closingDirective = completionClosingDirectiveForOpening(normalizedCommand);
@@ -165,21 +206,21 @@ void BlockEditorToolboxController::populateBlockToolbox()
         }
 
         auto *categoryItem =
-            new QListWidgetItem(QStringLiteral("[%1]").arg(contextDisplayLabel(contextToken)), owner_->blockToolboxList_);
+            new QListWidgetItem(QStringLiteral("[%1]").arg(contextDisplayLabel(contextToken)), toolboxList());
         categoryItem->setFlags(Qt::ItemIsEnabled);
         ++insertedRows;
 
         for (const QString &commandToken : visibleCommands) {
             const QString label = labelForCommand(commandToken);
-            auto *item = new QListWidgetItem(QStringLiteral("  %1").arg(label), owner_->blockToolboxList_);
+            auto *item = new QListWidgetItem(QStringLiteral("  %1").arg(label), toolboxList());
             item->setData(Qt::UserRole, commandToken);
-            item->setToolTip(TextEditorTab::tr("Drag to canvas."));
+            item->setToolTip(translate("Drag to canvas."));
             ++insertedRows;
         }
     }
 
     if (insertedRows == 0) {
-        auto *emptyItem = new QListWidgetItem(TextEditorTab::tr("[No commands match filter]"), owner_->blockToolboxList_);
+        auto *emptyItem = new QListWidgetItem(translate("[No commands match filter]"), toolboxList());
         emptyItem->setFlags(Qt::ItemIsEnabled);
     }
 
@@ -188,20 +229,20 @@ void BlockEditorToolboxController::populateBlockToolbox()
 
 void BlockEditorToolboxController::populateBlockToolboxScopeCombo()
 {
-    if (owner_ == nullptr || owner_->blockToolboxScopeCombo_ == nullptr) {
+    if (scopeCombo() == nullptr) {
         return;
     }
 
-    const QString previousScope = owner_->blockToolboxScopeCombo_->currentData().toString().trimmed().toLower();
-    const QSignalBlocker scopeSignalBlocker(owner_->blockToolboxScopeCombo_);
-    owner_->blockToolboxScopeCombo_->clear();
-    owner_->blockToolboxScopeCombo_->addItem(TextEditorTab::tr("Auto (selected block)"), QStringLiteral("__auto__"));
-    owner_->blockToolboxScopeCombo_->addItem(TextEditorTab::tr("All"), QStringLiteral("all"));
-    owner_->blockToolboxScopeCombo_->addItem(TextEditorTab::tr("Top-level"), QStringLiteral("none"));
+    const QString previousScope = scopeCombo()->currentData().toString().trimmed().toLower();
+    const QSignalBlocker scopeSignalBlocker(scopeCombo());
+    scopeCombo()->clear();
+    scopeCombo()->addItem(translate("Auto (selected block)"), QStringLiteral("__auto__"));
+    scopeCombo()->addItem(translate("All"), QStringLiteral("all"));
+    scopeCombo()->addItem(translate("Top-level"), QStringLiteral("none"));
 
     QStringList dynamicContexts;
-    for (auto contextIterator = owner_->commandMetadata().contextCommandTokens.cbegin(); contextIterator != owner_->commandMetadata().contextCommandTokens.cend(); ++contextIterator) {
-        const QString normalizedContext = owner_->normalizeCompletionContext(contextIterator.key());
+    for (auto contextIterator = (*context_.commandMetadata).contextCommandTokens.cbegin(); contextIterator != (*context_.commandMetadata).contextCommandTokens.cend(); ++contextIterator) {
+        const QString normalizedContext = normalizeCompletionContext(contextIterator.key());
         if (normalizedContext.isEmpty()
             || normalizedContext == QStringLiteral("all")
             || normalizedContext == QStringLiteral("none")) {
@@ -214,22 +255,22 @@ void BlockEditorToolboxController::populateBlockToolboxScopeCombo()
     });
 
     for (const QString &contextToken : dynamicContexts) {
-        owner_->blockToolboxScopeCombo_->addItem(contextDisplayLabel(contextToken), contextToken);
+        scopeCombo()->addItem(contextDisplayLabel(contextToken), contextToken);
     }
 
     int restoreIndex = 0;
     if (!previousScope.isEmpty()) {
-        restoreIndex = owner_->blockToolboxScopeCombo_->findData(previousScope);
+        restoreIndex = scopeCombo()->findData(previousScope);
     }
     if (restoreIndex < 0) {
         restoreIndex = 0;
     }
-    owner_->blockToolboxScopeCombo_->setCurrentIndex(restoreIndex);
+    scopeCombo()->setCurrentIndex(restoreIndex);
 }
 
 QString BlockEditorToolboxController::selectedBlockInsertionContextToken() const
 {
-    if (owner_ == nullptr || owner_->blockCanvasScene_ == nullptr) {
+    if (canvasScene() == nullptr) {
         return QStringLiteral("none");
     }
 
@@ -243,28 +284,28 @@ QString BlockEditorToolboxController::selectedBlockInsertionContextToken() const
         return nullptr;
     };
     BlockCanvasItem *selectedBlock = nullptr;
-    if (!owner_->blockCanvasScene_->selectedItems().isEmpty()) {
-        selectedBlock = resolveBlockFromItem(owner_->blockCanvasScene_->selectedItems().first());
+    if (!canvasScene()->selectedItems().isEmpty()) {
+        selectedBlock = resolveBlockFromItem(canvasScene()->selectedItems().first());
     }
     if (selectedBlock == nullptr) {
-        selectedBlock = resolveBlockFromItem(owner_->blockCanvasScene_->focusItem());
+        selectedBlock = resolveBlockFromItem(canvasScene()->focusItem());
     }
     if (selectedBlock == nullptr) {
         return QStringLiteral("none");
     }
 
     const QString selectedKind = normalizeDirective(selectedBlock->kind());
-    const QString selectedContext = owner_->normalizeCompletionContext(selectedKind);
+    const QString selectedContext = normalizeCompletionContext(selectedKind);
     if (selectedBlock->isContainerOpen() && !selectedContext.isEmpty()) {
         return selectedContext;
     }
 
-    if (owner_->editor_ == nullptr || selectedBlock->lineNumber() <= 0) {
+    if (editor() == nullptr || selectedBlock->lineNumber() <= 0) {
         return QStringLiteral("none");
     }
 
     QStringList stack;
-    const QStringList lines = blockEditorNormalizedSourceLines(owner_->editor_->toPlainText());
+    const QStringList lines = blockEditorNormalizedSourceLines(editor()->toPlainText());
     const int lastLine = qMin(selectedBlock->lineNumber() - 1, lines.size());
     for (int lineIndex = 0; lineIndex < lastLine; ++lineIndex) {
         const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineIndex), lineIndex + 1);
@@ -293,34 +334,34 @@ QString BlockEditorToolboxController::selectedBlockInsertionContextToken() const
         return QStringLiteral("none");
     }
 
-    const QString parentContext = owner_->normalizeCompletionContext(stack.constLast());
+    const QString parentContext = normalizeCompletionContext(stack.constLast());
     return parentContext.isEmpty() ? QStringLiteral("none") : parentContext;
 }
 
 void BlockEditorToolboxController::updateBlockToolboxScopeLabel()
 {
-    if (owner_ == nullptr || owner_->blockToolboxScopeCombo_ == nullptr) {
+    if (scopeCombo() == nullptr) {
         return;
     }
 
     QString selectedScope = QStringLiteral("all");
-    selectedScope = owner_->blockToolboxScopeCombo_->currentData().toString().trimmed().toLower();
+    selectedScope = scopeCombo()->currentData().toString().trimmed().toLower();
 
     if (selectedScope == QStringLiteral("__auto__")) {
         const QString contextToken = selectedBlockInsertionContextToken();
-        owner_->blockToolboxScopeCombo_->setToolTip(TextEditorTab::tr("Auto scope currently resolves to: %1.")
+        scopeCombo()->setToolTip(translate("Auto scope currently resolves to: %1.")
                                                 .arg(contextDisplayLabel(contextToken)));
         return;
     }
 
     if (selectedScope == QStringLiteral("all")) {
-        owner_->blockToolboxScopeCombo_->setToolTip(TextEditorTab::tr("Shows commands from all supported contexts."));
+        scopeCombo()->setToolTip(translate("Shows commands from all supported contexts."));
         return;
     }
 
-    const QString normalizedScope = owner_->normalizeCompletionContext(selectedScope);
+    const QString normalizedScope = normalizeCompletionContext(selectedScope);
     const QString labelText = contextDisplayLabel(normalizedScope.isEmpty() ? QStringLiteral("none") : normalizedScope);
-    owner_->blockToolboxScopeCombo_->setToolTip(TextEditorTab::tr("Shows commands for: %1.").arg(labelText));
+    scopeCombo()->setToolTip(translate("Shows commands for: %1.").arg(labelText));
 }
 
 }

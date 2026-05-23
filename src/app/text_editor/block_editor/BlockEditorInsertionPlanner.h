@@ -8,12 +8,12 @@
 #include <QString>
 #include <QVector>
 
+#include <functional>
+
 class QGraphicsItem;
 
 namespace TherionStudio
 {
-class TextEditorTab;
-
 struct BlockEditorInsertionPlan
 {
     int insertBeforeLine = 1;
@@ -22,10 +22,16 @@ struct BlockEditorInsertionPlan
     bool compatible = true;
 };
 
+struct BlockEditorInsertionPlannerContext
+{
+    std::function<int(const QGraphicsItem *)> blockCanvasItemLineNumber;
+    std::function<bool(const QString &, const QString &)> isCompatibleChildKindForBlocks;
+};
+
 class BlockEditorInsertionPlanner final
 {
 public:
-    explicit BlockEditorInsertionPlanner(const TextEditorTab *owner);
+    explicit BlockEditorInsertionPlanner(BlockEditorInsertionPlannerContext context);
 
     BlockEditorInsertionPlan planInsertion(const QString &normalizedKind,
                                            const QVector<BlockEditorDocumentEntry> &entries,
@@ -37,6 +43,6 @@ public:
                                            int appendLineNumber) const;
 
 private:
-    const TextEditorTab *owner_ = nullptr;
+    BlockEditorInsertionPlannerContext context_;
 };
 }

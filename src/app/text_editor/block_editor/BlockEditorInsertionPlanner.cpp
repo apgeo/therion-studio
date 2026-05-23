@@ -1,17 +1,18 @@
 #include "BlockEditorInsertionPlanner.h"
 
 #include "BlockEditorDirectiveRules.h"
-#include "../TextEditorTab.h"
 
 #include <QGraphicsItem>
 #include <QRectF>
+
+#include <utility>
 
 namespace TherionStudio
 {
 using namespace BlockEditorDirectiveRules;
 
-BlockEditorInsertionPlanner::BlockEditorInsertionPlanner(const TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorInsertionPlanner::BlockEditorInsertionPlanner(BlockEditorInsertionPlannerContext context)
+    : context_(std::move(context))
 {
 }
 
@@ -27,7 +28,7 @@ BlockEditorInsertionPlan BlockEditorInsertionPlanner::planInsertion(
 {
     BlockEditorInsertionPlan plan;
     plan.insertBeforeLine = appendLineNumber;
-    if (owner_ == nullptr) {
+    if (!context_.blockCanvasItemLineNumber || !context_.isCompatibleChildKindForBlocks) {
         plan.compatible = false;
         return plan;
     }
@@ -43,7 +44,7 @@ BlockEditorInsertionPlan BlockEditorInsertionPlanner::planInsertion(
             plan.parentLine = hintedEntry.parentLine;
         }
     } else if (targetBlockItem != nullptr) {
-        const auto targetIndexIt = entryIndexByStartLine.constFind(owner_->blockCanvasItemLineNumber(targetBlockItem));
+        const auto targetIndexIt = entryIndexByStartLine.constFind(context_.blockCanvasItemLineNumber(targetBlockItem));
         if (targetIndexIt != entryIndexByStartLine.cend()) {
             const BlockEditorDocumentEntry targetEntry = entries.at(*targetIndexIt);
             plan.parentLine = targetEntry.parentLine;
@@ -56,7 +57,7 @@ BlockEditorInsertionPlan BlockEditorInsertionPlanner::planInsertion(
             const bool preferBetweenInsertion = nearTopEdge || nearBottomEdge;
 
             const bool targetAcceptsSourceAsChild = isContainerBlockDirective(targetEntry.kind)
-                && owner_->isCompatibleChildKindForBlocks(targetEntry.kind, normalizedKind);
+                && context_.isCompatibleChildKindForBlocks(targetEntry.kind, normalizedKind);
             if (targetAcceptsSourceAsChild) {
                 if (!preferBetweenInsertion) {
                     plan.parentLine = targetEntry.startLine;
@@ -95,7 +96,7 @@ BlockEditorInsertionPlan BlockEditorInsertionPlanner::planInsertion(
         }
     }
 
-    if (owner_->isCompatibleChildKindForBlocks(plan.parentKind, normalizedKind)) {
+    if (context_.isCompatibleChildKindForBlocks(plan.parentKind, normalizedKind)) {
         return plan;
     }
 
@@ -114,7 +115,7 @@ BlockEditorInsertionPlan BlockEditorInsertionPlanner::planInsertion(
                 candidateParentKind = entries.at(*candidateParentIt).kind;
             }
         }
-        if (owner_->isCompatibleChildKindForBlocks(candidateParentKind, normalizedKind)) {
+        if (context_.isCompatibleChildKindForBlocks(candidateParentKind, normalizedKind)) {
             plan.insertBeforeLine = incompatibleParentEntry.endLine + 1;
             plan.parentLine = candidateParentLine;
             plan.parentKind = candidateParentKind;
@@ -123,7 +124,7 @@ BlockEditorInsertionPlan BlockEditorInsertionPlanner::planInsertion(
         incompatibleParentLine = candidateParentLine;
     }
 
-    if (owner_->isCompatibleChildKindForBlocks(QString(), normalizedKind)) {
+    if (context_.isCompatibleChildKindForBlocks(QString(), normalizedKind)) {
         plan.insertBeforeLine = appendLineNumber;
         plan.parentLine = 0;
         plan.parentKind.clear();

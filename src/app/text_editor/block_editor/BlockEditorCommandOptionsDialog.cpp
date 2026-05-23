@@ -3,7 +3,6 @@
 #include "BlockEditorCommandOptionParser.h"
 #include "../ContextHelpController.h"
 #include "../TextEditorOptionValidation.h"
-#include "../TextEditorTab.h"
 
 #include <QAbstractItemView>
 #include <QDialog>
@@ -25,11 +24,18 @@
 #include "../../../core/TherionCommandSyntax.h"
 #include "../../../core/TherionDocumentParser.h"
 
+#include <utility>
+
 namespace TherionStudio
 {
-BlockEditorCommandOptionsDialog::BlockEditorCommandOptionsDialog(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorCommandOptionsDialog::BlockEditorCommandOptionsDialog(BlockEditorCommandOptionsDialogContext context)
+    : context_(std::move(context))
 {
+}
+
+QString BlockEditorCommandOptionsDialog::tr(const char *text) const
+{
+    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
 }
 
 std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
@@ -38,7 +44,7 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     int lineNumber,
     BlockEditorCommandIdFieldMode idFieldMode)
 {
-    if (owner_ == nullptr || lineNumber <= 0) {
+    if (context_.commandMetadata == nullptr || lineNumber <= 0) {
         return std::nullopt;
     }
 
@@ -56,12 +62,12 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     const BlockEditorParsedCommandOptions parsedOptions =
         parseBlockEditorCommandOptions(commandName,
                                        commandParsedLine.tokens,
-                                       owner_->commandMetadata().commandOptionFixedArityByKey,
+                                       context_.commandMetadata->commandOptionFixedArityByKey,
                                        hasIdField);
     const QString currentAdditionalPositionalTokens = parsedOptions.extraPositionalTokens.join(QLatin1Char(' '));
 
-    QDialog dialog(owner_);
-    dialog.setWindowTitle(TextEditorTab::tr("Configure %1").arg(commandName));
+    QDialog dialog(context_.dialogParent);
+    dialog.setWindowTitle(tr("Configure %1").arg(commandName));
     dialog.setModal(true);
     auto *layout = new QVBoxLayout(&dialog);
     layout->setContentsMargins(12, 12, 12, 12);
@@ -71,27 +77,27 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     QLineEdit *idEdit = nullptr;
     if (hasIdField) {
         idEdit = new QLineEdit(parsedOptions.leadingValue, &dialog);
-        idEdit->setPlaceholderText(requiresId ? TextEditorTab::tr("required") : TextEditorTab::tr("optional"));
-        formLayout->addRow(TextEditorTab::tr("ID"), idEdit);
+        idEdit->setPlaceholderText(requiresId ? tr("required") : tr("optional"));
+        formLayout->addRow(tr("ID"), idEdit);
     }
     QLineEdit *additionalPositionalTokensEdit = nullptr;
     if (!currentAdditionalPositionalTokens.isEmpty()) {
         additionalPositionalTokensEdit = new QLineEdit(currentAdditionalPositionalTokens, &dialog);
         additionalPositionalTokensEdit->setToolTip(
-            TextEditorTab::tr("Preserved positional tokens that are not parsed as options. "
+            tr("Preserved positional tokens that are not parsed as options. "
                               "Prefer using explicit options whenever possible."));
-        formLayout->addRow(TextEditorTab::tr("Extra Arguments (Advanced)"), additionalPositionalTokensEdit);
+        formLayout->addRow(tr("Extra Arguments (Advanced)"), additionalPositionalTokensEdit);
     }
     layout->addLayout(formLayout);
 
-    auto *optionsLabel = new QLabel(TextEditorTab::tr("Options"), &dialog);
+    auto *optionsLabel = new QLabel(tr("Options"), &dialog);
     layout->addWidget(optionsLabel);
 
     auto *optionsActionsLayout = new QHBoxLayout;
     optionsActionsLayout->setContentsMargins(0, 0, 0, 0);
     optionsActionsLayout->setSpacing(6);
-    auto *addOptionButton = new QPushButton(TextEditorTab::tr("Add New Option"), &dialog);
-    auto *removeOptionButton = new QPushButton(TextEditorTab::tr("Remove Option"), &dialog);
+    auto *addOptionButton = new QPushButton(tr("Add New Option"), &dialog);
+    auto *removeOptionButton = new QPushButton(tr("Remove Option"), &dialog);
     addOptionButton->setAutoDefault(false);
     removeOptionButton->setAutoDefault(false);
     optionsActionsLayout->addWidget(addOptionButton);
@@ -101,7 +107,7 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
 
     auto *optionsTable = new QTableWidget(&dialog);
     optionsTable->setColumnCount(2);
-    optionsTable->setHorizontalHeaderLabels({TextEditorTab::tr("Option"), TextEditorTab::tr("Value")});
+    optionsTable->setHorizontalHeaderLabels({tr("Option"), tr("Value")});
     optionsTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     optionsTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     optionsTable->verticalHeader()->setVisible(false);
@@ -117,7 +123,7 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     }
     layout->addWidget(optionsTable, 1);
 
-    auto *helpLabel = new QLabel(TextEditorTab::tr("Contextual Help"), &dialog);
+    auto *helpLabel = new QLabel(tr("Contextual Help"), &dialog);
     QFont helpLabelFont = helpLabel->font();
     helpLabelFont.setBold(true);
     helpLabel->setFont(helpLabelFont);
@@ -129,7 +135,7 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     helpBrowser->setMinimumHeight(160);
     layout->addWidget(helpBrowser, 1);
 
-    const TherionHelpEntry commandHelpEntry = owner_->commandMetadata().helpEntries.value(commandName);
+    const TherionHelpEntry commandHelpEntry = context_.commandMetadata->helpEntries.value(commandName);
     const QString commandHelpHtml = ContextHelpController::renderHelpHtml(commandName,
                                                                            commandHelpEntry.summary,
                                                                            commandHelpEntry.syntax,
@@ -149,7 +155,7 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
         }
         if (idArgumentLine.isEmpty()) {
             for (const QString &argumentLine : commandHelpEntry.arguments) {
-                if (owner_->isRequiredArgumentSignatureForBlocks(argumentLine.section(QLatin1Char('='), 0, 0).trimmed())) {
+                if (context_.isRequiredArgumentSignatureForBlocks != nullptr && context_.isRequiredArgumentSignatureForBlocks(argumentLine.section(QLatin1Char('='), 0, 0).trimmed())) {
                     idArgumentLine = argumentLine.trimmed();
                     break;
                 }
@@ -186,7 +192,7 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
         const QString optionToken = row >= 0 && optionsTable->item(row, 0) != nullptr
             ? optionsTable->item(row, 0)->text().trimmed().toLower()
             : QString();
-        const QString optionHelp = owner_->commandMetadata().commandOptionHelpHtmlByKey.value(commandOptionHelpKey(commandName, optionToken));
+        const QString optionHelp = context_.commandMetadata->commandOptionHelpHtmlByKey.value(commandOptionHelpKey(commandName, optionToken));
         if (!optionHelp.trimmed().isEmpty()) {
             helpBrowser->setHtml(optionHelp);
             return;
@@ -244,8 +250,8 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
         }
         const int row = optionsTable->rowCount();
         optionsTable->insertRow(row);
-        const QString defaultOption = !owner_->commandMetadata().commandOptionTokens.value(commandName).isEmpty()
-            ? owner_->commandMetadata().commandOptionTokens.value(commandName).first()
+        const QString defaultOption = !context_.commandMetadata->commandOptionTokens.value(commandName).isEmpty()
+            ? context_.commandMetadata->commandOptionTokens.value(commandName).first()
             : QStringLiteral("-option");
         optionsTable->setItem(row, 0, new QTableWidgetItem(defaultOption));
         optionsTable->setItem(row, 1, new QTableWidgetItem(QString()));
@@ -277,7 +283,7 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
 
     const QString updatedId = hasIdField && idEdit != nullptr ? idEdit->text().trimmed() : QString();
     if (requiresId && updatedId.isEmpty()) {
-        QMessageBox::warning(owner_, TextEditorTab::tr("Configure Block"), TextEditorTab::tr("ID cannot be empty."));
+        QMessageBox::warning(context_.dialogParent, tr("Configure Block"), tr("ID cannot be empty."));
         return std::nullopt;
     }
 
@@ -297,16 +303,16 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     const TextEditorOptionValidationResult validation = validateAndSerializeCommandOptions(
         commandName,
         optionRows,
-        owner_->commandMetadata().commandOptionValueArityTokens,
-        owner_->commandMetadata().commandOptionFixedArityByKey,
-        owner_->commandMetadata().commandOptionArgumentLabelsByKey,
-        owner_->commandMetadata().commandOptionValueTokens,
+        context_.commandMetadata->commandOptionValueArityTokens,
+        context_.commandMetadata->commandOptionFixedArityByKey,
+        context_.commandMetadata->commandOptionArgumentLabelsByKey,
+        context_.commandMetadata->commandOptionValueTokens,
         false);
     if (!validation.ok) {
         if (validation.failingRow >= 0 && validation.failingRow < optionsTable->rowCount()) {
             optionsTable->setCurrentCell(validation.failingRow, 0);
         }
-        QMessageBox::warning(owner_, TextEditorTab::tr("Configure Block"), validation.errorMessage);
+        QMessageBox::warning(context_.dialogParent, tr("Configure Block"), validation.errorMessage);
         return std::nullopt;
     }
 

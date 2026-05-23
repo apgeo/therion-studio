@@ -1,7 +1,5 @@
 #include "BlockEditorDetailsPaneController.h"
 
-#include "../TextEditorTab.h"
-
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -9,102 +7,106 @@
 #include <QTableWidget>
 #include <QTextBrowser>
 
+#include <utility>
+
 namespace TherionStudio
 {
-BlockEditorDetailsPaneController::BlockEditorDetailsPaneController(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorDetailsPaneController::BlockEditorDetailsPaneController(BlockEditorDetailsPaneContext context)
+    : context_(std::move(context))
 {
 }
 
 void BlockEditorDetailsPaneController::clearDetailsPane()
 {
-    if (owner_ == nullptr) {
+    if (!context_.resetDetailsState || !context_.setDetailsPopulating) {
         return;
     }
 
-    if (owner_->tearingDown_) {
-        owner_->blockDetailsMode_ = TextEditorTab::BlockDetailsMode::None;
-        owner_->blockDetailsSelectedLineNumber_ = 0;
-        owner_->blockDetailsSelectedKind_.clear();
+    const bool tearingDown = context_.tearingDown != nullptr && *context_.tearingDown;
+    context_.resetDetailsState(tearingDown);
+    if (tearingDown) {
         return;
     }
 
-    owner_->blockDetailsMode_ = TextEditorTab::BlockDetailsMode::None;
-    owner_->blockDetailsSelectedLineNumber_ = 0;
-    owner_->blockDetailsSelectedKind_.clear();
-    owner_->blockDetailsBaseStatusText_.clear();
-    if (owner_->blockDetailsEditPanel_ != nullptr) {
-        owner_->blockDetailsEditPanel_->setVisible(false);
+    if (context_.editPanel != nullptr) {
+        context_.editPanel->setVisible(false);
     }
-    owner_->blockDetailsPopulating_ = true;
-    if (owner_->blockDetailsStatusLabel_ != nullptr) {
-        owner_->blockDetailsStatusLabel_->setStyleSheet(QString());
-        owner_->blockDetailsStatusLabel_->setText(TextEditorTab::tr("Select a block in the canvas to edit its parameters."));
+    context_.setDetailsPopulating(true);
+    const auto tr = [this](const char *text) {
+        return context_.translate ? context_.translate(text) : QString::fromLatin1(text);
+    };
+    if (context_.statusLabel != nullptr) {
+        context_.statusLabel->setStyleSheet(QString());
+        context_.statusLabel->setText(tr("Select a block in the canvas to edit its parameters."));
     }
-    if (owner_->blockDetailsIdEdit_ != nullptr) {
-        owner_->blockDetailsIdEdit_->clear();
-        owner_->blockDetailsIdEdit_->setEnabled(false);
-        owner_->blockDetailsIdEdit_->setVisible(true);
+    if (context_.idEdit != nullptr) {
+        context_.idEdit->clear();
+        context_.idEdit->setEnabled(false);
+        context_.idEdit->setVisible(true);
     }
-    if (owner_->blockDetailsAdditionalPositionalEdit_ != nullptr) {
-        owner_->blockDetailsAdditionalPositionalEdit_->clear();
-        owner_->blockDetailsAdditionalPositionalEdit_->setEnabled(false);
-        owner_->blockDetailsAdditionalPositionalEdit_->setVisible(true);
+    if (context_.additionalPositionalEdit != nullptr) {
+        context_.additionalPositionalEdit->clear();
+        context_.additionalPositionalEdit->setEnabled(false);
+        context_.additionalPositionalEdit->setVisible(true);
     }
-    if (owner_->blockDetailsSecondaryFieldStack_ != nullptr) {
-        owner_->blockDetailsSecondaryFieldStack_->setVisible(true);
-        if (owner_->blockDetailsAdditionalPositionalEdit_ != nullptr) {
-            owner_->blockDetailsSecondaryFieldStack_->setCurrentWidget(owner_->blockDetailsAdditionalPositionalEdit_);
+    if (context_.secondaryFieldStack != nullptr) {
+        context_.secondaryFieldStack->setVisible(true);
+        if (context_.additionalPositionalEdit != nullptr) {
+            context_.secondaryFieldStack->setCurrentWidget(context_.additionalPositionalEdit);
         }
     }
-    owner_->setBlockDetailsReadingsTagEditor(QString(), {}, {});
-    if (owner_->blockDetailsCommentEdit_ != nullptr) {
-        owner_->blockDetailsCommentEdit_->clear();
-        owner_->blockDetailsCommentEdit_->setEnabled(false);
-        owner_->blockDetailsCommentEdit_->setVisible(true);
+    if (context_.clearReadingsTagEditor) {
+        context_.clearReadingsTagEditor();
     }
-    if (owner_->blockDetailsPrimaryFieldLabel_ != nullptr) {
-        owner_->blockDetailsPrimaryFieldLabel_->setText(TextEditorTab::tr("ID"));
-        owner_->blockDetailsPrimaryFieldLabel_->setVisible(true);
+    if (context_.commentEdit != nullptr) {
+        context_.commentEdit->clear();
+        context_.commentEdit->setEnabled(false);
+        context_.commentEdit->setVisible(true);
     }
-    if (owner_->blockDetailsSecondaryFieldLabel_ != nullptr) {
-        owner_->blockDetailsSecondaryFieldLabel_->setText(TextEditorTab::tr("Extra Arguments (Advanced)"));
-        owner_->blockDetailsSecondaryFieldLabel_->setVisible(true);
+    if (context_.primaryFieldLabel != nullptr) {
+        context_.primaryFieldLabel->setText(tr("ID"));
+        context_.primaryFieldLabel->setVisible(true);
     }
-    if (owner_->blockDetailsCommentFieldLabel_ != nullptr) {
-        owner_->blockDetailsCommentFieldLabel_->setText(TextEditorTab::tr("Comment"));
-        owner_->blockDetailsCommentFieldLabel_->setVisible(true);
+    if (context_.secondaryFieldLabel != nullptr) {
+        context_.secondaryFieldLabel->setText(tr("Extra Arguments (Advanced)"));
+        context_.secondaryFieldLabel->setVisible(true);
     }
-    if (owner_->blockDetailsOptionsTable_ != nullptr) {
-        owner_->blockDetailsOptionsTable_->setRowCount(0);
-        owner_->blockDetailsOptionsTable_->setEnabled(false);
-        owner_->blockDetailsOptionsTable_->setVisible(true);
+    if (context_.commentFieldLabel != nullptr) {
+        context_.commentFieldLabel->setText(tr("Comment"));
+        context_.commentFieldLabel->setVisible(true);
     }
-    if (owner_->blockDetailsOptionArgsLabel_ != nullptr) {
-        owner_->blockDetailsOptionArgsLabel_->setVisible(false);
+    if (context_.optionsTable != nullptr) {
+        context_.optionsTable->setRowCount(0);
+        context_.optionsTable->setEnabled(false);
+        context_.optionsTable->setVisible(true);
     }
-    if (owner_->blockDetailsOptionArgsPanel_ != nullptr) {
-        owner_->blockDetailsOptionArgsPanel_->setVisible(false);
+    if (context_.optionArgsLabel != nullptr) {
+        context_.optionArgsLabel->setVisible(false);
     }
-    if (owner_->blockDetailsAddOptionButton_ != nullptr) {
-        owner_->blockDetailsAddOptionButton_->setEnabled(false);
-        owner_->blockDetailsAddOptionButton_->setVisible(true);
+    if (context_.optionArgsPanel != nullptr) {
+        context_.optionArgsPanel->setVisible(false);
     }
-    if (owner_->blockDetailsRemoveOptionButton_ != nullptr) {
-        owner_->blockDetailsRemoveOptionButton_->setEnabled(false);
-        owner_->blockDetailsRemoveOptionButton_->setVisible(true);
+    if (context_.addOptionButton != nullptr) {
+        context_.addOptionButton->setEnabled(false);
+        context_.addOptionButton->setVisible(true);
     }
-    if (owner_->blockDetailsApplyButton_ != nullptr) {
-        owner_->blockDetailsApplyButton_->setEnabled(false);
+    if (context_.removeOptionButton != nullptr) {
+        context_.removeOptionButton->setEnabled(false);
+        context_.removeOptionButton->setVisible(true);
     }
-    if (owner_->blockDetailsLegacyConfigureButton_ != nullptr) {
-        owner_->blockDetailsLegacyConfigureButton_->setEnabled(false);
-        owner_->blockDetailsLegacyConfigureButton_->setVisible(false);
+    if (context_.applyButton != nullptr) {
+        context_.applyButton->setEnabled(false);
     }
-    if (owner_->blockDetailsHelpBrowser_ != nullptr) {
-        owner_->blockDetailsHelpBrowser_->setHtml(TextEditorTab::tr("<p>Select a block parameter to see contextual help.</p>"));
+    if (context_.legacyConfigureButton != nullptr) {
+        context_.legacyConfigureButton->setEnabled(false);
+        context_.legacyConfigureButton->setVisible(false);
     }
-    owner_->refreshBlockDetailsOptionArgumentEditors();
-    owner_->blockDetailsPopulating_ = false;
+    if (context_.helpBrowser != nullptr) {
+        context_.helpBrowser->setHtml(tr("<p>Select a block parameter to see contextual help.</p>"));
+    }
+    if (context_.refreshOptionArgumentEditors) {
+        context_.refreshOptionArgumentEditors();
+    }
+    context_.setDetailsPopulating(false);
 }
 }

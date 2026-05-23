@@ -3,7 +3,6 @@
 #include "BlockEditorCanvasItem.h"
 #include "BlockEditorDirectiveRules.h"
 #include "BlockEditorSourceText.h"
-#include "../TextEditorTab.h"
 
 #include "../../../core/TherionDocumentParser.h"
 
@@ -18,6 +17,7 @@
 #include <algorithm>
 #include <functional>
 #include <limits>
+#include <utility>
 
 namespace
 {
@@ -35,39 +35,60 @@ void appendUniqueList(QStringList &target, const QStringList &values)
 
 namespace TherionStudio
 {
-BlockEditorCanvasRebuildController::BlockEditorCanvasRebuildController(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorCanvasRebuildController::BlockEditorCanvasRebuildController(BlockEditorCanvasRebuildContext context)
+    : context_(std::move(context))
 {
+}
+
+QString BlockEditorCanvasRebuildController::tr(const char *text) const
+{
+    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
 }
 
 void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
 {
-    if (owner_ == nullptr || owner_->blockCanvasScene_ == nullptr || owner_->tearingDown_) {
+    if (context_.scene == nullptr
+        || context_.movePreviewLine == nullptr
+        || context_.containerBoundaryGuideItems == nullptr
+        || context_.containerBoundaryEndYByLine == nullptr
+        || context_.commandMetadata == nullptr
+        || context_.sourceContext == nullptr
+        || context_.handleBlockDeleteRequest == nullptr
+        || context_.handleBlockMoveRequest == nullptr
+        || context_.updateBlockMovePreview == nullptr
+        || context_.clearBlockMovePreview == nullptr
+        || context_.refreshBlockDetailsSelectionFromScene == nullptr
+        || (context_.tearingDown != nullptr && *context_.tearingDown)) {
         return;
     }
 
-    const int preferredSelectedLine = owner_->blockDetailsSelectedLineNumber_;
-    owner_->blockMovePreviewLine_ = nullptr;
-    owner_->blockContainerBoundaryGuideItems_.clear();
-    owner_->blockContainerBoundaryEndYByLine_.clear();
-    {
-        const QSignalBlocker sceneSignalBlocker(owner_->blockCanvasScene_);
-        owner_->blockCanvasScene_->clear();
+    const BlockEditorSourceController source(context_.sourceContext());
+    if (!source.hasEditor()) {
+        return;
     }
 
-    if (!owner_->isBlocksModeSupportedForCurrentFile()) {
-        auto *note = owner_->blockCanvasScene_->addText(
-            TextEditorTab::tr("Blocks mode is currently available only for .th and .thconfig files."));
+    const int preferredSelectedLine = context_.selectedLineNumber != nullptr ? *context_.selectedLineNumber : 0;
+    (*context_.movePreviewLine) = nullptr;
+    (*context_.containerBoundaryGuideItems).clear();
+    (*context_.containerBoundaryEndYByLine).clear();
+    {
+        const QSignalBlocker sceneSignalBlocker(context_.scene);
+        context_.scene->clear();
+    }
+
+    if (!(context_.isBlocksModeSupportedForCurrentFile != nullptr && context_.isBlocksModeSupportedForCurrentFile())) {
+        auto *note = context_.scene->addText(
+            tr("Blocks mode is currently available only for .th and .thconfig files."));
         note->setPos(16.0, 16.0);
         return;
     }
 
-    if (owner_->blocksModeActive_ && owner_->ensureEncodingRootDirectiveForBlocks()) {
+    if ((context_.blocksModeActive != nullptr && *context_.blocksModeActive) && (context_.ensureEncodingRootDirectiveForBlocks != nullptr && context_.ensureEncodingRootDirectiveForBlocks())) {
         // Normalization replaced the text and triggered a fresh rebuild.
         return;
     }
 
-    QStringList lines = blockEditorNormalizedSourceLines(owner_->editor_->toPlainText());
+    QStringList lines = blockEditorNormalizedSourceLines(source.text());
 
     struct StackEntry
     {
@@ -96,21 +117,21 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
                                              false,
                                              parentItem);
             item->onDelete = [this](int lineNumber) {
-                owner_->handleBlockDeleteRequest(lineNumber);
+                context_.handleBlockDeleteRequest(lineNumber);
             };
             item->onMoveRequest = [this](int lineNumber, const QPointF &scenePos) {
-                owner_->handleBlockMoveRequest(lineNumber, scenePos);
+                context_.handleBlockMoveRequest(lineNumber, scenePos);
             };
             item->onMovePreview = [this](int sourceLineNumber, const QPointF &scenePos, bool active) {
                 if (active) {
-                    owner_->updateBlockMovePreview(sourceLineNumber, scenePos);
+                    context_.updateBlockMovePreview(sourceLineNumber, scenePos);
                 } else {
-                    owner_->clearBlockMovePreview();
+                    context_.clearBlockMovePreview();
                 }
             };
             if (parentItem == nullptr) {
                 roots.append(item);
-                owner_->blockCanvasScene_->addItem(item);
+                context_.scene->addItem(item);
             }
             allItems.append(item);
             continue;
@@ -139,10 +160,10 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         }
 
         auto isCommandDirectiveInScope = [this](const QString &commandToken, const QString &scope) {
-            QStringList candidates = owner_->commandMetadata().contextCommandTokens.value(scope);
-            appendUniqueList(candidates, owner_->commandMetadata().contextCommandTokens.value(QStringLiteral("all")));
+            QStringList candidates = context_.commandMetadata->contextCommandTokens.value(scope);
+            appendUniqueList(candidates, context_.commandMetadata->contextCommandTokens.value(QStringLiteral("all")));
             if (scope == QStringLiteral("none")) {
-                appendUniqueList(candidates, owner_->commandMetadata().contextCommandTokens.value(QStringLiteral("none")));
+                appendUniqueList(candidates, context_.commandMetadata->contextCommandTokens.value(QStringLiteral("none")));
             }
             return candidates.contains(commandToken, Qt::CaseInsensitive);
         };
@@ -171,21 +192,21 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
                                          isContainerInstance,
                                          parentItem);
         item->onDelete = [this](int lineNumber) {
-            owner_->handleBlockDeleteRequest(lineNumber);
+            context_.handleBlockDeleteRequest(lineNumber);
         };
         item->onMoveRequest = [this](int lineNumber, const QPointF &scenePos) {
-            owner_->handleBlockMoveRequest(lineNumber, scenePos);
+            context_.handleBlockMoveRequest(lineNumber, scenePos);
         };
         item->onMovePreview = [this](int sourceLineNumber, const QPointF &scenePos, bool active) {
             if (active) {
-                owner_->updateBlockMovePreview(sourceLineNumber, scenePos);
+                context_.updateBlockMovePreview(sourceLineNumber, scenePos);
             } else {
-                owner_->clearBlockMovePreview();
+                context_.clearBlockMovePreview();
             }
         };
         if (parentItem == nullptr) {
             roots.append(item);
-            owner_->blockCanvasScene_->addItem(item);
+            context_.scene->addItem(item);
         }
         allItems.append(item);
 
@@ -195,7 +216,7 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
     }
 
     if (allItems.isEmpty()) {
-        auto *note = owner_->blockCanvasScene_->addText(TextEditorTab::tr("No Therion directives found."));
+        auto *note = context_.scene->addText(tr("No Therion directives found."));
         note->setPos(16.0, 16.0);
         return;
     }
@@ -238,7 +259,7 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         layoutTree(root, 0);
     }
 
-    QStringList sourceLines = blockEditorNormalizedSourceLines(owner_->editor_->toPlainText());
+    QStringList sourceLines = blockEditorNormalizedSourceLines(source.text());
 
     auto visualSubtreeBottomForSpan = [&allItems](int startLine, int endLine, qreal fallbackBottom) {
         qreal bottom = fallbackBottom;
@@ -563,10 +584,10 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         const qreal startY = itemRect.bottom();
         const qreal endY = boundary.endY;
 
-        auto *vertical = owner_->blockCanvasScene_->addLine(QLineF(guideX, startY, guideX, endY), connectorPen);
+        auto *vertical = context_.scene->addLine(QLineF(guideX, startY, guideX, endY), connectorPen);
         vertical->setOpacity(0.38);
         vertical->setZValue(-100.0);
-        owner_->blockContainerBoundaryGuideItems_.append(vertical);
+        (*context_.containerBoundaryGuideItems).append(vertical);
 
         // Keep the closure marker aligned with the opening card width.
         const qreal endCapStartX = itemRect.left();
@@ -577,27 +598,27 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         QPen closePen(closeColor);
         closePen.setWidthF(kClosureMarkerStrokeWidth);
         closePen.setStyle(Qt::SolidLine);
-        auto *endCap = owner_->blockCanvasScene_->addLine(QLineF(endCapStartX, endY, endCapEndX, endY), closePen);
+        auto *endCap = context_.scene->addLine(QLineF(endCapStartX, endY, endCapEndX, endY), closePen);
         endCap->setOpacity(0.95);
         endCap->setZValue(-99.0);
         endCap->setData(kBlockEditorCanvasEndHintContainerLineDataRole, item->lineNumber());
-        owner_->blockContainerBoundaryGuideItems_.append(endCap);
-        owner_->blockContainerBoundaryEndYByLine_.insert(item->lineNumber(), endY);
+        (*context_.containerBoundaryGuideItems).append(endCap);
+        (*context_.containerBoundaryEndYByLine).insert(item->lineNumber(), endY);
 
         minGuideX = qMin(minGuideX, guideX);
         maxGuideBottom = qMax(maxGuideBottom, endY);
     }
 
-    owner_->blockCanvasScene_->setSceneRect(0.0, 0.0, 1400.0, qMax<qreal>(y + 40.0, 600.0));
+    context_.scene->setSceneRect(0.0, 0.0, 1400.0, qMax<qreal>(y + 40.0, 600.0));
     if (minGuideX != std::numeric_limits<qreal>::max() || maxGuideBottom > 0.0) {
-        QRectF sceneRect = owner_->blockCanvasScene_->sceneRect();
+        QRectF sceneRect = context_.scene->sceneRect();
         if (minGuideX != std::numeric_limits<qreal>::max() && minGuideX - 12.0 < sceneRect.left()) {
             sceneRect.setLeft(minGuideX - 12.0);
         }
         if (maxGuideBottom + 16.0 > sceneRect.bottom()) {
             sceneRect.setBottom(maxGuideBottom + 16.0);
         }
-        owner_->blockCanvasScene_->setSceneRect(sceneRect);
+        context_.scene->setSceneRect(sceneRect);
     }
 
     if (preferredSelectedLine > 0) {
@@ -605,14 +626,14 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
             if (item == nullptr || item->lineNumber() != preferredSelectedLine) {
                 continue;
             }
-            owner_->blockCanvasScene_->clearSelection();
+            context_.scene->clearSelection();
             item->setSelected(true);
-            owner_->blockCanvasScene_->setFocusItem(item);
+            context_.scene->setFocusItem(item);
             break;
         }
     }
 
-    owner_->refreshBlockDetailsSelectionFromScene();
+    context_.refreshBlockDetailsSelectionFromScene();
 
 }
 }

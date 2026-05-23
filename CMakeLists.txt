@@ -301,6 +301,9 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
     src/app/text_editor/TextEditorTabBlockEditorLineBuildService.cpp
     src/app/text_editor/TextEditorTabBlockEditorOptionArgsController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorResolverContexts.cpp
+    src/app/text_editor/TextEditorTabBlockEditorSelectionContexts.cpp
+    src/app/text_editor/TextEditorTabBlockEditorToolboxController.cpp
     src/app/text_editor/TextEditorTabBlockEditorApplyExecutor.cpp
     src/app/text_editor/TextEditorTabBlockEditorApplyStateController.cpp
     src/app/text_editor/TextEditorTabBlockEditorCanvasBoundaryController.cpp
@@ -594,6 +597,9 @@ set(THERION_TEXT_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
     src/app/text_editor/TextEditorTabBlockEditorLineBuildService.cpp
     src/app/text_editor/TextEditorTabBlockEditorOptionArgsController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorResolverContexts.cpp
+    src/app/text_editor/TextEditorTabBlockEditorSelectionContexts.cpp
+    src/app/text_editor/TextEditorTabBlockEditorToolboxController.cpp
     src/app/text_editor/TextEditorTabBlockEditorApplyExecutor.cpp
     src/app/text_editor/TextEditorTabBlockEditorApplyStateController.cpp
     src/app/text_editor/TextEditorTabBlockEditorCanvasBoundaryController.cpp
@@ -682,6 +688,9 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
     src/app/text_editor/TextEditorTabBlockEditorLineBuildService.cpp
     src/app/text_editor/TextEditorTabBlockEditorOptionArgsController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorResolverContexts.cpp
+    src/app/text_editor/TextEditorTabBlockEditorSelectionContexts.cpp
+    src/app/text_editor/TextEditorTabBlockEditorToolboxController.cpp
     src/app/text_editor/TextEditorTabBlockEditorApplyExecutor.cpp
     src/app/text_editor/TextEditorTabBlockEditorApplyStateController.cpp
     src/app/text_editor/TextEditorTabBlockEditorCanvasBoundaryController.cpp

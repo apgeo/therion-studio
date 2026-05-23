@@ -1,17 +1,18 @@
 #include "BlockEditorMovePlanner.h"
 
 #include "BlockEditorDirectiveRules.h"
-#include "../TextEditorTab.h"
 
 #include <QGraphicsItem>
 #include <QRectF>
+
+#include <utility>
 
 namespace TherionStudio
 {
 using namespace BlockEditorDirectiveRules;
 
-BlockEditorMovePlanner::BlockEditorMovePlanner(const TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorMovePlanner::BlockEditorMovePlanner(BlockEditorMovePlannerContext context)
+    : context_(std::move(context))
 {
 }
 
@@ -26,7 +27,7 @@ BlockEditorMovePlan BlockEditorMovePlanner::planMove(
     int appendLineNumber) const
 {
     BlockEditorMovePlan plan;
-    if (owner_ == nullptr) {
+    if (!context_.blockCanvasItemLineNumber || !context_.isCompatibleChildKindForBlocks) {
         return plan;
     }
 
@@ -53,7 +54,7 @@ BlockEditorMovePlan BlockEditorMovePlanner::planMove(
     };
 
     if (!plan.resolved) {
-        const BlockEditorDropTargetResolver targetResolver(owner_);
+        const BlockEditorDropTargetResolver targetResolver(context_.dropTargetContext);
         QGraphicsItem *targetBlockItem = targetResolver.resolveTargetItem(entries,
                                                                           sceneItemsByLine,
                                                                           scenePos,
@@ -63,7 +64,7 @@ BlockEditorMovePlan BlockEditorMovePlanner::planMove(
             return plan;
         }
 
-        const auto targetIndexIt = entryIndexByStartLine.constFind(owner_->blockCanvasItemLineNumber(targetBlockItem));
+        const auto targetIndexIt = entryIndexByStartLine.constFind(context_.blockCanvasItemLineNumber(targetBlockItem));
         if (targetIndexIt == entryIndexByStartLine.cend()) {
             return plan;
         }
@@ -80,7 +81,7 @@ BlockEditorMovePlan BlockEditorMovePlanner::planMove(
         const bool preferBetweenInsertion = nearTopEdge || nearBottomEdge;
 
         const bool targetAcceptsSourceAsChild = isContainerBlockDirective(targetEntry.kind)
-            && owner_->isCompatibleChildKindForBlocks(targetEntry.kind, sourceEntry.kind);
+            && context_.isCompatibleChildKindForBlocks(targetEntry.kind, sourceEntry.kind);
         if (targetAcceptsSourceAsChild && targetEntry.startLine != sourceEntry.startLine) {
             if (!preferBetweenInsertion) {
                 plan.destinationParentLine = targetEntry.startLine;

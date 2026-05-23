@@ -9,12 +9,14 @@
 #include <QCursor>
 #include <QElapsedTimer>
 #include <QGraphicsItem>
+#include <QGraphicsPathItem>
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QScopedValueRollback>
 #include <QWidget>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <optional>
 #include <utility>
@@ -72,6 +74,8 @@ int mapSelectionHitPriority(const QGraphicsItem *item)
         return 3;
     case kMapSceneSelectionSubtypeLineDetail:
         return 4;
+    case kMapSceneSelectionSubtypeAreaFill:
+        return 5;
     default:
         break;
     }
@@ -79,7 +83,41 @@ int mapSelectionHitPriority(const QGraphicsItem *item)
     return 1;
 }
 
-QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems, bool requireSelected = false)
+bool genericPathItemContainsStrokedHit(const QGraphicsItem *item, const QPointF &scenePosition)
+{
+    const auto *pathItem = dynamic_cast<const QGraphicsPathItem *>(item);
+    if (pathItem == nullptr) {
+        return true;
+    }
+
+    const QPainterPath path = pathItem->path();
+    const QPointF localPosition = pathItem->mapFromScene(scenePosition);
+    const qreal tolerance = std::max<qreal>(pathItem->pen().widthF() + 4.0, 6.0);
+    if (!path.boundingRect().adjusted(-tolerance, -tolerance, tolerance, tolerance).contains(localPosition)) {
+        return false;
+    }
+
+    const qreal pathLength = path.length();
+    if (pathLength <= 0.0) {
+        return false;
+    }
+
+    const int sampleCount = qBound(24, static_cast<int>(std::ceil(pathLength / std::max<qreal>(tolerance * 0.5, 2.0))), 512);
+    for (int index = 0; index <= sampleCount; ++index) {
+        const qreal percent = static_cast<qreal>(index) / static_cast<qreal>(sampleCount);
+        const QPointF pathPoint = path.pointAtPercent(percent);
+        const qreal dx = pathPoint.x() - localPosition.x();
+        const qreal dy = pathPoint.y() - localPosition.y();
+        if (std::hypot(dx, dy) <= tolerance) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems,
+                                   bool requireSelected = false,
+                                   std::optional<QPointF> scenePosition = std::nullopt)
 {
     QGraphicsItem *bestItem = nullptr;
     int bestPriority = std::numeric_limits<int>::max();
@@ -92,6 +130,13 @@ QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems, bool 
         }
         const int lineNumber = item->data(kMapSceneLineNumberRole).toInt();
         if (lineNumber <= 0) {
+            continue;
+        }
+
+        const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
+        if (scenePosition.has_value()
+            && subtype == kMapSceneSelectionSubtypeGeneric
+            && !genericPathItemContainsStrokedHit(item, scenePosition.value())) {
             continue;
         }
 
@@ -243,7 +288,14 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
                                                                      Qt::IntersectsItemShape,
                                                                      Qt::DescendingOrder,
                                                                      context_.view->transform());
-            primarySelectedItem = preferredMapHitItem(hitItems, true);
+            primarySelectedItem = preferredMapHitItem(hitItems, true, scenePos);
+            if (primarySelectedItem == nullptr && (*context_.pendingClickLineNumber) > 0) {
+                if (QGraphicsItem *pendingHitItem = preferredMapHitItem(hitItems, false, scenePos)) {
+                    if (pendingHitItem->data(kMapSceneLineNumberRole).toInt() == (*context_.pendingClickLineNumber)) {
+                        primarySelectedItem = pendingHitItem;
+                    }
+                }
+            }
         } else if (primarySelectedItem == nullptr) {
             const QPoint viewportPos = context_.view->viewport()->mapFromGlobal(QCursor::pos());
             if (context_.view->viewport()->rect().contains(viewportPos)) {
@@ -252,7 +304,7 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
                                                                          Qt::IntersectsItemShape,
                                                                          Qt::DescendingOrder,
                                                                          context_.view->transform());
-                primarySelectedItem = preferredMapHitItem(hitItems, true);
+                primarySelectedItem = preferredMapHitItem(hitItems, true, scenePos);
             }
         }
     }
@@ -271,6 +323,12 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
         } else {
             primarySelectedItem = selectedLineItems.first();
         }
+    }
+
+    if (primarySelectedItem != nullptr && !primarySelectedItem->isSelected()) {
+        const QScopedValueRollback<bool> selectionGuard((*context_.updatingSelection), true);
+        context_.scene->clearSelection();
+        primarySelectedItem->setSelected(true);
     }
 
     (*context_.pendingClickSelection) = false;

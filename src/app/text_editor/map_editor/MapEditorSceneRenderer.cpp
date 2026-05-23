@@ -406,7 +406,7 @@ QPainterPath linePathForFeature(const MapGeometryFeature &feature, const QRectF 
     }
 
     if (feature.closed && feature.lineVertices.size() >= 3) {
-        path.closeSubpath();
+        path.lineTo(toPreview(feature.lineVertices.first().anchor));
     }
 
     return path;
@@ -1394,6 +1394,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 fillItem->setZValue(2.0);
                 markGeometryItem(fillItem);
                 fillItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                fillItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeAreaFill);
                 if (mapItemsByLine != nullptr && feature.lineNumber > 0) {
                     mapItemsByLine->insert(feature.lineNumber, fillItem);
                 }

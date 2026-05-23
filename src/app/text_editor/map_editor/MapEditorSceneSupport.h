@@ -37,7 +37,8 @@ enum MapSceneSelectionSubtype
     kMapSceneSelectionSubtypeLineControl = 3,
     kMapSceneSelectionSubtypeLineControlConnector = 4,
     kMapSceneSelectionSubtypeAreaVertex = 5,
-    kMapSceneSelectionSubtypePointOrientationHandle = 6
+    kMapSceneSelectionSubtypePointOrientationHandle = 6,
+    kMapSceneSelectionSubtypeAreaFill = 7
 };
 
 struct TherionParsedLine;

@@ -7,6 +7,7 @@
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QFile>
+#include <QGraphicsPathItem>
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QMainWindow>
@@ -569,6 +570,143 @@ bool dragItemBySceneDelta(QGraphicsView *view, QGraphicsItem *item, const QPoint
     sendMouse(viewport, QEvent::MouseButtonRelease, end, Qt::LeftButton, Qt::NoButton);
     pumpEvents();
     return true;
+}
+
+QGraphicsPathItem *findPathItemForLine(QGraphicsScene *scene, int lineNumber, std::optional<int> selectionSubtype = std::nullopt)
+{
+    if (scene == nullptr || lineNumber <= 0) {
+        return nullptr;
+    }
+
+    const auto items = scene->items();
+    for (QGraphicsItem *rawItem : items) {
+        auto *pathItem = dynamic_cast<QGraphicsPathItem *>(rawItem);
+        if (pathItem == nullptr || !pathItem->isVisible()) {
+            continue;
+        }
+        if (pathItem->data(kMapSceneLineNumberRole).toInt() != lineNumber) {
+            continue;
+        }
+        if (selectionSubtype.has_value()
+            && pathItem->data(kMapSceneSelectionSubtypeRole).toInt() != selectionSubtype.value()) {
+            continue;
+        }
+        if (!selectionSubtype.has_value()
+            && pathItem->data(kMapSceneSelectionSubtypeRole).toInt() != kMapSceneSelectionSubtypeGeneric) {
+            continue;
+        }
+        return pathItem;
+    }
+
+    return nullptr;
+}
+
+int runAreaBorderHitSelectionSmoke()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for area hit-selection smoke test.")) {
+        return 1;
+    }
+
+    const QString filePath = tempDir.filePath(QStringLiteral("area_hit_selection_smoke.th2"));
+    QFile file(filePath);
+    if (!expect(file.open(QIODevice::WriteOnly | QIODevice::Text),
+                "Failed to create temporary TH2 file for area hit-selection smoke test.")) {
+        return 1;
+    }
+
+    const QByteArray th2Contents =
+        "encoding utf-8\n"
+        "\n"
+        "scrap area-hit -projection plan\n"
+        "line wall -id border\n"
+        "  0 0\n"
+        "  100 0\n"
+        "  100 -100\n"
+        "  0 -100\n"
+        "  0 0\n"
+        "endline\n"
+        "area water\n"
+        "  border\n"
+        "endarea\n"
+        "endscrap\n";
+    file.write(th2Contents);
+    file.close();
+
+    QMainWindow hostWindow;
+    hostWindow.resize(900, 700);
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto *mapTab = new MapEditorTab(central);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to load referenced-area TH2 file for hit-selection smoke test.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEvents();
+    mapTab->triggerSelectMode();
+    pumpEvents();
+
+    auto *mapView = mapTab->findChild<QGraphicsView *>();
+    if (!expect(mapView != nullptr && mapView->scene() != nullptr,
+                "Map view/scene was not initialized for area hit-selection smoke test.")) {
+        return 1;
+    }
+
+    auto *linePathItem = findPathItemForLine(mapView->scene(), 4);
+    auto *areaFillItem = findPathItemForLine(mapView->scene(), 11, kMapSceneSelectionSubtypeAreaFill);
+    if (!expect(linePathItem != nullptr, "Referenced area border line path was not found in the map scene.")) {
+        return 1;
+    }
+    if (!expect(areaFillItem != nullptr, "Referenced area fill path was not found in the map scene.")) {
+        return 1;
+    }
+
+    mapView->centerOn(areaFillItem);
+    pumpEvents();
+
+    const QPointF borderScenePoint = linePathItem->mapToScene(linePathItem->path().pointAtPercent(0.25));
+    const QPoint borderViewportPoint = mapView->mapFromScene(borderScenePoint);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, borderViewportPoint, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, borderViewportPoint, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    if (!expect(selectedSourceLineNumbers(mapView->scene()) == QSet<int>({4}),
+                "Clicking a referenced area border should select the owning line object.")) {
+        return 1;
+    }
+    if (!expect(mapTab->currentLineNumber() == 4,
+                "Clicking a referenced area border should move the text cursor to the line directive.")) {
+        return 1;
+    }
+
+    const QPointF fillScenePoint = areaFillItem->mapToScene(areaFillItem->path().boundingRect().center());
+    const QPoint fillViewportPoint = mapView->mapFromScene(fillScenePoint);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, fillViewportPoint, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, fillViewportPoint, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    if (!expect(selectedSourceLineNumbers(mapView->scene()) == QSet<int>({11}),
+                "Clicking inside a referenced area fill should select the area object.")) {
+        return 1;
+    }
+    if (!expect(mapTab->currentLineNumber() == 11,
+                "Clicking inside a referenced area fill should move the text cursor to the area directive.")) {
+        return 1;
+    }
+
+    hostWindow.close();
+    pumpEvents();
+    return 0;
 }
 
 int runDragUndoRedoSmoke()
@@ -1220,5 +1358,8 @@ int runDragUndoRedoSmoke()
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
+    if (const int rc = runAreaBorderHitSelectionSmoke(); rc != 0) {
+        return rc;
+    }
     return runDragUndoRedoSmoke();
 }

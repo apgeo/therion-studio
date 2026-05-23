@@ -174,6 +174,10 @@ void MapEditorInspectorObjectController::configureInspectorObjectTreeColumns()
     if (context_.objectsModel != nullptr && context_.objectsModel->columnCount() < kInspectorObjectColumnCount) {
         context_.objectsModel->setColumnCount(kInspectorObjectColumnCount);
     }
+    context_.objectsTree->setMouseTracking(true);
+    if (context_.objectsTree->viewport() != nullptr) {
+        context_.objectsTree->viewport()->setMouseTracking(true);
+    }
     context_.objectsTree->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     if (QHeaderView *header = context_.objectsTree->header(); header != nullptr) {
         header->setStretchLastSection(false);

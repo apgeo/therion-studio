@@ -702,6 +702,15 @@ bool dragObjectTreeRow(QTreeView *objectsTree,
     }
 
     const QPoint sourcePoint = sourceRect.center();
+    sendMouse(objectsTree->viewport(), QEvent::MouseMove, sourcePoint, Qt::NoButton, Qt::NoButton);
+    pumpEvents();
+    if (!objectsTree->hasMouseTracking()
+        || !objectsTree->viewport()->hasMouseTracking()
+        || objectsTree->viewport()->cursor().shape() != Qt::OpenHandCursor) {
+        std::cerr << "Objects tree movable row hover should enable mouse tracking and use an open-hand cursor.\n";
+        return false;
+    }
+
     const QPoint targetPoint(targetRect.center().x(),
                              position == InspectorObjectDropPosition::AfterTarget
                                  ? targetRect.bottom() - 1

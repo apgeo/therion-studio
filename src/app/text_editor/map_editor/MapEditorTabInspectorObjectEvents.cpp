@@ -8,6 +8,7 @@
 #include <QMouseEvent>
 #include <QPalette>
 #include <QPersistentModelIndex>
+#include <QScrollBar>
 #include <QStandardItemModel>
 #include <QTreeView>
 #include <QWidget>
@@ -19,10 +20,12 @@ namespace TherionStudio
 namespace
 {
 constexpr int kInspectorObjectCategoryRole = Qt::UserRole + 702;
+constexpr int kInspectorSourceLineRole = Qt::UserRole + 700;
 constexpr int kInspectorObjectNameColumn = 0;
 constexpr int kInspectorObjectDragColumn = 1;
 constexpr int kInspectorObjectVisibilityColumn = 2;
 constexpr int kInspectorObjectDeleteColumn = 3;
+constexpr int kInspectorDragAutoScrollMargin = 24;
 
 void hideDropIndicator(QWidget *indicator)
 {
@@ -34,6 +37,33 @@ void hideDropIndicator(QWidget *indicator)
 bool isScrapCategory(const QModelIndex &index)
 {
     return index.data(kInspectorObjectCategoryRole).toString() == QStringLiteral("Scraps");
+}
+
+bool isMovableObjectIndex(const QModelIndex &index)
+{
+    return index.isValid()
+        && index.data(kInspectorSourceLineRole).toInt() > 0
+        && !isScrapCategory(index);
+}
+
+bool isDragAffordanceColumn(int column)
+{
+    return column == kInspectorObjectNameColumn || column == kInspectorObjectDragColumn;
+}
+
+void autoscrollDragViewport(QTreeView *tree, const QPoint &viewportPos)
+{
+    if (tree == nullptr || tree->viewport() == nullptr || tree->verticalScrollBar() == nullptr) {
+        return;
+    }
+
+    QScrollBar *scrollBar = tree->verticalScrollBar();
+    const int step = std::max(1, scrollBar->singleStep());
+    if (viewportPos.y() < kInspectorDragAutoScrollMargin) {
+        scrollBar->setValue(scrollBar->value() - step);
+    } else if (viewportPos.y() > tree->viewport()->height() - kInspectorDragAutoScrollMargin) {
+        scrollBar->setValue(scrollBar->value() + step);
+    }
 }
 
 QString dropIndicatorStyleSheet(const QColor &color)
@@ -59,6 +89,8 @@ std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *eve
             return std::nullopt;
         }
 
+        mapObjectsTree_->viewport()->setCursor(Qt::ClosedHandCursor);
+        autoscrollDragViewport(mapObjectsTree_, mouseEvent->pos());
         const QModelIndex index = mapObjectsTree_->indexAt(mouseEvent->pos());
         const QModelIndex objectIndex = index.sibling(index.row(), kInspectorObjectNameColumn);
         if (objectIndex.isValid() && objectIndex != inspectorObjectPressedNameIndex_) {
@@ -92,11 +124,27 @@ std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *eve
                        ? tr("Move object: release to place after target object.")
                        : tr("Move object: release to place before target object."));
             refreshToolbarSummary();
-            mapObjectsTree_->viewport()->setCursor(Qt::ClosedHandCursor);
             event->accept();
             return true;
         }
 
+        hideDropIndicator(inspectorObjectDropIndicator_);
+        return std::nullopt;
+    }
+
+    if (event->type() == QEvent::MouseMove) {
+        auto *mouseEvent = static_cast<QMouseEvent *>(event);
+        const QModelIndex index = mapObjectsTree_->indexAt(mouseEvent->pos());
+        const QModelIndex objectIndex = index.sibling(index.row(), kInspectorObjectNameColumn);
+        if (isDragAffordanceColumn(index.column()) && isMovableObjectIndex(objectIndex)) {
+            mapObjectsTree_->viewport()->setCursor(Qt::OpenHandCursor);
+        } else {
+            mapObjectsTree_->viewport()->unsetCursor();
+        }
+        return std::nullopt;
+    }
+
+    if (event->type() == QEvent::Leave) {
         hideDropIndicator(inspectorObjectDropIndicator_);
         mapObjectsTree_->viewport()->unsetCursor();
         return std::nullopt;

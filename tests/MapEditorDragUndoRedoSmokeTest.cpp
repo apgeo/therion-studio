@@ -660,7 +660,8 @@ enum class InspectorObjectDropPosition
 bool dragObjectTreeRow(QTreeView *objectsTree,
                        int sourceLineNumber,
                        int targetLineNumber,
-                       InspectorObjectDropPosition position)
+                       InspectorObjectDropPosition position,
+                       bool exerciseCancelBeforeDrop = false)
 {
     if (objectsTree == nullptr || objectsTree->model() == nullptr || objectsTree->viewport() == nullptr) {
         std::cerr << "Objects tree, model, or viewport is unavailable for drag simulation.\n";
@@ -732,7 +733,7 @@ bool dragObjectTreeRow(QTreeView *objectsTree,
         std::cerr << "Objects tree drag should use a closed-hand cursor while moving a row.\n";
         return false;
     }
-    if (indicatorRect.height() != 3
+    if (indicatorRect.height() != 2
         || indicatorRect.width() < targetRect.width()
         || qAbs(indicatorRect.center().y() - expectedDropY) > 3) {
         std::cerr << "Objects tree drop indicator should be a slim line at the target edge; geometry="
@@ -740,6 +741,31 @@ bool dragObjectTreeRow(QTreeView *objectsTree,
                   << indicatorRect.width() << 'x' << indicatorRect.height()
                   << ", expected target y=" << expectedDropY << '\n';
         return false;
+    }
+    if (exerciseCancelBeforeDrop) {
+        QEvent leaveEvent(QEvent::Leave);
+        QCoreApplication::sendEvent(objectsTree->viewport(), &leaveEvent);
+        pumpEvents();
+        if (dropIndicator->isVisible()
+            || objectsTree->viewport()->cursor().shape() == Qt::ClosedHandCursor
+            || objectsTree->viewport()->cursor().shape() == Qt::OpenHandCursor) {
+            std::cerr << "Objects tree drag leave should clear indicator and hand cursor state.\n";
+            return false;
+        }
+
+        sendMouse(objectsTree->viewport(), QEvent::MouseMove, sourcePoint, Qt::NoButton, Qt::NoButton);
+        pumpEvents();
+        sendMouse(objectsTree->viewport(), QEvent::MouseButtonPress, sourcePoint, Qt::LeftButton, Qt::LeftButton);
+        pumpEvents();
+        sendMouse(objectsTree->viewport(), QEvent::MouseMove, targetPoint, Qt::NoButton, Qt::LeftButton);
+        pumpEvents();
+        dropIndicator = objectsTree->viewport()->findChild<QWidget *>(QStringLiteral("mapObjectsTreeDropIndicator"));
+        if (dropIndicator == nullptr
+            || !dropIndicator->isVisible()
+            || objectsTree->viewport()->cursor().shape() != Qt::ClosedHandCursor) {
+            std::cerr << "Objects tree drag should restart cleanly after leave cancellation.\n";
+            return false;
+        }
     }
     sendMouse(objectsTree->viewport(), QEvent::MouseButtonRelease, targetPoint, Qt::LeftButton, Qt::NoButton);
     pumpEvents();
@@ -803,7 +829,11 @@ int runInspectorObjectMoveScenario(const char *scenarioName,
     }
 
     const QString originalText = mapTab->text();
-    if (!expect(dragObjectTreeRow(objectsTree, sourceLineNumber, targetLineNumber, position),
+    if (!expect(dragObjectTreeRow(objectsTree,
+                                  sourceLineNumber,
+                                  targetLineNumber,
+                                  position,
+                                  qstrcmp(scenarioName, "after_line") == 0),
                 "Dragging an object row onto another object row should be routed through the inspector move handler.")) {
         return 1;
     }

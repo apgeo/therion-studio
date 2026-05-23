@@ -34,6 +34,16 @@ void hideDropIndicator(QWidget *indicator)
     }
 }
 
+void clearPressedObjectState(QPersistentModelIndex *pressedIndex, bool *pressedWasSelected)
+{
+    if (pressedIndex != nullptr) {
+        *pressedIndex = QPersistentModelIndex();
+    }
+    if (pressedWasSelected != nullptr) {
+        *pressedWasSelected = false;
+    }
+}
+
 bool isScrapCategory(const QModelIndex &index)
 {
     return index.data(kInspectorObjectCategoryRole).toString() == QStringLiteral("Scraps");
@@ -86,7 +96,10 @@ std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *eve
     if (event->type() == QEvent::MouseMove && inspectorObjectPressedNameIndex_.isValid()) {
         auto *mouseEvent = static_cast<QMouseEvent *>(event);
         if (!(mouseEvent->buttons() & Qt::LeftButton)) {
-            return std::nullopt;
+            clearPressedObjectState(&inspectorObjectPressedNameIndex_, &inspectorObjectPressedWasSelected_);
+            hideDropIndicator(inspectorObjectDropIndicator_);
+            mapObjectsTree_->viewport()->unsetCursor();
+            return true;
         }
 
         mapObjectsTree_->viewport()->setCursor(Qt::ClosedHandCursor);
@@ -106,7 +119,7 @@ std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *eve
             }
             inspectorObjectDropIndicator_->setStyleSheet(dropIndicatorStyleSheet(
                 mapObjectsTree_->palette().color(QPalette::Highlight)));
-            const int indicatorHeight = 3;
+            const int indicatorHeight = 2;
             const int indicatorX = std::max(0, targetRect.left());
             const int indicatorY = std::clamp(((afterTarget || targetIsScrap) ? targetRect.bottom() : targetRect.top())
                                                   - (indicatorHeight / 2),
@@ -145,6 +158,7 @@ std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *eve
     }
 
     if (event->type() == QEvent::Leave) {
+        clearPressedObjectState(&inspectorObjectPressedNameIndex_, &inspectorObjectPressedWasSelected_);
         hideDropIndicator(inspectorObjectDropIndicator_);
         mapObjectsTree_->viewport()->unsetCursor();
         return std::nullopt;

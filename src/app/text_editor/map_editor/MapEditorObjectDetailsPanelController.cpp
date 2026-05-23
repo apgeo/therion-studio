@@ -16,6 +16,8 @@
 #include <QScopedValueRollback>
 #include <QWidget>
 
+#include <utility>
+
 namespace TherionStudio
 {
 namespace
@@ -36,68 +38,73 @@ int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int so
 }
 }
 
-MapEditorObjectDetailsPanelController::MapEditorObjectDetailsPanelController(MapEditorTab *owner)
-    : owner_(owner)
+MapEditorObjectDetailsPanelController::MapEditorObjectDetailsPanelController(MapEditorObjectDetailsContext context)
+    : context_(std::move(context))
 {
+}
+
+QString MapEditorObjectDetailsPanelController::translate(const char *text) const
+{
+    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
 }
 
 void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
 {
-    if (owner_->objectDetailsSelectionLabel_ == nullptr
-        || owner_->objectSelectionSection_ == nullptr
-        || owner_->objectSelectionTitleLabel_ == nullptr
-        || owner_->vertexSelectionSection_ == nullptr
-        || owner_->geometrySelectionSection_ == nullptr
-        || owner_->advancedSelectionSection_ == nullptr
-        || owner_->objectDeleteButton_ == nullptr
-        || owner_->objectQuickFieldsEditor_ == nullptr
-        || owner_->objectQuickIdentifierLabel_ == nullptr
-        || owner_->objectQuickNameLabel_ == nullptr
-        || owner_->objectQuickProjectionLabel_ == nullptr
-        || owner_->objectQuickTypeLabel_ == nullptr
-        || owner_->objectQuickSubtypeLabel_ == nullptr
-        || owner_->objectQuickTypeCombo_ == nullptr
-        || owner_->objectQuickSubtypeCombo_ == nullptr
-        || owner_->objectQuickProjectionCombo_ == nullptr
-        || owner_->objectQuickIdentifierEdit_ == nullptr
-        || owner_->objectQuickNameEdit_ == nullptr
-        || owner_->vertexActionsEditor_ == nullptr
-        || owner_->vertexInsertButton_ == nullptr
-        || owner_->vertexDeleteButton_ == nullptr
-        || owner_->vertexToggleSmoothButton_ == nullptr
-        || owner_->objectDetailsMetadataLabel_ == nullptr
-        || owner_->objectOrientationEditor_ == nullptr
-        || owner_->objectOrientationEnabledCheck_ == nullptr
-        || owner_->objectOrientationSpin_ == nullptr
-        || owner_->linePointLeftSizeEnabledCheck_ == nullptr
-        || owner_->linePointLeftSizeSpin_ == nullptr
-        || owner_->objectOrientationApplyButton_ == nullptr
-        || owner_->lineOptionsEditor_ == nullptr
-        || owner_->lineClosedCheck_ == nullptr
-        || owner_->lineReversedCheck_ == nullptr
-        || owner_->scrapScaleEditor_ == nullptr
-        || owner_->scrapScaleSourceX1Spin_ == nullptr
-        || owner_->scrapScaleSourceY1Spin_ == nullptr
-        || owner_->scrapScaleSourceX2Spin_ == nullptr
-        || owner_->scrapScaleSourceY2Spin_ == nullptr
-        || owner_->scrapScaleRealX1Spin_ == nullptr
-        || owner_->scrapScaleRealY1Spin_ == nullptr
-        || owner_->scrapScaleRealX2Spin_ == nullptr
-        || owner_->scrapScaleRealY2Spin_ == nullptr
-        || owner_->scrapScaleUnitCombo_ == nullptr
-        || owner_->objectConfigureButton_ == nullptr) {
+    if (context_.selectionLabel == nullptr
+        || context_.selectionSection == nullptr
+        || context_.selectionTitleLabel == nullptr
+        || context_.vertexSection == nullptr
+        || context_.geometrySection == nullptr
+        || context_.advancedSection == nullptr
+        || context_.deleteButton == nullptr
+        || context_.quickFieldsEditor == nullptr
+        || context_.quickIdentifierLabel == nullptr
+        || context_.quickNameLabel == nullptr
+        || context_.quickProjectionLabel == nullptr
+        || context_.quickTypeLabel == nullptr
+        || context_.quickSubtypeLabel == nullptr
+        || context_.quickTypeCombo == nullptr
+        || context_.quickSubtypeCombo == nullptr
+        || context_.quickProjectionCombo == nullptr
+        || context_.quickIdentifierEdit == nullptr
+        || context_.quickNameEdit == nullptr
+        || context_.vertexActionsEditor == nullptr
+        || context_.vertexInsertButton == nullptr
+        || context_.vertexDeleteButton == nullptr
+        || context_.vertexToggleSmoothButton == nullptr
+        || context_.metadataLabel == nullptr
+        || context_.orientationEditor == nullptr
+        || context_.orientationEnabledCheck == nullptr
+        || context_.orientationSpin == nullptr
+        || context_.linePointLeftSizeEnabledCheck == nullptr
+        || context_.linePointLeftSizeSpin == nullptr
+        || context_.orientationApplyButton == nullptr
+        || context_.lineOptionsEditor == nullptr
+        || context_.lineClosedCheck == nullptr
+        || context_.lineReversedCheck == nullptr
+        || context_.scrapScaleEditor == nullptr
+        || context_.scrapScaleSourceX1Spin == nullptr
+        || context_.scrapScaleSourceY1Spin == nullptr
+        || context_.scrapScaleSourceX2Spin == nullptr
+        || context_.scrapScaleSourceY2Spin == nullptr
+        || context_.scrapScaleRealX1Spin == nullptr
+        || context_.scrapScaleRealY1Spin == nullptr
+        || context_.scrapScaleRealX2Spin == nullptr
+        || context_.scrapScaleRealY2Spin == nullptr
+        || context_.scrapScaleUnitCombo == nullptr
+        || context_.configureButton == nullptr) {
         return;
     }
 
-    const QScopedValueRollback<bool> uiGuard(owner_->updatingObjectDetailsUi_, true);
+    const QScopedValueRollback<bool> uiGuard(*context_.updatingUi, true);
 
-    int effectiveLineNumber = owner_->selectedObjectLineNumber_;
-    QString effectiveKind = owner_->selectedObjectKind_.trimmed().toLower();
+    int effectiveLineNumber = *context_.selectedObjectLineNumber;
+    QString effectiveKind = context_.selectedObjectKind->trimmed().toLower();
 
-    if (!(effectiveLineNumber > 0 && isConfigurableMapObjectKind(effectiveKind)) && owner_->textEditor_ != nullptr) {
-        const int cursorLineNumber = owner_->textEditor_->currentLineNumber();
+    if (!(effectiveLineNumber > 0 && isConfigurableMapObjectKind(effectiveKind)) && context_.textEditor != nullptr) {
+        const int cursorLineNumber = context_.textEditor->currentLineNumber();
         if (cursorLineNumber > 0) {
-            QStringList lines = owner_->textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+            QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
             for (QString &line : lines) {
                 if (line.endsWith(QLatin1Char('\r'))) {
                     line.chop(1);
@@ -116,52 +123,52 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     }
 
     if (effectiveLineNumber <= 0 || effectiveKind.isEmpty()) {
-        owner_->objectDetailsSelectionLabel_->setText(owner_->tr("No map object selected."));
-        owner_->objectDetailsSelectionLabel_->setVisible(true);
-        owner_->objectSelectionTitleLabel_->setText(owner_->tr("Object"));
-        owner_->objectSelectionSection_->setVisible(false);
-        owner_->vertexSelectionSection_->setVisible(false);
-        owner_->geometrySelectionSection_->setVisible(false);
-        owner_->advancedSelectionSection_->setVisible(false);
-        owner_->objectDeleteButton_->setEnabled(false);
-        owner_->objectQuickFieldsEditor_->setVisible(false);
-        owner_->objectQuickCommandKind_.clear();
-        owner_->vertexActionsEditor_->setVisible(false);
-        owner_->objectDetailsMetadataLabel_->setText(QStringLiteral("-"));
-        owner_->objectOrientationEditor_->setVisible(false);
-        owner_->linePointLeftSizeEnabledCheck_->setChecked(false);
-        owner_->linePointLeftSizeSpin_->setEnabled(false);
-        owner_->linePointLeftSizeSpin_->setValue(40.0);
-        owner_->lineOptionsEditor_->setVisible(false);
-        owner_->scrapScaleEditor_->setVisible(false);
-        owner_->objectConfigureButton_->setVisible(false);
-        owner_->objectConfigureButton_->setEnabled(false);
-        owner_->lineClosedCheck_->setChecked(false);
-        owner_->lineReversedCheck_->setChecked(false);
+        context_.selectionLabel->setText(translate("No map object selected."));
+        context_.selectionLabel->setVisible(true);
+        context_.selectionTitleLabel->setText(translate("Object"));
+        context_.selectionSection->setVisible(false);
+        context_.vertexSection->setVisible(false);
+        context_.geometrySection->setVisible(false);
+        context_.advancedSection->setVisible(false);
+        context_.deleteButton->setEnabled(false);
+        context_.quickFieldsEditor->setVisible(false);
+        context_.objectQuickCommandKind->clear();
+        context_.vertexActionsEditor->setVisible(false);
+        context_.metadataLabel->setText(QStringLiteral("-"));
+        context_.orientationEditor->setVisible(false);
+        context_.linePointLeftSizeEnabledCheck->setChecked(false);
+        context_.linePointLeftSizeSpin->setEnabled(false);
+        context_.linePointLeftSizeSpin->setValue(40.0);
+        context_.lineOptionsEditor->setVisible(false);
+        context_.scrapScaleEditor->setVisible(false);
+        context_.configureButton->setVisible(false);
+        context_.configureButton->setEnabled(false);
+        context_.lineClosedCheck->setChecked(false);
+        context_.lineReversedCheck->setChecked(false);
         return;
     }
 
-    owner_->objectDetailsSelectionLabel_->setVisible(false);
-    owner_->objectSelectionSection_->setVisible(true);
-    owner_->advancedSelectionSection_->setVisible(true);
+    context_.selectionLabel->setVisible(false);
+    context_.selectionSection->setVisible(true);
+    context_.advancedSection->setVisible(true);
     QString objectSectionTitle = effectiveKind;
     if (effectiveKind == QStringLiteral("line")) {
-        objectSectionTitle = owner_->tr("Line");
+        objectSectionTitle = translate("Line");
     } else if (effectiveKind == QStringLiteral("area")) {
-        objectSectionTitle = owner_->tr("Area");
+        objectSectionTitle = translate("Area");
     } else if (effectiveKind == QStringLiteral("point")) {
-        objectSectionTitle = owner_->tr("Point");
+        objectSectionTitle = translate("Point");
     } else if (effectiveKind == QStringLiteral("scrap")) {
-        objectSectionTitle = owner_->tr("Scrap");
+        objectSectionTitle = translate("Scrap");
     }
-    owner_->objectSelectionTitleLabel_->setText(objectSectionTitle);
-    owner_->objectDetailsMetadataLabel_->setText(owner_->tr("Source line %1").arg(effectiveLineNumber));
-    owner_->objectDeleteButton_->setEnabled(effectiveLineNumber > 0);
+    context_.selectionTitleLabel->setText(objectSectionTitle);
+    context_.metadataLabel->setText(translate("Source line %1").arg(effectiveLineNumber));
+    context_.deleteButton->setEnabled(effectiveLineNumber > 0);
 
-    owner_->objectQuickFieldsEditor_->setVisible(false);
-    owner_->objectQuickCommandKind_.clear();
-    if (owner_->textEditor_ != nullptr && effectiveLineNumber > 0) {
-        QStringList lines = owner_->textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    context_.quickFieldsEditor->setVisible(false);
+    context_.objectQuickCommandKind->clear();
+    if (context_.textEditor != nullptr && effectiveLineNumber > 0) {
+        QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
         for (QString &line : lines) {
             if (line.endsWith(QLatin1Char('\r'))) {
                 line.chop(1);
@@ -173,66 +180,65 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             if (const std::optional<InspectorObjectQuickFields> fields = inspectorObjectQuickFieldsFromParsedLine(parsedLine)) {
                 const bool typeFieldsVisible = fields->commandKind != QStringLiteral("scrap");
                 const bool projectionFieldVisible = fields->commandKind == QStringLiteral("scrap");
-                owner_->objectQuickFieldsEditor_->setVisible(true);
-                owner_->objectQuickNameLabel_->setVisible(fields->nameVisible);
-                owner_->objectQuickProjectionLabel_->setVisible(projectionFieldVisible);
-                owner_->objectQuickTypeLabel_->setVisible(typeFieldsVisible);
-                owner_->objectQuickSubtypeLabel_->setVisible(typeFieldsVisible);
-                owner_->objectQuickNameEdit_->setVisible(fields->nameVisible);
-                owner_->objectQuickProjectionCombo_->setVisible(projectionFieldVisible);
-                owner_->objectQuickTypeCombo_->setVisible(typeFieldsVisible);
-                owner_->objectQuickSubtypeCombo_->setVisible(typeFieldsVisible);
-                owner_->objectQuickProjectionCombo_->setEnabled(projectionFieldVisible);
-                owner_->objectQuickTypeCombo_->setEnabled(typeFieldsVisible && fields->typeEditable);
-                owner_->objectQuickSubtypeCombo_->setEnabled(typeFieldsVisible && fields->typeEditable);
-                setEditableComboValues(owner_->objectQuickTypeCombo_, inspectorTypeValuesForCommand(fields->commandKind), fields->type);
-                setEditableComboValues(owner_->objectQuickProjectionCombo_, inspectorProjectionValues(), fields->projection);
-                owner_->objectQuickIdentifierEdit_->setText(fields->identifier);
-                owner_->objectQuickIdentifierLabel_->setText(owner_->tr("ID"));
-                owner_->objectQuickNameEdit_->setText(fields->name);
-                owner_->objectQuickCommandKind_ = fields->commandKind;
-                owner_->updateObjectQuickSubtypeChoices();
-                setEditableComboValues(owner_->objectQuickSubtypeCombo_,
+                context_.quickFieldsEditor->setVisible(true);
+                context_.quickNameLabel->setVisible(fields->nameVisible);
+                context_.quickProjectionLabel->setVisible(projectionFieldVisible);
+                context_.quickTypeLabel->setVisible(typeFieldsVisible);
+                context_.quickSubtypeLabel->setVisible(typeFieldsVisible);
+                context_.quickNameEdit->setVisible(fields->nameVisible);
+                context_.quickProjectionCombo->setVisible(projectionFieldVisible);
+                context_.quickTypeCombo->setVisible(typeFieldsVisible);
+                context_.quickSubtypeCombo->setVisible(typeFieldsVisible);
+                context_.quickProjectionCombo->setEnabled(projectionFieldVisible);
+                context_.quickTypeCombo->setEnabled(typeFieldsVisible && fields->typeEditable);
+                context_.quickSubtypeCombo->setEnabled(typeFieldsVisible && fields->typeEditable);
+                setEditableComboValues(context_.quickTypeCombo, inspectorTypeValuesForCommand(fields->commandKind), fields->type);
+                setEditableComboValues(context_.quickProjectionCombo, inspectorProjectionValues(), fields->projection);
+                context_.quickIdentifierEdit->setText(fields->identifier);
+                context_.quickIdentifierLabel->setText(translate("ID"));
+                context_.quickNameEdit->setText(fields->name);
+                *context_.objectQuickCommandKind = fields->commandKind;
+                setEditableComboValues(context_.quickSubtypeCombo,
                                        inspectorSubtypeValuesForCommandType(fields->commandKind, fields->type),
                                        fields->subtype);
             }
         }
     }
-    owner_->objectConfigureButton_->setVisible(true);
-    owner_->objectConfigureButton_->setEnabled(isConfigurableMapObjectKind(effectiveKind));
+    context_.configureButton->setVisible(true);
+    context_.configureButton->setEnabled(isConfigurableMapObjectKind(effectiveKind));
 
-    const bool lineVertexActionsAvailable = owner_->selectedObjectKind_ == QStringLiteral("line")
-        && owner_->selectedObjectVertexIndex_ >= 0
-        && owner_->textEditor_ != nullptr;
-    owner_->vertexActionsEditor_->setVisible(lineVertexActionsAvailable);
-    owner_->vertexInsertButton_->setEnabled(lineVertexActionsAvailable);
-    owner_->vertexDeleteButton_->setEnabled(lineVertexActionsAvailable);
-    owner_->vertexToggleSmoothButton_->setEnabled(lineVertexActionsAvailable);
+    const bool lineVertexActionsAvailable = *context_.selectedObjectKind == QStringLiteral("line")
+        && *context_.selectedObjectVertexIndex >= 0
+        && context_.textEditor != nullptr;
+    context_.vertexActionsEditor->setVisible(lineVertexActionsAvailable);
+    context_.vertexInsertButton->setEnabled(lineVertexActionsAvailable);
+    context_.vertexDeleteButton->setEnabled(lineVertexActionsAvailable);
+    context_.vertexToggleSmoothButton->setEnabled(lineVertexActionsAvailable);
 
-    const bool lineOptionsVisible = owner_->selectedObjectLineNumber_ > 0
-        && owner_->selectedObjectKind_ == QStringLiteral("line")
-        && owner_->textEditor_ != nullptr;
-    owner_->lineOptionsEditor_->setVisible(lineOptionsVisible);
+    const bool lineOptionsVisible = *context_.selectedObjectLineNumber > 0
+        && *context_.selectedObjectKind == QStringLiteral("line")
+        && context_.textEditor != nullptr;
+    context_.lineOptionsEditor->setVisible(lineOptionsVisible);
     if (lineOptionsVisible) {
-        if (const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(owner_->textEditor_->text(), owner_->selectedObjectLineNumber_);
+        if (const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), *context_.selectedObjectLineNumber);
             lineFeature.has_value() && lineFeature->kind == MapGeometryFeature::Kind::Line) {
-            owner_->lineClosedCheck_->setChecked(lineFeature->closed);
-            owner_->lineReversedCheck_->setChecked(lineFeature->reversed);
+            context_.lineClosedCheck->setChecked(lineFeature->closed);
+            context_.lineReversedCheck->setChecked(lineFeature->reversed);
         } else {
-            owner_->lineClosedCheck_->setChecked(false);
-            owner_->lineReversedCheck_->setChecked(false);
+            context_.lineClosedCheck->setChecked(false);
+            context_.lineReversedCheck->setChecked(false);
         }
     } else {
-        owner_->lineClosedCheck_->setChecked(false);
-        owner_->lineReversedCheck_->setChecked(false);
+        context_.lineClosedCheck->setChecked(false);
+        context_.lineReversedCheck->setChecked(false);
     }
 
-    owner_->geometrySelectionSection_->setVisible(lineOptionsVisible);
+    context_.geometrySection->setVisible(lineOptionsVisible);
 
     const bool scrapScaleVisible = effectiveLineNumber > 0
         && effectiveKind == QStringLiteral("scrap")
-        && owner_->textEditor_ != nullptr;
-    owner_->scrapScaleEditor_->setVisible(scrapScaleVisible);
+        && context_.textEditor != nullptr;
+    context_.scrapScaleEditor->setVisible(scrapScaleVisible);
     if (scrapScaleVisible) {
         auto configureScaleSpin = [](QDoubleSpinBox *spin, int decimals) {
             if (spin == nullptr) {
@@ -241,17 +247,17 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             spin->setDecimals(decimals);
             spin->setSingleStep(decimals == 0 ? 1.0 : 0.1);
         };
-        configureScaleSpin(owner_->scrapScaleSourceX1Spin_, 0);
-        configureScaleSpin(owner_->scrapScaleSourceY1Spin_, 0);
-        configureScaleSpin(owner_->scrapScaleSourceX2Spin_, 0);
-        configureScaleSpin(owner_->scrapScaleSourceY2Spin_, 0);
-        configureScaleSpin(owner_->scrapScaleRealX1Spin_, 4);
-        configureScaleSpin(owner_->scrapScaleRealY1Spin_, 4);
-        configureScaleSpin(owner_->scrapScaleRealX2Spin_, 4);
-        configureScaleSpin(owner_->scrapScaleRealY2Spin_, 4);
+        configureScaleSpin(context_.scrapScaleSourceX1Spin, 0);
+        configureScaleSpin(context_.scrapScaleSourceY1Spin, 0);
+        configureScaleSpin(context_.scrapScaleSourceX2Spin, 0);
+        configureScaleSpin(context_.scrapScaleSourceY2Spin, 0);
+        configureScaleSpin(context_.scrapScaleRealX1Spin, 4);
+        configureScaleSpin(context_.scrapScaleRealY1Spin, 4);
+        configureScaleSpin(context_.scrapScaleRealX2Spin, 4);
+        configureScaleSpin(context_.scrapScaleRealY2Spin, 4);
 
-        InspectorScrapScale scale = defaultInspectorScrapScale(owner_->mapSourceBoundsForCurrentDocument());
-        QStringList lines = owner_->textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+        InspectorScrapScale scale = defaultInspectorScrapScale(context_.mapSourceBoundsForCurrentDocument());
+        QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
         for (QString &line : lines) {
             if (line.endsWith(QLatin1Char('\r'))) {
                 line.chop(1);
@@ -265,65 +271,65 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             }
         }
 
-        owner_->scrapScaleSourceX1Spin_->setValue(scale.sourcePoint1.x());
-        owner_->scrapScaleSourceY1Spin_->setValue(scale.sourcePoint1.y());
-        owner_->scrapScaleSourceX2Spin_->setValue(scale.sourcePoint2.x());
-        owner_->scrapScaleSourceY2Spin_->setValue(scale.sourcePoint2.y());
-        owner_->scrapScaleRealX1Spin_->setValue(scale.realPoint1.x());
-        owner_->scrapScaleRealY1Spin_->setValue(scale.realPoint1.y());
-        owner_->scrapScaleRealX2Spin_->setValue(scale.realPoint2.x());
-        owner_->scrapScaleRealY2Spin_->setValue(scale.realPoint2.y());
-        const int unitIndex = owner_->scrapScaleUnitCombo_->findText(scale.unitToken);
-        owner_->scrapScaleUnitCombo_->setCurrentIndex(unitIndex >= 0 ? unitIndex : 0);
+        context_.scrapScaleSourceX1Spin->setValue(scale.sourcePoint1.x());
+        context_.scrapScaleSourceY1Spin->setValue(scale.sourcePoint1.y());
+        context_.scrapScaleSourceX2Spin->setValue(scale.sourcePoint2.x());
+        context_.scrapScaleSourceY2Spin->setValue(scale.sourcePoint2.y());
+        context_.scrapScaleRealX1Spin->setValue(scale.realPoint1.x());
+        context_.scrapScaleRealY1Spin->setValue(scale.realPoint1.y());
+        context_.scrapScaleRealX2Spin->setValue(scale.realPoint2.x());
+        context_.scrapScaleRealY2Spin->setValue(scale.realPoint2.y());
+        const int unitIndex = context_.scrapScaleUnitCombo->findText(scale.unitToken);
+        context_.scrapScaleUnitCombo->setCurrentIndex(unitIndex >= 0 ? unitIndex : 0);
     }
 
     bool orientationApplicable = false;
     bool linePointLeftSizeApplicable = false;
     std::optional<qreal> orientationDegrees;
     std::optional<qreal> linePointLeftSize;
-    if (owner_->textEditor_ != nullptr && owner_->selectedObjectLineNumber_ > 0) {
-        if (owner_->selectedObjectKind_ == QStringLiteral("point")) {
-            QStringList lines = owner_->textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    if (context_.textEditor != nullptr && *context_.selectedObjectLineNumber > 0) {
+        if (*context_.selectedObjectKind == QStringLiteral("point")) {
+            QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
             for (QString &line : lines) {
                 if (line.endsWith(QLatin1Char('\r'))) {
                     line.chop(1);
                 }
             }
-            if (owner_->selectedObjectLineNumber_ <= lines.size()) {
+            if (*context_.selectedObjectLineNumber <= lines.size()) {
                 const TherionParsedLine parsedLine =
-                    TherionDocumentParser::parseLine(lines.at(owner_->selectedObjectLineNumber_ - 1), owner_->selectedObjectLineNumber_);
+                    TherionDocumentParser::parseLine(lines.at(*context_.selectedObjectLineNumber - 1), *context_.selectedObjectLineNumber);
                 if (parsedLine.directive == QStringLiteral("point")
                     && isOrientationSupportedForParsedLine(parsedLine)) {
                     orientationApplicable = true;
                     orientationDegrees = pointOrientationFromParsedLine(parsedLine);
                 }
             }
-        } else if (owner_->selectedObjectKind_ == QStringLiteral("line") && owner_->selectedObjectVertexIndex_ >= 0) {
-            if (const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(owner_->textEditor_->text(), owner_->selectedObjectLineNumber_);
+        } else if (*context_.selectedObjectKind == QStringLiteral("line") && *context_.selectedObjectVertexIndex >= 0) {
+            if (const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), *context_.selectedObjectLineNumber);
                 lineFeature.has_value() && lineFeature->kind == MapGeometryFeature::Kind::Line) {
-                if (lineVertexIndexForSourceVertex(lineFeature.value(), owner_->selectedObjectVertexIndex_) >= 0) {
-                    QStringList lines = owner_->textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+                if (lineVertexIndexForSourceVertex(lineFeature.value(), *context_.selectedObjectVertexIndex) >= 0) {
+                    QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
                     for (QString &line : lines) {
                         if (line.endsWith(QLatin1Char('\r'))) {
                             line.chop(1);
                         }
                     }
-                    if (owner_->selectedObjectLineNumber_ > lines.size()) {
+                    if (*context_.selectedObjectLineNumber > lines.size()) {
                         orientationApplicable = false;
                     } else {
                         const TherionParsedLine parsedLine =
-                            TherionDocumentParser::parseLine(lines.at(owner_->selectedObjectLineNumber_ - 1), owner_->selectedObjectLineNumber_);
+                            TherionDocumentParser::parseLine(lines.at(*context_.selectedObjectLineNumber - 1), *context_.selectedObjectLineNumber);
                         if (isOrientationSupportedForParsedLine(parsedLine)) {
                             orientationApplicable = true;
-                            orientationDegrees = linePointOrientationForSourceVertex(owner_->textEditor_->text(),
-                                                                                    owner_->selectedObjectLineNumber_,
-                                                                                    owner_->selectedObjectVertexIndex_);
+                            orientationDegrees = linePointOrientationForSourceVertex(context_.textEditor->text(),
+                                                                                    *context_.selectedObjectLineNumber,
+                                                                                    *context_.selectedObjectVertexIndex);
                         }
                         if (isLinePointLeftSizeSupportedForParsedLine(parsedLine)) {
                             linePointLeftSizeApplicable = true;
-                            linePointLeftSize = linePointLeftSizeForSourceVertex(owner_->textEditor_->text(),
-                                                                                 owner_->selectedObjectLineNumber_,
-                                                                                 owner_->selectedObjectVertexIndex_);
+                            linePointLeftSize = linePointLeftSizeForSourceVertex(context_.textEditor->text(),
+                                                                                 *context_.selectedObjectLineNumber,
+                                                                                 *context_.selectedObjectVertexIndex);
                         }
                     }
                 }
@@ -331,31 +337,31 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         }
     }
 
-    owner_->objectOrientationEditor_->setVisible(orientationApplicable || linePointLeftSizeApplicable);
-    owner_->objectOrientationEnabledCheck_->setVisible(orientationApplicable);
-    owner_->objectOrientationSpin_->setVisible(orientationApplicable);
-    owner_->linePointLeftSizeEnabledCheck_->setVisible(linePointLeftSizeApplicable);
-    owner_->linePointLeftSizeSpin_->setVisible(linePointLeftSizeApplicable);
+    context_.orientationEditor->setVisible(orientationApplicable || linePointLeftSizeApplicable);
+    context_.orientationEnabledCheck->setVisible(orientationApplicable);
+    context_.orientationSpin->setVisible(orientationApplicable);
+    context_.linePointLeftSizeEnabledCheck->setVisible(linePointLeftSizeApplicable);
+    context_.linePointLeftSizeSpin->setVisible(linePointLeftSizeApplicable);
     if (orientationApplicable) {
-        owner_->objectOrientationEnabledCheck_->setChecked(orientationDegrees.has_value());
-        owner_->objectOrientationSpin_->setEnabled(owner_->objectOrientationEnabledCheck_->isChecked());
-        owner_->objectOrientationSpin_->setValue(orientationDegrees.value_or(0.0));
+        context_.orientationEnabledCheck->setChecked(orientationDegrees.has_value());
+        context_.orientationSpin->setEnabled(context_.orientationEnabledCheck->isChecked());
+        context_.orientationSpin->setValue(orientationDegrees.value_or(0.0));
     } else {
-        owner_->objectOrientationEnabledCheck_->setChecked(false);
-        owner_->objectOrientationSpin_->setEnabled(false);
-        owner_->objectOrientationSpin_->setValue(0.0);
+        context_.orientationEnabledCheck->setChecked(false);
+        context_.orientationSpin->setEnabled(false);
+        context_.orientationSpin->setValue(0.0);
     }
     if (linePointLeftSizeApplicable) {
-        owner_->linePointLeftSizeEnabledCheck_->setChecked(linePointLeftSize.has_value());
-        owner_->linePointLeftSizeSpin_->setEnabled(owner_->linePointLeftSizeEnabledCheck_->isChecked());
-        owner_->linePointLeftSizeSpin_->setValue(linePointLeftSize.value_or(40.0));
+        context_.linePointLeftSizeEnabledCheck->setChecked(linePointLeftSize.has_value());
+        context_.linePointLeftSizeSpin->setEnabled(context_.linePointLeftSizeEnabledCheck->isChecked());
+        context_.linePointLeftSizeSpin->setValue(linePointLeftSize.value_or(40.0));
     } else {
-        owner_->linePointLeftSizeEnabledCheck_->setChecked(false);
-        owner_->linePointLeftSizeSpin_->setEnabled(false);
-        owner_->linePointLeftSizeSpin_->setValue(40.0);
+        context_.linePointLeftSizeEnabledCheck->setChecked(false);
+        context_.linePointLeftSizeSpin->setEnabled(false);
+        context_.linePointLeftSizeSpin->setValue(40.0);
     }
-    owner_->objectOrientationApplyButton_->setText(linePointLeftSizeApplicable ? owner_->tr("Apply Line Point Options") : owner_->tr("Apply Orientation"));
-    owner_->objectOrientationApplyButton_->setEnabled(orientationApplicable || linePointLeftSizeApplicable);
-    owner_->vertexSelectionSection_->setVisible(lineVertexActionsAvailable || orientationApplicable || linePointLeftSizeApplicable);
+    context_.orientationApplyButton->setText(linePointLeftSizeApplicable ? translate("Apply Line Point Options") : translate("Apply Orientation"));
+    context_.orientationApplyButton->setEnabled(orientationApplicable || linePointLeftSizeApplicable);
+    context_.vertexSection->setVisible(lineVertexActionsAvailable || orientationApplicable || linePointLeftSizeApplicable);
 }
 }

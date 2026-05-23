@@ -15,6 +15,8 @@
 #include <QLineF>
 #include <QScopedValueRollback>
 
+#include <utility>
+
 namespace TherionStudio
 {
 namespace
@@ -35,70 +37,75 @@ int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int so
 }
 }
 
-MapEditorObjectDetailsEditController::MapEditorObjectDetailsEditController(MapEditorTab *owner)
-    : owner_(owner)
+MapEditorObjectDetailsEditController::MapEditorObjectDetailsEditController(MapEditorObjectDetailsContext context)
+    : context_(std::move(context))
 {
+}
+
+QString MapEditorObjectDetailsEditController::translate(const char *text) const
+{
+    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
 }
 
 void MapEditorObjectDetailsEditController::populateScrapScaleFromSourceBounds()
 {
-    if (owner_->updatingObjectDetailsUi_
-        || owner_->scrapScaleSourceX1Spin_ == nullptr
-        || owner_->scrapScaleSourceY1Spin_ == nullptr
-        || owner_->scrapScaleSourceX2Spin_ == nullptr
-        || owner_->scrapScaleSourceY2Spin_ == nullptr
-        || owner_->scrapScaleRealX1Spin_ == nullptr
-        || owner_->scrapScaleRealY1Spin_ == nullptr
-        || owner_->scrapScaleRealX2Spin_ == nullptr
-        || owner_->scrapScaleRealY2Spin_ == nullptr
-        || owner_->scrapScaleUnitCombo_ == nullptr) {
+    if (*context_.updatingUi
+        || context_.scrapScaleSourceX1Spin == nullptr
+        || context_.scrapScaleSourceY1Spin == nullptr
+        || context_.scrapScaleSourceX2Spin == nullptr
+        || context_.scrapScaleSourceY2Spin == nullptr
+        || context_.scrapScaleRealX1Spin == nullptr
+        || context_.scrapScaleRealY1Spin == nullptr
+        || context_.scrapScaleRealX2Spin == nullptr
+        || context_.scrapScaleRealY2Spin == nullptr
+        || context_.scrapScaleUnitCombo == nullptr) {
         return;
     }
 
-    owner_->scrapScaleSourceX1Spin_->setDecimals(0);
-    owner_->scrapScaleSourceY1Spin_->setDecimals(0);
-    owner_->scrapScaleSourceX2Spin_->setDecimals(0);
-    owner_->scrapScaleSourceY2Spin_->setDecimals(0);
-    owner_->scrapScaleRealX1Spin_->setDecimals(4);
-    owner_->scrapScaleRealY1Spin_->setDecimals(4);
-    owner_->scrapScaleRealX2Spin_->setDecimals(4);
-    owner_->scrapScaleRealY2Spin_->setDecimals(4);
+    context_.scrapScaleSourceX1Spin->setDecimals(0);
+    context_.scrapScaleSourceY1Spin->setDecimals(0);
+    context_.scrapScaleSourceX2Spin->setDecimals(0);
+    context_.scrapScaleSourceY2Spin->setDecimals(0);
+    context_.scrapScaleRealX1Spin->setDecimals(4);
+    context_.scrapScaleRealY1Spin->setDecimals(4);
+    context_.scrapScaleRealX2Spin->setDecimals(4);
+    context_.scrapScaleRealY2Spin->setDecimals(4);
 
-    const InspectorScrapScale scale = defaultInspectorScrapScale(owner_->mapSourceBoundsForCurrentDocument());
-    owner_->scrapScaleSourceX1Spin_->setValue(scale.sourcePoint1.x());
-    owner_->scrapScaleSourceY1Spin_->setValue(scale.sourcePoint1.y());
-    owner_->scrapScaleSourceX2Spin_->setValue(scale.sourcePoint2.x());
-    owner_->scrapScaleSourceY2Spin_->setValue(scale.sourcePoint2.y());
-    owner_->scrapScaleRealX1Spin_->setValue(scale.realPoint1.x());
-    owner_->scrapScaleRealY1Spin_->setValue(scale.realPoint1.y());
-    owner_->scrapScaleRealX2Spin_->setValue(scale.realPoint2.x());
-    owner_->scrapScaleRealY2Spin_->setValue(scale.realPoint2.y());
-    const int unitIndex = owner_->scrapScaleUnitCombo_->findText(scale.unitToken);
-    owner_->scrapScaleUnitCombo_->setCurrentIndex(unitIndex >= 0 ? unitIndex : 0);
+    const InspectorScrapScale scale = defaultInspectorScrapScale(context_.mapSourceBoundsForCurrentDocument());
+    context_.scrapScaleSourceX1Spin->setValue(scale.sourcePoint1.x());
+    context_.scrapScaleSourceY1Spin->setValue(scale.sourcePoint1.y());
+    context_.scrapScaleSourceX2Spin->setValue(scale.sourcePoint2.x());
+    context_.scrapScaleSourceY2Spin->setValue(scale.sourcePoint2.y());
+    context_.scrapScaleRealX1Spin->setValue(scale.realPoint1.x());
+    context_.scrapScaleRealY1Spin->setValue(scale.realPoint1.y());
+    context_.scrapScaleRealX2Spin->setValue(scale.realPoint2.x());
+    context_.scrapScaleRealY2Spin->setValue(scale.realPoint2.y());
+    const int unitIndex = context_.scrapScaleUnitCombo->findText(scale.unitToken);
+    context_.scrapScaleUnitCombo->setCurrentIndex(unitIndex >= 0 ? unitIndex : 0);
 }
 
 void MapEditorObjectDetailsEditController::applyScrapScaleEdits()
 {
-    if (owner_->updatingObjectDetailsUi_
-        || owner_->textEditor_ == nullptr
-        || owner_->scrapScaleSourceX1Spin_ == nullptr
-        || owner_->scrapScaleSourceY1Spin_ == nullptr
-        || owner_->scrapScaleSourceX2Spin_ == nullptr
-        || owner_->scrapScaleSourceY2Spin_ == nullptr
-        || owner_->scrapScaleRealX1Spin_ == nullptr
-        || owner_->scrapScaleRealY1Spin_ == nullptr
-        || owner_->scrapScaleRealX2Spin_ == nullptr
-        || owner_->scrapScaleRealY2Spin_ == nullptr
-        || owner_->scrapScaleUnitCombo_ == nullptr) {
+    if (*context_.updatingUi
+        || context_.textEditor == nullptr
+        || context_.scrapScaleSourceX1Spin == nullptr
+        || context_.scrapScaleSourceY1Spin == nullptr
+        || context_.scrapScaleSourceX2Spin == nullptr
+        || context_.scrapScaleSourceY2Spin == nullptr
+        || context_.scrapScaleRealX1Spin == nullptr
+        || context_.scrapScaleRealY1Spin == nullptr
+        || context_.scrapScaleRealX2Spin == nullptr
+        || context_.scrapScaleRealY2Spin == nullptr
+        || context_.scrapScaleUnitCombo == nullptr) {
         return;
     }
 
     int targetLineNumber = 0;
-    if (owner_->selectedObjectLineNumber_ > 0 && owner_->selectedObjectKind_ == QStringLiteral("scrap")) {
-        targetLineNumber = owner_->selectedObjectLineNumber_;
+    if (*context_.selectedObjectLineNumber > 0 && *context_.selectedObjectKind == QStringLiteral("scrap")) {
+        targetLineNumber = *context_.selectedObjectLineNumber;
     } else {
-        const int cursorLineNumber = owner_->textEditor_->currentLineNumber();
-        QStringList lines = owner_->textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+        const int cursorLineNumber = context_.textEditor->currentLineNumber();
+        QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
         for (QString &line : lines) {
             if (line.endsWith(QLatin1Char('\r'))) {
                 line.chop(1);
@@ -114,39 +121,39 @@ void MapEditorObjectDetailsEditController::applyScrapScaleEdits()
     }
 
     if (targetLineNumber <= 0) {
-        owner_->toolbarStatusNote_ = owner_->tr("Select a scrap to edit its scale.");
-        owner_->refreshToolbarSummary();
+        *context_.toolbarStatusNote = translate("Select a scrap to edit its scale.");
+        context_.refreshToolbarSummary();
         return;
     }
 
     InspectorScrapScale scale;
-    scale.sourcePoint1 = QPointF(owner_->scrapScaleSourceX1Spin_->value(), owner_->scrapScaleSourceY1Spin_->value());
-    scale.sourcePoint2 = QPointF(owner_->scrapScaleSourceX2Spin_->value(), owner_->scrapScaleSourceY2Spin_->value());
-    scale.realPoint1 = QPointF(owner_->scrapScaleRealX1Spin_->value(), owner_->scrapScaleRealY1Spin_->value());
-    scale.realPoint2 = QPointF(owner_->scrapScaleRealX2Spin_->value(), owner_->scrapScaleRealY2Spin_->value());
-    scale.unitToken = owner_->scrapScaleUnitCombo_->currentText().trimmed();
+    scale.sourcePoint1 = QPointF(context_.scrapScaleSourceX1Spin->value(), context_.scrapScaleSourceY1Spin->value());
+    scale.sourcePoint2 = QPointF(context_.scrapScaleSourceX2Spin->value(), context_.scrapScaleSourceY2Spin->value());
+    scale.realPoint1 = QPointF(context_.scrapScaleRealX1Spin->value(), context_.scrapScaleRealY1Spin->value());
+    scale.realPoint2 = QPointF(context_.scrapScaleRealX2Spin->value(), context_.scrapScaleRealY2Spin->value());
+    scale.unitToken = context_.scrapScaleUnitCombo->currentText().trimmed();
     if (scale.unitToken.isEmpty()) {
         scale.unitToken = QStringLiteral("m");
     }
 
     if (QLineF(scale.sourcePoint1, scale.sourcePoint2).length() <= 1e-6
         || QLineF(scale.realPoint1, scale.realPoint2).length() <= 1e-6) {
-        owner_->toolbarStatusNote_ = owner_->tr("Scrap scale requires two distinct picture points and two distinct real points.");
-        owner_->refreshToolbarSummary();
+        *context_.toolbarStatusNote = translate("Scrap scale requires two distinct picture points and two distinct real points.");
+        context_.refreshToolbarSummary();
         return;
     }
 
-    const QString beforeText = owner_->textEditor_->text();
+    const QString beforeText = context_.textEditor->text();
     QString afterText = beforeText;
     QString errorMessage;
     if (!TherionDocumentEditor::rewriteScrapScale(&afterText,
                                                   targetLineNumber,
                                                   scrapScaleExpression(scale),
                                                   &errorMessage)) {
-        owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-            ? owner_->tr("Failed to update scrap scale.")
-            : owner_->tr("Failed to update scrap scale: %1").arg(errorMessage);
-        owner_->refreshToolbarSummary();
+        *context_.toolbarStatusNote = errorMessage.isEmpty()
+            ? translate("Failed to update scrap scale.")
+            : translate("Failed to update scrap scale: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
         return;
     }
 
@@ -154,26 +161,26 @@ void MapEditorObjectDetailsEditController::applyScrapScaleEdits()
         return;
     }
 
-    const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-    owner_->textEditor_->replaceTextForCommand(afterText);
-    owner_->recordSourceTextSnapshot(owner_->tr("Set Scrap Scale"), beforeText, afterText, targetLineNumber);
-    owner_->toolbarStatusNote_ = owner_->tr("Updated scrap scale.");
-    owner_->refreshToolbarSummary();
-    owner_->refreshObjectDetailsPanel();
+    const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+    context_.textEditor->replaceTextForCommand(afterText);
+    context_.recordSourceTextSnapshot(translate("Set Scrap Scale"), beforeText, afterText, targetLineNumber);
+    *context_.toolbarStatusNote = translate("Updated scrap scale.");
+    context_.refreshToolbarSummary();
+    context_.refreshObjectDetailsPanel();
 }
 
 void MapEditorObjectDetailsEditController::handleConfigureObjectSettingsTriggered()
 {
-    if (owner_->textEditor_ == nullptr) {
+    if (context_.textEditor == nullptr) {
         return;
     }
 
-    int targetLineNumber = owner_->selectedObjectLineNumber_;
-    QString targetKind = owner_->selectedObjectKind_.trimmed().toLower();
+    int targetLineNumber = *context_.selectedObjectLineNumber;
+    QString targetKind = context_.selectedObjectKind->trimmed().toLower();
     if (!(targetLineNumber > 0 && isConfigurableMapObjectKind(targetKind))) {
-        targetLineNumber = owner_->textEditor_->currentLineNumber();
+        targetLineNumber = context_.textEditor->currentLineNumber();
         if (targetLineNumber > 0) {
-            QStringList lines = owner_->textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+            QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
             for (QString &line : lines) {
                 if (line.endsWith(QLatin1Char('\r'))) {
                     line.chop(1);
@@ -188,74 +195,74 @@ void MapEditorObjectDetailsEditController::handleConfigureObjectSettingsTriggere
     }
 
     if (targetLineNumber <= 0 || !isConfigurableMapObjectKind(targetKind)) {
-        owner_->toolbarStatusNote_ = owner_->tr("Object settings are available for scrap, point, line, and area commands.");
-        owner_->refreshToolbarSummary();
+        *context_.toolbarStatusNote = translate("Object settings are available for scrap, point, line, and area commands.");
+        context_.refreshToolbarSummary();
         return;
     }
 
-    owner_->textEditor_->configureCommandAtLine(targetKind, targetLineNumber);
-    owner_->refreshObjectDetailsPanel();
+    context_.textEditor->configureCommandAtLine(targetKind, targetLineNumber);
+    context_.refreshObjectDetailsPanel();
 }
 
 void MapEditorObjectDetailsEditController::handleLineClosedToggled(bool checked)
 {
-    if (owner_->updatingObjectDetailsUi_
-        || owner_->textEditor_ == nullptr
-        || owner_->selectedObjectLineNumber_ <= 0
-        || owner_->selectedObjectKind_ != QStringLiteral("line")) {
+    if (*context_.updatingUi
+        || context_.textEditor == nullptr
+        || *context_.selectedObjectLineNumber <= 0
+        || *context_.selectedObjectKind != QStringLiteral("line")) {
         return;
     }
 
     QString errorMessage;
-    if (!owner_->rewriteLineOptionToggle(owner_->selectedObjectLineNumber_, QStringLiteral("close"), checked, &errorMessage)) {
-        owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-            ? owner_->tr("Failed to update line closed state.")
-            : owner_->tr("Failed to update line closed state: %1").arg(errorMessage);
-        owner_->refreshToolbarSummary();
-        owner_->refreshObjectDetailsPanel();
+    if (!context_.rewriteLineOptionToggle(*context_.selectedObjectLineNumber, QStringLiteral("close"), checked, &errorMessage)) {
+        *context_.toolbarStatusNote = errorMessage.isEmpty()
+            ? translate("Failed to update line closed state.")
+            : translate("Failed to update line closed state: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        context_.refreshObjectDetailsPanel();
     }
 }
 
 void MapEditorObjectDetailsEditController::handleLineReversedToggled(bool checked)
 {
-    if (owner_->updatingObjectDetailsUi_
-        || owner_->textEditor_ == nullptr
-        || owner_->selectedObjectLineNumber_ <= 0
-        || owner_->selectedObjectKind_ != QStringLiteral("line")) {
+    if (*context_.updatingUi
+        || context_.textEditor == nullptr
+        || *context_.selectedObjectLineNumber <= 0
+        || *context_.selectedObjectKind != QStringLiteral("line")) {
         return;
     }
 
     QString errorMessage;
-    if (!owner_->rewriteLineOptionToggle(owner_->selectedObjectLineNumber_, QStringLiteral("reverse"), checked, &errorMessage)) {
-        owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-            ? owner_->tr("Failed to update line reverse state.")
-            : owner_->tr("Failed to update line reverse state: %1").arg(errorMessage);
-        owner_->refreshToolbarSummary();
-        owner_->refreshObjectDetailsPanel();
+    if (!context_.rewriteLineOptionToggle(*context_.selectedObjectLineNumber, QStringLiteral("reverse"), checked, &errorMessage)) {
+        *context_.toolbarStatusNote = errorMessage.isEmpty()
+            ? translate("Failed to update line reverse state.")
+            : translate("Failed to update line reverse state: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        context_.refreshObjectDetailsPanel();
     }
 }
 
 void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
 {
-    if (owner_->updatingObjectDetailsUi_ || owner_->textEditor_ == nullptr || owner_->selectedObjectLineNumber_ <= 0) {
+    if (*context_.updatingUi || context_.textEditor == nullptr || *context_.selectedObjectLineNumber <= 0) {
         return;
     }
-    if (owner_->objectOrientationEnabledCheck_ == nullptr
-        || owner_->objectOrientationSpin_ == nullptr
-        || owner_->linePointLeftSizeEnabledCheck_ == nullptr
-        || owner_->linePointLeftSizeSpin_ == nullptr) {
+    if (context_.orientationEnabledCheck == nullptr
+        || context_.orientationSpin == nullptr
+        || context_.linePointLeftSizeEnabledCheck == nullptr
+        || context_.linePointLeftSizeSpin == nullptr) {
         return;
     }
-    if (owner_->selectedObjectKind_ != QStringLiteral("point") && owner_->selectedObjectKind_ != QStringLiteral("line")) {
+    if (*context_.selectedObjectKind != QStringLiteral("point") && *context_.selectedObjectKind != QStringLiteral("line")) {
         return;
     }
 
-    const bool enabled = owner_->objectOrientationEnabledCheck_->isChecked();
-    const qreal orientation = normalizeOrientationDegreesForMapDetails(owner_->objectOrientationSpin_->value());
-    const bool leftSizeEnabled = owner_->linePointLeftSizeEnabledCheck_->isVisible()
-        && owner_->linePointLeftSizeEnabledCheck_->isChecked();
-    const qreal leftSize = qMax<qreal>(0.1, owner_->linePointLeftSizeSpin_->value());
-    QStringList documentLines = owner_->textEditor_->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    const bool enabled = context_.orientationEnabledCheck->isChecked();
+    const qreal orientation = normalizeOrientationDegreesForMapDetails(context_.orientationSpin->value());
+    const bool leftSizeEnabled = context_.linePointLeftSizeEnabledCheck->isVisible()
+        && context_.linePointLeftSizeEnabledCheck->isChecked();
+    const qreal leftSize = qMax<qreal>(0.1, context_.linePointLeftSizeSpin->value());
+    QStringList documentLines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
     for (QString &line : documentLines) {
         if (line.endsWith(QLatin1Char('\r'))) {
             line.chop(1);
@@ -263,61 +270,61 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
     }
     QString errorMessage;
     bool rewritten = false;
-    if (owner_->selectedObjectKind_ == QStringLiteral("point")) {
-        if (owner_->selectedObjectLineNumber_ > documentLines.size()) {
+    if (*context_.selectedObjectKind == QStringLiteral("point")) {
+        if (*context_.selectedObjectLineNumber > documentLines.size()) {
             return;
         }
         const TherionParsedLine parsedLine =
-            TherionDocumentParser::parseLine(documentLines.at(owner_->selectedObjectLineNumber_ - 1), owner_->selectedObjectLineNumber_);
+            TherionDocumentParser::parseLine(documentLines.at(*context_.selectedObjectLineNumber - 1), *context_.selectedObjectLineNumber);
         if (!isOrientationSupportedForParsedLine(parsedLine)) {
-            owner_->toolbarStatusNote_ = owner_->tr("Orientation is not supported for this point type.");
-            owner_->refreshToolbarSummary();
-            owner_->refreshObjectDetailsPanel();
+            *context_.toolbarStatusNote = translate("Orientation is not supported for this point type.");
+            context_.refreshToolbarSummary();
+            context_.refreshObjectDetailsPanel();
             return;
         }
-        rewritten = owner_->textEditor_->rewritePointOrientation(owner_->selectedObjectLineNumber_,
+        rewritten = context_.textEditor->rewritePointOrientation(*context_.selectedObjectLineNumber,
                                                          enabled,
                                                          orientation,
                                                          &errorMessage);
     } else {
-        if (owner_->selectedObjectVertexIndex_ < 0) {
+        if (*context_.selectedObjectVertexIndex < 0) {
             return;
         }
 
-        const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(owner_->textEditor_->text(), owner_->selectedObjectLineNumber_);
+        const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), *context_.selectedObjectLineNumber);
         if (!lineFeature.has_value()
             || lineFeature->kind != MapGeometryFeature::Kind::Line
-            || lineVertexIndexForSourceVertex(lineFeature.value(), owner_->selectedObjectVertexIndex_) < 0) {
-            owner_->toolbarStatusNote_ = owner_->tr("Orientation editing is available only for selected line anchor vertices.");
-            owner_->refreshToolbarSummary();
-            owner_->refreshObjectDetailsPanel();
+            || lineVertexIndexForSourceVertex(lineFeature.value(), *context_.selectedObjectVertexIndex) < 0) {
+            *context_.toolbarStatusNote = translate("Orientation editing is available only for selected line anchor vertices.");
+            context_.refreshToolbarSummary();
+            context_.refreshObjectDetailsPanel();
             return;
         }
-        if (owner_->selectedObjectLineNumber_ > documentLines.size()) {
+        if (*context_.selectedObjectLineNumber > documentLines.size()) {
             return;
         }
         const TherionParsedLine parsedLine =
-            TherionDocumentParser::parseLine(documentLines.at(owner_->selectedObjectLineNumber_ - 1), owner_->selectedObjectLineNumber_);
+            TherionDocumentParser::parseLine(documentLines.at(*context_.selectedObjectLineNumber - 1), *context_.selectedObjectLineNumber);
         const bool orientationSupported = isOrientationSupportedForParsedLine(parsedLine);
         const bool leftSizeSupported = isLinePointLeftSizeSupportedForParsedLine(parsedLine);
         if (!orientationSupported && !leftSizeSupported) {
-            owner_->toolbarStatusNote_ = owner_->tr("Orientation is not supported for this line type.");
-            owner_->refreshToolbarSummary();
-            owner_->refreshObjectDetailsPanel();
+            *context_.toolbarStatusNote = translate("Orientation is not supported for this line type.");
+            context_.refreshToolbarSummary();
+            context_.refreshObjectDetailsPanel();
             return;
         }
 
         rewritten = true;
         if (orientationSupported) {
-            rewritten = owner_->textEditor_->rewriteLinePointOrientation(owner_->selectedObjectLineNumber_,
-                                                                 owner_->selectedObjectVertexIndex_,
+            rewritten = context_.textEditor->rewriteLinePointOrientation(*context_.selectedObjectLineNumber,
+                                                                 *context_.selectedObjectVertexIndex,
                                                                  enabled,
                                                                  orientation,
                                                                  &errorMessage);
         }
         if (rewritten && leftSizeSupported) {
-            rewritten = owner_->textEditor_->rewriteLinePointLeftSize(owner_->selectedObjectLineNumber_,
-                                                             owner_->selectedObjectVertexIndex_,
+            rewritten = context_.textEditor->rewriteLinePointLeftSize(*context_.selectedObjectLineNumber,
+                                                             *context_.selectedObjectVertexIndex,
                                                              leftSizeEnabled,
                                                              leftSize,
                                                              &errorMessage);
@@ -325,102 +332,102 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
     }
 
     if (!rewritten) {
-        owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-            ? owner_->tr("Failed to update orientation.")
-            : owner_->tr("Failed to update orientation: %1").arg(errorMessage);
-        owner_->refreshToolbarSummary();
-        owner_->refreshObjectDetailsPanel();
+        *context_.toolbarStatusNote = errorMessage.isEmpty()
+            ? translate("Failed to update orientation.")
+            : translate("Failed to update orientation: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        context_.refreshObjectDetailsPanel();
         return;
     }
 
-    if (owner_->selectedObjectKind_ == QStringLiteral("line")) {
-        owner_->toolbarStatusNote_ = owner_->tr("Updated line point options.");
+    if (*context_.selectedObjectKind == QStringLiteral("line")) {
+        *context_.toolbarStatusNote = translate("Updated line point options.");
     } else {
-        owner_->toolbarStatusNote_ = enabled
-            ? owner_->tr("Updated orientation to %1 degrees.").arg(QString::number(orientation, 'f', 3))
-            : owner_->tr("Cleared orientation override.");
+        *context_.toolbarStatusNote = enabled
+            ? translate("Updated orientation to %1 degrees.").arg(QString::number(orientation, 'f', 3))
+            : translate("Cleared orientation override.");
     }
-    owner_->refreshToolbarSummary();
-    owner_->refreshObjectDetailsPanel();
+    context_.refreshToolbarSummary();
+    context_.refreshObjectDetailsPanel();
 }
 
 void MapEditorObjectDetailsEditController::handleObjectOrientationEnabledToggled(bool checked)
 {
-    if (owner_->updatingObjectDetailsUi_ || owner_->objectOrientationSpin_ == nullptr) {
+    if (*context_.updatingUi || context_.orientationSpin == nullptr) {
         return;
     }
-    owner_->objectOrientationSpin_->setEnabled(checked);
+    context_.orientationSpin->setEnabled(checked);
 }
 
 void MapEditorObjectDetailsEditController::handleLinePointLeftSizeEnabledToggled(bool checked)
 {
-    if (owner_->updatingObjectDetailsUi_ || owner_->linePointLeftSizeSpin_ == nullptr) {
+    if (*context_.updatingUi || context_.linePointLeftSizeSpin == nullptr) {
         return;
     }
-    owner_->linePointLeftSizeSpin_->setEnabled(checked);
-    if (checked && owner_->linePointLeftSizeSpin_->value() <= 0.0) {
-        owner_->linePointLeftSizeSpin_->setValue(40.0);
+    context_.linePointLeftSizeSpin->setEnabled(checked);
+    if (checked && context_.linePointLeftSizeSpin->value() <= 0.0) {
+        context_.linePointLeftSizeSpin->setValue(40.0);
     }
 }
 
 void MapEditorObjectDetailsEditController::deleteSelectedObjectFromSelection()
 {
-    if (owner_->textEditor_ == nullptr) {
+    if (context_.textEditor == nullptr) {
         return;
     }
 
-    int targetLineNumber = owner_->selectedObjectLineNumber_;
+    int targetLineNumber = *context_.selectedObjectLineNumber;
     if (targetLineNumber <= 0) {
-        targetLineNumber = owner_->textEditor_->currentLineNumber();
+        targetLineNumber = context_.textEditor->currentLineNumber();
     }
     if (targetLineNumber <= 0) {
         return;
     }
 
-    if (owner_->textEditor_->deleteCommandAtLine(targetLineNumber)) {
-        owner_->hiddenInspectorObjectLines_.remove(targetLineNumber);
-        owner_->lastInspectorClickedObjectLineNumber_ = 0;
-        owner_->clearInspectorObjectSelection();
-        owner_->toolbarStatusNote_ = owner_->tr("Deleted selected object from source.");
-        owner_->refreshToolbarSummary();
+    if (context_.textEditor->deleteCommandAtLine(targetLineNumber)) {
+        context_.hiddenInspectorObjectLines->remove(targetLineNumber);
+        *context_.lastInspectorClickedObjectLineNumber = 0;
+        context_.clearInspectorObjectSelection();
+        *context_.toolbarStatusNote = translate("Deleted selected object from source.");
+        context_.refreshToolbarSummary();
     }
 }
 
 void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
 {
-    if (owner_->updatingObjectDetailsUi_
-        || owner_->textEditor_ == nullptr
-        || owner_->objectQuickTypeCombo_ == nullptr
-        || owner_->objectQuickSubtypeCombo_ == nullptr
-        || owner_->objectQuickIdentifierEdit_ == nullptr
-        || owner_->objectQuickNameEdit_ == nullptr) {
+    if (*context_.updatingUi
+        || context_.textEditor == nullptr
+        || context_.quickTypeCombo == nullptr
+        || context_.quickSubtypeCombo == nullptr
+        || context_.quickIdentifierEdit == nullptr
+        || context_.quickNameEdit == nullptr) {
         return;
     }
 
-    int targetLineNumber = owner_->selectedObjectLineNumber_;
+    int targetLineNumber = *context_.selectedObjectLineNumber;
     if (targetLineNumber <= 0) {
-        targetLineNumber = owner_->textEditor_->currentLineNumber();
+        targetLineNumber = context_.textEditor->currentLineNumber();
     }
     if (targetLineNumber <= 0) {
         return;
     }
 
-    const QString beforeText = owner_->textEditor_->text();
+    const QString beforeText = context_.textEditor->text();
     QString afterText = beforeText;
     QString errorMessage;
     if (!TherionDocumentEditor::rewriteMapObjectQuickFields(&afterText,
                                                             targetLineNumber,
-                                                            owner_->objectQuickTypeCombo_->currentText(),
-                                                            owner_->objectQuickSubtypeCombo_->currentText(),
-                                                            owner_->objectQuickIdentifierEdit_->text(),
-                                                            owner_->objectQuickNameEdit_->text(),
-                                                            owner_->objectQuickNameEdit_->isVisible(),
+                                                            context_.quickTypeCombo->currentText(),
+                                                            context_.quickSubtypeCombo->currentText(),
+                                                            context_.quickIdentifierEdit->text(),
+                                                            context_.quickNameEdit->text(),
+                                                            context_.quickNameEdit->isVisible(),
                                                             &errorMessage)) {
-        owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-            ? owner_->tr("Failed to update object fields.")
-            : owner_->tr("Failed to update object fields: %1").arg(errorMessage);
-        owner_->refreshToolbarSummary();
-        owner_->refreshObjectDetailsPanel();
+        *context_.toolbarStatusNote = errorMessage.isEmpty()
+            ? translate("Failed to update object fields.")
+            : translate("Failed to update object fields: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        context_.refreshObjectDetailsPanel();
         return;
     }
 
@@ -428,42 +435,42 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
         return;
     }
 
-    const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-    owner_->textEditor_->replaceTextForCommand(afterText);
-    owner_->recordSourceTextSnapshot(owner_->tr("Edit Object Fields"), beforeText, afterText, targetLineNumber);
-    owner_->toolbarStatusNote_ = owner_->tr("Updated object fields.");
-    owner_->refreshToolbarSummary();
-    owner_->refreshObjectDetailsPanel();
+    const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+    context_.textEditor->replaceTextForCommand(afterText);
+    context_.recordSourceTextSnapshot(translate("Edit Object Fields"), beforeText, afterText, targetLineNumber);
+    *context_.toolbarStatusNote = translate("Updated object fields.");
+    context_.refreshToolbarSummary();
+    context_.refreshObjectDetailsPanel();
 }
 
 void MapEditorObjectDetailsEditController::applyScrapProjectionEdit()
 {
-    if (owner_->updatingObjectDetailsUi_
-        || owner_->textEditor_ == nullptr
-        || owner_->objectQuickProjectionCombo_ == nullptr) {
+    if (*context_.updatingUi
+        || context_.textEditor == nullptr
+        || context_.quickProjectionCombo == nullptr) {
         return;
     }
 
-    int targetLineNumber = owner_->selectedObjectLineNumber_;
+    int targetLineNumber = *context_.selectedObjectLineNumber;
     if (targetLineNumber <= 0) {
-        targetLineNumber = owner_->textEditor_->currentLineNumber();
+        targetLineNumber = context_.textEditor->currentLineNumber();
     }
     if (targetLineNumber <= 0) {
         return;
     }
 
-    const QString beforeText = owner_->textEditor_->text();
+    const QString beforeText = context_.textEditor->text();
     QString afterText = beforeText;
     QString errorMessage;
     if (!TherionDocumentEditor::rewriteScrapProjection(&afterText,
                                                        targetLineNumber,
-                                                       owner_->objectQuickProjectionCombo_->currentText(),
+                                                       context_.quickProjectionCombo->currentText(),
                                                        &errorMessage)) {
-        owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-            ? owner_->tr("Failed to update scrap projection.")
-            : owner_->tr("Failed to update scrap projection: %1").arg(errorMessage);
-        owner_->refreshToolbarSummary();
-        owner_->refreshObjectDetailsPanel();
+        *context_.toolbarStatusNote = errorMessage.isEmpty()
+            ? translate("Failed to update scrap projection.")
+            : translate("Failed to update scrap projection: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        context_.refreshObjectDetailsPanel();
         return;
     }
 
@@ -471,41 +478,41 @@ void MapEditorObjectDetailsEditController::applyScrapProjectionEdit()
         return;
     }
 
-    const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-    owner_->textEditor_->replaceTextForCommand(afterText);
-    owner_->recordSourceTextSnapshot(owner_->tr("Edit Scrap Projection"), beforeText, afterText, targetLineNumber);
-    owner_->toolbarStatusNote_ = owner_->tr("Updated scrap projection.");
-    owner_->refreshToolbarSummary();
-    owner_->refreshObjectDetailsPanel();
+    const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+    context_.textEditor->replaceTextForCommand(afterText);
+    context_.recordSourceTextSnapshot(translate("Edit Scrap Projection"), beforeText, afterText, targetLineNumber);
+    *context_.toolbarStatusNote = translate("Updated scrap projection.");
+    context_.refreshToolbarSummary();
+    context_.refreshObjectDetailsPanel();
 }
 
 void MapEditorObjectDetailsEditController::updateObjectQuickSubtypeChoices()
 {
-    if (owner_->objectQuickSubtypeCombo_ == nullptr || owner_->objectQuickTypeCombo_ == nullptr) {
+    if (context_.quickSubtypeCombo == nullptr || context_.quickTypeCombo == nullptr) {
         return;
     }
 
-    const QString currentSubtype = owner_->objectQuickSubtypeCombo_->currentText();
-    setEditableComboValues(owner_->objectQuickSubtypeCombo_,
-                           inspectorSubtypeValuesForCommandType(owner_->objectQuickCommandKind_, owner_->objectQuickTypeCombo_->currentText()),
+    const QString currentSubtype = context_.quickSubtypeCombo->currentText();
+    setEditableComboValues(context_.quickSubtypeCombo,
+                           inspectorSubtypeValuesForCommandType(*context_.objectQuickCommandKind, context_.quickTypeCombo->currentText()),
                            currentSubtype);
 }
 
 void MapEditorObjectDetailsEditController::insertVertexFromSelectionPanel()
 {
-    owner_->insertLineVertexFromSelection();
-    owner_->refreshObjectDetailsPanel();
+    context_.insertLineVertexFromSelection();
+    context_.refreshObjectDetailsPanel();
 }
 
 void MapEditorObjectDetailsEditController::deleteVertexFromSelectionPanel()
 {
-    owner_->removeLineVertexFromSelection();
-    owner_->refreshObjectDetailsPanel();
+    context_.removeLineVertexFromSelection();
+    context_.refreshObjectDetailsPanel();
 }
 
 void MapEditorObjectDetailsEditController::toggleVertexSmoothFromSelectionPanel()
 {
-    owner_->toggleLineVertexSmoothFromSelection();
-    owner_->refreshObjectDetailsPanel();
+    context_.toggleLineVertexSmoothFromSelection();
+    context_.refreshObjectDetailsPanel();
 }
 }

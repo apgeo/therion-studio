@@ -12,6 +12,8 @@
 #include <QStandardItemModel>
 #include <QTreeView>
 
+#include <utility>
+
 namespace TherionStudio
 {
 namespace
@@ -23,22 +25,27 @@ constexpr int kInspectorBackgroundColumnCount = 3;
 constexpr int kInspectorBackgroundLayerIndexRole = Qt::UserRole + 730;
 }
 
-MapEditorInspectorBackgroundController::MapEditorInspectorBackgroundController(MapEditorTab *owner)
-    : owner_(owner)
+MapEditorInspectorBackgroundController::MapEditorInspectorBackgroundController(MapEditorInspectorBackgroundContext context)
+    : context_(std::move(context))
 {
+}
+
+QString MapEditorInspectorBackgroundController::translate(const char *text) const
+{
+    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
 }
 
 void MapEditorInspectorBackgroundController::configureInspectorBackgroundLayerTreeColumns()
 {
-    if (owner_->mapBackgroundLayersTree_ == nullptr) {
+    if (context_.backgroundLayersTree == nullptr) {
         return;
     }
 
-    if (owner_->mapBackgroundLayersModel_ != nullptr && owner_->mapBackgroundLayersModel_->columnCount() < kInspectorBackgroundColumnCount) {
-        owner_->mapBackgroundLayersModel_->setColumnCount(kInspectorBackgroundColumnCount);
+    if (context_.backgroundLayersModel != nullptr && context_.backgroundLayersModel->columnCount() < kInspectorBackgroundColumnCount) {
+        context_.backgroundLayersModel->setColumnCount(kInspectorBackgroundColumnCount);
     }
-    owner_->mapBackgroundLayersTree_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    if (QHeaderView *header = owner_->mapBackgroundLayersTree_->header(); header != nullptr) {
+    context_.backgroundLayersTree->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    if (QHeaderView *header = context_.backgroundLayersTree->header(); header != nullptr) {
         header->setStretchLastSection(false);
         header->setSectionsMovable(false);
         header->setMinimumSectionSize(22);
@@ -52,7 +59,7 @@ void MapEditorInspectorBackgroundController::configureInspectorBackgroundLayerTr
 
 void MapEditorInspectorBackgroundController::handleInspectorBackgroundLayerSelectionChanged(const QModelIndex &current)
 {
-    if (owner_->updatingMapInspectorBackgroundUi_ || !current.isValid()) {
+    if (context_.updatingUi == nullptr || *context_.updatingUi || !current.isValid()) {
         return;
     }
     if (current.column() == kInspectorBackgroundVisibilityColumn
@@ -62,12 +69,14 @@ void MapEditorInspectorBackgroundController::handleInspectorBackgroundLayerSelec
 
     const QModelIndex layerIndex = current.sibling(current.row(), kInspectorBackgroundNameColumn);
     const int backgroundLayerIndex = layerIndex.data(kInspectorBackgroundLayerIndexRole).toInt();
-    owner_->setSelectedBackgroundLayerIndex(backgroundLayerIndex);
+    if (context_.setSelectedLayerIndex) {
+        context_.setSelectedLayerIndex(backgroundLayerIndex);
+    }
 }
 
 void MapEditorInspectorBackgroundController::handleInspectorBackgroundLayerClicked(const QModelIndex &index)
 {
-    if (!index.isValid() || owner_->mapBackgroundLayersModel_ == nullptr) {
+    if (!index.isValid() || context_.backgroundLayersModel == nullptr) {
         return;
     }
     if (index.column() != kInspectorBackgroundVisibilityColumn && index.column() != kInspectorBackgroundDeleteColumn) {
@@ -76,33 +85,40 @@ void MapEditorInspectorBackgroundController::handleInspectorBackgroundLayerClick
 
     const QModelIndex layerIndex = index.sibling(index.row(), kInspectorBackgroundNameColumn);
     const int backgroundLayerIndex = layerIndex.data(kInspectorBackgroundLayerIndexRole).toInt();
-    if (backgroundLayerIndex < 0 || backgroundLayerIndex >= owner_->backgroundLayerCount()) {
+    const int layerCount = context_.layerCount ? context_.layerCount() : 0;
+    if (backgroundLayerIndex < 0 || backgroundLayerIndex >= layerCount) {
         return;
     }
 
-    owner_->setSelectedBackgroundLayerIndex(backgroundLayerIndex);
+    if (context_.setSelectedLayerIndex) {
+        context_.setSelectedLayerIndex(backgroundLayerIndex);
+    }
     if (index.column() == kInspectorBackgroundDeleteColumn) {
-        owner_->removeSelectedBackgroundLayer();
+        if (context_.removeSelectedLayer) {
+            context_.removeSelectedLayer();
+        }
         return;
     }
-    owner_->toggleSelectedBackgroundLayerVisibility();
+    if (context_.toggleSelectedLayerVisibility) {
+        context_.toggleSelectedLayerVisibility();
+    }
 }
 
 void MapEditorInspectorBackgroundController::refreshInspectorBackgroundPanel()
 {
-    if (owner_->mapBackgroundLayersModel_ == nullptr) {
+    if (context_.backgroundLayersModel == nullptr || context_.updatingUi == nullptr) {
         return;
     }
 
-    const QScopedValueRollback<bool> guard(owner_->updatingMapInspectorBackgroundUi_, true);
-    owner_->mapBackgroundLayersModel_->clear();
-    owner_->mapBackgroundLayersModel_->setColumnCount(kInspectorBackgroundColumnCount);
-    owner_->mapBackgroundLayersModel_->setHorizontalHeaderLabels({owner_->tr("Layers"), QString(), QString()});
+    const QScopedValueRollback<bool> guard(*context_.updatingUi, true);
+    context_.backgroundLayersModel->clear();
+    context_.backgroundLayersModel->setColumnCount(kInspectorBackgroundColumnCount);
+    context_.backgroundLayersModel->setHorizontalHeaderLabels({translate("Layers"), QString(), QString()});
     configureInspectorBackgroundLayerTreeColumns();
 
-    const int layerCount = owner_->backgroundLayerCount();
+    const int layerCount = context_.layerCount ? context_.layerCount() : 0;
     for (int index = 0; index < layerCount; ++index) {
-        auto *layerItem = new QStandardItem(owner_->backgroundLayerLabel(index));
+        auto *layerItem = new QStandardItem(context_.layerLabel ? context_.layerLabel(index) : QString());
         layerItem->setEditable(false);
         layerItem->setData(index, kInspectorBackgroundLayerIndexRole);
 
@@ -110,56 +126,56 @@ void MapEditorInspectorBackgroundController::refreshInspectorBackgroundPanel()
         visibilityItem->setEditable(false);
         visibilityItem->setTextAlignment(Qt::AlignCenter);
         visibilityItem->setData(index, kInspectorBackgroundLayerIndexRole);
-        const bool visible = owner_->isBackgroundLayerVisible(index);
+        const bool visible = context_.layerVisible ? context_.layerVisible(index) : false;
         visibilityItem->setIcon(inspectorActionIcon(visible ? QStringLiteral("eye") : QStringLiteral("eye-off")));
-        visibilityItem->setToolTip(visible ? owner_->tr("Hide background layer") : owner_->tr("Show background layer"));
+        visibilityItem->setToolTip(visible ? translate("Hide background layer") : translate("Show background layer"));
 
         auto *deleteItem = new QStandardItem;
         deleteItem->setEditable(false);
         deleteItem->setTextAlignment(Qt::AlignCenter);
         deleteItem->setData(index, kInspectorBackgroundLayerIndexRole);
         deleteItem->setIcon(inspectorActionIcon(QStringLiteral("trash-2")));
-        deleteItem->setToolTip(owner_->tr("Remove background layer"));
+        deleteItem->setToolTip(translate("Remove background layer"));
 
-        owner_->mapBackgroundLayersModel_->appendRow({layerItem, visibilityItem, deleteItem});
+        context_.backgroundLayersModel->appendRow({layerItem, visibilityItem, deleteItem});
     }
-    if (owner_->mapBackgroundLayersTree_ != nullptr && owner_->mapBackgroundLayersTree_->selectionModel() != nullptr) {
-        const int selectedLayer = owner_->selectedBackgroundLayerIndex();
+    if (context_.backgroundLayersTree != nullptr && context_.backgroundLayersTree->selectionModel() != nullptr) {
+        const int selectedLayer = context_.selectedLayerIndex ? context_.selectedLayerIndex() : -1;
         const QModelIndex selectedIndex = selectedLayer >= 0
-            ? owner_->mapBackgroundLayersModel_->index(selectedLayer, kInspectorBackgroundNameColumn)
+            ? context_.backgroundLayersModel->index(selectedLayer, kInspectorBackgroundNameColumn)
             : QModelIndex();
-        owner_->mapBackgroundLayersTree_->setCurrentIndex(selectedIndex);
+        context_.backgroundLayersTree->setCurrentIndex(selectedIndex);
         if (selectedIndex.isValid()) {
-            owner_->mapBackgroundLayersTree_->selectionModel()->select(selectedIndex,
+            context_.backgroundLayersTree->selectionModel()->select(selectedIndex,
                                                                QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
         } else {
-            owner_->mapBackgroundLayersTree_->selectionModel()->clearSelection();
+            context_.backgroundLayersTree->selectionModel()->clearSelection();
         }
     }
 
-    const int selectedIndex = owner_->selectedBackgroundLayerIndex();
+    const int selectedIndex = context_.selectedLayerIndex ? context_.selectedLayerIndex() : -1;
     const bool hasLayer = selectedIndex >= 0 && selectedIndex < layerCount;
-    owner_->mapBackgroundMoveUpButton_->setEnabled(hasLayer && selectedIndex > 0);
-    owner_->mapBackgroundMoveDownButton_->setEnabled(hasLayer && selectedIndex >= 0 && selectedIndex < layerCount - 1);
-    owner_->mapBackgroundPosXSpin_->setEnabled(hasLayer);
-    owner_->mapBackgroundPosYSpin_->setEnabled(hasLayer);
-    owner_->mapBackgroundOpacitySlider_->setEnabled(hasLayer);
-    owner_->mapBackgroundGammaSlider_->setEnabled(hasLayer);
-    owner_->mapBackgroundOpacityResetButton_->setEnabled(hasLayer);
-    owner_->mapBackgroundGammaResetButton_->setEnabled(hasLayer);
+    context_.moveUpButton->setEnabled(hasLayer && selectedIndex > 0);
+    context_.moveDownButton->setEnabled(hasLayer && selectedIndex >= 0 && selectedIndex < layerCount - 1);
+    context_.positionXSpin->setEnabled(hasLayer);
+    context_.positionYSpin->setEnabled(hasLayer);
+    context_.opacitySlider->setEnabled(hasLayer);
+    context_.gammaSlider->setEnabled(hasLayer);
+    context_.opacityResetButton->setEnabled(hasLayer);
+    context_.gammaResetButton->setEnabled(hasLayer);
 
     if (!hasLayer) {
-        owner_->mapBackgroundPosXSpin_->setValue(0.0);
-        owner_->mapBackgroundPosYSpin_->setValue(0.0);
-        owner_->mapBackgroundOpacitySlider_->setValue(58);
-        owner_->mapBackgroundGammaSlider_->setValue(100);
+        context_.positionXSpin->setValue(0.0);
+        context_.positionYSpin->setValue(0.0);
+        context_.opacitySlider->setValue(58);
+        context_.gammaSlider->setValue(100);
         return;
     }
 
-    const QPointF position = owner_->backgroundLayerPosition(selectedIndex);
-    owner_->mapBackgroundPosXSpin_->setValue(position.x());
-    owner_->mapBackgroundPosYSpin_->setValue(position.y());
-    owner_->mapBackgroundOpacitySlider_->setValue(qBound(5, qRound(owner_->backgroundLayerOpacity(selectedIndex) * 100.0), 100));
-    owner_->mapBackgroundGammaSlider_->setValue(qBound(20, qRound(owner_->backgroundLayerGamma(selectedIndex) * 100.0), 250));
+    const QPointF position = context_.layerPosition ? context_.layerPosition(selectedIndex) : QPointF();
+    context_.positionXSpin->setValue(position.x());
+    context_.positionYSpin->setValue(position.y());
+    context_.opacitySlider->setValue(qBound(5, qRound((context_.layerOpacity ? context_.layerOpacity(selectedIndex) : 0.58) * 100.0), 100));
+    context_.gammaSlider->setValue(qBound(20, qRound((context_.layerGamma ? context_.layerGamma(selectedIndex) : 1.0) * 100.0), 250));
 }
 }

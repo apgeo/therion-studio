@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MapEditorTab.h"
+#include "MapEditorInspectorObjectContext.h"
 
 #include <QModelIndex>
 #include <QSet>
@@ -10,8 +10,7 @@ namespace TherionStudio
 class MapEditorInspectorObjectController final
 {
 public:
-    explicit MapEditorInspectorObjectController(MapEditorTab *owner);
-    explicit MapEditorInspectorObjectController(const MapEditorTab *owner);
+    explicit MapEditorInspectorObjectController(MapEditorInspectorObjectContext context);
 
     void rebuildInspectorObjectsTree();
     void configureInspectorObjectTreeColumns();
@@ -25,6 +24,8 @@ public:
     void applyInspectorObjectVisibility();
 
 private:
-    MapEditorTab *owner_ = nullptr;
+    QString translate(const char *text) const;
+
+    MapEditorInspectorObjectContext context_;
 };
 }

@@ -1,0 +1,188 @@
+#include "MapEditorTab.h"
+
+#include "MapEditorCanvasEditContext.h"
+#include "MapEditorCanvasEditController.h"
+#include "../TextEditorTab.h"
+
+namespace TherionStudio
+{
+MapEditorCanvasEditContext MapEditorTab::canvasEditContext()
+{
+    return MapEditorCanvasEditContext{
+        .callbackContext = this,
+        .textEditor = textEditor_,
+        .scene = mapScene_,
+        .undoStack = undoStack_,
+        .itemsByLine = &mapItemsByLine_,
+        .draftGeometryItems = &draftGeometryItems_,
+        .toolbarStatusNote = &toolbarStatusNote_,
+        .commandApplyInProgress = &mapCommandApplyInProgress_,
+        .updatingSelection = &updatingSelection_,
+        .pendingClickSelection = &pendingMapClickSelection_,
+        .pendingClickLineNumber = &pendingMapClickLineNumber_,
+        .pendingClickSourceVertexIndex = &pendingMapClickSourceVertexIndex_,
+        .pendingClickGeometryKind = &pendingMapClickGeometryKind_,
+        .selectedObjectLineNumber = &selectedObjectLineNumber_,
+        .selectedObjectVertexIndex = &selectedObjectVertexIndex_,
+        .selectedObjectKind = &selectedObjectKind_,
+        .selectedObjectCoordinate = &selectedObjectCoordinate_,
+        .nextDraftGeometryId = &nextDraftGeometryId_,
+        .translate = [this](const char *text) {
+            return tr(text);
+        },
+        .refreshToolbarSummary = [this]() {
+            refreshToolbarSummary();
+        },
+        .flushPendingSceneRefreshAfterCommand = [this]() {
+            flushPendingMapSceneRefreshAfterCommand();
+        },
+        .sourcePointFromScenePosition = [this](const QPointF &scenePosition) {
+            return sourcePointFromScenePosition(scenePosition);
+        },
+        .updateGeometrySelectionPresentation = [this]() {
+            updateGeometrySelectionPresentation();
+        },
+        .updateCommandSurfaceState = [this]() {
+            updateCommandSurfaceState();
+        },
+        .updateHelpPanel = [this]() {
+            updateHelpPanel();
+        },
+        .refreshObjectDetailsPanel = [this]() {
+            refreshObjectDetailsPanel();
+        },
+        .mapPreviewBounds = [this]() {
+            return mapPreviewBounds();
+        },
+        .mapSourceBoundsForCurrentDocument = [this]() {
+            return mapSourceBoundsForCurrentDocument();
+        },
+        .restorePointSelectionLater = [this](int lineNumber) {
+            restorePointSelection(lineNumber);
+        },
+        .restoreLineAnchorSelectionLater = [this](int lineNumber, int sourceVertexIndex) {
+            restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
+        },
+        .recordDraftMove = [this](QGraphicsRectItem *item, const QPointF &oldPosition, const QPointF &newPosition) {
+            recordDraftMove(item, oldPosition, newPosition);
+        },
+        .recordDraftVisibility = [this](QGraphicsRectItem *item, bool oldVisible, bool newVisible) {
+            recordDraftVisibility(item, oldVisible, newVisible);
+        },
+    };
+}
+
+void MapEditorTab::recordCardMove(int lineNumber, const QPointF &oldPosition, const QPointF &newPosition)
+{
+    MapEditorCanvasEditController(canvasEditContext()).recordCardMove(lineNumber, oldPosition, newPosition);
+}
+
+void MapEditorTab::recordCardVisibility(int lineNumber, bool oldVisible, bool newVisible)
+{
+    MapEditorCanvasEditController(canvasEditContext()).recordCardVisibility(lineNumber, oldVisible, newVisible);
+}
+
+void MapEditorTab::recordPointGeometryMove(int lineNumber, const QPointF &oldPoint, const QPointF &newPoint)
+{
+    MapEditorCanvasEditController(canvasEditContext()).recordPointGeometryMove(lineNumber, oldPoint, newPoint);
+}
+
+void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
+                                            const QString &kind,
+                                            int vertexIndex,
+                                            const QPointF &oldPoint,
+                                            const QPointF &newPoint)
+{
+    MapEditorCanvasEditController(canvasEditContext()).recordLineAreaVertexMove(lineNumber, kind, vertexIndex, oldPoint, newPoint);
+}
+
+void MapEditorTab::recordPointOrientationHandleChange(int lineNumber, qreal orientationDegrees)
+{
+    MapEditorCanvasEditController(canvasEditContext()).recordPointOrientationHandleChange(lineNumber, orientationDegrees);
+}
+
+void MapEditorTab::recordLinePointLeftHandleChange(int lineNumber,
+                                                   int sourceVertexIndex,
+                                                   qreal orientationDegrees,
+                                                   qreal leftSize)
+{
+    MapEditorCanvasEditController(canvasEditContext()).recordLinePointLeftHandleChange(lineNumber,
+                                                                                       sourceVertexIndex,
+                                                                                       orientationDegrees,
+                                                                                       leftSize);
+}
+
+void MapEditorTab::restorePointSelection(int lineNumber)
+{
+    MapEditorCanvasEditController(canvasEditContext()).restorePointSelection(lineNumber);
+}
+
+void MapEditorTab::restoreLineAnchorSelection(int lineNumber, int sourceVertexIndex)
+{
+    MapEditorCanvasEditController(canvasEditContext()).restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
+}
+
+void MapEditorTab::recordSourceTextSnapshot(const QString &label,
+                                            const QString &beforeText,
+                                            const QString &afterText,
+                                            int insertedLineNumber)
+{
+    MapEditorCanvasEditController(canvasEditContext()).recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
+}
+
+bool MapEditorTab::insertLineVertexFromSelection()
+{
+    return MapEditorCanvasEditController(canvasEditContext()).insertLineVertexFromSelection();
+}
+
+bool MapEditorTab::removeLineVertexFromSelection()
+{
+    return MapEditorCanvasEditController(canvasEditContext()).removeLineVertexFromSelection();
+}
+
+bool MapEditorTab::toggleLineVertexSmoothFromSelection()
+{
+    return MapEditorCanvasEditController(canvasEditContext()).toggleLineVertexSmoothFromSelection();
+}
+
+QGraphicsRectItem *MapEditorTab::selectedDraftGeometryItem() const
+{
+    return MapEditorCanvasEditController(const_cast<MapEditorTab *>(this)->canvasEditContext()).selectedDraftGeometryItem();
+}
+
+QGraphicsRectItem *MapEditorTab::createDraftGeometryItem(DraftGeometryKind kind)
+{
+    return MapEditorCanvasEditController(canvasEditContext()).createDraftGeometryItem(kind);
+}
+
+void MapEditorTab::addDraftGeometryItem(QGraphicsRectItem *item, const QPointF &position)
+{
+    MapEditorCanvasEditController(canvasEditContext()).addDraftGeometryItem(item, position);
+}
+
+void MapEditorTab::removeDraftGeometryItem(QGraphicsRectItem *item)
+{
+    MapEditorCanvasEditController(canvasEditContext()).removeDraftGeometryItem(item);
+}
+
+QVector<QPointF> MapEditorTab::sourceVerticesForDraft(const QGraphicsRectItem *item) const
+{
+    return MapEditorCanvasEditController(const_cast<MapEditorTab *>(this)->canvasEditContext()).sourceVerticesForDraft(item);
+}
+
+QPointF MapEditorTab::previewToSourcePoint(const QPointF &previewPoint, const QRectF &sourceBounds, const QRectF &previewBounds) const
+{
+    return MapEditorCanvasEditController(const_cast<MapEditorTab *>(this)->canvasEditContext())
+        .previewToSourcePoint(previewPoint, sourceBounds, previewBounds);
+}
+
+void MapEditorTab::recordDraftMove(QGraphicsRectItem *item, const QPointF &oldPosition, const QPointF &newPosition)
+{
+    MapEditorCanvasEditController(canvasEditContext()).recordDraftMove(item, oldPosition, newPosition);
+}
+
+void MapEditorTab::recordDraftVisibility(QGraphicsRectItem *item, bool oldVisible, bool newVisible)
+{
+    MapEditorCanvasEditController(canvasEditContext()).recordDraftVisibility(item, oldVisible, newVisible);
+}
+}

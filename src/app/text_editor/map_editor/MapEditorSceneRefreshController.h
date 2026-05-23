@@ -1,13 +1,66 @@
 #pragma once
 
+#include <QHash>
+#include <QPointF>
+#include <QRectF>
+#include <QString>
+
+#include <functional>
+
+class QGraphicsItem;
+class QGraphicsScene;
+class QGraphicsView;
+class QObject;
+class QUndoStack;
+
 namespace TherionStudio
 {
-class MapEditorTab;
+struct MapEditorSceneRefreshContext
+{
+    QObject *sceneParent = nullptr;
+    QObject *selectionConnectionContext = nullptr;
+    QGraphicsScene **scene = nullptr;
+    QGraphicsView *view = nullptr;
+    QUndoStack *undoStack = nullptr;
+    QHash<int, QGraphicsItem *> *itemsByLine = nullptr;
+    bool *commandApplyInProgress = nullptr;
+    bool *sceneRefreshPending = nullptr;
+    bool *autoFitEnabled = nullptr;
+    bool *fitBackgroundRequested = nullptr;
+    bool *gridVisible = nullptr;
+    qreal *gridSpacingMeters = nullptr;
+
+    std::function<QString()> documentText;
+    std::function<int()> currentLineNumber;
+    std::function<QString()> filePath;
+    std::function<void()> handleSceneSelectionChanged;
+    std::function<void()> updateCommandSurfaceState;
+    std::function<void()> clearMapScene;
+    std::function<QRectF()> mapSourceBoundsForCurrentDocument;
+    std::function<void(int, const QPointF &, const QPointF &)> recordCardMove;
+    std::function<void(int, bool, bool)> recordCardVisibility;
+    std::function<void(int, const QPointF &, const QPointF &)> recordPointGeometryMove;
+    std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> recordLineAreaVertexMove;
+    std::function<void(int, qreal)> recordPointOrientationHandleChange;
+    std::function<void(int, int, qreal, qreal)> recordLinePointLeftHandleChange;
+    std::function<void()> restoreBackgroundImageItems;
+    std::function<void()> reprojectMetadataBackgroundLayersForCurrentDocument;
+    std::function<void()> restoreDraftGeometryItems;
+    std::function<void(int)> selectMapLine;
+    std::function<void()> applyInspectorObjectVisibility;
+    std::function<void()> updateGeometrySelectionPresentation;
+    std::function<void(bool)> fitMapToView;
+    std::function<void()> syncZoomFactorFromView;
+    std::function<void()> updateInteractiveDrawPreview;
+    std::function<void()> refreshStatus;
+    std::function<void()> refreshObjectDetailsPanel;
+    std::function<void()> updateHelpPanel;
+};
 
 class MapEditorSceneRefreshController final
 {
 public:
-    explicit MapEditorSceneRefreshController(MapEditorTab *owner);
+    explicit MapEditorSceneRefreshController(MapEditorSceneRefreshContext context);
 
     void buildMapScene();
     void refreshMapScene();
@@ -15,6 +68,8 @@ public:
     void flushPendingMapSceneRefreshAfterCommand();
 
 private:
-    MapEditorTab *owner_ = nullptr;
+    QGraphicsScene *scene() const;
+
+    MapEditorSceneRefreshContext context_;
 };
 }

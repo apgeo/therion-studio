@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MapEditorCanvasEditContext.h"
 #include "MapEditorSceneSupport.h"
 
 #include <QPointF>
@@ -11,15 +12,12 @@ class QGraphicsRectItem;
 
 namespace TherionStudio
 {
-class MapEditorTab;
-
 enum class DraftGeometryKind;
 
 class MapEditorCanvasEditController final
 {
 public:
-    explicit MapEditorCanvasEditController(MapEditorTab *owner);
-    explicit MapEditorCanvasEditController(const MapEditorTab *owner);
+    explicit MapEditorCanvasEditController(MapEditorCanvasEditContext context);
 
     void recordCardMove(int lineNumber, const QPointF &oldPosition, const QPointF &newPosition);
     void recordCardVisibility(int lineNumber, bool oldVisible, bool newVisible);
@@ -53,6 +51,9 @@ public:
     QPointF previewToSourcePoint(const QPointF &previewPoint, const QRectF &sourceBounds, const QRectF &previewBounds) const;
 
 private:
-    MapEditorTab *owner_ = nullptr;
+    QString tr(const char *text) const;
+    void resetPendingClickSelection();
+
+    MapEditorCanvasEditContext context_;
 };
 }

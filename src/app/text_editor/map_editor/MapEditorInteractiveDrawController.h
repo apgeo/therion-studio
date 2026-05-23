@@ -1,17 +1,18 @@
 #pragma once
 
-#include "MapEditorTab.h"
+#include "MapEditorInteractiveDrawContext.h"
 
 #include <QPointF>
+#include <QString>
 
 namespace TherionStudio
 {
 class MapEditorInteractiveDrawController final
 {
 public:
-    explicit MapEditorInteractiveDrawController(MapEditorTab *owner);
+    explicit MapEditorInteractiveDrawController(MapEditorInteractiveDrawContext context);
 
-    void setInteractiveDrawMode(MapEditorTab::InteractiveDrawMode mode);
+    void setInteractiveDrawMode(MapEditorInteractiveDrawMode mode);
     bool handleInteractiveDrawClick(const QPointF &scenePosition);
     bool commitInteractiveDrawSession();
     void clearInteractiveDrawSession(bool clearMode);
@@ -19,6 +20,10 @@ public:
     bool cancelInteractiveDrawingToSelectMode();
 
 private:
-    MapEditorTab *owner_ = nullptr;
+    QString tr(const char *text) const;
+    MapEditorInteractiveDrawMode mode() const;
+    void setMode(MapEditorInteractiveDrawMode mode);
+
+    MapEditorInteractiveDrawContext context_;
 };
 }

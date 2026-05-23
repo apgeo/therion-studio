@@ -6,7 +6,6 @@
 #include "MapEditorSceneInternals.h"
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSourceReferenceResolver.h"
-#include "MapEditorTab.h"
 #include "../../../core/TherionDocumentEditor.h"
 
 #include <QGraphicsItem>
@@ -14,11 +13,13 @@
 #include <QGraphicsScene>
 #include <QScopedValueRollback>
 #include <QTimer>
+#include <QObject>
 #include <QUndoCommand>
 #include <QUndoStack>
 
 #include <memory>
 #include <optional>
+#include <utility>
 
 namespace TherionStudio
 {
@@ -86,74 +87,83 @@ MapEditableGeometryVertexItem *findGeometryVertexItem(QGraphicsScene *scene,
 
 }
 
-MapEditorCanvasEditController::MapEditorCanvasEditController(MapEditorTab *owner)
-    : owner_(owner)
+QString MapEditorCanvasEditController::tr(const char *text) const
 {
+    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
 }
 
-MapEditorCanvasEditController::MapEditorCanvasEditController(const MapEditorTab *owner)
-    : owner_(const_cast<MapEditorTab *>(owner))
+void MapEditorCanvasEditController::resetPendingClickSelection()
+{
+    (*context_.pendingClickSelection) = false;
+    (*context_.pendingClickLineNumber) = 0;
+    (*context_.pendingClickSourceVertexIndex) = -1;
+    (*context_.pendingClickGeometryKind).clear();
+}
+
+MapEditorCanvasEditController::MapEditorCanvasEditController(MapEditorCanvasEditContext context)
+    : context_(std::move(context))
 {
 }
 
 void MapEditorCanvasEditController::recordCardMove(int lineNumber, const QPointF &oldPosition, const QPointF &newPosition)
 {
-    if (owner_->undoStack_ == nullptr || oldPosition == newPosition) {
+    if (context_.undoStack == nullptr || oldPosition == newPosition) {
         return;
     }
 
-    auto *card = dynamic_cast<MapCardItem *>(owner_->mapItemsByLine_.value(lineNumber, nullptr));
+    auto *card = dynamic_cast<MapCardItem *>((*context_.itemsByLine).value(lineNumber, nullptr));
     if (card == nullptr) {
         return;
     }
 
-    owner_->undoStack_->push(createMapCardMoveCommand(card, oldPosition, newPosition));
+    context_.undoStack->push(createMapCardMoveCommand(card, oldPosition, newPosition));
 }
 
 void MapEditorCanvasEditController::recordCardVisibility(int lineNumber, bool oldVisible, bool newVisible)
 {
-    if (owner_->undoStack_ == nullptr || oldVisible == newVisible) {
+    if (context_.undoStack == nullptr || oldVisible == newVisible) {
         return;
     }
 
-    auto *card = dynamic_cast<MapCardItem *>(owner_->mapItemsByLine_.value(lineNumber, nullptr));
+    auto *card = dynamic_cast<MapCardItem *>((*context_.itemsByLine).value(lineNumber, nullptr));
     if (card == nullptr) {
         return;
     }
 
-    owner_->undoStack_->push(createMapCardVisibilityCommand(card, oldVisible, newVisible));
+    context_.undoStack->push(createMapCardVisibilityCommand(card, oldVisible, newVisible));
 }
 
 void MapEditorCanvasEditController::recordPointGeometryMove(int lineNumber, const QPointF &oldPoint, const QPointF &newPoint)
 {
-    if (lineNumber <= 0 || !sourcePointsDifferForCommands(oldPoint, newPoint) || owner_->textEditor_ == nullptr) {
+    if (lineNumber <= 0 || !sourcePointsDifferForCommands(oldPoint, newPoint) || context_.textEditor == nullptr) {
         return;
     }
 
-    auto statusCallback = [owner = owner_](const QString &statusMessage) {
-        owner->toolbarStatusNote_ = statusMessage;
-        owner->refreshToolbarSummary();
+    auto statusCallback = [statusNote = context_.toolbarStatusNote,
+                           refreshToolbarSummary = context_.refreshToolbarSummary](const QString &statusMessage) {
+        *statusNote = statusMessage;
+        refreshToolbarSummary();
     };
 
-    if (owner_->undoStack_ != nullptr) {
-        const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-        owner_->undoStack_->push(createMapPointGeometryMoveCommand(owner_->textEditor_,
+    if (context_.undoStack != nullptr) {
+        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+        context_.undoStack->push(createMapPointGeometryMoveCommand(context_.textEditor,
                                                        lineNumber,
                                                        oldPoint,
                                                        newPoint,
                                                        statusCallback));
-        owner_->flushPendingMapSceneRefreshAfterCommand();
+        context_.flushPendingSceneRefreshAfterCommand();
         return;
     }
 
-    const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-    std::unique_ptr<QUndoCommand> directCommand(createMapPointGeometryMoveCommand(owner_->textEditor_,
+    const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+    std::unique_ptr<QUndoCommand> directCommand(createMapPointGeometryMoveCommand(context_.textEditor,
                                                                              lineNumber,
                                                                              oldPoint,
                                                                              newPoint,
                                                                              statusCallback));
     directCommand->redo();
-    owner_->flushPendingMapSceneRefreshAfterCommand();
+    context_.flushPendingSceneRefreshAfterCommand();
 }
 
 void MapEditorCanvasEditController::recordLineAreaVertexMove(int lineNumber,
@@ -162,7 +172,7 @@ void MapEditorCanvasEditController::recordLineAreaVertexMove(int lineNumber,
                                             const QPointF &oldPoint,
                                             const QPointF &newPoint)
 {
-    if (lineNumber <= 0 || vertexIndex < 0 || !sourcePointsDifferForCommands(oldPoint, newPoint) || owner_->textEditor_ == nullptr) {
+    if (lineNumber <= 0 || vertexIndex < 0 || !sourcePointsDifferForCommands(oldPoint, newPoint) || context_.textEditor == nullptr) {
         return;
     }
 
@@ -171,14 +181,14 @@ void MapEditorCanvasEditController::recordLineAreaVertexMove(int lineNumber,
         ? QStringLiteral("line")
         : (normalizedKind.startsWith(QStringLiteral("area")) ? QStringLiteral("area") : normalizedKind);
     if (rewriteKind != QStringLiteral("line") && rewriteKind != QStringLiteral("area")) {
-        owner_->toolbarStatusNote_ = owner_->tr("Geometry move failed: unsupported geometry kind '%1'.").arg(kind);
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = tr("Geometry move failed: unsupported geometry kind '%1'.").arg(kind);
+        context_.refreshToolbarSummary();
         return;
     }
 
     QVector<MapLineAreaVertexSecondaryMove> secondaryMoves;
     if (rewriteKind == QStringLiteral("line")) {
-        const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(owner_->textEditor_->text(), lineNumber);
+        const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
         if (lineFeature.has_value()) {
             secondaryMoves = coupledLineVertexMoveSet(lineFeature.value(), vertexIndex, oldPoint, newPoint).secondaryMoves;
             for (auto it = secondaryMoves.begin(); it != secondaryMoves.end();) {
@@ -191,14 +201,15 @@ void MapEditorCanvasEditController::recordLineAreaVertexMove(int lineNumber,
         }
     }
 
-    auto statusCallback = [owner = owner_](const QString &statusMessage) {
-        owner->toolbarStatusNote_ = statusMessage;
-        owner->refreshToolbarSummary();
+    auto statusCallback = [statusNote = context_.toolbarStatusNote,
+                           refreshToolbarSummary = context_.refreshToolbarSummary](const QString &statusMessage) {
+        *statusNote = statusMessage;
+        refreshToolbarSummary();
     };
 
-    if (owner_->undoStack_ != nullptr) {
-        const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-        owner_->undoStack_->push(createMapLineAreaVertexMoveCommand(owner_->textEditor_,
+    if (context_.undoStack != nullptr) {
+        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+        context_.undoStack->push(createMapLineAreaVertexMoveCommand(context_.textEditor,
                                                            lineNumber,
                                                            rewriteKind,
                                                            vertexIndex,
@@ -206,12 +217,12 @@ void MapEditorCanvasEditController::recordLineAreaVertexMove(int lineNumber,
                                                            newPoint,
                                                            secondaryMoves,
                                                            statusCallback));
-        owner_->flushPendingMapSceneRefreshAfterCommand();
+        context_.flushPendingSceneRefreshAfterCommand();
         return;
     }
 
-    const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-    std::unique_ptr<QUndoCommand> directCommand(createMapLineAreaVertexMoveCommand(owner_->textEditor_,
+    const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+    std::unique_ptr<QUndoCommand> directCommand(createMapLineAreaVertexMoveCommand(context_.textEditor,
                                                                              lineNumber,
                                                                              rewriteKind,
                                                                              vertexIndex,
@@ -220,21 +231,18 @@ void MapEditorCanvasEditController::recordLineAreaVertexMove(int lineNumber,
                                                                              secondaryMoves,
                                                                              statusCallback));
     directCommand->redo();
-    owner_->flushPendingMapSceneRefreshAfterCommand();
+    context_.flushPendingSceneRefreshAfterCommand();
 }
 
 void MapEditorCanvasEditController::recordPointOrientationHandleChange(int lineNumber, qreal orientationDegrees)
 {
-    if (lineNumber <= 0 || owner_->textEditor_ == nullptr) {
+    if (lineNumber <= 0 || context_.textEditor == nullptr) {
         return;
     }
 
-    owner_->pendingMapClickSelection_ = false;
-    owner_->pendingMapClickLineNumber_ = 0;
-    owner_->pendingMapClickSourceVertexIndex_ = -1;
-    owner_->pendingMapClickGeometryKind_.clear();
+    resetPendingClickSelection();
 
-    const QString beforeText = owner_->textEditor_->text();
+    const QString beforeText = context_.textEditor->text();
     QString afterText = beforeText;
     QString errorMessage;
     if (!TherionDocumentEditor::rewritePointOrientation(&afterText,
@@ -242,10 +250,10 @@ void MapEditorCanvasEditController::recordPointOrientationHandleChange(int lineN
                                                         true,
                                                         orientationDegrees,
                                                         &errorMessage)) {
-        owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-            ? owner_->tr("Point orientation update failed.")
-            : owner_->tr("Point orientation update failed: %1").arg(errorMessage);
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+            ? tr("Point orientation update failed.")
+            : tr("Point orientation update failed: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
         return;
     }
 
@@ -253,15 +261,15 @@ void MapEditorCanvasEditController::recordPointOrientationHandleChange(int lineN
         return;
     }
 
-    owner_->textEditor_->replaceTextForCommand(afterText);
-    recordSourceTextSnapshot(owner_->tr("Edit Point Orientation"), beforeText, afterText, lineNumber);
+    context_.textEditor->replaceTextForCommand(afterText);
+    recordSourceTextSnapshot(tr("Edit Point Orientation"), beforeText, afterText, lineNumber);
     restorePointSelection(lineNumber);
-    QTimer::singleShot(0, owner_, [owner = owner_, lineNumber]() {
-        owner->restorePointSelection(lineNumber);
+    QTimer::singleShot(0, context_.callbackContext, [restorePointSelectionLater = context_.restorePointSelectionLater, lineNumber]() {
+        restorePointSelectionLater(lineNumber);
     });
-    owner_->toolbarStatusNote_ = owner_->tr("Updated point orientation to %1 degrees.")
+    (*context_.toolbarStatusNote) = tr("Updated point orientation to %1 degrees.")
         .arg(QString::number(normalizeOrientationDegreesForMapDetails(orientationDegrees), 'f', 1));
-    owner_->refreshToolbarSummary();
+    context_.refreshToolbarSummary();
 }
 
 void MapEditorCanvasEditController::recordLinePointLeftHandleChange(int lineNumber,
@@ -269,16 +277,13 @@ void MapEditorCanvasEditController::recordLinePointLeftHandleChange(int lineNumb
                                                    qreal orientationDegrees,
                                                    qreal leftSize)
 {
-    if (lineNumber <= 0 || sourceVertexIndex < 0 || owner_->textEditor_ == nullptr) {
+    if (lineNumber <= 0 || sourceVertexIndex < 0 || context_.textEditor == nullptr) {
         return;
     }
 
-    owner_->pendingMapClickSelection_ = false;
-    owner_->pendingMapClickLineNumber_ = 0;
-    owner_->pendingMapClickSourceVertexIndex_ = -1;
-    owner_->pendingMapClickGeometryKind_.clear();
+    resetPendingClickSelection();
 
-    const QString beforeText = owner_->textEditor_->text();
+    const QString beforeText = context_.textEditor->text();
     QString afterText = beforeText;
     QString errorMessage;
     if (!TherionDocumentEditor::rewriteLinePointOrientation(&afterText,
@@ -287,10 +292,10 @@ void MapEditorCanvasEditController::recordLinePointLeftHandleChange(int lineNumb
                                                             true,
                                                             orientationDegrees,
                                                             &errorMessage)) {
-        owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-            ? owner_->tr("Line point orientation update failed.")
-            : owner_->tr("Line point orientation update failed: %1").arg(errorMessage);
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+            ? tr("Line point orientation update failed.")
+            : tr("Line point orientation update failed: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
         return;
     }
 
@@ -300,10 +305,10 @@ void MapEditorCanvasEditController::recordLinePointLeftHandleChange(int lineNumb
                                                          true,
                                                          leftSize,
                                                          &errorMessage)) {
-        owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-            ? owner_->tr("Line point l-size update failed.")
-            : owner_->tr("Line point l-size update failed: %1").arg(errorMessage);
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+            ? tr("Line point l-size update failed.")
+            : tr("Line point l-size update failed: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
         return;
     }
 
@@ -311,26 +316,30 @@ void MapEditorCanvasEditController::recordLinePointLeftHandleChange(int lineNumb
         return;
     }
 
-    owner_->textEditor_->replaceTextForCommand(afterText);
-    recordSourceTextSnapshot(owner_->tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
+    context_.textEditor->replaceTextForCommand(afterText);
+    recordSourceTextSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
     restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
-    QTimer::singleShot(0, owner_, [owner = owner_, lineNumber, sourceVertexIndex]() {
-        owner->restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
+    QTimer::singleShot(0,
+                       context_.callbackContext,
+                       [restoreLineAnchorSelectionLater = context_.restoreLineAnchorSelectionLater,
+                        lineNumber,
+                        sourceVertexIndex]() {
+        restoreLineAnchorSelectionLater(lineNumber, sourceVertexIndex);
     });
-    owner_->toolbarStatusNote_ = owner_->tr("Updated line point orientation %1 deg and l-size %2.")
+    (*context_.toolbarStatusNote) = tr("Updated line point orientation %1 deg and l-size %2.")
         .arg(QString::number(orientationDegrees, 'f', 1),
              QString::number(leftSize, 'f', 1));
-    owner_->refreshToolbarSummary();
+    context_.refreshToolbarSummary();
 }
 
 void MapEditorCanvasEditController::restorePointSelection(int lineNumber)
 {
-    if (owner_->mapScene_ == nullptr || lineNumber <= 0) {
+    if (context_.scene == nullptr || lineNumber <= 0) {
         return;
     }
 
-    auto selectedItemIt = owner_->mapItemsByLine_.find(lineNumber);
-    if (selectedItemIt == owner_->mapItemsByLine_.end()) {
+    auto selectedItemIt = (*context_.itemsByLine).find(lineNumber);
+    if (selectedItemIt == (*context_.itemsByLine).end()) {
         return;
     }
 
@@ -340,29 +349,29 @@ void MapEditorCanvasEditController::restorePointSelection(int lineNumber)
     }
 
     {
-        const QScopedValueRollback<bool> selectionGuard(owner_->updatingSelection_, true);
-        owner_->mapScene_->clearSelection();
+        const QScopedValueRollback<bool> selectionGuard((*context_.updatingSelection), true);
+        context_.scene->clearSelection();
         pointItem->setVisible(true);
         pointItem->setSelected(true);
     }
 
-    owner_->selectedObjectLineNumber_ = lineNumber;
-    owner_->selectedObjectVertexIndex_ = -1;
-    owner_->selectedObjectKind_ = QStringLiteral("point");
-    owner_->selectedObjectCoordinate_ = pointItem->sourcePoint();
-    owner_->updateGeometrySelectionPresentation();
-    owner_->updateCommandSurfaceState();
-    owner_->updateHelpPanel();
-    owner_->refreshObjectDetailsPanel();
+    (*context_.selectedObjectLineNumber) = lineNumber;
+    (*context_.selectedObjectVertexIndex) = -1;
+    (*context_.selectedObjectKind) = QStringLiteral("point");
+    (*context_.selectedObjectCoordinate) = pointItem->sourcePoint();
+    context_.updateGeometrySelectionPresentation();
+    context_.updateCommandSurfaceState();
+    context_.updateHelpPanel();
+    context_.refreshObjectDetailsPanel();
 }
 
 void MapEditorCanvasEditController::restoreLineAnchorSelection(int lineNumber, int sourceVertexIndex)
 {
-    if (owner_->mapScene_ == nullptr || lineNumber <= 0 || sourceVertexIndex < 0) {
+    if (context_.scene == nullptr || lineNumber <= 0 || sourceVertexIndex < 0) {
         return;
     }
 
-    MapEditableGeometryVertexItem *ownerAnchor = findGeometryVertexItem(owner_->mapScene_,
+    MapEditableGeometryVertexItem *ownerAnchor = findGeometryVertexItem(context_.scene,
                                                                         lineNumber,
                                                                         sourceVertexIndex,
                                                                         QStringLiteral("line"));
@@ -371,20 +380,20 @@ void MapEditorCanvasEditController::restoreLineAnchorSelection(int lineNumber, i
     }
 
     {
-        const QScopedValueRollback<bool> selectionGuard(owner_->updatingSelection_, true);
-        owner_->mapScene_->clearSelection();
+        const QScopedValueRollback<bool> selectionGuard((*context_.updatingSelection), true);
+        context_.scene->clearSelection();
         ownerAnchor->setVisible(true);
         ownerAnchor->setSelected(true);
     }
 
-    owner_->selectedObjectLineNumber_ = lineNumber;
-    owner_->selectedObjectVertexIndex_ = sourceVertexIndex;
-    owner_->selectedObjectKind_ = QStringLiteral("line");
-    owner_->selectedObjectCoordinate_ = owner_->sourcePointFromScenePosition(ownerAnchor->pos());
-    owner_->updateGeometrySelectionPresentation();
-    owner_->updateCommandSurfaceState();
-    owner_->updateHelpPanel();
-    owner_->refreshObjectDetailsPanel();
+    (*context_.selectedObjectLineNumber) = lineNumber;
+    (*context_.selectedObjectVertexIndex) = sourceVertexIndex;
+    (*context_.selectedObjectKind) = QStringLiteral("line");
+    (*context_.selectedObjectCoordinate) = context_.sourcePointFromScenePosition(ownerAnchor->pos());
+    context_.updateGeometrySelectionPresentation();
+    context_.updateCommandSurfaceState();
+    context_.updateHelpPanel();
+    context_.refreshObjectDetailsPanel();
 }
 
 void MapEditorCanvasEditController::recordSourceTextSnapshot(const QString &label,
@@ -392,34 +401,35 @@ void MapEditorCanvasEditController::recordSourceTextSnapshot(const QString &labe
                                             const QString &afterText,
                                             int insertedLineNumber)
 {
-    if (owner_->textEditor_ == nullptr || beforeText == afterText) {
+    if (context_.textEditor == nullptr || beforeText == afterText) {
         return;
     }
 
-    auto statusCallback = [owner = owner_](const QString &statusMessage) {
-        owner->toolbarStatusNote_ = statusMessage;
-        owner->refreshToolbarSummary();
+    auto statusCallback = [statusNote = context_.toolbarStatusNote,
+                           refreshToolbarSummary = context_.refreshToolbarSummary](const QString &statusMessage) {
+        *statusNote = statusMessage;
+        refreshToolbarSummary();
     };
 
-    if (owner_->undoStack_ != nullptr) {
-        const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-        owner_->undoStack_->push(createMapSourceTextSnapshotCommand(owner_->textEditor_,
+    if (context_.undoStack != nullptr) {
+        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+        context_.undoStack->push(createMapSourceTextSnapshotCommand(context_.textEditor,
                                                         label,
                                                         beforeText,
                                                         afterText,
                                                         insertedLineNumber,
                                                         statusCallback));
-        owner_->flushPendingMapSceneRefreshAfterCommand();
+        context_.flushPendingSceneRefreshAfterCommand();
     }
 }
 
 bool MapEditorCanvasEditController::insertLineVertexFromSelection()
 {
-    if (owner_->mapScene_ == nullptr || owner_->textEditor_ == nullptr) {
+    if (context_.scene == nullptr || context_.textEditor == nullptr) {
         return false;
     }
 
-    const QList<QGraphicsItem *> selectedItems = owner_->mapScene_->selectedItems();
+    const QList<QGraphicsItem *> selectedItems = context_.scene->selectedItems();
     if (selectedItems.size() != 1) {
         return false;
     }
@@ -430,17 +440,17 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection()
     }
 
     const int lineNumber = vertexItem->lineNumber();
-    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(owner_->textEditor_->text(), lineNumber);
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
     if (!lineFeature.has_value()) {
-        owner_->toolbarStatusNote_ = owner_->tr("Insert vertex failed: line geometry could not be resolved.");
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = tr("Insert vertex failed: line geometry could not be resolved.");
+        context_.refreshToolbarSummary();
         return true;
     }
 
     const int anchorIndex = lineVertexIndexForSourceVertex(lineFeature.value(), vertexItem->vertexIndex());
     if (anchorIndex < 0) {
-        owner_->toolbarStatusNote_ = owner_->tr("Insert vertex failed: selected line anchor could not be resolved.");
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = tr("Insert vertex failed: selected line anchor could not be resolved.");
+        context_.refreshToolbarSummary();
         return true;
     }
 
@@ -451,43 +461,43 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection()
         segmentStartIndex = anchorIndex - 1;
     }
     if (segmentStartIndex < 0) {
-        owner_->toolbarStatusNote_ = owner_->tr("Insert vertex failed: line needs at least one editable segment.");
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = tr("Insert vertex failed: line needs at least one editable segment.");
+        context_.refreshToolbarSummary();
         return true;
     }
 
     QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
     int insertedIndex = -1;
     if (!insertLineVertexByDeCasteljau(&editedVertices, segmentStartIndex, 0.5, &insertedIndex)) {
-        owner_->toolbarStatusNote_ = owner_->tr("Insert vertex failed: segment split could not be computed.");
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = tr("Insert vertex failed: segment split could not be computed.");
+        context_.refreshToolbarSummary();
         return true;
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices);
     QString errorMessage;
-    if (!owner_->textEditor_->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
-        owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-            ? owner_->tr("Insert vertex failed.")
-            : owner_->tr("Insert vertex failed: %1").arg(errorMessage);
-        owner_->refreshToolbarSummary();
+    if (!context_.textEditor->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+        (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+            ? tr("Insert vertex failed.")
+            : tr("Insert vertex failed: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
         return true;
     }
 
-    owner_->toolbarStatusNote_ = insertedIndex >= 0
-        ? owner_->tr("Inserted line vertex %1 on source line %2.").arg(insertedIndex + 1).arg(lineNumber)
-        : owner_->tr("Inserted line vertex on source line %1.").arg(lineNumber);
-    owner_->refreshToolbarSummary();
+    (*context_.toolbarStatusNote) = insertedIndex >= 0
+        ? tr("Inserted line vertex %1 on source line %2.").arg(insertedIndex + 1).arg(lineNumber)
+        : tr("Inserted line vertex on source line %1.").arg(lineNumber);
+    context_.refreshToolbarSummary();
     return true;
 }
 
 bool MapEditorCanvasEditController::removeLineVertexFromSelection()
 {
-    if (owner_->mapScene_ == nullptr || owner_->textEditor_ == nullptr) {
+    if (context_.scene == nullptr || context_.textEditor == nullptr) {
         return false;
     }
 
-    const QList<QGraphicsItem *> selectedItems = owner_->mapScene_->selectedItems();
+    const QList<QGraphicsItem *> selectedItems = context_.scene->selectedItems();
     if (selectedItems.size() != 1) {
         return false;
     }
@@ -498,49 +508,49 @@ bool MapEditorCanvasEditController::removeLineVertexFromSelection()
     }
 
     const int lineNumber = vertexItem->lineNumber();
-    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(owner_->textEditor_->text(), lineNumber);
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
     if (!lineFeature.has_value()) {
-        owner_->toolbarStatusNote_ = owner_->tr("Delete vertex failed: line geometry could not be resolved.");
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = tr("Delete vertex failed: line geometry could not be resolved.");
+        context_.refreshToolbarSummary();
         return true;
     }
 
     const int anchorIndex = lineVertexIndexForSourceVertex(lineFeature.value(), vertexItem->vertexIndex());
     if (anchorIndex < 0) {
-        owner_->toolbarStatusNote_ = owner_->tr("Delete vertex failed: selected line anchor could not be resolved.");
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = tr("Delete vertex failed: selected line anchor could not be resolved.");
+        context_.refreshToolbarSummary();
         return true;
     }
 
     QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
     if (!removeLineVertexWithReconnect(&editedVertices, anchorIndex)) {
-        owner_->toolbarStatusNote_ = owner_->tr("Delete vertex failed: only middle anchors can be removed while keeping a valid line.");
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = tr("Delete vertex failed: only middle anchors can be removed while keeping a valid line.");
+        context_.refreshToolbarSummary();
         return true;
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices);
     QString errorMessage;
-    if (!owner_->textEditor_->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
-        owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-            ? owner_->tr("Delete vertex failed.")
-            : owner_->tr("Delete vertex failed: %1").arg(errorMessage);
-        owner_->refreshToolbarSummary();
+    if (!context_.textEditor->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+        (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+            ? tr("Delete vertex failed.")
+            : tr("Delete vertex failed: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
         return true;
     }
 
-    owner_->toolbarStatusNote_ = owner_->tr("Removed line vertex %1 on source line %2.").arg(anchorIndex + 1).arg(lineNumber);
-    owner_->refreshToolbarSummary();
+    (*context_.toolbarStatusNote) = tr("Removed line vertex %1 on source line %2.").arg(anchorIndex + 1).arg(lineNumber);
+    context_.refreshToolbarSummary();
     return true;
 }
 
 bool MapEditorCanvasEditController::toggleLineVertexSmoothFromSelection()
 {
-    if (owner_->mapScene_ == nullptr || owner_->textEditor_ == nullptr) {
+    if (context_.scene == nullptr || context_.textEditor == nullptr) {
         return false;
     }
 
-    const QList<QGraphicsItem *> selectedItems = owner_->mapScene_->selectedItems();
+    const QList<QGraphicsItem *> selectedItems = context_.scene->selectedItems();
     if (selectedItems.size() != 1) {
         return false;
     }
@@ -551,17 +561,17 @@ bool MapEditorCanvasEditController::toggleLineVertexSmoothFromSelection()
     }
 
     const int lineNumber = vertexItem->lineNumber();
-    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(owner_->textEditor_->text(), lineNumber);
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
     if (!lineFeature.has_value()) {
-        owner_->toolbarStatusNote_ = owner_->tr("Toggle smooth failed: line geometry could not be resolved.");
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = tr("Toggle smooth failed: line geometry could not be resolved.");
+        context_.refreshToolbarSummary();
         return true;
     }
 
     const int ownerIndex = lineVertexOwnerIndexForSourceVertex(lineFeature.value(), vertexItem->vertexIndex());
     if (ownerIndex < 0 || ownerIndex >= lineFeature->lineVertices.size()) {
-        owner_->toolbarStatusNote_ = owner_->tr("Toggle smooth failed: selected line vertex could not be resolved.");
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = tr("Toggle smooth failed: selected line vertex could not be resolved.");
+        context_.refreshToolbarSummary();
         return true;
     }
 
@@ -580,28 +590,28 @@ bool MapEditorCanvasEditController::toggleLineVertexSmoothFromSelection()
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices);
     QString errorMessage;
-    if (!owner_->textEditor_->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
-        owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-            ? owner_->tr("Toggle smooth failed.")
-            : owner_->tr("Toggle smooth failed: %1").arg(errorMessage);
-        owner_->refreshToolbarSummary();
+    if (!context_.textEditor->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+        (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+            ? tr("Toggle smooth failed.")
+            : tr("Toggle smooth failed: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
         return true;
     }
 
-    owner_->toolbarStatusNote_ = target.isSmooth
-        ? owner_->tr("Line vertex %1 on source line %2 set to smooth.").arg(ownerIndex + 1).arg(lineNumber)
-        : owner_->tr("Line vertex %1 on source line %2 set to corner (smooth off).").arg(ownerIndex + 1).arg(lineNumber);
-    owner_->refreshToolbarSummary();
+    (*context_.toolbarStatusNote) = target.isSmooth
+        ? tr("Line vertex %1 on source line %2 set to smooth.").arg(ownerIndex + 1).arg(lineNumber)
+        : tr("Line vertex %1 on source line %2 set to corner (smooth off).").arg(ownerIndex + 1).arg(lineNumber);
+    context_.refreshToolbarSummary();
     return true;
 }
 
 QGraphicsRectItem *MapEditorCanvasEditController::selectedDraftGeometryItem() const
 {
-    if (owner_->mapScene_ == nullptr) {
+    if (context_.scene == nullptr) {
         return nullptr;
     }
 
-    const QList<QGraphicsItem *> selectedItems = owner_->mapScene_->selectedItems();
+    const QList<QGraphicsItem *> selectedItems = context_.scene->selectedItems();
     for (QGraphicsItem *item : selectedItems) {
         if (auto *draftItem = dynamic_cast<QGraphicsRectItem *>(item)) {
             if (dynamic_cast<MapDraftGeometryItem *>(draftItem) != nullptr) {
@@ -615,7 +625,7 @@ QGraphicsRectItem *MapEditorCanvasEditController::selectedDraftGeometryItem() co
 
 QGraphicsRectItem *MapEditorCanvasEditController::createDraftGeometryItem(DraftGeometryKind kind)
 {
-    return new MapDraftGeometryItem(owner_->nextDraftGeometryId_++, kind);
+    return new MapDraftGeometryItem((*context_.nextDraftGeometryId)++, kind);
 }
 
 void MapEditorCanvasEditController::addDraftGeometryItem(QGraphicsRectItem *item, const QPointF &position)
@@ -626,22 +636,24 @@ void MapEditorCanvasEditController::addDraftGeometryItem(QGraphicsRectItem *item
     }
 
     draftItem->setPos(position);
-    draftItem->setMoveCommittedCallback([owner = owner_, draftItem](int, const QPointF &oldPosition, const QPointF &newPosition) {
-        owner->recordDraftMove(draftItem, oldPosition, newPosition);
+    draftItem->setMoveCommittedCallback([recordDraftMove = context_.recordDraftMove,
+                                         draftItem](int, const QPointF &oldPosition, const QPointF &newPosition) {
+        recordDraftMove(draftItem, oldPosition, newPosition);
     });
-    draftItem->setVisibilityCommittedCallback([owner = owner_, draftItem](int, bool oldVisible, bool newVisible) {
-        owner->recordDraftVisibility(draftItem, oldVisible, newVisible);
+    draftItem->setVisibilityCommittedCallback([recordDraftVisibility = context_.recordDraftVisibility,
+                                               draftItem](int, bool oldVisible, bool newVisible) {
+        recordDraftVisibility(draftItem, oldVisible, newVisible);
     });
-    if (owner_->undoStack_ != nullptr) {
-        owner_->undoStack_->push(createMapDraftAddCommand(owner_->mapScene_, &owner_->draftGeometryItems_, draftItem, position));
+    if (context_.undoStack != nullptr) {
+        context_.undoStack->push(createMapDraftAddCommand(context_.scene, context_.draftGeometryItems, draftItem, position));
     } else {
-        if (owner_->mapScene_ != nullptr) {
-            owner_->mapScene_->addItem(draftItem);
+        if (context_.scene != nullptr) {
+            context_.scene->addItem(draftItem);
         }
-        owner_->draftGeometryItems_.append(draftItem);
+        (*context_.draftGeometryItems).append(draftItem);
     }
 
-    owner_->updateCommandSurfaceState();
+    context_.updateCommandSurfaceState();
 }
 
 void MapEditorCanvasEditController::removeDraftGeometryItem(QGraphicsRectItem *item)
@@ -651,9 +663,9 @@ void MapEditorCanvasEditController::removeDraftGeometryItem(QGraphicsRectItem *i
         return;
     }
 
-    owner_->draftGeometryItems_.removeAll(draftItem);
-    if (owner_->mapScene_ != nullptr) {
-        owner_->mapScene_->removeItem(draftItem);
+    (*context_.draftGeometryItems).removeAll(draftItem);
+    if (context_.scene != nullptr) {
+        context_.scene->removeItem(draftItem);
     }
     delete draftItem;
 }
@@ -689,8 +701,8 @@ QVector<QPointF> MapEditorCanvasEditController::sourceVerticesForDraft(const QGr
         return {};
     }
 
-    const QRectF previewBounds = owner_->mapPreviewBounds();
-    const QRectF sourceBounds = owner_->mapSourceBoundsForCurrentDocument();
+    const QRectF previewBounds = context_.mapPreviewBounds();
+    const QRectF sourceBounds = context_.mapSourceBoundsForCurrentDocument();
     if (!previewBounds.isValid() || !sourceBounds.isValid() || sourceBounds.width() < 0.001 || sourceBounds.height() < 0.001) {
         return previewVertices;
     }
@@ -719,21 +731,21 @@ QPointF MapEditorCanvasEditController::previewToSourcePoint(const QPointF &previ
 void MapEditorCanvasEditController::recordDraftMove(QGraphicsRectItem *item, const QPointF &oldPosition, const QPointF &newPosition)
 {
     auto *draftItem = dynamic_cast<MapDraftGeometryItem *>(item);
-    if (draftItem == nullptr || owner_->undoStack_ == nullptr || oldPosition == newPosition) {
+    if (draftItem == nullptr || context_.undoStack == nullptr || oldPosition == newPosition) {
         return;
     }
 
-    owner_->undoStack_->push(createMapDraftMoveCommand(draftItem, oldPosition, newPosition));
+    context_.undoStack->push(createMapDraftMoveCommand(draftItem, oldPosition, newPosition));
 }
 
 void MapEditorCanvasEditController::recordDraftVisibility(QGraphicsRectItem *item, bool oldVisible, bool newVisible)
 {
     auto *draftItem = dynamic_cast<MapDraftGeometryItem *>(item);
-    if (draftItem == nullptr || owner_->undoStack_ == nullptr || oldVisible == newVisible) {
+    if (draftItem == nullptr || context_.undoStack == nullptr || oldVisible == newVisible) {
         return;
     }
 
-    owner_->undoStack_->push(createMapDraftVisibilityCommand(draftItem, oldVisible, newVisible));
+    context_.undoStack->push(createMapDraftVisibilityCommand(draftItem, oldVisible, newVisible));
 }
 
 }

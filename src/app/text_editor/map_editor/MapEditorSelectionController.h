@@ -1,15 +1,15 @@
 #pragma once
 
+#include "MapEditorSelectionContext.h"
+
 #include <QSet>
 
 namespace TherionStudio
 {
-class MapEditorTab;
-
 class MapEditorSelectionController final
 {
 public:
-    explicit MapEditorSelectionController(MapEditorTab *owner);
+    explicit MapEditorSelectionController(MapEditorSelectionContext context);
 
     void handleMapSceneSelectionChanged();
     void syncMapSelectionFromTextCursor(int lineNumber, int columnNumber);
@@ -18,6 +18,6 @@ public:
     void selectMapLines(const QSet<int> &lineNumbers, bool centerOnSelection = true);
 
 private:
-    MapEditorTab *owner_ = nullptr;
+    MapEditorSelectionContext context_;
 };
 }

@@ -148,7 +148,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/TextEditorOptionValidation.h
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
-    src/app/text_editor/block_editor/BlockEditorPanelBuilder.cpp
+    src/app/text_editor/TextEditorTabBlockEditorPanel.cpp
 src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
@@ -259,34 +259,40 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
     src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp
     src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.h
+    src/app/text_editor/map_editor/MapEditorCanvasEditContext.h
     src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp
     src/app/text_editor/map_editor/MapEditorCanvasEditController.h
     src/app/text_editor/map_editor/MapEditorInspectorBackgroundController.cpp
     src/app/text_editor/map_editor/MapEditorInspectorBackgroundController.h
     src/app/text_editor/map_editor/MapEditorInspectorData.cpp
     src/app/text_editor/map_editor/MapEditorInspectorData.h
+    src/app/text_editor/map_editor/MapEditorInspectorObjectContext.h
     src/app/text_editor/map_editor/MapEditorInspectorObjectController.cpp
     src/app/text_editor/map_editor/MapEditorInspectorObjectController.h
     src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsContext.h
     src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.h
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawContext.h
     src/app/text_editor/map_editor/MapEditorInteractiveDrawController.cpp
     src/app/text_editor/map_editor/MapEditorInteractiveDrawController.h
     src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.cpp
     src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.h
     src/app/text_editor/map_editor/MapEditorInputPolicy.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.h
+    src/app/text_editor/map_editor/MapEditorViewportInputContext.h
     src/app/text_editor/map_editor/MapEditorViewportInputController.cpp
     src/app/text_editor/map_editor/MapEditorViewportInputController.h
     src/app/text_editor/map_editor/MapEditorSceneLifecycleController.cpp
     src/app/text_editor/map_editor/MapEditorSceneLifecycleController.h
     src/app/text_editor/map_editor/MapEditorSceneRefreshController.cpp
     src/app/text_editor/map_editor/MapEditorSceneRefreshController.h
+    src/app/text_editor/map_editor/MapEditorSelectionContext.h
     src/app/text_editor/map_editor/MapEditorSelectionController.cpp
     src/app/text_editor/map_editor/MapEditorSelectionController.h
     src/app/text_editor/map_editor/MapEditorSceneInternals.h
@@ -294,6 +300,14 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
     src/app/text_editor/map_editor/MapEditorSceneSupport.h
     src/app/text_editor/map_editor/MapEditorTab.cpp
+    src/app/text_editor/map_editor/MapEditorTabCanvasEditContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabInspectorObjectContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabInteractiveDrawContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabSceneContexts.cpp
+    src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/TextEditorTab.cpp
@@ -481,7 +495,7 @@ set(THERION_EDITOR_UI_TEST_BASE_SOURCES
     src/app/text_editor/TextEditorOptionValidation.h
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
-    src/app/text_editor/block_editor/BlockEditorPanelBuilder.cpp
+    src/app/text_editor/TextEditorTabBlockEditorPanel.cpp
 src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
@@ -646,34 +660,40 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
     src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp
     src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.h
+    src/app/text_editor/map_editor/MapEditorCanvasEditContext.h
     src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp
     src/app/text_editor/map_editor/MapEditorCanvasEditController.h
     src/app/text_editor/map_editor/MapEditorInspectorBackgroundController.cpp
     src/app/text_editor/map_editor/MapEditorInspectorBackgroundController.h
     src/app/text_editor/map_editor/MapEditorInspectorData.cpp
     src/app/text_editor/map_editor/MapEditorInspectorData.h
+    src/app/text_editor/map_editor/MapEditorInspectorObjectContext.h
     src/app/text_editor/map_editor/MapEditorInspectorObjectController.cpp
     src/app/text_editor/map_editor/MapEditorInspectorObjectController.h
     src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.h
+    src/app/text_editor/map_editor/MapEditorObjectDetailsContext.h
     src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.h
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawContext.h
     src/app/text_editor/map_editor/MapEditorInteractiveDrawController.cpp
     src/app/text_editor/map_editor/MapEditorInteractiveDrawController.h
     src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.cpp
     src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.h
     src/app/text_editor/map_editor/MapEditorInputPolicy.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.h
+    src/app/text_editor/map_editor/MapEditorViewportInputContext.h
     src/app/text_editor/map_editor/MapEditorViewportInputController.cpp
     src/app/text_editor/map_editor/MapEditorViewportInputController.h
     src/app/text_editor/map_editor/MapEditorSceneLifecycleController.cpp
     src/app/text_editor/map_editor/MapEditorSceneLifecycleController.h
     src/app/text_editor/map_editor/MapEditorSceneRefreshController.cpp
     src/app/text_editor/map_editor/MapEditorSceneRefreshController.h
+    src/app/text_editor/map_editor/MapEditorSelectionContext.h
     src/app/text_editor/map_editor/MapEditorSelectionController.cpp
     src/app/text_editor/map_editor/MapEditorSelectionController.h
     src/app/text_editor/map_editor/MapEditorSceneInternals.h
@@ -681,6 +701,14 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
     src/app/text_editor/map_editor/MapEditorSceneSupport.h
     src/app/text_editor/map_editor/MapEditorTab.cpp
+    src/app/text_editor/map_editor/MapEditorTabCanvasEditContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabInspectorObjectContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabInteractiveDrawContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabSceneContexts.cpp
+    src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/TextEditorTab.cpp

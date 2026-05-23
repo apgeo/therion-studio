@@ -1,17 +1,50 @@
 #pragma once
 
+#include <QHash>
 #include <QPointF>
 #include <QRectF>
+#include <QVector>
+
+#include <functional>
+
+class QGraphicsItem;
+class QGraphicsPathItem;
+class QGraphicsPixmapItem;
+class QGraphicsRectItem;
+class QGraphicsScene;
+class QGraphicsView;
 
 namespace TherionStudio
 {
-class MapEditorTab;
+struct MapEditorSceneLifecycleContext
+{
+    QGraphicsScene **scene = nullptr;
+    QGraphicsView *view = nullptr;
+    QHash<int, QGraphicsItem *> *itemsByLine = nullptr;
+    QVector<QGraphicsRectItem *> *draftGeometryItems = nullptr;
+    QVector<QGraphicsPixmapItem *> *backgroundImageItems = nullptr;
+    bool *interactiveDrawStrokeActive = nullptr;
+    QGraphicsPathItem **interactiveDrawPreviewPath = nullptr;
+    QVector<QGraphicsItem *> *interactiveDrawPreviewMarkers = nullptr;
+    bool *updatingSelection = nullptr;
+    int *nextDraftGeometryId = nullptr;
+    int *selectedBackgroundLayerIndex = nullptr;
+    bool *autoFitEnabled = nullptr;
+    qreal *zoomFactor = nullptr;
+
+    std::function<void()> refreshBackgroundLayerControls;
+    std::function<void()> applyBackgroundLayerStackingOrder;
+    std::function<void(int)> setSelectedBackgroundLayerIndexInternal;
+    std::function<QRectF()> mapBackgroundFitBounds;
+    std::function<void()> updateCommandSurfaceState;
+    std::function<int()> zoomPercent;
+    std::function<void(int)> emitZoomStatusChanged;
+};
 
 class MapEditorSceneLifecycleController final
 {
 public:
-    explicit MapEditorSceneLifecycleController(MapEditorTab *owner);
-    explicit MapEditorSceneLifecycleController(const MapEditorTab *owner);
+    explicit MapEditorSceneLifecycleController(MapEditorSceneLifecycleContext context);
 
     void clearMapScene();
     void clearDraftGeometryItems();
@@ -26,6 +59,8 @@ public:
     QRectF mapPreviewBounds() const;
 
 private:
-    MapEditorTab *owner_ = nullptr;
+    QGraphicsScene *scene() const;
+
+    MapEditorSceneLifecycleContext context_;
 };
 }

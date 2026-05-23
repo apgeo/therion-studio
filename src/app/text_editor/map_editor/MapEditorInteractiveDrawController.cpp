@@ -16,64 +16,83 @@
 #include <QPen>
 #include <QScopedValueRollback>
 
+#include <utility>
+
 namespace TherionStudio
 {
-MapEditorInteractiveDrawController::MapEditorInteractiveDrawController(MapEditorTab *owner)
-    : owner_(owner)
+QString MapEditorInteractiveDrawController::tr(const char *text) const
+{
+    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
+}
+
+MapEditorInteractiveDrawMode MapEditorInteractiveDrawController::mode() const
+{
+    return context_.drawMode ? context_.drawMode() : MapEditorInteractiveDrawMode::None;
+}
+
+void MapEditorInteractiveDrawController::setMode(MapEditorInteractiveDrawMode mode)
+{
+    if (context_.setDrawMode) {
+        context_.setDrawMode(mode);
+    }
+}
+
+MapEditorInteractiveDrawController::MapEditorInteractiveDrawController(MapEditorInteractiveDrawContext context)
+    : context_(std::move(context))
 {
 }
 
-void MapEditorInteractiveDrawController::setInteractiveDrawMode(MapEditorTab::InteractiveDrawMode mode)
+void MapEditorInteractiveDrawController::setInteractiveDrawMode(MapEditorInteractiveDrawMode mode)
 {
-    const MapEditorTab::InteractiveDrawMode previousMode = owner_->interactiveDrawMode_;
+    const MapEditorInteractiveDrawMode previousMode = this->mode();
     clearInteractiveDrawSession(false);
-    owner_->interactiveDrawMode_ = mode;
-    owner_->selectModeActive_ = mode == MapEditorTab::InteractiveDrawMode::None;
-    if (previousMode != owner_->interactiveDrawMode_) {
-        emit owner_->modeStatusChanged();
+    setMode(mode);
+    (*context_.selectModeActive) = mode == MapEditorInteractiveDrawMode::None;
+    if (previousMode != this->mode()) {
+        context_.emitModeStatusChanged();
     }
-    owner_->updateCommandSurfaceState();
+    context_.updateCommandSurfaceState();
 }
 
 bool MapEditorInteractiveDrawController::handleInteractiveDrawClick(const QPointF &scenePosition)
 {
-    if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::None) {
+    if (mode() == MapEditorInteractiveDrawMode::None) {
         return false;
     }
 
-    if (owner_->textEditor_ == nullptr) {
-        owner_->toolbarStatusNote_ = owner_->tr("Drawing failed: no active TH2 text editor.");
-        owner_->refreshToolbarSummary();
+    if (context_.textEditor == nullptr) {
+        (*context_.toolbarStatusNote) = tr("Drawing failed: no active TH2 text editor.");
+        context_.refreshToolbarSummary();
         return true;
     }
 
-    if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Point) {
+    if (mode() == MapEditorInteractiveDrawMode::Point) {
         QString errorMessage;
         int insertedLineNumber = 0;
-        const QVector<QPointF> vertices{owner_->sourcePointFromScenePosition(scenePosition)};
-        const QString beforeText = owner_->textEditor_->text();
-        const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-        if (!owner_->textEditor_->insertDraftGeometry(QStringLiteral("point"), vertices, &insertedLineNumber, &errorMessage)) {
-            owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-                ? owner_->tr("Point insert failed.")
-                : owner_->tr("Point insert failed: %1").arg(errorMessage);
+        const QVector<QPointF> vertices{context_.sourcePointFromScenePosition(scenePosition)};
+        const QString beforeText = context_.textEditor->text();
+        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+        if (!context_.textEditor->insertDraftGeometry(QStringLiteral("point"), vertices, &insertedLineNumber, &errorMessage)) {
+            (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+                ? tr("Point insert failed.")
+                : tr("Point insert failed: %1").arg(errorMessage);
         } else {
-            owner_->recordSourceTextSnapshot(owner_->tr("Insert Point"), beforeText, owner_->textEditor_->text(), insertedLineNumber);
-            owner_->toolbarStatusNote_ = insertedLineNumber > 0
-                ? owner_->tr("Inserted point at source line %1.").arg(insertedLineNumber)
-                : owner_->tr("Inserted point.");
+            context_.recordSourceTextSnapshot(tr("Insert Point"), beforeText, context_.textEditor->text(), insertedLineNumber);
+            (*context_.toolbarStatusNote) = insertedLineNumber > 0
+                ? tr("Inserted point at source line %1.").arg(insertedLineNumber)
+                : tr("Inserted point.");
         }
-        owner_->refreshToolbarSummary();
+        context_.refreshToolbarSummary();
         return true;
     }
 
-    if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area) {
-        owner_->captureInteractiveLineAnchor(scenePosition, std::nullopt);
-        owner_->interactiveDrawHoverActive_ = false;
-        owner_->toolbarStatusNote_ = owner_->tr("Area mode: %1 vertex/vertices captured. Press Enter or Complete Draft.")
-                                 .arg(owner_->interactiveDrawLineVertices_.size());
-        owner_->refreshToolbarSummary();
-        owner_->updateCommandSurfaceState();
+    if (mode() == MapEditorInteractiveDrawMode::Area) {
+        context_.captureInteractiveLineAnchor(scenePosition, std::nullopt);
+        (*context_.hoverActive) = false;
+        (*context_.toolbarStatusNote) = tr("Area mode: %1 vertex/vertices captured. Press Enter or Complete Draft.")
+                                 .arg((*context_.lineVertices).size());
+        context_.refreshToolbarSummary();
+        context_.updateCommandSurfaceState();
         return true;
     }
 
@@ -82,146 +101,146 @@ bool MapEditorInteractiveDrawController::handleInteractiveDrawClick(const QPoint
 
 bool MapEditorInteractiveDrawController::commitInteractiveDrawSession()
 {
-    const MapEditorTab::InteractiveDrawMode modeAtCommit = owner_->interactiveDrawMode_;
-    if (modeAtCommit != MapEditorTab::InteractiveDrawMode::Line
-        && modeAtCommit != MapEditorTab::InteractiveDrawMode::Area) {
+    const MapEditorInteractiveDrawMode modeAtCommit = mode();
+    if (modeAtCommit != MapEditorInteractiveDrawMode::Line
+        && modeAtCommit != MapEditorInteractiveDrawMode::Area) {
         return false;
     }
 
-    if (owner_->textEditor_ == nullptr) {
-        owner_->toolbarStatusNote_ = owner_->tr("Complete Draft failed: no active TH2 text editor.");
-        owner_->refreshToolbarSummary();
+    if (context_.textEditor == nullptr) {
+        (*context_.toolbarStatusNote) = tr("Complete Draft failed: no active TH2 text editor.");
+        context_.refreshToolbarSummary();
         return true;
     }
 
-    const int minVertexCount = modeAtCommit == MapEditorTab::InteractiveDrawMode::Line ? 2 : 3;
-    const int capturedVertices = owner_->interactiveDrawLineVertices_.size();
+    const int minVertexCount = modeAtCommit == MapEditorInteractiveDrawMode::Line ? 2 : 3;
+    const int capturedVertices = (*context_.lineVertices).size();
     if (capturedVertices < minVertexCount) {
-        owner_->toolbarStatusNote_ = modeAtCommit == MapEditorTab::InteractiveDrawMode::Line
-            ? owner_->tr("Line mode needs at least 2 vertices before completion.")
-            : owner_->tr("Area mode needs at least 3 vertices before completion.");
-        owner_->refreshToolbarSummary();
+        (*context_.toolbarStatusNote) = modeAtCommit == MapEditorInteractiveDrawMode::Line
+            ? tr("Line mode needs at least 2 vertices before completion.")
+            : tr("Area mode needs at least 3 vertices before completion.");
+        context_.refreshToolbarSummary();
         return true;
     }
 
-    if (modeAtCommit == MapEditorTab::InteractiveDrawMode::Line) {
+    if (modeAtCommit == MapEditorInteractiveDrawMode::Line) {
         QString errorMessage;
         int insertedLineNumber = 0;
-        const QStringList coordinateRows = owner_->lineCoordinateRowsForInteractiveDraft();
-        const QString beforeText = owner_->textEditor_->text();
-        const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-        if (!owner_->textEditor_->insertDraftLineGeometry(coordinateRows, &insertedLineNumber, &errorMessage)) {
-            owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-                ? owner_->tr("Complete Draft failed.")
-                : owner_->tr("Complete Draft failed: %1").arg(errorMessage);
-            owner_->refreshToolbarSummary();
+        const QStringList coordinateRows = context_.lineCoordinateRowsForInteractiveDraft();
+        const QString beforeText = context_.textEditor->text();
+        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+        if (!context_.textEditor->insertDraftLineGeometry(coordinateRows, &insertedLineNumber, &errorMessage)) {
+            (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+                ? tr("Complete Draft failed.")
+                : tr("Complete Draft failed: %1").arg(errorMessage);
+            context_.refreshToolbarSummary();
             return true;
         }
-        owner_->recordSourceTextSnapshot(owner_->tr("Insert Line"), beforeText, owner_->textEditor_->text(), insertedLineNumber);
-        owner_->toolbarStatusNote_ = insertedLineNumber > 0
-            ? owner_->tr("Complete Draft wrote line geometry at source line %1.").arg(insertedLineNumber)
-            : owner_->tr("Complete Draft wrote line geometry to source.");
+        context_.recordSourceTextSnapshot(tr("Insert Line"), beforeText, context_.textEditor->text(), insertedLineNumber);
+        (*context_.toolbarStatusNote) = insertedLineNumber > 0
+            ? tr("Complete Draft wrote line geometry at source line %1.").arg(insertedLineNumber)
+            : tr("Complete Draft wrote line geometry to source.");
     } else {
         QString errorMessage;
         int insertedLineNumber = 0;
-        const QString beforeText = owner_->textEditor_->text();
-        const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-        if (!owner_->textEditor_->insertDraftAreaGeometry(owner_->areaCoordinateRowsForInteractiveDraft(),
+        const QString beforeText = context_.textEditor->text();
+        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+        if (!context_.textEditor->insertDraftAreaGeometry(context_.areaCoordinateRowsForInteractiveDraft(),
                                                   &insertedLineNumber,
                                                   &errorMessage)) {
-            owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-                ? owner_->tr("Complete Draft failed.")
-                : owner_->tr("Complete Draft failed: %1").arg(errorMessage);
-            owner_->refreshToolbarSummary();
+            (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+                ? tr("Complete Draft failed.")
+                : tr("Complete Draft failed: %1").arg(errorMessage);
+            context_.refreshToolbarSummary();
             return true;
         }
-        owner_->recordSourceTextSnapshot(owner_->tr("Insert Area"), beforeText, owner_->textEditor_->text(), insertedLineNumber);
-        owner_->toolbarStatusNote_ = insertedLineNumber > 0
-            ? owner_->tr("Complete Draft wrote area geometry at source line %1.").arg(insertedLineNumber)
-            : owner_->tr("Complete Draft wrote area geometry to source.");
+        context_.recordSourceTextSnapshot(tr("Insert Area"), beforeText, context_.textEditor->text(), insertedLineNumber);
+        (*context_.toolbarStatusNote) = insertedLineNumber > 0
+            ? tr("Complete Draft wrote area geometry at source line %1.").arg(insertedLineNumber)
+            : tr("Complete Draft wrote area geometry to source.");
     }
 
     clearInteractiveDrawSession(false);
-    owner_->interactiveDrawMode_ = modeAtCommit;
-    owner_->selectModeActive_ = false;
-    owner_->toolbarStatusNote_ = modeAtCommit == MapEditorTab::InteractiveDrawMode::Line
-        ? owner_->tr("Line committed. Line mode is still active for the next object.")
-        : owner_->tr("Area committed. Area mode is still active for the next object.");
-    owner_->refreshToolbarSummary();
-    owner_->updateHelpPanel();
-    owner_->updateCommandSurfaceState();
+    setMode(modeAtCommit);
+    (*context_.selectModeActive) = false;
+    (*context_.toolbarStatusNote) = modeAtCommit == MapEditorInteractiveDrawMode::Line
+        ? tr("Line committed. Line mode is still active for the next object.")
+        : tr("Area committed. Area mode is still active for the next object.");
+    context_.refreshToolbarSummary();
+    context_.updateHelpPanel();
+    context_.updateCommandSurfaceState();
     return true;
 }
 
 void MapEditorInteractiveDrawController::clearInteractiveDrawSession(bool clearMode)
 {
-    owner_->interactiveDrawSourceVertices_.clear();
-    owner_->interactiveDrawSceneVertices_.clear();
-    owner_->interactiveDrawLineVertices_.clear();
-    owner_->interactiveDrawStrokeActive_ = false;
-    owner_->interactiveDrawAnchorPressActive_ = false;
-    owner_->interactiveDrawAnchorDragActive_ = false;
-    owner_->interactiveDrawControlDragActive_ = false;
-    owner_->interactiveDrawHoverActive_ = false;
-    if (owner_->mapView_ != nullptr && owner_->mapView_->viewport() != nullptr && !owner_->mapPanActive_) {
-        owner_->mapView_->viewport()->unsetCursor();
+    (*context_.sourceVertices).clear();
+    (*context_.sceneVertices).clear();
+    (*context_.lineVertices).clear();
+    (*context_.strokeActive) = false;
+    (*context_.anchorPressActive) = false;
+    (*context_.anchorDragActive) = false;
+    (*context_.controlDragActive) = false;
+    (*context_.hoverActive) = false;
+    if (context_.view != nullptr && context_.view->viewport() != nullptr && !(*context_.panActive)) {
+        context_.view->viewport()->unsetCursor();
     }
 
-    if (owner_->mapScene_ != nullptr) {
-        if (owner_->interactiveDrawPreviewPath_ != nullptr) {
-            owner_->mapScene_->removeItem(owner_->interactiveDrawPreviewPath_);
-            delete owner_->interactiveDrawPreviewPath_;
-            owner_->interactiveDrawPreviewPath_ = nullptr;
+    if (context_.scene != nullptr) {
+        if ((*context_.previewPath) != nullptr) {
+            context_.scene->removeItem((*context_.previewPath));
+            delete (*context_.previewPath);
+            (*context_.previewPath) = nullptr;
         }
-        for (QGraphicsItem *marker : std::as_const(owner_->interactiveDrawPreviewMarkers_)) {
+        for (QGraphicsItem *marker : std::as_const((*context_.previewMarkers))) {
             if (marker != nullptr) {
-                owner_->mapScene_->removeItem(marker);
+                context_.scene->removeItem(marker);
                 delete marker;
             }
         }
     }
-    owner_->interactiveDrawPreviewMarkers_.clear();
-    owner_->interactiveDrawPreviewPath_ = nullptr;
+    (*context_.previewMarkers).clear();
+    (*context_.previewPath) = nullptr;
 
     if (clearMode) {
-        const bool modeChanged = owner_->interactiveDrawMode_ != MapEditorTab::InteractiveDrawMode::None;
-        owner_->interactiveDrawMode_ = MapEditorTab::InteractiveDrawMode::None;
-        owner_->selectModeActive_ = true;
+        const bool modeChanged = mode() != MapEditorInteractiveDrawMode::None;
+        setMode(MapEditorInteractiveDrawMode::None);
+        (*context_.selectModeActive) = true;
         if (modeChanged) {
-            emit owner_->modeStatusChanged();
+            context_.emitModeStatusChanged();
         }
     }
 }
 
 void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
 {
-    if (owner_->mapScene_ == nullptr) {
+    if (context_.scene == nullptr) {
         return;
     }
 
-    if (owner_->interactiveDrawPreviewPath_ != nullptr) {
-        owner_->mapScene_->removeItem(owner_->interactiveDrawPreviewPath_);
-        delete owner_->interactiveDrawPreviewPath_;
-        owner_->interactiveDrawPreviewPath_ = nullptr;
+    if ((*context_.previewPath) != nullptr) {
+        context_.scene->removeItem((*context_.previewPath));
+        delete (*context_.previewPath);
+        (*context_.previewPath) = nullptr;
     }
-    for (QGraphicsItem *marker : std::as_const(owner_->interactiveDrawPreviewMarkers_)) {
+    for (QGraphicsItem *marker : std::as_const((*context_.previewMarkers))) {
         if (marker != nullptr) {
-            owner_->mapScene_->removeItem(marker);
+            context_.scene->removeItem(marker);
             delete marker;
         }
     }
-    owner_->interactiveDrawPreviewMarkers_.clear();
+    (*context_.previewMarkers).clear();
 
-    if (owner_->interactiveDrawMode_ != MapEditorTab::InteractiveDrawMode::Line
-        && owner_->interactiveDrawMode_ != MapEditorTab::InteractiveDrawMode::Area
-        && owner_->interactiveDrawMode_ != MapEditorTab::InteractiveDrawMode::Freehand) {
+    if (mode() != MapEditorInteractiveDrawMode::Line
+        && mode() != MapEditorInteractiveDrawMode::Area
+        && mode() != MapEditorInteractiveDrawMode::Freehand) {
         return;
     }
 
     QColor accent;
-    if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line) {
+    if (mode() == MapEditorInteractiveDrawMode::Line) {
         accent = QColor(QStringLiteral("#ffb15a"));
-    } else if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area) {
+    } else if (mode() == MapEditorInteractiveDrawMode::Area) {
         accent = QColor(QStringLiteral("#ff7f8f"));
     } else {
         accent = QColor(QStringLiteral("#66d38f"));
@@ -234,8 +253,8 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
     QVector<QPointF> anchorMarkers;
     QVector<QPointF> controlMarkers;
     QVector<QLineF> controlConnectors;
-    if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line
-        || owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area) {
+    if (mode() == MapEditorInteractiveDrawMode::Line
+        || mode() == MapEditorInteractiveDrawMode::Area) {
         struct DraftPreviewVertex
         {
             QPointF anchorScene;
@@ -244,8 +263,8 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         };
 
         QVector<DraftPreviewVertex> previewVertices;
-        previewVertices.reserve(owner_->interactiveDrawLineVertices_.size() + 1);
-        for (const MapEditorInteractiveLineDraftVertex &vertex : std::as_const(owner_->interactiveDrawLineVertices_)) {
+        previewVertices.reserve((*context_.lineVertices).size() + 1);
+        for (const MapEditorInteractiveLineDraftVertex &vertex : std::as_const((*context_.lineVertices))) {
             DraftPreviewVertex previewVertex;
             previewVertex.anchorScene = vertex.anchorScene;
             previewVertex.incomingControlScene = vertex.incomingControlScene;
@@ -278,17 +297,17 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
             }
         };
 
-        if (owner_->interactiveDrawAnchorPressActive_) {
+        if ((*context_.anchorPressActive)) {
             DraftPreviewVertex candidate;
-            candidate.anchorScene = owner_->interactiveDrawAnchorPressScenePoint_;
+            candidate.anchorScene = (*context_.anchorPressScenePoint);
             previewVertices.append(candidate);
             anchorMarkers.append(candidate.anchorScene);
-            if (owner_->interactiveDrawAnchorDragActive_) {
-                appendBezierControlsForLastSegment(owner_->interactiveDrawAnchorDragScenePoint_);
+            if ((*context_.anchorDragActive)) {
+                appendBezierControlsForLastSegment((*context_.anchorDragScenePoint));
             }
-        } else if (owner_->interactiveDrawHoverActive_ && !previewVertices.isEmpty()) {
+        } else if ((*context_.hoverActive) && !previewVertices.isEmpty()) {
             DraftPreviewVertex candidate;
-            candidate.anchorScene = owner_->interactiveDrawHoverScenePoint_;
+            candidate.anchorScene = (*context_.hoverScenePoint);
             previewVertices.append(candidate);
         }
 
@@ -318,7 +337,7 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
                 }
             }
         }
-        if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area && previewVertices.size() >= 3) {
+        if (mode() == MapEditorInteractiveDrawMode::Area && previewVertices.size() >= 3) {
             const DraftPreviewVertex &first = previewVertices.first();
             const DraftPreviewVertex &last = previewVertices.last();
 
@@ -354,30 +373,30 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
             }
         }
     } else {
-        if (owner_->interactiveDrawSceneVertices_.isEmpty()) {
+        if ((*context_.sceneVertices).isEmpty()) {
             return;
         }
-        QVector<QPointF> displayVertices = owner_->interactiveDrawSceneVertices_;
-        if (owner_->interactiveDrawHoverActive_) {
-            displayVertices.append(owner_->interactiveDrawHoverScenePoint_);
+        QVector<QPointF> displayVertices = (*context_.sceneVertices);
+        if ((*context_.hoverActive)) {
+            displayVertices.append((*context_.hoverScenePoint));
         }
 
         path = QPainterPath(displayVertices.first());
         for (int index = 1; index < displayVertices.size(); ++index) {
             path.lineTo(displayVertices.at(index));
         }
-        if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area && displayVertices.size() >= 3) {
+        if (mode() == MapEditorInteractiveDrawMode::Area && displayVertices.size() >= 3) {
             path.closeSubpath();
         }
-        anchorMarkers = owner_->interactiveDrawSceneVertices_;
+        anchorMarkers = (*context_.sceneVertices);
     }
 
-    owner_->interactiveDrawPreviewPath_ = new QGraphicsPathItem(path);
-    owner_->interactiveDrawPreviewPath_->setPen(QPen(accent, 2.0, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
-    owner_->interactiveDrawPreviewPath_->setBrush(Qt::NoBrush);
-    owner_->interactiveDrawPreviewPath_->setZValue(28.0);
-    owner_->interactiveDrawPreviewPath_->setAcceptedMouseButtons(Qt::NoButton);
-    owner_->mapScene_->addItem(owner_->interactiveDrawPreviewPath_);
+    (*context_.previewPath) = new QGraphicsPathItem(path);
+    (*context_.previewPath)->setPen(QPen(accent, 2.0, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
+    (*context_.previewPath)->setBrush(Qt::NoBrush);
+    (*context_.previewPath)->setZValue(28.0);
+    (*context_.previewPath)->setAcceptedMouseButtons(Qt::NoButton);
+    context_.scene->addItem((*context_.previewPath));
 
     for (const QPointF &vertex : std::as_const(anchorMarkers)) {
         auto *marker = new QGraphicsEllipseItem(QRectF(vertex.x() - 3.2, vertex.y() - 3.2, 6.4, 6.4));
@@ -385,8 +404,8 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         marker->setBrush(QBrush(accent));
         marker->setZValue(28.5);
         marker->setAcceptedMouseButtons(Qt::NoButton);
-        owner_->mapScene_->addItem(marker);
-        owner_->interactiveDrawPreviewMarkers_.append(marker);
+        context_.scene->addItem(marker);
+        (*context_.previewMarkers).append(marker);
     }
 
     for (const QLineF &connector : std::as_const(controlConnectors)) {
@@ -394,8 +413,8 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         connectorItem->setPen(QPen(controlColor.lighter(115), 1.2, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
         connectorItem->setZValue(28.4);
         connectorItem->setAcceptedMouseButtons(Qt::NoButton);
-        owner_->mapScene_->addItem(connectorItem);
-        owner_->interactiveDrawPreviewMarkers_.append(connectorItem);
+        context_.scene->addItem(connectorItem);
+        (*context_.previewMarkers).append(connectorItem);
     }
 
     for (const QPointF &control : std::as_const(controlMarkers)) {
@@ -404,76 +423,76 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         marker->setBrush(QBrush(controlColor));
         marker->setZValue(28.6);
         marker->setAcceptedMouseButtons(Qt::NoButton);
-        owner_->mapScene_->addItem(marker);
-        owner_->interactiveDrawPreviewMarkers_.append(marker);
+        context_.scene->addItem(marker);
+        (*context_.previewMarkers).append(marker);
     }
 }
 
 bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
 {
-    if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::None) {
+    if (mode() == MapEditorInteractiveDrawMode::None) {
         return false;
     }
 
-    const MapEditorTab::InteractiveDrawMode modeAtCancel = owner_->interactiveDrawMode_;
-    const bool isLineOrArea = modeAtCancel == MapEditorTab::InteractiveDrawMode::Line
-        || modeAtCancel == MapEditorTab::InteractiveDrawMode::Area;
+    const MapEditorInteractiveDrawMode modeAtCancel = mode();
+    const bool isLineOrArea = modeAtCancel == MapEditorInteractiveDrawMode::Line
+        || modeAtCancel == MapEditorInteractiveDrawMode::Area;
     bool committedLineOrAreaDraft = false;
-    if (isLineOrArea && owner_->hasCompletableInteractiveDrawSession()) {
-        if (modeAtCancel == MapEditorTab::InteractiveDrawMode::Line) {
+    if (isLineOrArea && context_.hasCompletableInteractiveDrawSession()) {
+        if (modeAtCancel == MapEditorInteractiveDrawMode::Line) {
             QString errorMessage;
             int insertedLineNumber = 0;
-            const QString beforeText = owner_->textEditor_->text();
-            const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-            if (!owner_->textEditor_->insertDraftLineGeometry(owner_->lineCoordinateRowsForInteractiveDraft(),
+            const QString beforeText = context_.textEditor->text();
+            const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+            if (!context_.textEditor->insertDraftLineGeometry(context_.lineCoordinateRowsForInteractiveDraft(),
                                                       &insertedLineNumber,
                                                       &errorMessage)) {
-                owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-                    ? owner_->tr("Complete Draft failed.")
-                    : owner_->tr("Complete Draft failed: %1").arg(errorMessage);
-                owner_->refreshToolbarSummary();
-                owner_->updateCommandSurfaceState();
-                owner_->updateHelpPanel();
+                (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+                    ? tr("Complete Draft failed.")
+                    : tr("Complete Draft failed: %1").arg(errorMessage);
+                context_.refreshToolbarSummary();
+                context_.updateCommandSurfaceState();
+                context_.updateHelpPanel();
                 return false;
             }
-            owner_->recordSourceTextSnapshot(owner_->tr("Insert Line"), beforeText, owner_->textEditor_->text(), insertedLineNumber);
+            context_.recordSourceTextSnapshot(tr("Insert Line"), beforeText, context_.textEditor->text(), insertedLineNumber);
         } else {
             QString errorMessage;
             int insertedLineNumber = 0;
-            const QString beforeText = owner_->textEditor_->text();
-            const QScopedValueRollback<bool> commandGuard(owner_->mapCommandApplyInProgress_, true);
-            if (!owner_->textEditor_->insertDraftAreaGeometry(owner_->areaCoordinateRowsForInteractiveDraft(),
+            const QString beforeText = context_.textEditor->text();
+            const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+            if (!context_.textEditor->insertDraftAreaGeometry(context_.areaCoordinateRowsForInteractiveDraft(),
                                                       &insertedLineNumber,
                                                       &errorMessage)) {
-                owner_->toolbarStatusNote_ = errorMessage.isEmpty()
-                    ? owner_->tr("Complete Draft failed.")
-                    : owner_->tr("Complete Draft failed: %1").arg(errorMessage);
-                owner_->refreshToolbarSummary();
-                owner_->updateCommandSurfaceState();
-                owner_->updateHelpPanel();
+                (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+                    ? tr("Complete Draft failed.")
+                    : tr("Complete Draft failed: %1").arg(errorMessage);
+                context_.refreshToolbarSummary();
+                context_.updateCommandSurfaceState();
+                context_.updateHelpPanel();
                 return false;
             }
-            owner_->recordSourceTextSnapshot(owner_->tr("Insert Area"), beforeText, owner_->textEditor_->text(), insertedLineNumber);
+            context_.recordSourceTextSnapshot(tr("Insert Area"), beforeText, context_.textEditor->text(), insertedLineNumber);
         }
         committedLineOrAreaDraft = true;
     }
 
     clearInteractiveDrawSession(true);
-    owner_->interactiveDrawStrokeActive_ = false;
-    if (owner_->mapView_ != nullptr) {
-        owner_->mapView_->setDragMode(QGraphicsView::NoDrag);
+    (*context_.strokeActive) = false;
+    if (context_.view != nullptr) {
+        context_.view->setDragMode(QGraphicsView::NoDrag);
     }
 
     if (committedLineOrAreaDraft) {
-        owner_->toolbarStatusNote_ = owner_->tr("Selection mode: draft committed.");
+        (*context_.toolbarStatusNote) = tr("Selection mode: draft committed.");
     } else if (isLineOrArea) {
-        owner_->toolbarStatusNote_ = owner_->tr("Selection mode: draft canceled.");
+        (*context_.toolbarStatusNote) = tr("Selection mode: draft canceled.");
     } else {
-        owner_->toolbarStatusNote_ = owner_->tr("Selection mode: drawing canceled.");
+        (*context_.toolbarStatusNote) = tr("Selection mode: drawing canceled.");
     }
-    owner_->refreshToolbarSummary();
-    owner_->updateCommandSurfaceState();
-    owner_->updateHelpPanel();
+    context_.refreshToolbarSummary();
+    context_.updateCommandSurfaceState();
+    context_.updateHelpPanel();
     return true;
 }
 }

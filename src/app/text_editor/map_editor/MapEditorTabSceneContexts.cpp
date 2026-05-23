@@ -1,0 +1,189 @@
+#include "MapEditorTab.h"
+
+#include "MapEditorSceneLifecycleController.h"
+#include "MapEditorSceneRefreshController.h"
+#include "../TextEditorTab.h"
+
+namespace TherionStudio
+{
+MapEditorSceneLifecycleContext MapEditorTab::sceneLifecycleContext() const
+{
+    auto *self = const_cast<MapEditorTab *>(this);
+    return MapEditorSceneLifecycleContext{
+        .scene = &self->mapScene_,
+        .view = self->mapView_,
+        .itemsByLine = &self->mapItemsByLine_,
+        .draftGeometryItems = &self->draftGeometryItems_,
+        .backgroundImageItems = &self->backgroundImageItems_,
+        .interactiveDrawStrokeActive = &self->interactiveDrawStrokeActive_,
+        .interactiveDrawPreviewPath = &self->interactiveDrawPreviewPath_,
+        .interactiveDrawPreviewMarkers = &self->interactiveDrawPreviewMarkers_,
+        .updatingSelection = &self->updatingSelection_,
+        .nextDraftGeometryId = &self->nextDraftGeometryId_,
+        .selectedBackgroundLayerIndex = &self->selectedBackgroundLayerIndex_,
+        .autoFitEnabled = &self->autoFitEnabled_,
+        .zoomFactor = &self->zoomFactor_,
+        .refreshBackgroundLayerControls = [self]() {
+            self->refreshBackgroundLayerControls();
+        },
+        .applyBackgroundLayerStackingOrder = [self]() {
+            self->applyBackgroundLayerStackingOrder();
+        },
+        .setSelectedBackgroundLayerIndexInternal = [self](int index) {
+            self->setSelectedBackgroundLayerIndexInternal(index);
+        },
+        .mapBackgroundFitBounds = [self]() {
+            return self->mapBackgroundFitBounds();
+        },
+        .updateCommandSurfaceState = [self]() {
+            self->updateCommandSurfaceState();
+        },
+        .zoomPercent = [self]() {
+            return self->zoomPercent();
+        },
+        .emitZoomStatusChanged = [self](int zoomPercent) {
+            emit self->zoomStatusChanged(zoomPercent);
+        },
+    };
+}
+
+MapEditorSceneRefreshContext MapEditorTab::sceneRefreshContext()
+{
+    const QPointer<MapEditorTab> self(this);
+    return MapEditorSceneRefreshContext{
+        .sceneParent = this,
+        .selectionConnectionContext = this,
+        .scene = &mapScene_,
+        .view = mapView_,
+        .undoStack = undoStack_,
+        .itemsByLine = &mapItemsByLine_,
+        .commandApplyInProgress = &mapCommandApplyInProgress_,
+        .sceneRefreshPending = &mapSceneRefreshPending_,
+        .autoFitEnabled = &autoFitEnabled_,
+        .fitBackgroundRequested = &fitBackgroundRequested_,
+        .gridVisible = &mapGridVisible_,
+        .gridSpacingMeters = &mapGridSpacingMeters_,
+        .documentText = [self]() {
+            return self != nullptr && self->textEditor_ != nullptr ? self->textEditor_->text() : QString();
+        },
+        .currentLineNumber = [self]() {
+            return self != nullptr && self->textEditor_ != nullptr ? self->textEditor_->currentLineNumber() : 0;
+        },
+        .filePath = [self]() {
+            return self != nullptr ? self->filePath() : QString();
+        },
+        .handleSceneSelectionChanged = [self]() {
+            if (self != nullptr) {
+                self->handleMapSceneSelectionChanged();
+            }
+        },
+        .updateCommandSurfaceState = [self]() {
+            if (self != nullptr) {
+                self->updateCommandSurfaceState();
+            }
+        },
+        .clearMapScene = [self]() {
+            if (self != nullptr) {
+                self->clearMapScene();
+            }
+        },
+        .mapSourceBoundsForCurrentDocument = [self]() {
+            return self != nullptr ? self->mapSourceBoundsForCurrentDocument() : QRectF();
+        },
+        .recordCardMove = [self](int lineNumber, const QPointF &oldPosition, const QPointF &newPosition) {
+            if (self != nullptr) {
+                self->recordCardMove(lineNumber, oldPosition, newPosition);
+            }
+        },
+        .recordCardVisibility = [self](int lineNumber, bool oldVisible, bool newVisible) {
+            if (self != nullptr) {
+                self->recordCardVisibility(lineNumber, oldVisible, newVisible);
+            }
+        },
+        .recordPointGeometryMove = [self](int lineNumber, const QPointF &oldPoint, const QPointF &newPoint) {
+            if (self != nullptr) {
+                self->recordPointGeometryMove(lineNumber, oldPoint, newPoint);
+            }
+        },
+        .recordLineAreaVertexMove = [self](int lineNumber,
+                                           const QString &kind,
+                                           int vertexIndex,
+                                           const QPointF &oldPoint,
+                                           const QPointF &newPoint) {
+            if (self != nullptr) {
+                self->recordLineAreaVertexMove(lineNumber, kind, vertexIndex, oldPoint, newPoint);
+            }
+        },
+        .recordPointOrientationHandleChange = [self](int lineNumber, qreal orientationDegrees) {
+            if (self != nullptr) {
+                self->recordPointOrientationHandleChange(lineNumber, orientationDegrees);
+            }
+        },
+        .recordLinePointLeftHandleChange = [self](int lineNumber, int sourceVertexIndex, qreal orientationDegrees, qreal leftSize) {
+            if (self != nullptr) {
+                self->recordLinePointLeftHandleChange(lineNumber, sourceVertexIndex, orientationDegrees, leftSize);
+            }
+        },
+        .restoreBackgroundImageItems = [self]() {
+            if (self != nullptr) {
+                self->restoreBackgroundImageItems();
+            }
+        },
+        .reprojectMetadataBackgroundLayersForCurrentDocument = [self]() {
+            if (self != nullptr) {
+                self->reprojectMetadataBackgroundLayersForCurrentDocument();
+            }
+        },
+        .restoreDraftGeometryItems = [self]() {
+            if (self != nullptr) {
+                self->restoreDraftGeometryItems();
+            }
+        },
+        .selectMapLine = [self](int lineNumber) {
+            if (self != nullptr) {
+                self->selectMapLine(lineNumber);
+            }
+        },
+        .applyInspectorObjectVisibility = [self]() {
+            if (self != nullptr) {
+                self->applyInspectorObjectVisibility();
+            }
+        },
+        .updateGeometrySelectionPresentation = [self]() {
+            if (self != nullptr) {
+                self->updateGeometrySelectionPresentation();
+            }
+        },
+        .fitMapToView = [self](bool includeBackgroundImages) {
+            if (self != nullptr) {
+                self->fitMapToView(includeBackgroundImages);
+            }
+        },
+        .syncZoomFactorFromView = [self]() {
+            if (self != nullptr) {
+                self->syncZoomFactorFromView();
+            }
+        },
+        .updateInteractiveDrawPreview = [self]() {
+            if (self != nullptr) {
+                self->updateInteractiveDrawPreview();
+            }
+        },
+        .refreshStatus = [self]() {
+            if (self != nullptr) {
+                self->refreshStatus();
+            }
+        },
+        .refreshObjectDetailsPanel = [self]() {
+            if (self != nullptr) {
+                self->refreshObjectDetailsPanel();
+            }
+        },
+        .updateHelpPanel = [self]() {
+            if (self != nullptr) {
+                self->updateHelpPanel();
+            }
+        },
+    };
+}
+}

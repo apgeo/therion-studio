@@ -14,7 +14,7 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 LINE_LIMITS = {
     "src/app/text_editor/TextEditorTab.cpp": 1087,
     "src/app/text_editor/raw_editor/RawEditorCompletionController.cpp": 267,
-    "src/app/text_editor/map_editor/MapEditorTab.cpp": 860,
+    "src/app/text_editor/map_editor/MapEditorTab.cpp": 687,
     "src/app/MainWindow.cpp": 2203,
 }
 
@@ -46,10 +46,6 @@ FORBIDDEN_PATHS = (
     "src/app/MapEditorTabWorkspace.cpp",
 )
 
-ALLOWED_BLOCK_EDITOR_TEXT_EDITOR_INCLUDES = {
-    "src/app/text_editor/block_editor/BlockEditorPanelBuilder.cpp",
-}
-
 TEXT_EDITOR_BLOCK_EDITOR_FORBIDDEN_PATTERNS = (
     ("src/app/text_editor/TextEditorTab.h", "friend class BlockEditor", "TextEditorTab shall not expose private state to BlockEditor friends"),
 )
@@ -59,6 +55,101 @@ BLOCK_EDITOR_FORBIDDEN_PATTERNS = (
     ("TextEditorTab* owner", "BlockEditor classes shall use explicit context objects instead of TextEditorTab owner pointers"),
     ("TextEditorTab *owner_", "BlockEditor classes shall use explicit context objects instead of TextEditorTab owner pointers"),
     ("TextEditorTab* owner_", "BlockEditor classes shall use explicit context objects instead of TextEditorTab owner pointers"),
+)
+
+MAP_EDITOR_TAB_FORBIDDEN_PATTERNS = (
+    (
+        "src/app/text_editor/map_editor/MapEditorTab.h",
+        "friend class MapEditorInspectorBackgroundController",
+        "MapEditorInspectorBackgroundController shall use an explicit context object",
+    ),
+    (
+        "src/app/text_editor/map_editor/MapEditorTab.h",
+        "friend class MapEditorSceneLifecycleController",
+        "MapEditorSceneLifecycleController shall use an explicit context object",
+    ),
+    (
+        "src/app/text_editor/map_editor/MapEditorTab.h",
+        "friend class MapEditorSceneRefreshController",
+        "MapEditorSceneRefreshController shall use an explicit context object",
+    ),
+    (
+        "src/app/text_editor/map_editor/MapEditorTab.h",
+        "friend class MapEditorObjectDetailsEditController",
+        "MapEditorObjectDetailsEditController shall use an explicit context object",
+    ),
+    (
+        "src/app/text_editor/map_editor/MapEditorTab.h",
+        "friend class MapEditorObjectDetailsPanelController",
+        "MapEditorObjectDetailsPanelController shall use an explicit context object",
+    ),
+    (
+        "src/app/text_editor/map_editor/MapEditorTab.h",
+        "friend class MapEditorInspectorObjectController",
+        "MapEditorInspectorObjectController shall use an explicit context object",
+    ),
+    (
+        "src/app/text_editor/map_editor/MapEditorTab.h",
+        "friend class MapEditorInteractiveDrawController",
+        "MapEditorInteractiveDrawController shall use an explicit context object",
+    ),
+    (
+        "src/app/text_editor/map_editor/MapEditorTab.h",
+        "friend class MapEditorSelectionController",
+        "MapEditorSelectionController shall use an explicit context object",
+    ),
+    (
+        "src/app/text_editor/map_editor/MapEditorTab.h",
+        "friend class MapEditorViewportInputController",
+        "MapEditorViewportInputController shall use an explicit context object",
+    ),
+    (
+        "src/app/text_editor/map_editor/MapEditorTab.h",
+        "friend class MapEditorCanvasEditController",
+        "MapEditorCanvasEditController shall use an explicit context object",
+    ),
+)
+
+MAP_EDITOR_INSPECTOR_BACKGROUND_FORBIDDEN_PATTERNS = (
+    (
+        "MapEditorTab *owner",
+        "MapEditorInspectorBackgroundController shall use an explicit context object instead of MapEditorTab owner pointers",
+    ),
+    (
+        "MapEditorTab* owner",
+        "MapEditorInspectorBackgroundController shall use an explicit context object instead of MapEditorTab owner pointers",
+    ),
+    (
+        "MapEditorTab *owner_",
+        "MapEditorInspectorBackgroundController shall use an explicit context object instead of MapEditorTab owner pointers",
+    ),
+    (
+        "MapEditorTab* owner_",
+        "MapEditorInspectorBackgroundController shall use an explicit context object instead of MapEditorTab owner pointers",
+    ),
+)
+
+MAP_EDITOR_CONTEXT_CONTROLLER_FORBIDDEN_PATTERNS = (
+    (
+        "MapEditorTab *owner",
+        "MapEditor controllers converted to explicit contexts shall not regain MapEditorTab owner pointers",
+    ),
+    (
+        "MapEditorTab* owner",
+        "MapEditor controllers converted to explicit contexts shall not regain MapEditorTab owner pointers",
+    ),
+    (
+        "MapEditorTab *owner_",
+        "MapEditor controllers converted to explicit contexts shall not regain MapEditorTab owner pointers",
+    ),
+    (
+        "MapEditorTab* owner_",
+        "MapEditor controllers converted to explicit contexts shall not regain MapEditorTab owner pointers",
+    ),
+    (
+        '#include "MapEditorTab.h"',
+        "MapEditor controllers converted to explicit contexts shall not include MapEditorTab directly",
+    ),
 )
 
 
@@ -110,14 +201,45 @@ def main() -> int:
         for pattern, message in BLOCK_EDITOR_FORBIDDEN_PATTERNS:
             if pattern in file_text:
                 dependency_violations.append(f"{relative_path}: forbidden `{pattern}` ({message})")
-        if (
-            '#include "../TextEditorTab.h"' in file_text
-            and relative_path not in ALLOWED_BLOCK_EDITOR_TEXT_EDITOR_INCLUDES
-        ):
+        if '#include "../TextEditorTab.h"' in file_text:
             dependency_violations.append(
                 f"{relative_path}: forbidden direct TextEditorTab include "
                 "(BlockEditor implementation shall depend on explicit contexts)"
             )
+
+    for relative_path, pattern, message in MAP_EDITOR_TAB_FORBIDDEN_PATTERNS:
+        absolute_path = REPO_ROOT / relative_path
+        if absolute_path.exists() and contains_text(absolute_path, pattern):
+            dependency_violations.append(f"{relative_path}: forbidden `{pattern}` ({message})")
+
+    map_inspector_background_root = REPO_ROOT / "src/app/text_editor/map_editor"
+    for absolute_path in sorted(map_inspector_background_root.glob("MapEditorInspectorBackgroundController*.[ch]*")):
+        relative_path = absolute_path.relative_to(REPO_ROOT).as_posix()
+        file_text = absolute_path.read_text(encoding="utf-8", errors="replace")
+        for pattern, message in MAP_EDITOR_INSPECTOR_BACKGROUND_FORBIDDEN_PATTERNS:
+            if pattern in file_text:
+                dependency_violations.append(f"{relative_path}: forbidden `{pattern}` ({message})")
+        for pattern, message in MAP_EDITOR_CONTEXT_CONTROLLER_FORBIDDEN_PATTERNS:
+            if pattern in file_text:
+                dependency_violations.append(f"{relative_path}: forbidden `{pattern}` ({message})")
+
+    for controller_name in (
+        "MapEditorSceneLifecycleController",
+        "MapEditorSceneRefreshController",
+        "MapEditorObjectDetailsEditController",
+        "MapEditorObjectDetailsPanelController",
+        "MapEditorInspectorObjectController",
+        "MapEditorInteractiveDrawController",
+        "MapEditorSelectionController",
+        "MapEditorViewportInputController",
+        "MapEditorCanvasEditController",
+    ):
+        for absolute_path in sorted(map_inspector_background_root.glob(f"{controller_name}*.[ch]*")):
+            relative_path = absolute_path.relative_to(REPO_ROOT).as_posix()
+            file_text = absolute_path.read_text(encoding="utf-8", errors="replace")
+            for pattern, message in MAP_EDITOR_CONTEXT_CONTROLLER_FORBIDDEN_PATTERNS:
+                if pattern in file_text:
+                    dependency_violations.append(f"{relative_path}: forbidden `{pattern}` ({message})")
 
     if violations or layout_violations or dependency_violations:
         print("Structure constraint violations detected:")
@@ -145,6 +267,15 @@ def main() -> int:
     print("Dependency constraints passed:")
     print("  - TextEditorTab has no BlockEditor friend declarations")
     print("  - BlockEditor controllers use explicit contexts instead of TextEditorTab owner pointers")
+    print("  - BlockEditor implementation files do not include TextEditorTab directly")
+    print("  - MapEditorInspectorBackgroundController uses an explicit context instead of MapEditorTab friendship")
+    print("  - MapEditor scene lifecycle/refresh controllers use explicit contexts instead of MapEditorTab friendship")
+    print("  - MapEditor object-details controllers use explicit contexts instead of MapEditorTab friendship")
+    print("  - MapEditor inspector-object controller uses an explicit context instead of MapEditorTab friendship")
+    print("  - MapEditor interactive-draw controller uses an explicit context instead of MapEditorTab friendship")
+    print("  - MapEditor selection controller uses an explicit context instead of MapEditorTab friendship")
+    print("  - MapEditor viewport-input controller uses an explicit context instead of MapEditorTab friendship")
+    print("  - MapEditor canvas-edit controller uses an explicit context instead of MapEditorTab friendship")
     return 0
 
 

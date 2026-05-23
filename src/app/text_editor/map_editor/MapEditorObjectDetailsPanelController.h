@@ -1,17 +1,19 @@
 #pragma once
 
-#include "MapEditorTab.h"
+#include "MapEditorObjectDetailsContext.h"
 
 namespace TherionStudio
 {
 class MapEditorObjectDetailsPanelController final
 {
 public:
-    explicit MapEditorObjectDetailsPanelController(MapEditorTab *owner);
+    explicit MapEditorObjectDetailsPanelController(MapEditorObjectDetailsContext context);
 
     void refreshObjectDetailsPanel();
 
 private:
-    MapEditorTab *owner_ = nullptr;
+    QString translate(const char *text) const;
+
+    MapEditorObjectDetailsContext context_;
 };
 }

@@ -1,12 +1,11 @@
 #include "MapEditorViewportInputController.h"
 
-#include "../TextEditorTab.h"
 #include "MapEditorInputPolicy.h"
 #include "MapEditorSceneInternals.h"
 #include "MapEditorSceneSupport.h"
-#include "MapEditorTab.h"
 
 #include <QDateTime>
+#include <QElapsedTimer>
 #include <QEvent>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
@@ -25,6 +24,7 @@
 #include <cmath>
 #include <limits>
 #include <optional>
+#include <utility>
 
 namespace TherionStudio
 {
@@ -129,111 +129,121 @@ QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems, bool 
 
 }
 
-MapEditorViewportInputController::MapEditorViewportInputController(MapEditorTab *owner)
-    : owner_(owner)
+MapEditorInteractiveDrawMode MapEditorViewportInputController::drawMode() const
+{
+    return context_.drawMode ? context_.drawMode() : MapEditorInteractiveDrawMode::None;
+}
+
+QString MapEditorViewportInputController::tr(const char *text) const
+{
+    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
+}
+
+MapEditorViewportInputController::MapEditorViewportInputController(MapEditorViewportInputContext context)
+    : context_(std::move(context))
 {
 }
 
 std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watched, QEvent *event)
 {
-    if (owner_->mapView_ == nullptr) {
+    if (context_.view == nullptr) {
         return std::nullopt;
     }
 
-    QWidget *viewport = owner_->mapView_->viewport();
+    QWidget *viewport = context_.view->viewport();
     if (watched == viewport) {
         switch (event->type()) {
         case QEvent::TabletPress:
         case QEvent::TabletMove:
         case QEvent::TabletRelease:
-            owner_->lastTabletInteractionUtc_ = QDateTime::currentDateTimeUtc();
+            (*context_.lastTabletInteractionUtc) = QDateTime::currentDateTimeUtc();
             break;
         case QEvent::MouseButtonPress: {
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
             if (mouseEvent->button() == Qt::LeftButton) {
-                if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Freehand) {
-                    if (owner_->textEditor_ == nullptr) {
-                        owner_->toolbarStatusNote_ = owner_->tr("Drawing failed: no active TH2 text editor.");
-                        owner_->refreshToolbarSummary();
+                if (drawMode() == MapEditorInteractiveDrawMode::Freehand) {
+                    if (context_.textEditor == nullptr) {
+                        (*context_.toolbarStatusNote) = tr("Drawing failed: no active TH2 text editor.");
+                        context_.refreshToolbarSummary();
                         event->accept();
                         return true;
                     }
 
-                    owner_->clearInteractiveDrawSession(false);
-                    const QPointF scenePoint = owner_->mapView_->mapToScene(mouseEvent->pos());
-                    owner_->interactiveDrawStrokeActive_ = true;
-                    owner_->interactiveDrawSourceVertices_.append(owner_->sourcePointFromScenePosition(scenePoint));
-                    owner_->interactiveDrawSceneVertices_.append(scenePoint);
-                    owner_->updateInteractiveDrawPreview();
-                    owner_->toolbarStatusNote_ = owner_->tr("Freehand mode: drawing stroke...");
-                    owner_->refreshToolbarSummary();
-                    owner_->updateCommandSurfaceState();
-                    owner_->primaryPointerInteractionActive_ = false;
+                    context_.clearInteractiveDrawSession(false);
+                    const QPointF scenePoint = context_.view->mapToScene(mouseEvent->pos());
+                    (*context_.interactiveDrawStrokeActive) = true;
+                    (*context_.interactiveDrawSourceVertices).append(context_.sourcePointFromScenePosition(scenePoint));
+                    (*context_.interactiveDrawSceneVertices).append(scenePoint);
+                    context_.updateInteractiveDrawPreview();
+                    (*context_.toolbarStatusNote) = tr("Freehand mode: drawing stroke...");
+                    context_.refreshToolbarSummary();
+                    context_.updateCommandSurfaceState();
+                    (*context_.primaryPointerInteractionActive) = false;
                     event->accept();
                     return true;
                 }
-                if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line
-                    || owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area) {
-                    const QPointF scenePoint = owner_->mapView_->mapToScene(mouseEvent->pos());
-                    const QPointF sceneOffset = owner_->mapView_->mapToScene(mouseEvent->pos() + QPoint(8, 0));
+                if (drawMode() == MapEditorInteractiveDrawMode::Line
+                    || drawMode() == MapEditorInteractiveDrawMode::Area) {
+                    const QPointF scenePoint = context_.view->mapToScene(mouseEvent->pos());
+                    const QPointF sceneOffset = context_.view->mapToScene(mouseEvent->pos() + QPoint(8, 0));
                     const qreal controlHitRadius = std::max<qreal>(4.0, QLineF(scenePoint, sceneOffset).length());
-                    if (const auto handle = owner_->interactiveLineControlAt(scenePoint, controlHitRadius)) {
-                        owner_->interactiveDrawControlDragActive_ = true;
-                        owner_->interactiveDrawControlDragHandle_ = handle.value();
-                        owner_->interactiveDrawAnchorPressActive_ = false;
-                        owner_->interactiveDrawAnchorDragActive_ = false;
-                        owner_->interactiveDrawHoverActive_ = false;
+                    if (const auto handle = context_.interactiveLineControlAt(scenePoint, controlHitRadius)) {
+                        (*context_.interactiveDrawControlDragActive) = true;
+                        (*context_.interactiveDrawControlDragHandle) = handle.value();
+                        (*context_.interactiveDrawAnchorPressActive) = false;
+                        (*context_.interactiveDrawAnchorDragActive) = false;
+                        (*context_.interactiveDrawHoverActive) = false;
                         viewport->setCursor(Qt::ClosedHandCursor);
-                        owner_->toolbarStatusNote_ = owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line
-                            ? owner_->tr("Line mode: dragging bezier control point.")
-                            : owner_->tr("Area mode: dragging bezier control point.");
-                        owner_->refreshToolbarSummary();
-                        owner_->updateCommandSurfaceState();
-                        owner_->primaryPointerInteractionActive_ = false;
+                        (*context_.toolbarStatusNote) = drawMode() == MapEditorInteractiveDrawMode::Line
+                            ? tr("Line mode: dragging bezier control point.")
+                            : tr("Area mode: dragging bezier control point.");
+                        context_.refreshToolbarSummary();
+                        context_.updateCommandSurfaceState();
+                        (*context_.primaryPointerInteractionActive) = false;
                         event->accept();
                         return true;
                     }
 
-                    owner_->interactiveDrawAnchorPressActive_ = true;
-                    owner_->interactiveDrawAnchorPressScenePoint_ = scenePoint;
-                    owner_->interactiveDrawAnchorDragActive_ = false;
-                    owner_->interactiveDrawAnchorDragScenePoint_ = owner_->interactiveDrawAnchorPressScenePoint_;
-                    owner_->interactiveDrawControlDragActive_ = false;
-                    owner_->interactiveDrawHoverActive_ = false;
-                    owner_->updateInteractiveDrawPreview();
-                    owner_->primaryPointerInteractionActive_ = false;
+                    (*context_.interactiveDrawAnchorPressActive) = true;
+                    (*context_.interactiveDrawAnchorPressScenePoint) = scenePoint;
+                    (*context_.interactiveDrawAnchorDragActive) = false;
+                    (*context_.interactiveDrawAnchorDragScenePoint) = (*context_.interactiveDrawAnchorPressScenePoint);
+                    (*context_.interactiveDrawControlDragActive) = false;
+                    (*context_.interactiveDrawHoverActive) = false;
+                    context_.updateInteractiveDrawPreview();
+                    (*context_.primaryPointerInteractionActive) = false;
                     event->accept();
                     return true;
                 }
-                if (owner_->handleInteractiveDrawClick(owner_->mapView_->mapToScene(mouseEvent->pos()))) {
-                    owner_->primaryPointerInteractionActive_ = false;
+                if (context_.handleInteractiveDrawClick(context_.view->mapToScene(mouseEvent->pos()))) {
+                    (*context_.primaryPointerInteractionActive) = false;
                     event->accept();
                     return true;
                 }
-                owner_->primaryPointerInteractionActive_ = true;
-                if (owner_->mapView_ != nullptr) {
-                    owner_->pendingMapClickSelection_ = true;
-                    owner_->pendingMapClickScenePosition_ = owner_->mapView_->mapToScene(mouseEvent->pos());
-                    owner_->pendingMapClickElapsed_.start();
-                    owner_->pendingMapClickLineNumber_ = 0;
-                    owner_->pendingMapClickSourceVertexIndex_ = -1;
-                    owner_->pendingMapClickGeometryKind_.clear();
-                    if (owner_->mapScene_ != nullptr) {
-                        const QList<QGraphicsItem *> hitItems = owner_->mapScene_->items(owner_->pendingMapClickScenePosition_,
+                (*context_.primaryPointerInteractionActive) = true;
+                if (context_.view != nullptr) {
+                    (*context_.pendingClickSelection) = true;
+                    (*context_.pendingClickScenePosition) = context_.view->mapToScene(mouseEvent->pos());
+                    (*context_.pendingClickElapsed).start();
+                    (*context_.pendingClickLineNumber) = 0;
+                    (*context_.pendingClickSourceVertexIndex) = -1;
+                    (*context_.pendingClickGeometryKind).clear();
+                    if (context_.scene != nullptr) {
+                        const QList<QGraphicsItem *> hitItems = context_.scene->items((*context_.pendingClickScenePosition),
                                                                                  Qt::IntersectsItemShape,
                                                                                  Qt::DescendingOrder,
-                                                                                 owner_->mapView_->transform());
+                                                                                 context_.view->transform());
                         if (QGraphicsItem *item = preferredMapHitItem(hitItems)) {
                             const int lineNumber = item->data(kMapSceneLineNumberRole).toInt();
-                            owner_->pendingMapClickLineNumber_ = lineNumber;
+                            (*context_.pendingClickLineNumber) = lineNumber;
                             if (auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item)) {
-                                owner_->pendingMapClickSourceVertexIndex_ = vertexItem->vertexIndex();
-                                owner_->pendingMapClickGeometryKind_ = vertexItem->geometryKind();
+                                (*context_.pendingClickSourceVertexIndex) = vertexItem->vertexIndex();
+                                (*context_.pendingClickGeometryKind) = vertexItem->geometryKind();
                             } else if (item->data(kMapSceneSelectionSubtypeRole).toInt() == kMapSceneSelectionSubtypeLineControlConnector) {
                                 const int ownerVertexIndex = item->data(kMapSceneOwnerVertexRole).toInt();
                                 if (ownerVertexIndex >= 0) {
-                                    owner_->pendingMapClickSourceVertexIndex_ = ownerVertexIndex;
-                                    owner_->pendingMapClickGeometryKind_ = QStringLiteral("line");
+                                    (*context_.pendingClickSourceVertexIndex) = ownerVertexIndex;
+                                    (*context_.pendingClickGeometryKind) = QStringLiteral("line");
                                 }
                             }
                         }
@@ -242,8 +252,8 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
             }
 
             if (mouseEvent->button() == Qt::RightButton) {
-                owner_->mapPanActive_ = true;
-                owner_->mapPanLastPosition_ = mouseEvent->pos();
+                (*context_.mapPanActive) = true;
+                (*context_.mapPanLastPosition) = mouseEvent->pos();
                 viewport->setCursor(Qt::ClosedHandCursor);
                 event->accept();
                 return true;
@@ -251,179 +261,179 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
             break;
         }
         case QEvent::MouseMove: {
-            if ((owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line
-                 || owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area)
-                && owner_->interactiveDrawControlDragActive_) {
-                const QPointF scenePoint = owner_->mapView_->mapToScene(static_cast<QMouseEvent *>(event)->pos());
-                if (owner_->setInteractiveLineControlScenePoint(owner_->interactiveDrawControlDragHandle_, scenePoint)) {
-                    owner_->updateInteractiveDrawPreview();
+            if ((drawMode() == MapEditorInteractiveDrawMode::Line
+                 || drawMode() == MapEditorInteractiveDrawMode::Area)
+                && (*context_.interactiveDrawControlDragActive)) {
+                const QPointF scenePoint = context_.view->mapToScene(static_cast<QMouseEvent *>(event)->pos());
+                if (context_.setInteractiveLineControlScenePoint((*context_.interactiveDrawControlDragHandle), scenePoint)) {
+                    context_.updateInteractiveDrawPreview();
                 }
                 event->accept();
                 return true;
             }
 
-            if ((owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line
-                 || owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area)
-                && owner_->interactiveDrawAnchorPressActive_) {
-                const QPointF scenePoint = owner_->mapView_->mapToScene(static_cast<QMouseEvent *>(event)->pos());
+            if ((drawMode() == MapEditorInteractiveDrawMode::Line
+                 || drawMode() == MapEditorInteractiveDrawMode::Area)
+                && (*context_.interactiveDrawAnchorPressActive)) {
+                const QPointF scenePoint = context_.view->mapToScene(static_cast<QMouseEvent *>(event)->pos());
                 constexpr qreal dragThreshold = 4.0;
-                if (!owner_->interactiveDrawAnchorDragActive_
-                    && QLineF(owner_->interactiveDrawAnchorPressScenePoint_, scenePoint).length() >= dragThreshold) {
-                    owner_->interactiveDrawAnchorDragActive_ = true;
+                if (!(*context_.interactiveDrawAnchorDragActive)
+                    && QLineF((*context_.interactiveDrawAnchorPressScenePoint), scenePoint).length() >= dragThreshold) {
+                    (*context_.interactiveDrawAnchorDragActive) = true;
                 }
-                owner_->interactiveDrawAnchorDragScenePoint_ = scenePoint;
-                owner_->updateInteractiveDrawPreview();
+                (*context_.interactiveDrawAnchorDragScenePoint) = scenePoint;
+                context_.updateInteractiveDrawPreview();
                 event->accept();
                 return true;
             }
 
-            if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Freehand && owner_->interactiveDrawStrokeActive_) {
-                const QPointF scenePoint = owner_->mapView_->mapToScene(static_cast<QMouseEvent *>(event)->pos());
+            if (drawMode() == MapEditorInteractiveDrawMode::Freehand && (*context_.interactiveDrawStrokeActive)) {
+                const QPointF scenePoint = context_.view->mapToScene(static_cast<QMouseEvent *>(event)->pos());
                 constexpr qreal minimumSceneSampleDistance = 4.0;
-                if (owner_->interactiveDrawSceneVertices_.isEmpty()
-                    || QLineF(owner_->interactiveDrawSceneVertices_.last(), scenePoint).length() >= minimumSceneSampleDistance) {
-                    owner_->interactiveDrawSceneVertices_.append(scenePoint);
-                    owner_->interactiveDrawSourceVertices_.append(owner_->sourcePointFromScenePosition(scenePoint));
-                    owner_->updateInteractiveDrawPreview();
-                    owner_->updateCommandSurfaceState();
+                if ((*context_.interactiveDrawSceneVertices).isEmpty()
+                    || QLineF((*context_.interactiveDrawSceneVertices).last(), scenePoint).length() >= minimumSceneSampleDistance) {
+                    (*context_.interactiveDrawSceneVertices).append(scenePoint);
+                    (*context_.interactiveDrawSourceVertices).append(context_.sourcePointFromScenePosition(scenePoint));
+                    context_.updateInteractiveDrawPreview();
+                    context_.updateCommandSurfaceState();
                 }
                 event->accept();
                 return true;
             }
 
-            if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line
-                || owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area) {
-                const bool hasDraftVertices = !owner_->interactiveDrawLineVertices_.isEmpty();
+            if (drawMode() == MapEditorInteractiveDrawMode::Line
+                || drawMode() == MapEditorInteractiveDrawMode::Area) {
+                const bool hasDraftVertices = !(*context_.interactiveDrawLineVertices).isEmpty();
                 if (hasDraftVertices) {
                     const QPoint mousePosition = static_cast<QMouseEvent *>(event)->pos();
-                    const QPointF scenePoint = owner_->mapView_->mapToScene(mousePosition);
-                    const QPointF sceneOffset = owner_->mapView_->mapToScene(mousePosition + QPoint(8, 0));
+                    const QPointF scenePoint = context_.view->mapToScene(mousePosition);
+                    const QPointF sceneOffset = context_.view->mapToScene(mousePosition + QPoint(8, 0));
                     const qreal controlHitRadius = std::max<qreal>(4.0, QLineF(scenePoint, sceneOffset).length());
-                    if (owner_->interactiveLineControlAt(scenePoint, controlHitRadius).has_value()) {
+                    if (context_.interactiveLineControlAt(scenePoint, controlHitRadius).has_value()) {
                         viewport->setCursor(Qt::OpenHandCursor);
                     } else {
                         viewport->unsetCursor();
                     }
-                    owner_->interactiveDrawHoverActive_ = true;
-                    owner_->interactiveDrawHoverScenePoint_ = scenePoint;
-                    owner_->updateInteractiveDrawPreview();
+                    (*context_.interactiveDrawHoverActive) = true;
+                    (*context_.interactiveDrawHoverScenePoint) = scenePoint;
+                    context_.updateInteractiveDrawPreview();
                     event->accept();
                     return true;
                 }
             }
 
-            if (!owner_->mapPanActive_) {
+            if (!(*context_.mapPanActive)) {
                 break;
             }
 
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
-            const QPoint delta = mouseEvent->pos() - owner_->mapPanLastPosition_;
-            owner_->mapPanLastPosition_ = mouseEvent->pos();
-            if (owner_->mapView_->horizontalScrollBar() != nullptr) {
-                owner_->mapView_->horizontalScrollBar()->setValue(owner_->mapView_->horizontalScrollBar()->value() - delta.x());
+            const QPoint delta = mouseEvent->pos() - (*context_.mapPanLastPosition);
+            (*context_.mapPanLastPosition) = mouseEvent->pos();
+            if (context_.view->horizontalScrollBar() != nullptr) {
+                context_.view->horizontalScrollBar()->setValue(context_.view->horizontalScrollBar()->value() - delta.x());
             }
-            if (owner_->mapView_->verticalScrollBar() != nullptr) {
-                owner_->mapView_->verticalScrollBar()->setValue(owner_->mapView_->verticalScrollBar()->value() - delta.y());
+            if (context_.view->verticalScrollBar() != nullptr) {
+                context_.view->verticalScrollBar()->setValue(context_.view->verticalScrollBar()->value() - delta.y());
             }
 
-            owner_->autoFitEnabled_ = false;
-            owner_->syncZoomFactorFromView();
-            owner_->updateCommandSurfaceState();
+            (*context_.autoFitEnabled) = false;
+            context_.syncZoomFactorFromView();
+            context_.updateCommandSurfaceState();
             event->accept();
             return true;
         }
         case QEvent::MouseButtonRelease: {
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
-            if ((owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line
-                 || owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area)
-                && owner_->interactiveDrawControlDragActive_
+            if ((drawMode() == MapEditorInteractiveDrawMode::Line
+                 || drawMode() == MapEditorInteractiveDrawMode::Area)
+                && (*context_.interactiveDrawControlDragActive)
                 && mouseEvent->button() == Qt::LeftButton) {
-                const QPointF scenePoint = owner_->mapView_->mapToScene(mouseEvent->pos());
-                owner_->setInteractiveLineControlScenePoint(owner_->interactiveDrawControlDragHandle_, scenePoint);
-                owner_->interactiveDrawControlDragActive_ = false;
-                const QPointF sceneOffset = owner_->mapView_->mapToScene(mouseEvent->pos() + QPoint(8, 0));
+                const QPointF scenePoint = context_.view->mapToScene(mouseEvent->pos());
+                context_.setInteractiveLineControlScenePoint((*context_.interactiveDrawControlDragHandle), scenePoint);
+                (*context_.interactiveDrawControlDragActive) = false;
+                const QPointF sceneOffset = context_.view->mapToScene(mouseEvent->pos() + QPoint(8, 0));
                 const qreal controlHitRadius = std::max<qreal>(4.0, QLineF(scenePoint, sceneOffset).length());
-                if (owner_->interactiveLineControlAt(scenePoint, controlHitRadius).has_value()) {
+                if (context_.interactiveLineControlAt(scenePoint, controlHitRadius).has_value()) {
                     viewport->setCursor(Qt::OpenHandCursor);
                 } else {
                     viewport->unsetCursor();
                 }
-                owner_->toolbarStatusNote_ = owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line
-                    ? owner_->tr("Line mode: bezier control adjusted.")
-                    : owner_->tr("Area mode: bezier control adjusted.");
-                owner_->refreshToolbarSummary();
-                owner_->updateCommandSurfaceState();
+                (*context_.toolbarStatusNote) = drawMode() == MapEditorInteractiveDrawMode::Line
+                    ? tr("Line mode: bezier control adjusted.")
+                    : tr("Area mode: bezier control adjusted.");
+                context_.refreshToolbarSummary();
+                context_.updateCommandSurfaceState();
                 event->accept();
                 return true;
             }
 
-            if ((owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line
-                 || owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area)
-                && owner_->interactiveDrawAnchorPressActive_
+            if ((drawMode() == MapEditorInteractiveDrawMode::Line
+                 || drawMode() == MapEditorInteractiveDrawMode::Area)
+                && (*context_.interactiveDrawAnchorPressActive)
                 && mouseEvent->button() == Qt::LeftButton) {
-                const QPointF anchorScenePoint = owner_->interactiveDrawAnchorPressScenePoint_;
+                const QPointF anchorScenePoint = (*context_.interactiveDrawAnchorPressScenePoint);
                 std::optional<QPointF> dragScenePoint;
-                if (owner_->interactiveDrawAnchorDragActive_) {
-                    const QPointF releaseScenePoint = owner_->mapView_->mapToScene(mouseEvent->pos());
+                if ((*context_.interactiveDrawAnchorDragActive)) {
+                    const QPointF releaseScenePoint = context_.view->mapToScene(mouseEvent->pos());
                     constexpr qreal dragThreshold = 4.0;
-                    if (QLineF(owner_->interactiveDrawAnchorPressScenePoint_, releaseScenePoint).length() >= dragThreshold) {
+                    if (QLineF((*context_.interactiveDrawAnchorPressScenePoint), releaseScenePoint).length() >= dragThreshold) {
                         dragScenePoint = releaseScenePoint;
                     }
                 }
 
-                owner_->interactiveDrawAnchorPressActive_ = false;
-                owner_->interactiveDrawAnchorDragActive_ = false;
-                owner_->interactiveDrawHoverActive_ = false;
-                owner_->captureInteractiveLineAnchor(anchorScenePoint, dragScenePoint);
-                owner_->toolbarStatusNote_ = owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line
-                    ? owner_->tr("Line mode: %1 vertex/vertices captured. Press Enter or Complete Draft.")
-                          .arg(owner_->interactiveDrawLineVertices_.size())
-                    : owner_->tr("Area mode: %1 vertex/vertices captured. Press Enter or Complete Draft.")
-                          .arg(owner_->interactiveDrawLineVertices_.size());
-                owner_->refreshToolbarSummary();
-                owner_->updateCommandSurfaceState();
+                (*context_.interactiveDrawAnchorPressActive) = false;
+                (*context_.interactiveDrawAnchorDragActive) = false;
+                (*context_.interactiveDrawHoverActive) = false;
+                context_.captureInteractiveLineAnchor(anchorScenePoint, dragScenePoint);
+                (*context_.toolbarStatusNote) = drawMode() == MapEditorInteractiveDrawMode::Line
+                    ? tr("Line mode: %1 vertex/vertices captured. Press Enter or Complete Draft.")
+                          .arg((*context_.interactiveDrawLineVertices).size())
+                    : tr("Area mode: %1 vertex/vertices captured. Press Enter or Complete Draft.")
+                          .arg((*context_.interactiveDrawLineVertices).size());
+                context_.refreshToolbarSummary();
+                context_.updateCommandSurfaceState();
                 event->accept();
                 return true;
             }
-            if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Freehand
-                && owner_->interactiveDrawStrokeActive_
+            if (drawMode() == MapEditorInteractiveDrawMode::Freehand
+                && (*context_.interactiveDrawStrokeActive)
                 && mouseEvent->button() == Qt::LeftButton) {
-                const QPointF releasePoint = owner_->mapView_->mapToScene(mouseEvent->pos());
-                if (owner_->interactiveDrawSceneVertices_.isEmpty()
-                    || QLineF(owner_->interactiveDrawSceneVertices_.last(), releasePoint).length() >= 1.0) {
-                    owner_->interactiveDrawSceneVertices_.append(releasePoint);
-                    owner_->interactiveDrawSourceVertices_.append(owner_->sourcePointFromScenePosition(releasePoint));
+                const QPointF releasePoint = context_.view->mapToScene(mouseEvent->pos());
+                if ((*context_.interactiveDrawSceneVertices).isEmpty()
+                    || QLineF((*context_.interactiveDrawSceneVertices).last(), releasePoint).length() >= 1.0) {
+                    (*context_.interactiveDrawSceneVertices).append(releasePoint);
+                    (*context_.interactiveDrawSourceVertices).append(context_.sourcePointFromScenePosition(releasePoint));
                 }
-                owner_->interactiveDrawStrokeActive_ = false;
+                (*context_.interactiveDrawStrokeActive) = false;
 
-                if (owner_->interactiveDrawSourceVertices_.size() < 2) {
-                    owner_->clearInteractiveDrawSession(false);
-                    owner_->toolbarStatusNote_ = owner_->tr("Freehand mode needs a drag stroke to create a line.");
-                    owner_->refreshToolbarSummary();
-                    owner_->updateCommandSurfaceState();
+                if ((*context_.interactiveDrawSourceVertices).size() < 2) {
+                    context_.clearInteractiveDrawSession(false);
+                    (*context_.toolbarStatusNote) = tr("Freehand mode needs a drag stroke to create a line.");
+                    context_.refreshToolbarSummary();
+                    context_.updateCommandSurfaceState();
                     event->accept();
                     return true;
                 }
 
-                const bool committed = owner_->commitInteractiveDrawVertices(QStringLiteral("line"),
-                                                                     owner_->interactiveDrawSourceVertices_,
-                                                                     owner_->tr("freehand line"));
-                owner_->clearInteractiveDrawSession(false);
+                const bool committed = context_.commitInteractiveDrawVertices(QStringLiteral("line"),
+                                                                     (*context_.interactiveDrawSourceVertices),
+                                                                     tr("freehand line"));
+                context_.clearInteractiveDrawSession(false);
                 if (committed) {
-                    owner_->updateHelpPanel();
+                    context_.updateHelpPanel();
                 }
-                owner_->refreshToolbarSummary();
-                owner_->updateCommandSurfaceState();
+                context_.refreshToolbarSummary();
+                context_.updateCommandSurfaceState();
                 event->accept();
                 return true;
             }
 
             if (mouseEvent->button() == Qt::LeftButton && mouseEvent->buttons() == Qt::NoButton) {
-                owner_->primaryPointerInteractionActive_ = false;
+                (*context_.primaryPointerInteractionActive) = false;
             }
 
-            if (owner_->mapPanActive_ && mouseEvent->button() == Qt::RightButton) {
-                owner_->mapPanActive_ = false;
+            if ((*context_.mapPanActive) && mouseEvent->button() == Qt::RightButton) {
+                (*context_.mapPanActive) = false;
                 viewport->unsetCursor();
                 event->accept();
                 return true;
@@ -432,20 +442,20 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
         }
         case QEvent::Wheel: {
             auto *wheelEvent = static_cast<QWheelEvent *>(event);
-            if (owner_->nativeZoomGestureActive_
-                && owner_->lastNativeZoomGestureUtc_.isValid()
-                && owner_->lastNativeZoomGestureUtc_.msecsTo(QDateTime::currentDateTimeUtc()) > 1500) {
-                owner_->nativeZoomGestureActive_ = false;
+            if ((*context_.nativeZoomGestureActive)
+                && (*context_.lastNativeZoomGestureUtc).isValid()
+                && (*context_.lastNativeZoomGestureUtc).msecsTo(QDateTime::currentDateTimeUtc()) > 1500) {
+                (*context_.nativeZoomGestureActive) = false;
             }
 
-            const bool recentNativeZoom = owner_->lastNativeZoomGestureUtc_.isValid()
-                && owner_->lastNativeZoomGestureUtc_.msecsTo(QDateTime::currentDateTimeUtc()) <= 150;
-            if (owner_->nativeZoomGestureActive_ || recentNativeZoom) {
+            const bool recentNativeZoom = (*context_.lastNativeZoomGestureUtc).isValid()
+                && (*context_.lastNativeZoomGestureUtc).msecsTo(QDateTime::currentDateTimeUtc()) <= 150;
+            if ((*context_.nativeZoomGestureActive) || recentNativeZoom) {
                 event->accept();
                 return true;
             }
 
-            if (owner_->primaryPointerInteractionActive_) {
+            if ((*context_.primaryPointerInteractionActive)) {
                 event->accept();
                 return true;
             }
@@ -453,7 +463,7 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
             const Qt::KeyboardModifiers modifiers = wheelEvent->modifiers();
             const bool cmdModifier = modifiers.testFlag(Qt::ControlModifier) || modifiers.testFlag(Qt::MetaModifier);
             const bool preciseScroll = wheelEventHasPreciseScrollingDeltas(wheelEvent);
-            const MapEditorWheelAction wheelAction = resolveMapEditorWheelAction(owner_->touchFriendlyControlsEnabled_,
+            const MapEditorWheelAction wheelAction = resolveMapEditorWheelAction((*context_.touchFriendlyControlsEnabled),
                                                                                  preciseScroll,
                                                                                  cmdModifier);
             if (wheelAction == MapEditorWheelAction::Zoom) {
@@ -468,7 +478,7 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
 
                 if (!qFuzzyIsNull(delta)) {
                     const qreal factor = std::pow(1.0015, delta);
-                    owner_->applyZoomAtViewportPosition(factor, wheelEvent->position());
+                    context_.applyZoomAtViewportPosition(factor, wheelEvent->position());
                 }
 
                 event->accept();
@@ -482,16 +492,16 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
             }
 
             if (!panDelta.isNull()) {
-                if (owner_->mapView_->horizontalScrollBar() != nullptr) {
-                    owner_->mapView_->horizontalScrollBar()->setValue(owner_->mapView_->horizontalScrollBar()->value() - panDelta.x());
+                if (context_.view->horizontalScrollBar() != nullptr) {
+                    context_.view->horizontalScrollBar()->setValue(context_.view->horizontalScrollBar()->value() - panDelta.x());
                 }
-                if (owner_->mapView_->verticalScrollBar() != nullptr) {
-                    owner_->mapView_->verticalScrollBar()->setValue(owner_->mapView_->verticalScrollBar()->value() - panDelta.y());
+                if (context_.view->verticalScrollBar() != nullptr) {
+                    context_.view->verticalScrollBar()->setValue(context_.view->verticalScrollBar()->value() - panDelta.y());
                 }
 
-                owner_->autoFitEnabled_ = false;
-                owner_->syncZoomFactorFromView();
-                owner_->updateCommandSurfaceState();
+                (*context_.autoFitEnabled) = false;
+                context_.syncZoomFactorFromView();
+                context_.updateCommandSurfaceState();
             }
 
             event->accept();
@@ -499,28 +509,28 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
         }
         case QEvent::NativeGesture: {
             auto *gestureEvent = static_cast<QNativeGestureEvent *>(event);
-            if (owner_->primaryPointerInteractionActive_) {
+            if ((*context_.primaryPointerInteractionActive)) {
                 event->accept();
                 return true;
             }
 
             if (gestureEvent->gestureType() == Qt::BeginNativeGesture) {
-                owner_->nativeZoomGestureActive_ = true;
-                owner_->lastNativeZoomGestureUtc_ = QDateTime::currentDateTimeUtc();
+                (*context_.nativeZoomGestureActive) = true;
+                (*context_.lastNativeZoomGestureUtc) = QDateTime::currentDateTimeUtc();
                 event->accept();
                 return true;
             }
 
             if (gestureEvent->gestureType() == Qt::EndNativeGesture) {
-                owner_->nativeZoomGestureActive_ = false;
-                owner_->lastNativeZoomGestureUtc_ = QDateTime::currentDateTimeUtc();
+                (*context_.nativeZoomGestureActive) = false;
+                (*context_.lastNativeZoomGestureUtc) = QDateTime::currentDateTimeUtc();
                 event->accept();
                 return true;
             }
 
             if (gestureEvent->gestureType() == Qt::ZoomNativeGesture) {
-                owner_->nativeZoomGestureActive_ = true;
-                owner_->lastNativeZoomGestureUtc_ = QDateTime::currentDateTimeUtc();
+                (*context_.nativeZoomGestureActive) = true;
+                (*context_.lastNativeZoomGestureUtc) = QDateTime::currentDateTimeUtc();
                 const qreal rawValue = gestureEvent->value();
                 if (!std::isfinite(rawValue)) {
                     event->accept();
@@ -531,7 +541,7 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                 const qreal clampedDelta = qBound(-0.35, rawValue, 0.35);
                 const qreal factor = std::exp(clampedDelta);
                 if (factor > 0.0) {
-                    owner_->applyZoomAtViewportPosition(factor, gestureEvent->position());
+                    context_.applyZoomAtViewportPosition(factor, gestureEvent->position());
                 }
                 event->accept();
                 return true;
@@ -539,9 +549,9 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
             break;
         }
         case QEvent::TouchBegin: {
-            if (!shouldEnableTouchPanCandidate(owner_->touchFriendlyControlsEnabled_,
-                                               owner_->selectModeActive_,
-                                               owner_->primaryPointerInteractionActive_)) {
+            if (!shouldEnableTouchPanCandidate((*context_.touchFriendlyControlsEnabled),
+                                               (*context_.selectModeActive),
+                                               (*context_.primaryPointerInteractionActive))) {
                 event->accept();
                 return true;
             }
@@ -549,117 +559,117 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
             auto *touchEvent = static_cast<QTouchEvent *>(event);
             if (touchEvent->points().size() == 2) {
                 const QPointF centroid = (touchEvent->points().at(0).position() + touchEvent->points().at(1).position()) / 2.0;
-                owner_->touchPanCandidate_ = true;
-                owner_->touchPanActive_ = false;
-                owner_->touchPanStartPosition_ = centroid;
-                owner_->touchPanLastPosition_ = centroid;
+                (*context_.touchPanCandidate) = true;
+                (*context_.touchPanActive) = false;
+                (*context_.touchPanStartPosition) = centroid;
+                (*context_.touchPanLastPosition) = centroid;
             }
             break;
         }
         case QEvent::TouchUpdate: {
-            if (!owner_->touchPanCandidate_ || owner_->primaryPointerInteractionActive_) {
+            if (!(*context_.touchPanCandidate) || (*context_.primaryPointerInteractionActive)) {
                 event->accept();
                 return true;
             }
 
             auto *touchEvent = static_cast<QTouchEvent *>(event);
             if (touchEvent->points().size() != 2) {
-                owner_->touchPanCandidate_ = false;
-                owner_->touchPanActive_ = false;
+                (*context_.touchPanCandidate) = false;
+                (*context_.touchPanActive) = false;
                 break;
             }
 
             const QPointF centroid = (touchEvent->points().at(0).position() + touchEvent->points().at(1).position()) / 2.0;
-            if (!owner_->touchPanActive_) {
+            if (!(*context_.touchPanActive)) {
                 const qreal threshold = 8.0;
-                if (QLineF(owner_->touchPanStartPosition_, centroid).length() < threshold) {
+                if (QLineF((*context_.touchPanStartPosition), centroid).length() < threshold) {
                     event->accept();
                     return true;
                 }
-                owner_->touchPanActive_ = true;
+                (*context_.touchPanActive) = true;
             }
 
-            const QPointF delta = centroid - owner_->touchPanLastPosition_;
-            owner_->touchPanLastPosition_ = centroid;
-            if (owner_->mapView_->horizontalScrollBar() != nullptr) {
-                owner_->mapView_->horizontalScrollBar()->setValue(owner_->mapView_->horizontalScrollBar()->value() - qRound(delta.x()));
+            const QPointF delta = centroid - (*context_.touchPanLastPosition);
+            (*context_.touchPanLastPosition) = centroid;
+            if (context_.view->horizontalScrollBar() != nullptr) {
+                context_.view->horizontalScrollBar()->setValue(context_.view->horizontalScrollBar()->value() - qRound(delta.x()));
             }
-            if (owner_->mapView_->verticalScrollBar() != nullptr) {
-                owner_->mapView_->verticalScrollBar()->setValue(owner_->mapView_->verticalScrollBar()->value() - qRound(delta.y()));
+            if (context_.view->verticalScrollBar() != nullptr) {
+                context_.view->verticalScrollBar()->setValue(context_.view->verticalScrollBar()->value() - qRound(delta.y()));
             }
 
-            owner_->autoFitEnabled_ = false;
-            owner_->syncZoomFactorFromView();
-            owner_->updateCommandSurfaceState();
+            (*context_.autoFitEnabled) = false;
+            context_.syncZoomFactorFromView();
+            context_.updateCommandSurfaceState();
             event->accept();
             return true;
         }
         case QEvent::TouchEnd:
         case QEvent::TouchCancel:
-            owner_->touchPanCandidate_ = false;
-            owner_->touchPanActive_ = false;
+            (*context_.touchPanCandidate) = false;
+            (*context_.touchPanActive) = false;
             break;
         case QEvent::Leave:
-            if (owner_->mapPanActive_) {
-                owner_->mapPanActive_ = false;
+            if ((*context_.mapPanActive)) {
+                (*context_.mapPanActive) = false;
                 viewport->unsetCursor();
             }
-            owner_->primaryPointerInteractionActive_ = false;
-            owner_->touchPanCandidate_ = false;
-            owner_->touchPanActive_ = false;
-            owner_->nativeZoomGestureActive_ = false;
-            owner_->interactiveDrawStrokeActive_ = false;
-            owner_->interactiveDrawAnchorPressActive_ = false;
-            owner_->interactiveDrawAnchorDragActive_ = false;
-            owner_->interactiveDrawControlDragActive_ = false;
+            (*context_.primaryPointerInteractionActive) = false;
+            (*context_.touchPanCandidate) = false;
+            (*context_.touchPanActive) = false;
+            (*context_.nativeZoomGestureActive) = false;
+            (*context_.interactiveDrawStrokeActive) = false;
+            (*context_.interactiveDrawAnchorPressActive) = false;
+            (*context_.interactiveDrawAnchorDragActive) = false;
+            (*context_.interactiveDrawControlDragActive) = false;
             viewport->unsetCursor();
-            if (owner_->interactiveDrawHoverActive_) {
-                owner_->interactiveDrawHoverActive_ = false;
-                owner_->updateInteractiveDrawPreview();
+            if ((*context_.interactiveDrawHoverActive)) {
+                (*context_.interactiveDrawHoverActive) = false;
+                context_.updateInteractiveDrawPreview();
             }
             break;
         case QEvent::Resize:
-            if (owner_->autoFitEnabled_ && owner_->mapView_->isVisible()) {
-                owner_->fitMapToView(owner_->fitBackgroundRequested_);
+            if ((*context_.autoFitEnabled) && context_.view->isVisible()) {
+                context_.fitMapToView((*context_.fitBackgroundRequested));
             }
             break;
         case QEvent::KeyPress: {
             auto *keyEvent = static_cast<QKeyEvent *>(event);
-            if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line
-                || owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area
-                || owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Freehand) {
+            if (drawMode() == MapEditorInteractiveDrawMode::Line
+                || drawMode() == MapEditorInteractiveDrawMode::Area
+                || drawMode() == MapEditorInteractiveDrawMode::Freehand) {
                 if ((keyEvent->key() == Qt::Key_Backspace || keyEvent->key() == Qt::Key_Delete)
                     && keyEvent->modifiers() == Qt::NoModifier
-                    && owner_->interactiveDrawMode_ != MapEditorTab::InteractiveDrawMode::Freehand) {
-                    if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Line
-                        && !owner_->interactiveDrawLineVertices_.isEmpty()) {
-                        owner_->interactiveDrawLineVertices_.removeLast();
-                        if (!owner_->interactiveDrawLineVertices_.isEmpty()) {
-                            MapEditorInteractiveLineDraftVertex &tail = owner_->interactiveDrawLineVertices_.last();
+                    && drawMode() != MapEditorInteractiveDrawMode::Freehand) {
+                    if (drawMode() == MapEditorInteractiveDrawMode::Line
+                        && !(*context_.interactiveDrawLineVertices).isEmpty()) {
+                        (*context_.interactiveDrawLineVertices).removeLast();
+                        if (!(*context_.interactiveDrawLineVertices).isEmpty()) {
+                            MapEditorInteractiveLineDraftVertex &tail = (*context_.interactiveDrawLineVertices).last();
                             tail.outgoingControlScene.reset();
                             tail.outgoingControlSource.reset();
                         }
-                        owner_->updateInteractiveDrawPreview();
-                        owner_->toolbarStatusNote_ = owner_->tr("Vertex removed from current draft (%1 remaining).")
-                                                 .arg(owner_->interactiveDrawLineVertices_.size());
-                        owner_->refreshToolbarSummary();
-                        owner_->updateCommandSurfaceState();
+                        context_.updateInteractiveDrawPreview();
+                        (*context_.toolbarStatusNote) = tr("Vertex removed from current draft (%1 remaining).")
+                                                 .arg((*context_.interactiveDrawLineVertices).size());
+                        context_.refreshToolbarSummary();
+                        context_.updateCommandSurfaceState();
                         event->accept();
                         return true;
                     }
-                    if (owner_->interactiveDrawMode_ == MapEditorTab::InteractiveDrawMode::Area
-                        && !owner_->interactiveDrawLineVertices_.isEmpty()) {
-                        owner_->interactiveDrawLineVertices_.removeLast();
-                        if (!owner_->interactiveDrawLineVertices_.isEmpty()) {
-                            MapEditorInteractiveLineDraftVertex &tail = owner_->interactiveDrawLineVertices_.last();
+                    if (drawMode() == MapEditorInteractiveDrawMode::Area
+                        && !(*context_.interactiveDrawLineVertices).isEmpty()) {
+                        (*context_.interactiveDrawLineVertices).removeLast();
+                        if (!(*context_.interactiveDrawLineVertices).isEmpty()) {
+                            MapEditorInteractiveLineDraftVertex &tail = (*context_.interactiveDrawLineVertices).last();
                             tail.outgoingControlScene.reset();
                             tail.outgoingControlSource.reset();
                         }
-                        owner_->updateInteractiveDrawPreview();
-                        owner_->toolbarStatusNote_ = owner_->tr("Vertex removed from current draft (%1 remaining).")
-                                                 .arg(owner_->interactiveDrawLineVertices_.size());
-                        owner_->refreshToolbarSummary();
-                        owner_->updateCommandSurfaceState();
+                        context_.updateInteractiveDrawPreview();
+                        (*context_.toolbarStatusNote) = tr("Vertex removed from current draft (%1 remaining).")
+                                                 .arg((*context_.interactiveDrawLineVertices).size());
+                        context_.refreshToolbarSummary();
+                        context_.updateCommandSurfaceState();
                         event->accept();
                         return true;
                     }
@@ -669,17 +679,17 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
             const bool insertShortcut = keyEvent->key() == Qt::Key_Insert
                 || (keyEvent->key() == Qt::Key_I && keyEvent->modifiers() == Qt::NoModifier);
             if (insertShortcut) {
-                if (owner_->insertLineVertexFromSelection()) {
+                if (context_.insertLineVertexFromSelection()) {
                     event->accept();
                     return true;
                 }
             } else if (keyEvent->key() == Qt::Key_Delete || keyEvent->key() == Qt::Key_Backspace) {
-                if (owner_->removeLineVertexFromSelection()) {
+                if (context_.removeLineVertexFromSelection()) {
                     event->accept();
                     return true;
                 }
             } else if (keyEvent->key() == Qt::Key_S && keyEvent->modifiers() == Qt::NoModifier) {
-                if (owner_->toggleLineVertexSmoothFromSelection()) {
+                if (context_.toggleLineVertexSmoothFromSelection()) {
                     event->accept();
                     return true;
                 }
@@ -689,9 +699,9 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
         default:
             break;
         }
-    } else if (watched == owner_->mapView_ && event->type() == QEvent::Resize) {
-        if (owner_->autoFitEnabled_ && owner_->mapView_->isVisible()) {
-            owner_->fitMapToView(owner_->fitBackgroundRequested_);
+    } else if (watched == context_.view && event->type() == QEvent::Resize) {
+        if ((*context_.autoFitEnabled) && context_.view->isVisible()) {
+            context_.fitMapToView((*context_.fitBackgroundRequested));
         }
     }
 

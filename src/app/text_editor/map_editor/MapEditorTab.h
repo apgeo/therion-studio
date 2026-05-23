@@ -53,31 +53,26 @@ enum class DraftGeometryKind;
 namespace TherionStudio
 {
 class TextEditorTab;
-class MapEditorCanvasEditController;
-class MapEditorInteractiveDrawController;
+struct MapEditorCanvasEditContext;
+struct MapEditorInteractiveDrawContext;
 class MapEditorInspectorBackgroundController;
+struct MapEditorInspectorBackgroundContext;
 class MapEditorInspectorObjectController;
+struct MapEditorInspectorObjectContext;
+struct MapEditorObjectDetailsContext;
 class MapEditorObjectDetailsEditController;
 class MapEditorObjectDetailsPanelController;
+struct MapEditorSceneLifecycleContext;
 class MapEditorSceneLifecycleController;
+struct MapEditorSceneRefreshContext;
 class MapEditorSceneRefreshController;
-class MapEditorSelectionController;
+struct MapEditorSelectionContext;
 class SessionSettingsStore;
-class MapEditorViewportInputController;
+struct MapEditorViewportInputContext;
 
 class MapEditorTab final : public QWidget
 {
     Q_OBJECT
-    friend class MapEditorCanvasEditController;
-    friend class MapEditorInteractiveDrawController;
-    friend class MapEditorInspectorBackgroundController;
-    friend class MapEditorInspectorObjectController;
-    friend class MapEditorObjectDetailsEditController;
-    friend class MapEditorObjectDetailsPanelController;
-    friend class MapEditorSceneLifecycleController;
-    friend class MapEditorSceneRefreshController;
-    friend class MapEditorSelectionController;
-    friend class MapEditorViewportInputController;
 
 public:
     enum class WorkspaceMode
@@ -212,10 +207,14 @@ private:
     void initializeWorkspace();
     void buildUi();
     void buildMapScene();
+    MapEditorViewportInputContext viewportInputContext();
     void refreshMapScene();
     void refreshMapScenePreservingUndoStack();
     void flushPendingMapSceneRefreshAfterCommand();
+    MapEditorSceneRefreshContext sceneRefreshContext();
     void clearMapScene();
+    MapEditorSelectionContext selectionContext();
+    MapEditorCanvasEditContext canvasEditContext();
     void clearDraftGeometryItems();
     void clearBackgroundImageItems();
     void restoreDraftGeometryItems();
@@ -223,6 +222,7 @@ private:
     void selectMapLine(int lineNumber, bool centerOnSelection = true);
     void selectMapLines(const QSet<int> &lineNumbers, bool centerOnSelection = true);
     void setInteractiveDrawMode(InteractiveDrawMode mode);
+    MapEditorInteractiveDrawContext interactiveDrawContext();
     bool handleInteractiveDrawClick(const QPointF &scenePosition);
     bool commitInteractiveDrawSession();
     void clearInteractiveDrawSession(bool clearMode);
@@ -250,6 +250,7 @@ private:
     QRectF mapGeometryFitBounds() const;
     QRectF mapBackgroundFitBounds() const;
     QRectF mapPreviewBounds() const;
+    MapEditorSceneLifecycleContext sceneLifecycleContext() const;
     void addBackgroundImage(const QString &imagePath, bool writeXtherionMetadata = false);
     void refreshBackgroundLayerControls();
     void applyBackgroundLayerStackingOrder();
@@ -311,6 +312,7 @@ private:
     void setTouchFriendlyControlsEnabled(bool enabled);
     void handleApplicationAppearanceChanged();
     void refreshWorkspaceModeUi();
+    MapEditorInspectorObjectContext inspectorObjectContext();
     void rebuildInspectorObjectsTree();
     QModelIndex findInspectorObjectIndexForLine(int lineNumber) const;
     void syncInspectorObjectSelectionToLine(int lineNumber);
@@ -324,7 +326,9 @@ private:
     void configureInspectorBackgroundLayerTreeColumns();
     void handleInspectorBackgroundLayerSelectionChanged(const QModelIndex &current);
     void handleInspectorBackgroundLayerClicked(const QModelIndex &index);
+    MapEditorInspectorBackgroundContext inspectorBackgroundContext();
     void refreshInspectorBackgroundPanel();
+    MapEditorObjectDetailsContext objectDetailsContext();
     void refreshObjectDetailsPanel();
     void applyObjectOrientationEdits();
     void deleteSelectedObjectFromSelection();

@@ -1,47 +1,55 @@
 #include "MapEditorSceneRefreshController.h"
 
-#include "../TextEditorTab.h"
 #include "MapEditorInspectorData.h"
 #include "MapEditorObjectDetailsLogic.h"
 #include "MapEditorSceneSupport.h"
-#include "MapEditorTab.h"
 #include "../../../core/TherionDocumentParser.h"
 
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QObject>
-#include <QPointer>
 #include <QUndoStack>
 
 #include <optional>
+#include <utility>
 
 namespace TherionStudio
 {
-MapEditorSceneRefreshController::MapEditorSceneRefreshController(MapEditorTab *owner)
-    : owner_(owner)
+MapEditorSceneRefreshController::MapEditorSceneRefreshController(MapEditorSceneRefreshContext context)
+    : context_(std::move(context))
 {
+}
+
+QGraphicsScene *MapEditorSceneRefreshController::scene() const
+{
+    return context_.scene != nullptr ? *context_.scene : nullptr;
 }
 
 void MapEditorSceneRefreshController::buildMapScene()
 {
-    owner_->mapScene_ = new QGraphicsScene(owner_);
-    owner_->mapView_->setScene(owner_->mapScene_);
-    QObject::connect(owner_->mapScene_, &QGraphicsScene::selectionChanged, owner_, &MapEditorTab::handleMapSceneSelectionChanged);
+    *context_.scene = new QGraphicsScene(context_.sceneParent);
+    context_.view->setScene(*context_.scene);
+    QObject::connect(*context_.scene,
+                     &QGraphicsScene::selectionChanged,
+                     context_.selectionConnectionContext,
+                     [onSelectionChanged = context_.handleSceneSelectionChanged]() {
+                         onSelectionChanged();
+                     });
 }
 
 void MapEditorSceneRefreshController::refreshMapScene()
 {
-    if (owner_->mapScene_ == nullptr) {
+    if (scene() == nullptr) {
         return;
     }
 
-    if (owner_->mapCommandApplyInProgress_) {
-        owner_->mapSceneRefreshPending_ = true;
+    if (*context_.commandApplyInProgress) {
+        *context_.sceneRefreshPending = true;
         return;
     }
 
-    if (owner_->undoStack_ != nullptr) {
-        owner_->undoStack_->clear();
+    if (context_.undoStack != nullptr) {
+        context_.undoStack->clear();
     }
 
     refreshMapScenePreservingUndoStack();
@@ -49,17 +57,18 @@ void MapEditorSceneRefreshController::refreshMapScene()
 
 void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack()
 {
-    if (owner_->mapScene_ == nullptr) {
+    QGraphicsScene *mapScene = scene();
+    if (mapScene == nullptr) {
         return;
     }
 
-    if (owner_->undoStack_ != nullptr) {
-        owner_->updateCommandSurfaceState();
+    if (context_.undoStack != nullptr) {
+        context_.updateCommandSurfaceState();
     }
 
-    owner_->clearMapScene();
+    context_.clearMapScene();
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(owner_->textEditor_->text());
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(context_.documentText());
     const QVector<MapSceneEntry> entries = collectMapSceneEntries(parsedLines);
     QVector<MapGeometryFeature> geometryFeatures = collectGeometryFeatures(parsedLines);
     QHash<int, TherionParsedLine> parsedLinesByLineNumber;
@@ -76,68 +85,51 @@ void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack()
             feature.orientationDegrees = pointOrientationFromParsedLine(parsedLine);
         }
     }
-    const QRectF sourceBounds = owner_->mapSourceBoundsForCurrentDocument();
+    const QRectF sourceBounds = context_.mapSourceBoundsForCurrentDocument();
     const std::optional<QRectF> sourceBoundsOverride = sourceBounds.isValid()
         ? std::optional<QRectF>(sourceBounds)
         : std::nullopt;
-    const QPointer<MapEditorTab> self(owner_);
-    renderMapWorkspaceScene(owner_->mapScene_,
-                            owner_->filePath(),
+    renderMapWorkspaceScene(mapScene,
+                            context_.filePath(),
                             entries,
                             geometryFeatures,
                             sourceBoundsOverride,
-                            MapGridOptions{owner_->mapGridVisible_,
-                                           owner_->mapGridSpacingMeters_,
+                            MapGridOptions{*context_.gridVisible,
+                                           *context_.gridSpacingMeters,
                                            mapSourceUnitsPerMeterFromParsedLines(parsedLines)},
-                            &owner_->mapItemsByLine_,
-                            [owner = owner_](int lineNumber, const QPointF &oldPosition, const QPointF &newPosition) {
-                                owner->recordCardMove(lineNumber, oldPosition, newPosition);
-                            },
-                            [owner = owner_](int lineNumber, bool oldVisible, bool newVisible) {
-                                owner->recordCardVisibility(lineNumber, oldVisible, newVisible);
-                            },
-                            [owner = owner_](int lineNumber, const QPointF &oldPoint, const QPointF &newPoint) {
-                                owner->recordPointGeometryMove(lineNumber, oldPoint, newPoint);
-                            },
-                            [owner = owner_](int lineNumber, const QString &kind, int vertexIndex, const QPointF &oldPoint, const QPointF &newPoint) {
-                                owner->recordLineAreaVertexMove(lineNumber, kind, vertexIndex, oldPoint, newPoint);
-                            },
-                            [self](int lineNumber, qreal orientationDegrees) {
-                                if (self != nullptr) {
-                                    self->recordPointOrientationHandleChange(lineNumber, orientationDegrees);
-                                }
-                            },
-                            [self](int lineNumber, int sourceVertexIndex, qreal orientationDegrees, qreal leftSize) {
-                                if (self != nullptr) {
-                                    self->recordLinePointLeftHandleChange(lineNumber, sourceVertexIndex, orientationDegrees, leftSize);
-                                }
-                            });
+                            context_.itemsByLine,
+                            context_.recordCardMove,
+                            context_.recordCardVisibility,
+                            context_.recordPointGeometryMove,
+                            context_.recordLineAreaVertexMove,
+                            context_.recordPointOrientationHandleChange,
+                            context_.recordLinePointLeftHandleChange);
 
-    owner_->restoreBackgroundImageItems();
-    owner_->reprojectMetadataBackgroundLayersForCurrentDocument();
-    owner_->restoreDraftGeometryItems();
-    owner_->selectMapLine(owner_->textEditor_->currentLineNumber());
-    owner_->applyInspectorObjectVisibility();
-    owner_->updateGeometrySelectionPresentation();
-    if (owner_->autoFitEnabled_) {
-        owner_->fitMapToView(owner_->fitBackgroundRequested_);
+    context_.restoreBackgroundImageItems();
+    context_.reprojectMetadataBackgroundLayersForCurrentDocument();
+    context_.restoreDraftGeometryItems();
+    context_.selectMapLine(context_.currentLineNumber());
+    context_.applyInspectorObjectVisibility();
+    context_.updateGeometrySelectionPresentation();
+    if (*context_.autoFitEnabled) {
+        context_.fitMapToView(*context_.fitBackgroundRequested);
     } else {
-        owner_->syncZoomFactorFromView();
+        context_.syncZoomFactorFromView();
     }
-    owner_->updateInteractiveDrawPreview();
-    owner_->refreshStatus();
-    owner_->updateCommandSurfaceState();
-    owner_->updateHelpPanel();
-    owner_->refreshObjectDetailsPanel();
+    context_.updateInteractiveDrawPreview();
+    context_.refreshStatus();
+    context_.updateCommandSurfaceState();
+    context_.updateHelpPanel();
+    context_.refreshObjectDetailsPanel();
 }
 
 void MapEditorSceneRefreshController::flushPendingMapSceneRefreshAfterCommand()
 {
-    if (!owner_->mapSceneRefreshPending_) {
+    if (!*context_.sceneRefreshPending) {
         return;
     }
 
-    owner_->mapSceneRefreshPending_ = false;
+    *context_.sceneRefreshPending = false;
     refreshMapScenePreservingUndoStack();
 }
 

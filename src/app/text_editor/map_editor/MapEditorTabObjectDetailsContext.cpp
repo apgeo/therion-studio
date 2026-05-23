@@ -1,0 +1,96 @@
+#include "MapEditorTab.h"
+
+#include "MapEditorObjectDetailsContext.h"
+#include "../TextEditorTab.h"
+
+namespace TherionStudio
+{
+MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
+{
+    return MapEditorObjectDetailsContext{
+        .textEditor = textEditor_,
+        .updatingUi = &updatingObjectDetailsUi_,
+        .commandApplyInProgress = &mapCommandApplyInProgress_,
+        .selectedObjectLineNumber = &selectedObjectLineNumber_,
+        .selectedObjectVertexIndex = &selectedObjectVertexIndex_,
+        .selectedObjectKind = &selectedObjectKind_,
+        .objectQuickCommandKind = &objectQuickCommandKind_,
+        .hiddenInspectorObjectLines = &hiddenInspectorObjectLines_,
+        .lastInspectorClickedObjectLineNumber = &lastInspectorClickedObjectLineNumber_,
+        .toolbarStatusNote = &toolbarStatusNote_,
+        .selectionLabel = objectDetailsSelectionLabel_,
+        .selectionSection = objectSelectionSection_,
+        .selectionTitleLabel = objectSelectionTitleLabel_,
+        .vertexSection = vertexSelectionSection_,
+        .geometrySection = geometrySelectionSection_,
+        .advancedSection = advancedSelectionSection_,
+        .deleteButton = objectDeleteButton_,
+        .quickFieldsEditor = objectQuickFieldsEditor_,
+        .quickIdentifierLabel = objectQuickIdentifierLabel_,
+        .quickNameLabel = objectQuickNameLabel_,
+        .quickProjectionLabel = objectQuickProjectionLabel_,
+        .quickTypeLabel = objectQuickTypeLabel_,
+        .quickSubtypeLabel = objectQuickSubtypeLabel_,
+        .quickTypeCombo = objectQuickTypeCombo_,
+        .quickSubtypeCombo = objectQuickSubtypeCombo_,
+        .quickProjectionCombo = objectQuickProjectionCombo_,
+        .quickIdentifierEdit = objectQuickIdentifierEdit_,
+        .quickNameEdit = objectQuickNameEdit_,
+        .vertexActionsEditor = vertexActionsEditor_,
+        .vertexInsertButton = vertexInsertButton_,
+        .vertexDeleteButton = vertexDeleteButton_,
+        .vertexToggleSmoothButton = vertexToggleSmoothButton_,
+        .metadataLabel = objectDetailsMetadataLabel_,
+        .orientationEditor = objectOrientationEditor_,
+        .orientationEnabledCheck = objectOrientationEnabledCheck_,
+        .orientationSpin = objectOrientationSpin_,
+        .linePointLeftSizeEnabledCheck = linePointLeftSizeEnabledCheck_,
+        .linePointLeftSizeSpin = linePointLeftSizeSpin_,
+        .orientationApplyButton = objectOrientationApplyButton_,
+        .lineOptionsEditor = lineOptionsEditor_,
+        .lineClosedCheck = lineClosedCheck_,
+        .lineReversedCheck = lineReversedCheck_,
+        .scrapScaleEditor = scrapScaleEditor_,
+        .scrapScaleSourceX1Spin = scrapScaleSourceX1Spin_,
+        .scrapScaleSourceY1Spin = scrapScaleSourceY1Spin_,
+        .scrapScaleSourceX2Spin = scrapScaleSourceX2Spin_,
+        .scrapScaleSourceY2Spin = scrapScaleSourceY2Spin_,
+        .scrapScaleRealX1Spin = scrapScaleRealX1Spin_,
+        .scrapScaleRealY1Spin = scrapScaleRealY1Spin_,
+        .scrapScaleRealX2Spin = scrapScaleRealX2Spin_,
+        .scrapScaleRealY2Spin = scrapScaleRealY2Spin_,
+        .scrapScaleUnitCombo = scrapScaleUnitCombo_,
+        .configureButton = objectConfigureButton_,
+        .translate = [this](const char *text) {
+            return tr(text);
+        },
+        .mapSourceBoundsForCurrentDocument = [this]() {
+            return mapSourceBoundsForCurrentDocument();
+        },
+        .refreshToolbarSummary = [this]() {
+            refreshToolbarSummary();
+        },
+        .refreshObjectDetailsPanel = [this]() {
+            refreshObjectDetailsPanel();
+        },
+        .clearInspectorObjectSelection = [this]() {
+            clearInspectorObjectSelection();
+        },
+        .rewriteLineOptionToggle = [this](int lineNumber, const QString &optionName, bool enabled, QString *errorMessage) {
+            return rewriteLineOptionToggle(lineNumber, optionName, enabled, errorMessage);
+        },
+        .recordSourceTextSnapshot = [this](const QString &label, const QString &beforeText, const QString &afterText, int insertedLineNumber) {
+            recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
+        },
+        .insertLineVertexFromSelection = [this]() {
+            return insertLineVertexFromSelection();
+        },
+        .removeLineVertexFromSelection = [this]() {
+            return removeLineVertexFromSelection();
+        },
+        .toggleLineVertexSmoothFromSelection = [this]() {
+            return toggleLineVertexSmoothFromSelection();
+        },
+    };
+}
+}

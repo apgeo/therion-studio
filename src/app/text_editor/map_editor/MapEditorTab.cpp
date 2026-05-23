@@ -29,14 +29,11 @@
 #include "MapEditorSceneInternals.h"
 #include "MapEditorInputPolicy.h"
 #include "MapEditorViewportInputController.h"
-#include "MapEditorCanvasEditController.h"
 #include "MapEditorSceneLifecycleController.h"
 #include "MapEditorSceneRefreshController.h"
-#include "MapEditorSelectionController.h"
 #include "MapEditorInspectorData.h"
 #include "MapEditorInspectorBackgroundController.h"
 #include "MapEditorInspectorObjectController.h"
-#include "MapEditorInteractiveDrawController.h"
 #include "MapEditorObjectDetailsEditController.h"
 #include "MapEditorObjectDetailsPanelController.h"
 #include "MapEditorSourceReferenceResolver.h"
@@ -56,11 +53,6 @@ constexpr int kInspectorObjectNameColumn = 0;
 constexpr int kInspectorObjectVisibilityColumn = 1;
 constexpr int kInspectorObjectDeleteColumn = 2;
 constexpr int kInspectorObjectColumnCount = 3;
-constexpr int kInspectorBackgroundNameColumn = 0;
-constexpr int kInspectorBackgroundVisibilityColumn = 1;
-constexpr int kInspectorBackgroundDeleteColumn = 2;
-constexpr int kInspectorBackgroundColumnCount = 3;
-constexpr int kInspectorBackgroundLayerIndexRole = Qt::UserRole + 730;
 
 }
 
@@ -152,7 +144,7 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         return QWidget::eventFilter(watched, event);
     }
 
-    if (const std::optional<bool> viewportResult = MapEditorViewportInputController(this).handleEvent(watched, event)) {
+    if (const std::optional<bool> viewportResult = MapEditorViewportInputController(viewportInputContext()).handleEvent(watched, event)) {
         return viewportResult.value();
     }
 
@@ -194,37 +186,22 @@ void MapEditorTab::handleApplicationAppearanceChanged()
 
 void MapEditorTab::buildMapScene()
 {
-    MapEditorSceneRefreshController(this).buildMapScene();
+    MapEditorSceneRefreshController(sceneRefreshContext()).buildMapScene();
 }
 
 void MapEditorTab::refreshMapScene()
 {
-    MapEditorSceneRefreshController(this).refreshMapScene();
+    MapEditorSceneRefreshController(sceneRefreshContext()).refreshMapScene();
 }
 
 void MapEditorTab::refreshMapScenePreservingUndoStack()
 {
-    MapEditorSceneRefreshController(this).refreshMapScenePreservingUndoStack();
+    MapEditorSceneRefreshController(sceneRefreshContext()).refreshMapScenePreservingUndoStack();
 }
 
 void MapEditorTab::flushPendingMapSceneRefreshAfterCommand()
 {
-    MapEditorSceneRefreshController(this).flushPendingMapSceneRefreshAfterCommand();
-}
-
-void MapEditorTab::handleMapSceneSelectionChanged()
-{
-    MapEditorSelectionController(this).handleMapSceneSelectionChanged();
-}
-
-void MapEditorTab::syncMapSelectionFromTextCursor(int lineNumber, int columnNumber)
-{
-    MapEditorSelectionController(this).syncMapSelectionFromTextCursor(lineNumber, columnNumber);
-}
-
-void MapEditorTab::updateGeometrySelectionPresentation()
-{
-    MapEditorSelectionController(this).updateGeometrySelectionPresentation();
+    MapEditorSceneRefreshController(sceneRefreshContext()).flushPendingMapSceneRefreshAfterCommand();
 }
 
 void MapEditorTab::handleAddPointTriggered()
@@ -363,31 +340,6 @@ void MapEditorTab::handleCompleteDraftTriggered()
     updateHelpPanel();
 }
 
-void MapEditorTab::setInteractiveDrawMode(InteractiveDrawMode mode)
-{
-    MapEditorInteractiveDrawController(this).setInteractiveDrawMode(mode);
-}
-
-bool MapEditorTab::handleInteractiveDrawClick(const QPointF &scenePosition)
-{
-    return MapEditorInteractiveDrawController(this).handleInteractiveDrawClick(scenePosition);
-}
-
-bool MapEditorTab::commitInteractiveDrawSession()
-{
-    return MapEditorInteractiveDrawController(this).commitInteractiveDrawSession();
-}
-
-void MapEditorTab::clearInteractiveDrawSession(bool clearMode)
-{
-    MapEditorInteractiveDrawController(this).clearInteractiveDrawSession(clearMode);
-}
-
-void MapEditorTab::updateInteractiveDrawPreview()
-{
-    MapEditorInteractiveDrawController(this).updateInteractiveDrawPreview();
-}
-
 QRectF MapEditorTab::mapSourceBoundsForCurrentDocument() const
 {
     if (textEditor_ == nullptr) {
@@ -503,11 +455,6 @@ bool MapEditorTab::commitInteractiveDrawVertices(const QString &geometryKind,
     return true;
 }
 
-bool MapEditorTab::cancelInteractiveDrawingToSelectMode()
-{
-    return MapEditorInteractiveDrawController(this).cancelInteractiveDrawingToSelectMode();
-}
-
 void MapEditorTab::updateCommandSurfaceState()
 {
     if (cancelDrawShortcut_ != nullptr) {
@@ -529,192 +476,192 @@ void MapEditorTab::updateHelpPanel()
 
 void MapEditorTab::rebuildInspectorObjectsTree()
 {
-    MapEditorInspectorObjectController(this).rebuildInspectorObjectsTree();
+    MapEditorInspectorObjectController(inspectorObjectContext()).rebuildInspectorObjectsTree();
 }
 
 void MapEditorTab::configureInspectorObjectTreeColumns()
 {
-    MapEditorInspectorObjectController(this).configureInspectorObjectTreeColumns();
+    MapEditorInspectorObjectController(inspectorObjectContext()).configureInspectorObjectTreeColumns();
 }
 
 QModelIndex MapEditorTab::findInspectorObjectIndexForLine(int lineNumber) const
 {
-    return MapEditorInspectorObjectController(this).findInspectorObjectIndexForLine(lineNumber);
+    return MapEditorInspectorObjectController(const_cast<MapEditorTab *>(this)->inspectorObjectContext()).findInspectorObjectIndexForLine(lineNumber);
 }
 
 void MapEditorTab::syncInspectorObjectSelectionToLine(int lineNumber)
 {
-    MapEditorInspectorObjectController(this).syncInspectorObjectSelectionToLine(lineNumber);
+    MapEditorInspectorObjectController(inspectorObjectContext()).syncInspectorObjectSelectionToLine(lineNumber);
 }
 
 void MapEditorTab::syncInspectorObjectSelectionToLine(int lineNumber, bool scrollToSelection)
 {
-    MapEditorInspectorObjectController(this).syncInspectorObjectSelectionToLine(lineNumber, scrollToSelection);
+    MapEditorInspectorObjectController(inspectorObjectContext()).syncInspectorObjectSelectionToLine(lineNumber, scrollToSelection);
 }
 
 void MapEditorTab::setInspectorObjectCurrentIndex(const QModelIndex &index)
 {
-    MapEditorInspectorObjectController(this).setInspectorObjectCurrentIndex(index);
+    MapEditorInspectorObjectController(inspectorObjectContext()).setInspectorObjectCurrentIndex(index);
 }
 
 void MapEditorTab::clearInspectorObjectSelection(const QSet<int> &suppressAutoReselectLineNumbers)
 {
-    MapEditorInspectorObjectController(this).clearInspectorObjectSelection(suppressAutoReselectLineNumbers);
+    MapEditorInspectorObjectController(inspectorObjectContext()).clearInspectorObjectSelection(suppressAutoReselectLineNumbers);
 }
 
 void MapEditorTab::handleInspectorObjectSelectionChanged(const QModelIndex &current)
 {
-    MapEditorInspectorObjectController(this).handleInspectorObjectSelectionChanged(current);
+    MapEditorInspectorObjectController(inspectorObjectContext()).handleInspectorObjectSelectionChanged(current);
 }
 
 void MapEditorTab::handleInspectorObjectClicked(const QModelIndex &index)
 {
-    MapEditorInspectorObjectController(this).handleInspectorObjectClicked(index);
+    MapEditorInspectorObjectController(inspectorObjectContext()).handleInspectorObjectClicked(index);
 }
 
 void MapEditorTab::applyInspectorObjectVisibility()
 {
-    MapEditorInspectorObjectController(this).applyInspectorObjectVisibility();
+    MapEditorInspectorObjectController(inspectorObjectContext()).applyInspectorObjectVisibility();
 }
 
 void MapEditorTab::configureInspectorBackgroundLayerTreeColumns()
 {
-    MapEditorInspectorBackgroundController(this).configureInspectorBackgroundLayerTreeColumns();
+    MapEditorInspectorBackgroundController(inspectorBackgroundContext()).configureInspectorBackgroundLayerTreeColumns();
 }
 
 void MapEditorTab::handleInspectorBackgroundLayerSelectionChanged(const QModelIndex &current)
 {
-    MapEditorInspectorBackgroundController(this).handleInspectorBackgroundLayerSelectionChanged(current);
+    MapEditorInspectorBackgroundController(inspectorBackgroundContext()).handleInspectorBackgroundLayerSelectionChanged(current);
 }
 
 void MapEditorTab::handleInspectorBackgroundLayerClicked(const QModelIndex &index)
 {
-    MapEditorInspectorBackgroundController(this).handleInspectorBackgroundLayerClicked(index);
+    MapEditorInspectorBackgroundController(inspectorBackgroundContext()).handleInspectorBackgroundLayerClicked(index);
 }
 
 void MapEditorTab::refreshInspectorBackgroundPanel()
 {
-    MapEditorInspectorBackgroundController(this).refreshInspectorBackgroundPanel();
+    MapEditorInspectorBackgroundController(inspectorBackgroundContext()).refreshInspectorBackgroundPanel();
 }
 
 void MapEditorTab::refreshObjectDetailsPanel()
 {
-    MapEditorObjectDetailsPanelController(this).refreshObjectDetailsPanel();
+    MapEditorObjectDetailsPanelController(objectDetailsContext()).refreshObjectDetailsPanel();
 }
 
 void MapEditorTab::applyObjectOrientationEdits()
 {
-    MapEditorObjectDetailsEditController(this).applyObjectOrientationEdits();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).applyObjectOrientationEdits();
 }
 
 void MapEditorTab::handleObjectOrientationEnabledToggled(bool checked)
 {
-    MapEditorObjectDetailsEditController(this).handleObjectOrientationEnabledToggled(checked);
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleObjectOrientationEnabledToggled(checked);
 }
 
 void MapEditorTab::handleLinePointLeftSizeEnabledToggled(bool checked)
 {
-    MapEditorObjectDetailsEditController(this).handleLinePointLeftSizeEnabledToggled(checked);
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleLinePointLeftSizeEnabledToggled(checked);
 }
 
 void MapEditorTab::deleteSelectedObjectFromSelection()
 {
-    MapEditorObjectDetailsEditController(this).deleteSelectedObjectFromSelection();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).deleteSelectedObjectFromSelection();
 }
 
 void MapEditorTab::applyObjectQuickFieldEdits()
 {
-    MapEditorObjectDetailsEditController(this).applyObjectQuickFieldEdits();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).applyObjectQuickFieldEdits();
 }
 
 void MapEditorTab::applyScrapProjectionEdit()
 {
-    MapEditorObjectDetailsEditController(this).applyScrapProjectionEdit();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).applyScrapProjectionEdit();
 }
 
 void MapEditorTab::updateObjectQuickSubtypeChoices()
 {
-    MapEditorObjectDetailsEditController(this).updateObjectQuickSubtypeChoices();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).updateObjectQuickSubtypeChoices();
 }
 
 void MapEditorTab::insertVertexFromSelectionPanel()
 {
-    MapEditorObjectDetailsEditController(this).insertVertexFromSelectionPanel();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).insertVertexFromSelectionPanel();
 }
 
 void MapEditorTab::deleteVertexFromSelectionPanel()
 {
-    MapEditorObjectDetailsEditController(this).deleteVertexFromSelectionPanel();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).deleteVertexFromSelectionPanel();
 }
 
 void MapEditorTab::toggleVertexSmoothFromSelectionPanel()
 {
-    MapEditorObjectDetailsEditController(this).toggleVertexSmoothFromSelectionPanel();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).toggleVertexSmoothFromSelectionPanel();
 }
 
 void MapEditorTab::populateScrapScaleFromSourceBounds()
 {
-    MapEditorObjectDetailsEditController(this).populateScrapScaleFromSourceBounds();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).populateScrapScaleFromSourceBounds();
 }
 
 void MapEditorTab::applyScrapScaleEdits()
 {
-    MapEditorObjectDetailsEditController(this).applyScrapScaleEdits();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).applyScrapScaleEdits();
 }
 
 void MapEditorTab::handleConfigureObjectSettingsTriggered()
 {
-    MapEditorObjectDetailsEditController(this).handleConfigureObjectSettingsTriggered();
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleConfigureObjectSettingsTriggered();
 }
 
 void MapEditorTab::handleLineClosedToggled(bool checked)
 {
-    MapEditorObjectDetailsEditController(this).handleLineClosedToggled(checked);
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleLineClosedToggled(checked);
 }
 
 void MapEditorTab::handleLineReversedToggled(bool checked)
 {
-    MapEditorObjectDetailsEditController(this).handleLineReversedToggled(checked);
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleLineReversedToggled(checked);
 }
 
 void MapEditorTab::clearMapScene()
 {
-    MapEditorSceneLifecycleController(this).clearMapScene();
+    MapEditorSceneLifecycleController(sceneLifecycleContext()).clearMapScene();
 }
 
 void MapEditorTab::clearDraftGeometryItems()
 {
-    MapEditorSceneLifecycleController(this).clearDraftGeometryItems();
+    MapEditorSceneLifecycleController(sceneLifecycleContext()).clearDraftGeometryItems();
 }
 
 void MapEditorTab::clearBackgroundImageItems()
 {
-    MapEditorSceneLifecycleController(this).clearBackgroundImageItems();
+    MapEditorSceneLifecycleController(sceneLifecycleContext()).clearBackgroundImageItems();
 }
 
 void MapEditorTab::restoreDraftGeometryItems()
 {
-    MapEditorSceneLifecycleController(this).restoreDraftGeometryItems();
+    MapEditorSceneLifecycleController(sceneLifecycleContext()).restoreDraftGeometryItems();
 }
 
 void MapEditorTab::restoreBackgroundImageItems()
 {
-    MapEditorSceneLifecycleController(this).restoreBackgroundImageItems();
+    MapEditorSceneLifecycleController(sceneLifecycleContext()).restoreBackgroundImageItems();
 }
 
 void MapEditorTab::fitMapToView(bool includeBackgroundImages)
 {
-    MapEditorSceneLifecycleController(this).fitMapToView(includeBackgroundImages);
+    MapEditorSceneLifecycleController(sceneLifecycleContext()).fitMapToView(includeBackgroundImages);
 }
 
 void MapEditorTab::syncZoomFactorFromView()
 {
-    MapEditorSceneLifecycleController(this).syncZoomFactorFromView();
+    MapEditorSceneLifecycleController(sceneLifecycleContext()).syncZoomFactorFromView();
 }
 
 void MapEditorTab::applyZoomAtViewportPosition(qreal factor, const QPointF &viewportPosition)
 {
-    MapEditorSceneLifecycleController(this).applyZoomAtViewportPosition(factor, viewportPosition);
+    MapEditorSceneLifecycleController(sceneLifecycleContext()).applyZoomAtViewportPosition(factor, viewportPosition);
 }
 
 void MapEditorTab::refreshToolbarSummary()
@@ -724,137 +671,17 @@ void MapEditorTab::refreshToolbarSummary()
 
 QRectF MapEditorTab::mapGeometryFitBounds() const
 {
-    return MapEditorSceneLifecycleController(this).mapGeometryFitBounds();
+    return MapEditorSceneLifecycleController(sceneLifecycleContext()).mapGeometryFitBounds();
 }
 
 QRectF MapEditorTab::mapPreviewBounds() const
 {
-    return MapEditorSceneLifecycleController(this).mapPreviewBounds();
+    return MapEditorSceneLifecycleController(sceneLifecycleContext()).mapPreviewBounds();
 }
 
 void MapEditorTab::adjustMapZoom(qreal factor)
 {
-    MapEditorSceneLifecycleController(this).adjustMapZoom(factor);
-}
-
-void MapEditorTab::recordCardMove(int lineNumber, const QPointF &oldPosition, const QPointF &newPosition)
-{
-    MapEditorCanvasEditController(this).recordCardMove(lineNumber, oldPosition, newPosition);
-}
-
-void MapEditorTab::recordCardVisibility(int lineNumber, bool oldVisible, bool newVisible)
-{
-    MapEditorCanvasEditController(this).recordCardVisibility(lineNumber, oldVisible, newVisible);
-}
-
-void MapEditorTab::recordPointGeometryMove(int lineNumber, const QPointF &oldPoint, const QPointF &newPoint)
-{
-    MapEditorCanvasEditController(this).recordPointGeometryMove(lineNumber, oldPoint, newPoint);
-}
-
-void MapEditorTab::recordLineAreaVertexMove(int lineNumber,
-                                            const QString &kind,
-                                            int vertexIndex,
-                                            const QPointF &oldPoint,
-                                            const QPointF &newPoint)
-{
-    MapEditorCanvasEditController(this).recordLineAreaVertexMove(lineNumber, kind, vertexIndex, oldPoint, newPoint);
-}
-
-void MapEditorTab::recordPointOrientationHandleChange(int lineNumber, qreal orientationDegrees)
-{
-    MapEditorCanvasEditController(this).recordPointOrientationHandleChange(lineNumber, orientationDegrees);
-}
-
-void MapEditorTab::recordLinePointLeftHandleChange(int lineNumber,
-                                                   int sourceVertexIndex,
-                                                   qreal orientationDegrees,
-                                                   qreal leftSize)
-{
-    MapEditorCanvasEditController(this).recordLinePointLeftHandleChange(lineNumber, sourceVertexIndex, orientationDegrees, leftSize);
-}
-
-void MapEditorTab::restorePointSelection(int lineNumber)
-{
-    MapEditorCanvasEditController(this).restorePointSelection(lineNumber);
-}
-
-void MapEditorTab::restoreLineAnchorSelection(int lineNumber, int sourceVertexIndex)
-{
-    MapEditorCanvasEditController(this).restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
-}
-
-void MapEditorTab::recordSourceTextSnapshot(const QString &label,
-                                            const QString &beforeText,
-                                            const QString &afterText,
-                                            int insertedLineNumber)
-{
-    MapEditorCanvasEditController(this).recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
-}
-
-bool MapEditorTab::insertLineVertexFromSelection()
-{
-    return MapEditorCanvasEditController(this).insertLineVertexFromSelection();
-}
-
-bool MapEditorTab::removeLineVertexFromSelection()
-{
-    return MapEditorCanvasEditController(this).removeLineVertexFromSelection();
-}
-
-bool MapEditorTab::toggleLineVertexSmoothFromSelection()
-{
-    return MapEditorCanvasEditController(this).toggleLineVertexSmoothFromSelection();
-}
-
-QGraphicsRectItem *MapEditorTab::selectedDraftGeometryItem() const
-{
-    return MapEditorCanvasEditController(this).selectedDraftGeometryItem();
-}
-
-QGraphicsRectItem *MapEditorTab::createDraftGeometryItem(DraftGeometryKind kind)
-{
-    return MapEditorCanvasEditController(this).createDraftGeometryItem(kind);
-}
-
-void MapEditorTab::addDraftGeometryItem(QGraphicsRectItem *item, const QPointF &position)
-{
-    MapEditorCanvasEditController(this).addDraftGeometryItem(item, position);
-}
-
-void MapEditorTab::removeDraftGeometryItem(QGraphicsRectItem *item)
-{
-    MapEditorCanvasEditController(this).removeDraftGeometryItem(item);
-}
-
-QVector<QPointF> MapEditorTab::sourceVerticesForDraft(const QGraphicsRectItem *item) const
-{
-    return MapEditorCanvasEditController(this).sourceVerticesForDraft(item);
-}
-
-QPointF MapEditorTab::previewToSourcePoint(const QPointF &previewPoint, const QRectF &sourceBounds, const QRectF &previewBounds) const
-{
-    return MapEditorCanvasEditController(this).previewToSourcePoint(previewPoint, sourceBounds, previewBounds);
-}
-
-void MapEditorTab::recordDraftMove(QGraphicsRectItem *item, const QPointF &oldPosition, const QPointF &newPosition)
-{
-    MapEditorCanvasEditController(this).recordDraftMove(item, oldPosition, newPosition);
-}
-
-void MapEditorTab::recordDraftVisibility(QGraphicsRectItem *item, bool oldVisible, bool newVisible)
-{
-    MapEditorCanvasEditController(this).recordDraftVisibility(item, oldVisible, newVisible);
-}
-
-void MapEditorTab::selectMapLine(int lineNumber, bool centerOnSelection)
-{
-    MapEditorSelectionController(this).selectMapLine(lineNumber, centerOnSelection);
-}
-
-void MapEditorTab::selectMapLines(const QSet<int> &lineNumbers, bool centerOnSelection)
-{
-    MapEditorSelectionController(this).selectMapLines(lineNumbers, centerOnSelection);
+    MapEditorSceneLifecycleController(sceneLifecycleContext()).adjustMapZoom(factor);
 }
 
 }

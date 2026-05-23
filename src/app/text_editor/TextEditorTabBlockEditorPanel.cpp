@@ -1,14 +1,14 @@
-#include "../TextEditorTab.h"
+#include "TextEditorTab.h"
 
-#include "BlockEditorCanvasView.h"
-#include "BlockEditorDetailsSupport.h"
-#include "BlockEditorDirectiveRules.h"
-#include "BlockEditorOptionTableDelegate.h"
-#include "BlockEditorTokenTagEditor.h"
-#include "BlockEditorToolboxList.h"
-#include "../TextEditorSurfaceStyler.h"
+#include "block_editor/BlockEditorCanvasView.h"
+#include "block_editor/BlockEditorDetailsSupport.h"
+#include "block_editor/BlockEditorDirectiveRules.h"
+#include "block_editor/BlockEditorOptionTableDelegate.h"
+#include "block_editor/BlockEditorTokenTagEditor.h"
+#include "block_editor/BlockEditorToolboxList.h"
+#include "TextEditorSurfaceStyler.h"
 
-#include "../../../core/TherionCommandSyntax.h"
+#include "../../core/TherionCommandSyntax.h"
 
 #include <QAbstractItemView>
 #include <QComboBox>

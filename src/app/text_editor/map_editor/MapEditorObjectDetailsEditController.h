@@ -1,13 +1,13 @@
 #pragma once
 
-#include "MapEditorTab.h"
+#include "MapEditorObjectDetailsContext.h"
 
 namespace TherionStudio
 {
 class MapEditorObjectDetailsEditController final
 {
 public:
-    explicit MapEditorObjectDetailsEditController(MapEditorTab *owner);
+    explicit MapEditorObjectDetailsEditController(MapEditorObjectDetailsContext context);
 
     void applyObjectOrientationEdits();
     void handleObjectOrientationEnabledToggled(bool checked);
@@ -26,6 +26,8 @@ public:
     void handleLineReversedToggled(bool checked);
 
 private:
-    MapEditorTab *owner_ = nullptr;
+    QString translate(const char *text) const;
+
+    MapEditorObjectDetailsContext context_;
 };
 }

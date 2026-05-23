@@ -3,6 +3,7 @@
 #include <QString>
 
 class QLabel;
+class QComboBox;
 class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
@@ -20,6 +21,8 @@ public:
         QString suggestedExecutablePath;
         QString persistedWorkingDirectory;
         QString persistedArguments;
+        QString persistedRunTargetMode;
+        QString persistedTargetConfigPath;
     };
 
     struct BuildResult
@@ -28,14 +31,18 @@ public:
         QLineEdit *therionExecutableEdit = nullptr;
         QPushButton *therionBrowseExecutableButton = nullptr;
         QLineEdit *therionWorkingDirectoryEdit = nullptr;
+        QPushButton *therionBrowseWorkingDirectoryButton = nullptr;
         QLineEdit *therionArgumentsEdit = nullptr;
+        QComboBox *therionRunTargetCombo = nullptr;
+        QLineEdit *therionTargetConfigEdit = nullptr;
+        QPushButton *therionBrowseTargetConfigButton = nullptr;
         QLabel *therionConfigNameValue = nullptr;
         QLabel *therionConfigPathValue = nullptr;
-        QLabel *therionRunPolicyLabel = nullptr;
-        QLabel *therionStatusLabel = nullptr;
+        QLabel *therionWorkingDirectoryValue = nullptr;
         QPushButton *therionRunButton = nullptr;
         QPushButton *therionStopButton = nullptr;
         QPushButton *therionResetWorkingDirectoryButton = nullptr;
+        QPushButton *therionClearOutputButton = nullptr;
         QPushButton *therionCopyOutputButton = nullptr;
         QPlainTextEdit *consoleView = nullptr;
     };

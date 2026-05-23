@@ -33,10 +33,9 @@ int runStartResultPresentationTest()
     if (!expect(alreadyRunning.isHandled, "AlreadyRunning should be handled by the start-result presenter.")) {
         return 1;
     }
-    if (!expect(alreadyRunning.appendConsoleMessage
-                    && alreadyRunning.showStatusBarMessage
+    if (!expect(alreadyRunning.showStatusBarMessage
                     && alreadyRunning.updateStatusLabel,
-                "AlreadyRunning should update console, status bar, and status label.")) {
+                "AlreadyRunning should update status bar and status label.")) {
         return 1;
     }
     if (!expect(alreadyRunning.statusBarTimeoutMs == 3000,
@@ -61,9 +60,8 @@ int runStartResultPresentationTest()
         TherionRunnerStartResultPresenter::present(TherionRunnerService::StartCode::ExecutableNotFound,
                                                    QStringLiteral("/missing/therion"));
     if (!expect(missingExecutable.showWarningDialog
-                    && missingExecutable.appendConsoleMessage
                     && missingExecutable.updateStatusLabel,
-                "ExecutableNotFound should warn and mirror the message to console/status label.")) {
+                "ExecutableNotFound should warn and update the status label.")) {
         return 1;
     }
     if (!expect(missingExecutable.warningDialogMessage.contains(QStringLiteral("/missing/therion")),
@@ -83,17 +81,8 @@ int runStartSuccessPresentationTest()
 
     const TherionRunnerStartSuccessPresenter::Presentation fallbackPresentation =
         TherionRunnerStartSuccessPresenter::present(startResult,
-                                                    QStringLiteral("therion"),
                                                     QStringLiteral("-q survey.th"),
                                                     QStringLiteral("/project"));
-    if (!expect(fallbackPresentation.shouldUpdateExecutableText,
-                "Platform fallback should update executable text when the user input was the default token.")) {
-        return 1;
-    }
-    if (!expect(fallbackPresentation.updatedExecutableText == startResult.resolvedExecutablePath,
-                "Platform fallback should write the resolved executable path back to the UI field.")) {
-        return 1;
-    }
     if (!expect(fallbackPresentation.consoleMessage
                     == QStringLiteral("Running /opt/therion/bin/therion -q survey.th in /project"),
                 "Start-success console message changed unexpectedly.")) {
@@ -106,11 +95,10 @@ int runStartSuccessPresentationTest()
 
     const TherionRunnerStartSuccessPresenter::Presentation explicitPresentation =
         TherionRunnerStartSuccessPresenter::present(startResult,
-                                                    QStringLiteral("/custom/therion"),
                                                     QString(),
                                                     QStringLiteral("/project"));
-    if (!expect(!explicitPresentation.shouldUpdateExecutableText,
-                "Explicit executable input should not be overwritten by platform fallback.")) {
+    if (!expect(explicitPresentation.statusLabelMessage == QStringLiteral("Starting Therion..."),
+                "Start-success status label should not depend on argument text.")) {
         return 1;
     }
 
@@ -124,7 +112,8 @@ int runLifecyclePresentationTest()
     if (!expect(!notRunning.shouldStopProcess, "Stop request should not stop when Therion is not running.")) {
         return 1;
     }
-    if (!expect(notRunning.consoleMessage == QStringLiteral("Therion is not running."),
+    if (!expect(notRunning.shouldUpdateStatusLabel
+                    && notRunning.statusLabelMessage == QStringLiteral("Therion is not running."),
                 "Not-running stop message changed unexpectedly.")) {
         return 1;
     }

@@ -15,8 +15,6 @@ public:
                                      const QString &workingDirectory,
                                      const QString &projectRootPath,
                                      const QString &activeDocumentPath);
-
-private:
     static QString resolveCandidatePath(const QString &candidate,
                                         const QString &workingDirectory,
                                         const QString &projectRootPath);

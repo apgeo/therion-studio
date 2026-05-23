@@ -38,6 +38,8 @@ int runInstanceBackedRoundTripTest()
         store.setTherionExecutablePath(QStringLiteral("/usr/bin/therion"));
         store.setTherionWorkingDirectory(QStringLiteral("/tmp/project"));
         store.setTherionArguments(QStringLiteral("-q thconfig"));
+        store.setTherionRunTargetMode(QStringLiteral("project"));
+        store.setTherionTargetConfigPath(QStringLiteral("/tmp/project/thconfig"));
         store.setTherionMapTouchFriendlyControlsEnabled(true);
         store.setTherionMapBackgroundLayers(QStringLiteral("[]"));
     }
@@ -80,6 +82,14 @@ int runInstanceBackedRoundTripTest()
                 "Therion arguments should round-trip through the injected settings file.")) {
         return 1;
     }
+    if (!expect(store.therionRunTargetMode() == QStringLiteral("project"),
+                "Therion run target mode should round-trip through the injected settings file.")) {
+        return 1;
+    }
+    if (!expect(store.therionTargetConfigPath() == QStringLiteral("/tmp/project/thconfig"),
+                "Therion target config path should round-trip through the injected settings file.")) {
+        return 1;
+    }
     if (!expect(store.therionMapTouchFriendlyControlsEnabled(),
                 "Touch-friendly controls flag should round-trip through the injected settings file.")) {
         return 1;
@@ -104,6 +114,10 @@ int runDefaultsTest()
         return 1;
     }
     if (!expect(store.openDocumentPaths().isEmpty(), "Default open document path list should be empty.")) {
+        return 1;
+    }
+    if (!expect(store.therionRunTargetMode() == QStringLiteral("project"),
+                "Default Therion run target mode should be project config.")) {
         return 1;
     }
     if (!expect(!store.therionMapTouchFriendlyControlsEnabled(),

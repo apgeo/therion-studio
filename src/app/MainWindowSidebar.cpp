@@ -3,6 +3,7 @@
 #include "MainWindowDocumentHelpers.h"
 
 #include <QAbstractItemView>
+#include <QAction>
 #include <QApplication>
 #include <QColor>
 #include <QDesktopServices>
@@ -20,6 +21,7 @@
 #include <QMessageBox>
 #include <QMenu>
 #include <QPainter>
+#include <QSignalBlocker>
 #include <QSplitter>
 #include <QStackedWidget>
 #include <QStatusBar>
@@ -804,10 +806,25 @@ void MainWindow::buildStructureSidebar()
     });
     activityLayout->addWidget(sidebarConsoleButton_);
 
+    auto *compileActionSeparator = new QFrame(activityBar);
+    compileActionSeparator->setObjectName(QStringLiteral("SidebarActivitySeparator"));
+    compileActionSeparator->setFrameShape(QFrame::NoFrame);
+    compileActionSeparator->setFixedSize(22, 1);
+    activityLayout->addWidget(compileActionSeparator, 0, Qt::AlignHCenter);
+
+    sidebarCompileButton_ = new QToolButton(activityBar);
+    configureActivityButton(sidebarCompileButton_, QStringLiteral("play"), tr("Compile Project Config"));
+    sidebarCompileButton_->setCheckable(false);
+    connect(sidebarCompileButton_, &QToolButton::clicked, this, [this]() {
+        runTherionProjectConfig();
+    });
+    activityLayout->addWidget(sidebarCompileButton_);
+
     const auto applyActivityRailTheme = [activityBar,
                                          filesButton = sidebarFilesButton_,
                                          structureButton = sidebarStructureButton_,
                                          compilerButton = sidebarConsoleButton_,
+                                         compileButton = sidebarCompileButton_,
                                          filesIconName,
                                          structureIconName,
                                          consoleIconName,
@@ -835,10 +852,14 @@ void MainWindow::buildStructureSidebar()
                                        "}"
                                        "#SidebarActivityRail QToolButton:checked {"
                                        "background-color: %3;"
+                                       "}"
+                                       "#SidebarActivityRail QFrame#SidebarActivitySeparator {"
+                                       "background-color: %4;"
                                        "}")
                                        .arg(rgbaColorCss(railBase, 0.78))
                                        .arg(rgbaColorCss(railHover, 0.24))
-                                       .arg(rgbaColorCss(railChecked, 0.34)));
+                                       .arg(rgbaColorCss(railChecked, 0.34))
+                                       .arg(rgbaColorCss(palette.color(QPalette::Mid), 0.7)));
 
         const int extent = activityIconSize.width();
         const qreal devicePixelRatio = activityBar->devicePixelRatioF();
@@ -850,6 +871,9 @@ void MainWindow::buildStructureSidebar()
         }
         if (compilerButton != nullptr) {
             compilerButton->setIcon(themedLucideIcon(consoleIconName, palette, extent, devicePixelRatio));
+        }
+        if (compileButton != nullptr) {
+            compileButton->setIcon(themedLucideIcon(QStringLiteral("play"), palette, extent, devicePixelRatio));
         }
     };
     applyActivityRailTheme();
@@ -940,6 +964,32 @@ void MainWindow::buildStructureSidebar()
     setSidebarPane(activeSidebarPane_);
 }
 
+void MainWindow::showSidebarPane(SidebarPane pane)
+{
+    if (sidebarContainer_ == nullptr) {
+        setSidebarPane(pane);
+        return;
+    }
+
+    if (showSidebarAction_ != nullptr && !showSidebarAction_->isChecked()) {
+        const QSignalBlocker blocker(showSidebarAction_);
+        showSidebarAction_->setChecked(true);
+    }
+
+    sidebarContainer_->setVisible(true);
+    if (sidebarContentContainer_ != nullptr) {
+        sidebarContentContainer_->setVisible(true);
+    }
+
+    if (sidebarCollapsed_) {
+        setSidebarCollapsed(false);
+    } else {
+        restoreSidebarWidth();
+    }
+
+    setSidebarPane(pane);
+}
+
 void MainWindow::setSidebarPane(SidebarPane pane)
 {
     if (sidebarPages_ == nullptr) {
@@ -956,6 +1006,9 @@ void MainWindow::setSidebarPane(SidebarPane pane)
     }
     if (sidebarConsoleButton_ != nullptr) {
         sidebarConsoleButton_->setChecked(pane == SidebarPane::Console);
+    }
+    if (sidebarCompileButton_ != nullptr) {
+        sidebarCompileButton_->setChecked(false);
     }
 }
 

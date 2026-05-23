@@ -81,6 +81,16 @@ public:
         return CopyOutputResult::Copied;
     }
 
+    bool clearConsoleOutput() const
+    {
+        if (consoleView_ == nullptr) {
+            return false;
+        }
+
+        consoleView_->clear();
+        return true;
+    }
+
     void applyRunnerState(bool isRunning) const
     {
         if (runButton_ != nullptr) {

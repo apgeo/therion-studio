@@ -1,5 +1,6 @@
 #include "MainWindowTherionConsoleBuilder.h"
 
+#include <QComboBox>
 #include <QCoreApplication>
 #include <QFont>
 #include <QGridLayout>
@@ -33,6 +34,19 @@ void addLabeledWidget(QVBoxLayout *layout, const QString &labelText, QWidget *wi
 {
     layout->addWidget(createFieldLabel(labelText, parent));
     layout->addWidget(widget);
+}
+
+void styleHelperValue(QLabel *label)
+{
+    if (label == nullptr) {
+        return;
+    }
+
+    label->setStyleSheet(QStringLiteral(
+        "QLabel {"
+        " color: palette(mid);"
+        " font-size: 11px;"
+        "}"));
 }
 }
 
@@ -73,48 +87,86 @@ MainWindowTherionConsoleBuilder::build(const BuildInput &input)
     executableRowLayout->addWidget(result.therionBrowseExecutableButton);
     addLabeledWidget(settingsLayout, translate("Executable"), executableRow, widget);
 
-    result.therionWorkingDirectoryEdit = new QLineEdit(widget);
-    result.therionWorkingDirectoryEdit->setPlaceholderText(
-        translate("Defaults to the current project root"));
-    result.therionWorkingDirectoryEdit->setText(input.persistedWorkingDirectory);
-    result.therionWorkingDirectoryEdit->setCursorPosition(result.therionWorkingDirectoryEdit->text().size());
-    addLabeledWidget(settingsLayout, translate("Working Directory"), result.therionWorkingDirectoryEdit, widget);
-
     result.therionArgumentsEdit = new QLineEdit(widget);
     result.therionArgumentsEdit->setPlaceholderText(
         translate("Additional Therion command-line options"));
     result.therionArgumentsEdit->setText(input.persistedArguments);
     result.therionArgumentsEdit->setCursorPosition(result.therionArgumentsEdit->text().size());
     addLabeledWidget(settingsLayout, translate("Arguments"), result.therionArgumentsEdit, widget);
-    layout->addLayout(settingsLayout);
+
+    result.therionRunTargetCombo = new QComboBox(widget);
+    result.therionRunTargetCombo->addItem(translate("Current Config"), QStringLiteral("current"));
+    result.therionRunTargetCombo->addItem(translate("Project Config"), QStringLiteral("project"));
+    const int selectedTargetIndex = result.therionRunTargetCombo->findData(input.persistedRunTargetMode);
+    const int defaultTargetIndex = result.therionRunTargetCombo->findData(QStringLiteral("project"));
+    result.therionRunTargetCombo->setCurrentIndex(selectedTargetIndex >= 0 ? selectedTargetIndex : defaultTargetIndex);
+    addLabeledWidget(settingsLayout, translate("Run Target"), result.therionRunTargetCombo, widget);
+
+    result.therionTargetConfigEdit = new QLineEdit(widget);
+    result.therionTargetConfigEdit->setPlaceholderText(translate("Path to project .thconfig"));
+    result.therionTargetConfigEdit->setText(input.persistedTargetConfigPath);
+    result.therionTargetConfigEdit->setCursorPosition(result.therionTargetConfigEdit->text().size());
+    result.therionBrowseTargetConfigButton = new QPushButton(translate("..."), widget);
+    result.therionBrowseTargetConfigButton->setToolTip(translate("Browse for target .thconfig"));
+    result.therionBrowseTargetConfigButton->setAccessibleName(translate("Browse for target .thconfig"));
+    result.therionBrowseTargetConfigButton->setFixedWidth(34);
+
+    auto *targetConfigRow = new QWidget(widget);
+    auto *targetConfigRowLayout = new QHBoxLayout(targetConfigRow);
+    targetConfigRowLayout->setContentsMargins(0, 0, 0, 0);
+    targetConfigRowLayout->setSpacing(6);
+    targetConfigRowLayout->addWidget(result.therionTargetConfigEdit, 1);
+    targetConfigRowLayout->addWidget(result.therionBrowseTargetConfigButton);
+    addLabeledWidget(settingsLayout, translate("Target Config"), targetConfigRow, widget);
 
     result.therionConfigNameValue = new QLabel(translate("Auto-detect"), widget);
-    result.therionConfigNameValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    result.therionConfigNameValue->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    result.therionConfigNameValue->hide();
     result.therionConfigPathValue =
         new QLabel(translate("No config file resolved from the current context"), widget);
     result.therionConfigPathValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
     result.therionConfigPathValue->setWordWrap(true);
     result.therionConfigPathValue->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    result.therionRunPolicyLabel =
-        new QLabel(translate("Reject parallel runs while a Therion process is active"), widget);
-    result.therionRunPolicyLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    result.therionRunPolicyLabel->setWordWrap(true);
-    result.therionRunPolicyLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    styleHelperValue(result.therionConfigPathValue);
+    settingsLayout->addWidget(result.therionConfigPathValue);
 
-    auto *summaryLayout = new QVBoxLayout;
-    summaryLayout->setContentsMargins(0, 4, 0, 0);
-    summaryLayout->setSpacing(4);
-    addLabeledWidget(summaryLayout, translate("Config"), result.therionConfigNameValue, widget);
-    addLabeledWidget(summaryLayout, translate("Config Path"), result.therionConfigPathValue, widget);
-    addLabeledWidget(summaryLayout, translate("Run Policy"), result.therionRunPolicyLabel, widget);
-    layout->addLayout(summaryLayout);
+    result.therionWorkingDirectoryEdit = new QLineEdit(widget);
+    result.therionWorkingDirectoryEdit->setPlaceholderText(
+        translate("Auto: selected config folder"));
+    result.therionWorkingDirectoryEdit->setText(input.persistedWorkingDirectory);
+    result.therionWorkingDirectoryEdit->setCursorPosition(result.therionWorkingDirectoryEdit->text().size());
+    result.therionBrowseWorkingDirectoryButton = new QPushButton(translate("..."), widget);
+    result.therionBrowseWorkingDirectoryButton->setToolTip(
+        translate("Browse for working directory override"));
+    result.therionBrowseWorkingDirectoryButton->setAccessibleName(
+        translate("Browse for working directory override"));
+    result.therionBrowseWorkingDirectoryButton->setFixedWidth(34);
 
-    result.therionStatusLabel = new QLabel(translate("Idle"), widget);
-    result.therionStatusLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    result.therionStatusLabel->setWordWrap(true);
-    result.therionStatusLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    layout->addWidget(result.therionStatusLabel);
+    auto *workingDirectoryRow = new QWidget(widget);
+    auto *workingDirectoryRowLayout = new QHBoxLayout(workingDirectoryRow);
+    workingDirectoryRowLayout->setContentsMargins(0, 0, 0, 0);
+    workingDirectoryRowLayout->setSpacing(6);
+    workingDirectoryRowLayout->addWidget(result.therionWorkingDirectoryEdit, 1);
+    workingDirectoryRowLayout->addWidget(result.therionBrowseWorkingDirectoryButton);
+    addLabeledWidget(settingsLayout, translate("Working Directory Override"), workingDirectoryRow, widget);
+
+    result.therionWorkingDirectoryValue =
+        new QLabel(translate("Project root or selected config folder"), widget);
+    result.therionWorkingDirectoryValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    result.therionWorkingDirectoryValue->setWordWrap(true);
+    result.therionWorkingDirectoryValue->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    styleHelperValue(result.therionWorkingDirectoryValue);
+    settingsLayout->addWidget(result.therionWorkingDirectoryValue);
+
+    result.therionResetWorkingDirectoryButton =
+        new QPushButton(translate("Reset Override"), widget);
+    result.therionResetWorkingDirectoryButton->setToolTip(
+        translate("Clear the project working directory override and use the selected config folder"));
+    result.therionResetWorkingDirectoryButton->setEnabled(false);
+    result.therionResetWorkingDirectoryButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    settingsLayout->addWidget(result.therionResetWorkingDirectoryButton);
+    settingsLayout->addSpacing(10);
+
+    layout->addLayout(settingsLayout);
 
     auto *buttonGrid = new QGridLayout;
     buttonGrid->setContentsMargins(0, 0, 0, 0);
@@ -123,21 +175,19 @@ MainWindowTherionConsoleBuilder::build(const BuildInput &input)
     result.therionRunButton = new QPushButton(translate("Run Therion"), widget);
     result.therionStopButton = new QPushButton(translate("Stop"), widget);
     result.therionStopButton->setEnabled(false);
-    result.therionResetWorkingDirectoryButton =
-        new QPushButton(translate("Use Root"), widget);
-    result.therionResetWorkingDirectoryButton->setToolTip(translate("Use project root as working directory"));
+    result.therionClearOutputButton = new QPushButton(translate("Clear Output"), widget);
     result.therionCopyOutputButton = new QPushButton(translate("Copy Output"), widget);
 
     for (QPushButton *button : {result.therionRunButton,
                                 result.therionStopButton,
-                                result.therionResetWorkingDirectoryButton,
+                                result.therionClearOutputButton,
                                 result.therionCopyOutputButton}) {
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     }
 
     buttonGrid->addWidget(result.therionRunButton, 0, 0);
     buttonGrid->addWidget(result.therionStopButton, 0, 1);
-    buttonGrid->addWidget(result.therionResetWorkingDirectoryButton, 1, 0);
+    buttonGrid->addWidget(result.therionClearOutputButton, 1, 0);
     buttonGrid->addWidget(result.therionCopyOutputButton, 1, 1);
     buttonGrid->setColumnStretch(0, 1);
     buttonGrid->setColumnStretch(1, 1);

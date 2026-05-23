@@ -2,6 +2,7 @@
 
 #include "TherionRunnerService.h"
 
+#include <QComboBox>
 #include <QLineEdit>
 #include <QObject>
 #include <QPushButton>
@@ -41,6 +42,28 @@ void MainWindowTherionConsoleWiring::wire(const WiringInput &input)
                          });
     }
 
+    if (input.therionBrowseTargetConfigButton != nullptr) {
+        QObject::connect(input.therionBrowseTargetConfigButton,
+                         &QPushButton::clicked,
+                         input.context,
+                         [handler = input.onBrowseTargetConfigRequested]() {
+                             if (handler) {
+                                 handler();
+                             }
+                         });
+    }
+
+    if (input.therionBrowseWorkingDirectoryButton != nullptr) {
+        QObject::connect(input.therionBrowseWorkingDirectoryButton,
+                         &QPushButton::clicked,
+                         input.context,
+                         [handler = input.onBrowseWorkingDirectoryRequested]() {
+                             if (handler) {
+                                 handler();
+                             }
+                         });
+    }
+
     if (input.therionResetWorkingDirectoryButton != nullptr) {
         QObject::connect(input.therionResetWorkingDirectoryButton,
                          &QPushButton::clicked,
@@ -63,6 +86,17 @@ void MainWindowTherionConsoleWiring::wire(const WiringInput &input)
                          });
     }
 
+    if (input.therionClearOutputButton != nullptr) {
+        QObject::connect(input.therionClearOutputButton,
+                         &QPushButton::clicked,
+                         input.context,
+                         [handler = input.onClearOutputRequested]() {
+                             if (handler) {
+                                 handler();
+                             }
+                         });
+    }
+
     if (input.therionWorkingDirectoryEdit != nullptr) {
         QObject::connect(input.therionWorkingDirectoryEdit,
                          &QLineEdit::textChanged,
@@ -79,6 +113,28 @@ void MainWindowTherionConsoleWiring::wire(const WiringInput &input)
                          &QLineEdit::textChanged,
                          input.context,
                          [handler = input.onArgumentsChanged](const QString &text) {
+                             if (handler) {
+                                 handler(text);
+                             }
+                         });
+    }
+
+    if (input.therionRunTargetCombo != nullptr) {
+        QObject::connect(input.therionRunTargetCombo,
+                         &QComboBox::currentIndexChanged,
+                         input.context,
+                         [handler = input.onRunTargetChanged](int) {
+                             if (handler) {
+                                 handler();
+                             }
+                         });
+    }
+
+    if (input.therionTargetConfigEdit != nullptr) {
+        QObject::connect(input.therionTargetConfigEdit,
+                         &QLineEdit::textChanged,
+                         input.context,
+                         [handler = input.onTargetConfigChanged](const QString &text) {
                              if (handler) {
                                  handler(text);
                              }

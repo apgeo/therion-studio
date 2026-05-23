@@ -17,6 +17,8 @@ const auto kStructureNameOverridesKey = QStringLiteral("session/structureNameOve
 const auto kTherionExecutablePathKey = QStringLiteral("session/therionExecutablePath");
 const auto kTherionWorkingDirectoryKey = QStringLiteral("session/therionWorkingDirectory");
 const auto kTherionArgumentsKey = QStringLiteral("session/therionArguments");
+const auto kTherionRunTargetModeKey = QStringLiteral("session/therionRunTargetMode");
+const auto kTherionTargetConfigPathKey = QStringLiteral("session/therionTargetConfigPath");
 const auto kTherionMapTouchFriendlyControlsEnabledKey = QStringLiteral("session/therionMapTouchFriendlyControlsEnabled");
 const auto kTherionMapBackgroundLayersKey = QStringLiteral("session/therionMapBackgroundLayers");
 }
@@ -135,6 +137,26 @@ void SessionSettingsStore::setTherionArguments(const QString &arguments)
     settings_->setValue(kTherionArgumentsKey, arguments);
 }
 
+QString SessionSettingsStore::therionRunTargetMode() const
+{
+    return settings_->value(kTherionRunTargetModeKey, QStringLiteral("project")).toString();
+}
+
+void SessionSettingsStore::setTherionRunTargetMode(const QString &mode)
+{
+    settings_->setValue(kTherionRunTargetModeKey, mode);
+}
+
+QString SessionSettingsStore::therionTargetConfigPath() const
+{
+    return settings_->value(kTherionTargetConfigPathKey).toString();
+}
+
+void SessionSettingsStore::setTherionTargetConfigPath(const QString &path)
+{
+    settings_->setValue(kTherionTargetConfigPathKey, path);
+}
+
 bool SessionSettingsStore::therionMapTouchFriendlyControlsEnabled() const
 {
     return settings_->value(kTherionMapTouchFriendlyControlsEnabledKey, false).toBool();
@@ -243,6 +265,26 @@ QString SessionStore::therionArguments()
 void SessionStore::setTherionArguments(const QString &arguments)
 {
     SessionSettingsStore().setTherionArguments(arguments);
+}
+
+QString SessionStore::therionRunTargetMode()
+{
+    return SessionSettingsStore().therionRunTargetMode();
+}
+
+void SessionStore::setTherionRunTargetMode(const QString &mode)
+{
+    SessionSettingsStore().setTherionRunTargetMode(mode);
+}
+
+QString SessionStore::therionTargetConfigPath()
+{
+    return SessionSettingsStore().therionTargetConfigPath();
+}
+
+void SessionStore::setTherionTargetConfigPath(const QString &path)
+{
+    SessionSettingsStore().setTherionTargetConfigPath(path);
 }
 
 bool SessionStore::therionMapTouchFriendlyControlsEnabled()

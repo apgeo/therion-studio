@@ -16,7 +16,6 @@ public:
     };
 
     static Presentation present(const TherionRunnerService::StartResult &startResult,
-                                const QString &executableInput,
                                 const QString &argumentsText,
                                 const QString &workingDirectory);
 };

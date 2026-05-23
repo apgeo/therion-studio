@@ -52,6 +52,12 @@ public:
     QString therionArguments() const;
     void setTherionArguments(const QString &arguments);
 
+    QString therionRunTargetMode() const;
+    void setTherionRunTargetMode(const QString &mode);
+
+    QString therionTargetConfigPath() const;
+    void setTherionTargetConfigPath(const QString &path);
+
     bool therionMapTouchFriendlyControlsEnabled() const;
     void setTherionMapTouchFriendlyControlsEnabled(bool enabled);
 
@@ -91,6 +97,12 @@ public:
 
     static QString therionArguments();
     static void setTherionArguments(const QString &arguments);
+
+    static QString therionRunTargetMode();
+    static void setTherionRunTargetMode(const QString &mode);
+
+    static QString therionTargetConfigPath();
+    static void setTherionTargetConfigPath(const QString &path);
 
     static bool therionMapTouchFriendlyControlsEnabled();
     static void setTherionMapTouchFriendlyControlsEnabled(bool enabled);

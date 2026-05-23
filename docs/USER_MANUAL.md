@@ -36,11 +36,13 @@ The main window is organized into:
 
 ### 2.1 Sidebar Activity Rail and Panes
 
-The sidebar has an always-visible activity rail with 3 panes:
+The sidebar has an always-visible activity rail with 3 pane entries:
 
 - `Files`
 - `Structure`
 - `Compiler`
+
+The rail also has a divider-separated `Compile` play-button action. It runs Therion with `Project Config`.
 
 Behavior:
 
@@ -86,6 +88,7 @@ If no documents are open, a Welcome tab is shown.
 
 - `Show Sidebar`
 - `Show Compiler` (switches sidebar to Compiler pane)
+- rail `Compile` action (runs `Project Config`)
 
 ### 3.5 Help Menu
 
@@ -156,6 +159,7 @@ Text editor includes:
 - active-line highlight that follows the text cursor (including map-driven source navigation)
 - editor mode toggle: `Raw` and `Blocks` (available for `.th` and `.thconfig` files)
 - for `.th`/`.thconfig`, the `Mode` switcher is in the full-width document toolbar row above the file tabs, not in an extra row inside editor content
+- for `thconfig`/`*.thconfig`, `Compile Current Config` is shown after `Undo`/`Redo` with a divider and uses the play icon
 - find/replace bar with `Whole word` and `Case sensitive` options
 - completion popup is shown while typing (commands/options/values), sourced from command catalog metadata; `Ctrl+Space` remains available as manual trigger
 - when completion popup is visible, confirm a suggestion with `Enter`, `Tab`, or mouse click; `Esc` closes the popup
@@ -289,8 +293,9 @@ Text editor includes:
 Main window status bar shows:
 
 - left: transient app status (`Ready`, operation results)
-- right: active document encoding
+- right: compiler state/result and active document encoding
 - when a `.th2` map editor tab is active: current zoom appears before the color mode badge (`Select` in green, `Insert` in red)
+- compiler indicator shows `Compiler: Idle`, `Compiler: Running`, `Compiler: OK`, or `Compiler: Failed`; click it to open the Compiler pane, and click it again while the Compiler pane is visible to collapse the sidebar
 - active document file names and paths are intentionally kept out of the status bar; use the tab title for document identity
 
 ### 5.4 Use Structure Sidebar
@@ -317,8 +322,8 @@ Map tab uses explicit workspace modes:
 - embedded Visual mode uses the same thin top content separator under the file tabs as Raw/Blocks mode
 - Visual inspector tabs use native `QTabWidget` rendering and sit in a borderless panel matching the other editor side panes
 - the editor area uses a single dedicated left divider between sidebar content and document chrome; embedded canvases do not duplicate that divider
-- from left, the toolbar defaults to `Save`, divider, `Undo`/`Redo`, divider
-- `Save`, `Undo`, and `Redo` are icon-only buttons (with tooltips) in both main and detached map toolbars
+- from left, the toolbar defaults to `Save`, divider, `Undo`/`Redo`, optional config compile action, divider
+- `Save`, `Undo`, `Redo`, and config `Compile` are icon-only buttons (with tooltips) in both main and detached map toolbars where applicable
 - when a `.th2` map tab is active, the next left-side toolbar groups are:
 - `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
 - `Select`, `Complete Draft`, divider, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`
@@ -403,6 +408,7 @@ Toolbar actions:
 - top document-toolbar view actions (TH2): `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
 - current map zoom is shown in the main status bar before the `Select`/`Insert` mode badge
 - history actions: `Undo`, `Redo`
+- config action: `Compile Current Config` for active `thconfig`/`*.thconfig` tabs
 - selection/draft actions: `Select`, `Complete Draft`
 - insertion/drawing tools: `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`
 - a divider separates draft completion from insertion/drawing tools; there is no trailing divider after `Area`
@@ -508,29 +514,49 @@ Persistence:
 Compiler pane fields:
 
 - `Executable`
-- `Working Directory`
 - `Arguments`
-- `Config` (resolved)
-- `Config Path` (resolved)
-- `Run Policy`
+- `Run Target`
+- `Target Config`
+- `Working Directory Override`
 
-The pane is optimized for narrow sidebar widths: field labels are stacked above their controls, long paths show their trailing path segment while keeping the full value editable, runner output wraps to the available width, and action buttons are arranged in two compact rows.
+The resolved config path appears as subdued helper text below `Target Config`. The effective working directory appears as subdued helper text below `Working Directory Override`.
+
+The pane is optimized for narrow sidebar widths: field labels are stacked above their controls, helper paths are less prominent than editable controls, long paths show their trailing path segment while keeping the full value editable, runner output wraps to the available width, and action buttons are arranged in compact rows.
 
 Buttons:
 
 - `Run Therion`
 - `Stop`
-- `Use Root` (uses the current project root as working directory)
+- `Clear Output`
 - `Copy Output`
 - `...` next to `Executable` for executable path browsing
+- `...` next to `Target Config` for selecting the project config file
+- `...` next to `Working Directory Override` for selecting an override folder
+- `Reset Override` below the effective working-directory helper text clears the project working-directory override and returns working-directory selection to automatic mode
 
 Behavior:
 
 - parallel runs are rejected while process is active
-- if config is auto-detected and no explicit `-c/--config` is provided, working directory may auto-switch to config file directory
+- `Run Target` chooses what Therion receives as the config/source file:
+- `Current Config` uses the active document when it is `thconfig` or `*.thconfig`
+- when the active tab is `thconfig` or `*.thconfig`, `Run Target` automatically switches to `Current Config`
+- when the active tab is not `thconfig` or `*.thconfig`, `Run Target` is locked to `Project Config`
+- `Project Config` uses the configured target config path, falling back to the project or working-directory `thconfig`
+- arbitrary one-off configs should be opened as documents and run with `Current Config`
+- `Target Config` is editable for `Project Config`; it is disabled for `Current Config`
+- if no explicit config argument is present in `Arguments`, the selected run-target config is passed to Therion when running
+- `Working Directory Override` is empty by default
+- `Working Directory Override` is available only for `Project Config`; `Current Config` always runs from the active config file folder
+- when the project `Working Directory Override` is empty, Therion runs from the selected project config folder; if no config is resolved, it runs from the project root
+- when the project `Working Directory Override` is set, that path is used as the process working directory and as the base for relative target config paths
+- if no run-target config can be resolved, the run is blocked with an actionable message instead of invoking Therion without source files
+- explicit relative `-c/--config` arguments are resolved from the override/project base so changing automatic working-directory mode does not break the typed argument
 - the runner augments the Therion process `PATH` with the resolved Therion executable directory, common package-manager paths, and common TeX paths so helper tools such as `cavern` and `pdftex` can be found even when the app is launched from the desktop
 - if no executable has been saved, the `Executable` field is filled with the auto-detected stable executable path, such as `/opt/homebrew/bin/therion` on Homebrew macOS
 - only Therion process stdout/stderr is written to the compiler output view; application workflow/status messages stay outside that output view
+- `Clear Output` clears the visible compiler output text without changing runner settings or the status-bar compiler result
+- the main status bar keeps a compact compiler indicator visible while editing; it shows current running state or the most recent success/failure result and toggles the Compiler pane when clicked
+- run target mode and target config path are restored across restarts
 
 ## 6. Settings and Session Persistence
 

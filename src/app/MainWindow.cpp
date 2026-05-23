@@ -32,6 +32,7 @@
 #include <QStringList>
 #include <QStatusBar>
 #include <QTabWidget>
+#include <QTime>
 #include <QTimer>
 #include <QTextBrowser>
 #include <QToolButton>
@@ -518,10 +519,15 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceSaveButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Save"), QStringLiteral("save"));
     workspaceUndoButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Undo"), QStringLiteral("undo-2"));
     workspaceRedoButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Redo"), QStringLiteral("redo-2"));
+    workspaceCompileCurrentConfigButton_ =
+        createWorkspaceIconButton(workspaceModeSwitcher_, tr("Compile Current Config"), QStringLiteral("play"));
     hostLayout->addWidget(workspaceSaveButton_);
     hostLayout->addWidget(createWorkspaceToolbarSeparator(workspaceModeSwitcher_));
     hostLayout->addWidget(workspaceUndoButton_);
     hostLayout->addWidget(workspaceRedoButton_);
+    workspaceCompileSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
+    hostLayout->addWidget(workspaceCompileSeparator_);
+    hostLayout->addWidget(workspaceCompileCurrentConfigButton_);
     workspaceHistorySeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
     hostLayout->addWidget(workspaceHistorySeparator_);
     workspaceZoomGroup_ = new QWidget(workspaceModeSwitcher_);
@@ -599,6 +605,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     connect(workspaceSaveButton_, &QToolButton::clicked, this, &MainWindow::saveActiveDocument);
     connect(workspaceUndoButton_, &QToolButton::clicked, this, &MainWindow::triggerUndoForActiveDocument);
     connect(workspaceRedoButton_, &QToolButton::clicked, this, &MainWindow::triggerRedoForActiveDocument);
+    connect(workspaceCompileCurrentConfigButton_, &QToolButton::clicked, this, &MainWindow::triggerCompileCurrentConfigForActiveDocument);
     connect(workspaceZoomInButton_, &QToolButton::clicked, this, &MainWindow::triggerZoomInForActiveDocument);
     connect(workspaceZoomOutButton_, &QToolButton::clicked, this, &MainWindow::triggerZoomOutForActiveDocument);
     connect(workspaceFitButton_, &QToolButton::clicked, this, &MainWindow::triggerFitForActiveDocument);
@@ -657,6 +664,8 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceZoomGroup_->setVisible(false);
     workspaceMapToolsGroup_->setVisible(false);
     workspaceHistorySeparator_->setVisible(false);
+    workspaceCompileSeparator_->setVisible(false);
+    workspaceCompileCurrentConfigButton_->setVisible(false);
     workspaceZoomSeparator_->setVisible(false);
     workspaceModeSwitcher_->setVisible(true);
     if (editorAreaLayout_ != nullptr) {
@@ -675,6 +684,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceSaveButton_ == nullptr
         || workspaceUndoButton_ == nullptr
         || workspaceRedoButton_ == nullptr
+        || workspaceCompileCurrentConfigButton_ == nullptr
         || workspaceZoomGroup_ == nullptr
         || workspaceZoomInButton_ == nullptr
         || workspaceZoomOutButton_ == nullptr
@@ -689,6 +699,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceFreehandLineButton_ == nullptr
         || workspaceAreaButton_ == nullptr
         || workspaceHistorySeparator_ == nullptr
+        || workspaceCompileSeparator_ == nullptr
         || workspaceZoomSeparator_ == nullptr
         || workspaceTextRawModeButton_ == nullptr
         || workspaceBlocksModeButton_ == nullptr) {
@@ -700,6 +711,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget);
     const bool showMapModes = mapTab != nullptr;
     const bool showTextModes = textTab != nullptr;
+    const bool showCompileCurrentConfig = showTextModes && !currentDocumentTherionConfigPath().isEmpty();
     const bool mapPaneDetached = mapTab != nullptr && mapTab->isMapPaneDetached();
     const bool showZoomTools = showMapModes && !mapPaneDetached;
     const bool showMapTools = showMapModes && !mapPaneDetached;
@@ -722,6 +734,9 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceSaveButton_->setEnabled(tabWidget != nullptr);
     workspaceUndoButton_->setEnabled(documentCanUndoForWidget(tabWidget));
     workspaceRedoButton_->setEnabled(documentCanRedoForWidget(tabWidget));
+    workspaceCompileSeparator_->setVisible(showCompileCurrentConfig);
+    workspaceCompileCurrentConfigButton_->setVisible(showCompileCurrentConfig);
+    workspaceCompileCurrentConfigButton_->setEnabled(showCompileCurrentConfig);
     workspaceZoomInButton_->setEnabled(showZoomTools);
     workspaceZoomOutButton_->setEnabled(showZoomTools);
     workspaceFitButton_->setEnabled(showZoomTools);
@@ -816,6 +831,11 @@ void MainWindow::triggerRedoForActiveDocument()
     }
 }
 
+void MainWindow::triggerCompileCurrentConfigForActiveDocument()
+{
+    runTherionCurrentConfig();
+}
+
 void MainWindow::triggerZoomInForActiveDocument()
 {
     if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
@@ -898,30 +918,54 @@ void MainWindow::initializeDocumentStatusWidgets()
     if (statusBar() == nullptr
         || statusMapZoomLabel_ != nullptr
         || statusMapModeLabel_ != nullptr
+        || statusCompilerButton_ != nullptr
         || statusDocumentEncodingLabel_ != nullptr) {
         return;
     }
 
     statusDocumentEncodingLabel_ = new QLabel(statusBar());
     statusDocumentEncodingLabel_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    statusDocumentEncodingLabel_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    statusDocumentEncodingLabel_->setMinimumWidth(130);
+    statusDocumentEncodingLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    statusDocumentEncodingLabel_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 
     statusMapZoomLabel_ = new QLabel(statusBar());
     statusMapZoomLabel_->setTextInteractionFlags(Qt::NoTextInteraction);
     statusMapZoomLabel_->setAlignment(Qt::AlignCenter);
-    statusMapZoomLabel_->setMinimumWidth(52);
+    statusMapZoomLabel_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
     statusMapZoomLabel_->setVisible(false);
 
     statusMapModeLabel_ = new QLabel(statusBar());
     statusMapModeLabel_->setTextInteractionFlags(Qt::NoTextInteraction);
     statusMapModeLabel_->setAlignment(Qt::AlignCenter);
-    statusMapModeLabel_->setMinimumWidth(78);
+    statusMapModeLabel_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
     statusMapModeLabel_->setVisible(false);
+
+    statusCompilerButton_ = new QToolButton(statusBar());
+    statusCompilerButton_->setAutoRaise(true);
+    statusCompilerButton_->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    statusCompilerButton_->setCursor(Qt::PointingHandCursor);
+    statusCompilerButton_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+    statusCompilerButton_->setToolTip(tr("Open Compiler output"));
+    connect(statusCompilerButton_, &QToolButton::clicked, this, [this]() {
+        const bool compilerSidebarVisible = sidebarContainer_ != nullptr
+            && sidebarContainer_->isVisible()
+            && sidebarContentContainer_ != nullptr
+            && sidebarContentContainer_->isVisible()
+            && !sidebarCollapsed_
+            && activeSidebarPane_ == SidebarPane::Console;
+        if (compilerSidebarVisible) {
+            setSidebarCollapsed(true);
+            return;
+        }
+
+        showSidebarPane(SidebarPane::Console);
+    });
 
     statusBar()->addPermanentWidget(statusMapZoomLabel_, 0);
     statusBar()->addPermanentWidget(statusMapModeLabel_, 0);
+    statusBar()->addPermanentWidget(statusCompilerButton_, 0);
     statusBar()->addPermanentWidget(statusDocumentEncodingLabel_, 0);
+    setCompilerStatusIdle();
     refreshDocumentStatusWidgets();
 }
 
@@ -990,6 +1034,57 @@ void MainWindow::refreshDocumentStatusWidgets()
     }
 }
 
+void MainWindow::setCompilerStatusIdle()
+{
+    updateCompilerStatusButton(tr("Compiler: Idle"),
+                               tr("Therion compiler is idle. Click to open Compiler output."),
+                               QStringLiteral("#6c757d"));
+}
+
+void MainWindow::setCompilerStatusRunning(const QString &configPath)
+{
+    const QString toolTip = configPath.isEmpty()
+        ? tr("Therion is running. Click to open Compiler output.")
+        : tr("Therion is running %1. Click to open Compiler output.").arg(QDir::toNativeSeparators(configPath));
+    updateCompilerStatusButton(tr("Compiler: Running..."), toolTip, QStringLiteral("#2f80ed"));
+}
+
+void MainWindow::setCompilerStatusResult(bool success, const QString &details)
+{
+    const QString finishedAt = QTime::currentTime().toString(QStringLiteral("HH:mm"));
+    const QString statusText = success
+        ? tr("Compiler: OK %1").arg(finishedAt)
+        : tr("Compiler: Failed %1").arg(finishedAt);
+    const QString toolTip = details.trimmed().isEmpty()
+        ? tr("Last Therion run finished at %1. Click to open Compiler output.").arg(finishedAt)
+        : tr("%1 Click to open Compiler output.").arg(details);
+    updateCompilerStatusButton(statusText,
+                               toolTip,
+                               success ? QStringLiteral("#2e9f5c") : QStringLiteral("#c0392b"));
+}
+
+void MainWindow::updateCompilerStatusButton(const QString &text,
+                                            const QString &toolTip,
+                                            const QString &accentColor)
+{
+    if (statusCompilerButton_ == nullptr) {
+        return;
+    }
+
+    statusCompilerButton_->setText(text);
+    statusCompilerButton_->setToolTip(toolTip);
+    statusCompilerButton_->setStyleSheet(QStringLiteral(
+                                             "QToolButton {"
+                                             " color: white;"
+                                             " font-weight: 700;"
+                                             " background-color: %1;"
+                                             " border: none;"
+                                             " border-radius: 4px;"
+                                             " padding: 1px 8px;"
+                                             " min-height: 18px;"
+                                             "}").arg(accentColor));
+}
+
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
@@ -1048,11 +1143,11 @@ void MainWindow::buildMenus()
     openMapEditorAction_->setEnabled(false);
 
     QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
-    QAction *toggleSidebarAction = viewMenu->addAction(tr("Show Sidebar"));
-    toggleSidebarAction->setCheckable(true);
-    toggleSidebarAction->setChecked(true);
-    toggleSidebarAction->setStatusTip(tr("Show or hide the sidebar panel"));
-    connect(toggleSidebarAction, &QAction::toggled, this, [this](bool visible) {
+    showSidebarAction_ = viewMenu->addAction(tr("Show Sidebar"));
+    showSidebarAction_->setCheckable(true);
+    showSidebarAction_->setChecked(true);
+    showSidebarAction_->setStatusTip(tr("Show or hide the sidebar panel"));
+    connect(showSidebarAction_, &QAction::toggled, this, [this](bool visible) {
         if (sidebarContainer_ == nullptr) {
             return;
         }
@@ -1078,17 +1173,7 @@ void MainWindow::buildMenus()
     QAction *showConsolePaneAction = viewMenu->addAction(tr("Show Compiler"));
     showConsolePaneAction->setStatusTip(tr("Switch the sidebar to the compiler pane"));
     connect(showConsolePaneAction, &QAction::triggered, this, [this]() {
-        if (sidebarContainer_ != nullptr) {
-            sidebarContainer_->setVisible(true);
-            if (sidebarContentContainer_ != nullptr) {
-                sidebarContentContainer_->setVisible(true);
-            }
-            if (sidebarCollapsed_) {
-                setSidebarCollapsed(false);
-            }
-            restoreSidebarWidth();
-        }
-        setSidebarPane(SidebarPane::Console);
+        showSidebarPane(SidebarPane::Console);
     });
 
     QMenu *windowMenu = menuBar()->addMenu(tr("&Window"));
@@ -1154,9 +1239,6 @@ void MainWindow::restoreSessionState()
         projectModel_->setRootPath(projectRootPath_);
         projectTree_->setRootIndex(projectModel_->index(projectRootPath_));
         appendConsoleLine(tr("Restored project root %1").arg(projectRootPath_));
-        if (therionWorkingDirectoryEdit_ != nullptr && therionWorkingDirectoryEdit_->text().trimmed().isEmpty()) {
-            therionWorkingDirectoryEdit_->setText(projectRootPath_);
-        }
         loadStructureNameOverrides();
         syncOpenDocumentsToProjectRoot();
         rebuildStructureSidebar();
@@ -1177,6 +1259,8 @@ void MainWindow::persistSessionState()
     sessionStore_.setTherionExecutablePath(therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text().trimmed() : QString());
     sessionStore_.setTherionWorkingDirectory(therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text().trimmed() : QString());
     sessionStore_.setTherionArguments(therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text().trimmed() : QString());
+    sessionStore_.setTherionRunTargetMode(therionRunTargetMode());
+    sessionStore_.setTherionTargetConfigPath(therionTargetConfigEdit_ != nullptr ? therionTargetConfigEdit_->text().trimmed() : QString());
     saveStructureNameOverrides();
     persistOpenDocuments();
 }
@@ -1294,9 +1378,6 @@ void MainWindow::openProject()
     projectRootPath_ = projectPath;
     projectModel_->setRootPath(projectRootPath_);
     projectTree_->setRootIndex(projectModel_->index(projectRootPath_));
-    if (therionWorkingDirectoryEdit_ != nullptr && therionWorkingDirectoryEdit_->text().trimmed().isEmpty()) {
-        therionWorkingDirectoryEdit_->setText(projectRootPath_);
-    }
     loadStructureNameOverrides();
     syncOpenDocumentsToProjectRoot();
     sessionStore_.setLastProjectPath(projectRootPath_);

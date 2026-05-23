@@ -205,11 +205,15 @@ Required capabilities:
 
 - configure or discover the Therion executable path
 - run Therion from the current project context
-- show the selected config name/path, editable working directory, and additional command-line options
-- allow resetting the working directory to the default project context
+- show the selected config name/path, effective working directory, project-config working-directory override, and additional command-line options
+- order the primary compiler setup fields as executable, arguments, run target, target config, and working-directory override
+- show the resolved config path directly below the target-config selector and the effective working directory directly below the working-directory override as subdued helper text, without separate section headers
+- allow clearing the project-config working-directory override so the runner returns to automatic selected-config-folder behavior
+- provide a folder chooser beside the working-directory override and place the override reset action below the effective working-directory value
 - capture stdout, stderr, and exit status
 - display command output in an application console view
 - expose run status and allow copying console output
+- allow clearing the visible console output without changing runner settings or the last compiler status
 - optionally reveal the working directory or output directory in the platform file manager after a successful run
 - show actionable error messages when execution fails
 - keep the UI responsive while Therion is running
@@ -328,6 +332,8 @@ The rules below define the expected day-to-day interaction model. If a later req
 - In detached map windows, an equivalent top command toolbar shall be shown above the map canvas and inspector.
 - Toolbar actions should present compact icon-first controls, with text equivalents available through tooltips, accessibility names, and automation-stable identifiers.
 - When a map editor tab is active, the status bar shall show the current map zoom before the Select/Insert mode badge.
+- The main-window status bar shall show a compact global compiler indicator with the current compiler state and the last run result (`Idle`, `Running`, `OK`, or `Failed`).
+- Activating the compiler status indicator shall toggle the Compiler sidebar: open it when hidden/collapsed or showing another pane, and collapse it when the Compiler pane is already visible.
 - The status bar shall not show the active document file name or path; persistent document identity remains available in the tab title and tooltips.
 - Bundled map toolbar icons shall be permissively licensed, shall include their license notice in the repository, and shall adapt to the active light/dark application palette.
 - Placement tools that require a scrap context shall be disabled or unavailable until a valid scrap target exists.
@@ -417,7 +423,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - For files currently open in editor tabs, structure indexing shall use in-memory document text so unsaved edits are reflected immediately in the structure tree.
 - The structure sidebar shall provide explicit user controls to collapse and re-expand the panel.
 - The sidebar shall use a fixed-width activity rail plus a resizable content pane so the rail remains available when content is collapsed.
-- The activity rail shall provide `Files`, `Structure`, and `Compiler` entries; map-object/background workflows shall be available in the TH2 Visual-mode inspector rather than a dedicated `Map` rail entry.
+- The activity rail shall provide `Files`, `Structure`, and `Compiler` pane entries plus a visually separated `Compile` action using the play icon. The rail `Compile` action shall run Therion with `Project Config` without requiring the Compiler pane to be focused.
 - Resizing the sidebar content pane to its collapsed threshold shall automatically collapse the content pane, leave the activity rail visible, and shall not resize the rail itself.
 
 #### 3.8.7 Therion Runner and Console Behavior
@@ -427,12 +433,28 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The compiler console output view shall contain Therion process output only; application status messages such as project-open events, runner setup notes, and UI workflow messages shall be shown outside the console output view.
 - The console shall capture stdout, stderr, and the exit status of each run.
 - The console surface shall show the active config name and location, the working directory, and the active command-line options.
+- The working-directory editor shall act as a `Project Config` override and shall be empty by default.
+- When `Current Config` is active, the working-directory override shall be disabled and ignored; the effective working directory shall be the active config file directory.
+- When `Project Config` is active and the override is empty, the effective working directory shall be the selected project config directory, falling back to the project root when no config is resolved.
+- The resolved config path shall be displayed immediately below `Target Config`, and the effective working directory shall be displayed immediately below `Working Directory Override`, as less-prominent helper text without additional labels.
 - The compiler sidebar surface shall remain usable at narrow widths by using stacked field labels, compact browse/reset controls, wrapped runner output, and action buttons that wrap into multiple rows instead of clipping horizontally.
+- The compiler sidebar shall provide a single run surface with an explicit run target selector for `Current Config` and `Project Config`.
+- The status bar compiler indicator shall update when Therion starts, finishes, or reports a runner error, and shall keep the last success/failure result visible while the user continues editing.
+- A `Compile Current Config` toolbar action using the play icon shall be shown for active `thconfig`/`*.thconfig` documents after `Undo`/`Redo`, separated by a toolbar divider, and shall run Therion with `Current Config`.
+- `Current Config` shall run the active document only when the active document is a Therion config file such as `thconfig` or `*.thconfig`.
+- When the active document is a Therion config file, the run target selector shall automatically switch to `Current Config`.
+- When the active document is not a Therion config file, the run target selector shall be locked to `Project Config`.
+- `Project Config` shall run the configured project target config when one is set, otherwise it shall resolve the default `thconfig` from the project or working-directory context.
+- Arbitrary one-off configs shall be run by opening the config file as a document and using `Current Config` rather than a separate custom run-target mode.
+- When no explicit config argument is supplied in the additional command-line options, the selected run-target config shall be passed to Therion as the source/config argument for the run.
+- If no run-target config can be resolved, the application shall block the run and show an actionable message rather than invoking Therion without source files.
+- The selected run-target mode and target config path shall persist across restarts.
 - When no user-defined Therion executable is persisted, the compiler sidebar shall populate `Executable` with a platform auto-detected stable executable path rather than a versioned package-internal canonical path when such a stable path exists.
 - The Therion process shall run with a platform-aware `PATH` that includes the resolved Therion executable directory, common package-manager locations, and common TeX tool locations before the inherited environment path so helper tools such as `cavern` and `pdftex` can be found from GUI launches.
-- The user shall be able to reset the working directory to the default project context.
-- The console shall show a visible running, success, or failure state for the most recent run.
+- The user shall be able to reset a non-empty project working-directory override and return to automatic working-directory resolution.
+- The status-bar compiler indicator shall show a visible running, success, or failure state for the most recent run.
 - The user shall be able to copy the full console output.
+- The user shall be able to clear the visible console output from the Compiler sidebar without clearing runner settings or the status-bar compiler result.
 - Failures shall be shown as actionable messages rather than raw process noise alone.
 - After a successful run, the application may offer opening the working directory or output folder in the platform file manager.
 - The user shall be able to rerun Therion from the current project context.
@@ -918,7 +940,7 @@ The criteria below are intended for implementation verification and QA.
 - The structure tree does not include synthetic project-root or summary rows.
 - Sidebar selection changes the active document context.
 - The sidebar remains synchronized with the open project when the underlying structure changes.
-- The activity rail exposes `Files`, `Structure`, and `Compiler`; no dedicated `Map` rail pane is required.
+- The activity rail exposes `Files`, `Structure`, `Compiler`, and quick `Compile`; no dedicated `Map` rail pane is required.
 - The sidebar can be collapsed and re-expanded through explicit UI controls.
 
 #### 8.1.6 Therion Runner / Console
@@ -926,8 +948,9 @@ The criteria below are intended for implementation verification and QA.
 - Therion can be started from inside the application.
 - Therion output appears in the console in the order it is produced.
 - The UI remains responsive while Therion is running.
-- The console shows config identity, working directory, command-line options, and the current run state.
-- The working directory can be reset to its default project value and the output can be copied.
+- The console shows config identity, effective working directory, command-line options, and the current run state.
+- The main status bar shows the current compiler state or last compiler result, and clicking that indicator toggles the Compiler sidebar.
+- The working-directory override can be cleared and the output can be copied.
 - Failures are shown with actionable messages and exit status.
 - Therion runs can be cancelled by the user.
 - If a run is already active, the application shall define a deterministic policy: reject parallel runs, queue them, or replace the active run.

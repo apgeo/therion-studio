@@ -8,11 +8,11 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QHash>
+#include <QIcon>
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QModelIndex>
 #include <QSignalBlocker>
-#include <QStyle>
 #include <QStandardItem>
 #include <QStandardItemModel>
 #include <QTabWidget>
@@ -112,20 +112,16 @@ QString mapObjectItemText(const TherionStudio::ProjectStructureEntry &entry)
     return QStringLiteral("%1: %2").arg(structureObjectKindLabel(entry.category), entry.name);
 }
 
-QIcon structureItemIconForCategory(const QString &category, const QStyle *style)
+QIcon structureItemIconForCategory(const QString &category)
 {
-    if (style == nullptr) {
-        return QIcon();
-    }
-
     if (category == QStringLiteral("Surveys")) {
-        return style->standardIcon(QStyle::SP_DirHomeIcon);
+        return QIcon(QStringLiteral(":/resources/icons/lucide/compass.svg"));
     }
     if (category == QStringLiteral("Maps")) {
-        return style->standardIcon(QStyle::SP_DirIcon);
+        return QIcon(QStringLiteral(":/resources/icons/lucide/map.svg"));
     }
     if (category == QStringLiteral("Scraps")) {
-        return style->standardIcon(QStyle::SP_FileIcon);
+        return QIcon(QStringLiteral(":/resources/icons/lucide/puzzle.svg"));
     }
 
     return QIcon();
@@ -348,7 +344,6 @@ void MainWindow::applyStructureSidebarEntries(const QVector<TherionStudio::Proje
             QStandardItem *item = nullptr;
         };
 
-        const QStyle *appStyle = style();
         const QHash<QString, QSet<QString>> mapScrapRefs = mapScrapReferencesByMapKey(entries);
         QHash<QString, QSet<QString>> mapOwnersByScrapName;
         for (auto it = mapScrapRefs.constBegin(); it != mapScrapRefs.constEnd(); ++it) {
@@ -379,7 +374,7 @@ void MainWindow::applyStructureSidebarEntries(const QVector<TherionStudio::Proje
                                                 entry.lineNumber,
                                                 entry.category,
                                                 entryName);
-            const QIcon entryIcon = structureItemIconForCategory(entry.category, appStyle);
+            const QIcon entryIcon = structureItemIconForCategory(entry.category);
             if (!entryIcon.isNull()) {
                 entryItem->setIcon(entryIcon);
             }

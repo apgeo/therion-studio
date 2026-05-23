@@ -4,6 +4,7 @@ Last updated: 2026-05-23
 
 This manual describes the currently implemented behavior.
 Update this file whenever UI layout, workflows, keyboard shortcuts, or settings behavior changes.
+The application uses a dark cave-map ThS monogram icon with yellow S accent for runtime windows and packaged launch surfaces.
 
 ## 1. Application Overview
 

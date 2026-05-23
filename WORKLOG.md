@@ -6,7 +6,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 - Phase 6: finish encoding robustness work. Implementation is mostly complete; remaining work is corpus hardening and edge-case handling.
 - Phase 7: finish UX/accessibility/platform-convention work, especially shortcut and keyboard parity on macOS, Windows, and Linux.
-- Phase 8: start release readiness and packaging work for all supported platforms.
+- Phase 8: start release readiness and packaging work for all supported platforms after Homebrew source-build formula draft and initial regenerated safe-area dark cave-map ThS monogram app icon with yellow S accent wiring.
 - Phase 9: continue map-editor parity polish after the `Inspector -> Objects` row-drag/delete-rule/area-boundary-selection/reference-disclosure batch, selected-object explicit-orientation handle/checkbox-selection-preservation gating, single-table parsed-attribute object settings with object-level help, Selection inspector geometry-before-vertex ordering, explicit `Object Actions` and contextual `Point Details`/`Line Point` section naming, high-DPI sidebar rail icon rendering, Lucide structure hierarchy icons, compact compiler sidebar layout with clearable output and status-bar-only runner state, compiler output restricted to Therion process streams, stable auto-detected Therion executable path, compiler run-target selector for current/project configs with config tabs auto-current, non-config tabs locked to project, divider-separated rail project compile action, current-config toolbar compile action, and toggleable status-bar compiler state/result indicator, automatic selected-config-folder working directory with project-only override, browse, reset, and subdued inline resolved path summaries, runner helper-tool PATH augmentation, monitor-x return-map icon, XTherion-style selected-line-vertex `<<`/smooth/`>>` control group, supported line-point option preservation during Bezier conversion, logical-vertex reselection after line-point rewrites, immediate orientation/l-size inspector updates without an apply button, contextual selected-vertex insert/interactive-extend actions, safe selected-line split for non-area-border interior vertices, and source-derived orientation applicability for point types; focus on interaction gaps found during use.
 - Phase 10: continue interactive map drawing/insertion polish, especially mode-aware undo/redo semantics where one completed draw gesture maps to one undo step.
 - Phase 11: continue structured block-canvas authoring coverage, safer nested insertion behavior, and remaining BlockEditor extraction/refactor slices.
@@ -40,7 +40,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 ### Phase 8 - Release Readiness and Packaging (`MVP`)
 
 - Status: not started.
-- Remaining work: define packaging targets, artifact layout, runtime dependency bundling, signing/notarization expectations, Linux packaging strategy, and representative performance expectations.
+- Remaining work: define packaging targets, artifact layout beyond Homebrew source-build formula draft and initial regenerated safe-area dark cave-map ThS monogram app icon with yellow S accent wiring, runtime dependency bundling, signing/notarization expectations, Linux packaging strategy, and representative performance expectations.
 - Remaining packaging scope includes producing launchable artifacts on macOS, Windows, and Linux.
 
 ### Phase 9 - Map Editor Parity Polish (`Post-MVP`)

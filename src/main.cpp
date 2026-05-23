@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QEvent>
 #include <QGuiApplication>
+#include <QIcon>
 #include <QLocale>
 #include <QObject>
 #include <QStyleHints>
@@ -109,6 +110,7 @@ int main(int argc, char *argv[])
     application.setApplicationName(QStringLiteral("Therion Studio"));
     application.setOrganizationName(QStringLiteral("Therion Studio"));
     application.setOrganizationDomain(QStringLiteral("therionstudio.example"));
+    application.setWindowIcon(QIcon(QStringLiteral(":/resources/app/app-icon.svg")));
 
     QTranslator applicationTranslator;
     if (applicationTranslator.load(QLocale(),

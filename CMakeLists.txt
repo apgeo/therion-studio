@@ -341,7 +341,33 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/editor/TherionSyntaxHighlighter.h
     src/main.cpp)
 
+set(THERION_STUDIO_APP_ICON_SVG
+    resources/app/app-icon.svg)
+set(THERION_STUDIO_MACOS_ICON
+    resources/app/TherionStudio.icns)
+set(THERION_STUDIO_WINDOWS_ICON
+    resources/app/TherionStudio.ico)
+
+if(APPLE)
+    set_source_files_properties(${THERION_STUDIO_MACOS_ICON} PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources")
+    target_sources(TherionStudio PRIVATE
+        ${THERION_STUDIO_MACOS_ICON})
+endif()
+
+if(WIN32)
+    set(THERION_STUDIO_WINDOWS_ICON_PATH
+        "${CMAKE_CURRENT_SOURCE_DIR}/${THERION_STUDIO_WINDOWS_ICON}")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/windows/TherionStudio.rc.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/TherionStudio.rc"
+        @ONLY)
+    target_sources(TherionStudio PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}/TherionStudio.rc")
+endif()
+
 set(THERION_STUDIO_RESOURCE_FILES
+    ${THERION_STUDIO_APP_ICON_SVG}
     resources/therion_command_catalog.json
     resources/therion_command_catalog.overrides.json
     resources/therion_syntax_palette.json
@@ -404,7 +430,8 @@ if(APPLE)
     set_target_properties(TherionStudio PROPERTIES
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/cmake/macos/Info.plist.in"
         MACOSX_BUNDLE_BUNDLE_NAME "Therion Studio"
-        MACOSX_BUNDLE_GUI_IDENTIFIER "com.therionstudio.app"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.lblazek.therionstudio"
+        MACOSX_BUNDLE_ICON_FILE "TherionStudio.icns"
         MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
 endif()

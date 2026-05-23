@@ -34,6 +34,10 @@ Formula dependencies should include:
 - `qtbase`
 - `qtsvg`
 
+The draft source-build Homebrew formula is kept in `packaging/homebrew/Formula/therion-studio.rb`
+until it is moved to a dedicated external tap repository. Before publishing it, replace the
+repository URL/checksum placeholders and declare the final project license.
+
 The external Therion command-line executable is not bundled. Users configure it in the application runner settings, or install it separately through Homebrew.
 
 ## Windows

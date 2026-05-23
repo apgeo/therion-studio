@@ -757,6 +757,7 @@ Requirements:
 - Windows signed installers are preferred for production releases; unsigned installers may be used only for clearly documented internal preview builds
 - Linux production releases shall provide at least one broadly portable distribution format, such as AppImage or an equivalent self-contained bundle; distro-specific packages may be added in addition to the primary artifact
 - required Qt libraries and other non-system runtime dependencies shall be bundled with the application or installed by the package manager package so that first launch does not depend on a local Qt SDK or developer toolchain
+- release artifacts shall include a branded dark cave-map ThS monogram application icon with yellow S accent for runtime windows and platform launch surfaces, with platform-specific icon metadata wired for macOS and Windows packages
 - packaged releases shall store user settings, recent-project state, session data, and logs in standard user-writable per-platform locations rather than inside the installation directory
 - updating from one released version to another shall preserve user settings and persisted session data where the stored data format remains compatible
 - automatic update delivery is not required for the MVP, but the release process shall support a documented manual update path for each platform

@@ -32,6 +32,8 @@ namespace
 constexpr int kInspectorSourceLineRoleForTest = Qt::UserRole + 700;
 constexpr int kInspectorObjectNameColumnForTest = 0;
 constexpr int kInspectorObjectDragColumnForTest = 1;
+constexpr int kInspectorObjectVisibilityColumnForTest = 2;
+constexpr int kInspectorObjectDeleteColumnForTest = 3;
 
 bool expect(bool condition, const char *message)
 {
@@ -662,7 +664,10 @@ bool dragObjectTreeRow(QTreeView *objectsTree,
                        int targetLineNumber,
                        InspectorObjectDropPosition position,
                        bool exerciseCancelBeforeDrop = false,
-                       bool exerciseInvalidBeforeDrop = false)
+                       bool exerciseInvalidBeforeDrop = false,
+                       bool exerciseCurrentLocationBeforeDrop = false,
+                       int currentLocationTargetLineNumber = 0,
+                       InspectorObjectDropPosition currentLocationPosition = InspectorObjectDropPosition::BeforeTarget)
 {
     if (objectsTree == nullptr || objectsTree->model() == nullptr || objectsTree->viewport() == nullptr) {
         std::cerr << "Objects tree, model, or viewport is unavailable for drag simulation.\n";
@@ -712,6 +717,22 @@ bool dragObjectTreeRow(QTreeView *objectsTree,
         std::cerr << "Objects tree movable row hover should enable mouse tracking and use an open-hand cursor.\n";
         return false;
     }
+    for (int actionColumn : {kInspectorObjectVisibilityColumnForTest, kInspectorObjectDeleteColumnForTest}) {
+        const QModelIndex actionIndex = sourceIndex.sibling(sourceIndex.row(), actionColumn);
+        const QRect actionRect = objectsTree->visualRect(actionIndex);
+        if (!actionRect.isValid()) {
+            std::cerr << "Objects tree action column visual rect should be valid.\n";
+            return false;
+        }
+        sendMouse(objectsTree->viewport(), QEvent::MouseMove, actionRect.center(), Qt::NoButton, Qt::NoButton);
+        pumpEvents();
+        if (objectsTree->viewport()->cursor().shape() != Qt::PointingHandCursor) {
+            std::cerr << "Objects tree visibility/delete action hover should use a pointing-hand cursor.\n";
+            return false;
+        }
+    }
+    sendMouse(objectsTree->viewport(), QEvent::MouseMove, sourcePoint, Qt::NoButton, Qt::NoButton);
+    pumpEvents();
 
     const QPoint targetPoint(targetRect.center().x(),
                              position == InspectorObjectDropPosition::AfterTarget
@@ -730,6 +751,44 @@ bool dragObjectTreeRow(QTreeView *objectsTree,
             return false;
         }
         sendMouse(objectsTree->viewport(), QEvent::MouseButtonRelease, invalidPoint, Qt::LeftButton, Qt::NoButton);
+        pumpEvents();
+
+        sendMouse(objectsTree->viewport(), QEvent::MouseMove, sourcePoint, Qt::NoButton, Qt::NoButton);
+        pumpEvents();
+    }
+    if (exerciseCurrentLocationBeforeDrop) {
+        const int noOpTargetLineNumber = currentLocationTargetLineNumber > 0
+            ? currentLocationTargetLineNumber
+            : targetLineNumber;
+        const QModelIndex currentLocationTargetIndex = findObjectTreeIndexForLine(objectsTree->model(), noOpTargetLineNumber);
+        if (!currentLocationTargetIndex.isValid()) {
+            std::cerr << "Objects tree current-location target line was not found: "
+                      << noOpTargetLineNumber << '\n';
+            return false;
+        }
+        objectsTree->scrollTo(currentLocationTargetIndex, QAbstractItemView::EnsureVisible);
+        pumpEvents();
+        const QRect currentLocationTargetRect = objectsTree->visualRect(currentLocationTargetIndex);
+        if (!currentLocationTargetRect.isValid()) {
+            std::cerr << "Objects tree current-location target visual rect was invalid.\n";
+            return false;
+        }
+        const QPoint currentLocationPoint(
+            currentLocationTargetRect.center().x(),
+            currentLocationPosition == InspectorObjectDropPosition::AfterTarget
+                ? currentLocationTargetRect.bottom() - 1
+                : currentLocationTargetRect.top() + 1);
+        sendMouse(objectsTree->viewport(), QEvent::MouseButtonPress, sourcePoint, Qt::LeftButton, Qt::LeftButton);
+        pumpEvents();
+        sendMouse(objectsTree->viewport(), QEvent::MouseMove, currentLocationPoint, Qt::NoButton, Qt::LeftButton);
+        pumpEvents();
+        auto *dropIndicator = objectsTree->viewport()->findChild<QWidget *>(QStringLiteral("mapObjectsTreeDropIndicator"));
+        if ((dropIndicator != nullptr && dropIndicator->isVisible())
+            || objectsTree->viewport()->cursor().shape() != Qt::ForbiddenCursor) {
+            std::cerr << "Objects tree current-location drop should hide indicator and use forbidden cursor.\n";
+            return false;
+        }
+        sendMouse(objectsTree->viewport(), QEvent::MouseButtonRelease, currentLocationPoint, Qt::LeftButton, Qt::NoButton);
         pumpEvents();
 
         sendMouse(objectsTree->viewport(), QEvent::MouseMove, sourcePoint, Qt::NoButton, Qt::NoButton);
@@ -802,7 +861,9 @@ int runInspectorObjectMoveScenario(const char *scenarioName,
                                    int targetLineNumber,
                                    InspectorObjectDropPosition position,
                                    int expectedCurrentLineNumber,
-                                   const QString &expectedMovedText)
+                                   const QString &expectedMovedText,
+                                   int currentLocationTargetLineNumber = 0,
+                                   InspectorObjectDropPosition currentLocationPosition = InspectorObjectDropPosition::BeforeTarget)
 {
     QTemporaryDir tempDir;
     if (!expect(tempDir.isValid(), "Failed to create temporary directory for object move smoke test.")) {
@@ -854,7 +915,10 @@ int runInspectorObjectMoveScenario(const char *scenarioName,
                                   targetLineNumber,
                                   position,
                                   qstrcmp(scenarioName, "after_line") == 0,
-                                  qstrcmp(scenarioName, "after_line") == 0),
+                                  qstrcmp(scenarioName, "after_line") == 0,
+                                  currentLocationTargetLineNumber > 0,
+                                  currentLocationTargetLineNumber,
+                                  currentLocationPosition),
                 "Dragging an object row onto another object row should be routed through the inspector move handler.")) {
         return 1;
     }
@@ -932,7 +996,9 @@ int runInspectorObjectMoveSmoke()
                                                       4,
                                                       InspectorObjectDropPosition::AfterTarget,
                                                       7,
-                                                      afterLineExpected);
+                                                      afterLineExpected,
+                                                      4,
+                                                      InspectorObjectDropPosition::BeforeTarget);
         rc != 0) {
         return rc;
     }
@@ -942,6 +1008,7 @@ int runInspectorObjectMoveSmoke()
         "scrap move -projection plan\n"
         "point 1 2 station -name P1\n"
         "point 3 4 station -name P2\n"
+        "# keep hidden source between visible objects\n"
         "line wall\n"
         "  0 0\n"
         "  1 1\n"
@@ -956,14 +1023,17 @@ int runInspectorObjectMoveSmoke()
         "endline\n"
         "point 1 2 station -name P1\n"
         "point 3 4 station -name P2\n"
+        "# keep hidden source between visible objects\n"
         "endscrap\n");
     if (const int rc = runInspectorObjectMoveScenario("before_point",
                                                       beforePointContents,
-                                                      5,
+                                                      6,
                                                       3,
                                                       InspectorObjectDropPosition::BeforeTarget,
                                                       3,
-                                                      beforePointExpected);
+                                                      beforePointExpected,
+                                                      4,
+                                                      InspectorObjectDropPosition::AfterTarget);
         rc != 0) {
         return rc;
     }

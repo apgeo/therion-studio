@@ -242,6 +242,48 @@ int runNoOpAndInvalidTargetTest()
         ? 0
         : 1;
 }
+
+int runAdjacentBoundaryNoOpTest()
+{
+    const QString text = QStringLiteral(
+        "encoding utf-8\n"
+        "scrap s1 -projection plan\n"
+        "point 1 2 station -name P1\n"
+        "point 3 4 station -name P2\n"
+        "line wall\n"
+        "  0 0\n"
+        "  1 1\n"
+        "endline\n"
+        "endscrap\n");
+
+    const MapEditorObjectMovePlan beforeNextPlan = MapEditorObjectMovePlanner::planMove(
+        text,
+        3,
+        4,
+        MapEditorObjectMovePosition::BeforeTarget);
+    if (!expect(beforeNextPlan.resolved && !beforeNextPlan.changed,
+                "Moving an object before its immediate next sibling should resolve as a no-op.")) {
+        return 1;
+    }
+    if (!expect(beforeNextPlan.movedText == text,
+                "Immediate-next no-op move should preserve the original text exactly.")) {
+        return 1;
+    }
+
+    const MapEditorObjectMovePlan afterPreviousPlan = MapEditorObjectMovePlanner::planMove(
+        text,
+        5,
+        4,
+        MapEditorObjectMovePosition::AfterTarget);
+    if (!expect(afterPreviousPlan.resolved && !afterPreviousPlan.changed,
+                "Moving an object after its immediate previous sibling should resolve as a no-op.")) {
+        return 1;
+    }
+    return expect(afterPreviousPlan.movedText == text,
+                  "Immediate-previous no-op move should preserve the original text exactly.")
+        ? 0
+        : 1;
+}
 }
 
 int main()
@@ -262,6 +304,9 @@ int main()
         return rc;
     }
     if (const int rc = runNoOpAndInvalidTargetTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runAdjacentBoundaryNoOpTest(); rc != 0) {
         return rc;
     }
     return 0;

@@ -1,6 +1,8 @@
 #include "MapEditorTab.h"
 
 #include "MapEditorInspectorObjectController.h"
+#include "MapEditorObjectMovePlanner.h"
+#include "../TextEditorTab.h"
 
 #include <QColor>
 #include <QEvent>
@@ -30,7 +32,13 @@ constexpr int kInspectorDragAutoScrollMargin = 24;
 void hideDropIndicator(QWidget *indicator)
 {
     if (indicator != nullptr) {
+        const QRect dirtyRect = indicator->geometry().adjusted(-1, -1, 1, 1);
+        QWidget *parent = indicator->parentWidget();
         indicator->hide();
+        indicator->setGeometry(QRect());
+        if (parent != nullptr) {
+            parent->update(dirtyRect);
+        }
     }
 }
 
@@ -69,6 +77,11 @@ bool isDragAffordanceColumn(int column)
     return column == kInspectorObjectNameColumn || column == kInspectorObjectDragColumn;
 }
 
+bool isActionColumn(int column)
+{
+    return column == kInspectorObjectVisibilityColumn || column == kInspectorObjectDeleteColumn;
+}
+
 void autoscrollDragViewport(QTreeView *tree, const QPoint &viewportPos)
 {
     if (tree == nullptr || tree->viewport() == nullptr || tree->verticalScrollBar() == nullptr) {
@@ -98,6 +111,57 @@ bool isSelfDropTarget(const QModelIndex &sourceIndex, const QModelIndex &targetI
 {
     return sourceIndex.isValid() && targetIndex.isValid() && targetIndex == sourceIndex;
 }
+
+MapEditorObjectMovePosition dropPositionForTarget(const QModelIndex &targetIndex, bool afterTarget)
+{
+    if (isScrapCategory(targetIndex)) {
+        return MapEditorObjectMovePosition::IntoTargetScrap;
+    }
+    return afterTarget ? MapEditorObjectMovePosition::AfterTarget : MapEditorObjectMovePosition::BeforeTarget;
+}
+
+bool isCurrentVisibleObjectSlot(const QModelIndex &sourceIndex, const QModelIndex &targetIndex, bool afterTarget)
+{
+    if (!sourceIndex.isValid() || !targetIndex.isValid() || isScrapCategory(targetIndex)) {
+        return false;
+    }
+    if (sourceIndex.parent() != targetIndex.parent()) {
+        return false;
+    }
+    return afterTarget
+        ? sourceIndex.row() == targetIndex.row() + 1
+        : sourceIndex.row() + 1 == targetIndex.row();
+}
+
+bool isCurrentObjectLocation(TextEditorTab *textEditor,
+                             const QModelIndex &sourceIndex,
+                             const QModelIndex &targetIndex,
+                             bool afterTarget)
+{
+    if (!sourceIndex.isValid() || !targetIndex.isValid()) {
+        return false;
+    }
+
+    if (isCurrentVisibleObjectSlot(sourceIndex, targetIndex, afterTarget)) {
+        return true;
+    }
+
+    if (textEditor == nullptr) {
+        return false;
+    }
+
+    const int sourceLineNumber = sourceIndex.data(kInspectorSourceLineRole).toInt();
+    const int targetLineNumber = targetIndex.data(kInspectorSourceLineRole).toInt();
+    if (sourceLineNumber <= 0 || targetLineNumber <= 0) {
+        return false;
+    }
+
+    const MapEditorObjectMovePlan movePlan = MapEditorObjectMovePlanner::planMove(textEditor->text(),
+                                                                                  sourceLineNumber,
+                                                                                  targetLineNumber,
+                                                                                  dropPositionForTarget(targetIndex, afterTarget));
+    return movePlan.resolved && !movePlan.changed;
+}
 }
 
 std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *event)
@@ -123,6 +187,14 @@ std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *eve
             const QRect targetRect = mapObjectsTree_->visualRect(objectIndex);
             const bool targetIsScrap = isScrapCategory(objectIndex);
             const bool afterTarget = targetRect.isValid() && mouseEvent->pos().y() > targetRect.center().y();
+            if (isCurrentObjectLocation(textEditor_, inspectorObjectPressedNameIndex_, objectIndex, afterTarget)) {
+                hideDropIndicator(inspectorObjectDropIndicator_);
+                mapObjectsTree_->viewport()->setCursor(Qt::ForbiddenCursor);
+                toolbarStatusNote_ = tr("Move object: already at this position.");
+                refreshToolbarSummary();
+                event->accept();
+                return true;
+            }
             if (inspectorObjectDropIndicator_ == nullptr
                 || inspectorObjectDropIndicator_->parentWidget() != mapObjectsTree_->viewport()) {
                 inspectorObjectDropIndicator_ = new QWidget(mapObjectsTree_->viewport());
@@ -170,6 +242,8 @@ std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *eve
         const QModelIndex objectIndex = index.sibling(index.row(), kInspectorObjectNameColumn);
         if (isDragAffordanceColumn(index.column()) && isMovableObjectIndex(objectIndex)) {
             mapObjectsTree_->viewport()->setCursor(Qt::OpenHandCursor);
+        } else if (isActionColumn(index.column()) && objectIndex.data(kInspectorSourceLineRole).toInt() > 0) {
+            mapObjectsTree_->viewport()->setCursor(Qt::PointingHandCursor);
         } else {
             mapObjectsTree_->viewport()->unsetCursor();
         }
@@ -207,6 +281,12 @@ std::optional<bool> MapEditorTab::handleInspectorObjectViewportEvent(QEvent *eve
         if (sourceIndex.isValid() && objectIndex.isValid() && sourceIndex != objectIndex) {
             const QRect targetRect = mapObjectsTree_->visualRect(objectIndex);
             const bool afterTarget = targetRect.isValid() && mouseEvent->pos().y() > targetRect.center().y();
+            if (isCurrentObjectLocation(textEditor_, sourceIndex, objectIndex, afterTarget)) {
+                toolbarStatusNote_ = tr("Move object: already at this position.");
+                refreshToolbarSummary();
+                event->accept();
+                return true;
+            }
             if (MapEditorInspectorObjectController(inspectorObjectContext()).moveInspectorObject(sourceIndex, objectIndex, afterTarget)) {
                 event->accept();
                 return true;

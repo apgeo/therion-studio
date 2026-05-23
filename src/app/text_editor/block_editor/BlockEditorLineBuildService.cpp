@@ -94,23 +94,28 @@ bool BlockEditorLineBuildService::buildUpdatedLine(QString *updatedLine, QString
     QString result = QStringLiteral("%1%2").arg(indent, commandToken);
 
     if (context_.isSimpleValueMode()) {
+        const bool noValueCommand = !isMapObjectReferenceKind(normalizedKind)
+            && context_.commandMetadata->commandArgumentSignaturesByToken.value(normalizedKind).isEmpty();
         const QString updatedValue = context_.idEdit != nullptr
             ? context_.idEdit->text().trimmed()
             : QString();
-        if (updatedValue.isEmpty()) {
+        if (!noValueCommand && updatedValue.isEmpty()) {
             if (validationError != nullptr) {
                 *validationError = tr("Value cannot be empty.");
             }
             return false;
         }
-        if (isMapObjectReferenceKind(normalizedKind)) {
+        if (noValueCommand) {
+            result = QStringLiteral("%1%2").arg(indent, commandToken);
+        } else if (isMapObjectReferenceKind(normalizedKind)) {
             result = QStringLiteral("%1%2").arg(indent, updatedValue);
         } else if (context_.commandMetadata->commandPrimaryValueIsPerson.value(normalizedKind, false)) {
             result += QStringLiteral(" ") + serializeTherionArgumentToken(updatedValue);
         } else {
             result += QStringLiteral(" ") + updatedValue;
         }
-        if (context_.additionalPositionalEdit != nullptr
+        if (!noValueCommand
+            && context_.additionalPositionalEdit != nullptr
             && context_.additionalPositionalEdit->isVisible()) {
             const QString secondaryValue = context_.additionalPositionalEdit->text().trimmed();
             if (!secondaryValue.isEmpty()) {

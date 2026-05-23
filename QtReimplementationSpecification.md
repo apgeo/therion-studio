@@ -94,6 +94,7 @@ Structured block-canvas requirements:
 - `Object Reference` cards shall serialize as the original single map-body line containing the target object name, not as a Therion command token
 - `Object Reference` cards shall be insertable only inside `map` blocks, shall support drag/drop reordering with other map children, and shall preserve unresolved target names for round-trip safety
 - map-body commands such as `break` shall be exposed in the structured-mode toolbox from generated command-catalog context metadata, not from Block Editor hardcoded command lists
+- catalog-backed leaf commands without positional arguments, such as map `break`, shall not require or display a synthetic value field in Block Details
 - in `.thconfig` structured mode, top-level configuration directives such as `select`, `export`, and `unselect` shall be rendered as leaf cards at document root when present in source.
 - directives that support both inline and block forms (for example `source`) shall open nested scope only in explicit block form; inline single-line form shall remain a leaf card.
 - in structured mode for `.th` and `.thconfig` documents, `encoding` shall be treated as a fixed document-root directive: exactly one `encoding ...` line shall exist at line 1, it shall be auto-inserted when missing based on the detected document encoding, it shall not be insertable from toolbox, and its card shall not be movable or deletable

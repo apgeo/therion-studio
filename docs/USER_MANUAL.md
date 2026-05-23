@@ -212,7 +212,7 @@ Text editor includes:
 - right canvas also renders catalog-recognized leaf directives in-scope (for example `input`), not only the previously hardcoded centerline leaf pair
 - inside `map ... endmap`, scrap/map body references are shown as `Object Reference` cards; these are pseudo-blocks, not real Therion commands, and they serialize back as a single object-name line
 - `Object Reference` cards can be dragged/reordered inside map blocks and can be inserted from the `Inside Map` toolbox scope; edit the `Target` field in Block Details to the referenced scrap or nested map name
-- the `Inside Map` toolbox scope also shows catalog-backed map-body commands such as `Break`; dragging `Break` into a map block inserts a plain `break` line
+- the `Inside Map` toolbox scope also shows catalog-backed map-body commands such as `Break`; dragging `Break` into a map block inserts a plain `break` line, and Block Details does not require a value for no-argument commands
 - `.thconfig` root-level directives like `select`, `export`, and `unselect` are rendered as top-level cards in Blocks mode
 - `source` is context-sensitive in Blocks mode: `source file.th` stays a leaf card, while explicit `source` ... `endsource` is rendered as a container block
 - right `Block Details` pane edits parameters of the selected block directly (no modal dialog for supported block kinds)

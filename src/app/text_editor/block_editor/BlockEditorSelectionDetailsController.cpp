@@ -380,6 +380,9 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
                 argumentSignatures.append(signature);
             }
         }
+        const bool noValueCommand = !isMapObjectReferenceKind(normalizedKind)
+            && argumentSignatures.isEmpty()
+            && (*context_.commandMetadata).commandArgumentSignaturesByToken.value(normalizedKind).isEmpty();
         const bool hasSecondaryArgument = argumentSignatures.size() > 1;
 
         QString currentValue = isMapObjectReferenceKind(normalizedKind)
@@ -397,6 +400,8 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         if (context_.primaryFieldLabel != nullptr) {
             if (isMapObjectReferenceKind(normalizedKind)) {
                 context_.primaryFieldLabel->setText(tr("Target"));
+            } else if (noValueCommand) {
+                context_.primaryFieldLabel->setVisible(false);
             } else if ((*context_.commandMetadata).commandPrimaryValueIsPerson.value(normalizedKind, false)) {
                 context_.primaryFieldLabel->setText(tr("Person"));
             } else if (!argumentSignatures.isEmpty()) {
@@ -437,8 +442,9 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         }
         context_.setReadingsTagEditor(QString(), {}, {});
         if (context_.idEdit != nullptr) {
-            context_.idEdit->setEnabled(true);
-            context_.idEdit->setPlaceholderText(tr("required"));
+            context_.idEdit->setEnabled(!noValueCommand);
+            context_.idEdit->setVisible(!noValueCommand);
+            context_.idEdit->setPlaceholderText(noValueCommand ? QString() : tr("required"));
             context_.idEdit->setText(currentValue);
         }
         if (context_.optionsTable != nullptr) {

@@ -8,6 +8,7 @@ namespace TherionStudio
 MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
 {
     return MapEditorObjectDetailsContext{
+        .callbackContext = this,
         .textEditor = textEditor_,
         .updatingUi = &updatingObjectDetailsUi_,
         .commandApplyInProgress = &mapCommandApplyInProgress_,
@@ -80,6 +81,12 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .selectMapLine = [this](int lineNumber, bool centerOnSelection) {
             selectMapLine(lineNumber, centerOnSelection);
             syncInspectorObjectSelectionToLine(lineNumber);
+        },
+        .restorePointSelectionLater = [this](int lineNumber) {
+            restorePointSelection(lineNumber);
+        },
+        .restoreLineAnchorSelectionLater = [this](int lineNumber, int sourceVertexIndex) {
+            restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
         },
         .rewriteLineOptionToggle = [this](int lineNumber, const QString &optionName, bool enabled, QString *errorMessage) {
             return rewriteLineOptionToggle(lineNumber, optionName, enabled, errorMessage);

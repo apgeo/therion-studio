@@ -7,7 +7,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Phase 6: finish encoding robustness work. Implementation is mostly complete; remaining work is corpus hardening and edge-case handling.
 - Phase 7: finish UX/accessibility/platform-convention work, especially shortcut and keyboard parity on macOS, Windows, and Linux.
 - Phase 8: start release readiness and packaging work for all supported platforms.
-- Phase 9: continue map-editor parity polish after the `Inspector -> Objects` row-drag/delete-rule/area-boundary-selection/reference-disclosure batch; focus on interaction gaps found during use.
+- Phase 9: continue map-editor parity polish after the `Inspector -> Objects` row-drag/delete-rule/area-boundary-selection/reference-disclosure batch and selected-object explicit-orientation handle/checkbox-selection-preservation gating; focus on interaction gaps found during use.
 - Phase 10: continue interactive map drawing/insertion polish, especially mode-aware undo/redo semantics where one completed draw gesture maps to one undo step.
 - Phase 11: continue structured block-canvas authoring coverage, safer nested insertion behavior, and remaining BlockEditor extraction/refactor slices.
 
@@ -46,7 +46,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 ### Phase 9 - Map Editor Parity Polish (`Post-MVP`)
 
 - Status: in progress.
-- Remaining work: continue interaction parity review beyond the completed object-row drag/drop/delete-rule/area-boundary-selection/reference-disclosure batch, including object inspector ergonomics, command-surface consistency, selection edge cases, and cross-platform input behavior.
+- Remaining work: continue interaction parity review beyond the completed object-row drag/drop/delete-rule/area-boundary-selection/reference-disclosure/explicit-orientation handle, checkbox-selection-preservation, and line-anchor seed batch, including object inspector ergonomics, command-surface consistency, selection edge cases, and cross-platform input behavior.
 
 ### Phase 10 - Interactive Map Drawing and Insertion (`Post-MVP`)
 

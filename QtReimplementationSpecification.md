@@ -181,9 +181,9 @@ Required capabilities:
 - show object-specific identifiers and metadata
 - reflect the current selection in the settings panel
 - validate required fields and prevent invalid edits where necessary
-- for point symbols and selected line-point anchors, the inspector shall provide explicit orientation override controls with enable/disable state and degree input constrained to canonical `0..<360`
+- for point symbols and selected line-point anchors, the inspector shall provide explicit orientation override controls with enable/disable state and degree input constrained to canonical `0..<360`; enabling the override shall immediately create an explicit orientation value, including `0`, so the map orientation handle can appear without requiring a separate apply action, and shall preserve the currently selected point or line anchor after the source rewrite
 - orientation controls shall be gated by command-metadata applicability (type/subtype constraints from the Therion command catalog) and shall not be shown for unsupported object variants
-- selecting a point symbol that supports `-orientation` shall show a draggable orientation handle in the map canvas; dragging the handle shall write the point command's `-orientation` option using the same source rewrite path as the inspector
+- selecting a point symbol that supports `-orientation` shall show a draggable orientation handle in the map canvas when the point has an explicit `-orientation` value, including `0`; dragging the handle shall write the point command's `-orientation` option using the same source rewrite path as the inspector
 - for selected `line slope` anchor vertices, the inspector shall provide `l-size` controls with enable/disable state and positive numeric input, and shall serialize the option as an XTherion-compatible line-point row attached to the selected coordinate
 
 ### 3.5 Structure Sidebar
@@ -375,8 +375,9 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Object identifiers shall remain optional for most map objects, but when an identifier is explicitly set inside a scrap it should be unique within that scrap; generated border lines referenced by area blocks shall always include an explicit `-id`.
 - Vertex overlays should be shown only for the currently selected map object, and line-control handles/connectors shall be shown only for the currently selected line vertex, to reduce visual clutter while preserving editability.
 - Selecting a line object shall show an XTherion-compatible direction tick at the first line vertex; the tick shall be perpendicular to the first segment tangent, shall prefer the first outgoing control handle when present, and shall flip direction when the line has `-reverse on`.
-- Selecting an orientable point object shall show a compact orientation handle in the map canvas; dragging the handle shall update the point's `-orientation` source option and preserve the point selection after the scene refresh.
-- Selecting a `line slope` anchor vertex shall show an XTherion-style left line-point handle in the map canvas; dragging the handle shall update the selected point's `orientation` and `l-size` source options using the same XTherion line-point row serialization as the inspector.
+- Selecting an orientable point object shall show a compact orientation handle in the map canvas when that point has an explicit `-orientation` value, including `0`; dragging the handle shall update the point's `-orientation` source option and preserve the point selection after the scene refresh.
+- Selecting a `line slope` anchor vertex shall show an XTherion-style left line-point handle in the map canvas when that line point has an explicit `orientation` value, including `0`; dragging the handle shall update the selected point's `orientation` and `l-size` source options using the same XTherion line-point row serialization as the inspector.
+- Enabling orientation for a selected line anchor that does not yet have an explicit line-point orientation shall seed the new value perpendicular to the local line direction on the line's left side, rather than defaulting to `0`.
 - Selecting a line or area vertex/control point in the map editor shall reveal the corresponding source coordinate token in the text editor when that source token can be resolved.
 - Placing the text cursor on a line or area coordinate token shall select the corresponding map vertex/control point when that map geometry is resolvable.
 - Placing the text cursor on vertex-related line option rows (for example `smooth off`) shall select the corresponding current line vertex when that map geometry is resolvable.

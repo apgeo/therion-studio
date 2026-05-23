@@ -12,6 +12,7 @@ class QComboBox;
 class QDoubleSpinBox;
 class QLabel;
 class QLineEdit;
+class QObject;
 class QPushButton;
 class QWidget;
 
@@ -21,6 +22,7 @@ class TextEditorTab;
 
 struct MapEditorObjectDetailsContext
 {
+    QObject *callbackContext = nullptr;
     TextEditorTab *textEditor = nullptr;
     bool *updatingUi = nullptr;
     bool *commandApplyInProgress = nullptr;
@@ -83,6 +85,8 @@ struct MapEditorObjectDetailsContext
     std::function<void()> refreshObjectDetailsPanel;
     std::function<void()> clearInspectorObjectSelection;
     std::function<void(int, bool)> selectMapLine;
+    std::function<void(int)> restorePointSelectionLater;
+    std::function<void(int, int)> restoreLineAnchorSelectionLater;
     std::function<bool(int, const QString &, bool, QString *)> rewriteLineOptionToggle;
     std::function<void(const QString &, const QString &, const QString &, int)> recordSourceTextSnapshot;
     std::function<bool()> insertLineVertexFromSelection;

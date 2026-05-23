@@ -174,13 +174,11 @@ public:
         pointButton_ = createDetachedIconButton(commandBar_, QObject::tr("Point"), QStringLiteral("locate-fixed"));
         lineButton_ = createDetachedIconButton(commandBar_, QObject::tr("Line"), QStringLiteral("spline"));
         freehandLineButton_ = createDetachedIconButton(commandBar_, QObject::tr("Freehand"), QStringLiteral("pencil-line"));
-        smartTraceLineButton_ = createDetachedIconButton(commandBar_, QObject::tr("Smart Trace"), QStringLiteral("wand-sparkles"));
         areaButton_ = createDetachedIconButton(commandBar_, QObject::tr("Area"), QStringLiteral("pentagon"));
         selectButton_->setCheckable(true);
         pointButton_->setCheckable(true);
         lineButton_->setCheckable(true);
         freehandLineButton_->setCheckable(true);
-        smartTraceLineButton_->setCheckable(true);
         areaButton_->setCheckable(true);
         commandLayout->addWidget(selectButton_);
         commandLayout->addWidget(completeDraftButton_);
@@ -188,7 +186,6 @@ public:
         commandLayout->addWidget(pointButton_);
         commandLayout->addWidget(lineButton_);
         commandLayout->addWidget(freehandLineButton_);
-        commandLayout->addWidget(smartTraceLineButton_);
         commandLayout->addWidget(areaButton_);
         commandLayout->addWidget(createDetachedToolbarSeparator(commandBar_));
         commandLayout->addStretch(1);
@@ -217,7 +214,6 @@ public:
             connect(pointButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddPoint);
             connect(lineButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddLine);
             connect(freehandLineButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddFreehandLine);
-            connect(smartTraceLineButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddSmartTraceLine);
             connect(areaButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddArea);
             connect(mapWindowButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::toggleMapPaneWindow);
             connect(mapTab_, &MapEditorTab::mapPaneDetachStateChanged, this, [this](bool) {
@@ -314,7 +310,6 @@ private:
         const QSignalBlocker pointBlocker(pointButton_);
         const QSignalBlocker lineBlocker(lineButton_);
         const QSignalBlocker freehandBlocker(freehandLineButton_);
-        const QSignalBlocker smartTraceBlocker(smartTraceLineButton_);
         const QSignalBlocker areaBlocker(areaButton_);
         undoButton_->setEnabled(mapTab_->canUndo());
         redoButton_->setEnabled(mapTab_->canRedo());
@@ -328,7 +323,6 @@ private:
         pointButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::Point);
         lineButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::Line);
         freehandLineButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::Freehand);
-        smartTraceLineButton_->setChecked(false);
         areaButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::Area);
     }
 
@@ -347,7 +341,6 @@ private:
     QToolButton *pointButton_ = nullptr;
     QToolButton *lineButton_ = nullptr;
     QToolButton *freehandLineButton_ = nullptr;
-    QToolButton *smartTraceLineButton_ = nullptr;
     QToolButton *areaButton_ = nullptr;
     QToolButton *mapWindowButton_ = nullptr;
     QLabel *zoomLabel_ = nullptr;
@@ -1261,11 +1254,6 @@ void MapEditorTab::triggerAddLine()
 void MapEditorTab::triggerAddFreehandLine()
 {
     handleAddFreehandLineTriggered();
-}
-
-void MapEditorTab::triggerAddSmartTraceLine()
-{
-    handleAddSmartTraceLineTriggered();
 }
 
 void MapEditorTab::triggerAddArea()

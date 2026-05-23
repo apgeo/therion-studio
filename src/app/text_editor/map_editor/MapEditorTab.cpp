@@ -164,15 +164,6 @@ void MapEditorTab::handleAddFreehandLineTriggered()
     refreshToolbarSummary();
 }
 
-void MapEditorTab::handleAddSmartTraceLineTriggered()
-{
-    setInteractiveDrawMode(InteractiveDrawMode::None);
-    selectModeActive_ = false;
-    toolbarStatusNote_ = tr("Smart Trace mode: inserted a trace-ready draft line. Complete Draft commits one undo step.");
-    addDraftGeometryItem(createDraftGeometryItem(DraftGeometryKind::Line), mapView_ != nullptr ? mapView_->mapToScene(mapView_->viewport()->rect().center()) : QPointF(190.0, 190.0));
-    refreshToolbarSummary();
-}
-
 void MapEditorTab::handleAddAreaTriggered()
 {
     setInteractiveDrawMode(InteractiveDrawMode::Area);

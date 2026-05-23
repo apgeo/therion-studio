@@ -17,6 +17,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Continue Phase 9 with the next map-editor parity issue found during manual testing, including validation that bezier control handles remain draggable when close to other geometry.
 - Continue Phase 10 with manual validation of Apple Pencil freehand stroke preview/output, including solid freehand draft preview and less-aggressive shape-sensitive bezier simplification behavior, plus focused GUI smoke coverage for point insertion and line/area draft completion paths.
 - Validate that removing the visible `Touch Controls` toolbar button leaves automatic mouse, touchpad, Magic Mouse, pinch, and stylus navigation behavior intact.
+- Validate that removing the visible `Smart Trace` toolbar button leaves current point/line/freehand/area drawing workflows intact.
 - Continue Phase 11 selection/details glue consolidation without behavior changes, then ratchet structure limits only after full verification passes.
 
 ## Risks / Blockers
@@ -57,7 +58,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 ### Phase 10 - Interactive Map Drawing and Insertion (`Post-MVP`)
 
 - Status: in progress.
-- Remaining work: harden mode-aware undo/redo semantics for drawing sessions, manually validate Apple Pencil freehand stroke preview/output, solid freehand draft preview, and less-aggressive shape-sensitive bezier simplification, add focused GUI smoke tests for point insertion and line/area draft completion, and keep smart-trace as staged capability unless tracing heuristics are explicitly implemented.
+- Remaining work: harden mode-aware undo/redo semantics for drawing sessions, manually validate Apple Pencil freehand stroke preview/output, solid freehand draft preview, and less-aggressive shape-sensitive bezier simplification, add focused GUI smoke tests for point insertion and line/area draft completion, and keep Smart Trace as a future feature until tracing heuristics are explicitly implemented.
 - Verification target: `MapEditorDragUndoRedoSmokeTest`, new drawing workflow smoke tests, and manual authoring pass with mouse, trackpad, and stylus where available.
 
 ### Phase 11 - Structured Text Authoring Canvas (`Post-MVP`)
@@ -82,6 +83,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Expanded rewrite corpus/regression coverage beyond the MVP fixture set.
 - Extend `input` relative-path autocomplete semantics to other path-taking Therion commands/options, such as `-sketch`.
 - Completion ranking polish for complex contexts so highest-confidence context-valid tokens stay first and low-signal fallback entries are reduced.
+- Future Smart Trace implementation with real trace detection, preview, bezier simplification, and one undo step per accepted trace.
 
 ## Manual QA Matrix
 

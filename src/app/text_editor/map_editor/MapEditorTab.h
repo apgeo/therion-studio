@@ -129,7 +129,6 @@ public:
     void triggerAddPoint();
     void triggerAddLine();
     void triggerAddFreehandLine();
-    void triggerAddSmartTraceLine();
     void triggerAddArea();
     bool isInsertModeActive() const;
     bool isMapPaneDetached() const;
@@ -187,7 +186,6 @@ private slots:
     void handleAddPointTriggered();
     void handleAddLineTriggered();
     void handleAddFreehandLineTriggered();
-    void handleAddSmartTraceLineTriggered();
     void handleAddAreaTriggered();
     void handleSelectModeTriggered();
     void handleInsertScrapTriggered();

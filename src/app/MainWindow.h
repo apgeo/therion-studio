@@ -169,7 +169,6 @@ private:
     void triggerPointForActiveDocument();
     void triggerLineForActiveDocument();
     void triggerFreehandLineForActiveDocument();
-    void triggerSmartTraceLineForActiveDocument();
     void triggerAreaForActiveDocument();
 
     QHBoxLayout *mainContentLayout_ = nullptr;
@@ -248,7 +247,6 @@ private:
     QToolButton *workspacePointButton_ = nullptr;
     QToolButton *workspaceLineButton_ = nullptr;
     QToolButton *workspaceFreehandLineButton_ = nullptr;
-    QToolButton *workspaceSmartTraceLineButton_ = nullptr;
     QToolButton *workspaceAreaButton_ = nullptr;
     QFrame *workspaceHistorySeparator_ = nullptr;
     QFrame *workspaceZoomSeparator_ = nullptr;

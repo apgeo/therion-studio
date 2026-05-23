@@ -152,7 +152,7 @@ Required capabilities:
 - support zooming, panning, and viewport restoration
 - support fitting the viewport to geometry only or to geometry plus background layers
 - support background imagery and sketch references used by TH2 documents, including multiple layers and `.xvi` vector references
-- support freehand line drawing with simplified bezier output and smart-trace-assisted line creation
+- support freehand line drawing with simplified bezier output
 - support automatic input behavior for mouse, touchpad, stylus, and platform touch gestures
 
 Map editor editing workflows should include, at minimum:
@@ -268,7 +268,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Main-window document command toolbars shall not draw their own bottom border; separation below the toolbar shall come from the native tab/content frame or the embedded editor content separator.
 - Main-window document chrome shall use one continuous left divider between sidebar content and the editor area; the document command toolbar, file tabs, and document content shall align to that divider without duplicate embedded-canvas left borders.
 - Main-window file tabs shall use native platform tab rendering and shall sit on the `QTabWidget` editor/canvas frame without custom tab-bar geometry overrides.
-- When a TH2 document is active, the document command toolbar shall include these left-side groups in order: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`; then `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`; then a visual separator before right-aligned mode controls.
+- When a TH2 document is active, the document command toolbar shall include these left-side groups in order: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`; then `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`; then a visual separator before right-aligned mode controls.
 - For `.th` and `.thconfig` documents, the `Raw`/`Blocks` mode selector shall be shown in this document command toolbar instead of a dedicated in-content mode row.
 - The application shall show the active document path and current text encoding in a status area tied to the active document context.
 - When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
@@ -319,7 +319,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Dropping onto a scrap target shall move the object into that scrap when the object type supports it.
 - The list shall show a visual drop indicator for the current drag target.
 - All map mutations shall support undo and redo.
-- The map command surface shall expose zoom in, zoom out, fit geometry, fit background plus geometry, undo, redo, selection mode, draft completion, scrap insertion, point insertion, line insertion, freehand line drawing, smart trace, and area insertion.
+- The map command surface shall expose zoom in, zoom out, fit geometry, fit background plus geometry, undo, redo, selection mode, draft completion, scrap insertion, point insertion, line insertion, freehand line drawing, and area insertion.
 - In the main window, map command actions shall be hosted in the shared full-width document command toolbar above the tab strip; the graphical map canvas shall not host a floating in-canvas map toolbar overlay.
 - In detached map windows, an equivalent top command toolbar shall be shown above the map canvas and inspector.
 - Toolbar actions should present compact icon-first controls, with text equivalents available through tooltips, accessibility names, and automation-stable identifiers.
@@ -513,7 +513,7 @@ Undo and redo behavior shall be predictable and user-centered.
 Required behavior:
 
 - a continuous drag gesture on map geometry shall commit as one undo step
-- freehand or smart-trace line creation shall commit as one undo step per explicit completed draft
+- freehand line creation shall commit as one undo step per explicit completed draft
 - batch inspector edits applied by one explicit commit action shall commit as one undo step
 - text-driven and map-driven mutations shall both participate in the same document undo history for the active TH2 session
 - failed or invalid operations shall not create empty undo entries
@@ -856,7 +856,7 @@ The criteria below are intended for implementation verification and QA.
 - A TH2 document exposes an embedded mode selector with `Visual` and `Raw` modes.
 - In the main window, the TH2 `Visual`/`Raw` mode selector is shown in the right-aligned controls of the full-width document command toolbar row above the tab strip.
 - In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same document command toolbar control area, after `Raw`, using screen-share/screen-share-off icons for detach/return state.
-- In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`) after `Undo`/`Redo`.
+- In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`) after `Undo`/`Redo`.
 - In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window top command toolbar remains available.
 - In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side map inspector (`Selection`, `Objects`, `Backgrounds` tabs).
 - In embedded `Raw` mode, the tab shows the source text editor plus contextual help inspector.
@@ -872,7 +872,7 @@ The criteria below are intended for implementation verification and QA.
 - Dragging and dropping map objects reorders or moves them according to the drop target.
 - Undo and redo work for map mutations.
 - The map command surface exposes drawing, fitting, zoom, undo/redo, and draft-completion actions in the top toolbar (main and detached map windows).
-- Freehand line drawing serializes simplified bezier line geometry, and smart-trace-assisted line creation is supported.
+- Freehand line drawing serializes simplified bezier line geometry.
 - Background layers support persisted position, visibility, gamma, opacity, and `.xvi` rendering where applicable.
 - Raster background image add/move/show-hide/gamma/remove operations write and maintain XTherion-compatible `xth_me_area_adjust`, `xth_me_area_zoom_to`, and `xth_me_image_insert` metadata in the TH2 source.
 - Background grid controls can toggle the grid and set a metric spacing; rendered grid cells remain square and use scrap `-scale` metadata to match real-world meters where available.
@@ -1060,6 +1060,7 @@ The following items may be delivered after the MVP, provided they do not regress
 - a user-facing style editor for Therion syntax-highlighting customization beyond bundled and override-file workflows
 - a user-facing application-theme editor or theme-switching system beyond bundled defaults and override-file workflows
 - advanced background image and sketch-layer ergonomics
+- future smart-trace-assisted line creation with explicit preview, acceptance, bezier simplification, and undo semantics
 - expanded debug and diagnostic sidebar tools
 - stronger session restoration of viewport, selection, and window layout state
 - additional quality-of-life shortcuts or menu actions that do not conflict with the documented command set
@@ -1229,7 +1230,7 @@ Required parity scope:
   - vertex insertion/removal
   - control-handle toggles and smoothness changes
   - line closing/opening and reverse state editing
-  - freehand and smart-trace-assisted line creation
+  - freehand line creation
 - area creation and editing, including source-line-linked borders
 - map mutation undo/redo coverage
 

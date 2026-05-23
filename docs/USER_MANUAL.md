@@ -321,7 +321,7 @@ Map tab uses explicit workspace modes:
 - `Save`, `Undo`, and `Redo` are icon-only buttons (with tooltips) in both main and detached map toolbars
 - when a `.th2` map tab is active, the next left-side toolbar groups are:
 - `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
-- `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`
+- `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`
 - when a `.th2` map tab is active in the main window, the right side of that toolbar shows compact square icon-only controls for `Visual`, `Raw`, and `Separate Map` / `Return Map` (in that order); `Separate Map` uses the screen-share icon and `Return Map` uses the screen-share-off icon
 - `.th` / `.thconfig` right-side `Raw` / `Blocks` mode controls are also compact square icon-only controls, with tooltips and accessible names
 - when a map editor is shown outside the main tab strip (detached map window), an equivalent top command toolbar is shown above the map canvas and inspector, but `Visual`/`Raw` buttons are omitted there
@@ -388,7 +388,7 @@ Toolbar actions:
 - current map zoom is shown in the main status bar before the `Select`/`Insert` mode badge
 - history actions: `Undo`, `Redo`
 - selection/draft actions: `Select`, `Complete Draft`
-- insertion/drawing tools: `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`
+- insertion/drawing tools: `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`
 - icons recolor with the active light/dark application palette
 
 Interactive drawing (current):
@@ -423,7 +423,6 @@ Interactive drawing (current):
 - `Esc` exits active insert mode and returns to `Select` mode:
 - in `Line`/`Area`, if draft has enough captured vertices it is committed before exiting; otherwise the incomplete draft is canceled
 - in `Point`/`Freehand`, the active insert mode is canceled
-- `Smart Trace` still uses the existing draft-card workflow (not full trace capture yet).
 
 Detached map-pane behavior:
 
@@ -558,7 +557,8 @@ There is currently no dedicated Settings dialog; settings are updated through no
 ## 8. Known Current Limitations
 
 - Non-UTF-8 support relies on Qt-supported codecs and may not perfectly decode every legacy encoding variant on every platform.
-- Freehand mode inserts simplified bezier line geometry from the dragged stroke; Smart Trace remains a staged workflow without full tracing behavior yet.
+- Freehand mode inserts simplified bezier line geometry from the dragged stroke.
+- Smart Trace is not currently exposed in the toolbar; it remains a future tracing feature rather than a staged user workflow.
 - GUI automation coverage is still incomplete; many checks are currently unit/regression + manual workflows.
 
 ## 9. Troubleshooting

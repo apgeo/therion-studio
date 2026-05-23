@@ -243,7 +243,7 @@ QString quickUserManualMarkdown()
         "- `Visual` and `Raw` workspace modes for TH2 tabs are in the document toolbar row above tabs\n"
         "- `Separate Map` / `Return Map` is available in the same document toolbar row\n"
         "- For TH2 tabs, map view controls `Zoom In`, `Zoom Out`, `Fit`, `Fit + BG` are in the same top toolbar (after `Undo`/`Redo`)\n"
-        "- `Select`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`\n"
+        "- `Select`, `Point`, `Line`, `Freehand`, `Area`\n"
         "- `Insert Scrap`, `Complete Draft`, `Undo`, `Redo`\n"
         "\n"
         "### Line-vertex shortcuts\n"
@@ -549,13 +549,11 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspacePointButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Point"), QStringLiteral("locate-fixed"));
     workspaceLineButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Line"), QStringLiteral("spline"));
     workspaceFreehandLineButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Freehand"), QStringLiteral("pencil-line"));
-    workspaceSmartTraceLineButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Smart Trace"), QStringLiteral("wand-sparkles"));
     workspaceAreaButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Area"), QStringLiteral("pentagon"));
     workspaceSelectButton_->setCheckable(true);
     workspacePointButton_->setCheckable(true);
     workspaceLineButton_->setCheckable(true);
     workspaceFreehandLineButton_->setCheckable(true);
-    workspaceSmartTraceLineButton_->setCheckable(true);
     workspaceAreaButton_->setCheckable(true);
     mapToolsLayout->addWidget(workspaceSelectButton_);
     mapToolsLayout->addWidget(workspaceCompleteDraftButton_);
@@ -563,7 +561,6 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     mapToolsLayout->addWidget(workspacePointButton_);
     mapToolsLayout->addWidget(workspaceLineButton_);
     mapToolsLayout->addWidget(workspaceFreehandLineButton_);
-    mapToolsLayout->addWidget(workspaceSmartTraceLineButton_);
     mapToolsLayout->addWidget(workspaceAreaButton_);
     hostLayout->addWidget(workspaceMapToolsGroup_);
     workspaceMapToolsSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
@@ -613,7 +610,6 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     connect(workspacePointButton_, &QToolButton::clicked, this, &MainWindow::triggerPointForActiveDocument);
     connect(workspaceLineButton_, &QToolButton::clicked, this, &MainWindow::triggerLineForActiveDocument);
     connect(workspaceFreehandLineButton_, &QToolButton::clicked, this, &MainWindow::triggerFreehandLineForActiveDocument);
-    connect(workspaceSmartTraceLineButton_, &QToolButton::clicked, this, &MainWindow::triggerSmartTraceLineForActiveDocument);
     connect(workspaceAreaButton_, &QToolButton::clicked, this, &MainWindow::triggerAreaForActiveDocument);
     connect(workspaceVisualModeButton_, &QToolButton::clicked, this, [this]() {
         if (workspaceModeSwitcherSyncInProgress_) {
@@ -693,7 +689,6 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspacePointButton_ == nullptr
         || workspaceLineButton_ == nullptr
         || workspaceFreehandLineButton_ == nullptr
-        || workspaceSmartTraceLineButton_ == nullptr
         || workspaceAreaButton_ == nullptr
         || workspaceHistorySeparator_ == nullptr
         || workspaceZoomSeparator_ == nullptr
@@ -741,7 +736,6 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspacePointButton_->setEnabled(showMapTools);
     workspaceLineButton_->setEnabled(showMapTools);
     workspaceFreehandLineButton_->setEnabled(showMapTools);
-    workspaceSmartTraceLineButton_->setEnabled(showMapTools);
     workspaceAreaButton_->setEnabled(showMapTools);
 
     workspaceModeSwitcherSyncInProgress_ = true;
@@ -750,7 +744,6 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         const QSignalBlocker pointBlocker(workspacePointButton_);
         const QSignalBlocker lineBlocker(workspaceLineButton_);
         const QSignalBlocker freehandBlocker(workspaceFreehandLineButton_);
-        const QSignalBlocker smartTraceBlocker(workspaceSmartTraceLineButton_);
         const QSignalBlocker areaBlocker(workspaceAreaButton_);
         const QSignalBlocker visualBlocker(workspaceVisualModeButton_);
         const QSignalBlocker rawBlocker(workspaceRawModeButton_);
@@ -760,7 +753,6 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         workspacePointButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Point);
         workspaceLineButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Line);
         workspaceFreehandLineButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Freehand);
-        workspaceSmartTraceLineButton_->setChecked(false);
         workspaceAreaButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Area);
         workspaceVisualModeButton_->setChecked(mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Visual);
         workspaceRawModeButton_->setChecked(mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Raw);
@@ -895,13 +887,6 @@ void MainWindow::triggerFreehandLineForActiveDocument()
 {
     if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
         mapTab->triggerAddFreehandLine();
-    }
-}
-
-void MainWindow::triggerSmartTraceLineForActiveDocument()
-{
-    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
-        mapTab->triggerAddSmartTraceLine();
     }
 }
 

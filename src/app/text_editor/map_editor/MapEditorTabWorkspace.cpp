@@ -191,7 +191,7 @@ public:
         commandLayout->addWidget(areaButton_);
         commandLayout->addStretch(1);
 
-        mapWindowButton_ = createDetachedIconButton(commandBar_, QObject::tr("Return Map"), QStringLiteral("screen-share-off"));
+        mapWindowButton_ = createDetachedIconButton(commandBar_, QObject::tr("Return Map"), QStringLiteral("monitor-x"));
         commandLayout->addWidget(mapWindowButton_);
 
         centralLayout->addWidget(commandBar_);

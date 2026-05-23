@@ -322,7 +322,7 @@ Map tab uses explicit workspace modes:
 - when a `.th2` map tab is active, the next left-side toolbar groups are:
 - `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
 - `Select`, `Complete Draft`, divider, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`
-- when a `.th2` map tab is active in the main window, the right side of that toolbar shows compact square icon-only controls for `Visual`, `Raw`, and `Separate Map` / `Return Map` (in that order); `Separate Map` uses the screen-share icon and `Return Map` uses the screen-share-off icon
+- when a `.th2` map tab is active in the main window, the right side of that toolbar shows compact square icon-only controls for `Visual`, `Raw`, and `Separate Map` / `Return Map` (in that order); `Separate Map` uses the screen-share icon and `Return Map` uses the monitor-x icon
 - `.th` / `.thconfig` right-side `Raw` / `Blocks` mode controls are also compact square icon-only controls, with tooltips and accessible names
 - when a map editor is shown outside the main tab strip (detached map window), an equivalent top command toolbar is shown above the map canvas and inspector, but `Visual`/`Raw` buttons are omitted there
 - detached map windows draw one separator below the window titlebar and one separator below their command toolbar above the canvas/inspector content
@@ -444,7 +444,7 @@ Interactive drawing (current):
 Detached map-pane behavior:
 
 - `Separate Map` (document toolbar row above tabs) detaches the graphical map pane into its own top-level window (useful for a second monitor).
-- Detached map window keeps the same top command toolbar groups and right-side `Inspector` tabs as embedded `Visual` mode, except detached toolbar omits `Visual`/`Raw` and shows icon-only `Return Map` with the screen-share-off icon.
+- Detached map window keeps the same top command toolbar groups and right-side `Inspector` tabs as embedded `Visual` mode, except detached toolbar omits `Visual`/`Raw` and shows icon-only `Return Map` with the monitor-x icon.
 - The main tab keeps the raw text editor visible while detached.
 - While detached, the main-window toolbar hides map zoom/drawing/selection groups for that TH2 tab; use the detached map window toolbar for map commands.
 - Detached map window shows its own status bar for map zoom and `Select`/`Insert` mode.

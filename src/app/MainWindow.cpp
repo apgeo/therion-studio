@@ -757,7 +757,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         workspaceMapPaneWindowButton_->setEnabled(true);
         workspaceMapPaneWindowButton_->setIcon(QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg")
                                                          .arg(mapPaneDetached
-                                                                  ? QStringLiteral("screen-share-off")
+                                                                  ? QStringLiteral("monitor-x")
                                                                   : QStringLiteral("screen-share"))));
         workspaceMapPaneWindowButton_->setToolTip(mapTab->mapPaneWindowActionToolTip());
         workspaceMapPaneWindowButton_->setAccessibleName(mapTab->mapPaneWindowActionText());

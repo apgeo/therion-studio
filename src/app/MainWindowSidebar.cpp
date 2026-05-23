@@ -34,6 +34,7 @@
 #include <QTreeView>
 #include <QUrl>
 #include <QVBoxLayout>
+#include <cmath>
 #include <functional>
 
 namespace
@@ -226,7 +227,7 @@ QString rgbaColorCss(const QColor &color, qreal alpha)
         .arg(clampedAlpha, 0, 'f', 3);
 }
 
-QPixmap renderLucidePixmap(const QString &iconName, const QColor &color, int extent)
+QPixmap renderLucidePixmap(const QString &iconName, const QColor &color, int extent, qreal devicePixelRatio)
 {
     QFile file(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
     if (!file.open(QIODevice::ReadOnly)) {
@@ -241,19 +242,22 @@ QPixmap renderLucidePixmap(const QString &iconName, const QColor &color, int ext
         return {};
     }
 
-    QPixmap pixmap(extent, extent);
+    const qreal dpr = qMax<qreal>(1.0, devicePixelRatio);
+    const int pixelExtent = qMax(1, static_cast<int>(std::ceil(extent * dpr)));
+    QPixmap pixmap(pixelExtent, pixelExtent);
     pixmap.fill(Qt::transparent);
 
     QPainter painter(&pixmap);
-    renderer.render(&painter, QRectF(0.0, 0.0, extent, extent));
+    renderer.render(&painter, QRectF(0.0, 0.0, pixelExtent, pixelExtent));
+    pixmap.setDevicePixelRatio(dpr);
     return pixmap;
 }
 
-QIcon themedLucideIcon(const QString &iconName, const QPalette &palette, int extent)
+QIcon themedLucideIcon(const QString &iconName, const QPalette &palette, int extent, qreal devicePixelRatio)
 {
     QIcon icon;
-    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::ButtonText), extent), QIcon::Normal);
-    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::Disabled, QPalette::ButtonText), extent), QIcon::Disabled);
+    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::ButtonText), extent, devicePixelRatio), QIcon::Normal);
+    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::Disabled, QPalette::ButtonText), extent, devicePixelRatio), QIcon::Disabled);
     return icon;
 }
 
@@ -837,14 +841,15 @@ void MainWindow::buildStructureSidebar()
                                        .arg(rgbaColorCss(railChecked, 0.34)));
 
         const int extent = activityIconSize.width();
+        const qreal devicePixelRatio = activityBar->devicePixelRatioF();
         if (filesButton != nullptr) {
-            filesButton->setIcon(themedLucideIcon(filesIconName, palette, extent));
+            filesButton->setIcon(themedLucideIcon(filesIconName, palette, extent, devicePixelRatio));
         }
         if (structureButton != nullptr) {
-            structureButton->setIcon(themedLucideIcon(structureIconName, palette, extent));
+            structureButton->setIcon(themedLucideIcon(structureIconName, palette, extent, devicePixelRatio));
         }
         if (compilerButton != nullptr) {
-            compilerButton->setIcon(themedLucideIcon(consoleIconName, palette, extent));
+            compilerButton->setIcon(themedLucideIcon(consoleIconName, palette, extent, devicePixelRatio));
         }
     };
     applyActivityRailTheme();

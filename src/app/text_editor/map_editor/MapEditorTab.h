@@ -117,7 +117,6 @@ public:
     bool canRedo() const;
     InteractiveDrawMode interactiveDrawMode() const;
     bool canCompleteDraftAction() const;
-    bool isTouchFriendlyControlsEnabled() const;
     void triggerUndo();
     void triggerRedo();
     void triggerZoomIn();
@@ -132,7 +131,6 @@ public:
     void triggerAddFreehandLine();
     void triggerAddSmartTraceLine();
     void triggerAddArea();
-    void setTouchControlsEnabled(bool enabled);
     bool isInsertModeActive() const;
     bool isMapPaneDetached() const;
     QString mapPaneWindowActionText() const;
@@ -200,7 +198,6 @@ private slots:
     void handleZoomOutTriggered();
     void handleFitTriggered();
     void handleFitWithBackgroundTriggered();
-    void handleTouchFriendlyControlsToggled(bool checked);
     void updateCommandSurfaceState();
 
 private:
@@ -309,7 +306,6 @@ private:
     void refreshTitle();
     void refreshStatus();
     QString displayPath() const;
-    void setTouchFriendlyControlsEnabled(bool enabled);
     void handleApplicationAppearanceChanged();
     void refreshWorkspaceModeUi();
     MapEditorInspectorObjectContext inspectorObjectContext();

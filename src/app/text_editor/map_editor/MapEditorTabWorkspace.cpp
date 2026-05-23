@@ -176,14 +176,12 @@ public:
         freehandLineButton_ = createDetachedIconButton(commandBar_, QObject::tr("Freehand"), QStringLiteral("pencil-line"));
         smartTraceLineButton_ = createDetachedIconButton(commandBar_, QObject::tr("Smart Trace"), QStringLiteral("wand-sparkles"));
         areaButton_ = createDetachedIconButton(commandBar_, QObject::tr("Area"), QStringLiteral("pentagon"));
-        touchControlsButton_ = createDetachedIconButton(commandBar_, QObject::tr("Touch Controls"), QStringLiteral("hand"));
         selectButton_->setCheckable(true);
         pointButton_->setCheckable(true);
         lineButton_->setCheckable(true);
         freehandLineButton_->setCheckable(true);
         smartTraceLineButton_->setCheckable(true);
         areaButton_->setCheckable(true);
-        touchControlsButton_->setCheckable(true);
         commandLayout->addWidget(selectButton_);
         commandLayout->addWidget(completeDraftButton_);
         commandLayout->addWidget(insertScrapButton_);
@@ -192,7 +190,6 @@ public:
         commandLayout->addWidget(freehandLineButton_);
         commandLayout->addWidget(smartTraceLineButton_);
         commandLayout->addWidget(areaButton_);
-        commandLayout->addWidget(touchControlsButton_);
         commandLayout->addWidget(createDetachedToolbarSeparator(commandBar_));
         commandLayout->addStretch(1);
 
@@ -222,7 +219,6 @@ public:
             connect(freehandLineButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddFreehandLine);
             connect(smartTraceLineButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddSmartTraceLine);
             connect(areaButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddArea);
-            connect(touchControlsButton_, &QToolButton::toggled, mapTab_, &MapEditorTab::setTouchControlsEnabled);
             connect(mapWindowButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::toggleMapPaneWindow);
             connect(mapTab_, &MapEditorTab::mapPaneDetachStateChanged, this, [this](bool) {
                 refreshCommandBarState();
@@ -320,7 +316,6 @@ private:
         const QSignalBlocker freehandBlocker(freehandLineButton_);
         const QSignalBlocker smartTraceBlocker(smartTraceLineButton_);
         const QSignalBlocker areaBlocker(areaButton_);
-        const QSignalBlocker touchBlocker(touchControlsButton_);
         undoButton_->setEnabled(mapTab_->canUndo());
         redoButton_->setEnabled(mapTab_->canRedo());
         fitBackgroundButton_->setEnabled(mapTab_->backgroundLayerCount() > 0);
@@ -335,7 +330,6 @@ private:
         freehandLineButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::Freehand);
         smartTraceLineButton_->setChecked(false);
         areaButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::Area);
-        touchControlsButton_->setChecked(mapTab_->isTouchFriendlyControlsEnabled());
     }
 
     QPointer<MapEditorTab> mapTab_;
@@ -355,7 +349,6 @@ private:
     QToolButton *freehandLineButton_ = nullptr;
     QToolButton *smartTraceLineButton_ = nullptr;
     QToolButton *areaButton_ = nullptr;
-    QToolButton *touchControlsButton_ = nullptr;
     QToolButton *mapWindowButton_ = nullptr;
     QLabel *zoomLabel_ = nullptr;
     QLabel *modeLabel_ = nullptr;
@@ -382,7 +375,8 @@ void MapEditorTab::initializeWorkspace()
 {
     undoStack_ = new QUndoStack(this);
     workspaceMode_ = WorkspaceMode::Visual;
-    touchFriendlyControlsEnabled_ = sessionStore_->therionMapTouchFriendlyControlsEnabled();
+    touchFriendlyControlsEnabled_ = false;
+    sessionStore_->setTherionMapTouchFriendlyControlsEnabled(false);
     buildUi();
     connect(this, &MapEditorTab::zoomStatusChanged, this, [this](int) {
         refreshStatus();
@@ -391,7 +385,6 @@ void MapEditorTab::initializeWorkspace()
         refreshStatus();
     });
     updateWorkspaceVisibility();
-    setTouchFriendlyControlsEnabled(touchFriendlyControlsEnabled_);
 
     if (QStyleHints *styleHints = QGuiApplication::styleHints()) {
         connect(styleHints, &QStyleHints::colorSchemeChanged, this, [this](Qt::ColorScheme) {
@@ -1210,11 +1203,6 @@ bool MapEditorTab::canCompleteDraftAction() const
     return mapReady && (selectedDraftGeometryItem() != nullptr || hasCompletableInteractiveDrawSession());
 }
 
-bool MapEditorTab::isTouchFriendlyControlsEnabled() const
-{
-    return touchFriendlyControlsEnabled_;
-}
-
 void MapEditorTab::triggerUndo()
 {
     handleUndoTriggered();
@@ -1283,11 +1271,6 @@ void MapEditorTab::triggerAddSmartTraceLine()
 void MapEditorTab::triggerAddArea()
 {
     handleAddAreaTriggered();
-}
-
-void MapEditorTab::setTouchControlsEnabled(bool enabled)
-{
-    handleTouchFriendlyControlsToggled(enabled);
 }
 
 bool MapEditorTab::isInsertModeActive() const
@@ -1422,11 +1405,6 @@ void MapEditorTab::handleFitTriggered()
     toolbarStatusNote_ = tr("Fit geometry: centered visible map content.");
     fitMapToView();
     refreshToolbarSummary();
-}
-
-void MapEditorTab::handleTouchFriendlyControlsToggled(bool checked)
-{
-    setTouchFriendlyControlsEnabled(checked);
 }
 
 void MapEditorTab::updateWorkspaceVisibility()
@@ -1579,10 +1557,4 @@ void MapEditorTab::focusDetachedMapPaneWindow()
     detachedMapPaneWindow_->activateWindow();
 }
 
-void MapEditorTab::setTouchFriendlyControlsEnabled(bool enabled)
-{
-    touchFriendlyControlsEnabled_ = enabled;
-    sessionStore_->setTherionMapTouchFriendlyControlsEnabled(enabled);
-    updateCommandSurfaceState();
-}
 }

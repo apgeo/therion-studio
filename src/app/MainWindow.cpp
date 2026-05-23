@@ -551,14 +551,12 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceFreehandLineButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Freehand"), QStringLiteral("pencil-line"));
     workspaceSmartTraceLineButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Smart Trace"), QStringLiteral("wand-sparkles"));
     workspaceAreaButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Area"), QStringLiteral("pentagon"));
-    workspaceTouchControlsButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Touch Controls"), QStringLiteral("hand"));
     workspaceSelectButton_->setCheckable(true);
     workspacePointButton_->setCheckable(true);
     workspaceLineButton_->setCheckable(true);
     workspaceFreehandLineButton_->setCheckable(true);
     workspaceSmartTraceLineButton_->setCheckable(true);
     workspaceAreaButton_->setCheckable(true);
-    workspaceTouchControlsButton_->setCheckable(true);
     mapToolsLayout->addWidget(workspaceSelectButton_);
     mapToolsLayout->addWidget(workspaceCompleteDraftButton_);
     mapToolsLayout->addWidget(workspaceInsertScrapButton_);
@@ -567,7 +565,6 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     mapToolsLayout->addWidget(workspaceFreehandLineButton_);
     mapToolsLayout->addWidget(workspaceSmartTraceLineButton_);
     mapToolsLayout->addWidget(workspaceAreaButton_);
-    mapToolsLayout->addWidget(workspaceTouchControlsButton_);
     hostLayout->addWidget(workspaceMapToolsGroup_);
     workspaceMapToolsSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
     hostLayout->addWidget(workspaceMapToolsSeparator_);
@@ -618,7 +615,6 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     connect(workspaceFreehandLineButton_, &QToolButton::clicked, this, &MainWindow::triggerFreehandLineForActiveDocument);
     connect(workspaceSmartTraceLineButton_, &QToolButton::clicked, this, &MainWindow::triggerSmartTraceLineForActiveDocument);
     connect(workspaceAreaButton_, &QToolButton::clicked, this, &MainWindow::triggerAreaForActiveDocument);
-    connect(workspaceTouchControlsButton_, &QToolButton::toggled, this, &MainWindow::toggleTouchControlsForActiveDocument);
     connect(workspaceVisualModeButton_, &QToolButton::clicked, this, [this]() {
         if (workspaceModeSwitcherSyncInProgress_) {
             return;
@@ -699,7 +695,6 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceFreehandLineButton_ == nullptr
         || workspaceSmartTraceLineButton_ == nullptr
         || workspaceAreaButton_ == nullptr
-        || workspaceTouchControlsButton_ == nullptr
         || workspaceHistorySeparator_ == nullptr
         || workspaceZoomSeparator_ == nullptr
         || workspaceMapToolsSeparator_ == nullptr
@@ -748,7 +743,6 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceFreehandLineButton_->setEnabled(showMapTools);
     workspaceSmartTraceLineButton_->setEnabled(showMapTools);
     workspaceAreaButton_->setEnabled(showMapTools);
-    workspaceTouchControlsButton_->setEnabled(showMapTools);
 
     workspaceModeSwitcherSyncInProgress_ = true;
     if (showMapModes) {
@@ -758,7 +752,6 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         const QSignalBlocker freehandBlocker(workspaceFreehandLineButton_);
         const QSignalBlocker smartTraceBlocker(workspaceSmartTraceLineButton_);
         const QSignalBlocker areaBlocker(workspaceAreaButton_);
-        const QSignalBlocker touchBlocker(workspaceTouchControlsButton_);
         const QSignalBlocker visualBlocker(workspaceVisualModeButton_);
         const QSignalBlocker rawBlocker(workspaceRawModeButton_);
         const QSignalBlocker mapWindowBlocker(workspaceMapPaneWindowButton_);
@@ -769,7 +762,6 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         workspaceFreehandLineButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Freehand);
         workspaceSmartTraceLineButton_->setChecked(false);
         workspaceAreaButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Area);
-        workspaceTouchControlsButton_->setChecked(mapTab->isTouchFriendlyControlsEnabled());
         workspaceVisualModeButton_->setChecked(mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Visual);
         workspaceRawModeButton_->setChecked(mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Raw);
         workspaceVisualModeButton_->setEnabled(!mapPaneDetached);
@@ -917,17 +909,6 @@ void MainWindow::triggerAreaForActiveDocument()
 {
     if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
         mapTab->triggerAddArea();
-    }
-}
-
-void MainWindow::toggleTouchControlsForActiveDocument(bool checked)
-{
-    if (workspaceModeSwitcherSyncInProgress_) {
-        return;
-    }
-
-    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
-        mapTab->setTouchControlsEnabled(checked);
     }
 }
 

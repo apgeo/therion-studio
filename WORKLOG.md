@@ -16,6 +16,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Run a manual pass of TH2 Visual `Inspector -> Objects` row dragging in the running app after the latest current-location/drop-line fixes.
 - Continue Phase 9 with the next map-editor parity issue found during manual testing, including validation that bezier control handles remain draggable when close to other geometry.
 - Continue Phase 10 with manual validation of Apple Pencil freehand stroke preview/output, including solid freehand draft preview and less-aggressive shape-sensitive bezier simplification behavior, plus focused GUI smoke coverage for point insertion and line/area draft completion paths.
+- Validate that removing the visible `Touch Controls` toolbar button leaves automatic mouse, touchpad, Magic Mouse, pinch, and stylus navigation behavior intact.
 - Continue Phase 11 selection/details glue consolidation without behavior changes, then ratchet structure limits only after full verification passes.
 
 ## Risks / Blockers
@@ -23,6 +24,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Parser/serializer round-trip coverage is still incomplete for full Therion corpus-level confidence.
 - Non-UTF decoding is implemented with Qt-supported codecs, but broader legacy-encoding corpus validation is still pending.
 - Cross-platform GUI automation remains limited beyond focused smoke tests; manual macOS/Windows/Linux parity passes are still required.
+- Pen/touch navigation now depends on automatic input-policy behavior; Sidecar and touch-screen manual validation remains pending.
 - Current map/text undo arbitration still depends on choosing between the map `QUndoStack` and embedded text-editor undo until the later unified command-stack refactor.
 - Packaging/signing/distribution requirements have not yet been exercised end-to-end on all target platforms.
 

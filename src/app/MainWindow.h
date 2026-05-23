@@ -171,7 +171,6 @@ private:
     void triggerFreehandLineForActiveDocument();
     void triggerSmartTraceLineForActiveDocument();
     void triggerAreaForActiveDocument();
-    void toggleTouchControlsForActiveDocument(bool checked);
 
     QHBoxLayout *mainContentLayout_ = nullptr;
     QWidget *editorAreaHost_ = nullptr;
@@ -251,7 +250,6 @@ private:
     QToolButton *workspaceFreehandLineButton_ = nullptr;
     QToolButton *workspaceSmartTraceLineButton_ = nullptr;
     QToolButton *workspaceAreaButton_ = nullptr;
-    QToolButton *workspaceTouchControlsButton_ = nullptr;
     QFrame *workspaceHistorySeparator_ = nullptr;
     QFrame *workspaceZoomSeparator_ = nullptr;
     QFrame *workspaceMapToolsSeparator_ = nullptr;

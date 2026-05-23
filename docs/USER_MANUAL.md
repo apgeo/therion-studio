@@ -321,7 +321,7 @@ Map tab uses explicit workspace modes:
 - `Save`, `Undo`, and `Redo` are icon-only buttons (with tooltips) in both main and detached map toolbars
 - when a `.th2` map tab is active, the next left-side toolbar groups are:
 - `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
-- `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`
+- `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`
 - when a `.th2` map tab is active in the main window, the right side of that toolbar shows compact square icon-only controls for `Visual`, `Raw`, and `Separate Map` / `Return Map` (in that order); `Separate Map` uses the screen-share icon and `Return Map` uses the screen-share-off icon
 - `.th` / `.thconfig` right-side `Raw` / `Blocks` mode controls are also compact square icon-only controls, with tooltips and accessible names
 - when a map editor is shown outside the main tab strip (detached map window), an equivalent top command toolbar is shown above the map canvas and inspector, but `Visual`/`Raw` buttons are omitted there
@@ -389,7 +389,6 @@ Toolbar actions:
 - history actions: `Undo`, `Redo`
 - selection/draft actions: `Select`, `Complete Draft`
 - insertion/drawing tools: `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`
-- workflow actions: `Touch Controls`
 - icons recolor with the active light/dark application palette
 
 Interactive drawing (current):
@@ -462,11 +461,7 @@ Implemented map navigation behavior:
 - precise scrolling devices (touchpads / Magic Mouse style deltas): two-finger/surface scroll pans, `Cmd/Ctrl + scroll` zooms
 - pinch: native pinch zoom (`ZoomNativeGesture`) zooms around gesture position
 - additional touch handling: two-touch threshold pan in Select mode, viewport gestures suppressed during active primary-pointer interaction
-- explicit `Touch Controls` toolbar toggle for pen-first workflows:
-  - when enabled, non-modified wheel/scroll input pans by default (including non-precise wheel devices)
-  - `Cmd/Ctrl + scroll` still zooms
-  - two-touch pan candidate can activate outside Select mode
-  - setting is persisted in app session settings
+- there is no dedicated `Touch Controls` toolbar mode; navigation uses automatic input-device handling
 
 Zoom constraints:
 

@@ -153,7 +153,7 @@ Required capabilities:
 - support fitting the viewport to geometry only or to geometry plus background layers
 - support background imagery and sketch references used by TH2 documents, including multiple layers and `.xvi` vector references
 - support freehand line drawing with simplified bezier output and smart-trace-assisted line creation
-- support a touch-friendly control mode for pen-first workflows
+- support automatic input behavior for mouse, touchpad, stylus, and platform touch gestures
 
 Map editor editing workflows should include, at minimum:
 
@@ -268,7 +268,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Main-window document command toolbars shall not draw their own bottom border; separation below the toolbar shall come from the native tab/content frame or the embedded editor content separator.
 - Main-window document chrome shall use one continuous left divider between sidebar content and the editor area; the document command toolbar, file tabs, and document content shall align to that divider without duplicate embedded-canvas left borders.
 - Main-window file tabs shall use native platform tab rendering and shall sit on the `QTabWidget` editor/canvas frame without custom tab-bar geometry overrides.
-- When a TH2 document is active, the document command toolbar shall include these left-side groups in order: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`; then `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`; then a visual separator before right-aligned mode controls.
+- When a TH2 document is active, the document command toolbar shall include these left-side groups in order: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`; then `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`; then a visual separator before right-aligned mode controls.
 - For `.th` and `.thconfig` documents, the `Raw`/`Blocks` mode selector shall be shown in this document command toolbar instead of a dedicated in-content mode row.
 - The application shall show the active document path and current text encoding in a status area tied to the active document context.
 - When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
@@ -319,7 +319,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Dropping onto a scrap target shall move the object into that scrap when the object type supports it.
 - The list shall show a visual drop indicator for the current drag target.
 - All map mutations shall support undo and redo.
-- The map command surface shall expose zoom in, zoom out, fit geometry, fit background plus geometry, undo, redo, selection mode, draft completion, scrap insertion, point insertion, line insertion, freehand line drawing, smart trace, area insertion, and touch-controls toggle.
+- The map command surface shall expose zoom in, zoom out, fit geometry, fit background plus geometry, undo, redo, selection mode, draft completion, scrap insertion, point insertion, line insertion, freehand line drawing, smart trace, and area insertion.
 - In the main window, map command actions shall be hosted in the shared full-width document command toolbar above the tab strip; the graphical map canvas shall not host a floating in-canvas map toolbar overlay.
 - In detached map windows, an equivalent top command toolbar shall be shown above the map canvas and inspector.
 - Toolbar actions should present compact icon-first controls, with text equivalents available through tooltips, accessibility names, and automation-stable identifiers.
@@ -346,7 +346,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Manual edits to a selected scrap scale shall write XTherion-compatible 8-parameter `-scale [x1 y1 x2 y2 rx1 ry1 rx2 ry2 unit]` metadata and shall preserve other scrap options/comments where practical.
 - Background sketch or image layers shall be restorable when reopening the document.
 - `.xvi` vector background references shall render as background layers when present.
-- The map editor shall support an explicit touch-friendly controls mode for pen-first workflows rather than relying only on device heuristics.
+- The map editor shall not expose a dedicated touch-controls toolbar mode; mouse, touchpad, Magic Mouse, pinch, stylus, and platform touch gestures shall use automatic input-policy handling.
 - After reparsing the document, the map editor shall restore the selected object when that object can still be resolved in the updated document.
 - Geometry editing shall support point placement, line vertex editing, area editing, and selection of individual vertices or control points.
 - When a visible bezier control point overlaps or is near another selectable line/area shape, hit testing shall prioritize the control point so it remains selectable and draggable.
@@ -534,7 +534,7 @@ Required persistent preferences include:
 - visibility and height of the help/documentation inspector
 - project browser expansion state, where practical
 - map editor viewport state, where practical
-- map editor touch-friendly controls mode
+- map editor viewport state and automatic input-policy state
 - background image adjustment state, where practical
 - Therion executable path or runner configuration, where the user has set one
 - Therion runner working-directory override and command-line options, where the user has set them
@@ -556,7 +556,7 @@ Required behavior:
 - the map editor shall accept stylus input for selecting and editing map content when the operating system and hardware provide it
 - stylus input shall be treated as a first-class pointer source, not as a special-case mouse emulation path
 - the map editor shall continue to work with a mouse or trackpad when stylus input is unavailable
-- the map editor shall expose an explicit touch-friendly controls mode suited for Sidecar and other pen-first secondary-display workflows
+- the map editor shall use automatic input handling for Sidecar and other pen-first secondary-display workflows without requiring a dedicated toolbar toggle
 - on macOS, the application shall remain usable when the map editor is shown on a Sidecar secondary display
 - when Apple Pencil input is available through Sidecar or equivalent macOS stylus routing, the map editor shall accept it as stylus input
 - Sidecar support shall not be required for the core workflow; the application shall remain fully usable without it
@@ -856,7 +856,7 @@ The criteria below are intended for implementation verification and QA.
 - A TH2 document exposes an embedded mode selector with `Visual` and `Raw` modes.
 - In the main window, the TH2 `Visual`/`Raw` mode selector is shown in the right-aligned controls of the full-width document command toolbar row above the tab strip.
 - In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same document command toolbar control area, after `Raw`, using screen-share/screen-share-off icons for detach/return state.
-- In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`, `Touch Controls`) after `Undo`/`Redo`.
+- In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Smart Trace`, `Area`) after `Undo`/`Redo`.
 - In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window top command toolbar remains available.
 - In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side map inspector (`Selection`, `Objects`, `Backgrounds` tabs).
 - In embedded `Raw` mode, the tab shows the source text editor plus contextual help inspector.
@@ -878,7 +878,7 @@ The criteria below are intended for implementation verification and QA.
 - Background grid controls can toggle the grid and set a metric spacing; rendered grid cells remain square and use scrap `-scale` metadata to match real-world meters where available.
 - Map-driven scrap insertion writes XTherion-compatible default `-scale` metadata, while existing Therion/XTherion `-scale` forms are preserved unless explicitly edited.
 - Selecting a scrap in `Selection` exposes manual scale calibration controls and writes XTherion-compatible 8-parameter `-scale [...]` metadata to the scrap command.
-- A touch-friendly controls mode is available for pen-first workflows.
+- Automatic input-policy handling supports pen-first workflows without a dedicated touch-controls toolbar button.
 - Zoom, pan, and background-image adjustments persist for the session.
 
 #### 8.1.4 Object Settings / Inspector
@@ -956,7 +956,7 @@ The criteria below are intended for implementation verification and QA.
 
 - The map editor accepts stylus input when the platform and hardware provide it.
 - Mouse and trackpad input remain fully supported when stylus input is unavailable.
-- The map editor provides an explicit touch-friendly controls mode for pen-first workflows.
+- The map editor provides automatic input-policy handling for pen-first workflows without requiring a dedicated touch-controls mode.
 - On macOS, the app remains usable when the map editor is shown on a Sidecar secondary display.
 - Apple Pencil input routed through Sidecar or equivalent macOS stylus support is accepted by the map editor.
 - Sidecar and Apple Pencil support are not required for the core workflow to function.
@@ -1218,7 +1218,7 @@ Required parity scope:
 - selection, hover, visibility toggles, and object-focused editing
 - viewport controls: pan, zoom, fit geometry, fit geometry+background
 - input-mode-aware navigation behavior for touchpad, mouse, and stylus workflows
-- touch-friendly control mode suitable for pen-first workflows
+- automatic input-policy behavior suitable for pen-first workflows
 
 ### 14.5 Map Geometry Editing
 

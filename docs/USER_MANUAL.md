@@ -514,13 +514,15 @@ Compiler pane fields:
 - `Config Path` (resolved)
 - `Run Policy`
 
+The pane is optimized for narrow sidebar widths: field labels are stacked above their controls, long paths show their trailing path segment while keeping the full value editable, runner output wraps to the available width, and action buttons are arranged in two compact rows.
+
 Buttons:
 
 - `Run Therion`
 - `Stop`
-- `Use Project Root`
+- `Use Root` (uses the current project root as working directory)
 - `Copy Output`
-- `Browse...` for executable path
+- `...` next to `Executable` for executable path browsing
 
 Behavior:
 

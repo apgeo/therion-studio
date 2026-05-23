@@ -1,7 +1,8 @@
 #include "MainWindowTherionConsoleBuilder.h"
 
 #include <QCoreApplication>
-#include <QFormLayout>
+#include <QFont>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -17,6 +18,22 @@ QString translate(const char *sourceText)
 {
     return QCoreApplication::translate("MainWindow", sourceText);
 }
+
+QLabel *createFieldLabel(const QString &text, QWidget *parent)
+{
+    auto *label = new QLabel(text, parent);
+    QFont font = label->font();
+    font.setBold(true);
+    label->setFont(font);
+    label->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    return label;
+}
+
+void addLabeledWidget(QVBoxLayout *layout, const QString &labelText, QWidget *widget, QWidget *parent)
+{
+    layout->addWidget(createFieldLabel(labelText, parent));
+    layout->addWidget(widget);
+}
 }
 
 namespace TherionStudio
@@ -28,14 +45,12 @@ MainWindowTherionConsoleBuilder::build(const BuildInput &input)
 
     auto *widget = new QWidget(input.consoleHost);
     auto *layout = new QVBoxLayout(widget);
-    layout->setContentsMargins(12, 12, 12, 12);
+    layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(8);
 
-    auto *form = new QFormLayout;
-    form->setLabelAlignment(Qt::AlignLeft);
-    form->setFormAlignment(Qt::AlignTop);
-    form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
-    form->setRowWrapPolicy(QFormLayout::WrapLongRows);
+    auto *settingsLayout = new QVBoxLayout;
+    settingsLayout->setContentsMargins(0, 0, 0, 0);
+    settingsLayout->setSpacing(5);
 
     result.therionExecutableEdit = new QLineEdit(widget);
     result.therionExecutableEdit->setPlaceholderText(translate("therion"));
@@ -44,7 +59,11 @@ MainWindowTherionConsoleBuilder::build(const BuildInput &input)
                                                      ? QStringLiteral("therion")
                                                      : input.suggestedExecutablePath)
                                               : input.persistedExecutablePath);
-    result.therionBrowseExecutableButton = new QPushButton(translate("Browse..."), widget);
+    result.therionExecutableEdit->setCursorPosition(result.therionExecutableEdit->text().size());
+    result.therionBrowseExecutableButton = new QPushButton(translate("..."), widget);
+    result.therionBrowseExecutableButton->setToolTip(translate("Browse for Therion executable"));
+    result.therionBrowseExecutableButton->setAccessibleName(translate("Browse for Therion executable"));
+    result.therionBrowseExecutableButton->setFixedWidth(34);
 
     auto *executableRow = new QWidget(widget);
     auto *executableRowLayout = new QHBoxLayout(executableRow);
@@ -52,19 +71,26 @@ MainWindowTherionConsoleBuilder::build(const BuildInput &input)
     executableRowLayout->setSpacing(6);
     executableRowLayout->addWidget(result.therionExecutableEdit, 1);
     executableRowLayout->addWidget(result.therionBrowseExecutableButton);
+    addLabeledWidget(settingsLayout, translate("Executable"), executableRow, widget);
 
     result.therionWorkingDirectoryEdit = new QLineEdit(widget);
     result.therionWorkingDirectoryEdit->setPlaceholderText(
         translate("Defaults to the current project root"));
     result.therionWorkingDirectoryEdit->setText(input.persistedWorkingDirectory);
+    result.therionWorkingDirectoryEdit->setCursorPosition(result.therionWorkingDirectoryEdit->text().size());
+    addLabeledWidget(settingsLayout, translate("Working Directory"), result.therionWorkingDirectoryEdit, widget);
 
     result.therionArgumentsEdit = new QLineEdit(widget);
     result.therionArgumentsEdit->setPlaceholderText(
         translate("Additional Therion command-line options"));
     result.therionArgumentsEdit->setText(input.persistedArguments);
+    result.therionArgumentsEdit->setCursorPosition(result.therionArgumentsEdit->text().size());
+    addLabeledWidget(settingsLayout, translate("Arguments"), result.therionArgumentsEdit, widget);
+    layout->addLayout(settingsLayout);
 
     result.therionConfigNameValue = new QLabel(translate("Auto-detect"), widget);
     result.therionConfigNameValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    result.therionConfigNameValue->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     result.therionConfigPathValue =
         new QLabel(translate("No config file resolved from the current context"), widget);
     result.therionConfigPathValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -76,13 +102,13 @@ MainWindowTherionConsoleBuilder::build(const BuildInput &input)
     result.therionRunPolicyLabel->setWordWrap(true);
     result.therionRunPolicyLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
 
-    form->addRow(translate("Executable"), executableRow);
-    form->addRow(translate("Working Directory"), result.therionWorkingDirectoryEdit);
-    form->addRow(translate("Arguments"), result.therionArgumentsEdit);
-    form->addRow(translate("Config"), result.therionConfigNameValue);
-    form->addRow(translate("Config Path"), result.therionConfigPathValue);
-    form->addRow(translate("Run Policy"), result.therionRunPolicyLabel);
-    layout->addLayout(form);
+    auto *summaryLayout = new QVBoxLayout;
+    summaryLayout->setContentsMargins(0, 4, 0, 0);
+    summaryLayout->setSpacing(4);
+    addLabeledWidget(summaryLayout, translate("Config"), result.therionConfigNameValue, widget);
+    addLabeledWidget(summaryLayout, translate("Config Path"), result.therionConfigPathValue, widget);
+    addLabeledWidget(summaryLayout, translate("Run Policy"), result.therionRunPolicyLabel, widget);
+    layout->addLayout(summaryLayout);
 
     result.therionStatusLabel = new QLabel(translate("Idle"), widget);
     result.therionStatusLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -90,23 +116,36 @@ MainWindowTherionConsoleBuilder::build(const BuildInput &input)
     result.therionStatusLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     layout->addWidget(result.therionStatusLabel);
 
-    auto *buttonRow = new QHBoxLayout;
+    auto *buttonGrid = new QGridLayout;
+    buttonGrid->setContentsMargins(0, 0, 0, 0);
+    buttonGrid->setHorizontalSpacing(6);
+    buttonGrid->setVerticalSpacing(6);
     result.therionRunButton = new QPushButton(translate("Run Therion"), widget);
     result.therionStopButton = new QPushButton(translate("Stop"), widget);
     result.therionStopButton->setEnabled(false);
     result.therionResetWorkingDirectoryButton =
-        new QPushButton(translate("Use Project Root"), widget);
+        new QPushButton(translate("Use Root"), widget);
+    result.therionResetWorkingDirectoryButton->setToolTip(translate("Use project root as working directory"));
     result.therionCopyOutputButton = new QPushButton(translate("Copy Output"), widget);
 
-    buttonRow->addWidget(result.therionRunButton);
-    buttonRow->addWidget(result.therionStopButton);
-    buttonRow->addWidget(result.therionResetWorkingDirectoryButton);
-    buttonRow->addWidget(result.therionCopyOutputButton);
-    buttonRow->addStretch(1);
-    layout->addLayout(buttonRow);
+    for (QPushButton *button : {result.therionRunButton,
+                                result.therionStopButton,
+                                result.therionResetWorkingDirectoryButton,
+                                result.therionCopyOutputButton}) {
+        button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    }
+
+    buttonGrid->addWidget(result.therionRunButton, 0, 0);
+    buttonGrid->addWidget(result.therionStopButton, 0, 1);
+    buttonGrid->addWidget(result.therionResetWorkingDirectoryButton, 1, 0);
+    buttonGrid->addWidget(result.therionCopyOutputButton, 1, 1);
+    buttonGrid->setColumnStretch(0, 1);
+    buttonGrid->setColumnStretch(1, 1);
+    layout->addLayout(buttonGrid);
 
     result.consoleView = new QPlainTextEdit(widget);
     result.consoleView->setReadOnly(true);
+    result.consoleView->setLineWrapMode(QPlainTextEdit::WidgetWidth);
     result.consoleView->setPlaceholderText(translate("Therion runner output will appear here."));
     layout->addWidget(result.consoleView, 1);
 

@@ -7,6 +7,7 @@
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QFile>
+#include <QGraphicsEllipseItem>
 #include <QGraphicsPathItem>
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -53,6 +54,79 @@ bool tokenIsNumber(const QString &token)
     bool ok = false;
     token.toDouble(&ok);
     return ok;
+}
+
+int countGraphicsEllipseItems(const QGraphicsScene *scene)
+{
+    if (scene == nullptr) {
+        return 0;
+    }
+
+    int count = 0;
+    for (QGraphicsItem *item : scene->items()) {
+        if (dynamic_cast<QGraphicsEllipseItem *>(item) != nullptr) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+bool runFreehandBezierRowLogicSmoke()
+{
+    QVector<QPointF> straightStroke;
+    straightStroke.reserve(64);
+    for (int index = 0; index < 64; ++index) {
+        const double t = static_cast<double>(index) / 63.0;
+        straightStroke.append(QPointF(t * 180.0, t * 12.0));
+    }
+
+    const QStringList straightRows = bezierLineCoordinateRowsForFreehandStroke(straightStroke);
+    if (straightRows.size() > 3) {
+        std::cerr << "Simple freehand strokes should collapse to very few bezier anchors; got "
+                  << straightRows.size() << " rows.\n";
+        return false;
+    }
+
+    QVector<QPointF> sampledStroke;
+    sampledStroke.reserve(64);
+    for (int index = 0; index < 64; ++index) {
+        const double t = static_cast<double>(index) / 63.0;
+        sampledStroke.append(QPointF(t * 120.0, std::sin(t * 8.0) * 35.0 + t * 80.0));
+    }
+    const QStringList simplifiedRows = bezierLineCoordinateRowsForFreehandStroke(sampledStroke);
+    if (simplifiedRows.size() <= straightRows.size()) {
+        std::cerr << "Complex freehand strokes should retain more bezier anchors than simple strokes; got "
+                  << simplifiedRows.size() << " complex rows and "
+                  << straightRows.size() << " simple rows.\n";
+        return false;
+    }
+
+    QVector<QPointF> longerSampledStroke;
+    longerSampledStroke.reserve(128);
+    for (int index = 0; index < 128; ++index) {
+        const double t = static_cast<double>(index) / 127.0;
+        longerSampledStroke.append(QPointF(t * 260.0, std::sin(t * 16.0) * 42.0 + t * 120.0));
+    }
+    const QStringList longerRows = bezierLineCoordinateRowsForFreehandStroke(longerSampledStroke);
+    if (longerRows.size() <= simplifiedRows.size()) {
+        std::cerr << "More complex freehand strokes should retain proportionally more bezier anchors; got "
+                  << longerRows.size() << " longer rows and "
+                  << simplifiedRows.size() << " medium rows.\n";
+        return false;
+    }
+
+    const QStringList rows = bezierLineCoordinateRowsForFreehandStroke({
+        QPointF(0.0, 0.0),
+        QPointF(10.0, 5.0),
+        QPointF(20.0, 0.0),
+    });
+    if (!expect(rows.size() >= 2,
+                "Freehand bezier row conversion should keep at least start and end rows.")) {
+        return false;
+    }
+    const QStringList tokens = rows.at(1).split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+    return expect(tokens.size() >= 6,
+                  "Freehand bezier row conversion should produce cubic coordinate rows.");
 }
 
 int countDirectiveLines(const QString &text, const QString &directive)
@@ -1858,13 +1932,28 @@ int runDragUndoRedoSmoke()
     const QPoint strokeMid1(viewportCenter.x() - 10, viewportCenter.y() + 8);
     const QPoint strokeMid2(viewportCenter.x() + 16, viewportCenter.y() - 4);
     const QPoint strokeEnd(viewportCenter.x() + 34, viewportCenter.y() - 14);
+    const int ellipseItemsBeforeFreehandPreview = countGraphicsEllipseItems(mapView->scene());
     sendMouse(mapView->viewport(), QEvent::MouseButtonPress, strokeStart, Qt::LeftButton, Qt::LeftButton);
     sendMouse(mapView->viewport(), QEvent::MouseMove, strokeMid1, Qt::NoButton, Qt::LeftButton);
+    pumpEvents();
+    if (!expect(countGraphicsEllipseItems(mapView->scene()) == ellipseItemsBeforeFreehandPreview,
+                "Freehand live preview should not render per-sample point markers.")) {
+        return 1;
+    }
     sendMouse(mapView->viewport(), QEvent::MouseMove, strokeMid2, Qt::NoButton, Qt::LeftButton);
     sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, strokeEnd, Qt::LeftButton, Qt::NoButton);
     pumpEvents();
     if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeFreehand + 1,
                 "Freehand drag-and-release should insert one new line directive.")) {
+        return 1;
+    }
+    if (!expect(lastDraftLineHasBezierCoordinateRow(mapTab->text()),
+                "Freehand drag-and-release should serialize the simplified stroke as bezier line coordinate rows.")) {
+        std::cerr << "Actual source after freehand:\n" << mapTab->text().toStdString() << '\n';
+        return 1;
+    }
+    if (!expect(lastDraftLineNumericRows(mapTab->text()).size() >= 2,
+                "Freehand drag-and-release should keep enough anchors for a valid simplified bezier line.")) {
         return 1;
     }
 
@@ -1877,6 +1966,9 @@ int runDragUndoRedoSmoke()
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
+    if (!runFreehandBezierRowLogicSmoke()) {
+        return 1;
+    }
     if (const int rc = runInspectorObjectMoveSmoke(); rc != 0) {
         return rc;
     }

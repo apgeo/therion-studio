@@ -33,6 +33,7 @@ struct MapEditorInteractiveLineControlHandleRef
 
 QStringList lineCoordinateRowsForInteractiveDraft(const QVector<MapEditorInteractiveLineDraftVertex> &vertices);
 QStringList areaCoordinateRowsForInteractiveDraft(const QVector<MapEditorInteractiveLineDraftVertex> &vertices);
+QStringList bezierLineCoordinateRowsForFreehandStroke(const QVector<QPointF> &sourceVertices);
 void captureInteractiveLineAnchor(QVector<MapEditorInteractiveLineDraftVertex> *vertices,
                                   const QPointF &anchorScenePoint,
                                   const QPointF &anchorSourcePoint,

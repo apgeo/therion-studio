@@ -5,8 +5,192 @@
 
 #include <QLineF>
 
+#include <algorithm>
+#include <cmath>
+#include <utility>
+
 namespace TherionStudio
 {
+namespace
+{
+constexpr qreal kFreehandSimplifyAverageSampleFactor = 0.65;
+constexpr qreal kFreehandSimplifyBoundsFactor = 0.001;
+constexpr int kFreehandMaximumSafetyAnchors = 256;
+
+qreal pointSegmentDistance(const QPointF &point, const QPointF &start, const QPointF &end)
+{
+    const qreal segmentX = end.x() - start.x();
+    const qreal segmentY = end.y() - start.y();
+    const qreal segmentLengthSquared = segmentX * segmentX + segmentY * segmentY;
+    if (segmentLengthSquared <= 0.000001) {
+        return QLineF(point, start).length();
+    }
+
+    const qreal relativeX = point.x() - start.x();
+    const qreal relativeY = point.y() - start.y();
+    const qreal projection = std::clamp((relativeX * segmentX + relativeY * segmentY) / segmentLengthSquared,
+                                        0.0,
+                                        1.0);
+    const QPointF projected(start.x() + segmentX * projection,
+                            start.y() + segmentY * projection);
+    return QLineF(point, projected).length();
+}
+
+void markRamerDouglasPeuckerKeepPoints(const QVector<QPointF> &points,
+                                       int first,
+                                       int last,
+                                       qreal tolerance,
+                                       QVector<bool> *keep)
+{
+    if (keep == nullptr || last <= first + 1) {
+        return;
+    }
+
+    qreal maxDistance = 0.0;
+    int maxIndex = -1;
+    for (int index = first + 1; index < last; ++index) {
+        const qreal distance = pointSegmentDistance(points.at(index), points.at(first), points.at(last));
+        if (distance > maxDistance) {
+            maxDistance = distance;
+            maxIndex = index;
+        }
+    }
+
+    if (maxIndex < 0 || maxDistance <= tolerance) {
+        return;
+    }
+
+    (*keep)[maxIndex] = true;
+    markRamerDouglasPeuckerKeepPoints(points, first, maxIndex, tolerance, keep);
+    markRamerDouglasPeuckerKeepPoints(points, maxIndex, last, tolerance, keep);
+}
+
+QVector<QPointF> ramerDouglasPeuckerSimplified(const QVector<QPointF> &points, qreal tolerance)
+{
+    if (points.size() <= 2) {
+        return points;
+    }
+
+    QVector<bool> keep(points.size(), false);
+    keep[0] = true;
+    keep[keep.size() - 1] = true;
+    markRamerDouglasPeuckerKeepPoints(points, 0, points.size() - 1, tolerance, &keep);
+
+    QVector<QPointF> simplified;
+    simplified.reserve(points.size());
+    for (int index = 0; index < points.size(); ++index) {
+        if (keep.at(index)) {
+            simplified.append(points.at(index));
+        }
+    }
+    return simplified.size() >= 2 ? simplified : points;
+}
+
+QVector<QPointF> evenlyCappedAnchors(const QVector<QPointF> &points, int maxAnchors)
+{
+    if (points.size() <= maxAnchors || maxAnchors < 2) {
+        return points;
+    }
+
+    QVector<QPointF> capped;
+    capped.reserve(maxAnchors);
+    for (int index = 0; index < maxAnchors; ++index) {
+        const qreal sourceIndex = static_cast<qreal>(index) * static_cast<qreal>(points.size() - 1)
+            / static_cast<qreal>(maxAnchors - 1);
+        capped.append(points.at(std::clamp(static_cast<qsizetype>(std::round(sourceIndex)),
+                                           qsizetype{0},
+                                           points.size() - 1)));
+    }
+    return capped;
+}
+
+qreal polylineLength(const QVector<QPointF> &points)
+{
+    if (points.size() <= 2) {
+        return points.size() == 2 ? QLineF(points.first(), points.last()).length() : 0.0;
+    }
+
+    qreal length = 0.0;
+    for (int index = 1; index < points.size(); ++index) {
+        length += QLineF(points.at(index - 1), points.at(index)).length();
+    }
+    return length;
+}
+
+QVector<QPointF> simplifiedFreehandSourceVertices(const QVector<QPointF> &sourceVertices)
+{
+    QVector<QPointF> deduplicated;
+    deduplicated.reserve(sourceVertices.size());
+    for (const QPointF &point : sourceVertices) {
+        if (deduplicated.isEmpty() || QLineF(deduplicated.last(), point).length() > 0.0001) {
+            deduplicated.append(point);
+        }
+    }
+
+    if (deduplicated.size() <= 2) {
+        return deduplicated;
+    }
+
+    qreal minX = deduplicated.first().x();
+    qreal maxX = minX;
+    qreal minY = deduplicated.first().y();
+    qreal maxY = minY;
+    for (const QPointF &point : std::as_const(deduplicated)) {
+        minX = std::min(minX, point.x());
+        maxX = std::max(maxX, point.x());
+        minY = std::min(minY, point.y());
+        maxY = std::max(maxY, point.y());
+    }
+    const qreal diagonal = std::hypot(maxX - minX, maxY - minY);
+    if (diagonal <= 0.0001) {
+        return evenlyCappedAnchors(deduplicated, std::min(static_cast<int>(deduplicated.size()),
+                                                          kFreehandMaximumSafetyAnchors));
+    }
+
+    const qreal averageSampleLength = polylineLength(deduplicated) / static_cast<qreal>(deduplicated.size() - 1);
+    const qreal tolerance = std::max(averageSampleLength * kFreehandSimplifyAverageSampleFactor,
+                                    diagonal * kFreehandSimplifyBoundsFactor);
+    const QVector<QPointF> simplified = ramerDouglasPeuckerSimplified(deduplicated, tolerance);
+    if (simplified.size() <= kFreehandMaximumSafetyAnchors) {
+        return simplified;
+    }
+
+    return evenlyCappedAnchors(simplified, kFreehandMaximumSafetyAnchors);
+}
+
+QVector<MapEditorInteractiveLineDraftVertex> bezierDraftVerticesFromAnchors(const QVector<QPointF> &anchors)
+{
+    QVector<MapEditorInteractiveLineDraftVertex> vertices;
+    vertices.reserve(anchors.size());
+    for (const QPointF &anchor : anchors) {
+        MapEditorInteractiveLineDraftVertex vertex;
+        vertex.anchorSource = anchor;
+        vertex.anchorScene = anchor;
+        vertices.append(vertex);
+    }
+
+    if (vertices.size() < 2) {
+        return vertices;
+    }
+
+    for (int index = 0; index < vertices.size() - 1; ++index) {
+        const QPointF previousAnchor = index > 0
+            ? vertices.at(index - 1).anchorSource
+            : vertices.at(index).anchorSource;
+        const QPointF currentAnchor = vertices.at(index).anchorSource;
+        const QPointF nextAnchor = vertices.at(index + 1).anchorSource;
+        const QPointF afterNextAnchor = index + 2 < vertices.size()
+            ? vertices.at(index + 2).anchorSource
+            : nextAnchor;
+
+        vertices[index].outgoingControlSource = currentAnchor + (nextAnchor - previousAnchor) / 6.0;
+        vertices[index + 1].incomingControlSource = nextAnchor - (afterNextAnchor - currentAnchor) / 6.0;
+    }
+
+    return vertices;
+}
+}
+
 QStringList lineCoordinateRowsForInteractiveDraft(const QVector<MapEditorInteractiveLineDraftVertex> &vertices)
 {
     QStringList rows;
@@ -39,6 +223,16 @@ QStringList lineCoordinateRowsForInteractiveDraft(const QVector<MapEditorInterac
     }
 
     return rows;
+}
+
+QStringList bezierLineCoordinateRowsForFreehandStroke(const QVector<QPointF> &sourceVertices)
+{
+    const QVector<QPointF> simplifiedAnchors = simplifiedFreehandSourceVertices(sourceVertices);
+    if (simplifiedAnchors.size() < 2) {
+        return {};
+    }
+
+    return lineCoordinateRowsForInteractiveDraft(bezierDraftVerticesFromAnchors(simplifiedAnchors));
 }
 
 QStringList areaCoordinateRowsForInteractiveDraft(const QVector<MapEditorInteractiveLineDraftVertex> &vertices)

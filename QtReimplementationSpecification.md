@@ -152,7 +152,7 @@ Required capabilities:
 - support zooming, panning, and viewport restoration
 - support fitting the viewport to geometry only or to geometry plus background layers
 - support background imagery and sketch references used by TH2 documents, including multiple layers and `.xvi` vector references
-- support freehand line drawing and smart-trace-assisted line creation
+- support freehand line drawing with simplified bezier output and smart-trace-assisted line creation
 - support a touch-friendly control mode for pen-first workflows
 
 Map editor editing workflows should include, at minimum:
@@ -349,6 +349,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The map editor shall support an explicit touch-friendly controls mode for pen-first workflows rather than relying only on device heuristics.
 - After reparsing the document, the map editor shall restore the selected object when that object can still be resolved in the updated document.
 - Geometry editing shall support point placement, line vertex editing, area editing, and selection of individual vertices or control points.
+- When a visible bezier control point overlaps or is near another selectable line/area shape, hit testing shall prioritize the control point so it remains selectable and draggable.
 - During interactive line insertion, click-only anchor placement shall create straight segments between consecutive anchors.
 - During interactive line insertion, click-and-drag anchor placement shall create a curved segment with editable bezier control points so the inserted shape matches the drafted curve intent.
 - During interactive line insertion, click-and-drag curve seeding shall treat the drag location as a curve pull point and derive cubic control points from it; midpoint-coupled parallel handle seeding shall not be used.
@@ -356,6 +357,8 @@ The rules below define the expected day-to-day interaction model. If a later req
 - During interactive line insertion, existing bezier control points shall remain visible in the draft preview and shall support direct drag adjustment before the draft is committed.
 - During interactive line insertion, when a draft vertex has both incoming and outgoing bezier controls, dragging one control shall mirror-adapt the opposite control to preserve smooth tangent continuity.
 - During interactive line insertion, hovering a draggable draft bezier control point shall present a hand cursor and active drag shall present a closed-hand cursor.
+- During freehand line insertion, the live preview shall show the drawn stroke as a solid line without per-sample point markers, and the sampled stroke shall be simplified before commit and serialized as bezier coordinate rows rather than as a dense point-by-point polyline.
+- Freehand stroke simplification shall be geometry-sensitive rather than based on a fixed point count: simpler strokes shall collapse to fewer bezier anchors, while more complex strokes shall retain proportionally more anchors needed to preserve the drawn shape.
 - During interactive area insertion, click-only anchor placement shall create straight segments between consecutive anchors.
 - During interactive area insertion, click-and-drag anchor placement shall create curved segments with editable bezier control points, using the same seeding and handle-edit workflow as interactive line insertion.
 - During interactive area insertion, when a draft vertex has both incoming and outgoing bezier controls, dragging one control shall mirror-adapt the opposite control to preserve smooth tangent continuity.
@@ -869,7 +872,7 @@ The criteria below are intended for implementation verification and QA.
 - Dragging and dropping map objects reorders or moves them according to the drop target.
 - Undo and redo work for map mutations.
 - The map command surface exposes drawing, fitting, zoom, undo/redo, and draft-completion actions in the top toolbar (main and detached map windows).
-- Freehand line drawing and smart-trace-assisted line creation are supported.
+- Freehand line drawing serializes simplified bezier line geometry, and smart-trace-assisted line creation is supported.
 - Background layers support persisted position, visibility, gamma, opacity, and `.xvi` rendering where applicable.
 - Raster background image add/move/show-hide/gamma/remove operations write and maintain XTherion-compatible `xth_me_area_adjust`, `xth_me_area_zoom_to`, and `xth_me_image_insert` metadata in the TH2 source.
 - Background grid controls can toggle the grid and set a metric spacing; rendered grid cells remain square and use scrap `-scale` metadata to match real-world meters where available.

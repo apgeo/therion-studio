@@ -380,7 +380,12 @@ bool MapEditorTab::commitInteractiveDrawVertices(const QString &geometryKind,
     int insertedLineNumber = 0;
     const QString beforeText = textEditor_->text();
     const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
-    if (!textEditor_->insertDraftGeometry(geometryKind, vertices, &insertedLineNumber, &errorMessage)) {
+    const bool inserted = geometryKind.trimmed().compare(QStringLiteral("line"), Qt::CaseInsensitive) == 0
+        ? textEditor_->insertDraftLineGeometry(bezierLineCoordinateRowsForFreehandStroke(vertices),
+                                               &insertedLineNumber,
+                                               &errorMessage)
+        : textEditor_->insertDraftGeometry(geometryKind, vertices, &insertedLineNumber, &errorMessage);
+    if (!inserted) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Complete Draft failed.")
             : tr("Complete Draft failed: %1").arg(errorMessage);

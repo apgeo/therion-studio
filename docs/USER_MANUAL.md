@@ -404,7 +404,7 @@ Interactive drawing (current):
 - after a curved segment exists, bezier control points are visible in the draft preview and can be dragged to adjust shape before commit
 - while hovering a draft bezier control point, the map cursor changes to a hand; while dragging it, cursor changes to closed hand
 - when a draft line vertex has both incoming and outgoing bezier controls, dragging one control mirrors/adapts the opposite control to keep smooth tangent behavior
-- `Freehand`: press, drag, and release in the map canvas to insert a sampled line stroke in one gesture.
+- `Freehand`: press, drag, and release in the map canvas to insert a line in one gesture; the live preview shows the drawn stroke as a solid line without per-sample point markers, and the sampled stroke is simplified into bezier coordinate rows rather than a dense point-by-point polyline. Simplification is shape-sensitive: simple strokes use fewer anchors, while more complex strokes keep more anchors to preserve the drawn curve.
 - `Area`: click to add draft vertices in the canvas, then press `Enter` or click `Complete Draft` to write the area; mode stays in `Area` so you can immediately draw the next area.
 - In `Area` mode, bezier drafting behavior matches `Line` mode:
 - click only: adds straight anchors
@@ -448,6 +448,7 @@ Line-handle behavior:
 - selecting a map object (card or geometry) moves the text editor cursor to that object's source line
 - selecting a map line/area vertex (including line control points) moves the text cursor to that specific vertex coordinate token
 - moving the text cursor onto a line/area coordinate token selects the corresponding map vertex/control point
+- visible bezier control points take precedence over nearby line/area shapes when clicking or dragging, so controls remain editable even when they sit close to another line
 - moving the text cursor onto vertex-related line-option rows (for example `smooth off`) selects the corresponding current line vertex
 - moving the text cursor onto `scrap` or `endscrap` selects all map objects that belong to that scrap block
 - dragging a line anchor moves attached incoming/outgoing control handles by the same delta
@@ -562,7 +563,7 @@ There is currently no dedicated Settings dialog; settings are updated through no
 ## 8. Known Current Limitations
 
 - Non-UTF-8 support relies on Qt-supported codecs and may not perfectly decode every legacy encoding variant on every platform.
-- Freehand/Smart Trace modes currently insert draft line items (no full tracing workflow yet).
+- Freehand mode inserts simplified bezier line geometry from the dragged stroke; Smart Trace remains a staged workflow without full tracing behavior yet.
 - GUI automation coverage is still incomplete; many checks are currently unit/regression + manual workflows.
 
 ## 9. Troubleshooting

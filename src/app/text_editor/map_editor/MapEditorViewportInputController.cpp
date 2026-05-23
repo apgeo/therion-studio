@@ -72,23 +72,23 @@ int mapSelectionHitPriority(const QGraphicsItem *item)
     }
     if (auto *vertexItem = dynamic_cast<const MapEditableGeometryVertexItem *>(item)) {
         const QString geometryKind = vertexItem->geometryKind().trimmed().toLower();
-        if (geometryKind == QStringLiteral("line") || geometryKind == QStringLiteral("area")) {
+        if (geometryKind.startsWith(QStringLiteral("line control"))) {
             return 0;
         }
-        if (geometryKind.startsWith(QStringLiteral("line control"))) {
-            return 2;
+        if (geometryKind == QStringLiteral("line") || geometryKind == QStringLiteral("area")) {
+            return 1;
         }
     }
 
     const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
     switch (subtype) {
+    case kMapSceneSelectionSubtypeLineControl:
+        return 0;
     case kMapSceneSelectionSubtypeLineAnchor:
     case kMapSceneSelectionSubtypeAreaVertex:
-        return 0;
-    case kMapSceneSelectionSubtypeLineControl:
-        return 2;
+        return 1;
     case kMapSceneSelectionSubtypePointOrientationHandle:
-        return 2;
+        return 1;
     case kMapSceneSelectionSubtypeLineControlConnector:
         return 3;
     case kMapSceneSelectionSubtypeLineDetail:

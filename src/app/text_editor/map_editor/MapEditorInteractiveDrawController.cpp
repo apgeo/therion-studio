@@ -388,11 +388,13 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         if (mode() == MapEditorInteractiveDrawMode::Area && displayVertices.size() >= 3) {
             path.closeSubpath();
         }
-        anchorMarkers = (*context_.sceneVertices);
     }
 
     (*context_.previewPath) = new QGraphicsPathItem(path);
-    (*context_.previewPath)->setPen(QPen(accent, 2.0, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
+    const Qt::PenStyle previewPenStyle = mode() == MapEditorInteractiveDrawMode::Freehand
+        ? Qt::SolidLine
+        : Qt::DashLine;
+    (*context_.previewPath)->setPen(QPen(accent, 2.0, previewPenStyle, Qt::RoundCap, Qt::RoundJoin));
     (*context_.previewPath)->setBrush(Qt::NoBrush);
     (*context_.previewPath)->setZValue(28.0);
     (*context_.previewPath)->setAcceptedMouseButtons(Qt::NoButton);

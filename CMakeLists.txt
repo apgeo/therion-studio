@@ -298,6 +298,14 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTabAppearanceController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorLineBuildService.cpp
+    src/app/text_editor/TextEditorTabBlockEditorOptionArgsController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorApplyExecutor.cpp
+    src/app/text_editor/TextEditorTabBlockEditorApplyStateController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorCanvasBoundaryController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorSourceController.cpp
+    src/app/text_editor/TextEditorTabContextHelpController.cpp
     src/app/text_editor/TextEditorTabCursorController.cpp
     src/app/text_editor/TextEditorTabDocumentController.cpp
     src/app/text_editor/TextEditorTabEncodingController.cpp
@@ -583,6 +591,14 @@ set(THERION_TEXT_EDITOR_UI_TEST_SOURCES
     ${THERION_EDITOR_UI_TEST_BASE_SOURCES}
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTabAppearanceController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorLineBuildService.cpp
+    src/app/text_editor/TextEditorTabBlockEditorOptionArgsController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorApplyExecutor.cpp
+    src/app/text_editor/TextEditorTabBlockEditorApplyStateController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorCanvasBoundaryController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorSourceController.cpp
+    src/app/text_editor/TextEditorTabContextHelpController.cpp
     src/app/text_editor/TextEditorTabCursorController.cpp
     src/app/text_editor/TextEditorTabDocumentController.cpp
     src/app/text_editor/TextEditorTabEncodingController.cpp
@@ -663,6 +679,14 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTabAppearanceController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorLineBuildService.cpp
+    src/app/text_editor/TextEditorTabBlockEditorOptionArgsController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorApplyExecutor.cpp
+    src/app/text_editor/TextEditorTabBlockEditorApplyStateController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorCanvasBoundaryController.cpp
+    src/app/text_editor/TextEditorTabBlockEditorSourceController.cpp
+    src/app/text_editor/TextEditorTabContextHelpController.cpp
     src/app/text_editor/TextEditorTabCursorController.cpp
     src/app/text_editor/TextEditorTabDocumentController.cpp
     src/app/text_editor/TextEditorTabEncodingController.cpp

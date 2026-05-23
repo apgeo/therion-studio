@@ -2,17 +2,45 @@
 
 #include "../../core/CommandCatalogService.h"
 
+#include <functional>
+
+#include <QJsonObject>
 #include <QString>
 #include <QStringList>
 
+class QPlainTextEdit;
+class QSplitter;
+class QTextBrowser;
+class QWidget;
+
 namespace TherionStudio
 {
-class TextEditorTab;
+struct TextEditorCommandMetadata;
+
+struct TextEditorContextHelpContext
+{
+    QWidget *rootWidget = nullptr;
+    QPlainTextEdit **editor = nullptr;
+    QSplitter **editorHelpSplitter = nullptr;
+    QWidget **helpPanel = nullptr;
+    QTextBrowser **helpBrowser = nullptr;
+    TextEditorCommandMetadata *metadata = nullptr;
+    QString *lastValidationTooltipKey = nullptr;
+    int *helpPanelExtent = nullptr;
+    bool *helpCollapsed = nullptr;
+    std::function<QString(const char *)> translate;
+    std::function<QString(const QString &)> normalizedDirectiveToken;
+    std::function<QString(const QString &)> openingDirectiveForClosingToken;
+    std::function<QString()> currentCompletionCommand;
+    std::function<void()> rebuildCompletionModel;
+    std::function<void(const QJsonObject &)> applyCatalogCommandsMetadata;
+    std::function<void()> populateBlockToolboxScopeCombo;
+};
 
 class TextEditorContextHelpController final
 {
 public:
-    explicit TextEditorContextHelpController(TextEditorTab *owner,
+    explicit TextEditorContextHelpController(TextEditorContextHelpContext context,
                                              CommandCatalogStore catalogStore = CommandCatalogStore());
 
     void buildHelpPanel();
@@ -28,7 +56,15 @@ public:
                                         QString *tooltipKey = nullptr) const;
 
 private:
-    TextEditorTab *owner_ = nullptr;
+    QString tr(const char *text) const;
+    QPlainTextEdit *editor() const;
+    QSplitter *editorHelpSplitter() const;
+    QWidget *helpPanel() const;
+    QTextBrowser *helpBrowser() const;
+    void setHelpPanel(QWidget *helpPanel);
+    void setHelpBrowser(QTextBrowser *helpBrowser);
+
+    TextEditorContextHelpContext context_;
     CommandCatalogStore catalogStore_;
 };
 }

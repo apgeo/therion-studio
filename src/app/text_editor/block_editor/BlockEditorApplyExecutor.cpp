@@ -1,38 +1,51 @@
 #include "BlockEditorApplyExecutor.h"
 
-#include "BlockEditorSourceController.h"
-#include "../TextEditorTab.h"
-
 #include <QMessageBox>
+
+#include <utility>
 
 namespace TherionStudio
 {
-BlockEditorApplyExecutor::BlockEditorApplyExecutor(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorApplyExecutor::BlockEditorApplyExecutor(BlockEditorApplyExecutorContext context)
+    : context_(std::move(context))
 {
+}
+
+QString BlockEditorApplyExecutor::tr(const char *text) const
+{
+    if (context_.translate) {
+        return context_.translate(text);
+    }
+    return QString::fromUtf8(text);
 }
 
 void BlockEditorApplyExecutor::applyChanges()
 {
-    if (owner_ == nullptr || owner_->tearingDown_) {
+    if (context_.tearingDown == nullptr
+        || context_.selectedLineNumber == nullptr
+        || !context_.sourceContext
+        || !context_.buildUpdatedLine
+        || !context_.selectBlockInCanvasAndDetails
+        || !context_.refreshApplyState
+        || (*context_.tearingDown)) {
         return;
     }
 
     QString updatedLine;
     QString validationError;
-    if (!owner_->buildUpdatedLineFromBlockDetails(&updatedLine, &validationError)) {
+    if (!context_.buildUpdatedLine(&updatedLine, &validationError)) {
         if (!validationError.isEmpty()) {
-            QMessageBox::warning(owner_, TextEditorTab::tr("Configure Block"), validationError);
+            QMessageBox::warning(context_.dialogParent, tr("Configure Block"), validationError);
         }
         return;
     }
 
-    const BlockEditorSourceController source(owner_);
-    if (!source.replaceLine(owner_->blockDetailsSelectedLineNumber_, updatedLine)) {
+    const BlockEditorSourceController source(context_.sourceContext());
+    if (!source.replaceLine(*context_.selectedLineNumber, updatedLine)) {
         return;
     }
 
-    owner_->selectBlockInCanvasAndDetails(owner_->blockDetailsSelectedLineNumber_);
-    owner_->refreshBlockDetailsApplyState();
+    context_.selectBlockInCanvasAndDetails(*context_.selectedLineNumber);
+    context_.refreshApplyState();
 }
 }

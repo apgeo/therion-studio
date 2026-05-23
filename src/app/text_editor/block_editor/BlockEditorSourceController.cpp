@@ -1,7 +1,6 @@
 #include "BlockEditorSourceController.h"
 
 #include "BlockEditorSourceText.h"
-#include "../TextEditorTab.h"
 
 #include <QPlainTextEdit>
 #include <QTextBlock>
@@ -9,27 +8,36 @@
 #include <QTextDocument>
 #include <QtGlobal>
 
+#include <utility>
+
 namespace TherionStudio
 {
-BlockEditorSourceController::BlockEditorSourceController(TextEditorTab *owner)
-    : owner_(owner)
-    , mutableOwner_(owner)
+BlockEditorSourceController::BlockEditorSourceController(BlockEditorSourceContext context)
+    : context_(std::move(context))
 {
 }
 
-BlockEditorSourceController::BlockEditorSourceController(const TextEditorTab *owner)
-    : owner_(owner)
+QString BlockEditorSourceController::tr(const char *text) const
 {
+    if (context_.translate) {
+        return context_.translate(text);
+    }
+    return QString::fromUtf8(text);
+}
+
+bool BlockEditorSourceController::canEdit() const
+{
+    return context_.editable && context_.editor != nullptr;
 }
 
 bool BlockEditorSourceController::hasEditor() const
 {
-    return owner_ != nullptr && owner_->editor_ != nullptr;
+    return context_.editor != nullptr;
 }
 
 QString BlockEditorSourceController::text() const
 {
-    return hasEditor() ? owner_->editor_->toPlainText() : QString();
+    return hasEditor() ? context_.editor->toPlainText() : QString();
 }
 
 QStringList BlockEditorSourceController::normalizedLines() const
@@ -41,9 +49,9 @@ bool BlockEditorSourceController::insertLinesBefore(int lineNumber,
                                                     const QStringList &newLines,
                                                     QString *errorMessage) const
 {
-    if (mutableOwner_ == nullptr || !hasEditor() || lineNumber <= 0 || newLines.isEmpty()) {
+    if (!canEdit() || !context_.replaceText || lineNumber <= 0 || newLines.isEmpty()) {
         if (errorMessage != nullptr) {
-            *errorMessage = TextEditorTab::tr("Invalid insertion request.");
+            *errorMessage = tr("Invalid insertion request.");
         }
         return false;
     }
@@ -59,7 +67,7 @@ bool BlockEditorSourceController::insertLinesBefore(int lineNumber,
     }
     if (trimmedLines.isEmpty()) {
         if (errorMessage != nullptr) {
-            *errorMessage = TextEditorTab::tr("No lines to insert.");
+            *errorMessage = tr("No lines to insert.");
         }
         return false;
     }
@@ -77,12 +85,11 @@ bool BlockEditorSourceController::insertLinesBefore(int lineNumber,
 
 bool BlockEditorSourceController::removeLineRange(int startLine, int endLine) const
 {
-    if (mutableOwner_ == nullptr || mutableOwner_->editor_ == nullptr || mutableOwner_->editor_->document() == nullptr
-        || startLine <= 0 || endLine < startLine) {
+    if (!canEdit() || context_.editor->document() == nullptr || startLine <= 0 || endLine < startLine) {
         return false;
     }
 
-    QTextDocument *document = mutableOwner_->editor_->document();
+    QTextDocument *document = context_.editor->document();
     const QTextBlock startBlock = document->findBlockByLineNumber(startLine - 1);
     const QTextBlock endBlock = document->findBlockByLineNumber(endLine - 1);
     if (!startBlock.isValid() || !endBlock.isValid()) {
@@ -104,17 +111,17 @@ bool BlockEditorSourceController::removeLineRange(int startLine, int endLine) co
     cursor.setPosition(selectionEnd, QTextCursor::KeepAnchor);
     cursor.removeSelectedText();
     cursor.endEditBlock();
-    mutableOwner_->editor_->setTextCursor(cursor);
+    context_.editor->setTextCursor(cursor);
     return true;
 }
 
 bool BlockEditorSourceController::replaceLine(int lineNumber, const QString &line) const
 {
-    if (mutableOwner_ == nullptr || mutableOwner_->editor_ == nullptr) {
+    if (!canEdit() || context_.editor->document() == nullptr) {
         return false;
     }
 
-    const QTextBlock targetBlock = mutableOwner_->editor_->document()->findBlockByLineNumber(lineNumber - 1);
+    const QTextBlock targetBlock = context_.editor->document()->findBlockByLineNumber(lineNumber - 1);
     if (!targetBlock.isValid()) {
         return false;
     }
@@ -125,7 +132,7 @@ bool BlockEditorSourceController::replaceLine(int lineNumber, const QString &lin
     editCursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
     editCursor.insertText(line);
     editCursor.endEditBlock();
-    mutableOwner_->editor_->setTextCursor(editCursor);
+    context_.editor->setTextCursor(editCursor);
     return true;
 }
 
@@ -136,8 +143,8 @@ void BlockEditorSourceController::replaceWithLines(const QString &originalConten
 
 void BlockEditorSourceController::replaceText(const QString &contents) const
 {
-    if (mutableOwner_ != nullptr) {
-        mutableOwner_->replaceTextForCommand(contents);
+    if (context_.replaceText) {
+        context_.replaceText(contents);
     }
 }
 }

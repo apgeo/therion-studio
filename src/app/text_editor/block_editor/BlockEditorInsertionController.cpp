@@ -86,7 +86,7 @@ void BlockEditorInsertionController::insertFromDrop(const QString &kind, const Q
     const QStringList linesToInsert = templateBuilder.buildLines(normalizedKind, existingLines, insertionPlan);
 
     QString errorMessage;
-    const BlockEditorSourceController source(owner_);
+    const BlockEditorSourceController source(owner_->blockEditorSourceContext());
     if (!source.insertLinesBefore(insertionPlan.insertBeforeLine, linesToInsert, &errorMessage)) {
         QMessageBox::warning(owner_, TextEditorTab::tr("Block Insert Failed"), errorMessage);
     }

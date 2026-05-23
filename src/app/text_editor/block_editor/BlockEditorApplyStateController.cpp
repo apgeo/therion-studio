@@ -1,57 +1,70 @@
 #include "BlockEditorApplyStateController.h"
 
-#include "BlockEditorSourceController.h"
-#include "../TextEditorTab.h"
-
 #include <QLabel>
-#include <QPlainTextEdit>
 #include <QPushButton>
+
+#include <utility>
 
 namespace TherionStudio
 {
-BlockEditorApplyStateController::BlockEditorApplyStateController(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorApplyStateController::BlockEditorApplyStateController(BlockEditorApplyStateContext context)
+    : context_(std::move(context))
 {
+}
+
+QPushButton *BlockEditorApplyStateController::applyButton() const
+{
+    return context_.applyButton != nullptr ? *context_.applyButton : nullptr;
+}
+
+QLabel *BlockEditorApplyStateController::statusLabel() const
+{
+    return context_.statusLabel != nullptr ? *context_.statusLabel : nullptr;
 }
 
 void BlockEditorApplyStateController::refreshApplyState()
 {
-    if (owner_ == nullptr
-        || owner_->tearingDown_
-        || owner_->blockDetailsPopulating_
-        || owner_->blockDetailsApplyButton_ == nullptr
-        || !BlockEditorSourceController(owner_).hasEditor()) {
+    if (context_.tearingDown == nullptr
+        || context_.detailsPopulating == nullptr
+        || context_.selectedLineNumber == nullptr
+        || context_.baseStatusText == nullptr
+        || !context_.sourceContext
+        || !context_.buildUpdatedLine
+        || (*context_.tearingDown)
+        || (*context_.detailsPopulating)
+        || applyButton() == nullptr
+        || !BlockEditorSourceController(context_.sourceContext()).hasEditor()) {
         return;
     }
-    const BlockEditorSourceController source(owner_);
+    const BlockEditorSourceController source(context_.sourceContext());
 
     QString validationError;
     QString candidateLine;
-    const bool buildOk = owner_->buildUpdatedLineFromBlockDetails(&candidateLine, &validationError);
+    const bool buildOk = context_.buildUpdatedLine(&candidateLine, &validationError);
 
     QString currentLine;
     bool hasCurrentLine = false;
-    if (owner_->blockDetailsSelectedLineNumber_ > 0) {
+    if ((*context_.selectedLineNumber) > 0) {
         QStringList lines = source.normalizedLines();
-        if (owner_->blockDetailsSelectedLineNumber_ <= lines.size()) {
-            currentLine = lines.at(owner_->blockDetailsSelectedLineNumber_ - 1);
+        if ((*context_.selectedLineNumber) <= lines.size()) {
+            currentLine = lines.at((*context_.selectedLineNumber) - 1);
             hasCurrentLine = true;
         }
     }
 
     const bool hasChanges = buildOk && hasCurrentLine && candidateLine != currentLine;
-    owner_->blockDetailsApplyButton_->setEnabled(hasChanges);
+    applyButton()->setEnabled(hasChanges);
 
-    if (owner_->blockDetailsStatusLabel_ == nullptr) {
+    if (statusLabel() == nullptr) {
         return;
     }
     if (!validationError.isEmpty()) {
-        owner_->blockDetailsStatusLabel_->setStyleSheet(QStringLiteral("color: #c0392b;"));
-        owner_->blockDetailsStatusLabel_->setText(
-            QStringLiteral("%1 — %2").arg(owner_->blockDetailsBaseStatusText_, validationError));
+        statusLabel()->setStyleSheet(QStringLiteral("color: #c0392b;"));
+        statusLabel()->setText(
+            QStringLiteral("%1 — %2").arg(*context_.baseStatusText, validationError));
         return;
     }
-    owner_->blockDetailsStatusLabel_->setStyleSheet(QString());
-    owner_->blockDetailsStatusLabel_->setText(owner_->blockDetailsBaseStatusText_);
+    statusLabel()->setStyleSheet(QString());
+    statusLabel()->setText(*context_.baseStatusText);
 }
 }

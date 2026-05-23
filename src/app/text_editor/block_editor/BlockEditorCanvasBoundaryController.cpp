@@ -1,7 +1,6 @@
 #include "BlockEditorCanvasBoundaryController.h"
 
 #include "BlockEditorCanvasItem.h"
-#include "../TextEditorTab.h"
 
 #include <QGraphicsLineItem>
 #include <QGraphicsScene>
@@ -13,14 +12,14 @@
 
 namespace TherionStudio
 {
-BlockEditorCanvasBoundaryController::BlockEditorCanvasBoundaryController(TextEditorTab *owner)
-    : owner_(owner)
+BlockEditorCanvasBoundaryController::BlockEditorCanvasBoundaryController(BlockEditorCanvasBoundaryContext context)
+    : context_(context)
 {
 }
 
 int BlockEditorCanvasBoundaryController::resolveEndHintContainerStartLineAtScenePos(const QPointF &scenePos) const
 {
-    if (owner_ == nullptr || owner_->blockCanvasScene_ == nullptr) {
+    if (context_.scene == nullptr || context_.containerBoundaryGuideItems == nullptr) {
         return 0;
     }
 
@@ -37,7 +36,7 @@ int BlockEditorCanvasBoundaryController::resolveEndHintContainerStartLineAtScene
         return 0;
     };
 
-    const int directLine = resolveFromItem(owner_->blockCanvasScene_->itemAt(scenePos, QTransform()));
+    const int directLine = resolveFromItem(context_.scene->itemAt(scenePos, QTransform()));
     if (directLine > 0) {
         return directLine;
     }
@@ -63,7 +62,7 @@ int BlockEditorCanvasBoundaryController::resolveEndHintContainerStartLineAtScene
     int bestLineNumber = 0;
     qreal bestDistance = std::numeric_limits<qreal>::max();
 
-    for (QGraphicsLineItem *guideItem : owner_->blockContainerBoundaryGuideItems_) {
+    for (QGraphicsLineItem *guideItem : *context_.containerBoundaryGuideItems) {
         if (guideItem == nullptr || !guideItem->isVisible()) {
             continue;
         }

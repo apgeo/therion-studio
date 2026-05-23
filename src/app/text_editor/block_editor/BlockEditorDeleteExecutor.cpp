@@ -23,8 +23,12 @@ BlockEditorDeleteExecutor::BlockEditorDeleteExecutor(TextEditorTab *owner)
 
 bool BlockEditorDeleteExecutor::deleteCommandAtLine(int lineNumber)
 {
-    const BlockEditorSourceController source(owner_);
-    if (owner_ == nullptr || lineNumber <= 0 || !source.hasEditor()) {
+    if (owner_ == nullptr || lineNumber <= 0) {
+        return false;
+    }
+
+    const BlockEditorSourceController source(owner_->blockEditorSourceContext());
+    if (!source.hasEditor()) {
         return false;
     }
 

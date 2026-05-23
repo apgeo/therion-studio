@@ -73,6 +73,13 @@ class BlockEditorMovePlanner;
 class BlockEditorCommandOptionsDialog;
 class BlockEditorSingleValueCommandDialog;
 class BlockEditorSourceController;
+struct BlockEditorDetailsHelpContext;
+struct BlockEditorLineBuildContext;
+struct BlockEditorOptionArgsContext;
+struct BlockEditorApplyExecutorContext;
+struct BlockEditorApplyStateContext;
+struct BlockEditorCanvasBoundaryContext;
+struct BlockEditorSourceContext;
 struct TherionParsedLine;
 
 class TextEditorTab final : public QWidget
@@ -196,12 +203,6 @@ private slots:
     void handleBlocksModeRequested();
 
 private:
-    friend class TextEditorContextHelpController;
-    friend class BlockEditorOptionArgsController;
-    friend class BlockEditorDetailsHelpController;
-    friend class BlockEditorLineBuildService;
-    friend class BlockEditorApplyStateController;
-    friend class BlockEditorApplyExecutor;
     friend class BlockEditorSelectionDetailsController;
     friend class BlockEditorDetailsPaneController;
     friend class BlockEditorToolboxController;
@@ -211,7 +212,6 @@ private:
     friend class BlockEditorDataBlockDialog;
     friend class BlockEditorDeleteExecutor;
     friend class BlockEditorMovePreviewController;
-    friend class BlockEditorCanvasBoundaryController;
     friend class BlockEditorCanvasRebuildController;
     friend class BlockEditorDocumentOutlineBuilder;
     friend class BlockEditorDropTargetResolver;
@@ -221,7 +221,6 @@ private:
     friend class BlockEditorMovePlanner;
     friend class BlockEditorCommandOptionsDialog;
     friend class BlockEditorSingleValueCommandDialog;
-    friend class BlockEditorSourceController;
 
     enum class BlockDetailsMode
     {
@@ -242,6 +241,7 @@ private:
     TextEditorCommandMetadata &mutableCommandMetadata() { return commandMetadata_; }
     QString displayPath() const;
     void buildHelpPanel();
+    void buildContextHelpController();
     void buildRawEditorPanel();
     void buildAppearanceController();
     void buildCursorController();
@@ -251,6 +251,19 @@ private:
     void buildSourceRewriteController();
     void buildStatusController();
     void buildBlockEditorPanel();
+    void buildBlockDetailsHelpController();
+    BlockEditorDetailsHelpContext blockEditorDetailsHelpContext();
+    void buildBlockDetailsLineBuildService();
+    BlockEditorLineBuildContext blockEditorLineBuildContext();
+    void buildBlockDetailsOptionArgsController();
+    BlockEditorOptionArgsContext blockEditorOptionArgsContext();
+    void buildBlockDetailsApplyExecutor();
+    BlockEditorApplyExecutorContext blockEditorApplyExecutorContext();
+    void buildBlockDetailsApplyStateController();
+    BlockEditorApplyStateContext blockEditorApplyStateContext();
+    BlockEditorCanvasBoundaryContext blockEditorCanvasBoundaryContext() const;
+    BlockEditorSourceContext blockEditorSourceContext();
+    BlockEditorSourceContext blockEditorSourceContext() const;
     void loadHelpMetadata();
     void loadHelpMetadataFromCommandCatalog();
     void updateContextHelp();

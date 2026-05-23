@@ -1,17 +1,26 @@
 #pragma once
 
+#include <functional>
+
 #include <QString>
 #include <QStringList>
 
+class QPlainTextEdit;
+
 namespace TherionStudio
 {
-class TextEditorTab;
+struct BlockEditorSourceContext
+{
+    QPlainTextEdit *editor = nullptr;
+    bool editable = false;
+    std::function<void(const QString &)> replaceText;
+    std::function<QString(const char *)> translate;
+};
 
 class BlockEditorSourceController final
 {
 public:
-    explicit BlockEditorSourceController(TextEditorTab *owner);
-    explicit BlockEditorSourceController(const TextEditorTab *owner);
+    explicit BlockEditorSourceController(BlockEditorSourceContext context);
 
     bool hasEditor() const;
     QString text() const;
@@ -23,7 +32,9 @@ public:
     void replaceText(const QString &contents) const;
 
 private:
-    const TextEditorTab *owner_ = nullptr;
-    TextEditorTab *mutableOwner_ = nullptr;
+    QString tr(const char *text) const;
+    bool canEdit() const;
+
+    BlockEditorSourceContext context_;
 };
 }

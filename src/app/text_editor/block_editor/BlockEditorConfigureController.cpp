@@ -55,7 +55,7 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
                 return;
             }
             lines[lineNumber - 1] = updatedLine.value();
-            BlockEditorSourceController(owner_).replaceWithLines(contents, lines);
+            BlockEditorSourceController(owner_->blockEditorSourceContext()).replaceWithLines(contents, lines);
             return;
         }
     }
@@ -80,7 +80,7 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
             return;
         }
 
-        BlockEditorSourceController(owner_).replaceWithLines(nextContents, nextLines);
+        BlockEditorSourceController(owner_->blockEditorSourceContext()).replaceWithLines(nextContents, nextLines);
 
         if (dataResult->schemaMismatchDetected) {
             QMessageBox::information(owner_,
@@ -102,7 +102,7 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
         }
         lines[lineNumber - 1] = updatedLine.value();
 
-        BlockEditorSourceController(owner_).replaceWithLines(contents, lines);
+        BlockEditorSourceController(owner_->blockEditorSourceContext()).replaceWithLines(contents, lines);
         return;
     }
 

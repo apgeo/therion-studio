@@ -30,7 +30,7 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
     if (owner_ == nullptr || owner_->tearingDown_) {
         return false;
     }
-    const BlockEditorSourceController source(owner_);
+    const BlockEditorSourceController source(owner_->blockEditorSourceContext());
     if (lineNumber <= 0 || !source.hasEditor()) {
         owner_->clearBlockDetailsPane();
         return false;

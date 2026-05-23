@@ -71,20 +71,7 @@ namespace TherionStudio
 TextEditorTab::TextEditorTab(QWidget *parent)
     : QWidget(parent)
 {
-    contextHelpController_ = std::make_unique<TextEditorContextHelpController>(this);
-    blockDetailsOptionArgsController_ = std::make_unique<BlockEditorOptionArgsController>(this);
-    blockDetailsHelpController_ = std::make_unique<BlockEditorDetailsHelpController>(this);
-    blockDetailsLineBuildService_ = std::make_unique<BlockEditorLineBuildService>(this);
-    blockDetailsApplyStateController_ = std::make_unique<BlockEditorApplyStateController>(this);
-    blockDetailsApplyExecutor_ = std::make_unique<BlockEditorApplyExecutor>(this);
-    blockDetailsSelectionDetailsController_ = std::make_unique<BlockEditorSelectionDetailsController>(this);
-    blockDetailsPaneController_ = std::make_unique<BlockEditorDetailsPaneController>(this);
-    blockToolboxController_ = std::make_unique<BlockEditorToolboxController>(this);
-    blockDetailsToolboxDetailsController_ = std::make_unique<BlockEditorToolboxDetailsController>(this);
-    blockDetailsCanvasSelectionController_ = std::make_unique<BlockEditorCanvasSelectionController>(this);
-    blockDetailsMovePreviewController_ = std::make_unique<BlockEditorMovePreviewController>(this);
-    blockDetailsCanvasBoundaryController_ = std::make_unique<BlockEditorCanvasBoundaryController>(this);
-    blockDetailsCanvasRebuildController_ = std::make_unique<BlockEditorCanvasRebuildController>(this);
+    buildContextHelpController();
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -112,7 +99,20 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     modeLayout->addStretch(1);
     modeRow_->setMaximumHeight(modeSelectorRequestedVisible_ ? QWIDGETSIZE_MAX : 0);
 
+    blockToolboxController_ = std::make_unique<BlockEditorToolboxController>(this);
     buildBlockEditorPanel();
+    buildBlockDetailsOptionArgsController();
+    buildBlockDetailsHelpController();
+    buildBlockDetailsLineBuildService();
+    buildBlockDetailsApplyStateController();
+    buildBlockDetailsApplyExecutor();
+    blockDetailsSelectionDetailsController_ = std::make_unique<BlockEditorSelectionDetailsController>(this);
+    blockDetailsPaneController_ = std::make_unique<BlockEditorDetailsPaneController>(this);
+    blockDetailsToolboxDetailsController_ = std::make_unique<BlockEditorToolboxDetailsController>(this);
+    blockDetailsCanvasSelectionController_ = std::make_unique<BlockEditorCanvasSelectionController>(this);
+    blockDetailsMovePreviewController_ = std::make_unique<BlockEditorMovePreviewController>(this);
+    blockDetailsCanvasBoundaryController_ = std::make_unique<BlockEditorCanvasBoundaryController>(blockEditorCanvasBoundaryContext());
+    blockDetailsCanvasRebuildController_ = std::make_unique<BlockEditorCanvasRebuildController>(this);
     buildAppearanceController();
 
     editorModeStack_ = new QStackedWidget(this);

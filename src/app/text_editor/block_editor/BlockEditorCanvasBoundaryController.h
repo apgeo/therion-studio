@@ -1,19 +1,27 @@
 #pragma once
 
+#include <QList>
 #include <QPointF>
+
+class QGraphicsLineItem;
+class QGraphicsScene;
 
 namespace TherionStudio
 {
-class TextEditorTab;
+struct BlockEditorCanvasBoundaryContext
+{
+    QGraphicsScene *scene = nullptr;
+    const QList<QGraphicsLineItem *> *containerBoundaryGuideItems = nullptr;
+};
 
 class BlockEditorCanvasBoundaryController final
 {
 public:
-    explicit BlockEditorCanvasBoundaryController(TextEditorTab *owner);
+    explicit BlockEditorCanvasBoundaryController(BlockEditorCanvasBoundaryContext context);
 
     int resolveEndHintContainerStartLineAtScenePos(const QPointF &scenePos) const;
 
 private:
-    TextEditorTab *owner_ = nullptr;
+    BlockEditorCanvasBoundaryContext context_;
 };
 }

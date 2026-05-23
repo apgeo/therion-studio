@@ -95,6 +95,6 @@ void BlockEditorMoveController::moveBlock(int lineNumber, const QPointF &scenePo
         return;
     }
 
-    BlockEditorSourceController(owner_).replaceWithLines(contents, rewriteResult.lines);
+    BlockEditorSourceController(owner_->blockEditorSourceContext()).replaceWithLines(contents, rewriteResult.lines);
 }
 }

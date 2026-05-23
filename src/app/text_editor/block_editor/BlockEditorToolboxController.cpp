@@ -148,6 +148,9 @@ void BlockEditorToolboxController::populateBlockToolbox()
     contextsToShow.erase(std::remove_if(contextsToShow.begin(),
                                         contextsToShow.end(),
                                         [this](const QString &contextToken) {
+                                            if (contextToken == QStringLiteral("map")) {
+                                                return false;
+                                            }
                                             QStringList candidates = (*context_.commandMetadata).contextCommandTokens.value(contextToken);
                                             if (contextToken == QStringLiteral("none")) {
                                                 appendUniqueList(candidates, (*context_.commandMetadata).contextCommandTokens.value(QStringLiteral("none")));
@@ -165,6 +168,9 @@ void BlockEditorToolboxController::populateBlockToolbox()
         }
         appendUniqueList(sectionCommands, (*context_.commandMetadata).contextCommandTokens.value(QStringLiteral("all")));
         appendUnique(sectionCommands, QStringLiteral("comment"));
+        if (contextToken == QStringLiteral("map")) {
+            appendUnique(sectionCommands, mapObjectReferenceKind());
+        }
 
         QStringList visibleCommands;
         for (const QString &command : sectionCommands) {
@@ -189,7 +195,9 @@ void BlockEditorToolboxController::populateBlockToolbox()
                 continue;
             }
 
-            const QString label = labelForCommand(normalizedCommand);
+            const QString label = isMapObjectReferenceKind(normalizedCommand)
+                ? translate("Object Reference")
+                : labelForCommand(normalizedCommand);
             const QString searchable = normalizedCommand + QStringLiteral(" ") + label.toLower();
             if (!filterText.isEmpty() && !searchable.contains(filterText)) {
                 continue;
@@ -211,7 +219,9 @@ void BlockEditorToolboxController::populateBlockToolbox()
         ++insertedRows;
 
         for (const QString &commandToken : visibleCommands) {
-            const QString label = labelForCommand(commandToken);
+            const QString label = isMapObjectReferenceKind(commandToken)
+                ? translate("Object Reference")
+                : labelForCommand(commandToken);
             auto *item = new QListWidgetItem(QStringLiteral("  %1").arg(label), toolboxList());
             item->setData(Qt::UserRole, commandToken);
             item->setToolTip(translate("Drag to canvas."));

@@ -2,6 +2,7 @@
 
 #include "BlockEditorCommandOptionParser.h"
 #include "BlockEditorDetailsSupport.h"
+#include "BlockEditorDirectiveRules.h"
 #include "../ContextHelpController.h"
 #include "../TextEditorCommandMetadata.h"
 
@@ -21,6 +22,8 @@
 
 namespace TherionStudio
 {
+using namespace BlockEditorDirectiveRules;
+
 BlockEditorSelectionDetailsController::BlockEditorSelectionDetailsController(BlockEditorSelectionDetailsContext context)
     : context_(std::move(context))
 {
@@ -107,7 +110,9 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         if (context_.setDetailsMode) { context_.setDetailsMode(BlockEditorSelectionDetailsMode::Unsupported); }
     }
 
-    *context_.baseStatusText = tr("Command: %1").arg(normalizedKind);
+    *context_.baseStatusText = isMapObjectReferenceKind(normalizedKind)
+        ? tr("Object Reference")
+        : tr("Command: %1").arg(normalizedKind);
     if (context_.statusLabel != nullptr) {
         context_.statusLabel->setStyleSheet(QString());
         context_.statusLabel->setText(*context_.baseStatusText);
@@ -377,18 +382,22 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         }
         const bool hasSecondaryArgument = argumentSignatures.size() > 1;
 
-        QString currentValue = parsedLine.tokens.size() > 1 ? parsedLine.tokens.at(1) : QString();
+        QString currentValue = isMapObjectReferenceKind(normalizedKind)
+            ? parsedLine.tokens.value(0)
+            : (parsedLine.tokens.size() > 1 ? parsedLine.tokens.at(1) : QString());
         QString secondaryValue;
-        if (hasSecondaryArgument && parsedLine.tokens.size() > 2) {
+        if (!isMapObjectReferenceKind(normalizedKind) && hasSecondaryArgument && parsedLine.tokens.size() > 2) {
             secondaryValue = parsedLine.tokens.mid(2).join(QLatin1Char(' '));
-        } else if (!hasSecondaryArgument) {
+        } else if (!isMapObjectReferenceKind(normalizedKind) && !hasSecondaryArgument) {
             currentValue = parsedLine.tokens.size() > 1
                 ? parsedLine.tokens.mid(1).join(QLatin1Char(' '))
                 : QString();
         }
 
         if (context_.primaryFieldLabel != nullptr) {
-            if ((*context_.commandMetadata).commandPrimaryValueIsPerson.value(normalizedKind, false)) {
+            if (isMapObjectReferenceKind(normalizedKind)) {
+                context_.primaryFieldLabel->setText(tr("Target"));
+            } else if ((*context_.commandMetadata).commandPrimaryValueIsPerson.value(normalizedKind, false)) {
                 context_.primaryFieldLabel->setText(tr("Person"));
             } else if (!argumentSignatures.isEmpty()) {
                 context_.primaryFieldLabel->setText(blockArgumentLabelFromSignature(argumentSignatures.first()));

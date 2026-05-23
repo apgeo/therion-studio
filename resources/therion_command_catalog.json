@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generated_at_utc": "2026-05-23T18:47:53.492900+00:00",
+    "generated_at_utc": "2026-05-23T23:13:36.503174+00:00",
     "generator_version": "2",
     "source_repository": "snapshot-copy",
     "source_reference": "snapshot-copy",
@@ -218,12 +218,14 @@
         "|break|"
       ],
       "contexts": [
-        "centerline"
+        "centerline",
+        "map"
       ],
       "arguments": [],
       "options": [],
       "dependencies": [
-        "context: centerline"
+        "context: centerline",
+        "context: map"
       ],
       "allowed_values": [],
       "block": {

@@ -56,12 +56,54 @@ QHash<QString, QString> gBlockCloseToOpenMap = invertBlockOpenCloseMap(gBlockOpe
 
 namespace TherionStudio::BlockEditorDirectiveRules
 {
+QString mapObjectReferenceKind()
+{
+    return QStringLiteral("__map_object_reference");
+}
+
+bool isMapObjectReferenceKind(const QString &kind)
+{
+    return normalizeDirectiveToken(kind) == mapObjectReferenceKind();
+}
+
 QString blockDisplayName(const TherionParsedLine &parsedLine)
 {
     if (parsedLine.tokens.size() >= 2) {
         return parsedLine.tokens.at(1);
     }
     return QString();
+}
+
+QString blockDisplayNameForKind(const QString &kind, const TherionParsedLine &parsedLine)
+{
+    if (isMapObjectReferenceKind(kind)) {
+        return parsedLine.tokens.isEmpty() ? QString() : parsedLine.tokens.first();
+    }
+    return blockDisplayName(parsedLine);
+}
+
+QString blockDisplayKindLabel(const QString &kind)
+{
+    if (isMapObjectReferenceKind(kind)) {
+        return QObject::tr("Object Reference");
+    }
+    return kind;
+}
+
+bool isMapObjectReferenceCandidateLine(const QString &activeScope,
+                                       const TherionParsedLine &parsedLine,
+                                       bool commandDirective)
+{
+    if (normalizeDirectiveToken(activeScope) != QStringLiteral("map") || commandDirective) {
+        return false;
+    }
+    const QString directive = normalizeDirectiveToken(parsedLine.directive);
+    if (directive.isEmpty()
+        || isBlockOpeningDirective(directive)
+        || isBlockClosingDirective(directive)) {
+        return false;
+    }
+    return !parsedLine.tokens.isEmpty();
 }
 
 void resetCatalogBlockDirectiveMetadataToDefaults()

@@ -29,6 +29,8 @@ QStringList BlockEditorInsertionTemplateBuilder::buildLines(const QString &norma
     QStringList linesToInsert;
     if (normalizedKind == QStringLiteral("comment")) {
         linesToInsert << QStringLiteral("%1#").arg(indent);
+    } else if (isMapObjectReferenceKind(normalizedKind)) {
+        linesToInsert << QStringLiteral("%1new-object").arg(indent);
     } else if (normalizedKind == QStringLiteral("data")) {
         linesToInsert << QStringLiteral("%1data").arg(indent);
     } else if (isContainerBlockDirective(normalizedKind)) {

@@ -861,6 +861,40 @@ def annotate_block_metadata(commands: list[dict[str, Any]]) -> list[dict[str, st
     return pairs
 
 
+def apply_map_body_command_contexts(catalog: dict[str, Any]) -> None:
+    commands = catalog.get("commands", [])
+    commands_by_name = {
+        normalize_directive_token(command.get("name", "")): command
+        for command in commands
+        if isinstance(command, dict)
+    }
+    map_command = commands_by_name.get("map")
+    if not map_command:
+        return
+
+    map_syntax = " ".join(map_command.get("syntax", [])).lower()
+    if not map_syntax:
+        return
+
+    for option in map_command.get("options", []):
+        option_name = normalize_whitespace(option.get("name", ""))
+        keyword = symbol_keyword_from_token(option_name.split(" ", 1)[0])
+        if not keyword:
+            continue
+        target_command = commands_by_name.get(keyword)
+        if target_command is None:
+            continue
+        if option.get("description", "").strip():
+            continue
+        if re.search(rf"\b{re.escape(keyword)}\b", map_syntax) is None:
+            continue
+
+        contexts = target_command.setdefault("contexts", [])
+        append_unique(contexts, "map")
+        dependencies = target_command.setdefault("dependencies", [])
+        append_unique(dependencies, "context: map")
+
+
 def apply_overrides(catalog: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
     commands_by_name = {command["name"]: command for command in catalog["commands"]}
     for command_name, patch in overrides.get("command_patches", {}).items():
@@ -912,7 +946,7 @@ def build_catalog(inputs: list[Path], source_repo: str, source_ref: str) -> dict
     sorted_commands = sorted(deduped.values(), key=lambda item: item["name"].lower())
     block_pairs = annotate_block_metadata(sorted_commands)
 
-    return {
+    catalog = {
         "metadata": {
             "generated_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
             "generator_version": "2",
@@ -923,6 +957,8 @@ def build_catalog(inputs: list[Path], source_repo: str, source_ref: str) -> dict
         "block_pairs": block_pairs,
         "commands": sorted_commands,
     }
+    apply_map_body_command_contexts(catalog)
+    return catalog
 
 
 def main() -> int:

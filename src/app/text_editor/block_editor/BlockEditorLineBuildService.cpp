@@ -1,5 +1,6 @@
 #include "BlockEditorLineBuildService.h"
 
+#include "BlockEditorDirectiveRules.h"
 #include "../TextEditorCommandMetadata.h"
 #include "../TextEditorOptionValidation.h"
 
@@ -15,6 +16,8 @@
 
 namespace TherionStudio
 {
+using namespace BlockEditorDirectiveRules;
+
 BlockEditorLineBuildService::BlockEditorLineBuildService(BlockEditorLineBuildContext context)
     : context_(std::move(context))
 {
@@ -100,7 +103,9 @@ bool BlockEditorLineBuildService::buildUpdatedLine(QString *updatedLine, QString
             }
             return false;
         }
-        if (context_.commandMetadata->commandPrimaryValueIsPerson.value(normalizedKind, false)) {
+        if (isMapObjectReferenceKind(normalizedKind)) {
+            result = QStringLiteral("%1%2").arg(indent, updatedValue);
+        } else if (context_.commandMetadata->commandPrimaryValueIsPerson.value(normalizedKind, false)) {
             result += QStringLiteral(" ") + serializeTherionArgumentToken(updatedValue);
         } else {
             result += QStringLiteral(" ") + updatedValue;

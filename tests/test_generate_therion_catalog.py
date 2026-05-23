@@ -248,6 +248,11 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         self.assertIn("splay", flags_values)
         self.assertNotIn("data", flags_values)
 
+    def test_map_body_break_is_available_in_map_context(self) -> None:
+        break_command = self.commands_by_name["break"]
+        self.assertIn("centerline", break_command.get("contexts", []))
+        self.assertIn("map", break_command.get("contexts", []))
+
     def test_symbol_type_subtype_matrix_presence(self) -> None:
         point = self.commands_by_name["point"]
         line = self.commands_by_name["line"]

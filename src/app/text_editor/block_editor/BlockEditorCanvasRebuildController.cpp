@@ -170,7 +170,9 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
 
         const bool commandDirective = !isBlockOpeningDirective(directive)
             && isCommandDirectiveInScope(directive, activeScope);
-        if (!isBlockOpeningDirective(directive) && !commandDirective) {
+        const bool mapObjectReference =
+            isMapObjectReferenceCandidateLine(activeScope, parsedLine, commandDirective);
+        if (!isBlockOpeningDirective(directive) && !commandDirective && !mapObjectReference) {
             continue;
         }
 
@@ -179,7 +181,11 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
             parentItem = stack.last().item;
         }
 
-        const QString name = blockDisplayName(parsedLine);
+        if (mapObjectReference) {
+            directive = mapObjectReferenceKind();
+        }
+
+        const QString name = blockDisplayNameForKind(directive, parsedLine);
         const QString inlineComment = parsedLine.commentStart >= 0 ? parsedLine.commentText.trimmed() : QString();
         const bool encodingDirective = isEncodingDirective(directive);
         const bool isContainerInstance = isContainerDirectiveInstance(directive, parsedLine);

@@ -162,9 +162,9 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
 
         const bool commandDirective = !isBlockOpeningDirective(directive)
             && context_.isCommandDirectiveInScope(directive, activeScope);
-        if (commandDirective) {
+        if (commandDirective || isMapObjectReferenceCandidateLine(activeScope, parsedLine, commandDirective)) {
             BlockEditorDocumentEntry entry;
-            entry.kind = directive;
+            entry.kind = commandDirective ? directive : mapObjectReferenceKind();
             entry.startLine = currentLineNumber;
             entry.endLine = currentLineNumber;
             entry.parentLine = openStack.isEmpty() ? 0 : openStack.last().lineNumber;

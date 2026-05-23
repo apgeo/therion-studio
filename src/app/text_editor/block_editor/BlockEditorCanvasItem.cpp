@@ -25,6 +25,9 @@ QColor blockEditorCanvasBaseColorForDirective(const QString &directive)
     if (normalizedKind == QStringLiteral("map")) {
         return QColor(QStringLiteral("#d5f3f0"));
     }
+    if (BlockEditorDirectiveRules::isMapObjectReferenceKind(normalizedKind)) {
+        return QColor(QStringLiteral("#fff0c2"));
+    }
     return QColor(QStringLiteral("#d8e9ff"));
 }
 
@@ -128,7 +131,8 @@ void BlockCanvasItem::paint(QPainter *painter,
         painter->drawText(commentBadgeRect, Qt::AlignCenter, QStringLiteral("#"));
     }
 
-    const QString title = name_.isEmpty() ? kind_ : QStringLiteral("%1: %2").arg(kind_, name_);
+    const QString kindLabel = BlockEditorDirectiveRules::blockDisplayKindLabel(kind_);
+    const QString title = name_.isEmpty() ? kindLabel : QStringLiteral("%1: %2").arg(kindLabel, name_);
     painter->setPen(QColor(QStringLiteral("#1f1f1f")));
     qreal textRight = deletable_ ? deleteButtonRect.left() - 16.0 : boundingRect().right() - 10.0;
     if (!commentBadgeRect.isNull()) {

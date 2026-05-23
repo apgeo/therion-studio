@@ -1,5 +1,6 @@
 #include "BlockEditorToolboxDetailsController.h"
 
+#include "BlockEditorDirectiveRules.h"
 #include "../ContextHelpController.h"
 #include "../TextEditorCommandMetadata.h"
 
@@ -43,7 +44,10 @@ void BlockEditorToolboxDetailsController::showToolboxCommandDetails(const QStrin
         context_.scene->clearSelection();
     }
 
-    context_.beginToolboxCommandDetails(normalizedCommand, tr("Command: %1").arg(normalizedCommand));
+    const bool mapReference = BlockEditorDirectiveRules::isMapObjectReferenceKind(normalizedCommand);
+    context_.beginToolboxCommandDetails(normalizedCommand,
+                                        mapReference ? tr("Object Reference")
+                                                     : tr("Command: %1").arg(normalizedCommand));
     if (context_.editPanel != nullptr) {
         context_.editPanel->setVisible(false);
     }
@@ -110,12 +114,18 @@ void BlockEditorToolboxDetailsController::showToolboxCommandDetails(const QStrin
         context_.applyButton->setEnabled(false);
     }
     if (context_.helpBrowser != nullptr && context_.commandMetadata != nullptr) {
-        const TherionHelpEntry entry = context_.commandMetadata->helpEntries.value(normalizedCommand);
-        context_.helpBrowser->setHtml(
-            ContextHelpController::renderHelpSummaryHtml(
-                normalizedCommand,
-                entry.summary,
-                tr("No summary is available for this command.")));
+        if (mapReference) {
+            context_.helpBrowser->setHtml(tr("<p><b>Object Reference</b></p>"
+                                             "<p>References an existing scrap or map from inside a <code>map</code> block. "
+                                             "The block serializes as a single map body line, for example <code>scrap-a</code>.</p>"));
+        } else {
+            const TherionHelpEntry entry = context_.commandMetadata->helpEntries.value(normalizedCommand);
+            context_.helpBrowser->setHtml(
+                ContextHelpController::renderHelpSummaryHtml(
+                    normalizedCommand,
+                    entry.summary,
+                    tr("No summary is available for this command.")));
+        }
     }
     if (context_.refreshOptionArgumentEditors) {
         context_.refreshOptionArgumentEditors();

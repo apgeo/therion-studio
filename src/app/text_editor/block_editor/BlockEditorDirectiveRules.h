@@ -12,6 +12,13 @@ struct TherionParsedLine;
 namespace BlockEditorDirectiveRules
 {
 QString blockDisplayName(const TherionParsedLine &parsedLine);
+QString blockDisplayNameForKind(const QString &kind, const TherionParsedLine &parsedLine);
+QString blockDisplayKindLabel(const QString &kind);
+QString mapObjectReferenceKind();
+bool isMapObjectReferenceKind(const QString &kind);
+bool isMapObjectReferenceCandidateLine(const QString &activeScope,
+                                       const TherionParsedLine &parsedLine,
+                                       bool commandDirective);
 void resetCatalogBlockDirectiveMetadataToDefaults();
 void applyCatalogBlockDirectiveMetadata(const QJsonObject &catalogObject);
 bool isBlockOpeningDirective(const QString &directive);

@@ -973,6 +973,9 @@ QString TextEditorTab::normalizeCompletionContext(const QString &contextToken) c
 
 bool TextEditorTab::isCompatibleChildKindForBlocks(const QString &parentKind, const QString &childKind) const
 {
+    if (BlockEditorDirectiveRules::isMapObjectReferenceKind(childKind)) {
+        return normalizeDirective(parentKind) == QStringLiteral("map");
+    }
     if (rawEditorCompletionController_ == nullptr) {
         return false;
     }

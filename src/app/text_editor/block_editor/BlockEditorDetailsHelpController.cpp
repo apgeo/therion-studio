@@ -1,5 +1,6 @@
 #include "BlockEditorDetailsHelpController.h"
 
+#include "BlockEditorDirectiveRules.h"
 #include "../ContextHelpController.h"
 #include "../TextEditorCommandMetadata.h"
 
@@ -98,6 +99,12 @@ void BlockEditorDetailsHelpController::updateHelpForCurrentFocus()
     }
 
     const QString normalizedKind = context_.normalizeDirectiveToken(selectedKind);
+    if (BlockEditorDirectiveRules::isMapObjectReferenceKind(normalizedKind)) {
+        context_.helpBrowser->setHtml(tr("<p><b>Object Reference</b></p>"
+                                         "<p>References an existing scrap or map from inside a <code>map</code> block. "
+                                         "Edit the target to the referenced object name. Unresolved names are preserved so incomplete maps stay round-trip safe.</p>"));
+        return;
+    }
     const TherionHelpEntry commandHelpEntry = context_.commandMetadata->helpEntries.value(normalizedKind);
     const QString commandHelpHtml = ContextHelpController::renderHelpHtml(normalizedKind,
                                                                            commandHelpEntry.summary,

@@ -349,6 +349,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/check.svg
     resources/icons/lucide/code.svg
     resources/icons/lucide/cog.svg
+    resources/icons/lucide/compass.svg
     resources/icons/lucide/external-link.svg
     resources/icons/lucide/grip-vertical.svg
     resources/icons/lucide/eye.svg

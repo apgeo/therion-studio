@@ -301,7 +301,7 @@ Main window status bar shows:
 ### 5.4 Use Structure Sidebar
 
 Structure pane shows simplified hierarchy with only `Survey` -> `Map` -> `Scrap` entries (no project-root or summary rows in the tree).
-Each row shows an icon by item kind (`Survey`, `Map`, `Scrap`) for quicker scanning.
+Rows use item-kind icons for quicker scanning: compass for `Survey`, map for `Map`, and puzzle for `Scrap`.
 When a `map ... endmap` block references scraps, those scraps are shown under that map node.
 Structure updates from in-memory tab content, so unsaved edits (for example deleting a scrap block) are reflected immediately.
 Selecting an entry:

@@ -68,6 +68,9 @@ QString closingDirectiveFor(const QString &directive)
     if (directive == QStringLiteral("area")) {
         return QStringLiteral("endarea");
     }
+    if (directive == QStringLiteral("scrap")) {
+        return QStringLiteral("endscrap");
+    }
     return QString();
 }
 
@@ -130,7 +133,16 @@ MapEditorObjectMovePlan MapEditorObjectMovePlanner::planMove(const QString &text
     }
 
     const TherionParsedLine *targetStart = parsedLineAt(parsedLines, targetLineNumber);
-    if (targetStart == nullptr || !isMovableMapObjectDirective(targetStart->directive)) {
+    if (targetStart == nullptr) {
+        plan.errorMessage = QStringLiteral("The target line is not a movable point, line, area, or scrap object.");
+        return plan;
+    }
+    if (position == MapEditorObjectMovePosition::IntoTargetScrap) {
+        if (targetStart->directive != QStringLiteral("scrap")) {
+            plan.errorMessage = QStringLiteral("The target line is not a scrap object.");
+            return plan;
+        }
+    } else if (!isMovableMapObjectDirective(targetStart->directive)) {
         plan.errorMessage = QStringLiteral("The target line is not a movable point, line, or area object.");
         return plan;
     }
@@ -147,9 +159,18 @@ MapEditorObjectMovePlan MapEditorObjectMovePlanner::planMove(const QString &text
         return plan;
     }
 
-    const int insertBeforeLineOriginal = position == MapEditorObjectMovePosition::BeforeTarget
-        ? targetStart->lineNumber
-        : targetEndLine + 1;
+    int insertBeforeLineOriginal = 0;
+    switch (position) {
+    case MapEditorObjectMovePosition::BeforeTarget:
+        insertBeforeLineOriginal = targetStart->lineNumber;
+        break;
+    case MapEditorObjectMovePosition::AfterTarget:
+        insertBeforeLineOriginal = targetEndLine + 1;
+        break;
+    case MapEditorObjectMovePosition::IntoTargetScrap:
+        insertBeforeLineOriginal = targetEndLine;
+        break;
+    }
 
     plan.sourceStartLine = sourceStart->lineNumber;
     plan.sourceEndLine = sourceEndLine;

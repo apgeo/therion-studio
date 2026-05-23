@@ -305,6 +305,7 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorTabCanvasEditContext.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundContext.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorObjectContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabInspectorObjectEvents.cpp
     src/app/text_editor/map_editor/MapEditorTabInteractiveDrawContext.cpp
     src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp
     src/app/text_editor/map_editor/MapEditorTabSceneContexts.cpp
@@ -345,6 +346,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/code.svg
     resources/icons/lucide/cog.svg
     resources/icons/lucide/external-link.svg
+    resources/icons/lucide/grip-vertical.svg
     resources/icons/lucide/eye.svg
     resources/icons/lucide/eye-off.svg
     resources/icons/lucide/folder-open.svg
@@ -715,6 +717,7 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorTabCanvasEditContext.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundContext.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorObjectContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabInspectorObjectEvents.cpp
     src/app/text_editor/map_editor/MapEditorTabInteractiveDrawContext.cpp
     src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp
     src/app/text_editor/map_editor/MapEditorTabSceneContexts.cpp

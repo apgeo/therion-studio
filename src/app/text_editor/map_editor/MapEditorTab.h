@@ -322,6 +322,7 @@ private:
     void clearInspectorObjectSelection(const QSet<int> &suppressAutoReselectLineNumbers = {});
     void handleInspectorObjectSelectionChanged(const QModelIndex &current);
     void handleInspectorObjectClicked(const QModelIndex &index);
+    std::optional<bool> handleInspectorObjectViewportEvent(QEvent *event);
     void applyInspectorObjectVisibility();
     void configureInspectorBackgroundLayerTreeColumns();
     void handleInspectorBackgroundLayerSelectionChanged(const QModelIndex &current);
@@ -378,6 +379,7 @@ private:
     QSet<int> hiddenInspectorObjectLines_;
     QPersistentModelIndex inspectorObjectPressedNameIndex_;
     bool inspectorObjectPressedWasSelected_ = false;
+    QPointer<QWidget> inspectorObjectDropIndicator_;
     int lastInspectorClickedObjectLineNumber_ = 0;
     QSet<int> suppressedInspectorAutoReselectLineNumbers_;
     QLabel *objectDetailsSelectionLabel_ = nullptr;

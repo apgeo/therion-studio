@@ -29,18 +29,22 @@ struct MapEditorInspectorObjectContext
     bool *updatingSelection = nullptr;
     int *lastClickedLineNumber = nullptr;
     QSet<int> *suppressedAutoReselectLineNumbers = nullptr;
+    bool *commandApplyInProgress = nullptr;
     int *selectedObjectLineNumber = nullptr;
     int *selectedObjectVertexIndex = nullptr;
     QString *selectedObjectKind = nullptr;
     std::optional<QPointF> *selectedObjectCoordinate = nullptr;
+    QString *toolbarStatusNote = nullptr;
 
     std::function<QString(const char *)> translate;
     std::function<QString()> filePath;
     std::function<int()> currentLineNumber;
+    std::function<void()> refreshToolbarSummary;
     std::function<void()> refreshObjectDetailsPanel;
     std::function<void()> updateCommandSurfaceState;
     std::function<void()> updateGeometrySelectionPresentation;
     std::function<void(int, int)> syncMapSelectionFromTextCursor;
     std::function<void(const QSet<int> &, bool)> selectMapLines;
+    std::function<void(const QString &, const QString &, const QString &, int)> recordSourceTextSnapshot;
 };
 }

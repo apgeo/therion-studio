@@ -43,19 +43,6 @@
 
 namespace TherionStudio
 {
-namespace
-{
-constexpr int kMapItemRole = Qt::UserRole + 120;
-constexpr int kMapItemGeometryValue = 1;
-constexpr int kInspectorSourceLineRole = Qt::UserRole + 700;
-constexpr int kInspectorSourceFileRole = Qt::UserRole + 701;
-constexpr int kInspectorObjectNameColumn = 0;
-constexpr int kInspectorObjectVisibilityColumn = 1;
-constexpr int kInspectorObjectDeleteColumn = 2;
-constexpr int kInspectorObjectColumnCount = 3;
-
-}
-
 bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
 {
     if (event != nullptr && watched == qApp) {
@@ -90,56 +77,8 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
     }
 
     if (mapObjectsTree_ != nullptr && watched == mapObjectsTree_->viewport()) {
-        if (event->type() == QEvent::MouseButtonRelease) {
-            auto *mouseEvent = static_cast<QMouseEvent *>(event);
-            if (mouseEvent->button() == Qt::LeftButton) {
-                const QModelIndex index = mapObjectsTree_->indexAt(mouseEvent->pos());
-                const QModelIndex objectIndex = index.sibling(index.row(), kInspectorObjectNameColumn);
-                if (index.column() == kInspectorObjectNameColumn
-                    && objectIndex.isValid()
-                    && mapObjectsModel_ != nullptr
-                    && mapObjectsModel_->rowCount(objectIndex) > 0
-                    && mouseEvent->pos().x() < mapObjectsTree_->visualRect(objectIndex).left() + mapObjectsTree_->indentation()) {
-                    return QWidget::eventFilter(watched, event);
-                }
-                if (index.isValid()
-                    && (index.column() == kInspectorObjectNameColumn
-                        || index.column() == kInspectorObjectVisibilityColumn
-                        || index.column() == kInspectorObjectDeleteColumn)) {
-                    event->accept();
-                    return true;
-                }
-            }
-        }
-
-        if (event->type() == QEvent::MouseButtonPress) {
-            inspectorObjectPressedNameIndex_ = QPersistentModelIndex();
-            inspectorObjectPressedWasSelected_ = false;
-
-            auto *mouseEvent = static_cast<QMouseEvent *>(event);
-            if (mouseEvent->button() == Qt::LeftButton && mapObjectsTree_->selectionModel() != nullptr) {
-                const QModelIndex index = mapObjectsTree_->indexAt(mouseEvent->pos());
-                const QModelIndex objectIndex = index.sibling(index.row(), kInspectorObjectNameColumn);
-                if (index.column() == kInspectorObjectNameColumn
-                    && objectIndex.isValid()
-                    && mapObjectsModel_ != nullptr
-                    && mapObjectsModel_->rowCount(objectIndex) > 0
-                    && mouseEvent->pos().x() < mapObjectsTree_->visualRect(objectIndex).left() + mapObjectsTree_->indentation()) {
-                    return QWidget::eventFilter(watched, event);
-                }
-                if (index.isValid()
-                    && (index.column() == kInspectorObjectNameColumn
-                        || index.column() == kInspectorObjectVisibilityColumn
-                        || index.column() == kInspectorObjectDeleteColumn)) {
-                    if (index.column() == kInspectorObjectNameColumn) {
-                        inspectorObjectPressedNameIndex_ = QPersistentModelIndex(objectIndex);
-                        inspectorObjectPressedWasSelected_ = mapObjectsTree_->selectionModel()->isSelected(objectIndex);
-                    }
-                    handleInspectorObjectClicked(index);
-                    event->accept();
-                    return true;
-                }
-            }
+        if (const std::optional<bool> inspectorResult = handleInspectorObjectViewportEvent(event)) {
+            return inspectorResult.value();
         }
         return QWidget::eventFilter(watched, event);
     }

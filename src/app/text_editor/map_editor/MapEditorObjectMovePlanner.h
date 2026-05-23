@@ -7,7 +7,8 @@ namespace TherionStudio
 enum class MapEditorObjectMovePosition
 {
     BeforeTarget,
-    AfterTarget
+    AfterTarget,
+    IntoTargetScrap
 };
 
 struct MapEditorObjectMovePlan

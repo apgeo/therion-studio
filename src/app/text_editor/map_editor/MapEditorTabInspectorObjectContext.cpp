@@ -18,10 +18,12 @@ MapEditorInspectorObjectContext MapEditorTab::inspectorObjectContext()
         .updatingSelection = &updatingMapInspectorObjectSelection_,
         .lastClickedLineNumber = &lastInspectorClickedObjectLineNumber_,
         .suppressedAutoReselectLineNumbers = &suppressedInspectorAutoReselectLineNumbers_,
+        .commandApplyInProgress = &mapCommandApplyInProgress_,
         .selectedObjectLineNumber = &selectedObjectLineNumber_,
         .selectedObjectVertexIndex = &selectedObjectVertexIndex_,
         .selectedObjectKind = &selectedObjectKind_,
         .selectedObjectCoordinate = &selectedObjectCoordinate_,
+        .toolbarStatusNote = &toolbarStatusNote_,
         .translate = [this](const char *text) {
             return tr(text);
         },
@@ -30,6 +32,9 @@ MapEditorInspectorObjectContext MapEditorTab::inspectorObjectContext()
         },
         .currentLineNumber = [this]() {
             return currentLineNumber();
+        },
+        .refreshToolbarSummary = [this]() {
+            refreshToolbarSummary();
         },
         .refreshObjectDetailsPanel = [this]() {
             refreshObjectDetailsPanel();
@@ -45,6 +50,9 @@ MapEditorInspectorObjectContext MapEditorTab::inspectorObjectContext()
         },
         .selectMapLines = [this](const QSet<int> &lineNumbers, bool centerOnSelection) {
             selectMapLines(lineNumbers, centerOnSelection);
+        },
+        .recordSourceTextSnapshot = [this](const QString &label, const QString &beforeText, const QString &afterText, int insertedLineNumber) {
+            recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
         },
     };
 }

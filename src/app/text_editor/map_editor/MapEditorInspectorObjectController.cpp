@@ -2,6 +2,7 @@
 
 #include "../TextEditorTab.h"
 #include "MapEditorInspectorData.h"
+#include "MapEditorObjectMovePlanner.h"
 #include "MapEditorSceneSupport.h"
 #include "../../../core/ProjectStructureIndex.h"
 #include "../../../core/TherionDocumentParser.h"
@@ -27,10 +28,17 @@ namespace
 {
 constexpr int kInspectorSourceLineRole = Qt::UserRole + 700;
 constexpr int kInspectorSourceFileRole = Qt::UserRole + 701;
+constexpr int kInspectorObjectCategoryRole = Qt::UserRole + 702;
 constexpr int kInspectorObjectNameColumn = 0;
-constexpr int kInspectorObjectVisibilityColumn = 1;
-constexpr int kInspectorObjectDeleteColumn = 2;
-constexpr int kInspectorObjectColumnCount = 3;
+constexpr int kInspectorObjectDragColumn = 1;
+constexpr int kInspectorObjectVisibilityColumn = 2;
+constexpr int kInspectorObjectDeleteColumn = 3;
+constexpr int kInspectorObjectColumnCount = 4;
+
+bool isScrapCategory(const QString &category)
+{
+    return category == QStringLiteral("Scraps");
+}
 }
 
 MapEditorInspectorObjectController::MapEditorInspectorObjectController(MapEditorInspectorObjectContext context)
@@ -53,7 +61,7 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
     *context_.pressedWasSelected = false;
     context_.objectsModel->clear();
     context_.objectsModel->setColumnCount(kInspectorObjectColumnCount);
-    context_.objectsModel->setHorizontalHeaderLabels({translate("Objects"), QString(), QString()});
+    context_.objectsModel->setHorizontalHeaderLabels({translate("Objects"), QString(), QString(), QString()});
     configureInspectorObjectTreeColumns();
 
     const QString th2Path = context_.filePath();
@@ -99,8 +107,20 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
         entryItem->setEditable(false);
         entryItem->setData(entry.sourceFile, kInspectorSourceFileRole);
         entryItem->setData(entry.lineNumber, kInspectorSourceLineRole);
+        entryItem->setData(entry.category, kInspectorObjectCategoryRole);
         if (entry.lineNumber > 0) {
             currentObjectLines.insert(entry.lineNumber);
+        }
+
+        auto *dragItem = new QStandardItem;
+        dragItem->setEditable(false);
+        dragItem->setTextAlignment(Qt::AlignCenter);
+        dragItem->setData(entry.sourceFile, kInspectorSourceFileRole);
+        dragItem->setData(entry.lineNumber, kInspectorSourceLineRole);
+        dragItem->setData(entry.category, kInspectorObjectCategoryRole);
+        if (entry.lineNumber > 0 && !isScrapCategory(entry.category)) {
+            dragItem->setIcon(inspectorActionIcon(QStringLiteral("grip-vertical")));
+            dragItem->setToolTip(translate("Drag to move this object"));
         }
 
         auto *visibilityItem = new QStandardItem;
@@ -108,6 +128,7 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
         visibilityItem->setTextAlignment(Qt::AlignCenter);
         visibilityItem->setData(entry.sourceFile, kInspectorSourceFileRole);
         visibilityItem->setData(entry.lineNumber, kInspectorSourceLineRole);
+        visibilityItem->setData(entry.category, kInspectorObjectCategoryRole);
         if (entry.lineNumber > 0) {
             const bool visible = !context_.hiddenObjectLines->contains(entry.lineNumber);
             visibilityItem->setIcon(inspectorActionIcon(visible ? QStringLiteral("eye") : QStringLiteral("eye-off")));
@@ -119,13 +140,14 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
         deleteItem->setTextAlignment(Qt::AlignCenter);
         deleteItem->setData(entry.sourceFile, kInspectorSourceFileRole);
         deleteItem->setData(entry.lineNumber, kInspectorSourceLineRole);
+        deleteItem->setData(entry.category, kInspectorObjectCategoryRole);
         if (entry.lineNumber > 0) {
             deleteItem->setIcon(inspectorActionIcon(QStringLiteral("trash-2")));
             deleteItem->setToolTip(translate("Delete object from source"));
         }
 
         QStandardItem *parentItem = parentStack.isEmpty() ? context_.objectsModel->invisibleRootItem() : parentStack.last();
-        parentItem->appendRow({entryItem, visibilityItem, deleteItem});
+        parentItem->appendRow({entryItem, dragItem, visibilityItem, deleteItem});
         parentStack.append(entryItem);
     }
     for (auto it = context_.hiddenObjectLines->begin(); it != context_.hiddenObjectLines->end();) {
@@ -158,8 +180,10 @@ void MapEditorInspectorObjectController::configureInspectorObjectTreeColumns()
         header->setSectionsMovable(false);
         header->setMinimumSectionSize(22);
         header->setSectionResizeMode(kInspectorObjectNameColumn, QHeaderView::Stretch);
+        header->setSectionResizeMode(kInspectorObjectDragColumn, QHeaderView::Fixed);
         header->setSectionResizeMode(kInspectorObjectVisibilityColumn, QHeaderView::Fixed);
         header->setSectionResizeMode(kInspectorObjectDeleteColumn, QHeaderView::Fixed);
+        header->resizeSection(kInspectorObjectDragColumn, 24);
         header->resizeSection(kInspectorObjectVisibilityColumn, 26);
         header->resizeSection(kInspectorObjectDeleteColumn, 26);
     }
@@ -287,6 +311,7 @@ void MapEditorInspectorObjectController::handleInspectorObjectClicked(const QMod
     }
 
     if (index.column() != kInspectorObjectNameColumn
+        && index.column() != kInspectorObjectDragColumn
         && index.column() != kInspectorObjectVisibilityColumn
         && index.column() != kInspectorObjectDeleteColumn) {
         return;
@@ -329,6 +354,10 @@ void MapEditorInspectorObjectController::handleInspectorObjectClicked(const QMod
         context_.textEditor->goToLine(lineNumber);
         context_.syncMapSelectionFromTextCursor(lineNumber, context_.textEditor->currentColumnNumber());
         *context_.lastClickedLineNumber = lineNumber;
+        return;
+    }
+
+    if (index.column() == kInspectorObjectDragColumn) {
         return;
     }
 
@@ -377,6 +406,83 @@ void MapEditorInspectorObjectController::handleInspectorObjectClicked(const QMod
     if (shouldShow) {
         context_.selectMapLines(QSet<int>(subtreeLineNumbers.begin(), subtreeLineNumbers.end()), false);
     }
+}
+
+bool MapEditorInspectorObjectController::moveInspectorObject(const QModelIndex &sourceIndex, const QModelIndex &targetIndex, bool afterTarget)
+{
+    if (!sourceIndex.isValid() || !targetIndex.isValid() || context_.textEditor == nullptr) {
+        return false;
+    }
+
+    const QModelIndex sourceObjectIndex = sourceIndex.sibling(sourceIndex.row(), kInspectorObjectNameColumn);
+    const QModelIndex targetObjectIndex = targetIndex.sibling(targetIndex.row(), kInspectorObjectNameColumn);
+    const int sourceLineNumber = sourceObjectIndex.data(kInspectorSourceLineRole).toInt();
+    const int targetLineNumber = targetObjectIndex.data(kInspectorSourceLineRole).toInt();
+    if (sourceLineNumber <= 0 || targetLineNumber <= 0 || sourceLineNumber == targetLineNumber) {
+        return false;
+    }
+
+    const bool targetIsScrap = isScrapCategory(targetObjectIndex.data(kInspectorObjectCategoryRole).toString());
+    const QString beforeText = context_.textEditor->text();
+    const MapEditorObjectMovePlan movePlan = MapEditorObjectMovePlanner::planMove(beforeText,
+                                                                                  sourceLineNumber,
+                                                                                  targetLineNumber,
+                                                                                  targetIsScrap
+                                                                                      ? MapEditorObjectMovePosition::IntoTargetScrap
+                                                                                      : (afterTarget
+                                                                                             ? MapEditorObjectMovePosition::AfterTarget
+                                                                                             : MapEditorObjectMovePosition::BeforeTarget));
+    if (!movePlan.resolved) {
+        if (context_.toolbarStatusNote != nullptr) {
+            *context_.toolbarStatusNote = movePlan.errorMessage.isEmpty()
+                ? translate("Object move failed.")
+                : translate("Object move failed: %1").arg(movePlan.errorMessage);
+        }
+        if (context_.refreshToolbarSummary) {
+            context_.refreshToolbarSummary();
+        }
+        return false;
+    }
+
+    if (!movePlan.changed) {
+        if (context_.toolbarStatusNote != nullptr) {
+            *context_.toolbarStatusNote = translate("Object already at requested position.");
+        }
+        if (context_.refreshToolbarSummary) {
+            context_.refreshToolbarSummary();
+        }
+        return false;
+    }
+
+    auto applyMoveText = [&]() {
+        context_.textEditor->replaceTextForCommand(movePlan.movedText);
+        if (context_.recordSourceTextSnapshot) {
+            context_.recordSourceTextSnapshot(translate("Move Map Object"),
+                                              beforeText,
+                                              movePlan.movedText,
+                                              movePlan.insertBeforeLineAfterRemoval);
+        }
+    };
+    if (context_.commandApplyInProgress != nullptr) {
+        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+        applyMoveText();
+    } else {
+        applyMoveText();
+    }
+
+    context_.hiddenObjectLines->clear();
+    context_.textEditor->goToLine(movePlan.insertBeforeLineAfterRemoval);
+    context_.syncMapSelectionFromTextCursor(movePlan.insertBeforeLineAfterRemoval, context_.textEditor->currentColumnNumber());
+    rebuildInspectorObjectsTree();
+    syncInspectorObjectSelectionToLine(movePlan.insertBeforeLineAfterRemoval, true);
+
+    if (context_.toolbarStatusNote != nullptr) {
+        *context_.toolbarStatusNote = translate("Moved map object to line %1.").arg(movePlan.insertBeforeLineAfterRemoval);
+    }
+    if (context_.refreshToolbarSummary) {
+        context_.refreshToolbarSummary();
+    }
+    return true;
 }
 
 void MapEditorInspectorObjectController::applyInspectorObjectVisibility()

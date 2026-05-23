@@ -145,6 +145,43 @@ int runMoveAreaBetweenScrapsTest()
         : 1;
 }
 
+int runMovePointIntoScrapTest()
+{
+    const QString text = QStringLiteral(
+        "encoding utf-8\n"
+        "scrap a -projection plan\n"
+        "point 1 2 station -name P1\n"
+        "endscrap\n"
+        "scrap b -projection plan\n"
+        "point 5 6 label -text target\n"
+        "endscrap\n");
+    const QString expected = QStringLiteral(
+        "encoding utf-8\n"
+        "scrap a -projection plan\n"
+        "endscrap\n"
+        "scrap b -projection plan\n"
+        "point 5 6 label -text target\n"
+        "point 1 2 station -name P1\n"
+        "endscrap\n");
+
+    const MapEditorObjectMovePlan plan = MapEditorObjectMovePlanner::planMove(text,
+                                                                              3,
+                                                                              5,
+                                                                              MapEditorObjectMovePosition::IntoTargetScrap);
+    if (!expect(plan.resolved && plan.changed,
+                "Moving a point into a target scrap should resolve and change text.")) {
+        return 1;
+    }
+    if (!expect(plan.insertBeforeLineOriginal == 7 && plan.insertBeforeLineAfterRemoval == 6,
+                "Moving into a target scrap should insert before endscrap after source removal.")) {
+        return 1;
+    }
+    return expect(plan.movedText == expected,
+                  "Moving a point into a target scrap should append the point before the target endscrap.")
+        ? 0
+        : 1;
+}
+
 int runCrLfPreservationTest()
 {
     const QString text = QString::fromLatin1(
@@ -216,6 +253,9 @@ int main()
         return rc;
     }
     if (const int rc = runMoveAreaBetweenScrapsTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runMovePointIntoScrapTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runCrLfPreservationTest(); rc != 0) {

@@ -21,6 +21,7 @@ public:
     void clearInspectorObjectSelection(const QSet<int> &suppressAutoReselectLineNumbers = {});
     void handleInspectorObjectSelectionChanged(const QModelIndex &current);
     void handleInspectorObjectClicked(const QModelIndex &index);
+    bool moveInspectorObject(const QModelIndex &sourceIndex, const QModelIndex &targetIndex, bool afterTarget);
     void applyInspectorObjectVisibility();
 
 private:

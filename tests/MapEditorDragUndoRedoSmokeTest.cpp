@@ -10,11 +10,13 @@
 #include <QGraphicsPathItem>
 #include <QGraphicsScene>
 #include <QGraphicsView>
+#include <QIcon>
 #include <QMainWindow>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QRegularExpression>
 #include <QSet>
+#include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTreeView>
 #include <QVBoxLayout>
@@ -27,6 +29,10 @@ using namespace TherionStudio;
 
 namespace
 {
+constexpr int kInspectorSourceLineRoleForTest = Qt::UserRole + 700;
+constexpr int kInspectorObjectNameColumnForTest = 0;
+constexpr int kInspectorObjectDragColumnForTest = 1;
+
 bool expect(bool condition, const char *message)
 {
     if (!condition) {
@@ -600,6 +606,362 @@ QGraphicsPathItem *findPathItemForLine(QGraphicsScene *scene, int lineNumber, st
     }
 
     return nullptr;
+}
+
+QModelIndex findObjectTreeIndexForLine(QAbstractItemModel *model, int lineNumber, const QModelIndex &parent = QModelIndex())
+{
+    if (model == nullptr || lineNumber <= 0) {
+        return QModelIndex();
+    }
+
+    const int rowCount = model->rowCount(parent);
+    for (int row = 0; row < rowCount; ++row) {
+        const QModelIndex childIndex = model->index(row, kInspectorObjectNameColumnForTest, parent);
+        if (!childIndex.isValid()) {
+            continue;
+        }
+        if (childIndex.data(kInspectorSourceLineRoleForTest).toInt() == lineNumber) {
+            return childIndex;
+        }
+        if (const QModelIndex nestedIndex = findObjectTreeIndexForLine(model, lineNumber, childIndex);
+            nestedIndex.isValid()) {
+            return nestedIndex;
+        }
+    }
+
+    return QModelIndex();
+}
+
+void revealAncestorTabs(QWidget *widget)
+{
+    for (QWidget *ancestor = widget != nullptr ? widget->parentWidget() : nullptr;
+         ancestor != nullptr;
+         ancestor = ancestor->parentWidget()) {
+        auto *tabs = qobject_cast<QTabWidget *>(ancestor);
+        if (tabs == nullptr) {
+            continue;
+        }
+        for (int index = 0; index < tabs->count(); ++index) {
+            QWidget *page = tabs->widget(index);
+            if (page == widget || (page != nullptr && page->isAncestorOf(widget))) {
+                tabs->setCurrentIndex(index);
+                break;
+            }
+        }
+    }
+}
+
+enum class InspectorObjectDropPosition
+{
+    BeforeTarget,
+    AfterTarget
+};
+
+bool dragObjectTreeRow(QTreeView *objectsTree,
+                       int sourceLineNumber,
+                       int targetLineNumber,
+                       InspectorObjectDropPosition position)
+{
+    if (objectsTree == nullptr || objectsTree->model() == nullptr || objectsTree->viewport() == nullptr) {
+        std::cerr << "Objects tree, model, or viewport is unavailable for drag simulation.\n";
+        return false;
+    }
+
+    revealAncestorTabs(objectsTree);
+    objectsTree->expandAll();
+    pumpEvents();
+
+    const QModelIndex sourceIndex = findObjectTreeIndexForLine(objectsTree->model(), sourceLineNumber);
+    const QModelIndex targetIndex = findObjectTreeIndexForLine(objectsTree->model(), targetLineNumber);
+    if (!sourceIndex.isValid() || !targetIndex.isValid()) {
+        std::cerr << "Objects tree drag source/target line was not found: source valid="
+                  << sourceIndex.isValid() << ", target valid=" << targetIndex.isValid() << '\n';
+        return false;
+    }
+
+    const QModelIndex sourceDragIndex = sourceIndex.sibling(sourceIndex.row(), kInspectorObjectDragColumnForTest);
+    if (!sourceDragIndex.isValid()
+        || sourceDragIndex.data(Qt::DecorationRole).value<QIcon>().isNull()
+        || sourceDragIndex.data(Qt::ToolTipRole).toString().isEmpty()) {
+        std::cerr << "Objects tree movable rows should expose a visible drag handle icon and tooltip.\n";
+        return false;
+    }
+
+    objectsTree->scrollTo(sourceIndex, QAbstractItemView::EnsureVisible);
+    objectsTree->scrollTo(targetIndex, QAbstractItemView::EnsureVisible);
+    pumpEvents();
+
+    const QRect sourceRect = objectsTree->visualRect(sourceDragIndex);
+    const QRect targetRect = objectsTree->visualRect(targetIndex);
+    if (!sourceRect.isValid() || !targetRect.isValid()) {
+        std::cerr << "Objects tree drag source/target visual rect was invalid: source="
+                  << sourceRect.isValid() << ", target=" << targetRect.isValid()
+                  << ", tree visible=" << objectsTree->isVisible()
+                  << ", viewport visible=" << objectsTree->viewport()->isVisible() << '\n';
+        return false;
+    }
+
+    const QPoint sourcePoint = sourceRect.center();
+    const QPoint targetPoint(targetRect.center().x(),
+                             position == InspectorObjectDropPosition::AfterTarget
+                                 ? targetRect.bottom() - 1
+                                 : targetRect.top() + 1);
+    sendMouse(objectsTree->viewport(), QEvent::MouseButtonPress, sourcePoint, Qt::LeftButton, Qt::LeftButton);
+    pumpEvents();
+    sendMouse(objectsTree->viewport(), QEvent::MouseMove, targetPoint, Qt::NoButton, Qt::LeftButton);
+    pumpEvents();
+    auto *dropIndicator = objectsTree->viewport()->findChild<QWidget *>(QStringLiteral("mapObjectsTreeDropIndicator"));
+    if (dropIndicator == nullptr || !dropIndicator->isVisible()) {
+        std::cerr << "Objects tree drag should show a visible drop indicator before release.\n";
+        return false;
+    }
+    const QRect indicatorRect = dropIndicator->geometry();
+    const int expectedDropY = position == InspectorObjectDropPosition::AfterTarget
+        ? targetRect.bottom()
+        : targetRect.top();
+    if (objectsTree->viewport()->cursor().shape() != Qt::ClosedHandCursor) {
+        std::cerr << "Objects tree drag should use a closed-hand cursor while moving a row.\n";
+        return false;
+    }
+    if (indicatorRect.height() != 3
+        || indicatorRect.width() < targetRect.width()
+        || qAbs(indicatorRect.center().y() - expectedDropY) > 3) {
+        std::cerr << "Objects tree drop indicator should be a slim line at the target edge; geometry="
+                  << indicatorRect.x() << ',' << indicatorRect.y() << ' '
+                  << indicatorRect.width() << 'x' << indicatorRect.height()
+                  << ", expected target y=" << expectedDropY << '\n';
+        return false;
+    }
+    sendMouse(objectsTree->viewport(), QEvent::MouseButtonRelease, targetPoint, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    if (dropIndicator->isVisible()) {
+        std::cerr << "Objects tree drag drop indicator should be hidden after release.\n";
+        return false;
+    }
+    return true;
+}
+
+int runInspectorObjectMoveScenario(const char *scenarioName,
+                                   const QByteArray &th2Contents,
+                                   int sourceLineNumber,
+                                   int targetLineNumber,
+                                   InspectorObjectDropPosition position,
+                                   int expectedCurrentLineNumber,
+                                   const QString &expectedMovedText)
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for object move smoke test.")) {
+        return 1;
+    }
+
+    const QString filePath = tempDir.filePath(QStringLiteral("object_move_%1.th2").arg(QString::fromLatin1(scenarioName)));
+    QFile file(filePath);
+    if (!expect(file.open(QIODevice::WriteOnly | QIODevice::Text),
+                "Failed to create temporary TH2 file for object move smoke test.")) {
+        return 1;
+    }
+
+    file.write(th2Contents);
+    file.close();
+
+    QMainWindow hostWindow;
+    hostWindow.resize(900, 700);
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto *mapTab = new MapEditorTab(central);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to load TH2 file for object move smoke test.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEvents();
+
+    auto *objectsTree = mapTab->findChild<QTreeView *>(QStringLiteral("mapObjectsTree"));
+    if (!expect(objectsTree != nullptr && objectsTree->model() != nullptr,
+                "Objects inspector tree was not initialized for object move smoke test.")) {
+        return 1;
+    }
+
+    const QString originalText = mapTab->text();
+    if (!expect(dragObjectTreeRow(objectsTree, sourceLineNumber, targetLineNumber, position),
+                "Dragging an object row onto another object row should be routed through the inspector move handler.")) {
+        return 1;
+    }
+
+    const QString movedText = mapTab->text();
+    if (!expect(movedText == expectedMovedText,
+                "Dragging an object row in Objects inspector should rewrite the TH2 source order.")) {
+        std::cerr << "Scenario: " << scenarioName << '\n';
+        std::cerr << "Actual moved source:\n" << movedText.toStdString() << '\n';
+        return 1;
+    }
+    if (!expect(mapTab->currentLineNumber() == expectedCurrentLineNumber,
+                "After object-row move, the text cursor should reveal the moved object at its new source line.")) {
+        return 1;
+    }
+    if (!expect(mapTab->canUndo(), "Object-row move should be undoable.")) {
+        return 1;
+    }
+
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == originalText,
+                "Undo after object-row move should restore the original source order.")) {
+        return 1;
+    }
+    if (!expect(!mapTab->canUndo(),
+                "Undo after object-row move should not leave a duplicate text-editor undo command.")) {
+        return 1;
+    }
+    if (!expect(mapTab->canRedo(), "Object-row move should be redoable after undo.")) {
+        return 1;
+    }
+
+    mapTab->triggerRedo();
+    pumpEvents();
+    if (!expect(mapTab->text() == expectedMovedText,
+                "Redo after object-row move should restore the moved source order.")) {
+        return 1;
+    }
+    if (!expect(!mapTab->canRedo(),
+                "Redo after object-row move should consume the map redo command.")) {
+        return 1;
+    }
+
+    hostWindow.close();
+    pumpEvents();
+    return 0;
+}
+
+int runInspectorObjectMoveSmoke()
+{
+    const QByteArray afterLineContents =
+        "encoding utf-8\n"
+        "scrap move -projection plan\n"
+        "point 1 2 station -name P1\n"
+        "line wall\n"
+        "  0 0\n"
+        "  1 1\n"
+        "endline\n"
+        "point 3 4 station -name P2\n"
+        "endscrap\n";
+    const QString afterLineExpected = QStringLiteral(
+        "encoding utf-8\n"
+        "scrap move -projection plan\n"
+        "line wall\n"
+        "  0 0\n"
+        "  1 1\n"
+        "endline\n"
+        "point 1 2 station -name P1\n"
+        "point 3 4 station -name P2\n"
+        "endscrap\n");
+    if (const int rc = runInspectorObjectMoveScenario("after_line",
+                                                      afterLineContents,
+                                                      3,
+                                                      4,
+                                                      InspectorObjectDropPosition::AfterTarget,
+                                                      7,
+                                                      afterLineExpected);
+        rc != 0) {
+        return rc;
+    }
+
+    const QByteArray beforePointContents =
+        "encoding utf-8\n"
+        "scrap move -projection plan\n"
+        "point 1 2 station -name P1\n"
+        "point 3 4 station -name P2\n"
+        "line wall\n"
+        "  0 0\n"
+        "  1 1\n"
+        "endline\n"
+        "endscrap\n";
+    const QString beforePointExpected = QStringLiteral(
+        "encoding utf-8\n"
+        "scrap move -projection plan\n"
+        "line wall\n"
+        "  0 0\n"
+        "  1 1\n"
+        "endline\n"
+        "point 1 2 station -name P1\n"
+        "point 3 4 station -name P2\n"
+        "endscrap\n");
+    if (const int rc = runInspectorObjectMoveScenario("before_point",
+                                                      beforePointContents,
+                                                      5,
+                                                      3,
+                                                      InspectorObjectDropPosition::BeforeTarget,
+                                                      3,
+                                                      beforePointExpected);
+        rc != 0) {
+        return rc;
+    }
+
+    const QByteArray betweenScrapContents =
+        "encoding utf-8\n"
+        "scrap a -projection plan\n"
+        "area water\n"
+        "  0 0 1 0 1 1\n"
+        "endarea\n"
+        "endscrap\n"
+        "scrap b -projection plan\n"
+        "point 5 6 label -text target\n"
+        "endscrap\n";
+    const QString betweenScrapExpected = QStringLiteral(
+        "encoding utf-8\n"
+        "scrap a -projection plan\n"
+        "endscrap\n"
+        "scrap b -projection plan\n"
+        "area water\n"
+        "  0 0 1 0 1 1\n"
+        "endarea\n"
+        "point 5 6 label -text target\n"
+        "endscrap\n");
+    if (const int rc = runInspectorObjectMoveScenario("between_scraps",
+                                                      betweenScrapContents,
+                                                      3,
+                                                      8,
+                                                      InspectorObjectDropPosition::BeforeTarget,
+                                                      5,
+                                                      betweenScrapExpected);
+        rc != 0) {
+        return rc;
+    }
+
+    const QByteArray intoScrapContents =
+        "encoding utf-8\n"
+        "scrap a -projection plan\n"
+        "point 1 2 station -name P1\n"
+        "endscrap\n"
+        "scrap b -projection plan\n"
+        "point 5 6 label -text target\n"
+        "endscrap\n";
+    const QString intoScrapExpected = QStringLiteral(
+        "encoding utf-8\n"
+        "scrap a -projection plan\n"
+        "endscrap\n"
+        "scrap b -projection plan\n"
+        "point 5 6 label -text target\n"
+        "point 1 2 station -name P1\n"
+        "endscrap\n");
+    return runInspectorObjectMoveScenario("into_scrap",
+                                          intoScrapContents,
+                                          3,
+                                          5,
+                                          InspectorObjectDropPosition::AfterTarget,
+                                          6,
+                                          intoScrapExpected);
 }
 
 int runAreaBorderHitSelectionSmoke()
@@ -1385,6 +1747,9 @@ int runDragUndoRedoSmoke()
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
+    if (const int rc = runInspectorObjectMoveSmoke(); rc != 0) {
+        return rc;
+    }
     if (const int rc = runAreaBorderHitSelectionSmoke(); rc != 0) {
         return rc;
     }

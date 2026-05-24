@@ -8,6 +8,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QObject>
+#include <QScrollBar>
 #include <QTransform>
 #include <QUndoStack>
 
@@ -77,6 +78,18 @@ void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack(bool pr
     const QPointF preservedCenter = canPreserveViewport
         ? context_.view->mapToScene(context_.view->viewport()->rect().center())
         : QPointF();
+    QScrollBar *preservedHorizontalScrollBar = canPreserveViewport
+        ? context_.view->horizontalScrollBar()
+        : nullptr;
+    QScrollBar *preservedVerticalScrollBar = canPreserveViewport
+        ? context_.view->verticalScrollBar()
+        : nullptr;
+    const int preservedHorizontalScrollValue = preservedHorizontalScrollBar != nullptr
+        ? preservedHorizontalScrollBar->value()
+        : 0;
+    const int preservedVerticalScrollValue = preservedVerticalScrollBar != nullptr
+        ? preservedVerticalScrollBar->value()
+        : 0;
 
     if (context_.undoStack != nullptr) {
         context_.updateCommandSurfaceState();
@@ -137,7 +150,16 @@ void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack(bool pr
     context_.updateGeometrySelectionPresentation();
     if (canPreserveViewport) {
         context_.view->setTransform(preservedTransform);
-        context_.view->centerOn(preservedCenter);
+        if (preservedHorizontalScrollBar != nullptr && preservedVerticalScrollBar != nullptr) {
+            preservedHorizontalScrollBar->setValue(qBound(preservedHorizontalScrollBar->minimum(),
+                                                         preservedHorizontalScrollValue,
+                                                         preservedHorizontalScrollBar->maximum()));
+            preservedVerticalScrollBar->setValue(qBound(preservedVerticalScrollBar->minimum(),
+                                                       preservedVerticalScrollValue,
+                                                       preservedVerticalScrollBar->maximum()));
+        } else {
+            context_.view->centerOn(preservedCenter);
+        }
         *context_.autoFitEnabled = false;
         context_.syncZoomFactorFromView();
     } else if (*context_.autoFitEnabled) {

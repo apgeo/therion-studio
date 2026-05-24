@@ -40,6 +40,18 @@ QByteArray readRawFile(const QString &filePath)
     return file.readAll();
 }
 
+QByteArray encodingNameBytes(const QString &encodingName)
+{
+    return encodingName.trimmed().toLatin1();
+}
+
+QStringEncoder makeEncoder(const QString &encodingName,
+                           QStringConverter::Flags flags = QStringConverter::Flag::Default)
+{
+    const QByteArray nameBytes = encodingNameBytes(encodingName);
+    return QStringEncoder(nameBytes.constData(), flags);
+}
+
 int runDirectiveEncodingRoundTripTest(const QString &codecName,
                                       const QString &directiveToken,
                                       const QString &sourceText,
@@ -61,7 +73,7 @@ int runDirectiveEncodingRoundTripTest(const QString &codecName,
     const QString filePath = QDir(tempDir.path()).filePath(fileName);
     const QString prefixedText = QStringLiteral("encoding %1\n").arg(directiveToken) + sourceText;
 
-    QStringEncoder encoder(codecName, QStringConverter::Flag::Default);
+    QStringEncoder encoder = makeEncoder(codecName);
     if (!expect(encoder.isValid(), codecMissingMessage)) {
         return 1;
     }
@@ -359,7 +371,7 @@ int runInspectorFallbackEncodingPreservationTest()
         "line wall -id puvodni-linka -close off\n"
         "map puvodni-mapa\n");
 
-    QStringEncoder encoder(QStringLiteral("windows-1250"), QStringConverter::Flag::Default);
+    QStringEncoder encoder = makeEncoder(QStringLiteral("windows-1250"));
     if (!expect(encoder.isValid(), "windows-1250 codec is not available in this Qt runtime.")) {
         return 1;
     }
@@ -408,7 +420,7 @@ int runInspectorFallbackEncodingPreservationTest()
         return 1;
     }
 
-    QStringEncoder expectedEncoder(encodingName, QStringConverter::Flag::Default);
+    QStringEncoder expectedEncoder = makeEncoder(encodingName);
     if (!expect(expectedEncoder.isValid(), "Resolved encoding is not writable for expected byte validation.")) {
         return 1;
     }
@@ -444,7 +456,7 @@ int runInspectorFallbackEncodingPreservationWindows1252Test()
         "line wall -id ligne-originale -close off\n"
         "map cafe-plan\n");
 
-    QStringEncoder encoder(QStringLiteral("windows-1252"), QStringConverter::Flag::Default);
+    QStringEncoder encoder = makeEncoder(QStringLiteral("windows-1252"));
     if (!expect(encoder.isValid(), "windows-1252 codec is not available in this Qt runtime.")) {
         return 1;
     }
@@ -493,7 +505,7 @@ int runInspectorFallbackEncodingPreservationWindows1252Test()
         return 1;
     }
 
-    QStringEncoder expectedEncoder(encodingName, QStringConverter::Flag::Default);
+    QStringEncoder expectedEncoder = makeEncoder(encodingName);
     if (!expect(expectedEncoder.isValid(), "Resolved windows-1252 encoding is not writable for expected byte validation.")) {
         return 1;
     }

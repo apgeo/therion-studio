@@ -30,6 +30,11 @@ QString canonicalEncodingName(QStringDecoder &decoder, const QString &fallbackNa
     return QString::fromLatin1(resolved);
 }
 
+QByteArray encodingNameBytes(const QString &encodingName)
+{
+    return encodingName.trimmed().toLatin1();
+}
+
 bool decodeBytesWithName(QByteArrayView data,
                          const QString &encodingName,
                  QString *contents,
@@ -40,7 +45,8 @@ bool decodeBytesWithName(QByteArrayView data,
         return false;
     }
 
-    QStringDecoder decoder(encodingName, QStringConverter::Flag::ConvertInvalidToNull);
+    const QByteArray nameBytes = encodingNameBytes(encodingName);
+    QStringDecoder decoder(nameBytes.constData(), QStringConverter::Flag::ConvertInvalidToNull);
     if (!decoder.isValid()) {
         return false;
     }
@@ -241,7 +247,8 @@ bool DocumentFile::writeTextFile(const QString &filePath,
         ? QStringLiteral("UTF-8")
         : encodingName.trimmed();
 
-    QStringEncoder encoder(resolvedEncodingName, QStringConverter::Flag::Default);
+    const QByteArray nameBytes = encodingNameBytes(resolvedEncodingName);
+    QStringEncoder encoder(nameBytes.constData(), QStringConverter::Flag::Default);
     if (!encoder.isValid()) {
         if (errorMessage != nullptr) {
             *errorMessage = QStringLiteral("Unable to encode %1 using %2.")

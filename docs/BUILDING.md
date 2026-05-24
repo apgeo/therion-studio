@@ -13,6 +13,7 @@ The bundled command catalog, syntax palette, and UI icons are compiled into Qt r
 ## macOS
 
 macOS packaging is intended for Homebrew formula installation. The app bundle does not bundle Qt frameworks; the formula shall declare Qt dependencies instead.
+CI targets the last two major macOS versions available as GitHub-hosted runners.
 
 Configure and build:
 
@@ -84,7 +85,9 @@ editing `CMakeLists.txt`. Branch and SHA builds derive a development package lab
 
 ## Linux
 
-Linux release packaging is not finalized yet. Development builds should prefer distribution Qt packages so `.deb` packaging remains realistic. On Ubuntu 24.04 and Debian-family systems, install the development dependencies with:
+Linux release packaging is not finalized yet. Development builds should prefer distribution Qt packages so `.deb` packaging remains realistic. CI validates distribution Qt builds on Ubuntu 24.04 and Ubuntu 26.04; Ubuntu 26.04 runs in an official Ubuntu container image until GitHub provides a hosted runner label for it.
+
+On supported Ubuntu and Debian-family systems, install the development dependencies with:
 
 ```sh
 sudo apt-get install qt6-base-dev qt6-base-dev-tools qt6-svg-dev qt6-tools-dev qt6-tools-dev-tools

@@ -766,12 +766,13 @@ Requirements:
 - internal preview builds may be unsigned or ad hoc signed and may use simplified packaging, provided the build is clearly marked as non-production and the installation steps are documented for testers
 - the MVP shall provide end-user release artifacts for macOS, Windows, and Linux; users shall not be required to install a local Qt SDK or build the application manually in order to run the product
 - macOS Homebrew releases shall build and install the application through a formula, declare Qt as formula dependencies, and shall not bundle Qt frameworks inside the app bundle
+- macOS release support shall cover the last two major macOS versions available through the supported build and distribution channels where practical
 - signed and notarized macOS `.dmg` or `.pkg` artifacts may be added as a later production distribution path when signing credentials are available
 - Windows releases shall be delivered as an installer that bundles Therion Studio and the Qt runtime required by the application
 - Windows release installers shall not bundle the external Therion command-line executable; users shall configure or install Therion separately through the existing runner settings
 - Windows signed installers are preferred for production releases; unsigned installers may be used only for clearly documented internal preview builds
 - Linux production releases shall provide at least one broadly portable distribution format, such as AppImage or an equivalent self-contained bundle; distro-specific packages may be added in addition to the primary artifact
-- Linux `.deb` packaging should remain compatible with the Qt 6 packages shipped by supported Debian/Ubuntu distributions where practical; Linux CI shall include a distribution-package Qt build for the supported Ubuntu baseline
+- Linux `.deb` packaging should remain compatible with the Qt 6 packages shipped by supported Debian/Ubuntu distributions where practical; Linux CI shall include distribution-package Qt builds for supported Ubuntu baselines, including Ubuntu 24.04 and Ubuntu 26.04
 - required Qt libraries and other non-system runtime dependencies shall be bundled with the application or installed by the package manager package so that first launch does not depend on a local Qt SDK or developer toolchain
 - release artifacts shall include a branded dark cave-map ThS monogram application icon with yellow S accent for runtime windows and platform launch surfaces, with platform-specific icon metadata wired for macOS and Windows packages
 - packaged releases shall store user settings, recent-project state, session data, and logs in standard user-writable per-platform locations rather than inside the installation directory

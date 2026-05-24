@@ -68,7 +68,7 @@ Recommended release flow:
 4. Download the uploaded installer artifact.
 5. Attach the installer to the GitHub Release for the tag.
 
-The workflow currently installs Qt via `jurplel/install-qt-action`, installs NSIS/Ninja with Chocolatey,
+The workflow installs Qt directly with `aqtinstall`, installs NSIS/Ninja with Chocolatey,
 configures a Release Ninja build, runs CPack, and uploads the generated `.exe` installer artifact.
 
 ## Future Hardening

@@ -4,6 +4,7 @@
 #include <QPointF>
 #include <QSet>
 #include <QString>
+#include <QVector>
 
 #include <functional>
 #include <optional>
@@ -16,6 +17,7 @@ class QGraphicsView;
 namespace TherionStudio
 {
 class TextEditorTab;
+struct TherionParsedLine;
 
 struct MapEditorSelectionContext
 {
@@ -42,6 +44,7 @@ struct MapEditorSelectionContext
     std::optional<QPointF> *selectedObjectCoordinate = nullptr;
 
     std::function<int()> currentLineNumber;
+    std::function<QVector<TherionParsedLine>()> parsedLinesForCurrentDocument;
     std::function<QPointF(const QPointF &)> sourcePointFromScenePosition;
     std::function<void()> updateCommandSurfaceState;
     std::function<void()> updateHelpPanel;

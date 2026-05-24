@@ -30,6 +30,9 @@ MapEditorInspectorObjectContext MapEditorTab::inspectorObjectContext()
         .filePath = [this]() {
             return filePath();
         },
+        .parsedLinesForCurrentDocument = [this]() {
+            return parsedLinesForCurrentDocument();
+        },
         .currentLineNumber = [this]() {
             return currentLineNumber();
         },

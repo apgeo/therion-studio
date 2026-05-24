@@ -32,6 +32,7 @@ struct CursorGeometrySelection
 };
 
 std::optional<MapGeometryFeature> lineFeatureForLineNumber(const QString &documentText, int lineNumber);
+std::optional<MapGeometryFeature> lineFeatureForLineNumber(const QVector<TherionParsedLine> &parsedLines, int lineNumber);
 QString formatSourceCoordinate(qreal value);
 QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2LineVertex> &lineVertices);
 CursorGeometrySelection cursorGeometrySelectionForTextCursor(const QVector<TherionParsedLine> &parsedLines,

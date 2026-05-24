@@ -76,6 +76,7 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
     }
 
     const QString currentText = context_.textEditor->text();
+    const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument();
     const QVector<ProjectStructureEntry> entries = ProjectStructureIndex::scanTh2Objects(th2Path, currentText);
     if (entries.isEmpty()) {
         auto *placeholderItem = new QStandardItem(translate("No TH2 scraps, points, lines, or areas were found in the current document"));
@@ -85,7 +86,7 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
     }
 
     QHash<int, TherionParsedLine> parsedLinesByLineNumber;
-    for (const TherionParsedLine &parsedLine : TherionDocumentParser::parseText(currentText)) {
+    for (const TherionParsedLine &parsedLine : parsedLines) {
         if (parsedLine.lineNumber > 0) {
             parsedLinesByLineNumber.insert(parsedLine.lineNumber, parsedLine);
         }

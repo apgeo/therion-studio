@@ -395,7 +395,7 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
     if (selectedLineNumber > 0 && context_.textEditor != nullptr) {
         const QScopedValueRollback<bool> syncGuard((*context_.textNavigationInProgress), true);
         if (selectedPointSource.has_value()) {
-            const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(context_.textEditor->text());
+            const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument();
             const std::optional<int> pointLineNumber =
                 sourcePointLineNumberForSelection(parsedLines, selectedPointSource.value());
             if (pointLineNumber.has_value()) {
@@ -405,7 +405,7 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
                 context_.textEditor->goToLine(selectedLineNumber);
             }
         } else if (selectedSourceVertexIndex >= 0) {
-            const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(context_.textEditor->text());
+            const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument();
             const std::optional<SourceVertexTextReference> sourceReference =
                 sourceVertexTextReferenceForSelection(parsedLines,
                                                       selectedLineNumber,
@@ -452,7 +452,8 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
             }
         }
     } else if (selectedLineNumber > 0 && context_.textEditor != nullptr) {
-        if (const std::optional<MapGeometryFeature> feature = lineFeatureForLineNumber(context_.textEditor->text(), selectedLineNumber);
+        if (const std::optional<MapGeometryFeature> feature = lineFeatureForLineNumber(context_.parsedLinesForCurrentDocument(),
+                                                                                      selectedLineNumber);
             feature.has_value()) {
             if (feature->kind == MapGeometryFeature::Kind::Line) {
                 (*context_.selectedObjectKind) = QStringLiteral("line");
@@ -508,7 +509,7 @@ void MapEditorSelectionController::syncMapSelectionFromTextCursor(int lineNumber
         (*context_.suppressedAutoReselectLineNumbers).clear();
     }
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(context_.textEditor->text());
+    const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument();
     if (const std::optional<QSet<int>> scrapLines = scrapObjectLinesForCursor(parsedLines, lineNumber);
         scrapLines.has_value()) {
         if (!scrapLines->isEmpty()) {
@@ -547,7 +548,7 @@ void MapEditorSelectionController::syncMapSelectionFromTextCursor(int lineNumber
     MapEditableGeometryVertexItem *targetItem = nullptr;
     if (lineGeometry) {
         int ownerSourceVertexIndex = -1;
-        if (const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(),
+        if (const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(parsedLines,
                                                                                             cursorSelection.featureLineNumber);
             lineFeature.has_value()) {
             const int ownerVertexOrder = lineVertexOwnerIndexForSourceVertex(lineFeature.value(), sourceVertexIndex);

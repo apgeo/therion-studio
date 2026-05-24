@@ -5,6 +5,7 @@
 #include <QPointF>
 #include <QSet>
 #include <QString>
+#include <QVector>
 
 #include <functional>
 #include <optional>
@@ -16,6 +17,7 @@ class QTreeView;
 namespace TherionStudio
 {
 class TextEditorTab;
+struct TherionParsedLine;
 
 struct MapEditorInspectorObjectContext
 {
@@ -38,6 +40,7 @@ struct MapEditorInspectorObjectContext
 
     std::function<QString(const char *)> translate;
     std::function<QString()> filePath;
+    std::function<QVector<TherionParsedLine>()> parsedLinesForCurrentDocument;
     std::function<int()> currentLineNumber;
     std::function<void()> refreshToolbarSummary;
     std::function<void()> refreshObjectDetailsPanel;

@@ -12,11 +12,15 @@ namespace TherionStudio
 {
 std::optional<MapGeometryFeature> lineFeatureForLineNumber(const QString &documentText, int lineNumber)
 {
+    return lineFeatureForLineNumber(TherionDocumentParser::parseText(documentText), lineNumber);
+}
+
+std::optional<MapGeometryFeature> lineFeatureForLineNumber(const QVector<TherionParsedLine> &parsedLines, int lineNumber)
+{
     if (lineNumber <= 0) {
         return std::nullopt;
     }
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(documentText);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
     for (const MapGeometryFeature &feature : features) {
         if (feature.kind == MapGeometryFeature::Kind::Line

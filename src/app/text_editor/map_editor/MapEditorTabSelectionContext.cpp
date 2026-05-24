@@ -32,6 +32,9 @@ MapEditorSelectionContext MapEditorTab::selectionContext()
         .currentLineNumber = [this]() {
             return currentLineNumber();
         },
+        .parsedLinesForCurrentDocument = [this]() {
+            return parsedLinesForCurrentDocument();
+        },
         .sourcePointFromScenePosition = [this](const QPointF &scenePosition) {
             return sourcePointFromScenePosition(scenePosition);
         },

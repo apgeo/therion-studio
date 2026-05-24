@@ -433,6 +433,7 @@ Interactive drawing (current):
 - while hovering a draft bezier control point, the map cursor changes to a hand; while dragging it, cursor changes to closed hand
 - when a draft line vertex has both incoming and outgoing bezier controls, dragging one control mirrors/adapts the opposite control to keep smooth tangent behavior
 - `Freehand`: press, drag, and release in the map canvas to insert a line in one gesture; the live preview shows the drawn stroke as a solid line without per-sample point markers, and the sampled stroke is simplified into bezier coordinate rows rather than a dense point-by-point polyline. Simplification is shape-sensitive: simple strokes use fewer anchors, while more complex strokes keep more anchors to preserve the drawn curve.
+- Completing map drawing or map-edit commands keeps the current map viewport center and zoom stable; use `Fit` or `Fit With Background` explicitly when you want to recenter the canvas.
 - `Area`: click to add draft vertices in the canvas, then press `Enter` or click `Complete Draft` to write the area; mode stays in `Area` so you can immediately draw the next area.
 - In `Area` mode, bezier drafting behavior matches `Line` mode:
 - click only: adds straight anchors

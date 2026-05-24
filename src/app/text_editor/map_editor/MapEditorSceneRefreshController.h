@@ -47,7 +47,7 @@ struct MapEditorSceneRefreshContext
     std::function<void()> restoreBackgroundImageItems;
     std::function<void()> reprojectMetadataBackgroundLayersForCurrentDocument;
     std::function<void()> restoreDraftGeometryItems;
-    std::function<void(int)> selectMapLine;
+    std::function<void(int, bool)> selectMapLine;
     std::function<void()> applyInspectorObjectVisibility;
     std::function<void()> updateGeometrySelectionPresentation;
     std::function<void(bool)> fitMapToView;
@@ -70,6 +70,7 @@ public:
 
 private:
     QGraphicsScene *scene() const;
+    void refreshMapScenePreservingUndoStack(bool preserveViewport);
 
     MapEditorSceneRefreshContext context_;
 };

@@ -142,9 +142,9 @@ MapEditorSceneRefreshContext MapEditorTab::sceneRefreshContext()
                 self->restoreDraftGeometryItems();
             }
         },
-        .selectMapLine = [self](int lineNumber) {
+        .selectMapLine = [self](int lineNumber, bool centerOnSelection) {
             if (self != nullptr) {
-                self->selectMapLine(lineNumber);
+                self->selectMapLine(lineNumber, centerOnSelection);
             }
         },
         .applyInspectorObjectVisibility = [self]() {

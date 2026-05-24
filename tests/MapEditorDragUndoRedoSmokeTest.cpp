@@ -1941,6 +1941,7 @@ int runDragUndoRedoSmoke()
 
     const QString textBeforeFreehand = mapTab->text();
     const int lineDirectivesBeforeFreehand = countDirectiveLines(textBeforeFreehand, QStringLiteral("line"));
+    const QPointF sceneCenterBeforeFreehand = mapView->mapToScene(mapView->viewport()->rect().center());
     mapTab->triggerAddFreehandLine();
     pumpEvents();
     const QPoint strokeStart(viewportCenter.x() - 30, viewportCenter.y() + 20);
@@ -1960,6 +1961,12 @@ int runDragUndoRedoSmoke()
     pumpEvents();
     if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeFreehand + 1,
                 "Freehand drag-and-release should insert one new line directive.")) {
+        return 1;
+    }
+    const QPointF sceneCenterAfterFreehand = mapView->mapToScene(mapView->viewport()->rect().center());
+    const QPointF sceneCenterDelta = sceneCenterAfterFreehand - sceneCenterBeforeFreehand;
+    if (!expect(std::hypot(sceneCenterDelta.x(), sceneCenterDelta.y()) < 3.0,
+                "Freehand completion should not recenter or refit the map viewport.")) {
         return 1;
     }
     if (!expect(lastDraftLineHasBezierCoordinateRow(mapTab->text()),

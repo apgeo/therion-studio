@@ -8,6 +8,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QObject>
+#include <QTransform>
 #include <QUndoStack>
 
 #include <optional>
@@ -57,10 +58,25 @@ void MapEditorSceneRefreshController::refreshMapScene()
 
 void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack()
 {
+    refreshMapScenePreservingUndoStack(false);
+}
+
+void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack(bool preserveViewport)
+{
     QGraphicsScene *mapScene = scene();
     if (mapScene == nullptr) {
         return;
     }
+
+    const bool canPreserveViewport = preserveViewport
+        && context_.view != nullptr
+        && context_.view->viewport() != nullptr;
+    const QTransform preservedTransform = canPreserveViewport
+        ? context_.view->transform()
+        : QTransform();
+    const QPointF preservedCenter = canPreserveViewport
+        ? context_.view->mapToScene(context_.view->viewport()->rect().center())
+        : QPointF();
 
     if (context_.undoStack != nullptr) {
         context_.updateCommandSurfaceState();
@@ -114,10 +130,15 @@ void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack()
     context_.restoreBackgroundImageItems();
     context_.reprojectMetadataBackgroundLayersForCurrentDocument();
     context_.restoreDraftGeometryItems();
-    context_.selectMapLine(context_.currentLineNumber());
+    context_.selectMapLine(context_.currentLineNumber(), !preserveViewport);
     context_.applyInspectorObjectVisibility();
     context_.updateGeometrySelectionPresentation();
-    if (*context_.autoFitEnabled) {
+    if (canPreserveViewport) {
+        context_.view->setTransform(preservedTransform);
+        context_.view->centerOn(preservedCenter);
+        *context_.autoFitEnabled = false;
+        context_.syncZoomFactorFromView();
+    } else if (*context_.autoFitEnabled) {
         context_.fitMapToView(*context_.fitBackgroundRequested);
     } else {
         context_.syncZoomFactorFromView();
@@ -136,7 +157,7 @@ void MapEditorSceneRefreshController::flushPendingMapSceneRefreshAfterCommand()
     }
 
     *context_.sceneRefreshPending = false;
-    refreshMapScenePreservingUndoStack();
+    refreshMapScenePreservingUndoStack(true);
 }
 
 }

@@ -5,8 +5,8 @@ This document describes the current build and packaging workflow.
 ## Common Requirements
 
 - CMake 3.21 or newer
-- C++17 compiler
-- Qt 6.5 or newer with `Widgets` and `Svg`
+- C++20 compiler
+- Qt 6.5 or newer with `Widgets`, `Svg`, and `Concurrent`
 
 The bundled command catalog, syntax palette, and UI icons are compiled into Qt resources.
 
@@ -48,26 +48,39 @@ Windows packaging is intended to produce an installer containing:
 - Qt runtime libraries and plugins required by the app
 
 The installer shall not bundle the external `therion.exe` command-line executable.
+The maintained Windows packaging notes and GitHub Actions workflow details are in
+`packaging/windows/README.md`.
 
 Recommended MSVC release build:
 
 ```powershell
 cmake -S . -B build-win -G Ninja `
   -DCMAKE_BUILD_TYPE=Release `
-  -DCMAKE_PREFIX_PATH=C:\Qt\6.11.0\msvc2022_64
+  -DCMAKE_PREFIX_PATH=C:\Qt\6.7.3\msvc2022_64 `
+  -DTHERION_STUDIO_VERSION=2026.5.0
 
 cmake --build build-win --target TherionStudio
-cmake --install build-win --prefix dist\windows
 cpack --config build-win\CPackConfig.cmake
 ```
 
-The CMake install step runs Qt deployment on Windows, copying the required Qt runtime next to the installed executable. CPack is configured to use NSIS for the Windows installer.
+CPack runs the CMake install step internally. The install step runs Qt deployment on Windows,
+copying the required Qt runtime next to the installed executable. CPack is configured to use
+NSIS for the Windows installer and emits `TherionStudio-<version>-Windows-x86_64.exe` in the
+build directory.
 
 Required Windows packaging tools:
 
 - Qt for MSVC
 - Ninja or another CMake generator
 - NSIS for installer generation
+
+The manual GitHub Actions workflow `.github/workflows/windows-installer.yml` builds the same
+installer on `windows-2022` and uploads it as an artifact. Use its `source_ref` input to build
+from `main`, a release tag, or a specific commit SHA. When the checked-out commit is exactly tagged
+with a CalVer release tag such as `v2026.5.0`, the workflow derives
+`THERION_STUDIO_VERSION=2026.5.0` and passes it to CMake so CPack uses the tag version without
+editing `CMakeLists.txt`. Branch and SHA builds derive a development package label such as
+`2026.5.0-a1b2c3d`.
 
 ## Linux
 

@@ -1,7 +1,19 @@
 cmake_minimum_required(VERSION 3.21)
 
+set(THERION_STUDIO_VERSION "2026.5.0" CACHE STRING
+    "Therion Studio numeric application version. CI may override this from release tags.")
+if(NOT THERION_STUDIO_VERSION MATCHES "^[0-9]+(\\.[0-9]+)?(\\.[0-9]+)?(\\.[0-9]+)?$")
+    message(FATAL_ERROR "THERION_STUDIO_VERSION must be numeric, for example 2026.5.0")
+endif()
+
+set(THERION_STUDIO_PACKAGE_LABEL "${THERION_STUDIO_VERSION}" CACHE STRING
+    "Therion Studio package/artifact label. CI may include a short commit hash for development builds.")
+if(NOT THERION_STUDIO_PACKAGE_LABEL MATCHES "^[A-Za-z0-9._-]+$")
+    message(FATAL_ERROR "THERION_STUDIO_PACKAGE_LABEL may contain only letters, numbers, dots, underscores, and hyphens")
+endif()
+
 project(TherionStudio
-    VERSION 0.1.0
+    VERSION "${THERION_STUDIO_VERSION}"
     LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -462,11 +474,17 @@ if(WIN32)
     set(CPACK_PACKAGE_NAME "Therion Studio")
     set(CPACK_PACKAGE_VENDOR "Therion Studio")
     set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+    set(CPACK_PACKAGE_FILE_NAME "TherionStudio-${THERION_STUDIO_PACKAGE_LABEL}-Windows-x86_64")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Therion Studio desktop editor")
     set(CPACK_PACKAGE_INSTALL_DIRECTORY "Therion Studio")
     set(CPACK_PACKAGE_EXECUTABLES "TherionStudio" "Therion Studio")
     set(CPACK_CREATE_DESKTOP_LINKS "TherionStudio")
     set(CPACK_NSIS_DISPLAY_NAME "Therion Studio")
     set(CPACK_NSIS_PACKAGE_NAME "Therion Studio")
+    set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/${THERION_STUDIO_WINDOWS_ICON}")
+    set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/${THERION_STUDIO_WINDOWS_ICON}")
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "TherionStudio.exe")
+    set(CPACK_NSIS_EXECUTABLES_DIRECTORY ".")
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
     include(CPack)
 endif()

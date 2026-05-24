@@ -600,6 +600,7 @@ There is currently no dedicated Settings dialog; settings are updated through no
 - `Insert` key may be missing on many Mac keyboards; map vertex insertion supports `I` as fallback.
 - Homebrew Therion auto-detection is supported for common paths (`/opt/homebrew/bin/therion`, `/usr/local/bin/therion`, and `$HOMEBREW_PREFIX/bin/therion`).
 - macOS distribution is intended to use a Homebrew formula. Qt is provided by formula dependencies rather than bundled inside `TherionStudio.app`.
+- Windows distribution is intended to use a CPack/NSIS installer artifact that bundles the required Qt runtime but does not bundle the external Therion compiler executable.
 
 ### 7.2 Windows
 

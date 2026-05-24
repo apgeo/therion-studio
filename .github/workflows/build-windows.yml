@@ -1,0 +1,71 @@
+name: Build Windows
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: windows-2022 Debug
+    runs-on: windows-2022
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install Qt
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -Scope Global -ErrorAction SilentlyContinue) {
+            $global:PSNativeCommandUseErrorActionPreference = $true
+          }
+          function Invoke-CheckedNativeCommand {
+            $command = $args[0]
+            $commandArgs = @($args | Select-Object -Skip 1)
+            & $command @commandArgs
+            if ($LASTEXITCODE -ne 0) {
+              throw "Command failed with exit code ${LASTEXITCODE}: $($args -join ' ')"
+            }
+          }
+
+          Invoke-CheckedNativeCommand python -m pip install --upgrade aqtinstall
+          Invoke-CheckedNativeCommand python -m aqt install-qt windows desktop 6.7.3 win64_msvc2022_64 `
+            --base https://download.qt.io `
+            --timeout 30 `
+            --outputdir "$env:RUNNER_WORKSPACE\Qt" `
+            --archives qtbase qtsvg qttools
+          $qtRoot = Get-ChildItem -Path "$env:RUNNER_WORKSPACE\Qt\6.7.3" -Directory |
+            Where-Object { $_.Name -like "*msvc2022_64" } |
+            Select-Object -First 1
+          if (-not $qtRoot) {
+            throw "Qt installation root not found."
+          }
+          "CMAKE_PREFIX_PATH=$($qtRoot.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "$($qtRoot.FullName)\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Debug
+          -DTHERION_ENABLE_STRICT_WARNINGS=ON
+
+      - name: Build
+        run: cmake --build build --config Debug
+
+      - name: Run unit tests
+        run: >
+          ctest --test-dir build
+          --build-config Debug
+          -L unit
+          --output-on-failure
+          --timeout 300
+
+      - name: Run UI smoke tests
+        run: >
+          cmake -E env QT_QPA_PLATFORM=offscreen
+          ctest --test-dir build
+          --build-config Debug
+          -L ui
+          --output-on-failure
+          --timeout 300

@@ -205,4 +205,14 @@ void MapEditorTab::recordDraftVisibility(QGraphicsRectItem *item, bool oldVisibl
 {
     MapEditorCanvasEditController(canvasEditContext()).recordDraftVisibility(item, oldVisible, newVisible);
 }
+
+void MapEditorTab::recordDraftCompletion(QGraphicsRectItem *item,
+                                         const QString &label,
+                                         const QString &beforeText,
+                                         const QString &afterText,
+                                         int insertedLineNumber)
+{
+    MapEditorCanvasEditController(canvasEditContext())
+        .recordDraftCompletion(item, label, beforeText, afterText, insertedLineNumber);
+}
 }

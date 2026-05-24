@@ -302,6 +302,11 @@ private:
     bool setLineVertexControlHandleForSelection(bool incoming, bool enabled);
     void recordDraftMove(QGraphicsRectItem *item, const QPointF &oldPosition, const QPointF &newPosition);
     void recordDraftVisibility(QGraphicsRectItem *item, bool oldVisible, bool newVisible);
+    void recordDraftCompletion(QGraphicsRectItem *item,
+                               const QString &label,
+                               const QString &beforeText,
+                               const QString &afterText,
+                               int insertedLineNumber);
     QGraphicsRectItem *selectedDraftGeometryItem() const;
     QGraphicsRectItem *createDraftGeometryItem(DraftGeometryKind kind);
     void addDraftGeometryItem(QGraphicsRectItem *item, const QPointF &position);

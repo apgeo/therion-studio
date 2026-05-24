@@ -2,6 +2,7 @@
 
 #include "../TextEditorTab.h"
 
+#include <QGraphicsScene>
 #include <QPointer>
 #include <QUndoCommand>
 
@@ -328,6 +329,122 @@ private:
     bool firstRedo_ = true;
 };
 
+class MapDraftCompletionCommand final : public QUndoCommand
+{
+public:
+    MapDraftCompletionCommand(TextEditorTab *textEditor,
+                              QGraphicsScene *scene,
+                              QVector<QGraphicsRectItem *> *draftItems,
+                              MapDraftGeometryItem *draftItem,
+                              QString label,
+                              QString beforeText,
+                              QString afterText,
+                              int insertedLineNumber,
+                              std::function<void(const QString &)> statusCallback)
+        : textEditor_(textEditor)
+        , scene_(scene)
+        , draftItems_(draftItems)
+        , draftItem_(draftItem)
+        , beforeText_(std::move(beforeText))
+        , afterText_(std::move(afterText))
+        , insertedLineNumber_(insertedLineNumber)
+        , statusCallback_(std::move(statusCallback))
+    {
+        setText(std::move(label));
+    }
+
+    ~MapDraftCompletionCommand() override
+    {
+        if (draftItem_ != nullptr && !isDraftAttached()) {
+            delete draftItem_;
+            draftItem_ = nullptr;
+        }
+    }
+
+    void undo() override
+    {
+        if (textEditor_ == nullptr) {
+            setObsolete(true);
+            return;
+        }
+
+        textEditor_->replaceTextForCommand(beforeText_);
+        restoreDraftItem();
+        if (statusCallback_ != nullptr) {
+            statusCallback_(insertedLineNumber_ > 0
+                                ? QStringLiteral("Reverted completed draft at source line %1.").arg(insertedLineNumber_)
+                                : QStringLiteral("Reverted completed draft."));
+        }
+    }
+
+    void redo() override
+    {
+        if (firstRedo_) {
+            firstRedo_ = false;
+            detachDraftItem();
+            return;
+        }
+        if (textEditor_ == nullptr) {
+            setObsolete(true);
+            return;
+        }
+
+        textEditor_->replaceTextForCommand(afterText_);
+        detachDraftItem();
+        if (statusCallback_ != nullptr) {
+            statusCallback_(insertedLineNumber_ > 0
+                                ? QStringLiteral("Restored completed draft at source line %1.").arg(insertedLineNumber_)
+                                : QStringLiteral("Restored completed draft."));
+        }
+    }
+
+private:
+    bool isDraftAttached() const
+    {
+        const bool inScene = scene_ != nullptr && draftItem_ != nullptr && scene_->items().contains(draftItem_);
+        const bool inList = draftItems_ != nullptr && draftItem_ != nullptr && draftItems_->contains(draftItem_);
+        return inScene || inList;
+    }
+
+    void detachDraftItem()
+    {
+        if (draftItem_ == nullptr) {
+            return;
+        }
+        if (scene_ != nullptr) {
+            scene_->removeItem(draftItem_);
+        }
+        if (draftItems_ != nullptr) {
+            draftItems_->removeAll(draftItem_);
+        }
+    }
+
+    void restoreDraftItem()
+    {
+        if (draftItem_ == nullptr) {
+            return;
+        }
+        if (scene_ != nullptr && !scene_->items().contains(draftItem_)) {
+            scene_->addItem(draftItem_);
+            draftItem_->setZValue(20.0);
+            draftItem_->setSelected(true);
+        }
+        if (draftItems_ != nullptr && !draftItems_->contains(draftItem_)) {
+            draftItems_->append(draftItem_);
+        }
+    }
+
+    QPointer<TextEditorTab> textEditor_;
+    QPointer<QGraphicsScene> scene_;
+    QVector<QGraphicsRectItem *> *draftItems_ = nullptr;
+    MapDraftGeometryItem *draftItem_ = nullptr;
+    QString beforeText_;
+    QString afterText_;
+    int insertedLineNumber_ = 0;
+    std::function<void(const QString &)> statusCallback_;
+    bool firstRedo_ = true;
+};
+
 }
 
 QUndoCommand *createMapPointGeometryMoveCommand(TextEditorTab *textEditor,
@@ -371,6 +488,27 @@ QUndoCommand *createMapSourceTextSnapshotCommand(TextEditorTab *textEditor,
                                             afterText,
                                             insertedLineNumber,
                                             std::move(statusCallback));
+}
+
+QUndoCommand *createMapDraftCompletionCommand(TextEditorTab *textEditor,
+                                              QGraphicsScene *scene,
+                                              QVector<QGraphicsRectItem *> *draftItems,
+                                              MapDraftGeometryItem *draftItem,
+                                              const QString &label,
+                                              const QString &beforeText,
+                                              const QString &afterText,
+                                              int insertedLineNumber,
+                                              MapCanvasEditStatusCallback statusCallback)
+{
+    return new MapDraftCompletionCommand(textEditor,
+                                         scene,
+                                         draftItems,
+                                         draftItem,
+                                         label,
+                                         beforeText,
+                                         afterText,
+                                         insertedLineNumber,
+                                         std::move(statusCallback));
 }
 
 MapLineAreaVertexMoveSet coupledLineVertexMoveSet(const MapGeometryFeature &lineFeature,

@@ -1863,8 +1863,9 @@ int runDragUndoRedoSmoke()
         return 1;
     }
 
-    const int areaDirectivesBeforeEscCommit = countDirectiveLines(mapTab->text(), QStringLiteral("area"));
-    const int lineDirectivesBeforeAreaEscCommit = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
+    const QString textBeforeAreaEscCommit = mapTab->text();
+    const int areaDirectivesBeforeEscCommit = countDirectiveLines(textBeforeAreaEscCommit, QStringLiteral("area"));
+    const int lineDirectivesBeforeAreaEscCommit = countDirectiveLines(textBeforeAreaEscCommit, QStringLiteral("line"));
     mapTab->triggerAddArea();
     pumpEvents();
     const QPoint firstAreaVertex(viewportCenter.x() - 22, viewportCenter.y() + 18);
@@ -1892,6 +1893,19 @@ int runDragUndoRedoSmoke()
     }
     if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeAreaEscCommit + 1,
                 "Area commit should create a closed border line referenced by the area block.")) {
+        return 1;
+    }
+    const QString textAfterAreaEscCommit = mapTab->text();
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textBeforeAreaEscCommit,
+                "Undo after Area mode completion should remove the inserted area and border line blocks.")) {
+        return 1;
+    }
+    mapTab->triggerRedo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterAreaEscCommit,
+                "Redo after undoing Area mode completion should restore the area and border line blocks.")) {
         return 1;
     }
     if (!expect(lastDraftAreaReferencesLineId(mapTab->text()),
@@ -1925,7 +1939,8 @@ int runDragUndoRedoSmoke()
         return 1;
     }
 
-    const int lineDirectivesBeforeFreehand = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
+    const QString textBeforeFreehand = mapTab->text();
+    const int lineDirectivesBeforeFreehand = countDirectiveLines(textBeforeFreehand, QStringLiteral("line"));
     mapTab->triggerAddFreehandLine();
     pumpEvents();
     const QPoint strokeStart(viewportCenter.x() - 30, viewportCenter.y() + 20);
@@ -1954,6 +1969,19 @@ int runDragUndoRedoSmoke()
     }
     if (!expect(lastDraftLineNumericRows(mapTab->text()).size() >= 2,
                 "Freehand drag-and-release should keep enough anchors for a valid simplified bezier line.")) {
+        return 1;
+    }
+    const QString textAfterFreehand = mapTab->text();
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textBeforeFreehand,
+                "Undo after Freehand completion should remove the inserted bezier line block.")) {
+        return 1;
+    }
+    mapTab->triggerRedo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterFreehand,
+                "Redo after undoing Freehand completion should restore the bezier line block.")) {
         return 1;
     }
 

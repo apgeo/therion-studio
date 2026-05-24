@@ -1288,4 +1288,39 @@ void MapEditorCanvasEditController::recordDraftVisibility(QGraphicsRectItem *ite
     context_.undoStack->push(createMapDraftVisibilityCommand(draftItem, oldVisible, newVisible));
 }
 
+void MapEditorCanvasEditController::recordDraftCompletion(QGraphicsRectItem *item,
+                                                          const QString &label,
+                                                          const QString &beforeText,
+                                                          const QString &afterText,
+                                                          int insertedLineNumber)
+{
+    auto *draftItem = dynamic_cast<MapDraftGeometryItem *>(item);
+    if (draftItem == nullptr || context_.textEditor == nullptr || beforeText == afterText) {
+        return;
+    }
+
+    auto statusCallback = [statusNote = context_.toolbarStatusNote,
+                           refreshToolbarSummary = context_.refreshToolbarSummary](const QString &statusMessage) {
+        *statusNote = statusMessage;
+        refreshToolbarSummary();
+    };
+
+    if (context_.undoStack == nullptr) {
+        removeDraftGeometryItem(draftItem);
+        return;
+    }
+
+    const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+    context_.undoStack->push(createMapDraftCompletionCommand(context_.textEditor,
+                                                            context_.scene,
+                                                            context_.draftGeometryItems,
+                                                            draftItem,
+                                                            label,
+                                                            beforeText,
+                                                            afterText,
+                                                            insertedLineNumber,
+                                                            statusCallback));
+    context_.flushPendingSceneRefreshAfterCommand();
+}
+
 }

@@ -320,10 +320,8 @@ void MapEditorTab::handleCompleteDraftTriggered()
         refreshToolbarSummary();
         return;
     }
-    recordSourceTextSnapshot(tr("Complete Draft"), beforeText, textEditor_->text(), insertedLineNumber);
-
     const QString geometryLabel = draftGeometryLabel(draftItem->kind());
-    removeDraftGeometryItem(draftRectItem);
+    recordDraftCompletion(draftRectItem, tr("Complete Draft"), beforeText, textEditor_->text(), insertedLineNumber);
     toolbarStatusNote_ = insertedLineNumber > 0
         ? tr("Complete Draft wrote %1 geometry at source line %2.").arg(geometryLabel, QString::number(insertedLineNumber))
         : tr("Complete Draft wrote %1 geometry to source.").arg(geometryLabel);

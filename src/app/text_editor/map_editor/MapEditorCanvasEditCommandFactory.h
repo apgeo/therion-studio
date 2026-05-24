@@ -9,10 +9,13 @@
 #include <functional>
 
 class QUndoCommand;
+class QGraphicsRectItem;
+class QGraphicsScene;
 
 namespace TherionStudio
 {
 class TextEditorTab;
+class MapDraftGeometryItem;
 
 using MapCanvasEditStatusCallback = std::function<void(const QString &)>;
 
@@ -47,6 +50,15 @@ QUndoCommand *createMapSourceTextSnapshotCommand(TextEditorTab *textEditor,
                                                  const QString &afterText,
                                                  int insertedLineNumber,
                                                  MapCanvasEditStatusCallback statusCallback);
+QUndoCommand *createMapDraftCompletionCommand(TextEditorTab *textEditor,
+                                              QGraphicsScene *scene,
+                                              QVector<QGraphicsRectItem *> *draftItems,
+                                              MapDraftGeometryItem *draftItem,
+                                              const QString &label,
+                                              const QString &beforeText,
+                                              const QString &afterText,
+                                              int insertedLineNumber,
+                                              MapCanvasEditStatusCallback statusCallback);
 MapLineAreaVertexMoveSet coupledLineVertexMoveSet(const MapGeometryFeature &lineFeature,
                                                   int sourceVertexIndex,
                                                   const QPointF &oldPoint,

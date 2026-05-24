@@ -44,12 +44,31 @@ jobs:
             qt6-tools-dev \
             qt6-tools-dev-tools
 
+      - name: Limit Linux build parallelism
+        if: runner.os == 'Linux'
+        run: echo "CMAKE_BUILD_PARALLEL_LEVEL=2" >> "$GITHUB_ENV"
+
       - name: Install Qt (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          python -m pip install --upgrade aqtinstall
-          python -m aqt install-qt windows desktop 6.7.3 win64_msvc2022_64 `
+          $ErrorActionPreference = "Stop"
+          if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -Scope Global -ErrorAction SilentlyContinue) {
+            $global:PSNativeCommandUseErrorActionPreference = $true
+          }
+          function Invoke-CheckedNativeCommand {
+            $command = $args[0]
+            $commandArgs = @($args | Select-Object -Skip 1)
+            & $command @commandArgs
+            if ($LASTEXITCODE -ne 0) {
+              throw "Command failed with exit code ${LASTEXITCODE}: $($args -join ' ')"
+            }
+          }
+
+          Invoke-CheckedNativeCommand python -m pip install --upgrade aqtinstall
+          Invoke-CheckedNativeCommand python -m aqt install-qt windows desktop 6.7.3 win64_msvc2022_64 `
+            --base https://download.qt.io `
+            --timeout 30 `
             --outputdir "$env:RUNNER_WORKSPACE\Qt" `
             --modules qtsvg qttools
           $qtRoot = Get-ChildItem -Path "$env:RUNNER_WORKSPACE\Qt\6.7.3" -Directory |
@@ -66,7 +85,11 @@ jobs:
         run: |
           brew update
           brew install qtbase qtsvg
-          echo "CMAKE_PREFIX_PATH=$(brew --prefix qtbase);$(brew --prefix qtsvg)" >> "$GITHUB_ENV"
+          qtbase_prefix="$(brew --prefix qtbase)"
+          qtsvg_prefix="$(brew --prefix qtsvg)"
+          echo "CMAKE_PREFIX_PATH=${qtbase_prefix}:${qtsvg_prefix}" >> "$GITHUB_ENV"
+          echo "Qt6_DIR=${qtbase_prefix}/lib/cmake/Qt6" >> "$GITHUB_ENV"
+          echo "Qt6Svg_DIR=${qtsvg_prefix}/lib/cmake/Qt6Svg" >> "$GITHUB_ENV"
           echo "$(brew --prefix qtbase)/bin" >> "$GITHUB_PATH"
 
       - name: Configure
@@ -76,7 +99,7 @@ jobs:
           -DTHERION_ENABLE_STRICT_WARNINGS=ON
 
       - name: Build
-        run: cmake --build build --config ${{ matrix.build_type }} --parallel
+        run: cmake --build build --config ${{ matrix.build_type }}
 
       - name: Run unit tests
         run: >
@@ -135,6 +158,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Limit Ubuntu 26.04 build parallelism
+        run: echo "CMAKE_BUILD_PARALLEL_LEVEL=2" >> "$GITHUB_ENV"
+
       - name: Configure
         run: >
           cmake -S . -B build
@@ -142,7 +168,7 @@ jobs:
           -DTHERION_ENABLE_STRICT_WARNINGS=ON
 
       - name: Build
-        run: cmake --build build --config ${{ matrix.build_type }} --parallel
+        run: cmake --build build --config ${{ matrix.build_type }}
 
       - name: Run unit tests
         run: >

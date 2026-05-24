@@ -80,6 +80,7 @@ MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
     const bool appLooksDark = appReferenceLightness < 0.42;
 
     bool lightMode = appLooksLight;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     if (QGuiApplication::styleHints() != nullptr) {
         const Qt::ColorScheme scheme = QGuiApplication::styleHints()->colorScheme();
         if (scheme == Qt::ColorScheme::Dark) {
@@ -87,12 +88,13 @@ MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
         } else if (scheme == Qt::ColorScheme::Light) {
             lightMode = true;
         }
+    }
+#endif
 
-        // On some platform/style combinations the color-scheme hint can disagree
-        // with the effective application palette; prefer the palette in that case.
-        if ((lightMode && appLooksDark) || (!lightMode && appLooksLight)) {
-            lightMode = appLooksLight;
-        }
+    // On some platform/style combinations the color-scheme hint can disagree
+    // with the effective application palette; prefer the palette in that case.
+    if ((lightMode && appLooksDark) || (!lightMode && appLooksLight)) {
+        lightMode = appLooksLight;
     }
 
     MapCanvasTheme theme;

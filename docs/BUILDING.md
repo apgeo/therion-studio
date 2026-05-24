@@ -6,7 +6,7 @@ This document describes the current build and packaging workflow.
 
 - CMake 3.21 or newer
 - C++20 compiler
-- Qt 6.5 or newer with `Widgets`, `Svg`, and `Concurrent`
+- Qt 6.4 or newer with `Widgets`, `Svg`, and `Concurrent`
 
 The bundled command catalog, syntax palette, and UI icons are compiled into Qt resources.
 
@@ -84,4 +84,10 @@ editing `CMakeLists.txt`. Branch and SHA builds derive a development package lab
 
 ## Linux
 
-Linux release packaging is not finalized yet. Development builds can use the same CMake build flow as macOS, with Qt supplied by the system package manager or a Qt SDK.
+Linux release packaging is not finalized yet. Development builds should prefer distribution Qt packages so `.deb` packaging remains realistic. On Ubuntu 24.04 and Debian-family systems, install the development dependencies with:
+
+```sh
+sudo apt-get install qt6-base-dev qt6-base-dev-tools qt6-svg-dev qt6-tools-dev qt6-tools-dev-tools
+```
+
+Then use the same CMake configure/build flow as macOS.

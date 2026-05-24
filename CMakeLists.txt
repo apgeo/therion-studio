@@ -23,8 +23,8 @@ option(THERION_ENABLE_STRICT_WARNINGS
     "Enable warnings-as-errors for non-UI library targets"
     OFF)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Svg Concurrent)
-find_package(Qt6LinguistTools 6.5 QUIET)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Widgets Svg Concurrent)
+find_package(Qt6LinguistTools 6.4 QUIET)
 
 qt_standard_project_setup()
 

@@ -12,7 +12,7 @@ Prerequisites:
 - Visual Studio 2022 Build Tools with the MSVC x64 toolchain
 - CMake 3.21 or newer
 - Ninja
-- Qt 6.5 or newer for `msvc2022_64`, including `qtsvg` and `qttools`
+- Qt 6.4 or newer for `msvc2022_64`, including `qtsvg` and `qttools`
 - NSIS
 
 Example PowerShell build:

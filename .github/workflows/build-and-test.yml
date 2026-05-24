@@ -36,16 +36,12 @@ jobs:
             libxcb-image0 \
             libxcb-keysyms1 \
             libxcb-render-util0 \
-            libxcb-xinerama0
-
-      - name: Install Qt (Linux)
-        if: runner.os == 'Linux'
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: 6.7.3
-          arch: gcc_64
-          modules: qtsvg qttools
-          cache: true
+            libxcb-xinerama0 \
+            qt6-base-dev \
+            qt6-base-dev-tools \
+            qt6-svg-dev \
+            qt6-tools-dev \
+            qt6-tools-dev-tools
 
       - name: Install Qt (Windows)
         if: runner.os == 'Windows'

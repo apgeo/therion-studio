@@ -81,6 +81,7 @@ QString applicationChromeStyleSheet()
 
 bool effectiveDarkAppearance()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     if (QStyleHints *styleHints = QGuiApplication::styleHints()) {
         const Qt::ColorScheme scheme = styleHints->colorScheme();
         if (scheme == Qt::ColorScheme::Dark) {
@@ -90,6 +91,7 @@ bool effectiveDarkAppearance()
             return false;
         }
     }
+#endif
 
     const QColor windowColor = QApplication::palette().color(QPalette::Window);
     return windowColor.isValid() && windowColor.lightnessF() < 0.5;
@@ -200,11 +202,13 @@ int main(int argc, char *argv[])
     applyApplicationAppearance(application);
     ApplicationAppearanceWatcher appearanceWatcher(&application, &application);
     application.installEventFilter(&appearanceWatcher);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     if (QStyleHints *styleHints = QGuiApplication::styleHints()) {
         QObject::connect(styleHints, &QStyleHints::colorSchemeChanged, &application, [&application](Qt::ColorScheme) {
             applyApplicationAppearance(application);
         });
     }
+#endif
 
     auto *window = new MainWindow;
     window->show();

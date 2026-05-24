@@ -144,11 +144,13 @@ TextEditorTab::TextEditorTab(QWidget *parent)
     refreshCurrentLineHighlight();
     updateContextHelp();
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     if (QStyleHints *styleHints = QGuiApplication::styleHints()) {
         connect(styleHints, &QStyleHints::colorSchemeChanged, this, [this](Qt::ColorScheme) {
             handleApplicationAppearanceChanged();
         });
     }
+#endif
     if (qApp != nullptr) {
         qApp->installEventFilter(this);
     }

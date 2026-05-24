@@ -1,6 +1,7 @@
 #include "../src/core/TherionBackgroundMetadata.h"
 
 #include <QDir>
+#include <QFileInfo>
 #include <QtMath>
 
 #include <iostream>
@@ -22,9 +23,19 @@ bool nearlyEqual(qreal a, qreal b, qreal epsilon = 0.0001)
     return qAbs(a - b) <= epsilon;
 }
 
+QString normalizedPathForCompare(const QString &path)
+{
+    return QDir::fromNativeSeparators(QDir::cleanPath(path));
+}
+
+QString documentPathForTest(const QString &fileName)
+{
+    return QDir(QDir::tempPath()).filePath(QStringLiteral("therion-studio-test/project/data/") + fileName);
+}
+
 int runRasterInsertParsingTest()
 {
-    const QString documentPath = QDir::cleanPath(QStringLiteral("/tmp/project/data/clopy01.th2"));
+    const QString documentPath = documentPathForTest(QStringLiteral("clopy01.th2"));
     const QString text =
         QStringLiteral("encoding utf-8\n"
                        "##XTHERION## xth_me_image_insert {0 1 5.011872336272722} {0 {}} clopy01.png 0 {}\n");
@@ -60,8 +71,8 @@ int runRasterInsertParsingTest()
         return 1;
     }
 
-    const QString expectedPath = QDir::cleanPath(QStringLiteral("/tmp/project/data/clopy01.png"));
-    if (!expect(QDir::cleanPath(reference.absolutePath) == expectedPath,
+    const QString expectedPath = QFileInfo(documentPath).dir().filePath(QStringLiteral("clopy01.png"));
+    if (!expect(normalizedPathForCompare(reference.absolutePath) == normalizedPathForCompare(expectedPath),
                 "Expected relative raster path to resolve against TH2 document directory.")) {
         return 1;
     }
@@ -71,7 +82,7 @@ int runRasterInsertParsingTest()
 
 int runBracedRasterPathParsingTest()
 {
-    const QString documentPath = QDir::cleanPath(QStringLiteral("/tmp/project/data/map.th2"));
+    const QString documentPath = documentPathForTest(QStringLiteral("map.th2"));
     const QString text =
         QStringLiteral("##XTHERION## xth_me_image_insert {-12.5 0 1.25} {40 {}} {background scans/clopy 01.png} 0 {}\n");
 
@@ -96,8 +107,8 @@ int runBracedRasterPathParsingTest()
         return 1;
     }
 
-    const QString expectedPath = QDir::cleanPath(QStringLiteral("/tmp/project/data/background scans/clopy 01.png"));
-    if (!expect(QDir::cleanPath(reference.absolutePath) == expectedPath,
+    const QString expectedPath = QFileInfo(documentPath).dir().filePath(QStringLiteral("background scans/clopy 01.png"));
+    if (!expect(normalizedPathForCompare(reference.absolutePath) == normalizedPathForCompare(expectedPath),
                 "Expected braced raster path with spaces to resolve against document directory.")) {
         return 1;
     }
@@ -107,7 +118,7 @@ int runBracedRasterPathParsingTest()
 
 int runXviInsertParsingTest()
 {
-    const QString documentPath = QDir::cleanPath(QStringLiteral("/tmp/project/data/create.th2"));
+    const QString documentPath = documentPathForTest(QStringLiteral("create.th2"));
     const QString text =
         QStringLiteral("##XTHERION## xth_me_image_insert {456.253 1 1.0} {60.18 0@create.} create.xvi 0 {}\n");
 
@@ -164,7 +175,7 @@ int runAreaAdjustParsingTest()
 
 int runMalformedMetadataIgnoredTest()
 {
-    const QString documentPath = QDir::cleanPath(QStringLiteral("/tmp/project/data/map.th2"));
+    const QString documentPath = documentPathForTest(QStringLiteral("map.th2"));
     const QString text =
         QStringLiteral("##XTHERION## xth_me_image_insert {broken payload\n"
                        "##XTHERION## xth_me_area_adjust 1 2 3\n");

@@ -14,6 +14,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Check structure constraints
+        run: python3 scripts/check_structure_constraints.py
+
       - name: Install Qt runtime dependencies
         run: |
           sudo apt-get update
@@ -41,8 +44,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=Debug
           -DTHERION_ENABLE_STRICT_WARNINGS=ON
 
-      - name: Build
-        run: cmake --build build --config Debug
+      - name: Build app and unit tests
+        run: cmake --build build --config Debug --target TherionStudio therion_unit_tests
 
       - name: Run unit tests
         run: >
@@ -51,6 +54,9 @@ jobs:
           -L unit
           --output-on-failure
           --timeout 300
+
+      - name: Build UI smoke tests
+        run: cmake --build build --config Debug --target therion_ui_tests
 
       - name: Run UI smoke tests
         run: >
@@ -95,6 +101,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Check structure constraints
+        run: python3 scripts/check_structure_constraints.py
+
       - name: Limit build parallelism
         run: echo "CMAKE_BUILD_PARALLEL_LEVEL=2" >> "$GITHUB_ENV"
 
@@ -104,8 +113,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=Debug
           -DTHERION_ENABLE_STRICT_WARNINGS=ON
 
-      - name: Build
-        run: cmake --build build --config Debug
+      - name: Build app and unit tests
+        run: cmake --build build --config Debug --target TherionStudio therion_unit_tests
 
       - name: Run unit tests
         run: >
@@ -114,6 +123,9 @@ jobs:
           -L unit
           --output-on-failure
           --timeout 300
+
+      - name: Build UI smoke tests
+        run: cmake --build build --config Debug --target therion_ui_tests
 
       - name: Run UI smoke tests
         run: >

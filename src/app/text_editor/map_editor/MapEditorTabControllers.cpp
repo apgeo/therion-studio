@@ -18,6 +18,11 @@
 
 namespace TherionStudio
 {
+namespace
+{
+constexpr int kMagnifierUpdateIntervalMs = 16;
+}
+
 void MapEditorTab::updateCommandSurfaceState()
 {
     if (cancelDrawShortcut_ != nullptr) {
@@ -297,9 +302,16 @@ void MapEditorTab::scheduleMagnifierOverlayUpdateFromViewportPosition(const QPoi
         return;
     }
 
+    const int elapsedMs = magnifierThrottleActive_
+        ? static_cast<int>(magnifierLastUpdateElapsed_.elapsed())
+        : kMagnifierUpdateIntervalMs;
+    const int delayMs = qMax(0, kMagnifierUpdateIntervalMs - elapsedMs);
+
     magnifierUpdatePending_ = true;
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(delayMs, this, [this]() {
         magnifierUpdatePending_ = false;
+        magnifierThrottleActive_ = true;
+        magnifierLastUpdateElapsed_.restart();
         updateMagnifierOverlayFromViewportPosition(magnifierPendingViewportPosition_, true);
     });
 }
@@ -319,6 +331,7 @@ void MapEditorTab::hideMagnifierOverlay()
         mapMagnifierOverlay_->setOverlayActive(false);
     }
     magnifierHasViewportPosition_ = false;
+    magnifierThrottleActive_ = false;
 }
 
 QString MapEditorTab::magnifierCoordinateTextForScenePosition(const QPointF &scenePosition) const

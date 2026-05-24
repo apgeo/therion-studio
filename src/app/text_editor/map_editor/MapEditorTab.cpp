@@ -197,7 +197,57 @@ void MapEditorTab::refreshMapScenePreservingUndoStack()
 
 void MapEditorTab::flushPendingMapSceneRefreshAfterCommand()
 {
+    const bool hadPendingRefresh = mapSceneRefreshPending_;
     MapEditorSceneRefreshController(sceneRefreshContext()).flushPendingMapSceneRefreshAfterCommand();
+    if (hadPendingRefresh) {
+        rebuildInspectorObjectsTree();
+    }
+}
+
+void MapEditorTab::scheduleSourceDrivenMapRefresh()
+{
+    if (mapCommandApplyInProgress_) {
+        if (sourceDrivenMapRefreshTimer_ != nullptr) {
+            sourceDrivenMapRefreshTimer_->stop();
+        }
+        refreshMapScene();
+        return;
+    }
+
+    if (sourceDrivenMapRefreshTimer_ == nullptr) {
+        applySourceDrivenMapRefresh();
+        return;
+    }
+
+    sourceDrivenMapRefreshTimer_->start();
+}
+
+void MapEditorTab::applySourceDrivenMapRefresh()
+{
+    if (mapCommandApplyInProgress_) {
+        scheduleSourceDrivenMapRefresh();
+        return;
+    }
+
+    refreshMapScene();
+    rebuildInspectorObjectsTree();
+}
+
+QVector<TherionParsedLine> MapEditorTab::parsedLinesForCurrentDocument() const
+{
+    if (textEditor_ == nullptr) {
+        return {};
+    }
+
+    const int currentRevision = textEditor_->documentRevision();
+    if (cachedParsedLinesValid_ && cachedParsedLinesRevision_ == currentRevision) {
+        return cachedParsedLines_;
+    }
+
+    cachedParsedLines_ = TherionDocumentParser::parseText(textEditor_->text());
+    cachedParsedLinesRevision_ = currentRevision;
+    cachedParsedLinesValid_ = true;
+    return cachedParsedLines_;
 }
 
 void MapEditorTab::handleAddPointTriggered()
@@ -335,15 +385,26 @@ QRectF MapEditorTab::mapSourceBoundsForCurrentDocument() const
         return QRectF();
     }
 
-    const QString currentText = textEditor_->text();
-    const TherionAreaAdjust areaAdjust = parseTherionAreaAdjust(currentText);
-    if (areaAdjust.valid && areaAdjust.modelRect.isValid()) {
-        return areaAdjust.modelRect;
+    const int currentRevision = textEditor_->documentRevision();
+    if (cachedMapSourceBoundsValid_ && cachedMapSourceBoundsRevision_ == currentRevision) {
+        return cachedMapSourceBounds_;
     }
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(currentText);
-    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
-    return geometryBoundsForFeatures(features);
+    const QString currentText = textEditor_->text();
+    QRectF resolvedBounds;
+    const TherionAreaAdjust areaAdjust = parseTherionAreaAdjust(currentText);
+    if (areaAdjust.valid && areaAdjust.modelRect.isValid()) {
+        resolvedBounds = areaAdjust.modelRect;
+    } else {
+        const QVector<TherionParsedLine> parsedLines = parsedLinesForCurrentDocument();
+        const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+        resolvedBounds = geometryBoundsForFeatures(features);
+    }
+
+    cachedMapSourceBoundsValid_ = true;
+    cachedMapSourceBoundsRevision_ = currentRevision;
+    cachedMapSourceBounds_ = resolvedBounds;
+    return cachedMapSourceBounds_;
 }
 
 QPointF MapEditorTab::sourcePointFromScenePosition(const QPointF &scenePosition) const

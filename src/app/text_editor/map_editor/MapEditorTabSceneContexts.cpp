@@ -66,6 +66,9 @@ MapEditorSceneRefreshContext MapEditorTab::sceneRefreshContext()
         .documentText = [self]() {
             return self != nullptr && self->textEditor_ != nullptr ? self->textEditor_->text() : QString();
         },
+        .parsedLinesForCurrentDocument = [self]() {
+            return self != nullptr ? self->parsedLinesForCurrentDocument() : QVector<TherionParsedLine>{};
+        },
         .currentLineNumber = [self]() {
             return self != nullptr && self->textEditor_ != nullptr ? self->textEditor_->currentLineNumber() : 0;
         },

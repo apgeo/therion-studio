@@ -173,6 +173,7 @@ public:
     bool isDirty() const;
     int currentLineNumber() const;
     int currentColumnNumber() const;
+    int documentRevision() const;
     QString text() const;
     QColor sourceSurfaceColor() const;
     QString statusPathText() const;

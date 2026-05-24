@@ -218,22 +218,93 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         return;
     }
 
-    if ((*context_.previewPath) != nullptr) {
-        context_.scene->removeItem((*context_.previewPath));
-        delete (*context_.previewPath);
-        (*context_.previewPath) = nullptr;
-    }
-    for (QGraphicsItem *marker : std::as_const((*context_.previewMarkers))) {
+    auto clearPreviewMarkers = [this]() {
+        for (QGraphicsItem *marker : std::as_const((*context_.previewMarkers))) {
+            if (marker != nullptr) {
+                if (marker->scene() != nullptr) {
+                    marker->scene()->removeItem(marker);
+                }
+                delete marker;
+            }
+        }
+        (*context_.previewMarkers).clear();
+    };
+    auto hidePreviewPath = [this]() {
+        if ((*context_.previewPath) != nullptr) {
+            (*context_.previewPath)->setPath(QPainterPath());
+            (*context_.previewPath)->setVisible(false);
+        }
+    };
+
+    auto removePreviewMarkerAt = [this](int markerIndex) {
+        if (markerIndex < 0 || markerIndex >= (*context_.previewMarkers).size()) {
+            return;
+        }
+        QGraphicsItem *marker = (*context_.previewMarkers).at(markerIndex);
         if (marker != nullptr) {
-            context_.scene->removeItem(marker);
+            if (marker->scene() != nullptr) {
+                marker->scene()->removeItem(marker);
+            }
             delete marker;
         }
-    }
-    (*context_.previewMarkers).clear();
+        (*context_.previewMarkers)[markerIndex] = nullptr;
+    };
+    auto ensurePreviewMarkerSlot = [this](int markerIndex) {
+        while ((*context_.previewMarkers).size() <= markerIndex) {
+            (*context_.previewMarkers).append(nullptr);
+        }
+    };
+    auto ensurePreviewEllipseMarker = [this, &ensurePreviewMarkerSlot, &removePreviewMarkerAt](
+                                          int markerIndex,
+                                          const QRectF &rect) {
+        ensurePreviewMarkerSlot(markerIndex);
+        auto *marker = dynamic_cast<QGraphicsEllipseItem *>((*context_.previewMarkers).at(markerIndex));
+        if (marker == nullptr) {
+            removePreviewMarkerAt(markerIndex);
+            marker = new QGraphicsEllipseItem(rect);
+            marker->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+            marker->setAcceptedMouseButtons(Qt::NoButton);
+            (*context_.previewMarkers)[markerIndex] = marker;
+        } else {
+            marker->setRect(rect);
+        }
+        if (marker->scene() != nullptr && marker->scene() != context_.scene) {
+            marker->scene()->removeItem(marker);
+        }
+        if (marker->scene() != context_.scene) {
+            context_.scene->addItem(marker);
+        }
+        return marker;
+    };
+    auto ensurePreviewLineMarker = [this, &ensurePreviewMarkerSlot, &removePreviewMarkerAt](int markerIndex) {
+        ensurePreviewMarkerSlot(markerIndex);
+        auto *marker = dynamic_cast<QGraphicsLineItem *>((*context_.previewMarkers).at(markerIndex));
+        if (marker == nullptr) {
+            removePreviewMarkerAt(markerIndex);
+            marker = new QGraphicsLineItem();
+            marker->setAcceptedMouseButtons(Qt::NoButton);
+            (*context_.previewMarkers)[markerIndex] = marker;
+        }
+        if (marker->scene() != nullptr && marker->scene() != context_.scene) {
+            marker->scene()->removeItem(marker);
+        }
+        if (marker->scene() != context_.scene) {
+            context_.scene->addItem(marker);
+        }
+        return marker;
+    };
+    auto trimPreviewMarkers = [this, &removePreviewMarkerAt](int usedMarkerCount) {
+        for (int markerIndex = (*context_.previewMarkers).size() - 1; markerIndex >= usedMarkerCount; --markerIndex) {
+            removePreviewMarkerAt(markerIndex);
+        }
+        (*context_.previewMarkers).resize(usedMarkerCount);
+    };
 
     if (mode() != MapEditorInteractiveDrawMode::Line
         && mode() != MapEditorInteractiveDrawMode::Area
         && mode() != MapEditorInteractiveDrawMode::Freehand) {
+        clearPreviewMarkers();
+        hidePreviewPath();
         return;
     }
 
@@ -374,6 +445,8 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         }
     } else {
         if ((*context_.sceneVertices).isEmpty()) {
+            clearPreviewMarkers();
+            hidePreviewPath();
             return;
         }
         QVector<QPointF> displayVertices = (*context_.sceneVertices);
@@ -390,56 +463,55 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         }
     }
 
-    (*context_.previewPath) = new QGraphicsPathItem(path);
+    if ((*context_.previewPath) == nullptr) {
+        (*context_.previewPath) = new QGraphicsPathItem();
+        (*context_.previewPath)->setBrush(Qt::NoBrush);
+        (*context_.previewPath)->setZValue(28.0);
+        (*context_.previewPath)->setAcceptedMouseButtons(Qt::NoButton);
+        context_.scene->addItem((*context_.previewPath));
+    } else if ((*context_.previewPath)->scene() != context_.scene) {
+        context_.scene->addItem((*context_.previewPath));
+    }
+
     const Qt::PenStyle previewPenStyle = mode() == MapEditorInteractiveDrawMode::Freehand
         ? Qt::SolidLine
         : Qt::DashLine;
     QPen previewPen(accent, 3.2, previewPenStyle, Qt::RoundCap, Qt::RoundJoin);
     previewPen.setCosmetic(true);
     (*context_.previewPath)->setPen(previewPen);
-    (*context_.previewPath)->setBrush(Qt::NoBrush);
-    (*context_.previewPath)->setZValue(28.0);
-    (*context_.previewPath)->setAcceptedMouseButtons(Qt::NoButton);
-    context_.scene->addItem((*context_.previewPath));
+    (*context_.previewPath)->setPath(path);
+    (*context_.previewPath)->setVisible(true);
 
+    int previewMarkerIndex = 0;
     for (const QPointF &vertex : std::as_const(anchorMarkers)) {
-        auto *marker = new QGraphicsEllipseItem(QRectF(-5.0, -5.0, 10.0, 10.0));
+        QGraphicsEllipseItem *marker = ensurePreviewEllipseMarker(previewMarkerIndex++, QRectF(-5.0, -5.0, 10.0, 10.0));
         marker->setPos(vertex);
-        marker->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
         QPen markerPen(accent.darker(130), 1.4);
         markerPen.setCosmetic(true);
         marker->setPen(markerPen);
         marker->setBrush(QBrush(accent));
         marker->setZValue(28.5);
-        marker->setAcceptedMouseButtons(Qt::NoButton);
-        context_.scene->addItem(marker);
-        (*context_.previewMarkers).append(marker);
     }
 
     for (const QLineF &connector : std::as_const(controlConnectors)) {
-        auto *connectorItem = new QGraphicsLineItem(connector);
+        QGraphicsLineItem *connectorItem = ensurePreviewLineMarker(previewMarkerIndex++);
+        connectorItem->setLine(connector);
         QPen connectorPen(controlColor.lighter(115), 1.6, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin);
         connectorPen.setCosmetic(true);
         connectorItem->setPen(connectorPen);
         connectorItem->setZValue(28.4);
-        connectorItem->setAcceptedMouseButtons(Qt::NoButton);
-        context_.scene->addItem(connectorItem);
-        (*context_.previewMarkers).append(connectorItem);
     }
 
     for (const QPointF &control : std::as_const(controlMarkers)) {
-        auto *marker = new QGraphicsEllipseItem(QRectF(-5.2, -5.2, 10.4, 10.4));
+        QGraphicsEllipseItem *marker = ensurePreviewEllipseMarker(previewMarkerIndex++, QRectF(-5.2, -5.2, 10.4, 10.4));
         marker->setPos(control);
-        marker->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
         QPen markerPen(controlColor.darker(150), 1.5);
         markerPen.setCosmetic(true);
         marker->setPen(markerPen);
         marker->setBrush(QBrush(controlColor));
         marker->setZValue(28.6);
-        marker->setAcceptedMouseButtons(Qt::NoButton);
-        context_.scene->addItem(marker);
-        (*context_.previewMarkers).append(marker);
     }
+    trimPreviewMarkers(previewMarkerIndex);
 }
 
 bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()

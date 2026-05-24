@@ -4,6 +4,7 @@
 #include <QPointF>
 #include <QRectF>
 #include <QString>
+#include <QVector>
 
 #include <functional>
 
@@ -15,6 +16,8 @@ class QUndoStack;
 
 namespace TherionStudio
 {
+struct TherionParsedLine;
+
 struct MapEditorSceneRefreshContext
 {
     QObject *sceneParent = nullptr;
@@ -31,6 +34,7 @@ struct MapEditorSceneRefreshContext
     qreal *gridSpacingMeters = nullptr;
 
     std::function<QString()> documentText;
+    std::function<QVector<TherionParsedLine>()> parsedLinesForCurrentDocument;
     std::function<int()> currentLineNumber;
     std::function<QString()> filePath;
     std::function<void()> handleSceneSelectionChanged;

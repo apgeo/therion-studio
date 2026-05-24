@@ -18,6 +18,7 @@
 #include <optional>
 
 #include "MapEditorInteractiveDrawLogic.h"
+#include "../../../core/TherionDocumentParser.h"
 
 class QLabel;
 class QFrame;
@@ -42,6 +43,7 @@ class QUndoStack;
 class QMainWindow;
 class QGraphicsItem;
 class QShortcut;
+class QTimer;
 class QModelIndex;
 
 namespace TherionStudio
@@ -207,6 +209,8 @@ private:
     void refreshMapScene();
     void refreshMapScenePreservingUndoStack();
     void flushPendingMapSceneRefreshAfterCommand();
+    void scheduleSourceDrivenMapRefresh();
+    void applySourceDrivenMapRefresh();
     MapEditorSceneRefreshContext sceneRefreshContext();
     void clearMapScene();
     MapEditorSelectionContext selectionContext();
@@ -223,6 +227,7 @@ private:
     bool commitInteractiveDrawSession();
     void clearInteractiveDrawSession(bool clearMode);
     void updateInteractiveDrawPreview();
+    QVector<TherionParsedLine> parsedLinesForCurrentDocument() const;
     QRectF mapSourceBoundsForCurrentDocument() const;
     QPointF sourcePointFromScenePosition(const QPointF &scenePosition) const;
     bool hasCompletableInteractiveDrawSession() const;
@@ -372,8 +377,10 @@ private:
     MapEditorMagnifierOverlay *mapMagnifierOverlay_ = nullptr;
     QPoint magnifierPendingViewportPosition_;
     QPoint magnifierLastViewportPosition_;
+    QElapsedTimer magnifierLastUpdateElapsed_;
     bool magnifierUpdatePending_ = false;
     bool magnifierHasViewportPosition_ = false;
+    bool magnifierThrottleActive_ = false;
     QGraphicsScene *mapScene_ = nullptr;
     QWidget *mapPaneContainer_ = nullptr;
     QFrame *mapPaneTopSeparator_ = nullptr;
@@ -476,6 +483,12 @@ private:
     bool autoFitEnabled_ = true;
     qreal zoomFactor_ = 1.0;
     bool fitBackgroundRequested_ = false;
+    mutable bool cachedMapSourceBoundsValid_ = false;
+    mutable int cachedMapSourceBoundsRevision_ = -1;
+    mutable QRectF cachedMapSourceBounds_;
+    mutable bool cachedParsedLinesValid_ = false;
+    mutable int cachedParsedLinesRevision_ = -1;
+    mutable QVector<TherionParsedLine> cachedParsedLines_;
     bool mapPanActive_ = false;
     QPoint mapPanLastPosition_;
     bool primaryPointerInteractionActive_ = false;
@@ -495,6 +508,7 @@ private:
     int selectedBackgroundLayerIndex_ = -1;
     bool mapCommandApplyInProgress_ = false;
     bool mapSceneRefreshPending_ = false;
+    QTimer *sourceDrivenMapRefreshTimer_ = nullptr;
     QPointer<QMainWindow> detachedMapPaneWindow_;
     bool mapPaneDetached_ = false;
     bool inlineWorkspaceModeSelectorVisible_ = true;

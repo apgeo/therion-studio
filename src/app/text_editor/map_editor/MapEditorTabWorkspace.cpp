@@ -39,6 +39,7 @@
 #include <QSvgRenderer>
 #include <QTabBar>
 #include <QTabWidget>
+#include <QTimer>
 #include <QToolButton>
 #include <QTreeView>
 #include <QUndoStack>
@@ -439,12 +440,15 @@ void MapEditorTab::buildUi()
     textEditor_ = new TextEditorTab(splitter_);
     textEditor_->setInlineStatusVisible(false);
     textEditor_->setModeSelectorVisible(false);
+    sourceDrivenMapRefreshTimer_ = new QTimer(this);
+    sourceDrivenMapRefreshTimer_->setSingleShot(true);
+    sourceDrivenMapRefreshTimer_->setInterval(75);
+    connect(sourceDrivenMapRefreshTimer_, &QTimer::timeout, this, &MapEditorTab::applySourceDrivenMapRefresh);
     connect(textEditor_, &TextEditorTab::titleChanged, this, &MapEditorTab::titleChanged);
     connect(textEditor_, &TextEditorTab::dirtyStateChanged, this, &MapEditorTab::dirtyStateChanged);
     connect(textEditor_, &TextEditorTab::currentLineChanged, this, &MapEditorTab::handleTextEditorCurrentLineChanged);
     connect(textEditor_, &TextEditorTab::cursorPositionChanged, this, &MapEditorTab::handleTextEditorCursorPositionChanged);
-    connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::refreshMapScene);
-    connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::rebuildInspectorObjectsTree);
+    connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::scheduleSourceDrivenMapRefresh);
     connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::documentTextChanged);
     connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::updateCommandSurfaceState);
     connect(this, &MapEditorTab::backgroundLayersChanged, this, &MapEditorTab::refreshInspectorBackgroundPanel);
@@ -494,7 +498,7 @@ void MapEditorTab::buildUi()
         mapView_->viewport()->setFocusPolicy(Qt::StrongFocus);
         mapView_->viewport()->installEventFilter(this);
         mapView_->viewport()->setMouseTracking(true);
-        mapMagnifierOverlay_ = new MapEditorMagnifierOverlay(mapView_, mapView_->viewport());
+        mapMagnifierOverlay_ = new MapEditorMagnifierOverlay(mapView_, mapView_);
         mapMagnifierOverlay_->updatePlacement();
         if (mapView_->horizontalScrollBar() != nullptr) {
             connect(mapView_->horizontalScrollBar(),

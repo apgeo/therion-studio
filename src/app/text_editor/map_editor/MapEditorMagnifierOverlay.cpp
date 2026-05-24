@@ -65,8 +65,13 @@ void MapEditorMagnifierOverlay::updatePlacement()
         return;
     }
 
-    const int x = qMax(kOverlayMargin, parent->width() - width() - kOverlayMargin);
-    const int y = kOverlayMargin;
+    QRect anchorRect = parent->rect();
+    if (view_ != nullptr && parent == view_ && view_->viewport() != nullptr) {
+        anchorRect = view_->viewport()->geometry();
+    }
+
+    const int x = qMax(anchorRect.left() + kOverlayMargin, anchorRect.right() - width() - kOverlayMargin + 1);
+    const int y = anchorRect.top() + kOverlayMargin;
     move(x, y);
     raise();
 }

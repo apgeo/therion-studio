@@ -426,6 +426,11 @@ int TextEditorTab::currentColumnNumber() const
     return cursorController_ != nullptr ? cursorController_->currentColumnNumber() : 1;
 }
 
+int TextEditorTab::documentRevision() const
+{
+    return editor_->document()->revision();
+}
+
 QString TextEditorTab::text() const
 {
     return editor_->toPlainText();

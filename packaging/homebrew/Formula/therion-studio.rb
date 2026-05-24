@@ -1,5 +1,5 @@
 # Draft Homebrew formula for a future external tap, e.g.
-# https://github.com/lblazek/homebrew-therion-studio
+# https://github.com/ladislavb/homebrew-therion-studio
 #
 # Before publishing:
 # - replace homepage/url with the final public repository URL
@@ -7,8 +7,8 @@
 
 class TherionStudio < Formula
   desc "Qt desktop editor for Therion cave-survey projects"
-  homepage "https://github.com/lblazek/therion-studio"
-  url "https://github.com/lblazek/therion-studio/archive/refs/tags/v0.1.0.tar.gz"
+  homepage "https://github.com/ladislavb/therion-studio"
+  url "https://github.com/ladislavb/therion-studio/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "REPLACE_WITH_SOURCE_TARBALL_SHA256"
   license "GPL-3.0-or-later"
 

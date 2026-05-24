@@ -13,13 +13,13 @@ homebrew-therion-studio/
 Suggested user-facing install flow after publishing the tap:
 
 ```sh
-brew install lblazek/therion-studio/therion-studio
+brew install ladislavb/therion-studio/therion-studio
 ```
 
 or:
 
 ```sh
-brew tap lblazek/therion-studio
+brew tap ladislavb/therion-studio
 brew install therion-studio
 ```
 

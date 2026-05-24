@@ -319,6 +319,7 @@ Map tab uses explicit workspace modes:
 
 - `Visual`: graphical map editor + right-side `Inspector` tabs (`Selection`, `Objects`, `Backgrounds`)
 - In `Visual` mode, drawing and editing handles use screen-adaptive sizing so point/vertex handles and preview strokes remain usable without becoming oversized when zoomed in.
+- In `Visual` mode, moving the pointer over the map shows a top-right magnifier overlay with a zoomed cursor-local crop, center crosshair, and source coordinate readout for precise point and vertex placement.
 - `Raw`: source text editor + right-side contextual help inspector
 - the full-width document toolbar row is shown above the file tabs for all document types
 - the command toolbar sits directly above the native file tabs without an extra bottom border

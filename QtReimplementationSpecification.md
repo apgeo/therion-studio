@@ -350,6 +350,8 @@ The rules below define the expected day-to-day interaction model. If a later req
   - a modifier-based zoom gesture (for example Command+scroll) should be supported consistently across platforms
 - Pen-plus-touch workflows shall not accidentally trigger zoom when the user performs a pan gesture.
 - Map drawing and editing affordances, including point handles, line/area vertex handles, control handles, preview strokes, and line strokes, shall remain visually usable across zoom levels by using screen-adaptive sizing where appropriate.
+- The TH2 Visual map editor shall provide a fixed viewport magnifier overlay for precise tracing and placement. The magnifier shall show a zoomed crop around the current cursor position, an exact center crosshair, and the corresponding map/source coordinate readout.
+- The map magnifier shall be rendered as a viewport overlay, not as scene geometry, so it remains pinned to the map viewport and does not pan or zoom with the document.
 - Background image position, opacity, gamma, and visibility shall be editable per session.
 - Background layers shall support insertion, selection, visibility toggles, opacity adjustment, gamma adjustment, and persisted positioning.
 - Adding a raster background image from the TH2 Visual map editor shall write XTherion-compatible `##XTHERION## xth_me_image_insert` metadata to the TH2 source, using document-relative paths where possible.

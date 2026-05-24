@@ -291,6 +291,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.h
     src/app/text_editor/map_editor/MapEditorInputPolicy.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.h
+    src/app/text_editor/map_editor/MapEditorMagnifierOverlay.cpp
+    src/app/text_editor/map_editor/MapEditorMagnifierOverlay.h
     src/app/text_editor/map_editor/MapEditorViewportInputContext.h
     src/app/text_editor/map_editor/MapEditorViewportInputController.cpp
     src/app/text_editor/map_editor/MapEditorViewportInputController.h
@@ -750,6 +752,8 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.h
     src/app/text_editor/map_editor/MapEditorInputPolicy.cpp
     src/app/text_editor/map_editor/MapEditorInputPolicy.h
+    src/app/text_editor/map_editor/MapEditorMagnifierOverlay.cpp
+    src/app/text_editor/map_editor/MapEditorMagnifierOverlay.h
     src/app/text_editor/map_editor/MapEditorViewportInputContext.h
     src/app/text_editor/map_editor/MapEditorViewportInputController.cpp
     src/app/text_editor/map_editor/MapEditorViewportInputController.h

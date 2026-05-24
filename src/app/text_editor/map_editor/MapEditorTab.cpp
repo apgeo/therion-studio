@@ -35,6 +35,7 @@
 #include "MapEditorInspectorData.h"
 #include "MapEditorInspectorBackgroundController.h"
 #include "MapEditorInspectorObjectController.h"
+#include "MapEditorMagnifierOverlay.h"
 #include "MapEditorObjectDetailsEditController.h"
 #include "MapEditorObjectDetailsPanelController.h"
 #include "MapEditorSourceReferenceResolver.h"
@@ -114,6 +115,25 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         return QWidget::eventFilter(watched, event);
     }
 
+    if (mapView_ != nullptr && watched == mapView_->viewport()) {
+        switch (event->type()) {
+        case QEvent::MouseMove:
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonRelease:
+            scheduleMagnifierOverlayUpdateFromViewportPosition(static_cast<QMouseEvent *>(event)->pos());
+            break;
+        case QEvent::Leave:
+            hideMagnifierOverlay();
+            break;
+        case QEvent::Resize:
+        case QEvent::Show:
+            updateMagnifierOverlayGeometry();
+            break;
+        default:
+            break;
+        }
+    }
+
     if (const std::optional<bool> viewportResult = MapEditorViewportInputController(viewportInputContext()).handleEvent(watched, event)) {
         return viewportResult.value();
     }
@@ -162,11 +182,17 @@ void MapEditorTab::buildMapScene()
 void MapEditorTab::refreshMapScene()
 {
     MapEditorSceneRefreshController(sceneRefreshContext()).refreshMapScene();
+    if (mapMagnifierOverlay_ != nullptr) {
+        mapMagnifierOverlay_->update();
+    }
 }
 
 void MapEditorTab::refreshMapScenePreservingUndoStack()
 {
     MapEditorSceneRefreshController(sceneRefreshContext()).refreshMapScenePreservingUndoStack();
+    if (mapMagnifierOverlay_ != nullptr) {
+        mapMagnifierOverlay_->update();
+    }
 }
 
 void MapEditorTab::flushPendingMapSceneRefreshAfterCommand()
@@ -794,11 +820,61 @@ void MapEditorTab::syncZoomFactorFromView()
 void MapEditorTab::applyZoomAtViewportPosition(qreal factor, const QPointF &viewportPosition)
 {
     MapEditorSceneLifecycleController(sceneLifecycleContext()).applyZoomAtViewportPosition(factor, viewportPosition);
+    updateMagnifierOverlayFromViewportPosition(viewportPosition.toPoint(), mapMagnifierOverlay_ != nullptr && mapMagnifierOverlay_->isVisible());
 }
 
 void MapEditorTab::refreshToolbarSummary()
 {
     // Status text is retained for future command-surface summaries.
+}
+
+void MapEditorTab::updateMagnifierOverlayGeometry()
+{
+    if (mapMagnifierOverlay_ != nullptr) {
+        mapMagnifierOverlay_->updatePlacement();
+    }
+}
+
+void MapEditorTab::updateMagnifierOverlayFromViewportPosition(const QPoint &viewportPosition, bool active)
+{
+    if (mapMagnifierOverlay_ == nullptr || mapView_ == nullptr || mapView_->viewport() == nullptr) {
+        return;
+    }
+    if (!mapView_->viewport()->rect().contains(viewportPosition)) {
+        hideMagnifierOverlay();
+        return;
+    }
+
+    const QPointF scenePosition = mapView_->mapToScene(viewportPosition);
+    mapMagnifierOverlay_->setCursorPosition(viewportPosition,
+                                            scenePosition,
+                                            magnifierCoordinateTextForScenePosition(scenePosition));
+    mapMagnifierOverlay_->setOverlayActive(active);
+}
+
+void MapEditorTab::scheduleMagnifierOverlayUpdateFromViewportPosition(const QPoint &viewportPosition)
+{
+    if (mapMagnifierOverlay_ == nullptr) {
+        return;
+    }
+
+    QTimer::singleShot(0, this, [this, viewportPosition]() {
+        updateMagnifierOverlayFromViewportPosition(viewportPosition, true);
+    });
+}
+
+void MapEditorTab::hideMagnifierOverlay()
+{
+    if (mapMagnifierOverlay_ != nullptr) {
+        mapMagnifierOverlay_->setOverlayActive(false);
+    }
+}
+
+QString MapEditorTab::magnifierCoordinateTextForScenePosition(const QPointF &scenePosition) const
+{
+    const QPointF sourcePosition = sourcePointFromScenePosition(scenePosition);
+    return tr("x %1  y %2").arg(QString::number(sourcePosition.x(), 'f', 1),
+                                QString::number(sourcePosition.y(), 'f', 1));
 }
 
 QRectF MapEditorTab::mapGeometryFitBounds() const

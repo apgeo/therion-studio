@@ -1,5 +1,7 @@
 #include "MapEditorTab.h"
 
+#include "MapEditorMagnifierOverlay.h"
+
 #include <QApplication>
 #include <QAbstractItemView>
 #include <QAbstractSpinBox>
@@ -490,6 +492,9 @@ void MapEditorTab::buildUi()
     if (mapView_->viewport() != nullptr) {
         mapView_->viewport()->setFocusPolicy(Qt::StrongFocus);
         mapView_->viewport()->installEventFilter(this);
+        mapView_->viewport()->setMouseTracking(true);
+        mapMagnifierOverlay_ = new MapEditorMagnifierOverlay(mapView_, mapView_->viewport());
+        mapMagnifierOverlay_->updatePlacement();
     }
 
     buildMapScene();

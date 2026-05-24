@@ -62,6 +62,7 @@ struct MapEditorInspectorObjectContext;
 struct MapEditorObjectDetailsContext;
 class MapEditorObjectDetailsEditController;
 class MapEditorObjectDetailsPanelController;
+class MapEditorMagnifierOverlay;
 struct MapEditorSceneLifecycleContext;
 class MapEditorSceneLifecycleController;
 struct MapEditorSceneRefreshContext;
@@ -245,6 +246,11 @@ private:
     void applyZoomAtViewportPosition(qreal factor, const QPointF &viewportPosition);
     void refreshToolbarSummary();
     void adjustMapZoom(qreal factor);
+    void updateMagnifierOverlayGeometry();
+    void updateMagnifierOverlayFromViewportPosition(const QPoint &viewportPosition, bool active);
+    void scheduleMagnifierOverlayUpdateFromViewportPosition(const QPoint &viewportPosition);
+    void hideMagnifierOverlay();
+    QString magnifierCoordinateTextForScenePosition(const QPointF &scenePosition) const;
     QRectF mapGeometryFitBounds() const;
     QRectF mapBackgroundFitBounds() const;
     QRectF mapPreviewBounds() const;
@@ -357,6 +363,7 @@ private:
     QPushButton *rawModeButton_ = nullptr;
     TextEditorTab *textEditor_ = nullptr;
     QGraphicsView *mapView_ = nullptr;
+    MapEditorMagnifierOverlay *mapMagnifierOverlay_ = nullptr;
     QGraphicsScene *mapScene_ = nullptr;
     QWidget *mapPaneContainer_ = nullptr;
     QFrame *mapPaneTopSeparator_ = nullptr;

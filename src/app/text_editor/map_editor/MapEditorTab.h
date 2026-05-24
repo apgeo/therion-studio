@@ -249,6 +249,7 @@ private:
     void updateMagnifierOverlayGeometry();
     void updateMagnifierOverlayFromViewportPosition(const QPoint &viewportPosition, bool active);
     void scheduleMagnifierOverlayUpdateFromViewportPosition(const QPoint &viewportPosition);
+    void refreshVisibleMagnifierOverlay();
     void hideMagnifierOverlay();
     QString magnifierCoordinateTextForScenePosition(const QPointF &scenePosition) const;
     QRectF mapGeometryFitBounds() const;
@@ -364,6 +365,10 @@ private:
     TextEditorTab *textEditor_ = nullptr;
     QGraphicsView *mapView_ = nullptr;
     MapEditorMagnifierOverlay *mapMagnifierOverlay_ = nullptr;
+    QPoint magnifierPendingViewportPosition_;
+    QPoint magnifierLastViewportPosition_;
+    bool magnifierUpdatePending_ = false;
+    bool magnifierHasViewportPosition_ = false;
     QGraphicsScene *mapScene_ = nullptr;
     QWidget *mapPaneContainer_ = nullptr;
     QFrame *mapPaneTopSeparator_ = nullptr;

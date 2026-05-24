@@ -1381,6 +1381,12 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
             }
         }
     }
+    const TherionAreaAdjust existingAreaAdjust = parseTherionAreaAdjust(beforeText);
+    const bool hasExistingPlacementMetadata = preserveExistingPlacement
+        && existingReference.has_value()
+        && existingReference->hasBasePosition
+        && existingAreaAdjust.valid
+        && existingAreaAdjust.modelRect.isValid();
 
     QPointF basePosition;
     if (preserveExistingPlacement && existingReference.has_value() && existingReference->hasBasePosition) {
@@ -1411,7 +1417,7 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
                                                         backgroundLayerGammaValue(item));
 
     QString afterMetadataText = beforeText;
-    if (!preserveExistingPlacement) {
+    if (!hasExistingPlacementMetadata) {
         afterMetadataText = upsertXtherionSimpleCommandLine(afterMetadataText,
                                                             QStringLiteral("xth_me_area_adjust"),
                                                             xtherionAreaAdjustLine(xtherionAutoAreaAdjustRect()));

@@ -28,6 +28,7 @@
 #include <QPushButton>
 #include <QShortcut>
 #include <QScopedValueRollback>
+#include <QScrollBar>
 #include <QSizePolicy>
 #include <QSignalBlocker>
 #include <QSlider>
@@ -495,6 +496,18 @@ void MapEditorTab::buildUi()
         mapView_->viewport()->setMouseTracking(true);
         mapMagnifierOverlay_ = new MapEditorMagnifierOverlay(mapView_, mapView_->viewport());
         mapMagnifierOverlay_->updatePlacement();
+        if (mapView_->horizontalScrollBar() != nullptr) {
+            connect(mapView_->horizontalScrollBar(),
+                    &QScrollBar::valueChanged,
+                    this,
+                    &MapEditorTab::refreshVisibleMagnifierOverlay);
+        }
+        if (mapView_->verticalScrollBar() != nullptr) {
+            connect(mapView_->verticalScrollBar(),
+                    &QScrollBar::valueChanged,
+                    this,
+                    &MapEditorTab::refreshVisibleMagnifierOverlay);
+        }
     }
 
     buildMapScene();

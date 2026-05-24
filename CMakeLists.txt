@@ -136,6 +136,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/MainWindowDocumentHelpers.cpp
     src/app/MainWindowDocumentHelpers.h
     src/app/MainWindowMapBackground.cpp
+    src/app/MainWindowProjectLifecycle.cpp
     src/app/MainWindowSidebar.cpp
     src/app/MainWindowStructureBrowser.cpp
     src/app/MainWindowStructureRoles.h
@@ -308,6 +309,7 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
     src/app/text_editor/map_editor/MapEditorSceneSupport.h
     src/app/text_editor/map_editor/MapEditorTab.cpp
+    src/app/text_editor/map_editor/MapEditorTabControllers.cpp
     src/app/text_editor/map_editor/MapEditorTabCanvasEditContext.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundContext.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorObjectContext.cpp
@@ -320,6 +322,7 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/TextEditorTab.cpp
+    src/app/text_editor/TextEditorTabCompletionFacade.cpp
     src/app/text_editor/TextEditorTabAppearanceController.cpp
     src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
     src/app/text_editor/TextEditorTabBlockEditorLineBuildService.cpp
@@ -667,6 +670,7 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
 set(THERION_TEXT_EDITOR_UI_TEST_SOURCES
     ${THERION_EDITOR_UI_TEST_BASE_SOURCES}
     src/app/text_editor/TextEditorTab.cpp
+    src/app/text_editor/TextEditorTabCompletionFacade.cpp
     src/app/text_editor/TextEditorTabAppearanceController.cpp
     src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
     src/app/text_editor/TextEditorTabBlockEditorLineBuildService.cpp
@@ -769,6 +773,7 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
     src/app/text_editor/map_editor/MapEditorSceneSupport.h
     src/app/text_editor/map_editor/MapEditorTab.cpp
+    src/app/text_editor/map_editor/MapEditorTabControllers.cpp
     src/app/text_editor/map_editor/MapEditorTabCanvasEditContext.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundContext.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorObjectContext.cpp
@@ -781,6 +786,7 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/TextEditorTab.cpp
+    src/app/text_editor/TextEditorTabCompletionFacade.cpp
     src/app/text_editor/TextEditorTabAppearanceController.cpp
     src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
     src/app/text_editor/TextEditorTabBlockEditorLineBuildService.cpp

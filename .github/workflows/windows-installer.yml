@@ -10,7 +10,7 @@ on:
       qt_version:
         description: Qt version to install
         required: true
-        default: 6.7.3
+        default: 6.8.3
       build_type:
         description: CMake build type
         required: true
@@ -87,7 +87,7 @@ jobs:
             --base https://download.qt.io `
             --timeout 30 `
             --outputdir "$env:RUNNER_WORKSPACE\Qt" `
-            --modules qtsvg qttools
+            --archives qtbase qtsvg qttools
           $qtRoot = Get-ChildItem -Path "$env:RUNNER_WORKSPACE\Qt\${{ inputs.qt_version }}" -Directory |
             Where-Object { $_.Name -like "*msvc2022_64" } |
             Select-Object -First 1

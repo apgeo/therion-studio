@@ -57,7 +57,7 @@ Recommended MSVC release build:
 ```powershell
 cmake -S . -B build-win -G Ninja `
   -DCMAKE_BUILD_TYPE=Release `
-  -DCMAKE_PREFIX_PATH=C:\Qt\6.7.3\msvc2022_64 `
+  -DCMAKE_PREFIX_PATH=C:\Qt\6.8.3\msvc2022_64 `
   -DTHERION_STUDIO_VERSION=2026.5.0
 
 cmake --build build-win --target TherionStudio

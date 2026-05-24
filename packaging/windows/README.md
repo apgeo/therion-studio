@@ -18,7 +18,7 @@ Prerequisites:
 Example PowerShell build:
 
 ```powershell
-$QtRoot = "C:/Qt/6.7.3/msvc2022_64"
+$QtRoot = "C:/Qt/6.8.3/msvc2022_64"
 $Version = "2026.5.0"
 
 cmake -S . -B build-win -G Ninja `

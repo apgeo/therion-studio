@@ -362,7 +362,8 @@ void RawEditorCommandMetadataLoader::applyCommandAliasMetadata(const QString &co
         mergeHelpEntry(alias, aliasEntry);
         appendUniqueList(metadata().commandOptionTokens[alias], metadata().commandOptionTokens.value(commandName));
         appendUniqueList(metadata().commandValueTokens[alias], metadata().commandValueTokens.value(commandName));
-        const QString argumentPrefix = commandName + QStringLiteral("\x1farg\x1f");
+        QString argumentPrefix = commandArgumentValueKey(commandName, 0);
+        argumentPrefix.chop(1);
         QStringList commandArgumentKeys;
         for (auto argumentIterator = metadata().commandArgumentValueTokens.cbegin();
              argumentIterator != metadata().commandArgumentValueTokens.cend();

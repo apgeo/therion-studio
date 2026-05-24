@@ -6,6 +6,11 @@
 
 namespace
 {
+QString metadataKeySeparator()
+{
+    return QString(QChar(0x1f));
+}
+
 void appendUniqueCaseInsensitive(QStringList &target, const QString &value)
 {
     const QString trimmed = value.trimmed();
@@ -23,19 +28,21 @@ namespace TherionStudio
 {
 QString commandOptionValueKey(const QString &commandName, const QString &optionToken)
 {
-    return commandName.trimmed().toLower() + QStringLiteral("\x1f")
+    return commandName.trimmed().toLower() + metadataKeySeparator()
         + optionToken.trimmed().toLower();
 }
 
 QString commandOptionHelpKey(const QString &commandName, const QString &optionToken)
 {
-    return commandName.trimmed().toLower() + QStringLiteral("\x1fhelp\x1f")
+    return commandName.trimmed().toLower() + metadataKeySeparator() + QStringLiteral("help")
+        + metadataKeySeparator()
         + optionToken.trimmed().toLower();
 }
 
 QString commandArgumentValueKey(const QString &commandName, int argumentIndex)
 {
-    return commandName.trimmed().toLower() + QStringLiteral("\x1farg\x1f")
+    return commandName.trimmed().toLower() + metadataKeySeparator() + QStringLiteral("arg")
+        + metadataKeySeparator()
         + QString::number(qMax(argumentIndex, 0));
 }
 

@@ -8,6 +8,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QFont>
+#include <QGuiApplication>
+#include <QPalette>
 #include <QRegularExpression>
 #include <QTextCharFormat>
 
@@ -22,6 +24,12 @@ QTextCharFormat makeFormat(const QColor &foreground, bool bold = false, bool ita
     format.setFontWeight(bold ? QFont::Bold : QFont::Normal);
     format.setFontItalic(italic);
     return format;
+}
+
+bool applicationUsesDarkSyntaxPalette()
+{
+    const QColor baseColor = QGuiApplication::palette().color(QPalette::Base);
+    return baseColor.isValid() && baseColor.lightnessF() < 0.5;
 }
 
 QSet<QString> extractOptionKeys(const QString &optionKeyField)
@@ -217,18 +225,36 @@ TherionSyntaxHighlighter::TherionSyntaxHighlighter(QTextDocument *parent)
     loadPalette();
 }
 
+void TherionSyntaxHighlighter::reloadPaletteForApplicationAppearance()
+{
+    loadPalette();
+    rehighlight();
+}
+
 void TherionSyntaxHighlighter::loadPalette()
 {
-    baseTextFormat_ = makeFormat(QColor(QStringLiteral("#D4D4D4")));
-    keywordFormat_ = makeFormat(QColor(QStringLiteral("#569CD6")), true);
-    optionFormat_ = makeFormat(QColor(QStringLiteral("#9CDCFE")));
-    identifierFormat_ = makeFormat(QColor(QStringLiteral("#DCDCAA")));
-    invalidTokenFormat_ = makeFormat(QColor(QStringLiteral("#F44747")));
+    keywordTokens_.clear();
+    commandTokens_.clear();
+    commandOptionTokens_.clear();
+    commandAllowedValues_.clear();
+    commandOptionValueArity_.clear();
+    commandOptionEnumValues_.clear();
+    commandSubtypeByTypeTokens_.clear();
+    commandPositionalIdTokenIndexes_.clear();
+    commandOptionIdValueTokens_.clear();
+    closingDirectiveIdTokens_.clear();
+
+    const bool darkPalette = applicationUsesDarkSyntaxPalette();
+    baseTextFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#D4D4D4")) : QColor(QStringLiteral("#24292f")));
+    keywordFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#569CD6")) : QColor(QStringLiteral("#0550ae")), true);
+    optionFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#9CDCFE")) : QColor(QStringLiteral("#0969da")));
+    identifierFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#DCDCAA")) : QColor(QStringLiteral("#8250df")));
+    invalidTokenFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#F44747")) : QColor(QStringLiteral("#cf222e")));
     invalidTokenFormat_.setUnderlineStyle(QTextCharFormat::WaveUnderline);
-    invalidTokenFormat_.setUnderlineColor(QColor(QStringLiteral("#F44747")));
-    stringFormat_ = makeFormat(QColor(QStringLiteral("#CE9178")));
-    numberFormat_ = makeFormat(QColor(QStringLiteral("#B5CEA8")));
-    commentFormat_ = makeFormat(QColor(QStringLiteral("#6A9955")), false, true);
+    invalidTokenFormat_.setUnderlineColor(invalidTokenFormat_.foreground().color());
+    stringFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#CE9178")) : QColor(QStringLiteral("#0a3069")));
+    numberFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#B5CEA8")) : QColor(QStringLiteral("#116329")));
+    commentFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#6A9955")) : QColor(QStringLiteral("#6e7781")), false, true);
 
     QFile paletteFile(QStringLiteral(":/resources/therion_syntax_palette.json"));
     if (!paletteFile.open(QIODevice::ReadOnly)) {
@@ -241,7 +267,10 @@ void TherionSyntaxHighlighter::loadPalette()
     }
 
     const QJsonObject rootObject = document.object();
-    const QJsonObject stylesObject = rootObject.value(QStringLiteral("styles")).toObject();
+    QJsonObject stylesObject = rootObject.value(darkPalette ? QStringLiteral("darkStyles") : QStringLiteral("styles")).toObject();
+    if (stylesObject.isEmpty()) {
+        stylesObject = rootObject.value(QStringLiteral("styles")).toObject();
+    }
 
     applyStyle(QStringLiteral("baseText"), stylesObject.value(QStringLiteral("baseText")).toObject());
     applyStyle(QStringLiteral("keyword"), stylesObject.value(QStringLiteral("keyword")).toObject());

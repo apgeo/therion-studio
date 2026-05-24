@@ -172,6 +172,9 @@ void MapEditorTab::handleApplicationAppearanceChanged()
     if (mapScene_ != nullptr) {
         refreshMapScenePreservingUndoStack();
     }
+    rebuildInspectorObjectsTree();
+    refreshInspectorBackgroundPanel();
+    refreshStatus();
 }
 
 void MapEditorTab::buildMapScene()

@@ -6,9 +6,11 @@
 
 #include "../../../core/TherionDocumentParser.h"
 
+#include <QApplication>
 #include <QGraphicsItem>
 #include <QGraphicsLineItem>
 #include <QGraphicsScene>
+#include <QPalette>
 #include <QPen>
 #include <QPlainTextEdit>
 #include <QSignalBlocker>
@@ -571,7 +573,8 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         }
     }
 
-    QPen connectorPen(QColor(QStringLiteral("#4f6b86")));
+    const QPalette palette = QApplication::palette();
+    QPen connectorPen(palette.color(QPalette::Mid));
     connectorPen.setWidthF(1.2);
     connectorPen.setStyle(Qt::SolidLine);
 
@@ -599,7 +602,10 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         const qreal endCapStartX = itemRect.left();
         const qreal endCapEndX = itemRect.right();
 
-        QColor closeColor = blockEditorCanvasBaseColorForDirective(item->kind()).darker(130);
+        const QColor baseColor = blockEditorCanvasBaseColorForDirective(item->kind());
+        QColor closeColor = baseColor.lightnessF() < 0.5
+            ? baseColor.lighter(155)
+            : baseColor.darker(130);
         closeColor.setAlpha(245);
         QPen closePen(closeColor);
         closePen.setWidthF(kClosureMarkerStrokeWidth);

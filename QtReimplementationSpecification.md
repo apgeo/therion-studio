@@ -669,7 +669,8 @@ Required behavior:
 - syntax highlighting shall be driven by a structured highlight palette loaded from metadata such as JSON rather than being defined only inline in rendering code
 - the highlight palette shall support distinct style roles for at least base text, block keywords, commands, parameters, numbers, booleans, strings, and comments
 - Therion syntax highlighting shall be defined independently from the broader application theme and shall not be the place where window, panel, or editor-chrome theme colors are specified
-- bundled default highlight styles shall be packaged with the application so the editor remains readable even when no override file exists
+- bundled default highlight styles shall include contrast-safe light and dark variants and shall be packaged with the application so the editor remains readable even when no override file exists
+- active editors shall reload the effective syntax-highlight variant when the application appearance changes at runtime
 - when a highlight-style entry is missing or invalid, the editor shall fall back to safe bundled or built-in defaults rather than disabling syntax highlighting
 - the application may support a user override highlight-style file layered on top of the bundled defaults; decode failure of the override file shall be non-fatal and shall fall back to bundled styles
 - changing the highlight style palette shall affect presentation only and shall not change tokenization rules, completion behavior, or document content
@@ -1040,6 +1041,7 @@ The criteria below are intended for implementation verification and QA.
 - Syntax highlighting uses a structured Therion-specific palette rather than a single hardcoded color scheme embedded only in the editor widget code.
 - Distinct highlight roles exist for base text, blocks, commands, parameters, numbers, booleans, strings, and comments.
 - Therion syntax-highlight rules are defined independently from broader application theme colors.
+- Bundled syntax-highlight styles include light and dark variants, and active editors switch variants when runtime appearance changes.
 - Missing or invalid highlight-style entries fall back to bundled or built-in defaults without disabling editor usability.
 - Packaged builds include the style resources required to render syntax highlighting consistently on all supported platforms.
 

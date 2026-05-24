@@ -1,11 +1,14 @@
 #include "app/MainWindow.h"
 
 #include <QApplication>
+#include <QColor>
 #include <QEvent>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QLocale>
 #include <QObject>
+#include <QPalette>
+#include <QStyle>
 #include <QStyleHints>
 #include <QStyleFactory>
 #include <QTranslator>
@@ -76,8 +79,81 @@ QString applicationChromeStyleSheet()
         "}");
 }
 
-void applyApplicationChromeStyle(QApplication &application)
+bool effectiveDarkAppearance()
 {
+    if (QStyleHints *styleHints = QGuiApplication::styleHints()) {
+        const Qt::ColorScheme scheme = styleHints->colorScheme();
+        if (scheme == Qt::ColorScheme::Dark) {
+            return true;
+        }
+        if (scheme == Qt::ColorScheme::Light) {
+            return false;
+        }
+    }
+
+    const QColor windowColor = QApplication::palette().color(QPalette::Window);
+    return windowColor.isValid() && windowColor.lightnessF() < 0.5;
+}
+
+QPalette applicationPaletteForAppearance(bool darkAppearance)
+{
+    QPalette palette = QApplication::style() != nullptr
+        ? QApplication::style()->standardPalette()
+        : QPalette();
+
+    if (!darkAppearance) {
+        palette.setColor(QPalette::Highlight, QColor(QStringLiteral("#0a84ff")));
+        palette.setColor(QPalette::HighlightedText, QColor(QStringLiteral("#ffffff")));
+        palette.setColor(QPalette::Link, QColor(QStringLiteral("#0066cc")));
+        return palette;
+    }
+
+    const QColor window(QStringLiteral("#20242c"));
+    const QColor base(QStringLiteral("#171b22"));
+    const QColor alternateBase(QStringLiteral("#232934"));
+    const QColor text(QStringLiteral("#e8edf4"));
+    const QColor mutedText(QStringLiteral("#a8b1c0"));
+    const QColor button(QStringLiteral("#2a303b"));
+    const QColor disabledText(QStringLiteral("#8f9bad"));
+    const QColor light(QStringLiteral("#3d4654"));
+    const QColor midlight(QStringLiteral("#647185"));
+    const QColor mid(QStringLiteral("#46505f"));
+    const QColor dark(QStringLiteral("#11161d"));
+    const QColor shadow(QStringLiteral("#080b10"));
+    const QColor highlight(QStringLiteral("#2f80ed"));
+    const QColor highlightedText(QStringLiteral("#ffffff"));
+
+    palette.setColor(QPalette::Window, window);
+    palette.setColor(QPalette::WindowText, text);
+    palette.setColor(QPalette::Base, base);
+    palette.setColor(QPalette::AlternateBase, alternateBase);
+    palette.setColor(QPalette::ToolTipBase, alternateBase);
+    palette.setColor(QPalette::ToolTipText, text);
+    palette.setColor(QPalette::Text, text);
+    palette.setColor(QPalette::Button, button);
+    palette.setColor(QPalette::ButtonText, text);
+    palette.setColor(QPalette::BrightText, QColor(QStringLiteral("#ff6b6b")));
+    palette.setColor(QPalette::Link, QColor(QStringLiteral("#75b7ff")));
+    palette.setColor(QPalette::Light, light);
+    palette.setColor(QPalette::Midlight, midlight);
+    palette.setColor(QPalette::Mid, mid);
+    palette.setColor(QPalette::Dark, dark);
+    palette.setColor(QPalette::Shadow, shadow);
+    palette.setColor(QPalette::Highlight, highlight);
+    palette.setColor(QPalette::HighlightedText, highlightedText);
+    palette.setColor(QPalette::PlaceholderText, mutedText);
+
+    palette.setColor(QPalette::Disabled, QPalette::WindowText, disabledText);
+    palette.setColor(QPalette::Disabled, QPalette::Text, disabledText);
+    palette.setColor(QPalette::Disabled, QPalette::ButtonText, disabledText);
+    palette.setColor(QPalette::Disabled, QPalette::Highlight, QColor(QStringLiteral("#3a4250")));
+    palette.setColor(QPalette::Disabled, QPalette::HighlightedText, disabledText);
+    return palette;
+}
+
+void applyApplicationAppearance(QApplication &application)
+{
+    application.setPalette(applicationPaletteForAppearance(effectiveDarkAppearance()));
     application.setStyleSheet(applicationChromeStyleSheet());
 }
 
@@ -94,7 +170,7 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override
     {
         if (watched == application_ && event != nullptr && event->type() == QEvent::ApplicationPaletteChange) {
-            applyApplicationChromeStyle(*application_);
+            application_->setStyleSheet(applicationChromeStyleSheet());
         }
         return QObject::eventFilter(watched, event);
     }
@@ -121,12 +197,12 @@ int main(int argc, char *argv[])
     }
 
     applyPlatformStyle(application);
-    applyApplicationChromeStyle(application);
+    applyApplicationAppearance(application);
     ApplicationAppearanceWatcher appearanceWatcher(&application, &application);
     application.installEventFilter(&appearanceWatcher);
     if (QStyleHints *styleHints = QGuiApplication::styleHints()) {
         QObject::connect(styleHints, &QStyleHints::colorSchemeChanged, &application, [&application](Qt::ColorScheme) {
-            applyApplicationChromeStyle(application);
+            applyApplicationAppearance(application);
         });
     }
 

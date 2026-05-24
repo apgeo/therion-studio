@@ -33,6 +33,7 @@
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QSplitter>
+#include <QSvgRenderer>
 #include <QStandardItemModel>
 #include <QStatusBar>
 #include <QStyleHints>
@@ -56,12 +57,44 @@ namespace TherionStudio
 {
 namespace
 {
+QPixmap renderLucidePixmap(const QString &iconName, const QColor &color, int extent, qreal devicePixelRatio)
+{
+    QFile file(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QPixmap();
+    }
+
+    QString svg = QString::fromUtf8(file.readAll());
+    svg.replace(QStringLiteral("currentColor"), color.name(QColor::HexRgb));
+    QSvgRenderer renderer(svg.toUtf8());
+    if (!renderer.isValid()) {
+        return QPixmap();
+    }
+
+    QPixmap pixmap(QSize(extent, extent) * devicePixelRatio);
+    pixmap.setDevicePixelRatio(devicePixelRatio);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    renderer.render(&painter, QRectF(0, 0, extent, extent));
+    return pixmap;
+}
+
+QIcon themedLucideIcon(const QString &iconName, const QPalette &palette, int extent, qreal devicePixelRatio)
+{
+    QIcon icon;
+    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::ButtonText), extent, devicePixelRatio), QIcon::Normal);
+    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::Disabled, QPalette::ButtonText), extent, devicePixelRatio), QIcon::Disabled);
+    return icon;
+}
+
 QToolButton *createDetachedIconButton(QWidget *parent, const QString &toolTip, const QString &iconName)
 {
     auto *button = new QToolButton(parent);
     button->setAutoRaise(false);
-    button->setIcon(QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName)));
     button->setIconSize(QSize(14, 14));
+    button->setIcon(themedLucideIcon(iconName, button->palette(), 14, button->devicePixelRatioF()));
+    button->setProperty("lucideIconName", iconName);
     button->setToolButtonStyle(Qt::ToolButtonIconOnly);
     button->setToolTip(toolTip);
     button->setAccessibleName(toolTip);
@@ -286,8 +319,9 @@ public:
                                           " border-radius: 4px;"
                                           " padding: 1px 8px;"
                                           " min-height: 18px;"
-                                          "}").arg(background));
+                                                  "}").arg(background));
         }
+        refreshCommandBarIconTheme();
     }
 
     void setCloseCallback(std::function<void()> callback)
@@ -329,6 +363,30 @@ private:
         lineButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::Line);
         freehandLineButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::Freehand);
         areaButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::Area);
+        refreshCommandBarIconTheme();
+    }
+
+    void refreshCommandBarIconTheme()
+    {
+        if (commandBar_ == nullptr) {
+            return;
+        }
+
+        const QPalette palette = commandBar_->palette();
+        const qreal devicePixelRatio = commandBar_->devicePixelRatioF();
+        const QList<QToolButton *> buttons = commandBar_->findChildren<QToolButton *>();
+        for (QToolButton *button : buttons) {
+            if (button == nullptr) {
+                continue;
+            }
+
+            const QString iconName = button->property("lucideIconName").toString();
+            if (iconName.isEmpty()) {
+                continue;
+            }
+
+            button->setIcon(themedLucideIcon(iconName, palette, button->iconSize().width(), devicePixelRatio));
+        }
     }
 
     QPointer<MapEditorTab> mapTab_;
@@ -632,7 +690,7 @@ void MapEditorTab::buildUi()
 
     objectDetailsMetadataLabel_ = new QLabel(QStringLiteral("-"), objectSelectionSection_);
     objectDetailsMetadataLabel_->setTextFormat(Qt::PlainText);
-    objectDetailsMetadataLabel_->setStyleSheet(QStringLiteral("QLabel { color: palette(mid); }"));
+    objectDetailsMetadataLabel_->setStyleSheet(QStringLiteral("QLabel { color: palette(midlight); }"));
     objectSelectionLayout->addWidget(objectDetailsMetadataLabel_);
 
     objectAreaReferenceLabel_ = new QLabel(objectSelectionSection_);
@@ -640,7 +698,7 @@ void MapEditorTab::buildUi()
     objectAreaReferenceLabel_->setTextInteractionFlags(Qt::TextBrowserInteraction);
     objectAreaReferenceLabel_->setOpenExternalLinks(false);
     objectAreaReferenceLabel_->setWordWrap(true);
-    objectAreaReferenceLabel_->setStyleSheet(QStringLiteral("QLabel { color: palette(mid); }"));
+    objectAreaReferenceLabel_->setStyleSheet(QStringLiteral("QLabel { color: palette(midlight); }"));
     connect(objectAreaReferenceLabel_, &QLabel::linkActivated, this, [this](const QString &link) {
         bool ok = false;
         const int areaLineNumber = link.toInt(&ok);

@@ -5,6 +5,9 @@
 
 #include <QAbstractItemModel>
 #include <QAbstractItemView>
+#include <QApplication>
+#include <QColor>
+#include <QFile>
 #include <QDir>
 #include <QFileInfo>
 #include <QHash>
@@ -12,9 +15,12 @@
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QModelIndex>
+#include <QPainter>
+#include <QPalette>
 #include <QSignalBlocker>
 #include <QStandardItem>
 #include <QStandardItemModel>
+#include <QSvgRenderer>
 #include <QTabWidget>
 #include <QToolButton>
 #include <QTreeView>
@@ -112,16 +118,49 @@ QString mapObjectItemText(const TherionStudio::ProjectStructureEntry &entry)
     return QStringLiteral("%1: %2").arg(structureObjectKindLabel(entry.category), entry.name);
 }
 
+QPixmap renderStructureLucidePixmap(const QString &iconName, const QColor &color, int extent)
+{
+    QFile file(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QPixmap();
+    }
+
+    QString svg = QString::fromUtf8(file.readAll());
+    svg.replace(QStringLiteral("currentColor"), color.name(QColor::HexRgb));
+    QSvgRenderer renderer(svg.toUtf8());
+    if (!renderer.isValid()) {
+        return QPixmap();
+    }
+
+    const qreal devicePixelRatio = qApp != nullptr ? qApp->devicePixelRatio() : 1.0;
+    QPixmap pixmap(QSize(extent, extent) * devicePixelRatio);
+    pixmap.setDevicePixelRatio(devicePixelRatio);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    renderer.render(&painter, QRectF(0, 0, extent, extent));
+    return pixmap;
+}
+
+QIcon structureLucideIcon(const QString &iconName)
+{
+    const QPalette palette = QApplication::palette();
+    QIcon icon;
+    icon.addPixmap(renderStructureLucidePixmap(iconName, palette.color(QPalette::Text), 16), QIcon::Normal);
+    icon.addPixmap(renderStructureLucidePixmap(iconName, palette.color(QPalette::Disabled, QPalette::Text), 16), QIcon::Disabled);
+    return icon;
+}
+
 QIcon structureItemIconForCategory(const QString &category)
 {
     if (category == QStringLiteral("Surveys")) {
-        return QIcon(QStringLiteral(":/resources/icons/lucide/compass.svg"));
+        return structureLucideIcon(QStringLiteral("compass"));
     }
     if (category == QStringLiteral("Maps")) {
-        return QIcon(QStringLiteral(":/resources/icons/lucide/map.svg"));
+        return structureLucideIcon(QStringLiteral("map"));
     }
     if (category == QStringLiteral("Scraps")) {
-        return QIcon(QStringLiteral(":/resources/icons/lucide/puzzle.svg"));
+        return structureLucideIcon(QStringLiteral("puzzle"));
     }
 
     return QIcon();

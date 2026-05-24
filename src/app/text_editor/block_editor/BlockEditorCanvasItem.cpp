@@ -5,30 +5,48 @@
 #include <QApplication>
 #include <QGraphicsSceneMouseEvent>
 #include <QPainter>
+#include <QPalette>
 #include <QPen>
 #include <QStyle>
 
 namespace TherionStudio
 {
+namespace
+{
+bool blockEditorUsesDarkPalette()
+{
+    const QColor base = QApplication::palette().color(QPalette::Base);
+    return base.isValid() && base.lightnessF() < 0.5;
+}
+
+QColor readableTextColorForFill(const QColor &fill)
+{
+    return fill.lightnessF() < 0.5
+        ? QColor(QStringLiteral("#f2f5f9"))
+        : QColor(QStringLiteral("#1f1f1f"));
+}
+}
+
 QColor blockEditorCanvasBaseColorForDirective(const QString &directive)
 {
     const QString normalizedKind = BlockEditorDirectiveRules::normalizeDirective(directive);
+    const bool darkPalette = blockEditorUsesDarkPalette();
     if (normalizedKind == QStringLiteral("survey")) {
-        return QColor(QStringLiteral("#d7f7d7"));
+        return darkPalette ? QColor(QStringLiteral("#243f2b")) : QColor(QStringLiteral("#d7f7d7"));
     }
     if (normalizedKind == QStringLiteral("centerline")) {
-        return QColor(QStringLiteral("#ffe9cc"));
+        return darkPalette ? QColor(QStringLiteral("#493520")) : QColor(QStringLiteral("#ffe9cc"));
     }
     if (normalizedKind == QStringLiteral("data")) {
-        return QColor(QStringLiteral("#e8dbff"));
+        return darkPalette ? QColor(QStringLiteral("#372b4d")) : QColor(QStringLiteral("#e8dbff"));
     }
     if (normalizedKind == QStringLiteral("map")) {
-        return QColor(QStringLiteral("#d5f3f0"));
+        return darkPalette ? QColor(QStringLiteral("#1f4543")) : QColor(QStringLiteral("#d5f3f0"));
     }
     if (BlockEditorDirectiveRules::isMapObjectReferenceKind(normalizedKind)) {
-        return QColor(QStringLiteral("#fff0c2"));
+        return darkPalette ? QColor(QStringLiteral("#493d1c")) : QColor(QStringLiteral("#fff0c2"));
     }
-    return QColor(QStringLiteral("#d8e9ff"));
+    return darkPalette ? QColor(QStringLiteral("#25384f")) : QColor(QStringLiteral("#d8e9ff"));
 }
 
 BlockCanvasItem::BlockCanvasItem(const QString &kind,
@@ -103,16 +121,23 @@ void BlockCanvasItem::paint(QPainter *painter,
     }
 
     const QColor baseColor = blockEditorCanvasBaseColorForDirective(kind_);
+    const QPalette palette = QApplication::palette();
+    const QColor textColor = readableTextColorForFill(baseColor);
+    const QColor selectedBorder = palette.color(QPalette::Highlight);
+    const QColor normalBorder = palette.color(QPalette::Mid);
+    const QColor buttonFill = palette.color(QPalette::Button);
+    const QColor buttonBorder = palette.color(QPalette::Mid);
+    const bool darkPalette = blockEditorUsesDarkPalette();
 
-    painter->setPen(QPen(isSelected() ? QColor(QStringLiteral("#2f6fed")) : QColor(QStringLiteral("#8c8c8c")), isSelected() ? 2.0 : 1.0));
+    painter->setPen(QPen(isSelected() ? selectedBorder : normalBorder, isSelected() ? 2.0 : 1.0));
     painter->setBrush(baseColor);
     painter->drawRoundedRect(boundingRect(), 6.0, 6.0);
 
     QRectF deleteButtonRect;
     if (deletable_) {
         deleteButtonRect = deleteIconRect();
-        painter->setPen(QPen(QColor(QStringLiteral("#6a6a6a")), 1.0));
-        painter->setBrush(QColor(QStringLiteral("#f2f2f2")));
+        painter->setPen(QPen(buttonBorder, 1.0));
+        painter->setBrush(buttonFill);
         painter->drawRoundedRect(deleteButtonRect, 4.0, 4.0);
 
         const QRect deleteIconBounds = deleteButtonRect.adjusted(4.0, 4.0, -4.0, -4.0).toRect();
@@ -124,16 +149,16 @@ void BlockCanvasItem::paint(QPainter *painter,
     QRectF commentBadgeRect;
     if (!inlineComment_.trimmed().isEmpty()) {
         commentBadgeRect = inlineCommentBadgeRect();
-        painter->setPen(QPen(QColor(QStringLiteral("#7c6a42")), 1.0));
-        painter->setBrush(QColor(QStringLiteral("#fff1c9")));
+        painter->setPen(QPen(darkPalette ? QColor(QStringLiteral("#d7b95f")) : QColor(QStringLiteral("#7c6a42")), 1.0));
+        painter->setBrush(darkPalette ? QColor(QStringLiteral("#3a3018")) : QColor(QStringLiteral("#fff1c9")));
         painter->drawRoundedRect(commentBadgeRect, 4.0, 4.0);
-        painter->setPen(QColor(QStringLiteral("#5f4a1e")));
+        painter->setPen(darkPalette ? QColor(QStringLiteral("#f4dc8b")) : QColor(QStringLiteral("#5f4a1e")));
         painter->drawText(commentBadgeRect, Qt::AlignCenter, QStringLiteral("#"));
     }
 
     const QString kindLabel = BlockEditorDirectiveRules::blockDisplayKindLabel(kind_);
     const QString title = name_.isEmpty() ? kindLabel : QStringLiteral("%1: %2").arg(kindLabel, name_);
-    painter->setPen(QColor(QStringLiteral("#1f1f1f")));
+    painter->setPen(textColor);
     qreal textRight = deletable_ ? deleteButtonRect.left() - 16.0 : boundingRect().right() - 10.0;
     if (!commentBadgeRect.isNull()) {
         textRight = qMin(textRight, commentBadgeRect.left() - 10.0);

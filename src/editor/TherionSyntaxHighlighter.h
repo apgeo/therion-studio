@@ -16,6 +16,7 @@ class TherionSyntaxHighlighter final : public QSyntaxHighlighter
 
 public:
     explicit TherionSyntaxHighlighter(QTextDocument *parent = nullptr);
+    void reloadPaletteForApplicationAppearance();
 
 protected:
     void highlightBlock(const QString &text) override;

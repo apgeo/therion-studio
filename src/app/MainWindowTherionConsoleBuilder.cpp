@@ -44,7 +44,7 @@ void styleHelperValue(QLabel *label)
 
     label->setStyleSheet(QStringLiteral(
         "QLabel {"
-        " color: palette(mid);"
+        " color: palette(midlight);"
         " font-size: 11px;"
         "}"));
 }

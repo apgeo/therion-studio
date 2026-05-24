@@ -186,6 +186,9 @@ void TextEditorTab::handleApplicationAppearanceChanged()
     if (appearanceController_ != nullptr) {
         appearanceController_->handleApplicationAppearanceChanged();
     }
+    if (highlighter_ != nullptr) {
+        highlighter_->reloadPaletteForApplicationAppearance();
+    }
 }
 
 bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)

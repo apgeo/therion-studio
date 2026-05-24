@@ -1,7 +1,36 @@
 {
   "styles": {
     "baseText": {
-      "foreground": "#333333"
+      "foreground": "#24292f"
+    },
+    "keyword": {
+      "foreground": "#0550ae",
+      "bold": true
+    },
+    "option": {
+      "foreground": "#0969da"
+    },
+    "identifier": {
+      "foreground": "#8250df"
+    },
+    "invalidToken": {
+      "foreground": "#cf222e",
+      "bold": true
+    },
+    "string": {
+      "foreground": "#0a3069"
+    },
+    "number": {
+      "foreground": "#116329"
+    },
+    "comment": {
+      "foreground": "#6e7781",
+      "italic": true
+    }
+  },
+  "darkStyles": {
+    "baseText": {
+      "foreground": "#D4D4D4"
     },
     "keyword": {
       "foreground": "#569CD6",

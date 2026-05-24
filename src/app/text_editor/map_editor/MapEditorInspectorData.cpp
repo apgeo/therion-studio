@@ -6,15 +6,47 @@
 #include "../../../core/TherionDocumentParser.h"
 
 #include <QComboBox>
+#include <QApplication>
+#include <QFile>
 #include <QHash>
 #include <QIcon>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QLineEdit>
+#include <QPainter>
+#include <QPalette>
+#include <QSvgRenderer>
 
 namespace TherionStudio
 {
+namespace
+{
+QPixmap renderInspectorLucidePixmap(const QString &iconName, const QColor &color, int extent)
+{
+    QFile file(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QPixmap();
+    }
+
+    QString svg = QString::fromUtf8(file.readAll());
+    svg.replace(QStringLiteral("currentColor"), color.name(QColor::HexRgb));
+    QSvgRenderer renderer(svg.toUtf8());
+    if (!renderer.isValid()) {
+        return QPixmap();
+    }
+
+    const qreal devicePixelRatio = qApp != nullptr ? qApp->devicePixelRatio() : 1.0;
+    QPixmap pixmap(QSize(extent, extent) * devicePixelRatio);
+    pixmap.setDevicePixelRatio(devicePixelRatio);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    renderer.render(&painter, QRectF(0, 0, extent, extent));
+    return pixmap;
+}
+}
+
 bool inspectorTokenLooksNumeric(const QString &token)
 {
     if (token.isEmpty()) {
@@ -212,7 +244,11 @@ QString inspectorMapObjectItemText(const ProjectStructureEntry &entry, const The
 
 QIcon inspectorActionIcon(const QString &iconName)
 {
-    return QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
+    const QPalette palette = QApplication::palette();
+    QIcon icon;
+    icon.addPixmap(renderInspectorLucidePixmap(iconName, palette.color(QPalette::Text), 16), QIcon::Normal);
+    icon.addPixmap(renderInspectorLucidePixmap(iconName, palette.color(QPalette::Disabled, QPalette::Text), 16), QIcon::Disabled);
+    return icon;
 }
 
 qreal mapSourceUnitsPerMeterFromParsedLines(const QVector<TherionParsedLine> &parsedLines)

@@ -34,6 +34,7 @@ The main window is organized into:
 - Splitter handles use a consistent native visible grab-handle style across sidebar/content, raw-help, blocks columns, and map inspector splits
 - Main sidebar/content/editor seams avoid double borders; the editor area owns the continuous left seam and embedded canvases do not duplicate it
 - Main document chrome uses a unified spacing/contrast system: tabs, top command toolbar, sidebar panels, and contextual-help panels share consistent separator tone, control sizing, and surface hierarchy in light/dark modes
+- The application follows the effective system light/dark appearance at startup and when the operating-system appearance changes while the app is running.
 
 ### 2.1 Sidebar Activity Rail and Panes
 
@@ -236,7 +237,7 @@ Text editor includes:
 - when dragging over a container card, dropping near the card top/bottom edge inserts before/after that block; dropping in the middle keeps container-child insertion behavior
 - for container-compatible child blocks (for example comment under `survey`), dropping near container bottom edge inserts at the beginning of the container body (before first child), enabling direct placement between container header and first child
 - dropping onto a compatible container (for example `survey`) moves the block inside that container near its end
-- block canvas updates live when application/system appearance changes (light/dark), including immediate canvas background and boundary-guide redraw
+- block canvas updates live when application/system appearance changes (light/dark), including immediate canvas background, contrast-safe card colors, and boundary-guide redraw
 - Blocks mode panel chrome uses consistent padding/spacing so toolbox, canvas, and details borders align more cleanly with surrounding window panes
 - Blocks-mode toolbox splitter pane uses a left-side divider only (no top/right/bottom border) and padded content inset consistent with contextual-help spacing
 - Raw mode uses the same 12/8 panel padding/spacing rhythm as Blocks mode, and keeps contextual help in a bounded right-side column for layout consistency
@@ -346,7 +347,7 @@ Map canvas appearance:
 
 - canvas and geometry contrast adapts to current system light/dark appearance so lines, handles, labels, and grid stay readable
 - map, raw-editor, and blocks-canvas surfaces are edge-aligned with no extra outer margin around the main content area
-- switching system light/dark appearance updates the map workspace and sidebar/status separators live, without restarting the app
+- switching system light/dark appearance updates the map workspace, text syntax palette, block canvas, sidebar/status separators, tree/action icons, and secondary helper text live, without restarting the app
 
 Inspector panel (`Visual` mode):
 

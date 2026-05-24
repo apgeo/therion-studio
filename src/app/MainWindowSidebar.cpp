@@ -833,7 +833,9 @@ void MainWindow::buildStructureSidebar()
             return;
         }
 
-        const QPalette palette = activityBar->palette();
+        const QPalette palette = QApplication::palette(activityBar);
+        activityBar->setPalette(palette);
+        activityBar->setAutoFillBackground(true);
         const QColor railBase = palette.color(QPalette::Window);
         const QColor railHover = palette.color(QPalette::Highlight);
         const QColor railChecked = palette.color(QPalette::Highlight);

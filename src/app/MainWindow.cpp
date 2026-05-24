@@ -4,6 +4,7 @@
 #include <QColor>
 #include <QDockWidget>
 #include <QCoreApplication>
+#include <QEvent>
 #include <QFile>
 #include <QFileInfo>
 #include <QFileSystemModel>
@@ -22,6 +23,7 @@
 #include <QDialogButtonBox>
 #include <QMenu>
 #include <QMenuBar>
+#include <QPainter>
 #include <QPushButton>
 #include <QHash>
 #include <QSizePolicy>
@@ -38,6 +40,7 @@
 #include <QToolButton>
 #include <QTreeView>
 #include <QKeySequence>
+#include <QSvgRenderer>
 #include <QWidget>
 #include <QResizeEvent>
 #include <QJsonDocument>
@@ -51,6 +54,37 @@
 
 namespace
 {
+QPixmap renderLucidePixmap(const QString &iconName, const QColor &color, int extent, qreal devicePixelRatio)
+{
+    QFile file(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QPixmap();
+    }
+
+    QString svg = QString::fromUtf8(file.readAll());
+    svg.replace(QStringLiteral("currentColor"), color.name(QColor::HexRgb));
+    QSvgRenderer renderer(svg.toUtf8());
+    if (!renderer.isValid()) {
+        return QPixmap();
+    }
+
+    QPixmap pixmap(QSize(extent, extent) * devicePixelRatio);
+    pixmap.setDevicePixelRatio(devicePixelRatio);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    renderer.render(&painter, QRectF(0, 0, extent, extent));
+    return pixmap;
+}
+
+QIcon themedLucideIcon(const QString &iconName, const QPalette &palette, int extent, qreal devicePixelRatio)
+{
+    QIcon icon;
+    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::ButtonText), extent, devicePixelRatio), QIcon::Normal);
+    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::Disabled, QPalette::ButtonText), extent, devicePixelRatio), QIcon::Disabled);
+    return icon;
+}
+
 QString workspaceCommandBarStyleSheet(const QColor &backgroundColor)
 {
     return QStringLiteral(
@@ -191,8 +225,9 @@ QToolButton *createWorkspaceIconButton(QWidget *parent,
 {
     auto *button = new QToolButton(parent);
     button->setAutoRaise(false);
-    button->setIcon(QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName)));
     button->setIconSize(QSize(14, 14));
+    button->setIcon(themedLucideIcon(iconName, button->palette(), 14, button->devicePixelRatioF()));
+    button->setProperty("lucideIconName", iconName);
     button->setToolButtonStyle(Qt::ToolButtonIconOnly);
     button->setToolTip(toolTip);
     button->setAccessibleName(toolTip);
@@ -707,6 +742,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     }
 
     QWidget *tabWidget = currentDocumentWidget();
+    refreshWorkspaceIconTheme();
     auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(tabWidget);
     auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget);
     const bool showMapModes = mapTab != nullptr;
@@ -778,10 +814,11 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         workspaceVisualModeButton_->setEnabled(!mapPaneDetached);
         workspaceRawModeButton_->setEnabled(!mapPaneDetached);
         workspaceMapPaneWindowButton_->setEnabled(true);
-        workspaceMapPaneWindowButton_->setIcon(QIcon(QStringLiteral(":/resources/icons/lucide/%1.svg")
-                                                         .arg(mapPaneDetached
-                                                                  ? QStringLiteral("monitor-x")
-                                                                  : QStringLiteral("screen-share"))));
+        workspaceMapPaneWindowButton_->setProperty("lucideIconName",
+                                                   mapPaneDetached
+                                                       ? QStringLiteral("monitor-x")
+                                                       : QStringLiteral("screen-share"));
+        refreshWorkspaceIconTheme();
         workspaceMapPaneWindowButton_->setToolTip(mapTab->mapPaneWindowActionToolTip());
         workspaceMapPaneWindowButton_->setAccessibleName(mapTab->mapPaneWindowActionText());
         workspaceModeSwitcher_->setToolTip(mapPaneDetached
@@ -801,6 +838,29 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     }
     workspaceModeSwitcherSyncInProgress_ = false;
     refreshWorkspaceModeSwitcherGeometry();
+}
+
+void MainWindow::refreshWorkspaceIconTheme()
+{
+    if (workspaceModeSwitcher_ == nullptr) {
+        return;
+    }
+
+    const QPalette palette = workspaceModeSwitcher_->palette();
+    const qreal devicePixelRatio = workspaceModeSwitcher_->devicePixelRatioF();
+    const QList<QToolButton *> buttons = workspaceModeSwitcher_->findChildren<QToolButton *>();
+    for (QToolButton *button : buttons) {
+        if (button == nullptr) {
+            continue;
+        }
+
+        const QString iconName = button->property("lucideIconName").toString();
+        if (iconName.isEmpty()) {
+            continue;
+        }
+
+        button->setIcon(themedLucideIcon(iconName, palette, button->iconSize().width(), devicePixelRatio));
+    }
 }
 
 void MainWindow::refreshWorkspaceModeSwitcherGeometry()
@@ -1098,6 +1158,27 @@ void MainWindow::resizeEvent(QResizeEvent *event)
     QMainWindow::resizeEvent(event);
     refreshDocumentStatusWidgets();
     refreshWorkspaceModeSwitcherGeometry();
+}
+
+void MainWindow::changeEvent(QEvent *event)
+{
+    QMainWindow::changeEvent(event);
+    if (event == nullptr) {
+        return;
+    }
+
+    switch (event->type()) {
+    case QEvent::ApplicationPaletteChange:
+    case QEvent::PaletteChange:
+    case QEvent::StyleChange:
+        refreshWorkspaceIconTheme();
+        rebuildStructureSidebar();
+        rebuildMapObjectsTree();
+        refreshMapBackgroundPanel();
+        break;
+    default:
+        break;
+    }
 }
 
 void MainWindow::buildMenus()

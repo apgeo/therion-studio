@@ -53,6 +53,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    void changeEvent(QEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
 private slots:
@@ -175,6 +176,7 @@ private:
     void updateCompilerStatusButton(const QString &text, const QString &toolTip, const QString &accentColor);
     void initializeWorkspaceModeSwitcher();
     void refreshWorkspaceModeSwitcher();
+    void refreshWorkspaceIconTheme();
     void refreshWorkspaceModeSwitcherGeometry();
     void triggerUndoForActiveDocument();
     void triggerRedoForActiveDocument();

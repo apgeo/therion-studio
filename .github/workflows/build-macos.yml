@@ -1,0 +1,58 @@
+name: Build macOS
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.os }} Debug
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-15
+          - macos-26
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install Qt dependencies
+        run: |
+          brew update
+          brew install qtbase qtsvg
+          qtbase_prefix="$(brew --prefix qtbase)"
+          qtsvg_prefix="$(brew --prefix qtsvg)"
+          echo "CMAKE_PREFIX_PATH=${qtbase_prefix}:${qtsvg_prefix}" >> "$GITHUB_ENV"
+          echo "Qt6_DIR=${qtbase_prefix}/lib/cmake/Qt6" >> "$GITHUB_ENV"
+          echo "Qt6Svg_DIR=${qtsvg_prefix}/lib/cmake/Qt6Svg" >> "$GITHUB_ENV"
+          echo "$(brew --prefix qtbase)/bin" >> "$GITHUB_PATH"
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Debug
+          -DTHERION_ENABLE_STRICT_WARNINGS=ON
+
+      - name: Build
+        run: cmake --build build --config Debug
+
+      - name: Run unit tests
+        run: >
+          ctest --test-dir build
+          --build-config Debug
+          -L unit
+          --output-on-failure
+          --timeout 300
+
+      - name: Run UI smoke tests
+        run: >
+          cmake -E env QT_QPA_PLATFORM=offscreen
+          ctest --test-dir build
+          --build-config Debug
+          -L ui
+          --output-on-failure
+          --timeout 300

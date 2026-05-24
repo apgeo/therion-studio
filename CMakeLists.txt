@@ -880,6 +880,12 @@ set(THERION_TEST_EXECUTABLE_TARGETS
     ${THERION_UNIT_TEST_TARGETS}
     ${THERION_UI_TEST_TARGETS})
 
+add_custom_target(therion_unit_tests
+    DEPENDS ${THERION_UNIT_TEST_TARGETS})
+
+add_custom_target(therion_ui_tests
+    DEPENDS ${THERION_UI_TEST_TARGETS})
+
 foreach(test_target IN LISTS THERION_TEST_EXECUTABLE_TARGETS)
     target_compile_definitions(${test_target} PRIVATE
         QT_NO_CAST_FROM_ASCII

@@ -318,6 +318,7 @@ Selecting an entry:
 Map tab uses explicit workspace modes:
 
 - `Visual`: graphical map editor + right-side `Inspector` tabs (`Selection`, `Objects`, `Backgrounds`)
+- In `Visual` mode, drawing and editing handles use screen-adaptive sizing so point/vertex handles and preview strokes remain usable without becoming oversized when zoomed in.
 - `Raw`: source text editor + right-side contextual help inspector
 - the full-width document toolbar row is shown above the file tabs for all document types
 - the command toolbar sits directly above the native file tabs without an extra bottom border
@@ -504,9 +505,10 @@ In `Visual` mode `Inspector -> Backgrounds`, the `Background Images` controls pr
 - per-layer delete icon (`trash`) in the list row
 - `Up`, `Down`
 - position `X`, `Y` fields
-- raster layer position, visibility, and gamma edits update the matching XTherion metadata line; deleting a metadata-backed raster layer removes that line from the TH2 source
+- raster layer position, visibility, and gamma edits update the matching XTherion metadata line; visibility and gamma edits preserve the existing background placement, while deleting a metadata-backed raster layer removes that line from the TH2 source
 - opacity slider with reset
 - gamma slider with reset
+- if a TH2 map has no drawn objects yet, visible background imagery becomes the primary drawing surface: `Fit` centers on the background, and the empty placeholder grid/messages are hidden
 
 Persistence:
 

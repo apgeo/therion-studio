@@ -394,15 +394,21 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
     const Qt::PenStyle previewPenStyle = mode() == MapEditorInteractiveDrawMode::Freehand
         ? Qt::SolidLine
         : Qt::DashLine;
-    (*context_.previewPath)->setPen(QPen(accent, 2.0, previewPenStyle, Qt::RoundCap, Qt::RoundJoin));
+    QPen previewPen(accent, 3.2, previewPenStyle, Qt::RoundCap, Qt::RoundJoin);
+    previewPen.setCosmetic(true);
+    (*context_.previewPath)->setPen(previewPen);
     (*context_.previewPath)->setBrush(Qt::NoBrush);
     (*context_.previewPath)->setZValue(28.0);
     (*context_.previewPath)->setAcceptedMouseButtons(Qt::NoButton);
     context_.scene->addItem((*context_.previewPath));
 
     for (const QPointF &vertex : std::as_const(anchorMarkers)) {
-        auto *marker = new QGraphicsEllipseItem(QRectF(vertex.x() - 3.2, vertex.y() - 3.2, 6.4, 6.4));
-        marker->setPen(QPen(accent.darker(130), 1.0));
+        auto *marker = new QGraphicsEllipseItem(QRectF(-5.0, -5.0, 10.0, 10.0));
+        marker->setPos(vertex);
+        marker->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        QPen markerPen(accent.darker(130), 1.4);
+        markerPen.setCosmetic(true);
+        marker->setPen(markerPen);
         marker->setBrush(QBrush(accent));
         marker->setZValue(28.5);
         marker->setAcceptedMouseButtons(Qt::NoButton);
@@ -412,7 +418,9 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
 
     for (const QLineF &connector : std::as_const(controlConnectors)) {
         auto *connectorItem = new QGraphicsLineItem(connector);
-        connectorItem->setPen(QPen(controlColor.lighter(115), 1.2, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
+        QPen connectorPen(controlColor.lighter(115), 1.6, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin);
+        connectorPen.setCosmetic(true);
+        connectorItem->setPen(connectorPen);
         connectorItem->setZValue(28.4);
         connectorItem->setAcceptedMouseButtons(Qt::NoButton);
         context_.scene->addItem(connectorItem);
@@ -420,8 +428,12 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
     }
 
     for (const QPointF &control : std::as_const(controlMarkers)) {
-        auto *marker = new QGraphicsEllipseItem(QRectF(control.x() - 4.0, control.y() - 4.0, 8.0, 8.0));
-        marker->setPen(QPen(controlColor.darker(150), 1.2));
+        auto *marker = new QGraphicsEllipseItem(QRectF(-5.2, -5.2, 10.4, 10.4));
+        marker->setPos(control);
+        marker->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
+        QPen markerPen(controlColor.darker(150), 1.5);
+        markerPen.setCosmetic(true);
+        marker->setPen(markerPen);
         marker->setBrush(QBrush(controlColor));
         marker->setZValue(28.6);
         marker->setAcceptedMouseButtons(Qt::NoButton);

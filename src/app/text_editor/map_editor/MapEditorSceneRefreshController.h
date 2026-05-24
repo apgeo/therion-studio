@@ -37,6 +37,7 @@ struct MapEditorSceneRefreshContext
     std::function<void()> updateCommandSurfaceState;
     std::function<void()> clearMapScene;
     std::function<QRectF()> mapSourceBoundsForCurrentDocument;
+    std::function<QRectF()> mapBackgroundFitBounds;
     std::function<void(int, const QPointF &, const QPointF &)> recordCardMove;
     std::function<void(int, bool, bool)> recordCardVisibility;
     std::function<void(int, const QPointF &, const QPointF &)> recordPointGeometryMove;

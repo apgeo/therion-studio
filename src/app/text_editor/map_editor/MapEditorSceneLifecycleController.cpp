@@ -144,11 +144,9 @@ void MapEditorSceneLifecycleController::fitMapToView(bool includeBackgroundImage
     }
 
     QRectF fitBounds = mapGeometryFitBounds();
-    if (includeBackgroundImages) {
-        const QRectF backgroundBounds = context_.mapBackgroundFitBounds();
-        if (backgroundBounds.isValid()) {
-            fitBounds = fitBounds.isValid() ? fitBounds.united(backgroundBounds) : backgroundBounds;
-        }
+    const QRectF backgroundBounds = context_.mapBackgroundFitBounds();
+    if (backgroundBounds.isValid() && (includeBackgroundImages || !fitBounds.isValid())) {
+        fitBounds = fitBounds.isValid() ? fitBounds.united(backgroundBounds) : backgroundBounds;
     }
     if (!fitBounds.isValid()) {
         if (mapScene->items().isEmpty()) {

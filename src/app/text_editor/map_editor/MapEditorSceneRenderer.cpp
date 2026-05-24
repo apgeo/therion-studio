@@ -55,6 +55,17 @@ T *makeMouseTransparent(T *item)
     return item;
 }
 
+QPen cosmeticPen(const QColor &color,
+                 qreal width,
+                 Qt::PenStyle style = Qt::SolidLine,
+                 Qt::PenCapStyle cap = Qt::SquareCap,
+                 Qt::PenJoinStyle join = Qt::BevelJoin)
+{
+    QPen pen(color, width, style, cap, join);
+    pen.setCosmetic(true);
+    return pen;
+}
+
 MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
 {
     Q_UNUSED(scene);
@@ -799,6 +810,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const QVector<MapGeometryFeature> &geometryFeatures,
                              const std::optional<QRectF> &sourceBoundsOverride,
                              const MapGridOptions &gridOptions,
+                             bool showEmptyDocumentGuides,
                              QHash<int, QGraphicsItem *> *mapItemsByLine,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,
                              const std::function<void(int, bool, bool)> &recordCardVisibility,
@@ -823,17 +835,19 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     const QRectF sceneFrame(0, 0, 1200, 900);
     scene->setSceneRect(sceneFrame);
     const QRectF geometryCanvas = sceneFrame.adjusted(24.0, 24.0, -24.0, -24.0);
-    makeMouseTransparent(scene->addRect(geometryCanvas, QPen(canvasTheme.canvasBorder, 1.2), QBrush(canvasTheme.canvasFill)));
+    if (showEmptyDocumentGuides || !geometryFeatures.isEmpty()) {
+        makeMouseTransparent(scene->addRect(geometryCanvas, QPen(canvasTheme.canvasBorder, 1.2), QBrush(canvasTheme.canvasFill)));
+    }
 
     const QRectF previewBounds = geometryCanvas.adjusted(20.0, 20.0, -20.0, -20.0);
     const QRectF sourceBounds = (sourceBoundsOverride.has_value() && sourceBoundsOverride->isValid())
         ? sourceBoundsOverride.value()
         : geometryBoundsForFeatures(geometryFeatures);
     const qreal mapScale = sceneCoordsScaleFactor(sourceBounds, previewBounds);
-    const qreal pointRadius = qBound(3.2, 4.8 * mapScale, 6.2);
-    const qreal vertexRadius = qBound(2.4, 3.8 * mapScale, 4.8);
-    const qreal thickLineWidth = qBound(1.3, 2.2 * mapScale, 2.9);
-    const qreal detailLineWidth = qBound(0.8, 1.4 * mapScale, 1.8);
+    const qreal pointRadius = 5.6;
+    const qreal vertexRadius = 4.4;
+    const qreal thickLineWidth = 3.2;
+    const qreal detailLineWidth = 1.8;
     const qreal gridLineWidth = canvasTheme.lightMode ? 1.0 : 1.1;
     const bool compactLabels = geometryFeatures.size() > 24;
     auto markGeometryItem = [](QGraphicsItem *item) {
@@ -842,7 +856,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
         }
     };
 
-    if (gridOptions.visible && sourceBounds.isValid()) {
+    if ((showEmptyDocumentGuides || !geometryFeatures.isEmpty()) && gridOptions.visible && sourceBounds.isValid()) {
         const QRectF fittedPreviewBounds = sceneCoordsPreviewBounds(sourceBounds, previewBounds);
         const qreal sourceUnitsPerMeter = qBound(1e-6, gridOptions.sourceUnitsPerMeter, 1e9);
         const qreal spacing = qBound(0.1, gridOptions.spacingMeters * sourceUnitsPerMeter, 1e9);
@@ -867,7 +881,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
         }
     }
 
-    if (geometryFeatures.isEmpty()) {
+    if (geometryFeatures.isEmpty() && showEmptyDocumentGuides) {
         auto *emptyGeometryItem = makeMouseTransparent(scene->addText(QObject::tr("No parseable point, line, or area geometry was found in this document yet."), QFont(QStringLiteral("Menlo"), 11)));
         emptyGeometryItem->setDefaultTextColor(canvasTheme.mutedText);
         emptyGeometryItem->setPos(previewBounds.left() + 16.0, previewBounds.top() + 16.0);
@@ -882,7 +896,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 const QPointF previewPoint = mapGeometryPointToPreview(feature.anchor, sourceBounds, previewBounds);
                 auto *pointItem = new MapEditablePointItem(feature.lineNumber, feature.anchor, sourceBounds, previewBounds);
                 pointItem->setRect(QRectF(-pointRadius, -pointRadius, pointRadius * 2.0, pointRadius * 2.0));
-                pointItem->setPen(QPen(canvasTheme.pointHandleStroke, 1.1));
+                pointItem->setPen(cosmeticPen(canvasTheme.pointHandleStroke, 1.1));
                 pointItem->setBrush(QBrush(canvasTheme.pointHandleFill));
                 pointItem->setMoveCommittedCallback(recordPointGeometryMove);
                 scene->addItem(pointItem);
@@ -899,7 +913,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     auto *orientationHandle = new MapPointOrientationHandleItem(feature.lineNumber,
                                                                                 previewPoint,
                                                                                 feature.orientationDegrees.value(),
-                                                                                qBound<qreal>(18.0, 28.0 * mapScale, 34.0));
+                                                                                24.0);
                     orientationHandle->setChangeCommittedCallback(recordPointOrientationHandleChange);
                     scene->addItem(orientationHandle);
                     orientationHandle->setZValue(4.6);
@@ -925,6 +939,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                 if (feature.stationPoint || !compactLabels) {
                     auto *label = makeMouseTransparent(scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold)));
+                    label->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
                     label->setDefaultTextColor(canvasTheme.labelText);
                     label->setPos(previewPoint + QPointF(10.0, -18.0));
                     label->setZValue(4.0);
@@ -940,12 +955,12 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 QColor detailStroke = feature.accent;
                 detailStroke.setAlpha(canvasTheme.lightMode ? 230 : 245);
 
-                auto *lineItem = scene->addPath(path, QPen(canvasTheme.geometryStroke, thickLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                auto *lineItem = scene->addPath(path, cosmeticPen(canvasTheme.geometryStroke, thickLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
                 lineItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
                 lineItem->setZValue(2.5);
                 markGeometryItem(lineItem);
                 lineItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
-                auto *detailItem = scene->addPath(path, QPen(detailStroke, detailLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                auto *detailItem = scene->addPath(path, cosmeticPen(detailStroke, detailLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
                 detailItem->setZValue(3.0);
                 markGeometryItem(detailItem);
                 makeMouseTransparent(detailItem);
@@ -955,11 +970,11 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 detailItem->setVisible(false);
                 const qreal lineDirectionTickLength = qBound(12.0, 18.0 * mapScale, 24.0);
                 auto *directionTickItem = new QGraphicsLineItem;
-                directionTickItem->setPen(QPen(QColor(QStringLiteral("#ffda00")),
-                                               qBound(2.0, 2.8 * mapScale, 4.0),
-                                               Qt::SolidLine,
-                                               Qt::RoundCap,
-                                               Qt::RoundJoin));
+                directionTickItem->setPen(cosmeticPen(QColor(QStringLiteral("#ffda00")),
+                                               3.4,
+                                                      Qt::SolidLine,
+                                                      Qt::RoundCap,
+                                                      Qt::RoundJoin));
                 directionTickItem->setZValue(4.8);
                 markGeometryItem(directionTickItem);
                 makeMouseTransparent(directionTickItem);
@@ -995,7 +1010,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     vertexFill.setAlpha(185);
                     QColor vertexOutline = feature.accent.darker(220);
                     vertexOutline.setAlpha(220);
-                    vertexItem->setPen(QPen(vertexOutline, 1.0));
+                    vertexItem->setPen(cosmeticPen(vertexOutline, 1.0));
                     vertexItem->setBrush(QBrush(vertexFill));
                     vertexItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                     scene->addItem(vertexItem);
@@ -1041,7 +1056,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     }
                 }
 
-                const qreal controlRadius = qBound(1.8, 3.0 * mapScale, 4.0);
+                const qreal controlRadius = 4.0;
                 for (int segmentIndex = 1; segmentIndex < feature.lineVertices.size(); ++segmentIndex) {
                     const MapGeometryFeature::TH2LineVertex &previousVertex = feature.lineVertices.at(segmentIndex - 1);
                     const MapGeometryFeature::TH2LineVertex &currentVertex = feature.lineVertices.at(segmentIndex);
@@ -1050,7 +1065,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         const QPointF anchorPreview = mapGeometryPointToPreview(previousVertex.anchor, sourceBounds, previewBounds);
                         const QPointF controlPreview = mapGeometryPointToPreview(previousVertex.outgoingControl.value(), sourceBounds, previewBounds);
                         auto *connector = scene->addLine(QLineF(anchorPreview, controlPreview),
-                                                         QPen(canvasTheme.controlConnector, qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
+                                                         cosmeticPen(canvasTheme.controlConnector, qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
                         connector->setZValue(3.2);
                         markGeometryItem(connector);
                         makeMouseTransparent(connector);
@@ -1075,7 +1090,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                                               sourceBounds,
                                                                               previewBounds);
                         controlItem->setRect(QRectF(-controlRadius, -controlRadius, controlRadius * 2.0, controlRadius * 2.0));
-                        controlItem->setPen(QPen(canvasTheme.controlHandleStroke, 1.0));
+                        controlItem->setPen(cosmeticPen(canvasTheme.controlHandleStroke, 1.0));
                         controlItem->setBrush(QBrush(canvasTheme.controlHandleFill));
                         controlItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                         scene->addItem(controlItem);
@@ -1093,7 +1108,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         const QPointF anchorPreview = mapGeometryPointToPreview(currentVertex.anchor, sourceBounds, previewBounds);
                         const QPointF controlPreview = mapGeometryPointToPreview(currentVertex.incomingControl.value(), sourceBounds, previewBounds);
                         auto *connector = scene->addLine(QLineF(anchorPreview, controlPreview),
-                                                         QPen(canvasTheme.controlConnector, qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
+                                                         cosmeticPen(canvasTheme.controlConnector, qBound(0.7, 1.0 * mapScale, 1.4), Qt::DashLine, Qt::RoundCap));
                         connector->setZValue(3.2);
                         markGeometryItem(connector);
                         makeMouseTransparent(connector);
@@ -1118,7 +1133,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                                               sourceBounds,
                                                                               previewBounds);
                         controlItem->setRect(QRectF(-controlRadius, -controlRadius, controlRadius * 2.0, controlRadius * 2.0));
-                        controlItem->setPen(QPen(canvasTheme.controlHandleStroke, 1.0));
+                        controlItem->setPen(cosmeticPen(canvasTheme.controlHandleStroke, 1.0));
                         controlItem->setBrush(QBrush(canvasTheme.controlHandleFill));
                         controlItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                         scene->addItem(controlItem);
@@ -1330,6 +1345,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                 if (!compactLabels) {
                     auto *label = makeMouseTransparent(scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold)));
+                    label->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
                     label->setDefaultTextColor(canvasTheme.labelText);
                     label->setPos(mapGeometryPointToPreview(feature.lineVertices.first().anchor, sourceBounds, previewBounds) + QPointF(10.0, -18.0));
                     label->setZValue(4.0);
@@ -1378,7 +1394,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         vertexFill.setAlpha(185);
                         QColor vertexOutline = feature.accent.darker(220);
                         vertexOutline.setAlpha(220);
-                        vertexItem->setPen(QPen(vertexOutline, 1.0));
+                        vertexItem->setPen(cosmeticPen(vertexOutline, 1.0));
                         vertexItem->setBrush(QBrush(vertexFill));
                         vertexItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                         scene->addItem(vertexItem);
@@ -1436,6 +1452,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                 if (!compactLabels) {
                     auto *label = makeMouseTransparent(scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold)));
+                    label->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
                     label->setDefaultTextColor(canvasTheme.labelText);
                     label->setPos(mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds) + QPointF(10.0, -18.0));
                     label->setZValue(4.0);
@@ -1446,7 +1463,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
         }
     }
 
-    if (entries.isEmpty()) {
+    if (entries.isEmpty() && showEmptyDocumentGuides) {
         auto *emptyItem = makeMouseTransparent(scene->addText(QObject::tr("No Therion map objects were detected in this document."), QFont(QStringLiteral("Menlo"), 12)));
         emptyItem->setDefaultTextColor(canvasTheme.mutedText);
         emptyItem->setPos(previewBounds.left() + 16.0, previewBounds.top() + 44.0);

@@ -19,6 +19,7 @@
 #include <QtMath>
 
 #include <cmath>
+#include <optional>
 
 #include "MapEditorSceneSupport.h"
 #include "../TextEditorTab.h"
@@ -701,7 +702,7 @@ void MapEditorTab::toggleSelectedBackgroundLayerVisibility()
     }
 
     item->setVisible(!item->isVisible());
-    syncBackgroundLayerXtherionMetadata(item, tr("Toggle Background Visibility"));
+    syncBackgroundLayerXtherionMetadata(item, tr("Toggle Background Visibility"), true);
     saveBackgroundLayersToSession();
     refreshBackgroundLayerControls();
 }
@@ -731,7 +732,7 @@ void MapEditorTab::setSelectedBackgroundLayerGamma(qreal gamma)
     }
 
     applyBackgroundLayerGamma(item, qBound(0.2, gamma, 2.5));
-    syncBackgroundLayerXtherionMetadata(item, tr("Set Background Gamma"));
+    syncBackgroundLayerXtherionMetadata(item, tr("Set Background Gamma"), true);
     saveBackgroundLayersToSession();
     refreshBackgroundLayerControls();
 }
@@ -1123,6 +1124,9 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
                                          sourceBounds,
                                          previewBounds);
             existingLayer->setData(4, true);
+            if (existingMetadata->hasImageScale) {
+                applyBackgroundLayerGamma(existingLayer, qBound(0.2, existingMetadata->imageScale, 2.5));
+            }
             if (existingMetadata->hasVisibility) {
                 existingLayer->setVisible(existingMetadata->visible);
             }
@@ -1200,6 +1204,9 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
                                          areaAdjust,
                                          sourceBounds,
                                          previewBounds);
+        }
+        if (reference.hasImageScale) {
+            applyBackgroundLayerGamma(item, qBound(0.2, reference.imageScale, 2.5));
         }
 
         if (!referencePathKey.isEmpty()) {
@@ -1293,6 +1300,10 @@ void MapEditorTab::reprojectMetadataBackgroundLayersForCurrentDocument()
                                          sourceBounds,
                                          previewBounds)) {
             existingLayer->setData(4, true);
+            const qreal gamma = metadataReference->hasImageScale
+                ? qBound(0.2, metadataReference->imageScale, 2.5)
+                : backgroundLayerGammaValue(existingLayer);
+            applyBackgroundLayerGamma(existingLayer, gamma);
             if (metadataReference->hasVisibility) {
                 existingLayer->setVisible(metadataReference->visible);
             }
@@ -1346,7 +1357,9 @@ QRectF MapEditorTab::xtherionAutoAreaAdjustRect() const
     return limits.adjusted(-128.0, -128.0, 128.0, 128.0);
 }
 
-void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item, const QString &label)
+void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item,
+                                                       const QString &label,
+                                                       bool preserveExistingPlacement)
 {
     if (item == nullptr || textEditor_ == nullptr) {
         return;
@@ -1357,36 +1370,56 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
         return;
     }
 
-    QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
-    const QRectF previewBounds = mapPreviewBounds();
-    if (!sourceBounds.isValid()) {
-        sourceBounds = xtherionAutoAreaAdjustRect();
-    }
-    if (!sourceBounds.isValid() || !previewBounds.isValid()) {
-        return;
-    }
-
-    const QSizeF modelSize = rasterModelSize(layerPath, 1.0);
-    if (!modelSize.isValid() || modelSize.width() <= 0.0 || modelSize.height() <= 0.0) {
-        return;
+    const QString beforeText = textEditor_->text();
+    std::optional<XtherionBackgroundReference> existingReference;
+    if (preserveExistingPlacement) {
+        const QString layerPathKey = normalizedPathKey(layerPath);
+        for (const XtherionBackgroundReference &reference : parseXtherionBackgroundReferences(beforeText, filePath())) {
+            if (!layerPathKey.isEmpty() && normalizedPathKey(reference.absolutePath) == layerPathKey) {
+                existingReference = reference;
+                break;
+            }
+        }
     }
 
-    const QPointF modelTopLeft = previewToModelPoint(item->pos(), sourceBounds, previewBounds);
-    const QPointF basePosition(modelTopLeft.x(), modelTopLeft.y() + modelSize.height());
+    QPointF basePosition;
+    if (preserveExistingPlacement && existingReference.has_value() && existingReference->hasBasePosition) {
+        basePosition = existingReference->basePosition;
+    } else {
+        QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
+        const QRectF previewBounds = mapPreviewBounds();
+        if (!sourceBounds.isValid()) {
+            sourceBounds = xtherionAutoAreaAdjustRect();
+        }
+        if (!sourceBounds.isValid() || !previewBounds.isValid()) {
+            return;
+        }
+
+        const QSizeF modelSize = rasterModelSize(layerPath, 1.0);
+        if (!modelSize.isValid() || modelSize.width() <= 0.0 || modelSize.height() <= 0.0) {
+            return;
+        }
+
+        const QPointF modelTopLeft = previewToModelPoint(item->pos(), sourceBounds, previewBounds);
+        basePosition = QPointF(modelTopLeft.x(), modelTopLeft.y() + modelSize.height());
+    }
+
     const QString metadataLine = xtherionImageInsertLine(layerPath,
                                                         filePath(),
                                                         basePosition,
                                                         item->isVisible(),
                                                         backgroundLayerGammaValue(item));
 
-    const QString beforeText = textEditor_->text();
-    const QString afterAreaText = upsertXtherionSimpleCommandLine(beforeText,
-                                                                  QStringLiteral("xth_me_area_adjust"),
-                                                                  xtherionAreaAdjustLine(xtherionAutoAreaAdjustRect()));
-    const QString afterZoomText = upsertXtherionSimpleCommandLine(afterAreaText,
-                                                                  QStringLiteral("xth_me_area_zoom_to"),
-                                                                  xtherionAreaZoomLine());
-    const QString afterText = upsertXtherionImageMetadataLine(afterZoomText,
+    QString afterMetadataText = beforeText;
+    if (!preserveExistingPlacement) {
+        afterMetadataText = upsertXtherionSimpleCommandLine(afterMetadataText,
+                                                            QStringLiteral("xth_me_area_adjust"),
+                                                            xtherionAreaAdjustLine(xtherionAutoAreaAdjustRect()));
+        afterMetadataText = upsertXtherionSimpleCommandLine(afterMetadataText,
+                                                            QStringLiteral("xth_me_area_zoom_to"),
+                                                            xtherionAreaZoomLine());
+    }
+    const QString afterText = upsertXtherionImageMetadataLine(afterMetadataText,
                                                              filePath(),
                                                              layerPath,
                                                              metadataLine,

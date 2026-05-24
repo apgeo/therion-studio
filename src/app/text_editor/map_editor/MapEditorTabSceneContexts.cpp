@@ -90,6 +90,9 @@ MapEditorSceneRefreshContext MapEditorTab::sceneRefreshContext()
         .mapSourceBoundsForCurrentDocument = [self]() {
             return self != nullptr ? self->mapSourceBoundsForCurrentDocument() : QRectF();
         },
+        .mapBackgroundFitBounds = [self]() {
+            return self != nullptr ? self->mapBackgroundFitBounds() : QRectF();
+        },
         .recordCardMove = [self](int lineNumber, const QPointF &oldPosition, const QPointF &newPosition) {
             if (self != nullptr) {
                 self->recordCardMove(lineNumber, oldPosition, newPosition);

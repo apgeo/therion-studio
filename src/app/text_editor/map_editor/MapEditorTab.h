@@ -258,7 +258,7 @@ private:
     void syncAutoBackgroundLayersFromCurrentDocument();
     void reprojectMetadataBackgroundLayersForCurrentDocument();
     QRectF xtherionAutoAreaAdjustRect() const;
-    void syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item, const QString &label);
+    void syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item, const QString &label, bool preserveExistingPlacement = false);
     void removeBackgroundLayerXtherionMetadata(const QString &layerPath, const QString &label);
     QGraphicsPixmapItem *backgroundLayerItemAt(int index) const;
     QGraphicsPixmapItem *selectedBackgroundLayerItem() const;

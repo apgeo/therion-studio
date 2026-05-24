@@ -349,11 +349,15 @@ The rules below define the expected day-to-day interaction model. If a later req
   - pinch/magnify gestures shall zoom
   - a modifier-based zoom gesture (for example Command+scroll) should be supported consistently across platforms
 - Pen-plus-touch workflows shall not accidentally trigger zoom when the user performs a pan gesture.
+- Map drawing and editing affordances, including point handles, line/area vertex handles, control handles, preview strokes, and line strokes, shall remain visually usable across zoom levels by using screen-adaptive sizing where appropriate.
 - Background image position, opacity, gamma, and visibility shall be editable per session.
 - Background layers shall support insertion, selection, visibility toggles, opacity adjustment, gamma adjustment, and persisted positioning.
 - Adding a raster background image from the TH2 Visual map editor shall write XTherion-compatible `##XTHERION## xth_me_image_insert` metadata to the TH2 source, using document-relative paths where possible.
 - Adding or removing raster background images from the TH2 Visual map editor shall maintain XTherion-compatible `##XTHERION## xth_me_area_adjust` and `##XTHERION## xth_me_area_zoom_to` header metadata.
 - Editing a raster background layer's position, visibility, or gamma in the TH2 Visual map editor shall update the corresponding `xth_me_image_insert` metadata so reopening in XTherion or Therion Studio restores the same background reference.
+- Editing a raster background layer's visibility or gamma shall preserve the layer's existing placement metadata and shall not change its scene position.
+- When a TH2 Visual map has no parseable point, line, or area geometry but has visible background layers, Fit shall center on the visible background bounds instead of the empty placeholder canvas.
+- When a TH2 Visual map has no parseable geometry but has visible background layers, the map editor shall suppress the empty-document placeholder canvas, grid, and no-object messages so the background remains the primary drawing surface.
 - Removing a raster background layer that is backed by `xth_me_image_insert` metadata shall remove that metadata line from the TH2 source.
 - The `Backgrounds` inspector layer list shall expose per-row visibility and delete icon actions aligned with the object-list action pattern.
 - The `Backgrounds` inspector shall expose visual map-grid controls for showing/hiding a square metric grid and setting its spacing in meters; when a scrap `-scale` is available, the spacing shall be converted from meters to TH2 source coordinates through that scale.

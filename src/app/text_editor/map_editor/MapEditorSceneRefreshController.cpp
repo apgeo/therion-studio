@@ -89,6 +89,11 @@ void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack()
     const std::optional<QRectF> sourceBoundsOverride = sourceBounds.isValid()
         ? std::optional<QRectF>(sourceBounds)
         : std::nullopt;
+    const bool hasVisibleBackgroundBounds = context_.mapBackgroundFitBounds
+        && context_.mapBackgroundFitBounds().isValid();
+    const bool showEmptyDocumentGuides = !hasVisibleBackgroundBounds
+        || !geometryFeatures.isEmpty()
+        || !entries.isEmpty();
     renderMapWorkspaceScene(mapScene,
                             context_.filePath(),
                             entries,
@@ -97,6 +102,7 @@ void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack()
                             MapGridOptions{*context_.gridVisible,
                                            *context_.gridSpacingMeters,
                                            mapSourceUnitsPerMeterFromParsedLines(parsedLines)},
+                            showEmptyDocumentGuides,
                             context_.itemsByLine,
                             context_.recordCardMove,
                             context_.recordCardVisibility,

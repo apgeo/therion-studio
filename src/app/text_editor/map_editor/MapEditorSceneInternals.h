@@ -58,6 +58,7 @@ public:
     {
         setFlag(QGraphicsItem::ItemIsMovable, true);
         setFlag(QGraphicsItem::ItemIsSelectable, true);
+        setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
         setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
         setAcceptHoverEvents(true);
         setCursor(Qt::OpenHandCursor);
@@ -215,6 +216,7 @@ public:
     {
         setFlag(QGraphicsItem::ItemIsMovable, true);
         setFlag(QGraphicsItem::ItemIsSelectable, true);
+        setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
         setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
         setAcceptHoverEvents(true);
         setCursor(Qt::OpenHandCursor);
@@ -457,7 +459,9 @@ public:
             const QPointF arrowTip = handlePreview_;
             const qreal arrowLength = qMin<qreal>(7.0, length);
             const QPointF arrowBase = arrowTip - (direction * arrowLength);
-            painter->setPen(QPen(color, dragActive_ ? 3.0 : 2.2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            QPen handlePen(color, dragActive_ ? 3.0 : 2.2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+            handlePen.setCosmetic(true);
+            painter->setPen(handlePen);
             painter->drawLine(anchorPreview_, arrowBase);
 
             QPainterPath arrow;
@@ -565,7 +569,7 @@ private:
     {
         constexpr qreal pi = 3.14159265358979323846;
         const qreal radians = normalizeDegrees(orientationDegrees) * pi / 180.0;
-        const qreal displayLength = qMax<qreal>(12.0, qMax<qreal>(0.1, leftSize) * previewScale_);
+        const qreal displayLength = qBound<qreal>(12.0, qMax<qreal>(0.1, leftSize) * previewScale_, 28.0);
         return anchorPreview_ + QPointF(std::sin(radians) * displayLength,
                                         -std::cos(radians) * displayLength);
     }
@@ -667,7 +671,9 @@ public:
         const QPointF arrowTip = handlePreview_;
         const qreal arrowLength = qMin<qreal>(7.0, length);
         const QPointF arrowBase = arrowTip - (direction * arrowLength);
-        painter->setPen(QPen(color, dragActive_ ? 3.0 : 2.2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        QPen handlePen(color, dragActive_ ? 3.0 : 2.2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+        handlePen.setCosmetic(true);
+        painter->setPen(handlePen);
         painter->drawLine(anchorPreview_, arrowBase);
 
         QPainterPath arrow;

@@ -499,6 +499,8 @@ Platform modifier mapping:
 | Close | File | none in the current Swift app | Expose the action in the menu even if no explicit shortcut is assigned |
 | Close All Tabs | File | Command+Shift+W | Close every open editor tab |
 | Close Project | File | none in the current Swift app | Close the active project and its project-scoped documents after unsaved changes are resolved |
+| Undo | Edit | platform-standard Undo | Undo the last available change in the active document, including raw text edits and supported map-editing commands |
+| Redo | Edit | platform-standard Redo | Redo the last undone change in the active document, including raw text edits and supported map-editing commands |
 | Fold All | Editor | Command+Option+[ | Fold all foldable blocks in the active text editor |
 | Unfold All | Editor | Command+Option+] | Unfold all folded blocks in the active text editor |
 | Find… | Find | Command+F | Open the search bar in find mode |

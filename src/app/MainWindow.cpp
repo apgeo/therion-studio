@@ -732,8 +732,16 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceZoomSeparator_->setVisible(showZoomTools);
     workspaceMapToolsGroup_->setVisible(showMapTools);
     workspaceSaveButton_->setEnabled(tabWidget != nullptr);
-    workspaceUndoButton_->setEnabled(documentCanUndoForWidget(tabWidget));
-    workspaceRedoButton_->setEnabled(documentCanRedoForWidget(tabWidget));
+    const bool canUndo = documentCanUndoForWidget(tabWidget);
+    const bool canRedo = documentCanRedoForWidget(tabWidget);
+    workspaceUndoButton_->setEnabled(canUndo);
+    workspaceRedoButton_->setEnabled(canRedo);
+    if (undoAction_ != nullptr) {
+        undoAction_->setEnabled(canUndo);
+    }
+    if (redoAction_ != nullptr) {
+        redoAction_->setEnabled(canRedo);
+    }
     workspaceCompileSeparator_->setVisible(showCompileCurrentConfig);
     workspaceCompileCurrentConfigButton_->setVisible(showCompileCurrentConfig);
     workspaceCompileCurrentConfigButton_->setEnabled(showCompileCurrentConfig);
@@ -1128,6 +1136,17 @@ void MainWindow::buildMenus()
     connect(exitAction, &QAction::triggered, this, &QWidget::close);
 
     QMenu *editMenu = menuBar()->addMenu(tr("&Edit"));
+    undoAction_ = editMenu->addAction(tr("&Undo"));
+    undoAction_->setShortcuts(QKeySequence::Undo);
+    undoAction_->setStatusTip(tr("Undo the last change in the active document."));
+    connect(undoAction_, &QAction::triggered, this, &MainWindow::triggerUndoForActiveDocument);
+
+    redoAction_ = editMenu->addAction(tr("&Redo"));
+    redoAction_->setShortcuts(QKeySequence::Redo);
+    redoAction_->setStatusTip(tr("Redo the last undone change in the active document."));
+    connect(redoAction_, &QAction::triggered, this, &MainWindow::triggerRedoForActiveDocument);
+    editMenu->addSeparator();
+
     QAction *findAction = editMenu->addAction(tr("&Find"));
     findAction->setShortcut(QKeySequence::Find);
     connect(findAction, &QAction::triggered, this, [this]() { showFindBar(false); });

@@ -13,6 +13,7 @@
 #include "../core/SessionStore.h"
 
 class QLabel;
+class QAction;
 class QComboBox;
 class QFileSystemModel;
 class QCloseEvent;
@@ -230,6 +231,8 @@ private:
     QToolButton *consoleCollapseButton_ = nullptr;
     QAction *openProjectAction_ = nullptr;
     QAction *closeProjectAction_ = nullptr;
+    QAction *undoAction_ = nullptr;
+    QAction *redoAction_ = nullptr;
     QAction *showSidebarAction_ = nullptr;
     QAction *openMapEditorAction_ = nullptr;
     QPlainTextEdit *consoleView_ = nullptr;

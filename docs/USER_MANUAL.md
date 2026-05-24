@@ -109,6 +109,8 @@ Platform key substitution follows Qt standard behavior (`Ctrl` on Windows/Linux,
 | Save | Platform default `QKeySequence::Save` |
 | Save all | Platform default `QKeySequence::SaveAs` |
 | Close app | Platform default `QKeySequence::Quit` |
+| Undo active document change | Platform default `QKeySequence::Undo` |
+| Redo active document change | Platform default `QKeySequence::Redo` |
 | Find | Platform default `QKeySequence::Find` |
 | Find and replace | Platform default `QKeySequence::Replace` |
 | Text editor: completion popup (manual trigger) | `Ctrl+Space` |

@@ -849,7 +849,6 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     const qreal thickLineWidth = 3.2;
     const qreal detailLineWidth = 1.8;
     const qreal gridLineWidth = canvasTheme.lightMode ? 1.0 : 1.1;
-    const bool compactLabels = geometryFeatures.size() > 24;
     auto markGeometryItem = [](QGraphicsItem *item) {
         if (item != nullptr) {
             item->setData(kMapItemRole, kMapItemGeometryValue);
@@ -937,7 +936,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     makeMouseTransparent(triangle);
                 }
 
-                if (feature.stationPoint || !compactLabels) {
+                if (feature.stationPoint) {
                     auto *label = makeMouseTransparent(scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold)));
                     label->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
                     label->setDefaultTextColor(canvasTheme.labelText);
@@ -1343,13 +1342,6 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     makeMouseTransparent(triangle);
                 }
 
-                if (!compactLabels) {
-                    auto *label = makeMouseTransparent(scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold)));
-                    label->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
-                    label->setDefaultTextColor(canvasTheme.labelText);
-                    label->setPos(mapGeometryPointToPreview(feature.lineVertices.first().anchor, sourceBounds, previewBounds) + QPointF(10.0, -18.0));
-                    label->setZValue(4.0);
-                }
                 break;
             }
             case MapGeometryFeature::Kind::Area: {
@@ -1450,13 +1442,6 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     }
                 }
 
-                if (!compactLabels) {
-                    auto *label = makeMouseTransparent(scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold)));
-                    label->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
-                    label->setDefaultTextColor(canvasTheme.labelText);
-                    label->setPos(mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds) + QPointF(10.0, -18.0));
-                    label->setZValue(4.0);
-                }
                 break;
             }
             }

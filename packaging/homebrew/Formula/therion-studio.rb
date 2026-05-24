@@ -4,13 +4,13 @@
 # Before publishing:
 # - replace homepage/url with the final public repository URL
 # - replace sha256 with: curl -L <url> | shasum -a 256
-# - add a license stanza once the project license is declared
 
 class TherionStudio < Formula
   desc "Qt desktop editor for Therion cave-survey projects"
   homepage "https://github.com/lblazek/therion-studio"
   url "https://github.com/lblazek/therion-studio/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "REPLACE_WITH_SOURCE_TARBALL_SHA256"
+  license "GPL-3.0-or-later"
 
   depends_on "cmake" => :build
   depends_on "pkgconf" => :build

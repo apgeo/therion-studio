@@ -777,6 +777,7 @@ Requirements:
 - updating from one released version to another shall preserve user settings and persisted session data where the stored data format remains compatible
 - automatic update delivery is not required for the MVP, but the release process shall support a documented manual update path for each platform
 - release artifacts shall include visible product version information and release notes or equivalent upgrade documentation
+- release artifacts shall include the Therion Studio project license (`GPL-3.0-or-later`) and third-party notices for bundled resources
 - the application shall not require administrator or root privileges for normal day-to-day use after installation, except where the target platform's installer flow requires elevation during installation itself
 
 ## 6. Architectural Requirements
@@ -1065,6 +1066,7 @@ The criteria below are intended for implementation verification and QA.
 - Linux release artifacts launch on the supported target environments using the documented package format.
 - Updating the application preserves user settings and recent-project/session data when the release notes do not declare a breaking migration.
 - End users can install and run the released product without building from source.
+- Release artifacts expose the `GPL-3.0-or-later` project license and bundled-resource third-party notices.
 
 ## 9. Suggested Reimplementation Order
 

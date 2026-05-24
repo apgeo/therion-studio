@@ -36,7 +36,7 @@ Formula dependencies should include:
 
 The draft source-build Homebrew formula is kept in `packaging/homebrew/Formula/therion-studio.rb`
 until it is moved to a dedicated external tap repository. Before publishing it, replace the
-repository URL/checksum placeholders and declare the final project license.
+repository URL/checksum placeholders and verify the formula metadata.
 
 The external Therion command-line executable is not bundled. Users configure it in the application runner settings, or install it separately through Homebrew.
 
@@ -66,7 +66,7 @@ cpack --config build-win\CPackConfig.cmake
 CPack runs the CMake install step internally. The install step runs Qt deployment on Windows,
 copying the required Qt runtime next to the installed executable. CPack is configured to use
 NSIS for the Windows installer and emits `TherionStudio-<version>-Windows-x86_64.exe` in the
-build directory.
+build directory. The installer metadata uses the root `LICENSE` file for the project license.
 
 Required Windows packaging tools:
 

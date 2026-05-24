@@ -29,7 +29,7 @@ Before publishing:
 
 - replace the GitHub owner/repository placeholders if needed
 - replace `REPLACE_WITH_SOURCE_TARBALL_SHA256` with the release tarball checksum
-- declare the project license once it is finalized
+- verify the `GPL-3.0-or-later` license metadata
 - tag the source release, e.g. `v0.1.0`
 - run `brew audit --strict --online --new --formula therion-studio`
 - run `brew install --build-from-source ./Formula/therion-studio.rb`

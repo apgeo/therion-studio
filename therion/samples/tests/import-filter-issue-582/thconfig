@@ -1,4 +1,0 @@
-source
-  import data.3d -filter b.
-endsource
-export database -o database.csv

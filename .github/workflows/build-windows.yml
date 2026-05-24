@@ -30,12 +30,12 @@ jobs:
           }
 
           Invoke-CheckedNativeCommand python -m pip install --upgrade aqtinstall
-          Invoke-CheckedNativeCommand python -m aqt install-qt windows desktop 6.7.3 win64_msvc2022_64 `
+          Invoke-CheckedNativeCommand python -m aqt install-qt windows desktop 6.8.3 win64_msvc2022_64 `
             --base https://download.qt.io `
             --timeout 30 `
             --outputdir "$env:RUNNER_WORKSPACE\Qt" `
             --archives qtbase qtsvg qttools
-          $qtRoot = Get-ChildItem -Path "$env:RUNNER_WORKSPACE\Qt\6.7.3" -Directory |
+          $qtRoot = Get-ChildItem -Path "$env:RUNNER_WORKSPACE\Qt\6.8.3" -Directory |
             Where-Object { $_.Name -like "*msvc2022_64" } |
             Select-Object -First 1
           if (-not $qtRoot) {

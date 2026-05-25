@@ -296,6 +296,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
     src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.cpp
     src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.h
+    src/app/text_editor/map_editor/MapEditorLineSplitPlanner.cpp
+    src/app/text_editor/map_editor/MapEditorLineSplitPlanner.h
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
@@ -552,6 +554,13 @@ qt_add_executable(MapEditorObjectDeletePlannerTest
 
 target_link_libraries(MapEditorObjectDeletePlannerTest PRIVATE therion_core Qt6::Core)
 
+qt_add_executable(MapEditorLineSplitPlannerTest
+    tests/MapEditorLineSplitPlannerTest.cpp
+    src/app/text_editor/map_editor/MapEditorLineSplitPlanner.cpp
+    src/app/text_editor/map_editor/MapEditorLineSplitPlanner.h)
+
+target_link_libraries(MapEditorLineSplitPlannerTest PRIVATE therion_core Qt6::Core)
+
 therion_add_core_unit_test(SessionStoreTest
     tests/SessionStoreTest.cpp)
 
@@ -726,7 +735,8 @@ add_library(therion_text_editor_ui_test_support STATIC
 target_link_libraries(therion_text_editor_ui_test_support
     PUBLIC
         therion_core
-        Qt6::Widgets)
+        Qt6::Widgets
+        Qt6::Svg)
 
 function(therion_add_text_editor_ui_test target_name test_source resource_name)
     qt_add_executable(${target_name}
@@ -773,6 +783,8 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
     src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.cpp
     src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.h
+    src/app/text_editor/map_editor/MapEditorLineSplitPlanner.cpp
+    src/app/text_editor/map_editor/MapEditorLineSplitPlanner.h
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
@@ -842,6 +854,10 @@ therion_add_map_editor_ui_test(MapEditorDragUndoRedoSmokeTest
     tests/MapEditorDragUndoRedoSmokeTest.cpp
     "MapEditorDragUndoRedoSmokeResources")
 
+therion_add_map_editor_ui_test(MapEditorSplitAreaBorderSmokeTest
+    tests/MapEditorSplitAreaBorderSmokeTest.cpp
+    "MapEditorSplitAreaBorderSmokeResources")
+
 set(THERION_UNIT_TEST_TARGETS
     CommandCatalogServiceTest
     TherionDocumentEditorTest
@@ -854,6 +870,7 @@ set(THERION_UNIT_TEST_TARGETS
     MapEditorAreaReferenceResolverTest
     MapEditorInputPolicyTest
     MapEditorObjectDeletePlannerTest
+    MapEditorLineSplitPlannerTest
     MapEditorObjectMovePlannerTest
     ProjectStructureScannerTest
     SessionStoreTest
@@ -867,7 +884,8 @@ set(THERION_UI_TEST_TARGETS
     TextEditorCaretInteractionTest
     TextEditorCompletionHighlightTest
     MapEditorDetachedPaneTest
-    MapEditorDragUndoRedoSmokeTest)
+    MapEditorDragUndoRedoSmokeTest
+    MapEditorSplitAreaBorderSmokeTest)
 
 set(THERION_TEST_EXECUTABLE_TARGETS
     ${THERION_UNIT_TEST_TARGETS}

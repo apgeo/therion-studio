@@ -257,7 +257,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     context_.vertexInsertAfterButton->setEnabled(lineVertexActionsAvailable);
     context_.vertexDeleteButton->setEnabled(lineVertexActionsAvailable);
     context_.vertexSplitButton->setEnabled(false);
-    context_.vertexSplitButton->setToolTip(translate("Split Here is available for interior, non-area-border line vertices."));
+    context_.vertexSplitButton->setToolTip(translate("Split Here is available for interior vertices of open lines."));
     if (lineVertexActionsAvailable) {
         bool firstVertex = false;
         bool lastVertex = false;
@@ -268,15 +268,11 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             firstVertex = lineVertexIndex == 0;
             lastVertex = lineVertexIndex == lineFeature->lineVertices.size() - 1;
             const bool interiorVertex = lineVertexIndex > 0 && lineVertexIndex < lineFeature->lineVertices.size() - 1;
-            const bool areaBorderLine = !mapEditorAreaReferencesForBorderLine(context_.textEditor->text(),
-                                                                              *context_.selectedObjectLineNumber).isEmpty();
-            context_.vertexSplitButton->setEnabled(interiorVertex && !lineFeature->closed && !areaBorderLine);
+            context_.vertexSplitButton->setEnabled(interiorVertex && !lineFeature->closed);
             if (!interiorVertex) {
                 context_.vertexSplitButton->setToolTip(translate("Cannot split at the first or last vertex."));
             } else if (lineFeature->closed) {
                 context_.vertexSplitButton->setToolTip(translate("Cannot split closed lines yet."));
-            } else if (areaBorderLine) {
-                context_.vertexSplitButton->setToolTip(translate("Cannot split area border lines yet."));
             } else {
                 context_.vertexSplitButton->setToolTip(translate("Split the selected line at this vertex."));
             }

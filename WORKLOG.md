@@ -12,8 +12,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Next Up
 
-- P0: Close Phase 9 open design item: finalize `Split Here` semantics for open area-referenced borders (closed-line split stays unsupported) and lock expected rewrite behavior.
-- P0: Add/refresh regression tests for split/ownership guardrails and source rewrite correctness around the finalized Phase 9 behavior.
+- P0: Continue Phase 9 with remaining map-editor parity polish in selection/details ergonomics and cross-platform input edge cases.
 - P1: Continue Phase 10 with Apple Pencil/freehand stroke UX, broader parsed-document snapshot use, less-aggressive shape-sensitive bezier simplification, and point/line/area workflow polish.
 - P2: Continue Phase 11 with object-reference target picking/resolution shortcuts, then selection/details glue consolidation without behavior changes.
 - P3: Schedule deferred Linux packaging strategy decision (`.deb` first candidate) after current product-behavior priorities.
@@ -41,7 +40,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 - Status: in progress.
 - Remaining work: continue interaction parity review for inspector ergonomics, command-surface consistency, selection edge cases, and cross-platform input behavior.
-- Open design item: finalize rewrite semantics for `Split Here` on open area-referenced borders so referenced areas can be updated to include both resulting border lines (closed-line split stays unsupported).
+- ~~Open validation item: confirm robust source rewrite behavior for `Split Here` on open area-referenced borders across mixed area-body layouts; closed-line split remains unsupported.~~
 
 ### Phase 10 - Interactive Map Drawing and Insertion (`Post-MVP`)
 

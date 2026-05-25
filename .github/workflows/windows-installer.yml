@@ -33,9 +33,40 @@ jobs:
           fetch-depth: 0
 
       - name: Set up MSVC toolchain
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $vsWhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+          if (-not (Test-Path $vsWhere)) {
+            throw "vswhere.exe not found at $vsWhere"
+          }
+
+          $vsInstallPath = & $vsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsInstallPath) {
+            throw "No Visual Studio installation with MSVC tools found."
+          }
+          $vsInstallPath = $vsInstallPath.Trim()
+
+          $vsDevCmd = Join-Path $vsInstallPath "Common7\Tools\VsDevCmd.bat"
+          if (-not (Test-Path $vsDevCmd)) {
+            throw "VsDevCmd.bat not found at $vsDevCmd"
+          }
+
+          $configuredEnv = & cmd.exe /s /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 >nul && set"
+          if ($LASTEXITCODE -ne 0) {
+            throw "VsDevCmd.bat failed with exit code $LASTEXITCODE"
+          }
+
+          foreach ($line in $configuredEnv) {
+            if ($line -match '^([^=]+)=(.*)$') {
+              $name = $Matches[1]
+              $value = $Matches[2]
+              if ($name -match '^(GITHUB_|RUNNER_)') {
+                continue
+              }
+              "$name=$value" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            }
+          }
 
       - name: Describe packaged source
         shell: pwsh

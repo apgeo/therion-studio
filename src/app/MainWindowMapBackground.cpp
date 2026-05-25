@@ -269,6 +269,7 @@ void MainWindow::refreshMapBackgroundPanel()
 
     const int selectedIndex = hasMapTab ? mapTab->selectedBackgroundLayerIndex() : -1;
     const bool hasLayer = hasMapTab && selectedIndex >= 0 && selectedIndex < mapTab->backgroundLayerCount();
+    const bool supportsGamma = hasLayer && mapTab->backgroundLayerSupportsGamma(selectedIndex);
 
     mapBackgroundRemoveButton_->setEnabled(hasLayer);
     mapBackgroundMoveUpButton_->setEnabled(hasLayer && selectedIndex > 0);
@@ -281,9 +282,9 @@ void MainWindow::refreshMapBackgroundPanel()
     mapBackgroundNudgeUpButton_->setEnabled(hasLayer);
     mapBackgroundNudgeDownButton_->setEnabled(hasLayer);
     mapBackgroundOpacitySlider_->setEnabled(hasLayer);
-    mapBackgroundGammaSlider_->setEnabled(hasLayer);
+    mapBackgroundGammaSlider_->setEnabled(supportsGamma);
     mapBackgroundOpacityResetButton_->setEnabled(hasLayer);
-    mapBackgroundGammaResetButton_->setEnabled(hasLayer);
+    mapBackgroundGammaResetButton_->setEnabled(supportsGamma);
 
     if (!hasLayer) {
         mapBackgroundVisibilityButton_->setText(tr("Hide"));
@@ -297,7 +298,9 @@ void MainWindow::refreshMapBackgroundPanel()
         mapBackgroundPosXSpin_->setValue(position.x());
         mapBackgroundPosYSpin_->setValue(position.y());
         mapBackgroundOpacitySlider_->setValue(qBound(5, qRound(mapTab->backgroundLayerOpacity(selectedIndex) * 100.0), 100));
-        mapBackgroundGammaSlider_->setValue(qBound(20, qRound(mapTab->backgroundLayerGamma(selectedIndex) * 100.0), 250));
+        mapBackgroundGammaSlider_->setValue(supportsGamma
+                                                ? qBound(20, qRound(mapTab->backgroundLayerGamma(selectedIndex) * 100.0), 250)
+                                                : 100);
     }
 
     updatingMapBackgroundPanel_ = false;

@@ -159,6 +159,9 @@ void MapEditorSceneLifecycleController::fitMapToView(bool includeBackgroundImage
     context_.view->resetTransform();
     context_.view->fitInView(fitBounds.adjusted(-24, -24, 24, 24), Qt::KeepAspectRatio);
     *context_.autoFitEnabled = true;
+    if (context_.reprojectMetadataBackgroundLayersForCurrentDocument) {
+        context_.reprojectMetadataBackgroundLayersForCurrentDocument();
+    }
     syncZoomFactorFromView();
     context_.updateCommandSurfaceState();
 }
@@ -193,6 +196,9 @@ void MapEditorSceneLifecycleController::applyZoomAtViewportPosition(qreal factor
     const QPoint viewportPoint = viewportPosition.toPoint();
     const QPointF scenePointBefore = context_.view->mapToScene(viewportPoint);
     context_.view->scale(appliedFactor, appliedFactor);
+    if (context_.reprojectMetadataBackgroundLayersForCurrentDocument) {
+        context_.reprojectMetadataBackgroundLayersForCurrentDocument();
+    }
     const QPointF scenePointAfter = context_.view->mapToScene(viewportPoint);
     const QPointF sceneDelta = scenePointAfter - scenePointBefore;
     context_.view->translate(sceneDelta.x(), sceneDelta.y());

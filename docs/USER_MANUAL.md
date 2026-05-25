@@ -138,8 +138,9 @@ Use `Separate Map` to move the visual map pane into its own window (for multi-mo
 In `Inspector -> Backgrounds`, you can:
 
 - show/hide metric grid and adjust spacing
-- add/remove/reorder background image layers
-- adjust per-layer visibility, position, opacity, and gamma
+- add/remove/reorder background layers (raster images and `.xvi`)
+- adjust per-layer visibility, position, and opacity
+- adjust gamma for raster layers (`.xvi` uses fixed gamma)
 
 ## 7. Running Therion
 

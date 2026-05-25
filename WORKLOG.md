@@ -41,6 +41,14 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Status: in progress.
 - Remaining work: continue interaction parity review for inspector ergonomics, command-surface consistency, selection edge cases, and cross-platform input behavior.
 - ~~Open validation item: confirm robust source rewrite behavior for `Split Here` on open area-referenced borders across mixed area-body layouts; closed-line split remains unsupported.~~
+- ~~Fix `.xvi` background handling: do not treat `.xvi` as raster bitmap (proper scaling path + gamma disabled).~~
+- ~~Fix `.xvi` metadata-load regression causing UI freeze/spinning ball via unbounded offscreen render and mismatched model bounds.~~
+- ~~Improve `.xvi` visual fidelity with zoom-aware supersampled re-render so overlay stays sharp during map zoom.~~
+- ~~Switch `.xvi` background rendering from pre-rasterized pixmap overlays to a vector-painted scene item path (grid/shots/sketch) to keep zoom quality and reduce re-raster cost.~~
+- ~~Fix `.xvi` open-time UI hangs by caching parsed `.xvi` payloads and skipping geometry rebuilds when projection inputs are unchanged.~~
+- ~~Differentiate `.xvi` shot classes visually: render splays with distinct color from traverse shots and keep sketches visually separate.~~
+- ~~Tune `.xvi` rendering performance/clarity: faster station lookup for shot classification and LOD-aware drawing (hide splays/sketch/grid at distant zoom), plus slightly stronger line weights.~~
+- ~~Preserve and render `.xvi` sketch-line color tokens (`connect` as dotted gray, named colors mapped directly) so auxiliary sketch semantics are visible in map background overlays.~~
 
 ### Phase 10 - Interactive Map Drawing and Insertion (`Post-MVP`)
 

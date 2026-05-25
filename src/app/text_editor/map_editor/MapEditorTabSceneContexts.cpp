@@ -32,6 +32,9 @@ MapEditorSceneLifecycleContext MapEditorTab::sceneLifecycleContext() const
         .setSelectedBackgroundLayerIndexInternal = [self](int index) {
             self->setSelectedBackgroundLayerIndexInternal(index);
         },
+        .reprojectMetadataBackgroundLayersForCurrentDocument = [self]() {
+            self->reprojectMetadataBackgroundLayersForCurrentDocument();
+        },
         .mapBackgroundFitBounds = [self]() {
             return self->mapBackgroundFitBounds();
         },

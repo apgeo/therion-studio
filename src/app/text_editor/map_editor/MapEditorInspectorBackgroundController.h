@@ -34,6 +34,7 @@ struct MapEditorInspectorBackgroundContext
     std::function<bool(int)> layerVisible;
     std::function<qreal(int)> layerOpacity;
     std::function<qreal(int)> layerGamma;
+    std::function<bool(int)> layerSupportsGamma;
     std::function<QPointF(int)> layerPosition;
     std::function<int()> selectedLayerIndex;
     std::function<void(int)> setSelectedLayerIndex;

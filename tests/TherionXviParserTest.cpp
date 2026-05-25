@@ -60,8 +60,12 @@ int runParseTextTest()
     if (!expect(document.shots.size() == 1, "Expected parsed XVI shots collection size.")) {
         return 1;
     }
-    if (!expect(document.sketchLines.size() == 1 && document.sketchLines.first().size() == 3,
+    if (!expect(document.sketchLines.size() == 1 && document.sketchLines.first().points.size() == 3,
                 "Expected parsed XVI sketchline point count.")) {
+        return 1;
+    }
+    if (!expect(document.sketchLines.first().colorToken == QStringLiteral("line"),
+                "Expected parsed XVI sketchline color token.")) {
         return 1;
     }
 
@@ -117,6 +121,32 @@ int runRejectInvalidContentTest()
 
     return 0;
 }
+
+int runSketchLineTokenPreservationTest()
+{
+    const QString xviText = QStringLiteral(
+        "set XVIgrid {0 0 1 0 0 1 2 2}\n"
+        "set XVIsketchlines {\n"
+        "  {connect 0 0 1 1 2 2}\n"
+        "}\n");
+
+    TherionXviDocument document;
+    if (!expect(parseTherionXviDocumentText(xviText, &document), "Expected XVI text with sketchline token to parse.")) {
+        return 1;
+    }
+    if (!expect(document.sketchLines.size() == 1, "Expected one parsed sketchline.")) {
+        return 1;
+    }
+    if (!expect(document.sketchLines.first().colorToken == QStringLiteral("connect"),
+                "Expected sketchline token to be preserved.")) {
+        return 1;
+    }
+    if (!expect(document.sketchLines.first().points.size() == 3, "Expected sketchline point count to remain preserved.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -130,7 +160,9 @@ int main()
     if (const int rc = runRejectInvalidContentTest(); rc != 0) {
         return rc;
     }
+    if (const int rc = runSketchLineTokenPreservationTest(); rc != 0) {
+        return rc;
+    }
 
     return 0;
 }
-

@@ -8,6 +8,12 @@
 
 namespace TherionStudio
 {
+struct TherionXviSketchLine
+{
+    QString colorToken;
+    QVector<QPointF> points;
+};
+
 struct TherionXviDocument
 {
     QPointF gridOrigin;
@@ -19,10 +25,9 @@ struct TherionXviDocument
     bool hasGridDefinition = false;
     QHash<QString, QPointF> stations;
     QVector<QLineF> shots;
-    QVector<QVector<QPointF>> sketchLines;
+    QVector<TherionXviSketchLine> sketchLines;
 };
 
 bool parseTherionXviDocumentText(const QString &content, TherionXviDocument *document);
 bool parseTherionXviDocumentFile(const QString &xviPath, TherionXviDocument *document);
 }
-

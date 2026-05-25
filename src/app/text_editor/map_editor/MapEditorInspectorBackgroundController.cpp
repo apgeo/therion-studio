@@ -155,14 +155,16 @@ void MapEditorInspectorBackgroundController::refreshInspectorBackgroundPanel()
 
     const int selectedIndex = context_.selectedLayerIndex ? context_.selectedLayerIndex() : -1;
     const bool hasLayer = selectedIndex >= 0 && selectedIndex < layerCount;
+    const bool supportsGamma = hasLayer
+        && (!context_.layerSupportsGamma || context_.layerSupportsGamma(selectedIndex));
     context_.moveUpButton->setEnabled(hasLayer && selectedIndex > 0);
     context_.moveDownButton->setEnabled(hasLayer && selectedIndex >= 0 && selectedIndex < layerCount - 1);
     context_.positionXSpin->setEnabled(hasLayer);
     context_.positionYSpin->setEnabled(hasLayer);
     context_.opacitySlider->setEnabled(hasLayer);
-    context_.gammaSlider->setEnabled(hasLayer);
+    context_.gammaSlider->setEnabled(supportsGamma);
     context_.opacityResetButton->setEnabled(hasLayer);
-    context_.gammaResetButton->setEnabled(hasLayer);
+    context_.gammaResetButton->setEnabled(supportsGamma);
 
     if (!hasLayer) {
         context_.positionXSpin->setValue(0.0);
@@ -176,6 +178,8 @@ void MapEditorInspectorBackgroundController::refreshInspectorBackgroundPanel()
     context_.positionXSpin->setValue(position.x());
     context_.positionYSpin->setValue(position.y());
     context_.opacitySlider->setValue(qBound(5, qRound((context_.layerOpacity ? context_.layerOpacity(selectedIndex) : 0.58) * 100.0), 100));
-    context_.gammaSlider->setValue(qBound(20, qRound((context_.layerGamma ? context_.layerGamma(selectedIndex) : 1.0) * 100.0), 250));
+    context_.gammaSlider->setValue(supportsGamma
+                                       ? qBound(20, qRound((context_.layerGamma ? context_.layerGamma(selectedIndex) : 1.0) * 100.0), 250)
+                                       : 100);
 }
 }

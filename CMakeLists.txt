@@ -338,6 +338,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
+    src/app/text_editor/map_editor/MapEditorXviBackgroundItem.cpp
+    src/app/text_editor/map_editor/MapEditorXviBackgroundItem.h
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTabCompletionFacade.cpp
     src/app/text_editor/TextEditorTabAppearanceController.cpp
@@ -824,7 +826,9 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
     src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
-    src/app/text_editor/map_editor/MapEditorTab.h)
+    src/app/text_editor/map_editor/MapEditorTab.h
+    src/app/text_editor/map_editor/MapEditorXviBackgroundItem.cpp
+    src/app/text_editor/map_editor/MapEditorXviBackgroundItem.h)
 
 add_library(therion_map_editor_ui_test_support STATIC
     ${THERION_MAP_EDITOR_UI_TEST_SOURCES})

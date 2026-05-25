@@ -198,7 +198,10 @@ bool parseTherionXviDocumentText(const QString &content, TherionXviDocument *doc
         if (block == Block::SketchLines) {
             const QVector<QPointF> points = parsePointPairs(tokens, 1);
             if (points.size() >= 2) {
-                document->sketchLines.append(points);
+                TherionXviSketchLine sketchLine;
+                sketchLine.colorToken = tokens.first().trimmed();
+                sketchLine.points = points;
+                document->sketchLines.append(sketchLine);
             }
             continue;
         }
@@ -222,4 +225,3 @@ bool parseTherionXviDocumentFile(const QString &xviPath, TherionXviDocument *doc
     return parseTherionXviDocumentText(QString::fromUtf8(file.readAll()), document);
 }
 }
-

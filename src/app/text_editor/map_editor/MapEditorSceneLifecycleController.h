@@ -35,6 +35,7 @@ struct MapEditorSceneLifecycleContext
     std::function<void()> refreshBackgroundLayerControls;
     std::function<void()> applyBackgroundLayerStackingOrder;
     std::function<void(int)> setSelectedBackgroundLayerIndexInternal;
+    std::function<void()> reprojectMetadataBackgroundLayersForCurrentDocument;
     std::function<QRectF()> mapBackgroundFitBounds;
     std::function<void()> updateCommandSurfaceState;
     std::function<int()> zoomPercent;

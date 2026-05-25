@@ -96,6 +96,7 @@ struct MapGeometryFeature
     int lineNumber = 0;
     QString category;
     QString label;
+    QString subtype;
     QString subtitle;
     QColor accent;
     QVector<QPointF> vertices;

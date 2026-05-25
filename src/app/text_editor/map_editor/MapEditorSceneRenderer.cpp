@@ -1,5 +1,6 @@
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSceneInternals.h"
+#include "MapEditorObjectStyleCatalog.h"
 
 #include <QFont>
 #include <QGuiApplication>
@@ -63,6 +64,21 @@ QPen cosmeticPen(const QColor &color,
 {
     QPen pen(color, width, style, cap, join);
     pen.setCosmetic(true);
+    return pen;
+}
+
+QPen styledCosmeticPen(const QColor &color,
+                       qreal width,
+                       Qt::PenStyle style,
+                       const QVector<qreal> &dashPattern,
+                       Qt::PenCapStyle cap = Qt::SquareCap,
+                       Qt::PenJoinStyle join = Qt::BevelJoin)
+{
+    QPen pen = cosmeticPen(color, width, style, cap, join);
+    if (!dashPattern.isEmpty()) {
+        pen.setStyle(Qt::CustomDashLine);
+        pen.setDashPattern(dashPattern);
+    }
     return pen;
 }
 
@@ -890,10 +906,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
         ? sourceBoundsOverride.value()
         : geometryBoundsForFeatures(geometryFeatures);
     const qreal mapScale = sceneCoordsScaleFactor(sourceBounds, previewBounds);
-    const qreal pointRadius = 5.6;
+    const MapEditorObjectStyleCatalog styleCatalog = mapEditorObjectStyleCatalog();
     const qreal vertexRadius = 4.4;
-    const qreal thickLineWidth = 3.2;
-    const qreal detailLineWidth = 1.8;
     const qreal gridLineWidth = canvasTheme.lightMode ? 1.0 : 1.1;
     auto markGeometryItem = [](QGraphicsItem *item) {
         if (item != nullptr) {
@@ -938,11 +952,17 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     break;
                 }
 
+                const MapEditorResolvedPointStyle pointStyle = resolveMapEditorPointStyle(styleCatalog,
+                                                                                           feature.stationPoint ? QStringLiteral("station") : feature.label,
+                                                                                           feature.subtype);
+                const qreal pointRadius = qBound(2.0, pointStyle.radius, 24.0);
+                const QColor pointFillColor = pointStyle.fillColor.value_or(canvasTheme.pointHandleFill);
+                const QColor pointStrokeColor = pointStyle.strokeColor.value_or(canvasTheme.pointHandleStroke);
                 const QPointF previewPoint = mapGeometryPointToPreview(feature.anchor, sourceBounds, previewBounds);
                 auto *pointItem = new MapEditablePointItem(feature.lineNumber, feature.anchor, sourceBounds, previewBounds);
                 pointItem->setRect(QRectF(-pointRadius, -pointRadius, pointRadius * 2.0, pointRadius * 2.0));
-                pointItem->setPen(cosmeticPen(canvasTheme.pointHandleStroke, 1.1));
-                pointItem->setBrush(QBrush(canvasTheme.pointHandleFill));
+                pointItem->setPen(cosmeticPen(pointStrokeColor, qBound(0.6, pointStyle.outlineWidth, 8.0)));
+                pointItem->setBrush(QBrush(pointFillColor));
                 pointItem->setMoveCommittedCallback(recordPointGeometryMove);
                 scene->addItem(pointItem);
                 pointItem->setZValue(3.0);
@@ -996,16 +1016,34 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     break;
                 }
 
+                const MapEditorResolvedLineStyle lineStyle = resolveMapEditorLineStyle(styleCatalog,
+                                                                                       feature.label,
+                                                                                       feature.subtype);
+                const qreal thickLineWidth = qBound(0.8, lineStyle.strokeWidth, 24.0);
+                const qreal detailLineWidth = qBound(0.6, lineStyle.detailWidth, 24.0);
                 const QPainterPath path = linePathForFeature(feature, sourceBounds, previewBounds);
-                QColor detailStroke = feature.accent;
+                QColor geometryStroke = lineStyle.strokeColor.value_or(canvasTheme.geometryStroke);
+                QColor detailStroke = lineStyle.detailColor.value_or(feature.accent);
                 detailStroke.setAlpha(canvasTheme.lightMode ? 230 : 245);
 
-                auto *lineItem = scene->addPath(path, cosmeticPen(canvasTheme.geometryStroke, thickLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                auto *lineItem = scene->addPath(path,
+                                                styledCosmeticPen(geometryStroke,
+                                                                  thickLineWidth,
+                                                                  lineStyle.penStyle,
+                                                                  lineStyle.dashPattern,
+                                                                  Qt::RoundCap,
+                                                                  Qt::RoundJoin));
                 lineItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
                 lineItem->setZValue(2.5);
                 markGeometryItem(lineItem);
                 lineItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
-                auto *detailItem = scene->addPath(path, cosmeticPen(detailStroke, detailLineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                auto *detailItem = scene->addPath(path,
+                                                  styledCosmeticPen(detailStroke,
+                                                                    detailLineWidth,
+                                                                    lineStyle.penStyle,
+                                                                    lineStyle.dashPattern,
+                                                                    Qt::RoundCap,
+                                                                    Qt::RoundJoin));
                 detailItem->setZValue(3.0);
                 markGeometryItem(detailItem);
                 makeMouseTransparent(detailItem);
@@ -1508,6 +1546,14 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     break;
                 }
 
+                const MapEditorResolvedAreaStyle areaStyle = resolveMapEditorAreaStyle(styleCatalog,
+                                                                                       feature.label,
+                                                                                       feature.subtype);
+                const qreal areaStrokeBase = qBound(0.8, areaStyle.strokeWidth, 24.0);
+                const qreal areaStrokeWidth = qBound(0.8, areaStrokeBase * mapScale, areaStrokeBase * 1.2);
+                QColor areaFillColor = areaStyle.fillColor.value_or(canvasTheme.areaFill);
+                areaFillColor.setAlphaF(qBound(0.0, areaStyle.fillOpacity, 1.0));
+                const QColor areaStrokeColor = areaStyle.strokeColor.value_or(canvasTheme.geometryStroke);
                 QPainterPath path;
                 if (feature.verticesEditable || feature.lineVertices.size() < 2) {
                     const QPointF firstPoint = mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds);
@@ -1520,7 +1566,16 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 }
                 path.closeSubpath();
 
-                auto *fillItem = scene->addPath(path, QPen(canvasTheme.geometryStroke, qBound(1.0, 2.0 * mapScale, 2.4), Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin), QBrush(canvasTheme.areaFill));
+                QBrush areaBrush(areaFillColor, Qt::SolidPattern);
+
+                auto *fillItem = scene->addPath(path,
+                                                styledCosmeticPen(areaStrokeColor,
+                                                                  areaStrokeWidth,
+                                                                  areaStyle.penStyle,
+                                                                  areaStyle.dashPattern,
+                                                                  Qt::RoundCap,
+                                                                  Qt::RoundJoin),
+                                                areaBrush);
                 fillItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
                 fillItem->setZValue(2.0);
                 markGeometryItem(fillItem);
@@ -1528,6 +1583,17 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 fillItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeAreaFill);
                 if (mapItemsByLine != nullptr && feature.lineNumber > 0) {
                     mapItemsByLine->insert(feature.lineNumber, fillItem);
+                }
+
+                if (areaStyle.useFillPattern) {
+                    QColor patternColor = areaStyle.fillPatternColor.value_or(areaStrokeColor);
+                    patternColor.setAlphaF(qBound(0.0, areaFillColor.alphaF() + 0.08, 1.0));
+                    QBrush patternBrush(patternColor, areaStyle.fillPattern);
+                    auto *patternItem = scene->addPath(path, Qt::NoPen, patternBrush);
+                    patternItem->setZValue(2.05);
+                    markGeometryItem(patternItem);
+                    makeMouseTransparent(patternItem);
+                    patternItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
                 }
                 if (feature.verticesEditable) {
                     auto areaVertexItemsByOrder = std::make_shared<QVector<MapEditableGeometryVertexItem *>>(feature.vertices.size(), nullptr);
@@ -1691,6 +1757,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             feature.lineNumber = parsedLine.lineNumber;
             feature.category = mapEntryCategoryForLine(parsedLine);
             feature.label = mapEntryTitleForLine(parsedLine);
+            feature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
             feature.subtitle = mapEntrySubtitleForLine(parsedLine);
             feature.accent = mapEntryAccentForCategory(feature.category);
             feature.sourceAnchor = pointTokens.first();
@@ -1721,6 +1788,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             feature.lineNumber = parsedLine.lineNumber;
             feature.category = mapEntryCategoryForLine(parsedLine);
             feature.label = mapEntryTitleForLine(parsedLine);
+            feature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
             feature.subtitle = mapEntrySubtitleForLine(parsedLine);
             feature.accent = mapEntryAccentForCategory(feature.category);
             feature.sourceAnchor = pointTokens.first();
@@ -1738,6 +1806,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.lineNumber = parsedLine.lineNumber;
             currentFeature.category = mapEntryCategoryForLine(parsedLine);
             currentFeature.label = mapEntryTitleForLine(parsedLine);
+            currentFeature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
             currentFeature.closed = lineOptionToggleValue(parsedLine, QStringLiteral("-close")).value_or(false);
@@ -1755,6 +1824,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.lineNumber = parsedLine.lineNumber;
             currentFeature.category = mapEntryCategoryForLine(parsedLine);
             currentFeature.label = mapEntryTitleForLine(parsedLine);
+            currentFeature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
             currentFeature.vertices.append(pointsFromTokens(parsedLine.tokens.mid(1)));

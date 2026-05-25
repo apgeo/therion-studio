@@ -1,0 +1,106 @@
+{
+  "schema_version": 2,
+  "defaults": {
+    "point": {
+      "radius": 5.6,
+      "outline_width": 1.1,
+      "fill_color": "#1E2430BE",
+      "stroke_color": "#0E151FE0"
+    },
+    "line": {
+      "stroke_width": 3.2,
+      "detail_width": 1.8,
+      "pen_style": "solid",
+      "stroke_color": "#1D2837",
+      "detail_color": "#FFB15A"
+    },
+    "area": {
+      "stroke_width": 2.0,
+      "fill_opacity": 0.11,
+      "pen_style": "solid",
+      "stroke_color": "#1D2837",
+      "fill_color": "#304969"
+    }
+  },
+  "lineStyles": [
+    {
+      "rawType": "wall",
+      "strokeColor": "#1C1C1E",
+      "lineWidth": 2.6,
+      "detailWidth": 1.8
+    },
+    {
+      "rawType": "border",
+      "strokeColor": "#607089",
+      "detailColor": "#90A1BB",
+      "lineWidth": 2.0,
+      "detailWidth": 1.2,
+      "dashPattern": [8, 4]
+    },
+    {
+      "rawType": "water-flow",
+      "strokeColor": "#0A84FF",
+      "detailColor": "#64B5FF",
+      "lineWidth": 2.1,
+      "detailWidth": 1.3
+    }
+  ],
+  "pointStyles": [
+    {
+      "rawType": "station",
+      "fillColor": "#FF3B30",
+      "strokeColor": "#F4F4F2E6",
+      "pointRadius": 4.2,
+      "outlineWidth": 1.2
+    },
+    {
+      "rawType": "label",
+      "fillColor": "#FFD60A",
+      "strokeColor": "#1C1C1E",
+      "pointRadius": 3.6,
+      "outlineWidth": 1.0
+    }
+  ],
+  "areaStyles": [
+    {
+      "rawType": "water",
+      "fillStyle": {
+        "kind": "solid",
+        "color": "#2A7FFF"
+      },
+      "strokeStyle": {
+        "color": "#0D4EA3",
+        "width": 1.4
+      },
+      "fillOpacity": 0.20
+    },
+    {
+      "rawType": "sand",
+      "fillStyle": {
+        "kind": "hatch",
+        "backgroundColor": "#BEA46A",
+        "strokeColor": "#8E6D2F",
+        "angle": 30
+      },
+      "strokeStyle": {
+        "color": "#8E6D2F",
+        "width": 1.2,
+        "dashPattern": [6, 3]
+      },
+      "fillOpacity": 0.18
+    },
+    {
+      "rawType": "blocks",
+      "fillStyle": {
+        "kind": "dots",
+        "backgroundColor": "#5E6673",
+        "dotColor": "#2B323F"
+      },
+      "strokeStyle": {
+        "color": "#2B323F",
+        "width": 1.0
+      },
+      "fillOpacity": 0.16
+    }
+  ]
+}

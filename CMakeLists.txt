@@ -300,6 +300,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/map_editor/MapEditorLineSplitPlanner.h
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
+    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.cpp
+    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
     src/app/text_editor/map_editor/MapEditorInteractiveDrawContext.h
@@ -395,6 +397,7 @@ endif()
 set(THERION_STUDIO_RESOURCE_FILES
     ${THERION_STUDIO_APP_ICON_SVG}
     ${THERION_STUDIO_APP_ICON_PNG}
+    resources/map_object_styles.json
     resources/therion_command_catalog.json
     resources/therion_syntax_palette.json
     resources/icons/lucide/LICENSE
@@ -521,6 +524,8 @@ therion_add_core_unit_test(TherionXviParserTest
 
 qt_add_executable(MapGeometryFeatureParsingTest
     tests/MapGeometryFeatureParsingTest.cpp
+    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.cpp
+    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h
     src/app/text_editor/map_editor/MapEditorSceneItems.cpp
     src/app/text_editor/map_editor/MapEditorSceneInternals.h
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
@@ -551,6 +556,18 @@ qt_add_executable(MapEditorObjectMovePlannerTest
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h)
 
 target_link_libraries(MapEditorObjectMovePlannerTest PRIVATE therion_core Qt6::Core)
+
+qt_add_executable(MapEditorObjectStyleCatalogTest
+    tests/MapEditorObjectStyleCatalogTest.cpp
+    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.cpp
+    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h)
+
+target_link_libraries(MapEditorObjectStyleCatalogTest PRIVATE Qt6::Core Qt6::Gui)
+
+qt_add_resources(MapEditorObjectStyleCatalogTest MapEditorObjectStyleCatalogResources
+    PREFIX "/"
+    FILES
+        resources/map_object_styles.json)
 
 qt_add_executable(MapEditorObjectDeletePlannerTest
     tests/MapEditorObjectDeletePlannerTest.cpp
@@ -792,6 +809,8 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorLineSplitPlanner.h
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
+    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.cpp
+    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
     src/app/text_editor/map_editor/MapEditorInteractiveDrawContext.h
@@ -876,6 +895,7 @@ set(THERION_UNIT_TEST_TARGETS
     DocumentFileEncodingTest
     MapEditorAreaReferenceResolverTest
     MapEditorInputPolicyTest
+    MapEditorObjectStyleCatalogTest
     MapEditorObjectDeletePlannerTest
     MapEditorLineSplitPlannerTest
     MapEditorObjectMovePlannerTest

@@ -8,9 +8,6 @@ Therion Studio is a cross-platform Qt desktop editor for
 Therion Studio aims to modernize the Therion GUI with a Qt-based, cross-platform application that
 is easier to maintain and more comfortable on modern desktop systems, especially macOS.
 
-Its development has been orchestrated with significant help from AI-assisted software engineering
-tools.
-
 ## Features
 
 - Multi-file Therion project editing with tabbed documents.
@@ -26,8 +23,9 @@ tools.
 
 ## Status
 
-The project is under active development. See
-[`QtReimplementationSpecification.md`](QtReimplementationSpecification.md) for detailed
+The project is under active development. Its development has been orchestrated with significant help from AI-assisted software engineering tools.
+
+See [`QtReimplementationSpecification.md`](QtReimplementationSpecification.md) for detailed
 requirements.
 
 ## Installation
@@ -37,6 +35,7 @@ Release packaging is still being hardened.
 - Windows installer notes: [`packaging/windows/README.md`](packaging/windows/README.md)
 - Homebrew tap and formula: [`ladislavb/homebrew-therion-studio`](https://github.com/ladislavb/homebrew-therion-studio)
 - Source build instructions: [`docs/BUILDING.md`](docs/BUILDING.md)
+- Release process checklist: [`docs/RELEASING.md`](docs/RELEASING.md)
 
 Release tags use CalVer, for example:
 

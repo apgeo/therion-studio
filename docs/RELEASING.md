@@ -1,0 +1,134 @@
+# Releasing Therion Studio
+
+This document describes the current release workflow for Therion Studio.
+
+## 1. Scope and Current Channels
+
+Current release channels:
+
+- Windows: NSIS installer artifact from GitHub Actions
+- macOS: Homebrew tap formula in `ladislavb/homebrew-therion-studio`
+
+Not finalized yet:
+
+- Linux release packaging (future `.deb` or Flatpak strategy)
+
+## 2. Versioning
+
+Therion Studio uses CalVer tags:
+
+```text
+vYYYY.M.PATCH
+```
+
+Example:
+
+```text
+v2026.5.1
+```
+
+## 3. Pre-Release Checklist
+
+Before tagging:
+
+1. Ensure `main` is up to date and clean.
+2. Confirm user-facing docs are current:
+   - `README.md`
+   - `docs/USER_MANUAL.md`
+   - packaging docs if changed
+3. Confirm CI workflow files are on `main` and valid.
+4. Decide final tag value (for example `v2026.5.1`).
+
+## 4. Create and Push the Release Tag
+
+```sh
+git checkout main
+git pull --ff-only origin main
+git tag -a v2026.5.1 -m "Therion Studio v2026.5.1"
+git push origin v2026.5.1
+```
+
+Optional safety check:
+
+```sh
+git tag --list 'v2026.5.1'
+```
+
+## 5. Run CI Validation Workflows
+
+Trigger these GitHub Actions workflows manually (`workflow_dispatch`):
+
+1. `Build Linux` with `run_ui_smoke_tests=true`
+2. `Build macOS` with `run_ui_smoke_tests=true`
+3. `Build Windows` with `run_ui_smoke_tests=true`
+
+All three should pass before publishing release assets.
+
+## 6. Build Windows Installer Artifact
+
+Run workflow:
+
+- `Windows Installer`
+
+Inputs:
+
+- `source_ref = v2026.5.1`
+- `qt_version = 6.8.3` (or current supported Qt version)
+- `build_type = Release`
+
+Expected artifact pattern:
+
+```text
+TherionStudio-<version>-Windows-x86_64.exe
+```
+
+## 7. Publish GitHub Release
+
+1. Create GitHub Release for tag `v2026.5.1`.
+2. Attach the Windows installer artifact from the workflow run.
+3. Add release notes (key features/fixes/known limitations).
+
+## 8. Update Homebrew Tap Formula (macOS)
+
+Homebrew formula is maintained in:
+
+- `https://github.com/ladislavb/homebrew-therion-studio`
+
+Update `therion-studio.rb`:
+
+1. Set `url` to the new tag tarball.
+2. Compute and set `sha256` from the same tarball.
+3. Keep platform/dependency policy aligned with this repo docs.
+
+Tarball and hash example:
+
+```sh
+VERSION=2026.5.1
+TAG=v$VERSION
+URL="https://github.com/ladislavb/therion-studio/archive/refs/tags/${TAG}.tar.gz"
+
+curl -fL "$URL" -o "/tmp/therion-studio-${TAG}.tar.gz"
+shasum -a 256 "/tmp/therion-studio-${TAG}.tar.gz"
+```
+
+Validate formula in tap repo:
+
+```sh
+brew style ./therion-studio.rb
+brew audit --strict --online ./therion-studio.rb
+brew install --build-from-source ./therion-studio.rb
+```
+
+Then commit and push in the tap repository.
+
+## 9. Post-Release Verification
+
+1. Confirm GitHub Release is visible with attached Windows installer.
+2. Confirm Homebrew tap installs the released version on macOS Sequoia+.
+3. Sanity-check app launch and basic open/save workflow.
+4. Update `WORKLOG.md` with completed release tasks.
+
+## 10. Known Gaps
+
+- Linux packaged release artifacts are not finalized.
+- Code signing/notarization strategy is not yet fully documented/exercised end-to-end.

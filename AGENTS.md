@@ -119,6 +119,5 @@ These instructions apply to the whole repository.
 - Surface ambiguities instead of silently choosing a product behavior that could ripple through the spec.
 - When code is added later, prefer file and module names that reflect responsibility clearly.
 - Document progress in the repository itself, not only in chat. Update [WORKLOG.md](WORKLOG.md) after every change so the current implementation state stays visible in the repo.
-- Keep [WORKLOG.md](WORKLOG.md) structured with clear `In progress`, `Next up`, `Risks / blockers` and `Completed` sections when practical.
-- In [WORKLOG.md](WORKLOG.md), cross out completed items using Markdown strikethrough (for example, `~~completed item~~`) instead of deleting them.
-- Apply the same strikethrough rule inside phase sections (`Phase Plan` blocks), including per-phase `Implemented highlights`, checklist-style bullets, and verification bullets once they are completed.
+- Keep [WORKLOG.md](WORKLOG.md) focused on planned/open/in-progress work (for example: `In progress`, `Next up`, `Risks / blockers`, `Phase plan`, `Backlog`) when practical.
+- Do not keep completed-task items in [WORKLOG.md](WORKLOG.md); move completed history to archive files when needed.

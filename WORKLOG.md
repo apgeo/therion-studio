@@ -31,6 +31,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - ~~Hardened `MapEditorTab` teardown by removing event filters and disconnecting child/global QObject senders targeting `MapEditorTab` at destructor entry to avoid late slot dispatch into a partially destructed receiver during widget-child shutdown.~~
 - ~~Improved Linux CI throughput by switching Ubuntu build configuration to the Ninja generator and raising `CMAKE_BUILD_PARALLEL_LEVEL` from `2` to `4` for both Ubuntu jobs, with explicit `ninja-build` dependency installation in hosted and container paths.~~
 - ~~Reduced Linux UI smoke-test wall-clock time by enabling parallel UI test execution with `ctest -j 2` in both Ubuntu jobs.~~
+- ~~Reduced push-path Linux CI time by running UI smoke-test build/run steps only for non-`push` events (PRs and manual dispatch), while preserving unit-test coverage on pushes.~~
 
 ## Phase Plan
 

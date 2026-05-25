@@ -64,6 +64,10 @@ cmake --build build-win --target TherionStudio
 cpack --config build-win\CPackConfig.cmake
 ```
 
+Use a matching toolchain/Qt pair on Windows. If `CMAKE_PREFIX_PATH` points to
+`...\msvc2022_64`, configure with MSVC (`cl`). Mixing MinGW (`g++`) with MSVC Qt
+libraries causes link failures with unresolved `__imp__` Qt symbols.
+
 CPack runs the CMake install step internally. The install step runs Qt deployment on Windows,
 copying the required Qt runtime next to the installed executable. CPack is configured to use
 NSIS for the Windows installer and emits `TherionStudio-<version>-Windows-x86_64.exe` in the

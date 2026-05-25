@@ -27,6 +27,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Completed
 
+- ~~Fixed Windows CI/toolchain drift by forcing MSVC environment activation (`ilammy/msvc-dev-cmd`) and explicit `cl` compiler selection in both `.github/workflows/build-windows.yml` and `.github/workflows/windows-installer.yml`, preventing MinGW from linking against `msvc2022_64` Qt binaries.~~
 - ~~Stabilized Linux UI regression coverage by making `TextEditorCompletionHighlightTest` identifier-color assertions palette-aware for both dark and light application palettes under `QT_QPA_PLATFORM=offscreen`.~~
 - ~~Hardened `MapEditorTab` teardown by removing event filters and disconnecting child/global QObject senders targeting `MapEditorTab` at destructor entry to avoid late slot dispatch into a partially destructed receiver during widget-child shutdown.~~
 - ~~Improved Linux CI throughput by switching Ubuntu build configuration to the Ninja generator and raising `CMAKE_BUILD_PARALLEL_LEVEL` from `2` to `4` for both Ubuntu jobs, with explicit `ninja-build` dependency installation in hosted and container paths.~~

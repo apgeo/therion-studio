@@ -32,6 +32,11 @@ jobs:
           ref: ${{ inputs.source_ref }}
           fetch-depth: 0
 
+      - name: Set up MSVC toolchain
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Describe packaged source
         shell: pwsh
         run: |
@@ -105,6 +110,8 @@ jobs:
             "-B", "build-windows",
             "-G", "Ninja",
             "-DCMAKE_BUILD_TYPE=${{ inputs.build_type }}",
+            "-DCMAKE_C_COMPILER=cl",
+            "-DCMAKE_CXX_COMPILER=cl",
             "-DTHERION_ENABLE_STRICT_WARNINGS=ON"
           )
           if ($env:THERION_STUDIO_VERSION) {

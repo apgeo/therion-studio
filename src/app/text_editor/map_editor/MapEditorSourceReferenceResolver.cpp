@@ -63,7 +63,8 @@ void appendLinePointOptionRows(QStringList *rows, const MapGeometryFeature::TH2L
     }
 }
 
-QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2LineVertex> &lineVertices)
+QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2LineVertex> &lineVertices,
+                                          bool closed)
 {
     QStringList rows;
     if (lineVertices.size() < 2) {
@@ -94,6 +95,23 @@ QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2L
         appendPointTokens(current.anchor);
         rows.append(rowTokens.join(QLatin1Char(' ')));
         appendLinePointOptionRows(&rows, current);
+    }
+
+    if (closed && lineVertices.size() >= 3) {
+        const MapGeometryFeature::TH2LineVertex &first = lineVertices.first();
+        const MapGeometryFeature::TH2LineVertex &last = lineVertices.last();
+        const bool cubicClose = last.outgoingControl.has_value() || first.incomingControl.has_value();
+        if (cubicClose) {
+            QStringList rowTokens;
+            const auto appendPointTokens = [&rowTokens](const QPointF &point) {
+                rowTokens.append(formatSourceCoordinate(point.x()));
+                rowTokens.append(formatSourceCoordinate(point.y()));
+            };
+            appendPointTokens(last.outgoingControl.value_or(last.anchor));
+            appendPointTokens(first.incomingControl.value_or(first.anchor));
+            appendPointTokens(first.anchor);
+            rows.append(rowTokens.join(QLatin1Char(' ')));
+        }
     }
     return rows;
 }

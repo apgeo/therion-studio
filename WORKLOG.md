@@ -49,11 +49,16 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - ~~Differentiate `.xvi` shot classes visually: render splays with distinct color from traverse shots and keep sketches visually separate.~~
 - ~~Tune `.xvi` rendering performance/clarity: faster station lookup for shot classification and LOD-aware drawing (hide splays/sketch/grid at distant zoom), plus slightly stronger line weights.~~
 - ~~Preserve and render `.xvi` sketch-line color tokens (`connect` as dotted gray, named colors mapped directly) so auxiliary sketch semantics are visible in map background overlays.~~
+- ~~Inspector smooth/control toggles now preserve line-vertex targeting even when scene selection temporarily drops during UI interaction (fallback to stored selected line/vertex).~~
+- ~~Inspector `<<` / `>>` control-handle toggles now resolve through line-control owner vertices (selection/controller/details mapping), so closed-line vertices can reliably enable both handles for full smooth editing.~~
+- ~~Inspector smooth toggle now preserves vertex selection across asynchronous scene refresh (flush + multi-attempt owner-vertex selection recovery).~~
 
 ### Phase 10 - Interactive Map Drawing and Insertion (`Post-MVP`)
 
 - Status: in progress.
 - Remaining work: improve Apple Pencil/freehand stroke preview/output, solid freehand draft preview, less-aggressive shape-sensitive bezier simplification, and remaining insertion edge cases.
+- ~~Line draft closure UX: clicking the first anchor in line mode now commits as closed line (`-close on`) without adding a duplicate terminal anchor row.~~
+- ~~Closed-line smoothing parity: map editor now supports editing/rendering control handles for the closing last->first segment (including persisted closing Bezier row rewrite and parsed-model normalization without duplicate terminal anchor).~~
 
 ### Phase 11 - Structured Text Authoring Canvas (`Post-MVP`)
 

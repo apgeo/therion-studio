@@ -109,7 +109,7 @@ Toolbar actions include:
 ### 6.3 Drawing Basics
 
 - `Point`: click to insert a point
-- `Line`: click vertices, then press `Enter` or `Complete Draft`
+- `Line`: click vertices, then press `Enter` or `Complete Draft`; click the first vertex again to finish as a closed line (`-close on`)
 - `Area`: click vertices, then press `Enter` or `Complete Draft`
 - `Freehand`: press-drag-release to insert a line
 

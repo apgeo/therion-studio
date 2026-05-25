@@ -371,6 +371,16 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
         if (auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(primarySelectedItem)) {
             selectedSourceVertexIndex = vertexItem->vertexIndex();
             selectedGeometryKind = vertexItem->geometryKind();
+            const int subtype = primarySelectedItem->data(kMapSceneSelectionSubtypeRole).toInt();
+            if ((subtype == kMapSceneSelectionSubtypeLineControl
+                 || subtype == kMapSceneSelectionSubtypeLineControlConnector)
+                && vertexItem->lineNumber() > 0) {
+                const int ownerVertexIndex = primarySelectedItem->data(kMapSceneOwnerVertexRole).toInt();
+                if (ownerVertexIndex >= 0) {
+                    selectedSourceVertexIndex = ownerVertexIndex;
+                    selectedGeometryKind = QStringLiteral("line");
+                }
+            }
         } else if (auto *pointItem = dynamic_cast<MapEditablePointItem *>(primarySelectedItem)) {
             selectedPointSource = pointItem->sourcePoint();
         } else if (primarySelectedItem->data(kMapSceneSelectionSubtypeRole).toInt() == kMapSceneSelectionSubtypePointOrientationHandle) {

@@ -298,10 +298,14 @@ bool TextEditorTab::insertDraftGeometry(const QString &kind,
 
 bool TextEditorTab::insertDraftLineGeometry(const QStringList &coordinateRows,
                                             int *insertedLineNumber,
-                                            QString *errorMessage)
+                                            QString *errorMessage,
+                                            const QString &lineOptions)
 {
     return sourceRewriteController_ != nullptr
-        && sourceRewriteController_->insertDraftLineGeometry(coordinateRows, insertedLineNumber, errorMessage);
+        && sourceRewriteController_->insertDraftLineGeometry(coordinateRows,
+                                                             insertedLineNumber,
+                                                             errorMessage,
+                                                             lineOptions);
 }
 
 bool TextEditorTab::insertDraftAreaGeometry(const QStringList &coordinateRows,

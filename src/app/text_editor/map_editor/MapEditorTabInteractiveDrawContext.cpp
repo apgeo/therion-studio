@@ -122,12 +122,12 @@ bool MapEditorTab::handleInteractiveDrawClick(const QPointF &scenePosition)
     return MapEditorInteractiveDrawController(interactiveDrawContext()).handleInteractiveDrawClick(scenePosition);
 }
 
-bool MapEditorTab::commitInteractiveDrawSession()
+bool MapEditorTab::commitInteractiveDrawSession(bool closeLineDraft)
 {
     if (lineExtensionActive_) {
         return commitLineExtensionSession();
     }
-    return MapEditorInteractiveDrawController(interactiveDrawContext()).commitInteractiveDrawSession();
+    return MapEditorInteractiveDrawController(interactiveDrawContext()).commitInteractiveDrawSession(closeLineDraft);
 }
 
 void MapEditorTab::clearInteractiveDrawSession(bool clearMode)

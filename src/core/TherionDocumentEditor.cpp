@@ -1300,7 +1300,8 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
 bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
                                                     const QStringList &coordinateRows,
                                                     int *insertedLineNumber,
-                                                    QString *errorMessage)
+                                                    QString *errorMessage,
+                                                    const QString &lineOptions)
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
@@ -1346,7 +1347,12 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
     }
 
     QStringList geometryLines;
-    geometryLines.append(QStringLiteral("  line wall"));
+    const QString normalizedLineOptions = lineOptions.trimmed();
+    if (normalizedLineOptions.isEmpty()) {
+        geometryLines.append(QStringLiteral("  line wall"));
+    } else {
+        geometryLines.append(QStringLiteral("  line wall %1").arg(normalizedLineOptions));
+    }
     for (const QString &row : std::as_const(normalizedRows)) {
         geometryLines.append(QStringLiteral("    %1").arg(row));
     }

@@ -615,7 +615,7 @@ bool MapEditorTab::commitLineExtensionSession()
         }
     }
 
-    const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices);
+    const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
     QString errorMessage;
     if (!textEditor_->rewriteLineCoordinateRows(lineExtensionLineNumber_, coordinateRows, &errorMessage)) {
         toolbarStatusNote_ = errorMessage.isEmpty()

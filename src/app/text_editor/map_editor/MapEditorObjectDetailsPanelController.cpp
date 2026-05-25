@@ -30,7 +30,10 @@ int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int so
     }
 
     for (int index = 0; index < lineFeature.lineVertices.size(); ++index) {
-        if (lineFeature.lineVertices.at(index).anchorSourceVertexIndex == sourceVertexIndex) {
+        const MapGeometryFeature::TH2LineVertex &vertex = lineFeature.lineVertices.at(index);
+        if (vertex.anchorSourceVertexIndex == sourceVertexIndex
+            || vertex.incomingSourceVertexIndex == sourceVertexIndex
+            || vertex.outgoingSourceVertexIndex == sourceVertexIndex) {
             return index;
         }
     }

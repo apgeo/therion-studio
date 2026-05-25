@@ -28,7 +28,8 @@ public:
     [[nodiscard]] static bool appendDraftLineGeometry(QString *contents,
                                                       const QStringList &coordinateRows,
                                                       int *insertedLineNumber = nullptr,
-                                                      QString *errorMessage = nullptr);
+                                                      QString *errorMessage = nullptr,
+                                                      const QString &lineOptions = QString());
     [[nodiscard]] static bool appendDraftAreaGeometry(QString *contents,
                                                       const QStringList &coordinateRows,
                                                       int *insertedLineNumber = nullptr,

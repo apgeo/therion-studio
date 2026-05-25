@@ -424,21 +424,40 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                  || drawMode() == MapEditorInteractiveDrawMode::Area)
                 && (*context_.interactiveDrawAnchorPressActive)
                 && mouseEvent->button() == Qt::LeftButton) {
+                const MapEditorInteractiveDrawMode currentDrawMode = drawMode();
                 const QPointF anchorScenePoint = (*context_.interactiveDrawAnchorPressScenePoint);
+                const QPointF releaseScenePoint = context_.view->mapToScene(mouseEvent->pos());
                 std::optional<QPointF> dragScenePoint;
                 if ((*context_.interactiveDrawAnchorDragActive)) {
-                    const QPointF releaseScenePoint = context_.view->mapToScene(mouseEvent->pos());
                     constexpr qreal dragThreshold = 4.0;
                     if (QLineF((*context_.interactiveDrawAnchorPressScenePoint), releaseScenePoint).length() >= dragThreshold) {
                         dragScenePoint = releaseScenePoint;
                     }
                 }
 
+                bool closeLineDraftByClick = false;
+                if (currentDrawMode == MapEditorInteractiveDrawMode::Line
+                    && !(*context_.interactiveDrawAnchorDragActive)
+                    && context_.interactiveDrawLineVertices != nullptr
+                    && context_.interactiveDrawLineVertices->size() >= 2) {
+                    const QPointF closeHitProbe = context_.view->mapToScene(mouseEvent->pos() + QPoint(10, 0));
+                    const qreal closeHitRadius = std::max<qreal>(5.0, QLineF(releaseScenePoint, closeHitProbe).length());
+                    const QPointF firstAnchorScenePoint = context_.interactiveDrawLineVertices->first().anchorScene;
+                    closeLineDraftByClick = QLineF(releaseScenePoint, firstAnchorScenePoint).length() <= closeHitRadius;
+                }
+
                 (*context_.interactiveDrawAnchorPressActive) = false;
                 (*context_.interactiveDrawAnchorDragActive) = false;
                 (*context_.interactiveDrawHoverActive) = false;
+
+                if (closeLineDraftByClick && context_.commitInteractiveDrawSession != nullptr) {
+                    context_.commitInteractiveDrawSession(true);
+                    event->accept();
+                    return true;
+                }
+
                 context_.captureInteractiveLineAnchor(anchorScenePoint, dragScenePoint);
-                (*context_.toolbarStatusNote) = drawMode() == MapEditorInteractiveDrawMode::Line
+                (*context_.toolbarStatusNote) = currentDrawMode == MapEditorInteractiveDrawMode::Line
                     ? tr("Line mode: %1 vertex/vertices captured. Press Enter or Complete Draft.")
                           .arg((*context_.interactiveDrawLineVertices).size())
                     : tr("Area mode: %1 vertex/vertices captured. Press Enter or Complete Draft.")

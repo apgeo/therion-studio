@@ -14,7 +14,7 @@ public:
 
     void setInteractiveDrawMode(MapEditorInteractiveDrawMode mode);
     bool handleInteractiveDrawClick(const QPointF &scenePosition);
-    bool commitInteractiveDrawSession();
+    bool commitInteractiveDrawSession(bool closeLineDraft = false);
     void clearInteractiveDrawSession(bool clearMode);
     void updateInteractiveDrawPreview();
     bool cancelInteractiveDrawingToSelectMode();

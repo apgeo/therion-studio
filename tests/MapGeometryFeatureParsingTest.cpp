@@ -215,6 +215,51 @@ int runLineOptionToggleParsingTest()
     return 0;
 }
 
+int runClosedLineClosingBezierParsingTest()
+{
+    const QString text =
+        QStringLiteral("line wall -close on\n"
+                       "  0 0\n"
+                       "  10 0\n"
+                       "  12 2 -2 2 0 0\n"
+                       "endline\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    const MapGeometryFeature *line = firstLineFeature(features);
+    if (!expect(line != nullptr, "Expected one parsed closed line feature for closing-bezier test.")) {
+        return 1;
+    }
+    if (!expect(line->closed, "Expected line to remain marked as closed.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.size() == 2,
+                "Expected closing Bezier row to map into last->first controls without adding duplicate anchor vertex.")) {
+        return 1;
+    }
+    if (!expect(line->lineSegments.size() == 2,
+                "Expected closed line to include explicit closing segment metadata.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.first().incomingControl.has_value()
+                && line->lineVertices.last().outgoingControl.has_value(),
+                "Expected closing Bezier controls to attach to first incoming and last outgoing handles.")) {
+        return 1;
+    }
+    if (!expect(std::abs(line->lineVertices.first().incomingControl.value().x() - (-2.0)) < 1e-6
+                && std::abs(line->lineVertices.first().incomingControl.value().y() - 2.0) < 1e-6,
+                "Expected first incoming control to preserve closing-segment control point.")) {
+        return 1;
+    }
+    if (!expect(std::abs(line->lineVertices.last().outgoingControl.value().x() - 12.0) < 1e-6
+                && std::abs(line->lineVertices.last().outgoingControl.value().y() - 2.0) < 1e-6,
+                "Expected last outgoing control to preserve closing-segment control point.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runDeCasteljauInsertionTest()
 {
     QVector<MapGeometryFeature::TH2LineVertex> vertices;
@@ -748,6 +793,9 @@ int main()
         return rc;
     }
     if (const int rc = runLineOptionToggleParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runClosedLineClosingBezierParsingTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runDeCasteljauInsertionTest(); rc != 0) {

@@ -103,6 +103,9 @@ MapEditorViewportInputContext MapEditorTab::viewportInputContext()
                                                 const QString &successLabel) {
             return commitInteractiveDrawVertices(geometryKind, vertices, successLabel);
         },
+        .commitInteractiveDrawSession = [this](bool closeLineDraft) {
+            return commitInteractiveDrawSession(closeLineDraft);
+        },
         .updateHelpPanel = [this]() {
             updateHelpPanel();
         },

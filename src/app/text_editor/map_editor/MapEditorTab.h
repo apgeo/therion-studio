@@ -225,7 +225,7 @@ private:
     void setInteractiveDrawMode(InteractiveDrawMode mode);
     MapEditorInteractiveDrawContext interactiveDrawContext();
     bool handleInteractiveDrawClick(const QPointF &scenePosition);
-    bool commitInteractiveDrawSession();
+    bool commitInteractiveDrawSession(bool closeLineDraft = false);
     void clearInteractiveDrawSession(bool clearMode);
     void updateInteractiveDrawPreview();
     QVector<TherionParsedLine> parsedLinesForCurrentDocument() const;

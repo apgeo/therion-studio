@@ -71,6 +71,7 @@ struct MapEditorViewportInputContext
     std::function<bool(const QPointF &)> handleInteractiveDrawClick;
     std::function<void(const QPointF &, const std::optional<QPointF> &)> captureInteractiveLineAnchor;
     std::function<bool(const QString &, const QVector<QPointF> &, const QString &)> commitInteractiveDrawVertices;
+    std::function<bool(bool)> commitInteractiveDrawSession;
     std::function<void()> updateHelpPanel;
     std::function<void()> syncZoomFactorFromView;
     std::function<void(qreal, const QPointF &)> applyZoomAtViewportPosition;

@@ -81,7 +81,8 @@ bool TextEditorSourceRewriteController::insertDraftGeometry(const QString &kind,
 
 bool TextEditorSourceRewriteController::insertDraftLineGeometry(const QStringList &coordinateRows,
                                                                 int *insertedLineNumber,
-                                                                QString *errorMessage)
+                                                                QString *errorMessage,
+                                                                const QString &lineOptions)
 {
     if (context_.editor == nullptr) {
         return false;
@@ -89,7 +90,11 @@ bool TextEditorSourceRewriteController::insertDraftLineGeometry(const QStringLis
 
     QString contents = context_.editor->toPlainText();
     int resolvedLineNumber = 0;
-    if (!TherionDocumentEditor::appendDraftLineGeometry(&contents, coordinateRows, &resolvedLineNumber, errorMessage)) {
+    if (!TherionDocumentEditor::appendDraftLineGeometry(&contents,
+                                                        coordinateRows,
+                                                        &resolvedLineNumber,
+                                                        errorMessage,
+                                                        lineOptions)) {
         return false;
     }
 

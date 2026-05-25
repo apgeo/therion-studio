@@ -367,6 +367,33 @@ int runAppendDraftGeometryTest()
         return 1;
     }
 
+    contents = QStringLiteral("scrap s\nendscrap\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::appendDraftLineGeometry(&contents,
+                                                               {QStringLiteral("1 2"),
+                                                                QStringLiteral("3 4"),
+                                                                QStringLiteral("5 6")},
+                                                               &lineNumber,
+                                                               &errorMessage,
+                                                               QStringLiteral("-close on")),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap s\n"
+                                           "  line wall -close on\n"
+                                           "    1 2\n"
+                                           "    3 4\n"
+                                           "    5 6\n"
+                                           "  endline\n"
+                                           "endscrap\n"),
+                "appendDraftLineGeometry should include line options in the generated line header.")) {
+        return 1;
+    }
+    if (!expect(lineNumber == 2, "appendDraftLineGeometry should report the inserted line header line number.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("scrap a\nendscrap\n");
     errorMessage.clear();
     if (!expect(!TherionDocumentEditor::appendDraftGeometry(&contents, QStringLiteral("area"), {QPointF(1.0, 2.0), QPointF(3.0, 4.0)}, nullptr, &errorMessage),

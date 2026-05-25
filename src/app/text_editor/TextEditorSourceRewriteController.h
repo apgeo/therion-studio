@@ -41,7 +41,8 @@ public:
                              QString *errorMessage = nullptr);
     bool insertDraftLineGeometry(const QStringList &coordinateRows,
                                  int *insertedLineNumber = nullptr,
-                                 QString *errorMessage = nullptr);
+                                 QString *errorMessage = nullptr,
+                                 const QString &lineOptions = QString());
     bool insertDraftAreaGeometry(const QStringList &coordinateRows,
                                  int *insertedLineNumber = nullptr,
                                  QString *errorMessage = nullptr);

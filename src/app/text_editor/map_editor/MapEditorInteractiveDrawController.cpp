@@ -99,7 +99,7 @@ bool MapEditorInteractiveDrawController::handleInteractiveDrawClick(const QPoint
     return false;
 }
 
-bool MapEditorInteractiveDrawController::commitInteractiveDrawSession()
+bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool closeLineDraft)
 {
     const MapEditorInteractiveDrawMode modeAtCommit = mode();
     if (modeAtCommit != MapEditorInteractiveDrawMode::Line
@@ -127,9 +127,13 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession()
         QString errorMessage;
         int insertedLineNumber = 0;
         const QStringList coordinateRows = context_.lineCoordinateRowsForInteractiveDraft();
+        const QString lineOptions = closeLineDraft ? QStringLiteral("-close on") : QString();
         const QString beforeText = context_.textEditor->text();
         const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-        if (!context_.textEditor->insertDraftLineGeometry(coordinateRows, &insertedLineNumber, &errorMessage)) {
+        if (!context_.textEditor->insertDraftLineGeometry(coordinateRows,
+                                                          &insertedLineNumber,
+                                                          &errorMessage,
+                                                          lineOptions)) {
             (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                 ? tr("Complete Draft failed.")
                 : tr("Complete Draft failed: %1").arg(errorMessage);
@@ -163,9 +167,13 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession()
     clearInteractiveDrawSession(false);
     setMode(modeAtCommit);
     (*context_.selectModeActive) = false;
-    (*context_.toolbarStatusNote) = modeAtCommit == MapEditorInteractiveDrawMode::Line
-        ? tr("Line committed. Line mode is still active for the next object.")
-        : tr("Area committed. Area mode is still active for the next object.");
+    if (modeAtCommit == MapEditorInteractiveDrawMode::Line) {
+        (*context_.toolbarStatusNote) = closeLineDraft
+            ? tr("Line committed as closed loop. Line mode is still active for the next object.")
+            : tr("Line committed. Line mode is still active for the next object.");
+    } else {
+        (*context_.toolbarStatusNote) = tr("Area committed. Area mode is still active for the next object.");
+    }
     context_.refreshToolbarSummary();
     context_.updateHelpPanel();
     context_.updateCommandSurfaceState();

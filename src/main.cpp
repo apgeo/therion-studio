@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
     application.setApplicationName(QStringLiteral("Therion Studio"));
     application.setOrganizationName(QStringLiteral("Therion Studio"));
     application.setOrganizationDomain(QStringLiteral("therionstudio.example"));
-    application.setWindowIcon(QIcon(QStringLiteral(":/resources/app/app-icon.svg")));
+    application.setWindowIcon(QIcon(QStringLiteral(":/resources/app/app-icon.png")));
 
     QTranslator applicationTranslator;
     if (applicationTranslator.load(QLocale(),

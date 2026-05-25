@@ -367,6 +367,8 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
 
 set(THERION_STUDIO_APP_ICON_SVG
     resources/app/app-icon.svg)
+set(THERION_STUDIO_APP_ICON_PNG
+    resources/app/app-icon.png)
 set(THERION_STUDIO_MACOS_ICON
     resources/app/TherionStudio.icns)
 set(THERION_STUDIO_WINDOWS_ICON
@@ -392,6 +394,7 @@ endif()
 
 set(THERION_STUDIO_RESOURCE_FILES
     ${THERION_STUDIO_APP_ICON_SVG}
+    ${THERION_STUDIO_APP_ICON_PNG}
     resources/therion_command_catalog.json
     resources/therion_syntax_palette.json
     resources/icons/lucide/LICENSE

@@ -35,6 +35,9 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 - Status: in progress.
 - Remaining work: harden release process and artifacts after the current Windows-installer + Homebrew flow, including signing/notarization expectations and deferred Linux packaging strategy.
+- ~~Regenerated bundled app icons (`resources/app/TherionStudio.icns`, `resources/app/TherionStudio.ico`) from `resources/app/app-icon.svg` for the current branding iteration.~~
+- ~~Switched runtime app-window icon source from SVG to clipped PNG (`resources/app/app-icon.png`) to avoid Qt SVG `clipPath` rendering artifacts in UI icon surfaces.~~
+- ~~Regenerated bundled app icons (`resources/app/TherionStudio.icns`, `resources/app/TherionStudio.ico`) from externally refined `resources/app/app-icon.png` master artwork.~~
 
 ### Phase 9 - Map Editor Parity Polish (`Post-MVP`)
 

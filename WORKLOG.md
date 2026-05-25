@@ -34,6 +34,8 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - ~~Reduced push-path Linux CI time by running UI smoke-test build/run steps only for non-`push` events (PRs and manual dispatch), while preserving unit-test coverage on pushes.~~
 - ~~Reduced cross-platform smoke-test compile duplication by extracting shared text-editor and map-editor UI test support sources into reusable static libraries and linking smoke-test executables against those libraries instead of recompiling identical source sets per test binary.~~
 - ~~Added cross-platform manual-workflow smoke-test toggles by introducing `workflow_dispatch.inputs.run_ui_smoke_tests` in Linux/macOS/Windows build workflows and gating Linux/macOS UI smoke build/run steps on that input (while preserving PR coverage).~~
+- ~~Fixed macOS CI Qt Svg discovery by switching Homebrew installation from split `qtbase`/`qtsvg` packages to the consolidated `qt` formula and wiring `Qt6_DIR`/`Qt6Svg_DIR` from a single prefix for stable `find_package(Qt6 COMPONENTS Svg ...)` resolution.~~
+- ~~Improved macOS CI build throughput by enabling Ninja (`-G Ninja`), installing `ninja`, and setting `CMAKE_BUILD_PARALLEL_LEVEL=4` in the macOS matrix workflow.~~
 
 ## Phase Plan
 

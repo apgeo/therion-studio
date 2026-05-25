@@ -29,17 +29,18 @@ jobs:
       - name: Install Qt dependencies
         run: |
           brew update
-          brew install qtbase qtsvg
-          qtbase_prefix="$(brew --prefix qtbase)"
-          qtsvg_prefix="$(brew --prefix qtsvg)"
-          echo "CMAKE_PREFIX_PATH=${qtbase_prefix}:${qtsvg_prefix}" >> "$GITHUB_ENV"
-          echo "Qt6_DIR=${qtbase_prefix}/lib/cmake/Qt6" >> "$GITHUB_ENV"
-          echo "Qt6Svg_DIR=${qtsvg_prefix}/lib/cmake/Qt6Svg" >> "$GITHUB_ENV"
-          echo "$(brew --prefix qtbase)/bin" >> "$GITHUB_PATH"
+          brew install qt ninja
+          qt_prefix="$(brew --prefix qt)"
+          echo "CMAKE_PREFIX_PATH=${qt_prefix}" >> "$GITHUB_ENV"
+          echo "Qt6_DIR=${qt_prefix}/lib/cmake/Qt6" >> "$GITHUB_ENV"
+          echo "Qt6Svg_DIR=${qt_prefix}/lib/cmake/Qt6Svg" >> "$GITHUB_ENV"
+          echo "${qt_prefix}/bin" >> "$GITHUB_PATH"
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=4" >> "$GITHUB_ENV"
 
       - name: Configure
         run: >
           cmake -S . -B build
+          -G Ninja
           -DCMAKE_BUILD_TYPE=Debug
           -DTHERION_ENABLE_STRICT_WARNINGS=ON
 

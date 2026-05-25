@@ -2,6 +2,8 @@ name: Build macOS
 
 on:
   pull_request:
+  schedule:
+    - cron: "0 4 * * 1"
   workflow_dispatch:
     inputs:
       run_ui_smoke_tests:
@@ -10,17 +12,21 @@ on:
         type: boolean
         default: true
 
+env:
+  PRIMARY_MACOS: macos-26
+
 jobs:
   build:
     name: ${{ matrix.os }} Debug
     runs-on: ${{ matrix.os }}
+    if: ${{ matrix.os == env.PRIMARY_MACOS || github.event_name == 'schedule' }}
 
     strategy:
       fail-fast: false
       matrix:
         os:
-          - macos-15
           - macos-26
+          - macos-15
 
     steps:
       - name: Check out repository
@@ -56,11 +62,11 @@ jobs:
           --timeout 300
 
       - name: Build UI smoke tests
-        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_ui_smoke_tests)
+        if: github.event_name == 'pull_request' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_ui_smoke_tests)
         run: cmake --build build --config Debug --target therion_ui_tests
 
       - name: Run UI smoke tests
-        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_ui_smoke_tests)
+        if: github.event_name == 'pull_request' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_ui_smoke_tests)
         run: >
           cmake -E env QT_QPA_PLATFORM=offscreen
           ctest --test-dir build

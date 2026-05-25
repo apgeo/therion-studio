@@ -159,11 +159,18 @@ jobs:
 
       - name: Create installer
         shell: pwsh
-        run: cpack --config build-windows/CPackConfig.cmake -C ${{ inputs.build_type }} --verbose
+        run: >
+          cpack
+          --config build-windows/CPackConfig.cmake
+          -B build-windows
+          -C ${{ inputs.build_type }}
+          --verbose
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: TherionStudio-Windows-installer
-          path: build-windows/TherionStudio-*-Windows-x86_64.exe
+          path: |
+            build-windows/TherionStudio-*-Windows-x86_64.exe
+            TherionStudio-*-Windows-x86_64.exe
           if-no-files-found: error

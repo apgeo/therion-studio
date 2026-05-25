@@ -267,12 +267,54 @@ def clean_tex_text(value: str) -> str:
     stripped = BRACKET_NOTE_RE.sub("", stripped)
     stripped = stripped.replace("\\hfill\\break", "\n")
     stripped = stripped.replace("\\qquad", " ")
+    stripped = stripped.replace("$", " ")
+    stripped = stripped.replace("``", "\"")
+    stripped = stripped.replace("''", "\"")
+    stripped = re.sub(r"`([^`']+)'", r'"\1"', stripped)
+    stripped = re.sub(r"\\([#$%&_{}])", r"\1", stripped)
+    stripped = re.sub(r"\\[,;:!]", " ", stripped)
     stripped = stripped.replace("~", " ")
     stripped = stripped.replace("---", " - ")
-    stripped = stripped.replace("--", " - ")
+    stripped = PIPE_TOKEN_RE.sub(lambda match: match.group(1), stripped)
     stripped = TEX_CMD_RE.sub(" ", stripped)
+    stripped = stripped.replace("\\\\", " ")
+    stripped = stripped.replace("|", " ")
     stripped = stripped.replace("{", " ").replace("}", " ")
+    stripped = stripped.replace("with - print-encodings", "with --print-encodings")
     return normalize_whitespace(stripped)
+
+
+def normalize_catalog_text_fields(catalog: dict[str, Any]) -> dict[str, Any]:
+    commands = catalog.get("commands", [])
+    if not isinstance(commands, list):
+        return catalog
+
+    for command in commands:
+        if not isinstance(command, dict):
+            continue
+        command["summary"] = clean_tex_text(str(command.get("summary", "")))
+
+        syntax_rows = command.get("syntax", [])
+        if isinstance(syntax_rows, list):
+            normalized_syntax_rows = [clean_tex_text(str(row)) for row in syntax_rows]
+            command["syntax"] = [row for row in normalized_syntax_rows if row]
+
+        for field_name in ("arguments", "options"):
+            entries = command.get(field_name, [])
+            if not isinstance(entries, list):
+                continue
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                for text_key in ("raw", "name", "signature", "description"):
+                    entry[text_key] = clean_tex_text(str(entry.get(text_key, "")))
+
+                dependencies = entry.get("dependencies", [])
+                if isinstance(dependencies, list):
+                    normalized_dependencies = [clean_tex_text(str(dep)) for dep in dependencies]
+                    entry["dependencies"] = [dep for dep in normalized_dependencies if dep]
+
+    return catalog
 
 
 def parse_item_block(block_text: str) -> list[dict[str, Any]]:
@@ -294,10 +336,12 @@ def parse_item_block(block_text: str) -> list[dict[str, Any]]:
 
     parsed_items: list[dict[str, Any]] = []
     for raw_item in items:
-        item = normalize_whitespace(raw_item)
+        item = clean_tex_text(raw_item)
+        if not item:
+            continue
         lhs, rhs = (item.split("=", 1) + [""])[:2] if "=" in item else (item, "")
-        lhs = normalize_whitespace(lhs)
-        rhs = normalize_whitespace(rhs)
+        lhs = clean_tex_text(lhs)
+        rhs = clean_tex_text(rhs)
 
         signature_core = extract_signature_core(lhs)
         name = signature_core if signature_core else lhs
@@ -916,6 +960,7 @@ def apply_overrides(catalog: dict[str, Any], overrides: dict[str, Any]) -> dict[
 
 
 def finalize_catalog(catalog: dict[str, Any]) -> dict[str, Any]:
+    catalog = normalize_catalog_text_fields(catalog)
     commands = sorted(catalog.get("commands", []), key=lambda item: item["name"].lower())
     catalog["commands"] = commands
     catalog["block_pairs"] = annotate_block_metadata(commands)
@@ -949,7 +994,7 @@ def build_catalog(inputs: list[Path], source_repo: str, source_ref: str) -> dict
     catalog = {
         "metadata": {
             "generated_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
-            "generator_version": "2",
+            "generator_version": "3",
             "source_repository": source_repo,
             "source_reference": source_ref,
             "source_files": [str(path) for path in inputs],

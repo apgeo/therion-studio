@@ -29,7 +29,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ### Phase 7 - UX, Accessibility, and Platform Conventions (`MVP` baseline)
 
-- Status: partially complete (including unsupported-file open guardrails with external-app fallback prompt, state-aware Welcome-tab onboarding cues, and quick project open/close toolbar actions).
+- Status: partially complete (including unsupported-file open guardrails with external-app fallback prompt, state-aware Welcome-tab onboarding cues, quick project open/close toolbar actions, and parser-level contextual-help text normalization).
 - Remaining work: improve shortcut matrix, menu behavior, focus traversal, high-DPI behavior, dark/light palette transitions, and platform-native expectations.
 
 ### Phase 8 - Release Readiness and Packaging (`MVP`)

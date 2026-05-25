@@ -32,6 +32,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - ~~Improved Linux CI throughput by switching Ubuntu build configuration to the Ninja generator and raising `CMAKE_BUILD_PARALLEL_LEVEL` from `2` to `4` for both Ubuntu jobs, with explicit `ninja-build` dependency installation in hosted and container paths.~~
 - ~~Reduced Linux UI smoke-test wall-clock time by enabling parallel UI test execution with `ctest -j 2` in both Ubuntu jobs.~~
 - ~~Reduced push-path Linux CI time by running UI smoke-test build/run steps only for non-`push` events (PRs and manual dispatch), while preserving unit-test coverage on pushes.~~
+- ~~Reduced cross-platform smoke-test compile duplication by extracting shared text-editor and map-editor UI test support sources into reusable static libraries and linking smoke-test executables against those libraries instead of recompiling identical source sets per test binary.~~
 
 ## Phase Plan
 

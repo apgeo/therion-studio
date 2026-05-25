@@ -719,12 +719,19 @@ set(THERION_TEXT_EDITOR_UI_TEST_RESOURCE_FILES
     resources/therion_command_catalog.overrides.json
     resources/therion_syntax_palette.json)
 
+add_library(therion_text_editor_ui_test_support STATIC
+    ${THERION_TEXT_EDITOR_UI_TEST_SOURCES})
+
+target_link_libraries(therion_text_editor_ui_test_support
+    PUBLIC
+        therion_core
+        Qt6::Widgets)
+
 function(therion_add_text_editor_ui_test target_name test_source resource_name)
     qt_add_executable(${target_name}
-        ${test_source}
-        ${THERION_TEXT_EDITOR_UI_TEST_SOURCES})
+        ${test_source})
 
-    target_link_libraries(${target_name} PRIVATE therion_core Qt6::Widgets)
+    target_link_libraries(${target_name} PRIVATE therion_text_editor_ui_test_support)
 
     qt_add_resources(${target_name} ${resource_name}
         PREFIX "/"
@@ -741,7 +748,6 @@ therion_add_text_editor_ui_test(TextEditorCompletionHighlightTest
     "TextEditorCompletionHighlightResources")
 
 set(THERION_MAP_EDITOR_UI_TEST_SOURCES
-    ${THERION_EDITOR_UI_TEST_BASE_SOURCES}
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h
@@ -805,37 +811,21 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
     src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
-    src/app/text_editor/map_editor/MapEditorTab.h
-    src/app/text_editor/TextEditorTab.cpp
-    src/app/text_editor/TextEditorTabCompletionFacade.cpp
-    src/app/text_editor/TextEditorTabAppearanceController.cpp
-    src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
-    src/app/text_editor/TextEditorTabBlockEditorLineBuildService.cpp
-    src/app/text_editor/TextEditorTabBlockEditorOptionArgsController.cpp
-    src/app/text_editor/TextEditorTabBlockEditorResolverContexts.cpp
-    src/app/text_editor/TextEditorTabBlockEditorSelectionContexts.cpp
-    src/app/text_editor/TextEditorTabBlockEditorToolboxController.cpp
-    src/app/text_editor/TextEditorTabBlockEditorApplyExecutor.cpp
-    src/app/text_editor/TextEditorTabBlockEditorApplyStateController.cpp
-    src/app/text_editor/TextEditorTabBlockEditorCanvasBoundaryController.cpp
-    src/app/text_editor/TextEditorTabBlockEditorSourceController.cpp
-    src/app/text_editor/TextEditorTabContextHelpController.cpp
-    src/app/text_editor/TextEditorTabCursorController.cpp
-    src/app/text_editor/TextEditorTabDocumentController.cpp
-    src/app/text_editor/TextEditorTabEncodingController.cpp
-    src/app/text_editor/TextEditorTabModeController.cpp
-    src/app/text_editor/TextEditorTabSourceRewriteController.cpp
-    src/app/text_editor/TextEditorTabStatusController.cpp
-    src/app/text_editor/TextEditorTab.h
-    src/editor/TherionSyntaxHighlighter.cpp
-    src/editor/TherionSyntaxHighlighter.h)
+    src/app/text_editor/map_editor/MapEditorTab.h)
+
+add_library(therion_map_editor_ui_test_support STATIC
+    ${THERION_MAP_EDITOR_UI_TEST_SOURCES})
+
+target_link_libraries(therion_map_editor_ui_test_support
+    PUBLIC
+        therion_text_editor_ui_test_support
+        Qt6::Svg)
 
 function(therion_add_map_editor_ui_test target_name test_source resource_name)
     qt_add_executable(${target_name}
-        ${test_source}
-        ${THERION_MAP_EDITOR_UI_TEST_SOURCES})
+        ${test_source})
 
-    target_link_libraries(${target_name} PRIVATE therion_core Qt6::Widgets Qt6::Svg)
+    target_link_libraries(${target_name} PRIVATE therion_map_editor_ui_test_support)
 
     qt_add_resources(${target_name} ${resource_name}
         PREFIX "/"
@@ -882,13 +872,17 @@ set(THERION_TEST_EXECUTABLE_TARGETS
     ${THERION_UNIT_TEST_TARGETS}
     ${THERION_UI_TEST_TARGETS})
 
+set(THERION_TEST_SUPPORT_TARGETS
+    therion_text_editor_ui_test_support
+    therion_map_editor_ui_test_support)
+
 add_custom_target(therion_unit_tests
     DEPENDS ${THERION_UNIT_TEST_TARGETS})
 
 add_custom_target(therion_ui_tests
     DEPENDS ${THERION_UI_TEST_TARGETS})
 
-foreach(test_target IN LISTS THERION_TEST_EXECUTABLE_TARGETS)
+foreach(test_target IN LISTS THERION_TEST_EXECUTABLE_TARGETS THERION_TEST_SUPPORT_TARGETS)
     target_compile_definitions(${test_target} PRIVATE
         QT_NO_CAST_FROM_ASCII
         QT_NO_CAST_TO_ASCII)

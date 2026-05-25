@@ -10,7 +10,9 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QFont>
+#include <QGuiApplication>
 #include <QKeyEvent>
+#include <QPalette>
 #include <QPlainTextEdit>
 #include <QTemporaryDir>
 #include <QTextBlock>
@@ -159,6 +161,13 @@ QColor tokenForegroundColor(const QTextBlock &block, const QString &token, bool 
     }
     return {};
 }
+
+QColor expectedIdentifierColor()
+{
+    const QColor baseColor = QGuiApplication::palette().color(QPalette::Base);
+    const bool darkPalette = baseColor.isValid() && baseColor.lightnessF() < 0.5;
+    return darkPalette ? QColor(QStringLiteral("#DCDCAA")) : QColor(QStringLiteral("#8250df"));
+}
 }
 
 int main(int argc, char *argv[])
@@ -258,7 +267,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    QColor expectedIdColor(QStringLiteral("#DCDCAA"));
+    const QColor expectedIdColor = expectedIdentifierColor();
     {
         editor->setPlainText(QStringLiteral("survey demo bogus\n"));
         pumpEvents();

@@ -25,6 +25,11 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Current map/text undo arbitration still depends on choosing between the map `QUndoStack` and embedded text-editor undo until the later unified command-stack refactor.
 - Packaging/signing/distribution requirements have not yet been exercised end-to-end on all target platforms.
 
+## Completed
+
+- ~~Stabilized Linux UI regression coverage by making `TextEditorCompletionHighlightTest` identifier-color assertions palette-aware for both dark and light application palettes under `QT_QPA_PLATFORM=offscreen`.~~
+- ~~Hardened `MapEditorTab` teardown by removing event filters and disconnecting child/global QObject senders targeting `MapEditorTab` at destructor entry to avoid late slot dispatch into a partially destructed receiver during widget-child shutdown.~~
+
 ## Phase Plan
 
 ### Phase 6 - Encoding and File-Format Robustness (`MVP`)

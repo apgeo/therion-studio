@@ -457,6 +457,20 @@ void MapEditorTab::initializeWorkspace()
 
 MapEditorTab::~MapEditorTab()
 {
+    if (qApp != nullptr) {
+        qApp->removeEventFilter(this);
+    }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    if (QStyleHints *styleHints = QGuiApplication::styleHints()) {
+        disconnect(styleHints, nullptr, this, nullptr);
+    }
+#endif
+
+    const QList<QObject *> childObjects = findChildren<QObject *>();
+    for (QObject *child : childObjects) {
+        disconnect(child, nullptr, this, nullptr);
+    }
+
     if (mapScene_ != nullptr) {
         disconnect(mapScene_, nullptr, this, nullptr);
     }

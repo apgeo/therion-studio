@@ -32,12 +32,13 @@ The install step places `TherionStudio.app` in the prefix. Do not run `macdeploy
 
 Formula dependencies should include:
 
-- `qtbase`
-- `qtsvg`
+- `qt`
 
-The draft source-build Homebrew formula is kept in `packaging/homebrew/Formula/therion-studio.rb`
-until it is moved to a dedicated external tap repository. Before publishing it, replace the
-repository URL/checksum placeholders and verify the formula metadata.
+The maintained source-build Homebrew formula is published in the dedicated tap repository:
+
+- `https://github.com/ladislavb/homebrew-therion-studio`
+
+Use the tap formula as the source of truth for current package metadata and dependency declarations.
 
 The external Therion command-line executable is not bundled. Users configure it in the application runner settings, or install it separately through Homebrew.
 

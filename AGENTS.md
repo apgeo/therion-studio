@@ -110,7 +110,12 @@ These instructions apply to the whole repository.
 - Maintain a living [QtReimplementationSpecification.md](QtReimplementationSpecification.md): whenever important behavior, workflow, constraints, acceptance criteria, or architecture assumptions change, update the specification in the same change.
 - Prefer specification wording that is framework-agnostic where practical so future reimplementations can reuse it as product/source-of-truth guidance.
 - Update documentation when behavior, architecture, packaging, or verification expectations change.
-- Maintain a living [docs/USER_MANUAL.md](docs/USER_MANUAL.md) and update it whenever UI layout, user workflows, keyboard shortcuts, or settings behavior changes; if the file does not exist yet, create it as part of the first such change.
+- Maintain a living [docs/USER_MANUAL.md](docs/USER_MANUAL.md) as an end-user guide: keep only user-facing workflows, UI behavior, shortcuts, settings, and troubleshooting; do not include implementation internals, architecture plans, QA-only checklists, or packaging/developer instructions.
+- Update [docs/USER_MANUAL.md](docs/USER_MANUAL.md) in the same change whenever user-visible features are added, behavior changes, or features are removed.
+- For added features, document where the feature appears in the UI, how users use it, and any relevant shortcuts/constraints.
+- For changed features, update the affected sections to match actual behavior and remove stale wording in the same edit.
+- For removed features, delete obsolete instructions and document the replacement workflow when one exists.
+- If the file does not exist yet, create it as part of the first user-visible workflow change.
 - Surface ambiguities instead of silently choosing a product behavior that could ripple through the spec.
 - When code is added later, prefer file and module names that reflect responsibility clearly.
 - Document progress in the repository itself, not only in chat. Update [WORKLOG.md](WORKLOG.md) after every change so the current implementation state stays visible in the repo.

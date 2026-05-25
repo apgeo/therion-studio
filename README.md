@@ -1,7 +1,7 @@
 # Therion Studio
 
 Therion Studio is a cross-platform Qt desktop editor for
-[Therion](https://therion.speleo.sk/) cave-survey projects.
+[Therion](https://therion.speleo.sk/)  – cave surveying software.
 
 ## Motivation
 
@@ -35,7 +35,7 @@ requirements.
 Release packaging is still being hardened.
 
 - Windows installer notes: [`packaging/windows/README.md`](packaging/windows/README.md)
-- Homebrew formula draft: [`packaging/homebrew/README.md`](packaging/homebrew/README.md)
+- Homebrew tap and formula: [`ladislavb/homebrew-therion-studio`](https://github.com/ladislavb/homebrew-therion-studio)
 - Source build instructions: [`docs/BUILDING.md`](docs/BUILDING.md)
 
 Release tags use CalVer, for example:

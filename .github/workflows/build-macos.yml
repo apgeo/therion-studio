@@ -12,21 +12,10 @@ on:
         type: boolean
         default: true
 
-env:
-  PRIMARY_MACOS: macos-26
-
 jobs:
-  build:
-    name: ${{ matrix.os }} Debug
-    runs-on: ${{ matrix.os }}
-    if: ${{ matrix.os == env.PRIMARY_MACOS || github.event_name == 'schedule' }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - macos-26
-          - macos-15
+  build-primary:
+    name: macos-26 Debug
+    runs-on: macos-26
 
     steps:
       - name: Check out repository
@@ -67,6 +56,56 @@ jobs:
 
       - name: Run UI smoke tests
         if: github.event_name == 'pull_request' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_ui_smoke_tests)
+        run: >
+          cmake -E env QT_QPA_PLATFORM=offscreen
+          ctest --test-dir build
+          --build-config Debug
+          -L ui
+          --output-on-failure
+          --timeout 300
+
+  build-legacy:
+    name: macos-15 Debug
+    if: github.event_name == 'schedule'
+    runs-on: macos-15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install Qt dependencies
+        run: |
+          brew update
+          brew install qt ninja
+          qt_prefix="$(brew --prefix qt)"
+          echo "CMAKE_PREFIX_PATH=${qt_prefix}" >> "$GITHUB_ENV"
+          echo "Qt6_DIR=${qt_prefix}/lib/cmake/Qt6" >> "$GITHUB_ENV"
+          echo "Qt6Svg_DIR=${qt_prefix}/lib/cmake/Qt6Svg" >> "$GITHUB_ENV"
+          echo "${qt_prefix}/bin" >> "$GITHUB_PATH"
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=4" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DTHERION_ENABLE_STRICT_WARNINGS=ON
+
+      - name: Build app and unit tests
+        run: cmake --build build --config Debug --target TherionStudio therion_unit_tests
+
+      - name: Run unit tests
+        run: >
+          ctest --test-dir build
+          --build-config Debug
+          -L unit
+          --output-on-failure
+          --timeout 300
+
+      - name: Build UI smoke tests
+        run: cmake --build build --config Debug --target therion_ui_tests
+
+      - name: Run UI smoke tests
         run: >
           cmake -E env QT_QPA_PLATFORM=offscreen
           ctest --test-dir build

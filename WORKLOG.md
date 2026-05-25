@@ -36,7 +36,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - ~~Added cross-platform manual-workflow smoke-test toggles by introducing `workflow_dispatch.inputs.run_ui_smoke_tests` in Linux/macOS/Windows build workflows and gating Linux/macOS UI smoke build/run steps on that input (while preserving PR coverage).~~
 - ~~Fixed macOS CI Qt Svg discovery by switching Homebrew installation from split `qtbase`/`qtsvg` packages to the consolidated `qt` formula and wiring `Qt6_DIR`/`Qt6Svg_DIR` from a single prefix for stable `find_package(Qt6 COMPONENTS Svg ...)` resolution.~~
 - ~~Improved macOS CI build throughput by enabling Ninja (`-G Ninja`), installing `ninja`, and setting `CMAKE_BUILD_PARALLEL_LEVEL=4` in the macOS matrix workflow.~~
-- ~~Updated macOS CI matrix policy to treat `macos-26` as primary for PR/manual runs while keeping `macos-15` schedule-only via job-level matrix gating, and added a weekly scheduled trigger that runs the full macOS matrix.~~
+- ~~Updated macOS CI policy to treat `macos-26` as primary for PR/manual runs while keeping `macos-15` schedule-only via a dedicated legacy job, and added a weekly scheduled trigger for legacy-coverage runs.~~
 
 ## Phase Plan
 

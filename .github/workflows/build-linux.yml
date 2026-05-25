@@ -23,6 +23,7 @@ jobs:
           sudo apt-get install -y \
             libgl1-mesa-dev \
             libxkbcommon-x11-0 \
+            ninja-build \
             libxcb-cursor0 \
             libxcb-icccm4 \
             libxcb-image0 \
@@ -36,11 +37,12 @@ jobs:
             qt6-tools-dev-tools
 
       - name: Limit build parallelism
-        run: echo "CMAKE_BUILD_PARALLEL_LEVEL=2" >> "$GITHUB_ENV"
+        run: echo "CMAKE_BUILD_PARALLEL_LEVEL=4" >> "$GITHUB_ENV"
 
       - name: Configure
         run: >
           cmake -S . -B build
+          -G Ninja
           -DCMAKE_BUILD_TYPE=Debug
           -DTHERION_ENABLE_STRICT_WARNINGS=ON
 
@@ -63,6 +65,7 @@ jobs:
           cmake -E env QT_QPA_PLATFORM=offscreen
           ctest --test-dir build
           --build-config Debug
+          -j 2
           -L ui
           --output-on-failure
           --timeout 300
@@ -85,6 +88,7 @@ jobs:
             git \
             libgl1-mesa-dev \
             libxkbcommon-x11-0 \
+            ninja-build \
             libxcb-cursor0 \
             libxcb-icccm4 \
             libxcb-image0 \
@@ -105,11 +109,12 @@ jobs:
         run: python3 scripts/check_structure_constraints.py
 
       - name: Limit build parallelism
-        run: echo "CMAKE_BUILD_PARALLEL_LEVEL=2" >> "$GITHUB_ENV"
+        run: echo "CMAKE_BUILD_PARALLEL_LEVEL=4" >> "$GITHUB_ENV"
 
       - name: Configure
         run: >
           cmake -S . -B build
+          -G Ninja
           -DCMAKE_BUILD_TYPE=Debug
           -DTHERION_ENABLE_STRICT_WARNINGS=ON
 
@@ -132,6 +137,7 @@ jobs:
           cmake -E env QT_QPA_PLATFORM=offscreen
           ctest --test-dir build
           --build-config Debug
+          -j 2
           -L ui
           --output-on-failure
           --timeout 300

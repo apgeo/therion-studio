@@ -91,7 +91,7 @@ bool TextEditorModeController::ensureEncodingRootDirectiveForBlocks()
         || context_.fileEncodingName == nullptr
         || context_.enforcingEncodingRootDirective == nullptr
         || *context_.enforcingEncodingRootDirective
-        || !context_.replaceTextForCommand) {
+        || !context_.replaceTextForSystemNormalization) {
         return false;
     }
 
@@ -125,7 +125,7 @@ bool TextEditorModeController::ensureEncodingRootDirectiveForBlocks()
     }
 
     *context_.enforcingEncodingRootDirective = true;
-    context_.replaceTextForCommand(normalizedContents);
+    context_.replaceTextForSystemNormalization(normalizedContents);
     *context_.enforcingEncodingRootDirective = false;
     return true;
 }

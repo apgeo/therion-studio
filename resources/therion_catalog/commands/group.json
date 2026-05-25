@@ -1,0 +1,24 @@
+{
+  "name": "group",
+  "directive": "group",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 372
+  },
+  "summary": "",
+  "syntax": [
+    "group"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

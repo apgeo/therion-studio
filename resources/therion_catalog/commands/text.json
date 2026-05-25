@@ -1,0 +1,47 @@
+{
+  "name": "text",
+  "directive": "text",
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 207
+  },
+  "summary": "Specifies translation of any default Therion text in output.",
+  "syntax": [
+    "text <language ID> <therion text> <my text>"
+  ],
+  "contexts": [
+    "none"
+  ],
+  "arguments": [
+    {
+      "raw": "<language ID> = standard ISO language identifier (e.g. en or en_GB)",
+      "name": "<language ID>",
+      "signature": "<language ID>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "unknown",
+      "description": "standard ISO language identifier (e.g. en or en_GB)",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<therion text> = therion text to translate. For list of therion texts and available translations, see thlang/texts.txt file.",
+      "name": "<therion text>",
+      "signature": "<therion text>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "string",
+      "description": "therion text to translate. For list of therion texts and available translations, see thlang/texts.txt file.",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: none"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

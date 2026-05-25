@@ -406,6 +406,13 @@ void TextEditorTab::replaceTextForCommand(const QString &contents)
     }
 }
 
+void TextEditorTab::replaceTextForSystemNormalization(const QString &contents)
+{
+    if (sourceRewriteController_ != nullptr) {
+        sourceRewriteController_->replaceTextForSystemNormalization(contents);
+    }
+}
+
 QString TextEditorTab::filePath() const
 {
     return filePath_;

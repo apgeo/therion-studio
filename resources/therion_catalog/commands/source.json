@@ -1,0 +1,37 @@
+{
+  "name": "source",
+  "directive": "source",
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 82
+  },
+  "summary": "Specifies which source (data) files Therion should read. You can specify several files here; one per line. You can also specify them using the -s command line option (see below). It is also possible to type (some small snippets of) code directly in configuration file using the multi-line syntax.",
+  "syntax": [
+    "source <file-name> or source therion commands endsource"
+  ],
+  "contexts": [
+    "none"
+  ],
+  "arguments": [
+    {
+      "raw": "<file-name>",
+      "name": "<file-name>",
+      "signature": "<file-name>",
+      "option_key": "",
+      "value_arity": "0",
+      "value_domain": "none",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: none"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "container_open",
+    "close_directive": "endsource"
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "name": "map",
+  "directive": "map",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 1327
+  },
+  "summary": "A map is a collection of either scraps or other maps of the same projection type. It's possible to include survey in the map - this will display centreline in the map. Map object simplifies the data management when selecting data for output. See the chapter How the map is put together for more thorough explanation. (Note: break only changes level of maps of scraps and has no function when used with maps of maps, as they will cause a break implicitly)",
+  "syntax": [
+    "map <id> [OPTIONS] ... scrap, survey or other map references ... break ... next level scrap, survey or other map references ... preview <above/below> <other map id> endmap"
+  ],
+  "contexts": [
+    "none",
+    "survey"
+  ],
+  "arguments": [
+    {
+      "raw": "<id> = scrap identifier",
+      "name": "<id>",
+      "signature": "<id>",
+      "option_key": "",
+      "value_arity": "0",
+      "value_domain": "none",
+      "description": "scrap identifier",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [
+    {
+      "raw": "projection/proj <plan/elevation/extended/none> = required if the map contains survey.",
+      "name": "projection/proj <plan/elevation/extended/none>",
+      "signature": "projection/proj <plan/elevation/extended/none>",
+      "option_key": "-projection",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "required if the map contains survey.",
+      "allowed_values": [
+        "plan",
+        "elevation",
+        "extended",
+        "none"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "title <string> = description of the object",
+      "name": "title <string>",
+      "signature": "title <string>",
+      "option_key": "-title",
+      "value_arity": "1",
+      "value_domain": "string",
+      "description": "description of the object",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "survey <id> = associate a survey with map (e.g.\\ all surveying statistics from this survey will be used when this map is selected for output).",
+      "name": "survey <id>",
+      "signature": "survey <id>",
+      "option_key": "-survey",
+      "value_arity": "1",
+      "value_domain": "unknown",
+      "description": "associate a survey with map (e.g.\\ all surveying statistics from this survey will be used when this map is selected for output).",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "the data lines consist of scrap or map references. Note that you can not mix them together.",
+      "name": "the data lines consist of scrap or map references. Note that you can not mix them together.",
+      "signature": "the data lines consist of scrap or map references. Note that you can not mix them together.",
+      "option_key": "-the",
+      "value_arity": "N",
+      "value_domain": "unknown",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "if you refer to map, you can specify offset at which this sub-map will be displayed together with preview type of its original position. Syntax is following: <map reference> [<offset X> <offset Y> <units>] <above/below/none>",
+      "name": "if you refer to map, you can specify offset at which this sub-map will be displayed together with preview type of its original position. Syntax is following: <map reference> [<offset X> <offset Y> <units>] <above/below/none>",
+      "signature": "if you refer to map, you can specify offset at which this sub-map will be displayed together with preview type of its original position. Syntax is following: <map reference> [<offset X> <offset Y> <units>] <above/below/none>",
+      "option_key": "-if",
+      "value_arity": "N",
+      "value_domain": "enum",
+      "description": "",
+      "allowed_values": [
+        "above",
+        "below",
+        "none"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "scraps following the break will be placed on another level (only applies to maps consisting of scraps)",
+      "name": "scraps following the break will be placed on another level (only applies to maps consisting of scraps)",
+      "signature": "scraps following the break will be placed on another level (only applies to maps consisting of scraps)",
+      "option_key": "-scraps",
+      "value_arity": "N",
+      "value_domain": "unknown",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "preview <above/below> <other map id> will put the outline of the other map in the specified preview position relative to the current map. Preview is displayed only if the map is in the map-level level as specified by the select command. Use the revise command if you want to add maps from higher levels to the preview.",
+      "name": "preview <above/below> <other map id> will put the outline of the other map in the specified preview position relative to the current map. Preview is displayed only if the map is in the map-level level as specified by the select command. Use the revise command if you want to add maps from higher levels to the preview.",
+      "signature": "preview <above/below> <other map id> will put the outline of the other map in the specified preview position relative to the current map. Preview is displayed only if the map is in the map-level level as specified by the select command. Use the revise command if you want to add maps from higher levels to the preview.",
+      "option_key": "-preview",
+      "value_arity": "N",
+      "value_domain": "enum",
+      "description": "",
+      "allowed_values": [
+        "above",
+        "below"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "colo[u]r <color> = set the map colour; this option overrides the automatic choice when the layout specifies colour map-fg [map].",
+      "name": "colo[u]r <color>",
+      "signature": "colo[u]r <color>",
+      "option_key": "-colour",
+      "value_arity": "1",
+      "value_domain": "unknown",
+      "description": "set the map colour; this option overrides the automatic choice when the layout specifies colour map-fg [map].",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "dependencies": [
+    "context: none, survey"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "container_open",
+    "close_directive": "endmap"
+  }
+}

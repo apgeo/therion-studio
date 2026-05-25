@@ -1,0 +1,50 @@
+{
+  "name": "infer",
+  "directive": "infer",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 363
+  },
+  "summary": "\"infer plumbs on\" tells the program to interpret gradients 90 ^ as UP/DOWN (this means no clino corrections are applied). \"infer equates on\" will case program to interpret shots with 0 length as equate commands (which means that no tape corrections are applied)",
+  "syntax": [
+    "infer <what> <on/off>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<what>",
+      "name": "<what>",
+      "signature": "<what>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<on/off>",
+      "name": "<on/off>",
+      "signature": "<on/off>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [
+    "on",
+    "off"
+  ],
+  "block": {
+    "role": "leaf"
+  }
+}

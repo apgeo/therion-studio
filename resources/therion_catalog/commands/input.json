@@ -1,0 +1,36 @@
+{
+  "name": "input",
+  "directive": "input",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 237
+  },
+  "summary": "inserts the contents of a file in place of the command. Default extension is \".th\" and may be omitted. For greatest portability use relative paths and Unix slashes \"/\", not Windows backslashes \"\\\", as directory separators.",
+  "syntax": [
+    "input <file-name>"
+  ],
+  "contexts": [
+    "all"
+  ],
+  "arguments": [
+    {
+      "raw": "<file-name>",
+      "name": "<file-name>",
+      "signature": "<file-name>",
+      "option_key": "",
+      "value_arity": "0",
+      "value_domain": "none",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: all"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

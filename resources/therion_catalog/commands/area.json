@@ -1,0 +1,118 @@
+{
+  "name": "area",
+  "directive": "area",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 1201
+  },
+  "summary": "Area is specified by surrounding border lines. They may be of any type, but must be listed in order and each pair of consecutive lines must intersect. In order to be sure that lines intersect even after scrap transformation you may e.g. continue a lake border 1 cm behind a passage wall - these overlaps will be automatically clipped by scrap border. You may use invisible border to achieve this inside of the passage. When defined by more than one line, the actual area will be the intersection of the areas defined by each separate line.",
+  "syntax": [
+    "area <type> place <bottom/default/top> clip <on/off> visibility <on/off> ... border line references ... endarea"
+  ],
+  "contexts": [
+    "scrap"
+  ],
+  "arguments": [
+    {
+      "raw": "<type> is one of following: water, sump, sand, debris, blocks, flowstone, moonmilk, snow, ice, clay, pebbles, bedrock (An empty area which can be used to clean the background.) , u (For user defined area symbols, may be followed by arbitrary subtype.) , mudcrack, pillar, pillar-with-curtains, pillars, pillars-with-curtains, stalactite, stalactite-stalagmite, stalagmite.",
+      "name": "<type> is one of following: water, sump, sand, debris, blocks, flowstone, moonmilk, snow, ice, clay, pebbles, bedrock (An empty area which can be used to clean the background.) , u (For user defined area symbols, may be followed by arbitrary subtype.) , mudcrack, pillar, pillar-with-curtains, pillars, pillars-with-curtains, stalactite, stalactite-stalagmite, stalagmite.",
+      "signature": "<type> is one of following: water, sump, sand, debris, blocks, flowstone, moonmilk, snow, ice, clay, pebbles, bedrock (An empty area which can be used to clean the background.) , u (For user defined area symbols, may be followed by arbitrary subtype.) , mudcrack, pillar, pillar-with-curtains, pillars, pillars-with-curtains, stalactite, stalactite-stalagmite, stalagmite.",
+      "option_key": "",
+      "value_arity": "N",
+      "value_domain": "unknown",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [
+    {
+      "raw": "id <ext_keyword> = ID of the symbol.",
+      "name": "id <ext_keyword>",
+      "signature": "id <ext_keyword>",
+      "option_key": "-id",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "ID of the symbol.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "the data lines consist of border line references (IDs)",
+      "name": "the data lines consist of border line references (IDs)",
+      "signature": "the data lines consist of border line references (IDs)",
+      "option_key": "-the",
+      "value_arity": "N",
+      "value_domain": "unknown",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "place <bottom/default/top> = changes displaying order in the map.",
+      "name": "place <bottom/default/top>",
+      "signature": "place <bottom/default/top>",
+      "option_key": "-place",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "changes displaying order in the map.",
+      "allowed_values": [
+        "bottom",
+        "default",
+        "top"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "clip <on/off> = specify whether a symbol is clipped by the scrap border.",
+      "name": "clip <on/off>",
+      "signature": "clip <on/off>",
+      "option_key": "-clip",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "specify whether a symbol is clipped by the scrap border.",
+      "allowed_values": [
+        "on",
+        "off"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "visibility <on/off> = displays/hides the symbol.",
+      "name": "visibility <on/off>",
+      "signature": "visibility <on/off>",
+      "option_key": "-visibility",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "displays/hides the symbol.",
+      "allowed_values": [
+        "on",
+        "off"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "context <point/line/area> <symbol-type> = (to be used with symbol-hide and symbol-show layout options) symbol will be hidden/shown according to rules for specified <symbol-type>.",
+      "name": "context <point/line/area> <symbol-type>",
+      "signature": "context <point/line/area> <symbol-type>",
+      "option_key": "-context",
+      "value_arity": "N",
+      "value_domain": "enum",
+      "description": "(to be used with symbol-hide and symbol-show layout options) symbol will be hidden/shown according to rules for specified <symbol-type>.",
+      "allowed_values": [
+        "point",
+        "line",
+        "area"
+      ],
+      "dependencies": []
+    }
+  ],
+  "dependencies": [
+    "context: scrap"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "container_open",
+    "close_directive": "endarea"
+  }
+}

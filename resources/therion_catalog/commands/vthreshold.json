@@ -1,0 +1,47 @@
+{
+  "name": "vthreshold",
+  "directive": "vthreshold",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 375
+  },
+  "summary": "threshold for interpreting LRUD readings as left-right-front-back reading perpendicular to the shot. If passages are horizontal (inclination < vthreshold), LR is perpendicular to the shot and UD is vertical. If passages are more or less vertical (inclination > vthreshold), even UD becomes perpendicular to the shot -- otherwise passages would not look very good. In the case of vertical shots, UD is interpreted as north-south dimension from the station to allow tube-like modeling of verticals.",
+  "syntax": [
+    "vthreshold <number> <units>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<number>",
+      "name": "<number>",
+      "signature": "<number>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<units>",
+      "name": "<units>",
+      "signature": "<units>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

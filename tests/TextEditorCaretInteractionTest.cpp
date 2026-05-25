@@ -399,7 +399,6 @@ int main(int argc, char *argv[])
     if (!expect(applyButton != nullptr, "Failed to find blockDetailsApplyButton.")) {
         return 1;
     }
-
     const QString blocksText = tab.text();
     if (!expect(blocksText.startsWith(QStringLiteral("encoding utf-8")),
                 "Blocks mode should normalize source to `encoding utf-8` at line 1.")) {
@@ -665,6 +664,11 @@ int main(int argc, char *argv[])
         if (guardBlocksButton != nullptr) {
             guardBlocksButton->click();
             pumpEvents();
+            if (!expect(!crashGuardTab->isDirty(),
+                        "Switching to Blocks mode must not mark a clean document as modified.")) {
+                delete crashGuardTab;
+                return 1;
+            }
         }
         auto *guardView = crashGuardTab->findChild<QGraphicsView *>();
         auto *guardStatus = crashGuardTab->findChild<QLabel *>(QStringLiteral("blockDetailsStatusLabel"));

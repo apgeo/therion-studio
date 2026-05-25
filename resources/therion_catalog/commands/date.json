@@ -1,0 +1,36 @@
+{
+  "name": "date",
+  "directive": "date",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 352
+  },
+  "summary": "survey date. If multiple dates are specified, a time interval is created.",
+  "syntax": [
+    "date <date>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<date>",
+      "name": "<date>",
+      "signature": "<date>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

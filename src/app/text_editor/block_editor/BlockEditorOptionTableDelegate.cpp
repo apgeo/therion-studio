@@ -1,7 +1,11 @@
 #include "BlockEditorOptionTableDelegate.h"
 
+#include <QAbstractItemView>
 #include <QCompleter>
+#include <QFontMetrics>
 #include <QLineEdit>
+#include <QScrollBar>
+#include <QStringListModel>
 
 namespace TherionStudio
 {
@@ -30,6 +34,23 @@ QWidget *BlockEditorOptionTableDelegate::createEditor(QWidget *parent,
     completer->setCaseSensitivity(Qt::CaseInsensitive);
     completer->setFilterMode(Qt::MatchContains);
     completer->setCompletionMode(QCompleter::PopupCompletion);
+    completer->setModelSorting(QCompleter::CaseInsensitivelySortedModel);
+
+    if (QAbstractItemView *popup = completer->popup(); popup != nullptr) {
+        popup->setTextElideMode(Qt::ElideNone);
+        popup->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        popup->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+
+        const QFontMetrics fm(popup->font());
+        int maxItemWidth = 0;
+        for (const QString &item : suggestions) {
+            maxItemWidth = qMax(maxItemWidth, fm.horizontalAdvance(item));
+        }
+        const int popupPaddingWidth = 36;
+        const int popupWidth = qMax(lineEdit->width(), maxItemWidth + popupPaddingWidth);
+        popup->setMinimumWidth(popupWidth);
+    }
+
     lineEdit->setCompleter(completer);
     return editor;
 }

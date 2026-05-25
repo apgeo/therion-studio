@@ -1,0 +1,26 @@
+{
+  "name": "break",
+  "directive": "break",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 371
+  },
+  "summary": "can be used with interleaved data to separate two traverses",
+  "syntax": [
+    "break"
+  ],
+  "contexts": [
+    "centerline",
+    "map"
+  ],
+  "arguments": [],
+  "options": [],
+  "dependencies": [
+    "context: centerline",
+    "context: map"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "name": "import",
+  "directive": "import",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 1453
+  },
+  "summary": "Reads survey data in different formats (currently processed centreline in *.3d, *.plt, *.xyz formats). Survey stations may be referenced in scraps etc. When importing a Survex 3D file, stations are inserted in the survey hierarchy if there exists an identical hierarchy to that in 3D file.",
+  "syntax": [
+    "import <file-name> [OPTIONS]"
+  ],
+  "contexts": [
+    "all",
+    "survey"
+  ],
+  "arguments": [],
+  "options": [
+    {
+      "raw": "filter <prefix> = if specified, only stations with given prefix and shots between them will be imported. Prefix will be removed from station names.",
+      "name": "filter <prefix>",
+      "signature": "filter <prefix>",
+      "option_key": "-filter",
+      "value_arity": "1",
+      "value_domain": "unknown",
+      "description": "if specified, only stations with given prefix and shots between them will be imported. Prefix will be removed from station names.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "surveys (create)/use/ignore = specifies how to import survey structure (works only with .3d files). create = split stations into subsurveys, if subsurveys do not exist, create them use = split stations into existing subsurveys ignore = do not split stations into sub-surveys",
+      "name": "surveys (create)/use/ignore",
+      "signature": "surveys (create)/use/ignore",
+      "option_key": "-surveys",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "specifies how to import survey structure (works only with .3d files). create = split stations into subsurveys, if subsurveys do not exist, create them use = split stations into existing subsurveys ignore = do not split stations into sub-surveys",
+      "allowed_values": [
+        "create",
+        "use",
+        "ignore"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "cs <coordinate system> = coordinate system for stations with fixed coordinates",
+      "name": "cs <coordinate system>",
+      "signature": "cs <coordinate system>",
+      "option_key": "-cs",
+      "value_arity": "1",
+      "value_domain": "unknown",
+      "description": "coordinate system for stations with fixed coordinates",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "calibrate [<x> <y> <z> <X> <Y> <Z>] = coordinates in the imported file are shifted from lower-case coordinates to upper-case coordinates.",
+      "name": "calibrate [<x> <y> <z> <X> <Y> <Z>]",
+      "signature": "calibrate [<x> <y> <z> <X> <Y> <Z>]",
+      "option_key": "-calibrate",
+      "value_arity": "N",
+      "value_domain": "unknown",
+      "description": "coordinates in the imported file are shifted from lower-case coordinates to upper-case coordinates.",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "dependencies": [
+    "context: all, survey"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

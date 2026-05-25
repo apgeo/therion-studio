@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 import re
 import unittest
 from pathlib import Path
@@ -12,7 +11,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GENERATOR_PATH = REPO_ROOT / "scripts" / "generate_therion_catalog.py"
-OVERRIDES_PATH = REPO_ROOT / "resources" / "therion_command_catalog.overrides.json"
+OVERRIDES_DIR = REPO_ROOT / "resources" / "therion_catalog" / "overrides"
 
 
 def load_generator_module():
@@ -37,8 +36,7 @@ class TherionCatalogGenerationTest(unittest.TestCase):
             source_repo="snapshot-copy",
             source_ref="snapshot-copy",
         )
-        overrides = json.loads(OVERRIDES_PATH.read_text(encoding="utf-8"))
-        cls.catalog = cls.generator.apply_overrides(cls.catalog, overrides)
+        cls.catalog = cls.generator.apply_command_override_files(cls.catalog, OVERRIDES_DIR)
         cls.commands_by_name = {entry["name"]: entry for entry in cls.catalog["commands"]}
 
     def test_expected_core_commands_exist(self) -> None:

@@ -1,0 +1,51 @@
+{
+  "name": "mark",
+  "directive": "mark",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 460
+  },
+  "summary": "set the type of named stations. <type> is one of: fixed, painted and temporary (default). If there is no station list, all subsequent stations are marked.",
+  "syntax": [
+    "mark [<station list>] <type>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "[<station list>]",
+      "name": "[<station list>]",
+      "signature": "[<station list>]",
+      "option_key": "",
+      "value_arity": "N",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<type>",
+      "name": "<type>",
+      "signature": "<type>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [
+    "fixed",
+    "painted",
+    "temporary"
+  ],
+  "block": {
+    "role": "leaf"
+  }
+}

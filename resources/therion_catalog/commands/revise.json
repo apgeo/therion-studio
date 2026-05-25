@@ -1,0 +1,25 @@
+{
+  "name": "revise",
+  "directive": "revise",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 1517
+  },
+  "summary": "This command is used to set or change properties of an already existing object.",
+  "syntax": [
+    "The syntax of this command for object created with \"single line\" command is revise id [-option1 value1 -option2 value2 ...] For objects created with \"multi line\" commands is syntax following revise id [-option1 value1 -option2 value2 ...] ... optionX valueX data ... endrevise"
+  ],
+  "contexts": [
+    "all"
+  ],
+  "arguments": [],
+  "options": [],
+  "dependencies": [
+    "context: all"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "container_open",
+    "close_directive": "endrevise"
+  }
+}

@@ -232,6 +232,7 @@ private:
     void refreshStatus();
     bool isCurrentStateDirty() const;
     void applyDirtyStateFromCurrentState();
+    void replaceTextForSystemNormalization(const QString &contents);
     const TextEditorCommandMetadata &commandMetadata() const { return commandMetadata_; }
     TextEditorCommandMetadata &mutableCommandMetadata() { return commandMetadata_; }
     QString displayPath() const;

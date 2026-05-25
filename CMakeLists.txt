@@ -388,7 +388,6 @@ endif()
 set(THERION_STUDIO_RESOURCE_FILES
     ${THERION_STUDIO_APP_ICON_SVG}
     resources/therion_command_catalog.json
-    resources/therion_command_catalog.overrides.json
     resources/therion_syntax_palette.json
     resources/icons/lucide/LICENSE
     resources/icons/lucide/check.svg
@@ -718,7 +717,6 @@ set(THERION_TEXT_EDITOR_UI_TEST_SOURCES
 
 set(THERION_TEXT_EDITOR_UI_TEST_RESOURCE_FILES
     resources/therion_command_catalog.json
-    resources/therion_command_catalog.overrides.json
     resources/therion_syntax_palette.json)
 
 add_library(therion_text_editor_ui_test_support STATIC

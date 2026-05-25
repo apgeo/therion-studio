@@ -1,0 +1,38 @@
+{
+  "name": "grade",
+  "directive": "grade",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 360
+  },
+  "summary": "sets standard deviations according to the survey grade specification (see grade command). All previously specified standard deviations or grades are lost. If you want to change an SD, use the sd option after this command. If multiple grades are specified, only the last one applies. You can specify grades only for position or only for surveys. If you want to combine them, you must use them in one grade line.",
+  "syntax": [
+    "grade <grade list>"
+  ],
+  "contexts": [
+    "centerline",
+    "all"
+  ],
+  "arguments": [
+    {
+      "raw": "<grade list>",
+      "name": "<grade list>",
+      "signature": "<grade list>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline",
+    "context: all"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

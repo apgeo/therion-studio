@@ -1,0 +1,47 @@
+{
+  "name": "instrument",
+  "directive": "instrument",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 356
+  },
+  "summary": "description of the instrument that was used to survey the given quantities (same keywords as team person's role)",
+  "syntax": [
+    "instrument <quantity list> <description>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<quantity list>",
+      "name": "<quantity list>",
+      "signature": "<quantity list>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<description>",
+      "name": "<description>",
+      "signature": "<description>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

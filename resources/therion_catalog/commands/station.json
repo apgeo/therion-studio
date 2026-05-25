@@ -1,0 +1,58 @@
+{
+  "name": "station",
+  "directive": "station",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 366
+  },
+  "summary": "set the station comment and its flags. If \"\" is specified as a comment, it is ignored. Supported flags: entrance, continuation, air-draught[:winter/summer], sink, spring, doline, dig, arch, overhang. Also not is allowed before a flag, to remove previously added flag. You can also specify custom attributes to the station using attr flag followed by attribute name and value. Example: station 4 \"pit to explore\" continuation attr code \"V\" If there is a passage, that was explored, but not surveyed yet, estimated explored length of this passage can be added to the station with continuation flag. Just add explored <explored-length> to the station flags. Explored lengths are a part of survey/cave statistics, displayed separately. Example: station 40 \"ugly crollway\" continuation explored 100m",
+  "syntax": [
+    "station <station> <comment> [<flags>]"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<station>",
+      "name": "<station>",
+      "signature": "<station>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<comment>",
+      "name": "<comment>",
+      "signature": "<comment>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "[<flags>]",
+      "name": "[<flags>]",
+      "signature": "[<flags>]",
+      "option_key": "",
+      "value_arity": "N",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

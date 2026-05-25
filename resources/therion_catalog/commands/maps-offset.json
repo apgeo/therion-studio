@@ -1,0 +1,24 @@
+{
+  "name": "maps-offset",
+  "directive": "maps-offset",
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 182
+  },
+  "summary": "Turns drawing maps in offset on (default) or off. If you turn if off, all cave passages will be displayed in detail in their actual position. All offset specifications will be completely ignored.",
+  "syntax": [
+    "maps-offset <on/off>"
+  ],
+  "contexts": [
+    "none"
+  ],
+  "arguments": [],
+  "options": [],
+  "dependencies": [
+    "context: none"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "setup3d",
+  "directive": "setup3d",
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 648
+  },
+  "summary": "",
+  "syntax": [
+    "* setup3d <value>"
+  ],
+  "contexts": [
+    "none"
+  ],
+  "arguments": [],
+  "options": [],
+  "dependencies": [
+    "context: none"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

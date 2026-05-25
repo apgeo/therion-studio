@@ -90,6 +90,26 @@ bool BlockEditorLineBuildService::buildUpdatedLine(QString *updatedLine, QString
     const QString commandToken = parsedLine.tokens.value(0).trimmed().isEmpty()
         ? normalizedKind
         : parsedLine.tokens.value(0).trimmed();
+    const bool commentOnlyLine = normalizedKind == QStringLiteral("comment")
+        && isFullLineComment(parsedLine);
+
+    if (commentOnlyLine) {
+        const QString updatedComment = context_.idEdit != nullptr
+            ? context_.idEdit->text().trimmed()
+            : QString();
+        if (updatedComment.isEmpty()) {
+            if (validationError != nullptr) {
+                *validationError = tr("Comment cannot be empty.");
+            }
+            return false;
+        }
+        QChar marker = *context_.commentMarker;
+        if (marker != QLatin1Char('#') && marker != QLatin1Char('%')) {
+            marker = QLatin1Char('#');
+        }
+        *updatedLine = QStringLiteral("%1%2 %3").arg(indent, QString(marker), updatedComment);
+        return true;
+    }
 
     QString result = QStringLiteral("%1%2").arg(indent, commandToken);
 

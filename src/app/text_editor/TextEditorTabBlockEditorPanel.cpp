@@ -41,6 +41,22 @@ constexpr int kPanelSpacing = 8;
 constexpr int kBlocksSidePaneMinWidth = 320;
 constexpr int kBlocksSidePaneMaxWidth = 460;
 
+QStringList filteredOptionTokenSuggestions(const QStringList &source)
+{
+    QStringList filtered;
+    for (const QString &candidate : source) {
+        const QString normalized = candidate.trimmed().toLower();
+        if (!TherionStudio::looksLikeOptionToken(normalized)) {
+            continue;
+        }
+        if (!filtered.contains(normalized, Qt::CaseInsensitive)) {
+            filtered.append(normalized);
+        }
+    }
+    filtered.sort(Qt::CaseInsensitive);
+    return filtered;
+}
+
 void applyThinSplitterStyle(QSplitter *splitter, const QString &objectName)
 {
     if (splitter == nullptr) {
@@ -210,8 +226,9 @@ void TextEditorTab::buildBlockEditorPanel()
     blockDetailsOptionsTable_->setObjectName(QStringLiteral("blockDetailsOptionsTable"));
     blockDetailsOptionsTable_->setColumnCount(2);
     blockDetailsOptionsTable_->setHorizontalHeaderLabels({tr("Option"), tr("Value")});
-    blockDetailsOptionsTable_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    blockDetailsOptionsTable_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Interactive);
     blockDetailsOptionsTable_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    blockDetailsOptionsTable_->setColumnWidth(0, 170);
     blockDetailsOptionsTable_->verticalHeader()->setVisible(false);
     blockDetailsOptionsTable_->setSelectionBehavior(QAbstractItemView::SelectRows);
     blockDetailsOptionsTable_->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -221,7 +238,8 @@ void TextEditorTab::buildBlockEditorPanel()
         new BlockEditorOptionTableDelegate(
             [this](const QModelIndex &index) {
                 if (index.column() == 0) {
-                    return commandMetadata().commandOptionTokens.value(blockDetailsSelectedKind_);
+                    return filteredOptionTokenSuggestions(
+                        commandMetadata().commandOptionTokens.value(blockDetailsSelectedKind_));
                 }
                 if (index.column() == 1) {
                     if (blockDetailsOptionsTable_ == nullptr) {

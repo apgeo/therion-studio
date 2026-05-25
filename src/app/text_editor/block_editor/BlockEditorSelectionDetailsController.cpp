@@ -70,7 +70,8 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
 
     const QString normalizedKind = context_.normalizedDirectiveToken ? context_.normalizedDirectiveToken(kind) : kind.trimmed().toLower();
     const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineNumber - 1), lineNumber);
-    if (parsedLine.tokens.isEmpty()) {
+    const bool commentOnlyLine = normalizedKind == QStringLiteral("comment") && isFullLineComment(parsedLine);
+    if (parsedLine.tokens.isEmpty() && !commentOnlyLine) {
         if (context_.clearDetailsPane) {
             context_.clearDetailsPane();
         }
@@ -380,25 +381,31 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
                 argumentSignatures.append(signature);
             }
         }
-        const bool noValueCommand = !isMapObjectReferenceKind(normalizedKind)
+        const bool noValueCommand = !commentOnlyLine
+            && !isMapObjectReferenceKind(normalizedKind)
             && argumentSignatures.isEmpty()
             && (*context_.commandMetadata).commandArgumentSignaturesByToken.value(normalizedKind).isEmpty();
         const bool hasSecondaryArgument = argumentSignatures.size() > 1;
 
-        QString currentValue = isMapObjectReferenceKind(normalizedKind)
+        QString currentValue = commentOnlyLine
+            ? parsedLine.commentText.trimmed()
+            : (isMapObjectReferenceKind(normalizedKind)
             ? parsedLine.tokens.value(0)
-            : (parsedLine.tokens.size() > 1 ? parsedLine.tokens.at(1) : QString());
+            : (parsedLine.tokens.size() > 1 ? parsedLine.tokens.at(1) : QString()));
         QString secondaryValue;
-        if (!isMapObjectReferenceKind(normalizedKind) && hasSecondaryArgument && parsedLine.tokens.size() > 2) {
+        if (!commentOnlyLine && !isMapObjectReferenceKind(normalizedKind) && hasSecondaryArgument && parsedLine.tokens.size() > 2) {
             secondaryValue = parsedLine.tokens.mid(2).join(QLatin1Char(' '));
-        } else if (!isMapObjectReferenceKind(normalizedKind) && !hasSecondaryArgument) {
+        } else if (!commentOnlyLine && !isMapObjectReferenceKind(normalizedKind) && !hasSecondaryArgument) {
             currentValue = parsedLine.tokens.size() > 1
                 ? parsedLine.tokens.mid(1).join(QLatin1Char(' '))
                 : QString();
         }
 
         if (context_.primaryFieldLabel != nullptr) {
-            if (isMapObjectReferenceKind(normalizedKind)) {
+            if (commentOnlyLine) {
+                context_.primaryFieldLabel->setText(tr("Comment"));
+                context_.primaryFieldLabel->setVisible(true);
+            } else if (isMapObjectReferenceKind(normalizedKind)) {
                 context_.primaryFieldLabel->setText(tr("Target"));
             } else if (noValueCommand) {
                 context_.primaryFieldLabel->setVisible(false);
@@ -411,7 +418,9 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             }
         }
         if (context_.secondaryFieldLabel != nullptr) {
-            if (hasSecondaryArgument) {
+            if (commentOnlyLine) {
+                context_.secondaryFieldLabel->setVisible(false);
+            } else if (hasSecondaryArgument) {
                 if (argumentSignatures.size() > 1) {
                     context_.secondaryFieldLabel->setText(blockArgumentLabelFromSignature(argumentSignatures.at(1)));
                 } else {
@@ -423,7 +432,7 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             }
         }
         if (context_.additionalPositionalEdit != nullptr) {
-            if (hasSecondaryArgument) {
+            if (!commentOnlyLine && hasSecondaryArgument) {
                 context_.additionalPositionalEdit->setEnabled(true);
                 context_.additionalPositionalEdit->setVisible(true);
                 context_.additionalPositionalEdit->setPlaceholderText(tr("optional"));
@@ -435,17 +444,27 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             }
         }
         if (context_.secondaryFieldStack != nullptr) {
-            context_.secondaryFieldStack->setVisible(hasSecondaryArgument);
+            context_.secondaryFieldStack->setVisible(!commentOnlyLine && hasSecondaryArgument);
             if (context_.additionalPositionalEdit != nullptr) {
                 context_.secondaryFieldStack->setCurrentWidget(context_.additionalPositionalEdit);
             }
         }
         context_.setReadingsTagEditor(QString(), {}, {});
         if (context_.idEdit != nullptr) {
-            context_.idEdit->setEnabled(!noValueCommand);
-            context_.idEdit->setVisible(!noValueCommand);
-            context_.idEdit->setPlaceholderText(noValueCommand ? QString() : tr("required"));
+            context_.idEdit->setEnabled(commentOnlyLine || !noValueCommand);
+            context_.idEdit->setVisible(commentOnlyLine || !noValueCommand);
+            context_.idEdit->setPlaceholderText((commentOnlyLine || !noValueCommand) ? tr("required") : QString());
             context_.idEdit->setText(currentValue);
+        }
+        if (commentOnlyLine) {
+            if (context_.commentFieldLabel != nullptr) {
+                context_.commentFieldLabel->setVisible(false);
+            }
+            if (context_.commentEdit != nullptr) {
+                context_.commentEdit->clear();
+                context_.commentEdit->setEnabled(false);
+                context_.commentEdit->setVisible(false);
+            }
         }
         if (context_.optionsTable != nullptr) {
             context_.optionsTable->setVisible(false);

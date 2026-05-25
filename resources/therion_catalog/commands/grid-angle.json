@@ -1,0 +1,47 @@
+{
+  "name": "grid-angle",
+  "directive": "grid-angle",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 362
+  },
+  "summary": "specifies the magnetic grid angle (declination against grid north).",
+  "syntax": [
+    "grid-angle <value> <units>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<value>",
+      "name": "<value>",
+      "signature": "<value>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<units>",
+      "name": "<units>",
+      "signature": "<units>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

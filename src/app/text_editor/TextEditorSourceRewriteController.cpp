@@ -31,7 +31,7 @@ bool TextEditorSourceRewriteController::rewriteStructureEntryName(int lineNumber
         return false;
     }
 
-    replaceTextPreservingCursor(contents, false, false);
+    replaceTextPreservingCursor(contents, false, false, true);
     return true;
 }
 
@@ -134,7 +134,7 @@ bool TextEditorSourceRewriteController::rewritePointCoordinates(int lineNumber,
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false);
+    replaceTextPreservingCursor(contents, true, false, true);
     return true;
 }
 
@@ -153,7 +153,7 @@ bool TextEditorSourceRewriteController::rewriteLineAreaVertex(int lineNumber,
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false);
+    replaceTextPreservingCursor(contents, true, false, true);
     return true;
 }
 
@@ -171,7 +171,7 @@ bool TextEditorSourceRewriteController::rewriteLineOptionToggle(int lineNumber,
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false);
+    replaceTextPreservingCursor(contents, true, false, true);
     return true;
 }
 
@@ -193,7 +193,7 @@ bool TextEditorSourceRewriteController::rewritePointOrientation(int lineNumber,
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false);
+    replaceTextPreservingCursor(contents, true, false, true);
     return true;
 }
 
@@ -217,7 +217,7 @@ bool TextEditorSourceRewriteController::rewriteLinePointOrientation(int lineNumb
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false);
+    replaceTextPreservingCursor(contents, true, false, true);
     return true;
 }
 
@@ -241,7 +241,7 @@ bool TextEditorSourceRewriteController::rewriteLinePointLeftSize(int lineNumber,
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false);
+    replaceTextPreservingCursor(contents, true, false, true);
     return true;
 }
 
@@ -258,7 +258,7 @@ bool TextEditorSourceRewriteController::rewriteLineCoordinateRows(int lineNumber
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false);
+    replaceTextPreservingCursor(contents, true, false, true);
     return true;
 }
 
@@ -268,12 +268,22 @@ void TextEditorSourceRewriteController::replaceTextForCommand(const QString &con
         return;
     }
 
-    replaceTextPreservingCursor(contents, true, true);
+    replaceTextPreservingCursor(contents, true, true, true);
+}
+
+void TextEditorSourceRewriteController::replaceTextForSystemNormalization(const QString &contents)
+{
+    if (context_.editor == nullptr) {
+        return;
+    }
+
+    replaceTextPreservingCursor(contents, false, true, false);
 }
 
 void TextEditorSourceRewriteController::replaceTextPreservingCursor(const QString &contents,
                                                                     bool emitDocumentTextChanged,
-                                                                    bool rebuildBlocksCanvas)
+                                                                    bool rebuildBlocksCanvas,
+                                                                    bool applyDirtyState)
 {
     if (context_.editor == nullptr) {
         return;
@@ -305,7 +315,7 @@ void TextEditorSourceRewriteController::replaceTextPreservingCursor(const QStrin
     if (context_.currentLineNumber != nullptr) {
         *context_.currentLineNumber = context_.editor->textCursor().blockNumber() + 1;
     }
-    if (context_.applyDirtyStateFromCurrentState) {
+    if (applyDirtyState && context_.applyDirtyStateFromCurrentState) {
         context_.applyDirtyStateFromCurrentState();
     }
     if (rebuildBlocksCanvas && context_.rebuildBlocksCanvasFromText) {

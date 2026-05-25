@@ -1,0 +1,24 @@
+{
+  "name": "sketch-warp",
+  "directive": "sketch-warp",
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 66
+  },
+  "summary": "",
+  "syntax": [
+    "* sketch-warp <algorithm>"
+  ],
+  "contexts": [
+    "none"
+  ],
+  "arguments": [],
+  "options": [],
+  "dependencies": [
+    "context: none"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

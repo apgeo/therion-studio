@@ -1,0 +1,97 @@
+{
+  "name": "survey",
+  "directive": "survey",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 262
+  },
+  "summary": "Survey is the main data structure. Surveys may be nested - this allows a hierarchical structure to be built. Usually some level of this hierarchical structure survey represents caves, higher levels karst areas and lower levels e.g. passages. Each survey has its own namespace specified by its <id> argument. Objects (like survey stations or scraps; see below) which belong to a subsurvey of the current survey are referenced as <object-id>@<subsurvey-id>, or, if there are more nesting levels <object-id>@<subsubsurvey-id>.<subsurvey-id>. (Note: it's not possible to reference any object from the higher-level surveys.) This means, that object identifiers must be unique only in the scope of one survey. For instance, survey stations names can be the same if they are in different surveys. This allows stations to be numbered from 0 in each survey or the joining of two caves into one cave system without renaming survey stations.",
+  "syntax": [
+    "survey <id> [OPTIONS] ... other therion objects ... endsurvey [<id>]"
+  ],
+  "contexts": [
+    "none",
+    "survey"
+  ],
+  "arguments": [
+    {
+      "raw": "<id> = survey identifier",
+      "name": "<id>",
+      "signature": "<id>",
+      "option_key": "",
+      "value_arity": "0",
+      "value_domain": "none",
+      "description": "survey identifier",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [
+    {
+      "raw": "namespace <on/off> = specify whether survey creates namespace (on by default)",
+      "name": "namespace <on/off>",
+      "signature": "namespace <on/off>",
+      "option_key": "-namespace",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "specify whether survey creates namespace (on by default)",
+      "allowed_values": [
+        "on",
+        "off"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "declination <specification> = set the default declination for all data objects in this survey (which can be overridden by declination definitions in subsurveys). The <specification> has three forms: 1. [] an empty string. This will reset the declination definition. 2. [<value> <units>] will set a single value (also for undated surveys). 3. [<date1> <value1> [<date2> <value2> ... ] <units>] will set declination for several dates. Then the declination of each shot will be set according to the date specification of the data object. If you want to explicitly set the declination for undated survey data, use \"-\" instead of date. If no declination is specified and some geodetic coordinate system is defined, the declination is automatically computed using built-in geomagnetic model. N.B.: The declination is positive when the magnetic north is east of true north.",
+      "name": "declination <specification>",
+      "signature": "declination <specification>",
+      "option_key": "-declination",
+      "value_arity": "1",
+      "value_domain": "unknown",
+      "description": "set the default declination for all data objects in this survey (which can be overridden by declination definitions in subsurveys). The <specification> has three forms: 1. [] an empty string. This will reset the declination definition. 2. [<value> <units>] will set a single value (also for undated surveys). 3. [<date1> <value1> [<date2> <value2> ... ] <units>] will set declination for several dates. Then the declination of each shot will be set according to the date specification of the data object. If you want to explicitly set the declination for undated survey data, use \"-\" instead of date. If no declination is specified and some geodetic coordinate system is defined, the declination is automatically computed using built-in geomagnetic model. N.B.: The declination is positive when the magnetic north is east of true north.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "person-rename <old name> <new name> = rename a person whose name has been changed",
+      "name": "person-rename <old name> <new name>",
+      "signature": "person-rename <old name> <new name>",
+      "option_key": "-person-rename",
+      "value_arity": "N",
+      "value_domain": "unknown",
+      "description": "rename a person whose name has been changed",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "title <string> = description of the object",
+      "name": "title <string>",
+      "signature": "title <string>",
+      "option_key": "-title",
+      "value_arity": "1",
+      "value_domain": "string",
+      "description": "description of the object",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "entrance <station-name> = specifies the main entrance to the cave represented by this survey. If not specified and there is exactly one station marked entrance in this survey, it is considered to represent a cave also. This information is used for cave-list export.",
+      "name": "entrance <station-name>",
+      "signature": "entrance <station-name>",
+      "option_key": "-entrance",
+      "value_arity": "1",
+      "value_domain": "station",
+      "description": "specifies the main entrance to the cave represented by this survey. If not specified and there is exactly one station marked entrance in this survey, it is considered to represent a cave also. This information is used for cave-list export.",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "dependencies": [
+    "context: none, survey"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "container_open",
+    "close_directive": "endsurvey"
+  }
+}

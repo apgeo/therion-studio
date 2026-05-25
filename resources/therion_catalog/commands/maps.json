@@ -1,0 +1,24 @@
+{
+  "name": "maps",
+  "directive": "maps",
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 170
+  },
+  "summary": "Turns processing of maps on (default) or off. If you turn if off, all scraps from selected surveys will be used in the output, no map definitions are taken into account. Useful for debugging map definitions.",
+  "syntax": [
+    "maps <on/off>"
+  ],
+  "contexts": [
+    "none"
+  ],
+  "arguments": [],
+  "options": [],
+  "dependencies": [
+    "context: none"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

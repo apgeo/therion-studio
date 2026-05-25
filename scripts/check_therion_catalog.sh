@@ -4,8 +4,10 @@ set -euo pipefail
 TMP_OUT="$(mktemp)"
 TMP_CURRENT_NORM="$(mktemp)"
 TMP_GENERATED_NORM="$(mktemp)"
+TMP_COMMANDS_DIR="$(mktemp -d)"
 cleanup() {
   rm -f "$TMP_OUT" "$TMP_CURRENT_NORM" "$TMP_GENERATED_NORM"
+  rm -rf "$TMP_COMMANDS_DIR"
 }
 trap cleanup EXIT
 
@@ -30,6 +32,7 @@ fi
 
 python3 scripts/generate_therion_catalog.py \
   --output "$TMP_OUT" \
+  --commands-dir "$TMP_COMMANDS_DIR" \
   --source-repo "$SOURCE_REPO" \
   --source-ref "$SOURCE_REF"
 
@@ -56,6 +59,11 @@ PY
 
 if ! diff -u "$TMP_CURRENT_NORM" "$TMP_GENERATED_NORM"; then
   echo "Therion command catalog is out of date. Run scripts/refresh_therion_catalog.sh --skip-update" >&2
+  exit 1
+fi
+
+if ! diff -ru "resources/therion_catalog/commands" "$TMP_COMMANDS_DIR"; then
+  echo "Per-command Therion catalog files are out of date. Run scripts/refresh_therion_catalog.sh --skip-update" >&2
   exit 1
 fi
 

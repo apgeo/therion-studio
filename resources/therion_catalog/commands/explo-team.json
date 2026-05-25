@@ -1,0 +1,36 @@
+{
+  "name": "explo-team",
+  "directive": "explo-team",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 355
+  },
+  "summary": "a discovery team member.",
+  "syntax": [
+    "explo-team <person>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<person>",
+      "name": "<person>",
+      "signature": "<person>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

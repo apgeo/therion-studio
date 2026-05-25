@@ -1,12 +1,12 @@
 {
   "metadata": {
-    "generated_at_utc": "2026-05-25T15:56:51.441828+00:00",
+    "generated_at_utc": "2026-05-25T17:26:42.280468+00:00",
     "generator_version": "3",
     "source_repository": "snapshot-copy",
     "source_reference": "snapshot-copy",
     "source_files": [
-      "../therion-studio/therion/thbook/ch02.tex",
-      "../therion-studio/therion/thbook/ch03.tex"
+      "therion/thbook/ch02.tex",
+      "therion/thbook/ch03.tex"
     ]
   },
   "block_pairs": [
@@ -17,10 +17,6 @@
     {
       "open_directive": "centerline",
       "close_directive": "endcenterline"
-    },
-    {
-      "open_directive": "grade",
-      "close_directive": "endgrade"
     },
     {
       "open_directive": "layout",
@@ -64,7 +60,7 @@
       "name": "area",
       "directive": "area",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 1201
       },
       "summary": "Area is specified by surrounding border lines. They may be of any type, but must be listed in order and each pair of consecutive lines must intersect. In order to be sure that lines intersect even after scrap transformation you may e.g. continue a lake border 1 cm behind a passage wall - these overlaps will be automatically clipped by scrap border. You may use invisible border to achieve this inside of the passage. When defined by more than one line, the actual area will be the intersection of the areas defined by each separate line.",
@@ -182,7 +178,7 @@
       "name": "break",
       "directive": "break",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 371
       },
       "summary": "can be used with interleaved data to separate two traverses",
@@ -190,12 +186,14 @@
         "break"
       ],
       "contexts": [
-        "centerline"
+        "centerline",
+        "map"
       ],
       "arguments": [],
       "options": [],
       "dependencies": [
-        "context: centerline"
+        "context: centerline",
+        "context: map"
       ],
       "allowed_values": [],
       "block": {
@@ -206,7 +204,7 @@
       "name": "calibrate",
       "directive": "calibrate",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 357
       },
       "summary": "set the instrument calibration. The measured value is calculated using the following formula: measured\\ value = (read\\ value - zero\\ error) scale . The supported quantities are the same as sd.",
@@ -264,7 +262,7 @@
       "name": "centreline",
       "directive": "centerline",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 342
       },
       "summary": "Survey data (centreline) specification. The syntax is borrowed from Survex with minor modifications; the Survex manual may be useful as an additional reference for the user. A synonym term \"centerline\" may be used.",
@@ -366,19 +364,33 @@
       "name": "cs",
       "directive": "cs",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
-        "line": 47
+        "file": "therion/thbook/ch02.tex",
+        "line": 367
       },
-      "summary": "",
+      "summary": "coordinate system for stations with fixed coordinates",
       "syntax": [
-        "* cs <coordinate system>"
+        "cs <coordinate system>"
       ],
       "contexts": [
+        "centerline",
         "none"
       ],
-      "arguments": [],
+      "arguments": [
+        {
+          "raw": "<coordinate system>",
+          "name": "<coordinate system>",
+          "signature": "<coordinate system>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
       "options": [],
       "dependencies": [
+        "context: centerline",
         "context: none"
       ],
       "allowed_values": [],
@@ -390,7 +402,7 @@
       "name": "data",
       "directive": "data",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 370
       },
       "summary": "set data style (normal, topofil, diving, cartesian, cylpolar, dimensions, nosurvey) and readings order. Reading is one of the following keywords: station, from, to, [back]tape/[back]length, [back]compass/[back]bearing, [back]clino/ 0[back]gradient, depth, fromdepth, todepth, depthchange, counter, fromcount, tocount, northing, easting, altitude, up/ceiling (dimension may be specified as a pair [<from> <to> \"5D, meaning the size at the beginning and end of the shot) , down/floor, left, right, ignore, ignoreall. See Survex manual for details. For interleaved data both newline and direction keywords are supported. If backward and forward compass or clino reading are given, the average of them is computed. If one of the shot stations is named either \".\" or \"-\", the shot has splay attribute set. Dot should be used for shots ending on features inside passage, dash for shots ending on passage walls, floor or ceiling. Although Therion makes no distinction between them yet, it should be used to improve 3D modeling in the future.",
@@ -518,7 +530,7 @@
       "name": "date",
       "directive": "date",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 352
       },
       "summary": "survey date. If multiple dates are specified, a time interval is created.",
@@ -554,7 +566,7 @@
       "name": "declination",
       "directive": "declination",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 361
       },
       "summary": "sets the declination for subsequent shots true\\ bearing = measured\\ bearing + declination. The declination is positive when the magnetic north is east of true north. If no declination is specified, or the declination is reset (-), then a valid declination specification is searched for in all surveys the data object is in. See declination option of survey command.",
@@ -601,7 +613,7 @@
       "name": "encoding",
       "directive": "encoding",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 213
       },
       "summary": "sets the encoding of input file. This allows the use of non-ASCII characters in input files.",
@@ -637,7 +649,7 @@
       "name": "endgroup",
       "directive": "endgroup",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 373
       },
       "summary": "group/endgroup pair enables the user to make temporary changes in almost any setting (calibrate, units, sd, data, flags...)",
@@ -661,20 +673,34 @@
       "name": "equate",
       "directive": "equate",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
-        "line": 1312
+        "file": "therion/thbook/ch02.tex",
+        "line": 369
       },
-      "summary": "Sets the survey stations equivalence.",
+      "summary": "set points that are equivalent",
       "syntax": [
         "equate <station list>"
       ],
       "contexts": [
+        "centerline",
         "none",
         "survey"
       ],
-      "arguments": [],
+      "arguments": [
+        {
+          "raw": "<station list>",
+          "name": "<station list>",
+          "signature": "<station list>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
       "options": [],
       "dependencies": [
+        "context: centerline",
         "context: none, survey"
       ],
       "allowed_values": [],
@@ -686,7 +712,7 @@
       "name": "explo-date",
       "directive": "explo-date",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 354
       },
       "summary": "discovery date. If multiple dates are specified, a time interval is created.",
@@ -722,7 +748,7 @@
       "name": "explo-team",
       "directive": "explo-team",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 355
       },
       "summary": "a discovery team member.",
@@ -758,7 +784,7 @@
       "name": "export",
       "directive": "export",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 672
       },
       "summary": "Exports selected surveys or maps.",
@@ -1162,7 +1188,7 @@
       "name": "extend",
       "directive": "extend",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 376
       },
       "summary": "control how the centerline is extended. <spec> is one of the following normal/reverse = extend given and following stations to the same/reverse direction as previous station. If two stations are given - direction is applied only to given shot. left/right = same as above, but direction is specified explicitly. vertical = do not move station (shot) in X direction, use only Z component of the shot start = specify starting station (shot) ignore = ignore specified station (shot), continue extended elevation with other station (shot) if possible hide = do not show specified station (shot) in extended elevation If no stations are specified, <spec> is valid for following shots specified.",
@@ -1209,7 +1235,7 @@
       "name": "fix",
       "directive": "fix",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 368
       },
       "summary": "fix station coordinates (with specified errors - only the units transformation, not calibration, is applied to them).",
@@ -1256,7 +1282,7 @@
       "name": "flags",
       "directive": "flags",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 365
       },
       "summary": "set flags for following shots. The supported flags are: surface (for surface measurements), duplicate (for duplicated surveys), splay (for short side legs that are hidden in maps and models by default). These are excluded from length calculations. All shots having one of the stations named either \".\" or \"-\" are splay shots by default (see also data command). If flag is set to approx[imate], it is included to total length calculations, but also displayed separately in survey statistics. It should be used for shots, that were not surveyed properly and need to be resurveyed. Also \"not\" is allowed before a flag.",
@@ -1292,32 +1318,45 @@
       "name": "grade",
       "directive": "grade",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
-        "line": 1490
+        "file": "therion/thbook/ch02.tex",
+        "line": 360
       },
-      "summary": "This command is used to store predefined precisions of centreline data. Built in grades are: BCRA (see ; syntax is: BCRA n , where n may be 3 or 5) and UISv1 (see ; syntax is: UISv1_ n , where n is -1 to 6 or X; whereas -1 to 2 are only declaratory and X requires sd data in centerline)) . See sd option description for centreline command to define your own grades.",
+      "summary": "sets standard deviations according to the survey grade specification (see grade command). All previously specified standard deviations or grades are lost. If you want to change an SD, use the sd option after this command. If multiple grades are specified, only the last one applies. You can specify grades only for position or only for surveys. If you want to combine them, you must use them in one grade line.",
       "syntax": [
-        ": grade <id> ... [<quantity list> <value> <units>] ... endgrade"
+        "grade <grade list>"
       ],
       "contexts": [
+        "centerline",
         "all"
       ],
-      "arguments": [],
+      "arguments": [
+        {
+          "raw": "<grade list>",
+          "name": "<grade list>",
+          "signature": "<grade list>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
       "options": [],
       "dependencies": [
+        "context: centerline",
         "context: all"
       ],
       "allowed_values": [],
       "block": {
-        "role": "container_open",
-        "close_directive": "endgrade"
+        "role": "leaf"
       }
     },
     {
       "name": "grid-angle",
       "directive": "grid-angle",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 362
       },
       "summary": "specifies the magnetic grid angle (declination against grid north).",
@@ -1364,7 +1403,7 @@
       "name": "group",
       "directive": "group",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 372
       },
       "summary": "",
@@ -1388,7 +1427,7 @@
       "name": "import",
       "directive": "import",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 1453
       },
       "summary": "Reads survey data in different formats (currently processed centreline in *.3d, *.plt, *.xyz formats). Survey stations may be referenced in scraps etc. When importing a Survex 3D file, stations are inserted in the survey hierarchy if there exists an identical hierarchy to that in 3D file.",
@@ -1462,7 +1501,7 @@
       "name": "infer",
       "directive": "infer",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 363
       },
       "summary": "\"infer plumbs on\" tells the program to interpret gradients 90 ^ as UP/DOWN (this means no clino corrections are applied). \"infer equates on\" will case program to interpret shots with 0 length as equate commands (which means that no tape corrections are applied)",
@@ -1512,7 +1551,7 @@
       "name": "input",
       "directive": "input",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 237
       },
       "summary": "inserts the contents of a file in place of the command. Default extension is \".th\" and may be omitted. For greatest portability use relative paths and Unix slashes \"/\", not Windows backslashes \"\\\", as directory separators.",
@@ -1548,7 +1587,7 @@
       "name": "instrument",
       "directive": "instrument",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 356
       },
       "summary": "description of the instrument that was used to survey the given quantities (same keywords as team person's role)",
@@ -1595,7 +1634,7 @@
       "name": "join",
       "directive": "join",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 1260
       },
       "summary": "Join works in two modes: it joins either two scraps or two or more points or lines in a map together. When joining more than two points or lines, use one join command for all of them, not a sequence of join commands for pairs. (E.g. use join a b c, not join a b followed by join b c.) When joining scraps, only passage walls are joined. It's a good idea to place a scrap join in the passage which is as simple as possible, otherwise you have to specify join for each pair of objects which should be joined. (If you want some object which is clipped by a scrap boundary to continue to a neighbouring scrap, use -clip off option for that object.) When joining more than two scraps at the same scrap border, a manual join must be performed where the connection points must be entered in one join statement. (Like join origScrapLineWest:end upperScrapLineWest:0 lowerScrapLineWest:0 and another similar join command for the three east wall lines.)",
@@ -1659,7 +1698,7 @@
       "name": "language",
       "directive": "language",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 38
       },
       "summary": "",
@@ -1683,7 +1722,7 @@
       "name": "layout",
       "directive": "layout",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 224
       },
       "summary": "Specifies layout for 2D maps. Settings which apply to atlas mode are marked \"A\"; map mode \"M\".",
@@ -2530,7 +2569,7 @@
       "name": "line",
       "directive": "line",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 1002
       },
       "summary": "Line is a command for drawing a line symbol on the map. Each line symbol is oriented and its visualization may depend on its orientation (e.g. pitch edge ticks). The general rule is that the free space is on the left, rock on the right. Examples: the lower side of a pitch, higher side of a chimney and interior of a passage are on the left side of pitch, chimney or wall symbols, respectively.",
@@ -2962,7 +3001,7 @@
       "name": "log",
       "directive": "log",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 195
       },
       "summary": "Turn on logging of various info. Currently only extended elevation processing log is supported.",
@@ -2986,7 +3025,7 @@
       "name": "lookup",
       "directive": "lookup",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 597
       },
       "summary": "Allows to define lookup maps. They are used for defining custom coloring of maps. (see colour command.)",
@@ -3067,7 +3106,7 @@
       "name": "map",
       "directive": "map",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 1327
       },
       "summary": "A map is a collection of either scraps or other maps of the same projection type. It's possible to include survey in the map - this will display centreline in the map. Map object simplifies the data management when selecting data for output. See the chapter How the map is put together for more thorough explanation. (Note: break only changes level of maps of scraps and has no function when used with maps of maps, as they will cause a break implicitly)",
@@ -3206,7 +3245,7 @@
       "name": "maps",
       "directive": "maps",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 170
       },
       "summary": "Turns processing of maps on (default) or off. If you turn if off, all scraps from selected surveys will be used in the output, no map definitions are taken into account. Useful for debugging map definitions.",
@@ -3230,7 +3269,7 @@
       "name": "maps-offset",
       "directive": "maps-offset",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 182
       },
       "summary": "Turns drawing maps in offset on (default) or off. If you turn if off, all cave passages will be displayed in detail in their actual position. All offset specifications will be completely ignored.",
@@ -3254,7 +3293,7 @@
       "name": "mark",
       "directive": "mark",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 460
       },
       "summary": "set the type of named stations. <type> is one of: fixed, painted and temporary (default). If there is no station list, all subsequent stations are marked.",
@@ -3305,7 +3344,7 @@
       "name": "point",
       "directive": "point",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 708
       },
       "summary": "Point is a command for drawing a point map symbol.",
@@ -3579,7 +3618,7 @@
       "name": "require",
       "directive": "require",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 1552
       },
       "summary": "Checks that the version of Therion in use is at least <version> and stops with an error if not.",
@@ -3615,7 +3654,7 @@
       "name": "revise",
       "directive": "revise",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 1517
       },
       "summary": "This command is used to set or change properties of an already existing object.",
@@ -3640,7 +3679,7 @@
       "name": "scrap",
       "directive": "scrap",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 576
       },
       "summary": "Scrap is a piece of 2D map, which doesn't contain overlapping passages (i.e. all the passages may be drawn on the paper without overlapping). For small and simple caves, the whole cave may belong to one scrap. In complicated systems, a scrap is usually one chamber or one passage. Ideally, a scrap contains about 100 m of the cave. (If necessary, scraps may be much smaller - just to display a few meters of the cave. When deciding about scrap size please take into account the following: Using small scraps may take more time for cartographer to optimize scrap joins. On the other hand smaller scraps will probably be less distorted by map warping algorithms than larger scraps. Using too large scraps may exhaust 's memory if passage fills are frequently used and the map editor in XTherion is much less responsive when editing huge scraps.) Each scrap is processed separately by ; scraps which are too large may exceed 's memory and cause errors. Scrap consists of point, line and area map symbols. See chapter How the map is put together for explanation how and in which order are they displayed. Scrap border consists of lines with the -outline out or -outline in options (passage walls have -outline out by default). These lines shouldn't intersect - otherwise Therion ( ) can't determine the interior of the scrap and \\ issues a warning message \"scrap outline intersects itself\". Each scrap has its own local cartesian coordinate system, which usually corresponds with the millimeter paper (if you measure the coordinates of map symbols by hand) or pixels of the scanned image (if you use XTherion). Therion does the transformation from this local coordinate system to the real coordinates using the positions of survey stations, which are specified both in the scrap as point map symbols and in centreline data. If the scrap doesn't contain at least two survey stations with the -name reference, you have to use the -scale option for calibrating the scrap. (This is usual for cross sections.) The transformation consists of the following steps: * Linear transformation (shifting, scaling and rotation) which \"best\" fits stations drawn in the scrap to real ones. \"Best\" means that the sum of squared distances between corresponding stations before and after transformation is minimal. The result is displayed red if debug option of the layout command is set on. * Non-linear transformation of the scrap which (1) moves survey stations to their correct position, (2) is continuous. Displayed blue in the debug mode. * Non-linear transformation of the scrap which (1) moves joined points together, (2) doesn't move survey stations, (3) is continuous. Finally the position of curves' control points is adjusted to preserve smoothness. The result is final map.",
@@ -3808,7 +3847,7 @@
       "name": "sd",
       "directive": "sd",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 359
       },
       "summary": "sets the standard deviation for the given measurements. The Quantity list can contain the following keywords: length, tape, bearing, compass, gradient, clino, counter, depth, x, y, z, position, easting, dx, northing, dy, altitude, dz.",
@@ -3866,7 +3905,7 @@
       "name": "select",
       "directive": "select",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 106
       },
       "summary": "selects objects (surveys and maps) for export. By default, all survey objects are selected. If there is no map selected, all scraps belonging to selected surveys are selected by default for map export. If there are no scraps or maps in the data, centerline from all surveys is exported in the map. When exporting maps in different projections, you need to select them for each projection separately. select does not only affect subsequent <export> commands but instead also <export> commands preceding the select command in the configuration file.",
@@ -3948,7 +3987,7 @@
       "name": "setup3d",
       "directive": "setup3d",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 648
       },
       "summary": "",
@@ -3972,7 +4011,7 @@
       "name": "sketch-colors",
       "directive": "sketch-colors",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 660
       },
       "summary": "",
@@ -3996,7 +4035,7 @@
       "name": "sketch-warp",
       "directive": "sketch-warp",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 66
       },
       "summary": "",
@@ -4020,7 +4059,7 @@
       "name": "source",
       "directive": "source",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 82
       },
       "summary": "Specifies which source (data) files Therion should read. You can specify several files here; one per line. You can also specify them using the -s command line option (see below). It is also possible to type (some small snippets of) code directly in configuration file using the multi-line syntax.",
@@ -4057,7 +4096,7 @@
       "name": "station",
       "directive": "station",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 366
       },
       "summary": "set the station comment and its flags. If \"\" is specified as a comment, it is ignored. Supported flags: entrance, continuation, air-draught[:winter/summer], sink, spring, doline, dig, arch, overhang. Also not is allowed before a flag, to remove previously added flag. You can also specify custom attributes to the station using attr flag followed by attribute name and value. Example: station 4 \"pit to explore\" continuation attr code \"V\" If there is a passage, that was explored, but not surveyed yet, estimated explored length of this passage can be added to the station with continuation flag. Just add explored <explored-length> to the station flags. Explored lengths are a part of survey/cave statistics, displayed separately. Example: station 40 \"ugly crollway\" continuation explored 100m",
@@ -4115,7 +4154,7 @@
       "name": "station-names",
       "directive": "station-names",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 377
       },
       "summary": "adds given prefix/suffix to all survey stations in the current centreline. Saves some typing.",
@@ -4162,7 +4201,7 @@
       "name": "surface",
       "directive": "surface",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 1389
       },
       "summary": "Surface (terrain) specification. It is possible to display it in two ways: as a scanned topographical map (both in 2D map and 3D model (You need to enter elevation data in order to display the topographical map in 3D model. Currently only JPEG maps are supported in 3D.) ) or surface grid -- digital elevation model (in 3D model only).",
@@ -4259,7 +4298,7 @@
       "name": "survey",
       "directive": "survey",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 262
       },
       "summary": "Survey is the main data structure. Surveys may be nested - this allows a hierarchical structure to be built. Usually some level of this hierarchical structure survey represents caves, higher levels karst areas and lower levels e.g. passages. Each survey has its own namespace specified by its <id> argument. Objects (like survey stations or scraps; see below) which belong to a subsurvey of the current survey are referenced as <object-id>@<subsurvey-id>, or, if there are more nesting levels <object-id>@<subsubsurvey-id>.<subsurvey-id>. (Note: it's not possible to reference any object from the higher-level surveys.) This means, that object identifiers must be unique only in the scope of one survey. For instance, survey stations names can be the same if they are in different surveys. This allows stations to be numbered from 0 in each survey or the joining of two caves into one cave system without renaming survey stations.",
@@ -4356,7 +4395,7 @@
       "name": "system",
       "directive": "system",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 27
       },
       "summary": "Allows to execute system commands during Therion compilation. (E.g. to open or refresh external PDF viewer.) Normally Therion waits until the subprocess is finished. If you want to continue compilation without break, use <command> & syntax on Linux and start <command> syntax on Windows.",
@@ -4378,7 +4417,7 @@
       "name": "team",
       "directive": "team",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 353
       },
       "summary": "a survey team member. The first argument is his/her name, the others describe the roles of the person in the team (optional - currently not used). The following role keywords are supported: [back]tape ([back]length), [back]compass ([back]bearing), [back]clino ([back]gradient), counter (count), depth, station, position, notes (notebook), pictures (pics), instruments (insts), assistant (dog), altitude (dz), dimensions, left, right, up (ceiling), down (floor).",
@@ -4425,7 +4464,7 @@
       "name": "text",
       "directive": "text",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 207
       },
       "summary": "Specifies translation of any default Therion text in output.",
@@ -4472,7 +4511,7 @@
       "name": "units",
       "directive": "units",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 358
       },
       "summary": "set the units for given measurements (same quantities as for sd).",
@@ -4530,7 +4569,7 @@
       "name": "unselect",
       "directive": "unselect",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch03.tex",
+        "file": "therion/thbook/ch03.tex",
         "line": 152
       },
       "summary": "Unselects objects from export.",
@@ -4554,7 +4593,7 @@
       "name": "vthreshold",
       "directive": "vthreshold",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 375
       },
       "summary": "threshold for interpreting LRUD readings as left-right-front-back reading perpendicular to the shot. If passages are horizontal (inclination < vthreshold), LR is perpendicular to the shot and UD is vertical. If passages are more or less vertical (inclination > vthreshold), even UD becomes perpendicular to the shot -- otherwise passages would not look very good. In the case of vertical shots, UD is interpreted as north-south dimension from the station to allow tube-like modeling of verticals.",
@@ -4601,7 +4640,7 @@
       "name": "walls",
       "directive": "walls",
       "source": {
-        "file": "../therion-studio/therion/thbook/ch02.tex",
+        "file": "therion/thbook/ch02.tex",
         "line": 374
       },
       "summary": "turn on/off passage shape generation from LRUD data for subsequent shots. If set auto, passage is generated only if there is no scrap referencing given centreline.",

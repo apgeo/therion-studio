@@ -1,0 +1,58 @@
+{
+  "name": "sd",
+  "directive": "sd",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 359
+  },
+  "summary": "sets the standard deviation for the given measurements. The Quantity list can contain the following keywords: length, tape, bearing, compass, gradient, clino, counter, depth, x, y, z, position, easting, dx, northing, dy, altitude, dz.",
+  "syntax": [
+    "sd <quantity list> <value> <units>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<quantity list>",
+      "name": "<quantity list>",
+      "signature": "<quantity list>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<value>",
+      "name": "<value>",
+      "signature": "<value>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<units>",
+      "name": "<units>",
+      "signature": "<units>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

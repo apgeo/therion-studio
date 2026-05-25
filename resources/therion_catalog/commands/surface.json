@@ -1,0 +1,97 @@
+{
+  "name": "surface",
+  "directive": "surface",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 1389
+  },
+  "summary": "Surface (terrain) specification. It is possible to display it in two ways: as a scanned topographical map (both in 2D map and 3D model (You need to enter elevation data in order to display the topographical map in 3D model. Currently only JPEG maps are supported in 3D.) ) or surface grid -- digital elevation model (in 3D model only).",
+  "syntax": [
+    "surface [<name>] cs <coordinate system> bitmap <filename> <calibration> grid-units <units> grid <origin x> <origin y> <x spacing> <y spacing> <x count> <y count> grid-flip (none)/vertical/horizontal [grid data] endsurface"
+  ],
+  "contexts": [
+    "none",
+    "survey"
+  ],
+  "arguments": [],
+  "options": [
+    {
+      "raw": "cs <coordinate system> = coordinate system for bitmap calibration and grid origin specification",
+      "name": "cs <coordinate system>",
+      "signature": "cs <coordinate system>",
+      "option_key": "-cs",
+      "value_arity": "1",
+      "value_domain": "unknown",
+      "description": "coordinate system for bitmap calibration and grid origin specification",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "bitmap <filename> <calibration> = scanned topographical map. calibration may have two forms: 1. [X1 Y1 x1 y1 X2 Y2 x2 y2 [units]], where upper case X/Y variables are picture coordinates (pixels; lower-left corner is 0 0), lower-case x/y variables are real coordinates. Optional units apply to real coordinates (metres by default). 2. [X1 Y1 station1 X2 Y2 station2], where upper case X/Y variables are picture coordinates and station1 and station2 are survey stations names.",
+      "name": "bitmap <filename> <calibration>",
+      "signature": "bitmap <filename> <calibration>",
+      "option_key": "-bitmap",
+      "value_arity": "N",
+      "value_domain": "path",
+      "description": "scanned topographical map. calibration may have two forms: 1. [X1 Y1 x1 y1 X2 Y2 x2 y2 [units]], where upper case X/Y variables are picture coordinates (pixels; lower-left corner is 0 0), lower-case x/y variables are real coordinates. Optional units apply to real coordinates (metres by default). 2. [X1 Y1 station1 X2 Y2 station2], where upper case X/Y variables are picture coordinates and station1 and station2 are survey stations names.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "grid-units <units> = units in which grid is specified. Metres by default.",
+      "name": "grid-units <units>",
+      "signature": "grid-units <units>",
+      "option_key": "-grid-units",
+      "value_arity": "1",
+      "value_domain": "unknown",
+      "description": "units in which grid is specified. Metres by default.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "grid <origin x> <origin y> <x spacing> <y spacing> <x count> <y count> <origin x> <origin y> = specify coordinates of the lower-left (S-W) corner of the grid <x spacing> <y spacing> = distance between grid nodes in W-E and S-N directions <x count> <y count> = number of nodes in the row and number of rows which form the grid (see below).",
+      "name": "grid <origin x> <origin y> <x spacing> <y spacing> <x count> <y count> <origin x> <origin y>",
+      "signature": "grid <origin x> <origin y> <x spacing> <y spacing> <x count> <y count> <origin x> <origin y>",
+      "option_key": "-grid",
+      "value_arity": "N",
+      "value_domain": "unknown",
+      "description": "specify coordinates of the lower-left (S-W) corner of the grid <x spacing> <y spacing> = distance between grid nodes in W-E and S-N directions <x count> <y count> = number of nodes in the row and number of rows which form the grid (see below).",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "[grid data] = a stream of numbers giving the altitude a.s.l. in grid nodes. It starts in the grid-origin and fills the grid in rows (in the row from W to E; rows from S to N).",
+      "name": "[grid data]",
+      "signature": "[grid data]",
+      "option_key": "-grid",
+      "value_arity": "1",
+      "value_domain": "unknown",
+      "description": "a stream of numbers giving the altitude a.s.l. in grid nodes. It starts in the grid-origin and fills the grid in rows (in the row from W to E; rows from S to N).",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "grid-flip (none)/vertical/horizontal = useful if your grid (exported from other program) needs to be flipped",
+      "name": "grid-flip (none)/vertical/horizontal",
+      "signature": "grid-flip (none)/vertical/horizontal",
+      "option_key": "-grid-flip",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "useful if your grid (exported from other program) needs to be flipped",
+      "allowed_values": [
+        "none",
+        "vertical",
+        "horizontal"
+      ],
+      "dependencies": []
+    }
+  ],
+  "dependencies": [
+    "context: none, survey"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "container_open",
+    "close_directive": "endsurface"
+  }
+}

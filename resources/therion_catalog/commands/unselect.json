@@ -1,0 +1,24 @@
+{
+  "name": "unselect",
+  "directive": "unselect",
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 152
+  },
+  "summary": "Unselects objects from export.",
+  "syntax": [
+    "unselect <object> [OPTIONS]"
+  ],
+  "contexts": [
+    "none"
+  ],
+  "arguments": [],
+  "options": [],
+  "dependencies": [
+    "context: none"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "equate",
+  "directive": "equate",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 369
+  },
+  "summary": "set points that are equivalent",
+  "syntax": [
+    "equate <station list>"
+  ],
+  "contexts": [
+    "centerline",
+    "none",
+    "survey"
+  ],
+  "arguments": [
+    {
+      "raw": "<station list>",
+      "name": "<station list>",
+      "signature": "<station list>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline",
+    "context: none, survey"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

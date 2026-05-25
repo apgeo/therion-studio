@@ -1,0 +1,24 @@
+{
+  "name": "sketch-colors",
+  "directive": "sketch-colors",
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 660
+  },
+  "summary": "",
+  "syntax": [
+    "* sketch-colors <number-of-colors>"
+  ],
+  "contexts": [
+    "none"
+  ],
+  "arguments": [],
+  "options": [],
+  "dependencies": [
+    "context: none"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

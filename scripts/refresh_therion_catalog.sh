@@ -90,3 +90,4 @@ python3 scripts/generate_therion_catalog.py \
   --source-ref "$SOURCE_REF"
 
 echo "Refreshed resources/therion_command_catalog.json"
+echo "Refreshed resources/therion_catalog/commands/*.json"

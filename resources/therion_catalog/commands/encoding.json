@@ -1,0 +1,36 @@
+{
+  "name": "encoding",
+  "directive": "encoding",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 213
+  },
+  "summary": "sets the encoding of input file. This allows the use of non-ASCII characters in input files.",
+  "syntax": [
+    "encoding <encoding-name>"
+  ],
+  "contexts": [
+    "none"
+  ],
+  "arguments": [
+    {
+      "raw": "<encoding-name> = to see a list of all the supported encoding names, run Therion with --print-encodings option. \"UTF-8\" (Unicode) and \"ASCII\" (7 bit) encodings are always supported.",
+      "name": "<encoding-name>",
+      "signature": "<encoding-name>",
+      "option_key": "",
+      "value_arity": "0",
+      "value_domain": "none",
+      "description": "to see a list of all the supported encoding names, run Therion with --print-encodings option. \"UTF-8\" (Unicode) and \"ASCII\" (7 bit) encodings are always supported.",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: none"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

@@ -75,9 +75,13 @@ public:
                                    const QStringList &coordinateRows,
                                    QString *errorMessage = nullptr);
     void replaceTextForCommand(const QString &contents);
+    void replaceTextForSystemNormalization(const QString &contents);
 
 private:
-    void replaceTextPreservingCursor(const QString &contents, bool emitDocumentTextChanged, bool rebuildBlocksCanvas);
+    void replaceTextPreservingCursor(const QString &contents,
+                                     bool emitDocumentTextChanged,
+                                     bool rebuildBlocksCanvas,
+                                     bool applyDirtyState);
     void replaceTextSelectingLine(const QString &contents, int lineNumber);
 
     TextEditorSourceRewriteContext context_;

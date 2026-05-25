@@ -1,0 +1,82 @@
+{
+  "name": "select",
+  "directive": "select",
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 106
+  },
+  "summary": "selects objects (surveys and maps) for export. By default, all survey objects are selected. If there is no map selected, all scraps belonging to selected surveys are selected by default for map export. If there are no scraps or maps in the data, centerline from all surveys is exported in the map. When exporting maps in different projections, you need to select them for each projection separately. select does not only affect subsequent <export> commands but instead also <export> commands preceding the select command in the configuration file.",
+  "syntax": [
+    "select <object> [OPTIONS]"
+  ],
+  "contexts": [
+    "none"
+  ],
+  "arguments": [
+    {
+      "raw": "<object> = any survey or map, identified by its ID.",
+      "name": "<object>",
+      "signature": "<object>",
+      "option_key": "",
+      "value_arity": "0",
+      "value_domain": "none",
+      "description": "any survey or map, identified by its ID.",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [
+    {
+      "raw": "recursive <on/off> = valid only when a survey is selected. If set on (by default) all subsurveys of the given survey are recursively selected/unselected.",
+      "name": "recursive <on/off>",
+      "signature": "recursive <on/off>",
+      "option_key": "-recursive",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "valid only when a survey is selected. If set on (by default) all subsurveys of the given survey are recursively selected/unselected.",
+      "allowed_values": [
+        "on",
+        "off"
+      ],
+      "dependencies": [
+        "valid only when a survey is selected. If set on (by default) all subsurveys of the given survey are recursively selected/unselected."
+      ]
+    },
+    {
+      "raw": "map-level <number> = valid only when a map is selected. Determines the level at which map expansion for atlas export is stopped. By default 0 is used; if \"basic\" is specified, expansion is done up to the basic maps. Note: Map previews are displayed only as specified in maps in the current map-level.",
+      "name": "map-level <number>",
+      "signature": "map-level <number>",
+      "option_key": "-map-level",
+      "value_arity": "1",
+      "value_domain": "number",
+      "description": "valid only when a map is selected. Determines the level at which map expansion for atlas export is stopped. By default 0 is used; if \"basic\" is specified, expansion is done up to the basic maps. Note: Map previews are displayed only as specified in maps in the current map-level.",
+      "allowed_values": [],
+      "dependencies": [
+        "valid only when a map is selected. Determines the level at which map expansion for atlas export is stopped. By default 0 is used; if \"basic\" is specified, expansion is done up to the basic maps. Note: Map previews are displayed only as specified in maps in the current map-level."
+      ]
+    },
+    {
+      "raw": "chapter-level <number> = valid only when a map is selected. Determines the level at which chapter expansion for atlas export is stopped. By default 0 is used, if \"-\" or \".\" is specified, no chapter is exported for this map. If title-pages option in layout is on, each chapter starts with a title page.",
+      "name": "chapter-level <number>",
+      "signature": "chapter-level <number>",
+      "option_key": "-chapter-level",
+      "value_arity": "1",
+      "value_domain": "number",
+      "description": "valid only when a map is selected. Determines the level at which chapter expansion for atlas export is stopped. By default 0 is used, if \"-\" or \".\" is specified, no chapter is exported for this map. If title-pages option in layout is on, each chapter starts with a title page.",
+      "allowed_values": [],
+      "dependencies": [
+        "valid only when a map is selected. Determines the level at which chapter expansion for atlas export is stopped. By default 0 is used, if \"-\" or \".\" is specified, no chapter is exported for this map. If title-pages option in layout is on, each chapter starts with a title page."
+      ]
+    }
+  ],
+  "dependencies": [
+    "context: none",
+    "valid only when a survey is selected. If set on (by default) all subsurveys of the given survey are recursively selected/unselected.",
+    "valid only when a map is selected. Determines the level at which map expansion for atlas export is stopped. By default 0 is used; if \"basic\" is specified, expansion is done up to the basic maps. Note: Map previews are displayed only as specified in maps in the current map-level.",
+    "valid only when a map is selected. Determines the level at which chapter expansion for atlas export is stopped. By default 0 is used, if \"-\" or \".\" is specified, no chapter is exported for this map. If title-pages option in layout is on, each chapter starts with a title page."
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

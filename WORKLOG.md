@@ -29,12 +29,14 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ### Phase 7 - UX, Accessibility, and Platform Conventions (`MVP` baseline)
 
-- Status: partially complete (including unsupported-file open guardrails with external-app fallback prompt, state-aware Welcome-tab onboarding cues, quick project open/close toolbar actions, and parser-level contextual-help text normalization).
+- Status: partially complete (including unsupported-file open guardrails with external-app fallback prompt, state-aware Welcome-tab onboarding cues, quick project open/close toolbar actions, parser-level contextual-help text normalization, and improved BlockEditor options table editing UX with valid-option filtering and non-truncated completion popup sizing).
+- Status: partially complete (including unsupported-file open guardrails with external-app fallback prompt, state-aware Welcome-tab onboarding cues, quick project open/close toolbar actions, parser-level contextual-help text normalization, improved BlockEditor options table editing UX with valid-option filtering and non-truncated completion popup sizing, and editable full-line `comment` blocks in Block details).
+- Status: partially complete (including unsupported-file open guardrails with external-app fallback prompt, state-aware Welcome-tab onboarding cues, quick project open/close toolbar actions, parser-level contextual-help text normalization, improved BlockEditor options table editing UX with valid-option filtering and non-truncated completion popup sizing, editable full-line `comment` blocks in Block details, and fixed uneven sibling spacing in Block canvas post-layout compaction).
 - Remaining work: improve shortcut matrix, menu behavior, focus traversal, high-DPI behavior, dark/light palette transitions, and platform-native expectations.
 
 ### Phase 8 - Release Readiness and Packaging (`MVP`)
 
-- Status: in progress.
+- Status: in progress (including command-catalog pipeline support for `resources/therion_catalog/` per-command/override layout, combined output at `resources/therion_command_catalog.json`, and `thbook`-derived inline context merges for centerline/map commands).
 - Remaining work: harden release process and artifacts after the current Windows-installer + Homebrew flow, including signing/notarization expectations and deferred Linux packaging strategy.
 
 ### Phase 9 - Map Editor Parity Polish (`Post-MVP`)

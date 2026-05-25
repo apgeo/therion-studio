@@ -1,0 +1,36 @@
+{
+  "name": "require",
+  "directive": "require",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 1552
+  },
+  "summary": "Checks that the version of Therion in use is at least <version> and stops with an error if not.",
+  "syntax": [
+    "require <version>"
+  ],
+  "contexts": [
+    "all"
+  ],
+  "arguments": [
+    {
+      "raw": "<version> = The minimum supported Therion version in the form major[.minor[.patch]], e.g. 6.3.",
+      "name": "<version>",
+      "signature": "<version>",
+      "option_key": "",
+      "value_arity": "0",
+      "value_domain": "none",
+      "description": "The minimum supported Therion version in the form major[.minor[.patch]], e.g. 6.3.",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: all"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

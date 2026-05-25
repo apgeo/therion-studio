@@ -355,8 +355,14 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
             const qreal actualTop = firstChild->sceneBoundingRect().top();
             if (actualTop > expectedTop + kGapEpsilon) {
                 const qreal deltaY = actualTop - expectedTop;
-                // Move the whole first-child subtree by moving its root item.
-                firstChild->moveBy(0.0, -deltaY);
+                // Keep sibling spacing stable by shifting all immediate child subtrees
+                // of this parent by the same delta.
+                for (BlockCanvasItem *childBlock : childBlocks) {
+                    if (childBlock == nullptr) {
+                        continue;
+                    }
+                    childBlock->moveBy(0.0, -deltaY);
+                }
             }
         }
     };

@@ -1,0 +1,22 @@
+{
+  "name": "system",
+  "directive": "system",
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 27
+  },
+  "summary": "Allows to execute system commands during Therion compilation. (E.g. to open or refresh external PDF viewer.) Normally Therion waits until the subprocess is finished. If you want to continue compilation without break, use <command> & syntax on Linux and start <command> syntax on Windows.",
+  "syntax": [],
+  "contexts": [
+    "none"
+  ],
+  "arguments": [],
+  "options": [],
+  "dependencies": [
+    "context: none"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

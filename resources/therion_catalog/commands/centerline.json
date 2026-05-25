@@ -1,0 +1,102 @@
+{
+  "name": "centreline",
+  "directive": "centerline",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 342
+  },
+  "summary": "Survey data (centreline) specification. The syntax is borrowed from Survex with minor modifications; the Survex manual may be useful as an additional reference for the user. A synonym term \"centerline\" may be used.",
+  "syntax": [
+    "centreline [OPTIONS] date <date> team <person> [<roles>] explo-date <date> explo-team <person> instrument <quantity list> <description> calibrate <quantity list> <zero error> [<scale>] units <quantity list> [<factor>] <units> sd <quantity list> <value> <units> grade <grade list> declination <value> <units> grid-angle <value> <units> infer <what> <on/off> mark <type> flags <shot flags> station <station> <comment> [<flags>] cs <coordinate system> fix <station> [<x> <y> <z> [<std x> <std y> <std z>]] equate <station list> data <style> <readings order> break group endgroup walls <auto/on/off> vthreshold <number> <units> extend <spec> [<station> [<station>]] station-names <prefix> <suffix> ... [SURVEY DATA] ... endcentreline"
+  ],
+  "contexts": [
+    "none",
+    "survey"
+  ],
+  "arguments": [],
+  "options": [
+    {
+      "raw": "id <ext_keyword> = id of the object",
+      "name": "id <ext_keyword>",
+      "signature": "id <ext_keyword>",
+      "option_key": "-id",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "id of the object",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "author <date> <person> = author of the data and its creation date",
+      "name": "author <date> <person>",
+      "signature": "author <date> <person>",
+      "option_key": "-author",
+      "value_arity": "N",
+      "value_domain": "date",
+      "description": "author of the data and its creation date",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "copyright <date> <string> = copyright date and name",
+      "name": "copyright <date> <string>",
+      "signature": "copyright <date> <string>",
+      "option_key": "-copyright",
+      "value_arity": "N",
+      "value_domain": "date",
+      "description": "copyright date and name",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "title <string> = description of the object",
+      "name": "title <string>",
+      "signature": "title <string>",
+      "option_key": "-title",
+      "value_arity": "1",
+      "value_domain": "string",
+      "description": "description of the object",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "dependencies": [
+    "context: none, survey"
+  ],
+  "allowed_values": [],
+  "inline_commands": [
+    "date",
+    "explo-date",
+    "team",
+    "explo-team",
+    "instrument",
+    "infer",
+    "declination",
+    "grid-angle",
+    "sd",
+    "grade",
+    "units",
+    "calibrate",
+    "break",
+    "mark",
+    "flags",
+    "station",
+    "cs",
+    "fix",
+    "equate",
+    "data",
+    "group",
+    "endgroup",
+    "walls",
+    "vthreshold",
+    "extend",
+    "station-names"
+  ],
+  "block": {
+    "role": "container_open",
+    "close_directive": "endcenterline"
+  },
+  "aliases": [
+    "centerline"
+  ]
+}

@@ -1,0 +1,432 @@
+{
+  "name": "line",
+  "directive": "line",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 1002
+  },
+  "summary": "Line is a command for drawing a line symbol on the map. Each line symbol is oriented and its visualization may depend on its orientation (e.g. pitch edge ticks). The general rule is that the free space is on the left, rock on the right. Examples: the lower side of a pitch, higher side of a chimney and interior of a passage are on the left side of pitch, chimney or wall symbols, respectively.",
+  "syntax": [
+    "line <type> [OPTIONS] [OPTIONS] ... [LINE DATA] ... [OPTIONS] ... [LINE DATA] ... endline"
+  ],
+  "contexts": [
+    "scrap"
+  ],
+  "arguments": [
+    {
+      "raw": "<type> is a keyword that determines the type of line. The following types are supported: passages: wall, contour, slope (Slope line marks upper border of the sloping area. It's necessary to specify l-size in at least one point. Gradient lines length and orientation is an average of specified l-sizes and orientations in the nearest points. If there is no orientation specification, gradient marks are perpendicular to the slope line.) , floor-step, pit, pitch (synonym of pit), ceiling-step, chimney, overhang, ceiling-meander, floor-meander, low-ceiling, pit-chimney; passage fills: flowstone, moonmilk, rock-border (Outer outline of large boulders. If the line is closed, it is filled with the background colour.) , rock-edge (Inner edges of large boulders.) , water-flow, abyss-entrance, dripline, fault, gradient, joint, rimstone-dam, rimstone-pool; equipment: fixed-ladder, handrail, rope, rope-ladder, steps, via-ferrata, walkway; labels: label; special: border, arrow, section (Line showing cross-section position.\\ If both control points (red dots) of a B\\'ezier curve (grey line) are given then the section line (blue) is drawn up to the perpendicular projection (dotted) of the first control point and from the projection (dotted) of the section control point. No section curve is displayed. ) , survey (Survey line is automatically drawn by Therion.) , map-connection (Used to indicate connection between maps (in offset, or the same points in extended elevation).) , u (For user defined line symbols.) .",
+      "name": "<type> is a keyword that determines the type of line. The following types are supported: passages: wall, contour, slope (Slope line marks upper border of the sloping area. It's necessary to specify l-size in at least one point. Gradient lines length and orientation is an average of specified l-sizes and orientations in the nearest points. If there is no orientation specification, gradient marks are perpendicular to the slope line.) , floor-step, pit, pitch (synonym of pit), ceiling-step, chimney, overhang, ceiling-meander, floor-meander, low-ceiling, pit-chimney; passage fills: flowstone, moonmilk, rock-border (Outer outline of large boulders. If the line is closed, it is filled with the background colour.) , rock-edge (Inner edges of large boulders.) , water-flow, abyss-entrance, dripline, fault, gradient, joint, rimstone-dam, rimstone-pool; equipment: fixed-ladder, handrail, rope, rope-ladder, steps, via-ferrata, walkway; labels: label; special: border, arrow, section (Line showing cross-section position.\\ If both control points (red dots) of a B\\'ezier curve (grey line) are given then the section line (blue) is drawn up to the perpendicular projection (dotted) of the first control point and from the projection (dotted) of the section control point. No section curve is displayed. ) , survey (Survey line is automatically drawn by Therion.) , map-connection (Used to indicate connection between maps (in offset, or the same points in extended elevation).) , u (For user defined line symbols.) .",
+      "signature": "<type> is a keyword that determines the type of line. The following types are supported: passages: wall, contour, slope (Slope line marks upper border of the sloping area. It's necessary to specify l-size in at least one point. Gradient lines length and orientation is an average of specified l-sizes and orientations in the nearest points. If there is no orientation specification, gradient marks are perpendicular to the slope line.) , floor-step, pit, pitch (synonym of pit), ceiling-step, chimney, overhang, ceiling-meander, floor-meander, low-ceiling, pit-chimney; passage fills: flowstone, moonmilk, rock-border (Outer outline of large boulders. If the line is closed, it is filled with the background colour.) , rock-edge (Inner edges of large boulders.) , water-flow, abyss-entrance, dripline, fault, gradient, joint, rimstone-dam, rimstone-pool; equipment: fixed-ladder, handrail, rope, rope-ladder, steps, via-ferrata, walkway; labels: label; special: border, arrow, section (Line showing cross-section position.\\ If both control points (red dots) of a B\\'ezier curve (grey line) are given then the section line (blue) is drawn up to the perpendicular projection (dotted) of the first control point and from the projection (dotted) of the section control point. No section curve is displayed. ) , survey (Survey line is automatically drawn by Therion.) , map-connection (Used to indicate connection between maps (in offset, or the same points in extended elevation).) , u (For user defined line symbols.) .",
+      "option_key": "",
+      "value_arity": "N",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [
+    {
+      "raw": "id <ext_keyword> = ID of the symbol.",
+      "name": "id <ext_keyword>",
+      "signature": "id <ext_keyword>",
+      "option_key": "-id",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "ID of the symbol.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "subtype <restr_keyword> = determines line subtype. The following subtypes are supported for given types: wall: invisible, bedrock (default), sand, clay, pebbles, debris, blocks, ice, underlying, overlying, unsurveyed, presumed, pit (Usually open to surface.) , flowstone, moonmilk; border: visible (default), invisible, temporary, presumed; water-flow: permanent (default), conjectural, intermittent; survey: cave (default), surface (default if centreline has surface flag). The subtype may be specified also directly in <type> specification using \":\" as a separator. (E.g. border:invisible) Any subtype specification can be used with user defined type (u). In this case you need also to define corresponding metapost symbol (see the chapter New map symbols ).",
+      "name": "subtype <restr_keyword>",
+      "signature": "subtype <restr_keyword>",
+      "option_key": "-subtype",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "determines line subtype. The following subtypes are supported for given types: wall: invisible, bedrock (default), sand, clay, pebbles, debris, blocks, ice, underlying, overlying, unsurveyed, presumed, pit (Usually open to surface.) , flowstone, moonmilk; border: visible (default), invisible, temporary, presumed; water-flow: permanent (default), conjectural, intermittent; survey: cave (default), surface (default if centreline has surface flag). The subtype may be specified also directly in <type> specification using \":\" as a separator. (E.g. border:invisible) Any subtype specification can be used with user defined type (u). In this case you need also to define corresponding metapost symbol (see the chapter New map symbols ).",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "[LINE DATA] specify either the coordinates of a line segment <x> <y>, or coordinates of a B\\'ezier curve arc <c1x> <c1y> <c2x> <c2y> <x> <y>, where c indicates the control point.",
+      "name": "[LINE DATA] specify either the coordinates of a line segment <x> <y>, or coordinates of a B\\'ezier curve arc <c1x> <c1y> <c2x> <c2y> <x> <y>, where c indicates the control point.",
+      "signature": "[LINE DATA] specify either the coordinates of a line segment <x> <y>, or coordinates of a B\\'ezier curve arc <c1x> <c1y> <c2x> <c2y> <x> <y>, where c indicates the control point.",
+      "option_key": "-line",
+      "value_arity": "N",
+      "value_domain": "unknown",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "close <on/off/auto> = determines whether a line is closed or not",
+      "name": "close <on/off/auto>",
+      "signature": "close <on/off/auto>",
+      "option_key": "-close",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "determines whether a line is closed or not",
+      "allowed_values": [
+        "on",
+        "off",
+        "auto"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "mark <keyword> = is used to mark the point on the line (see join command).",
+      "name": "mark <keyword>",
+      "signature": "mark <keyword>",
+      "option_key": "-mark",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "is used to mark the point on the line (see join command).",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "outline <in/out/none> = determines whether the line serves as a border line for a scrap. Default value is \"out\" for walls, \"none\" for all other lines. Use -outline in for large pillars etc.",
+      "name": "outline <in/out/none>",
+      "signature": "outline <in/out/none>",
+      "option_key": "-outline",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "determines whether the line serves as a border line for a scrap. Default value is \"out\" for walls, \"none\" for all other lines. Use -outline in for large pillars etc.",
+      "allowed_values": [
+        "in",
+        "out",
+        "none"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "reverse <on/off> = whether points are given in reverse order.",
+      "name": "reverse <on/off>",
+      "signature": "reverse <on/off>",
+      "option_key": "-reverse",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "whether points are given in reverse order.",
+      "allowed_values": [
+        "on",
+        "off"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "smooth <on/off/auto> = whether the line is smooth at the given point. Auto is default.",
+      "name": "smooth <on/off/auto>",
+      "signature": "smooth <on/off/auto>",
+      "option_key": "-smooth",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "whether the line is smooth at the given point. Auto is default.",
+      "allowed_values": [
+        "on",
+        "off",
+        "auto"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "adjust <horizontal/vertical> = shifts the line point to be aligned horizontally/ver\\-ti\\-cally with the previous point. It can't be set on the first point. The result is a horizontal/vertical line segment. This option is not allowed in the plan projection.",
+      "name": "adjust <horizontal/vertical>",
+      "signature": "adjust <horizontal/vertical>",
+      "option_key": "-adjust",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "shifts the line point to be aligned horizontally/ver\\-ti\\-cally with the previous point. It can't be set on the first point. The result is a horizontal/vertical line segment. This option is not allowed in the plan projection.",
+      "allowed_values": [
+        "horizontal",
+        "vertical"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "place <bottom/default/top> = changes displaying order in the map.",
+      "name": "place <bottom/default/top>",
+      "signature": "place <bottom/default/top>",
+      "option_key": "-place",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "changes displaying order in the map.",
+      "allowed_values": [
+        "bottom",
+        "default",
+        "top"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "clip <on/off> = specify whether a symbol is clipped by the scrap border.",
+      "name": "clip <on/off>",
+      "signature": "clip <on/off>",
+      "option_key": "-clip",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "specify whether a symbol is clipped by the scrap border.",
+      "allowed_values": [
+        "on",
+        "off"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "visibility <on/off> = displays/hides the symbol.",
+      "name": "visibility <on/off>",
+      "signature": "visibility <on/off>",
+      "option_key": "-visibility",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "displays/hides the symbol.",
+      "allowed_values": [
+        "on",
+        "off"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "context <point/line/area> <symbol-type> = (to be used with symbol-hide and symbol-show layout options) symbol will be hidden/shown according to rules for specified <symbol-type>. Type-specific options:",
+      "name": "context <point/line/area> <symbol-type>",
+      "signature": "context <point/line/area> <symbol-type>",
+      "option_key": "-context",
+      "value_arity": "N",
+      "value_domain": "enum",
+      "description": "(to be used with symbol-hide and symbol-show layout options) symbol will be hidden/shown according to rules for specified <symbol-type>. Type-specific options:",
+      "allowed_values": [
+        "point",
+        "line",
+        "area"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "altitude <value> = can be specified only with the wall type. This option creates an altitude label on the wall. All altitudes are exported as a difference against grid Z origin (which is 0 by default). If the value is specified, it gives the altitude difference of the point on the wall relative to the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". The value can be prefixed by a keyword \"fix\", then no nearest station is taken into consideration; the absolute given value is used instead. Units can follow the value. Examples: +4, [+4 m], [fix 1510 m].",
+      "name": "altitude <value>",
+      "signature": "altitude <value>",
+      "option_key": "-altitude",
+      "value_arity": "1",
+      "value_domain": "number",
+      "description": "can be specified only with the wall type. This option creates an altitude label on the wall. All altitudes are exported as a difference against grid Z origin (which is 0 by default). If the value is specified, it gives the altitude difference of the point on the wall relative to the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". The value can be prefixed by a keyword \"fix\", then no nearest station is taken into consideration; the absolute given value is used instead. Units can follow the value. Examples: +4, [+4 m], [fix 1510 m].",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "anchors <on/off> = this option can be specified only with the \"rope\" line type. Default is on.",
+      "name": "anchors <on/off>",
+      "signature": "anchors <on/off>",
+      "option_key": "-anchors",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "this option can be specified only with the \"rope\" line type. Default is on.",
+      "allowed_values": [
+        "on",
+        "off"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "border <on/off> = this option can be specified only with the \"slope\" symbol type. It switches on/off the border line of the slope.",
+      "name": "border <on/off>",
+      "signature": "border <on/off>",
+      "option_key": "-border",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "this option can be specified only with the \"slope\" symbol type. It switches on/off the border line of the slope.",
+      "allowed_values": [
+        "on",
+        "off"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "direction <begin/end/both/none/point> = can be used only with the section type. It indicates where to put a direction arrow on the section line. None is default. The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+      "name": "direction <begin/end/both/none/point>",
+      "signature": "direction <begin/end/both/none/point>",
+      "option_key": "-direction",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "can be used only with the section type. It indicates where to put a direction arrow on the section line. None is default. The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+      "allowed_values": [
+        "begin",
+        "end",
+        "both",
+        "none",
+        "point"
+      ],
+      "dependencies": [
+        "can be used only with the section type. It indicates where to put a direction arrow on the section line. None is default. The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option."
+      ]
+    },
+    {
+      "raw": "gradient <none/center/point> = can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+      "name": "gradient <none/center/point>",
+      "signature": "gradient <none/center/point>",
+      "option_key": "-gradient",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+      "allowed_values": [
+        "none",
+        "center",
+        "point"
+      ],
+      "dependencies": [
+        "can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option."
+      ]
+    },
+    {
+      "raw": "head <begin/end/both/none> = can be used only with the arrow type and indicates where to put an arrow head. End is default.",
+      "name": "head <begin/end/both/none>",
+      "signature": "head <begin/end/both/none>",
+      "option_key": "-head",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "can be used only with the arrow type and indicates where to put an arrow head. End is default.",
+      "allowed_values": [
+        "begin",
+        "end",
+        "both",
+        "none"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "l-size <number> = Size of the line (to the left). Only valid on and required for slope type.",
+      "name": "l-size <number>",
+      "signature": "l-size <number>",
+      "option_key": "-l-size",
+      "value_arity": "1",
+      "value_domain": "number",
+      "description": "Size of the line (to the left). Only valid on and required for slope type.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "orientation/orient <number> = orientation of the symbols on the line. Can be used only with slope type. If not specified, it's perpendicular to the line on its left side. 0 number < 360.",
+      "name": "orientation/orient <number>",
+      "signature": "orientation/orient <number>",
+      "option_key": "-orientation",
+      "value_arity": "1",
+      "value_domain": "number",
+      "description": "orientation of the symbols on the line. Can be used only with slope type. If not specified, it's perpendicular to the line on its left side. 0 number < 360.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "rebelays <on/off> = this option can be specified only with the \"rope\" line type. Default is on.",
+      "name": "rebelays <on/off>",
+      "signature": "rebelays <on/off>",
+      "option_key": "-rebelays",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "this option can be specified only with the \"rope\" line type. Default is on.",
+      "allowed_values": [
+        "on",
+        "off"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "scale = scale affects only the text on label lines, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value. Normal is default. Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 . Absolute font sizes (in points) can be assigned to named sizes using fonts-setup in the layout configuration section.",
+      "name": "scale",
+      "signature": "scale",
+      "option_key": "-scale",
+      "value_arity": "0",
+      "value_domain": "none",
+      "description": "scale affects only the text on label lines, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value. Normal is default. Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 . Absolute font sizes (in points) can be assigned to named sizes using fonts-setup in the layout configuration section.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "size <number> = synonym of l-size",
+      "name": "size <number>",
+      "signature": "size <number>",
+      "option_key": "-size",
+      "value_arity": "1",
+      "value_domain": "number",
+      "description": "synonym of l-size",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "text <string> = valid only for label lines.",
+      "name": "text <string>",
+      "signature": "text <string>",
+      "option_key": "-text",
+      "value_arity": "1",
+      "value_domain": "string",
+      "description": "valid only for label lines.",
+      "allowed_values": [],
+      "dependencies": [
+        "valid only for label lines."
+      ]
+    },
+    {
+      "raw": "height <value> = height of pit or wall:pit; available in \\ as a numeric variable ATTR__height.",
+      "name": "height <value>",
+      "signature": "height <value>",
+      "option_key": "-height",
+      "value_arity": "1",
+      "value_domain": "number",
+      "description": "height of pit or wall:pit; available in \\ as a numeric variable ATTR__height.",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "dependencies": [
+    "context: scrap",
+    "can be used only with the section type. It indicates where to put a direction arrow on the section line. None is default. The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+    "can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+    "valid only for label lines."
+  ],
+  "allowed_values": [],
+  "subtype_by_type": {
+    "wall": [
+      "invisible",
+      "bedrock",
+      "sand",
+      "clay",
+      "pebbles",
+      "debris",
+      "blocks",
+      "ice",
+      "underlying",
+      "overlying",
+      "unsurveyed",
+      "presumed",
+      "pit",
+      "flowstone",
+      "moonmilk"
+    ],
+    "border": [
+      "visible",
+      "invisible",
+      "temporary",
+      "presumed"
+    ],
+    "water-flow": [
+      "permanent",
+      "conjectural",
+      "intermittent"
+    ],
+    "survey": [
+      "cave",
+      "surface",
+      "u",
+      "c",
+      "join",
+      "out",
+      "none",
+      "plan",
+      "symbol-hide",
+      "symbol-show",
+      "fix"
+    ]
+  },
+  "block": {
+    "role": "container_open",
+    "close_directive": "endline"
+  }
+}

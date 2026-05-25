@@ -1,0 +1,47 @@
+{
+  "name": "extend",
+  "directive": "extend",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 376
+  },
+  "summary": "control how the centerline is extended. <spec> is one of the following normal/reverse = extend given and following stations to the same/reverse direction as previous station. If two stations are given - direction is applied only to given shot. left/right = same as above, but direction is specified explicitly. vertical = do not move station (shot) in X direction, use only Z component of the shot start = specify starting station (shot) ignore = ignore specified station (shot), continue extended elevation with other station (shot) if possible hide = do not show specified station (shot) in extended elevation If no stations are specified, <spec> is valid for following shots specified.",
+  "syntax": [
+    "extend <spec> [<station> [<station>]]"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<spec>",
+      "name": "<spec>",
+      "signature": "<spec>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "[<station> [<station>]",
+      "name": "[<station> [<station>]",
+      "signature": "[<station> [<station>]",
+      "option_key": "",
+      "value_arity": "N",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

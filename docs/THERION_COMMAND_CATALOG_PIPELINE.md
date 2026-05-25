@@ -1,8 +1,9 @@
 # Therion Command Catalog Pipeline
 
-This repository keeps a generated Therion command catalog in:
+This repository keeps generated Therion command metadata in:
 
-- `resources/therion_command_catalog.json`
+- `resources/therion_command_catalog.json` (combined file)
+- `resources/therion_catalog/commands/*.json` (per-command files)
 
 The catalog is generated from a pinned snapshot of Therion `thbook` sources:
 
@@ -29,7 +30,8 @@ Source snapshot metadata is tracked in:
 - `scripts/generate_therion_catalog.py`
   - Parses `ch02.tex` and `ch03.tex`.
   - Produces `resources/therion_command_catalog.json`.
-  - Merges local overrides from `resources/therion_command_catalog.overrides.json`.
+  - Produces per-command files in `resources/therion_catalog/commands/`.
+  - Merges local per-command overrides from `resources/therion_catalog/overrides/`.
 
 - `scripts/refresh_therion_catalog.sh`
   - End-to-end helper: optional snapshot update + catalog regeneration.
@@ -65,11 +67,12 @@ scripts/check_therion_catalog.sh
 - `therion/thbook/thbook.tex`
 - `docs/therion-source.lock`
 - `resources/therion_command_catalog.json`
-- `resources/therion_command_catalog.overrides.json` (if changed)
+- `resources/therion_catalog/commands/*.json`
+- `resources/therion_catalog/overrides/*.override.json` (if changed)
 
 ## Override policy
 
-Use `resources/therion_command_catalog.overrides.json` only for:
+Use `resources/therion_catalog/overrides/*.override.json` only for:
 
 - alias normalization (for example `centreline` / `centerline`)
 - missing data that cannot be extracted reliably from TeX
@@ -77,14 +80,14 @@ Use `resources/therion_command_catalog.overrides.json` only for:
 
 Parser-level extraction is the default and required path for Therion metadata behavior changes; do not add persistent overrides for data that can be parsed from source.
 
-Do not hardcode Therion command semantics in UI code when it can be represented in catalog JSON or overrides.
+Do not hardcode Therion command semantics in UI code when it can be represented in catalog JSON or per-command overrides.
 
 ## Schema extension policy
 
 When UI behavior needs metadata that is not currently present in `resources/therion_command_catalog.json`, follow this order:
 
 1. extend `scripts/generate_therion_catalog.py` (parser/generator level),
-2. regenerate `resources/therion_command_catalog.json`,
+2. regenerate `resources/therion_command_catalog.json` (and `resources/therion_catalog/commands/*.json`),
 3. update consumers to use the new generated fields.
 
 Do not hand-edit generated catalog output to add persistent fields.

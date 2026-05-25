@@ -1,0 +1,38 @@
+{
+  "name": "cs",
+  "directive": "cs",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 367
+  },
+  "summary": "coordinate system for stations with fixed coordinates",
+  "syntax": [
+    "cs <coordinate system>"
+  ],
+  "contexts": [
+    "centerline",
+    "none"
+  ],
+  "arguments": [
+    {
+      "raw": "<coordinate system>",
+      "name": "<coordinate system>",
+      "signature": "<coordinate system>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline",
+    "context: none"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

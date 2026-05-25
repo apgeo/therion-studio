@@ -1,0 +1,36 @@
+{
+  "name": "flags",
+  "directive": "flags",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 365
+  },
+  "summary": "set flags for following shots. The supported flags are: surface (for surface measurements), duplicate (for duplicated surveys), splay (for short side legs that are hidden in maps and models by default). These are excluded from length calculations. All shots having one of the stations named either \".\" or \"-\" are splay shots by default (see also data command). If flag is set to approx[imate], it is included to total length calculations, but also displayed separately in survey statistics. It should be used for shots, that were not surveyed properly and need to be resurveyed. Also \"not\" is allowed before a flag.",
+  "syntax": [
+    "flags <shot flags>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<shot flags>",
+      "name": "<shot flags>",
+      "signature": "<shot flags>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

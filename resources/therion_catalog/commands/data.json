@@ -1,0 +1,128 @@
+{
+  "name": "data",
+  "directive": "data",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 370
+  },
+  "summary": "set data style (normal, topofil, diving, cartesian, cylpolar, dimensions, nosurvey) and readings order. Reading is one of the following keywords: station, from, to, [back]tape/[back]length, [back]compass/[back]bearing, [back]clino/ 0[back]gradient, depth, fromdepth, todepth, depthchange, counter, fromcount, tocount, northing, easting, altitude, up/ceiling (dimension may be specified as a pair [<from> <to> \"5D, meaning the size at the beginning and end of the shot) , down/floor, left, right, ignore, ignoreall. See Survex manual for details. For interleaved data both newline and direction keywords are supported. If backward and forward compass or clino reading are given, the average of them is computed. If one of the shot stations is named either \".\" or \"-\", the shot has splay attribute set. Dot should be used for shots ending on features inside passage, dash for shots ending on passage walls, floor or ceiling. Although Therion makes no distinction between them yet, it should be used to improve 3D modeling in the future.",
+  "syntax": [
+    "data <style> <readings order>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<style>",
+      "name": "<style>",
+      "signature": "<style>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "enum",
+      "description": "",
+      "allowed_values": [
+        "normal",
+        "topofil",
+        "diving",
+        "cartesian",
+        "cylpolar",
+        "dimensions",
+        "nosurvey"
+      ],
+      "dependencies": []
+    },
+    {
+      "raw": "<readings order>",
+      "name": "<readings order>",
+      "signature": "<readings order>",
+      "option_key": "",
+      "value_arity": "N",
+      "value_domain": "enum",
+      "description": "",
+      "allowed_values": [
+        "tape",
+        "backtape",
+        "length",
+        "backlength",
+        "compass",
+        "backcompass",
+        "bearing",
+        "backbearing",
+        "clino",
+        "backclino",
+        "gradient",
+        "backgradient",
+        "station",
+        "from",
+        "to",
+        "depth",
+        "fromdepth",
+        "todepth",
+        "depthchange",
+        "counter",
+        "fromcount",
+        "tocount",
+        "northing",
+        "easting",
+        "altitude",
+        "up",
+        "down",
+        "floor",
+        "left",
+        "right",
+        "ignore",
+        "ignoreall"
+      ],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [
+    "normal",
+    "topofil",
+    "diving",
+    "cartesian",
+    "cylpolar",
+    "dimensions",
+    "nosurvey",
+    "tape",
+    "backtape",
+    "length",
+    "backlength",
+    "compass",
+    "backcompass",
+    "bearing",
+    "backbearing",
+    "clino",
+    "backclino",
+    "gradient",
+    "backgradient",
+    "station",
+    "from",
+    "to",
+    "depth",
+    "fromdepth",
+    "todepth",
+    "depthchange",
+    "counter",
+    "fromcount",
+    "tocount",
+    "northing",
+    "easting",
+    "altitude",
+    "up",
+    "down",
+    "floor",
+    "left",
+    "right",
+    "ignore",
+    "ignoreall"
+  ],
+  "block": {
+    "role": "leaf"
+  }
+}

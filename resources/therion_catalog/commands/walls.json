@@ -1,0 +1,40 @@
+{
+  "name": "walls",
+  "directive": "walls",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 374
+  },
+  "summary": "turn on/off passage shape generation from LRUD data for subsequent shots. If set auto, passage is generated only if there is no scrap referencing given centreline.",
+  "syntax": [
+    "walls <auto/on/off>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<auto/on/off>",
+      "name": "<auto/on/off>",
+      "signature": "<auto/on/off>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [
+    "on",
+    "off",
+    "auto"
+  ],
+  "block": {
+    "role": "leaf"
+  }
+}

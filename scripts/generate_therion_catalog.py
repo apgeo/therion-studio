@@ -81,6 +81,10 @@ CENTERLINE_INLINE_COMMAND_NAMES = {
     "extend",
     "station-names",
 }
+MAP_BODY_INLINE_COMMAND_NAMES = {
+    "break",
+    "preview",
+}
 
 
 def normalize_whitespace(value: str) -> str:
@@ -796,8 +800,6 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
                 inline_command_name = option_key[1:].strip().lower()
                 if not inline_command_name:
                     continue
-                if known_command_names and inline_command_name in known_command_names and inline_command_name != "data":
-                    continue
 
                 signature = normalize_whitespace(item.get("signature", ""))
                 signature_core = extract_signature_core(signature)
@@ -920,17 +922,11 @@ def apply_map_body_command_contexts(catalog: dict[str, Any]) -> None:
     if not map_syntax:
         return
 
-    for option in map_command.get("options", []):
-        option_name = normalize_whitespace(option.get("name", ""))
-        keyword = symbol_keyword_from_token(option_name.split(" ", 1)[0])
-        if not keyword:
+    for keyword in sorted(MAP_BODY_INLINE_COMMAND_NAMES):
+        if re.search(rf"\b{re.escape(keyword)}\b", map_syntax) is None:
             continue
         target_command = commands_by_name.get(keyword)
         if target_command is None:
-            continue
-        if option.get("description", "").strip():
-            continue
-        if re.search(rf"\b{re.escape(keyword)}\b", map_syntax) is None:
             continue
 
         contexts = target_command.setdefault("contexts", [])
@@ -939,21 +935,173 @@ def apply_map_body_command_contexts(catalog: dict[str, Any]) -> None:
         append_unique(dependencies, "context: map")
 
 
-def apply_overrides(catalog: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
-    commands_by_name = {command["name"]: command for command in catalog["commands"]}
-    for command_name, patch in overrides.get("command_patches", {}).items():
+def merge_command_entries(target: dict[str, Any], source: dict[str, Any]) -> None:
+    list_union_fields = (
+        "aliases",
+        "contexts",
+        "dependencies",
+        "inline_commands",
+        "allowed_values",
+        "type_values",
+    )
+    for field in list_union_fields:
+        source_values = source.get(field)
+        if not isinstance(source_values, list) or not source_values:
+            continue
+        target_values = target.setdefault(field, [])
+        if not isinstance(target_values, list):
+            target_values = []
+            target[field] = target_values
+        for value in source_values:
+            append_unique(target_values, value)
+
+    source_subtype_by_type = source.get("subtype_by_type")
+    if isinstance(source_subtype_by_type, dict):
+        target_subtype_by_type = target.setdefault("subtype_by_type", {})
+        if not isinstance(target_subtype_by_type, dict):
+            target_subtype_by_type = {}
+            target["subtype_by_type"] = target_subtype_by_type
+        for type_key, subtype_values in source_subtype_by_type.items():
+            if not isinstance(subtype_values, list):
+                continue
+            target_values = target_subtype_by_type.setdefault(type_key, [])
+            if not isinstance(target_values, list):
+                target_values = []
+                target_subtype_by_type[type_key] = target_values
+            for value in subtype_values:
+                append_unique(target_values, value)
+
+    for field in ("summary", "syntax", "arguments", "options"):
+        source_value = source.get(field)
+        if field == "summary":
+            if isinstance(source_value, str) and source_value.strip() and not str(target.get("summary", "")).strip():
+                target["summary"] = source_value
+            continue
+        if isinstance(source_value, list) and source_value and not target.get(field):
+            target[field] = source_value
+
+
+def merge_object_patch(target: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
+    for key, value in patch.items():
+        if isinstance(value, dict) and isinstance(target.get(key), dict):
+            merge_object_patch(target[key], value)
+            continue
+        target[key] = value
+    return target
+
+
+def apply_command_override_payload(command: dict[str, Any], payload: dict[str, Any], command_name: str, override_path: Path) -> None:
+    special_keys = {"patch", "options_by_key", "arguments_by_name", "arguments_by_index"}
+    direct_patch = {key: value for key, value in payload.items() if key not in special_keys}
+    if "patch" in payload:
+        patch_object = payload.get("patch")
+        if not isinstance(patch_object, dict):
+            raise ValueError(f"{override_path}: 'patch' must be an object for command '{command_name}'.")
+        merge_object_patch(command, patch_object)
+    elif direct_patch:
+        merge_object_patch(command, direct_patch)
+
+    options_by_key = payload.get("options_by_key", {})
+    if options_by_key:
+        if not isinstance(options_by_key, dict):
+            raise ValueError(f"{override_path}: 'options_by_key' must be an object for command '{command_name}'.")
+        option_entries = command.get("options", [])
+        if not isinstance(option_entries, list):
+            raise ValueError(f"{override_path}: command '{command_name}' has non-list options.")
+        for option_key, option_patch in options_by_key.items():
+            if not isinstance(option_patch, dict):
+                raise ValueError(f"{override_path}: patch for option '{option_key}' must be an object.")
+            normalized_option_key = normalize_whitespace(str(option_key)).lower()
+            target_option = next(
+                (
+                    option
+                    for option in option_entries
+                    if isinstance(option, dict)
+                    and normalize_whitespace(str(option.get("option_key", ""))).lower() == normalized_option_key
+                ),
+                None,
+            )
+            if target_option is None:
+                raise ValueError(
+                    f"{override_path}: command '{command_name}' has no option '{option_key}' for override."
+                )
+            merge_object_patch(target_option, option_patch)
+
+    arguments_by_name = payload.get("arguments_by_name", {})
+    if arguments_by_name:
+        if not isinstance(arguments_by_name, dict):
+            raise ValueError(f"{override_path}: 'arguments_by_name' must be an object for command '{command_name}'.")
+        arguments = command.get("arguments", [])
+        if not isinstance(arguments, list):
+            raise ValueError(f"{override_path}: command '{command_name}' has non-list arguments.")
+        for argument_name, argument_patch in arguments_by_name.items():
+            if not isinstance(argument_patch, dict):
+                raise ValueError(f"{override_path}: patch for argument '{argument_name}' must be an object.")
+            normalized_argument_name = normalize_whitespace(str(argument_name)).lower()
+            target_argument = next(
+                (
+                    argument
+                    for argument in arguments
+                    if isinstance(argument, dict)
+                    and normalize_whitespace(str(argument.get("name", ""))).lower() == normalized_argument_name
+                ),
+                None,
+            )
+            if target_argument is None:
+                raise ValueError(
+                    f"{override_path}: command '{command_name}' has no argument '{argument_name}' for override."
+                )
+            merge_object_patch(target_argument, argument_patch)
+
+    arguments_by_index = payload.get("arguments_by_index", {})
+    if arguments_by_index:
+        if not isinstance(arguments_by_index, dict):
+            raise ValueError(f"{override_path}: 'arguments_by_index' must be an object for command '{command_name}'.")
+        arguments = command.get("arguments", [])
+        if not isinstance(arguments, list):
+            raise ValueError(f"{override_path}: command '{command_name}' has non-list arguments.")
+        for index_token, argument_patch in arguments_by_index.items():
+            if not isinstance(argument_patch, dict):
+                raise ValueError(f"{override_path}: patch for argument index '{index_token}' must be an object.")
+            try:
+                index = int(str(index_token))
+            except ValueError as error:
+                raise ValueError(
+                    f"{override_path}: argument index '{index_token}' is not an integer for command '{command_name}'."
+                ) from error
+            if index < 0 or index >= len(arguments):
+                raise ValueError(
+                    f"{override_path}: argument index '{index}' is out of range for command '{command_name}'."
+                )
+            target_argument = arguments[index]
+            if not isinstance(target_argument, dict):
+                raise ValueError(
+                    f"{override_path}: argument at index '{index}' is not an object for command '{command_name}'."
+                )
+            merge_object_patch(target_argument, argument_patch)
+
+
+def apply_command_override_files(catalog: dict[str, Any], overrides_dir: Path) -> dict[str, Any]:
+    if not overrides_dir.exists():
+        return catalog
+    if not overrides_dir.is_dir():
+        raise ValueError(f"{overrides_dir}: overrides path exists but is not a directory.")
+
+    commands_by_name = {command["name"]: command for command in catalog.get("commands", []) if isinstance(command, dict)}
+    for override_path in sorted(overrides_dir.glob("*.override.json")):
+        suffix = ".override.json"
+        if not override_path.name.endswith(suffix):
+            continue
+        command_name = override_path.name[: -len(suffix)]
+        if not command_name:
+            continue
         command = commands_by_name.get(command_name)
         if command is None:
-            continue
-        for key, value in patch.items():
-            command[key] = value
-
-    for extra in overrides.get("extra_commands", []):
-        if not isinstance(extra, dict) or "name" not in extra:
-            continue
-        if extra["name"] in commands_by_name:
-            continue
-        catalog["commands"].append(extra)
+            raise ValueError(f"{override_path}: command '{command_name}' not found in generated catalog.")
+        payload = json.loads(override_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError(f"{override_path}: override payload must be a JSON object.")
+        apply_command_override_payload(command, payload, command_name, override_path)
 
     catalog["commands"] = sorted(catalog["commands"], key=lambda item: item["name"].lower())
     return catalog
@@ -965,6 +1113,28 @@ def finalize_catalog(catalog: dict[str, Any]) -> dict[str, Any]:
     catalog["commands"] = commands
     catalog["block_pairs"] = annotate_block_metadata(commands)
     return catalog
+
+
+def write_command_files(catalog: dict[str, Any], commands_dir: Path) -> None:
+    commands = catalog.get("commands", [])
+    if not isinstance(commands, list):
+        return
+
+    commands_dir.mkdir(parents=True, exist_ok=True)
+    stale_files = {path.name for path in commands_dir.glob("*.json")}
+    for command in commands:
+        if not isinstance(command, dict):
+            continue
+        command_name = normalize_directive_token(str(command.get("name", "")))
+        if not command_name:
+            continue
+        file_name = f"{command_name}.json"
+        file_path = commands_dir / file_name
+        file_path.write_text(json.dumps(command, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        stale_files.discard(file_name)
+
+    for stale_file in sorted(stale_files):
+        (commands_dir / stale_file).unlink()
 
 
 def build_catalog(inputs: list[Path], source_repo: str, source_ref: str) -> dict[str, Any]:
@@ -984,9 +1154,15 @@ def build_catalog(inputs: list[Path], source_repo: str, source_ref: str) -> dict
         commands.extend(parse_sections(text, str(input_path), known_command_names))
 
     # Deduplicate by command name while preserving first occurrence precedence.
+    # For duplicate command definitions (e.g. top-level plus centerline inline),
+    # merge context-oriented fields so scope metadata is not lost.
     deduped = {}
     for command in commands:
-        deduped.setdefault(command["name"], command)
+        existing = deduped.get(command["name"])
+        if existing is None:
+            deduped[command["name"]] = command
+            continue
+        merge_command_entries(existing, command)
 
     sorted_commands = sorted(deduped.values(), key=lambda item: item["name"].lower())
     block_pairs = annotate_block_metadata(sorted_commands)
@@ -1020,9 +1196,14 @@ def main() -> int:
         help="Output JSON path.",
     )
     parser.add_argument(
-        "--overrides",
-        default="resources/therion_command_catalog.overrides.json",
-        help="Overrides JSON path.",
+        "--overrides-dir",
+        default="resources/therion_catalog/overrides",
+        help="Directory with per-command override files (*.override.json).",
+    )
+    parser.add_argument(
+        "--commands-dir",
+        default="resources/therion_catalog/commands",
+        help="Directory where per-command JSON files are written.",
     )
     parser.add_argument(
         "--source-repo",
@@ -1053,12 +1234,12 @@ def main() -> int:
     catalog = build_catalog(input_paths, args.source_repo, args.source_ref)
     apply_source_derived_option_applicability(catalog, Path(args.source_root))
 
-    overrides_path = Path(args.overrides)
-    if overrides_path.exists():
-        overrides = json.loads(overrides_path.read_text(encoding="utf-8"))
-        catalog = apply_overrides(catalog, overrides)
+    overrides_dir = Path(args.overrides_dir)
+    catalog = apply_command_override_files(catalog, overrides_dir)
 
     catalog = finalize_catalog(catalog)
+
+    write_command_files(catalog, Path(args.commands_dir))
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)

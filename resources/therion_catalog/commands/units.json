@@ -1,0 +1,58 @@
+{
+  "name": "units",
+  "directive": "units",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 358
+  },
+  "summary": "set the units for given measurements (same quantities as for sd).",
+  "syntax": [
+    "units <quantity list> [<factor>] <units>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<quantity list>",
+      "name": "<quantity list>",
+      "signature": "<quantity list>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "[<factor>]",
+      "name": "[<factor>]",
+      "signature": "[<factor>]",
+      "option_key": "",
+      "value_arity": "N",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<units>",
+      "name": "<units>",
+      "signature": "<units>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

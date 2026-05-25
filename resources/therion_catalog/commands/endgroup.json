@@ -1,0 +1,24 @@
+{
+  "name": "endgroup",
+  "directive": "endgroup",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 373
+  },
+  "summary": "group/endgroup pair enables the user to make temporary changes in almost any setting (calibrate, units, sd, data, flags...)",
+  "syntax": [
+    "endgroup"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

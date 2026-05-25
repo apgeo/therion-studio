@@ -22,8 +22,8 @@ void TextEditorTab::buildModeController()
     modeContext.hideFindBar = [this]() {
         hideFindBar();
     };
-    modeContext.replaceTextForCommand = [this](const QString &contents) {
-        replaceTextForCommand(contents);
+    modeContext.replaceTextForSystemNormalization = [this](const QString &contents) {
+        replaceTextForSystemNormalization(contents);
     };
     modeContext.rebuildBlocksCanvasFromText = [this]() {
         rebuildBlocksCanvasFromText();

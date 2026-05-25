@@ -1,0 +1,81 @@
+{
+  "name": "lookup",
+  "directive": "lookup",
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 597
+  },
+  "summary": "Allows to define lookup maps. They are used for defining custom coloring of maps. (see colour command.)",
+  "syntax": [
+    "lookup <type>[:<index>] [-title \"custom title text\"] <parameter(s)> [colour] [\"text in legend\"] ... endlookup"
+  ],
+  "contexts": [
+    "none"
+  ],
+  "arguments": [
+    {
+      "raw": "<type> = May be altitude, explo-date, topo-date, map or scrap.",
+      "name": "<type>",
+      "signature": "<type>",
+      "option_key": "",
+      "value_arity": "0",
+      "value_domain": "none",
+      "description": "May be altitude, explo-date, topo-date, map or scrap.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<index> = the index is a user defined string that allows to distinguish different lookup maps for the same type.",
+      "name": "<index>",
+      "signature": "<index>",
+      "option_key": "",
+      "value_arity": "0",
+      "value_domain": "none",
+      "description": "the index is a user defined string that allows to distinguish different lookup maps for the same type.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<parameter> = the thing, you want to set the color for, e.g. an altitude with type altitude. May be distinct values or (if appropriate) bands.",
+      "name": "<parameter>",
+      "signature": "<parameter>",
+      "option_key": "",
+      "value_arity": "0",
+      "value_domain": "none",
+      "description": "the thing, you want to set the color for, e.g. an altitude with type altitude. May be distinct values or (if appropriate) bands.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "[colour] = grayscale value, RGB triplet, CMYK quadruplet or a combination of eight values (RGB, grayscale, CMYK). Use empty brackets ([]) if you want Therion to use it’s default colour palette together with a text label.",
+      "name": "[colour]",
+      "signature": "[colour]",
+      "option_key": "-colour",
+      "value_arity": "0",
+      "value_domain": "none",
+      "description": "grayscale value, RGB triplet, CMYK quadruplet or a combination of eight values (RGB, grayscale, CMYK). Use empty brackets ([]) if you want Therion to use it’s default colour palette together with a text label.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "[text in legend] = some optional text to show in the legend.",
+      "name": "[text in legend]",
+      "signature": "[text in legend]",
+      "option_key": "-text",
+      "value_arity": "N",
+      "value_domain": "string",
+      "description": "some optional text to show in the legend.",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: none"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "container_open",
+    "close_directive": "endlookup"
+  }
+}

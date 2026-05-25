@@ -1,0 +1,47 @@
+{
+  "name": "fix",
+  "directive": "fix",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 368
+  },
+  "summary": "fix station coordinates (with specified errors - only the units transformation, not calibration, is applied to them).",
+  "syntax": [
+    "fix <station> [<x> <y> <z> [<std x> <std y> <std z>]]"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<station>",
+      "name": "<station>",
+      "signature": "<station>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "[<x> <y> <z> [<std x> <std y> <std z>]",
+      "name": "[<x> <y> <z> [<std x> <std y> <std z>]",
+      "signature": "[<x> <y> <z> [<std x> <std y> <std z>]",
+      "option_key": "",
+      "value_arity": "N",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

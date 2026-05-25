@@ -86,7 +86,7 @@ These instructions apply to the whole repository.
 - Any change that touches Therion parsing, serialization, rewrite behavior, or source-to-model synchronization should include explicit round-trip or behavioral verification and should call out remaining semantic-risk areas.
 - Prefer structured metadata over runtime heuristics when behavior depends on documented rules. In particular, style catalogs, highlight palettes, and help metadata should be data-driven rather than hardcoded ad hoc.
 - For Therion completion/highlighting/help behavior, implement metadata correctness in parser/generator code first; do not solve these by editing generated catalog output or adding long-lived overrides.
-- Use `resources/therion_command_catalog.overrides.json` only as a short-term fallback when parser extraction is not yet feasible, and remove such overrides once parser support is added.
+- Use `resources/therion_catalog/overrides/*.override.json` only as a short-term fallback when parser extraction is not yet feasible, and remove such overrides once parser support is added.
 
 ## UI and Behavior Rules
 

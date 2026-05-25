@@ -1,0 +1,47 @@
+{
+  "name": "station-names",
+  "directive": "station-names",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 377
+  },
+  "summary": "adds given prefix/suffix to all survey stations in the current centreline. Saves some typing.",
+  "syntax": [
+    "station-names <prefix> <suffix>"
+  ],
+  "contexts": [
+    "centerline"
+  ],
+  "arguments": [
+    {
+      "raw": "<prefix>",
+      "name": "<prefix>",
+      "signature": "<prefix>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<suffix>",
+      "name": "<suffix>",
+      "signature": "<suffix>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: centerline"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

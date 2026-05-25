@@ -2,6 +2,7 @@
 
 #include <QAction>
 #include <QColor>
+#include <QDesktopServices>
 #include <QDockWidget>
 #include <QEvent>
 #include <QFile>
@@ -26,6 +27,8 @@
 #include <QSizePolicy>
 #include <QSplitter>
 #include <QLineEdit>
+#include <QMimeDatabase>
+#include <QMimeType>
 #include <QStandardItem>
 #include <QStandardItemModel>
 #include <QStringList>
@@ -35,6 +38,7 @@
 #include <QTimer>
 #include <QToolButton>
 #include <QTreeView>
+#include <QUrl>
 #include <QKeySequence>
 #include <QSvgRenderer>
 #include <QWidget>
@@ -132,6 +136,62 @@ QString workspaceCommandBarStyleSheet(const QColor &backgroundColor)
         .arg(backgroundColor.name(QColor::HexRgb));
 }
 
+bool isSupportedTextEditorFilePath(const QString &filePath)
+{
+    const QFileInfo info(filePath);
+    if (!info.isFile()) {
+        return false;
+    }
+
+    const QString fileName = info.fileName();
+    if (fileName.compare(QStringLiteral("thconfig"), Qt::CaseInsensitive) == 0) {
+        return true;
+    }
+
+    const QString suffix = info.suffix().toLower();
+    if (suffix == QStringLiteral("th")
+        || suffix == QStringLiteral("thconfig")
+        || suffix == QStringLiteral("txt")
+        || suffix == QStringLiteral("log")) {
+        return true;
+    }
+
+    const QMimeType mimeType = QMimeDatabase().mimeTypeForFile(filePath, QMimeDatabase::MatchDefault);
+    return mimeType.isValid() && mimeType.inherits(QStringLiteral("text/plain"));
+}
+
+bool openFileExternally(QWidget *parent, const QString &filePath)
+{
+    if (QDesktopServices::openUrl(QUrl::fromLocalFile(filePath))) {
+        return true;
+    }
+
+    QMessageBox::warning(parent,
+                         QObject::tr("Open in External App"),
+                         QObject::tr("Failed to open %1 with the system default application.")
+                             .arg(QDir::toNativeSeparators(filePath)));
+    return false;
+}
+
+void showUnsupportedFilePrompt(QWidget *parent, const QString &filePath)
+{
+    QMessageBox messageBox(parent);
+    messageBox.setIcon(QMessageBox::Information);
+    messageBox.setWindowTitle(QObject::tr("Unsupported File"));
+    messageBox.setText(QObject::tr("Unsupported file."));
+    messageBox.setInformativeText(
+        QObject::tr("Therion Studio cannot open this file type in the internal editor:\n%1")
+            .arg(QDir::toNativeSeparators(filePath)));
+    auto *openExternalButton = messageBox.addButton(QObject::tr("Open in External App"), QMessageBox::ActionRole);
+    messageBox.addButton(QMessageBox::Cancel);
+    messageBox.setDefaultButton(QMessageBox::Cancel);
+    messageBox.exec();
+
+    if (messageBox.clickedButton() == openExternalButton) {
+        openFileExternally(parent, filePath);
+    }
+}
+
 QHash<QString, QString> loadStructureNameOverridesFromJson(const QString &json)
 {
     QHash<QString, QString> overrides;
@@ -190,7 +250,28 @@ bool isProtectedMacUserFolder(const QString &path)
     return false;
 }
 
-QWidget *createCenteredMessage(const QString &title, const QString &body)
+constexpr auto kWelcomeTabPropertyName = "therionStudioWelcomeTab";
+
+int findWelcomeTabIndex(const QTabWidget *tabs)
+{
+    if (tabs == nullptr) {
+        return -1;
+    }
+
+    for (int index = 0; index < tabs->count(); ++index) {
+        QWidget *widget = tabs->widget(index);
+        if (widget != nullptr && widget->property(kWelcomeTabPropertyName).toBool()) {
+            return index;
+        }
+    }
+
+    return -1;
+}
+
+QWidget *createCenteredMessage(const QString &title,
+                               const QString &body,
+                               const QString &buttonText = QString(),
+                               std::function<void()> onButtonClick = {})
 {
     auto *widget = new QWidget;
     auto *layout = new QVBoxLayout(widget);
@@ -210,6 +291,16 @@ QWidget *createCenteredMessage(const QString &title, const QString &body)
 
     layout->addWidget(titleLabel);
     layout->addWidget(bodyLabel);
+    if (!buttonText.isEmpty()) {
+        auto *button = new QPushButton(buttonText);
+        button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        QObject::connect(button, &QPushButton::clicked, widget, [onButtonClick]() {
+            if (onButtonClick) {
+                onButtonClick();
+            }
+        });
+        layout->addWidget(button);
+    }
 
     layout->addStretch(1);
 
@@ -441,11 +532,17 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     hostLayout->setContentsMargins(4, 4, 8, 4);
     hostLayout->setSpacing(4);
 
+    workspaceOpenProjectButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Open Project"), QStringLiteral("folder-open"));
+    workspaceCloseProjectButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Close Project"), QStringLiteral("folder-x"));
+    workspaceProjectSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
     workspaceSaveButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Save"), QStringLiteral("save"));
     workspaceUndoButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Undo"), QStringLiteral("undo-2"));
     workspaceRedoButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Redo"), QStringLiteral("redo-2"));
     workspaceCompileCurrentConfigButton_ =
         createWorkspaceIconButton(workspaceModeSwitcher_, tr("Compile Current Config"), QStringLiteral("play"));
+    hostLayout->addWidget(workspaceOpenProjectButton_);
+    hostLayout->addWidget(workspaceCloseProjectButton_);
+    hostLayout->addWidget(workspaceProjectSeparator_);
     hostLayout->addWidget(workspaceSaveButton_);
     hostLayout->addWidget(createWorkspaceToolbarSeparator(workspaceModeSwitcher_));
     hostLayout->addWidget(workspaceUndoButton_);
@@ -527,6 +624,20 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     hostLayout->addWidget(workspaceMapModeSwitcher_);
     hostLayout->addWidget(workspaceTextModeSwitcher_);
 
+    connect(workspaceOpenProjectButton_, &QToolButton::clicked, this, [this]() {
+        if (openProjectAction_ != nullptr) {
+            openProjectAction_->trigger();
+        } else {
+            openProject();
+        }
+    });
+    connect(workspaceCloseProjectButton_, &QToolButton::clicked, this, [this]() {
+        if (closeProjectAction_ != nullptr) {
+            closeProjectAction_->trigger();
+        } else {
+            closeProject();
+        }
+    });
     connect(workspaceSaveButton_, &QToolButton::clicked, this, &MainWindow::saveActiveDocument);
     connect(workspaceUndoButton_, &QToolButton::clicked, this, &MainWindow::triggerUndoForActiveDocument);
     connect(workspaceRedoButton_, &QToolButton::clicked, this, &MainWindow::triggerRedoForActiveDocument);
@@ -603,6 +714,9 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     if (workspaceModeSwitcher_ == nullptr
         || workspaceMapModeSwitcher_ == nullptr
         || workspaceTextModeSwitcher_ == nullptr
+        || workspaceOpenProjectButton_ == nullptr
+        || workspaceCloseProjectButton_ == nullptr
+        || workspaceProjectSeparator_ == nullptr
         || workspaceVisualModeButton_ == nullptr
         || workspaceRawModeButton_ == nullptr
         || workspaceMapPaneWindowButton_ == nullptr
@@ -653,6 +767,9 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceModeSwitcher_->setVisible(true);
     workspaceMapModeSwitcher_->setVisible(showMapModes);
     workspaceTextModeSwitcher_->setVisible(showTextModes);
+    workspaceOpenProjectButton_->setVisible(true);
+    workspaceCloseProjectButton_->setVisible(true);
+    workspaceProjectSeparator_->setVisible(true);
     workspaceHistorySeparator_->setVisible(showZoomTools);
     workspaceZoomGroup_->setVisible(showZoomTools);
     workspaceZoomSeparator_->setVisible(showZoomTools);
@@ -1242,6 +1359,7 @@ void MainWindow::restoreOpenDocuments()
     }
 
     const QString activeDocumentPath = sessionStore_.activeDocumentPath();
+    bool skippedUnsupportedDocument = false;
 
     for (const QString &documentPath : openDocumentPaths) {
         if (documentPath.isEmpty() || isProtectedMacUserFolder(documentPath)) {
@@ -1251,7 +1369,11 @@ void MainWindow::restoreOpenDocuments()
         if (QFileInfo(documentPath).suffix().toLower() == QStringLiteral("th2")) {
             openMapEditorTab(documentPath);
         } else {
-            openTextTab(documentPath);
+            if (openTextTab(documentPath, false) == nullptr) {
+                skippedUnsupportedDocument = true;
+                appendConsoleLine(tr("Skipped unsupported document during session restore: %1")
+                                      .arg(QDir::toNativeSeparators(documentPath)));
+            }
         }
     }
 
@@ -1268,6 +1390,10 @@ void MainWindow::restoreOpenDocuments()
                 focusDetachedMapEditorTab(canonicalDocumentPath(activeDocumentPath));
             }
         }
+    }
+
+    if (skippedUnsupportedDocument) {
+        persistOpenDocuments();
     }
 }
 
@@ -1316,9 +1442,36 @@ void MainWindow::persistOpenDocuments()
 
 void MainWindow::addWelcomeTab()
 {
-    editorTabs_->addTab(createCenteredMessage(tr("Therion Studio"),
-                                             tr("Open a project to begin working with Therion documents, maps, and structure views.")),
-                        tr("Welcome"));
+    QWidget *welcomeWidget = nullptr;
+    if (projectRootPath_.isEmpty()) {
+        welcomeWidget = createCenteredMessage(tr("Therion Studio"),
+                                              tr("Open a project to begin working with Therion documents, maps, and structure views."),
+                                              tr("Open Project..."),
+                                              [this]() {
+                                                  openProject();
+                                              });
+    } else {
+        welcomeWidget = createCenteredMessage(tr("Therion Studio"),
+                                              tr("Open file from sidebar to begin editing this project."));
+    }
+    welcomeWidget->setProperty(kWelcomeTabPropertyName, true);
+
+    const int existingWelcomeIndex = findWelcomeTabIndex(editorTabs_);
+    if (existingWelcomeIndex >= 0) {
+        const bool wasCurrent = editorTabs_->currentIndex() == existingWelcomeIndex;
+        QWidget *existingWidget = editorTabs_->widget(existingWelcomeIndex);
+        editorTabs_->removeTab(existingWelcomeIndex);
+        if (existingWidget != nullptr) {
+            existingWidget->deleteLater();
+        }
+        editorTabs_->insertTab(existingWelcomeIndex, welcomeWidget, tr("Welcome"));
+        if (wasCurrent) {
+            editorTabs_->setCurrentIndex(existingWelcomeIndex);
+        }
+    } else {
+        editorTabs_->addTab(welcomeWidget, tr("Welcome"));
+    }
+
     refreshDocumentStatusWidgets();
     refreshWorkspaceModeSwitcher();
 }
@@ -1353,6 +1506,9 @@ void MainWindow::openProject()
     rebuildStructureSidebar();
     refreshTherionConfigDisplay();
     updateProjectActionState();
+    if (editorTabs_->count() == 0 || findWelcomeTabIndex(editorTabs_) >= 0) {
+        addWelcomeTab();
+    }
     statusBar()->showMessage(tr("Project root set to %1").arg(projectRootPath_), 3000);
     appendConsoleLine(tr("Project root set to %1").arg(projectRootPath_));
 }
@@ -1368,14 +1524,16 @@ void MainWindow::closeProject()
         return;
     }
 
+    const QString closedProjectPath = projectRootPath_;
+    projectRootPath_.clear();
+
     clearDocumentTabs();
     resetProjectBrowser();
     sessionStore_.setLastProjectPath(QString());
     persistOpenDocuments();
     rebuildStructureSidebar();
     statusBar()->showMessage(tr("Project closed"), 3000);
-    appendConsoleLine(tr("Closed project %1").arg(projectRootPath_));
-    projectRootPath_.clear();
+    appendConsoleLine(tr("Closed project %1").arg(closedProjectPath));
     refreshTherionConfigDisplay();
     updateProjectActionState();
 }
@@ -1392,8 +1550,10 @@ void MainWindow::handleProjectTreeActivated(const QModelIndex &index)
 
     if (QFileInfo(filePath).suffix().toLower() == QStringLiteral("th2")) {
         openMapEditorTab(filePath);
-    } else {
+    } else if (isSupportedTextEditorFilePath(filePath)) {
         openTextTab(filePath);
+    } else {
+        showUnsupportedFilePrompt(this, filePath);
     }
 }
 
@@ -1628,9 +1788,15 @@ void MainWindow::showFindBar(bool replaceMode)
     documentShowFindBarForWidget(tabWidget, replaceMode);
 }
 
-TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath)
+TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, bool showUnsupportedPrompt)
 {
     const QString canonicalPath = canonicalDocumentPath(filePath);
+    if (!isSupportedTextEditorFilePath(canonicalPath)) {
+        if (showUnsupportedPrompt) {
+            showUnsupportedFilePrompt(this, canonicalPath);
+        }
+        return nullptr;
+    }
 
     for (int index = 0; index < editorTabs_->count(); ++index) {
         auto *existingTab = qobject_cast<TherionStudio::TextEditorTab *>(editorTabs_->widget(index));
@@ -1652,6 +1818,15 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath)
         QMessageBox::warning(this, tr("Open File"), errorMessage);
         tab->deleteLater();
         return nullptr;
+    }
+
+    const int welcomeTabIndex = findWelcomeTabIndex(editorTabs_);
+    if (welcomeTabIndex >= 0) {
+        QWidget *welcomeWidget = editorTabs_->widget(welcomeTabIndex);
+        editorTabs_->removeTab(welcomeTabIndex);
+        if (welcomeWidget != nullptr) {
+            welcomeWidget->deleteLater();
+        }
     }
 
     const int tabIndex = editorTabs_->addTab(tab, tab->displayName());
@@ -1766,6 +1941,15 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         QMessageBox::warning(this, tr("Open File"), errorMessage);
         tab->deleteLater();
         return nullptr;
+    }
+
+    const int welcomeTabIndex = findWelcomeTabIndex(editorTabs_);
+    if (welcomeTabIndex >= 0) {
+        QWidget *welcomeWidget = editorTabs_->widget(welcomeTabIndex);
+        editorTabs_->removeTab(welcomeTabIndex);
+        if (welcomeWidget != nullptr) {
+            welcomeWidget->deleteLater();
+        }
     }
 
     const int tabIndex = editorTabs_->addTab(tab, tab->displayName());

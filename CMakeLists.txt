@@ -400,6 +400,8 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/eye.svg
     resources/icons/lucide/eye-off.svg
     resources/icons/lucide/folder-open.svg
+    resources/icons/lucide/folder-tree.svg
+    resources/icons/lucide/folder-x.svg
     resources/icons/lucide/hand.svg
     resources/icons/lucide/image.svg
     resources/icons/lucide/map-pin.svg

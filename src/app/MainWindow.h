@@ -119,7 +119,7 @@ private:
     bool confirmCloseTab(int index);
     bool confirmCloseDirtyDocuments();
     void clearDocumentTabs();
-    TherionStudio::TextEditorTab *openTextTab(const QString &filePath);
+    TherionStudio::TextEditorTab *openTextTab(const QString &filePath, bool showUnsupportedPrompt = true);
     TherionStudio::MapEditorTab *openMapEditorTab(const QString &filePath);
     QWidget *currentDocumentWidget() const;
     TherionStudio::TextEditorTab *currentTextTab() const;
@@ -266,6 +266,8 @@ private:
     QWidget *workspaceTextModeSwitcher_ = nullptr;
     QWidget *workspaceZoomGroup_ = nullptr;
     QWidget *workspaceMapToolsGroup_ = nullptr;
+    QToolButton *workspaceOpenProjectButton_ = nullptr;
+    QToolButton *workspaceCloseProjectButton_ = nullptr;
     QToolButton *workspaceSaveButton_ = nullptr;
     QToolButton *workspaceUndoButton_ = nullptr;
     QToolButton *workspaceRedoButton_ = nullptr;
@@ -281,6 +283,7 @@ private:
     QToolButton *workspaceLineButton_ = nullptr;
     QToolButton *workspaceFreehandLineButton_ = nullptr;
     QToolButton *workspaceAreaButton_ = nullptr;
+    QFrame *workspaceProjectSeparator_ = nullptr;
     QFrame *workspaceHistorySeparator_ = nullptr;
     QFrame *workspaceCompileSeparator_ = nullptr;
     QFrame *workspaceZoomSeparator_ = nullptr;

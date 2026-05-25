@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QTabWidget>
+#include <QToolButton>
 #include <QWidget>
 
 #include "MainWindowDocumentHelpers.h"
@@ -116,5 +117,11 @@ void MainWindow::updateProjectActionState()
     }
     if (closeProjectAction_ != nullptr) {
         closeProjectAction_->setEnabled(hasOpenProject);
+    }
+    if (workspaceOpenProjectButton_ != nullptr) {
+        workspaceOpenProjectButton_->setEnabled(!hasOpenProject);
+    }
+    if (workspaceCloseProjectButton_ != nullptr) {
+        workspaceCloseProjectButton_->setEnabled(hasOpenProject);
     }
 }

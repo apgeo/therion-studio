@@ -733,7 +733,7 @@ void MainWindow::buildStructureSidebar()
     activityLayout->setContentsMargins(6, 10, 6, 10);
     activityLayout->setSpacing(7);
 
-    const QString filesIconName = QStringLiteral("folder-open");
+    const QString filesIconName = QStringLiteral("folder-tree");
     const QString structureIconName = QStringLiteral("network");
     const QString consoleIconName = QStringLiteral("cog");
     const QSize activityIconSize(20, 20);

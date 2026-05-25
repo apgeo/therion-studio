@@ -19,6 +19,7 @@ Therion Studio is a desktop editor for Therion cave-mapping projects. It provide
 The app window has four main areas:
 
 - menu bar (`File`, `Edit`, `Map`, `View`, `Window`, `Help`)
+- top command bar with quick actions (`Open Project`, `Close Project`, `Save`, editor/map tools)
 - left sidebar with activity icons (`Files`, `Structure`, `Compiler`) and a `Compile` action
 - center tab area for documents
 - bottom status bar (app state, compile state, encoding, and map status)
@@ -31,11 +32,15 @@ The app window has four main areas:
 2. Choose your project folder.
 3. Use the `Files` pane to open documents.
 
+When no project is open, the `Welcome` tab shows an `Open Project...` button.
+When a project is open but no document tab is active, the `Welcome` tab shows `Open file from sidebar`.
+
 ### 3.2 Open Documents
 
 - Double-click a file in `Files`.
 - `.th2` files open in the map editor.
-- Other files open in the text editor.
+- Supported text files open in the text editor (`.th`, `.thconfig`, `.log`, `.txt`, and generic plain-text files).
+- Unsupported files (for example images or PDF) show an `Unsupported file` message with `Open in External App`.
 
 ### 3.3 Save Changes
 

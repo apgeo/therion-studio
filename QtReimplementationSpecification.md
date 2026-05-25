@@ -243,7 +243,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 
 #### 3.8.1 Project Browser Behavior
 
-- Clicking a file row shall open that file in the editor area and mark it as the active file.
+- Clicking a file row shall open supported files in the editor area and mark the opened document as active; unsupported file types shall not open in the internal editor and shall show an explicit unsupported-file prompt with an option to open externally.
 - Clicking a folder row shall select that folder and toggle its expanded state.
 - Clicking a folder row that is already selected shall collapse it and clear the folder selection.
 - Clicking empty space in the project browser shall clear the current file and folder selection.

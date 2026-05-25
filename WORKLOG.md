@@ -60,6 +60,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Track A: keep `TextEditorTab` as a thin orchestration shell; continue narrowing raw completion/catalog services and remaining friend/controller boundaries.
 - Track B: continue extracting `MapEditorTab` responsibilities into focused controllers for drawing, inspectors, selection details, scene lifecycle, and undo/snapshot orchestration.
 - Track C: consolidate shared source-edit/rewrite primitives used by Raw, Blocks, and Map modes into focused non-UI services.
+- MainWindow maintenance: split status-bar/status-lifecycle methods into `src/app/MainWindowStatusUi.cpp` to keep `src/app/MainWindow.cpp` within structure-constraint line limits without behavior changes.
 - BlockEditor next slice: consolidate selection/details glue (`selectBlockInCanvasAndDetails`, `refreshBlockDetailsSelectionFromScene`, `resolveBlockCanvasItem`, `selectBlockCanvasItem`, and related thin delegates) if API boundaries remain stable.
 - Guardrail: each slice should own one responsibility, keep behavior stable, and update documentation when user-visible behavior changes.
 

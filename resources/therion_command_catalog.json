@@ -1,9 +1,9 @@
 {
   "metadata": {
-    "generated_at_utc": "2026-05-25T17:26:42.280468+00:00",
+    "generated_at_utc": "2026-05-25T18:42:31.004983+00:00",
     "generator_version": "3",
-    "source_repository": "snapshot-copy",
-    "source_reference": "snapshot-copy",
+    "source_repository": "https://github.com/therion/therion",
+    "source_reference": "snapshot",
     "source_files": [
       "therion/thbook/ch02.tex",
       "therion/thbook/ch03.tex"
@@ -92,17 +92,6 @@
           "value_arity": "1",
           "value_domain": "keyword",
           "description": "ID of the symbol.",
-          "allowed_values": [],
-          "dependencies": []
-        },
-        {
-          "raw": "the data lines consist of border line references (IDs)",
-          "name": "the data lines consist of border line references (IDs)",
-          "signature": "the data lines consist of border line references (IDs)",
-          "option_key": "-the",
-          "value_arity": "N",
-          "value_domain": "unknown",
-          "description": "",
           "allowed_values": [],
           "dependencies": []
         },
@@ -3166,43 +3155,6 @@
           "value_arity": "1",
           "value_domain": "unknown",
           "description": "associate a survey with map (e.g.\\ all surveying statistics from this survey will be used when this map is selected for output).",
-          "allowed_values": [],
-          "dependencies": []
-        },
-        {
-          "raw": "the data lines consist of scrap or map references. Note that you can not mix them together.",
-          "name": "the data lines consist of scrap or map references. Note that you can not mix them together.",
-          "signature": "the data lines consist of scrap or map references. Note that you can not mix them together.",
-          "option_key": "-the",
-          "value_arity": "N",
-          "value_domain": "unknown",
-          "description": "",
-          "allowed_values": [],
-          "dependencies": []
-        },
-        {
-          "raw": "if you refer to map, you can specify offset at which this sub-map will be displayed together with preview type of its original position. Syntax is following: <map reference> [<offset X> <offset Y> <units>] <above/below/none>",
-          "name": "if you refer to map, you can specify offset at which this sub-map will be displayed together with preview type of its original position. Syntax is following: <map reference> [<offset X> <offset Y> <units>] <above/below/none>",
-          "signature": "if you refer to map, you can specify offset at which this sub-map will be displayed together with preview type of its original position. Syntax is following: <map reference> [<offset X> <offset Y> <units>] <above/below/none>",
-          "option_key": "-if",
-          "value_arity": "N",
-          "value_domain": "enum",
-          "description": "",
-          "allowed_values": [
-            "above",
-            "below",
-            "none"
-          ],
-          "dependencies": []
-        },
-        {
-          "raw": "scraps following the break will be placed on another level (only applies to maps consisting of scraps)",
-          "name": "scraps following the break will be placed on another level (only applies to maps consisting of scraps)",
-          "signature": "scraps following the break will be placed on another level (only applies to maps consisting of scraps)",
-          "option_key": "-scraps",
-          "value_arity": "N",
-          "value_domain": "unknown",
-          "description": "",
           "allowed_values": [],
           "dependencies": []
         },

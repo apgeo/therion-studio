@@ -38,17 +38,6 @@
       "dependencies": []
     },
     {
-      "raw": "the data lines consist of border line references (IDs)",
-      "name": "the data lines consist of border line references (IDs)",
-      "signature": "the data lines consist of border line references (IDs)",
-      "option_key": "-the",
-      "value_arity": "N",
-      "value_domain": "unknown",
-      "description": "",
-      "allowed_values": [],
-      "dependencies": []
-    },
-    {
       "raw": "place <bottom/default/top> = changes displaying order in the map.",
       "name": "place <bottom/default/top>",
       "signature": "place <bottom/default/top>",

@@ -156,6 +156,21 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         keys = {option.get("option_key") for option in line_options}
         self.assertIn("-subtype", keys)
 
+    def test_area_comopt_prose_is_not_parsed_as_option(self) -> None:
+        area_options = self.commands_by_name["area"]["options"]
+        keys = {option.get("option_key") for option in area_options}
+        self.assertNotIn("-the", keys)
+        prose = "the data lines consist of border line references (IDs)"
+        self.assertFalse(any(option.get("raw", "").lower() == prose for option in area_options))
+
+    def test_map_comopt_prose_is_not_parsed_as_option(self) -> None:
+        map_options = self.commands_by_name["map"]["options"]
+        keys = {option.get("option_key") for option in map_options}
+        self.assertNotIn("-the", keys)
+        self.assertNotIn("-if", keys)
+        self.assertNotIn("-scraps", keys)
+        self.assertIn("-preview", keys)
+
     def test_centreline_inline_commands_are_structured(self) -> None:
         centreline = self.commands_by_name["centreline"]
         inline_commands = centreline.get("inline_commands", [])

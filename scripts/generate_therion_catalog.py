@@ -321,7 +321,30 @@ def normalize_catalog_text_fields(catalog: dict[str, Any]) -> dict[str, Any]:
     return catalog
 
 
-def parse_item_block(block_text: str) -> list[dict[str, Any]]:
+def item_starts_with_pipe_signature(raw_item: str) -> bool:
+    # Most structured command/option signatures in thbook use |...| wrappers.
+    # Keep support for leading \NEW{...} annotation before the signature token.
+    if re.match(r"^\s*(?:\\NEW\{[^}]*\}\s*)*\|", raw_item) is not None:
+        return True
+
+    stripped = raw_item.lstrip()
+    # Some entries start with TeX formatting wrappers (e.g. {\rightskip ...})
+    # before the first |signature| token.
+    if not stripped.startswith(("{", "\\")):
+        return False
+
+    first_pipe_index = stripped.find("|")
+    if first_pipe_index < 0:
+        return False
+
+    equals_index = stripped.find("=")
+    if equals_index >= 0 and first_pipe_index > equals_index:
+        return False
+
+    return True
+
+
+def parse_item_block(block_text: str, require_leading_pipe_signature: bool = False) -> list[dict[str, Any]]:
     items: list[str] = []
     current: list[str] = []
     for raw_line in block_text.splitlines():
@@ -340,6 +363,8 @@ def parse_item_block(block_text: str) -> list[dict[str, Any]]:
 
     parsed_items: list[dict[str, Any]] = []
     for raw_item in items:
+        if require_leading_pipe_signature and not item_starts_with_pipe_signature(raw_item):
+            continue
         item = clean_tex_text(raw_item)
         if not item:
             continue
@@ -734,10 +759,10 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
             arguments.extend(parse_item_block(block))
         options = []
         for block in option_blocks:
-            options.extend(parse_item_block(block))
+            options.extend(parse_item_block(block, require_leading_pipe_signature=True))
         comopt_items: list[dict[str, Any]] = []
         for block in comopt_blocks:
-            comopt_items.extend(parse_item_block(block))
+            comopt_items.extend(parse_item_block(block, require_leading_pipe_signature=True))
 
         normalized_command_name = command_name.strip().lower()
         if normalized_command_name not in {"centreline", "centerline"}:

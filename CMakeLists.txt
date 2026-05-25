@@ -152,6 +152,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/MainWindowMapBackground.cpp
     src/app/MainWindowProjectLifecycle.cpp
     src/app/MainWindowSidebar.cpp
+    src/app/MainWindowStatusUi.cpp
     src/app/MainWindowStructureBrowser.cpp
     src/app/MainWindowStructureRoles.h
     src/app/MainWindowTherionConsoleController.h

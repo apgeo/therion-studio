@@ -4,34 +4,28 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## In Progress
 
-- Phase 6: finalize encoding robustness, with focus on corpus hardening and edge-case handling.
-- Phase 7: finalize UX/accessibility/platform-convention parity, with focus on shortcuts and keyboard behavior consistency on macOS, Windows, and Linux.
-- Phase 8: continue release-readiness and packaging work across supported platforms, including distribution strategy, signing/notarization expectations, and reproducible release artifacts.
-- Phase 9: continue map-editor parity polish, focusing on remaining interaction gaps, inspector ergonomics, and selection/ownership edge cases.
-- Phase 10: continue interactive drawing/insertion polish, focusing on Apple Pencil/freehand performance and remaining insertion edge cases.
-- Phase 11: continue structured block-canvas authoring coverage and BlockEditor extraction/refactor slices.
+- P0 - Phase 9: continue map-editor parity polish, focusing on remaining interaction gaps, inspector ergonomics, and unresolved area/line ownership rewrite semantics.
+- P1 - Phase 10: continue interactive drawing/insertion polish, focusing on Apple Pencil/freehand performance and remaining insertion edge cases.
+- P2 - Phase 11: continue structured block-canvas authoring coverage and BlockEditor extraction/refactor slices.
+- P2 - Phase 7: finalize UX/accessibility/platform-convention parity, with focus on shortcuts and keyboard behavior consistency on macOS, Windows, and Linux.
+- P3 - Phase 8: continue release-readiness and packaging hardening, with focus on signing/notarization expectations, release reproducibility, and deferred Linux packaging strategy.
 
 ## Next Up
 
-- Continue Phase 9 with line-point option parity, object-inspector ergonomics, and remaining area/line ownership edge cases.
-- Continue Phase 10 with Apple Pencil/freehand stroke UX, broader parsed-document snapshot use, less-aggressive shape-sensitive bezier simplification, and point/line/area workflow polish.
-- Continue Phase 11 with object-reference target picking/resolution shortcuts, then selection/details glue consolidation without behavior changes.
-- Finalize and exercise a Linux release-packaging path (`.deb` first candidate) aligned with distro Qt builds.
+- P0: Close Phase 9 open design item: finalize `Split Here` semantics for open area-referenced borders (closed-line split stays unsupported) and lock expected rewrite behavior.
+- P0: Add/refresh regression tests for split/ownership guardrails and source rewrite correctness around the finalized Phase 9 behavior.
+- P1: Continue Phase 10 with Apple Pencil/freehand stroke UX, broader parsed-document snapshot use, less-aggressive shape-sensitive bezier simplification, and point/line/area workflow polish.
+- P2: Continue Phase 11 with object-reference target picking/resolution shortcuts, then selection/details glue consolidation without behavior changes.
+- P3: Schedule deferred Linux packaging strategy decision (`.deb` first candidate) after current product-behavior priorities.
 
 ## Risks / Blockers
 
 - Parser/serializer round-trip coverage is still incomplete for full Therion corpus-level confidence.
-- Non-UTF decoding relies on Qt-supported codecs; broader legacy-encoding corpus support may still expose edge cases.
 - Pen/touch navigation depends on automatic input-policy behavior; Sidecar and touch-screen edge cases remain a product risk.
 - Map/text undo arbitration still depends on choosing between map `QUndoStack` and embedded text-editor undo until unified command-stack refactor.
 - Packaging/signing/distribution requirements are not yet exercised end-to-end on all target platforms.
 
 ## Phase Plan
-
-### Phase 6 - Encoding and File-Format Robustness (`MVP`)
-
-- Status: implementation mostly complete; corpus hardening pending.
-- Remaining work: improve handling for representative UTF-8 and legacy-encoded Therion files.
 
 ### Phase 7 - UX, Accessibility, and Platform Conventions (`MVP` baseline)
 
@@ -41,13 +35,13 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 ### Phase 8 - Release Readiness and Packaging (`MVP`)
 
 - Status: in progress.
-- Remaining work: define final packaging targets, release artifact layout, signing/notarization expectations, Linux packaging strategy, and end-to-end release verification.
+- Remaining work: harden release process and artifacts after the current Windows-installer + Homebrew flow, including signing/notarization expectations and deferred Linux packaging strategy.
 
 ### Phase 9 - Map Editor Parity Polish (`Post-MVP`)
 
 - Status: in progress.
 - Remaining work: continue interaction parity review for inspector ergonomics, command-surface consistency, selection edge cases, and cross-platform input behavior.
-- Open design item: define area-border rewrite semantics for `Split Here` so referenced areas can be updated to include both resulting border lines.
+- Open design item: `Split Here` on closed lines is intentionally unsupported; deletion guardrails for area-referenced border lines are already implemented; remaining work is defining rewrite semantics for `Split Here` on open area-referenced borders so referenced areas can be updated to include both resulting border lines.
 
 ### Phase 10 - Interactive Map Drawing and Insertion (`Post-MVP`)
 

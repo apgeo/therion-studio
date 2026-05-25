@@ -247,8 +247,21 @@ bool DocumentFile::writeTextFile(const QString &filePath,
         ? QStringLiteral("UTF-8")
         : encodingName.trimmed();
 
+    const QString normalizedEncoding = resolvedEncodingName.trimmed().toLower();
+    QStringConverter::Flags encoderFlags = QStringConverter::Flag::Default;
+    if (normalizedEncoding == QStringLiteral("utf16") ||
+        normalizedEncoding == QStringLiteral("utf-16") ||
+        normalizedEncoding == QStringLiteral("utf-16le") ||
+        normalizedEncoding == QStringLiteral("utf-16be") ||
+        normalizedEncoding == QStringLiteral("utf32") ||
+        normalizedEncoding == QStringLiteral("utf-32") ||
+        normalizedEncoding == QStringLiteral("utf-32le") ||
+        normalizedEncoding == QStringLiteral("utf-32be")) {
+        encoderFlags |= QStringConverter::Flag::WriteBom;
+    }
+
     const QByteArray nameBytes = encodingNameBytes(resolvedEncodingName);
-    QStringEncoder encoder(nameBytes.constData(), QStringConverter::Flag::Default);
+    QStringEncoder encoder(nameBytes.constData(), encoderFlags);
     if (!encoder.isValid()) {
         if (errorMessage != nullptr) {
             *errorMessage = QStringLiteral("Unable to encode %1 using %2.")

@@ -68,7 +68,8 @@ int runDirectiveEncodingRoundTripTest(const QString &codecName,
                                       const char *contentMismatchMessage,
                                       const char *encodingMismatchMessage,
                                       const char *saveFailureMessage,
-                                      const char *roundTripMismatchMessage)
+                                      const char *roundTripMismatchMessage,
+                                      QStringConverter::Flags encoderFlags = QStringConverter::Flag::Default)
 {
     QTemporaryDir tempDir;
     if (!expect(tempDir.isValid(), "Temporary directory creation failed.")) {
@@ -78,7 +79,7 @@ int runDirectiveEncodingRoundTripTest(const QString &codecName,
     const QString filePath = QDir(tempDir.path()).filePath(fileName);
     const QString prefixedText = QStringLiteral("encoding %1\n").arg(directiveToken) + sourceText;
 
-    QStringEncoder encoder = makeEncoder(codecName);
+    QStringEncoder encoder = makeEncoder(codecName, encoderFlags);
     if (!encoder.isValid()) {
         printOptionalCodecSkip(codecMissingMessage);
         return 0;
@@ -206,7 +207,8 @@ int runWindows1250DirectiveRoundTripTest()
                                              "windows-1250 fixture decoded contents mismatch.",
                                              "windows-1250 fixture did not preserve codec name from directive.",
                                              "windows-1250 save failed.",
-                                             "windows-1250 save did not preserve original byte encoding.");
+                                             "windows-1250 save did not preserve original byte encoding.",
+                                             QStringConverter::Flag::Default);
 }
 
 int runCp1250DirectiveAliasRoundTripTest()
@@ -222,7 +224,8 @@ int runCp1250DirectiveAliasRoundTripTest()
                                              "cp1250 alias fixture decoded contents mismatch.",
                                              "cp1250 alias fixture did not resolve to a 1250-family codec.",
                                              "cp1250 alias save failed.",
-                                             "cp1250 alias save did not preserve original byte encoding.");
+                                             "cp1250 alias save did not preserve original byte encoding.",
+                                             QStringConverter::Flag::Default);
 }
 
 int runWindows1252DirectiveRoundTripTest()
@@ -238,7 +241,8 @@ int runWindows1252DirectiveRoundTripTest()
                                              "windows-1252 fixture decoded contents mismatch.",
                                              "windows-1252 fixture did not preserve codec name from directive.",
                                              "windows-1252 save failed.",
-                                             "windows-1252 save did not preserve original byte encoding.");
+                                             "windows-1252 save did not preserve original byte encoding.",
+                                             QStringConverter::Flag::Default);
 }
 
 int runCp1252DirectiveAliasRoundTripTest()
@@ -254,7 +258,8 @@ int runCp1252DirectiveAliasRoundTripTest()
                                              "cp1252 alias fixture decoded contents mismatch.",
                                              "cp1252 alias fixture did not resolve to a 1252-family codec.",
                                              "cp1252 alias save failed.",
-                                             "cp1252 alias save did not preserve original byte encoding.");
+                                             "cp1252 alias save did not preserve original byte encoding.",
+                                             QStringConverter::Flag::Default);
 }
 
 int runLatin2DirectiveRoundTripTest()
@@ -270,7 +275,42 @@ int runLatin2DirectiveRoundTripTest()
                                              "latin2 fixture decoded contents mismatch.",
                                              "latin2 fixture did not resolve to an 8859-family codec.",
                                              "latin2 save failed.",
-                                             "latin2 save did not preserve original byte encoding.");
+                                             "latin2 save did not preserve original byte encoding.",
+                                             QStringConverter::Flag::Default);
+}
+
+int runUtf8DirectiveAliasRoundTripTest()
+{
+    return runDirectiveEncodingRoundTripTest(QStringLiteral("utf-8"),
+                                             QStringLiteral("utf8"),
+                                             QStringLiteral("survey žluťoučký kůň\nendsurvey\n"),
+                                             QStringLiteral("utf8-alias.th"),
+                                             QStringLiteral("utf"),
+                                             "utf-8 codec is not available in this Qt runtime.",
+                                             "Failed to encode utf8 alias fixture text.",
+                                             "Failed to write utf8 alias fixture file.",
+                                             "utf8 alias fixture decoded contents mismatch.",
+                                             "utf8 alias fixture did not resolve to a UTF-family codec.",
+                                             "utf8 alias save failed.",
+                                             "utf8 alias save did not preserve original byte encoding.",
+                                             QStringConverter::Flag::Default);
+}
+
+int runUtf16DirectiveAliasRoundTripTest()
+{
+    return runDirectiveEncodingRoundTripTest(QStringLiteral("utf-16"),
+                                             QStringLiteral("utf16"),
+                                             QStringLiteral("survey žluťoučký kůň\nendsurvey\n"),
+                                             QStringLiteral("utf16-alias.th"),
+                                             QStringLiteral("utf-16"),
+                                             "utf-16 codec is not available in this Qt runtime.",
+                                             "Failed to encode utf16 alias fixture text.",
+                                             "Failed to write utf16 alias fixture file.",
+                                             "utf16 alias fixture decoded contents mismatch.",
+                                             "utf16 alias fixture did not resolve to a UTF-16 codec.",
+                                             "utf16 alias save failed.",
+                                             "utf16 alias save did not preserve original byte encoding.",
+                                             QStringConverter::Flag::WriteBom);
 }
 
 int runUnknownDirectiveFallsBackToUtf8Test()
@@ -358,6 +398,62 @@ int runUnknownDirectiveFallsBackToLatin1Test()
 
     const QByteArray writtenBytes = readRawFile(filePath);
     if (!expect(writtenBytes == latin1Bytes, "Unknown-directive Latin1 fallback save did not preserve original bytes.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runUnknownDirectiveFallsBackToUtf16Test()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary directory creation failed.")) {
+        return 1;
+    }
+
+    const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("unknown-encoding-directive-utf16.th"));
+    const QString sourceText = QStringLiteral(
+        "encoding madeup-xyz\n"
+        "survey žluťoučký kůň\n"
+        "endsurvey\n");
+
+    QStringEncoder encoder = makeEncoder(QStringLiteral("utf-16"), QStringConverter::Flag::WriteBom);
+    if (!expect(encoder.isValid(), "utf-16 codec is not available in this Qt runtime.")) {
+        return 1;
+    }
+
+    const QByteArray utf16Bytes = encoder.encode(sourceText);
+    if (!expect(!encoder.hasError(), "Failed to encode unknown-directive UTF-16 fixture text.")) {
+        return 1;
+    }
+
+    if (!expect(writeRawFile(filePath, utf16Bytes), "Failed to write unknown-directive UTF-16 fixture file.")) {
+        return 1;
+    }
+
+    QString contents;
+    QString encodingName;
+    QString errorMessage;
+    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encodingName, nullptr, &errorMessage),
+                qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    if (!expect(contents == sourceText, "Unknown-directive UTF-16 fixture decoded contents mismatch.")) {
+        return 1;
+    }
+
+    if (!expect(encodingName.contains(QStringLiteral("utf-16"), Qt::CaseInsensitive),
+                "Unknown-directive UTF-16 fixture should resolve to a UTF-16-family encoding.")) {
+        return 1;
+    }
+
+    if (!expect(DocumentFile::writeTextFile(filePath, contents, encodingName, &errorMessage), qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    const QByteArray writtenBytes = readRawFile(filePath);
+    if (!expect(writtenBytes == utf16Bytes, "Unknown-directive UTF-16 fallback save did not preserve original bytes.")) {
         return 1;
     }
 
@@ -567,8 +663,20 @@ int main()
         return latin2Result;
     }
 
+    if (const int utf8AliasResult = runUtf8DirectiveAliasRoundTripTest(); utf8AliasResult != 0) {
+        return utf8AliasResult;
+    }
+
+    if (const int utf16AliasResult = runUtf16DirectiveAliasRoundTripTest(); utf16AliasResult != 0) {
+        return utf16AliasResult;
+    }
+
     if (const int unknownDirectiveResult = runUnknownDirectiveFallsBackToUtf8Test(); unknownDirectiveResult != 0) {
         return unknownDirectiveResult;
+    }
+
+    if (const int unknownDirectiveUtf16Result = runUnknownDirectiveFallsBackToUtf16Test(); unknownDirectiveUtf16Result != 0) {
+        return unknownDirectiveUtf16Result;
     }
 
     if (const int unknownDirectiveLatin1Result = runUnknownDirectiveFallsBackToLatin1Test(); unknownDirectiveLatin1Result != 0) {

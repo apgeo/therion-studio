@@ -27,6 +27,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Completed
 
+- ~~Updated `.github/workflows/windows-installer.yml` to `actions/upload-artifact@v5` to address the GitHub Actions Node.js 20 deprecation warning and align installer artifact upload with upcoming Node.js 24 runner defaults.~~
 - ~~Fixed `windows-installer.yml` artifact publication mismatch by forcing CPack output into `build-windows` and allowing artifact upload from both `build-windows/` and repository-root fallback paths for `TherionStudio-*-Windows-x86_64.exe`.~~
 - ~~Updated `AGENTS.md` USER_MANUAL maintenance rules to enforce end-user-only scope and explicit same-change documentation updates for added/changed/removed user-facing features.~~
 - ~~Reworked `docs/USER_MANUAL.md` into a focused end-user guide by removing implementation/QA/packaging internals and keeping user-facing workflows, shortcuts, map editing, compiler usage, and troubleshooting.~~

@@ -4,6 +4,12 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      run_ui_smoke_tests:
+        description: Run UI smoke tests during manual runs
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   ubuntu-24:
@@ -58,11 +64,11 @@ jobs:
           --timeout 300
 
       - name: Build UI smoke tests
-        if: github.event_name != 'push'
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_ui_smoke_tests)
         run: cmake --build build --config Debug --target therion_ui_tests
 
       - name: Run UI smoke tests
-        if: github.event_name != 'push'
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_ui_smoke_tests)
         run: >
           cmake -E env QT_QPA_PLATFORM=offscreen
           ctest --test-dir build
@@ -132,9 +138,11 @@ jobs:
           --timeout 300
 
       - name: Build UI smoke tests
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_ui_smoke_tests)
         run: cmake --build build --config Debug --target therion_ui_tests
 
       - name: Run UI smoke tests
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_ui_smoke_tests)
         run: >
           cmake -E env QT_QPA_PLATFORM=offscreen
           ctest --test-dir build

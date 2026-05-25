@@ -3,6 +3,12 @@ name: Build Windows
 on:
   pull_request:
   workflow_dispatch:
+    inputs:
+      run_ui_smoke_tests:
+        description: Run UI smoke tests during manual runs
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   build:

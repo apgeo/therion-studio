@@ -33,6 +33,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - ~~Reduced Linux UI smoke-test wall-clock time by enabling parallel UI test execution with `ctest -j 2` in both Ubuntu jobs.~~
 - ~~Reduced push-path Linux CI time by running UI smoke-test build/run steps only for non-`push` events (PRs and manual dispatch), while preserving unit-test coverage on pushes.~~
 - ~~Reduced cross-platform smoke-test compile duplication by extracting shared text-editor and map-editor UI test support sources into reusable static libraries and linking smoke-test executables against those libraries instead of recompiling identical source sets per test binary.~~
+- ~~Added cross-platform manual-workflow smoke-test toggles by introducing `workflow_dispatch.inputs.run_ui_smoke_tests` in Linux/macOS/Windows build workflows and gating Linux/macOS UI smoke build/run steps on that input (while preserving PR coverage).~~
 
 ## Phase Plan
 

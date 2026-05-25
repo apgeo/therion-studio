@@ -52,6 +52,13 @@ QWidget *BlockEditorOptionTableDelegate::createEditor(QWidget *parent,
     }
 
     lineEdit->setCompleter(completer);
+    QObject::connect(lineEdit, &QLineEdit::textEdited, lineEdit, [lineEdit, completer](const QString &text) {
+        if (completer == nullptr || lineEdit == nullptr) {
+            return;
+        }
+        completer->setCompletionPrefix(text);
+        completer->complete();
+    });
     return editor;
 }
 }

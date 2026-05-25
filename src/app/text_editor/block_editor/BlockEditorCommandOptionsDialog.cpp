@@ -1,6 +1,7 @@
 #include "BlockEditorCommandOptionsDialog.h"
 
 #include "BlockEditorCommandOptionParser.h"
+#include "BlockEditorOptionTableDelegate.h"
 #include "../ContextHelpController.h"
 #include "../TextEditorOptionValidation.h"
 
@@ -173,6 +174,56 @@ void appendOptionRow(QTableWidget *table, const QString &key, const QString &val
     valueItem->setData(kRowKindRole, static_cast<int>(OptionsDialogRowKind::Option));
     table->setItem(row, 1, valueItem);
 }
+
+void appendUniqueSuggestion(QStringList *target, const QString &value)
+{
+    if (target == nullptr) {
+        return;
+    }
+
+    const QString normalized = value.trimmed();
+    if (normalized.isEmpty()) {
+        return;
+    }
+    if (target->contains(normalized, Qt::CaseInsensitive)) {
+        return;
+    }
+    target->append(normalized);
+}
+
+QStringList optionDialogSuggestionsForCell(const TextEditorCommandMetadata *metadata,
+                                           QTableWidget *optionsTable,
+                                           const QString &commandName,
+                                           const QModelIndex &index)
+{
+    if (metadata == nullptr || optionsTable == nullptr || !index.isValid()) {
+        return {};
+    }
+
+    QStringList suggestions;
+    if (index.column() == 0) {
+        for (const QString &option : metadata->commandOptionTokens.value(commandName)) {
+            appendUniqueSuggestion(&suggestions, option);
+        }
+    } else if (index.column() == 1 && !rowIsPositionalAttribute(optionsTable, index.row())) {
+        const QString optionToken = (optionsTable->item(index.row(), 0) != nullptr
+                                         ? optionsTable->item(index.row(), 0)->text()
+                                         : QString())
+                                        .trimmed()
+                                        .toLower();
+        if (!optionToken.isEmpty()) {
+            const QString key = commandOptionValueKey(commandName, optionToken);
+            for (const QString &value : metadata->commandOptionValueTokens.value(key)) {
+                appendUniqueSuggestion(&suggestions, value);
+            }
+        }
+    }
+
+    std::sort(suggestions.begin(), suggestions.end(), [](const QString &left, const QString &right) {
+        return QString::compare(left, right, Qt::CaseInsensitive) < 0;
+    });
+    return suggestions;
+}
 }
 
 BlockEditorCommandOptionsDialog::BlockEditorCommandOptionsDialog(BlockEditorCommandOptionsDialogContext context)
@@ -250,6 +301,14 @@ std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(
     optionsTable->setSelectionMode(QAbstractItemView::SingleSelection);
     optionsTable->setAlternatingRowColors(true);
     optionsTable->setMinimumHeight(160);
+    optionsTable->setItemDelegate(new BlockEditorOptionTableDelegate(
+        [this, optionsTable, commandName](const QModelIndex &index) {
+            return optionDialogSuggestionsForCell(context_.commandMetadata,
+                                                  optionsTable,
+                                                  commandName,
+                                                  index);
+        },
+        optionsTable));
     if (hasIdField) {
         appendPositionalAttributeRow(optionsTable, QStringLiteral("id"), parsedOptions.leadingValue, 0);
     }

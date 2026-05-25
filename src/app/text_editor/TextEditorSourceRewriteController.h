@@ -75,14 +75,17 @@ public:
                                    const QStringList &coordinateRows,
                                    QString *errorMessage = nullptr);
     void replaceTextForCommand(const QString &contents);
+    void replaceTextForCommandWithUndo(const QString &contents);
     void replaceTextForSystemNormalization(const QString &contents);
 
 private:
+    void replaceEditorText(const QString &contents, bool recordUndoStep);
     void replaceTextPreservingCursor(const QString &contents,
                                      bool emitDocumentTextChanged,
                                      bool rebuildBlocksCanvas,
-                                     bool applyDirtyState);
-    void replaceTextSelectingLine(const QString &contents, int lineNumber);
+                                     bool applyDirtyState,
+                                     bool recordUndoStep);
+    void replaceTextSelectingLine(const QString &contents, int lineNumber, bool recordUndoStep);
 
     TextEditorSourceRewriteContext context_;
 };

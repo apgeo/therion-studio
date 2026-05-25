@@ -7,7 +7,7 @@
 ### Visual (map) editor
 
 - autocompletion in Edit Object Settings > Options
-- support for object styles
+- support for object styles - it should be possible to define default point, line and area style (point size, line thickness / type) and override it for object types / subtypes. It should be configurable via json file in resources.
 - line -close - close line by clicking the initial point; it should be possible to smoothen the last segment (add control points)
 - .xvi files should not be treated as bitmap files - should properly scale
 - .xvi files - gamma should be disabled for .xvi
@@ -27,6 +27,8 @@
 - Smart trace
 
 ### Block editor
+
+- Have a possibility to comment/uncomment commands - convert commands to/from full line comment
 
 ### All editors
 

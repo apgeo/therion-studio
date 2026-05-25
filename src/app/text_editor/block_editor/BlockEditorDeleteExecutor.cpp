@@ -57,7 +57,16 @@ bool BlockEditorDeleteExecutor::deleteCommandAtLine(int lineNumber)
         return source.removeLineRange(lineNumber, lineNumber);
     }
     if (directive.isEmpty()) {
-        return false;
+        const QMessageBox::StandardButton answer = QMessageBox::question(
+            context_.dialogParent,
+            tr("Delete Block"),
+            tr("Delete unrecognized line?"),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+        if (answer != QMessageBox::Yes) {
+            return false;
+        }
+        return source.removeLineRange(lineNumber, lineNumber);
     }
     if (directive == QStringLiteral("encoding")) {
         QMessageBox::information(context_.dialogParent,

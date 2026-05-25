@@ -17,6 +17,7 @@ public:
     std::function<void(const QString &, const QPointF &, bool)> onDragPreview;
 
 protected:
+    void wheelEvent(QWheelEvent *event) override;
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dragMoveEvent(QDragMoveEvent *event) override;
     void dragLeaveEvent(QDragLeaveEvent *event) override;

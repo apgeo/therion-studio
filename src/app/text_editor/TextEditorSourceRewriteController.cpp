@@ -31,7 +31,7 @@ bool TextEditorSourceRewriteController::rewriteStructureEntryName(int lineNumber
         return false;
     }
 
-    replaceTextPreservingCursor(contents, false, false, true);
+    replaceTextPreservingCursor(contents, false, false, true, false);
     return true;
 }
 
@@ -50,7 +50,7 @@ bool TextEditorSourceRewriteController::insertScrapBlock(const QString &preferre
         return false;
     }
 
-    replaceTextSelectingLine(contents, resolvedLineNumber);
+    replaceTextSelectingLine(contents, resolvedLineNumber, false);
     if (insertedLineNumber != nullptr) {
         *insertedLineNumber = resolvedLineNumber;
     }
@@ -72,7 +72,7 @@ bool TextEditorSourceRewriteController::insertDraftGeometry(const QString &kind,
         return false;
     }
 
-    replaceTextSelectingLine(contents, resolvedLineNumber);
+    replaceTextSelectingLine(contents, resolvedLineNumber, false);
     if (insertedLineNumber != nullptr) {
         *insertedLineNumber = resolvedLineNumber;
     }
@@ -93,7 +93,7 @@ bool TextEditorSourceRewriteController::insertDraftLineGeometry(const QStringLis
         return false;
     }
 
-    replaceTextSelectingLine(contents, resolvedLineNumber);
+    replaceTextSelectingLine(contents, resolvedLineNumber, false);
     if (insertedLineNumber != nullptr) {
         *insertedLineNumber = resolvedLineNumber;
     }
@@ -114,7 +114,7 @@ bool TextEditorSourceRewriteController::insertDraftAreaGeometry(const QStringLis
         return false;
     }
 
-    replaceTextSelectingLine(contents, resolvedLineNumber);
+    replaceTextSelectingLine(contents, resolvedLineNumber, false);
     if (insertedLineNumber != nullptr) {
         *insertedLineNumber = resolvedLineNumber;
     }
@@ -134,7 +134,7 @@ bool TextEditorSourceRewriteController::rewritePointCoordinates(int lineNumber,
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true);
+    replaceTextPreservingCursor(contents, true, false, true, false);
     return true;
 }
 
@@ -153,7 +153,7 @@ bool TextEditorSourceRewriteController::rewriteLineAreaVertex(int lineNumber,
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true);
+    replaceTextPreservingCursor(contents, true, false, true, false);
     return true;
 }
 
@@ -171,7 +171,7 @@ bool TextEditorSourceRewriteController::rewriteLineOptionToggle(int lineNumber,
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true);
+    replaceTextPreservingCursor(contents, true, false, true, false);
     return true;
 }
 
@@ -193,7 +193,7 @@ bool TextEditorSourceRewriteController::rewritePointOrientation(int lineNumber,
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true);
+    replaceTextPreservingCursor(contents, true, false, true, false);
     return true;
 }
 
@@ -217,7 +217,7 @@ bool TextEditorSourceRewriteController::rewriteLinePointOrientation(int lineNumb
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true);
+    replaceTextPreservingCursor(contents, true, false, true, false);
     return true;
 }
 
@@ -241,7 +241,7 @@ bool TextEditorSourceRewriteController::rewriteLinePointLeftSize(int lineNumber,
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true);
+    replaceTextPreservingCursor(contents, true, false, true, false);
     return true;
 }
 
@@ -258,7 +258,7 @@ bool TextEditorSourceRewriteController::rewriteLineCoordinateRows(int lineNumber
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true);
+    replaceTextPreservingCursor(contents, true, false, true, false);
     return true;
 }
 
@@ -268,7 +268,16 @@ void TextEditorSourceRewriteController::replaceTextForCommand(const QString &con
         return;
     }
 
-    replaceTextPreservingCursor(contents, true, true, true);
+    replaceTextPreservingCursor(contents, true, true, true, false);
+}
+
+void TextEditorSourceRewriteController::replaceTextForCommandWithUndo(const QString &contents)
+{
+    if (context_.editor == nullptr) {
+        return;
+    }
+
+    replaceTextPreservingCursor(contents, true, true, true, true);
 }
 
 void TextEditorSourceRewriteController::replaceTextForSystemNormalization(const QString &contents)
@@ -277,13 +286,42 @@ void TextEditorSourceRewriteController::replaceTextForSystemNormalization(const 
         return;
     }
 
-    replaceTextPreservingCursor(contents, false, true, false);
+    replaceTextPreservingCursor(contents, false, true, false, false);
+}
+
+void TextEditorSourceRewriteController::replaceEditorText(const QString &contents, bool recordUndoStep)
+{
+    if (context_.editor == nullptr) {
+        return;
+    }
+
+    if (context_.editor->toPlainText() == contents) {
+        return;
+    }
+
+    if (!recordUndoStep) {
+        context_.editor->setPlainText(contents);
+        return;
+    }
+
+    QTextDocument *document = context_.editor->document();
+    if (document == nullptr) {
+        context_.editor->setPlainText(contents);
+        return;
+    }
+
+    QTextCursor rewriteCursor(document);
+    rewriteCursor.beginEditBlock();
+    rewriteCursor.select(QTextCursor::Document);
+    rewriteCursor.insertText(contents);
+    rewriteCursor.endEditBlock();
 }
 
 void TextEditorSourceRewriteController::replaceTextPreservingCursor(const QString &contents,
                                                                     bool emitDocumentTextChanged,
                                                                     bool rebuildBlocksCanvas,
-                                                                    bool applyDirtyState)
+                                                                    bool applyDirtyState,
+                                                                    bool recordUndoStep)
 {
     if (context_.editor == nullptr) {
         return;
@@ -296,7 +334,7 @@ void TextEditorSourceRewriteController::replaceTextPreservingCursor(const QStrin
     if (context_.loading != nullptr) {
         *context_.loading = true;
     }
-    context_.editor->setPlainText(contents);
+    replaceEditorText(contents, recordUndoStep);
 
     const int targetLine = qBound(0, previousLine, qMax(0, context_.editor->document()->blockCount() - 1));
     const QTextBlock targetBlock = context_.editor->document()->findBlockByLineNumber(targetLine);
@@ -329,7 +367,9 @@ void TextEditorSourceRewriteController::replaceTextPreservingCursor(const QStrin
     }
 }
 
-void TextEditorSourceRewriteController::replaceTextSelectingLine(const QString &contents, int lineNumber)
+void TextEditorSourceRewriteController::replaceTextSelectingLine(const QString &contents,
+                                                                 int lineNumber,
+                                                                 bool recordUndoStep)
 {
     if (context_.editor == nullptr) {
         return;
@@ -338,7 +378,7 @@ void TextEditorSourceRewriteController::replaceTextSelectingLine(const QString &
     if (context_.loading != nullptr) {
         *context_.loading = true;
     }
-    context_.editor->setPlainText(contents);
+    replaceEditorText(contents, recordUndoStep);
 
     if (lineNumber > 0) {
         const QTextBlock targetBlock = context_.editor->document()->findBlockByLineNumber(lineNumber - 1);

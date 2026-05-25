@@ -66,6 +66,16 @@ bool isMapObjectReferenceKind(const QString &kind)
     return normalizeDirectiveToken(kind) == mapObjectReferenceKind();
 }
 
+QString unrecognizedKind()
+{
+    return QStringLiteral("__unrecognized");
+}
+
+bool isUnrecognizedKind(const QString &kind)
+{
+    return normalizeDirectiveToken(kind) == unrecognizedKind();
+}
+
 QString blockDisplayName(const TherionParsedLine &parsedLine)
 {
     if (parsedLine.tokens.size() >= 2) {
@@ -79,6 +89,9 @@ QString blockDisplayNameForKind(const QString &kind, const TherionParsedLine &pa
     if (isMapObjectReferenceKind(kind)) {
         return parsedLine.tokens.isEmpty() ? QString() : parsedLine.tokens.first();
     }
+    if (isUnrecognizedKind(kind)) {
+        return parsedLine.rawText.trimmed();
+    }
     return blockDisplayName(parsedLine);
 }
 
@@ -86,6 +99,9 @@ QString blockDisplayKindLabel(const QString &kind)
 {
     if (isMapObjectReferenceKind(kind)) {
         return QObject::tr("Object Reference");
+    }
+    if (isUnrecognizedKind(kind)) {
+        return QObject::tr("Unrecognized");
     }
     return kind;
 }

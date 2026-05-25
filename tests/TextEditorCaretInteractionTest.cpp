@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
     if (!expect(file.open(QIODevice::WriteOnly | QIODevice::Text), "Failed to create test file.")) {
         return 1;
     }
-    file.write("survey demo -title old # survey comment\ncenterline\n# caret-target line for typing test\nteam oldteam\nexplo-team old-discovery-team\ndata normal from to tape compass clino\n  1 2 3 4 5 6\nendcenterline\nendsurvey\n");
+    file.write("survey demo -title old # survey comment\ncenterline\n# caret-target line for typing test\nmystery-command foo bar\nteam oldteam\nexplo-team old-discovery-team\ndata normal from to tape compass clino\n  1 2 3 4 5 6\nendcenterline\nendsurvey\n");
     file.close();
 
     TextEditorTab tab;
@@ -537,6 +537,39 @@ int main(int argc, char *argv[])
     }
     if (!expect(editor->toPlainText().contains(QStringLiteral("# survey comment")),
                 "Applying block details should preserve existing inline comment.")) {
+        return 1;
+    }
+
+    if (!expect(selectBlockByKind(blockView, detailsStatus, QStringLiteral("comment")),
+                "Failed to select a full-line comment block in blocks view.")) {
+        return 1;
+    }
+    if (!expect(!primaryEdit->text().trimmed().isEmpty(),
+                "Comment block should populate primary field with non-empty line comment text.")) {
+        return 1;
+    }
+    if (!expect(!detailsStatus->text().toLower().contains(QStringLiteral("selected line is empty")),
+                "Comment block must not report 'Selected line is empty' in Block Details status.")) {
+        return 1;
+    }
+
+    if (!expect(selectBlockByKind(blockView, detailsStatus, QStringLiteral("unrecognized")),
+                "Failed to select unrecognized fallback block in blocks view.")) {
+        return 1;
+    }
+    if (!expect(primaryLabel->text().trimmed().compare(QStringLiteral("Raw line"), Qt::CaseInsensitive) == 0,
+                "Unrecognized block should expose editable raw-line field.")) {
+        return 1;
+    }
+    if (!expect(primaryEdit->text().contains(QStringLiteral("mystery-command foo bar")),
+                "Unrecognized block should show original raw source line.")) {
+        return 1;
+    }
+    primaryEdit->setText(QStringLiteral("mystery-command fixed-value"));
+    applyButton->click();
+    pumpEvents();
+    if (!expect(editor->toPlainText().contains(QStringLiteral("mystery-command fixed-value")),
+                "Applying unrecognized block details should rewrite the full raw source line.")) {
         return 1;
     }
 

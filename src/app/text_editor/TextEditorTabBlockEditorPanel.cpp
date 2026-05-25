@@ -129,7 +129,10 @@ void TextEditorTab::buildBlockEditorPanel()
         " border-bottom: none;"
         "}"));
     typedCanvasView->setScene(blockCanvasScene_);
-    typedCanvasView->setSceneRect(QRectF(0.0, 0.0, 1400.0, 2000.0));
+    blockCanvasScene_->setSceneRect(QRectF(0.0, 0.0, 1.0, 1.0));
+    typedCanvasView->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    typedCanvasView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    typedCanvasView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     typedCanvasView->setBackgroundBrush(palette().color(QPalette::Base));
     typedCanvasView->onDropBlock = [this](const QString &kind, const QPointF &scenePos) {
         handleCanvasDrop(kind, scenePos);

@@ -46,6 +46,7 @@ protected:
 
 private:
     QRectF deleteIconRect() const;
+    QRectF moveGripIconRect() const;
     QRectF inlineCommentBadgeRect() const;
 
     QString kind_;

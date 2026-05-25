@@ -105,6 +105,12 @@ void BlockEditorDetailsHelpController::updateHelpForCurrentFocus()
                                          "Edit the target to the referenced object name. Unresolved names are preserved so incomplete maps stay round-trip safe.</p>"));
         return;
     }
+    if (BlockEditorDirectiveRules::isUnrecognizedKind(normalizedKind)) {
+        context_.helpBrowser->setHtml(tr("<p><b>Unrecognized line</b></p>"
+                                         "<p>This source line could not be mapped to a known Block-editor command in the current context.</p>"
+                                         "<p>Edit the full raw line directly. The source text is preserved exactly as entered.</p>"));
+        return;
+    }
     const TherionHelpEntry commandHelpEntry = context_.commandMetadata->helpEntries.value(normalizedKind);
     const QString commandHelpHtml = ContextHelpController::renderHelpHtml(normalizedKind,
                                                                            commandHelpEntry.summary,

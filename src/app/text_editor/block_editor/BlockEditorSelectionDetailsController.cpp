@@ -71,6 +71,7 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
     const QString normalizedKind = context_.normalizedDirectiveToken ? context_.normalizedDirectiveToken(kind) : kind.trimmed().toLower();
     const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineNumber - 1), lineNumber);
     const bool commentOnlyLine = normalizedKind == QStringLiteral("comment") && isFullLineComment(parsedLine);
+    const bool unrecognizedLineKind = isUnrecognizedKind(normalizedKind);
     if (parsedLine.tokens.isEmpty() && !commentOnlyLine) {
         if (context_.clearDetailsPane) {
             context_.clearDetailsPane();
@@ -111,9 +112,13 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         if (context_.setDetailsMode) { context_.setDetailsMode(BlockEditorSelectionDetailsMode::Unsupported); }
     }
 
-    *context_.baseStatusText = isMapObjectReferenceKind(normalizedKind)
-        ? tr("Object Reference")
-        : tr("Command: %1").arg(normalizedKind);
+    if (isMapObjectReferenceKind(normalizedKind)) {
+        *context_.baseStatusText = tr("Object Reference");
+    } else if (isUnrecognizedKind(normalizedKind)) {
+        *context_.baseStatusText = tr("Command: unrecognized");
+    } else {
+        *context_.baseStatusText = tr("Command: %1").arg(normalizedKind);
+    }
     if (context_.statusLabel != nullptr) {
         context_.statusLabel->setStyleSheet(QString());
         context_.statusLabel->setText(*context_.baseStatusText);
@@ -382,27 +387,33 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             }
         }
         const bool noValueCommand = !commentOnlyLine
+            && !unrecognizedLineKind
             && !isMapObjectReferenceKind(normalizedKind)
             && argumentSignatures.isEmpty()
             && (*context_.commandMetadata).commandArgumentSignaturesByToken.value(normalizedKind).isEmpty();
         const bool hasSecondaryArgument = argumentSignatures.size() > 1;
 
-        QString currentValue = commentOnlyLine
+        QString currentValue = unrecognizedLineKind
+            ? lines.at(lineNumber - 1)
+            : (commentOnlyLine
             ? parsedLine.commentText.trimmed()
             : (isMapObjectReferenceKind(normalizedKind)
             ? parsedLine.tokens.value(0)
-            : (parsedLine.tokens.size() > 1 ? parsedLine.tokens.at(1) : QString()));
+            : (parsedLine.tokens.size() > 1 ? parsedLine.tokens.at(1) : QString())));
         QString secondaryValue;
-        if (!commentOnlyLine && !isMapObjectReferenceKind(normalizedKind) && hasSecondaryArgument && parsedLine.tokens.size() > 2) {
+        if (!commentOnlyLine && !unrecognizedLineKind && !isMapObjectReferenceKind(normalizedKind) && hasSecondaryArgument && parsedLine.tokens.size() > 2) {
             secondaryValue = parsedLine.tokens.mid(2).join(QLatin1Char(' '));
-        } else if (!commentOnlyLine && !isMapObjectReferenceKind(normalizedKind) && !hasSecondaryArgument) {
+        } else if (!commentOnlyLine && !unrecognizedLineKind && !isMapObjectReferenceKind(normalizedKind) && !hasSecondaryArgument) {
             currentValue = parsedLine.tokens.size() > 1
                 ? parsedLine.tokens.mid(1).join(QLatin1Char(' '))
                 : QString();
         }
 
         if (context_.primaryFieldLabel != nullptr) {
-            if (commentOnlyLine) {
+            if (unrecognizedLineKind) {
+                context_.primaryFieldLabel->setText(tr("Raw line"));
+                context_.primaryFieldLabel->setVisible(true);
+            } else if (commentOnlyLine) {
                 context_.primaryFieldLabel->setText(tr("Comment"));
                 context_.primaryFieldLabel->setVisible(true);
             } else if (isMapObjectReferenceKind(normalizedKind)) {
@@ -418,7 +429,7 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             }
         }
         if (context_.secondaryFieldLabel != nullptr) {
-            if (commentOnlyLine) {
+            if (commentOnlyLine || unrecognizedLineKind) {
                 context_.secondaryFieldLabel->setVisible(false);
             } else if (hasSecondaryArgument) {
                 if (argumentSignatures.size() > 1) {
@@ -432,7 +443,7 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             }
         }
         if (context_.additionalPositionalEdit != nullptr) {
-            if (!commentOnlyLine && hasSecondaryArgument) {
+            if (!commentOnlyLine && !unrecognizedLineKind && hasSecondaryArgument) {
                 context_.additionalPositionalEdit->setEnabled(true);
                 context_.additionalPositionalEdit->setVisible(true);
                 context_.additionalPositionalEdit->setPlaceholderText(tr("optional"));
@@ -444,19 +455,19 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             }
         }
         if (context_.secondaryFieldStack != nullptr) {
-            context_.secondaryFieldStack->setVisible(!commentOnlyLine && hasSecondaryArgument);
+            context_.secondaryFieldStack->setVisible(!commentOnlyLine && !unrecognizedLineKind && hasSecondaryArgument);
             if (context_.additionalPositionalEdit != nullptr) {
                 context_.secondaryFieldStack->setCurrentWidget(context_.additionalPositionalEdit);
             }
         }
         context_.setReadingsTagEditor(QString(), {}, {});
         if (context_.idEdit != nullptr) {
-            context_.idEdit->setEnabled(commentOnlyLine || !noValueCommand);
-            context_.idEdit->setVisible(commentOnlyLine || !noValueCommand);
-            context_.idEdit->setPlaceholderText((commentOnlyLine || !noValueCommand) ? tr("required") : QString());
+            context_.idEdit->setEnabled(unrecognizedLineKind || commentOnlyLine || !noValueCommand);
+            context_.idEdit->setVisible(unrecognizedLineKind || commentOnlyLine || !noValueCommand);
+            context_.idEdit->setPlaceholderText((unrecognizedLineKind || commentOnlyLine || !noValueCommand) ? tr("required") : QString());
             context_.idEdit->setText(currentValue);
         }
-        if (commentOnlyLine) {
+        if (commentOnlyLine || unrecognizedLineKind) {
             if (context_.commentFieldLabel != nullptr) {
                 context_.commentFieldLabel->setVisible(false);
             }

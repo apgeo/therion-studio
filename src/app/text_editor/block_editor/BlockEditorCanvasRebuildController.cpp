@@ -174,8 +174,18 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
             && isCommandDirectiveInScope(directive, activeScope);
         const bool mapObjectReference =
             isMapObjectReferenceCandidateLine(activeScope, parsedLine, commandDirective);
+        bool renderAsUnrecognized = false;
         if (!isBlockOpeningDirective(directive) && !commandDirective && !mapObjectReference) {
-            continue;
+            const QString trimmedRawLine = parsedLine.rawText.trimmed();
+            const QString firstToken = parsedLine.tokens.isEmpty() ? QString() : normalizeDirective(parsedLine.tokens.first());
+            const bool firstTokenLooksLikeDirective = !firstToken.isEmpty()
+                && firstToken.at(0).isLetter()
+                && !isBlockClosingDirective(firstToken);
+            const bool rawLineStartsLikeDirective = !trimmedRawLine.isEmpty() && trimmedRawLine.at(0).isLetter();
+            renderAsUnrecognized = firstTokenLooksLikeDirective || rawLineStartsLikeDirective;
+            if (!renderAsUnrecognized) {
+                continue;
+            }
         }
 
         BlockCanvasItem *parentItem = nullptr;
@@ -185,18 +195,21 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
 
         if (mapObjectReference) {
             directive = mapObjectReferenceKind();
+        } else if (renderAsUnrecognized) {
+            directive = unrecognizedKind();
         }
 
         const QString name = blockDisplayNameForKind(directive, parsedLine);
         const QString inlineComment = parsedLine.commentStart >= 0 ? parsedLine.commentText.trimmed() : QString();
         const bool encodingDirective = isEncodingDirective(directive);
+        const bool unrecognizedDirective = isUnrecognizedKind(directive);
         const bool isContainerInstance = isContainerDirectiveInstance(directive, parsedLine);
         auto *item = new BlockCanvasItem(directive,
                                          name,
                                          inlineComment,
                                          parsedLine.lineNumber,
                                          !encodingDirective,
-                                         !encodingDirective,
+                                         !encodingDirective && !unrecognizedDirective,
                                          isContainerInstance,
                                          parentItem);
         item->onDelete = [this](int lineNumber) {
@@ -584,8 +597,6 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
     connectorPen.setWidthF(1.2);
     connectorPen.setStyle(Qt::SolidLine);
 
-    qreal minGuideX = std::numeric_limits<qreal>::max();
-    qreal maxGuideBottom = 0.0;
     constexpr qreal kConnectorInsetX = 2.0;
 
     for (const ContainerBoundary &boundary : std::as_const(boundaries)) {
@@ -623,21 +634,15 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         (*context_.containerBoundaryGuideItems).append(endCap);
         (*context_.containerBoundaryEndYByLine).insert(item->lineNumber(), endY);
 
-        minGuideX = qMin(minGuideX, guideX);
-        maxGuideBottom = qMax(maxGuideBottom, endY);
     }
 
-    context_.scene->setSceneRect(0.0, 0.0, 1400.0, qMax<qreal>(y + 40.0, 600.0));
-    if (minGuideX != std::numeric_limits<qreal>::max() || maxGuideBottom > 0.0) {
-        QRectF sceneRect = context_.scene->sceneRect();
-        if (minGuideX != std::numeric_limits<qreal>::max() && minGuideX - 12.0 < sceneRect.left()) {
-            sceneRect.setLeft(minGuideX - 12.0);
-        }
-        if (maxGuideBottom + 16.0 > sceneRect.bottom()) {
-            sceneRect.setBottom(maxGuideBottom + 16.0);
-        }
-        context_.scene->setSceneRect(sceneRect);
+    QRectF sceneRect = context_.scene->itemsBoundingRect();
+    if (!sceneRect.isValid() || sceneRect.isEmpty()) {
+        sceneRect = QRectF(0.0, 0.0, 1.0, 1.0);
+    } else {
+        sceneRect = sceneRect.adjusted(-16.0, -12.0, 20.0, 24.0);
     }
+    context_.scene->setSceneRect(sceneRect);
 
     if (preferredSelectedLine > 0) {
         for (BlockCanvasItem *item : allItems) {

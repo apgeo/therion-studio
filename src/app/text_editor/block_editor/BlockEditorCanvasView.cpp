@@ -8,6 +8,9 @@
 #include <QDropEvent>
 #include <QMimeData>
 #include <QPainter>
+#include <QScrollBar>
+#include <QWheelEvent>
+#include <QtGlobal>
 
 namespace TherionStudio
 {
@@ -17,6 +20,35 @@ BlockEditorCanvasView::BlockEditorCanvasView(QWidget *parent)
     setAcceptDrops(true);
     setDragMode(QGraphicsView::RubberBandDrag);
     setRenderHint(QPainter::Antialiasing, true);
+}
+
+void BlockEditorCanvasView::wheelEvent(QWheelEvent *event)
+{
+    if (event == nullptr) {
+        QGraphicsView::wheelEvent(event);
+        return;
+    }
+
+    QPoint panDelta = event->pixelDelta();
+    if (panDelta.isNull()) {
+        const QPoint angleDelta = event->angleDelta();
+        panDelta = QPoint(qRound(static_cast<qreal>(angleDelta.x()) / 4.0),
+                          qRound(static_cast<qreal>(angleDelta.y()) / 4.0));
+    }
+
+    if (panDelta.isNull()) {
+        QGraphicsView::wheelEvent(event);
+        return;
+    }
+
+    if (horizontalScrollBar() != nullptr) {
+        horizontalScrollBar()->setValue(horizontalScrollBar()->value() - panDelta.x());
+    }
+    if (verticalScrollBar() != nullptr) {
+        verticalScrollBar()->setValue(verticalScrollBar()->value() - panDelta.y());
+    }
+
+    event->accept();
 }
 
 void BlockEditorCanvasView::dragEnterEvent(QDragEnterEvent *event)

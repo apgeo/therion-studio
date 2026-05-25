@@ -31,7 +31,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 - Status: partially complete (including unsupported-file open guardrails with external-app fallback prompt, state-aware Welcome-tab onboarding cues, quick project open/close toolbar actions, parser-level contextual-help text normalization, and improved BlockEditor options table editing UX with valid-option filtering and non-truncated completion popup sizing).
 - Status: partially complete (including unsupported-file open guardrails with external-app fallback prompt, state-aware Welcome-tab onboarding cues, quick project open/close toolbar actions, parser-level contextual-help text normalization, improved BlockEditor options table editing UX with valid-option filtering and non-truncated completion popup sizing, and editable full-line `comment` blocks in Block details).
-- Status: partially complete (including unsupported-file open guardrails with external-app fallback prompt, state-aware Welcome-tab onboarding cues, quick project open/close toolbar actions, parser-level contextual-help text normalization, improved BlockEditor options table editing UX with valid-option filtering and non-truncated completion popup sizing, editable full-line `comment` blocks in Block details, and fixed uneven sibling spacing in Block canvas post-layout compaction).
+- Status: partially complete (including unsupported-file open guardrails with external-app fallback prompt, state-aware Welcome-tab onboarding cues, quick project open/close toolbar actions, parser-level contextual-help text normalization, improved BlockEditor options table editing UX with valid-option filtering and non-truncated completion popup sizing, editable full-line `comment` blocks in Block details, fixed uneven sibling spacing in Block canvas post-layout compaction, non-dirty internal `encoding` normalization when entering Blocks mode on clean documents, removed false "Selected line is empty" validation for full-line `comment` blocks, and Block canvas visual polish with Lucide `trash-2`/`grip-vertical` icons, borderless delete icon treatment, adaptive scene bounds, explicit vertical scrollbar visibility, reliable wheel/touchpad vertical scrolling on the Blocks canvas, and corrected scroll range ownership by keeping `sceneRect` on `QGraphicsScene` instead of pinning `QGraphicsView` to `1x1`).
 - Remaining work: improve shortcut matrix, menu behavior, focus traversal, high-DPI behavior, dark/light palette transitions, and platform-native expectations.
 
 ### Phase 8 - Release Readiness and Packaging (`MVP`)
@@ -52,7 +52,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ### Phase 11 - Structured Text Authoring Canvas (`Post-MVP`)
 
-- Status: in progress.
+- Status: in progress (including fallback `Unrecognized` cards for command-like lines that cannot be mapped to known Block-editor directives, with raw-line editing to avoid silent line omission in Blocks mode, and block-canvas source reorder rewrites recorded as undoable text edits without changing Map editor `QUndoStack` ownership).
 - Remaining work: expand configurable block coverage, add target-picking/navigation affordances for map object references, improve insertion anchoring/source-safety feedback, and continue BlockEditor extraction.
 
 ## Refactor Tracks

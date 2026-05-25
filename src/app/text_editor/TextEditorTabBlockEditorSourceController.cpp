@@ -1,5 +1,6 @@
 #include "TextEditorTab.h"
 
+#include "TextEditorSourceRewriteController.h"
 #include "block_editor/BlockEditorConfigureController.h"
 #include "block_editor/BlockEditorDeleteExecutor.h"
 #include "block_editor/BlockEditorSourceController.h"
@@ -12,7 +13,9 @@ BlockEditorSourceContext TextEditorTab::blockEditorSourceContext()
     context.editor = editor_;
     context.editable = true;
     context.replaceText = [this](const QString &contents) {
-        replaceTextForCommand(contents);
+        if (sourceRewriteController_ != nullptr) {
+            sourceRewriteController_->replaceTextForCommandWithUndo(contents);
+        }
     };
     context.translate = [this](const char *text) {
         return tr(text);

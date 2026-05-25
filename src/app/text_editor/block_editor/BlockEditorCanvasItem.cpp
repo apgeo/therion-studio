@@ -3,11 +3,14 @@
 #include "BlockEditorDirectiveRules.h"
 
 #include <QApplication>
+#include <QFile>
 #include <QGraphicsSceneMouseEvent>
+#include <QHash>
 #include <QPainter>
 #include <QPalette>
 #include <QPen>
 #include <QStyle>
+#include <QSvgRenderer>
 
 namespace TherionStudio
 {
@@ -24,6 +27,43 @@ QColor readableTextColorForFill(const QColor &fill)
     return fill.lightnessF() < 0.5
         ? QColor(QStringLiteral("#f2f5f9"))
         : QColor(QStringLiteral("#1f1f1f"));
+}
+
+QPixmap renderLucidePixmap(const QString &iconName,
+                           const QColor &color,
+                           int extent,
+                           qreal devicePixelRatio)
+{
+    const QString cacheKey = QStringLiteral("%1|%2|%3|%4")
+                                 .arg(iconName,
+                                      color.name(QColor::HexArgb))
+                                 .arg(extent)
+                                 .arg(devicePixelRatio, 0, 'f', 2);
+    static QHash<QString, QPixmap> sPixmapCache;
+    if (sPixmapCache.contains(cacheKey)) {
+        return sPixmapCache.value(cacheKey);
+    }
+
+    QFile file(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QPixmap();
+    }
+
+    QString svg = QString::fromUtf8(file.readAll());
+    svg.replace(QStringLiteral("currentColor"), color.name(QColor::HexRgb));
+    QSvgRenderer renderer(svg.toUtf8());
+    if (!renderer.isValid()) {
+        return QPixmap();
+    }
+
+    QPixmap pixmap(QSize(extent, extent) * devicePixelRatio);
+    pixmap.setDevicePixelRatio(devicePixelRatio);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    renderer.render(&painter, QRectF(0, 0, extent, extent));
+    sPixmapCache.insert(cacheKey, pixmap);
+    return pixmap;
 }
 }
 
@@ -42,6 +82,9 @@ QColor blockEditorCanvasBaseColorForDirective(const QString &directive)
     }
     if (normalizedKind == QStringLiteral("map")) {
         return darkPalette ? QColor(QStringLiteral("#1f4543")) : QColor(QStringLiteral("#d5f3f0"));
+    }
+    if (BlockEditorDirectiveRules::isUnrecognizedKind(normalizedKind)) {
+        return darkPalette ? QColor(QStringLiteral("#4a2d2d")) : QColor(QStringLiteral("#ffd9d2"));
     }
     if (BlockEditorDirectiveRules::isMapObjectReferenceKind(normalizedKind)) {
         return darkPalette ? QColor(QStringLiteral("#493d1c")) : QColor(QStringLiteral("#fff0c2"));
@@ -74,7 +117,7 @@ BlockCanvasItem::BlockCanvasItem(const QString &kind,
 
 QRectF BlockCanvasItem::boundingRect() const
 {
-    return QRectF(0.0, 0.0, 260.0, 42.0);
+    return QRectF(0.0, 0.0, 290.0, 42.0);
 }
 
 void BlockCanvasItem::setName(const QString &name)
@@ -125,24 +168,36 @@ void BlockCanvasItem::paint(QPainter *painter,
     const QColor textColor = readableTextColorForFill(baseColor);
     const QColor selectedBorder = palette.color(QPalette::Highlight);
     const QColor normalBorder = palette.color(QPalette::Mid);
-    const QColor buttonFill = palette.color(QPalette::Button);
-    const QColor buttonBorder = palette.color(QPalette::Mid);
+    const QColor iconColor = palette.color(QPalette::ButtonText);
     const bool darkPalette = blockEditorUsesDarkPalette();
 
     painter->setPen(QPen(isSelected() ? selectedBorder : normalBorder, isSelected() ? 2.0 : 1.0));
     painter->setBrush(baseColor);
     painter->drawRoundedRect(boundingRect(), 6.0, 6.0);
 
+    QRectF gripButtonRect;
+    if (movable_) {
+        gripButtonRect = moveGripIconRect();
+        const QRect gripIconBounds = gripButtonRect.adjusted(2.0, 2.0, -2.0, -2.0).toRect();
+        const QPixmap gripPixmap = renderLucidePixmap(QStringLiteral("grip-vertical"),
+                                                      iconColor,
+                                                      qMax(8, gripIconBounds.width()),
+                                                      painter->device()->devicePixelRatioF());
+        if (!gripPixmap.isNull()) {
+            painter->drawPixmap(gripIconBounds.topLeft(), gripPixmap);
+        }
+    }
+
     QRectF deleteButtonRect;
     if (deletable_) {
         deleteButtonRect = deleteIconRect();
-        painter->setPen(QPen(buttonBorder, 1.0));
-        painter->setBrush(buttonFill);
-        painter->drawRoundedRect(deleteButtonRect, 4.0, 4.0);
-
         const QRect deleteIconBounds = deleteButtonRect.adjusted(4.0, 4.0, -4.0, -4.0).toRect();
-        if (QStyle *style = QApplication::style(); style != nullptr) {
-            style->standardIcon(QStyle::SP_TrashIcon).paint(painter, deleteIconBounds);
+        const QPixmap deletePixmap = renderLucidePixmap(QStringLiteral("trash-2"),
+                                                        iconColor,
+                                                        qMax(8, deleteIconBounds.width()),
+                                                        painter->device()->devicePixelRatioF());
+        if (!deletePixmap.isNull()) {
+            painter->drawPixmap(deleteIconBounds.topLeft(), deletePixmap);
         }
     }
 
@@ -160,6 +215,9 @@ void BlockCanvasItem::paint(QPainter *painter,
     const QString title = name_.isEmpty() ? kindLabel : QStringLiteral("%1: %2").arg(kindLabel, name_);
     painter->setPen(textColor);
     qreal textRight = deletable_ ? deleteButtonRect.left() - 16.0 : boundingRect().right() - 10.0;
+    if (!gripButtonRect.isNull()) {
+        textRight = qMin(textRight, gripButtonRect.left() - 10.0);
+    }
     if (!commentBadgeRect.isNull()) {
         textRight = qMin(textRight, commentBadgeRect.left() - 10.0);
     }
@@ -250,12 +308,31 @@ QRectF BlockCanvasItem::deleteIconRect() const
     return QRectF(x, 9.0, iconSize, iconSize);
 }
 
+QRectF BlockCanvasItem::moveGripIconRect() const
+{
+    if (!movable_) {
+        return QRectF();
+    }
+    const qreal iconSize = 18.0;
+    const qreal margin = 8.0;
+    qreal rightAnchor = boundingRect().right() - margin;
+    if (deletable_) {
+        rightAnchor = deleteIconRect().left() - 6.0;
+    }
+    return QRectF(rightAnchor - iconSize, 12.0, iconSize, iconSize);
+}
+
 QRectF BlockCanvasItem::inlineCommentBadgeRect() const
 {
     const qreal badgeWidth = 22.0;
     const qreal badgeHeight = 20.0;
     const qreal margin = 8.0;
-    const qreal rightAnchor = deletable_ ? deleteIconRect().left() - 8.0 : boundingRect().right() - margin;
+    qreal rightAnchor = boundingRect().right() - margin;
+    if (movable_) {
+        rightAnchor = moveGripIconRect().left() - 8.0;
+    } else if (deletable_) {
+        rightAnchor = deleteIconRect().left() - 8.0;
+    }
     return QRectF(rightAnchor - badgeWidth, 11.0, badgeWidth, badgeHeight);
 }
 }

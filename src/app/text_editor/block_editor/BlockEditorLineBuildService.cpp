@@ -75,13 +75,32 @@ bool BlockEditorLineBuildService::buildUpdatedLine(QString *updatedLine, QString
     }
 
     const QString normalizedKind = context_.normalizeDirectiveToken(*context_.selectedKind);
+    if (isUnrecognizedKind(normalizedKind)) {
+        const QString updatedRawLine = context_.idEdit != nullptr ? context_.idEdit->text() : QString();
+        if (updatedRawLine.trimmed().isEmpty()) {
+            if (validationError != nullptr) {
+                *validationError = tr("Line cannot be empty.");
+            }
+            return false;
+        }
+        *updatedLine = updatedRawLine;
+        return true;
+    }
+
     const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(*context_.selectedLineNumber - 1),
                                                                            *context_.selectedLineNumber);
+    const bool commentOnlyLine = normalizedKind == QStringLiteral("comment")
+        && isFullLineComment(parsedLine);
     if (parsedLine.tokens.isEmpty()) {
-        if (validationError != nullptr) {
+        if (commentOnlyLine) {
+            // Full-line comments intentionally have no directive tokens.
+            // They are editable in Block details via the dedicated comment branch below.
+        } else if (validationError != nullptr) {
             *validationError = tr("Selected line is empty.");
         }
-        return false;
+        if (!commentOnlyLine) {
+            return false;
+        }
     }
 
     const QRegularExpression indentPattern(QStringLiteral(R"(^[ \t]*)"));
@@ -90,8 +109,6 @@ bool BlockEditorLineBuildService::buildUpdatedLine(QString *updatedLine, QString
     const QString commandToken = parsedLine.tokens.value(0).trimmed().isEmpty()
         ? normalizedKind
         : parsedLine.tokens.value(0).trimmed();
-    const bool commentOnlyLine = normalizedKind == QStringLiteral("comment")
-        && isFullLineComment(parsedLine);
 
     if (commentOnlyLine) {
         const QString updatedComment = context_.idEdit != nullptr

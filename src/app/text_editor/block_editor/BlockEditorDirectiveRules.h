@@ -16,6 +16,8 @@ QString blockDisplayNameForKind(const QString &kind, const TherionParsedLine &pa
 QString blockDisplayKindLabel(const QString &kind);
 QString mapObjectReferenceKind();
 bool isMapObjectReferenceKind(const QString &kind);
+QString unrecognizedKind();
+bool isUnrecognizedKind(const QString &kind);
 bool isMapObjectReferenceCandidateLine(const QString &activeScope,
                                        const TherionParsedLine &parsedLine,
                                        bool commandDirective);

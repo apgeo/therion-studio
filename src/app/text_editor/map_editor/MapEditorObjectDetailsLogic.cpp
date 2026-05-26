@@ -156,10 +156,10 @@ QSet<QString> parseOrientationAllowedTypesFromText(const QString &text)
     return allowedTypes;
 }
 
-struct OrientationTypeApplicability
+struct ObjectDetailsCatalogCommandEntry
 {
-    QSet<QString> allowedTypes;
-    QSet<QString> excludedTypes;
+    QString key;
+    QJsonObject object;
 };
 
 QSet<QString> stringSetFromJsonArray(const QJsonArray &values)
@@ -174,20 +174,65 @@ QSet<QString> stringSetFromJsonArray(const QJsonArray &values)
     return tokens;
 }
 
-QHash<QString, OrientationTypeApplicability> loadOrientationTypeApplicabilityFromCatalog()
+QVector<ObjectDetailsCatalogCommandEntry> objectDetailsCatalogCommandEntries(const QJsonObject &catalogObject)
 {
-    QHash<QString, OrientationTypeApplicability> applicabilityByCommand;
+    QVector<ObjectDetailsCatalogCommandEntry> entries;
+    const QJsonValue commandsValue = catalogObject.value(QStringLiteral("commands"));
+    if (commandsValue.isArray()) {
+        const QJsonArray commandsArray = commandsValue.toArray();
+        entries.reserve(commandsArray.size());
+        for (const QJsonValue &commandValue : commandsArray) {
+            const QJsonObject commandObject = commandValue.toObject();
+            if (commandObject.isEmpty()) {
+                continue;
+            }
 
-    const CommandCatalogStore catalogStore;
-    const QJsonObject catalogObject = catalogStore.catalogObject();
+            ObjectDetailsCatalogCommandEntry entry;
+            entry.key = commandObject.value(QStringLiteral("name")).toString();
+            if (entry.key.trimmed().isEmpty()) {
+                entry.key = commandObject.value(QStringLiteral("directive")).toString();
+            }
+            entry.object = commandObject;
+            entries.append(entry);
+        }
+        return entries;
+    }
+
+    if (commandsValue.isObject()) {
+        const QJsonObject commandsObject = commandsValue.toObject();
+        entries.reserve(commandsObject.size());
+        for (auto it = commandsObject.begin(); it != commandsObject.end(); ++it) {
+            if (!it.value().isObject()) {
+                continue;
+            }
+
+            ObjectDetailsCatalogCommandEntry entry;
+            entry.key = it.key();
+            entry.object = it.value().toObject();
+            entries.append(entry);
+        }
+    }
+
+    return entries;
+}
+
+MapEditorOrientationApplicabilityByCommand mapEditorOrientationApplicabilityFromCommandCatalog(const QJsonObject &catalogObject)
+{
+    MapEditorOrientationApplicabilityByCommand applicabilityByCommand;
     if (catalogObject.isEmpty()) {
         return applicabilityByCommand;
     }
 
-    const QJsonArray commands = catalogObject.value(QStringLiteral("commands")).toArray();
-    for (const QJsonValue &commandValue : commands) {
-        const QJsonObject commandObject = commandValue.toObject();
-        const QString commandName = commandObject.value(QStringLiteral("name")).toString().trimmed().toLower();
+    const QVector<ObjectDetailsCatalogCommandEntry> commands = objectDetailsCatalogCommandEntries(catalogObject);
+    for (const ObjectDetailsCatalogCommandEntry &commandEntry : commands) {
+        const QJsonObject commandObject = commandEntry.object;
+        QString commandName = commandEntry.key.trimmed().toLower();
+        if (commandName.isEmpty()) {
+            commandName = commandObject.value(QStringLiteral("name")).toString().trimmed().toLower();
+        }
+        if (commandName.isEmpty()) {
+            commandName = commandObject.value(QStringLiteral("directive")).toString().trimmed().toLower();
+        }
         if (commandName.isEmpty()) {
             continue;
         }
@@ -210,7 +255,7 @@ QHash<QString, OrientationTypeApplicability> loadOrientationTypeApplicabilityFro
                 metadataTexts.append(dependencyValue.toString());
             }
 
-            OrientationTypeApplicability applicability;
+            MapEditorOrientationApplicability applicability;
             applicability.allowedTypes.unite(stringSetFromJsonArray(optionObject.value(QStringLiteral("applicable_types")).toArray()));
             applicability.excludedTypes.unite(stringSetFromJsonArray(optionObject.value(QStringLiteral("excluded_types")).toArray()));
             for (const QString &metadataText : metadataTexts) {
@@ -225,25 +270,33 @@ QHash<QString, OrientationTypeApplicability> loadOrientationTypeApplicabilityFro
     return applicabilityByCommand;
 }
 
-const QHash<QString, OrientationTypeApplicability> &orientationTypeApplicabilityByCommand()
+const MapEditorOrientationApplicabilityByCommand &defaultMapEditorOrientationApplicabilityByCommand()
 {
-    static const QHash<QString, OrientationTypeApplicability> applicability = loadOrientationTypeApplicabilityFromCatalog();
+    static const MapEditorOrientationApplicabilityByCommand applicability = [] {
+        const CommandCatalogStore catalogStore;
+        return mapEditorOrientationApplicabilityFromCommandCatalog(catalogStore.catalogObject());
+    }();
     return applicability;
 }
 
 bool isOrientationSupportedForParsedLine(const TherionParsedLine &parsedLine)
+{
+    return isOrientationSupportedForParsedLine(parsedLine, defaultMapEditorOrientationApplicabilityByCommand());
+}
+
+bool isOrientationSupportedForParsedLine(const TherionParsedLine &parsedLine,
+                                         const MapEditorOrientationApplicabilityByCommand &applicabilityByCommand)
 {
     const QString commandName = parsedLine.directive.trimmed().toLower();
     if (commandName != QStringLiteral("point") && commandName != QStringLiteral("line")) {
         return false;
     }
 
-    const QHash<QString, OrientationTypeApplicability> &applicabilityByCommand = orientationTypeApplicabilityByCommand();
     if (!applicabilityByCommand.contains(commandName)) {
         return true;
     }
 
-    const OrientationTypeApplicability applicability = applicabilityByCommand.value(commandName);
+    const MapEditorOrientationApplicability applicability = applicabilityByCommand.value(commandName);
     if (applicability.allowedTypes.isEmpty() && applicability.excludedTypes.isEmpty()) {
         return true;
     }

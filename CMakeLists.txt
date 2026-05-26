@@ -607,6 +607,13 @@ qt_add_executable(MapEditorObjectDeletePlannerTest
 
 target_link_libraries(MapEditorObjectDeletePlannerTest PRIVATE therion_core Qt6::Core)
 
+qt_add_executable(MapEditorObjectDetailsLogicTest
+    tests/MapEditorObjectDetailsLogicTest.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
+    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h)
+
+target_link_libraries(MapEditorObjectDetailsLogicTest PRIVATE therion_core Qt6::Core)
+
 qt_add_executable(MapEditorLineSplitPlannerTest
     tests/MapEditorLineSplitPlannerTest.cpp
     src/app/text_editor/map_editor/MapEditorLineSplitPlanner.cpp
@@ -940,6 +947,7 @@ set(THERION_UNIT_TEST_TARGETS
     MapEditorInspectorDataTest
     MapEditorObjectStyleCatalogTest
     MapEditorObjectDeletePlannerTest
+    MapEditorObjectDetailsLogicTest
     MapEditorLineSplitPlannerTest
     MapEditorObjectMovePlannerTest
     TextEditorDocumentControllerTest

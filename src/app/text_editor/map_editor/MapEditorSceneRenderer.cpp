@@ -5,8 +5,10 @@
 #include <QFont>
 #include <QGuiApplication>
 #include <QGraphicsLineItem>
+#include <QGraphicsPathItem>
 #include <QGraphicsScene>
 #include <QPalette>
+#include <QPainter>
 #include <QPainterPath>
 #include <QRegularExpression>
 #include <QStyleHints>
@@ -14,6 +16,7 @@
 #include "../../../core/TherionDocumentParser.h"
 
 #include <cmath>
+#include <limits>
 #include <memory>
 
 namespace TherionStudio {
@@ -67,20 +70,234 @@ QPen cosmeticPen(const QColor &color,
     return pen;
 }
 
-QPen styledCosmeticPen(const QColor &color,
-                       qreal width,
-                       Qt::PenStyle style,
-                       const QVector<qreal> &dashPattern,
-                       Qt::PenCapStyle cap = Qt::SquareCap,
-                       Qt::PenJoinStyle join = Qt::BevelJoin)
+QPen geometricPen(const QColor &color,
+                  qreal width,
+                  Qt::PenStyle style = Qt::SolidLine,
+                  Qt::PenCapStyle cap = Qt::SquareCap,
+                  Qt::PenJoinStyle join = Qt::BevelJoin)
 {
-    QPen pen = cosmeticPen(color, width, style, cap, join);
+    QPen pen(color, width, style, cap, join);
+    pen.setCosmetic(false);
+    return pen;
+}
+
+qreal zoomOutStrokeScale(qreal lod)
+{
+    if (lod >= 1.0) {
+        return 1.0;
+    }
+
+    return qBound<qreal>(0.32, std::pow(qMax<qreal>(0.01, lod), 0.72), 1.0);
+}
+
+class MapZoomAwarePathItem final : public QGraphicsPathItem
+{
+public:
+    MapZoomAwarePathItem(const QPainterPath &path,
+                         const QPen &basePen,
+                         const QBrush &brush = Qt::NoBrush,
+                         QGraphicsItem *parent = nullptr)
+        : QGraphicsPathItem(path, parent)
+        , basePen_(basePen)
+    {
+        setPen(basePen_);
+        setBrush(brush);
+    }
+
+protected:
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
+    {
+        Q_UNUSED(widget);
+
+        if (painter == nullptr) {
+            return;
+        }
+
+        const qreal lod = option != nullptr
+            ? QStyleOptionGraphicsItem::levelOfDetailFromTransform(painter->worldTransform())
+            : 1.0;
+        const qreal widthScale = zoomOutStrokeScale(lod);
+
+        QPen drawPen = basePen_;
+        drawPen.setCosmetic(true);
+        drawPen.setWidthF(qMax<qreal>(0.15, basePen_.widthF() * widthScale));
+
+        painter->save();
+        painter->setPen(drawPen);
+        painter->setBrush(brush());
+        painter->drawPath(path());
+        painter->restore();
+    }
+
+private:
+    QPen basePen_;
+};
+
+QPen styledGeometricPen(const QColor &color,
+                        qreal width,
+                        Qt::PenStyle style,
+                        const QVector<qreal> &dashPattern,
+                        Qt::PenCapStyle cap = Qt::SquareCap,
+                        Qt::PenJoinStyle join = Qt::BevelJoin)
+{
+    QPen pen = geometricPen(color, width, style, cap, join);
     if (!dashPattern.isEmpty()) {
         pen.setStyle(Qt::CustomDashLine);
         pen.setDashPattern(dashPattern);
     }
     return pen;
 }
+
+quint32 stableHashU32(quint32 value)
+{
+    value ^= value >> 16;
+    value *= 0x7feb352dU;
+    value ^= value >> 15;
+    value *= 0x846ca68bU;
+    value ^= value >> 16;
+    return value;
+}
+
+qreal stableRandomSigned(quint32 seed, int major, int minor, quint32 salt = 0U)
+{
+    quint32 value = seed ^ (static_cast<quint32>(major) * 0x9e3779b9U) ^ (static_cast<quint32>(minor) * 0x85ebca6bU) ^ salt;
+    value = stableHashU32(value);
+    const qreal normalized = static_cast<qreal>(value) / static_cast<qreal>(std::numeric_limits<quint32>::max());
+    return (normalized * 2.0) - 1.0;
+}
+
+class MapZoomAwareAreaPatternItem final : public QGraphicsPathItem
+{
+public:
+    MapZoomAwareAreaPatternItem(const QPainterPath &path,
+                                const MapEditorAreaFillPatternStyle &pattern,
+                                const QColor &fallbackColor,
+                                int fallbackSeed,
+                                QGraphicsItem *parent = nullptr)
+        : QGraphicsPathItem(path, parent)
+        , pattern_(pattern)
+        , fallbackColor_(fallbackColor)
+        , fallbackSeed_(fallbackSeed)
+    {
+        setPen(Qt::NoPen);
+        setBrush(Qt::NoBrush);
+    }
+
+protected:
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
+    {
+        Q_UNUSED(widget);
+        if (painter == nullptr) {
+            return;
+        }
+
+        const qreal lod = option != nullptr
+            ? QStyleOptionGraphicsItem::levelOfDetailFromTransform(painter->worldTransform())
+            : 1.0;
+
+        if (lod < 0.16) {
+            return;
+        }
+
+        painter->save();
+        painter->setClipPath(path(), Qt::IntersectClip);
+        painter->setBrush(Qt::NoBrush);
+        painter->setRenderHint(QPainter::Antialiasing, true);
+
+        const qreal safeLod = qBound<qreal>(0.12, lod, 16.0);
+        const qreal lodZoomIn = qMax<qreal>(1.0, safeLod);
+        const qreal densityRelax = std::pow(lodZoomIn, 0.35);
+        qreal screenSpacing = qBound<qreal>(4.0, pattern_.spacing, 64.0);
+        if (pattern_.kind == MapEditorFillPatternKind::CrossHatch) {
+            screenSpacing *= 1.25;
+        }
+        screenSpacing *= densityRelax;
+        const qreal sceneSpacing = qBound<qreal>(0.6, screenSpacing / safeLod, 320.0);
+        const qreal sceneStrokeWidth = qBound<qreal>(0.16, (pattern_.strokeWidth / safeLod) / densityRelax, 12.0);
+        const qreal sceneRadius = qBound<qreal>(0.3, pattern_.radius / safeLod, 32.0);
+        const qreal sceneOffsetJitter = qBound<qreal>(0.0, pattern_.offsetJitter / safeLod, 64.0);
+        const int seedValue = pattern_.seed.value_or(fallbackSeed_);
+        const quint32 seed = static_cast<quint32>(seedValue == 0 ? 1 : seedValue);
+        const QRectF bounds = path().boundingRect();
+
+        auto drawHatch = [&](qreal baseAngle, int orientationIndex) {
+            QColor strokeColor = pattern_.strokeColor.value_or(fallbackColor_);
+            const qreal baseAlpha = strokeColor.alphaF();
+            const qreal alphaByZoom = 1.0 / std::pow(lodZoomIn, 0.22);
+            const qreal crossTone = (pattern_.kind == MapEditorFillPatternKind::CrossHatch) ? 0.72 : 0.90;
+            strokeColor.setAlphaF(qBound(0.08, baseAlpha * alphaByZoom * crossTone, 1.0));
+            QPen pen(strokeColor,
+                     sceneStrokeWidth,
+                     pattern_.strokeStyle,
+                     Qt::SquareCap,
+                     Qt::MiterJoin);
+            if (!pattern_.dashPattern.isEmpty()) {
+                pen.setStyle(Qt::CustomDashLine);
+                pen.setDashPattern(pattern_.dashPattern);
+            }
+            painter->setPen(pen);
+
+            constexpr qreal kPi = 3.14159265358979323846;
+            const qreal maxExtent = std::hypot(bounds.width(), bounds.height()) * 1.9 + sceneSpacing;
+            const QPointF center = bounds.center();
+            const int bandCount = qMax(2, static_cast<int>(std::ceil(maxExtent / sceneSpacing)));
+            for (int band = -bandCount; band <= bandCount; ++band) {
+                const qreal jitterOffset = sceneOffsetJitter <= 0.0
+                    ? 0.0
+                    : stableRandomSigned(seed, orientationIndex, band, 0x20411U) * sceneOffsetJitter;
+                const qreal jitterAngle = pattern_.angleJitter <= 0.0
+                    ? 0.0
+                    : stableRandomSigned(seed, orientationIndex, band, 0x8b2f1U) * pattern_.angleJitter;
+                const qreal radians = (baseAngle + jitterAngle) * (kPi / 180.0);
+                const QPointF direction(std::cos(radians), std::sin(radians));
+                const QPointF normal(-direction.y(), direction.x());
+                const QPointF shiftedCenter = center + normal * ((static_cast<qreal>(band) * sceneSpacing) + jitterOffset);
+                painter->drawLine(shiftedCenter - (direction * maxExtent), shiftedCenter + (direction * maxExtent));
+            }
+        };
+
+        if (pattern_.kind == MapEditorFillPatternKind::Hatch || pattern_.kind == MapEditorFillPatternKind::CrossHatch) {
+            drawHatch(pattern_.angle, 0);
+            if (pattern_.kind == MapEditorFillPatternKind::CrossHatch) {
+                drawHatch(pattern_.angle + 90.0, 1);
+            }
+        } else if (pattern_.kind == MapEditorFillPatternKind::Dots) {
+            QColor dotColor = pattern_.dotColor.value_or(pattern_.strokeColor.value_or(fallbackColor_));
+            const qreal baseAlpha = dotColor.alphaF();
+            const qreal alphaByZoom = 1.0 / std::pow(lodZoomIn, 0.20);
+            dotColor.setAlphaF(qBound(0.08, baseAlpha * alphaByZoom * 0.88, 1.0));
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(dotColor);
+
+            const qreal startX = std::floor(bounds.left() / sceneSpacing) * sceneSpacing;
+            const qreal startY = std::floor(bounds.top() / sceneSpacing) * sceneSpacing;
+            const int cols = qBound(1, static_cast<int>(std::ceil(bounds.width() / sceneSpacing)) + 3, 1200);
+            const int rows = qBound(1, static_cast<int>(std::ceil(bounds.height() / sceneSpacing)) + 3, 1200);
+
+            for (int row = 0; row < rows; ++row) {
+                for (int col = 0; col < cols; ++col) {
+                    const int index = row * 4096 + col;
+                    const qreal jitterX = sceneOffsetJitter <= 0.0
+                        ? 0.0
+                        : stableRandomSigned(seed, 2, index, 0x14f21U) * sceneOffsetJitter;
+                    const qreal jitterY = sceneOffsetJitter <= 0.0
+                        ? 0.0
+                        : stableRandomSigned(seed, 3, index, 0x6a223U) * sceneOffsetJitter;
+                    const QPointF dotCenter(startX + (static_cast<qreal>(col) * sceneSpacing) + jitterX,
+                                            startY + (static_cast<qreal>(row) * sceneSpacing) + jitterY);
+                    painter->drawEllipse(dotCenter, sceneRadius, sceneRadius);
+                }
+            }
+        }
+
+        painter->restore();
+    }
+
+private:
+    MapEditorAreaFillPatternStyle pattern_;
+    QColor fallbackColor_;
+    int fallbackSeed_ = 1;
+};
 
 MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
 {
@@ -1020,37 +1237,21 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                                                        feature.label,
                                                                                        feature.subtype);
                 const qreal thickLineWidth = qBound(0.8, lineStyle.strokeWidth, 24.0);
-                const qreal detailLineWidth = qBound(0.6, lineStyle.detailWidth, 24.0);
                 const QPainterPath path = linePathForFeature(feature, sourceBounds, previewBounds);
                 QColor geometryStroke = lineStyle.strokeColor.value_or(canvasTheme.geometryStroke);
-                QColor detailStroke = lineStyle.detailColor.value_or(feature.accent);
-                detailStroke.setAlpha(canvasTheme.lightMode ? 230 : 245);
 
-                auto *lineItem = scene->addPath(path,
-                                                styledCosmeticPen(geometryStroke,
-                                                                  thickLineWidth,
-                                                                  lineStyle.penStyle,
-                                                                  lineStyle.dashPattern,
-                                                                  Qt::RoundCap,
-                                                                  Qt::RoundJoin));
+                auto *lineItem = new MapZoomAwarePathItem(path,
+                                                          styledGeometricPen(geometryStroke,
+                                                                             thickLineWidth,
+                                                                             lineStyle.penStyle,
+                                                                             lineStyle.dashPattern,
+                                                                             Qt::RoundCap,
+                                                                             Qt::RoundJoin));
+                scene->addItem(lineItem);
                 lineItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
                 lineItem->setZValue(2.5);
                 markGeometryItem(lineItem);
                 lineItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
-                auto *detailItem = scene->addPath(path,
-                                                  styledCosmeticPen(detailStroke,
-                                                                    detailLineWidth,
-                                                                    lineStyle.penStyle,
-                                                                    lineStyle.dashPattern,
-                                                                    Qt::RoundCap,
-                                                                    Qt::RoundJoin));
-                detailItem->setZValue(3.0);
-                markGeometryItem(detailItem);
-                makeMouseTransparent(detailItem);
-                detailItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
-                detailItem->setData(kMapSceneSelectionGatedRole, true);
-                detailItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineDetail);
-                detailItem->setVisible(false);
                 const qreal lineDirectionTickLength = qBound(12.0, 18.0 * mapScale, 24.0);
                 auto *directionTickItem = new QGraphicsLineItem;
                 directionTickItem->setPen(cosmeticPen(QColor(QStringLiteral("#ffda00")),
@@ -1329,7 +1530,6 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 };
                 auto couplingGuard = std::make_shared<bool>(false);
                 const auto updateInteractiveLinePreview = [lineItem,
-                                                           detailItem,
                                                            directionTickItem,
                                                            lineDirectionTickLength,
                                                            feature,
@@ -1338,7 +1538,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                            anchorItemsByOrder,
                                                            controlItemsBySourceVertex,
                                                            controlConnectors]() {
-                    if (lineItem == nullptr || detailItem == nullptr || anchorItemsByOrder == nullptr) {
+                    if (lineItem == nullptr || anchorItemsByOrder == nullptr) {
                         return;
                     }
                     if (anchorItemsByOrder->size() < 2) {
@@ -1414,8 +1614,6 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     }
 
                     lineItem->setPath(interactivePath);
-                    detailItem->setPath(interactivePath);
-
                     std::optional<QPointF> outgoingControlPreview;
                     const MapGeometryFeature::TH2LineVertex &firstVertex = feature.lineVertices.first();
                     if (firstVertex.outgoingSourceVertexIndex >= 0 && controlItemsBySourceVertex != nullptr) {
@@ -1568,14 +1766,15 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
                 QBrush areaBrush(areaFillColor, Qt::SolidPattern);
 
-                auto *fillItem = scene->addPath(path,
-                                                styledCosmeticPen(areaStrokeColor,
-                                                                  areaStrokeWidth,
-                                                                  areaStyle.penStyle,
-                                                                  areaStyle.dashPattern,
-                                                                  Qt::RoundCap,
-                                                                  Qt::RoundJoin),
-                                                areaBrush);
+                auto *fillItem = new MapZoomAwarePathItem(path,
+                                                          styledGeometricPen(areaStrokeColor,
+                                                                             areaStrokeWidth,
+                                                                             areaStyle.penStyle,
+                                                                             areaStyle.dashPattern,
+                                                                             Qt::RoundCap,
+                                                                             Qt::RoundJoin),
+                                                          areaBrush);
+                scene->addItem(fillItem);
                 fillItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
                 fillItem->setZValue(2.0);
                 markGeometryItem(fillItem);
@@ -1585,11 +1784,14 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     mapItemsByLine->insert(feature.lineNumber, fillItem);
                 }
 
-                if (areaStyle.useFillPattern) {
-                    QColor patternColor = areaStyle.fillPatternColor.value_or(areaStrokeColor);
-                    patternColor.setAlphaF(qBound(0.0, areaFillColor.alphaF() + 0.08, 1.0));
-                    QBrush patternBrush(patternColor, areaStyle.fillPattern);
-                    auto *patternItem = scene->addPath(path, Qt::NoPen, patternBrush);
+                if (areaStyle.fillPattern.has_value()) {
+                    QColor fallbackPatternColor = areaStrokeColor;
+                    fallbackPatternColor.setAlphaF(qBound(0.0, areaFillColor.alphaF() + 0.08, 1.0));
+                    auto *patternItem = new MapZoomAwareAreaPatternItem(path,
+                                                                        areaStyle.fillPattern.value(),
+                                                                        fallbackPatternColor,
+                                                                        feature.lineNumber);
+                    scene->addItem(patternItem);
                     patternItem->setZValue(2.05);
                     markGeometryItem(patternItem);
                     makeMouseTransparent(patternItem);

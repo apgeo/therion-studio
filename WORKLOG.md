@@ -9,6 +9,12 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P2 - Phase 11: continue structured block-canvas authoring coverage and BlockEditor extraction/refactor slices.
 - P1 - Block-canvas drag-loop crash hardening on macOS: guard drag-preview/drop callbacks during TextEditorTab teardown and verify no stale callback path remains around `.th2` + `.xvi` workflows.
 - P1 - Block editor logical-line continuation support: treat trailing `\` command continuations as one command block across parsing/details/apply/configure/delete paths and verify with UI regression coverage.
+- P1 - Map canvas zoom-level rendering balance: keep zoomed-out overview readable by reducing dominant geometry and `.xvi` stroke/handle visual weight without hurting editability at normal zoom.
+- P1 - Map line-style simplification: remove legacy secondary line-detail overlay (`detailWidth`/`detailColor`) and keep a single-stroke line style model.
+- P1 - Style schema naming cleanup: use consistent `stroke_width` keys for point and line widths in map style JSON (no legacy aliases).
+- P1 - Style schema naming cleanup: use `stroke_style` instead of `pen_style` for line/area stroke style keys in map style JSON (no legacy aliases).
+- P1 - Style schema naming cleanup: use `raw_type` + `raw_subtype` selector naming consistently in map style JSON.
+- P1 - Area fill-pattern renderer tuning: continue post-vectorization tuning of `fill_pattern` readability across zoom (LOD-aware spacing/width/radius/opacity shaping, especially for `cross_hatch` density at high zoom).
 - P2 - Phase 7: finalize UX/accessibility/platform-convention parity, with focus on shortcuts and keyboard behavior consistency on macOS, Windows, and Linux.
 - P3 - Phase 8: continue release-readiness and packaging hardening, with focus on signing/notarization expectations, release reproducibility, and deferred Linux packaging strategy.
 

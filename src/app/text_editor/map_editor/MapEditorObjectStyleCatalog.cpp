@@ -26,6 +26,19 @@ std::optional<qreal> optionalPositiveNumber(const QJsonObject &object, const cha
     return number;
 }
 
+std::optional<qreal> optionalNonNegativeNumber(const QJsonObject &object, const char *key)
+{
+    const QJsonValue value = object.value(QLatin1String(key));
+    if (!value.isDouble()) {
+        return std::nullopt;
+    }
+    const qreal number = value.toDouble();
+    if (number < 0.0) {
+        return std::nullopt;
+    }
+    return number;
+}
+
 std::optional<qreal> optionalZeroToOneNumber(const QJsonObject &object, const char *key)
 {
     const QJsonValue value = object.value(QLatin1String(key));
@@ -71,29 +84,17 @@ Qt::PenStyle penStyleFromString(const QString &value)
     return Qt::SolidLine;
 }
 
-Qt::BrushStyle brushStyleForPatternKind(const QString &kind, qreal angle)
+std::optional<int> optionalInteger(const QJsonObject &object, const char *key)
 {
-    const QString normalized = kind.trimmed().toLower();
-    if (normalized == QStringLiteral("dots") || normalized == QStringLiteral("dot")) {
-        return Qt::Dense6Pattern;
+    const QJsonValue value = object.value(QLatin1String(key));
+    if (!value.isDouble()) {
+        return std::nullopt;
     }
-    if (normalized == QStringLiteral("cross")) {
-        return Qt::CrossPattern;
+    const qreal number = value.toDouble();
+    if (!std::isfinite(number)) {
+        return std::nullopt;
     }
-    if (normalized == QStringLiteral("diag-cross")) {
-        return Qt::DiagCrossPattern;
-    }
-    if (normalized == QStringLiteral("hatch")) {
-        const qreal normalizedAngle = std::fmod(std::abs(angle), 180.0);
-        if (std::abs(normalizedAngle - 45.0) <= 12.0 || std::abs(normalizedAngle - 135.0) <= 12.0) {
-            return Qt::BDiagPattern;
-        }
-        if (std::abs(normalizedAngle - 30.0) <= 15.0 || std::abs(normalizedAngle - 150.0) <= 15.0) {
-            return Qt::FDiagPattern;
-        }
-        return Qt::HorPattern;
-    }
-    return Qt::SolidPattern;
+    return static_cast<int>(std::llround(number));
 }
 
 std::optional<QVector<qreal>> optionalDashPattern(const QJsonObject &object, const char *key)
@@ -129,11 +130,73 @@ QString normalizedToken(const QString &value)
     return value.trimmed().toLower();
 }
 
+MapEditorFillPatternKind fillPatternKindFromString(const QString &value)
+{
+    const QString normalized = normalizedToken(value);
+    if (normalized == QStringLiteral("hatch")) {
+        return MapEditorFillPatternKind::Hatch;
+    }
+    if (normalized == QStringLiteral("cross_hatch")) {
+        return MapEditorFillPatternKind::CrossHatch;
+    }
+    if (normalized == QStringLiteral("dots")) {
+        return MapEditorFillPatternKind::Dots;
+    }
+    return MapEditorFillPatternKind::None;
+}
+
+std::optional<MapEditorAreaFillPatternStyle> readAreaFillPattern(const QJsonObject &object)
+{
+    if (object.isEmpty()) {
+        return std::nullopt;
+    }
+
+    MapEditorAreaFillPatternStyle pattern;
+    pattern.kind = fillPatternKindFromString(object.value(QStringLiteral("kind")).toString());
+    if (pattern.kind == MapEditorFillPatternKind::None) {
+        return std::nullopt;
+    }
+
+    if (const std::optional<qreal> spacing = optionalPositiveNumber(object, "spacing")) {
+        pattern.spacing = spacing.value();
+    }
+    if (object.value(QStringLiteral("stroke_angle")).isDouble()) {
+        pattern.angle = object.value(QStringLiteral("stroke_angle")).toDouble(pattern.angle);
+    } else if (object.value(QStringLiteral("angle")).isDouble()) {
+        pattern.angle = object.value(QStringLiteral("angle")).toDouble(pattern.angle);
+    }
+    if (const std::optional<qreal> strokeWidth = optionalPositiveNumber(object, "stroke_width")) {
+        pattern.strokeWidth = strokeWidth.value();
+    }
+    if (object.value(QStringLiteral("stroke_style")).isString()) {
+        pattern.strokeStyle = penStyleFromString(object.value(QStringLiteral("stroke_style")).toString());
+    }
+    pattern.strokeColor = optionalColor(object, "stroke_color");
+    if (const std::optional<QVector<qreal>> dashPattern = optionalDashPattern(object, "dash_pattern")) {
+        pattern.dashPattern = dashPattern.value();
+    }
+    if (const std::optional<qreal> radius = optionalPositiveNumber(object, "radius")) {
+        pattern.radius = radius.value();
+    }
+    pattern.dotColor = optionalColor(object, "dot_color");
+    if (const std::optional<qreal> angleJitter = optionalNonNegativeNumber(object, "angle_jitter")) {
+        pattern.angleJitter = angleJitter.value();
+    }
+    if (const std::optional<qreal> offsetJitter = optionalNonNegativeNumber(object, "offset_jitter")) {
+        pattern.offsetJitter = offsetJitter.value();
+    }
+    if (const std::optional<int> seed = optionalInteger(object, "seed")) {
+        pattern.seed = seed;
+    }
+
+    return pattern;
+}
+
 MapEditorStyleSelector readSelector(const QJsonObject &object)
 {
     MapEditorStyleSelector selector;
-    selector.rawType = normalizedToken(object.value(QStringLiteral("rawType")).toString());
-    selector.subtype = normalizedToken(object.value(QStringLiteral("subtype")).toString());
+    selector.rawType = normalizedToken(object.value(QStringLiteral("raw_type")).toString());
+    selector.subtype = normalizedToken(object.value(QStringLiteral("raw_subtype")).toString());
     return selector;
 }
 
@@ -176,7 +239,7 @@ MapEditorObjectStyleCatalog loadMapEditorObjectStyleCatalogFromResource()
         if (const std::optional<qreal> radius = optionalPositiveNumber(point, "radius")) {
             catalog.point.radius = radius.value();
         }
-        if (const std::optional<qreal> outlineWidth = optionalPositiveNumber(point, "outline_width")) {
+        if (const std::optional<qreal> outlineWidth = optionalPositiveNumber(point, "stroke_width")) {
             catalog.point.outlineWidth = outlineWidth.value();
         }
         catalog.point.fillColor = optionalColor(point, "fill_color");
@@ -188,14 +251,10 @@ MapEditorObjectStyleCatalog loadMapEditorObjectStyleCatalogFromResource()
         if (const std::optional<qreal> strokeWidth = optionalPositiveNumber(line, "stroke_width")) {
             catalog.line.strokeWidth = strokeWidth.value();
         }
-        if (const std::optional<qreal> detailWidth = optionalPositiveNumber(line, "detail_width")) {
-            catalog.line.detailWidth = detailWidth.value();
-        }
-        if (line.value(QStringLiteral("pen_style")).isString()) {
-            catalog.line.penStyle = penStyleFromString(line.value(QStringLiteral("pen_style")).toString());
+        if (line.value(QStringLiteral("stroke_style")).isString()) {
+            catalog.line.penStyle = penStyleFromString(line.value(QStringLiteral("stroke_style")).toString());
         }
         catalog.line.strokeColor = optionalColor(line, "stroke_color");
-        catalog.line.detailColor = optionalColor(line, "detail_color");
         if (const std::optional<QVector<qreal>> dashPattern = optionalDashPattern(line, "dash_pattern")) {
             catalog.line.dashPattern = dashPattern.value();
         }
@@ -209,17 +268,18 @@ MapEditorObjectStyleCatalog loadMapEditorObjectStyleCatalogFromResource()
         if (const std::optional<qreal> fillOpacity = optionalZeroToOneNumber(area, "fill_opacity")) {
             catalog.area.fillOpacity = fillOpacity.value();
         }
-        if (area.value(QStringLiteral("pen_style")).isString()) {
-            catalog.area.penStyle = penStyleFromString(area.value(QStringLiteral("pen_style")).toString());
+        if (area.value(QStringLiteral("stroke_style")).isString()) {
+            catalog.area.penStyle = penStyleFromString(area.value(QStringLiteral("stroke_style")).toString());
         }
         catalog.area.strokeColor = optionalColor(area, "stroke_color");
         catalog.area.fillColor = optionalColor(area, "fill_color");
         if (const std::optional<QVector<qreal>> dashPattern = optionalDashPattern(area, "dash_pattern")) {
             catalog.area.dashPattern = dashPattern.value();
         }
+        catalog.area.fillPattern = readAreaFillPattern(area.value(QStringLiteral("fill_pattern")).toObject());
     }
 
-    const QJsonArray pointStyles = root.value(QStringLiteral("pointStyles")).toArray();
+    const QJsonArray pointStyles = root.value(QStringLiteral("point_styles")).toArray();
     catalog.pointStyles.reserve(pointStyles.size());
     for (const QJsonValue &entry : pointStyles) {
         if (!entry.isObject()) {
@@ -231,17 +291,14 @@ MapEditorObjectStyleCatalog loadMapEditorObjectStyleCatalogFromResource()
         if (rule.selector.rawType.isEmpty()) {
             continue;
         }
-        rule.radius = optionalPositiveNumber(object, "pointRadius");
-        if (!rule.radius.has_value()) {
-            rule.radius = optionalPositiveNumber(object, "radius");
-        }
-        rule.outlineWidth = optionalPositiveNumber(object, "outlineWidth");
-        rule.fillColor = optionalColor(object, "fillColor");
-        rule.strokeColor = optionalColor(object, "strokeColor");
+        rule.radius = optionalPositiveNumber(object, "radius");
+        rule.outlineWidth = optionalPositiveNumber(object, "stroke_width");
+        rule.fillColor = optionalColor(object, "fill_color");
+        rule.strokeColor = optionalColor(object, "stroke_color");
         catalog.pointStyles.append(rule);
     }
 
-    const QJsonArray lineStyles = root.value(QStringLiteral("lineStyles")).toArray();
+    const QJsonArray lineStyles = root.value(QStringLiteral("line_styles")).toArray();
     catalog.lineStyles.reserve(lineStyles.size());
     for (const QJsonValue &entry : lineStyles) {
         if (!entry.isObject()) {
@@ -253,23 +310,18 @@ MapEditorObjectStyleCatalog loadMapEditorObjectStyleCatalogFromResource()
         if (rule.selector.rawType.isEmpty()) {
             continue;
         }
-        rule.strokeWidth = optionalPositiveNumber(object, "lineWidth");
-        if (!rule.strokeWidth.has_value()) {
-            rule.strokeWidth = optionalPositiveNumber(object, "strokeWidth");
+        rule.strokeWidth = optionalPositiveNumber(object, "stroke_width");
+        if (object.value(QStringLiteral("stroke_style")).isString()) {
+            rule.penStyle = penStyleFromString(object.value(QStringLiteral("stroke_style")).toString());
         }
-        rule.detailWidth = optionalPositiveNumber(object, "detailWidth");
-        if (object.value(QStringLiteral("penStyle")).isString()) {
-            rule.penStyle = penStyleFromString(object.value(QStringLiteral("penStyle")).toString());
-        }
-        rule.strokeColor = optionalColor(object, "strokeColor");
-        rule.detailColor = optionalColor(object, "detailColor");
-        if (const std::optional<QVector<qreal>> dashPattern = optionalDashPattern(object, "dashPattern")) {
+        rule.strokeColor = optionalColor(object, "stroke_color");
+        if (const std::optional<QVector<qreal>> dashPattern = optionalDashPattern(object, "dash_pattern")) {
             rule.dashPattern = dashPattern;
         }
         catalog.lineStyles.append(rule);
     }
 
-    const QJsonArray areaStyles = root.value(QStringLiteral("areaStyles")).toArray();
+    const QJsonArray areaStyles = root.value(QStringLiteral("area_styles")).toArray();
     catalog.areaStyles.reserve(areaStyles.size());
     for (const QJsonValue &entry : areaStyles) {
         if (!entry.isObject()) {
@@ -282,55 +334,19 @@ MapEditorObjectStyleCatalog loadMapEditorObjectStyleCatalogFromResource()
             continue;
         }
 
-        rule.strokeWidth = optionalPositiveNumber(object, "strokeWidth");
-        rule.fillOpacity = optionalZeroToOneNumber(object, "fillOpacity");
-        if (object.value(QStringLiteral("penStyle")).isString()) {
-            rule.penStyle = penStyleFromString(object.value(QStringLiteral("penStyle")).toString());
+        rule.strokeWidth = optionalPositiveNumber(object, "stroke_width");
+        rule.fillOpacity = optionalZeroToOneNumber(object, "fill_opacity");
+        if (object.value(QStringLiteral("stroke_style")).isString()) {
+            rule.penStyle = penStyleFromString(object.value(QStringLiteral("stroke_style")).toString());
         }
 
-        rule.strokeColor = optionalColor(object, "strokeColor");
-        rule.fillColor = optionalColor(object, "fillColor");
-        if (const std::optional<QVector<qreal>> dashPattern = optionalDashPattern(object, "dashPattern")) {
+        rule.strokeColor = optionalColor(object, "stroke_color");
+        rule.fillColor = optionalColor(object, "fill_color");
+        if (const std::optional<QVector<qreal>> dashPattern = optionalDashPattern(object, "dash_pattern")) {
             rule.dashPattern = dashPattern;
         }
 
-        const QJsonObject fillStyle = object.value(QStringLiteral("fillStyle")).toObject();
-        if (!fillStyle.isEmpty()) {
-            const QString kind = fillStyle.value(QStringLiteral("kind")).toString();
-            const qreal angle = fillStyle.value(QStringLiteral("angle")).toDouble(45.0);
-            if (!kind.trimmed().isEmpty()) {
-                const Qt::BrushStyle patternStyle = brushStyleForPatternKind(kind, angle);
-                if (patternStyle != Qt::SolidPattern || normalizedToken(kind) == QStringLiteral("solid")) {
-                    rule.fillPattern = patternStyle;
-                    rule.useFillPattern = patternStyle != Qt::SolidPattern;
-                }
-            }
-            if (const std::optional<QColor> color = optionalColor(fillStyle, "color")) {
-                rule.fillColor = color;
-            }
-            if (const std::optional<QColor> backgroundColor = optionalColor(fillStyle, "backgroundColor")) {
-                rule.fillColor = backgroundColor;
-            }
-            if (const std::optional<QColor> patternColor = optionalColor(fillStyle, "strokeColor")) {
-                rule.fillPatternColor = patternColor;
-            }
-            if (const std::optional<QColor> dotColor = optionalColor(fillStyle, "dotColor")) {
-                rule.fillPatternColor = dotColor;
-            }
-        }
-
-        const QJsonObject strokeStyle = object.value(QStringLiteral("strokeStyle")).toObject();
-        if (!strokeStyle.isEmpty()) {
-            if (const std::optional<qreal> width = optionalPositiveNumber(strokeStyle, "width")) {
-                rule.strokeWidth = width;
-            }
-            if (const std::optional<QColor> color = optionalColor(strokeStyle, "color")) {
-                rule.strokeColor = color;
-            }
-            if (const std::optional<QVector<qreal>> dashPattern = optionalDashPattern(strokeStyle, "dashPattern")) {
-                rule.dashPattern = dashPattern;
-            }
-        }
+        rule.fillPattern = readAreaFillPattern(object.value(QStringLiteral("fill_pattern")).toObject());
 
         catalog.areaStyles.append(rule);
     }
@@ -385,10 +401,8 @@ MapEditorResolvedLineStyle resolveMapEditorLineStyle(const MapEditorObjectStyleC
 {
     MapEditorResolvedLineStyle resolved;
     resolved.strokeWidth = catalog.line.strokeWidth;
-    resolved.detailWidth = catalog.line.detailWidth;
     resolved.penStyle = catalog.line.penStyle;
     resolved.strokeColor = catalog.line.strokeColor;
-    resolved.detailColor = catalog.line.detailColor;
     resolved.dashPattern = catalog.line.dashPattern;
 
     const QString normalizedRawType = normalizedToken(rawType);
@@ -400,17 +414,11 @@ MapEditorResolvedLineStyle resolveMapEditorLineStyle(const MapEditorObjectStyleC
         if (rule.strokeWidth.has_value()) {
             resolved.strokeWidth = rule.strokeWidth.value();
         }
-        if (rule.detailWidth.has_value()) {
-            resolved.detailWidth = rule.detailWidth.value();
-        }
         if (rule.penStyle.has_value()) {
             resolved.penStyle = rule.penStyle.value();
         }
         if (rule.strokeColor.has_value()) {
             resolved.strokeColor = rule.strokeColor;
-        }
-        if (rule.detailColor.has_value()) {
-            resolved.detailColor = rule.detailColor;
         }
         if (rule.dashPattern.has_value()) {
             resolved.dashPattern = rule.dashPattern.value();
@@ -432,8 +440,6 @@ MapEditorResolvedAreaStyle resolveMapEditorAreaStyle(const MapEditorObjectStyleC
     resolved.fillColor = catalog.area.fillColor;
     resolved.dashPattern = catalog.area.dashPattern;
     resolved.fillPattern = catalog.area.fillPattern;
-    resolved.fillPatternColor = catalog.area.fillPatternColor;
-    resolved.useFillPattern = catalog.area.useFillPattern;
 
     const QString normalizedRawType = normalizedToken(rawType);
     const QString normalizedSubtype = normalizedToken(subtype);
@@ -460,13 +466,7 @@ MapEditorResolvedAreaStyle resolveMapEditorAreaStyle(const MapEditorObjectStyleC
             resolved.dashPattern = rule.dashPattern.value();
         }
         if (rule.fillPattern.has_value()) {
-            resolved.fillPattern = rule.fillPattern.value();
-        }
-        if (rule.fillPatternColor.has_value()) {
-            resolved.fillPatternColor = rule.fillPatternColor;
-        }
-        if (rule.useFillPattern.has_value()) {
-            resolved.useFillPattern = rule.useFillPattern.value();
+            resolved.fillPattern = rule.fillPattern;
         }
     }
 

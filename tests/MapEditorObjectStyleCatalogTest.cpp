@@ -32,10 +32,6 @@ int main()
                 "Expected line default stroke width from resource catalog.")) {
         return 1;
     }
-    if (!expect(std::abs(catalog.line.detailWidth - 1.8) < 1e-6,
-                "Expected line default detail width from resource catalog.")) {
-        return 1;
-    }
     if (!expect(catalog.line.penStyle == Qt::SolidLine,
                 "Expected line default pen style to resolve as solid.")) {
         return 1;
@@ -48,8 +44,8 @@ int main()
                 "Expected area default fill opacity from resource catalog.")) {
         return 1;
     }
-    if (!expect(catalog.area.penStyle == Qt::SolidLine,
-                "Expected area default pen style to resolve as solid.")) {
+    if (!expect(catalog.area.penStyle == Qt::DashLine,
+                "Expected area default pen style to resolve as dashed.")) {
         return 1;
     }
     if (!expect(!catalog.lineStyles.isEmpty(),
@@ -76,12 +72,42 @@ int main()
     }
 
     const MapEditorResolvedAreaStyle sandStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("sand"));
-    if (!expect(sandStyle.useFillPattern,
+    if (!expect(sandStyle.fillPattern.has_value(),
                 "Expected fill pattern for sand area style.")) {
         return 1;
     }
     if (!expect(!sandStyle.dashPattern.isEmpty(),
                 "Expected stroke dash pattern for sand area style.")) {
+        return 1;
+    }
+    if (!expect(sandStyle.fillPattern->kind == MapEditorFillPatternKind::CrossHatch,
+                "Expected cross_hatch fill pattern kind for sand area style.")) {
+        return 1;
+    }
+    if (!expect(std::abs(sandStyle.fillPattern->spacing - 7.0) < 1e-6,
+                "Expected spacing override for sand area fill pattern.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedAreaStyle waterStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("water"));
+    if (!expect(waterStyle.fillPattern.has_value()
+                    && waterStyle.fillPattern->kind == MapEditorFillPatternKind::Hatch,
+                "Expected hatch fill pattern for water area style.")) {
+        return 1;
+    }
+    if (!expect(waterStyle.fillPattern->strokeStyle == Qt::DashLine,
+                "Expected dashed stroke style for water area fill pattern.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedAreaStyle blocksStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("blocks"));
+    if (!expect(blocksStyle.fillPattern.has_value()
+                    && blocksStyle.fillPattern->kind == MapEditorFillPatternKind::Dots,
+                "Expected dots fill pattern for blocks area style.")) {
+        return 1;
+    }
+    if (!expect(std::abs(blocksStyle.fillPattern->radius - 1.1) < 1e-6,
+                "Expected dot radius override for blocks area fill pattern.")) {
         return 1;
     }
 

@@ -5,6 +5,8 @@
 #include <QCursor>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsItem>
+#include <QGraphicsScene>
+#include <QGraphicsView>
 #include <QGraphicsSceneHoverEvent>
 #include <QGraphicsSceneMouseEvent>
 #include <QPainter>
@@ -27,6 +29,50 @@ namespace TherionStudio {
 inline bool mapSourcePointsDiffer(const QPointF &a, const QPointF &b)
 {
     return (a - b).manhattanLength() > 0.01;
+}
+
+inline qreal mapZoomOutMarkerScale(const QGraphicsItem *item, const QPainter *painter, const QWidget *widget)
+{
+    qreal lod = 0.0;
+
+    if (widget != nullptr) {
+        const QObject *parent = widget->parent();
+        const QGraphicsView *view = qobject_cast<const QGraphicsView *>(parent);
+        if (view != nullptr) {
+            const QTransform viewTransform = view->transform();
+            const qreal viewScale = std::hypot(viewTransform.m11(), viewTransform.m21());
+            if (viewScale > 0.0) {
+                lod = viewScale;
+            }
+        }
+    }
+
+    if (lod <= 0.0 && item != nullptr && item->scene() != nullptr) {
+        const QList<QGraphicsView *> views = item->scene()->views();
+        for (const QGraphicsView *view : views) {
+            if (view == nullptr) {
+                continue;
+            }
+            const QTransform viewTransform = view->transform();
+            const qreal viewScale = std::hypot(viewTransform.m11(), viewTransform.m21());
+            if (viewScale > lod) {
+                lod = viewScale;
+            }
+        }
+    }
+
+    if (lod <= 0.0 && painter != nullptr) {
+        lod = QStyleOptionGraphicsItem::levelOfDetailFromTransform(painter->worldTransform());
+    }
+    if (lod <= 0.0) {
+        lod = 1.0;
+    }
+
+    if (lod >= 1.0) {
+        return 1.0;
+    }
+
+    return qBound<qreal>(0.34, std::pow(qMax<qreal>(0.01, lod), 0.70), 1.0);
 }
 
 struct CoordinateTransform
@@ -90,11 +136,11 @@ protected:
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
     {
-        Q_UNUSED(widget);
-
         const bool selected = option != nullptr && (option->state & QStyle::State_Selected);
         const bool emphasize = selected || hoverActive_ || dragActive_;
-        const qreal scale = dragActive_ ? 1.5 : (selected ? 1.4 : (hoverActive_ ? 1.25 : 1.0));
+        const qreal interactionScale = dragActive_ ? 1.5 : (selected ? 1.4 : (hoverActive_ ? 1.25 : 1.0));
+        const qreal zoomOutScale = mapZoomOutMarkerScale(this, painter, widget);
+        const qreal scale = interactionScale * zoomOutScale;
         const QRectF baseRect = rect();
         const QPointF center = baseRect.center();
         QRectF drawRect = baseRect;
@@ -114,10 +160,12 @@ protected:
                 : (fill.lightnessF() > 0.6 ? QColor(24, 38, 56, 70) : QColor(255, 255, 255, 70));
             painter->setPen(Qt::NoPen);
             painter->setBrush(halo);
-            painter->drawEllipse(drawRect.adjusted(-2.2, -2.2, 2.2, 2.2));
+            const qreal haloRadius = 2.2 * zoomOutScale;
+            painter->drawEllipse(drawRect.adjusted(-haloRadius, -haloRadius, haloRadius, haloRadius));
         }
 
-        painter->setPen(QPen(outline, selected ? 1.8 : 1.1));
+        const qreal outlineWidth = (selected ? 1.8 : 1.1) * zoomOutScale;
+        painter->setPen(QPen(outline, qMax<qreal>(0.55, outlineWidth)));
         painter->setBrush(fill);
         painter->drawEllipse(drawRect);
     }
@@ -269,11 +317,11 @@ protected:
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
     {
-        Q_UNUSED(widget);
-
         const bool selected = option != nullptr && (option->state & QStyle::State_Selected);
         const bool emphasize = selected || hoverActive_ || dragActive_;
-        const qreal scale = dragActive_ ? 1.45 : (selected ? 1.35 : (hoverActive_ ? 1.2 : 1.0));
+        const qreal interactionScale = dragActive_ ? 1.45 : (selected ? 1.35 : (hoverActive_ ? 1.2 : 1.0));
+        const qreal zoomOutScale = mapZoomOutMarkerScale(this, painter, widget);
+        const qreal scale = interactionScale * zoomOutScale;
         const QRectF baseRect = rect();
         const QPointF center = baseRect.center();
         QRectF drawRect = baseRect;
@@ -295,10 +343,12 @@ protected:
                 : (fill.lightnessF() > 0.6 ? QColor(24, 38, 56, 70) : QColor(255, 255, 255, 70));
             painter->setPen(Qt::NoPen);
             painter->setBrush(halo);
-            painter->drawEllipse(drawRect.adjusted(-2.0, -2.0, 2.0, 2.0));
+            const qreal haloRadius = 2.0 * zoomOutScale;
+            painter->drawEllipse(drawRect.adjusted(-haloRadius, -haloRadius, haloRadius, haloRadius));
         }
 
-        painter->setPen(QPen(outline, selected ? 1.7 : 1.0));
+        const qreal outlineWidth = (selected ? 1.7 : 1.0) * zoomOutScale;
+        painter->setPen(QPen(outline, qMax<qreal>(0.5, outlineWidth)));
         painter->setBrush(fill);
         painter->drawEllipse(drawRect);
     }

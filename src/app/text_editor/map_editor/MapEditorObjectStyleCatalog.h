@@ -8,6 +8,30 @@
 
 namespace TherionStudio
 {
+enum class MapEditorFillPatternKind
+{
+    None,
+    Hatch,
+    CrossHatch,
+    Dots
+};
+
+struct MapEditorAreaFillPatternStyle
+{
+    MapEditorFillPatternKind kind = MapEditorFillPatternKind::None;
+    qreal spacing = 6.0;
+    qreal angle = 45.0;
+    qreal strokeWidth = 1.0;
+    Qt::PenStyle strokeStyle = Qt::SolidLine;
+    std::optional<QColor> strokeColor;
+    QVector<qreal> dashPattern;
+    qreal radius = 1.2;
+    std::optional<QColor> dotColor;
+    qreal angleJitter = 0.0;
+    qreal offsetJitter = 0.0;
+    std::optional<int> seed;
+};
+
 struct MapEditorPointStyleDefaults
 {
     qreal radius = 5.6;
@@ -19,10 +43,8 @@ struct MapEditorPointStyleDefaults
 struct MapEditorLineStyleDefaults
 {
     qreal strokeWidth = 3.2;
-    qreal detailWidth = 1.8;
     Qt::PenStyle penStyle = Qt::SolidLine;
     std::optional<QColor> strokeColor;
-    std::optional<QColor> detailColor;
     QVector<qreal> dashPattern;
 };
 
@@ -34,9 +56,7 @@ struct MapEditorAreaStyleDefaults
     std::optional<QColor> strokeColor;
     std::optional<QColor> fillColor;
     QVector<qreal> dashPattern;
-    Qt::BrushStyle fillPattern = Qt::SolidPattern;
-    std::optional<QColor> fillPatternColor;
-    bool useFillPattern = false;
+    std::optional<MapEditorAreaFillPatternStyle> fillPattern;
 };
 
 struct MapEditorStyleSelector
@@ -58,10 +78,8 @@ struct MapEditorLineStyleRule
 {
     MapEditorStyleSelector selector;
     std::optional<qreal> strokeWidth;
-    std::optional<qreal> detailWidth;
     std::optional<Qt::PenStyle> penStyle;
     std::optional<QColor> strokeColor;
-    std::optional<QColor> detailColor;
     std::optional<QVector<qreal>> dashPattern;
 };
 
@@ -74,9 +92,7 @@ struct MapEditorAreaStyleRule
     std::optional<QColor> strokeColor;
     std::optional<QColor> fillColor;
     std::optional<QVector<qreal>> dashPattern;
-    std::optional<Qt::BrushStyle> fillPattern;
-    std::optional<QColor> fillPatternColor;
-    std::optional<bool> useFillPattern;
+    std::optional<MapEditorAreaFillPatternStyle> fillPattern;
 };
 
 struct MapEditorObjectStyleCatalog
@@ -101,10 +117,8 @@ struct MapEditorResolvedPointStyle
 struct MapEditorResolvedLineStyle
 {
     qreal strokeWidth = 3.2;
-    qreal detailWidth = 1.8;
     Qt::PenStyle penStyle = Qt::SolidLine;
     std::optional<QColor> strokeColor;
-    std::optional<QColor> detailColor;
     QVector<qreal> dashPattern;
 };
 
@@ -116,9 +130,7 @@ struct MapEditorResolvedAreaStyle
     std::optional<QColor> strokeColor;
     std::optional<QColor> fillColor;
     QVector<qreal> dashPattern;
-    Qt::BrushStyle fillPattern = Qt::SolidPattern;
-    std::optional<QColor> fillPatternColor;
-    bool useFillPattern = false;
+    std::optional<MapEditorAreaFillPatternStyle> fillPattern;
 };
 
 MapEditorObjectStyleCatalog mapEditorObjectStyleCatalog();

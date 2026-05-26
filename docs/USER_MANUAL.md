@@ -1,6 +1,6 @@
 # Therion Studio User Manual
 
-Last updated: 2026-05-25
+Last updated: 2026-05-26
 
 This guide covers end-user workflows in Therion Studio.
 
@@ -105,6 +105,10 @@ Toolbar actions include:
 - zoom: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
 - selection/drafting: `Select`, `Complete Draft`
 - insertion: `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`
+
+Canvas rendering is zoom-aware: geometry strokes and edit handles are reduced at distant zoom levels so overview remains readable.
+Line objects render as a single styled stroke; there is no separate secondary detail-stroke layer.
+Area fills support configurable pattern overlays from `resources/map_object_styles.json` via `fill_pattern` (`hatch`, `cross_hatch`, `dots`) with spacing/angle/stroke or dot parameters.
 
 ### 6.3 Drawing Basics
 

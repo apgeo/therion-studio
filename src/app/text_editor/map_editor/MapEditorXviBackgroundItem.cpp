@@ -4,8 +4,22 @@
 #include <QPen>
 #include <QStyleOptionGraphicsItem>
 
+#include <cmath>
+
 namespace TherionStudio
 {
+namespace
+{
+qreal zoomOutStrokeScale(qreal lod)
+{
+    if (lod >= 1.0) {
+        return 1.0;
+    }
+
+    return qBound<qreal>(0.30, std::pow(qMax<qreal>(0.01, lod), 0.80), 1.0);
+}
+}
+
 MapEditorXviBackgroundItem::MapEditorXviBackgroundItem(QGraphicsItem *parent)
     : QGraphicsPixmapItem(parent)
 {
@@ -47,9 +61,10 @@ void MapEditorXviBackgroundItem::paint(QPainter *painter,
     const qreal lod = option != nullptr
         ? QStyleOptionGraphicsItem::levelOfDetailFromTransform(painter->worldTransform())
         : 1.0;
+    const qreal zoomOutScale = zoomOutStrokeScale(lod);
 
     QPen gridPen(QColor(32, 32, 32, 40));
-    gridPen.setWidthF(1.0);
+    gridPen.setWidthF(1.0 * zoomOutScale);
     gridPen.setCosmetic(true);
     gridPen.setCapStyle(Qt::RoundCap);
     painter->setPen(gridPen);
@@ -58,7 +73,7 @@ void MapEditorXviBackgroundItem::paint(QPainter *painter,
     }
 
     QPen traverseShotPen(QColor(18, 44, 88, 130));
-    traverseShotPen.setWidthF(1.8);
+    traverseShotPen.setWidthF(1.8 * zoomOutScale);
     traverseShotPen.setCosmetic(true);
     traverseShotPen.setCapStyle(Qt::RoundCap);
     traverseShotPen.setJoinStyle(Qt::RoundJoin);
@@ -68,7 +83,7 @@ void MapEditorXviBackgroundItem::paint(QPainter *painter,
     }
 
     QPen splayPen(QColor(28, 92, 64, 122));
-    splayPen.setWidthF(1.4);
+    splayPen.setWidthF(1.4 * zoomOutScale);
     splayPen.setCosmetic(true);
     splayPen.setCapStyle(Qt::RoundCap);
     splayPen.setJoinStyle(Qt::RoundJoin);
@@ -92,7 +107,7 @@ void MapEditorXviBackgroundItem::paint(QPainter *painter,
 
             QPen sketchPen(strokeColor);
             sketchPen.setStyle(sketch.style);
-            sketchPen.setWidthF(1.15);
+            sketchPen.setWidthF(1.15 * zoomOutScale);
             sketchPen.setCosmetic(true);
             sketchPen.setCapStyle(Qt::RoundCap);
             sketchPen.setJoinStyle(Qt::RoundJoin);

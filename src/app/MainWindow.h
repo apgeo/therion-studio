@@ -10,6 +10,7 @@
 #include "MainWindowTherionConsoleController.h"
 #include "ProjectStructureScanner.h"
 #include "../core/ProjectStructureIndex.h"
+#include "../core/QtFileSystem.h"
 #include "../core/SessionStore.h"
 
 class QLabel;
@@ -313,6 +314,7 @@ private:
     QHash<QString, QPointer<QMainWindow>> detachedMapWindowsByPath_;
     QHash<TherionStudio::MapEditorTab *, QString> detachedMapPathsByTab_;
 
+    TherionStudio::QtFileSystem fileSystem_;
     TherionStudio::SessionSettingsStore sessionStore_;
     TherionStudio::ProjectStructureScanner *structureSidebarScanner_ = nullptr;
 };

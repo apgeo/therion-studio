@@ -65,6 +65,6 @@ void TextEditorTab::buildDocumentController()
         refreshStatus();
     };
 
-    documentController_ = std::make_unique<TextEditorDocumentController>(std::move(documentContext));
+    documentController_ = std::make_unique<TextEditorDocumentController>(*fileSystem_, std::move(documentContext));
 }
 }

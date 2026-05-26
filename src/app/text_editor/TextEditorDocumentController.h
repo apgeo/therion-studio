@@ -8,6 +8,7 @@ class QPlainTextEdit;
 
 namespace TherionStudio
 {
+class IFileSystem;
 struct TextEditorDocumentContext
 {
     QPlainTextEdit *editor = nullptr;
@@ -44,7 +45,7 @@ struct TextEditorDocumentContext
 class TextEditorDocumentController final
 {
 public:
-    explicit TextEditorDocumentController(TextEditorDocumentContext context);
+    explicit TextEditorDocumentController(IFileSystem &fileSystem, TextEditorDocumentContext context);
 
     bool loadFile(const QString &filePath, QString *errorMessage = nullptr);
     bool save(QString *errorMessage = nullptr);
@@ -53,6 +54,7 @@ public:
 private:
     QString tr(const char *text) const;
 
+    IFileSystem &fileSystem_;
     TextEditorDocumentContext context_;
 };
 }

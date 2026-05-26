@@ -30,7 +30,7 @@
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
 #include "../core/ProjectStructureIndex.h"
-#include "../core/DocumentFile.h"
+#include "../core/IFileSystem.h"
 #include "../core/TherionDocumentParser.h"
 
 namespace
@@ -183,7 +183,8 @@ QString normalizedStructurePathKey(const QString &path)
     return canonicalPath.isEmpty() ? fileInfo.absoluteFilePath() : canonicalPath;
 }
 
-QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(const QVector<TherionStudio::ProjectStructureEntry> &entries)
+QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(TherionStudio::IFileSystem &fileSystem,
+                                                         const QVector<TherionStudio::ProjectStructureEntry> &entries)
 {
     QHash<QString, QSet<QString>> referencesByMap;
     QSet<QString> knownScrapNames;
@@ -208,7 +209,7 @@ QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(const QVector<TherionSt
 
     for (auto fileIt = mapsBySourceFile.constBegin(); fileIt != mapsBySourceFile.constEnd(); ++fileIt) {
         QString contents;
-        if (!TherionStudio::DocumentFile::readUtf8TextFile(fileIt.key(), &contents, nullptr)) {
+        if (!fileSystem.readUtf8TextFile(fileIt.key(), &contents, nullptr)) {
             continue;
         }
         const QVector<TherionStudio::TherionParsedLine> parsedLines = TherionStudio::TherionDocumentParser::parseText(contents);
@@ -383,7 +384,7 @@ void MainWindow::applyStructureSidebarEntries(const QVector<TherionStudio::Proje
             QStandardItem *item = nullptr;
         };
 
-        const QHash<QString, QSet<QString>> mapScrapRefs = mapScrapReferencesByMapKey(entries);
+        const QHash<QString, QSet<QString>> mapScrapRefs = mapScrapReferencesByMapKey(fileSystem_, entries);
         QHash<QString, QSet<QString>> mapOwnersByScrapName;
         for (auto it = mapScrapRefs.constBegin(); it != mapScrapRefs.constEnd(); ++it) {
             for (const QString &scrapNameLower : it.value()) {

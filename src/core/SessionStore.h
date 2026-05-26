@@ -1,15 +1,14 @@
 #pragma once
 
-#include <QByteArray>
+#include "ISessionStore.h"
+
 #include <QSettings>
-#include <QString>
-#include <QStringList>
 
 #include <memory>
 
 namespace TherionStudio
 {
-class SessionSettingsStore final
+class SessionSettingsStore final : public ISessionStore
 {
 public:
     SessionSettingsStore();
@@ -18,96 +17,53 @@ public:
                          QSettings::Scope scope,
                          const QString &organization,
                          const QString &application);
-    ~SessionSettingsStore();
+    ~SessionSettingsStore() override;
 
     SessionSettingsStore(const SessionSettingsStore &) = delete;
     SessionSettingsStore &operator=(const SessionSettingsStore &) = delete;
     SessionSettingsStore(SessionSettingsStore &&) noexcept;
     SessionSettingsStore &operator=(SessionSettingsStore &&) noexcept;
 
-    QString lastProjectPath() const;
-    void setLastProjectPath(const QString &projectPath);
+    QString lastProjectPath() const override;
+    void setLastProjectPath(const QString &projectPath) override;
 
-    QByteArray mainWindowGeometry() const;
-    void setMainWindowGeometry(const QByteArray &geometry);
+    QByteArray mainWindowGeometry() const override;
+    void setMainWindowGeometry(const QByteArray &geometry) override;
 
-    QByteArray mainWindowState() const;
-    void setMainWindowState(const QByteArray &state);
+    QByteArray mainWindowState() const override;
+    void setMainWindowState(const QByteArray &state) override;
 
-    QStringList openDocumentPaths() const;
-    void setOpenDocumentPaths(const QStringList &documentPaths);
+    QStringList openDocumentPaths() const override;
+    void setOpenDocumentPaths(const QStringList &documentPaths) override;
 
-    QString activeDocumentPath() const;
-    void setActiveDocumentPath(const QString &documentPath);
+    QString activeDocumentPath() const override;
+    void setActiveDocumentPath(const QString &documentPath) override;
 
-    QString structureNameOverrides() const;
-    void setStructureNameOverrides(const QString &json);
+    QString structureNameOverrides() const override;
+    void setStructureNameOverrides(const QString &json) override;
 
-    QString therionExecutablePath() const;
-    void setTherionExecutablePath(const QString &path);
+    QString therionExecutablePath() const override;
+    void setTherionExecutablePath(const QString &path) override;
 
-    QString therionWorkingDirectory() const;
-    void setTherionWorkingDirectory(const QString &path);
+    QString therionWorkingDirectory() const override;
+    void setTherionWorkingDirectory(const QString &path) override;
 
-    QString therionArguments() const;
-    void setTherionArguments(const QString &arguments);
+    QString therionArguments() const override;
+    void setTherionArguments(const QString &arguments) override;
 
-    QString therionRunTargetMode() const;
-    void setTherionRunTargetMode(const QString &mode);
+    QString therionRunTargetMode() const override;
+    void setTherionRunTargetMode(const QString &mode) override;
 
-    QString therionTargetConfigPath() const;
-    void setTherionTargetConfigPath(const QString &path);
+    QString therionTargetConfigPath() const override;
+    void setTherionTargetConfigPath(const QString &path) override;
 
-    bool therionMapTouchFriendlyControlsEnabled() const;
-    void setTherionMapTouchFriendlyControlsEnabled(bool enabled);
+    bool therionMapTouchFriendlyControlsEnabled() const override;
+    void setTherionMapTouchFriendlyControlsEnabled(bool enabled) override;
 
-    QString therionMapBackgroundLayers() const;
-    void setTherionMapBackgroundLayers(const QString &json);
+    QString therionMapBackgroundLayers() const override;
+    void setTherionMapBackgroundLayers(const QString &json) override;
 
 private:
     std::unique_ptr<QSettings> settings_;
-};
-
-class SessionStore final
-{
-public:
-    static QString lastProjectPath();
-    static void setLastProjectPath(const QString &projectPath);
-
-    static QByteArray mainWindowGeometry();
-    static void setMainWindowGeometry(const QByteArray &geometry);
-
-    static QByteArray mainWindowState();
-    static void setMainWindowState(const QByteArray &state);
-
-    static QStringList openDocumentPaths();
-    static void setOpenDocumentPaths(const QStringList &documentPaths);
-
-    static QString activeDocumentPath();
-    static void setActiveDocumentPath(const QString &documentPath);
-
-    static QString structureNameOverrides();
-    static void setStructureNameOverrides(const QString &json);
-
-    static QString therionExecutablePath();
-    static void setTherionExecutablePath(const QString &path);
-
-    static QString therionWorkingDirectory();
-    static void setTherionWorkingDirectory(const QString &path);
-
-    static QString therionArguments();
-    static void setTherionArguments(const QString &arguments);
-
-    static QString therionRunTargetMode();
-    static void setTherionRunTargetMode(const QString &mode);
-
-    static QString therionTargetConfigPath();
-    static void setTherionTargetConfigPath(const QString &path);
-
-    static bool therionMapTouchFriendlyControlsEnabled();
-    static void setTherionMapTouchFriendlyControlsEnabled(bool enabled);
-
-    static QString therionMapBackgroundLayers();
-    static void setTherionMapBackgroundLayers(const QString &json);
 };
 }

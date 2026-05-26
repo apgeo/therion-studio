@@ -1,0 +1,53 @@
+#pragma once
+
+#include <QByteArray>
+#include <QString>
+#include <QStringList>
+
+namespace TherionStudio
+{
+class ISessionStore
+{
+public:
+    virtual ~ISessionStore() = default;
+
+    virtual QString lastProjectPath() const = 0;
+    virtual void setLastProjectPath(const QString &projectPath) = 0;
+
+    virtual QByteArray mainWindowGeometry() const = 0;
+    virtual void setMainWindowGeometry(const QByteArray &geometry) = 0;
+
+    virtual QByteArray mainWindowState() const = 0;
+    virtual void setMainWindowState(const QByteArray &state) = 0;
+
+    virtual QStringList openDocumentPaths() const = 0;
+    virtual void setOpenDocumentPaths(const QStringList &documentPaths) = 0;
+
+    virtual QString activeDocumentPath() const = 0;
+    virtual void setActiveDocumentPath(const QString &documentPath) = 0;
+
+    virtual QString structureNameOverrides() const = 0;
+    virtual void setStructureNameOverrides(const QString &json) = 0;
+
+    virtual QString therionExecutablePath() const = 0;
+    virtual void setTherionExecutablePath(const QString &path) = 0;
+
+    virtual QString therionWorkingDirectory() const = 0;
+    virtual void setTherionWorkingDirectory(const QString &path) = 0;
+
+    virtual QString therionArguments() const = 0;
+    virtual void setTherionArguments(const QString &arguments) = 0;
+
+    virtual QString therionRunTargetMode() const = 0;
+    virtual void setTherionRunTargetMode(const QString &mode) = 0;
+
+    virtual QString therionTargetConfigPath() const = 0;
+    virtual void setTherionTargetConfigPath(const QString &path) = 0;
+
+    virtual bool therionMapTouchFriendlyControlsEnabled() const = 0;
+    virtual void setTherionMapTouchFriendlyControlsEnabled(bool enabled) = 0;
+
+    virtual QString therionMapBackgroundLayers() const = 0;
+    virtual void setTherionMapBackgroundLayers(const QString &json) = 0;
+};
+}

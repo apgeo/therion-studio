@@ -1,6 +1,6 @@
 #include "TextEditorDocumentController.h"
 
-#include "../../core/DocumentFile.h"
+#include "../../core/IFileSystem.h"
 
 #include <QPlainTextEdit>
 #include <QTextCursor>
@@ -10,8 +10,10 @@
 
 namespace TherionStudio
 {
-TextEditorDocumentController::TextEditorDocumentController(TextEditorDocumentContext context)
-    : context_(std::move(context))
+TextEditorDocumentController::TextEditorDocumentController(IFileSystem &fileSystem,
+                                                           TextEditorDocumentContext context)
+    : fileSystem_(fileSystem)
+    , context_(std::move(context))
 {
 }
 
@@ -46,7 +48,7 @@ bool TextEditorDocumentController::loadFile(const QString &filePath, QString *er
     QString contents;
     QString loadedEncoding = QStringLiteral("UTF-8");
     QString loadedEncodingLabel;
-    if (!DocumentFile::readTextFile(filePath, &contents, &loadedEncoding, &loadedEncodingLabel, errorMessage)) {
+    if (!fileSystem_.readTextFile(filePath, &contents, &loadedEncoding, &loadedEncodingLabel, errorMessage)) {
         return false;
     }
 
@@ -127,7 +129,7 @@ bool TextEditorDocumentController::save(QString *errorMessage)
         return false;
     }
 
-    if (!DocumentFile::writeTextFile((*context_.filePath),
+    if (!fileSystem_.writeTextFile((*context_.filePath),
                                      context_.editor->toPlainText(),
                                      (*context_.fileEncodingName),
                                      errorMessage)) {

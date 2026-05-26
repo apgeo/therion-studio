@@ -89,6 +89,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Refactor Tracks
 
+- Architecture refactor roadmap: use `CODE_OPTIMALIZATION.md` as the current staged plan; Phase 0/1 focus is keeping CMake/test wiring build-clean while finishing dependency-injection seams such as file/session services.
 - Track A: keep `TextEditorTab` as a thin orchestration shell; continue narrowing raw completion/catalog services and remaining friend/controller boundaries.
 - Track B: continue extracting `MapEditorTab` responsibilities into focused controllers for drawing, inspectors, selection details, scene lifecycle, and undo/snapshot orchestration.
 - Track C: consolidate shared source-edit/rewrite primitives used by Raw, Blocks, and Map modes into focused non-UI services.

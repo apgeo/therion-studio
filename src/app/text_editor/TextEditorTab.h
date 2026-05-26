@@ -35,6 +35,7 @@ class QFormLayout;
 
 namespace TherionStudio
 {
+class IFileSystem;
 class TherionSyntaxHighlighter;
 class TextEditorAppearanceController;
 class TextEditorContextHelpController;
@@ -106,6 +107,7 @@ public:
         Blocks
     };
 
+    explicit TextEditorTab(IFileSystem &fileSystem, QWidget *parent = nullptr);
     explicit TextEditorTab(QWidget *parent = nullptr);
     ~TextEditorTab() override;
 
@@ -237,6 +239,7 @@ private:
     const TextEditorCommandMetadata &commandMetadata() const { return commandMetadata_; }
     TextEditorCommandMetadata &mutableCommandMetadata() { return commandMetadata_; }
     QString displayPath() const;
+    void buildAll();
     void buildHelpPanel();
     void buildContextHelpController();
     void buildRawEditorPanel();
@@ -436,6 +439,8 @@ private:
     QString cleanEncodingNameSnapshot_ = QStringLiteral("UTF-8");
     QString cleanTextSnapshot_;
     QString encodingStatusNote_;
+    std::unique_ptr<IFileSystem> ownedFileSystem_;
+    IFileSystem *fileSystem_ = nullptr;
     std::unique_ptr<TextEditorAppearanceController> appearanceController_;
     std::unique_ptr<TextEditorContextHelpController> contextHelpController_;
     std::unique_ptr<TextEditorCursorController> cursorController_;

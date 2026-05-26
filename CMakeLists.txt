@@ -49,6 +49,10 @@ set(THERION_CORE_SOURCES
     src/core/TherionCommandSyntax.h
     src/core/DocumentFile.cpp
     src/core/DocumentFile.h
+    src/core/IFileSystem.h
+    src/core/ISessionStore.h
+    src/core/QtFileSystem.cpp
+    src/core/QtFileSystem.h
     src/core/MapBackgroundPlacement.cpp
     src/core/MapBackgroundPlacement.h
     src/core/TherionBackgroundMetadata.cpp
@@ -167,7 +171,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
     src/app/text_editor/TextEditorTabBlockEditorPanel.cpp
-src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
+    src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.h
@@ -187,7 +191,7 @@ src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorToolboxList.h
     src/app/text_editor/block_editor/BlockEditorTokenTagEditor.cpp
     src/app/text_editor/block_editor/BlockEditorTokenTagEditor.h
-src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.h
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.h
@@ -640,7 +644,7 @@ set(THERION_EDITOR_UI_TEST_BASE_SOURCES
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
     src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
     src/app/text_editor/TextEditorTabBlockEditorPanel.cpp
-src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
+    src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsHelpController.h
@@ -660,7 +664,7 @@ src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorToolboxList.h
     src/app/text_editor/block_editor/BlockEditorTokenTagEditor.cpp
     src/app/text_editor/block_editor/BlockEditorTokenTagEditor.h
-src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.h
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.h
@@ -807,6 +811,13 @@ therion_add_text_editor_ui_test(TextEditorCompletionHighlightTest
     tests/TextEditorCompletionHighlightTest.cpp
     "TextEditorCompletionHighlightResources")
 
+qt_add_executable(TextEditorDocumentControllerTest
+    tests/TextEditorDocumentControllerTest.cpp
+    src/app/text_editor/TextEditorDocumentController.cpp
+    src/app/text_editor/TextEditorDocumentController.h)
+
+target_link_libraries(TextEditorDocumentControllerTest PRIVATE therion_core Qt6::Widgets)
+
 set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
@@ -931,6 +942,7 @@ set(THERION_UNIT_TEST_TARGETS
     MapEditorObjectDeletePlannerTest
     MapEditorLineSplitPlannerTest
     MapEditorObjectMovePlannerTest
+    TextEditorDocumentControllerTest
     ProjectStructureScannerTest
     SessionStoreTest
     TherionExecutableSelectionControllerTest

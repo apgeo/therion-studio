@@ -27,7 +27,7 @@
 #include "MapEditorSceneSupport.h"
 #include "../TextEditorTab.h"
 #include "../../../core/MapBackgroundPlacement.h"
-#include "../../../core/SessionStore.h"
+#include "../../../core/ISessionStore.h"
 #include "../../../core/TherionBackgroundMetadata.h"
 #include "../../../core/TherionDocumentParser.h"
 #include "../../../core/TherionXviParser.h"

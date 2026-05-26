@@ -1651,7 +1651,7 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
         }
     }
 
-    auto *tab = new TherionStudio::TextEditorTab;
+    auto *tab = new TherionStudio::TextEditorTab(fileSystem_);
     tab->setModeSelectorVisible(false);
     tab->setProjectRootPath(projectRootPath_);
     QString errorMessage;

@@ -52,6 +52,7 @@
 #include <memory>
 
 #include "../TextEditorTab.h"
+#include "../../../core/ISessionStore.h"
 #include "../../../core/SessionStore.h"
 
 namespace TherionStudio
@@ -436,7 +437,7 @@ MapEditorTab::MapEditorTab(QWidget *parent)
     initializeWorkspace();
 }
 
-MapEditorTab::MapEditorTab(SessionSettingsStore &sessionStore, QWidget *parent)
+MapEditorTab::MapEditorTab(ISessionStore &sessionStore, QWidget *parent)
     : QWidget(parent)
     , sessionStore_(&sessionStore)
 {

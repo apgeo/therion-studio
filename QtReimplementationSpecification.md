@@ -656,7 +656,11 @@ Required behavior:
 - the map editor shall provide bundled default styles so supported Therion object types remain legible even when no external override exists
 - when a style entry is missing for a specific type or subtype, the renderer shall fall back to a safe default style rather than failing to draw the object
 - the style catalog shall be loaded from structured metadata such as JSON rather than being defined only in rendering code
-- the application may support a user override style file layered on top of the bundled defaults; if an override fails to decode, the application shall continue using the bundled styles and report the problem as non-fatal
+- bundled map-style JSON resources shall be split into scoped files under `resources/map_object_styles/` using the same default, type, and subtype file naming convention as user overrides
+- the application shall support user style override JSON files layered on top of the bundled defaults; if an override fails to decode, the application shall continue using the bundled styles and treat the failure as non-fatal
+- user map-style override files shall be loaded from the application data location's `map_object_styles` directory (for example `~/Library/Application Support/Therion Studio/map_object_styles/` on macOS)
+- user map-style override file names shall identify the target scope: `point.json`, `line.json`, and `area.json` for kind defaults; `<kind>.<raw_type>.json` for type styles; and `<kind>.<raw_type>.<raw_subtype>.json` for subtype styles
+- user map-style override scopes shall be applied in default, type, then subtype order so more specific files take precedence regardless of lexical filename ordering
 - selection, draft, edit-preview, handle, close-target, and direction-marker visuals shall also be style-driven or centrally configurable so interaction visuals remain consistent across object types
 - style lookup shall not change Therion document semantics; changing a visual style shall affect rendering only unless the user explicitly edits the underlying TH2 content
 
@@ -709,6 +713,7 @@ Required capabilities:
 - maintain compatibility with existing Therion project structures
 - parse and serialize Therion numeric values and coordinates using locale-invariant rules so localized decimal separators do not alter file content
 - package the bundled map-style catalog with the application and load it deterministically at runtime
+- load user map-style override files after the bundled catalog so user styles take precedence without modifying the application bundle
 - package the bundled Therion syntax-highlight palette with the application and load it deterministically at runtime
 - package the bundled application theme resources with the application and load them deterministically at runtime
 - use UTF-8 by default and handle common text encodings robustly where needed

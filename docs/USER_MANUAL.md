@@ -108,7 +108,8 @@ Toolbar actions include:
 
 Canvas rendering is zoom-aware: geometry strokes and edit handles are reduced at distant zoom levels so overview remains readable.
 Line objects render as a single styled stroke; there is no separate secondary detail-stroke layer.
-Area fills support configurable pattern overlays from `resources/map_object_styles.json` via `fill_pattern` (`hatch`, `cross_hatch`, `dots`) with spacing/angle/stroke or dot parameters.
+Area fills support configurable pattern overlays from the bundled `resources/map_object_styles/*.json` style files via `fill_pattern` (`hatch`, `cross_hatch`, `dots`) with spacing/angle/stroke or dot parameters.
+User style overrides are loaded after bundled styles from the `map_object_styles` directory in the application data location. On macOS this is `~/Library/Application Support/Therion Studio/map_object_styles/`. Override files are partial JSON objects named by object kind and Therion type, for example `area.water.json`, `line.wall.json`, or `line.wall.presumed.json`; `area.json`, `line.json`, and `point.json` override defaults for that kind. Default files are applied first, then type files, then subtype files, so the most specific override wins.
 
 ### 6.3 Drawing Basics
 

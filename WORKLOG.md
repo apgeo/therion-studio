@@ -15,6 +15,9 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1 - Style schema naming cleanup: use `stroke_style` instead of `pen_style` for line/area stroke style keys in map style JSON (no legacy aliases).
 - P1 - Style schema naming cleanup: use `raw_type` + `raw_subtype` selector naming consistently in map style JSON.
 - P1 - Area fill-pattern renderer tuning: continue post-vectorization tuning of `fill_pattern` readability across zoom (LOD-aware spacing/width/radius/opacity shaping, especially for `cross_hatch` density at high zoom).
+- P1 - Area style catalog coverage: refine per-`raw_type` area styles in split `resources/map_object_styles/*.json` files for all generated Therion area types, keeping pattern density readable across zoom.
+- P1 - Split map-style catalog: keep bundled and user map-style files on the same partial JSON convention, loading bundled `resources/map_object_styles/*.json` first via a scoped CMake resource glob and application-data overrides second.
+- P1 - User map-style overrides: load partial JSON override files from the application data `map_object_styles` directory after bundled defaults, with default/type/subtype precedence and no project-level override layer.
 - P1 - Inspector type dropdown hydration: ensure `point`/`line`/`area` `Type` select values load from command catalog reliably across catalog schema variants (`commands` array/object), then validate map selection-panel editing workflow.
 - P1 - Selection-panel editable type/subtype combos: keep popup suggestions unfiltered by current text so users can switch away from parsed value without clearing the field first.
 - P2 - Phase 7: finalize UX/accessibility/platform-convention parity, with focus on shortcuts and keyboard behavior consistency on macOS, Windows, and Linux.
@@ -65,8 +68,8 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - ~~Inspector smooth/control toggles now preserve line-vertex targeting even when scene selection temporarily drops during UI interaction (fallback to stored selected line/vertex).~~
 - ~~Inspector `<<` / `>>` control-handle toggles now resolve through line-control owner vertices (selection/controller/details mapping), so closed-line vertices can reliably enable both handles for full smooth editing.~~
 - ~~Inspector smooth toggle now preserves vertex selection across asynchronous scene refresh (flush + multi-attempt owner-vertex selection recovery).~~
-- ~~Map render style defaults are now data-driven from `resources/map_object_styles.json` (point radius/outline, line thickness/detail/style, area thickness/fill-opacity/style), with safe hardcoded fallback when JSON is missing/invalid.~~
-- ~~Extended map object style catalog to support per-type/per-subtype overrides with colors, dash patterns, and area fill patterns (`solid`/`hatch`/`dots`) from `resources/map_object_styles.json`, keeping defaults as fallback.~~
+- ~~Map render style defaults are now data-driven from `resources/map_object_styles/*.json` (point radius/outline, line thickness/detail/style, area thickness/fill-opacity/style), with safe hardcoded fallback when JSON is missing/invalid.~~
+- ~~Extended map object style catalog to support per-type/per-subtype overrides with colors, dash patterns, and area fill patterns (`solid`/`hatch`/`dots`) from `resources/map_object_styles/*.json`, keeping defaults as fallback.~~
 
 ### Phase 10 - Interactive Map Drawing and Insertion (`Post-MVP`)
 

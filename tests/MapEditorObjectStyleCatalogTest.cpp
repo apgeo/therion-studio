@@ -1,5 +1,10 @@
 #include "../src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h"
 
+#include <QCoreApplication>
+#include <QDir>
+#include <QFile>
+#include <QTemporaryDir>
+
 #include <cmath>
 #include <iostream>
 
@@ -14,13 +19,81 @@ bool expect(bool condition, const char *message)
     }
     return condition;
 }
+
+int writeJsonFixtureFile(const QString &filePath, const char *content)
+{
+    QFile file(filePath);
+    if (!expect(file.open(QIODevice::WriteOnly | QIODevice::Text),
+                "Failed to create user style override test file.")) {
+        return 1;
+    }
+    file.write(content);
+    file.close();
+    return 0;
 }
 
-int main()
+int prepareUserOverrideFixture(QTemporaryDir *temporaryDir)
+{
+    if (!expect(temporaryDir != nullptr && temporaryDir->isValid(),
+                "Expected valid temporary directory for user style overrides.")) {
+        return 1;
+    }
+
+    qputenv("THERION_STUDIO_MAP_OBJECT_STYLES_DIR",
+            QFile::encodeName(temporaryDir->filePath(QStringLiteral("map_object_styles"))));
+
+    const QString overrideDirectoryPath = mapEditorUserObjectStylesDirectory();
+    if (!expect(!overrideDirectoryPath.isEmpty(),
+                "Expected non-empty user style override directory path.")) {
+        return 1;
+    }
+
+    if (!expect(QDir().mkpath(overrideDirectoryPath),
+                "Failed to create user style override test directory.")) {
+        return 1;
+    }
+
+    const QDir overrideDirectory(overrideDirectoryPath);
+    if (const int result =
+            writeJsonFixtureFile(overrideDirectory.filePath(QStringLiteral("area.water.json")),
+                                 R"json({
+  "stroke_width": 4.25,
+  "fill_opacity": 0.37
+})json");
+        result != 0) {
+        return 1;
+    }
+
+    if (const int result =
+            writeJsonFixtureFile(overrideDirectory.filePath(QStringLiteral("line.override.json")),
+                                 R"json({
+  "stroke_width": 5.0
+})json");
+        result != 0) {
+        return 1;
+    }
+
+    if (const int result =
+            writeJsonFixtureFile(overrideDirectory.filePath(QStringLiteral("line.override.aaa.json")),
+                                 R"json({
+  "stroke_width": 1.25
+})json");
+        result != 0) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runCatalogTest()
 {
     const MapEditorObjectStyleCatalog catalog = mapEditorObjectStyleCatalog();
     if (!expect(catalog.loadedFromResource,
                 "Expected map object style catalog to load from resource JSON.")) {
+        return 1;
+    }
+    if (!expect(catalog.loadedUserOverrides,
+                "Expected map object style catalog to load user override JSON.")) {
         return 1;
     }
 
@@ -65,6 +138,13 @@ int main()
         return 1;
     }
 
+    const MapEditorResolvedLineStyle overrideSubtypeStyle =
+        resolveMapEditorLineStyle(catalog, QStringLiteral("override"), QStringLiteral("aaa"));
+    if (!expect(std::abs(overrideSubtypeStyle.strokeWidth - 1.25) < 1e-6,
+                "Expected subtype user override to take precedence over type override.")) {
+        return 1;
+    }
+
     const MapEditorResolvedPointStyle stationStyle = resolveMapEditorPointStyle(catalog, QStringLiteral("station"));
     if (!expect(stationStyle.fillColor.has_value(),
                 "Expected station point fill color override.")) {
@@ -90,6 +170,14 @@ int main()
     }
 
     const MapEditorResolvedAreaStyle waterStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("water"));
+    if (!expect(std::abs(waterStyle.strokeWidth - 4.25) < 1e-6,
+                "Expected user override stroke width for water area style.")) {
+        return 1;
+    }
+    if (!expect(std::abs(waterStyle.fillOpacity - 0.37) < 1e-6,
+                "Expected user override fill opacity for water area style.")) {
+        return 1;
+    }
     if (!expect(waterStyle.fillPattern.has_value()
                     && waterStyle.fillPattern->kind == MapEditorFillPatternKind::Hatch,
                 "Expected hatch fill pattern for water area style.")) {
@@ -112,4 +200,19 @@ int main()
     }
 
     return 0;
+}
+}
+
+int main(int argc, char **argv)
+{
+    QCoreApplication app(argc, argv);
+    QCoreApplication::setApplicationName(QStringLiteral("Therion Studio"));
+    QCoreApplication::setOrganizationName(QStringLiteral("Therion Studio"));
+
+    QTemporaryDir temporaryDir;
+    if (const int result = prepareUserOverrideFixture(&temporaryDir); result != 0) {
+        return result;
+    }
+
+    return runCatalogTest();
 }

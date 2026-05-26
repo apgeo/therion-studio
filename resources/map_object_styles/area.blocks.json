@@ -1,0 +1,14 @@
+{
+  "fill_color": "#5E6673",
+  "fill_pattern": {
+    "kind": "dots",
+    "spacing": 8.0,
+    "radius": 1.1,
+    "dot_color": "#2B323F",
+    "offset_jitter": 2.5,
+    "seed": 221
+  },
+  "stroke_color": "#2B323F",
+  "stroke_width": 1.0,
+  "fill_opacity": 0.16
+}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QString>
 #include <QVector>
 #include <Qt>
 
@@ -104,6 +105,7 @@ struct MapEditorObjectStyleCatalog
     QVector<MapEditorLineStyleRule> lineStyles;
     QVector<MapEditorAreaStyleRule> areaStyles;
     bool loadedFromResource = false;
+    bool loadedUserOverrides = false;
 };
 
 struct MapEditorResolvedPointStyle
@@ -133,6 +135,7 @@ struct MapEditorResolvedAreaStyle
     std::optional<MapEditorAreaFillPatternStyle> fillPattern;
 };
 
+QString mapEditorUserObjectStylesDirectory();
 MapEditorObjectStyleCatalog mapEditorObjectStyleCatalog();
 MapEditorResolvedPointStyle resolveMapEditorPointStyle(const MapEditorObjectStyleCatalog &catalog,
                                                        const QString &rawType,

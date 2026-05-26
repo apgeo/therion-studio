@@ -1,0 +1,14 @@
+{
+  "fill_color": "#154E9B",
+  "fill_pattern": {
+    "kind": "hatch",
+    "spacing": 9.5,
+    "stroke_angle": 0,
+    "stroke_width": 0.65,
+    "stroke_style": "solid",
+    "stroke_color": "#082F63"
+  },
+  "stroke_color": "#082F63",
+  "stroke_width": 1.5,
+  "fill_opacity": 0.28
+}

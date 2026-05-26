@@ -376,6 +376,12 @@ set(THERION_STUDIO_MACOS_ICON
 set(THERION_STUDIO_WINDOWS_ICON
     resources/app/TherionStudio.ico)
 
+file(GLOB THERION_MAP_OBJECT_STYLE_FILES
+    CONFIGURE_DEPENDS
+    RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+    "resources/map_object_styles/*.json")
+list(SORT THERION_MAP_OBJECT_STYLE_FILES)
+
 if(APPLE)
     set_source_files_properties(${THERION_STUDIO_MACOS_ICON} PROPERTIES
         MACOSX_PACKAGE_LOCATION "Resources")
@@ -397,7 +403,7 @@ endif()
 set(THERION_STUDIO_RESOURCE_FILES
     ${THERION_STUDIO_APP_ICON_SVG}
     ${THERION_STUDIO_APP_ICON_PNG}
-    resources/map_object_styles.json
+    ${THERION_MAP_OBJECT_STYLE_FILES}
     resources/therion_command_catalog.json
     resources/therion_syntax_palette.json
     resources/icons/lucide/LICENSE
@@ -567,7 +573,7 @@ target_link_libraries(MapEditorObjectStyleCatalogTest PRIVATE Qt6::Core Qt6::Gui
 qt_add_resources(MapEditorObjectStyleCatalogTest MapEditorObjectStyleCatalogResources
     PREFIX "/"
     FILES
-        resources/map_object_styles.json)
+        ${THERION_MAP_OBJECT_STYLE_FILES})
 
 qt_add_executable(MapEditorInspectorDataTest
     tests/MapEditorInspectorDataTest.cpp

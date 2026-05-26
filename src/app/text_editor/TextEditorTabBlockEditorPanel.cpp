@@ -25,6 +25,7 @@
 #include <QModelIndex>
 #include <QPalette>
 #include <QPointF>
+#include <QPointer>
 #include <QPushButton>
 #include <QRectF>
 #include <QSplitter>
@@ -134,14 +135,21 @@ void TextEditorTab::buildBlockEditorPanel()
     typedCanvasView->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     typedCanvasView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     typedCanvasView->setBackgroundBrush(palette().color(QPalette::Base));
-    typedCanvasView->onDropBlock = [this](const QString &kind, const QPointF &scenePos) {
-        handleCanvasDrop(kind, scenePos);
+    QPointer<TextEditorTab> tabGuard(this);
+    typedCanvasView->onDropBlock = [tabGuard](const QString &kind, const QPointF &scenePos) {
+        if (tabGuard.isNull() || tabGuard->tearingDown_) {
+            return;
+        }
+        tabGuard->handleCanvasDrop(kind, scenePos);
     };
-    typedCanvasView->onDragPreview = [this](const QString &, const QPointF &scenePos, bool active) {
+    typedCanvasView->onDragPreview = [tabGuard](const QString &, const QPointF &scenePos, bool active) {
+        if (tabGuard.isNull() || tabGuard->tearingDown_) {
+            return;
+        }
         if (active) {
-            updateBlockMovePreview(-1, scenePos);
+            tabGuard->updateBlockMovePreview(-1, scenePos);
         } else {
-            clearBlockMovePreview();
+            tabGuard->clearBlockMovePreview();
         }
     };
     blockCanvasView_ = typedCanvasView;

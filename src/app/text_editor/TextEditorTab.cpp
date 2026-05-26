@@ -4,6 +4,7 @@
 #include "block_editor/BlockEditorCanvasSelectionController.h"
 #include "block_editor/BlockEditorCanvasBoundaryController.h"
 #include "block_editor/BlockEditorCanvasItem.h"
+#include "block_editor/BlockEditorCanvasView.h"
 #include "block_editor/BlockEditorCanvasRebuildController.h"
 #include "block_editor/BlockEditorConfigureController.h"
 #include "block_editor/BlockEditorDeleteExecutor.h"
@@ -160,6 +161,10 @@ TextEditorTab::TextEditorTab(QWidget *parent)
 TextEditorTab::~TextEditorTab()
 {
     tearingDown_ = true;
+    if (auto *typedCanvasView = dynamic_cast<BlockEditorCanvasView *>(blockCanvasView_); typedCanvasView != nullptr) {
+        typedCanvasView->onDropBlock = {};
+        typedCanvasView->onDragPreview = {};
+    }
     if (blockCanvasScene_ != nullptr) {
         disconnect(blockCanvasScene_, nullptr, this, nullptr);
     }
@@ -604,6 +609,9 @@ void TextEditorTab::rebuildBlocksCanvasFromText()
 
 void TextEditorTab::updateBlockMovePreview(int sourceLineNumber, const QPointF &scenePos)
 {
+    if (tearingDown_) {
+        return;
+    }
     if (blockDetailsMovePreviewController_ != nullptr) {
         blockDetailsMovePreviewController_->updateMovePreview(sourceLineNumber, scenePos);
     }
@@ -611,6 +619,9 @@ void TextEditorTab::updateBlockMovePreview(int sourceLineNumber, const QPointF &
 
 void TextEditorTab::clearBlockMovePreview()
 {
+    if (tearingDown_) {
+        return;
+    }
     if (blockDetailsMovePreviewController_ != nullptr) {
         blockDetailsMovePreviewController_->clearMovePreview();
     }

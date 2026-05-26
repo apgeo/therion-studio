@@ -90,7 +90,8 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         return;
     }
 
-    QStringList lines = blockEditorNormalizedSourceLines(source.text());
+    const QStringList lines = blockEditorNormalizedSourceLines(source.text());
+    const QVector<BlockEditorLogicalLine> logicalLines = blockEditorBuildLogicalLines(lines);
 
     struct StackEntry
     {
@@ -102,8 +103,9 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
     QVector<BlockCanvasItem *> roots;
     QVector<BlockCanvasItem *> allItems;
 
-    for (int lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
-        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineIndex), lineIndex + 1);
+    for (const BlockEditorLogicalLine &logicalLine : logicalLines) {
+        const TherionParsedLine parsedLine =
+            TherionDocumentParser::parseLine(logicalLine.text, logicalLine.startLine);
         if (isFullLineComment(parsedLine)) {
             BlockCanvasItem *parentItem = nullptr;
             if (!stack.isEmpty()) {

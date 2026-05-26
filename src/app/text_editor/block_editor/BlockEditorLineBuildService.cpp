@@ -1,6 +1,7 @@
 #include "BlockEditorLineBuildService.h"
 
 #include "BlockEditorDirectiveRules.h"
+#include "BlockEditorSourceText.h"
 #include "../TextEditorCommandMetadata.h"
 #include "../TextEditorOptionValidation.h"
 
@@ -87,8 +88,16 @@ bool BlockEditorLineBuildService::buildUpdatedLine(QString *updatedLine, QString
         return true;
     }
 
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(*context_.selectedLineNumber - 1),
-                                                                           *context_.selectedLineNumber);
+    BlockEditorLogicalLine logicalLine;
+    if (!blockEditorResolveLogicalLineAtLine(lines, *context_.selectedLineNumber, &logicalLine)) {
+        if (validationError != nullptr) {
+            *validationError = tr("Selected line is out of range.");
+        }
+        return false;
+    }
+
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(logicalLine.text,
+                                                                           logicalLine.startLine);
     const bool commentOnlyLine = normalizedKind == QStringLiteral("comment")
         && isFullLineComment(parsedLine);
     if (parsedLine.tokens.isEmpty()) {
@@ -104,7 +113,7 @@ bool BlockEditorLineBuildService::buildUpdatedLine(QString *updatedLine, QString
     }
 
     const QRegularExpression indentPattern(QStringLiteral(R"(^[ \t]*)"));
-    const auto match = indentPattern.match(lines.at(*context_.selectedLineNumber - 1));
+    const auto match = indentPattern.match(lines.at(logicalLine.startLine - 1));
     const QString indent = match.hasMatch() ? match.captured(0) : QString();
     const QString commandToken = parsedLine.tokens.value(0).trimmed().isEmpty()
         ? normalizedKind

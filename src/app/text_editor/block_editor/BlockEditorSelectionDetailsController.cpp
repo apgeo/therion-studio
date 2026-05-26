@@ -3,6 +3,7 @@
 #include "BlockEditorCommandOptionParser.h"
 #include "BlockEditorDetailsSupport.h"
 #include "BlockEditorDirectiveRules.h"
+#include "BlockEditorSourceText.h"
 #include "../ContextHelpController.h"
 #include "../TextEditorCommandMetadata.h"
 
@@ -68,8 +69,16 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         return false;
     }
 
+    BlockEditorLogicalLine logicalLine;
+    if (!blockEditorResolveLogicalLineAtLine(lines, lineNumber, &logicalLine)) {
+        if (context_.clearDetailsPane) {
+            context_.clearDetailsPane();
+        }
+        return false;
+    }
+
     const QString normalizedKind = context_.normalizedDirectiveToken ? context_.normalizedDirectiveToken(kind) : kind.trimmed().toLower();
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineNumber - 1), lineNumber);
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(logicalLine.text, logicalLine.startLine);
     const bool commentOnlyLine = normalizedKind == QStringLiteral("comment") && isFullLineComment(parsedLine);
     const bool unrecognizedLineKind = isUnrecognizedKind(normalizedKind);
     if (parsedLine.tokens.isEmpty() && !commentOnlyLine) {
@@ -79,13 +88,14 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         return false;
     }
     const QString inlineComment = parsedLine.commentStart >= 0 ? parsedLine.commentText.trimmed() : QString();
-    if (parsedLine.commentStart >= 0 && parsedLine.commentStart < lines.at(lineNumber - 1).size()) {
-        *context_.commentMarker = lines.at(lineNumber - 1).at(parsedLine.commentStart);
+    const QString markerSourceLine = lines.at(logicalLine.startLine - 1);
+    if (parsedLine.commentStart >= 0 && parsedLine.commentStart < markerSourceLine.size()) {
+        *context_.commentMarker = markerSourceLine.at(parsedLine.commentStart);
     } else {
         *context_.commentMarker = QLatin1Char('#');
     }
 
-    *context_.selectedLineNumber = lineNumber;
+    *context_.selectedLineNumber = logicalLine.startLine;
     *context_.selectedKind = normalizedKind;
     if (context_.editPanel != nullptr) {
         context_.editPanel->setVisible(true);

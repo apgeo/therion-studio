@@ -1,5 +1,7 @@
 #include "BlockEditorApplyExecutor.h"
 
+#include "BlockEditorSourceText.h"
+
 #include <QMessageBox>
 
 #include <utility>
@@ -41,9 +43,20 @@ void BlockEditorApplyExecutor::applyChanges()
     }
 
     const BlockEditorSourceController source(context_.sourceContext());
-    if (!source.replaceLine(*context_.selectedLineNumber, updatedLine)) {
+    QStringList lines = source.normalizedLines();
+    BlockEditorLogicalLine logicalLine;
+    if (!blockEditorResolveLogicalLineAtLine(lines, *context_.selectedLineNumber, &logicalLine)) {
         return;
     }
+
+    if (!blockEditorReplaceSourceLineRange(&lines,
+                                           logicalLine.startLine,
+                                           logicalLine.endLine,
+                                           QStringList{updatedLine})) {
+        return;
+    }
+
+    source.replaceText(blockEditorJoinSourceLines(source.text(), lines));
 
     context_.selectBlockInCanvasAndDetails(*context_.selectedLineNumber);
     context_.refreshApplyState();

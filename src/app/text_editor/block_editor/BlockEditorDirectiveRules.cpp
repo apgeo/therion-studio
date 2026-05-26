@@ -1,4 +1,5 @@
 #include "BlockEditorDirectiveRules.h"
+#include "BlockEditorSourceText.h"
 
 #include "../../../core/TherionDocumentParser.h"
 
@@ -265,9 +266,25 @@ int findMatchingBlockEndLine(const QStringList &lines,
         return -1;
     }
 
+    const QVector<BlockEditorLogicalLine> logicalLines = blockEditorBuildLogicalLines(lines);
+    int openingLogicalIndex = -1;
+    for (int index = 0; index < logicalLines.size(); ++index) {
+        const BlockEditorLogicalLine &logicalLine = logicalLines.at(index);
+        if (openingLineNumber < logicalLine.startLine || openingLineNumber > logicalLine.endLine) {
+            continue;
+        }
+        openingLogicalIndex = index;
+        break;
+    }
+    if (openingLogicalIndex < 0) {
+        return -1;
+    }
+
     int depth = 0;
-    for (int lineNumber = openingLineNumber; lineNumber <= lines.size(); ++lineNumber) {
-        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineNumber - 1), lineNumber);
+    for (int index = openingLogicalIndex; index < logicalLines.size(); ++index) {
+        const BlockEditorLogicalLine &logicalLine = logicalLines.at(index);
+        const TherionParsedLine parsedLine =
+            TherionDocumentParser::parseLine(logicalLine.text, logicalLine.startLine);
         const QString directive = normalizeDirective(parsedLine.directive);
         if (directive == openingDirective) {
             ++depth;
@@ -279,7 +296,7 @@ int findMatchingBlockEndLine(const QStringList &lines,
 
         --depth;
         if (depth == 0) {
-            return lineNumber;
+            return logicalLine.endLine;
         }
     }
 

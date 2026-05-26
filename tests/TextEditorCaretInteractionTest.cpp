@@ -822,5 +822,98 @@ int main(int argc, char *argv[])
         pumpEvents();
     }
 
+    const QString continuationPath = tempDir.path() + QStringLiteral("/continuation-test.th");
+    QFile continuationFile(continuationPath);
+    if (!expect(continuationFile.open(QIODevice::WriteOnly | QIODevice::Text),
+                "Failed to create continuation test file.")) {
+        return 1;
+    }
+    continuationFile.write(
+        "survey wrapped \\\n"
+        "  -title \"Wrapped Survey\" \\\n"
+        "  -person \"Survey Author\"\n"
+        "centerline\n"
+        "endcenterline\n"
+        "endsurvey\n");
+    continuationFile.close();
+
+    {
+        auto *continuationTab = new TextEditorTab;
+        if (!expect(continuationTab->loadFile(continuationPath, &errorMessage),
+                    "Failed to load continuation test file in TextEditorTab.")) {
+            std::cerr << errorMessage.toStdString() << '\n';
+            delete continuationTab;
+            return 1;
+        }
+        continuationTab->resize(960, 640);
+        continuationTab->show();
+        pumpEvents();
+
+        QPushButton *continuationBlocksButton = findButtonByText(continuationTab, QStringLiteral("Blocks"));
+        if (!expect(continuationBlocksButton != nullptr, "Failed to find Blocks mode button for continuation tab.")) {
+            delete continuationTab;
+            return 1;
+        }
+        continuationBlocksButton->click();
+        pumpEvents();
+
+        auto *continuationView = continuationTab->findChild<QGraphicsView *>();
+        auto *continuationStatus = continuationTab->findChild<QLabel *>(QStringLiteral("blockDetailsStatusLabel"));
+        auto *continuationPrimaryEdit = continuationTab->findChild<QLineEdit *>(QStringLiteral("blockDetailsPrimaryEdit"));
+        auto *continuationApplyButton = continuationTab->findChild<QPushButton *>(QStringLiteral("blockDetailsApplyButton"));
+        auto *continuationOptionsTable = continuationTab->findChild<QTableWidget *>(QStringLiteral("blockDetailsOptionsTable"));
+        if (!expect(continuationView != nullptr, "Failed to find block canvas view for continuation tab.")) {
+            delete continuationTab;
+            return 1;
+        }
+        if (!expect(continuationStatus != nullptr, "Failed to find block details status for continuation tab.")) {
+            delete continuationTab;
+            return 1;
+        }
+        if (!expect(continuationPrimaryEdit != nullptr, "Failed to find primary edit for continuation tab.")) {
+            delete continuationTab;
+            return 1;
+        }
+        if (!expect(continuationApplyButton != nullptr, "Failed to find apply button for continuation tab.")) {
+            delete continuationTab;
+            return 1;
+        }
+        if (!expect(continuationOptionsTable != nullptr, "Failed to find options table for continuation tab.")) {
+            delete continuationTab;
+            return 1;
+        }
+
+        if (!expect(selectBlockByKind(continuationView, continuationStatus, QStringLiteral("survey")),
+                    "Blocks view failed to select wrapped survey command.")) {
+            delete continuationTab;
+            return 1;
+        }
+        continuationPrimaryEdit->setText(QStringLiteral("wrapped-renamed"));
+        continuationApplyButton->click();
+        pumpEvents();
+
+        const QString continuationUpdatedText = continuationTab->text();
+        const bool preservesWrappedOptions =
+            continuationUpdatedText.contains(QStringLiteral("survey wrapped-renamed"))
+            && continuationUpdatedText.contains(QStringLiteral("-title"))
+            && continuationUpdatedText.contains(QStringLiteral("-person"));
+        if (!preservesWrappedOptions) {
+            std::cerr << "Continuation output after apply:\n"
+                      << continuationUpdatedText.toStdString()
+                      << '\n';
+            std::cerr << "Applying wrapped-command details should preserve wrapped option tokens in merged command output.\n";
+            delete continuationTab;
+            return 1;
+        }
+        if (!expect(!continuationUpdatedText.contains(QStringLiteral("\n  -title")),
+                    "Applying wrapped-command details should not leave orphan continuation rows.")) {
+            delete continuationTab;
+            return 1;
+        }
+
+        delete continuationTab;
+        pumpEvents();
+    }
+
     return 0;
 }

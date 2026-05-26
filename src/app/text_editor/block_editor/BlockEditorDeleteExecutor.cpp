@@ -1,6 +1,7 @@
 #include "BlockEditorDeleteExecutor.h"
 
 #include "BlockEditorDirectiveRules.h"
+#include "BlockEditorSourceText.h"
 
 #include <QMessageBox>
 #include <QPlainTextEdit>
@@ -42,7 +43,12 @@ bool BlockEditorDeleteExecutor::deleteCommandAtLine(int lineNumber)
         return false;
     }
 
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineNumber - 1), lineNumber);
+    BlockEditorLogicalLine logicalLine;
+    if (!blockEditorResolveLogicalLineAtLine(lines, lineNumber, &logicalLine)) {
+        return false;
+    }
+
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(logicalLine.text, logicalLine.startLine);
     const QString directive = normalizeDirective(parsedLine.directive);
     if (directive.isEmpty() && isFullLineComment(parsedLine)) {
         const QMessageBox::StandardButton answer = QMessageBox::question(
@@ -54,7 +60,7 @@ bool BlockEditorDeleteExecutor::deleteCommandAtLine(int lineNumber)
         if (answer != QMessageBox::Yes) {
             return false;
         }
-        return source.removeLineRange(lineNumber, lineNumber);
+        return source.removeLineRange(logicalLine.startLine, logicalLine.endLine);
     }
     if (directive.isEmpty()) {
         const QMessageBox::StandardButton answer = QMessageBox::question(
@@ -66,7 +72,7 @@ bool BlockEditorDeleteExecutor::deleteCommandAtLine(int lineNumber)
         if (answer != QMessageBox::Yes) {
             return false;
         }
-        return source.removeLineRange(lineNumber, lineNumber);
+        return source.removeLineRange(logicalLine.startLine, logicalLine.endLine);
     }
     if (directive == QStringLiteral("encoding")) {
         QMessageBox::information(context_.dialogParent,
@@ -75,13 +81,13 @@ bool BlockEditorDeleteExecutor::deleteCommandAtLine(int lineNumber)
         return false;
     }
 
-    int removeStartLine = lineNumber;
-    int removeEndLine = lineNumber;
+    int removeStartLine = logicalLine.startLine;
+    int removeEndLine = logicalLine.endLine;
 
     if (isContainerDirectiveInstance(directive, parsedLine)) {
         const QString closingDirective = closingDirectiveFor(directive);
-        const int endLine = findMatchingBlockEndLine(lines, lineNumber, directive, closingDirective);
-        if (endLine <= lineNumber) {
+        const int endLine = findMatchingBlockEndLine(lines, logicalLine.startLine, directive, closingDirective);
+        if (endLine <= logicalLine.startLine) {
             QMessageBox::warning(context_.dialogParent,
                                  tr("Delete Block"),
                                  tr("Unable to resolve closing directive for `%1`.").arg(directive));
@@ -90,7 +96,7 @@ bool BlockEditorDeleteExecutor::deleteCommandAtLine(int lineNumber)
         removeEndLine = endLine;
     } else if (directive == QStringLiteral("data")) {
         const QString dataScope = context_.resolveScopeForCommandAtLine != nullptr
-            ? context_.resolveScopeForCommandAtLine(QStringLiteral("data"), lines, lineNumber)
+            ? context_.resolveScopeForCommandAtLine(QStringLiteral("data"), lines, logicalLine.startLine)
             : QString();
         const QString dataScopeClosing = completionClosingDirectiveForOpening(dataScope);
         if (dataScopeClosing.isEmpty()) {
@@ -100,7 +106,7 @@ bool BlockEditorDeleteExecutor::deleteCommandAtLine(int lineNumber)
 
         int dataScopeStartLine = -1;
         int dataScopeDepth = 0;
-        for (int currentLine = lineNumber; currentLine >= 1; --currentLine) {
+        for (int currentLine = logicalLine.startLine; currentLine >= 1; --currentLine) {
             const TherionParsedLine currentParsedLine = TherionDocumentParser::parseLine(lines.at(currentLine - 1), currentLine);
             const QString currentDirective = normalizeDirective(currentParsedLine.directive);
             if (currentDirective == dataScopeClosing) {
@@ -126,13 +132,13 @@ bool BlockEditorDeleteExecutor::deleteCommandAtLine(int lineNumber)
                                                               dataScopeStartLine,
                                                               dataScope,
                                                               dataScopeClosing);
-        if (dataScopeEndLine <= lineNumber) {
+        if (dataScopeEndLine <= logicalLine.startLine) {
             QMessageBox::warning(context_.dialogParent, tr("Delete Block"), tr("Unable to resolve end of parent data scope block."));
             return false;
         }
 
         int dataBodyLastLine = dataScopeEndLine - 1;
-        for (int currentLine = lineNumber + 1; currentLine <= dataScopeEndLine - 1; ++currentLine) {
+        for (int currentLine = logicalLine.endLine + 1; currentLine <= dataScopeEndLine - 1; ++currentLine) {
             const TherionParsedLine currentParsedLine = TherionDocumentParser::parseLine(lines.at(currentLine - 1), currentLine);
             const QString currentDirective = normalizeDirective(currentParsedLine.directive);
             if (currentDirective.isEmpty() || currentDirective == QStringLiteral("extend")) {
@@ -147,7 +153,7 @@ bool BlockEditorDeleteExecutor::deleteCommandAtLine(int lineNumber)
                 break;
             }
         }
-        removeEndLine = qMax(lineNumber, dataBodyLastLine);
+        removeEndLine = qMax(logicalLine.endLine, dataBodyLastLine);
     }
 
     const QString label = directive == QStringLiteral("data")

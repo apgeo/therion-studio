@@ -2,12 +2,24 @@
 
 #include <QString>
 #include <QStringList>
+#include <QVector>
 
 namespace TherionStudio
 {
+struct BlockEditorLogicalLine
+{
+    int startLine = 0;
+    int endLine = 0;
+    QString text;
+};
+
 QString blockEditorSourceLineEnding(const QString &contents);
 QStringList blockEditorNormalizedSourceLines(const QString &contents);
 QString blockEditorJoinSourceLines(const QString &originalContents, const QStringList &lines);
+QVector<BlockEditorLogicalLine> blockEditorBuildLogicalLines(const QStringList &lines);
+bool blockEditorResolveLogicalLineAtLine(const QStringList &lines,
+                                         int lineNumber,
+                                         BlockEditorLogicalLine *logicalLine);
 bool blockEditorReplaceSourceLineRange(QStringList *lines,
                                        int startLine,
                                        int endLine,

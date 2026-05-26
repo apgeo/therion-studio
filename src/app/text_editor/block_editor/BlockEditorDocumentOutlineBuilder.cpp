@@ -47,9 +47,13 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
     }
 
     QVector<TherionParsedLine> parsedLines;
-    parsedLines.reserve(outline.lines.size());
-    for (int lineIndex = 0; lineIndex < outline.lines.size(); ++lineIndex) {
-        parsedLines.append(TherionDocumentParser::parseLine(outline.lines.at(lineIndex), lineIndex + 1));
+    QVector<BlockEditorLogicalLine> parsedLogicalLines;
+    const QVector<BlockEditorLogicalLine> logicalLines = blockEditorBuildLogicalLines(outline.lines);
+    parsedLines.reserve(logicalLines.size());
+    parsedLogicalLines.reserve(logicalLines.size());
+    for (const BlockEditorLogicalLine &logicalLine : logicalLines) {
+        parsedLines.append(TherionDocumentParser::parseLine(logicalLine.text, logicalLine.startLine));
+        parsedLogicalLines.append(logicalLine);
     }
 
     outline.entries.reserve(parsedLines.size());
@@ -59,13 +63,17 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
                                                                      outline.lines.size() + 1);
     const QString dataScopeClosing = completionClosingDirectiveForOpening(dataScope);
 
-    for (const TherionParsedLine &parsedLine : parsedLines) {
+    for (int parsedIndex = 0; parsedIndex < parsedLines.size(); ++parsedIndex) {
+        const TherionParsedLine &parsedLine = parsedLines.at(parsedIndex);
         const int currentLineNumber = parsedLine.lineNumber;
+        const BlockEditorLogicalLine currentLogicalLine = parsedIndex < parsedLogicalLines.size()
+            ? parsedLogicalLines.at(parsedIndex)
+            : BlockEditorLogicalLine{currentLineNumber, currentLineNumber, parsedLine.rawText};
         if (isFullLineComment(parsedLine)) {
             BlockEditorDocumentEntry entry;
             entry.kind = QStringLiteral("comment");
-            entry.startLine = currentLineNumber;
-            entry.endLine = currentLineNumber;
+            entry.startLine = currentLogicalLine.startLine;
+            entry.endLine = currentLogicalLine.endLine;
             entry.parentLine = openStack.isEmpty() ? 0 : openStack.last().lineNumber;
             outline.entryIndexByStartLine.insert(entry.startLine, outline.entries.size());
             outline.entries.append(entry);
@@ -102,8 +110,8 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
 
             BlockEditorDocumentEntry entry;
             entry.kind = directive;
-            entry.startLine = currentLineNumber;
-            entry.endLine = currentLineNumber;
+            entry.startLine = currentLogicalLine.startLine;
+            entry.endLine = currentLogicalLine.endLine;
             entry.parentLine = parentLine;
 
             if (context_.isContainerDirectiveInstanceForParsedLine(directive, parsedLine)) {
@@ -147,7 +155,7 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
                 if (dataBodyLastLine < currentLineNumber) {
                     dataBodyLastLine = currentLineNumber;
                 }
-                entry.endLine = dataBodyLastLine;
+                entry.endLine = qMax(dataBodyLastLine, currentLogicalLine.endLine);
             }
 
             outline.entryIndexByStartLine.insert(entry.startLine, outline.entries.size());
@@ -165,8 +173,8 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
         if (commandDirective || isMapObjectReferenceCandidateLine(activeScope, parsedLine, commandDirective)) {
             BlockEditorDocumentEntry entry;
             entry.kind = commandDirective ? directive : mapObjectReferenceKind();
-            entry.startLine = currentLineNumber;
-            entry.endLine = currentLineNumber;
+            entry.startLine = currentLogicalLine.startLine;
+            entry.endLine = currentLogicalLine.endLine;
             entry.parentLine = openStack.isEmpty() ? 0 : openStack.last().lineNumber;
             outline.entryIndexByStartLine.insert(entry.startLine, outline.entries.size());
             outline.entries.append(entry);

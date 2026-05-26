@@ -43,7 +43,12 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
         return;
     }
 
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineNumber - 1), lineNumber);
+    BlockEditorLogicalLine logicalLine;
+    if (!blockEditorResolveLogicalLineAtLine(lines, lineNumber, &logicalLine)) {
+        return;
+    }
+
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(logicalLine.text, logicalLine.startLine);
     if (parsedLine.tokens.isEmpty()) {
         return;
     }
@@ -62,8 +67,8 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
             BlockEditorCommandOptionsDialog optionsDialog(context_.commandOptionsDialogContext);
             const std::optional<QString> updatedLine =
                 optionsDialog.configureLine(normalizedKind,
-                                            lines.at(lineNumber - 1),
-                                            lineNumber,
+                                            logicalLine.text,
+                                            logicalLine.startLine,
                                             idFieldMode,
                                             showCommandHelpOnly
                                                 ? BlockEditorCommandOptionsHelpMode::CommandOnly
@@ -71,7 +76,12 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
             if (!updatedLine.has_value()) {
                 return;
             }
-            lines[lineNumber - 1] = updatedLine.value();
+            if (!blockEditorReplaceSourceLineRange(&lines,
+                                                   logicalLine.startLine,
+                                                   logicalLine.endLine,
+                                                   QStringList{updatedLine.value()})) {
+                return;
+            }
             source.replaceWithLines(contents, lines);
             return;
         }
@@ -113,11 +123,16 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
         && !hasCatalogOptions) {
         BlockEditorSingleValueCommandDialog valueDialog(context_.singleValueCommandDialogContext);
         const std::optional<QString> updatedLine =
-            valueDialog.configureLine(normalizedKind, lines.at(lineNumber - 1), lineNumber);
+            valueDialog.configureLine(normalizedKind, logicalLine.text, logicalLine.startLine);
         if (!updatedLine.has_value()) {
             return;
         }
-        lines[lineNumber - 1] = updatedLine.value();
+        if (!blockEditorReplaceSourceLineRange(&lines,
+                                               logicalLine.startLine,
+                                               logicalLine.endLine,
+                                               QStringList{updatedLine.value()})) {
+            return;
+        }
 
         source.replaceWithLines(contents, lines);
         return;

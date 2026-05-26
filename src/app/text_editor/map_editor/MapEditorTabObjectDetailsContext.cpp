@@ -10,6 +10,8 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
     return MapEditorObjectDetailsContext{
         .callbackContext = this,
         .textEditor = textEditor_,
+        .inspectorSymbolCatalog = &inspectorSymbolCatalog_,
+        .orientationApplicabilityByCommand = &orientationApplicabilityByCommand_,
         .updatingUi = &updatingObjectDetailsUi_,
         .commandApplyInProgress = &mapCommandApplyInProgress_,
         .selectedObjectLineNumber = &selectedObjectLineNumber_,

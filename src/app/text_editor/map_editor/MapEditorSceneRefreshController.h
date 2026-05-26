@@ -8,6 +8,8 @@
 
 #include <functional>
 
+#include "MapEditorObjectDetailsLogic.h"
+
 class QGraphicsItem;
 class QGraphicsScene;
 class QGraphicsView;
@@ -32,6 +34,7 @@ struct MapEditorSceneRefreshContext
     bool *fitBackgroundRequested = nullptr;
     bool *gridVisible = nullptr;
     qreal *gridSpacingMeters = nullptr;
+    const MapEditorOrientationApplicabilityByCommand *orientationApplicabilityByCommand = nullptr;
 
     std::function<QString()> documentText;
     std::function<QVector<TherionParsedLine>()> parsedLinesForCurrentDocument;
@@ -74,6 +77,7 @@ public:
 
 private:
     QGraphicsScene *scene() const;
+    const MapEditorOrientationApplicabilityByCommand &orientationApplicabilityByCommand() const;
     void refreshMapScenePreservingUndoStack(bool preserveViewport);
 
     MapEditorSceneRefreshContext context_;

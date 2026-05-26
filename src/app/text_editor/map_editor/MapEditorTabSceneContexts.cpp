@@ -66,6 +66,7 @@ MapEditorSceneRefreshContext MapEditorTab::sceneRefreshContext()
         .fitBackgroundRequested = &fitBackgroundRequested_,
         .gridVisible = &mapGridVisible_,
         .gridSpacingMeters = &mapGridSpacingMeters_,
+        .orientationApplicabilityByCommand = &orientationApplicabilityByCommand_,
         .documentText = [self]() {
             return self != nullptr && self->textEditor_ != nullptr ? self->textEditor_->text() : QString();
         },

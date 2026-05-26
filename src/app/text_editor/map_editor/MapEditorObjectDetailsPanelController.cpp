@@ -59,6 +59,13 @@ const InspectorSymbolCatalog &MapEditorObjectDetailsPanelController::inspectorSy
         : mapEditorInspectorSymbolCatalog();
 }
 
+const MapEditorOrientationApplicabilityByCommand &MapEditorObjectDetailsPanelController::orientationApplicabilityByCommand() const
+{
+    return context_.orientationApplicabilityByCommand != nullptr
+        ? *context_.orientationApplicabilityByCommand
+        : defaultMapEditorOrientationApplicabilityByCommand();
+}
+
 void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
 {
     if (context_.selectionLabel == nullptr
@@ -396,7 +403,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                 const TherionParsedLine parsedLine =
                     TherionDocumentParser::parseLine(lines.at(*context_.selectedObjectLineNumber - 1), *context_.selectedObjectLineNumber);
                 if (parsedLine.directive == QStringLiteral("point")
-                    && isOrientationSupportedForParsedLine(parsedLine)) {
+                    && isOrientationSupportedForParsedLine(parsedLine, orientationApplicabilityByCommand())) {
                     orientationApplicable = true;
                     orientationDegrees = pointOrientationFromParsedLine(parsedLine);
                 }
@@ -422,7 +429,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                     } else {
                         const TherionParsedLine parsedLine =
                             TherionDocumentParser::parseLine(lines.at(*context_.selectedObjectLineNumber - 1), *context_.selectedObjectLineNumber);
-                        if (isOrientationSupportedForParsedLine(parsedLine)) {
+                        if (isOrientationSupportedForParsedLine(parsedLine, orientationApplicabilityByCommand())) {
                             orientationApplicable = true;
                             orientationDegrees = linePointOrientationForSourceVertex(context_.textEditor->text(),
                                                                                     *context_.selectedObjectLineNumber,

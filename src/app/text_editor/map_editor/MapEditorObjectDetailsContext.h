@@ -7,6 +7,8 @@
 
 #include <functional>
 
+#include "MapEditorObjectDetailsLogic.h"
+
 class QCheckBox;
 class QComboBox;
 class QDoubleSpinBox;
@@ -26,6 +28,7 @@ struct MapEditorObjectDetailsContext
     QObject *callbackContext = nullptr;
     TextEditorTab *textEditor = nullptr;
     const InspectorSymbolCatalog *inspectorSymbolCatalog = nullptr;
+    const MapEditorOrientationApplicabilityByCommand *orientationApplicabilityByCommand = nullptr;
     bool *updatingUi = nullptr;
     bool *commandApplyInProgress = nullptr;
     int *selectedObjectLineNumber = nullptr;

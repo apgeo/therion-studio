@@ -130,6 +130,13 @@ QString MapEditorObjectDetailsEditController::translate(const char *text) const
     return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
 }
 
+const MapEditorOrientationApplicabilityByCommand &MapEditorObjectDetailsEditController::orientationApplicabilityByCommand() const
+{
+    return context_.orientationApplicabilityByCommand != nullptr
+        ? *context_.orientationApplicabilityByCommand
+        : defaultMapEditorOrientationApplicabilityByCommand();
+}
+
 void MapEditorObjectDetailsEditController::populateScrapScaleFromSourceBounds()
 {
     if (*context_.updatingUi
@@ -378,7 +385,7 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
         }
         const TherionParsedLine parsedLine =
             TherionDocumentParser::parseLine(documentLines.at(selectedLineNumber - 1), selectedLineNumber);
-        if (!isOrientationSupportedForParsedLine(parsedLine)) {
+        if (!isOrientationSupportedForParsedLine(parsedLine, orientationApplicabilityByCommand())) {
             *context_.toolbarStatusNote = translate("Orientation is not supported for this point type.");
             context_.refreshToolbarSummary();
             context_.refreshObjectDetailsPanel();
@@ -407,7 +414,7 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
         }
         const TherionParsedLine parsedLine =
             TherionDocumentParser::parseLine(documentLines.at(selectedLineNumber - 1), selectedLineNumber);
-        const bool orientationSupported = isOrientationSupportedForParsedLine(parsedLine);
+        const bool orientationSupported = isOrientationSupportedForParsedLine(parsedLine, orientationApplicabilityByCommand());
         const bool leftSizeSupported = isLinePointLeftSizeSupportedForParsedLine(parsedLine);
         if (!orientationSupported && !leftSizeSupported) {
             *context_.toolbarStatusNote = translate("Orientation is not supported for this line type.");

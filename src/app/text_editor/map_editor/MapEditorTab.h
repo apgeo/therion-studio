@@ -17,7 +17,9 @@
 #include <memory>
 #include <optional>
 
+#include "MapEditorInspectorData.h"
 #include "MapEditorInteractiveDrawLogic.h"
+#include "MapEditorObjectDetailsLogic.h"
 #include "../../../core/TherionDocumentParser.h"
 
 class QLabel;
@@ -505,6 +507,8 @@ private:
     QDateTime lastNativeZoomGestureUtc_;
     std::unique_ptr<ISessionStore> ownedSessionStore_;
     ISessionStore *sessionStore_ = nullptr;
+    InspectorSymbolCatalog inspectorSymbolCatalog_;
+    MapEditorOrientationApplicabilityByCommand orientationApplicabilityByCommand_;
     bool touchFriendlyControlsEnabled_ = false;
     int selectedBackgroundLayerIndex_ = -1;
     bool mapCommandApplyInProgress_ = false;

@@ -433,6 +433,8 @@ MapEditorTab::MapEditorTab(QWidget *parent)
     : QWidget(parent)
     , ownedSessionStore_(std::make_unique<SessionSettingsStore>())
     , sessionStore_(ownedSessionStore_.get())
+    , inspectorSymbolCatalog_(mapEditorInspectorSymbolCatalog())
+    , orientationApplicabilityByCommand_(defaultMapEditorOrientationApplicabilityByCommand())
 {
     initializeWorkspace();
 }
@@ -440,6 +442,8 @@ MapEditorTab::MapEditorTab(QWidget *parent)
 MapEditorTab::MapEditorTab(ISessionStore &sessionStore, QWidget *parent)
     : QWidget(parent)
     , sessionStore_(&sessionStore)
+    , inspectorSymbolCatalog_(mapEditorInspectorSymbolCatalog())
+    , orientationApplicabilityByCommand_(defaultMapEditorOrientationApplicabilityByCommand())
 {
     initializeWorkspace();
 }

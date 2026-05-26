@@ -27,6 +27,13 @@ QGraphicsScene *MapEditorSceneRefreshController::scene() const
     return context_.scene != nullptr ? *context_.scene : nullptr;
 }
 
+const MapEditorOrientationApplicabilityByCommand &MapEditorSceneRefreshController::orientationApplicabilityByCommand() const
+{
+    return context_.orientationApplicabilityByCommand != nullptr
+        ? *context_.orientationApplicabilityByCommand
+        : defaultMapEditorOrientationApplicabilityByCommand();
+}
+
 void MapEditorSceneRefreshController::buildMapScene()
 {
     *context_.scene = new QGraphicsScene(context_.sceneParent);
@@ -111,7 +118,8 @@ void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack(bool pr
             continue;
         }
         const TherionParsedLine parsedLine = parsedLinesByLineNumber.value(feature.lineNumber);
-        if (parsedLine.directive == QStringLiteral("point") && isOrientationSupportedForParsedLine(parsedLine)) {
+        if (parsedLine.directive == QStringLiteral("point")
+            && isOrientationSupportedForParsedLine(parsedLine, orientationApplicabilityByCommand())) {
             feature.orientationSupported = true;
             feature.orientationDegrees = pointOrientationFromParsedLine(parsedLine);
         }

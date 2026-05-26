@@ -18,6 +18,21 @@ Key recommendations:
 - Isolate OS-specific logic behind platform services and keep `Q_OS_*` usage out of feature code.
 - Prefer incremental extraction with round-trip and UI smoke tests after every high-risk slice.
 
+## Progress Tracker
+
+This tracker records architecture optimization progress at phase level. `WORKLOG.md` remains the day-to-day active work board.
+
+- [x] Phase 0: build and test wiring stabilized for the initial dependency-injection checkpoint.
+- [ ] Phase 1: low-risk dependency-injection seams completed.
+- [x] Phase 1 partial: `IFileSystem` wired into `TextEditorDocumentController` with fake-filesystem regression coverage.
+- [x] Phase 1 partial: `MainWindow` accepts `ISessionStore` instead of directly owning the concrete QSettings-backed store.
+- [ ] Phase 1 remaining: command catalog access is injectable where command metadata is consumed by UI/application workflows.
+- [ ] Phase 2: `MainWindow` application services extracted.
+- [ ] Phase 3: `TextEditorTab` coupling reduced.
+- [ ] Phase 4: map editor responsibilities decomposed.
+- [ ] Phase 5: platform and appearance services centralized.
+- [ ] Phase 6: packaging and CI hardening completed.
+
 ## Review Scope And Current State
 
 The review was based on the current working tree, including active uncommitted refactor work. Important files and areas inspected include:

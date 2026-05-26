@@ -54,6 +54,7 @@
 #include "text_editor/map_editor/MapEditorTab.h"
 #include "MainWindowDocumentHelpers.h"
 #include "MainWindowHelpDialog.h"
+#include "../core/SessionStore.h"
 
 namespace
 {
@@ -428,17 +429,23 @@ private:
 } // namespace
 
 MainWindow::MainWindow(QWidget *parent)
-    : MainWindow(TherionStudio::SessionSettingsStore(), parent)
+    : MainWindow(std::make_unique<TherionStudio::SessionSettingsStore>(), parent)
 {
 }
 
-MainWindow::MainWindow(TherionStudio::SessionSettingsStore sessionStore, QWidget *parent)
+MainWindow::MainWindow(std::unique_ptr<TherionStudio::ISessionStore> sessionStore, QWidget *parent)
+    : MainWindow(*sessionStore, parent)
+{
+    ownedSessionStore_ = std::move(sessionStore);
+}
+
+MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore, QWidget *parent)
     : QMainWindow(parent)
     , editorTabs_(new QTabWidget(this))
     , projectModel_(new QFileSystemModel(this))
     , structureModel_(new QStandardItemModel(this))
     , mapObjectsModel_(new QStandardItemModel(this))
-    , sessionStore_(std::move(sessionStore))
+    , sessionStore_(&sessionStore)
     , structureSidebarScanner_(new TherionStudio::ProjectStructureScanner(this))
 {
     setWindowTitle(tr("Therion Studio"));
@@ -1149,18 +1156,18 @@ void MainWindow::buildMenus()
 
 void MainWindow::restoreSessionState()
 {
-    const QByteArray geometry = sessionStore_.mainWindowGeometry();
+    const QByteArray geometry = sessionStore_->mainWindowGeometry();
     if (!geometry.isEmpty() && !restoreGeometry(geometry)) {
         resize(defaultMainWindowSize());
     }
 
-    const QByteArray state = sessionStore_.mainWindowState();
+    const QByteArray state = sessionStore_->mainWindowState();
     if (!state.isEmpty()) {
         restoreState(state);
     }
     ensureUsableMainWindowSize(this);
 
-    const QString lastProjectPath = sessionStore_.lastProjectPath();
+    const QString lastProjectPath = sessionStore_->lastProjectPath();
     if (!lastProjectPath.isEmpty() && QDir(lastProjectPath).exists() && !isProtectedMacUserFolder(lastProjectPath)) {
         projectRootPath_ = lastProjectPath;
         projectModel_->setRootPath(projectRootPath_);
@@ -1180,26 +1187,26 @@ void MainWindow::restoreSessionState()
 
 void MainWindow::persistSessionState()
 {
-    sessionStore_.setMainWindowGeometry(saveGeometry());
-    sessionStore_.setMainWindowState(saveState());
-    sessionStore_.setLastProjectPath(projectRootPath_);
-    sessionStore_.setTherionExecutablePath(therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text().trimmed() : QString());
-    sessionStore_.setTherionWorkingDirectory(therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text().trimmed() : QString());
-    sessionStore_.setTherionArguments(therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text().trimmed() : QString());
-    sessionStore_.setTherionRunTargetMode(therionRunTargetMode());
-    sessionStore_.setTherionTargetConfigPath(therionTargetConfigEdit_ != nullptr ? therionTargetConfigEdit_->text().trimmed() : QString());
+    sessionStore_->setMainWindowGeometry(saveGeometry());
+    sessionStore_->setMainWindowState(saveState());
+    sessionStore_->setLastProjectPath(projectRootPath_);
+    sessionStore_->setTherionExecutablePath(therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text().trimmed() : QString());
+    sessionStore_->setTherionWorkingDirectory(therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text().trimmed() : QString());
+    sessionStore_->setTherionArguments(therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text().trimmed() : QString());
+    sessionStore_->setTherionRunTargetMode(therionRunTargetMode());
+    sessionStore_->setTherionTargetConfigPath(therionTargetConfigEdit_ != nullptr ? therionTargetConfigEdit_->text().trimmed() : QString());
     saveStructureNameOverrides();
     persistOpenDocuments();
 }
 
 void MainWindow::restoreOpenDocuments()
 {
-    const QStringList openDocumentPaths = sessionStore_.openDocumentPaths();
+    const QStringList openDocumentPaths = sessionStore_->openDocumentPaths();
     if (openDocumentPaths.isEmpty()) {
         return;
     }
 
-    const QString activeDocumentPath = sessionStore_.activeDocumentPath();
+    const QString activeDocumentPath = sessionStore_->activeDocumentPath();
     bool skippedUnsupportedDocument = false;
 
     for (const QString &documentPath : openDocumentPaths) {
@@ -1263,7 +1270,7 @@ void MainWindow::persistOpenDocuments()
         documentPaths.append(filePath);
     }
 
-    sessionStore_.setOpenDocumentPaths(documentPaths);
+    sessionStore_->setOpenDocumentPaths(documentPaths);
 
     QString activeDocumentPath;
     for (auto iterator = detachedMapWindowsByPath_.constBegin(); iterator != detachedMapWindowsByPath_.constEnd(); ++iterator) {
@@ -1278,7 +1285,7 @@ void MainWindow::persistOpenDocuments()
         activeDocumentPath = currentWidget != nullptr ? documentPathForWidget(currentWidget) : QString();
     }
 
-    sessionStore_.setActiveDocumentPath(activeDocumentPath);
+    sessionStore_->setActiveDocumentPath(activeDocumentPath);
 }
 
 void MainWindow::addWelcomeTab()
@@ -1343,7 +1350,7 @@ void MainWindow::openProject()
     projectTree_->setRootIndex(projectModel_->index(projectRootPath_));
     loadStructureNameOverrides();
     syncOpenDocumentsToProjectRoot();
-    sessionStore_.setLastProjectPath(projectRootPath_);
+    sessionStore_->setLastProjectPath(projectRootPath_);
     rebuildStructureSidebar();
     refreshTherionConfigDisplay();
     updateProjectActionState();
@@ -1370,7 +1377,7 @@ void MainWindow::closeProject()
 
     clearDocumentTabs();
     resetProjectBrowser();
-    sessionStore_.setLastProjectPath(QString());
+    sessionStore_->setLastProjectPath(QString());
     persistOpenDocuments();
     rebuildStructureSidebar();
     statusBar()->showMessage(tr("Project closed"), 3000);
@@ -1559,12 +1566,12 @@ QString MainWindow::structureOverrideKey(const QString &sourceFile, int lineNumb
 
 void MainWindow::loadStructureNameOverrides()
 {
-    structureNameOverrides_ = loadStructureNameOverridesFromJson(sessionStore_.structureNameOverrides());
+    structureNameOverrides_ = loadStructureNameOverridesFromJson(sessionStore_->structureNameOverrides());
 }
 
 void MainWindow::saveStructureNameOverrides()
 {
-    sessionStore_.setStructureNameOverrides(structureNameOverridesToJson(structureNameOverrides_));
+    sessionStore_->setStructureNameOverrides(structureNameOverridesToJson(structureNameOverrides_));
 }
 
 void MainWindow::saveActiveDocument()
@@ -1774,7 +1781,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         }
     }
 
-    auto *tab = new TherionStudio::MapEditorTab(sessionStore_);
+    auto *tab = new TherionStudio::MapEditorTab(*sessionStore_);
     tab->setInlineWorkspaceModeSelectorVisible(false);
     tab->setProjectRootPath(projectRootPath_);
     QString errorMessage;

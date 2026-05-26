@@ -50,16 +50,16 @@ QString canonicalOrAbsolutePath(const QString &path)
 void MainWindow::buildConsole()
 {
     QWidget *consoleHost = consoleSidebarPage_ != nullptr ? consoleSidebarPage_ : this;
-    const QString persistedExecutablePath = sessionStore_.therionExecutablePath().trimmed();
+    const QString persistedExecutablePath = sessionStore_->therionExecutablePath().trimmed();
     const QString suggestedExecutablePath = TherionStudio::TherionRunnerService::suggestedDefaultExecutablePath();
     TherionStudio::MainWindowTherionConsoleBuilder::BuildInput buildInput;
     buildInput.consoleHost = consoleHost;
     buildInput.persistedExecutablePath = persistedExecutablePath;
     buildInput.suggestedExecutablePath = suggestedExecutablePath;
-    buildInput.persistedWorkingDirectory = sessionStore_.therionWorkingDirectory().trimmed();
-    buildInput.persistedArguments = sessionStore_.therionArguments().trimmed();
-    buildInput.persistedRunTargetMode = sessionStore_.therionRunTargetMode().trimmed();
-    buildInput.persistedTargetConfigPath = sessionStore_.therionTargetConfigPath().trimmed();
+    buildInput.persistedWorkingDirectory = sessionStore_->therionWorkingDirectory().trimmed();
+    buildInput.persistedArguments = sessionStore_->therionArguments().trimmed();
+    buildInput.persistedRunTargetMode = sessionStore_->therionRunTargetMode().trimmed();
+    buildInput.persistedTargetConfigPath = sessionStore_->therionTargetConfigPath().trimmed();
     const TherionStudio::MainWindowTherionConsoleBuilder::BuildResult buildResult =
         TherionStudio::MainWindowTherionConsoleBuilder::build(buildInput);
 

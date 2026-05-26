@@ -13,6 +13,7 @@ public:
 
 private:
     QString translate(const char *text) const;
+    const InspectorSymbolCatalog &inspectorSymbolCatalog() const;
 
     MapEditorObjectDetailsContext context_;
 };

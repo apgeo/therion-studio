@@ -436,13 +436,6 @@ InspectorScrapScale defaultInspectorScrapScale(const QRectF &sourceBounds)
     return scale;
 }
 
-struct InspectorSymbolCatalog
-{
-    QHash<QString, QStringList> typeValuesByCommand;
-    QHash<QString, QHash<QString, QStringList>> subtypeValuesByCommandAndType;
-    QStringList projectionValues;
-};
-
 struct InspectorCatalogCommandEntry
 {
     QString key;
@@ -560,12 +553,9 @@ void appendInspectorCommandMetadata(InspectorSymbolCatalog *catalog,
     }
 }
 
-InspectorSymbolCatalog loadInspectorSymbolCatalog()
+InspectorSymbolCatalog inspectorSymbolCatalogFromCommandCatalog(const QJsonObject &catalogObject)
 {
     InspectorSymbolCatalog catalog;
-
-    const CommandCatalogStore catalogStore;
-    const QJsonObject catalogObject = catalogStore.catalogObject();
     if (catalogObject.isEmpty()) {
         catalog.projectionValues = defaultInspectorProjectionValues();
         return catalog;
@@ -594,28 +584,45 @@ InspectorSymbolCatalog loadInspectorSymbolCatalog()
     return catalog;
 }
 
-const InspectorSymbolCatalog &inspectorSymbolCatalog()
+const InspectorSymbolCatalog &mapEditorInspectorSymbolCatalog()
 {
-    static const InspectorSymbolCatalog catalog = loadInspectorSymbolCatalog();
+    static const InspectorSymbolCatalog catalog = [] {
+        const CommandCatalogStore catalogStore;
+        return inspectorSymbolCatalogFromCommandCatalog(catalogStore.catalogObject());
+    }();
     return catalog;
 }
 
 QStringList inspectorTypeValuesForCommand(const QString &commandKind)
 {
-    return inspectorSymbolCatalog().typeValuesByCommand.value(commandKind.trimmed().toLower());
+    return inspectorTypeValuesForCommand(mapEditorInspectorSymbolCatalog(), commandKind);
+}
+
+QStringList inspectorTypeValuesForCommand(const InspectorSymbolCatalog &catalog, const QString &commandKind)
+{
+    return catalog.typeValuesByCommand.value(commandKind.trimmed().toLower());
 }
 
 QStringList inspectorSubtypeValuesForCommandType(const QString &commandKind, const QString &type)
 {
-    return inspectorSymbolCatalog()
-        .subtypeValuesByCommandAndType
-        .value(commandKind.trimmed().toLower())
-        .value(type.trimmed().toLower());
+    return inspectorSubtypeValuesForCommandType(mapEditorInspectorSymbolCatalog(), commandKind, type);
+}
+
+QStringList inspectorSubtypeValuesForCommandType(const InspectorSymbolCatalog &catalog,
+                                                 const QString &commandKind,
+                                                 const QString &type)
+{
+    return catalog.subtypeValuesByCommandAndType.value(commandKind.trimmed().toLower()).value(type.trimmed().toLower());
 }
 
 QStringList inspectorProjectionValues()
 {
-    return inspectorSymbolCatalog().projectionValues;
+    return inspectorProjectionValues(mapEditorInspectorSymbolCatalog());
+}
+
+QStringList inspectorProjectionValues(const InspectorSymbolCatalog &catalog)
+{
+    return catalog.projectionValues;
 }
 
 void setEditableComboValues(QComboBox *combo, const QStringList &values, const QString &currentText)

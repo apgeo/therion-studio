@@ -26,7 +26,8 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [ ] Phase 1: low-risk dependency-injection seams completed.
 - [x] Phase 1 partial: `IFileSystem` wired into `TextEditorDocumentController` with fake-filesystem regression coverage.
 - [x] Phase 1 partial: `MainWindow` accepts `ISessionStore` instead of directly owning the concrete QSettings-backed store.
-- [ ] Phase 1 remaining: command catalog access is injectable where command metadata is consumed by UI/application workflows.
+- [x] Phase 1 partial: map inspector type/subtype/projection metadata can be built from an injected command catalog.
+- [ ] Phase 1 remaining: command catalog access is injectable across all command metadata consumers.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.

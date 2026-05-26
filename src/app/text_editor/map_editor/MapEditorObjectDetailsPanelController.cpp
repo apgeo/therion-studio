@@ -52,6 +52,13 @@ QString MapEditorObjectDetailsPanelController::translate(const char *text) const
     return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
 }
 
+const InspectorSymbolCatalog &MapEditorObjectDetailsPanelController::inspectorSymbolCatalog() const
+{
+    return context_.inspectorSymbolCatalog != nullptr
+        ? *context_.inspectorSymbolCatalog
+        : mapEditorInspectorSymbolCatalog();
+}
+
 void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
 {
     if (context_.selectionLabel == nullptr
@@ -237,14 +244,19 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                 context_.quickProjectionCombo->setEnabled(projectionFieldVisible);
                 context_.quickTypeCombo->setEnabled(typeFieldsVisible && fields->typeEditable);
                 context_.quickSubtypeCombo->setEnabled(typeFieldsVisible && fields->typeEditable);
-                setEditableComboValues(context_.quickTypeCombo, inspectorTypeValuesForCommand(fields->commandKind), fields->type);
-                setEditableComboValues(context_.quickProjectionCombo, inspectorProjectionValues(), fields->projection);
+                const InspectorSymbolCatalog &catalog = inspectorSymbolCatalog();
+                setEditableComboValues(context_.quickTypeCombo,
+                                       inspectorTypeValuesForCommand(catalog, fields->commandKind),
+                                       fields->type);
+                setEditableComboValues(context_.quickProjectionCombo,
+                                       inspectorProjectionValues(catalog),
+                                       fields->projection);
                 context_.quickIdentifierEdit->setText(fields->identifier);
                 context_.quickIdentifierLabel->setText(translate("ID"));
                 context_.quickNameEdit->setText(fields->name);
                 *context_.objectQuickCommandKind = fields->commandKind;
                 setEditableComboValues(context_.quickSubtypeCombo,
-                                       inspectorSubtypeValuesForCommandType(fields->commandKind, fields->type),
+                                       inspectorSubtypeValuesForCommandType(catalog, fields->commandKind, fields->type),
                                        fields->subtype);
             }
         }

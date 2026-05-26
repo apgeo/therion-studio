@@ -3,6 +3,8 @@
 
 #include <QComboBox>
 #include <QApplication>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <iostream>
 
 using namespace TherionStudio;
@@ -82,12 +84,54 @@ int runAreaQuickTypeComboPopulationTest()
 
     return 0;
 }
+
+int runInjectedCatalogTest()
+{
+    QJsonObject pointCommand;
+    pointCommand.insert(QStringLiteral("name"), QStringLiteral("point"));
+    pointCommand.insert(QStringLiteral("type_values"), QJsonArray({QStringLiteral("custom-point")}));
+    QJsonObject pointSubtypes;
+    pointSubtypes.insert(QStringLiteral("custom-point"), QJsonArray({QStringLiteral("custom-subtype")}));
+    pointCommand.insert(QStringLiteral("subtype_by_type"), pointSubtypes);
+
+    QJsonObject scrapProjectionOption;
+    scrapProjectionOption.insert(QStringLiteral("option_key"), QStringLiteral("-projection"));
+    scrapProjectionOption.insert(QStringLiteral("allowed_values"), QJsonArray({QStringLiteral("custom-projection")}));
+    QJsonObject scrapCommand;
+    scrapCommand.insert(QStringLiteral("name"), QStringLiteral("scrap"));
+    scrapCommand.insert(QStringLiteral("options"), QJsonArray({scrapProjectionOption}));
+
+    QJsonObject catalogObject;
+    catalogObject.insert(QStringLiteral("commands"), QJsonArray({pointCommand, scrapCommand}));
+
+    const InspectorSymbolCatalog catalog = inspectorSymbolCatalogFromCommandCatalog(catalogObject);
+    if (!expect(inspectorTypeValuesForCommand(catalog, QStringLiteral("point")).contains(QStringLiteral("custom-point")),
+                "Injected inspector catalog should provide point type values without resource loading.")) {
+        return 1;
+    }
+    if (!expect(inspectorSubtypeValuesForCommandType(catalog,
+                                                     QStringLiteral("point"),
+                                                     QStringLiteral("custom-point"))
+                    .contains(QStringLiteral("custom-subtype")),
+                "Injected inspector catalog should provide subtype values without resource loading.")) {
+        return 1;
+    }
+    if (!expect(inspectorProjectionValues(catalog).contains(QStringLiteral("custom-projection")),
+                "Injected inspector catalog should provide projection values without resource loading.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
     if (const int result = runInspectorTypeCatalogLoadTest(); result != 0) {
+        return result;
+    }
+    if (const int result = runInjectedCatalogTest(); result != 0) {
         return result;
     }
     return runAreaQuickTypeComboPopulationTest();

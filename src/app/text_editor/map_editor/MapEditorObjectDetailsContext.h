@@ -18,12 +18,14 @@ class QWidget;
 
 namespace TherionStudio
 {
+struct InspectorSymbolCatalog;
 class TextEditorTab;
 
 struct MapEditorObjectDetailsContext
 {
     QObject *callbackContext = nullptr;
     TextEditorTab *textEditor = nullptr;
+    const InspectorSymbolCatalog *inspectorSymbolCatalog = nullptr;
     bool *updatingUi = nullptr;
     bool *commandApplyInProgress = nullptr;
     int *selectedObjectLineNumber = nullptr;

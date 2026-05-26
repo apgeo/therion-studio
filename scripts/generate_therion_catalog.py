@@ -458,7 +458,17 @@ def extract_section_description(section_text: str) -> str:
 
 def extract_symbol_type_values(arguments: list[dict[str, Any]]) -> list[str]:
     type_values: list[str] = []
-    type_argument = next((item for item in arguments if item.get("name", "").strip().lower() == "<type>"), None)
+    type_argument = None
+    for item in arguments:
+        if not isinstance(item, dict):
+            continue
+        candidate_text = " ".join(
+            str(item.get(field_name, ""))
+            for field_name in ("name", "signature", "raw", "description")
+        ).lower()
+        if "<type>" in candidate_text:
+            type_argument = item
+            break
     if type_argument is None:
         return type_values
 
@@ -473,6 +483,66 @@ def extract_symbol_type_values(arguments: list[dict[str, Any]]) -> list[str]:
         if not keyword:
             continue
         append_unique(type_values, keyword)
+
+    # Newer parsed argument payloads can be prose-only (without |keyword| tokens).
+    # Recover symbol type lists from "one of following:" / "supported:" style text.
+    prose = clean_tex_text(type_text).lower()
+    list_tail = ""
+    for marker in (
+        "one of following:",
+        "following types are supported:",
+        "the following types are supported:",
+        "types are supported:",
+        "following types:",
+    ):
+        marker_index = prose.find(marker)
+        if marker_index >= 0:
+            list_tail = prose[marker_index + len(marker):]
+            break
+    if not list_tail:
+        return type_values
+
+    # Remove explanatory parenthetical prose and cut common prose tails that
+    # follow the enumerated symbol list.
+    list_tail = re.sub(r"\([^)]*\)", " ", list_tail)
+    for stop_marker in (
+        "the subtype may be specified",
+        "the following subtypes",
+        "any subtype specification",
+        "type-specific options",
+    ):
+        stop_index = list_tail.find(stop_marker)
+        if stop_index >= 0:
+            list_tail = list_tail[:stop_index]
+            break
+    segments = [segment.strip() for segment in list_tail.split(";") if segment.strip()]
+    stop_words = {
+        "the",
+        "type",
+        "types",
+        "following",
+        "supported",
+        "is",
+        "are",
+        "for",
+        "and",
+        "or",
+        "of",
+        "use",
+        "see",
+    }
+    for segment in segments:
+        if ":" in segment:
+            segment = segment.split(":", 1)[1].strip()
+        for item in segment.split(","):
+            token = item.strip().strip(".")
+            if not token:
+                continue
+            first_word = token.split()[0].strip()
+            keyword = symbol_keyword_from_token(first_word)
+            if not keyword or keyword in stop_words:
+                continue
+            append_unique(type_values, keyword)
     return type_values
 
 
@@ -871,18 +941,20 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
 
         if normalized_command_name in {"point", "line", "area"}:
             type_values = extract_symbol_type_values(arguments)
-            if type_values:
-                option_names = {
-                    option_key[1:]
-                    for option_key in (option.get("option_key", "") for option in options)
-                    if isinstance(option_key, str) and option_key.startswith("-")
-                }
-                type_values = [value for value in type_values if value not in option_names]
-                result_entry["type_values"] = type_values
 
             subtype_matrix = extract_symbol_subtype_matrix(section_text)
             if normalized_command_name == "area":
-                type_argument = next((item for item in arguments if item.get("name", "").strip().lower() == "<type>"), None)
+                type_argument = None
+                for item in arguments:
+                    if not isinstance(item, dict):
+                        continue
+                    candidate_text = " ".join(
+                        str(item.get(field_name, ""))
+                        for field_name in ("name", "signature", "raw", "description")
+                    ).lower()
+                    if "<type>" in candidate_text:
+                        type_argument = item
+                        break
                 type_description = (
                     f"{type_argument.get('signature', '')} {type_argument.get('description', '')}".lower()
                     if type_argument
@@ -890,6 +962,13 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
                 )
                 if "arbitrary subtype" in type_description:
                     subtype_matrix.setdefault("u", ["*"])
+
+            if subtype_matrix:
+                for type_key in subtype_matrix.keys():
+                    append_unique(type_values, type_key)
+
+            if type_values:
+                result_entry["type_values"] = type_values
 
             if subtype_matrix:
                 result_entry["subtype_by_type"] = subtype_matrix

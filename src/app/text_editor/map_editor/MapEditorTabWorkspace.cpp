@@ -7,6 +7,7 @@
 #include <QAbstractSpinBox>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCompleter>
 #include <QDoubleSpinBox>
 #include <QFile>
 #include <QGuiApplication>
@@ -86,6 +87,21 @@ QIcon themedLucideIcon(const QString &iconName, const QPalette &palette, int ext
     icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::ButtonText), extent, devicePixelRatio), QIcon::Normal);
     icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::Disabled, QPalette::ButtonText), extent, devicePixelRatio), QIcon::Disabled);
     return icon;
+}
+
+void configureSelectionEditableCombo(QComboBox *combo, const QString &objectName)
+{
+    if (combo == nullptr) {
+        return;
+    }
+
+    combo->setObjectName(objectName);
+    combo->setEditable(true);
+    combo->setInsertPolicy(QComboBox::NoInsert);
+    if (QCompleter *completer = combo->completer(); completer != nullptr) {
+        completer->setCompletionMode(QCompleter::UnfilteredPopupCompletion);
+        completer->setCaseSensitivity(Qt::CaseInsensitive);
+    }
 }
 
 QToolButton *createDetachedIconButton(QWidget *parent, const QString &toolTip, const QString &iconName)
@@ -730,14 +746,11 @@ void MapEditorTab::buildUi()
     objectQuickForm->setContentsMargins(0, 0, 0, 0);
     objectQuickForm->setSpacing(6);
     objectQuickTypeCombo_ = new QComboBox(objectQuickFieldsEditor_);
-    objectQuickTypeCombo_->setEditable(true);
-    objectQuickTypeCombo_->setInsertPolicy(QComboBox::NoInsert);
+    configureSelectionEditableCombo(objectQuickTypeCombo_, QStringLiteral("mapObjectQuickTypeCombo"));
     objectQuickSubtypeCombo_ = new QComboBox(objectQuickFieldsEditor_);
-    objectQuickSubtypeCombo_->setEditable(true);
-    objectQuickSubtypeCombo_->setInsertPolicy(QComboBox::NoInsert);
+    configureSelectionEditableCombo(objectQuickSubtypeCombo_, QStringLiteral("mapObjectQuickSubtypeCombo"));
     objectQuickProjectionCombo_ = new QComboBox(objectQuickFieldsEditor_);
-    objectQuickProjectionCombo_->setEditable(true);
-    objectQuickProjectionCombo_->setInsertPolicy(QComboBox::NoInsert);
+    configureSelectionEditableCombo(objectQuickProjectionCombo_, QStringLiteral("mapObjectQuickProjectionCombo"));
     objectQuickIdentifierEdit_ = new QLineEdit(objectQuickFieldsEditor_);
     objectQuickNameEdit_ = new QLineEdit(objectQuickFieldsEditor_);
     objectQuickIdentifierLabel_ = new QLabel(tr("ID"), objectQuickFieldsEditor_);

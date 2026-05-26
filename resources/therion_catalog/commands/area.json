@@ -100,6 +100,34 @@
     "context: scrap"
   ],
   "allowed_values": [],
+  "type_values": [
+    "water",
+    "sump",
+    "sand",
+    "debris",
+    "blocks",
+    "flowstone",
+    "moonmilk",
+    "snow",
+    "ice",
+    "clay",
+    "pebbles",
+    "bedrock",
+    "u",
+    "mudcrack",
+    "pillar",
+    "pillar-with-curtains",
+    "pillars",
+    "pillars-with-curtains",
+    "stalactite",
+    "stalactite-stalagmite",
+    "stalagmite"
+  ],
+  "subtype_by_type": {
+    "u": [
+      "*"
+    ]
+  },
   "block": {
     "role": "container_open",
     "close_directive": "endarea"

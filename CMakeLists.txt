@@ -569,6 +569,20 @@ qt_add_resources(MapEditorObjectStyleCatalogTest MapEditorObjectStyleCatalogReso
     FILES
         resources/map_object_styles.json)
 
+qt_add_executable(MapEditorInspectorDataTest
+    tests/MapEditorInspectorDataTest.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorData.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorData.h
+    src/app/text_editor/map_editor/MapEditorSceneItems.cpp
+    src/app/text_editor/map_editor/MapEditorSceneSupport.h)
+
+target_link_libraries(MapEditorInspectorDataTest PRIVATE therion_core Qt6::Widgets Qt6::Svg)
+
+qt_add_resources(MapEditorInspectorDataTest MapEditorInspectorDataResources
+    PREFIX "/"
+    FILES
+        resources/therion_command_catalog.json)
+
 qt_add_executable(MapEditorObjectDeletePlannerTest
     tests/MapEditorObjectDeletePlannerTest.cpp
     src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.cpp
@@ -884,6 +898,10 @@ therion_add_map_editor_ui_test(MapEditorSplitAreaBorderSmokeTest
     tests/MapEditorSplitAreaBorderSmokeTest.cpp
     "MapEditorSplitAreaBorderSmokeResources")
 
+therion_add_map_editor_ui_test(MapEditorSelectionPanelTypeOptionsTest
+    tests/MapEditorSelectionPanelTypeOptionsTest.cpp
+    "MapEditorSelectionPanelTypeOptionsResources")
+
 set(THERION_UNIT_TEST_TARGETS
     CommandCatalogServiceTest
     TherionDocumentEditorTest
@@ -895,6 +913,7 @@ set(THERION_UNIT_TEST_TARGETS
     DocumentFileEncodingTest
     MapEditorAreaReferenceResolverTest
     MapEditorInputPolicyTest
+    MapEditorInspectorDataTest
     MapEditorObjectStyleCatalogTest
     MapEditorObjectDeletePlannerTest
     MapEditorLineSplitPlannerTest
@@ -912,7 +931,8 @@ set(THERION_UI_TEST_TARGETS
     TextEditorCompletionHighlightTest
     MapEditorDetachedPaneTest
     MapEditorDragUndoRedoSmokeTest
-    MapEditorSplitAreaBorderSmokeTest)
+    MapEditorSplitAreaBorderSmokeTest
+    MapEditorSelectionPanelTypeOptionsTest)
 
 set(THERION_TEST_EXECUTABLE_TARGETS
     ${THERION_UNIT_TEST_TARGETS}

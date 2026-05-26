@@ -443,6 +443,54 @@ struct InspectorSymbolCatalog
     QStringList projectionValues;
 };
 
+struct InspectorCatalogCommandEntry
+{
+    QString key;
+    QJsonObject object;
+};
+
+QVector<InspectorCatalogCommandEntry> inspectorCatalogCommandEntries(const QJsonObject &catalogObject)
+{
+    QVector<InspectorCatalogCommandEntry> entries;
+    const QJsonValue commandsValue = catalogObject.value(QStringLiteral("commands"));
+    if (commandsValue.isArray()) {
+        const QJsonArray commandsArray = commandsValue.toArray();
+        entries.reserve(commandsArray.size());
+        for (const QJsonValue &commandValue : commandsArray) {
+            const QJsonObject commandObject = commandValue.toObject();
+            if (commandObject.isEmpty()) {
+                continue;
+            }
+
+            InspectorCatalogCommandEntry entry;
+            entry.object = commandObject;
+            entry.key = commandObject.value(QStringLiteral("name")).toString();
+            if (entry.key.trimmed().isEmpty()) {
+                entry.key = commandObject.value(QStringLiteral("directive")).toString();
+            }
+            entries.append(entry);
+        }
+        return entries;
+    }
+
+    if (commandsValue.isObject()) {
+        const QJsonObject commandsObject = commandsValue.toObject();
+        entries.reserve(commandsObject.size());
+        for (auto it = commandsObject.begin(); it != commandsObject.end(); ++it) {
+            if (!it.value().isObject()) {
+                continue;
+            }
+
+            InspectorCatalogCommandEntry entry;
+            entry.key = it.key();
+            entry.object = it.value().toObject();
+            entries.append(entry);
+        }
+    }
+
+    return entries;
+}
+
 void appendInspectorCatalogToken(QStringList &tokens, const QString &token)
 {
     const QString normalized = token.trimmed().toLower();
@@ -463,6 +511,55 @@ QStringList defaultInspectorProjectionValues()
     };
 }
 
+void appendInspectorCommandMetadata(InspectorSymbolCatalog *catalog,
+                                    const QString &commandName,
+                                    const QJsonObject &commandObject)
+{
+    if (catalog == nullptr || commandName.isEmpty() || commandObject.isEmpty()) {
+        return;
+    }
+
+    if (commandName == QStringLiteral("scrap")) {
+        const QJsonArray options = commandObject.value(QStringLiteral("options")).toArray();
+        for (const QJsonValue &optionValue : options) {
+            const QJsonObject optionObject = optionValue.toObject();
+            if (optionObject.value(QStringLiteral("option_key")).toString().trimmed().toLower()
+                != QStringLiteral("-projection")) {
+                continue;
+            }
+            const QJsonArray allowedValues = optionObject.value(QStringLiteral("allowed_values")).toArray();
+            for (const QJsonValue &allowedValue : allowedValues) {
+                appendInspectorCatalogToken(catalog->projectionValues, allowedValue.toString());
+            }
+        }
+    }
+
+    if (commandName != QStringLiteral("point")
+        && commandName != QStringLiteral("line")
+        && commandName != QStringLiteral("area")) {
+        return;
+    }
+
+    const QJsonArray typeValues = commandObject.value(QStringLiteral("type_values")).toArray();
+    for (const QJsonValue &typeValue : typeValues) {
+        appendInspectorCatalogToken(catalog->typeValuesByCommand[commandName], typeValue.toString());
+    }
+
+    const QJsonObject subtypeByType = commandObject.value(QStringLiteral("subtype_by_type")).toObject();
+    for (auto subtypeIterator = subtypeByType.begin(); subtypeIterator != subtypeByType.end(); ++subtypeIterator) {
+        const QString typeKey = subtypeIterator.key().trimmed().toLower();
+        if (typeKey.isEmpty()) {
+            continue;
+        }
+
+        const QJsonArray subtypeValues = subtypeIterator.value().toArray();
+        for (const QJsonValue &subtypeValue : subtypeValues) {
+            appendInspectorCatalogToken(catalog->subtypeValuesByCommandAndType[commandName][typeKey],
+                                        subtypeValue.toString());
+        }
+    }
+}
+
 InspectorSymbolCatalog loadInspectorSymbolCatalog()
 {
     InspectorSymbolCatalog catalog;
@@ -474,49 +571,20 @@ InspectorSymbolCatalog loadInspectorSymbolCatalog()
         return catalog;
     }
 
-    const QJsonArray commands = catalogObject.value(QStringLiteral("commands")).toArray();
-    for (const QJsonValue &commandValue : commands) {
-        const QJsonObject commandObject = commandValue.toObject();
-        const QString commandName = commandObject.value(QStringLiteral("name")).toString().trimmed().toLower();
-        if (commandName == QStringLiteral("scrap")) {
-            const QJsonArray options = commandObject.value(QStringLiteral("options")).toArray();
-            for (const QJsonValue &optionValue : options) {
-                const QJsonObject optionObject = optionValue.toObject();
-                if (optionObject.value(QStringLiteral("option_key")).toString().trimmed().toLower()
-                    != QStringLiteral("-projection")) {
-                    continue;
-                }
-                const QJsonArray allowedValues = optionObject.value(QStringLiteral("allowed_values")).toArray();
-                for (const QJsonValue &allowedValue : allowedValues) {
-                    appendInspectorCatalogToken(catalog.projectionValues, allowedValue.toString());
-                }
-            }
+    const QVector<InspectorCatalogCommandEntry> commands = inspectorCatalogCommandEntries(catalogObject);
+    for (const InspectorCatalogCommandEntry &commandEntry : commands) {
+        const QJsonObject commandObject = commandEntry.object;
+        QString commandName = commandEntry.key.trimmed().toLower();
+        if (commandName.isEmpty()) {
+            commandName = commandObject.value(QStringLiteral("name")).toString().trimmed().toLower();
         }
-
-        if (commandName != QStringLiteral("point")
-            && commandName != QStringLiteral("line")
-            && commandName != QStringLiteral("area")) {
+        if (commandName.isEmpty()) {
+            commandName = commandObject.value(QStringLiteral("directive")).toString().trimmed().toLower();
+        }
+        if (commandName.isEmpty()) {
             continue;
         }
-
-        const QJsonArray typeValues = commandObject.value(QStringLiteral("type_values")).toArray();
-        for (const QJsonValue &typeValue : typeValues) {
-            appendInspectorCatalogToken(catalog.typeValuesByCommand[commandName], typeValue.toString());
-        }
-
-        const QJsonObject subtypeByType = commandObject.value(QStringLiteral("subtype_by_type")).toObject();
-        for (auto subtypeIterator = subtypeByType.begin(); subtypeIterator != subtypeByType.end(); ++subtypeIterator) {
-            const QString typeKey = subtypeIterator.key().trimmed().toLower();
-            if (typeKey.isEmpty()) {
-                continue;
-            }
-
-            const QJsonArray subtypeValues = subtypeIterator.value().toArray();
-            for (const QJsonValue &subtypeValue : subtypeValues) {
-                appendInspectorCatalogToken(catalog.subtypeValuesByCommandAndType[commandName][typeKey],
-                                            subtypeValue.toString());
-            }
-        }
+        appendInspectorCommandMetadata(&catalog, commandName, commandObject);
     }
 
     if (catalog.projectionValues.isEmpty()) {

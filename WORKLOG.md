@@ -20,6 +20,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1 - User map-style overrides: load partial JSON override files from the application data `map_object_styles` directory after bundled defaults, with default/type/subtype precedence and no project-level override layer.
 - P1 - Windows installer Qt runtime layout: install `TherionStudio.exe` under `bin/` so deployed Qt DLLs and plugin directories, including `platforms/qwindows.dll`, stay relative to the executable.
 - P1 - Windows GUI subsystem: link `TherionStudio.exe` without a console window so closing a console host cannot terminate the app.
+- P1 - Main-window startup geometry: enforce usable default/minimum main-window size and clamp restored session geometry to avoid narrow Windows launches while preserving half-screen resizing.
 - P2 - GitHub Actions runtime maintenance: keep Windows installer workflow actions on Node 24-compatible versions to avoid Node 20 deprecation warnings.
 - P1 - Inspector type dropdown hydration: ensure `point`/`line`/`area` `Type` select values load from command catalog reliably across catalog schema variants (`commands` array/object), then validate map selection-panel editing workflow.
 - P1 - Selection-panel editable type/subtype combos: keep popup suggestions unfiltered by current text so users can switch away from parsed value without clearing the field first.

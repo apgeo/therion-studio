@@ -277,6 +277,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Main-window document command toolbars shall not draw their own bottom border; separation below the toolbar shall come from the native tab/content frame or the embedded editor content separator.
 - Main-window document chrome shall use one continuous left divider between sidebar content and the editor area; the document command toolbar, file tabs, and document content shall align to that divider without duplicate embedded-canvas left borders.
 - Main-window file tabs shall use native platform tab rendering and shall sit on the `QTabWidget` editor/canvas frame without custom tab-bar geometry overrides.
+- The main window shall provide a usable default size and shall clamp restored session geometry to a usable minimum size so stale or platform-specific saved geometry cannot produce an unusably narrow window, while still permitting common half-screen layouts.
 - When a TH2 document is active, the document command toolbar shall include these left-side groups in order: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`; then `Select`, `Complete Draft`; then a visual separator; then `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`.
 - For `.th` and `.thconfig` documents, the `Raw`/`Blocks` mode selector shall be shown in this document command toolbar instead of a dedicated in-content mode row.
 - The application shall show the active document path and current text encoding in a status area tied to the active document context.

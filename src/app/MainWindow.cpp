@@ -24,6 +24,8 @@
 #include <QPainter>
 #include <QPushButton>
 #include <QHash>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QSizePolicy>
 #include <QSplitter>
 #include <QLineEdit>
@@ -55,6 +57,42 @@
 
 namespace
 {
+QSize minimumMainWindowSize()
+{
+    return QSize(720, 560);
+}
+
+QSize defaultMainWindowSize()
+{
+    QSize preferredSize(1280, 820);
+    const QSize minimumSize = minimumMainWindowSize();
+
+    if (const QScreen *screen = QGuiApplication::primaryScreen()) {
+        const QSize availableSize = screen->availableGeometry().size();
+        if (availableSize.isValid()) {
+            preferredSize.setWidth(qMin(preferredSize.width(),
+                                        qMax(minimumSize.width(), availableSize.width() * 4 / 5)));
+            preferredSize.setHeight(qMin(preferredSize.height(),
+                                         qMax(minimumSize.height(), availableSize.height() * 4 / 5)));
+        }
+    }
+
+    return preferredSize.expandedTo(minimumSize);
+}
+
+void ensureUsableMainWindowSize(QMainWindow *window)
+{
+    if (window == nullptr) {
+        return;
+    }
+
+    const QSize minimumSize = minimumMainWindowSize();
+    window->setMinimumSize(minimumSize);
+    if (window->width() < minimumSize.width() || window->height() < minimumSize.height()) {
+        window->resize(window->size().expandedTo(defaultMainWindowSize()));
+    }
+}
+
 QPixmap renderLucidePixmap(const QString &iconName, const QColor &color, int extent, qreal devicePixelRatio)
 {
     QFile file(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
@@ -412,6 +450,8 @@ MainWindow::MainWindow(TherionStudio::SessionSettingsStore sessionStore, QWidget
             this, &MainWindow::handleStructureSidebarScanFinished);
 
     buildUi();
+    setMinimumSize(minimumMainWindowSize());
+    resize(defaultMainWindowSize());
     restoreSessionState();
 
     if (editorTabs_->count() == 0) {
@@ -1110,14 +1150,15 @@ void MainWindow::buildMenus()
 void MainWindow::restoreSessionState()
 {
     const QByteArray geometry = sessionStore_.mainWindowGeometry();
-    if (!geometry.isEmpty()) {
-        restoreGeometry(geometry);
+    if (!geometry.isEmpty() && !restoreGeometry(geometry)) {
+        resize(defaultMainWindowSize());
     }
 
     const QByteArray state = sessionStore_.mainWindowState();
     if (!state.isEmpty()) {
         restoreState(state);
     }
+    ensureUsableMainWindowSize(this);
 
     const QString lastProjectPath = sessionStore_.lastProjectPath();
     if (!lastProjectPath.isEmpty() && QDir(lastProjectPath).exists() && !isProtectedMacUserFolder(lastProjectPath)) {

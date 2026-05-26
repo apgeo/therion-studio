@@ -24,6 +24,9 @@ The app window has four main areas:
 - center tab area for documents
 - bottom status bar (app state, compile state, encoding, and map status)
 
+The main window opens at a usable desktop size and clamps restored session geometry only enough
+to avoid unusably narrow windows while still allowing common half-screen layouts.
+
 ## 3. Getting Started
 
 ### 3.1 Open a Project

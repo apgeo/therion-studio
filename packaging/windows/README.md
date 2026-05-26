@@ -40,8 +40,8 @@ build-win/TherionStudio-<version>-Windows-x86_64.exe
 
 The Windows CMake configuration:
 
-- installs `TherionStudio.exe` at the installer root
-- runs Qt deployment during install packaging so required Qt DLLs and plugins are included
+- installs `TherionStudio.exe` under `bin/`
+- runs Qt deployment during install packaging so required Qt DLLs and plugins are included beside the installed executable, including `bin/platforms/qwindows.dll`
 - uses NSIS to create the installer
 - includes the project `GPL-3.0-or-later` license from the root `LICENSE` file in CPack metadata
 - assigns the bundled `resources/app/TherionStudio.ico` to the installer and installed app shortcut

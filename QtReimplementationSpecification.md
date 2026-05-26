@@ -774,6 +774,7 @@ Requirements:
 - macOS release support shall cover the last two major macOS versions available through the supported build and distribution channels where practical
 - signed and notarized macOS `.dmg` or `.pkg` artifacts may be added as a later production distribution path when signing credentials are available
 - Windows releases shall be delivered as an installer that bundles Therion Studio and the Qt runtime required by the application
+- Windows release installers shall place the executable and deployed Qt runtime in a consistent runtime directory, preserving Qt plugin subdirectories such as `platforms/qwindows.dll` relative to the executable
 - Windows release installers shall not bundle the external Therion command-line executable; users shall configure or install Therion separately through the existing runner settings
 - Windows signed installers are preferred for production releases; unsigned installers may be used only for clearly documented internal preview builds
 - Linux production releases shall provide at least one broadly portable distribution format, such as AppImage or an equivalent self-contained bundle; distro-specific packages may be added in addition to the primary artifact
@@ -1068,7 +1069,7 @@ The criteria below are intended for implementation verification and QA.
 - A documented support matrix exists for each release, covering operating-system versions, CPU architectures, and package formats.
 - Internal preview builds are explicitly identified as non-production when they are not fully signed or notarized.
 - macOS Homebrew releases install normally through the formula and run against Qt dependencies installed by Homebrew.
-- Windows installer artifacts install Therion Studio and the required Qt runtime without requiring a local Qt SDK or preinstalled Qt runtime.
+- Windows installer artifacts install Therion Studio and the required Qt runtime, including the Qt `windows` platform plugin, without requiring a local Qt SDK or preinstalled Qt runtime.
 - Windows installer artifacts do not install the external Therion command-line executable; the runner remains configurable by path.
 - Linux release artifacts launch on the supported target environments using the documented package format.
 - Updating the application preserves user settings and recent-project/session data when the release notes do not declare a breaking migration.

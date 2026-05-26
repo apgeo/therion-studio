@@ -41,6 +41,7 @@ build-win/TherionStudio-<version>-Windows-x86_64.exe
 The Windows CMake configuration:
 
 - installs `TherionStudio.exe` under `bin/`
+- links `TherionStudio.exe` as a Windows GUI application so launching it does not open a console window
 - runs Qt deployment during install packaging so required Qt DLLs and plugins are included beside the installed executable, including `bin/platforms/qwindows.dll`
 - uses NSIS to create the installer
 - includes the project `GPL-3.0-or-later` license from the root `LICENSE` file in CPack metadata
@@ -70,6 +71,8 @@ Recommended release flow:
 
 The workflow installs Qt directly with `aqtinstall`, installs NSIS/Ninja with Chocolatey,
 configures a Release Ninja build, runs CPack, and uploads the generated `.exe` installer artifact.
+The upload step uses a Node 24-compatible `actions/upload-artifact` version to avoid GitHub
+Actions Node 20 deprecation warnings.
 
 ## Future Hardening
 

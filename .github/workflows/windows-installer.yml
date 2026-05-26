@@ -167,7 +167,7 @@ jobs:
           --verbose
 
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: TherionStudio-Windows-installer
           path: |

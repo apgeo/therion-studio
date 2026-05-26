@@ -369,6 +369,11 @@ src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
     src/editor/TherionSyntaxHighlighter.h
     src/main.cpp)
 
+if(WIN32)
+    set_target_properties(TherionStudio PROPERTIES
+        WIN32_EXECUTABLE TRUE)
+endif()
+
 set(THERION_STUDIO_APP_ICON_SVG
     resources/app/app-icon.svg)
 set(THERION_STUDIO_APP_ICON_PNG

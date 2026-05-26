@@ -775,6 +775,7 @@ Requirements:
 - signed and notarized macOS `.dmg` or `.pkg` artifacts may be added as a later production distribution path when signing credentials are available
 - Windows releases shall be delivered as an installer that bundles Therion Studio and the Qt runtime required by the application
 - Windows release installers shall place the executable and deployed Qt runtime in a consistent runtime directory, preserving Qt plugin subdirectories such as `platforms/qwindows.dll` relative to the executable
+- Windows release executables shall use the GUI subsystem so launching the installed application does not open a console window or tie application lifetime to a console host
 - Windows release installers shall not bundle the external Therion command-line executable; users shall configure or install Therion separately through the existing runner settings
 - Windows signed installers are preferred for production releases; unsigned installers may be used only for clearly documented internal preview builds
 - Linux production releases shall provide at least one broadly portable distribution format, such as AppImage or an equivalent self-contained bundle; distro-specific packages may be added in addition to the primary artifact

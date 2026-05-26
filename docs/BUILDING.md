@@ -74,6 +74,8 @@ copying the required Qt runtime next to the installed `bin/TherionStudio.exe`, i
 Qt platform plugin at `bin/platforms/qwindows.dll`. CPack is configured to use NSIS for the
 Windows installer and emits `TherionStudio-<version>-Windows-x86_64.exe` in the build directory.
 The installer metadata uses the root `LICENSE` file for the project license.
+The installed executable is linked as a Windows GUI application and shall not open a console
+window when launched from Explorer, Start Menu, or the desktop shortcut.
 
 Required Windows packaging tools:
 

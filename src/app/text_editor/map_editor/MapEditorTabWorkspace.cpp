@@ -52,6 +52,7 @@
 #include <memory>
 
 #include "../TextEditorTab.h"
+#include "../../../core/CommandCatalogService.h"
 #include "../../../core/ISessionStore.h"
 #include "../../../core/SessionStore.h"
 
@@ -430,20 +431,30 @@ private:
 }
 
 MapEditorTab::MapEditorTab(QWidget *parent)
+    : MapEditorTab(CommandCatalogStore(), parent)
+{
+}
+
+MapEditorTab::MapEditorTab(CommandCatalogStore catalogStore, QWidget *parent)
     : QWidget(parent)
     , ownedSessionStore_(std::make_unique<SessionSettingsStore>())
     , sessionStore_(ownedSessionStore_.get())
-    , inspectorSymbolCatalog_(mapEditorInspectorSymbolCatalog())
-    , orientationApplicabilityByCommand_(defaultMapEditorOrientationApplicabilityByCommand())
+    , inspectorSymbolCatalog_(inspectorSymbolCatalogFromCommandCatalog(catalogStore.catalogObject()))
+    , orientationApplicabilityByCommand_(mapEditorOrientationApplicabilityFromCommandCatalog(catalogStore.catalogObject()))
 {
     initializeWorkspace();
 }
 
 MapEditorTab::MapEditorTab(ISessionStore &sessionStore, QWidget *parent)
+    : MapEditorTab(sessionStore, CommandCatalogStore(), parent)
+{
+}
+
+MapEditorTab::MapEditorTab(ISessionStore &sessionStore, CommandCatalogStore catalogStore, QWidget *parent)
     : QWidget(parent)
     , sessionStore_(&sessionStore)
-    , inspectorSymbolCatalog_(mapEditorInspectorSymbolCatalog())
-    , orientationApplicabilityByCommand_(defaultMapEditorOrientationApplicabilityByCommand())
+    , inspectorSymbolCatalog_(inspectorSymbolCatalogFromCommandCatalog(catalogStore.catalogObject()))
+    , orientationApplicabilityByCommand_(mapEditorOrientationApplicabilityFromCommandCatalog(catalogStore.catalogObject()))
 {
     initializeWorkspace();
 }

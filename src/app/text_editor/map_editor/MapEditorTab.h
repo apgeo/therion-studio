@@ -57,6 +57,7 @@ enum class DraftGeometryKind;
 namespace TherionStudio
 {
 class TextEditorTab;
+class CommandCatalogStore;
 struct MapEditorCanvasEditContext;
 struct MapEditorInteractiveDrawContext;
 class MapEditorInspectorBackgroundController;
@@ -95,7 +96,9 @@ public:
     };
 
     explicit MapEditorTab(QWidget *parent = nullptr);
+    explicit MapEditorTab(CommandCatalogStore catalogStore, QWidget *parent = nullptr);
     explicit MapEditorTab(ISessionStore &sessionStore, QWidget *parent = nullptr);
+    explicit MapEditorTab(ISessionStore &sessionStore, CommandCatalogStore catalogStore, QWidget *parent = nullptr);
     ~MapEditorTab() override;
 
     bool loadFile(const QString &filePath, QString *errorMessage = nullptr);

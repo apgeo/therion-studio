@@ -29,6 +29,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 1 partial: map inspector type/subtype/projection metadata can be built from an injected command catalog.
 - [x] Phase 1 partial: map object orientation support metadata can be built from an injected command catalog.
 - [x] Phase 1 partial: map editor controllers receive inspector/orientation metadata through explicit `MapEditorTab` context state.
+- [x] Phase 1 partial: `MapEditorTab` accepts an explicit `CommandCatalogStore` for map inspector/orientation metadata construction.
 - [ ] Phase 1 remaining: command catalog access is injectable across all command metadata consumers.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.

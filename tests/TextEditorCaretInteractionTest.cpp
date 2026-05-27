@@ -1,5 +1,6 @@
 #include "../src/app/text_editor/TextEditorTab.h"
-#include "../src/core/CommandCatalogService.h"
+#include "../src/core/CommandCatalogStore.h"
+#include "../src/core/QtFileSystem.h"
 #include "../src/core/TherionDocumentParser.h"
 
 #include <QApplication>
@@ -223,6 +224,7 @@ void clearReadingsOrderTagTokens(QWidget *root)
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+    QtFileSystem fileSystem;
 
     QTemporaryDir tempDir;
     if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
@@ -237,7 +239,7 @@ int main(int argc, char *argv[])
     file.write("survey demo -title old # survey comment\ncenterline\n# caret-target line for typing test\nmystery-command foo bar\nteam oldteam\nexplo-team old-discovery-team\ndata normal from to tape compass clino\n  1 2 3 4 5 6\nendcenterline\nendsurvey\n");
     file.close();
 
-    TextEditorTab tab{CommandCatalogStore()};
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
     QString errorMessage;
     if (!expect(tab.loadFile(filePath, &errorMessage), "Failed to load test file in TextEditorTab.")) {
         std::cerr << errorMessage.toStdString() << '\n';
@@ -684,7 +686,7 @@ int main(int argc, char *argv[])
     pumpEvents();
 
     {
-        auto *crashGuardTab = new TextEditorTab(CommandCatalogStore());
+        auto *crashGuardTab = new TextEditorTab(fileSystem, CommandCatalogStore());
         if (!expect(crashGuardTab->loadFile(filePath, &errorMessage),
                     "Failed to load crash-guard tab instance.")) {
             delete crashGuardTab;
@@ -727,7 +729,7 @@ int main(int argc, char *argv[])
     configFile.close();
 
     {
-        auto *configTab = new TextEditorTab(CommandCatalogStore());
+        auto *configTab = new TextEditorTab(fileSystem, CommandCatalogStore());
         if (!expect(configTab->loadFile(configPath, &errorMessage),
                     "Failed to load thconfig test file in TextEditorTab.")) {
             std::cerr << errorMessage.toStdString() << '\n';
@@ -839,7 +841,7 @@ int main(int argc, char *argv[])
     continuationFile.close();
 
     {
-        auto *continuationTab = new TextEditorTab(CommandCatalogStore());
+        auto *continuationTab = new TextEditorTab(fileSystem, CommandCatalogStore());
         if (!expect(continuationTab->loadFile(continuationPath, &errorMessage),
                     "Failed to load continuation test file in TextEditorTab.")) {
             std::cerr << errorMessage.toStdString() << '\n';

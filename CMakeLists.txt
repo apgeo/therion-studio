@@ -43,8 +43,8 @@ function(therion_enable_strict_warnings target_name)
 endfunction()
 
 set(THERION_CORE_SOURCES
-    src/core/CommandCatalogService.cpp
-    src/core/CommandCatalogService.h
+    src/core/CommandCatalogStore.cpp
+    src/core/CommandCatalogStore.h
     src/core/TherionCommandSyntax.cpp
     src/core/TherionCommandSyntax.h
     src/core/DocumentFile.cpp
@@ -524,8 +524,8 @@ endif()
 therion_add_core_unit_test(TherionDocumentEditorTest
     tests/TherionDocumentEditorTest.cpp)
 
-therion_add_core_unit_test(CommandCatalogServiceTest
-    tests/CommandCatalogServiceTest.cpp)
+therion_add_core_unit_test(CommandCatalogStoreTest
+    tests/CommandCatalogStoreTest.cpp)
 
 therion_add_core_unit_test(TherionProjectStructureIndexTest
     tests/ProjectStructureIndexTest.cpp)
@@ -934,7 +934,7 @@ therion_add_map_editor_ui_test(MapEditorSelectionPanelTypeOptionsTest
     "MapEditorSelectionPanelTypeOptionsResources")
 
 set(THERION_UNIT_TEST_TARGETS
-    CommandCatalogServiceTest
+    CommandCatalogStoreTest
     TherionDocumentEditorTest
     TherionProjectStructureIndexTest
     MapBackgroundPlacementTest

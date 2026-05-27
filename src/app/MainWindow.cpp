@@ -429,13 +429,6 @@ private:
 
 } // namespace
 
-MainWindow::MainWindow(TherionStudio::CommandCatalogStore commandCatalogStore, QWidget *parent)
-    : MainWindow(std::make_unique<TherionStudio::SessionSettingsStore>(),
-                 std::move(commandCatalogStore),
-                 parent)
-{
-}
-
 MainWindow::MainWindow(std::unique_ptr<TherionStudio::ISessionStore> sessionStore,
                        TherionStudio::CommandCatalogStore commandCatalogStore,
                        QWidget *parent)
@@ -1334,7 +1327,7 @@ void MainWindow::addWelcomeTab()
 
 void MainWindow::createNewWindow()
 {
-    auto *window = new MainWindow(commandCatalogStore_);
+    auto *window = new MainWindow(std::make_unique<TherionStudio::SessionSettingsStore>(), commandCatalogStore_);
     window->show();
 }
 
@@ -1789,7 +1782,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         }
     }
 
-    auto *tab = new TherionStudio::MapEditorTab(*sessionStore_, commandCatalogStore_);
+    auto *tab = new TherionStudio::MapEditorTab(fileSystem_, *sessionStore_, commandCatalogStore_);
     tab->setInlineWorkspaceModeSelectorVisible(false);
     tab->setProjectRootPath(projectRootPath_);
     QString errorMessage;

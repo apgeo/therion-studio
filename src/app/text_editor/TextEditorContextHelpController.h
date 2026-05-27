@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../core/CommandCatalogService.h"
+#include "../../core/CommandCatalogStore.h"
 
 #include <functional>
 

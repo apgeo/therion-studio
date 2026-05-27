@@ -2,6 +2,9 @@
 #include "../src/app/text_editor/map_editor/MapEditorSceneInternals.h"
 #include "../src/app/text_editor/map_editor/MapEditorSceneSupport.h"
 #include "../src/app/text_editor/TextEditorTab.h"
+#include "../src/core/CommandCatalogStore.h"
+#include "../src/core/QtFileSystem.h"
+#include "FakeSessionStore.h"
 
 #include <QApplication>
 #include <QCoreApplication>
@@ -143,6 +146,8 @@ int runSplitReferencedOpenLineFromSelectionPanelSmoke()
     file.write(th2Contents);
     file.close();
 
+    QtFileSystem fileSystem;
+    FakeSessionStore sessionStore;
     QMainWindow hostWindow;
     hostWindow.resize(960, 720);
     auto *central = new QWidget(&hostWindow);
@@ -150,7 +155,7 @@ int runSplitReferencedOpenLineFromSelectionPanelSmoke()
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
-    auto *mapTab = new MapEditorTab(CommandCatalogStore(), central);
+    auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), central);
     layout->addWidget(mapTab);
     hostWindow.setCentralWidget(central);
     hostWindow.show();

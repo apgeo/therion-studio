@@ -1,4 +1,4 @@
-#include "../src/core/CommandCatalogService.h"
+#include "../src/core/CommandCatalogStore.h"
 
 #include <QFile>
 #include <QJsonObject>

@@ -58,7 +58,6 @@
 #include <utility>
 
 #include "../../core/IFileSystem.h"
-#include "../../core/QtFileSystem.h"
 #include "../../core/TherionCommandSyntax.h"
 #include "../../editor/TherionSyntaxHighlighter.h"
 
@@ -76,15 +75,6 @@ namespace TherionStudio
 TextEditorTab::TextEditorTab(IFileSystem &fileSystem, CommandCatalogStore catalogStore, QWidget *parent)
     : QWidget(parent)
     , fileSystem_(&fileSystem)
-    , catalogStore_(std::move(catalogStore))
-{
-    buildAll();
-}
-
-TextEditorTab::TextEditorTab(CommandCatalogStore catalogStore, QWidget *parent)
-    : QWidget(parent)
-    , ownedFileSystem_(std::make_unique<QtFileSystem>())
-    , fileSystem_(ownedFileSystem_.get())
     , catalogStore_(std::move(catalogStore))
 {
     buildAll();

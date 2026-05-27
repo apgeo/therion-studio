@@ -23,7 +23,7 @@ Key recommendations:
 This tracker records architecture optimization progress at phase level. `WORKLOG.md` remains the day-to-day active work board.
 
 - [x] Phase 0: build and test wiring stabilized for the initial dependency-injection checkpoint.
-- [ ] Phase 1: low-risk dependency-injection seams completed.
+- [x] Phase 1: low-risk dependency-injection seams completed.
 - [x] Phase 1 partial: `IFileSystem` wired into `TextEditorDocumentController` with fake-filesystem regression coverage.
 - [x] Phase 1 partial: `MainWindow` accepts `ISessionStore` instead of directly owning the concrete QSettings-backed store.
 - [x] Phase 1 partial: map inspector type/subtype/projection metadata can be built from an injected command catalog.
@@ -40,8 +40,9 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 1 partial: `MapEditorTab` reuses its injected command catalog for the embedded raw text editor.
 - [x] Phase 1 partial: `MainWindow` creates additional windows with the already injected command catalog.
 - [x] Phase 1 partial: UI shell constructors no longer expose no-catalog fallback overloads.
-- [x] Phase 1 partial: unused static `CommandCatalogService` facade removed; catalog access goes through explicit stores.
-- [ ] Phase 1 remaining: command catalog access is injectable across all command metadata consumers.
+- [x] Phase 1 partial: unused static command-catalog facade removed; catalog access goes through explicit stores.
+- [x] Phase 1 partial: legacy real-adapter convenience constructors removed from editor and main-window shells.
+- [x] Phase 1 complete: document/session/catalog seams are injectable enough for focused tests and no UI command metadata consumer uses static catalog access.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.
@@ -63,7 +64,7 @@ The review was based on the current working tree, including active uncommitted r
 - `src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp`
 - `src/core/DocumentFile.*`
 - `src/core/SessionStore.*`
-- `src/core/CommandCatalogService.*`
+- `src/core/CommandCatalogStore.*`
 - `src/core/IFileSystem.h`, `src/core/ISessionStore.h`, `src/core/QtFileSystem.*`
 - `src/platform/*`
 - existing test wiring in `CMakeLists.txt`
@@ -110,8 +111,8 @@ Static functions are not automatically wrong. They are acceptable for pure state
 Current examples:
 
 - `DocumentFile` is a static file IO helper. This is simple, but it couples callers directly to filesystem behavior and makes failure simulation harder.
-- `CommandCatalogService` exposes static catalog access. This is convenient, but it hides resource loading and makes catalog variants hard to inject in focused tests.
-- `SessionStore` has been moving toward an `ISessionStore` abstraction, but the tree still reflects a transitional state.
+- `CommandCatalogStore` can load the built-in resource catalog, but UI shells now receive explicit store instances rather than reaching through a static facade.
+- `SessionStore` now has an `ISessionStore` seam for main-window and map-editor workflows; production composition happens at the application/main-window boundary rather than hidden editor constructors.
 
 **Service locator by constructor context**
 
@@ -928,7 +929,7 @@ These are low-risk and should happen before deep refactoring.
 - Fix accidental `CMakeLists.txt` drift and verify build/test health.
 - Add tests around `IFileSystem` and `ISessionStore` fakes.
 - Stop adding new direct `DocumentFile` calls from widgets.
-- Stop adding new static `CommandCatalogService` calls in UI code.
+- Keep command catalog loading at composition/test setup boundaries; do not reintroduce UI-side static catalog access.
 - Add a short architecture boundary note near this plan or developer docs.
 - Add structure checks for new editor-mode files so they stay under the stable directory layout.
 - Identify all remaining direct `Q_OS_*` usage and classify each as bootstrap, platform, or migration debt.

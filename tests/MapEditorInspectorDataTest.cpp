@@ -1,5 +1,5 @@
 #include "../src/app/text_editor/map_editor/MapEditorInspectorData.h"
-#include "../src/core/CommandCatalogService.h"
+#include "../src/core/CommandCatalogStore.h"
 #include "../src/core/TherionDocumentParser.h"
 
 #include <QComboBox>

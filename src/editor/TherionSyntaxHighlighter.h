@@ -6,7 +6,7 @@
 #include <QHash>
 #include <QJsonObject>
 
-#include "../core/CommandCatalogService.h"
+#include "../core/CommandCatalogStore.h"
 
 class QTextDocument;
 

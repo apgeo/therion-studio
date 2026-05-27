@@ -1,7 +1,7 @@
 #pragma once
 
 #include "TextEditorCommandMetadata.h"
-#include "../../core/CommandCatalogService.h"
+#include "../../core/CommandCatalogStore.h"
 
 #include <QString>
 #include <QStringList>
@@ -109,7 +109,6 @@ public:
     };
 
     explicit TextEditorTab(IFileSystem &fileSystem, CommandCatalogStore catalogStore, QWidget *parent = nullptr);
-    explicit TextEditorTab(CommandCatalogStore catalogStore, QWidget *parent = nullptr);
     ~TextEditorTab() override;
 
     bool loadFile(const QString &filePath, QString *errorMessage = nullptr);
@@ -440,7 +439,6 @@ private:
     QString cleanEncodingNameSnapshot_ = QStringLiteral("UTF-8");
     QString cleanTextSnapshot_;
     QString encodingStatusNote_;
-    std::unique_ptr<IFileSystem> ownedFileSystem_;
     IFileSystem *fileSystem_ = nullptr;
     CommandCatalogStore catalogStore_;
     std::unique_ptr<TextEditorAppearanceController> appearanceController_;

@@ -1,5 +1,6 @@
 #include "../src/app/text_editor/TextEditorTab.h"
-#include "../src/core/CommandCatalogService.h"
+#include "../src/core/CommandCatalogStore.h"
+#include "../src/core/QtFileSystem.h"
 #include "../src/core/TherionDocumentParser.h"
 
 #include <QAbstractItemView>
@@ -174,6 +175,7 @@ QColor expectedIdentifierColor()
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+    QtFileSystem fileSystem;
 
     QTemporaryDir tempDir;
     if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
@@ -208,7 +210,7 @@ int main(int argc, char *argv[])
     file.write("survey demo\nendsurvey\n");
     file.close();
 
-    TextEditorTab tab{CommandCatalogStore()};
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
     QString errorMessage;
     if (!expect(tab.loadFile(filePath, &errorMessage), "Failed to load test file in TextEditorTab.")) {
         std::cerr << errorMessage.toStdString() << '\n';

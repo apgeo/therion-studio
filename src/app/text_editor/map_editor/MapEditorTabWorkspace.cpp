@@ -52,9 +52,9 @@
 #include <memory>
 
 #include "../TextEditorTab.h"
-#include "../../../core/CommandCatalogService.h"
+#include "../../../core/CommandCatalogStore.h"
+#include "../../../core/IFileSystem.h"
 #include "../../../core/ISessionStore.h"
-#include "../../../core/SessionStore.h"
 
 namespace TherionStudio
 {
@@ -430,19 +430,12 @@ private:
 };
 }
 
-MapEditorTab::MapEditorTab(CommandCatalogStore catalogStore, QWidget *parent)
+MapEditorTab::MapEditorTab(IFileSystem &fileSystem,
+                           ISessionStore &sessionStore,
+                           CommandCatalogStore catalogStore,
+                           QWidget *parent)
     : QWidget(parent)
-    , ownedSessionStore_(std::make_unique<SessionSettingsStore>())
-    , sessionStore_(ownedSessionStore_.get())
-    , catalogStore_(std::move(catalogStore))
-    , inspectorSymbolCatalog_(inspectorSymbolCatalogFromCommandCatalog(catalogStore_.catalogObject()))
-    , orientationApplicabilityByCommand_(mapEditorOrientationApplicabilityFromCommandCatalog(catalogStore_.catalogObject()))
-{
-    initializeWorkspace();
-}
-
-MapEditorTab::MapEditorTab(ISessionStore &sessionStore, CommandCatalogStore catalogStore, QWidget *parent)
-    : QWidget(parent)
+    , fileSystem_(&fileSystem)
     , sessionStore_(&sessionStore)
     , catalogStore_(std::move(catalogStore))
     , inspectorSymbolCatalog_(inspectorSymbolCatalogFromCommandCatalog(catalogStore_.catalogObject()))
@@ -535,7 +528,7 @@ void MapEditorTab::buildUi()
     splitter_->setChildrenCollapsible(false);
     applyThinSplitterStyle(splitter_, QStringLiteral("mapEditorWorkspaceSplitter"));
 
-    textEditor_ = new TextEditorTab(catalogStore_, splitter_);
+    textEditor_ = new TextEditorTab(*fileSystem_, catalogStore_, splitter_);
     textEditor_->setInlineStatusVisible(false);
     textEditor_->setModeSelectorVisible(false);
     sourceDrivenMapRefreshTimer_ = new QTimer(this);

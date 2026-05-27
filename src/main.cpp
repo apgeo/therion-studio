@@ -1,5 +1,6 @@
 #include "app/MainWindow.h"
-#include "core/CommandCatalogService.h"
+#include "core/CommandCatalogStore.h"
+#include "core/SessionStore.h"
 
 #include <QApplication>
 #include <QColor>
@@ -13,6 +14,8 @@
 #include <QStyleHints>
 #include <QStyleFactory>
 #include <QTranslator>
+
+#include <memory>
 
 namespace
 {
@@ -211,7 +214,8 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    auto *window = new MainWindow(TherionStudio::CommandCatalogStore());
+    auto *window = new MainWindow(std::make_unique<TherionStudio::SessionSettingsStore>(),
+                                  TherionStudio::CommandCatalogStore());
     window->show();
 
     return application.exec();

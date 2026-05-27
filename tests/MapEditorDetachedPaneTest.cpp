@@ -1,5 +1,7 @@
 #include "../src/app/text_editor/map_editor/MapEditorTab.h"
-#include "../src/core/CommandCatalogService.h"
+#include "../src/core/CommandCatalogStore.h"
+#include "../src/core/QtFileSystem.h"
+#include "FakeSessionStore.h"
 
 #include <QApplication>
 #include <QEventLoop>
@@ -58,13 +60,15 @@ int countDetachedMapWindows(const QWidget *hostWindow)
 
 int runDetachedPaneLifecycleTest()
 {
+    QtFileSystem fileSystem;
+    FakeSessionStore sessionStore;
     QWidget hostWindow;
     hostWindow.resize(1280, 900);
     auto *layout = new QVBoxLayout(&hostWindow);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
-    auto *mapTab = new MapEditorTab(CommandCatalogStore(), &hostWindow);
+    auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), &hostWindow);
     layout->addWidget(mapTab);
     hostWindow.show();
     pumpEvents();

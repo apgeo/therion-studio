@@ -20,7 +20,7 @@
 #include "MapEditorInspectorData.h"
 #include "MapEditorInteractiveDrawLogic.h"
 #include "MapEditorObjectDetailsLogic.h"
-#include "../../../core/CommandCatalogService.h"
+#include "../../../core/CommandCatalogStore.h"
 #include "../../../core/TherionDocumentParser.h"
 
 class QLabel;
@@ -73,6 +73,7 @@ class MapEditorSceneLifecycleController;
 struct MapEditorSceneRefreshContext;
 class MapEditorSceneRefreshController;
 struct MapEditorSelectionContext;
+class IFileSystem;
 class ISessionStore;
 struct MapEditorViewportInputContext;
 
@@ -95,8 +96,10 @@ public:
         Area
     };
 
-    explicit MapEditorTab(CommandCatalogStore catalogStore, QWidget *parent = nullptr);
-    explicit MapEditorTab(ISessionStore &sessionStore, CommandCatalogStore catalogStore, QWidget *parent = nullptr);
+    explicit MapEditorTab(IFileSystem &fileSystem,
+                          ISessionStore &sessionStore,
+                          CommandCatalogStore catalogStore,
+                          QWidget *parent = nullptr);
     ~MapEditorTab() override;
 
     bool loadFile(const QString &filePath, QString *errorMessage = nullptr);
@@ -506,7 +509,7 @@ private:
     bool mapGridVisible_ = true;
     qreal mapGridSpacingMeters_ = 10.0;
     QDateTime lastNativeZoomGestureUtc_;
-    std::unique_ptr<ISessionStore> ownedSessionStore_;
+    IFileSystem *fileSystem_ = nullptr;
     ISessionStore *sessionStore_ = nullptr;
     CommandCatalogStore catalogStore_;
     InspectorSymbolCatalog inspectorSymbolCatalog_;

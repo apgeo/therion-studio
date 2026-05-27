@@ -11,7 +11,7 @@
 
 #include "MainWindowTherionConsoleController.h"
 #include "ProjectStructureScanner.h"
-#include "../core/CommandCatalogService.h"
+#include "../core/CommandCatalogStore.h"
 #include "../core/ISessionStore.h"
 #include "../core/ProjectStructureIndex.h"
 #include "../core/QtFileSystem.h"
@@ -52,7 +52,9 @@ class MainWindow final : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(TherionStudio::CommandCatalogStore commandCatalogStore, QWidget *parent = nullptr);
+    explicit MainWindow(std::unique_ptr<TherionStudio::ISessionStore> sessionStore,
+                        TherionStudio::CommandCatalogStore commandCatalogStore,
+                        QWidget *parent = nullptr);
     explicit MainWindow(TherionStudio::ISessionStore &sessionStore,
                         TherionStudio::CommandCatalogStore commandCatalogStore,
                         QWidget *parent = nullptr);
@@ -91,10 +93,6 @@ private slots:
     void handleMapEditorDetachRequested(TherionStudio::MapEditorTab *tab);
 
 private:
-    explicit MainWindow(std::unique_ptr<TherionStudio::ISessionStore> sessionStore,
-                        TherionStudio::CommandCatalogStore commandCatalogStore,
-                        QWidget *parent);
-
     enum class SidebarPane
     {
         FileBrowser = 0,

@@ -52,9 +52,7 @@ class MainWindow final : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
     explicit MainWindow(TherionStudio::CommandCatalogStore commandCatalogStore, QWidget *parent = nullptr);
-    explicit MainWindow(TherionStudio::ISessionStore &sessionStore, QWidget *parent = nullptr);
     explicit MainWindow(TherionStudio::ISessionStore &sessionStore,
                         TherionStudio::CommandCatalogStore commandCatalogStore,
                         QWidget *parent = nullptr);

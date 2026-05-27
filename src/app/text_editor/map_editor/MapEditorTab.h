@@ -95,9 +95,7 @@ public:
         Area
     };
 
-    explicit MapEditorTab(QWidget *parent = nullptr);
     explicit MapEditorTab(CommandCatalogStore catalogStore, QWidget *parent = nullptr);
-    explicit MapEditorTab(ISessionStore &sessionStore, QWidget *parent = nullptr);
     explicit MapEditorTab(ISessionStore &sessionStore, CommandCatalogStore catalogStore, QWidget *parent = nullptr);
     ~MapEditorTab() override;
 

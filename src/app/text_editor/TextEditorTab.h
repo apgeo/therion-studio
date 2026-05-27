@@ -108,10 +108,8 @@ public:
         Blocks
     };
 
-    explicit TextEditorTab(IFileSystem &fileSystem, QWidget *parent = nullptr);
     explicit TextEditorTab(IFileSystem &fileSystem, CommandCatalogStore catalogStore, QWidget *parent = nullptr);
     explicit TextEditorTab(CommandCatalogStore catalogStore, QWidget *parent = nullptr);
-    explicit TextEditorTab(QWidget *parent = nullptr);
     ~TextEditorTab() override;
 
     bool loadFile(const QString &filePath, QString *errorMessage = nullptr);

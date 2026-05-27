@@ -73,22 +73,12 @@ constexpr int kPanelSpacing = 8;
 
 namespace TherionStudio
 {
-TextEditorTab::TextEditorTab(IFileSystem &fileSystem, QWidget *parent)
-    : TextEditorTab(fileSystem, CommandCatalogStore(), parent)
-{
-}
-
 TextEditorTab::TextEditorTab(IFileSystem &fileSystem, CommandCatalogStore catalogStore, QWidget *parent)
     : QWidget(parent)
     , fileSystem_(&fileSystem)
     , catalogStore_(std::move(catalogStore))
 {
     buildAll();
-}
-
-TextEditorTab::TextEditorTab(QWidget *parent)
-    : TextEditorTab(CommandCatalogStore(), parent)
-{
 }
 
 TextEditorTab::TextEditorTab(CommandCatalogStore catalogStore, QWidget *parent)

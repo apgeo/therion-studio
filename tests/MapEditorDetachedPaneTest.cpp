@@ -1,4 +1,5 @@
 #include "../src/app/text_editor/map_editor/MapEditorTab.h"
+#include "../src/core/CommandCatalogService.h"
 
 #include <QApplication>
 #include <QEventLoop>
@@ -63,7 +64,7 @@ int runDetachedPaneLifecycleTest()
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
-    auto *mapTab = new MapEditorTab(&hostWindow);
+    auto *mapTab = new MapEditorTab(CommandCatalogStore(), &hostWindow);
     layout->addWidget(mapTab);
     hostWindow.show();
     pumpEvents();

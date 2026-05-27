@@ -429,13 +429,6 @@ private:
 
 } // namespace
 
-MainWindow::MainWindow(QWidget *parent)
-    : MainWindow(std::make_unique<TherionStudio::SessionSettingsStore>(),
-                 TherionStudio::CommandCatalogStore(),
-                 parent)
-{
-}
-
 MainWindow::MainWindow(TherionStudio::CommandCatalogStore commandCatalogStore, QWidget *parent)
     : MainWindow(std::make_unique<TherionStudio::SessionSettingsStore>(),
                  std::move(commandCatalogStore),
@@ -449,11 +442,6 @@ MainWindow::MainWindow(std::unique_ptr<TherionStudio::ISessionStore> sessionStor
     : MainWindow(*sessionStore, std::move(commandCatalogStore), parent)
 {
     ownedSessionStore_ = std::move(sessionStore);
-}
-
-MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore, QWidget *parent)
-    : MainWindow(sessionStore, TherionStudio::CommandCatalogStore(), parent)
-{
 }
 
 MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,

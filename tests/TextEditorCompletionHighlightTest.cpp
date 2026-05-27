@@ -1,4 +1,5 @@
 #include "../src/app/text_editor/TextEditorTab.h"
+#include "../src/core/CommandCatalogService.h"
 #include "../src/core/TherionDocumentParser.h"
 
 #include <QAbstractItemView>
@@ -207,7 +208,7 @@ int main(int argc, char *argv[])
     file.write("survey demo\nendsurvey\n");
     file.close();
 
-    TextEditorTab tab;
+    TextEditorTab tab{CommandCatalogStore()};
     QString errorMessage;
     if (!expect(tab.loadFile(filePath, &errorMessage), "Failed to load test file in TextEditorTab.")) {
         std::cerr << errorMessage.toStdString() << '\n';

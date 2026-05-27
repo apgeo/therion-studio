@@ -81,7 +81,7 @@ int runSelectionPanelTypeValuesTest()
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
-    auto *mapTab = new MapEditorTab(central);
+    auto *mapTab = new MapEditorTab(CommandCatalogStore(), central);
     layout->addWidget(mapTab);
     hostWindow.setCentralWidget(central);
     hostWindow.show();

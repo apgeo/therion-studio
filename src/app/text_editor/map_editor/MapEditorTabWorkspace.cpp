@@ -430,11 +430,6 @@ private:
 };
 }
 
-MapEditorTab::MapEditorTab(QWidget *parent)
-    : MapEditorTab(CommandCatalogStore(), parent)
-{
-}
-
 MapEditorTab::MapEditorTab(CommandCatalogStore catalogStore, QWidget *parent)
     : QWidget(parent)
     , ownedSessionStore_(std::make_unique<SessionSettingsStore>())
@@ -444,11 +439,6 @@ MapEditorTab::MapEditorTab(CommandCatalogStore catalogStore, QWidget *parent)
     , orientationApplicabilityByCommand_(mapEditorOrientationApplicabilityFromCommandCatalog(catalogStore_.catalogObject()))
 {
     initializeWorkspace();
-}
-
-MapEditorTab::MapEditorTab(ISessionStore &sessionStore, QWidget *parent)
-    : MapEditorTab(sessionStore, CommandCatalogStore(), parent)
-{
 }
 
 MapEditorTab::MapEditorTab(ISessionStore &sessionStore, CommandCatalogStore catalogStore, QWidget *parent)

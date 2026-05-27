@@ -655,17 +655,29 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
         }
     };
 
+    QVector<QLineF> gridLines;
     if (xvi.hasGridDefinition) {
         const int spanX = qMax(0, xvi.gridCountX - 1);
         const int spanY = qMax(0, xvi.gridCountY - 1);
         const QPointF gridP00 = xvi.gridOrigin + offset;
-        const QPointF gridP10 = gridP00 + (xvi.gridVectorX * spanX);
-        const QPointF gridP01 = gridP00 + (xvi.gridVectorY * spanY);
-        const QPointF gridP11 = gridP10 + (xvi.gridVectorY * spanY);
-        includePoint(modelToPreviewPoint(gridP00, effectiveModelBounds, previewBounds));
-        includePoint(modelToPreviewPoint(gridP10, effectiveModelBounds, previewBounds));
-        includePoint(modelToPreviewPoint(gridP01, effectiveModelBounds, previewBounds));
-        includePoint(modelToPreviewPoint(gridP11, effectiveModelBounds, previewBounds));
+        for (int xIndex = 0; xIndex <= spanX; ++xIndex) {
+            const QPointF start = gridP00 + (xvi.gridVectorX * xIndex);
+            const QPointF end = start + (xvi.gridVectorY * spanY);
+            const QPointF projectedStart = modelToPreviewPoint(start, effectiveModelBounds, previewBounds);
+            const QPointF projectedEnd = modelToPreviewPoint(end, effectiveModelBounds, previewBounds);
+            includePoint(projectedStart);
+            includePoint(projectedEnd);
+            gridLines.append(QLineF(projectedStart, projectedEnd));
+        }
+        for (int yIndex = 0; yIndex <= spanY; ++yIndex) {
+            const QPointF start = gridP00 + (xvi.gridVectorY * yIndex);
+            const QPointF end = start + (xvi.gridVectorX * spanX);
+            const QPointF projectedStart = modelToPreviewPoint(start, effectiveModelBounds, previewBounds);
+            const QPointF projectedEnd = modelToPreviewPoint(end, effectiveModelBounds, previewBounds);
+            includePoint(projectedStart);
+            includePoint(projectedEnd);
+            gridLines.append(QLineF(projectedStart, projectedEnd));
+        }
     }
 
     auto stationKey = [](const QPointF &point) {
@@ -741,7 +753,7 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
         }
     }
 
-    if (traverseShotLines.isEmpty() && splayShotLines.isEmpty() && !hasSketchPaths && !xvi.hasGridDefinition) {
+    if (gridLines.isEmpty() && traverseShotLines.isEmpty() && splayShotLines.isEmpty() && !hasSketchPaths) {
         return false;
     }
 
@@ -758,23 +770,6 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
 
     const QPointF layerTopLeft = clippedBounds.topLeft();
 
-    QVector<QLineF> gridLines;
-    if (xvi.hasGridDefinition) {
-        const int spanX = qMax(0, xvi.gridCountX - 1);
-        const int spanY = qMax(0, xvi.gridCountY - 1);
-        const QPointF gridP00 = xvi.gridOrigin + offset;
-        for (int row = 0; row <= spanY; ++row) {
-            const QPointF start = modelToPreviewPoint(gridP00 + (xvi.gridVectorY * row), effectiveModelBounds, previewBounds) - layerTopLeft;
-            const QPointF end = modelToPreviewPoint(gridP00 + (xvi.gridVectorY * row) + (xvi.gridVectorX * spanX), effectiveModelBounds, previewBounds) - layerTopLeft;
-            gridLines.append(QLineF(start, end));
-        }
-        for (int column = 0; column <= spanX; ++column) {
-            const QPointF start = modelToPreviewPoint(gridP00 + (xvi.gridVectorX * column), effectiveModelBounds, previewBounds) - layerTopLeft;
-            const QPointF end = modelToPreviewPoint(gridP00 + (xvi.gridVectorX * column) + (xvi.gridVectorY * spanY), effectiveModelBounds, previewBounds) - layerTopLeft;
-            gridLines.append(QLineF(start, end));
-        }
-    }
-
     auto normalizedLines = [&](const QVector<QLineF> &sourceLines) {
         QVector<QLineF> lines;
         lines.reserve(sourceLines.size());
@@ -786,6 +781,7 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
 
     const QVector<QLineF> normalizedTraverseShots = normalizedLines(traverseShotLines);
     const QVector<QLineF> normalizedSplayShots = normalizedLines(splayShotLines);
+    const QVector<QLineF> normalizedGridLines = normalizedLines(gridLines);
     QVector<MapEditorXviSketchPathData> normalizedSketchPaths;
     normalizedSketchPaths.reserve(sketchPaths.size());
     for (const MapEditorXviSketchPathData &sketchPath : sketchPaths) {
@@ -802,7 +798,7 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
     }
 
     MapEditorXviLayerGeometryData result;
-    result.gridLines = gridLines;
+    result.gridLines = normalizedGridLines;
     result.traverseShotLines = normalizedTraverseShots;
     result.splayShotLines = normalizedSplayShots;
     result.sketchPaths = normalizedSketchPaths;
@@ -1160,27 +1156,6 @@ void MapEditorTab::nudgeSelectedBackgroundLayer(const QPointF &delta)
     syncBackgroundLayerXtherionMetadata(item, tr("Move Background Image"));
     saveBackgroundLayersToSession();
     refreshBackgroundLayerControls();
-}
-
-void MapEditorTab::setMapGridVisible(bool visible)
-{
-    if (mapGridVisible_ == visible) {
-        return;
-    }
-
-    mapGridVisible_ = visible;
-    refreshMapScenePreservingUndoStack();
-}
-
-void MapEditorTab::setMapGridSpacingMeters(qreal spacingMeters)
-{
-    const qreal normalizedSpacing = qBound(0.1, spacingMeters, 10000.0);
-    if (qFuzzyCompare(mapGridSpacingMeters_, normalizedSpacing)) {
-        return;
-    }
-
-    mapGridSpacingMeters_ = normalizedSpacing;
-    refreshMapScenePreservingUndoStack();
 }
 
 void MapEditorTab::handleFitWithBackgroundTriggered()

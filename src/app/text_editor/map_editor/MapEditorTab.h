@@ -165,8 +165,6 @@ public:
     void resetSelectedBackgroundLayerGamma();
     void setSelectedBackgroundLayerPosition(const QPointF &position);
     void nudgeSelectedBackgroundLayer(const QPointF &delta);
-    void setMapGridVisible(bool visible);
-    void setMapGridSpacingMeters(qreal spacingMeters);
 
 public slots:
     void setWorkspaceMode(WorkspaceMode mode);
@@ -408,8 +406,6 @@ private:
     QSlider *mapBackgroundGammaSlider_ = nullptr;
     QPushButton *mapBackgroundOpacityResetButton_ = nullptr;
     QPushButton *mapBackgroundGammaResetButton_ = nullptr;
-    QCheckBox *mapGridVisibleCheck_ = nullptr;
-    QDoubleSpinBox *mapGridSpacingSpin_ = nullptr;
     bool updatingMapInspectorBackgroundUi_ = false;
     bool updatingMapInspectorObjectSelection_ = false;
     QSet<int> hiddenInspectorObjectLines_;
@@ -506,8 +502,6 @@ private:
     QPointF touchPanLastPosition_;
     QDateTime lastTabletInteractionUtc_;
     bool nativeZoomGestureActive_ = false;
-    bool mapGridVisible_ = true;
-    qreal mapGridSpacingMeters_ = 10.0;
     QDateTime lastNativeZoomGestureUtc_;
     IFileSystem *fileSystem_ = nullptr;
     ISessionStore *sessionStore_ = nullptr;

@@ -85,18 +85,10 @@ inline qreal mapZoomOutMarkerScale(const QGraphicsItem *item, const QPainter *pa
     return qBound<qreal>(0.34, std::pow(qMax<qreal>(0.01, lod), 0.70), 1.0);
 }
 
-struct CoordinateTransform
-{
-    bool valid = false;
-    QTransform sourceToMap;
-    QTransform mapToSource;
-};
-
 QRectF sceneCoordsPreviewBounds(const QRectF &sourceBounds, const QRectF &targetBounds);
 QPointF sceneCoordsSourceToPreview(const QPointF &source, const QRectF &sourceBounds, const QRectF &previewBounds);
 QPointF sceneCoordsPreviewToSource(const QPointF &preview, const QRectF &sourceBounds, const QRectF &previewBounds);
 qreal sceneCoordsScaleFactor(const QRectF &sourceBounds, const QRectF &previewBounds);
-CoordinateTransform coordinateTransformFromScrapScale(const QStringList &tokens);
 QVector<QPointF> pointsFromTokens(const QStringList &tokens);
 
 class MapEditablePointItem final : public QGraphicsEllipseItem

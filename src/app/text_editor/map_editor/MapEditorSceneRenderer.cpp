@@ -38,7 +38,6 @@ struct MapCanvasTheme
     bool lightMode = false;
     QColor canvasBorder;
     QColor canvasFill;
-    QColor gridLine;
     QColor geometryStroke;
     QColor areaFill;
     QColor labelText;
@@ -399,7 +398,6 @@ MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
     if (lightMode) {
         theme.canvasBorder = QColor(QStringLiteral("#bec9d8"));
         theme.canvasFill = QColor(QStringLiteral("#f4f8fd"));
-        theme.gridLine = QColor(124, 143, 167, 136);
         theme.geometryStroke = QColor(QStringLiteral("#1d2837"));
         theme.areaFill = QColor(48, 73, 105, 28);
         theme.labelText = QColor(QStringLiteral("#344a67"));
@@ -414,7 +412,6 @@ MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
 
     theme.canvasBorder = QColor(QStringLiteral("#596477"));
     theme.canvasFill = QColor(QStringLiteral("#232833"));
-    theme.gridLine = QColor(240, 246, 255, 198);
     theme.geometryStroke = QColor(QStringLiteral("#e1e9f5"));
     theme.areaFill = QColor(220, 227, 238, 24);
     theme.labelText = QColor(QStringLiteral("#e6eefb"));
@@ -1383,7 +1380,6 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const QVector<MapSceneEntry> &entries,
                              const QVector<MapGeometryFeature> &geometryFeatures,
                              const std::optional<QRectF> &sourceBoundsOverride,
-                             const MapGridOptions &gridOptions,
                              bool showEmptyDocumentGuides,
                              QHash<int, QGraphicsItem *> *mapItemsByLine,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,
@@ -1420,37 +1416,11 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
     const qreal mapScale = sceneCoordsScaleFactor(sourceBounds, previewBounds);
     const MapEditorObjectStyleCatalog styleCatalog = mapEditorObjectStyleCatalog();
     const qreal vertexRadius = 4.4;
-    const qreal gridLineWidth = canvasTheme.lightMode ? 1.0 : 1.1;
     auto markGeometryItem = [](QGraphicsItem *item) {
         if (item != nullptr) {
             item->setData(kMapItemRole, kMapItemGeometryValue);
         }
     };
-
-    if ((showEmptyDocumentGuides || !geometryFeatures.isEmpty()) && gridOptions.visible && sourceBounds.isValid()) {
-        const QRectF fittedPreviewBounds = sceneCoordsPreviewBounds(sourceBounds, previewBounds);
-        const qreal sourceUnitsPerMeter = qBound(1e-6, gridOptions.sourceUnitsPerMeter, 1e9);
-        const qreal spacing = qBound(0.1, gridOptions.spacingMeters * sourceUnitsPerMeter, 1e9);
-        constexpr int maxGridLinesPerAxis = 1000;
-
-        const qreal firstX = std::floor(sourceBounds.left() / spacing) * spacing;
-        const qreal lastX = std::ceil(sourceBounds.right() / spacing) * spacing;
-        int verticalLineCount = 0;
-        for (qreal sourceX = firstX; sourceX <= lastX + (spacing * 0.5) && verticalLineCount < maxGridLinesPerAxis; sourceX += spacing, ++verticalLineCount) {
-            const QPointF topPoint = mapGeometryPointToPreview(QPointF(sourceX, sourceBounds.top()), sourceBounds, previewBounds);
-            const QPointF bottomPoint = mapGeometryPointToPreview(QPointF(sourceX, sourceBounds.bottom()), sourceBounds, previewBounds);
-            makeMouseTransparent(scene->addLine(topPoint.x(), fittedPreviewBounds.top(), bottomPoint.x(), fittedPreviewBounds.bottom(), QPen(canvasTheme.gridLine, gridLineWidth, Qt::SolidLine)));
-        }
-
-        const qreal firstY = std::floor(sourceBounds.top() / spacing) * spacing;
-        const qreal lastY = std::ceil(sourceBounds.bottom() / spacing) * spacing;
-        int horizontalLineCount = 0;
-        for (qreal sourceY = firstY; sourceY <= lastY + (spacing * 0.5) && horizontalLineCount < maxGridLinesPerAxis; sourceY += spacing, ++horizontalLineCount) {
-            const QPointF leftPoint = mapGeometryPointToPreview(QPointF(sourceBounds.left(), sourceY), sourceBounds, previewBounds);
-            const QPointF rightPoint = mapGeometryPointToPreview(QPointF(sourceBounds.right(), sourceY), sourceBounds, previewBounds);
-            makeMouseTransparent(scene->addLine(fittedPreviewBounds.left(), leftPoint.y(), fittedPreviewBounds.right(), rightPoint.y(), QPen(canvasTheme.gridLine, gridLineWidth, Qt::SolidLine)));
-        }
-    }
 
     if (geometryFeatures.isEmpty() && showEmptyDocumentGuides) {
         auto *emptyGeometryItem = makeMouseTransparent(scene->addText(QObject::tr("No parseable point, line, or area geometry was found in this document yet."), QFont(QStringLiteral("Menlo"), 11)));

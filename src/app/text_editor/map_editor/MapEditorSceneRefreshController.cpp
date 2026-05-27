@@ -1,6 +1,5 @@
 #include "MapEditorSceneRefreshController.h"
 
-#include "MapEditorInspectorData.h"
 #include "MapEditorObjectDetailsLogic.h"
 #include "MapEditorSceneSupport.h"
 #include "../../../core/TherionDocumentParser.h"
@@ -140,9 +139,6 @@ void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack(bool pr
                             entries,
                             geometryFeatures,
                             sourceBoundsOverride,
-                            MapGridOptions{*context_.gridVisible,
-                                           *context_.gridSpacingMeters,
-                                           mapSourceUnitsPerMeterFromParsedLines(parsedLines)},
                             showEmptyDocumentGuides,
                             context_.itemsByLine,
                             context_.recordCardMove,

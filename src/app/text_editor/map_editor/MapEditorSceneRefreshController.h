@@ -32,8 +32,6 @@ struct MapEditorSceneRefreshContext
     bool *sceneRefreshPending = nullptr;
     bool *autoFitEnabled = nullptr;
     bool *fitBackgroundRequested = nullptr;
-    bool *gridVisible = nullptr;
-    qreal *gridSpacingMeters = nullptr;
     const MapEditorOrientationApplicabilityByCommand *orientationApplicabilityByCommand = nullptr;
 
     std::function<QString()> documentText;

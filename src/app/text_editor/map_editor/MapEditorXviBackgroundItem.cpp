@@ -191,12 +191,13 @@ void MapEditorXviBackgroundItem::paint(QPainter *painter,
         ? option->exposedRect.adjusted(-exposedPadding, -exposedPadding, exposedPadding, exposedPadding)
         : paintBounds_;
 
-    QPen gridPen(QColor(32, 32, 32, 40));
+    QPen gridPen(QColor(88, 114, 143, 92));
     gridPen.setWidthF(1.0 * zoomOutScale);
     gridPen.setCosmetic(true);
-    gridPen.setCapStyle(Qt::RoundCap);
+    gridPen.setCapStyle(Qt::SquareCap);
+    gridPen.setJoinStyle(Qt::MiterJoin);
     painter->setPen(gridPen);
-    if (!geometry_.gridLines.isEmpty() && lod >= 0.30) {
+    if (!geometry_.gridLines.isEmpty()) {
         drawExposedLines(painter, geometry_.gridLines, geometry_.gridTiles, clipRect, paintBounds_, exposedPadding);
     }
 

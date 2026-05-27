@@ -9,7 +9,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P2 - Phase 11: continue structured block-canvas authoring coverage and BlockEditor extraction/refactor slices.
 - P1 - Block-canvas drag-loop crash hardening on macOS: guard drag-preview/drop callbacks during TextEditorTab teardown and verify no stale callback path remains around `.th2` + `.xvi` workflows.
 - P1 - Block editor logical-line continuation support: treat trailing `\` command continuations as one command block across parsing/details/apply/configure/delete paths and verify with UI regression coverage.
-- P1 - Map canvas zoom-level rendering balance: keep zoomed-out overview readable by reducing dominant geometry and `.xvi` stroke/handle visual weight without hurting editability at normal zoom.
+- P1 - Map canvas zoom-level rendering balance: keep zoomed-out overview readable by reducing dominant geometry and `.xvi` stroke/handle visual weight without hurting editability at normal zoom, remove the unreliable editor-generated metric grid, and render embedded `.xvi` grids only as background-layer content.
 - P1 - Background layer visibility persistence: keep manual `.xvi` show/hide state stable across zoom/reprojection refreshes and session reloads without treating old session `visible` values as metadata overrides.
 - P1 - Map canvas pan/zoom performance: keep point labels cached inside point items, suppress distant labels, limit pattern repaints to exposed rects, avoid `.xvi` reprojection on view-only zoom, cull `.xvi` vector drawing through a spatial line-tile index, and use a viewport update strategy that avoids excessive region bookkeeping with many scene items.
 - P1 - Map line-style simplification: remove legacy secondary line-detail overlay (`detailWidth`/`detailColor`) and keep a single-stroke line style model.
@@ -107,7 +107,6 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 ## Backlog
 
 - Unified document-level undo stack for raw text edits, visual map mutations, inspector setting changes, object/background edits, and structured block changes.
-- TH2 Visual grid fallback for documents without parseable geometry or valid source bounds, such as user-defined grid origin/extent.
 - Broader GUI automation for structure, inspector, runner, map workflows, and cross-platform keyboard/shortcut matrix coverage.
 - Expanded rewrite corpus/regression coverage beyond the MVP fixture set.
 - Extend `input` relative-path autocomplete semantics to other path-taking Therion commands/options, such as `-sketch`.

@@ -140,14 +140,16 @@ In `Inspector -> Objects`, you can:
 
 Use `Separate Map` to move the visual map pane into its own window (for multi-monitor workflows). Use `Return Map` or close that window to reattach.
 
-### 6.6 Background Images and Grid
+### 6.6 Background Images
 
 In `Inspector -> Backgrounds`, you can:
 
-- show/hide metric grid and adjust spacing
 - add/remove/reorder background layers (raster images and `.xvi`)
 - adjust per-layer visibility, position, and opacity
 - adjust gamma for raster layers (`.xvi` uses fixed gamma)
+- `.xvi` backgrounds render vector shots, sketch lines, and their embedded `XVIgrid` when present
+
+The visual map editor does not provide a separate generated metric grid. Use background layers, including `.xvi` files, for reference grid content.
 
 ## 7. Running Therion
 

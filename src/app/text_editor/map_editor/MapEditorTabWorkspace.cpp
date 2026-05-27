@@ -991,25 +991,6 @@ void MapEditorTab::buildUi()
         return section;
     };
 
-    QVBoxLayout *gridLayout = nullptr;
-    auto *gridFrame = createBackgroundSection(tr("Grid"), &gridLayout);
-
-    mapGridVisibleCheck_ = new QCheckBox(tr("Show grid"), gridFrame);
-    mapGridVisibleCheck_->setChecked(mapGridVisible_);
-    gridLayout->addWidget(mapGridVisibleCheck_);
-
-    auto *gridSpacingRow = new QHBoxLayout;
-    gridSpacingRow->addWidget(new QLabel(tr("Spacing (m)"), gridFrame));
-    mapGridSpacingSpin_ = new QDoubleSpinBox(gridFrame);
-    mapGridSpacingSpin_->setRange(0.1, 10000.0);
-    mapGridSpacingSpin_->setDecimals(1);
-    mapGridSpacingSpin_->setSingleStep(1.0);
-    mapGridSpacingSpin_->setSuffix(tr(" m"));
-    mapGridSpacingSpin_->setValue(mapGridSpacingMeters_);
-    gridSpacingRow->addWidget(mapGridSpacingSpin_, 1);
-    gridLayout->addLayout(gridSpacingRow);
-    backgroundLayout->addWidget(gridFrame);
-
     auto *layersFrame = new QFrame(backgroundTab);
     layersFrame->setFrameShape(QFrame::StyledPanel);
     auto *layersLayout = new QVBoxLayout(layersFrame);
@@ -1150,9 +1131,6 @@ void MapEditorTab::buildUi()
     connect(mapBackgroundGammaResetButton_, &QPushButton::clicked, this, [this]() {
         resetSelectedBackgroundLayerGamma();
     });
-    connect(mapGridVisibleCheck_, &QCheckBox::toggled, this, &MapEditorTab::setMapGridVisible);
-    connect(mapGridSpacingSpin_, &QDoubleSpinBox::valueChanged, this, &MapEditorTab::setMapGridSpacingMeters);
-
     mapDetailsSplitter_->addWidget(mapView_);
     mapDetailsSplitter_->addWidget(objectDetailsPanel_);
     mapDetailsSplitter_->setStretchFactor(0, 1);

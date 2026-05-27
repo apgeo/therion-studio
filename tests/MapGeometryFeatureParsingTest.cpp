@@ -828,6 +828,22 @@ int runScrapScaleSourceUnitsPerMeterTest()
         return 1;
     }
 
+    const CoordinateTransform coordinateTransform = coordinateTransformFromScrapScale(parsedLine.tokens);
+    if (!expect(coordinateTransform.valid, "Expected full scrap scale coordinate transform to parse.")) {
+        return 1;
+    }
+    const QPointF realPoint1 = coordinateTransform.sourceToMap.map(QPointF(-128.0, -1152.0));
+    if (!expect(std::abs(realPoint1.x()) < 0.001 && std::abs(realPoint1.y()) < 0.001,
+                "Expected scrap scale source point 1 to map to real origin.")) {
+        return 1;
+    }
+    const QPointF sourceAtTenMeters = coordinateTransform.mapToSource.map(QPointF(10.0, 0.0));
+    if (!expect(std::abs(sourceAtTenMeters.x() - 265.698) < 0.01
+                    && std::abs(sourceAtTenMeters.y() + 1152.0) < 0.01,
+                "Expected real 10m grid interval to map back through scrap scale calibration.")) {
+        return 1;
+    }
+
     return 0;
 }
 }

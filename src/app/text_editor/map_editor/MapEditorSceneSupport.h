@@ -125,11 +125,11 @@ struct MapLineSecondaryMove
     QPointF newPoint;
 };
 
-struct MapGridOptions
+struct CoordinateTransform
 {
-    bool visible = true;
-    qreal spacingMeters = 10.0;
-    qreal sourceUnitsPerMeter = 1.0;
+    bool valid = false;
+    QTransform sourceToMap;
+    QTransform mapToSource;
 };
 
 class MapCardItem final : public QGraphicsRectItem
@@ -214,6 +214,7 @@ QVector<MapSceneEntry> collectMapSceneEntries(const QVector<TherionParsedLine> &
 
 QRectF geometryBoundsForFeatures(const QVector<MapGeometryFeature> &features);
 std::optional<qreal> sourceUnitsPerMeterFromScrapScale(const QStringList &tokens);
+CoordinateTransform coordinateTransformFromScrapScale(const QStringList &tokens);
 QPointF mapGeometryPointToPreview(const QPointF &point, const QRectF &sourceBounds, const QRectF &targetBounds);
 QPointF mapGeometryPreviewToSource(const QPointF &point, const QRectF &sourceBounds, const QRectF &targetBounds);
 QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedLine> &parsedLines);
@@ -244,7 +245,6 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                              const QVector<MapSceneEntry> &entries,
                              const QVector<MapGeometryFeature> &geometryFeatures,
                              const std::optional<QRectF> &sourceBoundsOverride,
-                             const MapGridOptions &gridOptions,
                              bool showEmptyDocumentGuides,
                              QHash<int, QGraphicsItem *> *mapItemsByLine,
                              const std::function<void(int, const QPointF &, const QPointF &)> &recordCardMove,

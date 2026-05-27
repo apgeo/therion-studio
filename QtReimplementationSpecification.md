@@ -360,14 +360,15 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Editing a raster background layer's position, visibility, or gamma in the TH2 Visual map editor shall update the corresponding `xth_me_image_insert` metadata so reopening in XTherion or Therion Studio restores the same background reference.
 - Editing a raster background layer's visibility or gamma shall preserve the layer's existing placement metadata and shall not change its scene position.
 - When a TH2 Visual map has no parseable point, line, or area geometry but has visible background layers, Fit shall center on the visible background bounds instead of the empty placeholder canvas.
-- When a TH2 Visual map has no parseable geometry but has visible background layers, the map editor shall suppress the empty-document placeholder canvas, grid, and no-object messages so the background remains the primary drawing surface.
+- When a TH2 Visual map has no parseable geometry but has visible background layers, the map editor shall suppress the empty-document placeholder canvas and no-object messages so the background remains the primary drawing surface.
 - Removing a raster background layer that is backed by `xth_me_image_insert` metadata shall remove that metadata line from the TH2 source.
 - The `Backgrounds` inspector layer list shall expose per-row visibility and delete icon actions aligned with the object-list action pattern.
-- The `Backgrounds` inspector shall expose visual map-grid controls for showing/hiding a square metric grid and setting its spacing in meters; when a scrap `-scale` is available, the spacing shall be converted from meters to TH2 source coordinates through that scale.
-- The map editor shall read Therion scrap `-scale` in numeric, unit, ratio, and 8/9-parameter calibration forms so grid spacing and geometry transforms remain compatible with Therion and XTherion-authored files.
+- The `Backgrounds` inspector shall not expose separate editor-generated map-grid controls; reference grid content shall come from background layers such as `.xvi` files.
+- The map editor shall read Therion scrap `-scale` in numeric, unit, ratio, and 8/9-parameter calibration forms so manual scale calibration and geometry transforms remain compatible with Therion and XTherion-authored files.
 - Manual edits to a selected scrap scale shall write XTherion-compatible 8-parameter `-scale [x1 y1 x2 y2 rx1 ry1 rx2 ry2 unit]` metadata and shall preserve other scrap options/comments where practical.
 - Background sketch or image layers shall be restorable when reopening the document.
 - `.xvi` vector background references shall render as background layers when present.
+- `.xvi` vector background rendering shall draw embedded `XVIgrid` lines as background content when present.
 - The map editor shall not expose a dedicated touch-controls toolbar mode; mouse, touchpad, Magic Mouse, pinch, stylus, and platform touch gestures shall use automatic input-policy handling.
 - After reparsing the document, the map editor shall restore the selected object when that object can still be resolved in the updated document.
 - Geometry editing shall support point placement, line vertex editing, area editing, and selection of individual vertices or control points.
@@ -940,7 +941,7 @@ The criteria below are intended for implementation verification and QA.
 - Freehand line drawing serializes simplified bezier line geometry.
 - Background layers support persisted position, visibility, gamma, opacity, and `.xvi` rendering where applicable.
 - Raster background image add/move/show-hide/gamma/remove operations write and maintain XTherion-compatible `xth_me_area_adjust`, `xth_me_area_zoom_to`, and `xth_me_image_insert` metadata in the TH2 source.
-- Background grid controls can toggle the grid and set a metric spacing; rendered grid cells remain square and use scrap `-scale` metadata to match real-world meters where available.
+- The Backgrounds inspector exposes layer controls without editor-generated grid toggles or spacing fields; `.xvi` grid lines render only as part of `.xvi` background content.
 - Map-driven scrap insertion writes XTherion-compatible default `-scale` metadata, while existing Therion/XTherion `-scale` forms are preserved unless explicitly edited.
 - Selecting a scrap in `Selection` exposes manual scale calibration controls and writes XTherion-compatible 8-parameter `-scale [...]` metadata to the scrap command.
 - Automatic input-policy handling supports pen-first workflows without a dedicated touch-controls toolbar button.

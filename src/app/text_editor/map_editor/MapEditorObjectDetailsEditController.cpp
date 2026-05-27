@@ -132,16 +132,18 @@ QString MapEditorObjectDetailsEditController::translate(const char *text) const
 
 const InspectorSymbolCatalog &MapEditorObjectDetailsEditController::inspectorSymbolCatalog() const
 {
-    return context_.inspectorSymbolCatalog != nullptr
-        ? *context_.inspectorSymbolCatalog
-        : mapEditorInspectorSymbolCatalog();
+    Q_ASSERT(context_.inspectorSymbolCatalog != nullptr);
+    static const InspectorSymbolCatalog emptyCatalog;
+    return context_.inspectorSymbolCatalog != nullptr ? *context_.inspectorSymbolCatalog : emptyCatalog;
 }
 
 const MapEditorOrientationApplicabilityByCommand &MapEditorObjectDetailsEditController::orientationApplicabilityByCommand() const
 {
+    Q_ASSERT(context_.orientationApplicabilityByCommand != nullptr);
+    static const MapEditorOrientationApplicabilityByCommand emptyApplicability;
     return context_.orientationApplicabilityByCommand != nullptr
         ? *context_.orientationApplicabilityByCommand
-        : defaultMapEditorOrientationApplicabilityByCommand();
+        : emptyApplicability;
 }
 
 void MapEditorObjectDetailsEditController::populateScrapScaleFromSourceBounds()

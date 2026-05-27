@@ -25,8 +25,6 @@ bool isConfigurableMapObjectKind(const QString &kind);
 QString objectKindForDirective(const QString &directiveToken);
 qreal normalizeOrientationDegreesForMapDetails(qreal value);
 MapEditorOrientationApplicabilityByCommand mapEditorOrientationApplicabilityFromCommandCatalog(const QJsonObject &catalogObject);
-const MapEditorOrientationApplicabilityByCommand &defaultMapEditorOrientationApplicabilityByCommand();
-bool isOrientationSupportedForParsedLine(const TherionParsedLine &parsedLine);
 bool isOrientationSupportedForParsedLine(const TherionParsedLine &parsedLine,
                                          const MapEditorOrientationApplicabilityByCommand &applicabilityByCommand);
 bool isLinePointLeftSizeSupportedForParsedLine(const TherionParsedLine &parsedLine);

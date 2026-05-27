@@ -1,6 +1,5 @@
 #include "MapEditorObjectDetailsLogic.h"
 
-#include "../../../core/CommandCatalogService.h"
 #include "../../../core/TherionDocumentParser.h"
 
 #include <QHash>
@@ -268,20 +267,6 @@ MapEditorOrientationApplicabilityByCommand mapEditorOrientationApplicabilityFrom
     }
 
     return applicabilityByCommand;
-}
-
-const MapEditorOrientationApplicabilityByCommand &defaultMapEditorOrientationApplicabilityByCommand()
-{
-    static const MapEditorOrientationApplicabilityByCommand applicability = [] {
-        const CommandCatalogStore catalogStore;
-        return mapEditorOrientationApplicabilityFromCommandCatalog(catalogStore.catalogObject());
-    }();
-    return applicability;
-}
-
-bool isOrientationSupportedForParsedLine(const TherionParsedLine &parsedLine)
-{
-    return isOrientationSupportedForParsedLine(parsedLine, defaultMapEditorOrientationApplicabilityByCommand());
 }
 
 bool isOrientationSupportedForParsedLine(const TherionParsedLine &parsedLine,

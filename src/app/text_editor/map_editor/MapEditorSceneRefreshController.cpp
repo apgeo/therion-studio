@@ -29,9 +29,11 @@ QGraphicsScene *MapEditorSceneRefreshController::scene() const
 
 const MapEditorOrientationApplicabilityByCommand &MapEditorSceneRefreshController::orientationApplicabilityByCommand() const
 {
+    Q_ASSERT(context_.orientationApplicabilityByCommand != nullptr);
+    static const MapEditorOrientationApplicabilityByCommand emptyApplicability;
     return context_.orientationApplicabilityByCommand != nullptr
         ? *context_.orientationApplicabilityByCommand
-        : defaultMapEditorOrientationApplicabilityByCommand();
+        : emptyApplicability;
 }
 
 void MapEditorSceneRefreshController::buildMapScene()

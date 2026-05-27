@@ -1,5 +1,6 @@
 #include "../src/app/text_editor/map_editor/MapEditorTab.h"
 #include "../src/app/text_editor/map_editor/MapEditorInspectorData.h"
+#include "../src/core/CommandCatalogService.h"
 
 #include <QApplication>
 #include <QComboBox>
@@ -35,7 +36,9 @@ void pumpEvents()
 
 int runSelectionPanelTypeValuesTest()
 {
-    const QStringList directAreaTypes = inspectorTypeValuesForCommand(QStringLiteral("area"));
+    const CommandCatalogStore catalogStore;
+    const InspectorSymbolCatalog catalog = inspectorSymbolCatalogFromCommandCatalog(catalogStore.catalogObject());
+    const QStringList directAreaTypes = inspectorTypeValuesForCommand(catalog, QStringLiteral("area"));
     if (!expect(!directAreaTypes.isEmpty(), "Inspector catalog for area types is empty before UI interaction.")) {
         return 1;
     }

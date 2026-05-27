@@ -55,14 +55,10 @@ QString inspectorMapObjectIconName(const ProjectStructureEntry &entry);
 QString inspectorMapObjectItemText(const ProjectStructureEntry &entry, const TherionParsedLine *parsedLine);
 QIcon inspectorActionIcon(const QString &iconName);
 InspectorSymbolCatalog inspectorSymbolCatalogFromCommandCatalog(const QJsonObject &catalogObject);
-const InspectorSymbolCatalog &mapEditorInspectorSymbolCatalog();
-QStringList inspectorTypeValuesForCommand(const QString &commandKind);
 QStringList inspectorTypeValuesForCommand(const InspectorSymbolCatalog &catalog, const QString &commandKind);
-QStringList inspectorSubtypeValuesForCommandType(const QString &commandKind, const QString &type);
 QStringList inspectorSubtypeValuesForCommandType(const InspectorSymbolCatalog &catalog,
                                                  const QString &commandKind,
                                                  const QString &type);
-QStringList inspectorProjectionValues();
 QStringList inspectorProjectionValues(const InspectorSymbolCatalog &catalog);
 void setEditableComboValues(QComboBox *combo, const QStringList &values, const QString &currentText);
 std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLine(const TherionParsedLine &parsedLine);

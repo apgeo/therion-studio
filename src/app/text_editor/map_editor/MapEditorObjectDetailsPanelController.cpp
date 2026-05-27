@@ -54,16 +54,18 @@ QString MapEditorObjectDetailsPanelController::translate(const char *text) const
 
 const InspectorSymbolCatalog &MapEditorObjectDetailsPanelController::inspectorSymbolCatalog() const
 {
-    return context_.inspectorSymbolCatalog != nullptr
-        ? *context_.inspectorSymbolCatalog
-        : mapEditorInspectorSymbolCatalog();
+    Q_ASSERT(context_.inspectorSymbolCatalog != nullptr);
+    static const InspectorSymbolCatalog emptyCatalog;
+    return context_.inspectorSymbolCatalog != nullptr ? *context_.inspectorSymbolCatalog : emptyCatalog;
 }
 
 const MapEditorOrientationApplicabilityByCommand &MapEditorObjectDetailsPanelController::orientationApplicabilityByCommand() const
 {
+    Q_ASSERT(context_.orientationApplicabilityByCommand != nullptr);
+    static const MapEditorOrientationApplicabilityByCommand emptyApplicability;
     return context_.orientationApplicabilityByCommand != nullptr
         ? *context_.orientationApplicabilityByCommand
-        : defaultMapEditorOrientationApplicabilityByCommand();
+        : emptyApplicability;
 }
 
 void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()

@@ -1,7 +1,6 @@
 #include "MapEditorInspectorData.h"
 
 #include "MapEditorSceneSupport.h"
-#include "../../../core/CommandCatalogService.h"
 #include "../../../core/ProjectStructureIndex.h"
 #include "../../../core/TherionDocumentParser.h"
 
@@ -584,28 +583,9 @@ InspectorSymbolCatalog inspectorSymbolCatalogFromCommandCatalog(const QJsonObjec
     return catalog;
 }
 
-const InspectorSymbolCatalog &mapEditorInspectorSymbolCatalog()
-{
-    static const InspectorSymbolCatalog catalog = [] {
-        const CommandCatalogStore catalogStore;
-        return inspectorSymbolCatalogFromCommandCatalog(catalogStore.catalogObject());
-    }();
-    return catalog;
-}
-
-QStringList inspectorTypeValuesForCommand(const QString &commandKind)
-{
-    return inspectorTypeValuesForCommand(mapEditorInspectorSymbolCatalog(), commandKind);
-}
-
 QStringList inspectorTypeValuesForCommand(const InspectorSymbolCatalog &catalog, const QString &commandKind)
 {
     return catalog.typeValuesByCommand.value(commandKind.trimmed().toLower());
-}
-
-QStringList inspectorSubtypeValuesForCommandType(const QString &commandKind, const QString &type)
-{
-    return inspectorSubtypeValuesForCommandType(mapEditorInspectorSymbolCatalog(), commandKind, type);
 }
 
 QStringList inspectorSubtypeValuesForCommandType(const InspectorSymbolCatalog &catalog,
@@ -613,11 +593,6 @@ QStringList inspectorSubtypeValuesForCommandType(const InspectorSymbolCatalog &c
                                                  const QString &type)
 {
     return catalog.subtypeValuesByCommandAndType.value(commandKind.trimmed().toLower()).value(type.trimmed().toLower());
-}
-
-QStringList inspectorProjectionValues()
-{
-    return inspectorProjectionValues(mapEditorInspectorSymbolCatalog());
 }
 
 QStringList inspectorProjectionValues(const InspectorSymbolCatalog &catalog)

@@ -1,4 +1,5 @@
 #include "../src/app/text_editor/map_editor/MapEditorInspectorData.h"
+#include "../src/core/CommandCatalogService.h"
 #include "../src/core/TherionDocumentParser.h"
 
 #include <QComboBox>
@@ -22,7 +23,10 @@ bool expect(bool condition, const char *message)
 
 int runInspectorTypeCatalogLoadTest()
 {
-    const QStringList pointTypes = inspectorTypeValuesForCommand(QStringLiteral("point"));
+    const CommandCatalogStore catalogStore;
+    const InspectorSymbolCatalog catalog = inspectorSymbolCatalogFromCommandCatalog(catalogStore.catalogObject());
+
+    const QStringList pointTypes = inspectorTypeValuesForCommand(catalog, QStringLiteral("point"));
     if (!expect(!pointTypes.isEmpty(), "Point type values should not be empty.")) {
         return 1;
     }
@@ -31,7 +35,7 @@ int runInspectorTypeCatalogLoadTest()
         return 1;
     }
 
-    const QStringList lineTypes = inspectorTypeValuesForCommand(QStringLiteral("line"));
+    const QStringList lineTypes = inspectorTypeValuesForCommand(catalog, QStringLiteral("line"));
     if (!expect(!lineTypes.isEmpty(), "Line type values should not be empty.")) {
         return 1;
     }
@@ -40,7 +44,7 @@ int runInspectorTypeCatalogLoadTest()
         return 1;
     }
 
-    const QStringList areaTypes = inspectorTypeValuesForCommand(QStringLiteral("area"));
+    const QStringList areaTypes = inspectorTypeValuesForCommand(catalog, QStringLiteral("area"));
     if (!expect(!areaTypes.isEmpty(), "Area type values should not be empty.")) {
         return 1;
     }
@@ -54,6 +58,9 @@ int runInspectorTypeCatalogLoadTest()
 
 int runAreaQuickTypeComboPopulationTest()
 {
+    const CommandCatalogStore catalogStore;
+    const InspectorSymbolCatalog catalog = inspectorSymbolCatalogFromCommandCatalog(catalogStore.catalogObject());
+
     const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(QStringLiteral("area water"), 1);
     const std::optional<InspectorObjectQuickFields> fields = inspectorObjectQuickFieldsFromParsedLine(parsedLine);
     if (!expect(fields.has_value(), "Area quick fields should be extracted from parsed area line.")) {
@@ -67,7 +74,7 @@ int runAreaQuickTypeComboPopulationTest()
     QComboBox combo;
     combo.setEditable(true);
     combo.setInsertPolicy(QComboBox::NoInsert);
-    setEditableComboValues(&combo, inspectorTypeValuesForCommand(fields->commandKind), fields->type);
+    setEditableComboValues(&combo, inspectorTypeValuesForCommand(catalog, fields->commandKind), fields->type);
 
     if (!expect(combo.count() > 1,
                 "Area type combo should contain catalog values, not only the parsed type.")) {

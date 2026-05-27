@@ -1,4 +1,5 @@
 #include "app/MainWindow.h"
+#include "core/CommandCatalogService.h"
 
 #include <QApplication>
 #include <QColor>
@@ -210,7 +211,7 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    auto *window = new MainWindow;
+    auto *window = new MainWindow(TherionStudio::CommandCatalogStore());
     window->show();
 
     return application.exec();

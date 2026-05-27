@@ -436,6 +436,13 @@ MainWindow::MainWindow(QWidget *parent)
 {
 }
 
+MainWindow::MainWindow(TherionStudio::CommandCatalogStore commandCatalogStore, QWidget *parent)
+    : MainWindow(std::make_unique<TherionStudio::SessionSettingsStore>(),
+                 std::move(commandCatalogStore),
+                 parent)
+{
+}
+
 MainWindow::MainWindow(std::unique_ptr<TherionStudio::ISessionStore> sessionStore,
                        TherionStudio::CommandCatalogStore commandCatalogStore,
                        QWidget *parent)

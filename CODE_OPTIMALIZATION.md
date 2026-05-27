@@ -34,6 +34,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 1 partial: `TextEditorTab` owns a single `CommandCatalogStore` and passes it to raw help/completion metadata and syntax highlighting.
 - [x] Phase 1 partial: `MainWindow` owns one `CommandCatalogStore` and passes it to text and map editor tabs.
 - [x] Phase 1 partial: map object-details edit actions use the injected inspector symbol catalog for subtype refreshes.
+- [x] Phase 1 partial: application startup composes the default `CommandCatalogStore` before constructing `MainWindow`.
 - [ ] Phase 1 remaining: command catalog access is injectable across all command metadata consumers.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.

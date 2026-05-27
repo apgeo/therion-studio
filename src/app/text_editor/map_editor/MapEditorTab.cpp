@@ -12,6 +12,7 @@
 #include <QGraphicsView>
 #include <QLabel>
 #include <QKeyEvent>
+#include <QMainWindow>
 #include <QMouseEvent>
 #include <QPalette>
 #include <QSet>
@@ -94,6 +95,10 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         return QWidget::eventFilter(watched, event);
     }
 
+    if (handleMapEditorEscapeKeyEvent(watched, event)) {
+        return true;
+    }
+
     if (watched == mapInspectorTabs_) {
         switch (event->type()) {
         case QEvent::Resize:
@@ -141,6 +146,66 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
     return QWidget::eventFilter(watched, event);
 }
 
+bool MapEditorTab::isMapEditorEventReceiver(QObject *receiver) const
+{
+    if (receiver == nullptr) {
+        return false;
+    }
+
+    if (auto *widget = qobject_cast<QWidget *>(receiver)) {
+        if (widget == this || isAncestorOf(widget)) {
+            return true;
+        }
+        if (isVisible() && window() != nullptr && widget->window() == window()) {
+            return true;
+        }
+        if (detachedMapPaneWindow_ != nullptr
+            && (widget == detachedMapPaneWindow_.data()
+                || detachedMapPaneWindow_->isAncestorOf(widget))) {
+            return true;
+        }
+    }
+
+    for (QObject *object = receiver; object != nullptr; object = object->parent()) {
+        if (object == this
+            || object == mapPaneContainer_
+            || object == mapView_
+            || object == objectDetailsPanel_
+            || object == mapInspectorTabs_) {
+            return true;
+        }
+        if (detachedMapPaneWindow_ != nullptr && object == detachedMapPaneWindow_.data()) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool MapEditorTab::handleMapEditorEscapeKeyEvent(QObject *receiver, QEvent *event)
+{
+    if (event == nullptr || event->type() != QEvent::KeyPress) {
+        return false;
+    }
+    if (interactiveDrawMode_ == InteractiveDrawMode::None && !lineExtensionActive_) {
+        return false;
+    }
+
+    auto *keyEvent = static_cast<QKeyEvent *>(event);
+    if (keyEvent->key() != Qt::Key_Escape || keyEvent->modifiers() != Qt::NoModifier) {
+        return false;
+    }
+    if (!isMapEditorEventReceiver(receiver)) {
+        return false;
+    }
+
+    if (!cancelInteractiveDrawingToSelectMode()) {
+        return false;
+    }
+
+    keyEvent->accept();
+    return true;
+}
 
 void MapEditorTab::changeEvent(QEvent *event)
 {

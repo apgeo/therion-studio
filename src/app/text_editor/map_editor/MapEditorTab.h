@@ -327,6 +327,8 @@ private:
     void updateWorkspaceVisibility();
     void updateGeometrySelectionPresentation();
     void updateMapInspectorLeftEdgeGeometry();
+    bool isMapEditorEventReceiver(QObject *receiver) const;
+    bool handleMapEditorEscapeKeyEvent(QObject *receiver, QEvent *event);
     void syncMapSelectionFromTextCursor(int lineNumber, int columnNumber);
     void detachMapPaneToWindow();
     void reattachMapPaneFromWindow();

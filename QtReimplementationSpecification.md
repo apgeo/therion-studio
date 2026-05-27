@@ -958,7 +958,7 @@ The criteria below are intended for implementation verification and QA.
 #### 8.1.4 Object Settings / Inspector
 
 - The inspector always matches the current selected object.
-- During point/line/freehand/area insertion, the Selection inspector is active before placement, shows pending type/subtype fields and the resolved style preview, and the completed object is serialized with the edited pending values.
+- During point/line/freehand/area insertion, the Selection inspector is active before placement, shows pending type/subtype fields and the resolved style preview, and the completed object is serialized with the edited pending values. Pressing `Esc` from the map canvas, command toolbar, or those pending Selection inspector fields shall exit insert mode; sufficiently complete line/area drafts shall be committed according to the existing draft-completion rule, while incomplete drafts shall be canceled.
 - During scrap insertion, the first Insert Scrap action shows pending scrap fields in the Selection inspector, and the second Insert Scrap action creates the scrap with the edited pending ID/projection values.
 - Changing selection updates the visible object settings immediately.
 - The `Selection` inspector shall group controls in this order: selected-object section, `Geometry`, contextual point/line-point details, and `Object Actions`, so object identity edits, object-level geometry state controls, point/line-point actions, and object actions remain visually distinct.

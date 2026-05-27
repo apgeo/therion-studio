@@ -127,7 +127,7 @@ Starting `Point`, `Line`, `Freehand`, or `Area` activates `Inspector -> Selectio
 While drafting line/area:
 
 - `Backspace`/`Delete` removes the last draft vertex
-- `Esc` exits insert mode (and commits only when draft is sufficiently complete)
+- `Esc` exits insert mode from the canvas, command toolbar, or Selection inspector fields (and commits only when a line/area draft is sufficiently complete)
 
 ### 6.4 Selection and Object Editing
 

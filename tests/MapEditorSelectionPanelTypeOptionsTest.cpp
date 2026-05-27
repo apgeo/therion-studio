@@ -11,8 +11,10 @@
 #include <QEventLoop>
 #include <QGraphicsScene>
 #include <QGraphicsView>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QMainWindow>
+#include <QPushButton>
 #include <QTemporaryDir>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -38,6 +40,16 @@ void pumpEvents()
 {
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+}
+
+void sendKey(QWidget *widget, QEvent::Type type, int key, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+{
+    if (widget == nullptr) {
+        return;
+    }
+
+    QKeyEvent event(type, key, modifiers);
+    QCoreApplication::sendEvent(widget, &event);
 }
 
 bool visibleNoSelectionLabel(QWidget *root)
@@ -105,6 +117,8 @@ int runSelectionPanelTypeValuesTest()
     auto *layout = new QVBoxLayout(central);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
+    auto *externalCommandSurfaceButton = new QPushButton(QStringLiteral("External command surface"), central);
+    layout->addWidget(externalCommandSurfaceButton);
 
     auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), central);
     layout->addWidget(mapTab);
@@ -184,6 +198,43 @@ int runSelectionPanelTypeValuesTest()
     }
     if (!expect(stylePreview->isVisible(),
                 "Line insert should show the style preview for the pending object.")) {
+        return 1;
+    }
+    auto *subtypeCombo = mapTab->findChild<QComboBox *>(QStringLiteral("mapObjectQuickSubtypeCombo"));
+    if (!expect(subtypeCombo != nullptr, "Selection panel subtype combo was not found.")) {
+        return 1;
+    }
+    subtypeCombo->setFocus(Qt::OtherFocusReason);
+    pumpEvents();
+    sendKey(subtypeCombo, QEvent::KeyPress, Qt::Key_Escape);
+    sendKey(subtypeCombo, QEvent::KeyRelease, Qt::Key_Escape);
+    pumpEvents();
+    if (!expect(!mapTab->isInsertModeActive(),
+                "Esc from a focused pending insert subtype field should leave map insert mode.")) {
+        return 1;
+    }
+    if (!expect(visibleNoSelectionLabel(mapTab),
+                "Esc from a focused pending insert field should clear the pending Selection inspector state.")) {
+        return 1;
+    }
+    if (!expect(!stylePreview->isVisible(),
+                "Esc from a focused pending insert field should hide the pending style preview.")) {
+        return 1;
+    }
+
+    mapTab->triggerAddPoint();
+    pumpEvents();
+    if (!expect(mapTab->isInsertModeActive(),
+                "Point insert should enter insert mode before testing Esc from the external command surface.")) {
+        return 1;
+    }
+    externalCommandSurfaceButton->setFocus(Qt::OtherFocusReason);
+    pumpEvents();
+    sendKey(externalCommandSurfaceButton, QEvent::KeyPress, Qt::Key_Escape);
+    sendKey(externalCommandSurfaceButton, QEvent::KeyRelease, Qt::Key_Escape);
+    pumpEvents();
+    if (!expect(!mapTab->isInsertModeActive(),
+                "Esc from the main-window command surface focus should leave map insert mode.")) {
         return 1;
     }
 

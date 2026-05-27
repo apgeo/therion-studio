@@ -130,6 +130,13 @@ QString MapEditorObjectDetailsEditController::translate(const char *text) const
     return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
 }
 
+const InspectorSymbolCatalog &MapEditorObjectDetailsEditController::inspectorSymbolCatalog() const
+{
+    return context_.inspectorSymbolCatalog != nullptr
+        ? *context_.inspectorSymbolCatalog
+        : mapEditorInspectorSymbolCatalog();
+}
+
 const MapEditorOrientationApplicabilityByCommand &MapEditorObjectDetailsEditController::orientationApplicabilityByCommand() const
 {
     return context_.orientationApplicabilityByCommand != nullptr
@@ -663,13 +670,18 @@ void MapEditorObjectDetailsEditController::applyScrapProjectionEdit()
 
 void MapEditorObjectDetailsEditController::updateObjectQuickSubtypeChoices()
 {
-    if (context_.quickSubtypeCombo == nullptr || context_.quickTypeCombo == nullptr) {
+    if (context_.quickSubtypeCombo == nullptr
+        || context_.quickTypeCombo == nullptr
+        || context_.objectQuickCommandKind == nullptr) {
         return;
     }
 
     const QString currentSubtype = context_.quickSubtypeCombo->currentText();
+    const InspectorSymbolCatalog &catalog = inspectorSymbolCatalog();
     setEditableComboValues(context_.quickSubtypeCombo,
-                           inspectorSubtypeValuesForCommandType(*context_.objectQuickCommandKind, context_.quickTypeCombo->currentText()),
+                           inspectorSubtypeValuesForCommandType(catalog,
+                                                                *context_.objectQuickCommandKind,
+                                                                context_.quickTypeCombo->currentText()),
                            currentSubtype);
 }
 

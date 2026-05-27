@@ -95,6 +95,8 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Track C: consolidate shared source-edit/rewrite primitives used by Raw, Blocks, and Map modes into focused non-UI services.
 - MainWindow maintenance: split status-bar/status-lifecycle methods into `src/app/MainWindowStatusUi.cpp` to keep `src/app/MainWindow.cpp` within structure-constraint line limits without behavior changes.
 - BlockEditor next slice: consolidate selection/details glue (`selectBlockInCanvasAndDetails`, `refreshBlockDetailsSelectionFromScene`, `resolveBlockCanvasItem`, `selectBlockCanvasItem`, and related thin delegates) if API boundaries remain stable.
+- Guardrail: architecture rules in `AGENTS.md` mirror `CODE_OPTIMALIZATION.md`; do not reintroduce hidden production adapters, static service facades, callback service-locators, or god-widget workflow growth.
+- Guardrail: non-trivial user proposals should be reviewed against architecture, performance, UX, security, portability, data integrity, and testability before implementation; risky proposals should include alternatives and tradeoffs.
 - Guardrail: each slice should own one responsibility, keep behavior stable, and update documentation when user-visible behavior changes.
 
 ## Backlog

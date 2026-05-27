@@ -28,6 +28,7 @@ These instructions apply to the whole repository.
 
 - Default technology assumptions should match the specification: Qt 6, cross-platform desktop, shared core logic across macOS, Windows, and Linux.
 - Follow established best practices and relevant platform standards for modern Qt and C++ desktop application development unless the specification explicitly requires a different approach.
+- Treat [CODE_OPTIMALIZATION.md](CODE_OPTIMALIZATION.md) as the active architecture optimization roadmap. If a code change conflicts with that plan, either align the code with the plan or update the plan explicitly in the same change.
 - Preserve separation of concerns:
   - domain model, parsing, serialization, and editing rules stay outside UI classes
   - widgets, views, and scene items should not own file I/O or document parsing
@@ -38,6 +39,47 @@ These instructions apply to the whole repository.
 - Prefer splitting large features into focused types or files such as model, parser, serializer, widget, controller, scene item, or service components rather than accumulating unrelated behavior in one class.
 - Avoid generic catch-all modules or class names such as Helpers, Utils, Misc, Support, or Manager unless the code is genuinely cohesive and no clearer responsibility word exists.
 - Do not introduce dependencies outside Qt and the standard library without explicit justification.
+
+## Architecture Guardrails
+
+- Keep the intended dependency direction explicit:
+  - presentation (`src/app/**` widgets, dialogs, views, scene items) may depend on application/core contracts and injected infrastructure interfaces
+  - application workflow services should avoid QtWidgets and should be testable without launching the full GUI
+  - core/domain code shall not depend on QtWidgets, QGraphicsView, dialogs, windows, or UI event classes
+  - infrastructure/platform adapters may use Qt/platform APIs, but should expose narrow interfaces upward
+- Do not add new business rules, persistence rules, parser/serializer logic, process orchestration, command-catalog loading, settings access, or platform-path decisions directly into widgets, dialogs, QGraphicsItems, or scene items.
+- Treat `MainWindow`, `TextEditorTab`, and `MapEditorTab` as orchestration shells under active reduction. When touching them, prefer extracting focused non-widget collaborators over adding more unrelated private state, slots, static helper functions, or workflow branches.
+- Do not add convenience constructors to UI shells or controllers that silently instantiate real infrastructure adapters such as filesystem, settings/session stores, resource/catalog loaders, process runners, or platform services.
+- Compose production infrastructure at an explicit composition boundary such as `main.cpp`, `MainWindow` bootstrap code, or a future composition-root class. Tests shall pass fakes or explicit test adapters rather than relying on hidden production defaults.
+- Do not introduce static/global service access for dependencies that perform IO, read bundled/user resources, access settings, launch processes, cache mutable state, or depend on platform APIs. Static functions are acceptable only for deterministic, stateless transformations with no hidden external dependency.
+- Add interfaces only where they provide a real seam: IO, settings, platform APIs, process execution, resource/catalog loading, multiple runtime implementations, or required test fakes. Prefer concrete pure functions/value services for deterministic logic.
+- Avoid service-locator context structs. Context structs should stay narrow, typed, and workflow-specific; they should not become broad bags of unrelated pointers and callbacks.
+- Avoid long-lived callbacks capturing widget pointers unless ownership and teardown behavior are explicit. Prefer named QObject signals/slots, narrow interfaces, or presenter/service methods for semantic workflows.
+- Keep QGraphicsItems and map scene items presentation-focused: rendering, hit affordances, and local interaction state only. Source rewrite, catalog rules, persistence, and document mutation belong outside scene items.
+- Long-running parsing, indexing, Therion execution, filesystem traversal, asset loading, and expensive map/background rendering shall be asynchronous, cancellable, debounced, or otherwise structured so they do not block the UI thread.
+- Cross-platform behavior shall be centralized behind platform or infrastructure services when practical. New `Q_OS_*` checks should be limited to `src/platform/**`, startup/bootstrap code, packaging code, or a clearly justified platform adapter.
+- Build/resource wiring should not duplicate source-of-truth lists unnecessarily. If resource catalogs are split into many files, prefer scoped CMake globs or generated lists with guardrails over manually duplicated file lists in multiple targets.
+
+## Proposal Review Discipline
+
+- Do not implement user-proposed designs mechanically when they introduce architectural debt, performance risk, UX regression, security exposure, portability problems, or testability loss.
+- Before implementing a non-trivial user proposal, evaluate it against:
+  - best practices for modern C++/Qt and the existing repository architecture
+  - runtime performance and UI responsiveness
+  - cross-platform behavior on macOS, Windows, and Linux
+  - user experience, discoverability, accessibility, and platform conventions
+  - data integrity, round-trip safety, and undo/redo semantics
+  - security and safety, especially file access, process execution, resource loading, and installer/packaging behavior
+  - testability and long-term maintenance cost
+- If the proposed approach is sound, proceed and state the relevant assumptions briefly.
+- If the proposed approach is risky or overcomplicated, say so directly and explain the concrete risk. Offer one or more practical alternatives, including the recommended option and tradeoffs.
+- Prefer incremental implementation scenarios for risky areas: smallest safe slice first, focused tests, then follow-up expansion.
+- Do not block momentum with theoretical objections. Challenge only when the concern can plausibly affect correctness, maintainability, performance, UX, security, portability, or project scope.
+- When product behavior is ambiguous, distinguish between:
+  - what is specified
+  - what is inferred from existing implementation
+  - what is a design recommendation
+- For high-risk areas such as parsing, serialization, source rewrite, map/text synchronization, packaging, process execution, or platform paths, include an explicit verification strategy before treating the change as complete.
 
 ## Source File Splitting
 

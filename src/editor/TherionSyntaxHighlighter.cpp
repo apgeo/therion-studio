@@ -13,6 +13,8 @@
 #include <QRegularExpression>
 #include <QTextCharFormat>
 
+#include <utility>
+
 namespace TherionStudio
 {
 namespace
@@ -220,7 +222,13 @@ bool textContainsIdPlaceholder(const QString &text)
 }
 
 TherionSyntaxHighlighter::TherionSyntaxHighlighter(QTextDocument *parent)
+    : TherionSyntaxHighlighter(CommandCatalogStore(), parent)
+{
+}
+
+TherionSyntaxHighlighter::TherionSyntaxHighlighter(CommandCatalogStore catalogStore, QTextDocument *parent)
     : QSyntaxHighlighter(parent)
+    , catalogStore_(std::move(catalogStore))
 {
     loadPalette();
 }
@@ -450,17 +458,12 @@ void TherionSyntaxHighlighter::highlightBlock(const QString &text)
 
 void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
 {
-    QFile catalogFile(QStringLiteral(":/resources/therion_command_catalog.json"));
-    if (!catalogFile.open(QIODevice::ReadOnly)) {
+    const QJsonObject catalogObject = catalogStore_.catalogObject();
+    if (catalogObject.isEmpty()) {
         return;
     }
 
-    const QJsonDocument catalogDocument = QJsonDocument::fromJson(catalogFile.readAll());
-    if (!catalogDocument.isObject()) {
-        return;
-    }
-
-    const QJsonArray commandsArray = catalogDocument.object().value(QStringLiteral("commands")).toArray();
+    const QJsonArray commandsArray = catalogObject.value(QStringLiteral("commands")).toArray();
     for (const QJsonValue &commandValue : commandsArray) {
         const QJsonObject commandObject = commandValue.toObject();
         const QString commandName = commandObject.value(QStringLiteral("name")).toString().trimmed().toLower();

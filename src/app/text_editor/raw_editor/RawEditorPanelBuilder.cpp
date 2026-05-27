@@ -125,7 +125,7 @@ void TextEditorTab::buildRawEditorPanel()
     editor_->setTabChangesFocus(false);
     editor_->setTabStopDistance(QFontMetricsF(editor_->font()).horizontalAdvance(QLatin1Char(' ')) * 4.0);
     editor_->setPlaceholderText(tr("Open a Therion text file to begin editing."));
-    highlighter_ = new TherionSyntaxHighlighter(editor_->document());
+    highlighter_ = new TherionSyntaxHighlighter(catalogStore_, editor_->document());
 
     completionModel_ = new QStringListModel(this);
     completionCompleter_ = new QCompleter(completionModel_, this);

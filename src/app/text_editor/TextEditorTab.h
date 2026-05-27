@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TextEditorCommandMetadata.h"
+#include "../../core/CommandCatalogService.h"
 
 #include <QString>
 #include <QStringList>
@@ -108,6 +109,8 @@ public:
     };
 
     explicit TextEditorTab(IFileSystem &fileSystem, QWidget *parent = nullptr);
+    explicit TextEditorTab(IFileSystem &fileSystem, CommandCatalogStore catalogStore, QWidget *parent = nullptr);
+    explicit TextEditorTab(CommandCatalogStore catalogStore, QWidget *parent = nullptr);
     explicit TextEditorTab(QWidget *parent = nullptr);
     ~TextEditorTab() override;
 
@@ -441,6 +444,7 @@ private:
     QString encodingStatusNote_;
     std::unique_ptr<IFileSystem> ownedFileSystem_;
     IFileSystem *fileSystem_ = nullptr;
+    CommandCatalogStore catalogStore_;
     std::unique_ptr<TextEditorAppearanceController> appearanceController_;
     std::unique_ptr<TextEditorContextHelpController> contextHelpController_;
     std::unique_ptr<TextEditorCursorController> cursorController_;

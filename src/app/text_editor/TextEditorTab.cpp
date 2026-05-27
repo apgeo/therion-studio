@@ -55,6 +55,8 @@
 
 #include <QPen>
 
+#include <utility>
+
 #include "../../core/IFileSystem.h"
 #include "../../core/QtFileSystem.h"
 #include "../../core/TherionCommandSyntax.h"
@@ -72,16 +74,28 @@ constexpr int kPanelSpacing = 8;
 namespace TherionStudio
 {
 TextEditorTab::TextEditorTab(IFileSystem &fileSystem, QWidget *parent)
+    : TextEditorTab(fileSystem, CommandCatalogStore(), parent)
+{
+}
+
+TextEditorTab::TextEditorTab(IFileSystem &fileSystem, CommandCatalogStore catalogStore, QWidget *parent)
     : QWidget(parent)
     , fileSystem_(&fileSystem)
+    , catalogStore_(std::move(catalogStore))
 {
     buildAll();
 }
 
 TextEditorTab::TextEditorTab(QWidget *parent)
+    : TextEditorTab(CommandCatalogStore(), parent)
+{
+}
+
+TextEditorTab::TextEditorTab(CommandCatalogStore catalogStore, QWidget *parent)
     : QWidget(parent)
     , ownedFileSystem_(std::make_unique<QtFileSystem>())
     , fileSystem_(ownedFileSystem_.get())
+    , catalogStore_(std::move(catalogStore))
 {
     buildAll();
 }

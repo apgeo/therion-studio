@@ -6,6 +6,8 @@
 #include <QHash>
 #include <QJsonObject>
 
+#include "../core/CommandCatalogService.h"
+
 class QTextDocument;
 
 namespace TherionStudio
@@ -16,6 +18,7 @@ class TherionSyntaxHighlighter final : public QSyntaxHighlighter
 
 public:
     explicit TherionSyntaxHighlighter(QTextDocument *parent = nullptr);
+    explicit TherionSyntaxHighlighter(CommandCatalogStore catalogStore, QTextDocument *parent = nullptr);
     void reloadPaletteForApplicationAppearance();
 
 protected:
@@ -44,5 +47,6 @@ private:
     QHash<QString, QSet<int>> commandPositionalIdTokenIndexes_;
     QHash<QString, QSet<QString>> commandOptionIdValueTokens_;
     QSet<QString> closingDirectiveIdTokens_;
+    CommandCatalogStore catalogStore_;
 };
 }

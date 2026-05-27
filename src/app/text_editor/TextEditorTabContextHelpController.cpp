@@ -48,6 +48,6 @@ void TextEditorTab::buildContextHelpController()
     };
 
     contextHelpController_ =
-        std::make_unique<TextEditorContextHelpController>(std::move(contextHelpContext));
+        std::make_unique<TextEditorContextHelpController>(std::move(contextHelpContext), catalogStore_);
 }
 }

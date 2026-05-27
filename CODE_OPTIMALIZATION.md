@@ -36,6 +36,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 1 partial: map object-details edit actions use the injected inspector symbol catalog for subtype refreshes.
 - [x] Phase 1 partial: application startup composes the default `CommandCatalogStore` before constructing `MainWindow`.
 - [x] Phase 1 partial: map inspector/orientation helper APIs no longer expose static default catalog access.
+- [x] Phase 1 partial: raw editor syntax/help controllers require explicit command catalog metadata injection.
 - [ ] Phase 1 remaining: command catalog access is injectable across all command metadata consumers.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.

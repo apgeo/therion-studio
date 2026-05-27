@@ -221,11 +221,6 @@ bool textContainsIdPlaceholder(const QString &text)
 }
 }
 
-TherionSyntaxHighlighter::TherionSyntaxHighlighter(QTextDocument *parent)
-    : TherionSyntaxHighlighter(CommandCatalogStore(), parent)
-{
-}
-
 TherionSyntaxHighlighter::TherionSyntaxHighlighter(CommandCatalogStore catalogStore, QTextDocument *parent)
     : QSyntaxHighlighter(parent)
     , catalogStore_(std::move(catalogStore))

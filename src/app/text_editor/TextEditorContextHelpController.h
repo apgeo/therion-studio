@@ -41,7 +41,7 @@ class TextEditorContextHelpController final
 {
 public:
     explicit TextEditorContextHelpController(TextEditorContextHelpContext context,
-                                             CommandCatalogStore catalogStore = CommandCatalogStore());
+                                             CommandCatalogStore catalogStore);
 
     void buildHelpPanel();
     void loadHelpMetadata();

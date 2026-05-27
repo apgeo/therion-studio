@@ -17,7 +17,6 @@ class TherionSyntaxHighlighter final : public QSyntaxHighlighter
     Q_OBJECT
 
 public:
-    explicit TherionSyntaxHighlighter(QTextDocument *parent = nullptr);
     explicit TherionSyntaxHighlighter(CommandCatalogStore catalogStore, QTextDocument *parent = nullptr);
     void reloadPaletteForApplicationAppearance();
 

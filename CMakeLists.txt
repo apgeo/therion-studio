@@ -465,6 +465,36 @@ qt_add_resources(TherionStudio "TherionStudioResources"
     FILES
         ${THERION_STUDIO_RESOURCE_FILES})
 
+qt_add_executable(MapObjectStyleGallery
+    tools/MapObjectStyleGallery.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorData.cpp
+    src/app/text_editor/map_editor/MapEditorInspectorData.h
+    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.cpp
+    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h
+    src/app/text_editor/map_editor/MapEditorPointSymbolGeometry.h
+    src/app/text_editor/map_editor/MapEditorSceneItems.cpp
+    src/app/text_editor/map_editor/MapEditorSceneInternals.h
+    src/app/text_editor/map_editor/MapEditorSceneSupport.h
+    src/app/text_editor/map_editor/MapEditorStylePreviewWidget.cpp
+    src/app/text_editor/map_editor/MapEditorStylePreviewWidget.h)
+
+set_target_properties(MapObjectStyleGallery PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+target_link_libraries(MapObjectStyleGallery PRIVATE therion_core Qt6::Widgets Qt6::Svg)
+
+qt_add_resources(MapObjectStyleGallery "MapObjectStyleGalleryResources"
+    PREFIX "/"
+    FILES
+        resources/therion_command_catalog.json
+        ${THERION_MAP_OBJECT_STYLE_FILES})
+
+add_custom_target(map_object_style_gallery
+    COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen
+            $<TARGET_FILE:MapObjectStyleGallery>
+            --output "${CMAKE_BINARY_DIR}/style_gallery"
+    DEPENDS MapObjectStyleGallery
+    COMMENT "Generating map object style gallery in ${CMAKE_BINARY_DIR}/style_gallery")
+
 set(THERION_STUDIO_TRANSLATION_FILES
     translations/therion_studio_cs.ts)
 

@@ -10,6 +10,41 @@ This document describes the current build and packaging workflow.
 
 The bundled command catalog, syntax palette, and UI icons are compiled into Qt resources.
 
+## Map Object Style Gallery
+
+The map object style gallery is a developer review artifact for bundled and user override styles.
+It renders all command-catalog-supported `point`, `line`, and `area` type/subtype combinations,
+including combinations with no dedicated style file that fall back to type or global defaults.
+
+Configure the build tree first if it does not exist yet:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+```
+
+Generate the gallery:
+
+```sh
+cmake --build build --target map_object_style_gallery
+```
+
+The default output is:
+
+```text
+build/style_gallery/index.html
+```
+
+Open `index.html` in a browser to review the generated PNG previews. The gallery labels each
+entry by style coverage, for example `exact subtype style`, `type style`,
+`inherited type style`, or `global default`.
+
+To write the gallery to a custom directory, run the helper executable directly after building it:
+
+```sh
+cmake --build build --target MapObjectStyleGallery
+QT_QPA_PLATFORM=offscreen ./build/MapObjectStyleGallery --output /tmp/therion-style-gallery
+```
+
 ## macOS
 
 macOS packaging is intended for Homebrew formula installation. The app bundle does not bundle Qt frameworks; the formula shall declare Qt dependencies instead.

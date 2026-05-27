@@ -659,6 +659,7 @@ Required behavior:
 - line style decorations shall support built-in repeated or offset primitives including offset strokes, parallel strokes, ticks, rungs, teeth, and repeated symbols
 - repeated line-symbol decorations shall support the built-in point-symbol shape set plus `oval` so symbol-only line styles such as wall blocks, debris, pebbles, sand, and ladder-like features can be represented without custom SVG
 - line decorations shall have decoration-local stroke and fill styling, spacing, side, offset, size, and deterministic jitter parameters independent from the base line stroke
+- the repository shall provide a developer style-gallery generator that renders all catalog-supported `point`, `line`, and `area` type/subtype combinations, including combinations with no specific style that therefore use type or global defaults, so bundled and override styles can be visually reviewed.
 - point styles shall support at least fill color, stroke color, stroke width, symbol shape, symbol size, and label style
 - point styles shall support an optional `label_field` style attribute that identifies a Therion option value to render next to the point symbol without hardcoding point-type-specific label extraction in the renderer
 - area styles shall support at least fill style and optional stroke style

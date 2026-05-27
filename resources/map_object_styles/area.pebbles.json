@@ -2,9 +2,12 @@
   "fill_color": "#A9A08C",
   "fill_pattern": {
     "kind": "dots",
+    "symbol": "oval",
     "spacing": 7.5,
-    "radius": 0.9,
+    "size": 2.4,
+    "size_jitter": 0.7,
     "dot_color": "#6C6250",
+    "angle_jitter": 75.0,
     "offset_jitter": 2.5,
     "seed": 907
   },

@@ -650,10 +650,16 @@ Required behavior:
 - line, point, and area rendering shall be style-driven based on Therion object type and, where applicable, subtype
 - the style system shall support separate definitions for line styles, point styles, area styles, and global interaction styles
 - line styles shall support at least stroke color, stroke width, dash pattern, and optional directional or repeated decorations such as ticks or arrows
-- point styles shall support at least fill color, point radius, symbol shape, and label style
+- point styles shall support at least fill color, stroke color, stroke width, symbol shape, symbol size, and label style
+- point styles shall support an optional `label_field` style attribute that identifies a Therion option value to render next to the point symbol without hardcoding point-type-specific label extraction in the renderer
 - area styles shall support at least fill style and optional stroke style
 - label styles shall support font size, weight, color, and positional offset relative to the rendered point symbol
+- bundled station point styles shall render the point `-name` value when present, and bundled label point styles shall render the point `-text` value when present
+- point label rendering shall interpret common Therion label text markup used in `-text` values, including line breaks, thin spaces, basic font switches, right-to-left spans, and supported size switches; unsupported Therion label markup shall not be shown as literal control text when it is safe to ignore
 - area fill styles shall support at least solid fill, hatch, and dot-pattern rendering
+- dot-pattern area fill styles shall support the fixed point symbol shape set plus an area-dot-only `oval` symbol (`circle`, `oval`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, `x`), shall color the repeated symbol with `dot_color`, and shall not require a separate outline color
+- dot-pattern area fill styles shall support optional deterministic per-symbol size jitter for non-uniform repeated symbol fills
+- dot-pattern area fill styles shall support optional deterministic per-symbol angle jitter for non-uniform repeated symbol fills
 - the map editor shall provide bundled default styles so supported Therion object types remain legible even when no external override exists
 - when a style entry is missing for a specific type or subtype, the renderer shall fall back to a safe default style rather than failing to draw the object
 - the style catalog shall be loaded from structured metadata such as JSON rather than being defined only in rendering code
@@ -1039,9 +1045,14 @@ The criteria below are intended for implementation verification and QA.
 - Supported line, point, and area types render using a style catalog rather than a single generic fallback appearance.
 - Type-specific and subtype-specific styles are applied when matching catalog entries exist.
 - Missing or invalid style entries fall back to bundled defaults without preventing map rendering.
-- Point symbols support configurable shape, radius, fill, and label presentation.
+- Point symbols support configurable shape, size, fill, stroke, and label presentation.
+- Point styles support an optional `label_field` that reads one Therion option value, for example `name` for `-name` or `text` for `-text`, and renders it next to the point symbol when present.
+- Station point defaults render `-name`; label point defaults render `-text` with common Therion label formatting such as `<br>` line breaks and `<thsp>` thin spaces.
 - Line symbols support configurable stroke width, dash pattern, and optional decorations such as arrows or ticks.
 - Area symbols support configurable solid, hatch, or dot-pattern fills and optional strokes.
+- Dot-pattern area fills support configurable repeated symbols using the fixed point shape set plus area-dot-only `oval`, with `dot_color` as the only symbol color.
+- Dot-pattern area fills support optional deterministic per-symbol size jitter.
+- Dot-pattern area fills support optional deterministic per-symbol angle jitter.
 - Selection, draft, and edit-preview visuals are applied consistently through the shared style system.
 - Line/area vertex visuals and selection-highlight overlays are visible for selected objects and are suppressed for non-selected objects in normal editing view.
 - Line control handles/connectors are visible only for the selected line vertex (or its selected control handle) and remain hidden for other vertices.

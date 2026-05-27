@@ -17,6 +17,19 @@ enum class MapEditorFillPatternKind
     Dots
 };
 
+enum class MapEditorPointSymbol
+{
+    Circle,
+    Oval,
+    Square,
+    Diamond,
+    Triangle,
+    Star,
+    Asterisk,
+    Plus,
+    X
+};
+
 struct MapEditorAreaFillPatternStyle
 {
     MapEditorFillPatternKind kind = MapEditorFillPatternKind::None;
@@ -26,7 +39,9 @@ struct MapEditorAreaFillPatternStyle
     Qt::PenStyle strokeStyle = Qt::SolidLine;
     std::optional<QColor> strokeColor;
     QVector<qreal> dashPattern;
-    qreal radius = 1.2;
+    qreal size = 2.4;
+    qreal sizeJitter = 0.0;
+    MapEditorPointSymbol symbol = MapEditorPointSymbol::Circle;
     std::optional<QColor> dotColor;
     qreal angleJitter = 0.0;
     qreal offsetJitter = 0.0;
@@ -35,10 +50,12 @@ struct MapEditorAreaFillPatternStyle
 
 struct MapEditorPointStyleDefaults
 {
-    qreal radius = 5.6;
+    MapEditorPointSymbol symbol = MapEditorPointSymbol::Circle;
+    qreal size = 11.2;
     qreal outlineWidth = 1.1;
     std::optional<QColor> fillColor;
     std::optional<QColor> strokeColor;
+    std::optional<QString> labelField;
 };
 
 struct MapEditorLineStyleDefaults
@@ -69,10 +86,12 @@ struct MapEditorStyleSelector
 struct MapEditorPointStyleRule
 {
     MapEditorStyleSelector selector;
-    std::optional<qreal> radius;
+    std::optional<MapEditorPointSymbol> symbol;
+    std::optional<qreal> size;
     std::optional<qreal> outlineWidth;
     std::optional<QColor> fillColor;
     std::optional<QColor> strokeColor;
+    std::optional<QString> labelField;
 };
 
 struct MapEditorLineStyleRule
@@ -110,10 +129,12 @@ struct MapEditorObjectStyleCatalog
 
 struct MapEditorResolvedPointStyle
 {
-    qreal radius = 5.6;
+    MapEditorPointSymbol symbol = MapEditorPointSymbol::Circle;
+    qreal size = 11.2;
     qreal outlineWidth = 1.1;
     std::optional<QColor> fillColor;
     std::optional<QColor> strokeColor;
+    std::optional<QString> labelField;
 };
 
 struct MapEditorResolvedLineStyle

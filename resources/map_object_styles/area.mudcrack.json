@@ -2,17 +2,17 @@
   "fill_color": "#8A6843",
   "fill_pattern": {
     "kind": "cross_hatch",
-    "spacing": 11.0,
-    "stroke_angle": 20,
-    "stroke_width": 0.55,
+    "spacing": 10.5,
+    "stroke_angle": 18,
+    "stroke_width": 0.6,
     "stroke_style": "dashed",
     "dash_pattern": [
-      5,
+      4,
       5
     ],
     "stroke_color": "#553A1F",
-    "angle_jitter": 8.0,
-    "offset_jitter": 3.0,
+    "angle_jitter": 15.0,
+    "offset_jitter": 4.0,
     "seed": 318
   },
   "stroke_color": "#553A1F",

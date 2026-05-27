@@ -581,6 +581,8 @@ void MapEditorTab::buildUi()
     mapView_->setDragMode(QGraphicsView::NoDrag);
     mapView_->setTransformationAnchor(QGraphicsView::AnchorViewCenter);
     mapView_->setResizeAnchor(QGraphicsView::AnchorViewCenter);
+    mapView_->setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
+    mapView_->setCacheMode(QGraphicsView::CacheBackground);
     mapView_->setRenderHint(QPainter::Antialiasing, true);
     mapView_->setBackgroundBrush(palette().color(QPalette::Window));
     mapView_->setFocusPolicy(Qt::StrongFocus);

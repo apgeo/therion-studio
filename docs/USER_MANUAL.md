@@ -110,9 +110,8 @@ Toolbar actions include:
 - insertion: `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`
 
 Canvas rendering is zoom-aware: geometry strokes and edit handles are reduced at distant zoom levels so overview remains readable.
+Point, line, and area rendering can be customized with JSON style overrides; see `Configuration -> Custom Map Object Styles`.
 Line objects render as a single styled stroke; there is no separate secondary detail-stroke layer.
-Area fills support configurable pattern overlays from the bundled `resources/map_object_styles/*.json` style files via `fill_pattern` (`hatch`, `cross_hatch`, `dots`) with spacing/angle/stroke or dot parameters.
-User style overrides are loaded after bundled styles from the `map_object_styles` directory in the application data location. On macOS this is `~/Library/Application Support/Therion Studio/map_object_styles/`. Override files are partial JSON objects named by object kind and Therion type, for example `area.water.json`, `line.wall.json`, or `line.wall.presumed.json`; `area.json`, `line.json`, and `point.json` override defaults for that kind. Default files are applied first, then type files, then subtype files, so the most specific override wins.
 
 ### 6.3 Drawing Basics
 
@@ -193,9 +192,174 @@ Platform key substitution follows Qt defaults (`Ctrl` on Windows/Linux, `Command
 | Delete selected map middle anchor | `Delete` or `Backspace` |
 | Toggle selected map vertex smooth/corner | `S` |
 
-## 9. Troubleshooting
+## 9. Configuration
 
-### 9.1 Therion executable not found
+### 9.1 Custom Map Object Styles
+
+Map object rendering can be customized with JSON style override files. User overrides live in the application data `map_object_styles` directory.
+
+Default platform locations are:
+
+| Platform | Override directory |
+|---|---|
+| macOS | `~/Library/Application Support/Therion Studio/map_object_styles/` |
+| Windows | `%APPDATA%\Therion Studio\map_object_styles\` |
+| Linux | `~/.local/share/Therion Studio/map_object_styles/` |
+
+On Linux, if `XDG_DATA_HOME` is set, the base directory is `$XDG_DATA_HOME` instead of `~/.local/share`.
+
+Override files are partial JSON objects. Include only the fields you want to change.
+
+File naming controls the style scope:
+
+| File name | Scope |
+|---|---|
+| `point.json` | default style for all points |
+| `point.<raw_type>.json` | style for a point type, for example `point.station.json` |
+| `point.<raw_type>.<raw_subtype>.json` | style for a point subtype |
+| `line.json` | default style for all lines |
+| `line.<raw_type>.json` | style for a line type, for example `line.wall.json` |
+| `line.<raw_type>.<raw_subtype>.json` | style for a line subtype, for example `line.wall.presumed.json` |
+| `area.json` | default style for all areas |
+| `area.<raw_type>.json` | style for an area type, for example `area.water.json` |
+| `area.<raw_type>.<raw_subtype>.json` | style for an area subtype |
+
+Defaults are applied first, then type files, then subtype files. More specific files override less specific files.
+
+#### Point Style Parameters
+
+Point style files support:
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `symbol` | string | One of `circle`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, `x`. |
+| `size` | number | Symbol bounding-box size. Every symbol fits into `size x size`; for `circle`, this is the diameter. |
+| `stroke_width` | number | Symbol outline or line width. |
+| `stroke_color` | color string | Symbol outline color, for example `#1C1C1E` or `#F4F4F2E6`. |
+| `fill_color` | color string | Fill color for filled symbols. `plus`, `x`, and `asterisk` are stroke-only symbols. |
+| `label_field` | string | Optional Therion option name to render next to the point, without the leading dash. For example `name` reads `-name`; `text` reads `-text`. |
+
+Example:
+
+```json
+{
+  "symbol": "triangle",
+  "label_field": "name",
+  "size": 12.0,
+  "stroke_width": 1.2,
+  "stroke_color": "#1C1C1E",
+  "fill_color": "#FFD60A"
+}
+```
+
+Bundled `point.station.json` renders `-name` next to station points. Bundled `point.label.json` renders `-text` next to label points. For `label_field: "text"`, the map canvas interprets common Therion label formatting tags such as `<br>`, `<thsp>`, `<rm>`, `<it>`, `<bf>`, `<ss>`, `<si>`, `<rtl>`, `</rtl>`, and `<size:...>` when drawing the label.
+
+#### Line Style Parameters
+
+Line style files support:
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `stroke_style` | string | One of `solid`, `dashed`, `dotted`, `dash-dot`, `dash-dot-dot`. |
+| `stroke_width` | number | Line stroke width. |
+| `stroke_color` | color string | Line stroke color. |
+| `dash_pattern` | number array | Custom dash pattern, for example `[8, 4]`. |
+
+Example:
+
+```json
+{
+  "stroke_style": "dashed",
+  "stroke_width": 2.0,
+  "stroke_color": "#607089",
+  "dash_pattern": [8, 4]
+}
+```
+
+#### Area Style Parameters
+
+Area style files support:
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `stroke_style` | string | One of `solid`, `dashed`, `dotted`, `dash-dot`, `dash-dot-dot`. |
+| `stroke_width` | number | Area boundary stroke width. |
+| `stroke_color` | color string | Area boundary stroke color. |
+| `dash_pattern` | number array | Custom boundary dash pattern. |
+| `fill_color` | color string | Area fill color. |
+| `fill_opacity` | number | Fill opacity from `0.0` to `1.0`. |
+| `fill_pattern` | object | Optional pattern overlay. |
+
+Supported `fill_pattern.kind` values are `hatch`, `cross_hatch`, and `dots`.
+
+`hatch` and `cross_hatch` pattern parameters:
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spacing` | number | Distance between pattern lines. |
+| `stroke_angle` | number | Pattern angle in degrees. |
+| `stroke_width` | number | Pattern line width. |
+| `stroke_style` | string | One of `solid`, `dashed`, `dotted`, `dash-dot`, `dash-dot-dot`. |
+| `stroke_color` | color string | Pattern line color. |
+| `dash_pattern` | number array | Optional custom dash pattern. |
+| `angle_jitter` | number | Optional deterministic angle variation. |
+| `offset_jitter` | number | Optional deterministic offset variation. |
+| `seed` | integer | Optional deterministic pattern seed. |
+
+`dots` pattern parameters:
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `spacing` | number | Distance between dot centers. |
+| `symbol` | string | Optional repeated symbol. One of `circle`, `oval`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, `x`. Defaults to `circle`. |
+| `size` | number | Symbol bounding-box size. |
+| `size_jitter` | number | Optional deterministic symbol size variation in the same units as `size`. |
+| `dot_color` | color string | Dot or symbol color. Filled symbols use it as fill; `asterisk`, `plus`, and `x` use it as stroke. Area dot symbols do not draw a separate outline. |
+| `angle_jitter` | number | Optional deterministic symbol rotation variation in degrees. |
+| `offset_jitter` | number | Optional deterministic dot offset variation. |
+| `seed` | integer | Optional deterministic pattern seed. |
+
+Example `dots` symbol pattern:
+
+```json
+{
+  "fill_pattern": {
+    "kind": "dots",
+    "symbol": "asterisk",
+    "spacing": 13.0,
+    "size": 5.4,
+    "size_jitter": 1.2,
+    "dot_color": "#8FB6D8",
+    "angle_jitter": 35.0
+  }
+}
+```
+
+Example hatch style:
+
+```json
+{
+  "fill_color": "#2A7FFF",
+  "fill_opacity": 0.2,
+  "stroke_color": "#0D4EA3",
+  "stroke_width": 1.4,
+  "fill_pattern": {
+    "kind": "hatch",
+    "spacing": 12.0,
+    "stroke_angle": 18,
+    "stroke_width": 0.55,
+    "stroke_style": "dashed",
+    "dash_pattern": [5, 5],
+    "stroke_color": "#0D4EA3"
+  }
+}
+```
+
+Invalid or missing style fields are ignored and the application falls back to the default styles.
+
+## 10. Troubleshooting
+
+### 10.1 Therion executable not found
 
 Symptom:
 
@@ -206,7 +370,7 @@ Fix:
 - set a valid full path in `Compiler -> Executable`
 - verify executable permissions
 
-### 9.2 Config cannot be resolved
+### 10.2 Config cannot be resolved
 
 Symptom:
 
@@ -218,7 +382,7 @@ Fix:
 - open the desired `.thconfig` and run using `Current Config`, or
 - verify working directory/override path
 
-### 9.3 “Open Current Document in Map Editor” is disabled
+### 10.3 “Open Current Document in Map Editor” is disabled
 
 Symptom:
 
@@ -228,7 +392,7 @@ Fix:
 
 - activate a `.th2` tab first
 
-### 9.4 Rename/delete is blocked in project tree
+### 10.4 Rename/delete is blocked in project tree
 
 Symptom:
 

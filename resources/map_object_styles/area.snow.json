@@ -1,12 +1,15 @@
 {
   "fill_color": "#EEF7FF",
   "fill_pattern": {
-    "kind": "cross_hatch",
-    "spacing": 12.0,
-    "stroke_angle": 45,
-    "stroke_width": 0.45,
-    "stroke_style": "dotted",
-    "stroke_color": "#8FB6D8"
+    "kind": "dots",
+    "symbol": "asterisk",
+    "spacing": 13.0,
+    "size": 5.4,
+    "size_jitter": 1.2,
+    "dot_color": "#8FB6D8",
+    "angle_jitter": 35.0,
+    "offset_jitter": 3.0,
+    "seed": 1201
   },
   "stroke_color": "#8FB6D8",
   "stroke_width": 1.0,

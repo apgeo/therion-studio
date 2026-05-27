@@ -10,14 +10,18 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1 - Block-canvas drag-loop crash hardening on macOS: guard drag-preview/drop callbacks during TextEditorTab teardown and verify no stale callback path remains around `.th2` + `.xvi` workflows.
 - P1 - Block editor logical-line continuation support: treat trailing `\` command continuations as one command block across parsing/details/apply/configure/delete paths and verify with UI regression coverage.
 - P1 - Map canvas zoom-level rendering balance: keep zoomed-out overview readable by reducing dominant geometry and `.xvi` stroke/handle visual weight without hurting editability at normal zoom.
+- P1 - Map canvas pan/zoom performance: keep point labels cached inside point items, suppress distant labels, limit pattern repaints to exposed rects, and use a viewport update strategy that avoids excessive region bookkeeping with many scene items.
 - P1 - Map line-style simplification: remove legacy secondary line-detail overlay (`detailWidth`/`detailColor`) and keep a single-stroke line style model.
 - P1 - Style schema naming cleanup: use consistent `stroke_width` keys for point and line widths in map style JSON (no legacy aliases).
 - P1 - Style schema naming cleanup: use `stroke_style` instead of `pen_style` for line/area stroke style keys in map style JSON (no legacy aliases).
 - P1 - Style schema naming cleanup: use `raw_type` + `raw_subtype` selector naming consistently in map style JSON.
-- P1 - Area fill-pattern renderer tuning: continue post-vectorization tuning of `fill_pattern` readability across zoom (LOD-aware spacing/width/radius/opacity shaping, especially for `cross_hatch` density at high zoom).
-- P1 - Area style catalog coverage: refine per-`raw_type` area styles in split `resources/map_object_styles/*.json` files for all generated Therion area types, keeping pattern density readable across zoom.
+- P1 - Point/area symbol style schema: use `symbol` + `size` for point styles and symbolic area `dots`, keep `point.station` on the bundled triangle symbol with `label_field: "name"`, use `point.label` with `label_field: "text"` and cached Therion label text rendering inside point items, keep point labels anchored with screen-space offsets next to their symbol and hidden at distant zoom, document point/line/area user override parameters, support the fixed built-in symbol set, and keep area-dot-only `oval` scoped out of point styles.
+- P1 - Point label orientation: decide and implement how style-driven point labels should use point `-orientation` without hurting station-name readability.
+- P1 - Area fill-pattern renderer tuning: continue post-vectorization tuning of `fill_pattern` readability across zoom (LOD-aware spacing/width/size/opacity shaping, exposed-rect-limited repainting, especially symbolic `dots` size/angle jitter and `cross_hatch` density at high zoom).
+- P2 - SVG map-style symbols: evaluate `symbol: "svg"` for future point styles and area `dots`, using safe relative files under `map_object_styles/`, no remote/external references, and cached QtSvg rendering.
+- P1 - Area style catalog coverage: refine per-`raw_type` area styles in split `resources/map_object_styles/*.json` files for all generated Therion area types, including dot-symbol granular fills and tuned clay/ice/water/sump/mudcrack hatch fills, keeping pattern density readable across zoom.
 - P1 - Split map-style catalog: keep bundled and user map-style files on the same partial JSON convention, loading bundled `resources/map_object_styles/*.json` first via a scoped CMake resource glob and application-data overrides second.
-- P1 - User map-style overrides: load partial JSON override files from the application data `map_object_styles` directory after bundled defaults, with default/type/subtype precedence and no project-level override layer.
+- P1 - User map-style overrides: load partial JSON override files from the application data `map_object_styles` directory after bundled defaults, keep macOS/Windows/Linux manual paths current, with default/type/subtype precedence and no project-level override layer.
 - P1 - Windows installer Qt runtime layout: install `TherionStudio.exe` under `bin/` so deployed Qt DLLs and plugin directories, including `platforms/qwindows.dll`, stay relative to the executable.
 - P1 - Windows GUI subsystem: link `TherionStudio.exe` without a console window so closing a console host cannot terminate the app.
 - P1 - Main-window startup geometry: enforce usable default/minimum main-window size and clamp restored session geometry to avoid narrow Windows launches while preserving half-screen resizing.
@@ -72,7 +76,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - ~~Inspector smooth/control toggles now preserve line-vertex targeting even when scene selection temporarily drops during UI interaction (fallback to stored selected line/vertex).~~
 - ~~Inspector `<<` / `>>` control-handle toggles now resolve through line-control owner vertices (selection/controller/details mapping), so closed-line vertices can reliably enable both handles for full smooth editing.~~
 - ~~Inspector smooth toggle now preserves vertex selection across asynchronous scene refresh (flush + multi-attempt owner-vertex selection recovery).~~
-- ~~Map render style defaults are now data-driven from `resources/map_object_styles/*.json` (point radius/outline, line thickness/detail/style, area thickness/fill-opacity/style), with safe hardcoded fallback when JSON is missing/invalid.~~
+- ~~Map render style defaults are now data-driven from `resources/map_object_styles/*.json` (point symbol/size/stroke, line thickness/style, area stroke/fill-opacity/style), with safe hardcoded fallback when JSON is missing/invalid.~~
 - ~~Extended map object style catalog to support per-type/per-subtype overrides with colors, dash patterns, and area fill patterns (`solid`/`hatch`/`dots`) from `resources/map_object_styles/*.json`, keeping defaults as fallback.~~
 
 ### Phase 10 - Interactive Map Drawing and Insertion (`Post-MVP`)

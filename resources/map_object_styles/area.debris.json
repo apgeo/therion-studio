@@ -1,17 +1,13 @@
 {
   "fill_color": "#9C8C6A",
   "fill_pattern": {
-    "kind": "hatch",
-    "spacing": 10.0,
-    "stroke_angle": 38,
-    "stroke_width": 0.65,
-    "stroke_style": "dashed",
-    "dash_pattern": [
-      2.5,
-      7
-    ],
-    "stroke_color": "#6D5C39",
-    "angle_jitter": 18.0,
+    "kind": "dots",
+    "symbol": "triangle",
+    "spacing": 9.0,
+    "size": 3.2,
+    "size_jitter": 1.0,
+    "dot_color": "#6D5C39",
+    "angle_jitter": 180.0,
     "offset_jitter": 5.0,
     "seed": 1403
   },

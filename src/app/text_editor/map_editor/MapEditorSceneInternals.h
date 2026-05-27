@@ -3,6 +3,7 @@
 #include <QColor>
 #include <QCoreApplication>
 #include <QCursor>
+#include <QFont>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
@@ -14,6 +15,7 @@
 #include <QPointF>
 #include <QRectF>
 #include <QObject>
+#include <QStaticText>
 #include <QStringList>
 #include <QStyle>
 #include <QStyleOptionGraphicsItem>
@@ -24,6 +26,8 @@
 #include <functional>
 #include <cmath>
 
+#include "MapEditorPointSymbolGeometry.h"
+
 namespace TherionStudio {
 
 inline bool mapSourcePointsDiffer(const QPointF &a, const QPointF &b)
@@ -31,7 +35,7 @@ inline bool mapSourcePointsDiffer(const QPointF &a, const QPointF &b)
     return (a - b).manhattanLength() > 0.01;
 }
 
-inline qreal mapZoomOutMarkerScale(const QGraphicsItem *item, const QPainter *painter, const QWidget *widget)
+inline qreal mapViewLevelOfDetail(const QGraphicsItem *item, const QPainter *painter, const QWidget *widget)
 {
     qreal lod = 0.0;
 
@@ -67,6 +71,12 @@ inline qreal mapZoomOutMarkerScale(const QGraphicsItem *item, const QPainter *pa
     if (lod <= 0.0) {
         lod = 1.0;
     }
+    return lod;
+}
+
+inline qreal mapZoomOutMarkerScale(const QGraphicsItem *item, const QPainter *painter, const QWidget *widget)
+{
+    const qreal lod = mapViewLevelOfDetail(item, painter, widget);
 
     if (lod >= 1.0) {
         return 1.0;
@@ -106,6 +116,7 @@ public:
         setFlag(QGraphicsItem::ItemIsSelectable, true);
         setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
         setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
+        setCacheMode(QGraphicsItem::DeviceCoordinateCache);
         setAcceptHoverEvents(true);
         setCursor(Qt::OpenHandCursor);
         setToolTip(QObject::tr("Point handle (line %1)").arg(lineNumber_));
@@ -122,6 +133,23 @@ public:
         displayToSourceMapper_ = std::move(mapper);
     }
 
+    void setSymbol(MapEditorPointSymbol symbol)
+    {
+        symbol_ = symbol;
+        update();
+    }
+
+    void setLabel(const QStaticText &labelText, const QFont &font, const QColor &color)
+    {
+        prepareGeometryChange();
+        labelText_ = labelText;
+        labelFont_ = font;
+        labelColor_ = color;
+        labelText_.prepare(QTransform(), labelFont_);
+        hasLabel_ = !labelText_.text().trimmed().isEmpty();
+        update();
+    }
+
     QPointF sourcePoint() const
     {
         return mapDisplayToSource(previewToSource(pos()));
@@ -131,7 +159,13 @@ protected:
     QRectF boundingRect() const override
     {
         // Paint includes scaled marker plus halo; keep update region larger to avoid drag trails.
-        return QGraphicsEllipseItem::boundingRect().adjusted(-6.0, -6.0, 6.0, 6.0);
+        QRectF bounds = QGraphicsEllipseItem::boundingRect().adjusted(-6.0, -6.0, 6.0, 6.0);
+        if (hasLabel_) {
+            const QSizeF labelSize = labelText_.size();
+            const QRectF labelBounds(QPointF(rect().right() + 3.0, -labelSize.height() / 2.0), labelSize);
+            bounds = bounds.united(labelBounds.adjusted(-1.0, -1.0, 1.0, 1.0));
+        }
+        return bounds;
     }
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
@@ -139,6 +173,7 @@ protected:
         const bool selected = option != nullptr && (option->state & QStyle::State_Selected);
         const bool emphasize = selected || hoverActive_ || dragActive_;
         const qreal interactionScale = dragActive_ ? 1.5 : (selected ? 1.4 : (hoverActive_ ? 1.25 : 1.0));
+        const qreal lod = mapViewLevelOfDetail(this, painter, widget);
         const qreal zoomOutScale = mapZoomOutMarkerScale(this, painter, widget);
         const qreal scale = interactionScale * zoomOutScale;
         const QRectF baseRect = rect();
@@ -151,7 +186,8 @@ protected:
         const QColor baseFill = brush().color().isValid() ? brush().color() : QColor(24, 24, 24, 170);
         QColor fill = baseFill;
         fill.setAlpha(emphasize ? 235 : 180);
-        QColor outline = selected ? QColor(QStringLiteral("#3ba4ff")) : QColor(22, 22, 22, 210);
+        const QColor baseOutline = pen().color().isValid() ? pen().color() : QColor(22, 22, 22, 210);
+        QColor outline = selected ? QColor(QStringLiteral("#3ba4ff")) : baseOutline;
 
         painter->setRenderHint(QPainter::Antialiasing, true);
         if (emphasize) {
@@ -164,10 +200,28 @@ protected:
             painter->drawEllipse(drawRect.adjusted(-haloRadius, -haloRadius, haloRadius, haloRadius));
         }
 
-        const qreal outlineWidth = (selected ? 1.8 : 1.1) * zoomOutScale;
-        painter->setPen(QPen(outline, qMax<qreal>(0.55, outlineWidth)));
-        painter->setBrush(fill);
-        painter->drawEllipse(drawRect);
+        const qreal baseOutlineWidth = pen().widthF() > 0.0 ? pen().widthF() : 1.1;
+        const qreal outlineWidth = (selected ? qMax<qreal>(baseOutlineWidth * 1.35, 1.8) : baseOutlineWidth) * zoomOutScale;
+        QPen symbolPen(outline, qMax<qreal>(0.55, outlineWidth));
+        symbolPen.setCapStyle(Qt::RoundCap);
+        symbolPen.setJoinStyle(Qt::RoundJoin);
+        painter->setPen(symbolPen);
+
+        const QPainterPath symbolPath = mapEditorPointSymbolPath(symbol_, drawRect);
+        if (mapEditorPointSymbolUsesFill(symbol_)) {
+            painter->setBrush(fill);
+        } else {
+            painter->setBrush(Qt::NoBrush);
+        }
+        painter->drawPath(symbolPath);
+
+        if (hasLabel_ && (lod >= 0.55 || emphasize)) {
+            painter->setFont(labelFont_);
+            painter->setPen(labelColor_.isValid() ? labelColor_ : outline);
+            painter->setBrush(Qt::NoBrush);
+            const QSizeF labelSize = labelText_.size();
+            painter->drawStaticText(QPointF(drawRect.right() + 3.0, -labelSize.height() / 2.0), labelText_);
+        }
     }
 
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override
@@ -238,6 +292,11 @@ private:
     QRectF sourceBounds_;
     QRectF previewBounds_;
     QRectF fittedBounds_;
+    MapEditorPointSymbol symbol_ = MapEditorPointSymbol::Circle;
+    QStaticText labelText_;
+    QFont labelFont_;
+    QColor labelColor_;
+    bool hasLabel_ = false;
     QPointF pressSourcePoint_;
     bool hoverActive_ = false;
     bool dragActive_ = false;

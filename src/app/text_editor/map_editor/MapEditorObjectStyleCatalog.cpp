@@ -71,6 +71,23 @@ std::optional<QColor> optionalColor(const QJsonObject &object, const char *key)
     return color;
 }
 
+std::optional<QString> optionalFieldName(const QJsonObject &object, const char *key)
+{
+    const QJsonValue value = object.value(QLatin1String(key));
+    if (!value.isString()) {
+        return std::nullopt;
+    }
+
+    QString field = value.toString().trimmed().toLower();
+    while (field.startsWith(QLatin1Char('-'))) {
+        field.remove(0, 1);
+    }
+    if (field.isEmpty()) {
+        return std::nullopt;
+    }
+    return field;
+}
+
 Qt::PenStyle penStyleFromString(const QString &value)
 {
     const QString normalized = value.trimmed().toLower();
@@ -150,6 +167,46 @@ MapEditorFillPatternKind fillPatternKindFromString(const QString &value)
     return MapEditorFillPatternKind::None;
 }
 
+std::optional<MapEditorPointSymbol> pointSymbolFromString(const QString &value)
+{
+    const QString normalized = normalizedToken(value);
+    if (normalized == QStringLiteral("circle")) {
+        return MapEditorPointSymbol::Circle;
+    }
+    if (normalized == QStringLiteral("square")) {
+        return MapEditorPointSymbol::Square;
+    }
+    if (normalized == QStringLiteral("diamond")) {
+        return MapEditorPointSymbol::Diamond;
+    }
+    if (normalized == QStringLiteral("triangle")) {
+        return MapEditorPointSymbol::Triangle;
+    }
+    if (normalized == QStringLiteral("star")) {
+        return MapEditorPointSymbol::Star;
+    }
+    if (normalized == QStringLiteral("asterisk")) {
+        return MapEditorPointSymbol::Asterisk;
+    }
+    if (normalized == QStringLiteral("plus")) {
+        return MapEditorPointSymbol::Plus;
+    }
+    if (normalized == QStringLiteral("x")) {
+        return MapEditorPointSymbol::X;
+    }
+    return std::nullopt;
+}
+
+std::optional<MapEditorPointSymbol> dotPatternSymbolFromString(const QString &value)
+{
+    const QString normalized = normalizedToken(value);
+    if (normalized == QStringLiteral("oval")) {
+        return MapEditorPointSymbol::Oval;
+    }
+
+    return pointSymbolFromString(value);
+}
+
 std::optional<MapEditorAreaFillPatternStyle> readAreaFillPattern(const QJsonObject &object)
 {
     if (object.isEmpty()) {
@@ -180,8 +237,18 @@ std::optional<MapEditorAreaFillPatternStyle> readAreaFillPattern(const QJsonObje
     if (const std::optional<QVector<qreal>> dashPattern = optionalDashPattern(object, "dash_pattern")) {
         pattern.dashPattern = dashPattern.value();
     }
-    if (const std::optional<qreal> radius = optionalPositiveNumber(object, "radius")) {
-        pattern.radius = radius.value();
+    if (const std::optional<qreal> size = optionalPositiveNumber(object, "size")) {
+        pattern.size = size.value();
+    }
+    if (const std::optional<qreal> sizeJitter = optionalNonNegativeNumber(object, "size_jitter")) {
+        pattern.sizeJitter = sizeJitter.value();
+    }
+    if (pattern.kind == MapEditorFillPatternKind::Dots
+        && object.value(QStringLiteral("symbol")).isString()) {
+        if (const std::optional<MapEditorPointSymbol> symbol =
+                dotPatternSymbolFromString(object.value(QStringLiteral("symbol")).toString())) {
+            pattern.symbol = symbol.value();
+        }
     }
     pattern.dotColor = optionalColor(object, "dot_color");
     if (const std::optional<qreal> angleJitter = optionalNonNegativeNumber(object, "angle_jitter")) {
@@ -227,8 +294,14 @@ void applyPointDefaults(MapEditorObjectStyleCatalog *catalog, const QJsonObject 
         return;
     }
 
-    if (const std::optional<qreal> radius = optionalPositiveNumber(point, "radius")) {
-        catalog->point.radius = radius.value();
+    if (point.value(QStringLiteral("symbol")).isString()) {
+        if (const std::optional<MapEditorPointSymbol> symbol =
+                pointSymbolFromString(point.value(QStringLiteral("symbol")).toString())) {
+            catalog->point.symbol = symbol.value();
+        }
+    }
+    if (const std::optional<qreal> size = optionalPositiveNumber(point, "size")) {
+        catalog->point.size = size.value();
     }
     if (const std::optional<qreal> outlineWidth = optionalPositiveNumber(point, "stroke_width")) {
         catalog->point.outlineWidth = outlineWidth.value();
@@ -238,6 +311,9 @@ void applyPointDefaults(MapEditorObjectStyleCatalog *catalog, const QJsonObject 
     }
     if (const std::optional<QColor> strokeColor = optionalColor(point, "stroke_color")) {
         catalog->point.strokeColor = strokeColor;
+    }
+    if (const std::optional<QString> labelField = optionalFieldName(point, "label_field")) {
+        catalog->point.labelField = labelField;
     }
 }
 
@@ -298,10 +374,14 @@ std::optional<MapEditorPointStyleRule> readPointStyleRule(const QJsonObject &obj
         return std::nullopt;
     }
 
-    rule.radius = optionalPositiveNumber(object, "radius");
+    if (object.value(QStringLiteral("symbol")).isString()) {
+        rule.symbol = pointSymbolFromString(object.value(QStringLiteral("symbol")).toString());
+    }
+    rule.size = optionalPositiveNumber(object, "size");
     rule.outlineWidth = optionalPositiveNumber(object, "stroke_width");
     rule.fillColor = optionalColor(object, "fill_color");
     rule.strokeColor = optionalColor(object, "stroke_color");
+    rule.labelField = optionalFieldName(object, "label_field");
     return rule;
 }
 
@@ -503,10 +583,12 @@ MapEditorResolvedPointStyle resolveMapEditorPointStyle(const MapEditorObjectStyl
                                                        const QString &subtype)
 {
     MapEditorResolvedPointStyle resolved;
-    resolved.radius = catalog.point.radius;
+    resolved.symbol = catalog.point.symbol;
+    resolved.size = catalog.point.size;
     resolved.outlineWidth = catalog.point.outlineWidth;
     resolved.fillColor = catalog.point.fillColor;
     resolved.strokeColor = catalog.point.strokeColor;
+    resolved.labelField = catalog.point.labelField;
 
     const QString normalizedRawType = normalizedToken(rawType);
     const QString normalizedSubtype = normalizedToken(subtype);
@@ -514,8 +596,11 @@ MapEditorResolvedPointStyle resolveMapEditorPointStyle(const MapEditorObjectStyl
         if (!selectorMatches(rule.selector, normalizedRawType, normalizedSubtype)) {
             continue;
         }
-        if (rule.radius.has_value()) {
-            resolved.radius = rule.radius.value();
+        if (rule.symbol.has_value()) {
+            resolved.symbol = rule.symbol.value();
+        }
+        if (rule.size.has_value()) {
+            resolved.size = rule.size.value();
         }
         if (rule.outlineWidth.has_value()) {
             resolved.outlineWidth = rule.outlineWidth.value();
@@ -525,6 +610,9 @@ MapEditorResolvedPointStyle resolveMapEditorPointStyle(const MapEditorObjectStyl
         }
         if (rule.strokeColor.has_value()) {
             resolved.strokeColor = rule.strokeColor;
+        }
+        if (rule.labelField.has_value()) {
+            resolved.labelField = rule.labelField;
         }
     }
 

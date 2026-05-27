@@ -98,6 +98,7 @@ struct MapGeometryFeature
     QString label;
     QString subtype;
     QString subtitle;
+    QHash<QString, QString> optionValues;
     QColor accent;
     QVector<QPointF> vertices;
     QPointF anchor;

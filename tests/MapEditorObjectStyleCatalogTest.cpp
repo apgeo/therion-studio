@@ -1,8 +1,10 @@
 #include "../src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h"
 
+#include <QByteArray>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QPair>
 #include <QTemporaryDir>
 
 #include <cmath>
@@ -20,7 +22,7 @@ bool expect(bool condition, const char *message)
     return condition;
 }
 
-int writeJsonFixtureFile(const QString &filePath, const char *content)
+int writeJsonFixtureFile(const QString &filePath, const QByteArray &content)
 {
     QFile file(filePath);
     if (!expect(file.open(QIODevice::WriteOnly | QIODevice::Text),
@@ -82,6 +84,65 @@ int prepareUserOverrideFixture(QTemporaryDir *temporaryDir)
         return 1;
     }
 
+    if (const int result =
+            writeJsonFixtureFile(overrideDirectory.filePath(QStringLiteral("point.override.json")),
+                                 R"json({
+  "symbol": "x",
+  "size": 13.0,
+  "label_field": "-id"
+})json");
+        result != 0) {
+        return 1;
+    }
+
+    if (const int result =
+            writeJsonFixtureFile(overrideDirectory.filePath(QStringLiteral("area.symbols.json")),
+                                 R"json({
+  "fill_pattern": {
+    "kind": "dots",
+    "symbol": "oval",
+    "size": 5.5,
+    "size_jitter": 1.25,
+    "dot_color": "#223344",
+    "angle_jitter": 17.5
+  }
+})json");
+        result != 0) {
+        return 1;
+    }
+
+    if (const int result =
+            writeJsonFixtureFile(overrideDirectory.filePath(QStringLiteral("point.oval.json")),
+                                 R"json({
+  "symbol": "oval",
+  "size": 14.0
+})json");
+        result != 0) {
+        return 1;
+    }
+
+    const QVector<QPair<QString, QString>> pointSymbolFiles = {
+        {QStringLiteral("circle"), QStringLiteral("circle")},
+        {QStringLiteral("square"), QStringLiteral("square")},
+        {QStringLiteral("diamond"), QStringLiteral("diamond")},
+        {QStringLiteral("triangle"), QStringLiteral("triangle")},
+        {QStringLiteral("star"), QStringLiteral("star")},
+        {QStringLiteral("asterisk"), QStringLiteral("asterisk")},
+        {QStringLiteral("plus"), QStringLiteral("plus")},
+        {QStringLiteral("x"), QStringLiteral("x")}
+    };
+    for (const QPair<QString, QString> &entry : pointSymbolFiles) {
+        const QByteArray content = QByteArray("{\n  \"symbol\": \"")
+            + entry.second.toUtf8()
+            + QByteArray("\"\n}\n");
+        if (const int result =
+                writeJsonFixtureFile(overrideDirectory.filePath(QStringLiteral("point.%1.json").arg(entry.first)),
+                                     content);
+            result != 0) {
+            return 1;
+        }
+    }
+
     return 0;
 }
 
@@ -97,8 +158,12 @@ int runCatalogTest()
         return 1;
     }
 
-    if (!expect(std::abs(catalog.point.radius - 5.6) < 1e-6,
-                "Expected point default radius from resource catalog.")) {
+    if (!expect(catalog.point.symbol == MapEditorPointSymbol::Circle,
+                "Expected point default symbol from resource catalog.")) {
+        return 1;
+    }
+    if (!expect(std::abs(catalog.point.size - 11.2) < 1e-6,
+                "Expected point default size from resource catalog.")) {
         return 1;
     }
     if (!expect(std::abs(catalog.line.strokeWidth - 3.2) < 1e-6,
@@ -150,6 +215,70 @@ int runCatalogTest()
                 "Expected station point fill color override.")) {
         return 1;
     }
+    if (!expect(stationStyle.symbol == MapEditorPointSymbol::Triangle,
+                "Expected station point symbol override.")) {
+        return 1;
+    }
+    if (!expect(stationStyle.labelField.has_value()
+                    && stationStyle.labelField.value() == QStringLiteral("name"),
+                "Expected station point label field override.")) {
+        return 1;
+    }
+    if (!expect(std::abs(stationStyle.size - 8.4) < 1e-6,
+                "Expected station point size override.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedPointStyle labelStyle = resolveMapEditorPointStyle(catalog, QStringLiteral("label"));
+    if (!expect(labelStyle.labelField.has_value()
+                    && labelStyle.labelField.value() == QStringLiteral("text"),
+                "Expected label point label field override.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedPointStyle overridePointStyle =
+        resolveMapEditorPointStyle(catalog, QStringLiteral("override"));
+    if (!expect(overridePointStyle.symbol == MapEditorPointSymbol::X,
+                "Expected user override point symbol.")) {
+        return 1;
+    }
+    if (!expect(std::abs(overridePointStyle.size - 13.0) < 1e-6,
+                "Expected user override point size.")) {
+        return 1;
+    }
+    if (!expect(overridePointStyle.labelField.has_value()
+                    && overridePointStyle.labelField.value() == QStringLiteral("id"),
+                "Expected user override point label field to normalize without leading dash.")) {
+        return 1;
+    }
+
+    const QVector<QPair<QString, MapEditorPointSymbol>> symbolCases = {
+        {QStringLiteral("circle"), MapEditorPointSymbol::Circle},
+        {QStringLiteral("square"), MapEditorPointSymbol::Square},
+        {QStringLiteral("diamond"), MapEditorPointSymbol::Diamond},
+        {QStringLiteral("triangle"), MapEditorPointSymbol::Triangle},
+        {QStringLiteral("star"), MapEditorPointSymbol::Star},
+        {QStringLiteral("asterisk"), MapEditorPointSymbol::Asterisk},
+        {QStringLiteral("plus"), MapEditorPointSymbol::Plus},
+        {QStringLiteral("x"), MapEditorPointSymbol::X}
+    };
+    for (const QPair<QString, MapEditorPointSymbol> &symbolCase : symbolCases) {
+        const MapEditorResolvedPointStyle symbolStyle = resolveMapEditorPointStyle(catalog, symbolCase.first);
+        if (!expect(symbolStyle.symbol == symbolCase.second,
+                    "Expected supported point symbol style to resolve from user override.")) {
+            return 1;
+        }
+    }
+    const MapEditorResolvedPointStyle ovalPointStyle =
+        resolveMapEditorPointStyle(catalog, QStringLiteral("oval"));
+    if (!expect(ovalPointStyle.symbol == MapEditorPointSymbol::Circle,
+                "Expected oval symbol to stay unsupported for point styles.")) {
+        return 1;
+    }
+    if (!expect(std::abs(ovalPointStyle.size - 14.0) < 1e-6,
+                "Expected non-symbol point style fields to keep loading for oval point fixture.")) {
+        return 1;
+    }
 
     const MapEditorResolvedAreaStyle sandStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("sand"));
     if (!expect(sandStyle.fillPattern.has_value(),
@@ -160,12 +289,23 @@ int runCatalogTest()
                 "Expected stroke dash pattern for sand area style.")) {
         return 1;
     }
-    if (!expect(sandStyle.fillPattern->kind == MapEditorFillPatternKind::CrossHatch,
-                "Expected cross_hatch fill pattern kind for sand area style.")) {
+    if (!expect(sandStyle.fillPattern->kind == MapEditorFillPatternKind::Dots,
+                "Expected dots fill pattern kind for sand area style.")) {
         return 1;
     }
-    if (!expect(std::abs(sandStyle.fillPattern->spacing - 7.0) < 1e-6,
+    if (!expect(std::abs(sandStyle.fillPattern->spacing - 6.4) < 1e-6,
                 "Expected spacing override for sand area fill pattern.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedAreaStyle clayStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("clay"));
+    if (!expect(clayStyle.fillPattern.has_value()
+                    && clayStyle.fillPattern->kind == MapEditorFillPatternKind::Hatch,
+                "Expected hatch fill pattern for clay area style.")) {
+        return 1;
+    }
+    if (!expect(clayStyle.fillPattern->angleJitter > 0.0,
+                "Expected angle jitter for clay area fill pattern.")) {
         return 1;
     }
 
@@ -187,6 +327,35 @@ int runCatalogTest()
                 "Expected dashed stroke style for water area fill pattern.")) {
         return 1;
     }
+    if (!expect(std::abs(waterStyle.fillPattern->angle) < 1e-6,
+                "Expected horizontal hatch angle for water area fill pattern.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedAreaStyle sumpStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("sump"));
+    if (!expect(sumpStyle.fillPattern.has_value()
+                    && sumpStyle.fillPattern->kind == MapEditorFillPatternKind::Hatch,
+                "Expected hatch fill pattern for sump area style.")) {
+        return 1;
+    }
+    if (!expect(sumpStyle.fillPattern->strokeStyle == Qt::SolidLine,
+                "Expected solid stroke style for sump area fill pattern.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedAreaStyle iceStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("ice"));
+    if (!expect(iceStyle.fillPattern.has_value()
+                    && iceStyle.fillPattern->kind == MapEditorFillPatternKind::CrossHatch,
+                "Expected cross_hatch fill pattern for ice area style.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedAreaStyle mudcrackStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("mudcrack"));
+    if (!expect(mudcrackStyle.fillPattern.has_value()
+                    && mudcrackStyle.fillPattern->kind == MapEditorFillPatternKind::CrossHatch,
+                "Expected cross_hatch fill pattern for mudcrack area style.")) {
+        return 1;
+    }
 
     const MapEditorResolvedAreaStyle blocksStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("blocks"));
     if (!expect(blocksStyle.fillPattern.has_value()
@@ -194,8 +363,64 @@ int runCatalogTest()
                 "Expected dots fill pattern for blocks area style.")) {
         return 1;
     }
-    if (!expect(std::abs(blocksStyle.fillPattern->radius - 1.1) < 1e-6,
-                "Expected dot radius override for blocks area fill pattern.")) {
+    if (!expect(blocksStyle.fillPattern->symbol == MapEditorPointSymbol::Square,
+                "Expected square dot symbol for blocks area fill pattern.")) {
+        return 1;
+    }
+    if (!expect(std::abs(blocksStyle.fillPattern->size - 3.0) < 1e-6,
+                "Expected dot symbol size override for blocks area fill pattern.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedAreaStyle pebblesStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("pebbles"));
+    if (!expect(pebblesStyle.fillPattern.has_value()
+                    && pebblesStyle.fillPattern->kind == MapEditorFillPatternKind::Dots,
+                "Expected dots fill pattern for pebbles area style.")) {
+        return 1;
+    }
+    if (!expect(pebblesStyle.fillPattern->symbol == MapEditorPointSymbol::Oval,
+                "Expected oval dot symbol for pebbles area fill pattern.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedAreaStyle debrisStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("debris"));
+    if (!expect(debrisStyle.fillPattern.has_value()
+                    && debrisStyle.fillPattern->kind == MapEditorFillPatternKind::Dots,
+                "Expected dots fill pattern for debris area style.")) {
+        return 1;
+    }
+    if (!expect(debrisStyle.fillPattern->symbol == MapEditorPointSymbol::Triangle,
+                "Expected triangle dot symbol for debris area fill pattern.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedAreaStyle snowStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("snow"));
+    if (!expect(snowStyle.fillPattern.has_value()
+                    && snowStyle.fillPattern->kind == MapEditorFillPatternKind::Dots,
+                "Expected dots fill pattern for snow area style.")) {
+        return 1;
+    }
+    if (!expect(snowStyle.fillPattern->symbol == MapEditorPointSymbol::Asterisk,
+                "Expected asterisk symbol for snow area fill pattern.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedAreaStyle symbolStyle = resolveMapEditorAreaStyle(catalog, QStringLiteral("symbols"));
+    if (!expect(symbolStyle.fillPattern.has_value()
+                    && symbolStyle.fillPattern->symbol == MapEditorPointSymbol::Oval,
+                "Expected user override dot symbol for area fill pattern.")) {
+        return 1;
+    }
+    if (!expect(std::abs(symbolStyle.fillPattern->size - 5.5) < 1e-6,
+                "Expected user override dot symbol size for area fill pattern.")) {
+        return 1;
+    }
+    if (!expect(std::abs(symbolStyle.fillPattern->sizeJitter - 1.25) < 1e-6,
+                "Expected user override dot symbol size jitter for area fill pattern.")) {
+        return 1;
+    }
+    if (!expect(std::abs(symbolStyle.fillPattern->angleJitter - 17.5) < 1e-6,
+                "Expected user override dot symbol angle jitter for area fill pattern.")) {
         return 1;
     }
 

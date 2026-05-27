@@ -1,6 +1,7 @@
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSceneInternals.h"
 #include "MapEditorObjectStyleCatalog.h"
+#include "MapEditorPointSymbolGeometry.h"
 
 #include <QFont>
 #include <QGuiApplication>
@@ -12,6 +13,7 @@
 #include <QPainterPath>
 #include <QRegularExpression>
 #include <QStyleHints>
+#include <QTransform>
 
 #include "../../../core/TherionDocumentParser.h"
 
@@ -46,7 +48,6 @@ struct MapCanvasTheme
     QColor controlConnector;
     QColor controlHandleStroke;
     QColor controlHandleFill;
-    QColor stationMarker;
 };
 
 template <typename T>
@@ -214,11 +215,21 @@ protected:
         screenSpacing *= densityRelax;
         const qreal sceneSpacing = qBound<qreal>(0.6, screenSpacing / safeLod, 320.0);
         const qreal sceneStrokeWidth = qBound<qreal>(0.16, (pattern_.strokeWidth / safeLod) / densityRelax, 12.0);
-        const qreal sceneRadius = qBound<qreal>(0.3, pattern_.radius / safeLod, 32.0);
+        const qreal sceneSymbolSize = qBound<qreal>(0.6, pattern_.size / safeLod, 64.0);
+        const qreal sceneSymbolSizeJitter = qBound<qreal>(0.0, pattern_.sizeJitter / safeLod, 64.0);
         const qreal sceneOffsetJitter = qBound<qreal>(0.0, pattern_.offsetJitter / safeLod, 64.0);
         const int seedValue = pattern_.seed.value_or(fallbackSeed_);
         const quint32 seed = static_cast<quint32>(seedValue == 0 ? 1 : seedValue);
         const QRectF bounds = path().boundingRect();
+        QRectF paintBounds = bounds;
+        if (option != nullptr && option->exposedRect.isValid()) {
+            const qreal margin = sceneSpacing + sceneOffsetJitter + sceneSymbolSize + sceneSymbolSizeJitter + sceneStrokeWidth + 2.0;
+            paintBounds = bounds.intersected(option->exposedRect.adjusted(-margin, -margin, margin, margin));
+            if (paintBounds.isEmpty()) {
+                painter->restore();
+                return;
+            }
+        }
 
         auto drawHatch = [&](qreal baseAngle, int orientationIndex) {
             QColor strokeColor = pattern_.strokeColor.value_or(fallbackColor_);
@@ -238,10 +249,29 @@ protected:
             painter->setPen(pen);
 
             constexpr qreal kPi = 3.14159265358979323846;
-            const qreal maxExtent = std::hypot(bounds.width(), bounds.height()) * 1.9 + sceneSpacing;
-            const QPointF center = bounds.center();
-            const int bandCount = qMax(2, static_cast<int>(std::ceil(maxExtent / sceneSpacing)));
-            for (int band = -bandCount; band <= bandCount; ++band) {
+            const QPointF anchorCenter = bounds.center();
+            const qreal paintExtent = std::hypot(paintBounds.width(), paintBounds.height()) * 1.8 + sceneSpacing + sceneOffsetJitter;
+            const qreal baseRadians = baseAngle * (kPi / 180.0);
+            const QPointF baseDirection(std::cos(baseRadians), std::sin(baseRadians));
+            const QPointF baseNormal(-baseDirection.y(), baseDirection.x());
+            const QPointF corners[] = {
+                paintBounds.topLeft(),
+                paintBounds.topRight(),
+                paintBounds.bottomLeft(),
+                paintBounds.bottomRight()
+            };
+            qreal minProjection = std::numeric_limits<qreal>::max();
+            qreal maxProjection = std::numeric_limits<qreal>::lowest();
+            for (const QPointF &corner : corners) {
+                const QPointF delta = corner - anchorCenter;
+                const qreal projection = QPointF::dotProduct(delta, baseNormal);
+                minProjection = qMin(minProjection, projection);
+                maxProjection = qMax(maxProjection, projection);
+            }
+            const qreal jitterBandMargin = qMax<qreal>(2.0, std::ceil((sceneOffsetJitter + sceneSpacing) / sceneSpacing));
+            const int firstBand = static_cast<int>(std::floor(minProjection / sceneSpacing - jitterBandMargin));
+            const int lastBand = static_cast<int>(std::ceil(maxProjection / sceneSpacing + jitterBandMargin));
+            for (int band = firstBand; band <= lastBand; ++band) {
                 const qreal jitterOffset = sceneOffsetJitter <= 0.0
                     ? 0.0
                     : stableRandomSigned(seed, orientationIndex, band, 0x20411U) * sceneOffsetJitter;
@@ -251,8 +281,10 @@ protected:
                 const qreal radians = (baseAngle + jitterAngle) * (kPi / 180.0);
                 const QPointF direction(std::cos(radians), std::sin(radians));
                 const QPointF normal(-direction.y(), direction.x());
-                const QPointF shiftedCenter = center + normal * ((static_cast<qreal>(band) * sceneSpacing) + jitterOffset);
-                painter->drawLine(shiftedCenter - (direction * maxExtent), shiftedCenter + (direction * maxExtent));
+                const QPointF shiftedCenter = anchorCenter + normal * ((static_cast<qreal>(band) * sceneSpacing) + jitterOffset);
+                const QPointF paintCenter = shiftedCenter
+                    + direction * QPointF::dotProduct(paintBounds.center() - shiftedCenter, direction);
+                painter->drawLine(paintCenter - (direction * paintExtent), paintCenter + (direction * paintExtent));
             }
         };
 
@@ -266,13 +298,18 @@ protected:
             const qreal baseAlpha = dotColor.alphaF();
             const qreal alphaByZoom = 1.0 / std::pow(lodZoomIn, 0.20);
             dotColor.setAlphaF(qBound(0.08, baseAlpha * alphaByZoom * 0.88, 1.0));
-            painter->setPen(Qt::NoPen);
-            painter->setBrush(dotColor);
+            const bool symbolUsesFill = mapEditorPointSymbolUsesFill(pattern_.symbol);
+            if (symbolUsesFill) {
+                painter->setPen(Qt::NoPen);
+                painter->setBrush(dotColor);
+            } else {
+                painter->setBrush(Qt::NoBrush);
+            }
 
-            const qreal startX = std::floor(bounds.left() / sceneSpacing) * sceneSpacing;
-            const qreal startY = std::floor(bounds.top() / sceneSpacing) * sceneSpacing;
-            const int cols = qBound(1, static_cast<int>(std::ceil(bounds.width() / sceneSpacing)) + 3, 1200);
-            const int rows = qBound(1, static_cast<int>(std::ceil(bounds.height() / sceneSpacing)) + 3, 1200);
+            const qreal startX = std::floor(paintBounds.left() / sceneSpacing) * sceneSpacing;
+            const qreal startY = std::floor(paintBounds.top() / sceneSpacing) * sceneSpacing;
+            const int cols = qBound(1, static_cast<int>(std::ceil(paintBounds.width() / sceneSpacing)) + 3, 1200);
+            const int rows = qBound(1, static_cast<int>(std::ceil(paintBounds.height() / sceneSpacing)) + 3, 1200);
 
             for (int row = 0; row < rows; ++row) {
                 for (int col = 0; col < cols; ++col) {
@@ -285,7 +322,34 @@ protected:
                         : stableRandomSigned(seed, 3, index, 0x6a223U) * sceneOffsetJitter;
                     const QPointF dotCenter(startX + (static_cast<qreal>(col) * sceneSpacing) + jitterX,
                                             startY + (static_cast<qreal>(row) * sceneSpacing) + jitterY);
-                    painter->drawEllipse(dotCenter, sceneRadius, sceneRadius);
+                    const qreal symbolSizeJitter = sceneSymbolSizeJitter <= 0.0
+                        ? 0.0
+                        : stableRandomSigned(seed, 5, index, 0x3c6efU) * sceneSymbolSizeJitter;
+                    const qreal currentSceneSymbolSize =
+                        qBound<qreal>(0.6, sceneSymbolSize + symbolSizeJitter, 64.0);
+                    if (!symbolUsesFill) {
+                        QPen symbolPen(dotColor,
+                                       qBound<qreal>(0.16, currentSceneSymbolSize * 0.18, 4.0),
+                                       Qt::SolidLine,
+                                       Qt::RoundCap,
+                                       Qt::RoundJoin);
+                        painter->setPen(symbolPen);
+                    }
+                    const QRectF symbolRect(dotCenter.x() - (currentSceneSymbolSize / 2.0),
+                                            dotCenter.y() - (currentSceneSymbolSize / 2.0),
+                                            currentSceneSymbolSize,
+                                            currentSceneSymbolSize);
+                    QPainterPath symbolPath = mapEditorPointSymbolPath(pattern_.symbol, symbolRect);
+                    if (pattern_.angleJitter > 0.0) {
+                        const qreal jitterAngle =
+                            stableRandomSigned(seed, 4, index, 0x92d41U) * pattern_.angleJitter;
+                        QTransform symbolTransform;
+                        symbolTransform.translate(dotCenter.x(), dotCenter.y());
+                        symbolTransform.rotate(jitterAngle);
+                        symbolTransform.translate(-dotCenter.x(), -dotCenter.y());
+                        symbolPath = symbolTransform.map(symbolPath);
+                    }
+                    painter->drawPath(symbolPath);
                 }
             }
         }
@@ -345,7 +409,6 @@ MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
         theme.controlConnector = QColor(52, 110, 186, 190);
         theme.controlHandleStroke = QColor(20, 73, 148, 230);
         theme.controlHandleFill = QColor(96, 176, 248, 220);
-        theme.stationMarker = QColor(QStringLiteral("#cf472e"));
         return theme;
     }
 
@@ -361,7 +424,6 @@ MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
     theme.controlConnector = QColor(118, 178, 242, 190);
     theme.controlHandleStroke = QColor(76, 150, 229, 230);
     theme.controlHandleFill = QColor(130, 201, 255, 220);
-    theme.stationMarker = QColor(QStringLiteral("#ff6a56"));
     return theme;
 }
 
@@ -856,6 +918,236 @@ QString optionValue(const QStringList &tokens, const QString &option)
     return QString();
 }
 
+QString normalizedOptionFieldName(const QString &field)
+{
+    QString normalized = field.trimmed().toLower();
+    while (normalized.startsWith(QLatin1Char('-'))) {
+        normalized.remove(0, 1);
+    }
+    return normalized;
+}
+
+QHash<QString, QString> optionValuesByFieldName(const QStringList &tokens)
+{
+    QHash<QString, QString> values;
+    for (int index = 0; index + 1 < tokens.size(); ++index) {
+        const QString token = tokens.at(index).trimmed();
+        if (!token.startsWith(QLatin1Char('-')) || tokenLooksNumeric(token)) {
+            continue;
+        }
+
+        const QString fieldName = normalizedOptionFieldName(token);
+        const QString candidate = tokens.at(index + 1);
+        if (fieldName.isEmpty() || (candidate.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(candidate))) {
+            continue;
+        }
+
+        values.insert(fieldName, candidate);
+    }
+    return values;
+}
+
+QString optionValueForFieldName(const QHash<QString, QString> &values, const QString &fieldName)
+{
+    const QString normalizedFieldName = normalizedOptionFieldName(fieldName);
+    return normalizedFieldName.isEmpty() ? QString() : values.value(normalizedFieldName).trimmed();
+}
+
+QString pointTypeTokenFromLine(const TherionParsedLine &parsedLine)
+{
+    if (parsedLine.directive != QStringLiteral("point")) {
+        return QString();
+    }
+
+    int numericCoordinateTokens = 0;
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        const QString token = parsedLine.tokens.at(index).trimmed();
+        if (token.isEmpty()) {
+            continue;
+        }
+        if (token.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(token)) {
+            break;
+        }
+        if (tokenLooksNumeric(token)) {
+            ++numericCoordinateTokens;
+            continue;
+        }
+        if (numericCoordinateTokens < 2) {
+            continue;
+        }
+        return token.toLower();
+    }
+
+    return QString();
+}
+
+QString stationPointNameFromLine(const TherionParsedLine &parsedLine)
+{
+    const QString optionName = optionValue(parsedLine.tokens, QStringLiteral("-name")).trimmed();
+    if (!optionName.isEmpty()) {
+        return optionName;
+    }
+
+    const QString typeToken = pointTypeTokenFromLine(parsedLine);
+    if (typeToken != QStringLiteral("station")) {
+        return QString();
+    }
+
+    bool sawTypeToken = false;
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        const QString token = parsedLine.tokens.at(index).trimmed();
+        if (token.isEmpty()) {
+            continue;
+        }
+        if (token.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(token)) {
+            break;
+        }
+        if (!sawTypeToken) {
+            if (token.toLower() == QStringLiteral("station")) {
+                sawTypeToken = true;
+            }
+            continue;
+        }
+        if (!tokenLooksNumeric(token)) {
+            return token;
+        }
+    }
+    return QString();
+}
+
+QString therionLabelTextToHtml(const QString &text)
+{
+    QString html;
+    bool styleSpanOpen = false;
+    int rtlSpanDepth = 0;
+
+    auto closeStyleSpan = [&]() {
+        if (styleSpanOpen) {
+            html += QStringLiteral("</span>");
+            styleSpanOpen = false;
+        }
+    };
+    auto openStyleSpan = [&](const QString &style) {
+        closeStyleSpan();
+        if (!style.isEmpty()) {
+            html += QStringLiteral("<span style=\"%1\">").arg(style.toHtmlEscaped());
+            styleSpanOpen = true;
+        }
+    };
+
+    for (int index = 0; index < text.size();) {
+        if (text.at(index) != QLatin1Char('<')) {
+            html += QString(text.at(index)).toHtmlEscaped();
+            ++index;
+            continue;
+        }
+
+        const int endIndex = text.indexOf(QLatin1Char('>'), index + 1);
+        if (endIndex < 0) {
+            html += QString(text.at(index)).toHtmlEscaped();
+            ++index;
+            continue;
+        }
+
+        const QString tag = text.mid(index + 1, endIndex - index - 1).trimmed();
+        const QString normalized = tag.toLower();
+        bool handled = true;
+        if (normalized == QStringLiteral("br")) {
+            html += QStringLiteral("<br/>");
+        } else if (normalized == QStringLiteral("thsp")) {
+            html += QStringLiteral("&#8201;");
+        } else if (normalized == QStringLiteral("rm")) {
+            closeStyleSpan();
+        } else if (normalized == QStringLiteral("bf")) {
+            openStyleSpan(QStringLiteral("font-weight:700;"));
+        } else if (normalized == QStringLiteral("it")) {
+            openStyleSpan(QStringLiteral("font-style:italic;"));
+        } else if (normalized == QStringLiteral("ss")) {
+            openStyleSpan(QStringLiteral("font-family:sans-serif;"));
+        } else if (normalized == QStringLiteral("si")) {
+            openStyleSpan(QStringLiteral("font-family:sans-serif; font-style:italic;"));
+        } else if (normalized.startsWith(QStringLiteral("size:"))) {
+            const QString sizeValue = normalized.mid(5).trimmed();
+            if (sizeValue == QStringLiteral("xs")) {
+                openStyleSpan(QStringLiteral("font-size:70%;"));
+            } else if (sizeValue == QStringLiteral("s")) {
+                openStyleSpan(QStringLiteral("font-size:85%;"));
+            } else if (sizeValue == QStringLiteral("m")) {
+                openStyleSpan(QStringLiteral("font-size:100%;"));
+            } else if (sizeValue == QStringLiteral("l")) {
+                openStyleSpan(QStringLiteral("font-size:120%;"));
+            } else if (sizeValue == QStringLiteral("xl")) {
+                openStyleSpan(QStringLiteral("font-size:145%;"));
+            } else if (sizeValue.endsWith(QLatin1Char('%'))) {
+                bool ok = false;
+                const int percent = sizeValue.left(sizeValue.size() - 1).toInt(&ok);
+                if (ok && percent >= 1 && percent <= 999) {
+                    openStyleSpan(QStringLiteral("font-size:%1%;").arg(percent));
+                }
+            } else {
+                bool ok = false;
+                const int points = sizeValue.toInt(&ok);
+                if (ok && points >= 1 && points <= 127) {
+                    openStyleSpan(QStringLiteral("font-size:%1pt;").arg(points));
+                }
+            }
+        } else if (normalized == QStringLiteral("rtl")) {
+            html += QStringLiteral("<span dir=\"rtl\">");
+            ++rtlSpanDepth;
+        } else if (normalized == QStringLiteral("/rtl")) {
+            if (rtlSpanDepth > 0) {
+                closeStyleSpan();
+                html += QStringLiteral("</span>");
+                --rtlSpanDepth;
+            }
+        } else if (normalized == QStringLiteral("left")
+                   || normalized == QStringLiteral("right")
+                   || normalized == QStringLiteral("center")
+                   || normalized == QStringLiteral("centre")
+                   || normalized.startsWith(QStringLiteral("lang:"))) {
+            // These tags are accepted by Therion labels but do not need visible text.
+        } else {
+            handled = false;
+        }
+
+        if (!handled) {
+            html += text.mid(index, endIndex - index + 1).toHtmlEscaped();
+        }
+        index = endIndex + 1;
+    }
+
+    closeStyleSpan();
+    while (rtlSpanDepth > 0) {
+        html += QStringLiteral("</span>");
+        --rtlSpanDepth;
+    }
+
+    return QStringLiteral("<div>%1</div>").arg(html);
+}
+
+bool therionLabelTextNeedsRichRendering(const QString &text)
+{
+    static const QRegularExpression markupPattern(
+        QStringLiteral(R"(<\s*(?:br|thsp|rm|it|bf|ss|si|rtl|/rtl|left|right|center|centre|lang:[^>]+|size:[^>]+)\s*>)"),
+        QRegularExpression::CaseInsensitiveOption);
+    return markupPattern.match(text).hasMatch();
+}
+
+QStaticText createPointLabelStaticText(const QString &text, bool useTherionFormatting, const QFont &font)
+{
+    QStaticText staticText;
+    if (!useTherionFormatting || !therionLabelTextNeedsRichRendering(text)) {
+        staticText.setText(text);
+        staticText.setTextFormat(Qt::PlainText);
+    } else {
+        staticText.setText(therionLabelTextToHtml(text));
+        staticText.setTextFormat(Qt::RichText);
+    }
+    staticText.setPerformanceHint(QStaticText::AggressiveCaching);
+    staticText.prepare(QTransform(), font);
+    return staticText;
+}
+
 void appendAreaReferenceIdentifiers(const TherionParsedLine &parsedLine,
                                     int startTokenIndex,
                                     QStringList *identifiers)
@@ -953,7 +1245,6 @@ QString mapEntryCategoryForLine(const TherionParsedLine &parsedLine)
     }
 
     const QString directive = parsedLine.tokens.first().toLower();
-    const QString secondToken = parsedLine.tokens.value(1).toLower();
 
     if (directive == QStringLiteral("survey")) {
         return QObject::tr("Survey");
@@ -973,7 +1264,7 @@ QString mapEntryCategoryForLine(const TherionParsedLine &parsedLine)
     if (directive == QStringLiteral("station")) {
         return QObject::tr("Station");
     }
-    if (directive == QStringLiteral("point") && secondToken == QStringLiteral("station")) {
+    if (directive == QStringLiteral("point") && pointTypeTokenFromLine(parsedLine) == QStringLiteral("station")) {
         return QObject::tr("Station");
     }
     if (directive == QStringLiteral("point")) {
@@ -990,8 +1281,15 @@ QString mapEntryTitleForLine(const TherionParsedLine &parsedLine)
     }
 
     const QString directive = parsedLine.tokens.first().toLower();
-    if (directive == QStringLiteral("point") && parsedLine.tokens.size() >= 3 && parsedLine.tokens.value(1).toLower() == QStringLiteral("station")) {
-        return parsedLine.tokens.value(2);
+    if (directive == QStringLiteral("point")) {
+        const QString pointType = pointTypeTokenFromLine(parsedLine);
+        if (pointType == QStringLiteral("station")) {
+            const QString stationName = stationPointNameFromLine(parsedLine);
+            return stationName.isEmpty() ? pointType : stationName;
+        }
+        if (!pointType.isEmpty()) {
+            return pointType;
+        }
     }
 
     if (parsedLine.tokens.size() > 1) {
@@ -1008,9 +1306,6 @@ QString mapEntrySubtitleForLine(const TherionParsedLine &parsedLine)
     }
 
     QStringList remainder = parsedLine.tokens.mid(1);
-    if (parsedLine.tokens.first().toLower() == QStringLiteral("point") && parsedLine.tokens.value(1).toLower() == QStringLiteral("station") && parsedLine.tokens.size() > 2) {
-        remainder = parsedLine.tokens.mid(2);
-    }
 
     QString subtitle = remainder.join(QStringLiteral(" "));
     if (parsedLine.tokens.first().toLower() == QStringLiteral("line")) {
@@ -1172,12 +1467,13 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 const MapEditorResolvedPointStyle pointStyle = resolveMapEditorPointStyle(styleCatalog,
                                                                                            feature.stationPoint ? QStringLiteral("station") : feature.label,
                                                                                            feature.subtype);
-                const qreal pointRadius = qBound(2.0, pointStyle.radius, 24.0);
+                const qreal pointSize = qBound(4.0, pointStyle.size, 48.0);
                 const QColor pointFillColor = pointStyle.fillColor.value_or(canvasTheme.pointHandleFill);
                 const QColor pointStrokeColor = pointStyle.strokeColor.value_or(canvasTheme.pointHandleStroke);
                 const QPointF previewPoint = mapGeometryPointToPreview(feature.anchor, sourceBounds, previewBounds);
                 auto *pointItem = new MapEditablePointItem(feature.lineNumber, feature.anchor, sourceBounds, previewBounds);
-                pointItem->setRect(QRectF(-pointRadius, -pointRadius, pointRadius * 2.0, pointRadius * 2.0));
+                pointItem->setRect(QRectF(-pointSize / 2.0, -pointSize / 2.0, pointSize, pointSize));
+                pointItem->setSymbol(pointStyle.symbol);
                 pointItem->setPen(cosmeticPen(pointStrokeColor, qBound(0.6, pointStyle.outlineWidth, 8.0)));
                 pointItem->setBrush(QBrush(pointFillColor));
                 pointItem->setMoveCommittedCallback(recordPointGeometryMove);
@@ -1206,25 +1502,19 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     orientationHandle->setVisible(false);
                 }
 
-                if (feature.stationPoint) {
-                    QPainterPath markerPath;
-                    markerPath.moveTo(previewPoint + QPointF(0.0, -12.0));
-                    markerPath.lineTo(previewPoint + QPointF(10.0, 6.0));
-                    markerPath.lineTo(previewPoint + QPointF(-10.0, 6.0));
-                    markerPath.closeSubpath();
-
-                    auto *triangle = scene->addPath(markerPath, QPen(canvasTheme.stationMarker, 1.2), QBrush(canvasTheme.stationMarker));
-                    triangle->setZValue(3.5);
-                    markGeometryItem(triangle);
-                    makeMouseTransparent(triangle);
-                }
-
-                if (feature.stationPoint) {
-                    auto *label = makeMouseTransparent(scene->addText(feature.label.isEmpty() ? feature.category : feature.label, QFont(QStringLiteral("Menlo"), 10, QFont::Bold)));
-                    label->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
-                    label->setDefaultTextColor(canvasTheme.labelText);
-                    label->setPos(previewPoint + QPointF(10.0, -18.0));
-                    label->setZValue(4.0);
+                if (pointStyle.labelField.has_value()) {
+                    const QString labelText = optionValueForFieldName(feature.optionValues, pointStyle.labelField.value());
+                    if (!labelText.isEmpty()) {
+                        QFont labelFont(QStringLiteral("Menlo"), 10);
+                        if (feature.stationPoint) {
+                            labelFont.setBold(true);
+                        }
+                        pointItem->setLabel(createPointLabelStaticText(labelText,
+                                                                       pointStyle.labelField.value() == QStringLiteral("text"),
+                                                                       labelFont),
+                                            labelFont,
+                                            canvasTheme.labelText);
+                    }
                 }
                 break;
             }
@@ -1723,20 +2013,6 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     }
                 }
 
-                if (feature.stationPoint) {
-                    const QPointF headPoint = mapGeometryPointToPreview(feature.lineVertices.first().anchor, sourceBounds, previewBounds);
-                    QPainterPath markerPath;
-                    markerPath.moveTo(headPoint + QPointF(0.0, -12.0));
-                    markerPath.lineTo(headPoint + QPointF(10.0, 6.0));
-                    markerPath.lineTo(headPoint + QPointF(-10.0, 6.0));
-                    markerPath.closeSubpath();
-
-                    auto *triangle = scene->addPath(markerPath, QPen(canvasTheme.stationMarker, 1.2), QBrush(canvasTheme.stationMarker));
-                    triangle->setZValue(3.5);
-                    markGeometryItem(triangle);
-                    makeMouseTransparent(triangle);
-                }
-
                 break;
             }
             case MapGeometryFeature::Kind::Area: {
@@ -1954,13 +2230,15 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
                 continue;
             }
 
+            const QString pointType = pointTypeTokenFromLine(parsedLine);
             MapGeometryFeature feature;
             feature.kind = MapGeometryFeature::Kind::Point;
             feature.lineNumber = parsedLine.lineNumber;
             feature.category = mapEntryCategoryForLine(parsedLine);
-            feature.label = mapEntryTitleForLine(parsedLine);
+            feature.label = pointType.isEmpty() ? mapEntryTitleForLine(parsedLine) : pointType;
             feature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
             feature.subtitle = mapEntrySubtitleForLine(parsedLine);
+            feature.optionValues = optionValuesByFieldName(parsedLine.tokens);
             feature.accent = mapEntryAccentForCategory(feature.category);
             feature.sourceAnchor = pointTokens.first();
             feature.anchor = feature.sourceAnchor;
@@ -1974,7 +2252,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
                                                             QStringLiteral("orient")})) {
                 feature.orientationDegrees = normalizedSceneOrientationDegrees(orientation.value());
             }
-            feature.stationPoint = false;
+            feature.stationPoint = pointType == QStringLiteral("station");
             features.append(feature);
             continue;
         }
@@ -1992,6 +2270,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             feature.label = mapEntryTitleForLine(parsedLine);
             feature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
             feature.subtitle = mapEntrySubtitleForLine(parsedLine);
+            feature.optionValues = optionValuesByFieldName(parsedLine.tokens);
             feature.accent = mapEntryAccentForCategory(feature.category);
             feature.sourceAnchor = pointTokens.first();
             feature.anchor = feature.sourceAnchor;

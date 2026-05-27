@@ -2,10 +2,13 @@
   "fill_color": "#5E6673",
   "fill_pattern": {
     "kind": "dots",
-    "spacing": 8.0,
-    "radius": 1.1,
+    "symbol": "square",
+    "spacing": 9.0,
+    "size": 3.0,
+    "size_jitter": 0.8,
     "dot_color": "#2B323F",
-    "offset_jitter": 2.5,
+    "angle_jitter": 45.0,
+    "offset_jitter": 3.0,
     "seed": 221
   },
   "stroke_color": "#2B323F",

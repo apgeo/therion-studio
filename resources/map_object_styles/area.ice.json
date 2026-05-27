@@ -1,14 +1,17 @@
 {
   "fill_color": "#BFE9FF",
   "fill_pattern": {
-    "kind": "hatch",
-    "spacing": 10.0,
-    "stroke_angle": 55,
-    "stroke_width": 0.5,
-    "stroke_style": "solid",
-    "stroke_color": "#4B9DD6"
+    "kind": "cross_hatch",
+    "spacing": 13.0,
+    "stroke_angle": 45,
+    "stroke_width": 0.45,
+    "stroke_style": "dotted",
+    "stroke_color": "#4B9DD6",
+    "angle_jitter": 4.0,
+    "offset_jitter": 2.0,
+    "seed": 402
   },
   "stroke_color": "#4B9DD6",
   "stroke_width": 1.1,
-  "fill_opacity": 0.24
+  "fill_opacity": 0.22
 }

@@ -48,6 +48,57 @@ const MapGeometryFeature *firstLineFeature(const QVector<MapGeometryFeature> &fe
     return nullptr;
 }
 
+QVector<const MapGeometryFeature *> pointFeatures(const QVector<MapGeometryFeature> &features)
+{
+    QVector<const MapGeometryFeature *> points;
+    for (const MapGeometryFeature &feature : features) {
+        if (feature.kind == MapGeometryFeature::Kind::Point) {
+            points.append(&feature);
+        }
+    }
+    return points;
+}
+
+int runPointTypeAndLabelOptionParsingTest()
+{
+    const QString text =
+        QStringLiteral("point 10 20 station -name P1\n"
+                       "point 30 40 label -text \"large<br>dome\"\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    const QVector<const MapGeometryFeature *> points = pointFeatures(features);
+    if (!expect(points.size() == 2, "Expected two point features to parse.")) {
+        return 1;
+    }
+
+    const MapGeometryFeature *station = points.at(0);
+    if (!expect(station->label == QStringLiteral("station"),
+                "Expected standard point-coordinate station syntax to resolve the point type.")) {
+        return 1;
+    }
+    if (!expect(station->stationPoint,
+                "Expected standard point-coordinate station syntax to mark the feature as a station point.")) {
+        return 1;
+    }
+    if (!expect(station->optionValues.value(QStringLiteral("name")) == QStringLiteral("P1"),
+                "Expected station -name option to be available for style-driven labels.")) {
+        return 1;
+    }
+
+    const MapGeometryFeature *label = points.at(1);
+    if (!expect(label->label == QStringLiteral("label"),
+                "Expected standard point-coordinate label syntax to resolve the point type.")) {
+        return 1;
+    }
+    if (!expect(label->optionValues.value(QStringLiteral("text")) == QStringLiteral("large<br>dome"),
+                "Expected label -text option to be available for style-driven labels.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runBezierSegmentParsingTest()
 {
     const QString text =
@@ -783,6 +834,9 @@ int runScrapScaleSourceUnitsPerMeterTest()
 
 int main()
 {
+    if (const int rc = runPointTypeAndLabelOptionParsingTest(); rc != 0) {
+        return rc;
+    }
     if (const int rc = runBezierSegmentParsingTest(); rc != 0) {
         return rc;
     }

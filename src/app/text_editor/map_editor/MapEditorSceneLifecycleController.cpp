@@ -196,9 +196,6 @@ void MapEditorSceneLifecycleController::applyZoomAtViewportPosition(qreal factor
     const QPoint viewportPoint = viewportPosition.toPoint();
     const QPointF scenePointBefore = context_.view->mapToScene(viewportPoint);
     context_.view->scale(appliedFactor, appliedFactor);
-    if (context_.reprojectMetadataBackgroundLayersForCurrentDocument) {
-        context_.reprojectMetadataBackgroundLayersForCurrentDocument();
-    }
     const QPointF scenePointAfter = context_.view->mapToScene(viewportPoint);
     const QPointF sceneDelta = scenePointAfter - scenePointBefore;
     context_.view->translate(sceneDelta.x(), sceneDelta.y());

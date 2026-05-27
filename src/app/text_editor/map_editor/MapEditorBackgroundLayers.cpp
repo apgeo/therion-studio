@@ -14,7 +14,6 @@
 #include <QJsonObject>
 #include <QLineF>
 #include <QPainter>
-#include <QPainterPath>
 #include <QPixmap>
 #include <QRegularExpression>
 #include <QScopedValueRollback>
@@ -683,8 +682,8 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
         return stationPointKeys.contains(stationKey(point));
     };
 
-    QPainterPath traverseShotPath;
-    QPainterPath splayShotPath;
+    QVector<QLineF> traverseShotLines;
+    QVector<QLineF> splayShotLines;
     for (const QLineF &shot : xvi.shots) {
         const QPointF rawStart = shot.p1();
         const QPointF rawEnd = shot.p2();
@@ -696,9 +695,8 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
         const QPointF projectedEnd = modelToPreviewPoint(rawEnd + offset, effectiveModelBounds, previewBounds);
         includePoint(projectedStart);
         includePoint(projectedEnd);
-        QPainterPath &targetPath = isSplay ? splayShotPath : traverseShotPath;
-        targetPath.moveTo(projectedStart);
-        targetPath.lineTo(projectedEnd);
+        QVector<QLineF> &targetLines = isSplay ? splayShotLines : traverseShotLines;
+        targetLines.append(QLineF(projectedStart, projectedEnd));
     }
 
     QHash<QString, int> sketchPathIndexByStyle;
@@ -723,28 +721,27 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
             targetPathIndex = sketchPaths.size() - 1;
             sketchPathIndexByStyle.insert(styleKey, targetPathIndex);
         }
-        QPainterPath &targetPath = sketchPaths[targetPathIndex].path;
+        QVector<QLineF> &targetLines = sketchPaths[targetPathIndex].lines;
 
         QPointF previousPoint = modelToPreviewPoint(polyline.first() + offset, effectiveModelBounds, previewBounds);
         includePoint(previousPoint);
-        targetPath.moveTo(previousPoint);
         for (int index = 1; index < polyline.size(); ++index) {
             const QPointF point = modelToPreviewPoint(polyline.at(index) + offset, effectiveModelBounds, previewBounds);
             includePoint(point);
-            targetPath.lineTo(point);
+            targetLines.append(QLineF(previousPoint, point));
             previousPoint = point;
         }
     }
 
     bool hasSketchPaths = false;
     for (const MapEditorXviSketchPathData &sketchPath : sketchPaths) {
-        if (!sketchPath.path.isEmpty()) {
+        if (!sketchPath.lines.isEmpty()) {
             hasSketchPaths = true;
             break;
         }
     }
 
-    if (traverseShotPath.isEmpty() && splayShotPath.isEmpty() && !hasSketchPaths && !xvi.hasGridDefinition) {
+    if (traverseShotLines.isEmpty() && splayShotLines.isEmpty() && !hasSketchPaths && !xvi.hasGridDefinition) {
         return false;
     }
 
@@ -761,7 +758,7 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
 
     const QPointF layerTopLeft = clippedBounds.topLeft();
 
-    QPainterPath gridPath;
+    QVector<QLineF> gridLines;
     if (xvi.hasGridDefinition) {
         const int spanX = qMax(0, xvi.gridCountX - 1);
         const int spanY = qMax(0, xvi.gridCountY - 1);
@@ -769,62 +766,45 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
         for (int row = 0; row <= spanY; ++row) {
             const QPointF start = modelToPreviewPoint(gridP00 + (xvi.gridVectorY * row), effectiveModelBounds, previewBounds) - layerTopLeft;
             const QPointF end = modelToPreviewPoint(gridP00 + (xvi.gridVectorY * row) + (xvi.gridVectorX * spanX), effectiveModelBounds, previewBounds) - layerTopLeft;
-            gridPath.moveTo(start);
-            gridPath.lineTo(end);
+            gridLines.append(QLineF(start, end));
         }
         for (int column = 0; column <= spanX; ++column) {
             const QPointF start = modelToPreviewPoint(gridP00 + (xvi.gridVectorX * column), effectiveModelBounds, previewBounds) - layerTopLeft;
             const QPointF end = modelToPreviewPoint(gridP00 + (xvi.gridVectorX * column) + (xvi.gridVectorY * spanY), effectiveModelBounds, previewBounds) - layerTopLeft;
-            gridPath.moveTo(start);
-            gridPath.lineTo(end);
+            gridLines.append(QLineF(start, end));
         }
     }
 
-    auto normalizedPath = [&](const QPainterPath &sourcePath) {
-        QPainterPath path;
-        for (int elementIndex = 0; elementIndex < sourcePath.elementCount(); ++elementIndex) {
-            const QPainterPath::Element element = sourcePath.elementAt(elementIndex);
-            const QPointF point(element.x, element.y);
-            if (element.isMoveTo()) {
-                path.moveTo(point - layerTopLeft);
-            } else {
-                path.lineTo(point - layerTopLeft);
-            }
+    auto normalizedLines = [&](const QVector<QLineF> &sourceLines) {
+        QVector<QLineF> lines;
+        lines.reserve(sourceLines.size());
+        for (const QLineF &line : sourceLines) {
+            lines.append(QLineF(line.p1() - layerTopLeft, line.p2() - layerTopLeft));
         }
-        return path;
+        return lines;
     };
 
-    QPainterPath normalizedTraverseShots;
-    for (int elementIndex = 0; elementIndex < traverseShotPath.elementCount(); ++elementIndex) {
-        const QPainterPath::Element element = traverseShotPath.elementAt(elementIndex);
-        const QPointF point(element.x, element.y);
-        if (element.isMoveTo()) {
-            normalizedTraverseShots.moveTo(point - layerTopLeft);
-        } else {
-            normalizedTraverseShots.lineTo(point - layerTopLeft);
-        }
-    }
-
-    const QPainterPath normalizedSplayShots = normalizedPath(splayShotPath);
+    const QVector<QLineF> normalizedTraverseShots = normalizedLines(traverseShotLines);
+    const QVector<QLineF> normalizedSplayShots = normalizedLines(splayShotLines);
     QVector<MapEditorXviSketchPathData> normalizedSketchPaths;
     normalizedSketchPaths.reserve(sketchPaths.size());
     for (const MapEditorXviSketchPathData &sketchPath : sketchPaths) {
-        if (sketchPath.path.isEmpty()) {
+        if (sketchPath.lines.isEmpty()) {
             continue;
         }
         MapEditorXviSketchPathData normalizedSketch;
         normalizedSketch.color = sketchPath.color;
         normalizedSketch.style = sketchPath.style;
-        normalizedSketch.path = normalizedPath(sketchPath.path);
-        if (!normalizedSketch.path.isEmpty()) {
+        normalizedSketch.lines = normalizedLines(sketchPath.lines);
+        if (!normalizedSketch.lines.isEmpty()) {
             normalizedSketchPaths.append(normalizedSketch);
         }
     }
 
     MapEditorXviLayerGeometryData result;
-    result.gridPath = gridPath;
-    result.traverseShotPath = normalizedTraverseShots;
-    result.splayShotPath = normalizedSplayShots;
+    result.gridLines = gridLines;
+    result.traverseShotLines = normalizedTraverseShots;
+    result.splayShotLines = normalizedSplayShots;
     result.sketchPaths = normalizedSketchPaths;
     result.contentBounds = QRectF(QPointF(0.0, 0.0), clippedBounds.size());
     if (!result.hasContent()) {

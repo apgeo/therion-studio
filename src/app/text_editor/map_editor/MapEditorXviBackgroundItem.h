@@ -2,24 +2,34 @@
 
 #include <QColor>
 #include <QGraphicsPixmapItem>
-#include <QPainterPath>
+#include <QLineF>
 #include <QRectF>
 #include <QVector>
 
 namespace TherionStudio
 {
+struct MapEditorXviLineTile
+{
+    QRectF bounds;
+    QVector<int> lineIndexes;
+};
+
 struct MapEditorXviSketchPathData
 {
-    QPainterPath path;
+    QVector<QLineF> lines;
+    QVector<MapEditorXviLineTile> tiles;
     QColor color;
     Qt::PenStyle style = Qt::SolidLine;
 };
 
 struct MapEditorXviLayerGeometryData
 {
-    QPainterPath gridPath;
-    QPainterPath traverseShotPath;
-    QPainterPath splayShotPath;
+    QVector<QLineF> gridLines;
+    QVector<MapEditorXviLineTile> gridTiles;
+    QVector<QLineF> traverseShotLines;
+    QVector<MapEditorXviLineTile> traverseShotTiles;
+    QVector<QLineF> splayShotLines;
+    QVector<MapEditorXviLineTile> splayShotTiles;
     QVector<MapEditorXviSketchPathData> sketchPaths;
     QRectF contentBounds;
 
@@ -27,15 +37,15 @@ struct MapEditorXviLayerGeometryData
     {
         bool hasSketch = false;
         for (const MapEditorXviSketchPathData &sketch : sketchPaths) {
-            if (sketch.path.elementCount() > 0) {
+            if (!sketch.lines.isEmpty()) {
                 hasSketch = true;
                 break;
             }
         }
         return !contentBounds.isEmpty()
-            && (gridPath.elementCount() > 0
-                || traverseShotPath.elementCount() > 0
-                || splayShotPath.elementCount() > 0
+            && (!gridLines.isEmpty()
+                || !traverseShotLines.isEmpty()
+                || !splayShotLines.isEmpty()
                 || hasSketch);
     }
 };

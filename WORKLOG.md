@@ -10,6 +10,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1 - Block-canvas drag-loop crash hardening on macOS: guard drag-preview/drop callbacks during TextEditorTab teardown and verify no stale callback path remains around `.th2` + `.xvi` workflows.
 - P1 - Block editor logical-line continuation support: treat trailing `\` command continuations as one command block across parsing/details/apply/configure/delete paths and verify with UI regression coverage.
 - P1 - Map canvas zoom-level rendering balance: keep zoomed-out overview readable by reducing dominant geometry and `.xvi` stroke/handle visual weight without hurting editability at normal zoom.
+- P1 - Background layer visibility persistence: keep manual `.xvi` show/hide state stable across zoom/reprojection refreshes and session reloads without treating old session `visible` values as metadata overrides.
 - P1 - Map canvas pan/zoom performance: keep point labels cached inside point items, suppress distant labels, limit pattern repaints to exposed rects, and use a viewport update strategy that avoids excessive region bookkeeping with many scene items.
 - P1 - Map line-style simplification: remove legacy secondary line-detail overlay (`detailWidth`/`detailColor`) and keep a single-stroke line style model.
 - P1 - Style schema naming cleanup: use consistent `stroke_width` keys for point and line widths in map style JSON (no legacy aliases).

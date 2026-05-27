@@ -43,6 +43,7 @@ using XviDocument = TherionXviDocument;
 using XtherionAreaAdjust = TherionAreaAdjust;
 
 constexpr int kBackgroundLayerXviGeometryKeyRole = 100;
+constexpr int kBackgroundLayerUserVisibilityRole = 101;
 
 struct CachedXviDocumentEntry
 {
@@ -108,6 +109,31 @@ XtherionAreaAdjust parseXtherionAreaAdjust(const QString &documentText)
 bool isXviBackgroundPath(const QString &layerPath)
 {
     return layerPath.endsWith(QStringLiteral(".xvi"), Qt::CaseInsensitive);
+}
+
+bool hasUserVisibilityOverride(const QGraphicsPixmapItem *item)
+{
+    return item != nullptr && item->data(kBackgroundLayerUserVisibilityRole).toBool();
+}
+
+void setBackgroundLayerVisibleFromMetadata(QGraphicsPixmapItem *item, bool visible)
+{
+    if (item == nullptr || hasUserVisibilityOverride(item)) {
+        return;
+    }
+
+    item->setVisible(visible);
+}
+
+void setBackgroundLayerVisibleFromUser(QGraphicsPixmapItem *item, bool visible)
+{
+    if (item == nullptr) {
+        return;
+    }
+
+    item->setVisible(visible);
+    // .xvi visibility is session/UI state because xth metadata updates are raster-only here.
+    item->setData(kBackgroundLayerUserVisibilityRole, isXviBackgroundPath(item->data(0).toString()));
 }
 
 QString quantizedNumberToken(qreal value)
@@ -1084,7 +1110,7 @@ void MapEditorTab::toggleSelectedBackgroundLayerVisibility()
         return;
     }
 
-    item->setVisible(!item->isVisible());
+    setBackgroundLayerVisibleFromUser(item, !item->isVisible());
     syncBackgroundLayerXtherionMetadata(item, tr("Toggle Background Visibility"), true);
     saveBackgroundLayersToSession();
     refreshBackgroundLayerControls();
@@ -1329,6 +1355,9 @@ void MapEditorTab::saveBackgroundLayersToSession() const
         QJsonObject layerObject;
         layerObject.insert(QStringLiteral("path"), layerPath);
         layerObject.insert(QStringLiteral("visible"), item->isVisible());
+        if (hasUserVisibilityOverride(item)) {
+            layerObject.insert(QStringLiteral("visibility_override"), true);
+        }
         layerObject.insert(QStringLiteral("opacity"), item->opacity());
         layerObject.insert(QStringLiteral("gamma"), backgroundLayerGammaValue(item));
         layerObject.insert(QStringLiteral("x"), item->pos().x());
@@ -1431,9 +1460,22 @@ void MapEditorTab::loadBackgroundLayersFromSession()
         }
 
         QGraphicsPixmapItem *item = backgroundImageItems_.last();
-        item->setVisible(hasMetadata && metadataReference->hasVisibility
-                             ? metadataReference->visible
-                             : layerObject.value(QStringLiteral("visible")).toBool(true));
+        const bool metadataHasVisibility = hasMetadata && metadataReference->hasVisibility;
+        const bool metadataVisible = metadataHasVisibility ? metadataReference->visible : true;
+        const QJsonValue sessionVisibleValue = layerObject.value(QStringLiteral("visible"));
+        const bool sessionVisible = sessionVisibleValue.isBool()
+            ? sessionVisibleValue.toBool()
+            : metadataVisible;
+        const bool legacyHiddenXviOverride = !layerObject.contains(QStringLiteral("visibility_override"))
+            && isXviBackgroundPath(layerPath)
+            && layerObject.contains(QStringLiteral("visible"))
+            && !sessionVisible;
+        const QJsonValue visibilityOverrideValue = layerObject.value(QStringLiteral("visibility_override"));
+        const bool hasVisibilityOverride = visibilityOverrideValue.isBool()
+            ? visibilityOverrideValue.toBool()
+            : legacyHiddenXviOverride;
+        item->setVisible((hasVisibilityOverride || !metadataHasVisibility) ? sessionVisible : metadataVisible);
+        item->setData(kBackgroundLayerUserVisibilityRole, hasVisibilityOverride);
         const qreal opacity = layerObject.value(QStringLiteral("opacity")).toDouble(0.58);
         item->setOpacity(qBound(0.05, opacity, 1.0));
         if (hasMetadata && metadataReference->hasBasePosition && !metadataReference->xviReference) {
@@ -1521,7 +1563,7 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
                 applyBackgroundLayerGamma(existingLayer, qBound(0.2, existingMetadata->imageScale, 2.5));
             }
             if (existingMetadata->hasVisibility) {
-                existingLayer->setVisible(existingMetadata->visible);
+                setBackgroundLayerVisibleFromMetadata(existingLayer, existingMetadata->visible);
             }
         }
     }
@@ -1557,7 +1599,7 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
             QGraphicsPixmapItem *backgroundItem = backgroundImageItems_.last();
             backgroundItem->setData(4, true);
             if (reference.hasVisibility) {
-                backgroundItem->setVisible(reference.visible);
+                setBackgroundLayerVisibleFromMetadata(backgroundItem, reference.visible);
             }
             applyBackgroundLayerStackingOrder();
             setSelectedBackgroundLayerIndexInternal(backgroundImageItems_.size() - 1);
@@ -1582,7 +1624,7 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
 
         item->setData(4, true);
         if (reference.hasVisibility) {
-            item->setVisible(reference.visible);
+            setBackgroundLayerVisibleFromMetadata(item, reference.visible);
         }
         if (reference.hasBasePosition && sourceBounds.isValid() && previewBounds.isValid()) {
             placeRasterLayerFromMetadata(item,
@@ -1674,7 +1716,7 @@ void MapEditorTab::reprojectMetadataBackgroundLayersForCurrentDocument()
             }
             existingLayer->setData(4, true);
             if (metadataReference->hasVisibility) {
-                existingLayer->setVisible(metadataReference->visible);
+                setBackgroundLayerVisibleFromMetadata(existingLayer, metadataReference->visible);
             }
             updatedAnyLayer = true;
             continue;
@@ -1691,7 +1733,7 @@ void MapEditorTab::reprojectMetadataBackgroundLayersForCurrentDocument()
                 : backgroundLayerGammaValue(existingLayer);
             applyBackgroundLayerGamma(existingLayer, gamma);
             if (metadataReference->hasVisibility) {
-                existingLayer->setVisible(metadataReference->visible);
+                setBackgroundLayerVisibleFromMetadata(existingLayer, metadataReference->visible);
             }
             updatedAnyLayer = true;
         }

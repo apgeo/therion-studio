@@ -49,6 +49,7 @@
 #include <QJsonObject>
 #include <QSignalBlocker>
 #include <functional>
+#include <utility>
 
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
@@ -429,23 +430,35 @@ private:
 } // namespace
 
 MainWindow::MainWindow(QWidget *parent)
-    : MainWindow(std::make_unique<TherionStudio::SessionSettingsStore>(), parent)
+    : MainWindow(std::make_unique<TherionStudio::SessionSettingsStore>(),
+                 TherionStudio::CommandCatalogStore(),
+                 parent)
 {
 }
 
-MainWindow::MainWindow(std::unique_ptr<TherionStudio::ISessionStore> sessionStore, QWidget *parent)
-    : MainWindow(*sessionStore, parent)
+MainWindow::MainWindow(std::unique_ptr<TherionStudio::ISessionStore> sessionStore,
+                       TherionStudio::CommandCatalogStore commandCatalogStore,
+                       QWidget *parent)
+    : MainWindow(*sessionStore, std::move(commandCatalogStore), parent)
 {
     ownedSessionStore_ = std::move(sessionStore);
 }
 
 MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore, QWidget *parent)
+    : MainWindow(sessionStore, TherionStudio::CommandCatalogStore(), parent)
+{
+}
+
+MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
+                       TherionStudio::CommandCatalogStore commandCatalogStore,
+                       QWidget *parent)
     : QMainWindow(parent)
     , editorTabs_(new QTabWidget(this))
     , projectModel_(new QFileSystemModel(this))
     , structureModel_(new QStandardItemModel(this))
     , mapObjectsModel_(new QStandardItemModel(this))
     , sessionStore_(&sessionStore)
+    , commandCatalogStore_(std::move(commandCatalogStore))
     , structureSidebarScanner_(new TherionStudio::ProjectStructureScanner(this))
 {
     setWindowTitle(tr("Therion Studio"));
@@ -1658,7 +1671,7 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
         }
     }
 
-    auto *tab = new TherionStudio::TextEditorTab(fileSystem_);
+    auto *tab = new TherionStudio::TextEditorTab(fileSystem_, commandCatalogStore_);
     tab->setModeSelectorVisible(false);
     tab->setProjectRootPath(projectRootPath_);
     QString errorMessage;
@@ -1781,7 +1794,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         }
     }
 
-    auto *tab = new TherionStudio::MapEditorTab(*sessionStore_);
+    auto *tab = new TherionStudio::MapEditorTab(*sessionStore_, commandCatalogStore_);
     tab->setInlineWorkspaceModeSelectorVisible(false);
     tab->setProjectRootPath(projectRootPath_);
     QString errorMessage;

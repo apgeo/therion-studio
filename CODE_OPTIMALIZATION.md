@@ -32,6 +32,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 1 partial: `MapEditorTab` accepts an explicit `CommandCatalogStore` for map inspector/orientation metadata construction.
 - [x] Phase 1 partial: `TherionSyntaxHighlighter` accepts an explicit `CommandCatalogStore` instead of loading command metadata directly from resources.
 - [x] Phase 1 partial: `TextEditorTab` owns a single `CommandCatalogStore` and passes it to raw help/completion metadata and syntax highlighting.
+- [x] Phase 1 partial: `MainWindow` owns one `CommandCatalogStore` and passes it to text and map editor tabs.
 - [ ] Phase 1 remaining: command catalog access is injectable across all command metadata consumers.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.

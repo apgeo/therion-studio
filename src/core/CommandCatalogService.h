@@ -22,10 +22,4 @@ private:
     QJsonObject catalogObject_;
 };
 
-class CommandCatalogService final
-{
-public:
-    static const QJsonObject &catalogObject();
-    static bool isCatalogAvailable();
-};
 }

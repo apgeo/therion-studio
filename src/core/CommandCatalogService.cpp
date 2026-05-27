@@ -47,14 +47,4 @@ bool CommandCatalogStore::isCatalogAvailable() const
     return !catalogObject_.isEmpty();
 }
 
-const QJsonObject &CommandCatalogService::catalogObject()
-{
-    static const CommandCatalogStore catalogStore;
-    return catalogStore.catalogObject();
-}
-
-bool CommandCatalogService::isCatalogAvailable()
-{
-    return !catalogObject().isEmpty();
-}
 }

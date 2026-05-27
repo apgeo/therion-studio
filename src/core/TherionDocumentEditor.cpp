@@ -302,6 +302,46 @@ QString formatCoordinate(qreal value)
     return QString::number(value, 'f', 1);
 }
 
+QString draftObjectTypeToken(const TherionDraftObjectOptions &options, const QString &fallbackType)
+{
+    const QString type = options.type.trimmed().isEmpty()
+        ? fallbackType.trimmed()
+        : options.type.trimmed();
+    const QString serializedType = serializedInlineToken(type);
+    return serializedType.isEmpty() ? serializedInlineToken(fallbackType) : serializedType;
+}
+
+QString draftObjectOptionsSuffix(const TherionDraftObjectOptions &options, bool includeName)
+{
+    QString suffix;
+    const QString subtype = serializedInlineToken(options.subtype);
+    if (!subtype.isEmpty()) {
+        suffix += QStringLiteral(" -subtype %1").arg(subtype);
+    }
+
+    const QString identifier = serializedInlineToken(options.identifier);
+    if (!identifier.isEmpty()) {
+        suffix += QStringLiteral(" -id %1").arg(identifier);
+    }
+
+    const QString name = serializedInlineToken(options.name);
+    if (includeName && options.nameEnabled && !name.isEmpty()) {
+        suffix += QStringLiteral(" -name %1").arg(name);
+    }
+    return suffix;
+}
+
+QString draftObjectHeader(const QString &directive,
+                          const QString &fallbackType,
+                          const TherionDraftObjectOptions &options,
+                          bool includeName = false)
+{
+    return QStringLiteral("%1 %2%3")
+        .arg(directive,
+             draftObjectTypeToken(options, fallbackType),
+             draftObjectOptionsSuffix(options, includeName));
+}
+
 QString formatCoordinateLikeExistingToken(const QString &existingToken, qreal value)
 {
     QString token = existingToken.trimmed();
@@ -1194,7 +1234,8 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
                                                 const QString &kind,
                                                 const QVector<QPointF> &vertices,
                                                 int *insertedLineNumber,
-                                                QString *errorMessage)
+                                                QString *errorMessage,
+                                                const TherionDraftObjectOptions &objectOptions)
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
@@ -1247,10 +1288,23 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
     int insertionLineOffset = 0;
     if (normalizedKind == QStringLiteral("point")) {
         const QPointF anchor = vertices.first();
-        geometryLines.append(QStringLiteral("  point %1 %2 station -name draft-point")
-                                 .arg(formatCoordinate(anchor.x()), formatCoordinate(anchor.y())));
+        TherionDraftObjectOptions pointOptions = objectOptions;
+        if (pointOptions.type.trimmed().isEmpty()) {
+            pointOptions.type = QStringLiteral("station");
+        }
+        if (!pointOptions.nameEnabled
+            && pointOptions.name.trimmed().isEmpty()
+            && pointOptions.type.trimmed().compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0) {
+            pointOptions.name = QStringLiteral("draft-point");
+            pointOptions.nameEnabled = true;
+        }
+        geometryLines.append(QStringLiteral("  point %1 %2 %3")
+                                 .arg(formatCoordinate(anchor.x()),
+                                      formatCoordinate(anchor.y()),
+                                      draftObjectHeader(QString(), QStringLiteral("station"), pointOptions, true).trimmed()));
     } else if (normalizedKind == QStringLiteral("line")) {
-        geometryLines.append(QStringLiteral("  line wall"));
+        geometryLines.append(QStringLiteral("  %1")
+                                 .arg(draftObjectHeader(QStringLiteral("line"), QStringLiteral("wall"), objectOptions)));
         for (const QPointF &vertex : vertices) {
             geometryLines.append(QStringLiteral("    %1 %2")
                                      .arg(formatCoordinate(vertex.x()), formatCoordinate(vertex.y())));
@@ -1274,7 +1328,8 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         }
         geometryLines.append(QStringLiteral("  endline"));
         insertionLineOffset = geometryLines.size();
-        geometryLines.append(QStringLiteral("  area water"));
+        geometryLines.append(QStringLiteral("  %1")
+                                 .arg(draftObjectHeader(QStringLiteral("area"), QStringLiteral("water"), objectOptions)));
         geometryLines.append(QStringLiteral("    %1").arg(borderIdentifier));
         geometryLines.append(QStringLiteral("  endarea"));
     }
@@ -1301,7 +1356,8 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
                                                     const QStringList &coordinateRows,
                                                     int *insertedLineNumber,
                                                     QString *errorMessage,
-                                                    const QString &lineOptions)
+                                                    const QString &lineOptions,
+                                                    const TherionDraftObjectOptions &objectOptions)
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
@@ -1348,10 +1404,11 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
 
     QStringList geometryLines;
     const QString normalizedLineOptions = lineOptions.trimmed();
+    const QString lineHeader = draftObjectHeader(QStringLiteral("line"), QStringLiteral("wall"), objectOptions);
     if (normalizedLineOptions.isEmpty()) {
-        geometryLines.append(QStringLiteral("  line wall"));
+        geometryLines.append(QStringLiteral("  %1").arg(lineHeader));
     } else {
-        geometryLines.append(QStringLiteral("  line wall %1").arg(normalizedLineOptions));
+        geometryLines.append(QStringLiteral("  %1 %2").arg(lineHeader, normalizedLineOptions));
     }
     for (const QString &row : std::as_const(normalizedRows)) {
         geometryLines.append(QStringLiteral("    %1").arg(row));
@@ -1379,7 +1436,8 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
 bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
                                                     const QStringList &coordinateRows,
                                                     int *insertedLineNumber,
-                                                    QString *errorMessage)
+                                                    QString *errorMessage,
+                                                    const TherionDraftObjectOptions &objectOptions)
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
@@ -1441,7 +1499,8 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
         geometryLines.append(QStringLiteral("    %1").arg(row));
     }
     geometryLines.append(QStringLiteral("  endline"));
-    geometryLines.append(QStringLiteral("  area water"));
+    geometryLines.append(QStringLiteral("  %1")
+                             .arg(draftObjectHeader(QStringLiteral("area"), QStringLiteral("water"), objectOptions)));
     geometryLines.append(QStringLiteral("    %1").arg(borderIdentifier));
     geometryLines.append(QStringLiteral("  endarea"));
 

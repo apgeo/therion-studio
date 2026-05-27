@@ -1,0 +1,17 @@
+{
+  "stroke_visible": false,
+  "decorations": [
+    {
+      "kind": "symbols",
+      "symbol": "triangle",
+      "side": "center",
+      "spacing": 13,
+      "size": 10,
+      "size_jitter": 1.8,
+      "angle_jitter": 20,
+      "stroke_color": "#1C1C1E",
+      "fill_color": "#FFFFFF",
+      "stroke_width": 1.3
+    }
+  ]
+}

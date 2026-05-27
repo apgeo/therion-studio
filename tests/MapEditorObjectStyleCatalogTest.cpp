@@ -85,6 +85,36 @@ int prepareUserOverrideFixture(QTemporaryDir *temporaryDir)
     }
 
     if (const int result =
+            writeJsonFixtureFile(overrideDirectory.filePath(QStringLiteral("line.decorated.json")),
+                                 R"json({
+  "stroke_visible": false,
+  "decorations": [
+    {
+      "kind": "symbols",
+      "symbol": "oval",
+      "side": "center",
+      "spacing": 11,
+      "size": 7.5,
+      "size_jitter": 2.0,
+      "angle_jitter": 25.0,
+      "stroke_color": "#112233",
+      "fill_color": "#ffffff",
+      "stroke_width": 1.1
+    },
+    {
+      "kind": "rungs",
+      "from_offset": -4,
+      "to_offset": 4,
+      "spacing": 9,
+      "stroke_width": 0.9
+    }
+  ]
+})json");
+        result != 0) {
+        return 1;
+    }
+
+    if (const int result =
             writeJsonFixtureFile(overrideDirectory.filePath(QStringLiteral("point.override.json")),
                                  R"json({
   "symbol": "x",
@@ -197,6 +227,30 @@ int runCatalogTest()
         return 1;
     }
 
+    const MapEditorResolvedLineStyle wallPebblesStyle =
+        resolveMapEditorLineStyle(catalog, QStringLiteral("wall"), QStringLiteral("pebbles"));
+    if (!expect(!wallPebblesStyle.strokeVisible,
+                "Expected wall pebbles line style to hide the base stroke.")) {
+        return 1;
+    }
+    if (!expect(wallPebblesStyle.decorations.size() == 1
+                    && wallPebblesStyle.decorations.first().symbol == MapEditorPointSymbol::Oval,
+                "Expected wall pebbles line style to render oval symbol decorations.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedLineStyle ropeLadderStyle =
+        resolveMapEditorLineStyle(catalog, QStringLiteral("rope-ladder"));
+    if (!expect(!ropeLadderStyle.strokeVisible && ropeLadderStyle.decorations.size() == 2,
+                "Expected rope-ladder line style to use parallel stroke and rung decorations.")) {
+        return 1;
+    }
+    if (!expect(ropeLadderStyle.decorations.first().kind == MapEditorLineDecorationKind::Parallel
+                    && ropeLadderStyle.decorations.at(1).kind == MapEditorLineDecorationKind::Rungs,
+                "Expected rope-ladder line decorations to preserve declaration order.")) {
+        return 1;
+    }
+
     const MapEditorResolvedLineStyle borderStyle = resolveMapEditorLineStyle(catalog, QStringLiteral("border"));
     if (!expect(!borderStyle.dashPattern.isEmpty(),
                 "Expected dash pattern override for border line style.")) {
@@ -207,6 +261,32 @@ int runCatalogTest()
         resolveMapEditorLineStyle(catalog, QStringLiteral("override"), QStringLiteral("aaa"));
     if (!expect(std::abs(overrideSubtypeStyle.strokeWidth - 1.25) < 1e-6,
                 "Expected subtype user override to take precedence over type override.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedLineStyle decoratedLineStyle =
+        resolveMapEditorLineStyle(catalog, QStringLiteral("decorated"));
+    if (!expect(!decoratedLineStyle.strokeVisible,
+                "Expected line style stroke_visible override to load.")) {
+        return 1;
+    }
+    if (!expect(decoratedLineStyle.decorations.size() == 2,
+                "Expected line style decorations to load from override.")) {
+        return 1;
+    }
+    if (!expect(decoratedLineStyle.decorations.first().kind == MapEditorLineDecorationKind::Symbols
+                    && decoratedLineStyle.decorations.first().symbol == MapEditorPointSymbol::Oval,
+                "Expected oval symbol line decoration to parse.")) {
+        return 1;
+    }
+    if (!expect(decoratedLineStyle.decorations.first().fillColor.has_value(),
+                "Expected line symbol decoration fill color to parse.")) {
+        return 1;
+    }
+    if (!expect(decoratedLineStyle.decorations.at(1).kind == MapEditorLineDecorationKind::Rungs
+                    && decoratedLineStyle.decorations.at(1).fromOffset.has_value()
+                    && decoratedLineStyle.decorations.at(1).toOffset.has_value(),
+                "Expected rung line decoration offsets to parse.")) {
         return 1;
     }
 

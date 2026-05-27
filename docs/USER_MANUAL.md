@@ -120,6 +120,10 @@ Line objects render as a single styled stroke; there is no separate secondary de
 - `Area`: click vertices, then press `Enter` or `Complete Draft`
 - `Freehand`: press-drag-release to insert a line
 
+Starting `Point`, `Line`, `Freehand`, or `Area` activates `Inspector -> Selection` before the first point/vertex is placed. Use the pending object fields there to set type, subtype, ID, and point name where applicable; the same values are written when the new object is inserted.
+
+`Insert Scrap` opens a pending scrap in `Inspector -> Selection` first. Set the scrap ID/projection there, then click `Insert Scrap` again to create the scrap block.
+
 While drafting line/area:
 
 - `Backspace`/`Delete` removes the last draft vertex
@@ -128,6 +132,12 @@ While drafting line/area:
 ### 6.4 Selection and Object Editing
 
 In `Inspector -> Selection`, you can edit properties for selected `Scrap`, `Point`, `Line`, or `Area`, including common fields like ID/type/subtype where supported.
+
+For point, line, and area objects, a style preview appears under `Subtype` as a full-width preview tile. The preview updates for selected objects and for pending insert objects before they are placed on the map. The tile uses a map-like light preview surface in both light and dark themes so dark map symbols remain readable. Area previews fill the preview tile so fill patterns are easier to inspect. The preview may still use preview-only contrast treatment for very low-contrast styles; the actual map rendering uses the configured style colors.
+
+When no map object or pending insert object is selected, the `Selection` tab shows the empty state instead of reusing the current text-cursor line.
+
+For filled areas, click inside the fill to select the area. Click directly on a line stroke, vertex, or control handle to select/edit the line instead.
 
 In `Inspector -> Objects`, you can:
 
@@ -262,10 +272,12 @@ Line style files support:
 
 | Parameter | Type | Meaning |
 |---|---|---|
+| `stroke_visible` | boolean | Whether to draw the base line stroke. Defaults to `true`. Set to `false` for symbol-only lines such as pebbles or blocks. |
 | `stroke_style` | string | One of `solid`, `dashed`, `dotted`, `dash-dot`, `dash-dot-dot`. |
 | `stroke_width` | number | Line stroke width. |
 | `stroke_color` | color string | Line stroke color. |
 | `dash_pattern` | number array | Custom dash pattern, for example `[8, 4]`. |
+| `decorations` | array | Optional repeated or offset line decorations drawn along the line geometry. |
 
 Example:
 
@@ -275,6 +287,67 @@ Example:
   "stroke_width": 2.0,
   "stroke_color": "#607089",
   "dash_pattern": [8, 4]
+}
+```
+
+Decoration entries support these `kind` values:
+
+| `kind` | Meaning |
+|---|---|
+| `offset_stroke` | Draw one parallel stroke at `offset`. |
+| `parallel` | Draw multiple parallel strokes from `offsets`. |
+| `ticks` | Draw repeated short tick marks. |
+| `rungs` | Draw repeated crossbars between `from_offset` and `to_offset`. |
+| `teeth` | Draw repeated filled triangular teeth on one side. |
+| `symbols` | Draw repeated built-in symbols. |
+
+Common decoration parameters:
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `side` | string | `center`, `left`, or `right`. Defaults to `center`; `teeth` default to `right`. |
+| `spacing` | number | Distance between repeated marks. |
+| `offset` | number | Normal offset from the line. With `side: left/right`, positive values move to that side. |
+| `offsets` | number array | Parallel offsets for `parallel`. |
+| `from_offset`, `to_offset` | number | Crossbar endpoints for `rungs`. |
+| `length` | number | Tick or rung length when explicit endpoints are not used. |
+| `size` | number | Tooth or symbol size. |
+| `symbol` | string | For `symbols`: one of `circle`, `oval`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, `x`. |
+| `stroke_style`, `stroke_width`, `stroke_color`, `dash_pattern` | mixed | Optional decoration-specific stroke styling. Defaults inherit the line stroke color where applicable. |
+| `fill_color` | color string | Fill color for filled teeth or symbols. |
+| `angle`, `angle_jitter`, `size_jitter`, `offset_jitter`, `seed` | mixed | Optional deterministic variation for repeated symbols. |
+
+Example symbol-only pebbles line:
+
+```json
+{
+  "stroke_visible": false,
+  "decorations": [
+    {
+      "kind": "symbols",
+      "symbol": "oval",
+      "side": "center",
+      "spacing": 10,
+      "size": 8,
+      "size_jitter": 2.5,
+      "angle_jitter": 30,
+      "stroke_color": "#1C1C1E",
+      "fill_color": "#FFFFFF",
+      "stroke_width": 1.2
+    }
+  ]
+}
+```
+
+Example ladder line:
+
+```json
+{
+  "stroke_visible": false,
+  "decorations": [
+    { "kind": "parallel", "offsets": [-5, 5], "stroke_width": 1.5 },
+    { "kind": "rungs", "from_offset": -5, "to_offset": 5, "spacing": 10, "stroke_width": 1.2 }
+  ]
 }
 ```
 

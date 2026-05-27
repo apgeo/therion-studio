@@ -6,6 +6,7 @@
 #include "MapEditorObjectDetailsLogic.h"
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSourceReferenceResolver.h"
+#include "MapEditorStylePreviewWidget.h"
 #include "../../../core/TherionDocumentParser.h"
 
 #include <QCheckBox>
@@ -85,11 +86,13 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.quickProjectionLabel == nullptr
         || context_.quickTypeLabel == nullptr
         || context_.quickSubtypeLabel == nullptr
+        || context_.stylePreviewLabel == nullptr
         || context_.quickTypeCombo == nullptr
         || context_.quickSubtypeCombo == nullptr
         || context_.quickProjectionCombo == nullptr
         || context_.quickIdentifierEdit == nullptr
         || context_.quickNameEdit == nullptr
+        || context_.stylePreview == nullptr
         || context_.vertexActionsEditor == nullptr
         || context_.vertexInsertBeforeButton == nullptr
         || context_.vertexInsertAfterButton == nullptr
@@ -123,35 +126,104 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
 
     const QScopedValueRollback<bool> uiGuard(*context_.updatingUi, true);
 
-    int effectiveLineNumber = *context_.selectedObjectLineNumber;
-    QString effectiveKind = context_.selectedObjectKind->trimmed().toLower();
+    auto clearStylePreview = [this]() {
+        context_.stylePreviewLabel->setVisible(false);
+        context_.stylePreview->clearStyleSelection();
+    };
+    auto showStylePreview = [this](const QString &commandKind, const QString &type, const QString &subtype) {
+        const QString normalizedCommand = commandKind.trimmed().toLower();
+        const bool visible = normalizedCommand == QStringLiteral("point")
+            || normalizedCommand == QStringLiteral("line")
+            || normalizedCommand == QStringLiteral("area");
+        context_.stylePreviewLabel->setVisible(visible);
+        if (visible) {
+            context_.stylePreview->setStyleSelection(normalizedCommand, type, subtype);
+        } else {
+            context_.stylePreview->clearStyleSelection();
+        }
+    };
 
-    if (!(effectiveLineNumber > 0 && isConfigurableMapObjectKind(effectiveKind)) && context_.textEditor != nullptr) {
-        const int cursorLineNumber = context_.textEditor->currentLineNumber();
-        if (cursorLineNumber > 0) {
-            QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-            for (QString &line : lines) {
-                if (line.endsWith(QLatin1Char('\r'))) {
-                    line.chop(1);
-                }
+    if (context_.pendingInsertQuickFields) {
+        const std::optional<InspectorObjectQuickFields> pendingFields = context_.pendingInsertQuickFields();
+        if (pendingFields.has_value() && !pendingFields->commandKind.trimmed().isEmpty()) {
+            const QString commandKind = pendingFields->commandKind.trimmed().toLower();
+            QString objectSectionTitle = commandKind;
+            if (commandKind == QStringLiteral("line")) {
+                objectSectionTitle = translate("New Line");
+            } else if (commandKind == QStringLiteral("area")) {
+                objectSectionTitle = translate("New Area");
+            } else if (commandKind == QStringLiteral("point")) {
+                objectSectionTitle = translate("New Point");
+            } else if (commandKind == QStringLiteral("scrap")) {
+                objectSectionTitle = translate("New Scrap");
             }
-            if (cursorLineNumber <= lines.size()) {
-                const TherionParsedLine parsedLine =
-                    TherionDocumentParser::parseLine(lines.at(cursorLineNumber - 1), cursorLineNumber);
-                const QString cursorKind = objectKindForDirective(parsedLine.directive);
-                if (!cursorKind.isEmpty()) {
-                    effectiveLineNumber = cursorLineNumber;
-                    effectiveKind = cursorKind;
-                }
-            }
+
+            context_.selectionLabel->setVisible(false);
+            context_.selectionSection->setVisible(true);
+            context_.selectionTitleLabel->setText(objectSectionTitle);
+            context_.vertexTitleLabel->setText(translate("Point Details"));
+            context_.metadataLabel->setText(translate("Pending insert"));
+            context_.deleteButton->setEnabled(false);
+            context_.deleteButton->setToolTip(QString());
+            context_.areaReferenceLabel->setVisible(false);
+            context_.areaReferenceLabel->clear();
+            context_.quickFieldsEditor->setVisible(true);
+            context_.objectQuickCommandKind->clear();
+            *context_.objectQuickCommandKind = commandKind;
+
+            const bool typeFieldsVisible = commandKind != QStringLiteral("scrap");
+            const bool projectionFieldVisible = commandKind == QStringLiteral("scrap");
+            context_.quickNameLabel->setVisible(pendingFields->nameVisible);
+            context_.quickProjectionLabel->setVisible(projectionFieldVisible);
+            context_.quickTypeLabel->setVisible(typeFieldsVisible);
+            context_.quickSubtypeLabel->setVisible(typeFieldsVisible);
+            context_.quickNameEdit->setVisible(pendingFields->nameVisible);
+            context_.quickProjectionCombo->setVisible(projectionFieldVisible);
+            context_.quickTypeCombo->setVisible(typeFieldsVisible);
+            context_.quickSubtypeCombo->setVisible(typeFieldsVisible);
+            context_.quickProjectionCombo->setEnabled(projectionFieldVisible);
+            context_.quickTypeCombo->setEnabled(typeFieldsVisible && pendingFields->typeEditable);
+            context_.quickSubtypeCombo->setEnabled(typeFieldsVisible && pendingFields->typeEditable);
+
+            const InspectorSymbolCatalog &catalog = inspectorSymbolCatalog();
+            setEditableComboValues(context_.quickTypeCombo,
+                                   inspectorTypeValuesForCommand(catalog, commandKind),
+                                   pendingFields->type);
+            setEditableComboValues(context_.quickProjectionCombo,
+                                   inspectorProjectionValues(catalog),
+                                   pendingFields->projection);
+            setEditableComboValues(context_.quickSubtypeCombo,
+                                   inspectorSubtypeValuesForCommandType(catalog, commandKind, pendingFields->type),
+                                   pendingFields->subtype);
+            context_.quickIdentifierLabel->setText(translate("ID"));
+            context_.quickIdentifierEdit->setText(pendingFields->identifier);
+            context_.quickNameEdit->setText(pendingFields->name);
+            showStylePreview(commandKind, pendingFields->type, pendingFields->subtype);
+
+            context_.vertexSection->setVisible(false);
+            context_.geometrySection->setVisible(false);
+            context_.advancedSection->setVisible(false);
+            context_.vertexActionsEditor->setVisible(false);
+            context_.orientationEditor->setVisible(false);
+            context_.lineOptionsEditor->setVisible(false);
+            context_.scrapScaleEditor->setVisible(false);
+            context_.configureButton->setVisible(false);
+            context_.configureButton->setEnabled(false);
+            context_.lineClosedCheck->setChecked(false);
+            context_.lineReversedCheck->setChecked(false);
+            return;
         }
     }
+
+    const int effectiveLineNumber = *context_.selectedObjectLineNumber;
+    const QString effectiveKind = context_.selectedObjectKind->trimmed().toLower();
 
     if (effectiveLineNumber <= 0 || effectiveKind.isEmpty()) {
         context_.selectionLabel->setText(translate("No map object selected."));
         context_.selectionLabel->setVisible(true);
         context_.selectionTitleLabel->setText(translate("Object"));
         context_.selectionSection->setVisible(false);
+        clearStylePreview();
         context_.vertexSection->setVisible(false);
         context_.geometrySection->setVisible(false);
         context_.advancedSection->setVisible(false);
@@ -267,8 +339,12 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                 setEditableComboValues(context_.quickSubtypeCombo,
                                        inspectorSubtypeValuesForCommandType(catalog, fields->commandKind, fields->type),
                                        fields->subtype);
+                showStylePreview(fields->commandKind, fields->type, fields->subtype);
             }
         }
+    }
+    if (!context_.quickFieldsEditor->isVisible()) {
+        clearStylePreview();
     }
     context_.configureButton->setVisible(true);
     context_.configureButton->setEnabled(isConfigurableMapObjectKind(effectiveKind));

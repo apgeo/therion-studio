@@ -308,7 +308,11 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
     src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.cpp
     src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h
+    src/app/text_editor/map_editor/MapEditorLineDecorationItem.cpp
+    src/app/text_editor/map_editor/MapEditorLineDecorationItem.h
     src/app/text_editor/map_editor/MapEditorPointSymbolGeometry.h
+    src/app/text_editor/map_editor/MapEditorStylePreviewWidget.cpp
+    src/app/text_editor/map_editor/MapEditorStylePreviewWidget.h
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
     src/app/text_editor/map_editor/MapEditorInteractiveDrawContext.h
@@ -544,6 +548,8 @@ qt_add_executable(MapGeometryFeatureParsingTest
     tests/MapGeometryFeatureParsingTest.cpp
     src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.cpp
     src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h
+    src/app/text_editor/map_editor/MapEditorLineDecorationItem.cpp
+    src/app/text_editor/map_editor/MapEditorLineDecorationItem.h
     src/app/text_editor/map_editor/MapEditorPointSymbolGeometry.h
     src/app/text_editor/map_editor/MapEditorSceneItems.cpp
     src/app/text_editor/map_editor/MapEditorSceneInternals.h
@@ -858,7 +864,11 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
     src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.cpp
     src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h
+    src/app/text_editor/map_editor/MapEditorLineDecorationItem.cpp
+    src/app/text_editor/map_editor/MapEditorLineDecorationItem.h
     src/app/text_editor/map_editor/MapEditorPointSymbolGeometry.h
+    src/app/text_editor/map_editor/MapEditorStylePreviewWidget.cpp
+    src/app/text_editor/map_editor/MapEditorStylePreviewWidget.h
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
     src/app/text_editor/map_editor/MapEditorInteractiveDrawContext.h

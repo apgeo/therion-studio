@@ -9,8 +9,12 @@
 #include <QCompleter>
 #include <QCoreApplication>
 #include <QEventLoop>
+#include <QGraphicsScene>
+#include <QGraphicsView>
+#include <QLabel>
 #include <QMainWindow>
 #include <QTemporaryDir>
+#include <QTabWidget>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QFile>
@@ -34,6 +38,23 @@ void pumpEvents()
 {
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+}
+
+bool visibleNoSelectionLabel(QWidget *root)
+{
+    if (root == nullptr) {
+        return false;
+    }
+
+    const QList<QLabel *> labels = root->findChildren<QLabel *>();
+    for (QLabel *label : labels) {
+        if (label != nullptr
+            && label->isVisible()
+            && label->text() == QStringLiteral("No map object selected.")) {
+            return true;
+        }
+    }
+    return false;
 }
 
 int runSelectionPanelTypeValuesTest()
@@ -109,6 +130,60 @@ int runSelectionPanelTypeValuesTest()
     if (!expect(typeCombo->completer() != nullptr
                 && typeCombo->completer()->completionMode() == QCompleter::UnfilteredPopupCompletion,
                 "Selection panel type combo should use unfiltered completion mode so the popup is not restricted to current text.")) {
+        return 1;
+    }
+
+    auto *inspectorTabs = mapTab->findChild<QTabWidget *>();
+    if (!expect(inspectorTabs != nullptr, "Map inspector tabs were not found.")) {
+        return 1;
+    }
+    auto *stylePreview = mapTab->findChild<QWidget *>(QStringLiteral("mapObjectStylePreview"));
+    if (!expect(stylePreview != nullptr, "Selection panel style preview widget was not found.")) {
+        return 1;
+    }
+
+    auto *mapView = mapTab->findChild<QGraphicsView *>();
+    if (!expect(mapView != nullptr && mapView->scene() != nullptr,
+                "Map graphics view was not found.")) {
+        return 1;
+    }
+    mapTab->goToLine(4);
+    pumpEvents();
+    if (!expect(!mapView->scene()->selectedItems().isEmpty(),
+                "Moving the text cursor to a map-object line should select the corresponding map item.")) {
+        return 1;
+    }
+    if (!expect(stylePreview->isVisible(),
+                "Text-cursor synchronized map selection should show the style preview.")) {
+        return 1;
+    }
+    mapView->scene()->clearSelection();
+    pumpEvents();
+    if (!expect(mapView->scene()->selectedItems().isEmpty(),
+                "Map scene selection should be empty after clearing it.")) {
+        return 1;
+    }
+    if (!expect(visibleNoSelectionLabel(mapTab),
+                "Selection panel should show the empty state after the map selection is cleared, even when the text cursor is on a map-object line.")) {
+        return 1;
+    }
+    if (!expect(!stylePreview->isVisible(),
+                "Style preview should be hidden when no map object is selected.")) {
+        return 1;
+    }
+
+    mapTab->triggerAddLine();
+    pumpEvents();
+    if (!expect(inspectorTabs->currentIndex() == 0,
+                "Line insert should activate the Selection inspector before the first vertex is placed.")) {
+        return 1;
+    }
+    if (!expect(typeCombo->isVisible() && typeCombo->currentText() == QStringLiteral("wall"),
+                "Line insert should expose pending type fields with the default wall type.")) {
+        return 1;
+    }
+    if (!expect(stylePreview->isVisible(),
+                "Line insert should show the style preview for the pending object.")) {
         return 1;
     }
 

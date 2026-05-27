@@ -1,0 +1,17 @@
+{
+  "stroke_visible": false,
+  "decorations": [
+    {
+      "kind": "symbols",
+      "symbol": "square",
+      "side": "center",
+      "spacing": 12,
+      "size": 9,
+      "size_jitter": 2.5,
+      "angle_jitter": 28,
+      "stroke_color": "#1C1C1E",
+      "fill_color": "#FFFFFF",
+      "stroke_width": 1.2
+    }
+  ]
+}

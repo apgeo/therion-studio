@@ -1,0 +1,22 @@
+{
+  "stroke_visible": false,
+  "decorations": [
+    {
+      "kind": "parallel",
+      "offsets": [
+        -4.5,
+        4.5
+      ],
+      "stroke_color": "#1C1C1E",
+      "stroke_width": 1.8
+    },
+    {
+      "kind": "rungs",
+      "from_offset": -4.5,
+      "to_offset": 4.5,
+      "spacing": 9,
+      "stroke_color": "#1C1C1E",
+      "stroke_width": 1.4
+    }
+  ]
+}

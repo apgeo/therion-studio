@@ -2,6 +2,7 @@
 
 #include "../TextEditorTab.h"
 #include "MapEditorAreaReferenceResolver.h"
+#include "MapEditorObjectDetailsLogic.h"
 #include "MapEditorSceneInternals.h"
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSourceReferenceResolver.h"
@@ -14,6 +15,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QScopedValueRollback>
+#include <QTransform>
 #include <QWidget>
 
 #include <algorithm>
@@ -84,7 +86,26 @@ int mapSelectionHitPriority(const QGraphicsItem *item)
     return 1;
 }
 
-bool genericPathItemContainsStrokedHit(const QGraphicsItem *item, const QPointF &scenePosition)
+qreal itemUnitToViewPixels(const QGraphicsItem *item, const QTransform &viewTransform)
+{
+    if (item == nullptr) {
+        return 1.0;
+    }
+
+    const QPointF originScene = item->mapToScene(QPointF(0.0, 0.0));
+    const QPointF xScene = item->mapToScene(QPointF(1.0, 0.0));
+    const QPointF yScene = item->mapToScene(QPointF(0.0, 1.0));
+    const QPointF originView = viewTransform.map(originScene);
+    const QPointF xDelta = viewTransform.map(xScene) - originView;
+    const QPointF yDelta = viewTransform.map(yScene) - originView;
+    const qreal xScale = std::hypot(xDelta.x(), xDelta.y());
+    const qreal yScale = std::hypot(yDelta.x(), yDelta.y());
+    return qMax<qreal>(0.001, qMax(xScale, yScale));
+}
+
+bool genericPathItemContainsStrokedHit(const QGraphicsItem *item,
+                                       const QPointF &scenePosition,
+                                       const QTransform &viewTransform)
 {
     const auto *pathItem = dynamic_cast<const QGraphicsPathItem *>(item);
     if (pathItem == nullptr) {
@@ -93,7 +114,9 @@ bool genericPathItemContainsStrokedHit(const QGraphicsItem *item, const QPointF 
 
     const QPainterPath path = pathItem->path();
     const QPointF localPosition = pathItem->mapFromScene(scenePosition);
-    const qreal tolerance = std::max<qreal>(pathItem->pen().widthF() + 4.0, 6.0);
+    const qreal viewScale = itemUnitToViewPixels(pathItem, viewTransform);
+    const qreal strokeRadiusPixels = pathItem->pen().widthF() * 0.5;
+    const qreal tolerance = (strokeRadiusPixels + 4.0) / viewScale;
     if (!path.boundingRect().adjusted(-tolerance, -tolerance, tolerance, tolerance).contains(localPosition)) {
         return false;
     }
@@ -118,7 +141,8 @@ bool genericPathItemContainsStrokedHit(const QGraphicsItem *item, const QPointF 
 
 QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems,
                                    bool requireSelected = false,
-                                   std::optional<QPointF> scenePosition = std::nullopt)
+                                   std::optional<QPointF> scenePosition = std::nullopt,
+                                   const QTransform &viewTransform = QTransform())
 {
     QGraphicsItem *bestItem = nullptr;
     int bestPriority = std::numeric_limits<int>::max();
@@ -137,7 +161,7 @@ QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems,
         const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
         if (scenePosition.has_value()
             && subtype == kMapSceneSelectionSubtypeGeneric
-            && !genericPathItemContainsStrokedHit(item, scenePosition.value())) {
+            && !genericPathItemContainsStrokedHit(item, scenePosition.value(), viewTransform)) {
             continue;
         }
 
@@ -169,6 +193,79 @@ int lineVertexOwnerIndexForSourceVertex(const MapGeometryFeature &lineFeature, i
     }
 
     return -1;
+}
+
+void clearSelectedObjectState(const MapEditorSelectionContext &context)
+{
+    (*context.selectedObjectLineNumber) = 0;
+    (*context.selectedObjectVertexIndex) = -1;
+    context.selectedObjectKind->clear();
+    context.selectedObjectCoordinate->reset();
+}
+
+QString geometryFeatureKindForSelection(MapGeometryFeature::Kind kind)
+{
+    switch (kind) {
+    case MapGeometryFeature::Kind::Point:
+        return QStringLiteral("point");
+    case MapGeometryFeature::Kind::Line:
+        return QStringLiteral("line");
+    case MapGeometryFeature::Kind::Area:
+        return QStringLiteral("area");
+    }
+    return QString();
+}
+
+QString objectKindForSourceLine(const QVector<TherionParsedLine> &parsedLines, int lineNumber)
+{
+    if (lineNumber <= 0) {
+        return QString();
+    }
+
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        if (parsedLine.lineNumber == lineNumber) {
+            if (const QString directiveKind = objectKindForDirective(parsedLine.directive);
+                !directiveKind.isEmpty()) {
+                return directiveKind;
+            }
+            break;
+        }
+    }
+
+    const QVector<MapGeometryFeature> geometryFeatures = collectGeometryFeatures(parsedLines);
+    for (const MapGeometryFeature &feature : geometryFeatures) {
+        if (feature.lineNumber == lineNumber) {
+            return geometryFeatureKindForSelection(feature.kind);
+        }
+    }
+
+    return QString();
+}
+
+void setSelectedObjectStateForSourceLine(const MapEditorSelectionContext &context,
+                                         int lineNumber,
+                                         QGraphicsItem *item = nullptr)
+{
+    clearSelectedObjectState(context);
+    if (lineNumber <= 0) {
+        return;
+    }
+
+    QString kind = objectKindForSourceLine(context.parsedLinesForCurrentDocument(), lineNumber);
+    if (kind.isEmpty()) {
+        if (dynamic_cast<MapEditablePointItem *>(item) != nullptr) {
+            kind = QStringLiteral("point");
+        }
+    }
+    if (!isConfigurableMapObjectKind(kind)) {
+        return;
+    }
+
+    (*context.selectedObjectLineNumber) = lineNumber;
+    (*context.selectedObjectKind) = kind;
+    if (auto *pointItem = dynamic_cast<MapEditablePointItem *>(item)) {
+        (*context.selectedObjectCoordinate) = pointItem->sourcePoint();
+    }
 }
 
 QSet<int> selectedAreaBorderLineNumbers(const QString &text, const QSet<int> &selectedLines)
@@ -317,9 +414,9 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
                                                                      Qt::IntersectsItemShape,
                                                                      Qt::DescendingOrder,
                                                                      context_.view->transform());
-            primarySelectedItem = preferredMapHitItem(hitItems, true, scenePos);
+            primarySelectedItem = preferredMapHitItem(hitItems, true, scenePos, context_.view->transform());
             if (primarySelectedItem == nullptr && (*context_.pendingClickLineNumber) > 0) {
-                if (QGraphicsItem *pendingHitItem = preferredMapHitItem(hitItems, false, scenePos)) {
+                if (QGraphicsItem *pendingHitItem = preferredMapHitItem(hitItems, false, scenePos, context_.view->transform())) {
                     if (pendingHitItem->data(kMapSceneLineNumberRole).toInt() == (*context_.pendingClickLineNumber)) {
                         primarySelectedItem = pendingHitItem;
                     }
@@ -333,7 +430,7 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
                                                                          Qt::IntersectsItemShape,
                                                                          Qt::DescendingOrder,
                                                                          context_.view->transform());
-                primarySelectedItem = preferredMapHitItem(hitItems, true, scenePos);
+                primarySelectedItem = preferredMapHitItem(hitItems, true, scenePos, context_.view->transform());
             }
         }
     }
@@ -462,17 +559,8 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
             }
         }
     } else if (selectedLineNumber > 0 && context_.textEditor != nullptr) {
-        if (const std::optional<MapGeometryFeature> feature = lineFeatureForLineNumber(context_.parsedLinesForCurrentDocument(),
-                                                                                      selectedLineNumber);
-            feature.has_value()) {
-            if (feature->kind == MapGeometryFeature::Kind::Line) {
-                (*context_.selectedObjectKind) = QStringLiteral("line");
-            } else if (feature->kind == MapGeometryFeature::Kind::Area) {
-                (*context_.selectedObjectKind) = QStringLiteral("area");
-            } else if (feature->kind == MapGeometryFeature::Kind::Point) {
-                (*context_.selectedObjectKind) = QStringLiteral("point");
-            }
-        }
+        (*context_.selectedObjectKind) = objectKindForSourceLine(context_.parsedLinesForCurrentDocument(),
+                                                                 selectedLineNumber);
         if ((*context_.selectedObjectKind).isEmpty()) {
             (*context_.selectedObjectKind) = QStringLiteral("object");
         }
@@ -488,8 +576,11 @@ void MapEditorSelectionController::handleMapSceneSelectionChanged()
         return;
     }
 
+    const bool primarySelectionIsAreaFill = primarySelectedItem != nullptr
+        && primarySelectedItem->data(kMapSceneSelectionSubtypeRole).toInt() == kMapSceneSelectionSubtypeAreaFill;
     if (selectedLineNumber > 0
         && (*context_.selectedObjectKind) == QStringLiteral("area")
+        && !primarySelectionIsAreaFill
         && context_.textEditor != nullptr) {
         const QScopedValueRollback<bool> selectionGuard((*context_.updatingSelection), true);
         selectAreaBorderLineItems(context_.scene,
@@ -522,11 +613,15 @@ void MapEditorSelectionController::syncMapSelectionFromTextCursor(int lineNumber
     const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument();
     if (const std::optional<QSet<int>> scrapLines = scrapObjectLinesForCursor(parsedLines, lineNumber);
         scrapLines.has_value()) {
+        setSelectedObjectStateForSourceLine(context_, lineNumber);
         if (!scrapLines->isEmpty()) {
             selectMapLines(scrapLines.value());
         } else {
             selectMapLine(lineNumber);
         }
+        context_.updateCommandSurfaceState();
+        context_.updateHelpPanel();
+        context_.refreshObjectDetailsPanel();
         return;
     }
 
@@ -554,6 +649,11 @@ void MapEditorSelectionController::syncMapSelectionFromTextCursor(int lineNumber
     if (!lineGeometry && !areaGeometry) {
         return;
     }
+
+    (*context_.selectedObjectLineNumber) = cursorSelection.featureLineNumber;
+    (*context_.selectedObjectVertexIndex) = sourceVertexIndex;
+    (*context_.selectedObjectKind) = geometryKind;
+    (*context_.selectedObjectCoordinate).reset();
 
     MapEditableGeometryVertexItem *targetItem = nullptr;
     if (lineGeometry) {
@@ -597,10 +697,12 @@ void MapEditorSelectionController::syncMapSelectionFromTextCursor(int lineNumber
         (*context_.updatingSelection) = true;
         targetItem->setSelected(true);
         (*context_.updatingSelection) = false;
+        (*context_.selectedObjectCoordinate) = context_.sourcePointFromScenePosition(targetItem->pos());
         updateGeometrySelectionPresentation();
         context_.updateCommandSurfaceState();
         context_.updateHelpPanel();
     }
+    context_.refreshObjectDetailsPanel();
 }
 
 void MapEditorSelectionController::updateGeometrySelectionPresentation()
@@ -669,6 +771,13 @@ void MapEditorSelectionController::selectMapLine(int lineNumber, bool centerOnSe
         return;
     }
 
+    QGraphicsItem *selectedItem = nullptr;
+    auto selectedItemIt = (*context_.itemsByLine).find(lineNumber);
+    if (selectedItemIt != (*context_.itemsByLine).end()) {
+        selectedItem = selectedItemIt.value();
+    }
+    setSelectedObjectStateForSourceLine(context_, lineNumber, selectedItem);
+
     (*context_.pendingClickSelection) = false;
     (*context_.pendingClickLineNumber) = 0;
     (*context_.pendingClickSourceVertexIndex) = -1;
@@ -676,19 +785,21 @@ void MapEditorSelectionController::selectMapLine(int lineNumber, bool centerOnSe
     (*context_.updatingSelection) = true;
     context_.scene->clearSelection();
 
-    auto selectedItemIt = (*context_.itemsByLine).find(lineNumber);
-    if (selectedItemIt != (*context_.itemsByLine).end() && selectedItemIt.value() != nullptr) {
-        selectedItemIt.value()->setSelected(true);
+    if (selectedItem != nullptr) {
+        selectedItem->setSelected(true);
         if (context_.textEditor != nullptr) {
             selectAreaBorderLineItems(context_.scene, *context_.itemsByLine, context_.textEditor->text(), lineNumber);
         }
         if (centerOnSelection && !(*context_.autoFitEnabled) && context_.view != nullptr) {
-            context_.view->centerOn(selectedItemIt.value());
+            context_.view->centerOn(selectedItem);
         }
     }
 
     (*context_.updatingSelection) = false;
     updateGeometrySelectionPresentation();
+    context_.updateCommandSurfaceState();
+    context_.updateHelpPanel();
+    context_.refreshObjectDetailsPanel();
 }
 
 void MapEditorSelectionController::selectMapLines(const QSet<int> &lineNumbers, bool centerOnSelection)

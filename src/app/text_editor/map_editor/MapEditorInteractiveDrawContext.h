@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MapEditorInteractiveDrawLogic.h"
+#include "../../../core/TherionDocumentEditor.h"
 
 #include <QPointF>
 #include <QString>
@@ -57,6 +58,7 @@ struct MapEditorInteractiveDrawContext
     std::function<void()> emitModeStatusChanged;
     std::function<QPointF(const QPointF &)> sourcePointFromScenePosition;
     std::function<void(const QString &, const QString &, const QString &, int)> recordSourceTextSnapshot;
+    std::function<TherionDraftObjectOptions(const QString &)> draftObjectOptions;
     std::function<QStringList()> lineCoordinateRowsForInteractiveDraft;
     std::function<QStringList()> areaCoordinateRowsForInteractiveDraft;
     std::function<void(const QPointF &, const std::optional<QPointF> &)> captureInteractiveLineAnchor;

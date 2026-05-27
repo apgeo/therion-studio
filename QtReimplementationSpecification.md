@@ -309,6 +309,11 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The `Selection` and `Backgrounds` tabs shall use the same framed-section pattern, with each section heading placed inside its box rather than as a standalone label above the box.
 - The `Objects` tab shall provide source-linked object-tree navigation grouped by scrap.
 - The `Selection` tab shall provide selection details/settings editing for the currently selected map object.
+- When no map object or pending insert object is selected, the `Selection` tab shall show an explicit empty state and shall not infer an editable selection from the current text cursor line.
+- For selected or pending-insert `point`, `line`, and `area` objects, the `Selection` tab shall show a full-width style preview tile below the subtype control and its `Style preview` label, using the same map object style catalog resolution as the canvas renderer. The preview tile shall use a map-like light preview surface in both light and dark themes so dark map symbols remain readable without inverting their configured colors. Area previews shall use the available preview tile area for fill-pattern readability, including deterministic dot-pattern jitter when configured. The preview shall preserve readability with preview-only contrast treatment when necessary; this shall not alter the configured style colors used by the canvas renderer.
+- Map hit testing shall use screen-space stroke tolerance for line bodies so line selection remains precise across zoom levels; clicking inside an area fill shall select the area unless the click is on a higher-priority handle/vertex or within the visible line-stroke hit tolerance.
+- Activating `Point`, `Line`, `Freehand`, or `Area` insertion shall activate the `Selection` tab before the first point or vertex is placed and shall expose pending object fields for type, subtype, ID, and point name where applicable; edits to those fields shall not mutate source text until the new object is inserted, and the inserted command shall use the pending values.
+- Activating `Insert Scrap` shall first expose a pending scrap in the `Selection` tab so the user may set scrap ID/projection; activating `Insert Scrap` again while that pending scrap is active shall write the scrap block using those pending values.
 - When the selected object is a `scrap`, the `Selection` tab shall expose manual scrap scale editing for XTherion/Therion-compatible 8-parameter `-scale` calibration values, including picture point 1/2 in pixels, real point 1/2, unit, and an action that writes the resulting `-scale [...]` option to the selected scrap command.
 - In embedded `Raw` mode, the workspace shall present the source text editor together with the contextual help inspector and no embedded map pane.
 - The embedded graphical map pane shall stay dedicated to map editing and shall not include a separate persistent map-help panel.
@@ -650,7 +655,10 @@ Required behavior:
 
 - line, point, and area rendering shall be style-driven based on Therion object type and, where applicable, subtype
 - the style system shall support separate definitions for line styles, point styles, area styles, and global interaction styles
-- line styles shall support at least stroke color, stroke width, dash pattern, and optional directional or repeated decorations such as ticks or arrows
+- line styles shall support at least stroke visibility, stroke color, stroke width, dash pattern, and optional directional or repeated decorations
+- line style decorations shall support built-in repeated or offset primitives including offset strokes, parallel strokes, ticks, rungs, teeth, and repeated symbols
+- repeated line-symbol decorations shall support the built-in point-symbol shape set plus `oval` so symbol-only line styles such as wall blocks, debris, pebbles, sand, and ladder-like features can be represented without custom SVG
+- line decorations shall have decoration-local stroke and fill styling, spacing, side, offset, size, and deterministic jitter parameters independent from the base line stroke
 - point styles shall support at least fill color, stroke color, stroke width, symbol shape, symbol size, and label style
 - point styles shall support an optional `label_field` style attribute that identifies a Therion option value to render next to the point symbol without hardcoding point-type-specific label extraction in the renderer
 - area styles shall support at least fill style and optional stroke style
@@ -950,6 +958,8 @@ The criteria below are intended for implementation verification and QA.
 #### 8.1.4 Object Settings / Inspector
 
 - The inspector always matches the current selected object.
+- During point/line/freehand/area insertion, the Selection inspector is active before placement, shows pending type/subtype fields and the resolved style preview, and the completed object is serialized with the edited pending values.
+- During scrap insertion, the first Insert Scrap action shows pending scrap fields in the Selection inspector, and the second Insert Scrap action creates the scrap with the edited pending ID/projection values.
 - Changing selection updates the visible object settings immediately.
 - The `Selection` inspector shall group controls in this order: selected-object section, `Geometry`, contextual point/line-point details, and `Object Actions`, so object identity edits, object-level geometry state controls, point/line-point actions, and object actions remain visually distinct.
 - The selected-object section title shall use the selected object kind (`Scrap`, `Point`, `Line`, or `Area`) instead of a generic `Object` heading, and shall show source location as a compact `Source line N` metadata line.
@@ -1049,7 +1059,7 @@ The criteria below are intended for implementation verification and QA.
 - Point symbols support configurable shape, size, fill, stroke, and label presentation.
 - Point styles support an optional `label_field` that reads one Therion option value, for example `name` for `-name` or `text` for `-text`, and renders it next to the point symbol when present.
 - Station point defaults render `-name`; label point defaults render `-text` with common Therion label formatting such as `<br>` line breaks and `<thsp>` thin spaces.
-- Line symbols support configurable stroke width, dash pattern, and optional decorations such as arrows or ticks.
+- Line symbols support configurable base stroke visibility, stroke width, dash pattern, and optional decorations such as offset strokes, parallel strokes, ticks, rungs, teeth, or repeated symbols.
 - Area symbols support configurable solid, hatch, or dot-pattern fills and optional strokes.
 - Dot-pattern area fills support configurable repeated symbols using the fixed point shape set plus area-dot-only `oval`, with `dot_color` as the only symbol color.
 - Dot-pattern area fills support optional deterministic per-symbol size jitter.
@@ -1317,7 +1327,7 @@ Required parity scope:
 
 - style-catalog-driven rendering for lines, points, and areas
 - subtype-aware style lookup with safe fallback behavior
-- directional line decorations (ticks, arrows, teeth) with reverse-aware orientation behavior
+- directional line decorations (ticks, teeth, repeated symbols, offset strokes, parallel strokes, and rungs) with reverse-aware orientation behavior
 - line-point orientation editing with normalized degree range (`0..<360`)
 - default orientation behavior tied to local line tangent and side semantics
 - background layers including raster imagery and `.xvi` references

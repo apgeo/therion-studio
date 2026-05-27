@@ -1,6 +1,7 @@
 #include "MapEditorTab.h"
 
 #include "MapEditorMagnifierOverlay.h"
+#include "MapEditorStylePreviewWidget.h"
 
 #include <QApplication>
 #include <QAbstractItemView>
@@ -761,6 +762,10 @@ void MapEditorTab::buildUi()
     objectQuickProjectionLabel_ = new QLabel(tr("Projection"), objectQuickFieldsEditor_);
     objectQuickTypeLabel_ = new QLabel(tr("Type"), objectQuickFieldsEditor_);
     objectQuickSubtypeLabel_ = new QLabel(tr("Subtype"), objectQuickFieldsEditor_);
+    objectStylePreviewLabel_ = new QLabel(tr("Style preview"), objectQuickFieldsEditor_);
+    objectStylePreview_ = new MapEditorStylePreviewWidget(objectQuickFieldsEditor_);
+    objectStylePreview_->setObjectName(QStringLiteral("mapObjectStylePreview"));
+    objectStylePreview_->clearStyleSelection();
     connect(objectQuickIdentifierEdit_, &QLineEdit::editingFinished, this, &MapEditorTab::applyObjectQuickFieldEdits);
     connect(objectQuickNameEdit_, &QLineEdit::editingFinished, this, &MapEditorTab::applyObjectQuickFieldEdits);
     connect(objectQuickTypeCombo_, qOverload<int>(&QComboBox::activated), this, [this]() {
@@ -785,6 +790,8 @@ void MapEditorTab::buildUi()
     objectQuickForm->addRow(objectQuickProjectionLabel_, objectQuickProjectionCombo_);
     objectQuickForm->addRow(objectQuickTypeLabel_, objectQuickTypeCombo_);
     objectQuickForm->addRow(objectQuickSubtypeLabel_, objectQuickSubtypeCombo_);
+    objectQuickForm->addRow(objectStylePreviewLabel_);
+    objectQuickForm->addRow(objectStylePreview_);
     objectQuickForm->addRow(objectQuickNameLabel_, objectQuickNameEdit_);
     objectSelectionLayout->addWidget(objectQuickFieldsEditor_);
     selectionLayout->addWidget(objectSelectionSection_);

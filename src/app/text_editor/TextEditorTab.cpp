@@ -305,30 +305,41 @@ bool TextEditorTab::insertScrapBlock(const QString &preferredName,
 bool TextEditorTab::insertDraftGeometry(const QString &kind,
                                         const QVector<QPointF> &vertices,
                                         int *insertedLineNumber,
-                                        QString *errorMessage)
+                                        QString *errorMessage,
+                                        const TherionDraftObjectOptions &objectOptions)
 {
     return sourceRewriteController_ != nullptr
-        && sourceRewriteController_->insertDraftGeometry(kind, vertices, insertedLineNumber, errorMessage);
+        && sourceRewriteController_->insertDraftGeometry(kind,
+                                                         vertices,
+                                                         insertedLineNumber,
+                                                         errorMessage,
+                                                         objectOptions);
 }
 
 bool TextEditorTab::insertDraftLineGeometry(const QStringList &coordinateRows,
                                             int *insertedLineNumber,
                                             QString *errorMessage,
-                                            const QString &lineOptions)
+                                            const QString &lineOptions,
+                                            const TherionDraftObjectOptions &objectOptions)
 {
     return sourceRewriteController_ != nullptr
         && sourceRewriteController_->insertDraftLineGeometry(coordinateRows,
                                                              insertedLineNumber,
                                                              errorMessage,
-                                                             lineOptions);
+                                                             lineOptions,
+                                                             objectOptions);
 }
 
 bool TextEditorTab::insertDraftAreaGeometry(const QStringList &coordinateRows,
                                             int *insertedLineNumber,
-                                            QString *errorMessage)
+                                            QString *errorMessage,
+                                            const TherionDraftObjectOptions &objectOptions)
 {
     return sourceRewriteController_ != nullptr
-        && sourceRewriteController_->insertDraftAreaGeometry(coordinateRows, insertedLineNumber, errorMessage);
+        && sourceRewriteController_->insertDraftAreaGeometry(coordinateRows,
+                                                             insertedLineNumber,
+                                                             errorMessage,
+                                                             objectOptions);
 }
 
 bool TextEditorTab::rewritePointCoordinates(int lineNumber,

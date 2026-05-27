@@ -72,7 +72,14 @@ bool MapEditorInteractiveDrawController::handleInteractiveDrawClick(const QPoint
         const QVector<QPointF> vertices{context_.sourcePointFromScenePosition(scenePosition)};
         const QString beforeText = context_.textEditor->text();
         const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-        if (!context_.textEditor->insertDraftGeometry(QStringLiteral("point"), vertices, &insertedLineNumber, &errorMessage)) {
+        const TherionDraftObjectOptions objectOptions = context_.draftObjectOptions
+            ? context_.draftObjectOptions(QStringLiteral("point"))
+            : TherionDraftObjectOptions{};
+        if (!context_.textEditor->insertDraftGeometry(QStringLiteral("point"),
+                                                      vertices,
+                                                      &insertedLineNumber,
+                                                      &errorMessage,
+                                                      objectOptions)) {
             (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                 ? tr("Point insert failed.")
                 : tr("Point insert failed: %1").arg(errorMessage);
@@ -130,10 +137,14 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
         const QString lineOptions = closeLineDraft ? QStringLiteral("-close on") : QString();
         const QString beforeText = context_.textEditor->text();
         const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+        const TherionDraftObjectOptions objectOptions = context_.draftObjectOptions
+            ? context_.draftObjectOptions(QStringLiteral("line"))
+            : TherionDraftObjectOptions{};
         if (!context_.textEditor->insertDraftLineGeometry(coordinateRows,
                                                           &insertedLineNumber,
                                                           &errorMessage,
-                                                          lineOptions)) {
+                                                          lineOptions,
+                                                          objectOptions)) {
             (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                 ? tr("Complete Draft failed.")
                 : tr("Complete Draft failed: %1").arg(errorMessage);
@@ -149,9 +160,13 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
         int insertedLineNumber = 0;
         const QString beforeText = context_.textEditor->text();
         const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+        const TherionDraftObjectOptions objectOptions = context_.draftObjectOptions
+            ? context_.draftObjectOptions(QStringLiteral("area"))
+            : TherionDraftObjectOptions{};
         if (!context_.textEditor->insertDraftAreaGeometry(context_.areaCoordinateRowsForInteractiveDraft(),
                                                   &insertedLineNumber,
-                                                  &errorMessage)) {
+                                                  &errorMessage,
+                                                  objectOptions)) {
             (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                 ? tr("Complete Draft failed.")
                 : tr("Complete Draft failed: %1").arg(errorMessage);
@@ -538,9 +553,14 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
             int insertedLineNumber = 0;
             const QString beforeText = context_.textEditor->text();
             const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+            const TherionDraftObjectOptions objectOptions = context_.draftObjectOptions
+                ? context_.draftObjectOptions(QStringLiteral("line"))
+                : TherionDraftObjectOptions{};
             if (!context_.textEditor->insertDraftLineGeometry(context_.lineCoordinateRowsForInteractiveDraft(),
                                                       &insertedLineNumber,
-                                                      &errorMessage)) {
+                                                      &errorMessage,
+                                                      QString(),
+                                                      objectOptions)) {
                 (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                     ? tr("Complete Draft failed.")
                     : tr("Complete Draft failed: %1").arg(errorMessage);
@@ -555,9 +575,13 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
             int insertedLineNumber = 0;
             const QString beforeText = context_.textEditor->text();
             const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+            const TherionDraftObjectOptions objectOptions = context_.draftObjectOptions
+                ? context_.draftObjectOptions(QStringLiteral("area"))
+                : TherionDraftObjectOptions{};
             if (!context_.textEditor->insertDraftAreaGeometry(context_.areaCoordinateRowsForInteractiveDraft(),
                                                       &insertedLineNumber,
-                                                      &errorMessage)) {
+                                                      &errorMessage,
+                                                      objectOptions)) {
                 (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                     ? tr("Complete Draft failed.")
                     : tr("Complete Draft failed: %1").arg(errorMessage);

@@ -1,5 +1,6 @@
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSceneInternals.h"
+#include "MapEditorLineDecorationItem.h"
 #include "MapEditorObjectStyleCatalog.h"
 #include "MapEditorPointSymbolGeometry.h"
 
@@ -1499,12 +1500,16 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 const qreal thickLineWidth = qBound(0.8, lineStyle.strokeWidth, 24.0);
                 const QPainterPath path = linePathForFeature(feature, sourceBounds, previewBounds);
                 QColor geometryStroke = lineStyle.strokeColor.value_or(canvasTheme.geometryStroke);
+                QColor baseLineStroke = geometryStroke;
+                if (!lineStyle.strokeVisible) {
+                    baseLineStroke.setAlpha(0);
+                }
 
                 auto *lineItem = new MapZoomAwarePathItem(path,
-                                                          styledGeometricPen(geometryStroke,
+                                                          styledGeometricPen(baseLineStroke,
                                                                              thickLineWidth,
-                                                                             lineStyle.penStyle,
-                                                                             lineStyle.dashPattern,
+                                                                             lineStyle.strokeVisible ? lineStyle.penStyle : Qt::SolidLine,
+                                                                             lineStyle.strokeVisible ? lineStyle.dashPattern : QVector<qreal>{},
                                                                              Qt::RoundCap,
                                                                              Qt::RoundJoin));
                 scene->addItem(lineItem);
@@ -1512,6 +1517,19 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 lineItem->setZValue(2.5);
                 markGeometryItem(lineItem);
                 lineItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                MapEditorLineDecorationItem *lineDecorationItem = nullptr;
+                if (!lineStyle.decorations.isEmpty()) {
+                    lineDecorationItem = new MapEditorLineDecorationItem(path,
+                                                                         lineStyle.decorations,
+                                                                         geometryStroke,
+                                                                         feature.reversed,
+                                                                         feature.lineNumber);
+                    scene->addItem(lineDecorationItem);
+                    lineDecorationItem->setZValue(2.55);
+                    markGeometryItem(lineDecorationItem);
+                    makeMouseTransparent(lineDecorationItem);
+                    lineDecorationItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                }
                 const qreal lineDirectionTickLength = qBound(12.0, 18.0 * mapScale, 24.0);
                 auto *directionTickItem = new QGraphicsLineItem;
                 directionTickItem->setPen(cosmeticPen(QColor(QStringLiteral("#ffda00")),
@@ -1790,6 +1808,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 };
                 auto couplingGuard = std::make_shared<bool>(false);
                 const auto updateInteractiveLinePreview = [lineItem,
+                                                           lineDecorationItem,
                                                            directionTickItem,
                                                            lineDirectionTickLength,
                                                            feature,
@@ -1874,6 +1893,9 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     }
 
                     lineItem->setPath(interactivePath);
+                    if (lineDecorationItem != nullptr) {
+                        lineDecorationItem->setDecorationPath(interactivePath);
+                    }
                     std::optional<QPointF> outgoingControlPreview;
                     const MapGeometryFeature::TH2LineVertex &firstVertex = feature.lineVertices.first();
                     if (firstVertex.outgoingSourceVertexIndex >= 0 && controlItemsBySourceVertex != nullptr) {

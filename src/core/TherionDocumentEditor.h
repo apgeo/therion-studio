@@ -7,6 +7,15 @@
 
 namespace TherionStudio
 {
+struct TherionDraftObjectOptions
+{
+    QString type;
+    QString subtype;
+    QString identifier;
+    QString name;
+    bool nameEnabled = false;
+};
+
 class TherionDocumentEditor final
 {
 public:
@@ -24,16 +33,19 @@ public:
                                                   const QString &kind,
                                                   const QVector<QPointF> &vertices,
                                                   int *insertedLineNumber = nullptr,
-                                                  QString *errorMessage = nullptr);
+                                                  QString *errorMessage = nullptr,
+                                                  const TherionDraftObjectOptions &objectOptions = {});
     [[nodiscard]] static bool appendDraftLineGeometry(QString *contents,
                                                       const QStringList &coordinateRows,
                                                       int *insertedLineNumber = nullptr,
                                                       QString *errorMessage = nullptr,
-                                                      const QString &lineOptions = QString());
+                                                      const QString &lineOptions = QString(),
+                                                      const TherionDraftObjectOptions &objectOptions = {});
     [[nodiscard]] static bool appendDraftAreaGeometry(QString *contents,
                                                       const QStringList &coordinateRows,
                                                       int *insertedLineNumber = nullptr,
-                                                      QString *errorMessage = nullptr);
+                                                      QString *errorMessage = nullptr,
+                                                      const TherionDraftObjectOptions &objectOptions = {});
     [[nodiscard]] static bool rewritePointCoordinates(QString *contents,
                                                       int lineNumber,
                                                       const QPointF &point,

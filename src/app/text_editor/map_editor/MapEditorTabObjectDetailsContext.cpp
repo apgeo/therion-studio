@@ -3,8 +3,160 @@
 #include "MapEditorObjectDetailsContext.h"
 #include "../TextEditorTab.h"
 
+#include <QTabWidget>
+
 namespace TherionStudio
 {
+namespace
+{
+QString normalizedPendingCommandKind(const QString &commandKind)
+{
+    const QString normalized = commandKind.trimmed().toLower();
+    if (normalized == QStringLiteral("scrap")
+        || normalized == QStringLiteral("point")
+        || normalized == QStringLiteral("line")
+        || normalized == QStringLiteral("area")) {
+        return normalized;
+    }
+    return QString();
+}
+
+QString defaultPendingTypeForCommand(const QString &commandKind)
+{
+    if (commandKind == QStringLiteral("point")) {
+        return QStringLiteral("station");
+    }
+    if (commandKind == QStringLiteral("line")) {
+        return QStringLiteral("wall");
+    }
+    if (commandKind == QStringLiteral("area")) {
+        return QStringLiteral("water");
+    }
+    return QString();
+}
+
+bool pendingPointNameVisible(const QString &type, const QString &name)
+{
+    return type.trimmed().compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0
+        || !name.trimmed().isEmpty();
+}
+}
+
+void MapEditorTab::beginPendingInsertObject(const QString &commandKind)
+{
+    const QString normalizedCommand = normalizedPendingCommandKind(commandKind);
+    if (normalizedCommand.isEmpty()) {
+        clearPendingInsertObject();
+        return;
+    }
+
+    InspectorObjectQuickFields fields;
+    fields.commandKind = normalizedCommand;
+    fields.typeEditable = normalizedCommand != QStringLiteral("scrap");
+    fields.type = defaultPendingTypeForCommand(normalizedCommand);
+    if (normalizedCommand == QStringLiteral("scrap")) {
+        fields.identifier = QStringLiteral("new-scrap");
+    } else if (normalizedCommand == QStringLiteral("point")) {
+        fields.name = QStringLiteral("draft-point");
+        fields.nameVisible = true;
+    }
+    pendingInsertFields_ = fields;
+}
+
+void MapEditorTab::clearPendingInsertObject()
+{
+    pendingInsertFields_ = InspectorObjectQuickFields{};
+}
+
+std::optional<InspectorObjectQuickFields> MapEditorTab::pendingInsertQuickFields() const
+{
+    if (pendingInsertFields_.commandKind.trimmed().isEmpty()) {
+        return std::nullopt;
+    }
+    return pendingInsertFields_;
+}
+
+void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields &fields)
+{
+    const QString existingCommand = pendingInsertFields_.commandKind;
+    const QString normalizedCommand = normalizedPendingCommandKind(fields.commandKind.isEmpty()
+                                                                       ? existingCommand
+                                                                       : fields.commandKind);
+    if (normalizedCommand.isEmpty()) {
+        clearPendingInsertObject();
+        return;
+    }
+
+    pendingInsertFields_ = fields;
+    pendingInsertFields_.commandKind = normalizedCommand;
+    pendingInsertFields_.typeEditable = normalizedCommand != QStringLiteral("scrap");
+    if (pendingInsertFields_.type.trimmed().isEmpty()) {
+        pendingInsertFields_.type = defaultPendingTypeForCommand(normalizedCommand);
+    }
+    if (normalizedCommand == QStringLiteral("point")) {
+        if (pendingInsertFields_.type.trimmed().compare(QStringLiteral("station"), Qt::CaseInsensitive) != 0
+            && pendingInsertFields_.name.trimmed() == QStringLiteral("draft-point")) {
+            pendingInsertFields_.name.clear();
+        }
+        pendingInsertFields_.nameVisible = pendingPointNameVisible(pendingInsertFields_.type,
+                                                                   pendingInsertFields_.name);
+    } else {
+        pendingInsertFields_.nameVisible = false;
+        pendingInsertFields_.name.clear();
+    }
+}
+
+TherionDraftObjectOptions MapEditorTab::pendingDraftObjectOptions(const QString &commandKind) const
+{
+    TherionDraftObjectOptions options;
+    const QString normalizedCommand = normalizedPendingCommandKind(commandKind);
+    if (normalizedCommand.isEmpty()
+        || pendingInsertFields_.commandKind.trimmed().toLower() != normalizedCommand) {
+        return options;
+    }
+
+    options.type = pendingInsertFields_.type;
+    options.subtype = pendingInsertFields_.subtype;
+    options.identifier = pendingInsertFields_.identifier;
+    if (normalizedCommand == QStringLiteral("point")) {
+        options.name = pendingInsertFields_.name;
+        options.nameEnabled = pendingInsertFields_.nameVisible;
+    }
+    return options;
+}
+
+QString MapEditorTab::pendingScrapPreferredName() const
+{
+    if (pendingInsertFields_.commandKind.trimmed().toLower() != QStringLiteral("scrap")) {
+        return QStringLiteral("new-scrap");
+    }
+
+    const QString identifier = pendingInsertFields_.identifier.trimmed();
+    return identifier.isEmpty() ? QStringLiteral("new-scrap") : identifier;
+}
+
+QString MapEditorTab::pendingScrapOptions(const QString &scaleOption) const
+{
+    QStringList options;
+    if (pendingInsertFields_.commandKind.trimmed().toLower() == QStringLiteral("scrap")) {
+        const QString projection = pendingInsertFields_.projection.trimmed();
+        if (!projection.isEmpty()) {
+            options.append(QStringLiteral("-projection %1").arg(projection));
+        }
+    }
+    if (!scaleOption.trimmed().isEmpty()) {
+        options.append(scaleOption.trimmed());
+    }
+    return options.join(QLatin1Char(' '));
+}
+
+void MapEditorTab::activateSelectionInspector()
+{
+    if (mapInspectorTabs_ != nullptr) {
+        mapInspectorTabs_->setCurrentIndex(0);
+    }
+}
+
 MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
 {
     return MapEditorObjectDetailsContext{
@@ -36,11 +188,13 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .quickProjectionLabel = objectQuickProjectionLabel_,
         .quickTypeLabel = objectQuickTypeLabel_,
         .quickSubtypeLabel = objectQuickSubtypeLabel_,
+        .stylePreviewLabel = objectStylePreviewLabel_,
         .quickTypeCombo = objectQuickTypeCombo_,
         .quickSubtypeCombo = objectQuickSubtypeCombo_,
         .quickProjectionCombo = objectQuickProjectionCombo_,
         .quickIdentifierEdit = objectQuickIdentifierEdit_,
         .quickNameEdit = objectQuickNameEdit_,
+        .stylePreview = objectStylePreview_,
         .vertexActionsEditor = vertexActionsEditor_,
         .vertexInsertBeforeButton = vertexInsertBeforeButton_,
         .vertexInsertAfterButton = vertexInsertAfterButton_,
@@ -80,6 +234,12 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         },
         .refreshObjectDetailsPanel = [this]() {
             refreshObjectDetailsPanel();
+        },
+        .pendingInsertQuickFields = [this]() -> std::optional<InspectorObjectQuickFields> {
+            return pendingInsertQuickFields();
+        },
+        .setPendingInsertQuickFields = [this](const InspectorObjectQuickFields &fields) {
+            setPendingInsertQuickFields(fields);
         },
         .clearInspectorObjectSelection = [this]() {
             clearInspectorObjectSelection();

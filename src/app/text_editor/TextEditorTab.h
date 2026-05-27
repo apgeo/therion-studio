@@ -2,6 +2,7 @@
 
 #include "TextEditorCommandMetadata.h"
 #include "../../core/CommandCatalogStore.h"
+#include "../../core/TherionDocumentEditor.h"
 
 #include <QString>
 #include <QStringList>
@@ -130,14 +131,17 @@ public:
     bool insertDraftGeometry(const QString &kind,
                              const QVector<QPointF> &vertices,
                              int *insertedLineNumber = nullptr,
-                             QString *errorMessage = nullptr);
+                             QString *errorMessage = nullptr,
+                             const TherionDraftObjectOptions &objectOptions = {});
     bool insertDraftLineGeometry(const QStringList &coordinateRows,
                                  int *insertedLineNumber = nullptr,
                                  QString *errorMessage = nullptr,
-                                 const QString &lineOptions = QString());
+                                 const QString &lineOptions = QString(),
+                                 const TherionDraftObjectOptions &objectOptions = {});
     bool insertDraftAreaGeometry(const QStringList &coordinateRows,
                                  int *insertedLineNumber = nullptr,
-                                 QString *errorMessage = nullptr);
+                                 QString *errorMessage = nullptr,
+                                 const TherionDraftObjectOptions &objectOptions = {});
     bool rewritePointCoordinates(int lineNumber,
                                  const QPointF &point,
                                  QString *errorMessage = nullptr);

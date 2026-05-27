@@ -21,6 +21,7 @@
 #include "MapEditorInteractiveDrawLogic.h"
 #include "MapEditorObjectDetailsLogic.h"
 #include "../../../core/CommandCatalogStore.h"
+#include "../../../core/TherionDocumentEditor.h"
 #include "../../../core/TherionDocumentParser.h"
 
 class QLabel;
@@ -68,6 +69,7 @@ struct MapEditorObjectDetailsContext;
 class MapEditorObjectDetailsEditController;
 class MapEditorObjectDetailsPanelController;
 class MapEditorMagnifierOverlay;
+class MapEditorStylePreviewWidget;
 struct MapEditorSceneLifecycleContext;
 class MapEditorSceneLifecycleController;
 struct MapEditorSceneRefreshContext;
@@ -353,6 +355,14 @@ private:
     void refreshInspectorBackgroundPanel();
     MapEditorObjectDetailsContext objectDetailsContext();
     void refreshObjectDetailsPanel();
+    void beginPendingInsertObject(const QString &commandKind);
+    void clearPendingInsertObject();
+    std::optional<InspectorObjectQuickFields> pendingInsertQuickFields() const;
+    void setPendingInsertQuickFields(const InspectorObjectQuickFields &fields);
+    TherionDraftObjectOptions pendingDraftObjectOptions(const QString &commandKind) const;
+    QString pendingScrapPreferredName() const;
+    QString pendingScrapOptions(const QString &scaleOption) const;
+    void activateSelectionInspector();
     void handleObjectOrientationValueChanged(double value);
     void handleLinePointLeftSizeValueChanged(double value);
     void deleteSelectedObjectFromSelection();
@@ -429,11 +439,13 @@ private:
     QLabel *objectQuickProjectionLabel_ = nullptr;
     QLabel *objectQuickTypeLabel_ = nullptr;
     QLabel *objectQuickSubtypeLabel_ = nullptr;
+    QLabel *objectStylePreviewLabel_ = nullptr;
     QComboBox *objectQuickTypeCombo_ = nullptr;
     QComboBox *objectQuickSubtypeCombo_ = nullptr;
     QComboBox *objectQuickProjectionCombo_ = nullptr;
     QLineEdit *objectQuickIdentifierEdit_ = nullptr;
     QLineEdit *objectQuickNameEdit_ = nullptr;
+    MapEditorStylePreviewWidget *objectStylePreview_ = nullptr;
     QString objectQuickCommandKind_;
     QWidget *vertexActionsEditor_ = nullptr;
     QPushButton *vertexInsertBeforeButton_ = nullptr;
@@ -527,6 +539,7 @@ private:
     int pendingMapClickSourceVertexIndex_ = -1;
     QString pendingMapClickGeometryKind_;
     InteractiveDrawMode interactiveDrawMode_ = InteractiveDrawMode::None;
+    InspectorObjectQuickFields pendingInsertFields_;
     bool lineExtensionActive_ = false;
     int lineExtensionLineNumber_ = 0;
     bool lineExtensionPrepend_ = false;

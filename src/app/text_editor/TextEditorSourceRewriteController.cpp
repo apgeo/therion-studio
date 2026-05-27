@@ -60,7 +60,8 @@ bool TextEditorSourceRewriteController::insertScrapBlock(const QString &preferre
 bool TextEditorSourceRewriteController::insertDraftGeometry(const QString &kind,
                                                             const QVector<QPointF> &vertices,
                                                             int *insertedLineNumber,
-                                                            QString *errorMessage)
+                                                            QString *errorMessage,
+                                                            const TherionDraftObjectOptions &objectOptions)
 {
     if (context_.editor == nullptr) {
         return false;
@@ -68,7 +69,12 @@ bool TextEditorSourceRewriteController::insertDraftGeometry(const QString &kind,
 
     QString contents = context_.editor->toPlainText();
     int resolvedLineNumber = 0;
-    if (!TherionDocumentEditor::appendDraftGeometry(&contents, kind, vertices, &resolvedLineNumber, errorMessage)) {
+    if (!TherionDocumentEditor::appendDraftGeometry(&contents,
+                                                    kind,
+                                                    vertices,
+                                                    &resolvedLineNumber,
+                                                    errorMessage,
+                                                    objectOptions)) {
         return false;
     }
 
@@ -82,7 +88,8 @@ bool TextEditorSourceRewriteController::insertDraftGeometry(const QString &kind,
 bool TextEditorSourceRewriteController::insertDraftLineGeometry(const QStringList &coordinateRows,
                                                                 int *insertedLineNumber,
                                                                 QString *errorMessage,
-                                                                const QString &lineOptions)
+                                                                const QString &lineOptions,
+                                                                const TherionDraftObjectOptions &objectOptions)
 {
     if (context_.editor == nullptr) {
         return false;
@@ -94,7 +101,8 @@ bool TextEditorSourceRewriteController::insertDraftLineGeometry(const QStringLis
                                                         coordinateRows,
                                                         &resolvedLineNumber,
                                                         errorMessage,
-                                                        lineOptions)) {
+                                                        lineOptions,
+                                                        objectOptions)) {
         return false;
     }
 
@@ -107,7 +115,8 @@ bool TextEditorSourceRewriteController::insertDraftLineGeometry(const QStringLis
 
 bool TextEditorSourceRewriteController::insertDraftAreaGeometry(const QStringList &coordinateRows,
                                                                 int *insertedLineNumber,
-                                                                QString *errorMessage)
+                                                                QString *errorMessage,
+                                                                const TherionDraftObjectOptions &objectOptions)
 {
     if (context_.editor == nullptr) {
         return false;
@@ -115,7 +124,11 @@ bool TextEditorSourceRewriteController::insertDraftAreaGeometry(const QStringLis
 
     QString contents = context_.editor->toPlainText();
     int resolvedLineNumber = 0;
-    if (!TherionDocumentEditor::appendDraftAreaGeometry(&contents, coordinateRows, &resolvedLineNumber, errorMessage)) {
+    if (!TherionDocumentEditor::appendDraftAreaGeometry(&contents,
+                                                        coordinateRows,
+                                                        &resolvedLineNumber,
+                                                        errorMessage,
+                                                        objectOptions)) {
         return false;
     }
 

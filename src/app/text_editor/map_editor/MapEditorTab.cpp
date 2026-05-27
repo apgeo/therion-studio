@@ -256,6 +256,9 @@ QVector<TherionParsedLine> MapEditorTab::parsedLinesForCurrentDocument() const
 void MapEditorTab::handleAddPointTriggered()
 {
     setInteractiveDrawMode(InteractiveDrawMode::Point);
+    beginPendingInsertObject(QStringLiteral("point"));
+    activateSelectionInspector();
+    refreshObjectDetailsPanel();
     toolbarStatusNote_ = tr("Point mode: click in map to insert a point.");
     refreshToolbarSummary();
 }
@@ -264,6 +267,9 @@ void MapEditorTab::handleAddLineTriggered()
 {
     lineExtensionActive_ = false;
     setInteractiveDrawMode(InteractiveDrawMode::Line);
+    beginPendingInsertObject(QStringLiteral("line"));
+    activateSelectionInspector();
+    refreshObjectDetailsPanel();
     toolbarStatusNote_ = tr("Line mode: click to add vertices, then press Enter or Complete Draft.");
     refreshToolbarSummary();
 }
@@ -272,6 +278,9 @@ void MapEditorTab::handleAddFreehandLineTriggered()
 {
     lineExtensionActive_ = false;
     setInteractiveDrawMode(InteractiveDrawMode::Freehand);
+    beginPendingInsertObject(QStringLiteral("line"));
+    activateSelectionInspector();
+    refreshObjectDetailsPanel();
     toolbarStatusNote_ = tr("Freehand mode: drag in map to draw a line, then release to finish.");
     refreshToolbarSummary();
 }
@@ -280,6 +289,9 @@ void MapEditorTab::handleAddAreaTriggered()
 {
     lineExtensionActive_ = false;
     setInteractiveDrawMode(InteractiveDrawMode::Area);
+    beginPendingInsertObject(QStringLiteral("area"));
+    activateSelectionInspector();
+    refreshObjectDetailsPanel();
     toolbarStatusNote_ = tr("Area mode: click to add vertices, then press Enter or Complete Draft.");
     refreshToolbarSummary();
 }
@@ -288,6 +300,8 @@ void MapEditorTab::handleSelectModeTriggered()
 {
     lineExtensionActive_ = false;
     setInteractiveDrawMode(InteractiveDrawMode::None);
+    clearPendingInsertObject();
+    refreshObjectDetailsPanel();
     selectModeActive_ = true;
     toolbarStatusNote_ = tr("Selection mode: select map cards or draft objects.");
     if (mapView_ != nullptr) {
@@ -304,12 +318,30 @@ void MapEditorTab::handleInsertScrapTriggered()
         return;
     }
 
+    lineExtensionActive_ = false;
+    if (interactiveDrawMode_ != InteractiveDrawMode::None) {
+        setInteractiveDrawMode(InteractiveDrawMode::None);
+    }
+    selectModeActive_ = true;
+
+    if (pendingInsertFields_.commandKind.trimmed().toLower() != QStringLiteral("scrap")) {
+        beginPendingInsertObject(QStringLiteral("scrap"));
+        activateSelectionInspector();
+        refreshObjectDetailsPanel();
+        toolbarStatusNote_ = tr("Scrap insert: set ID/projection in Selection, then click Insert Scrap again.");
+        refreshToolbarSummary();
+        return;
+    }
+
     QString errorMessage;
     int insertedLineNumber = 0;
     const QString beforeText = textEditor_->text();
     const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
     const QString scrapScaleOption = xtherionDefaultScrapScaleOption(mapSourceBoundsForCurrentDocument());
-    if (!textEditor_->insertScrapBlock(QStringLiteral("new-scrap"), &insertedLineNumber, &errorMessage, scrapScaleOption)) {
+    if (!textEditor_->insertScrapBlock(pendingScrapPreferredName(),
+                                       &insertedLineNumber,
+                                       &errorMessage,
+                                       pendingScrapOptions(scrapScaleOption))) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Insert Scrap failed.")
             : tr("Insert Scrap failed: %1").arg(errorMessage);
@@ -321,6 +353,8 @@ void MapEditorTab::handleInsertScrapTriggered()
     toolbarStatusNote_ = insertedLineNumber > 0
         ? tr("Inserted scrap block at line %1.").arg(insertedLineNumber)
         : tr("Inserted scrap block.");
+    clearPendingInsertObject();
+    refreshObjectDetailsPanel();
     refreshToolbarSummary();
 }
 
@@ -366,7 +400,11 @@ void MapEditorTab::handleCompleteDraftTriggered()
     int insertedLineNumber = 0;
     const QString beforeText = textEditor_->text();
     const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
-    if (!textEditor_->insertDraftGeometry(geometryKind, vertices, &insertedLineNumber, &errorMessage)) {
+    if (!textEditor_->insertDraftGeometry(geometryKind,
+                                          vertices,
+                                          &insertedLineNumber,
+                                          &errorMessage,
+                                          pendingDraftObjectOptions(geometryKind))) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Complete Draft failed.")
             : tr("Complete Draft failed: %1").arg(errorMessage);
@@ -500,8 +538,14 @@ bool MapEditorTab::commitInteractiveDrawVertices(const QString &geometryKind,
     const bool inserted = geometryKind.trimmed().compare(QStringLiteral("line"), Qt::CaseInsensitive) == 0
         ? textEditor_->insertDraftLineGeometry(bezierLineCoordinateRowsForFreehandStroke(vertices),
                                                &insertedLineNumber,
-                                               &errorMessage)
-        : textEditor_->insertDraftGeometry(geometryKind, vertices, &insertedLineNumber, &errorMessage);
+                                               &errorMessage,
+                                               QString(),
+                                               pendingDraftObjectOptions(QStringLiteral("line")))
+        : textEditor_->insertDraftGeometry(geometryKind,
+                                           vertices,
+                                           &insertedLineNumber,
+                                           &errorMessage,
+                                           pendingDraftObjectOptions(geometryKind));
     if (!inserted) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Complete Draft failed.")

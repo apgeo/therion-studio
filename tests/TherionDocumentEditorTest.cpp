@@ -394,6 +394,56 @@ int runAppendDraftGeometryTest()
         return 1;
     }
 
+    contents = QStringLiteral("scrap custom\nendscrap\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    TherionDraftObjectOptions lineObjectOptions;
+    lineObjectOptions.type = QStringLiteral("wall");
+    lineObjectOptions.subtype = QStringLiteral("blocks");
+    lineObjectOptions.identifier = QStringLiteral("custom-line");
+    if (!expect(TherionDocumentEditor::appendDraftLineGeometry(&contents,
+                                                               {QStringLiteral("10 20"),
+                                                                QStringLiteral("30 40")},
+                                                               &lineNumber,
+                                                               &errorMessage,
+                                                               QString(),
+                                                               lineObjectOptions),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap custom\n"
+                                           "  line wall -subtype blocks -id custom-line\n"
+                                           "    10 20\n"
+                                           "    30 40\n"
+                                           "  endline\n"
+                                           "endscrap\n"),
+                "appendDraftLineGeometry should apply caller-provided type, subtype, and ID options.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap custom\nendscrap\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    TherionDraftObjectOptions pointObjectOptions;
+    pointObjectOptions.type = QStringLiteral("label");
+    pointObjectOptions.subtype = QStringLiteral("remark");
+    pointObjectOptions.identifier = QStringLiteral("p-1");
+    if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
+                                                           QStringLiteral("point"),
+                                                           {QPointF(12.0, 34.0)},
+                                                           &lineNumber,
+                                                           &errorMessage,
+                                                           pointObjectOptions),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap custom\n"
+                                           "  point 12.0 34.0 label -subtype remark -id p-1\n"
+                                           "endscrap\n"),
+                "appendDraftGeometry should apply caller-provided point type, subtype, and ID options.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("scrap a\nendscrap\n");
     errorMessage.clear();
     if (!expect(!TherionDocumentEditor::appendDraftGeometry(&contents, QStringLiteral("area"), {QPointF(1.0, 2.0), QPointF(3.0, 4.0)}, nullptr, &errorMessage),
@@ -478,6 +528,37 @@ int runAppendDraftGeometryTest()
         return 1;
     }
     if (!expect(lineNumber == 9, "appendDraftAreaGeometry should report the inserted area line number.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap a\nendscrap\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    TherionDraftObjectOptions areaObjectOptions;
+    areaObjectOptions.type = QStringLiteral("pebbles");
+    areaObjectOptions.subtype = QStringLiteral("dry");
+    areaObjectOptions.identifier = QStringLiteral("area-1");
+    if (!expect(TherionDocumentEditor::appendDraftAreaGeometry(&contents,
+                                                               {QStringLiteral("1 2"),
+                                                                QStringLiteral("3 4"),
+                                                                QStringLiteral("5 6")},
+                                                               &lineNumber,
+                                                               &errorMessage,
+                                                               areaObjectOptions),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap a\n"
+                                           "  line border -id line-1 -close on\n"
+                                           "    1 2\n"
+                                           "    3 4\n"
+                                           "    5 6\n"
+                                           "  endline\n"
+                                           "  area pebbles -subtype dry -id area-1\n"
+                                           "    line-1\n"
+                                           "  endarea\n"
+                                           "endscrap\n"),
+                "appendDraftAreaGeometry should apply caller-provided area type, subtype, and ID options.")) {
         return 1;
     }
 

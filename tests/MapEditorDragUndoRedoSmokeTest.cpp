@@ -1273,6 +1273,40 @@ int runAreaBorderHitSelectionSmoke()
         return 1;
     }
 
+    const QPointF fillCenterScene = areaFillItem->mapToScene(areaFillItem->path().boundingRect().center());
+    const QPointF borderSegmentScenePoint = linePathItem->mapToScene(linePathItem->path().pointAtPercent(0.125));
+    const QPointF borderToCenter = fillCenterScene - borderSegmentScenePoint;
+    const qreal borderToCenterLength = std::hypot(borderToCenter.x(), borderToCenter.y());
+    if (!expect(borderToCenterLength > 0.001,
+                "Area fill center should be distinct from the referenced border hit point.")) {
+        return 1;
+    }
+    const QPointF nearBorderFillScenePoint = borderSegmentScenePoint + (borderToCenter / borderToCenterLength) * 4.0;
+    mapView->resetTransform();
+    mapView->scale(6.0, 6.0);
+    mapView->centerOn(nearBorderFillScenePoint);
+    const QPoint nearBorderFillViewportPoint = mapView->mapFromScene(nearBorderFillScenePoint);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, nearBorderFillViewportPoint, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, nearBorderFillViewportPoint, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    const QSet<int> nearBorderSelection = selectedSourceLineNumbers(mapView->scene());
+    if (!expect(nearBorderSelection == QSet<int>({11}),
+                "Clicking inside an area near its border at high zoom should select the area, not the border line.")) {
+        std::cerr << "Actual selected source lines:";
+        for (const int lineNumber : nearBorderSelection) {
+            std::cerr << ' ' << lineNumber;
+        }
+        std::cerr << '\n';
+        return 1;
+    }
+    if (!expect(mapTab->currentLineNumber() == 11,
+                "Clicking inside an area near its border at high zoom should move the text cursor to the area directive.")) {
+        return 1;
+    }
+
+    mapTab->goToLine(4);
+    pumpEvents();
+
     const QPointF fillScenePoint = areaFillItem->mapToScene(areaFillItem->path().boundingRect().center());
     const QPoint fillViewportPoint = mapView->mapFromScene(fillScenePoint);
     sendMouse(mapView->viewport(), QEvent::MouseButtonPress, fillViewportPoint, Qt::LeftButton, Qt::LeftButton);

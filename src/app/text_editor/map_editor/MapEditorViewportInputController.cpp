@@ -18,6 +18,7 @@
 #include <QScrollBar>
 #include <QTabletEvent>
 #include <QTouchEvent>
+#include <QTransform>
 #include <QWheelEvent>
 #include <QWidget>
 
@@ -102,7 +103,26 @@ int mapSelectionHitPriority(const QGraphicsItem *item)
     return 1;
 }
 
-bool genericPathItemContainsStrokedHit(const QGraphicsItem *item, const QPointF &scenePosition)
+qreal itemUnitToViewPixels(const QGraphicsItem *item, const QTransform &viewTransform)
+{
+    if (item == nullptr) {
+        return 1.0;
+    }
+
+    const QPointF originScene = item->mapToScene(QPointF(0.0, 0.0));
+    const QPointF xScene = item->mapToScene(QPointF(1.0, 0.0));
+    const QPointF yScene = item->mapToScene(QPointF(0.0, 1.0));
+    const QPointF originView = viewTransform.map(originScene);
+    const QPointF xDelta = viewTransform.map(xScene) - originView;
+    const QPointF yDelta = viewTransform.map(yScene) - originView;
+    const qreal xScale = std::hypot(xDelta.x(), xDelta.y());
+    const qreal yScale = std::hypot(yDelta.x(), yDelta.y());
+    return qMax<qreal>(0.001, qMax(xScale, yScale));
+}
+
+bool genericPathItemContainsStrokedHit(const QGraphicsItem *item,
+                                       const QPointF &scenePosition,
+                                       const QTransform &viewTransform)
 {
     const auto *pathItem = dynamic_cast<const QGraphicsPathItem *>(item);
     if (pathItem == nullptr) {
@@ -111,7 +131,9 @@ bool genericPathItemContainsStrokedHit(const QGraphicsItem *item, const QPointF 
 
     const QPainterPath path = pathItem->path();
     const QPointF localPosition = pathItem->mapFromScene(scenePosition);
-    const qreal tolerance = std::max<qreal>(pathItem->pen().widthF() + 4.0, 6.0);
+    const qreal viewScale = itemUnitToViewPixels(pathItem, viewTransform);
+    const qreal strokeRadiusPixels = pathItem->pen().widthF() * 0.5;
+    const qreal tolerance = (strokeRadiusPixels + 4.0) / viewScale;
     if (!path.boundingRect().adjusted(-tolerance, -tolerance, tolerance, tolerance).contains(localPosition)) {
         return false;
     }
@@ -136,7 +158,8 @@ bool genericPathItemContainsStrokedHit(const QGraphicsItem *item, const QPointF 
 
 QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems,
                                    bool requireSelected = false,
-                                   std::optional<QPointF> scenePosition = std::nullopt)
+                                   std::optional<QPointF> scenePosition = std::nullopt,
+                                   const QTransform &viewTransform = QTransform())
 {
     QGraphicsItem *bestItem = nullptr;
     int bestPriority = std::numeric_limits<int>::max();
@@ -155,7 +178,7 @@ QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems,
         const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
         if (scenePosition.has_value()
             && subtype == kMapSceneSelectionSubtypeGeneric
-            && !genericPathItemContainsStrokedHit(item, scenePosition.value())) {
+            && !genericPathItemContainsStrokedHit(item, scenePosition.value(), viewTransform)) {
             continue;
         }
 
@@ -277,7 +300,10 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                                                                                  Qt::IntersectsItemShape,
                                                                                  Qt::DescendingOrder,
                                                                                  context_.view->transform());
-                        if (QGraphicsItem *item = preferredMapHitItem(hitItems, false, (*context_.pendingClickScenePosition))) {
+                        if (QGraphicsItem *item = preferredMapHitItem(hitItems,
+                                                                      false,
+                                                                      (*context_.pendingClickScenePosition),
+                                                                      context_.view->transform())) {
                             const int lineNumber = item->data(kMapSceneLineNumberRole).toInt();
                             (*context_.pendingClickLineNumber) = lineNumber;
                             if (auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item)) {

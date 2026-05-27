@@ -7,6 +7,7 @@
 
 #include <functional>
 
+#include "MapEditorInspectorData.h"
 #include "MapEditorObjectDetailsLogic.h"
 
 class QCheckBox;
@@ -20,7 +21,7 @@ class QWidget;
 
 namespace TherionStudio
 {
-struct InspectorSymbolCatalog;
+class MapEditorStylePreviewWidget;
 class TextEditorTab;
 
 struct MapEditorObjectDetailsContext
@@ -54,11 +55,13 @@ struct MapEditorObjectDetailsContext
     QLabel *quickProjectionLabel = nullptr;
     QLabel *quickTypeLabel = nullptr;
     QLabel *quickSubtypeLabel = nullptr;
+    QLabel *stylePreviewLabel = nullptr;
     QComboBox *quickTypeCombo = nullptr;
     QComboBox *quickSubtypeCombo = nullptr;
     QComboBox *quickProjectionCombo = nullptr;
     QLineEdit *quickIdentifierEdit = nullptr;
     QLineEdit *quickNameEdit = nullptr;
+    MapEditorStylePreviewWidget *stylePreview = nullptr;
     QWidget *vertexActionsEditor = nullptr;
     QPushButton *vertexInsertBeforeButton = nullptr;
     QPushButton *vertexInsertAfterButton = nullptr;
@@ -92,6 +95,8 @@ struct MapEditorObjectDetailsContext
     std::function<QRectF()> mapSourceBoundsForCurrentDocument;
     std::function<void()> refreshToolbarSummary;
     std::function<void()> refreshObjectDetailsPanel;
+    std::function<std::optional<InspectorObjectQuickFields>()> pendingInsertQuickFields;
+    std::function<void(const InspectorObjectQuickFields &)> setPendingInsertQuickFields;
     std::function<void()> clearInspectorObjectSelection;
     std::function<void(int, bool)> selectMapLine;
     std::function<void(int)> restorePointSelectionLater;

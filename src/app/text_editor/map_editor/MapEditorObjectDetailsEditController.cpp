@@ -588,6 +588,19 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
         return;
     }
 
+    if (context_.pendingInsertQuickFields && context_.setPendingInsertQuickFields) {
+        std::optional<InspectorObjectQuickFields> pendingFields = context_.pendingInsertQuickFields();
+        if (pendingFields.has_value() && !pendingFields->commandKind.trimmed().isEmpty()) {
+            pendingFields->type = context_.quickTypeCombo->currentText();
+            pendingFields->subtype = context_.quickSubtypeCombo->currentText();
+            pendingFields->identifier = context_.quickIdentifierEdit->text();
+            pendingFields->name = context_.quickNameEdit->text();
+            context_.setPendingInsertQuickFields(pendingFields.value());
+            context_.refreshObjectDetailsPanel();
+            return;
+        }
+    }
+
     int targetLineNumber = *context_.selectedObjectLineNumber;
     if (targetLineNumber <= 0) {
         targetLineNumber = context_.textEditor->currentLineNumber();
@@ -633,6 +646,17 @@ void MapEditorObjectDetailsEditController::applyScrapProjectionEdit()
         || context_.textEditor == nullptr
         || context_.quickProjectionCombo == nullptr) {
         return;
+    }
+
+    if (context_.pendingInsertQuickFields && context_.setPendingInsertQuickFields) {
+        std::optional<InspectorObjectQuickFields> pendingFields = context_.pendingInsertQuickFields();
+        if (pendingFields.has_value() && pendingFields->commandKind.trimmed().toLower() == QStringLiteral("scrap")) {
+            pendingFields->projection = context_.quickProjectionCombo->currentText();
+            pendingFields->identifier = context_.quickIdentifierEdit != nullptr ? context_.quickIdentifierEdit->text() : pendingFields->identifier;
+            context_.setPendingInsertQuickFields(pendingFields.value());
+            context_.refreshObjectDetailsPanel();
+            return;
+        }
     }
 
     int targetLineNumber = *context_.selectedObjectLineNumber;

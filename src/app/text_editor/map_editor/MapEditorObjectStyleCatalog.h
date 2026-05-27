@@ -30,6 +30,47 @@ enum class MapEditorPointSymbol
     X
 };
 
+enum class MapEditorLineDecorationKind
+{
+    OffsetStroke,
+    Parallel,
+    Ticks,
+    Rungs,
+    Teeth,
+    Symbols
+};
+
+enum class MapEditorLineDecorationSide
+{
+    Center,
+    Left,
+    Right
+};
+
+struct MapEditorLineDecorationStyle
+{
+    MapEditorLineDecorationKind kind = MapEditorLineDecorationKind::Symbols;
+    MapEditorLineDecorationSide side = MapEditorLineDecorationSide::Center;
+    qreal spacing = 12.0;
+    qreal offset = 0.0;
+    QVector<qreal> offsets;
+    std::optional<qreal> fromOffset;
+    std::optional<qreal> toOffset;
+    qreal size = 8.0;
+    qreal length = 8.0;
+    qreal strokeWidth = 1.2;
+    Qt::PenStyle strokeStyle = Qt::SolidLine;
+    std::optional<QColor> strokeColor;
+    std::optional<QColor> fillColor;
+    QVector<qreal> dashPattern;
+    MapEditorPointSymbol symbol = MapEditorPointSymbol::Circle;
+    qreal angle = 0.0;
+    qreal angleJitter = 0.0;
+    qreal sizeJitter = 0.0;
+    qreal offsetJitter = 0.0;
+    std::optional<int> seed;
+};
+
 struct MapEditorAreaFillPatternStyle
 {
     MapEditorFillPatternKind kind = MapEditorFillPatternKind::None;
@@ -60,10 +101,12 @@ struct MapEditorPointStyleDefaults
 
 struct MapEditorLineStyleDefaults
 {
+    bool strokeVisible = true;
     qreal strokeWidth = 3.2;
     Qt::PenStyle penStyle = Qt::SolidLine;
     std::optional<QColor> strokeColor;
     QVector<qreal> dashPattern;
+    QVector<MapEditorLineDecorationStyle> decorations;
 };
 
 struct MapEditorAreaStyleDefaults
@@ -97,10 +140,12 @@ struct MapEditorPointStyleRule
 struct MapEditorLineStyleRule
 {
     MapEditorStyleSelector selector;
+    std::optional<bool> strokeVisible;
     std::optional<qreal> strokeWidth;
     std::optional<Qt::PenStyle> penStyle;
     std::optional<QColor> strokeColor;
     std::optional<QVector<qreal>> dashPattern;
+    std::optional<QVector<MapEditorLineDecorationStyle>> decorations;
 };
 
 struct MapEditorAreaStyleRule
@@ -139,10 +184,12 @@ struct MapEditorResolvedPointStyle
 
 struct MapEditorResolvedLineStyle
 {
+    bool strokeVisible = true;
     qreal strokeWidth = 3.2;
     Qt::PenStyle penStyle = Qt::SolidLine;
     std::optional<QColor> strokeColor;
     QVector<qreal> dashPattern;
+    QVector<MapEditorLineDecorationStyle> decorations;
 };
 
 struct MapEditorResolvedAreaStyle

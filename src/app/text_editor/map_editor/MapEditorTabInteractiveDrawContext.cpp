@@ -87,6 +87,9 @@ MapEditorInteractiveDrawContext MapEditorTab::interactiveDrawContext()
                                            int insertedLineNumber) {
             recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
         },
+        .draftObjectOptions = [this](const QString &commandKind) {
+            return pendingDraftObjectOptions(commandKind);
+        },
         .lineCoordinateRowsForInteractiveDraft = [this]() {
             return lineCoordinateRowsForInteractiveDraft();
         },
@@ -137,6 +140,8 @@ void MapEditorTab::clearInteractiveDrawSession(bool clearMode)
         lineExtensionActive_ = false;
         lineExtensionLineNumber_ = 0;
         lineExtensionPrepend_ = false;
+        clearPendingInsertObject();
+        refreshObjectDetailsPanel();
     }
 }
 
@@ -158,6 +163,11 @@ bool MapEditorTab::cancelInteractiveDrawingToSelectMode()
         updateHelpPanel();
         return true;
     }
-    return MapEditorInteractiveDrawController(interactiveDrawContext()).cancelInteractiveDrawingToSelectMode();
+    const bool handled = MapEditorInteractiveDrawController(interactiveDrawContext()).cancelInteractiveDrawingToSelectMode();
+    if (handled) {
+        clearPendingInsertObject();
+        refreshObjectDetailsPanel();
+    }
+    return handled;
 }
 }

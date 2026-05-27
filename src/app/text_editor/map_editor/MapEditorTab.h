@@ -20,6 +20,7 @@
 #include "MapEditorInspectorData.h"
 #include "MapEditorInteractiveDrawLogic.h"
 #include "MapEditorObjectDetailsLogic.h"
+#include "../../../core/CommandCatalogService.h"
 #include "../../../core/TherionDocumentParser.h"
 
 class QLabel;
@@ -57,7 +58,6 @@ enum class DraftGeometryKind;
 namespace TherionStudio
 {
 class TextEditorTab;
-class CommandCatalogStore;
 struct MapEditorCanvasEditContext;
 struct MapEditorInteractiveDrawContext;
 class MapEditorInspectorBackgroundController;
@@ -510,6 +510,7 @@ private:
     QDateTime lastNativeZoomGestureUtc_;
     std::unique_ptr<ISessionStore> ownedSessionStore_;
     ISessionStore *sessionStore_ = nullptr;
+    CommandCatalogStore catalogStore_;
     InspectorSymbolCatalog inspectorSymbolCatalog_;
     MapEditorOrientationApplicabilityByCommand orientationApplicabilityByCommand_;
     bool touchFriendlyControlsEnabled_ = false;

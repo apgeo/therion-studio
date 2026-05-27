@@ -439,8 +439,9 @@ MapEditorTab::MapEditorTab(CommandCatalogStore catalogStore, QWidget *parent)
     : QWidget(parent)
     , ownedSessionStore_(std::make_unique<SessionSettingsStore>())
     , sessionStore_(ownedSessionStore_.get())
-    , inspectorSymbolCatalog_(inspectorSymbolCatalogFromCommandCatalog(catalogStore.catalogObject()))
-    , orientationApplicabilityByCommand_(mapEditorOrientationApplicabilityFromCommandCatalog(catalogStore.catalogObject()))
+    , catalogStore_(std::move(catalogStore))
+    , inspectorSymbolCatalog_(inspectorSymbolCatalogFromCommandCatalog(catalogStore_.catalogObject()))
+    , orientationApplicabilityByCommand_(mapEditorOrientationApplicabilityFromCommandCatalog(catalogStore_.catalogObject()))
 {
     initializeWorkspace();
 }
@@ -453,8 +454,9 @@ MapEditorTab::MapEditorTab(ISessionStore &sessionStore, QWidget *parent)
 MapEditorTab::MapEditorTab(ISessionStore &sessionStore, CommandCatalogStore catalogStore, QWidget *parent)
     : QWidget(parent)
     , sessionStore_(&sessionStore)
-    , inspectorSymbolCatalog_(inspectorSymbolCatalogFromCommandCatalog(catalogStore.catalogObject()))
-    , orientationApplicabilityByCommand_(mapEditorOrientationApplicabilityFromCommandCatalog(catalogStore.catalogObject()))
+    , catalogStore_(std::move(catalogStore))
+    , inspectorSymbolCatalog_(inspectorSymbolCatalogFromCommandCatalog(catalogStore_.catalogObject()))
+    , orientationApplicabilityByCommand_(mapEditorOrientationApplicabilityFromCommandCatalog(catalogStore_.catalogObject()))
 {
     initializeWorkspace();
 }
@@ -543,7 +545,7 @@ void MapEditorTab::buildUi()
     splitter_->setChildrenCollapsible(false);
     applyThinSplitterStyle(splitter_, QStringLiteral("mapEditorWorkspaceSplitter"));
 
-    textEditor_ = new TextEditorTab(splitter_);
+    textEditor_ = new TextEditorTab(catalogStore_, splitter_);
     textEditor_->setInlineStatusVisible(false);
     textEditor_->setModeSelectorVisible(false);
     sourceDrivenMapRefreshTimer_ = new QTimer(this);

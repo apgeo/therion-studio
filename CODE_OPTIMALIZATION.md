@@ -38,6 +38,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 1 partial: map inspector/orientation helper APIs no longer expose static default catalog access.
 - [x] Phase 1 partial: raw editor syntax/help controllers require explicit command catalog metadata injection.
 - [x] Phase 1 partial: `MapEditorTab` reuses its injected command catalog for the embedded raw text editor.
+- [x] Phase 1 partial: `MainWindow` creates additional windows with the already injected command catalog.
 - [ ] Phase 1 remaining: command catalog access is injectable across all command metadata consumers.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.

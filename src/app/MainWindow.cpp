@@ -1346,7 +1346,7 @@ void MainWindow::addWelcomeTab()
 
 void MainWindow::createNewWindow()
 {
-    auto *window = new MainWindow;
+    auto *window = new MainWindow(commandCatalogStore_);
     window->show();
 }
 

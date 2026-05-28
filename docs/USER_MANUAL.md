@@ -112,6 +112,7 @@ Toolbar actions include:
 Canvas rendering is zoom-aware: geometry strokes and edit handles are reduced at distant zoom levels so overview remains readable.
 Point, line, and area rendering can be customized with JSON style overrides; see `Configuration -> Custom Map Object Styles`.
 Line objects render as a single styled stroke; there is no separate secondary detail-stroke layer.
+Area fills honor Therion's default `-clip on` visually when the area is inside a scrap with a resolvable wall boundary. The canvas clips the fill and fill pattern to the scrap wall outline; areas with `-clip off` render without this scrap-boundary clipping.
 
 ### 6.3 Drawing Basics
 
@@ -244,7 +245,7 @@ Point style files support:
 
 | Parameter | Type | Meaning |
 |---|---|---|
-| `symbol` | string | One of `circle`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, `x`. |
+| `symbol_parts` | array | Point symbol geometry. Each part uses a `kind`; built-in symbol kinds are `circle`, `oval`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, and `x`. Primitive geometry kinds are `line`, `polyline`, `polygon`, and `ellipse`. |
 | `size` | number | Symbol bounding-box size. Every symbol fits into `size x size`; for `circle`, this is the diameter. |
 | `stroke_width` | number | Symbol outline or line width. |
 | `stroke_color` | color string | Symbol outline color, for example `#1C1C1E` or `#F4F4F2E6`. |
@@ -255,16 +256,22 @@ Example:
 
 ```json
 {
-  "symbol": "triangle",
   "label_field": "name",
   "size": 12.0,
   "stroke_width": 1.2,
   "stroke_color": "#1C1C1E",
-  "fill_color": "#FFD60A"
+  "fill_color": "#FFD60A",
+  "symbol_parts": [
+    { "kind": "triangle", "size": 12.0 }
+  ]
 }
 ```
 
+For built-in symbol parts, use `x`, `y`, `size`, and optional `angle`. For `line`, use `x1`, `y1`, `x2`, `y2`. For `polyline` and `polygon`, use `points` as arrays such as `[[-3, 0], [0, -4], [3, 0]]`; `polygon` may use `fill: true`. For `ellipse`, use `x`, `y`, `width`, `height`, optional `angle`, and optional `fill: true`. Any part may override `fill_color`, `stroke_color`, and `stroke_width`; when omitted, the owning point, line decoration, or area pattern color is used. All coordinates are relative to the owning style's `size`.
+
 Bundled `point.station.json` renders `-name` next to station points. Bundled `point.label.json` renders `-text` next to label points. For `label_field: "text"`, the map canvas interprets common Therion label formatting tags such as `<br>`, `<thsp>`, `<rm>`, `<it>`, `<bf>`, `<ss>`, `<si>`, `<rtl>`, `</rtl>`, and `<size:...>` when drawing the label.
+
+Several bundled point styles are approximated from Therion's SKBB or UIS MetaPost symbols using `symbol_parts`, including simple sand, debris, pebbles, blocks, ice, snow, crystal, gypsum, and cave-pearl symbols.
 
 #### Line Style Parameters
 
@@ -299,23 +306,32 @@ Decoration entries support these `kind` values:
 | `ticks` | Draw repeated short tick marks. |
 | `rungs` | Draw repeated crossbars between `from_offset` and `to_offset`. |
 | `teeth` | Draw repeated filled triangular teeth on one side. |
-| `symbols` | Draw repeated built-in symbols. |
+| `symbols` | Draw repeated `symbol_parts` geometry. |
+| `waves` | Draw repeated wavy marks along one side of the line. |
+| `slope_ticks` | Draw `line slope` gradient ticks using per-line-point `orientation` and `l-size` values when present. |
 
 Common decoration parameters:
 
 | Parameter | Type | Meaning |
 |---|---|---|
 | `side` | string | `center`, `left`, or `right`. Defaults to `center`; `teeth` default to `right`. |
-| `spacing` | number | Distance between repeated marks. |
+| `spacing` | number | Distance between repeated marks. With `adjust_spacing: true`, this is the target MetaPost step before fitting it to the path length. |
+| `adjust_spacing` | boolean | Fit repeated marks evenly to the line length using Therion/MetaPost-style `adjust_step` spacing. Applies to repeated decorations such as `symbols`, `ticks`, `rungs`, `teeth`, `waves`, and `slope_ticks`. |
+| `spacing_divisor` | number | Divides the adjusted step after fitting. The bundled SKBB slope style uses `2.0`, matching `adjust_step(..., 1.4u) / 2`. Other repeated decorations usually keep the default `1.0`. |
 | `offset` | number | Normal offset from the line. With `side: left/right`, positive values move to that side. |
 | `offsets` | number array | Parallel offsets for `parallel`. |
 | `from_offset`, `to_offset` | number | Crossbar endpoints for `rungs`. |
-| `length` | number | Tick or rung length when explicit endpoints are not used. |
-| `size` | number | Tooth or symbol size. |
-| `symbol` | string | For `symbols`: one of `circle`, `oval`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, `x`. |
+| `length`, `default_length` | number | Tick or rung length when explicit endpoints are not used; wave mark width for `waves`; fallback `l-size` for `slope_ticks`. |
+| `alternate_length_scale` | number | Optional positive multiplier for every second `slope_ticks` mark, used for long-short-long-short slope symbols; defaults to `1.0`. |
+| `size` | number | Tooth or symbol size; wave amplitude for `waves`. |
+| `symbol_parts` | array | For `symbols`: repeated symbol geometry using the same `symbol_parts` syntax as point styles. |
 | `stroke_style`, `stroke_width`, `stroke_color`, `dash_pattern` | mixed | Optional decoration-specific stroke styling. Defaults inherit the line stroke color where applicable. |
 | `fill_color` | color string | Fill color for filled teeth or symbols. |
-| `angle`, `angle_jitter`, `size_jitter`, `offset_jitter`, `seed` | mixed | Optional deterministic variation for repeated symbols. |
+| `angle`, `angle_jitter`, `size_jitter`, `offset_jitter`, `distance_jitter`, `seed` | mixed | Optional deterministic variation for repeated symbols. `distance_jitter` moves repeated marks along the line by at most 45% of their spacing. |
+
+For `slope_ticks`, the map renderer interpolates `l-size` between line points where it is defined. If a line point has explicit `orientation`, that direction is used; otherwise the tick is perpendicular to the local line direction on the left side. If no `l-size` is present, the decoration uses `default_length` or `length` as a fallback. The bundled slope style follows the SKBB MetaPost rhythm: `spacing` is fitted to the path with `adjust_spacing`, actual marks are placed at half that fitted step, `l-size` is the long mark length, and short marks are approximately one third of that length.
+
+Bundled line styles include lightweight SKBB/UIS-derived presets for wall material subtypes, pit/floor-step ticks, wall ice, overhang teeth, fixed ladder rungs, handrail markers, survey lines, and border subtypes. Symbols that depend on richer Therion semantics or complex MetaPost paths may still use an approximation or the generic fallback style.
 
 Example symbol-only pebbles line:
 
@@ -325,7 +341,6 @@ Example symbol-only pebbles line:
   "decorations": [
     {
       "kind": "symbols",
-      "symbol": "oval",
       "side": "center",
       "spacing": 10,
       "size": 8,
@@ -333,7 +348,10 @@ Example symbol-only pebbles line:
       "angle_jitter": 30,
       "stroke_color": "#1C1C1E",
       "fill_color": "#FFFFFF",
-      "stroke_width": 1.2
+      "stroke_width": 1.2,
+      "symbol_parts": [
+        { "kind": "oval", "size": 8 }
+      ]
     }
   ]
 }
@@ -385,13 +403,13 @@ Supported `fill_pattern.kind` values are `hatch`, `cross_hatch`, and `dots`.
 
 | Parameter | Type | Meaning |
 |---|---|---|
-| `spacing` | number | Distance between dot centers. |
-| `symbol` | string | Optional repeated symbol. One of `circle`, `oval`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, `x`. Defaults to `circle`. |
-| `size` | number | Symbol bounding-box size. |
+| `spacing` | number | Distance between grid centers, or scatter cell size when `placement` is `scatter`. |
+| `placement` | string | Optional dot placement mode: `grid` (default) or `scatter` for a looser deterministic distribution inside spacing cells. |
+| `symbol_parts` | array | Repeated symbol geometry using the same `symbol_parts` syntax as point styles. |
+| `size` | number | Optional symbol motif bounding-box override. For `dots`, omit it in normal cases; the renderer derives it from the `symbol_parts` bounds. |
 | `size_jitter` | number | Optional deterministic symbol size variation in the same units as `size`. |
-| `dot_color` | color string | Dot or symbol color. Filled symbols use it as fill; `asterisk`, `plus`, and `x` use it as stroke. Area dot symbols do not draw a separate outline. |
 | `angle_jitter` | number | Optional deterministic symbol rotation variation in degrees. |
-| `offset_jitter` | number | Optional deterministic dot offset variation. |
+| `offset_jitter` | number | Optional deterministic dot offset variation. If omitted for `placement: "scatter"`, the renderer uses most of each spacing cell. |
 | `seed` | integer | Optional deterministic pattern seed. |
 
 Example `dots` symbol pattern:
@@ -400,12 +418,12 @@ Example `dots` symbol pattern:
 {
   "fill_pattern": {
     "kind": "dots",
-    "symbol": "asterisk",
     "spacing": 13.0,
-    "size": 5.4,
     "size_jitter": 1.2,
-    "dot_color": "#8FB6D8",
-    "angle_jitter": 35.0
+    "angle_jitter": 35.0,
+    "symbol_parts": [
+      { "kind": "asterisk", "size": 5.4, "stroke_color": "#8FB6D8" }
+    ]
   }
 }
 ```

@@ -24,9 +24,10 @@ namespace
 QPen previewPen(const QColor &color,
                 qreal width,
                 Qt::PenStyle style,
-                const QVector<qreal> &dashPattern = {})
+                const QVector<qreal> &dashPattern = {},
+                qreal minimumWidth = 0.6)
 {
-    QPen pen(color, qMax<qreal>(0.6, width), style, Qt::RoundCap, Qt::RoundJoin);
+    QPen pen(color, qMax<qreal>(minimumWidth, width), style, Qt::RoundCap, Qt::RoundJoin);
     pen.setCosmetic(true);
     if (!dashPattern.isEmpty()) {
         pen.setStyle(Qt::CustomDashLine);
@@ -62,6 +63,9 @@ QColor readablePreviewColor(const QColor &requestedColor,
 {
     if (!requestedColor.isValid()) {
         return fallbackColor;
+    }
+    if (requestedColor.alpha() == 0) {
+        return requestedColor;
     }
     if (previewContrastRatio(requestedColor, backgroundColor) >= 2.4) {
         return requestedColor;
@@ -249,6 +253,112 @@ qreal effectiveDecorationOffset(const MapEditorLineDecorationStyle &decoration,
     return offset;
 }
 
+qreal effectiveDecorationDistance(qreal baseDistance,
+                                  qreal pathLength,
+                                  qreal spacing,
+                                  const MapEditorLineDecorationStyle &decoration,
+                                  int markerIndex,
+                                  int seed)
+{
+    qreal distance = baseDistance;
+    if (decoration.distanceJitter > 0.0) {
+        const qreal jitter = qMin(decoration.distanceJitter, spacing * 0.45);
+        distance += stableRandomSigned(static_cast<quint32>(seed), markerIndex, 0, 0x4d712U) * jitter;
+    }
+    return qBound<qreal>(0.0, distance, pathLength);
+}
+
+qreal previewAdjustedStep(qreal length, qreal targetSpacing)
+{
+    if (length <= 0.001) {
+        return qMax<qreal>(0.001, length);
+    }
+
+    const qreal spacing = qMax<qreal>(1.0, targetSpacing);
+    if (spacing <= length / 2.0) {
+        return length / qMax<qreal>(1.0, std::floor(length / spacing));
+    }
+    return length / 2.0;
+}
+
+struct PreviewMarkerDistances
+{
+    QVector<qreal> distances;
+    qreal jitterSpacing = 1.0;
+};
+
+PreviewMarkerDistances repeatedPreviewMarkerDistances(qreal pathLength,
+                                                      const MapEditorLineDecorationStyle &decoration)
+{
+    PreviewMarkerDistances result;
+    const qreal spacing = qMax<qreal>(1.0, decoration.spacing);
+    if (decoration.adjustSpacing) {
+        const qreal adjustedSpacing = previewAdjustedStep(pathLength, spacing);
+        const qreal step = qMax<qreal>(0.001, adjustedSpacing / qMax<qreal>(1.0, decoration.spacingDivisor));
+        const int rawMarkerCount = static_cast<int>(std::floor(pathLength / step));
+        const int markerCount = rawMarkerCount > 0 ? qMin(rawMarkerCount, 96) : 1;
+        result.distances.reserve(markerCount);
+        result.jitterSpacing = step;
+        for (int markerIndex = 0; markerIndex < markerCount; ++markerIndex) {
+            result.distances.append(rawMarkerCount > markerCount
+                                        ? (markerIndex + 0.5) * pathLength / static_cast<qreal>(markerCount)
+                                        : (markerIndex + 0.5) * step);
+        }
+        return result;
+    }
+
+    const int rawMarkerCount = static_cast<int>(std::floor(pathLength / spacing));
+    const int markerCount = rawMarkerCount > 0 ? qMin(rawMarkerCount, 96) : 1;
+    result.distances.reserve(markerCount);
+    result.jitterSpacing = spacing;
+    for (int markerIndex = 0; markerIndex < markerCount; ++markerIndex) {
+        result.distances.append(rawMarkerCount > markerCount
+                                    ? (markerIndex + 0.5) * pathLength / static_cast<qreal>(markerCount)
+                                    : (rawMarkerCount > 0
+                                        ? (markerIndex + 0.5) * spacing
+                                        : pathLength * 0.5));
+    }
+    return result;
+}
+
+PreviewMarkerDistances slopeTickPreviewMarkerDistances(qreal pathLength,
+                                                       const MapEditorLineDecorationStyle &decoration)
+{
+    if (!decoration.adjustSpacing) {
+        return repeatedPreviewMarkerDistances(pathLength, decoration);
+    }
+
+    PreviewMarkerDistances result;
+    const qreal spacing = qMax<qreal>(1.0, decoration.spacing);
+    const qreal symbolUnit = qMax<qreal>(0.001, spacing / 1.4);
+    qreal edgeOffset = 0.0;
+    if (pathLength > 3.0 * symbolUnit) {
+        edgeOffset = 0.3 * symbolUnit;
+    } else if (pathLength > symbolUnit) {
+        edgeOffset = 0.1 * symbolUnit;
+    }
+
+    const qreal drawableLength = qMax<qreal>(0.0, pathLength - (2.0 * edgeOffset));
+    if (drawableLength <= 0.001) {
+        result.distances.append(pathLength * 0.5);
+        result.jitterSpacing = spacing;
+        return result;
+    }
+
+    const qreal adjustedSpacing = previewAdjustedStep(drawableLength, spacing);
+    const qreal step = qMax<qreal>(0.001, adjustedSpacing / qMax<qreal>(1.0, decoration.spacingDivisor));
+    const qreal start = qBound<qreal>(0.0, edgeOffset, pathLength);
+    const qreal end = qBound<qreal>(0.0, edgeOffset + drawableLength, pathLength);
+    result.jitterSpacing = step;
+    for (qreal distance = start; distance <= end + 0.001 && result.distances.size() < 128; distance += step) {
+        result.distances.append(qBound<qreal>(0.0, distance, pathLength));
+    }
+    if (result.distances.isEmpty()) {
+        result.distances.append(pathLength * 0.5);
+    }
+    return result;
+}
+
 void drawOffsetPreviewStroke(QPainter *painter,
                              const QPainterPath &path,
                              const MapEditorLineDecorationStyle &decoration,
@@ -287,7 +397,8 @@ void drawPreviewSymbol(QPainter *painter,
                        const QColor &strokeColor,
                        const std::optional<QColor> &fillColor,
                        qreal strokeWidth,
-                       const QColor &backgroundColor)
+                       const QColor &backgroundColor,
+                       qreal minimumStrokeWidth = 0.6)
 {
     const QRectF symbolRect(center.x() - size / 2.0,
                             center.y() - size / 2.0,
@@ -309,13 +420,111 @@ void drawPreviewSymbol(QPainter *painter,
                                    Qt::SolidLine));
         painter->drawPath(symbolPath);
     }
-    if (mapEditorPointSymbolUsesFill(symbol) && fillColor.has_value()) {
+    if (mapEditorPointSymbolUsesFill(symbol) && fillColor.has_value() && fillColor->alpha() > 0) {
         painter->setBrush(QBrush(fillColor.value()));
     } else {
         painter->setBrush(Qt::NoBrush);
     }
-    painter->setPen(previewPen(strokeColor, strokeWidth, Qt::SolidLine));
+    painter->setPen(previewPen(strokeColor, strokeWidth, Qt::SolidLine, {}, minimumStrokeWidth));
     painter->drawPath(symbolPath);
+}
+
+void drawPreviewSymbolParts(QPainter *painter,
+                            const QPointF &center,
+                            qreal renderedSize,
+                            qreal ownerSize,
+                            qreal angleDegrees,
+                            const QVector<MapEditorPointSymbolPart> &parts,
+                            MapEditorPointSymbol fallbackSymbol,
+                            const QColor &strokeColor,
+                            const std::optional<QColor> &fillColor,
+                            qreal strokeWidth,
+                            const QColor &backgroundColor,
+                            qreal minimumStrokeWidth = 0.6,
+                            bool fillOnlySymbols = false)
+{
+    const QRectF symbolRect(center.x() - renderedSize / 2.0,
+                            center.y() - renderedSize / 2.0,
+                            renderedSize,
+                            renderedSize);
+    QTransform transform;
+    if (std::abs(angleDegrees) > 0.001) {
+        transform.translate(center.x(), center.y());
+        transform.rotate(angleDegrees);
+        transform.translate(-center.x(), -center.y());
+    }
+
+    const auto drawPath = [&](const QPainterPath &sourcePath,
+                              bool usesFill,
+                              const std::optional<QColor> &partStrokeColor = std::nullopt,
+                              const std::optional<QColor> &partFillColor = std::nullopt,
+                              const std::optional<qreal> &partStrokeWidth = std::nullopt) {
+        const QPainterPath path = transform.map(sourcePath);
+        const QColor effectiveStrokeColor = partStrokeColor.value_or(strokeColor);
+        const std::optional<QColor> effectiveFillColor = partFillColor.has_value() ? partFillColor : fillColor;
+        const qreal effectiveStrokeWidth = partStrokeWidth.value_or(strokeWidth);
+        const bool drawFill = usesFill && effectiveFillColor.has_value() && effectiveFillColor->alpha() > 0;
+        const bool drawStroke = (!fillOnlySymbols || !drawFill)
+            || partStrokeColor.has_value()
+            || partStrokeWidth.has_value();
+        if (drawStroke && needsPreviewContrastUnderlay(effectiveStrokeColor, backgroundColor)) {
+            painter->setBrush(Qt::NoBrush);
+            painter->setPen(previewPen(previewContrastUnderlayColor(effectiveStrokeColor),
+                                       effectiveStrokeWidth + 2.2,
+                                       Qt::SolidLine));
+            painter->drawPath(path);
+        }
+        painter->setBrush(drawFill ? QBrush(effectiveFillColor.value()) : Qt::NoBrush);
+        painter->setPen(drawStroke
+                            ? previewPen(effectiveStrokeColor,
+                                         effectiveStrokeWidth,
+                                         Qt::SolidLine,
+                                         {},
+                                         minimumStrokeWidth)
+                            : Qt::NoPen);
+        painter->drawPath(path);
+    };
+
+    if (parts.isEmpty()) {
+        drawPath(mapEditorPointSymbolPath(fallbackSymbol, symbolRect),
+                 mapEditorPointSymbolUsesFill(fallbackSymbol));
+        return;
+    }
+
+    const qreal baseSize = qMax<qreal>(0.001, ownerSize);
+    for (const MapEditorPointSymbolPart &part : parts) {
+        drawPath(mapEditorPointSymbolPartPath(part, symbolRect, baseSize),
+                 mapEditorSymbolPartUsesFill(part),
+                 part.strokeColor,
+                 part.fillColor,
+                 part.strokeWidth);
+    }
+}
+
+void drawPreviewWave(QPainter *painter,
+                     const QPointF &center,
+                     const QPointF &tangent,
+                     const QPointF &normal,
+                     const MapEditorLineDecorationStyle &decoration)
+{
+    const qreal halfLength = qMax<qreal>(0.5, decoration.length * 0.5);
+    const qreal amplitude = qMax<qreal>(0.2, decoration.size);
+    const QPointF start = center - (tangent * halfLength);
+    const QPointF middle = center;
+    const QPointF end = center + (tangent * halfLength);
+    const QPointF quarter = tangent * (halfLength * 0.5);
+    const QPointF crest = normal * amplitude;
+    const QPointF trough = normal * -amplitude;
+
+    QPainterPath wave;
+    wave.moveTo(start);
+    wave.cubicTo(start + quarter * 0.65,
+                 middle - quarter + crest,
+                 middle);
+    wave.cubicTo(middle + quarter + trough,
+                 end - quarter * 0.65,
+                 end);
+    painter->drawPath(wave);
 }
 
 void drawLineDecorationsPreview(QPainter *painter,
@@ -346,24 +555,26 @@ void drawLineDecorationsPreview(QPainter *painter,
         case MapEditorLineDecorationKind::Ticks:
         case MapEditorLineDecorationKind::Rungs:
         case MapEditorLineDecorationKind::Teeth:
-        case MapEditorLineDecorationKind::Symbols: {
-            const qreal spacing = qMax<qreal>(1.0, decoration.spacing);
-            const int rawMarkerCount = static_cast<int>(std::floor(length / spacing));
-            const int markerCount = rawMarkerCount > 0
-                ? qMin(rawMarkerCount, 96)
-                : 1;
+        case MapEditorLineDecorationKind::Symbols:
+        case MapEditorLineDecorationKind::Waves:
+        case MapEditorLineDecorationKind::SlopeTicks: {
+            const PreviewMarkerDistances markerDistances = decoration.kind == MapEditorLineDecorationKind::SlopeTicks
+                ? slopeTickPreviewMarkerDistances(length, decoration)
+                : repeatedPreviewMarkerDistances(length, decoration);
             const int seed = decoration.seed.value_or(1);
             const QColor decorationStrokeColor = decoration.strokeColor.value_or(fallbackColor);
             painter->setPen(previewPen(decorationStrokeColor,
                                        decoration.strokeWidth,
                                        decoration.strokeStyle,
                                        decoration.dashPattern));
-            for (int markerIndex = 0; markerIndex < markerCount; ++markerIndex) {
-                const qreal distance = rawMarkerCount > markerCount
-                    ? (markerIndex + 0.5) * length / static_cast<qreal>(markerCount)
-                    : (rawMarkerCount > 0
-                        ? (markerIndex + 0.5) * spacing
-                        : length * 0.5);
+            for (int markerIndex = 0; markerIndex < markerDistances.distances.size(); ++markerIndex) {
+                const qreal baseDistance = markerDistances.distances.at(markerIndex);
+                const qreal distance = effectiveDecorationDistance(baseDistance,
+                                                                    length,
+                                                                    markerDistances.jitterSpacing,
+                                                                    decoration,
+                                                                    markerIndex,
+                                                                    seed);
                 const std::optional<PreviewSample> sample = samplePathAt(path, distance);
                 if (!sample.has_value()) {
                     continue;
@@ -427,6 +638,18 @@ void drawLineDecorationsPreview(QPainter *painter,
                                                decoration.dashPattern));
                     painter->drawPath(tooth);
                     painter->setBrush(Qt::NoBrush);
+                } else if (decoration.kind == MapEditorLineDecorationKind::Waves) {
+                    drawPreviewWave(painter, center, sample->tangent, sample->normal, decoration);
+                } else if (decoration.kind == MapEditorLineDecorationKind::SlopeTicks) {
+                    const qreal alternatingScale = markerIndex % 2 == 0 ? 1.0 : decoration.alternateLengthScale;
+                    drawPreviewLineStroke(painter,
+                                          QLineF(center,
+                                                 center + sample->normal * decoration.length * alternatingScale),
+                                          decorationStrokeColor,
+                                          decoration.strokeWidth,
+                                          decoration.strokeStyle,
+                                          decoration.dashPattern,
+                                          backgroundColor);
                 } else {
                     const qreal tangentAngle = std::atan2(sample->tangent.y(), sample->tangent.x()) * 180.0 / 3.14159265358979323846;
                     const qreal sizeJitter = decoration.sizeJitter <= 0.0
@@ -435,17 +658,20 @@ void drawLineDecorationsPreview(QPainter *painter,
                     const qreal angleJitter = decoration.angleJitter <= 0.0
                         ? 0.0
                         : stableRandomSigned(static_cast<quint32>(seed), markerIndex, 0, 0xa174U) * decoration.angleJitter;
-                    drawPreviewSymbol(painter,
-                                      center,
-                                      qBound<qreal>(4.0, decoration.size + sizeJitter, 22.0),
-                                      tangentAngle + decoration.angle + angleJitter,
-                                      decoration.symbol,
-                                      decorationStrokeColor,
-                                      decoration.fillColor.has_value()
-                                          ? std::optional<QColor>(decoration.fillColor.value())
-                                          : std::nullopt,
-                                      decoration.strokeWidth,
-                                      backgroundColor);
+                    drawPreviewSymbolParts(painter,
+                                           center,
+                                           qBound<qreal>(0.6, decoration.size + sizeJitter, 128.0),
+                                           decoration.size,
+                                           tangentAngle + decoration.angle + angleJitter,
+                                           decoration.symbolParts,
+                                           decoration.symbol,
+                                           decorationStrokeColor,
+                                           decoration.fillColor.has_value()
+                                               ? std::optional<QColor>(decoration.fillColor.value())
+                                               : std::nullopt,
+                                           decoration.strokeWidth,
+                                           backgroundColor,
+                                           0.15);
                 }
             }
             break;
@@ -488,19 +714,24 @@ void drawAreaPatternPreview(QPainter *painter,
             drawHatch(pattern.angle + 90.0);
         }
     } else if (pattern.kind == MapEditorFillPatternKind::Dots) {
-        const QColor dotColor = readablePreviewColor(pattern.dotColor.value_or(pattern.strokeColor.value_or(fallbackColor)),
-                                                     backgroundColor,
-                                                     fallbackColor);
+        const QColor symbolColor = readablePreviewColor(pattern.strokeColor.value_or(fallbackColor),
+                                                        backgroundColor,
+                                                        fallbackColor);
         const qreal spacing = qBound<qreal>(5.0, pattern.spacing, 22.0);
-        const qreal symbolSize = qBound<qreal>(1.8, pattern.size, 12.0);
-        const qreal sizeJitter = qBound<qreal>(0.0, pattern.sizeJitter, 12.0);
-        const qreal offsetJitter = qBound<qreal>(0.0, pattern.offsetJitter, spacing * 0.48);
+        const qreal symbolSize = qBound<qreal>(1.8, pattern.size, 22.0);
+        const qreal sizeJitter = qBound<qreal>(0.0, pattern.sizeJitter, 16.0);
+        const qreal configuredOffsetJitter = qBound<qreal>(0.0, pattern.offsetJitter, spacing * 0.48);
+        const bool scatterPlacement = pattern.dotPlacement == MapEditorAreaDotPlacement::Scatter;
+        const qreal offsetJitter = scatterPlacement && pattern.offsetJitter <= 0.0
+            ? spacing * 0.48
+            : configuredOffsetJitter;
         const int seedValue = pattern.seed.value_or(1);
         const quint32 seed = static_cast<quint32>(seedValue == 0 ? 1 : seedValue);
         const qreal startX = (std::floor(bounds.left() / spacing) * spacing) - spacing;
         const qreal startY = (std::floor(bounds.top() / spacing) * spacing) - spacing;
         const int cols = qBound(1, static_cast<int>(std::ceil(bounds.width() / spacing)) + 4, 160);
         const int rows = qBound(1, static_cast<int>(std::ceil(bounds.height() / spacing)) + 4, 160);
+        const qreal centerBias = scatterPlacement ? 0.5 : 0.0;
         for (int row = 0; row < rows; ++row) {
             for (int col = 0; col < cols; ++col) {
                 const int index = row * 4096 + col;
@@ -516,17 +747,21 @@ void drawAreaPatternPreview(QPainter *painter,
                 const qreal angleJitter = pattern.angleJitter <= 0.0
                     ? 0.0
                     : stableRandomSigned(seed, 4, index, 0x92d41U) * pattern.angleJitter;
-                const qreal currentSymbolSize = qBound<qreal>(1.4, symbolSize + symbolSizeJitter, 14.0);
-                drawPreviewSymbol(painter,
-                                  QPointF(startX + (static_cast<qreal>(col) * spacing) + jitterX,
-                                          startY + (static_cast<qreal>(row) * spacing) + jitterY),
-                                  currentSymbolSize,
-                                  angleJitter,
-                                  pattern.symbol,
-                                  dotColor,
-                                  mapEditorPointSymbolUsesFill(pattern.symbol) ? std::optional<QColor>(dotColor) : std::nullopt,
-                                  qMax<qreal>(0.7, currentSymbolSize * 0.18),
-                                  backgroundColor);
+                const qreal currentSymbolSize = qBound<qreal>(1.4, symbolSize + symbolSizeJitter, 26.0);
+                drawPreviewSymbolParts(painter,
+                                       QPointF(startX + ((static_cast<qreal>(col) + centerBias) * spacing) + jitterX,
+                                               startY + ((static_cast<qreal>(row) + centerBias) * spacing) + jitterY),
+                                       currentSymbolSize,
+                                       pattern.size,
+                                       angleJitter,
+                                       pattern.symbolParts,
+                                       pattern.symbol,
+                                       symbolColor,
+                                       std::optional<QColor>(symbolColor),
+                                       qMax<qreal>(0.7, currentSymbolSize * 0.18),
+                                       backgroundColor,
+                                       0.6,
+                                       true);
             }
         }
     }
@@ -626,15 +861,18 @@ void MapEditorStylePreviewWidget::paintEvent(QPaintEvent *event)
         const QColor pointStroke = readablePreviewColor(style.strokeColor.value_or(fallbackStroke),
                                                         previewBackground,
                                                         fallbackStroke);
-        drawPreviewSymbol(&painter,
-                          content.center(),
-                          symbolSize,
-                          0.0,
-                          style.symbol,
-                          pointStroke,
-                          pointFill,
-                          qBound<qreal>(0.7, style.outlineWidth, 4.0),
-                          previewBackground);
+        const qreal pointStrokeWidth = qBound<qreal>(0.7, style.outlineWidth, 4.0);
+        drawPreviewSymbolParts(&painter,
+                               content.center(),
+                               symbolSize,
+                               style.size,
+                               0.0,
+                               style.symbolParts,
+                               style.symbol,
+                               pointStroke,
+                               pointFill,
+                               pointStrokeWidth,
+                               previewBackground);
         return;
     }
 

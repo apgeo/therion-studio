@@ -6,6 +6,7 @@
 #include <QPolygonF>
 #include <QPointF>
 #include <QRectF>
+#include <QTransform>
 #include <QtGlobal>
 
 #include <cmath>
@@ -125,5 +126,95 @@ inline QPainterPath mapEditorPointSymbolPath(MapEditorPointSymbol symbol, const 
 
     path.addEllipse(rect);
     return path;
+}
+
+inline QPainterPath mapEditorPointSymbolPartPath(const MapEditorPointSymbolPart &part,
+                                                 const QRectF &baseRect,
+                                                 qreal baseStyleSize)
+{
+    const qreal scale = qMin(baseRect.width(), baseRect.height()) / qMax<qreal>(0.001, baseStyleSize);
+    const auto mapPoint = [&](const QPointF &point) {
+        return baseRect.center() + QPointF(point.x() * scale, point.y() * scale);
+    };
+
+    QPainterPath path;
+    QPointF transformCenter = mapPoint(QPointF(part.x, part.y));
+    switch (part.kind) {
+    case MapEditorSymbolPartKind::Symbol: {
+        const qreal symbolSize = qMax<qreal>(0.001, part.size * scale);
+        const QRectF symbolRect(transformCenter.x() - (symbolSize / 2.0),
+                                transformCenter.y() - (symbolSize / 2.0),
+                                symbolSize,
+                                symbolSize);
+        path = mapEditorPointSymbolPath(part.symbol, symbolRect);
+        break;
+    }
+    case MapEditorSymbolPartKind::Line:
+        path.moveTo(mapPoint(QPointF(part.x1, part.y1)));
+        path.lineTo(mapPoint(QPointF(part.x2, part.y2)));
+        transformCenter = mapPoint(QPointF((part.x1 + part.x2) / 2.0, (part.y1 + part.y2) / 2.0));
+        break;
+    case MapEditorSymbolPartKind::Polyline:
+        if (!part.points.isEmpty()) {
+            QPolygonF polyline;
+            polyline.reserve(part.points.size());
+            for (const QPointF &point : part.points) {
+                polyline.append(mapPoint(point));
+            }
+            transformCenter = polyline.boundingRect().center();
+            path.moveTo(mapPoint(part.points.first()));
+            for (int index = 1; index < part.points.size(); ++index) {
+                path.lineTo(mapPoint(part.points.at(index)));
+            }
+        }
+        break;
+    case MapEditorSymbolPartKind::Polygon: {
+        QPolygonF polygon;
+        polygon.reserve(part.points.size());
+        for (const QPointF &point : part.points) {
+            polygon.append(mapPoint(point));
+        }
+        path.addPolygon(polygon);
+        path.closeSubpath();
+        if (!polygon.isEmpty()) {
+            transformCenter = polygon.boundingRect().center();
+        }
+        break;
+    }
+    case MapEditorSymbolPartKind::Ellipse: {
+        const qreal width = qMax<qreal>(0.001, part.width * scale);
+        const qreal height = qMax<qreal>(0.001, part.height * scale);
+        const QRectF ellipseRect(transformCenter.x() - (width / 2.0),
+                                 transformCenter.y() - (height / 2.0),
+                                 width,
+                                 height);
+        path.addEllipse(ellipseRect);
+        break;
+    }
+    }
+
+    if (std::abs(part.angle) > 0.001 && !path.isEmpty()) {
+        QTransform transform;
+        transform.translate(transformCenter.x(), transformCenter.y());
+        transform.rotate(part.angle);
+        transform.translate(-transformCenter.x(), -transformCenter.y());
+        path = transform.map(path);
+    }
+    return path;
+}
+
+inline bool mapEditorSymbolPartUsesFill(const MapEditorPointSymbolPart &part)
+{
+    switch (part.kind) {
+    case MapEditorSymbolPartKind::Symbol:
+        return mapEditorPointSymbolUsesFill(part.symbol);
+    case MapEditorSymbolPartKind::Polygon:
+    case MapEditorSymbolPartKind::Ellipse:
+        return part.fill;
+    case MapEditorSymbolPartKind::Line:
+    case MapEditorSymbolPartKind::Polyline:
+        return false;
+    }
+    return false;
 }
 } // namespace TherionStudio

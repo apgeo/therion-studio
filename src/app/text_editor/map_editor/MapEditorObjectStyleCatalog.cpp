@@ -8,6 +8,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QProcessEnvironment>
+#include <QRectF>
 #include <QStandardPaths>
 
 #include <algorithm>
@@ -216,8 +217,14 @@ std::optional<MapEditorLineDecorationKind> lineDecorationKindFromString(const QS
     if (normalized == QStringLiteral("teeth")) {
         return MapEditorLineDecorationKind::Teeth;
     }
-    if (normalized == QStringLiteral("symbols") || normalized == QStringLiteral("dots")) {
+    if (normalized == QStringLiteral("symbols")) {
         return MapEditorLineDecorationKind::Symbols;
+    }
+    if (normalized == QStringLiteral("waves") || normalized == QStringLiteral("wave")) {
+        return MapEditorLineDecorationKind::Waves;
+    }
+    if (normalized == QStringLiteral("slope_ticks") || normalized == QStringLiteral("slope-ticks")) {
+        return MapEditorLineDecorationKind::SlopeTicks;
     }
     return std::nullopt;
 }
@@ -247,6 +254,15 @@ MapEditorFillPatternKind fillPatternKindFromString(const QString &value)
         return MapEditorFillPatternKind::Dots;
     }
     return MapEditorFillPatternKind::None;
+}
+
+MapEditorAreaDotPlacement areaDotPlacementFromString(const QString &value)
+{
+    const QString normalized = normalizedToken(value);
+    if (normalized == QStringLiteral("scatter") || normalized == QStringLiteral("random")) {
+        return MapEditorAreaDotPlacement::Scatter;
+    }
+    return MapEditorAreaDotPlacement::Grid;
 }
 
 std::optional<MapEditorPointSymbol> pointSymbolFromString(const QString &value)
@@ -289,6 +305,165 @@ std::optional<MapEditorPointSymbol> dotPatternSymbolFromString(const QString &va
     return pointSymbolFromString(value);
 }
 
+std::optional<QVector<QPointF>> optionalPointArray(const QJsonObject &object, const char *key)
+{
+    const QJsonValue value = object.value(QLatin1String(key));
+    if (!value.isArray()) {
+        return std::nullopt;
+    }
+
+    QVector<QPointF> points;
+    const QJsonArray array = value.toArray();
+    points.reserve(array.size());
+    for (const QJsonValue &entry : array) {
+        if (entry.isArray()) {
+            const QJsonArray pointArray = entry.toArray();
+            if (pointArray.size() < 2 || !pointArray.at(0).isDouble() || !pointArray.at(1).isDouble()) {
+                continue;
+            }
+            points.append(QPointF(pointArray.at(0).toDouble(), pointArray.at(1).toDouble()));
+        } else if (entry.isObject()) {
+            const QJsonObject pointObject = entry.toObject();
+            const std::optional<qreal> x = optionalFiniteNumber(pointObject, "x");
+            const std::optional<qreal> y = optionalFiniteNumber(pointObject, "y");
+            if (x.has_value() && y.has_value()) {
+                points.append(QPointF(x.value(), y.value()));
+            }
+        }
+    }
+    return points;
+}
+
+std::optional<MapEditorPointSymbolPart> readPointSymbolPart(const QJsonObject &object)
+{
+    const QString kind = normalizedToken(object.value(QStringLiteral("kind")).toString());
+    if (kind.isEmpty()) {
+        return std::nullopt;
+    }
+
+    MapEditorPointSymbolPart part;
+    if (kind == QStringLiteral("line")) {
+        part.kind = MapEditorSymbolPartKind::Line;
+    } else if (kind == QStringLiteral("polyline")) {
+        part.kind = MapEditorSymbolPartKind::Polyline;
+    } else if (kind == QStringLiteral("polygon")) {
+        part.kind = MapEditorSymbolPartKind::Polygon;
+    } else if (kind == QStringLiteral("ellipse")) {
+        part.kind = MapEditorSymbolPartKind::Ellipse;
+    } else if (const std::optional<MapEditorPointSymbol> symbol = dotPatternSymbolFromString(kind)) {
+        part.kind = MapEditorSymbolPartKind::Symbol;
+        part.symbol = symbol.value();
+    } else {
+        return std::nullopt;
+    }
+
+    part.x = optionalFiniteNumber(object, "x").value_or(0.0);
+    part.y = optionalFiniteNumber(object, "y").value_or(0.0);
+    part.size = optionalPositiveNumber(object, "size").value_or(1.0);
+    part.angle = optionalFiniteNumber(object, "angle").value_or(0.0);
+    part.x1 = optionalFiniteNumber(object, "x1").value_or(0.0);
+    part.y1 = optionalFiniteNumber(object, "y1").value_or(0.0);
+    part.x2 = optionalFiniteNumber(object, "x2").value_or(0.0);
+    part.y2 = optionalFiniteNumber(object, "y2").value_or(0.0);
+    part.width = optionalPositiveNumber(object, "width").value_or(part.size);
+    part.height = optionalPositiveNumber(object, "height").value_or(part.size);
+    part.fill = optionalBool(object, "fill").value_or(false);
+    part.fillColor = optionalColor(object, "fill_color");
+    part.strokeColor = optionalColor(object, "stroke_color");
+    part.strokeWidth = optionalPositiveNumber(object, "stroke_width");
+    if (const std::optional<QVector<QPointF>> points = optionalPointArray(object, "points")) {
+        part.points = points.value();
+    }
+
+    if ((part.kind == MapEditorSymbolPartKind::Polyline && part.points.size() < 2)
+        || (part.kind == MapEditorSymbolPartKind::Polygon && part.points.size() < 3)) {
+        return std::nullopt;
+    }
+    return part;
+}
+
+std::optional<QVector<MapEditorPointSymbolPart>> readPointSymbolParts(const QJsonObject &object)
+{
+    const QJsonValue value = object.value(QStringLiteral("symbol_parts"));
+    if (value.isUndefined()) {
+        return std::nullopt;
+    }
+    if (!value.isArray()) {
+        return std::nullopt;
+    }
+
+    QVector<MapEditorPointSymbolPart> parts;
+    const QJsonArray array = value.toArray();
+    parts.reserve(array.size());
+    for (const QJsonValue &entry : array) {
+        if (!entry.isObject()) {
+            continue;
+        }
+        if (const std::optional<MapEditorPointSymbolPart> part = readPointSymbolPart(entry.toObject())) {
+            parts.append(part.value());
+        }
+    }
+    return parts;
+}
+
+std::optional<qreal> symbolPartsNaturalSize(const QVector<MapEditorPointSymbolPart> &parts)
+{
+    QRectF bounds;
+    bool hasBounds = false;
+    const auto includePoint = [&](const QPointF &point) {
+        if (hasBounds) {
+            bounds = bounds.united(QRectF(point, QSizeF(0.0, 0.0)));
+        } else {
+            bounds = QRectF(point, QSizeF(0.0, 0.0));
+            hasBounds = true;
+        }
+    };
+    const auto includeRect = [&](const QRectF &rect) {
+        if (hasBounds) {
+            bounds = bounds.united(rect);
+        } else {
+            bounds = rect;
+            hasBounds = true;
+        }
+    };
+
+    for (const MapEditorPointSymbolPart &part : parts) {
+        switch (part.kind) {
+        case MapEditorSymbolPartKind::Symbol: {
+            const qreal halfSize = part.size / 2.0;
+            includeRect(QRectF(part.x - halfSize, part.y - halfSize, part.size, part.size));
+            break;
+        }
+        case MapEditorSymbolPartKind::Line:
+            includePoint(QPointF(part.x1, part.y1));
+            includePoint(QPointF(part.x2, part.y2));
+            break;
+        case MapEditorSymbolPartKind::Polyline:
+        case MapEditorSymbolPartKind::Polygon:
+            for (const QPointF &point : part.points) {
+                includePoint(point);
+            }
+            break;
+        case MapEditorSymbolPartKind::Ellipse:
+            includeRect(QRectF(part.x - (part.width / 2.0),
+                              part.y - (part.height / 2.0),
+                              part.width,
+                              part.height));
+            break;
+        }
+    }
+
+    if (!hasBounds) {
+        return std::nullopt;
+    }
+
+    const qreal size = qMax(bounds.width(), bounds.height());
+    if (size <= 0.0 || !std::isfinite(size)) {
+        return std::nullopt;
+    }
+    return size;
+}
+
 std::optional<MapEditorLineDecorationStyle> readLineDecoration(const QJsonObject &object)
 {
     if (object.isEmpty()) {
@@ -313,6 +488,12 @@ std::optional<MapEditorLineDecorationStyle> readLineDecoration(const QJsonObject
     if (const std::optional<qreal> spacing = optionalPositiveNumber(object, "spacing")) {
         decoration.spacing = spacing.value();
     }
+    if (const std::optional<bool> adjustSpacing = optionalBool(object, "adjust_spacing")) {
+        decoration.adjustSpacing = adjustSpacing.value();
+    }
+    if (const std::optional<qreal> spacingDivisor = optionalPositiveNumber(object, "spacing_divisor")) {
+        decoration.spacingDivisor = spacingDivisor.value();
+    }
     if (const std::optional<qreal> offset = optionalFiniteNumber(object, "offset")) {
         decoration.offset = offset.value();
     }
@@ -326,6 +507,11 @@ std::optional<MapEditorLineDecorationStyle> readLineDecoration(const QJsonObject
     }
     if (const std::optional<qreal> length = optionalPositiveNumber(object, "length")) {
         decoration.length = length.value();
+    } else if (const std::optional<qreal> defaultLength = optionalPositiveNumber(object, "default_length")) {
+        decoration.length = defaultLength.value();
+    }
+    if (const std::optional<qreal> alternateLengthScale = optionalPositiveNumber(object, "alternate_length_scale")) {
+        decoration.alternateLengthScale = alternateLengthScale.value();
     }
     if (const std::optional<qreal> strokeWidth = optionalPositiveNumber(object, "stroke_width")) {
         decoration.strokeWidth = strokeWidth.value();
@@ -338,11 +524,8 @@ std::optional<MapEditorLineDecorationStyle> readLineDecoration(const QJsonObject
     if (const std::optional<QVector<qreal>> dashPattern = optionalDashPattern(object, "dash_pattern")) {
         decoration.dashPattern = dashPattern.value();
     }
-    if (object.value(QStringLiteral("symbol")).isString()) {
-        if (const std::optional<MapEditorPointSymbol> symbol =
-                dotPatternSymbolFromString(object.value(QStringLiteral("symbol")).toString())) {
-            decoration.symbol = symbol.value();
-        }
+    if (const std::optional<QVector<MapEditorPointSymbolPart>> symbolParts = readPointSymbolParts(object)) {
+        decoration.symbolParts = symbolParts.value();
     }
     if (const std::optional<qreal> angle = optionalFiniteNumber(object, "angle")) {
         decoration.angle = angle.value();
@@ -355,6 +538,9 @@ std::optional<MapEditorLineDecorationStyle> readLineDecoration(const QJsonObject
     }
     if (const std::optional<qreal> offsetJitter = optionalNonNegativeNumber(object, "offset_jitter")) {
         decoration.offsetJitter = offsetJitter.value();
+    }
+    if (const std::optional<qreal> distanceJitter = optionalNonNegativeNumber(object, "distance_jitter")) {
+        decoration.distanceJitter = distanceJitter.value();
     }
     if (const std::optional<int> seed = optionalInteger(object, "seed")) {
         decoration.seed = seed;
@@ -396,6 +582,7 @@ std::optional<MapEditorAreaFillPatternStyle> readAreaFillPattern(const QJsonObje
     if (pattern.kind == MapEditorFillPatternKind::None) {
         return std::nullopt;
     }
+    pattern.dotPlacement = areaDotPlacementFromString(object.value(QStringLiteral("placement")).toString());
 
     if (const std::optional<qreal> spacing = optionalPositiveNumber(object, "spacing")) {
         pattern.spacing = spacing.value();
@@ -415,20 +602,19 @@ std::optional<MapEditorAreaFillPatternStyle> readAreaFillPattern(const QJsonObje
     if (const std::optional<QVector<qreal>> dashPattern = optionalDashPattern(object, "dash_pattern")) {
         pattern.dashPattern = dashPattern.value();
     }
-    if (const std::optional<qreal> size = optionalPositiveNumber(object, "size")) {
-        pattern.size = size.value();
+    const std::optional<qreal> explicitSize = optionalPositiveNumber(object, "size");
+    if (explicitSize.has_value()) {
+        pattern.size = explicitSize.value();
     }
     if (const std::optional<qreal> sizeJitter = optionalNonNegativeNumber(object, "size_jitter")) {
         pattern.sizeJitter = sizeJitter.value();
     }
-    if (pattern.kind == MapEditorFillPatternKind::Dots
-        && object.value(QStringLiteral("symbol")).isString()) {
-        if (const std::optional<MapEditorPointSymbol> symbol =
-                dotPatternSymbolFromString(object.value(QStringLiteral("symbol")).toString())) {
-            pattern.symbol = symbol.value();
-        }
+    if (const std::optional<QVector<MapEditorPointSymbolPart>> symbolParts = readPointSymbolParts(object)) {
+        pattern.symbolParts = symbolParts.value();
     }
-    pattern.dotColor = optionalColor(object, "dot_color");
+    if (!explicitSize.has_value()) {
+        pattern.size = symbolPartsNaturalSize(pattern.symbolParts).value_or(pattern.size);
+    }
     if (const std::optional<qreal> angleJitter = optionalNonNegativeNumber(object, "angle_jitter")) {
         pattern.angleJitter = angleJitter.value();
     }
@@ -472,11 +658,8 @@ void applyPointDefaults(MapEditorObjectStyleCatalog *catalog, const QJsonObject 
         return;
     }
 
-    if (point.value(QStringLiteral("symbol")).isString()) {
-        if (const std::optional<MapEditorPointSymbol> symbol =
-                pointSymbolFromString(point.value(QStringLiteral("symbol")).toString())) {
-            catalog->point.symbol = symbol.value();
-        }
+    if (const std::optional<QVector<MapEditorPointSymbolPart>> symbolParts = readPointSymbolParts(point)) {
+        catalog->point.symbolParts = symbolParts.value();
     }
     if (const std::optional<qreal> size = optionalPositiveNumber(point, "size")) {
         catalog->point.size = size.value();
@@ -558,9 +741,7 @@ std::optional<MapEditorPointStyleRule> readPointStyleRule(const QJsonObject &obj
         return std::nullopt;
     }
 
-    if (object.value(QStringLiteral("symbol")).isString()) {
-        rule.symbol = pointSymbolFromString(object.value(QStringLiteral("symbol")).toString());
-    }
+    rule.symbolParts = readPointSymbolParts(object);
     rule.size = optionalPositiveNumber(object, "size");
     rule.outlineWidth = optionalPositiveNumber(object, "stroke_width");
     rule.fillColor = optionalColor(object, "fill_color");
@@ -770,6 +951,7 @@ MapEditorResolvedPointStyle resolveMapEditorPointStyle(const MapEditorObjectStyl
 {
     MapEditorResolvedPointStyle resolved;
     resolved.symbol = catalog.point.symbol;
+    resolved.symbolParts = catalog.point.symbolParts;
     resolved.size = catalog.point.size;
     resolved.outlineWidth = catalog.point.outlineWidth;
     resolved.fillColor = catalog.point.fillColor;
@@ -782,8 +964,8 @@ MapEditorResolvedPointStyle resolveMapEditorPointStyle(const MapEditorObjectStyl
         if (!selectorMatches(rule.selector, normalizedRawType, normalizedSubtype)) {
             continue;
         }
-        if (rule.symbol.has_value()) {
-            resolved.symbol = rule.symbol.value();
+        if (rule.symbolParts.has_value()) {
+            resolved.symbolParts = rule.symbolParts.value();
         }
         if (rule.size.has_value()) {
             resolved.size = rule.size.value();

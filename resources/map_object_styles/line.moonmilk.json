@@ -1,0 +1,15 @@
+{
+  "stroke_visible": false,
+  "decorations": [
+    {
+      "kind": "waves",
+      "side": "center",
+      "spacing": 9.0,
+      "adjust_spacing": true,
+      "length": 8.0,
+      "size": 3.0,
+      "stroke_color": "#1C1C1E",
+      "stroke_width": 1.0
+    }
+  ]
+}

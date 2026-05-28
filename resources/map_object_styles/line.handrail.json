@@ -1,0 +1,22 @@
+{
+  "stroke_width": 1.4,
+  "stroke_color": "#1C1C1E",
+  "decorations": [
+    {
+      "kind": "symbols",
+      "side": "center",
+      "spacing": 14.0,
+      "adjust_spacing": true,
+      "size": 3.0,
+      "stroke_color": "#1C1C1E",
+      "fill_color": "#1C1C1E",
+      "stroke_width": 0.6,
+      "symbol_parts": [
+        {
+          "kind": "square",
+          "size": 3.0
+        }
+      ]
+    }
+  ]
+}

@@ -356,6 +356,7 @@ The rules below define the expected day-to-day interaction model. If a later req
   - a modifier-based zoom gesture (for example Command+scroll) should be supported consistently across platforms
 - Pen-plus-touch workflows shall not accidentally trigger zoom when the user performs a pan gesture.
 - Map drawing and editing affordances, including point handles, line/area vertex handles, control handles, preview strokes, and line strokes, shall remain visually usable across zoom levels by using screen-adaptive sizing where appropriate.
+- Area fill and fill-pattern rendering shall visually honor Therion's default `-clip on` behavior by clipping areas to the owning scrap wall boundary when that boundary can be resolved; areas with `-clip off` shall render without scrap-boundary clipping.
 - The TH2 Visual map editor shall provide a fixed viewport magnifier overlay for precise tracing and placement. The magnifier shall show a zoomed crop around the current cursor position, an exact center crosshair, and the corresponding map/source coordinate readout.
 - The map magnifier shall be rendered as a viewport overlay, not as scene geometry, so it remains pinned to the map viewport and does not pan or zoom with the document.
 - Background image position, opacity, gamma, and visibility shall be editable per session.
@@ -655,19 +656,22 @@ Required behavior:
 
 - line, point, and area rendering shall be style-driven based on Therion object type and, where applicable, subtype
 - the style system shall support separate definitions for line styles, point styles, area styles, and global interaction styles
+- bundled map-style definitions shall prefer Therion's SKBB MetaPost symbol definitions when available and shall use UIS definitions as the next fallback reference before using project-specific approximations
 - line styles shall support at least stroke visibility, stroke color, stroke width, dash pattern, and optional directional or repeated decorations
-- line style decorations shall support built-in repeated or offset primitives including offset strokes, parallel strokes, ticks, rungs, teeth, and repeated symbols
-- repeated line-symbol decorations shall support the built-in point-symbol shape set plus `oval` so symbol-only line styles such as wall blocks, debris, pebbles, sand, and ladder-like features can be represented without custom SVG
-- line decorations shall have decoration-local stroke and fill styling, spacing, side, offset, size, and deterministic jitter parameters independent from the base line stroke
+- line style decorations shall support built-in repeated or offset primitives including offset strokes, parallel strokes, ticks, rungs, teeth, repeated symbols, repeated wave marks, and `line slope` ticks driven by per-line-point `orientation` and `l-size`
+- repeated line-symbol decorations shall define their repeated symbol geometry with `symbol_parts`, using built-in shape parts (`circle`, `oval`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, `x`) and simple primitive parts (`line`, `polyline`, `polygon`, `ellipse`) so symbol-only line styles such as wall blocks, debris, pebbles, sand, and ladder-like features can be represented without custom SVG
+- line decorations shall have decoration-local stroke and fill styling, spacing, optional MetaPost-style adjusted spacing for path-fitted repeated marks across repeated decoration kinds, side, offset, size, alternating short-mark scale for `line slope` ticks, and deterministic size, offset, angle, and along-line distance jitter parameters independent from the base line stroke
 - the repository shall provide a developer style-gallery generator that renders all catalog-supported `point`, `line`, and `area` type/subtype combinations, including combinations with no specific style that therefore use type or global defaults, so bundled and override styles can be visually reviewed.
-- point styles shall support at least fill color, stroke color, stroke width, symbol shape, symbol size, and label style
+- point styles shall support at least fill color, stroke color, stroke width, `symbol_parts` geometry, symbol size, and label style
 - point styles shall support an optional `label_field` style attribute that identifies a Therion option value to render next to the point symbol without hardcoding point-type-specific label extraction in the renderer
 - area styles shall support at least fill style and optional stroke style
 - label styles shall support font size, weight, color, and positional offset relative to the rendered point symbol
 - bundled station point styles shall render the point `-name` value when present, and bundled label point styles shall render the point `-text` value when present
 - point label rendering shall interpret common Therion label text markup used in `-text` values, including line breaks, thin spaces, basic font switches, right-to-left spans, and supported size switches; unsupported Therion label markup shall not be shown as literal control text when it is safe to ignore
 - area fill styles shall support at least solid fill, hatch, and dot-pattern rendering
-- dot-pattern area fill styles shall support the fixed point symbol shape set plus an area-dot-only `oval` symbol (`circle`, `oval`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, `x`), shall color the repeated symbol with `dot_color`, and shall not require a separate outline color
+- dot-pattern area fill styles shall define their repeated symbol geometry with `symbol_parts`, using built-in shape parts (`circle`, `oval`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, `x`) and simple primitive parts (`line`, `polyline`, `polygon`, `ellipse`), and each symbol part may override `fill_color`, `stroke_color`, and `stroke_width`
+- dot-pattern area fill styles shall derive the repeated motif size from `symbol_parts` when no explicit motif `size` is configured
+- dot-pattern area fill styles shall support deterministic `grid` placement and deterministic `scatter` placement for looser area-material fills
 - dot-pattern area fill styles shall support optional deterministic per-symbol size jitter for non-uniform repeated symbol fills
 - dot-pattern area fill styles shall support optional deterministic per-symbol angle jitter for non-uniform repeated symbol fills
 - the map editor shall provide bundled default styles so supported Therion object types remain legible even when no external override exists
@@ -1057,12 +1061,15 @@ The criteria below are intended for implementation verification and QA.
 - Supported line, point, and area types render using a style catalog rather than a single generic fallback appearance.
 - Type-specific and subtype-specific styles are applied when matching catalog entries exist.
 - Missing or invalid style entries fall back to bundled defaults without preventing map rendering.
-- Point symbols support configurable shape, size, fill, stroke, and label presentation.
+- Point symbols support configurable `symbol_parts` geometry, size, fill, stroke, and label presentation.
 - Point styles support an optional `label_field` that reads one Therion option value, for example `name` for `-name` or `text` for `-text`, and renders it next to the point symbol when present.
 - Station point defaults render `-name`; label point defaults render `-text` with common Therion label formatting such as `<br>` line breaks and `<thsp>` thin spaces.
-- Line symbols support configurable base stroke visibility, stroke width, dash pattern, and optional decorations such as offset strokes, parallel strokes, ticks, rungs, teeth, or repeated symbols.
+- Line symbols support configurable base stroke visibility, stroke width, dash pattern, and optional decorations such as offset strokes, parallel strokes, ticks, rungs, teeth, repeated symbols, or slope ticks driven by line-point `orientation` and `l-size`.
+- Repeated line decorations, including `line slope` ticks, can be fitted to the path with MetaPost-style adjusted spacing; alternating long/short slope ticks preserve the configured ratio.
 - Area symbols support configurable solid, hatch, or dot-pattern fills and optional strokes.
-- Dot-pattern area fills support configurable repeated symbols using the fixed point shape set plus area-dot-only `oval`, with `dot_color` as the only symbol color.
+- Area symbols honor default `-clip on` scrap-boundary clipping when the owning scrap wall boundary can be resolved, and preserve un-clipped rendering for `-clip off`.
+- Dot-pattern area fills support configurable repeated `symbol_parts` geometry with per-part fill, stroke, and stroke-width overrides.
+- Dot-pattern area fills support deterministic grid and scatter placement modes.
 - Dot-pattern area fills support optional deterministic per-symbol size jitter.
 - Dot-pattern area fills support optional deterministic per-symbol angle jitter.
 - Selection, draft, and edit-preview visuals are applied consistently through the shared style system.

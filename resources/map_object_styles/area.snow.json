@@ -2,14 +2,18 @@
   "fill_color": "#EEF7FF",
   "fill_pattern": {
     "kind": "dots",
-    "symbol": "asterisk",
     "spacing": 13.0,
-    "size": 5.4,
     "size_jitter": 1.2,
-    "dot_color": "#8FB6D8",
     "angle_jitter": 35.0,
     "offset_jitter": 3.0,
-    "seed": 1201
+    "seed": 1201,
+    "symbol_parts": [
+      {
+        "kind": "asterisk",
+        "size": 5.4,
+        "stroke_color": "#8FB6D8"
+      }
+    ]
   },
   "stroke_color": "#8FB6D8",
   "stroke_width": 1.0,

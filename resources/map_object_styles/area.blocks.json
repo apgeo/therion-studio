@@ -2,14 +2,20 @@
   "fill_color": "#5E6673",
   "fill_pattern": {
     "kind": "dots",
-    "symbol": "square",
-    "spacing": 9.0,
-    "size": 3.0,
-    "size_jitter": 0.8,
-    "dot_color": "#2B323F",
+    "placement": "scatter",
+    "spacing": 18.0,
+    "size_jitter": 5.5,
     "angle_jitter": 45.0,
-    "offset_jitter": 3.0,
-    "seed": 221
+    "seed": 221,
+    "symbol_parts": [
+      {
+        "kind": "square",
+        "size": 12.0,
+        "fill_color": "#CCCCCC",
+        "stroke_color": "#2B323F",
+        "stroke_width": 1.0
+      }
+    ]
   },
   "stroke_color": "#2B323F",
   "stroke_width": 1.0,

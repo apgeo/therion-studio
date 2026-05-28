@@ -9,8 +9,18 @@
 #include <QRectF>
 #include <QVector>
 
+#include <optional>
+
 namespace TherionStudio
 {
+struct MapEditorLineDecorationVertex
+{
+    QPointF anchor;
+    std::optional<qreal> pathDistance;
+    std::optional<qreal> orientationDegrees;
+    std::optional<qreal> leftSize;
+};
+
 class MapEditorLineDecorationItem final : public QGraphicsPathItem
 {
 public:
@@ -19,6 +29,8 @@ public:
                                 const QColor &fallbackColor,
                                 bool reversed,
                                 int fallbackSeed,
+                                const QVector<MapEditorLineDecorationVertex> &lineVertices = {},
+                                qreal linePointLengthScale = 1.0,
                                 QGraphicsItem *parent = nullptr);
 
     void setDecorationPath(const QPainterPath &path);
@@ -35,7 +47,8 @@ private:
         Ticks,
         Rungs,
         Teeth,
-        Symbols
+        Symbols,
+        Waves
     };
 
     void updatePaintBounds();
@@ -69,11 +82,22 @@ private:
                     const QPointF &normal,
                     int markerIndex,
                     qreal zoomOutScale);
+    void drawWave(QPainter *painter,
+                  const MapEditorLineDecorationStyle &decoration,
+                  const QPointF &point,
+                  const QPointF &tangent,
+                  const QPointF &normal,
+                  int markerIndex);
+    void drawSlopeTicks(QPainter *painter,
+                        const MapEditorLineDecorationStyle &decoration,
+                        qreal zoomOutScale);
 
     QVector<MapEditorLineDecorationStyle> decorations_;
+    QVector<MapEditorLineDecorationVertex> lineVertices_;
     QColor fallbackColor_;
     bool reversed_ = false;
     int fallbackSeed_ = 0;
+    qreal linePointLengthScale_ = 1.0;
     QRectF paintBounds_;
 };
 }

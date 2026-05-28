@@ -1,0 +1,29 @@
+{
+  "size": 17.0,
+  "stroke_width": 1.2,
+  "stroke_color": "#1C1C1E",
+  "fill_color": "#00000000",
+  "symbol_parts": [
+    {
+      "x": 0.0,
+      "y": -4.9,
+      "size": 6.8,
+      "angle": 180.0,
+      "kind": "triangle"
+    },
+    {
+      "x": -5.1,
+      "y": 3.9,
+      "size": 6.6,
+      "angle": 78.0,
+      "kind": "triangle"
+    },
+    {
+      "x": 5.1,
+      "y": 3.9,
+      "size": 6.6,
+      "angle": -78.0,
+      "kind": "triangle"
+    }
+  ]
+}

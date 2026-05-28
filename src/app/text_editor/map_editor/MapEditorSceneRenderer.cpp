@@ -21,6 +21,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <utility>
 
 namespace TherionStudio {
 namespace {
@@ -217,7 +218,13 @@ protected:
         const qreal sceneStrokeWidth = qBound<qreal>(0.16, (pattern_.strokeWidth / safeLod) / densityRelax, 12.0);
         const qreal sceneSymbolSize = qBound<qreal>(0.6, pattern_.size / safeLod, 64.0);
         const qreal sceneSymbolSizeJitter = qBound<qreal>(0.0, pattern_.sizeJitter / safeLod, 64.0);
-        const qreal sceneOffsetJitter = qBound<qreal>(0.0, pattern_.offsetJitter / safeLod, 64.0);
+        const qreal configuredSceneOffsetJitter = qBound<qreal>(0.0, pattern_.offsetJitter / safeLod, 64.0);
+        const qreal sceneOffsetJitter =
+            pattern_.kind == MapEditorFillPatternKind::Dots
+                    && pattern_.dotPlacement == MapEditorAreaDotPlacement::Scatter
+                    && pattern_.offsetJitter <= 0.0
+                ? sceneSpacing * 0.48
+                : configuredSceneOffsetJitter;
         const int seedValue = pattern_.seed.value_or(fallbackSeed_);
         const quint32 seed = static_cast<quint32>(seedValue == 0 ? 1 : seedValue);
         const QRectF bounds = path().boundingRect();
@@ -294,22 +301,26 @@ protected:
                 drawHatch(pattern_.angle + 90.0, 1);
             }
         } else if (pattern_.kind == MapEditorFillPatternKind::Dots) {
-            QColor dotColor = pattern_.dotColor.value_or(pattern_.strokeColor.value_or(fallbackColor_));
-            const qreal baseAlpha = dotColor.alphaF();
+            const QColor baseSymbolColor = pattern_.strokeColor.value_or(fallbackColor_);
             const qreal alphaByZoom = 1.0 / std::pow(lodZoomIn, 0.20);
-            dotColor.setAlphaF(qBound(0.08, baseAlpha * alphaByZoom * 0.88, 1.0));
-            const bool symbolUsesFill = mapEditorPointSymbolUsesFill(pattern_.symbol);
-            if (symbolUsesFill) {
-                painter->setPen(Qt::NoPen);
-                painter->setBrush(dotColor);
-            } else {
-                painter->setBrush(Qt::NoBrush);
-            }
+            const auto scaledSymbolColor = [&](QColor color) {
+                const qreal baseAlpha = color.alphaF();
+                if (baseAlpha <= 0.0) {
+                    color.setAlphaF(0.0);
+                    return color;
+                }
+                color.setAlphaF(qBound(0.08, baseAlpha * alphaByZoom * 0.88, 1.0));
+                return color;
+            };
 
-            const qreal startX = std::floor(paintBounds.left() / sceneSpacing) * sceneSpacing;
-            const qreal startY = std::floor(paintBounds.top() / sceneSpacing) * sceneSpacing;
-            const int cols = qBound(1, static_cast<int>(std::ceil(paintBounds.width() / sceneSpacing)) + 3, 1200);
-            const int rows = qBound(1, static_cast<int>(std::ceil(paintBounds.height() / sceneSpacing)) + 3, 1200);
+            const bool scatterPlacement = pattern_.dotPlacement == MapEditorAreaDotPlacement::Scatter;
+            const qreal startPadding = scatterPlacement ? sceneSpacing : 0.0;
+            const qreal centerBias = scatterPlacement ? 0.5 : 0.0;
+            const qreal startX = (std::floor(paintBounds.left() / sceneSpacing) * sceneSpacing) - startPadding;
+            const qreal startY = (std::floor(paintBounds.top() / sceneSpacing) * sceneSpacing) - startPadding;
+            const int paddingCells = scatterPlacement ? 5 : 3;
+            const int cols = qBound(1, static_cast<int>(std::ceil(paintBounds.width() / sceneSpacing)) + paddingCells, 1200);
+            const int rows = qBound(1, static_cast<int>(std::ceil(paintBounds.height() / sceneSpacing)) + paddingCells, 1200);
 
             for (int row = 0; row < rows; ++row) {
                 for (int col = 0; col < cols; ++col) {
@@ -320,36 +331,93 @@ protected:
                     const qreal jitterY = sceneOffsetJitter <= 0.0
                         ? 0.0
                         : stableRandomSigned(seed, 3, index, 0x6a223U) * sceneOffsetJitter;
-                    const QPointF dotCenter(startX + (static_cast<qreal>(col) * sceneSpacing) + jitterX,
-                                            startY + (static_cast<qreal>(row) * sceneSpacing) + jitterY);
+                    const QPointF dotCenter(startX + ((static_cast<qreal>(col) + centerBias) * sceneSpacing) + jitterX,
+                                            startY + ((static_cast<qreal>(row) + centerBias) * sceneSpacing) + jitterY);
                     const qreal symbolSizeJitter = sceneSymbolSizeJitter <= 0.0
                         ? 0.0
                         : stableRandomSigned(seed, 5, index, 0x3c6efU) * sceneSymbolSizeJitter;
                     const qreal currentSceneSymbolSize =
                         qBound<qreal>(0.6, sceneSymbolSize + symbolSizeJitter, 64.0);
-                    if (!symbolUsesFill) {
-                        QPen symbolPen(dotColor,
+                    const auto applySymbolPaint = [&](bool usesFill,
+                                                      const std::optional<QColor> &partStrokeColor,
+                                                      const std::optional<QColor> &partFillColor,
+                                                      const std::optional<qreal> &partStrokeWidth) {
+                        const QColor strokeColor =
+                            scaledSymbolColor(partStrokeColor.value_or(partFillColor.value_or(baseSymbolColor)));
+                        const QColor fillColor =
+                            scaledSymbolColor(partFillColor.value_or(partStrokeColor.value_or(baseSymbolColor)));
+                        const bool drawFill = usesFill && fillColor.alpha() > 0;
+                        const bool drawStroke = !usesFill
+                            || partStrokeColor.has_value()
+                            || partStrokeWidth.has_value();
+                        if (usesFill) {
+                            painter->setBrush(drawFill ? QBrush(fillColor) : Qt::NoBrush);
+                            if (!drawStroke) {
+                                painter->setPen(Qt::NoPen);
+                                return;
+                            }
+                        } else {
+                            painter->setBrush(Qt::NoBrush);
+                        }
+                        const qreal effectiveStrokeWidth = partStrokeWidth.has_value()
+                            ? partStrokeWidth.value() / safeLod
+                            : currentSceneSymbolSize * 0.18;
+                        QPen symbolPen(strokeColor,
+                                       qBound<qreal>(0.16, effectiveStrokeWidth, 4.0),
+                                       Qt::SolidLine,
+                                       Qt::RoundCap,
+                                       Qt::RoundJoin);
+                        painter->setPen(symbolPen);
+                    };
+                    const QRectF symbolRect(dotCenter.x() - (currentSceneSymbolSize / 2.0),
+                                            dotCenter.y() - (currentSceneSymbolSize / 2.0),
+                                            currentSceneSymbolSize,
+                                            currentSceneSymbolSize);
+                    QTransform symbolTransform;
+                    if (pattern_.angleJitter > 0.0) {
+                        const qreal jitterAngle =
+                            stableRandomSigned(seed, 4, index, 0x92d41U) * pattern_.angleJitter;
+                        symbolTransform.translate(dotCenter.x(), dotCenter.y());
+                        symbolTransform.rotate(jitterAngle);
+                        symbolTransform.translate(-dotCenter.x(), -dotCenter.y());
+                    }
+                    const auto drawPartPath = [&](const QPainterPath &path,
+                                                  bool usesFill,
+                                                  const std::optional<QColor> &partStrokeColor,
+                                                  const std::optional<QColor> &partFillColor,
+                                                  const std::optional<qreal> &partStrokeWidth) {
+                        applySymbolPaint(usesFill, partStrokeColor, partFillColor, partStrokeWidth);
+                        painter->drawPath(symbolTransform.map(path));
+                    };
+                    const auto drawFallbackPath = [&](const QPainterPath &path, bool usesFill) {
+                        if (usesFill) {
+                            painter->setPen(Qt::NoPen);
+                            painter->setBrush(scaledSymbolColor(baseSymbolColor));
+                            return;
+                        }
+                        QPen symbolPen(scaledSymbolColor(baseSymbolColor),
                                        qBound<qreal>(0.16, currentSceneSymbolSize * 0.18, 4.0),
                                        Qt::SolidLine,
                                        Qt::RoundCap,
                                        Qt::RoundJoin);
                         painter->setPen(symbolPen);
+                        painter->setBrush(Qt::NoBrush);
+                    };
+                    if (pattern_.symbolParts.isEmpty()) {
+                        const QPainterPath path = mapEditorPointSymbolPath(pattern_.symbol, symbolRect);
+                        drawFallbackPath(path, mapEditorPointSymbolUsesFill(pattern_.symbol));
+                        painter->drawPath(symbolTransform.map(path));
+                    } else {
+                        for (const MapEditorPointSymbolPart &part : pattern_.symbolParts) {
+                            drawPartPath(mapEditorPointSymbolPartPath(part,
+                                                                      symbolRect,
+                                                                      qMax<qreal>(0.001, pattern_.size)),
+                                         mapEditorSymbolPartUsesFill(part),
+                                         part.strokeColor,
+                                         part.fillColor,
+                                         part.strokeWidth);
+                        }
                     }
-                    const QRectF symbolRect(dotCenter.x() - (currentSceneSymbolSize / 2.0),
-                                            dotCenter.y() - (currentSceneSymbolSize / 2.0),
-                                            currentSceneSymbolSize,
-                                            currentSceneSymbolSize);
-                    QPainterPath symbolPath = mapEditorPointSymbolPath(pattern_.symbol, symbolRect);
-                    if (pattern_.angleJitter > 0.0) {
-                        const qreal jitterAngle =
-                            stableRandomSigned(seed, 4, index, 0x92d41U) * pattern_.angleJitter;
-                        QTransform symbolTransform;
-                        symbolTransform.translate(dotCenter.x(), dotCenter.y());
-                        symbolTransform.rotate(jitterAngle);
-                        symbolTransform.translate(-dotCenter.x(), -dotCenter.y());
-                        symbolPath = symbolTransform.map(symbolPath);
-                    }
-                    painter->drawPath(symbolPath);
                 }
             }
         }
@@ -760,6 +828,219 @@ QPainterPath linePathForFeature(const MapGeometryFeature &feature, const QRectF 
     }
 
     return path;
+}
+
+struct WallClipPathCandidate
+{
+    QPainterPath path;
+    QPointF start;
+    QPointF end;
+    qreal length = 0.0;
+};
+
+std::optional<WallClipPathCandidate> wallClipPathCandidateForFeature(const MapGeometryFeature &feature,
+                                                                     const QRectF &sourceBounds,
+                                                                     const QRectF &previewBounds)
+{
+    QPainterPath path = linePathForFeature(feature, sourceBounds, previewBounds);
+    if (path.elementCount() < 2 || path.boundingRect().isEmpty()) {
+        return std::nullopt;
+    }
+
+    const QPainterPath::Element first = path.elementAt(0);
+    WallClipPathCandidate candidate;
+    candidate.path = path;
+    candidate.start = QPointF(first.x, first.y);
+    candidate.end = path.currentPosition();
+    candidate.length = qMax<qreal>(0.0, path.length());
+    return candidate;
+}
+
+qreal pointDistanceSquared(const QPointF &first, const QPointF &second)
+{
+    const QPointF delta = first - second;
+    return (delta.x() * delta.x()) + (delta.y() * delta.y());
+}
+
+QPainterPath stitchedOpenWallClipPath(QVector<WallClipPathCandidate> candidates)
+{
+    if (candidates.size() < 2) {
+        return QPainterPath();
+    }
+
+    int startIndex = 0;
+    for (int index = 1; index < candidates.size(); ++index) {
+        if (candidates.at(index).length > candidates.at(startIndex).length) {
+            startIndex = index;
+        }
+    }
+
+    WallClipPathCandidate current = candidates.takeAt(startIndex);
+    QPainterPath stitched = current.path;
+    const QPointF firstPoint = current.start;
+    QPointF currentEnd = current.end;
+
+    while (!candidates.isEmpty()) {
+        int bestIndex = -1;
+        bool reverseBest = false;
+        qreal bestDistance = std::numeric_limits<qreal>::max();
+        for (int index = 0; index < candidates.size(); ++index) {
+            const WallClipPathCandidate &candidate = candidates.at(index);
+            const qreal startDistance = pointDistanceSquared(currentEnd, candidate.start);
+            if (startDistance < bestDistance) {
+                bestDistance = startDistance;
+                bestIndex = index;
+                reverseBest = false;
+            }
+            const qreal endDistance = pointDistanceSquared(currentEnd, candidate.end);
+            if (endDistance < bestDistance) {
+                bestDistance = endDistance;
+                bestIndex = index;
+                reverseBest = true;
+            }
+        }
+
+        if (bestIndex < 0) {
+            break;
+        }
+
+        const WallClipPathCandidate next = candidates.takeAt(bestIndex);
+        const QPainterPath nextPath = reverseBest ? next.path.toReversed() : next.path;
+        stitched.connectPath(nextPath);
+        currentEnd = reverseBest ? next.start : next.end;
+    }
+
+    if (pointDistanceSquared(firstPoint, currentEnd) > 0.001) {
+        stitched.lineTo(firstPoint);
+    }
+    stitched.closeSubpath();
+    stitched.setFillRule(Qt::OddEvenFill);
+    return stitched.boundingRect().isEmpty() ? QPainterPath() : stitched;
+}
+
+QHash<int, QPainterPath> scrapClipPathsForFeatures(const QVector<MapGeometryFeature> &features,
+                                                   const QRectF &sourceBounds,
+                                                   const QRectF &previewBounds)
+{
+    QHash<int, QVector<WallClipPathCandidate>> openWallsByScrap;
+    QHash<int, QVector<QPainterPath>> closedWallsByScrap;
+
+    for (const MapGeometryFeature &feature : features) {
+        if (feature.kind != MapGeometryFeature::Kind::Line
+            || feature.scrapLineNumber <= 0
+            || feature.label.trimmed().toLower() != QStringLiteral("wall")
+            || feature.lineVertices.size() < 2) {
+            continue;
+        }
+
+        const std::optional<WallClipPathCandidate> candidate =
+            wallClipPathCandidateForFeature(feature, sourceBounds, previewBounds);
+        if (!candidate.has_value()) {
+            continue;
+        }
+
+        if (feature.closed && feature.lineVertices.size() >= 3) {
+            QPainterPath closed = candidate->path;
+            closed.closeSubpath();
+            closed.setFillRule(Qt::OddEvenFill);
+            if (!closed.boundingRect().isEmpty()) {
+                closedWallsByScrap[feature.scrapLineNumber].append(closed);
+            }
+        } else {
+            openWallsByScrap[feature.scrapLineNumber].append(candidate.value());
+        }
+    }
+
+    QHash<int, QPainterPath> clipPathsByScrap;
+    const QList<int> closedScraps = closedWallsByScrap.keys();
+    for (const int scrapLineNumber : closedScraps) {
+        QPainterPath combined;
+        combined.setFillRule(Qt::OddEvenFill);
+        for (const QPainterPath &path : std::as_const(closedWallsByScrap[scrapLineNumber])) {
+            combined.addPath(path);
+        }
+        if (!combined.boundingRect().isEmpty()) {
+            clipPathsByScrap.insert(scrapLineNumber, combined);
+        }
+    }
+
+    const QList<int> openScraps = openWallsByScrap.keys();
+    for (const int scrapLineNumber : openScraps) {
+        if (clipPathsByScrap.contains(scrapLineNumber)) {
+            continue;
+        }
+        const QPainterPath stitched = stitchedOpenWallClipPath(openWallsByScrap.value(scrapLineNumber));
+        if (!stitched.boundingRect().isEmpty()) {
+            clipPathsByScrap.insert(scrapLineNumber, stitched);
+        }
+    }
+
+    return clipPathsByScrap;
+}
+
+QVector<MapEditorLineDecorationVertex> lineDecorationVerticesForFeature(const MapGeometryFeature &feature,
+                                                                        const QRectF &sourceBounds,
+                                                                        const QRectF &previewBounds)
+{
+    QVector<MapEditorLineDecorationVertex> vertices;
+    if (feature.lineVertices.isEmpty()) {
+        return vertices;
+    }
+
+    auto toPreview = [&](const QPointF &point) {
+        return mapGeometryPointToPreview(point, sourceBounds, previewBounds);
+    };
+
+    auto appendVertex = [&vertices](const MapGeometryFeature::TH2LineVertex &sourceVertex,
+                                    const QPointF &previewAnchor,
+                                    qreal pathDistance) {
+        MapEditorLineDecorationVertex vertex;
+        vertex.anchor = previewAnchor;
+        vertex.pathDistance = pathDistance;
+        vertex.orientationDegrees = sourceVertex.orientationDegrees;
+        vertex.leftSize = sourceVertex.leftSize;
+        vertices.append(vertex);
+    };
+
+    qreal pathDistance = 0.0;
+    appendVertex(feature.lineVertices.first(), toPreview(feature.lineVertices.first().anchor), pathDistance);
+    for (int index = 1; index < feature.lineVertices.size(); ++index) {
+        const MapGeometryFeature::TH2LineVertex &previousVertex = feature.lineVertices.at(index - 1);
+        const MapGeometryFeature::TH2LineVertex &currentVertex = feature.lineVertices.at(index);
+        const QPointF previousAnchor = toPreview(previousVertex.anchor);
+        const QPointF currentAnchor = toPreview(currentVertex.anchor);
+        const QPointF cp1 = toPreview(previousVertex.outgoingControl.value_or(previousVertex.anchor));
+        const QPointF cp2 = toPreview(currentVertex.incomingControl.value_or(currentVertex.anchor));
+        QPainterPath segmentPath;
+        segmentPath.moveTo(previousAnchor);
+        if (previousVertex.outgoingControl.has_value() || currentVertex.incomingControl.has_value()) {
+            segmentPath.cubicTo(cp1, cp2, currentAnchor);
+        } else {
+            segmentPath.lineTo(currentAnchor);
+        }
+        pathDistance += segmentPath.length();
+        appendVertex(currentVertex, currentAnchor, pathDistance);
+    }
+
+    if (feature.closed && feature.lineVertices.size() >= 3) {
+        const MapGeometryFeature::TH2LineVertex &lastVertex = feature.lineVertices.last();
+        const MapGeometryFeature::TH2LineVertex &firstVertex = feature.lineVertices.first();
+        const QPointF lastAnchor = toPreview(lastVertex.anchor);
+        const QPointF firstAnchor = toPreview(firstVertex.anchor);
+        const QPointF cp1 = toPreview(lastVertex.outgoingControl.value_or(lastVertex.anchor));
+        const QPointF cp2 = toPreview(firstVertex.incomingControl.value_or(firstVertex.anchor));
+        QPainterPath segmentPath;
+        segmentPath.moveTo(lastAnchor);
+        if (lastVertex.outgoingControl.has_value() || firstVertex.incomingControl.has_value()) {
+            segmentPath.cubicTo(cp1, cp2, firstAnchor);
+        } else {
+            segmentPath.lineTo(firstAnchor);
+        }
+        pathDistance += segmentPath.length();
+        appendVertex(firstVertex, firstAnchor, pathDistance);
+    }
+
+    return vertices;
 }
 
 std::optional<QLineF> lineDirectionTickLine(const QPointF &firstAnchorPreview,
@@ -1415,6 +1696,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
         ? sourceBoundsOverride.value()
         : geometryBoundsForFeatures(geometryFeatures);
     const qreal mapScale = sceneCoordsScaleFactor(sourceBounds, previewBounds);
+    const QHash<int, QPainterPath> scrapClipPaths =
+        scrapClipPathsForFeatures(geometryFeatures, sourceBounds, previewBounds);
     const MapEditorObjectStyleCatalog styleCatalog = mapEditorObjectStyleCatalog();
     const qreal vertexRadius = 4.4;
     auto markGeometryItem = [](QGraphicsItem *item) {
@@ -1445,6 +1728,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 auto *pointItem = new MapEditablePointItem(feature.lineNumber, feature.anchor, sourceBounds, previewBounds);
                 pointItem->setRect(QRectF(-pointSize / 2.0, -pointSize / 2.0, pointSize, pointSize));
                 pointItem->setSymbol(pointStyle.symbol);
+                pointItem->setSymbolParts(pointStyle.symbolParts);
                 pointItem->setPen(cosmeticPen(pointStrokeColor, qBound(0.6, pointStyle.outlineWidth, 8.0)));
                 pointItem->setBrush(QBrush(pointFillColor));
                 pointItem->setMoveCommittedCallback(recordPointGeometryMove);
@@ -1523,7 +1807,11 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                                          lineStyle.decorations,
                                                                          geometryStroke,
                                                                          feature.reversed,
-                                                                         feature.lineNumber);
+                                                                         feature.lineNumber,
+                                                                         lineDecorationVerticesForFeature(feature,
+                                                                                                          sourceBounds,
+                                                                                                          previewBounds),
+                                                                         mapScale);
                     scene->addItem(lineDecorationItem);
                     lineDecorationItem->setZValue(2.55);
                     markGeometryItem(lineDecorationItem);
@@ -2031,10 +2319,21 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     path = linePathForFeature(feature, sourceBounds, previewBounds);
                 }
                 path.closeSubpath();
+                QPainterPath renderPath = path;
+                if (feature.clipToScrap && feature.scrapLineNumber > 0) {
+                    const QPainterPath scrapClipPath = scrapClipPaths.value(feature.scrapLineNumber);
+                    if (!scrapClipPath.isEmpty()) {
+                        QPainterPath clippedPath = path.intersected(scrapClipPath);
+                        clippedPath.setFillRule(Qt::OddEvenFill);
+                        if (!clippedPath.isEmpty() && !clippedPath.boundingRect().isEmpty()) {
+                            renderPath = clippedPath;
+                        }
+                    }
+                }
 
                 QBrush areaBrush(areaFillColor, Qt::SolidPattern);
 
-                auto *fillItem = new MapZoomAwarePathItem(path,
+                auto *fillItem = new MapZoomAwarePathItem(renderPath,
                                                           styledGeometricPen(areaStrokeColor,
                                                                              areaStrokeWidth,
                                                                              areaStyle.penStyle,
@@ -2055,7 +2354,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 if (areaStyle.fillPattern.has_value()) {
                     QColor fallbackPatternColor = areaStrokeColor;
                     fallbackPatternColor.setAlphaF(qBound(0.0, areaFillColor.alphaF() + 0.08, 1.0));
-                    auto *patternItem = new MapZoomAwareAreaPatternItem(path,
+                    auto *patternItem = new MapZoomAwareAreaPatternItem(renderPath,
                                                                         areaStyle.fillPattern.value(),
                                                                         fallbackPatternColor,
                                                                         feature.lineNumber);
@@ -2160,6 +2459,10 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
     QString currentLineIdentifier;
     QStringList currentAreaBorderIdentifiers;
     QHash<QString, MapGeometryFeature> lineFeaturesByIdentifier;
+    QVector<int> scrapLineStack;
+    auto currentScrapLineNumber = [&]() {
+        return scrapLineStack.isEmpty() ? 0 : scrapLineStack.last();
+    };
 
     auto flushCurrentFeature = [&]() {
         if (currentFeature.kind == MapGeometryFeature::Kind::Point) {
@@ -2202,6 +2505,20 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
     for (const TherionParsedLine &parsedLine : parsedLines) {
         const QString directive = parsedLine.directive;
 
+        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("scrap")) {
+            flushCurrentFeature();
+            scrapLineStack.append(parsedLine.lineNumber);
+            continue;
+        }
+
+        if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("endscrap")) {
+            flushCurrentFeature();
+            if (!scrapLineStack.isEmpty()) {
+                scrapLineStack.removeLast();
+            }
+            continue;
+        }
+
         if (directive == QStringLiteral("endline")) {
             if (inLineBlock) {
                 flushCurrentFeature();
@@ -2226,6 +2543,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             MapGeometryFeature feature;
             feature.kind = MapGeometryFeature::Kind::Point;
             feature.lineNumber = parsedLine.lineNumber;
+            feature.scrapLineNumber = currentScrapLineNumber();
             feature.category = mapEntryCategoryForLine(parsedLine);
             feature.label = pointType.isEmpty() ? mapEntryTitleForLine(parsedLine) : pointType;
             feature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
@@ -2258,6 +2576,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             MapGeometryFeature feature;
             feature.kind = MapGeometryFeature::Kind::Point;
             feature.lineNumber = parsedLine.lineNumber;
+            feature.scrapLineNumber = currentScrapLineNumber();
             feature.category = mapEntryCategoryForLine(parsedLine);
             feature.label = mapEntryTitleForLine(parsedLine);
             feature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
@@ -2277,6 +2596,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             flushCurrentFeature();
             currentFeature.kind = MapGeometryFeature::Kind::Line;
             currentFeature.lineNumber = parsedLine.lineNumber;
+            currentFeature.scrapLineNumber = currentScrapLineNumber();
             currentFeature.category = mapEntryCategoryForLine(parsedLine);
             currentFeature.label = mapEntryTitleForLine(parsedLine);
             currentFeature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
@@ -2295,11 +2615,17 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             flushCurrentFeature();
             currentFeature.kind = MapGeometryFeature::Kind::Area;
             currentFeature.lineNumber = parsedLine.lineNumber;
+            currentFeature.scrapLineNumber = currentScrapLineNumber();
             currentFeature.category = mapEntryCategoryForLine(parsedLine);
             currentFeature.label = mapEntryTitleForLine(parsedLine);
             currentFeature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
+            if (const std::optional<bool> clip = lineOptionToggleValue(parsedLine, QStringLiteral("-clip"))) {
+                currentFeature.clipToScrap = clip.value();
+            } else {
+                currentFeature.clipToScrap = lineOptionToggleValue(parsedLine, QStringLiteral("clip")).value_or(true);
+            }
             currentFeature.vertices.append(pointsFromTokens(parsedLine.tokens.mid(1)));
             appendAreaReferenceIdentifiers(parsedLine, 1, &currentAreaBorderIdentifiers);
             inAreaBlock = true;

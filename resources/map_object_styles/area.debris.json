@@ -2,14 +2,43 @@
   "fill_color": "#9C8C6A",
   "fill_pattern": {
     "kind": "dots",
-    "symbol": "triangle",
-    "spacing": 9.0,
-    "size": 3.2,
-    "size_jitter": 1.0,
-    "dot_color": "#6D5C39",
+    "spacing": 12.0,
+    "size_jitter": 1.1,
     "angle_jitter": 180.0,
-    "offset_jitter": 5.0,
-    "seed": 1403
+    "offset_jitter": 4.8,
+    "seed": 1403,
+    "symbol_parts": [
+      {
+        "kind": "triangle",
+        "x": 0.0,
+        "y": -1.38,
+        "size": 1.92,
+        "angle": 180.0,
+        "stroke_color": "#6D5C39",
+        "fill_color": "#00000000",
+        "stroke_width": 0.45
+      },
+      {
+        "kind": "triangle",
+        "x": -1.47,
+        "y": 1.1,
+        "size": 1.86,
+        "angle": 78.0,
+        "stroke_color": "#6D5C39",
+        "fill_color": "#00000000",
+        "stroke_width": 0.45
+      },
+      {
+        "kind": "triangle",
+        "x": 1.47,
+        "y": 1.1,
+        "size": 1.86,
+        "angle": -78.0,
+        "stroke_color": "#6D5C39",
+        "fill_color": "#00000000",
+        "stroke_width": 0.45
+      }
+    ]
   },
   "stroke_color": "#6D5C39",
   "stroke_width": 1.1,

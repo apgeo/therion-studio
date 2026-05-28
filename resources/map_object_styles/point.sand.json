@@ -1,0 +1,26 @@
+{
+  "size": 10.0,
+  "stroke_width": 0.5,
+  "stroke_color": "#1C1C1E",
+  "fill_color": "#1C1C1E",
+  "symbol_parts": [
+    {
+      "x": 0.0,
+      "y": -3.1,
+      "size": 1.5,
+      "kind": "circle"
+    },
+    {
+      "x": -2.7,
+      "y": 1.7,
+      "size": 1.5,
+      "kind": "circle"
+    },
+    {
+      "x": 2.7,
+      "y": 1.7,
+      "size": 1.5,
+      "kind": "circle"
+    }
+  ]
+}

@@ -1,15 +1,19 @@
 {
   "fill_color": "#BFE9FF",
   "fill_pattern": {
-    "kind": "cross_hatch",
+    "kind": "dots",
     "spacing": 13.0,
-    "stroke_angle": 45,
-    "stroke_width": 0.45,
-    "stroke_style": "dotted",
-    "stroke_color": "#4B9DD6",
-    "angle_jitter": 4.0,
-    "offset_jitter": 2.0,
-    "seed": 402
+    "size_jitter": 0.8,
+    "angle_jitter": 20.0,
+    "offset_jitter": 3.0,
+    "seed": 402,
+    "symbol_parts": [
+      {
+        "kind": "plus",
+        "size": 4.2,
+        "stroke_color": "#4B9DD6"
+      }
+    ]
   },
   "stroke_color": "#4B9DD6",
   "stroke_width": 1.1,

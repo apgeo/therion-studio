@@ -1,8 +1,13 @@
 {
-  "symbol": "triangle",
   "label_field": "name",
   "fill_color": "#FF3B30",
   "stroke_color": "#F4F4F2E6",
   "size": 8.4,
-  "stroke_width": 1.2
+  "stroke_width": 1.2,
+  "symbol_parts": [
+    {
+      "kind": "triangle",
+      "size": 8.4
+    }
+  ]
 }

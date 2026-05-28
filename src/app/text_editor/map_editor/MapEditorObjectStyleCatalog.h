@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QPointF>
 #include <QString>
 #include <QVector>
 #include <Qt>
@@ -15,6 +16,12 @@ enum class MapEditorFillPatternKind
     Hatch,
     CrossHatch,
     Dots
+};
+
+enum class MapEditorAreaDotPlacement
+{
+    Grid,
+    Scatter
 };
 
 enum class MapEditorPointSymbol
@@ -37,7 +44,9 @@ enum class MapEditorLineDecorationKind
     Ticks,
     Rungs,
     Teeth,
-    Symbols
+    Symbols,
+    Waves,
+    SlopeTicks
 };
 
 enum class MapEditorLineDecorationSide
@@ -47,33 +56,69 @@ enum class MapEditorLineDecorationSide
     Right
 };
 
+enum class MapEditorSymbolPartKind
+{
+    Symbol,
+    Line,
+    Polyline,
+    Polygon,
+    Ellipse
+};
+
+struct MapEditorPointSymbolPart
+{
+    MapEditorSymbolPartKind kind = MapEditorSymbolPartKind::Symbol;
+    MapEditorPointSymbol symbol = MapEditorPointSymbol::Circle;
+    qreal x = 0.0;
+    qreal y = 0.0;
+    qreal size = 1.0;
+    qreal angle = 0.0;
+    qreal x1 = 0.0;
+    qreal y1 = 0.0;
+    qreal x2 = 0.0;
+    qreal y2 = 0.0;
+    qreal width = 1.0;
+    qreal height = 1.0;
+    QVector<QPointF> points;
+    bool fill = false;
+    std::optional<QColor> fillColor;
+    std::optional<QColor> strokeColor;
+    std::optional<qreal> strokeWidth;
+};
+
 struct MapEditorLineDecorationStyle
 {
     MapEditorLineDecorationKind kind = MapEditorLineDecorationKind::Symbols;
     MapEditorLineDecorationSide side = MapEditorLineDecorationSide::Center;
     qreal spacing = 12.0;
+    bool adjustSpacing = false;
+    qreal spacingDivisor = 1.0;
     qreal offset = 0.0;
     QVector<qreal> offsets;
     std::optional<qreal> fromOffset;
     std::optional<qreal> toOffset;
     qreal size = 8.0;
     qreal length = 8.0;
+    qreal alternateLengthScale = 1.0;
     qreal strokeWidth = 1.2;
     Qt::PenStyle strokeStyle = Qt::SolidLine;
     std::optional<QColor> strokeColor;
     std::optional<QColor> fillColor;
     QVector<qreal> dashPattern;
     MapEditorPointSymbol symbol = MapEditorPointSymbol::Circle;
+    QVector<MapEditorPointSymbolPart> symbolParts;
     qreal angle = 0.0;
     qreal angleJitter = 0.0;
     qreal sizeJitter = 0.0;
     qreal offsetJitter = 0.0;
+    qreal distanceJitter = 0.0;
     std::optional<int> seed;
 };
 
 struct MapEditorAreaFillPatternStyle
 {
     MapEditorFillPatternKind kind = MapEditorFillPatternKind::None;
+    MapEditorAreaDotPlacement dotPlacement = MapEditorAreaDotPlacement::Grid;
     qreal spacing = 6.0;
     qreal angle = 45.0;
     qreal strokeWidth = 1.0;
@@ -83,7 +128,7 @@ struct MapEditorAreaFillPatternStyle
     qreal size = 2.4;
     qreal sizeJitter = 0.0;
     MapEditorPointSymbol symbol = MapEditorPointSymbol::Circle;
-    std::optional<QColor> dotColor;
+    QVector<MapEditorPointSymbolPart> symbolParts;
     qreal angleJitter = 0.0;
     qreal offsetJitter = 0.0;
     std::optional<int> seed;
@@ -92,6 +137,7 @@ struct MapEditorAreaFillPatternStyle
 struct MapEditorPointStyleDefaults
 {
     MapEditorPointSymbol symbol = MapEditorPointSymbol::Circle;
+    QVector<MapEditorPointSymbolPart> symbolParts;
     qreal size = 11.2;
     qreal outlineWidth = 1.1;
     std::optional<QColor> fillColor;
@@ -129,7 +175,7 @@ struct MapEditorStyleSelector
 struct MapEditorPointStyleRule
 {
     MapEditorStyleSelector selector;
-    std::optional<MapEditorPointSymbol> symbol;
+    std::optional<QVector<MapEditorPointSymbolPart>> symbolParts;
     std::optional<qreal> size;
     std::optional<qreal> outlineWidth;
     std::optional<QColor> fillColor;
@@ -175,6 +221,7 @@ struct MapEditorObjectStyleCatalog
 struct MapEditorResolvedPointStyle
 {
     MapEditorPointSymbol symbol = MapEditorPointSymbol::Circle;
+    QVector<MapEditorPointSymbolPart> symbolParts;
     qreal size = 11.2;
     qreal outlineWidth = 1.1;
     std::optional<QColor> fillColor;

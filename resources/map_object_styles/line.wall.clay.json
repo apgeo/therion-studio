@@ -1,0 +1,18 @@
+{
+  "decorations": [
+    {
+      "kind": "waves",
+      "side": "left",
+      "offset": 11.0,
+      "spacing": 36,
+      "adjust_spacing": true,
+      "length": 18.0,
+      "size": 5.0,
+      "offset_jitter": 1.2,
+      "distance_jitter": 6.0,
+      "stroke_color": "#1C1C1E",
+      "stroke_width": 1.8,
+      "seed": 211
+    }
+  ]
+}

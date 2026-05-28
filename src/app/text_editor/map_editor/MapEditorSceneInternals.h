@@ -131,6 +131,12 @@ public:
         update();
     }
 
+    void setSymbolParts(const QVector<MapEditorPointSymbolPart> &parts)
+    {
+        symbolParts_ = parts;
+        update();
+    }
+
     void setLabel(const QStaticText &labelText, const QFont &font, const QColor &color)
     {
         prepareGeometryChange();
@@ -177,7 +183,9 @@ protected:
 
         const QColor baseFill = brush().color().isValid() ? brush().color() : QColor(24, 24, 24, 170);
         QColor fill = baseFill;
-        fill.setAlpha(emphasize ? 235 : 180);
+        if (fill.alpha() > 0) {
+            fill.setAlpha(emphasize ? 235 : 180);
+        }
         const QColor baseOutline = pen().color().isValid() ? pen().color() : QColor(22, 22, 22, 210);
         QColor outline = selected ? QColor(QStringLiteral("#3ba4ff")) : baseOutline;
 
@@ -194,18 +202,40 @@ protected:
 
         const qreal baseOutlineWidth = pen().widthF() > 0.0 ? pen().widthF() : 1.1;
         const qreal outlineWidth = (selected ? qMax<qreal>(baseOutlineWidth * 1.35, 1.8) : baseOutlineWidth) * zoomOutScale;
-        QPen symbolPen(outline, qMax<qreal>(0.55, outlineWidth));
-        symbolPen.setCapStyle(Qt::RoundCap);
-        symbolPen.setJoinStyle(Qt::RoundJoin);
-        painter->setPen(symbolPen);
+        const auto drawSymbolPath = [&](bool usesFill,
+                                        const QPainterPath &path,
+                                        const std::optional<QColor> &partStrokeColor = std::nullopt,
+                                        const std::optional<QColor> &partFillColor = std::nullopt,
+                                        const std::optional<qreal> &partStrokeWidth = std::nullopt) {
+            const QColor stroke = selected ? outline : partStrokeColor.value_or(outline);
+            const QColor fillBrush = partFillColor.value_or(fill);
+            const qreal width = qMax<qreal>(0.55, partStrokeWidth.value_or(outlineWidth));
+            QPen symbolPen(stroke, width);
+            symbolPen.setCapStyle(Qt::RoundCap);
+            symbolPen.setJoinStyle(Qt::RoundJoin);
+            painter->setPen(symbolPen);
+            if (usesFill && fillBrush.alpha() > 0) {
+                painter->setBrush(fillBrush);
+            } else {
+                painter->setBrush(Qt::NoBrush);
+            }
+            painter->drawPath(path);
+        };
 
-        const QPainterPath symbolPath = mapEditorPointSymbolPath(symbol_, drawRect);
-        if (mapEditorPointSymbolUsesFill(symbol_)) {
-            painter->setBrush(fill);
+        if (symbolParts_.isEmpty()) {
+            drawSymbolPath(mapEditorPointSymbolUsesFill(symbol_), mapEditorPointSymbolPath(symbol_, drawRect));
         } else {
-            painter->setBrush(Qt::NoBrush);
+            const qreal baseStyleSize = qMax<qreal>(0.001, qMin(rect().width(), rect().height()));
+            for (const MapEditorPointSymbolPart &part : symbolParts_) {
+                drawSymbolPath(mapEditorSymbolPartUsesFill(part),
+                               mapEditorPointSymbolPartPath(part, drawRect, baseStyleSize),
+                               part.strokeColor,
+                               part.fillColor,
+                               part.strokeWidth.has_value()
+                                   ? std::optional<qreal>(part.strokeWidth.value() * zoomOutScale)
+                                   : std::nullopt);
+            }
         }
-        painter->drawPath(symbolPath);
 
         if (hasLabel_ && (lod >= 0.55 || emphasize)) {
             painter->setFont(labelFont_);
@@ -285,6 +315,7 @@ private:
     QRectF previewBounds_;
     QRectF fittedBounds_;
     MapEditorPointSymbol symbol_ = MapEditorPointSymbol::Circle;
+    QVector<MapEditorPointSymbolPart> symbolParts_;
     QStaticText labelText_;
     QFont labelFont_;
     QColor labelColor_;

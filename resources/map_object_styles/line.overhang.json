@@ -1,0 +1,16 @@
+{
+  "stroke_width": 2.0,
+  "stroke_color": "#1C1C1E",
+  "decorations": [
+    {
+      "kind": "teeth",
+      "side": "left",
+      "spacing": 9.0,
+      "adjust_spacing": true,
+      "size": 6.5,
+      "stroke_color": "#1C1C1E",
+      "fill_color": "#1C1C1E",
+      "stroke_width": 0.8
+    }
+  ]
+}

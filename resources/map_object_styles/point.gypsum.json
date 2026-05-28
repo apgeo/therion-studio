@@ -1,0 +1,11 @@
+{
+  "size": 10.0,
+  "stroke_width": 1.0,
+  "stroke_color": "#1C1C1E",
+  "symbol_parts": [
+    {
+      "kind": "plus",
+      "size": 10.0
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "stroke_width": 2.0,
+  "stroke_color": "#1C1C1E",
+  "decorations": [
+    {
+      "kind": "ticks",
+      "side": "left",
+      "spacing": 7.0,
+      "adjust_spacing": true,
+      "length": 5.2,
+      "stroke_color": "#1C1C1E",
+      "stroke_width": 0.9
+    }
+  ]
+}

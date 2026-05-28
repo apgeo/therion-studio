@@ -1,0 +1,20 @@
+{
+  "stroke_style": "dashed",
+  "stroke_width": 1.5,
+  "stroke_color": "#1C1C1E",
+  "dash_pattern": [
+    10,
+    5
+  ],
+  "decorations": [
+    {
+      "kind": "ticks",
+      "side": "right",
+      "spacing": 16.0,
+      "adjust_spacing": true,
+      "length": 5.0,
+      "stroke_color": "#1C1C1E",
+      "stroke_width": 0.9
+    }
+  ]
+}

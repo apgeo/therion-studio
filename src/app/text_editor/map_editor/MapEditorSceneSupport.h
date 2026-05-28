@@ -94,6 +94,7 @@ struct MapGeometryFeature
 
     Kind kind = Kind::Point;
     int lineNumber = 0;
+    int scrapLineNumber = 0;
     QString category;
     QString label;
     QString subtype;
@@ -108,6 +109,7 @@ struct MapGeometryFeature
     bool orientationSupported = false;
     std::optional<qreal> orientationDegrees;
     bool closed = false;
+    bool clipToScrap = true;
     bool reversed = false;
     bool stationPoint = false;
     bool verticesEditable = true;

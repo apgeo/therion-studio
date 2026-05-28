@@ -1,17 +1,88 @@
 {
-  "stroke_visible": false,
   "decorations": [
     {
       "kind": "symbols",
-      "symbol": "circle",
-      "side": "center",
-      "spacing": 8,
-      "size": 2.6,
-      "size_jitter": 0.8,
+      "side": "left",
+      "offset": 2.0,
+      "spacing": 7,
+      "adjust_spacing": true,
+      "size": 0.8,
+      "size_jitter": 0.18,
+      "offset_jitter": 0.7,
+      "distance_jitter": 2.6,
+      "stroke_color": "#000000",
+      "fill_color": "#000000",
+      "stroke_width": 0.25,
+      "seed": 17,
+      "symbol_parts": [
+        {
+          "kind": "circle",
+          "size": 0.8
+        }
+      ]
+    },
+    {
+      "kind": "symbols",
+      "side": "left",
+      "offset": 4.5,
+      "spacing": 9,
+      "adjust_spacing": true,
+      "size": 0.75,
+      "size_jitter": 0.18,
+      "offset_jitter": 1.0,
+      "distance_jitter": 3.5,
+      "stroke_color": "#000000",
+      "fill_color": "#000000",
+      "stroke_width": 0.25,
+      "seed": 43,
+      "symbol_parts": [
+        {
+          "kind": "circle",
+          "size": 0.75
+        }
+      ]
+    },
+    {
+      "kind": "symbols",
+      "side": "left",
+      "offset": 7.0,
+      "spacing": 12,
+      "adjust_spacing": true,
+      "size": 0.7,
+      "size_jitter": 0.2,
       "offset_jitter": 1.4,
-      "stroke_color": "#1C1C1E",
-      "fill_color": "#1C1C1E",
-      "stroke_width": 0.6
+      "distance_jitter": 4.6,
+      "stroke_color": "#000000",
+      "fill_color": "#000000",
+      "stroke_width": 0.25,
+      "seed": 79,
+      "symbol_parts": [
+        {
+          "kind": "circle",
+          "size": 0.7
+        }
+      ]
+    },
+    {
+      "kind": "symbols",
+      "side": "left",
+      "offset": 10.0,
+      "spacing": 16,
+      "adjust_spacing": true,
+      "size": 0.65,
+      "size_jitter": 0.2,
+      "offset_jitter": 1.9,
+      "distance_jitter": 6.2,
+      "stroke_color": "#000000",
+      "fill_color": "#000000",
+      "stroke_width": 0.25,
+      "seed": 113,
+      "symbol_parts": [
+        {
+          "kind": "circle",
+          "size": 0.65
+        }
+      ]
     }
   ]
 }

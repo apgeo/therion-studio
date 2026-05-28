@@ -3,15 +3,21 @@
   "decorations": [
     {
       "kind": "symbols",
-      "symbol": "square",
       "side": "center",
       "spacing": 12,
+      "adjust_spacing": true,
       "size": 9,
       "size_jitter": 2.5,
       "angle_jitter": 28,
       "stroke_color": "#1C1C1E",
       "fill_color": "#FFFFFF",
-      "stroke_width": 1.2
+      "stroke_width": 1.2,
+      "symbol_parts": [
+        {
+          "kind": "square",
+          "size": 9
+        }
+      ]
     }
   ]
 }

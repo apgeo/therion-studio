@@ -3,11 +3,16 @@
   "fill_pattern": {
     "kind": "dots",
     "spacing": 6.4,
-    "size": 1.4,
     "size_jitter": 0.45,
-    "dot_color": "#8E6D2F",
     "offset_jitter": 2.0,
-    "seed": 731
+    "seed": 731,
+    "symbol_parts": [
+      {
+        "kind": "circle",
+        "size": 1.2,
+        "fill_color": "#8E6D2F"
+      }
+    ]
   },
   "stroke_color": "#8E6D2F",
   "stroke_width": 1.2,

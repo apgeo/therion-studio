@@ -191,6 +191,46 @@ int runSmoothAndOptionMetadataIgnoredTest()
     return 0;
 }
 
+int runSlopeLinePointOptionsParsingTest()
+{
+    const QString text =
+        QStringLiteral("line slope\n"
+                       "  0 0\n"
+                       "  l-size 20\n"
+                       "  orientation 0\n"
+                       "  10 0\n"
+                       "  l-size 40\n"
+                       "  orientation 90\n"
+                       "endline\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    const MapGeometryFeature *line = firstLineFeature(features);
+    if (!expect(line != nullptr, "Expected one parsed slope line feature.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.size() == 2,
+                "Expected slope line to preserve two anchor vertices.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.first().leftSize.has_value()
+                    && std::abs(line->lineVertices.first().leftSize.value() - 20.0) < 1e-6
+                    && line->lineVertices.first().orientationDegrees.has_value()
+                    && std::abs(line->lineVertices.first().orientationDegrees.value()) < 1e-6,
+                "Expected first slope anchor to retain l-size and orientation metadata.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.last().leftSize.has_value()
+                    && std::abs(line->lineVertices.last().leftSize.value() - 40.0) < 1e-6
+                    && line->lineVertices.last().orientationDegrees.has_value()
+                    && std::abs(line->lineVertices.last().orientationDegrees.value() - 90.0) < 1e-6,
+                "Expected second slope anchor to retain l-size and orientation metadata.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runAnchorEquivalentControlNormalizationTest()
 {
     const QString text =
@@ -846,6 +886,67 @@ int runScrapScaleSourceUnitsPerMeterTest()
 
     return 0;
 }
+
+int runAreaScrapClipMetadataParsingTest()
+{
+    const QString text =
+        QStringLiteral("scrap s1\n"
+                       "line wall -id w1\n"
+                       "  0 0\n"
+                       "  10 0\n"
+                       "endline\n"
+                       "line wall -id w2\n"
+                       "  0 10\n"
+                       "  10 10\n"
+                       "endline\n"
+                       "area sand\n"
+                       "  w1\n"
+                       "  w2\n"
+                       "endarea\n"
+                       "area clay -clip off\n"
+                       "  w1\n"
+                       "  w2\n"
+                       "endarea\n"
+                       "endscrap\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+
+    QVector<const MapGeometryFeature *> areas;
+    QVector<const MapGeometryFeature *> lines;
+    for (const MapGeometryFeature &feature : features) {
+        if (feature.kind == MapGeometryFeature::Kind::Area) {
+            areas.append(&feature);
+        } else if (feature.kind == MapGeometryFeature::Kind::Line) {
+            lines.append(&feature);
+        }
+    }
+
+    if (!expect(lines.size() == 2, "Expected two wall line features for scrap clip metadata test.")) {
+        return 1;
+    }
+    if (!expect(areas.size() == 2, "Expected two area features for scrap clip metadata test.")) {
+        return 1;
+    }
+    if (!expect(lines.first()->scrapLineNumber == 1 && areas.first()->scrapLineNumber == 1,
+                "Expected line and area features to retain their owning scrap source line.")) {
+        return 1;
+    }
+    if (!expect(areas.first()->clipToScrap,
+                "Expected area without -clip to default to clip-on rendering metadata.")) {
+        return 1;
+    }
+    if (!expect(!areas.last()->clipToScrap,
+                "Expected area -clip off to disable scrap clipping metadata.")) {
+        return 1;
+    }
+    if (!expect(!areas.first()->verticesEditable && areas.first()->vertices.size() >= 3,
+                "Expected referenced area border lines to resolve into non-editable area geometry.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -857,6 +958,9 @@ int main()
         return rc;
     }
     if (const int rc = runSmoothAndOptionMetadataIgnoredTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runSlopeLinePointOptionsParsingTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runAnchorEquivalentControlNormalizationTest(); rc != 0) {
@@ -899,6 +1003,9 @@ int main()
         return rc;
     }
     if (const int rc = runScrapScaleSourceUnitsPerMeterTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runAreaScrapClipMetadataParsingTest(); rc != 0) {
         return rc;
     }
 

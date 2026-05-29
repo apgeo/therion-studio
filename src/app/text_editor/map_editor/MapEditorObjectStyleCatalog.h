@@ -56,6 +56,19 @@ enum class MapEditorLineDecorationSide
     Right
 };
 
+enum class MapEditorLineClosedFillMode
+{
+    None,
+    Background,
+    Color
+};
+
+enum class MapEditorPointLabelOrientationMode
+{
+    Screen,
+    Orientation
+};
+
 enum class MapEditorSymbolPartKind
 {
     Symbol,
@@ -115,6 +128,12 @@ struct MapEditorLineDecorationStyle
     std::optional<int> seed;
 };
 
+struct MapEditorLineClosedFillStyle
+{
+    MapEditorLineClosedFillMode mode = MapEditorLineClosedFillMode::None;
+    std::optional<QColor> color;
+};
+
 struct MapEditorAreaFillPatternStyle
 {
     MapEditorFillPatternKind kind = MapEditorFillPatternKind::None;
@@ -143,6 +162,7 @@ struct MapEditorPointStyleDefaults
     std::optional<QColor> fillColor;
     std::optional<QColor> strokeColor;
     std::optional<QString> labelField;
+    MapEditorPointLabelOrientationMode labelOrientation = MapEditorPointLabelOrientationMode::Screen;
 };
 
 struct MapEditorLineStyleDefaults
@@ -153,6 +173,7 @@ struct MapEditorLineStyleDefaults
     std::optional<QColor> strokeColor;
     QVector<qreal> dashPattern;
     QVector<MapEditorLineDecorationStyle> decorations;
+    MapEditorLineClosedFillStyle closedFill;
 };
 
 struct MapEditorAreaStyleDefaults
@@ -181,6 +202,7 @@ struct MapEditorPointStyleRule
     std::optional<QColor> fillColor;
     std::optional<QColor> strokeColor;
     std::optional<QString> labelField;
+    std::optional<MapEditorPointLabelOrientationMode> labelOrientation;
 };
 
 struct MapEditorLineStyleRule
@@ -192,6 +214,7 @@ struct MapEditorLineStyleRule
     std::optional<QColor> strokeColor;
     std::optional<QVector<qreal>> dashPattern;
     std::optional<QVector<MapEditorLineDecorationStyle>> decorations;
+    std::optional<MapEditorLineClosedFillStyle> closedFill;
 };
 
 struct MapEditorAreaStyleRule
@@ -227,6 +250,7 @@ struct MapEditorResolvedPointStyle
     std::optional<QColor> fillColor;
     std::optional<QColor> strokeColor;
     std::optional<QString> labelField;
+    MapEditorPointLabelOrientationMode labelOrientation = MapEditorPointLabelOrientationMode::Screen;
 };
 
 struct MapEditorResolvedLineStyle
@@ -237,6 +261,7 @@ struct MapEditorResolvedLineStyle
     std::optional<QColor> strokeColor;
     QVector<qreal> dashPattern;
     QVector<MapEditorLineDecorationStyle> decorations;
+    MapEditorLineClosedFillStyle closedFill;
 };
 
 struct MapEditorResolvedAreaStyle

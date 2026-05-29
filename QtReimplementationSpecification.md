@@ -188,6 +188,7 @@ Required capabilities:
 - validate required fields and prevent invalid edits where necessary
 - for point symbols and selected line-point anchors, the inspector shall provide explicit orientation override controls with enable/disable state and degree input constrained to canonical `0..<360`; enabling the override or changing the degree value shall immediately update the source and map canvas without a separate apply action, including explicit value `0`, and shall preserve the currently selected point or line anchor after the source rewrite
 - orientation controls shall be gated by command-metadata applicability (type/subtype constraints from the generated Therion command catalog, including source-derived option exclusions) and shall not be shown for unsupported object variants
+- explicit point `-orientation` shall rotate the rendered point symbol around its anchor using Therion orientation convention (`0` north/up, `90` east/right); style-driven labels shall remain screen-aligned by default, except label styles that opt into orientation-driven text rotation
 - selecting a point symbol that supports `-orientation` shall show a draggable orientation handle in the map canvas when the point has an explicit `-orientation` value, including `0`; dragging the handle shall write the point command's `-orientation` option using the same source rewrite path as the inspector
 - for selected `line slope` anchor vertices, the inspector shall provide `l-size` controls with enable/disable state and positive numeric input; changing either state or value shall immediately update the source and map canvas without a separate apply action, and shall serialize the option as an XTherion-compatible line-point row attached to the selected coordinate
 
@@ -401,6 +402,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Object identifiers shall remain optional for most map objects, but when an identifier is explicitly set inside a scrap it should be unique within that scrap; generated border lines referenced by area blocks shall always include an explicit `-id`.
 - Vertex overlays should be shown only for the currently selected map object, and line-control handles/connectors shall be shown only for the currently selected line vertex, to reduce visual clutter while preserving editability.
 - Selecting a line object shall show an XTherion-compatible direction tick at the first line vertex; the tick shall be perpendicular to the first segment tangent, shall prefer the first outgoing control handle when present, and shall flip direction when the line has `-reverse on`.
+- Point objects with explicit supported `-orientation` shall render their symbol geometry rotated around the point anchor; adjacent style-driven text labels shall remain screen-aligned unless their resolved point style opts into orientation-driven text rotation.
 - Selecting an orientable point object shall show a compact orientation handle in the map canvas when that point has an explicit `-orientation` value, including `0`; dragging the handle shall update the point's `-orientation` source option and preserve the point selection after the scene refresh.
 - Selecting a `line slope` anchor vertex shall show an XTherion-style left line-point handle in the map canvas when that line point has an explicit `orientation` value, including `0`; dragging the handle shall update the selected point's `orientation` and `l-size` source options using the same XTherion line-point row serialization as the inspector.
 - Enabling orientation for a selected line anchor that does not yet have an explicit line-point orientation shall seed the new value perpendicular to the local line direction on the line's left side, rather than defaulting to `0`.
@@ -657,18 +659,24 @@ Required behavior:
 - line, point, and area rendering shall be style-driven based on Therion object type and, where applicable, subtype
 - the style system shall support separate definitions for line styles, point styles, area styles, and global interaction styles
 - bundled map-style definitions shall prefer Therion's SKBB MetaPost symbol definitions when available and shall use UIS definitions as the next fallback reference before using project-specific approximations
-- line styles shall support at least stroke visibility, stroke color, stroke width, dash pattern, and optional directional or repeated decorations
+- line styles shall support at least stroke visibility, stroke color, stroke width, dash pattern, optional closed-line fill, and optional directional or repeated decorations
+- closed-line fills shall support a background-clean mode so symbols such as `line rock-border -close on` can erase/fill their interior before the outline is drawn, matching Therion MetaPost `thclean` semantics
 - line style decorations shall support built-in repeated or offset primitives including offset strokes, parallel strokes, ticks, rungs, teeth, repeated symbols, repeated wave marks, and `line slope` ticks driven by per-line-point `orientation` and `l-size`
+- `teeth` line decorations shall render as Therion/MetaPost-like filled sawtooth segments based on the decorated line path, not as disconnected point-symbol triangles
 - repeated line-symbol decorations shall define their repeated symbol geometry with `symbol_parts`, using built-in shape parts (`circle`, `oval`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, `x`) and simple primitive parts (`line`, `polyline`, `polygon`, `ellipse`) so symbol-only line styles such as wall blocks, debris, pebbles, sand, and ladder-like features can be represented without custom SVG
 - line decorations shall have decoration-local stroke and fill styling, spacing, optional MetaPost-style adjusted spacing for path-fitted repeated marks across repeated decoration kinds, side, offset, size, alternating short-mark scale for `line slope` ticks, and deterministic size, offset, angle, and along-line distance jitter parameters independent from the base line stroke
+- line decoration `left` and `right` side semantics shall match Therion line orientation: following the line from its first point, `left` is the free-space side by default, `right` is the opposite side, and `-reverse` flips the rendered side
 - the repository shall provide a developer style-gallery generator that renders all catalog-supported `point`, `line`, and `area` type/subtype combinations, including combinations with no specific style that therefore use type or global defaults, so bundled and override styles can be visually reviewed.
 - point styles shall support at least fill color, stroke color, stroke width, `symbol_parts` geometry, symbol size, and label style
 - point styles shall support an optional `label_field` style attribute that identifies a Therion option value to render next to the point symbol without hardcoding point-type-specific label extraction in the renderer
+- point styles shall support a label-orientation mode so text labels may either remain screen-aligned or rotate according to point `-orientation`
 - area styles shall support at least fill style and optional stroke style
 - label styles shall support font size, weight, color, and positional offset relative to the rendered point symbol
 - bundled station point styles shall render the point `-name` value when present, and bundled label point styles shall render the point `-text` value when present
-- point label rendering shall interpret common Therion label text markup used in `-text` values, including line breaks, thin spaces, basic font switches, right-to-left spans, and supported size switches; unsupported Therion label markup shall not be shown as literal control text when it is safe to ignore
+- point label rendering shall interpret common Therion label text markup used in `-text` values, including line breaks, multi-line alignment switches, thin spaces, basic font switches, right-to-left spans, and supported size switches; unsupported Therion label markup shall not be shown as literal control text when it is safe to ignore
 - area fill styles shall support at least solid fill, hatch, and dot-pattern rendering
+- area rendering shall honor Therion `-place bottom`, `-place default`, and `-place top` by assigning area fills and patterns to bottom, normal, or top render layers; default and bottom area rendering shall remain below normal line work, while explicit top area rendering may overlap normal line work
+- area rendering shall honor default `-clip on` by clipping area fills and patterns to the owning scrap wall boundary when that boundary can be resolved, and shall preserve un-clipped rendering for `-clip off`
 - dot-pattern area fill styles shall define their repeated symbol geometry with `symbol_parts`, using built-in shape parts (`circle`, `oval`, `square`, `diamond`, `triangle`, `star`, `asterisk`, `plus`, `x`) and simple primitive parts (`line`, `polyline`, `polygon`, `ellipse`), and each symbol part may override `fill_color`, `stroke_color`, and `stroke_width`
 - dot-pattern area fill styles shall derive the repeated motif size from `symbol_parts` when no explicit motif `size` is configured
 - dot-pattern area fill styles shall support deterministic `grid` placement and deterministic `scatter` placement for looser area-material fills
@@ -1063,10 +1071,13 @@ The criteria below are intended for implementation verification and QA.
 - Missing or invalid style entries fall back to bundled defaults without preventing map rendering.
 - Point symbols support configurable `symbol_parts` geometry, size, fill, stroke, and label presentation.
 - Point styles support an optional `label_field` that reads one Therion option value, for example `name` for `-name` or `text` for `-text`, and renders it next to the point symbol when present.
-- Station point defaults render `-name`; label point defaults render `-text` with common Therion label formatting such as `<br>` line breaks and `<thsp>` thin spaces.
-- Line symbols support configurable base stroke visibility, stroke width, dash pattern, and optional decorations such as offset strokes, parallel strokes, ticks, rungs, teeth, repeated symbols, or slope ticks driven by line-point `orientation` and `l-size`.
+- Station point defaults render `-name`; label point defaults render `-text` with common Therion label formatting such as `<br>` line breaks, multi-line alignment tags, and `<thsp>` thin spaces, and rotate that text when explicit `-orientation` is present.
+- Line symbols support configurable base stroke visibility, stroke width, dash pattern, optional closed-line fill, and optional decorations such as offset strokes, parallel strokes, ticks, rungs, teeth, repeated symbols, or slope ticks driven by line-point `orientation` and `l-size`.
+- Line decoration side semantics match Therion orientation; the selected-line side marker points to the same side used by `side: "left"` decorations before `-reverse`.
+- Closed `rock-border` lines clean-fill their interior with the map background before drawing the outline, so they cover default area fills and patterns like Therion's UIS MetaPost symbol.
 - Repeated line decorations, including `line slope` ticks, can be fitted to the path with MetaPost-style adjusted spacing; alternating long/short slope ticks preserve the configured ratio.
 - Area symbols support configurable solid, hatch, or dot-pattern fills and optional strokes.
+- Area symbols honor `-place bottom`, `-place default`, and `-place top` render layering; default/bottom areas remain below normal line work, and explicit top areas may overlap normal line work.
 - Area symbols honor default `-clip on` scrap-boundary clipping when the owning scrap wall boundary can be resolved, and preserve un-clipped rendering for `-clip off`.
 - Dot-pattern area fills support configurable repeated `symbol_parts` geometry with per-part fill, stroke, and stroke-width overrides.
 - Dot-pattern area fills support deterministic grid and scatter placement modes.
@@ -1335,6 +1346,7 @@ Required parity scope:
 
 - style-catalog-driven rendering for lines, points, and areas
 - subtype-aware style lookup with safe fallback behavior
+- point symbol orientation rendering and editing for command-catalog-supported `-orientation` objects, with style-controlled label text rotation
 - directional line decorations (ticks, teeth, repeated symbols, offset strokes, parallel strokes, and rungs) with reverse-aware orientation behavior
 - line-point orientation editing with normalized degree range (`0..<360`)
 - default orientation behavior tied to local line tangent and side semantics

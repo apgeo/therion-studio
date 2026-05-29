@@ -11,7 +11,8 @@
       {
         "kind": "asterisk",
         "size": 5.4,
-        "stroke_color": "#8FB6D8"
+        "stroke_color": "#8FB6D8",
+        "stroke_width": 0
       }
     ]
   },

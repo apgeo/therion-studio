@@ -43,6 +43,7 @@
 #include <QUrl>
 #include <QKeySequence>
 #include <QSvgRenderer>
+#include <QVariant>
 #include <QWidget>
 #include <QResizeEvent>
 #include <QJsonDocument>
@@ -59,6 +60,8 @@
 
 namespace
 {
+constexpr const char *kMapEditorUiSignalsConnectedProperty = "_therionStudioMapEditorUiSignalsConnected";
+
 QSize minimumMainWindowSize()
 {
     return QSize(720, 560);
@@ -1724,6 +1727,47 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
     return tab;
 }
 
+void MainWindow::connectMapEditorTabUiSignals(TherionStudio::MapEditorTab *tab)
+{
+    if (tab == nullptr) {
+        return;
+    }
+
+    connect(tab,
+            &TherionStudio::MapEditorTab::openDedicatedWindowRequested,
+            this,
+            &MainWindow::handleMapEditorDetachRequested,
+            Qt::UniqueConnection);
+
+    if (tab->property(kMapEditorUiSignalsConnectedProperty).toBool()) {
+        return;
+    }
+    tab->setProperty(kMapEditorUiSignalsConnectedProperty, true);
+
+    connect(tab,
+            &TherionStudio::MapEditorTab::workspaceModeChanged,
+            this,
+            [this, tab](TherionStudio::MapEditorTab::WorkspaceMode) {
+                if (currentDocumentWidget() == tab) {
+                    refreshWorkspaceModeSwitcher();
+                }
+            });
+    connect(tab,
+            &TherionStudio::MapEditorTab::mapPaneDetachStateChanged,
+            this,
+            [this, tab](bool) {
+                if (currentDocumentWidget() == tab) {
+                    refreshDocumentStatusWidgets();
+                    refreshWorkspaceModeSwitcher();
+                }
+            });
+    connect(tab, &TherionStudio::MapEditorTab::commandSurfaceStateChanged, this, [this, tab]() {
+        if (currentDocumentWidget() == tab) {
+            refreshWorkspaceModeSwitcher();
+        }
+    });
+}
+
 TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePath)
 {
     const QString canonicalPath = canonicalDocumentPath(filePath);
@@ -1743,39 +1787,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
             existingTab->setProjectRootPath(projectRootPath_);
             existingTab->setInlineWorkspaceModeSelectorVisible(false);
             editorTabs_->setCurrentIndex(index);
-            connect(existingTab,
-                    &TherionStudio::MapEditorTab::openDedicatedWindowRequested,
-                    this,
-                    &MainWindow::handleMapEditorDetachRequested,
-                    Qt::UniqueConnection);
-            connect(existingTab,
-                    &TherionStudio::MapEditorTab::workspaceModeChanged,
-                    this,
-                    [this, existingTab](TherionStudio::MapEditorTab::WorkspaceMode) {
-                        if (currentDocumentWidget() == existingTab) {
-                            refreshWorkspaceModeSwitcher();
-                        }
-                    },
-                    Qt::UniqueConnection);
-            connect(existingTab,
-                    &TherionStudio::MapEditorTab::mapPaneDetachStateChanged,
-                    this,
-                    [this, existingTab](bool) {
-                        if (currentDocumentWidget() == existingTab) {
-                            refreshDocumentStatusWidgets();
-                            refreshWorkspaceModeSwitcher();
-                        }
-                    },
-                    Qt::UniqueConnection);
-            connect(existingTab,
-                    &TherionStudio::MapEditorTab::commandSurfaceStateChanged,
-                    this,
-                    [this, existingTab]() {
-                        if (currentDocumentWidget() == existingTab) {
-                            refreshWorkspaceModeSwitcher();
-                        }
-                    },
-                    Qt::UniqueConnection);
+            connectMapEditorTabUiSignals(existingTab);
             refreshDocumentStatusWidgets();
             refreshWorkspaceModeSwitcher();
             return existingTab;
@@ -1844,27 +1856,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
             refreshDocumentStatusWidgets();
         }
     });
-    connect(tab, &TherionStudio::MapEditorTab::workspaceModeChanged, this, [this, tab](TherionStudio::MapEditorTab::WorkspaceMode) {
-        if (currentDocumentWidget() == tab) {
-            refreshWorkspaceModeSwitcher();
-        }
-    });
-    connect(tab, &TherionStudio::MapEditorTab::mapPaneDetachStateChanged, this, [this, tab](bool) {
-        if (currentDocumentWidget() == tab) {
-            refreshDocumentStatusWidgets();
-            refreshWorkspaceModeSwitcher();
-        }
-    });
-    connect(tab, &TherionStudio::MapEditorTab::commandSurfaceStateChanged, this, [this, tab]() {
-        if (currentDocumentWidget() == tab) {
-            refreshWorkspaceModeSwitcher();
-        }
-    });
-    connect(tab,
-            &TherionStudio::MapEditorTab::openDedicatedWindowRequested,
-            this,
-            &MainWindow::handleMapEditorDetachRequested,
-            Qt::UniqueConnection);
+    connectMapEditorTabUiSignals(tab);
 
     handleTextEditorCurrentLineChanged(tab->filePath(), tab->currentLineNumber());
 
@@ -2023,30 +2015,7 @@ void MainWindow::reattachDetachedMapEditorTab(TherionStudio::MapEditorTab *tab, 
         editorTabs_->setCurrentIndex(existingIndex);
     }
 
-    connect(tab,
-            &TherionStudio::MapEditorTab::openDedicatedWindowRequested,
-            this,
-            &MainWindow::handleMapEditorDetachRequested,
-            Qt::UniqueConnection);
-    connect(tab,
-            &TherionStudio::MapEditorTab::workspaceModeChanged,
-            this,
-            [this, tab](TherionStudio::MapEditorTab::WorkspaceMode) {
-                if (currentDocumentWidget() == tab) {
-                    refreshWorkspaceModeSwitcher();
-                }
-            },
-            Qt::UniqueConnection);
-    connect(tab,
-            &TherionStudio::MapEditorTab::mapPaneDetachStateChanged,
-            this,
-            [this, tab](bool) {
-                if (currentDocumentWidget() == tab) {
-                    refreshDocumentStatusWidgets();
-                    refreshWorkspaceModeSwitcher();
-                }
-            },
-            Qt::UniqueConnection);
+    connectMapEditorTabUiSignals(tab);
     tab->setInlineWorkspaceModeSelectorVisible(false);
     tab->setProjectRootPath(projectRootPath_);
     updateTabTitle(tab);

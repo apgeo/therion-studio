@@ -94,6 +94,39 @@ std::optional<QColor> optionalColor(const QJsonObject &object, const char *key)
     return color;
 }
 
+std::optional<MapEditorLineClosedFillStyle> optionalLineClosedFill(const QJsonObject &object, const char *key)
+{
+    const QJsonValue value = object.value(QLatin1String(key));
+    if (!value.isString()) {
+        return std::nullopt;
+    }
+
+    const QString raw = value.toString().trimmed();
+    const QString normalized = raw.toLower();
+    MapEditorLineClosedFillStyle closedFill;
+    if (normalized == QStringLiteral("none")
+        || normalized == QStringLiteral("off")
+        || normalized == QStringLiteral("false")
+        || normalized == QStringLiteral("0")) {
+        closedFill.mode = MapEditorLineClosedFillMode::None;
+        return closedFill;
+    }
+    if (normalized == QStringLiteral("background")
+        || normalized == QStringLiteral("clean")) {
+        closedFill.mode = MapEditorLineClosedFillMode::Background;
+        return closedFill;
+    }
+
+    const QColor color(raw);
+    if (!color.isValid()) {
+        return std::nullopt;
+    }
+
+    closedFill.mode = MapEditorLineClosedFillMode::Color;
+    closedFill.color = color;
+    return closedFill;
+}
+
 std::optional<QString> optionalFieldName(const QJsonObject &object, const char *key)
 {
     const QJsonValue value = object.value(QLatin1String(key));
@@ -109,6 +142,27 @@ std::optional<QString> optionalFieldName(const QJsonObject &object, const char *
         return std::nullopt;
     }
     return field;
+}
+
+std::optional<MapEditorPointLabelOrientationMode> optionalPointLabelOrientation(const QJsonObject &object, const char *key)
+{
+    const QJsonValue value = object.value(QLatin1String(key));
+    if (!value.isString()) {
+        return std::nullopt;
+    }
+
+    const QString normalized = value.toString().trimmed().toLower();
+    if (normalized == QStringLiteral("orientation")
+        || normalized == QStringLiteral("oriented")
+        || normalized == QStringLiteral("point")) {
+        return MapEditorPointLabelOrientationMode::Orientation;
+    }
+    if (normalized == QStringLiteral("screen")
+        || normalized == QStringLiteral("horizontal")
+        || normalized == QStringLiteral("none")) {
+        return MapEditorPointLabelOrientationMode::Screen;
+    }
+    return std::nullopt;
 }
 
 Qt::PenStyle penStyleFromString(const QString &value)
@@ -370,7 +424,7 @@ std::optional<MapEditorPointSymbolPart> readPointSymbolPart(const QJsonObject &o
     part.fill = optionalBool(object, "fill").value_or(false);
     part.fillColor = optionalColor(object, "fill_color");
     part.strokeColor = optionalColor(object, "stroke_color");
-    part.strokeWidth = optionalPositiveNumber(object, "stroke_width");
+    part.strokeWidth = optionalNonNegativeNumber(object, "stroke_width");
     if (const std::optional<QVector<QPointF>> points = optionalPointArray(object, "points")) {
         part.points = points.value();
     }
@@ -676,6 +730,10 @@ void applyPointDefaults(MapEditorObjectStyleCatalog *catalog, const QJsonObject 
     if (const std::optional<QString> labelField = optionalFieldName(point, "label_field")) {
         catalog->point.labelField = labelField;
     }
+    if (const std::optional<MapEditorPointLabelOrientationMode> labelOrientation =
+            optionalPointLabelOrientation(point, "label_orientation")) {
+        catalog->point.labelOrientation = labelOrientation.value();
+    }
 }
 
 void applyLineDefaults(MapEditorObjectStyleCatalog *catalog, const QJsonObject &line)
@@ -701,6 +759,9 @@ void applyLineDefaults(MapEditorObjectStyleCatalog *catalog, const QJsonObject &
     }
     if (const std::optional<QVector<MapEditorLineDecorationStyle>> decorations = readLineDecorations(line)) {
         catalog->line.decorations = decorations.value();
+    }
+    if (const std::optional<MapEditorLineClosedFillStyle> closedFill = optionalLineClosedFill(line, "closed_fill")) {
+        catalog->line.closedFill = closedFill.value();
     }
 }
 
@@ -747,6 +808,7 @@ std::optional<MapEditorPointStyleRule> readPointStyleRule(const QJsonObject &obj
     rule.fillColor = optionalColor(object, "fill_color");
     rule.strokeColor = optionalColor(object, "stroke_color");
     rule.labelField = optionalFieldName(object, "label_field");
+    rule.labelOrientation = optionalPointLabelOrientation(object, "label_orientation");
     return rule;
 }
 
@@ -768,6 +830,7 @@ std::optional<MapEditorLineStyleRule> readLineStyleRule(const QJsonObject &objec
         rule.dashPattern = dashPattern;
     }
     rule.decorations = readLineDecorations(object);
+    rule.closedFill = optionalLineClosedFill(object, "closed_fill");
     return rule;
 }
 
@@ -957,6 +1020,7 @@ MapEditorResolvedPointStyle resolveMapEditorPointStyle(const MapEditorObjectStyl
     resolved.fillColor = catalog.point.fillColor;
     resolved.strokeColor = catalog.point.strokeColor;
     resolved.labelField = catalog.point.labelField;
+    resolved.labelOrientation = catalog.point.labelOrientation;
 
     const QString normalizedRawType = normalizedToken(rawType);
     const QString normalizedSubtype = normalizedToken(subtype);
@@ -982,6 +1046,9 @@ MapEditorResolvedPointStyle resolveMapEditorPointStyle(const MapEditorObjectStyl
         if (rule.labelField.has_value()) {
             resolved.labelField = rule.labelField;
         }
+        if (rule.labelOrientation.has_value()) {
+            resolved.labelOrientation = rule.labelOrientation.value();
+        }
     }
 
     return resolved;
@@ -998,6 +1065,7 @@ MapEditorResolvedLineStyle resolveMapEditorLineStyle(const MapEditorObjectStyleC
     resolved.strokeColor = catalog.line.strokeColor;
     resolved.dashPattern = catalog.line.dashPattern;
     resolved.decorations = catalog.line.decorations;
+    resolved.closedFill = catalog.line.closedFill;
 
     const QString normalizedRawType = normalizedToken(rawType);
     const QString normalizedSubtype = normalizedToken(subtype);
@@ -1022,6 +1090,9 @@ MapEditorResolvedLineStyle resolveMapEditorLineStyle(const MapEditorObjectStyleC
         }
         if (rule.decorations.has_value()) {
             resolved.decorations = rule.decorations.value();
+        }
+        if (rule.closedFill.has_value()) {
+            resolved.closedFill = rule.closedFill.value();
         }
     }
 

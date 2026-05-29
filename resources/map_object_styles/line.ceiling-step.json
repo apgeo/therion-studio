@@ -9,7 +9,7 @@
   "decorations": [
     {
       "kind": "ticks",
-      "side": "right",
+      "side": "left",
       "spacing": 16.0,
       "adjust_spacing": true,
       "length": 5.0,

@@ -129,6 +129,7 @@ private:
     void clearDocumentTabs();
     TherionStudio::TextEditorTab *openTextTab(const QString &filePath, bool showUnsupportedPrompt = true);
     TherionStudio::MapEditorTab *openMapEditorTab(const QString &filePath);
+    void connectMapEditorTabUiSignals(TherionStudio::MapEditorTab *tab);
     QWidget *currentDocumentWidget() const;
     TherionStudio::TextEditorTab *currentTextTab() const;
     void showFindBar(bool replaceMode);

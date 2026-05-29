@@ -134,6 +134,8 @@ While drafting line/area:
 
 In `Inspector -> Selection`, you can edit properties for selected `Scrap`, `Point`, `Line`, or `Area`, including common fields like ID/type/subtype where supported.
 
+For point types that support Therion `-orientation`, the Selection inspector shows an orientation override. Enabling it writes `-orientation`; the point symbol rotates around its anchor using `0` as north/up and `90` as east/right. Station names stay screen-aligned for readability. Bundled `point.label` text follows `-orientation`, with the text baseline aligned to the orientation direction. A selected orientable point with explicit `-orientation` also shows a draggable direction handle on the canvas.
+
 For point, line, and area objects, a style preview appears under `Subtype` as a full-width preview tile. The preview updates for selected objects and for pending insert objects before they are placed on the map. The tile uses a map-like light preview surface in both light and dark themes so dark map symbols remain readable. Area previews fill the preview tile so fill patterns are easier to inspect. The preview may still use preview-only contrast treatment for very low-contrast styles; the actual map rendering uses the configured style colors.
 
 When no map object or pending insert object is selected, the `Selection` tab shows the empty state instead of reusing the current text-cursor line.
@@ -251,6 +253,7 @@ Point style files support:
 | `stroke_color` | color string | Symbol outline color, for example `#1C1C1E` or `#F4F4F2E6`. |
 | `fill_color` | color string | Fill color for filled symbols. `plus`, `x`, and `asterisk` are stroke-only symbols. |
 | `label_field` | string | Optional Therion option name to render next to the point, without the leading dash. For example `name` reads `-name`; `text` reads `-text`. |
+| `label_orientation` | string | `screen` keeps style-driven labels horizontal. `orientation` rotates label text from `-orientation`; this is used by bundled `point.label`. |
 
 Example:
 
@@ -267,9 +270,9 @@ Example:
 }
 ```
 
-For built-in symbol parts, use `x`, `y`, `size`, and optional `angle`. For `line`, use `x1`, `y1`, `x2`, `y2`. For `polyline` and `polygon`, use `points` as arrays such as `[[-3, 0], [0, -4], [3, 0]]`; `polygon` may use `fill: true`. For `ellipse`, use `x`, `y`, `width`, `height`, optional `angle`, and optional `fill: true`. Any part may override `fill_color`, `stroke_color`, and `stroke_width`; when omitted, the owning point, line decoration, or area pattern color is used. All coordinates are relative to the owning style's `size`.
+For built-in symbol parts, use `x`, `y`, `size`, and optional `angle`. For `line`, use `x1`, `y1`, `x2`, `y2`. For `polyline` and `polygon`, use `points` as arrays such as `[[-3, 0], [0, -4], [3, 0]]`; `polygon` may use `fill: true`. For `ellipse`, use `x`, `y`, `width`, `height`, optional `angle`, and optional `fill: true`. Any part may override `fill_color`, `stroke_color`, and `stroke_width`; `stroke_width: 0` means the thinnest supported rendered stroke. When omitted, the owning point, line decoration, or area pattern color is used. All coordinates are relative to the owning style's `size`.
 
-Bundled `point.station.json` renders `-name` next to station points. Bundled `point.label.json` renders `-text` next to label points. For `label_field: "text"`, the map canvas interprets common Therion label formatting tags such as `<br>`, `<thsp>`, `<rm>`, `<it>`, `<bf>`, `<ss>`, `<si>`, `<rtl>`, `</rtl>`, and `<size:...>` when drawing the label.
+Bundled `point.station.json` renders `-name` next to station points. Bundled `point.label.json` renders `-text` next to label points and rotates that text according to `-orientation` when present. For `label_field: "text"`, the map canvas interprets common Therion label formatting tags such as `<br>`, `<center>/<centre>`, `<left>`, `<right>`, `<thsp>`, `<rm>`, `<it>`, `<bf>`, `<ss>`, `<si>`, `<rtl>`, `</rtl>`, and `<size:...>` when drawing the label. Alignment tags affect multi-line labels with `<br>`.
 
 Several bundled point styles are approximated from Therion's SKBB or UIS MetaPost symbols using `symbol_parts`, including simple sand, debris, pebbles, blocks, ice, snow, crystal, gypsum, and cave-pearl symbols.
 
@@ -284,6 +287,7 @@ Line style files support:
 | `stroke_width` | number | Line stroke width. |
 | `stroke_color` | color string | Line stroke color. |
 | `dash_pattern` | number array | Custom dash pattern, for example `[8, 4]`. |
+| `closed_fill` | string | Optional fill for closed lines before drawing the stroke. Use `background` to emulate Therion `thclean` behavior, or a color string such as `#FFFFFF`. Defaults to `none`. |
 | `decorations` | array | Optional repeated or offset line decorations drawn along the line geometry. |
 
 Example:
@@ -305,7 +309,7 @@ Decoration entries support these `kind` values:
 | `parallel` | Draw multiple parallel strokes from `offsets`. |
 | `ticks` | Draw repeated short tick marks. |
 | `rungs` | Draw repeated crossbars between `from_offset` and `to_offset`. |
-| `teeth` | Draw repeated filled triangular teeth on one side. |
+| `teeth` | Draw Therion/MetaPost-like filled sawtooth teeth on one side, using the line path as each tooth base. |
 | `symbols` | Draw repeated `symbol_parts` geometry. |
 | `waves` | Draw repeated wavy marks along one side of the line. |
 | `slope_ticks` | Draw `line slope` gradient ticks using per-line-point `orientation` and `l-size` values when present. |
@@ -314,7 +318,7 @@ Common decoration parameters:
 
 | Parameter | Type | Meaning |
 |---|---|---|
-| `side` | string | `center`, `left`, or `right`. Defaults to `center`; `teeth` default to `right`. |
+| `side` | string | `center`, `left`, or `right`. `left` means the Therion left side when following the line direction from its first point; the selected-line yellow side marker points to this side. `right` is the opposite side. Defaults to `center`; `teeth` default to `right`. |
 | `spacing` | number | Distance between repeated marks. With `adjust_spacing: true`, this is the target MetaPost step before fitting it to the path length. |
 | `adjust_spacing` | boolean | Fit repeated marks evenly to the line length using Therion/MetaPost-style `adjust_step` spacing. Applies to repeated decorations such as `symbols`, `ticks`, `rungs`, `teeth`, `waves`, and `slope_ticks`. |
 | `spacing_divisor` | number | Divides the adjusted step after fitting. The bundled SKBB slope style uses `2.0`, matching `adjust_step(..., 1.4u) / 2`. Other repeated decorations usually keep the default `1.0`. |
@@ -331,7 +335,7 @@ Common decoration parameters:
 
 For `slope_ticks`, the map renderer interpolates `l-size` between line points where it is defined. If a line point has explicit `orientation`, that direction is used; otherwise the tick is perpendicular to the local line direction on the left side. If no `l-size` is present, the decoration uses `default_length` or `length` as a fallback. The bundled slope style follows the SKBB MetaPost rhythm: `spacing` is fitted to the path with `adjust_spacing`, actual marks are placed at half that fitted step, `l-size` is the long mark length, and short marks are approximately one third of that length.
 
-Bundled line styles include lightweight SKBB/UIS-derived presets for wall material subtypes, pit/floor-step ticks, wall ice, overhang teeth, fixed ladder rungs, handrail markers, survey lines, and border subtypes. Symbols that depend on richer Therion semantics or complex MetaPost paths may still use an approximation or the generic fallback style.
+Bundled line styles include lightweight SKBB/UIS-derived presets for wall material subtypes, pit/floor-step/ceiling-step ticks, wall ice, overhang teeth, fixed ladder rungs, handrail markers, survey lines, and border subtypes. Wall material decorations that Therion's SKBB MetaPost places with `rotated -90` use `side: "right"` in the bundled styles. `line rock-border -close on` uses `closed_fill: "background"` to match Therion's UIS MetaPost behavior: a closed rock-border cleans/fills the boulder interior with the map background before drawing the outline. Symbols that depend on richer Therion semantics or complex MetaPost paths may still use an approximation or the generic fallback style.
 
 Example symbol-only pebbles line:
 
@@ -370,6 +374,8 @@ Example ladder line:
 ```
 
 #### Area Style Parameters
+
+Area rendering also follows common Therion area options. `-place bottom`, `-place default`, and `-place top` choose whether the area fill and pattern are drawn on the bottom, normal, or top render layer. Default and bottom areas stay below normal line work; `-place top` intentionally draws above normal line work and should be used only when that overlap is desired. Edit handles and selection overlays remain above rendered geometry. `-clip on` is the default and clips area textures to the owning scrap wall boundary when that boundary can be resolved; `-clip off` keeps the area texture un-clipped, which is useful when joining scraps or intentionally extending textures across scrap borders.
 
 Area style files support:
 

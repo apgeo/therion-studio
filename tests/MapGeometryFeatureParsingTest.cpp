@@ -62,8 +62,8 @@ QVector<const MapGeometryFeature *> pointFeatures(const QVector<MapGeometryFeatu
 int runPointTypeAndLabelOptionParsingTest()
 {
     const QString text =
-        QStringLiteral("point 10 20 station -name P1\n"
-                       "point 30 40 label -text \"large<br>dome\"\n");
+        QStringLiteral("point 10 20 station -name P1 -orientation 450\n"
+                       "point 30 40 label -text \"large<br>dome\" -orient -45\n");
 
     const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
@@ -85,6 +85,11 @@ int runPointTypeAndLabelOptionParsingTest()
                 "Expected station -name option to be available for style-driven labels.")) {
         return 1;
     }
+    if (!expect(station->orientationDegrees.has_value()
+                    && std::abs(station->orientationDegrees.value() - 90.0) < 1e-6,
+                "Expected point -orientation to parse and normalize into scene degrees.")) {
+        return 1;
+    }
 
     const MapGeometryFeature *label = points.at(1);
     if (!expect(label->label == QStringLiteral("label"),
@@ -93,6 +98,11 @@ int runPointTypeAndLabelOptionParsingTest()
     }
     if (!expect(label->optionValues.value(QStringLiteral("text")) == QStringLiteral("large<br>dome"),
                 "Expected label -text option to be available for style-driven labels.")) {
+        return 1;
+    }
+    if (!expect(label->orientationDegrees.has_value()
+                    && std::abs(label->orientationDegrees.value() - 315.0) < 1e-6,
+                "Expected point -orient alias to parse and normalize negative degrees.")) {
         return 1;
     }
 
@@ -903,7 +913,11 @@ int runAreaScrapClipMetadataParsingTest()
                        "  w1\n"
                        "  w2\n"
                        "endarea\n"
-                       "area clay -clip off\n"
+                       "area clay -clip off -place top\n"
+                       "  w1\n"
+                       "  w2\n"
+                       "endarea\n"
+                       "area bedrock -place bottom\n"
                        "  w1\n"
                        "  w2\n"
                        "endarea\n"
@@ -925,7 +939,7 @@ int runAreaScrapClipMetadataParsingTest()
     if (!expect(lines.size() == 2, "Expected two wall line features for scrap clip metadata test.")) {
         return 1;
     }
-    if (!expect(areas.size() == 2, "Expected two area features for scrap clip metadata test.")) {
+    if (!expect(areas.size() == 3, "Expected three area features for scrap clip metadata test.")) {
         return 1;
     }
     if (!expect(lines.first()->scrapLineNumber == 1 && areas.first()->scrapLineNumber == 1,
@@ -936,8 +950,14 @@ int runAreaScrapClipMetadataParsingTest()
                 "Expected area without -clip to default to clip-on rendering metadata.")) {
         return 1;
     }
-    if (!expect(!areas.last()->clipToScrap,
+    if (!expect(!areas.at(1)->clipToScrap,
                 "Expected area -clip off to disable scrap clipping metadata.")) {
+        return 1;
+    }
+    if (!expect(areas.at(0)->areaPlace == MapGeometryAreaPlace::Default
+                    && areas.at(1)->areaPlace == MapGeometryAreaPlace::Top
+                    && areas.at(2)->areaPlace == MapGeometryAreaPlace::Bottom,
+                "Expected area -place metadata to parse as default, top, and bottom.")) {
         return 1;
     }
     if (!expect(!areas.first()->verticesEditable && areas.first()->vertices.size() >= 3,

@@ -2,7 +2,7 @@
   "decorations": [
     {
       "kind": "symbols",
-      "side": "left",
+      "side": "right",
       "offset": 2.0,
       "spacing": 7,
       "adjust_spacing": true,
@@ -23,7 +23,7 @@
     },
     {
       "kind": "symbols",
-      "side": "left",
+      "side": "right",
       "offset": 4.5,
       "spacing": 9,
       "adjust_spacing": true,
@@ -44,7 +44,7 @@
     },
     {
       "kind": "symbols",
-      "side": "left",
+      "side": "right",
       "offset": 7.0,
       "spacing": 12,
       "adjust_spacing": true,
@@ -65,7 +65,7 @@
     },
     {
       "kind": "symbols",
-      "side": "left",
+      "side": "right",
       "offset": 10.0,
       "spacing": 16,
       "adjust_spacing": true,

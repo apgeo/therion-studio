@@ -213,9 +213,9 @@ qreal decorationSideFactor(MapEditorLineDecorationSide side)
 {
     switch (side) {
     case MapEditorLineDecorationSide::Left:
-        return -1.0;
-    case MapEditorLineDecorationSide::Right:
         return 1.0;
+    case MapEditorLineDecorationSide::Right:
+        return -1.0;
     case MapEditorLineDecorationSide::Center:
         return 0.0;
     }
@@ -467,13 +467,6 @@ void drawPreviewSymbolParts(QPainter *painter,
         const bool drawStroke = (!fillOnlySymbols || !drawFill)
             || partStrokeColor.has_value()
             || partStrokeWidth.has_value();
-        if (drawStroke && needsPreviewContrastUnderlay(effectiveStrokeColor, backgroundColor)) {
-            painter->setBrush(Qt::NoBrush);
-            painter->setPen(previewPen(previewContrastUnderlayColor(effectiveStrokeColor),
-                                       effectiveStrokeWidth + 2.2,
-                                       Qt::SolidLine));
-            painter->drawPath(path);
-        }
         painter->setBrush(drawFill ? QBrush(effectiveFillColor.value()) : Qt::NoBrush);
         painter->setPen(drawStroke
                             ? previewPen(effectiveStrokeColor,
@@ -525,6 +518,63 @@ void drawPreviewWave(QPainter *painter,
                  end - quarter * 0.65,
                  end);
     painter->drawPath(wave);
+}
+
+QPainterPath previewToothPath(const QPainterPath &path,
+                              const MapEditorLineDecorationStyle &decoration,
+                              qreal centerDistance,
+                              qreal markerStep,
+                              int markerIndex,
+                              int seed)
+{
+    const qreal pathLength = path.length();
+    const qreal sideFactor = decorationSideFactor(decoration.side);
+    if (pathLength <= 0.001 || std::abs(sideFactor) <= 0.001) {
+        return {};
+    }
+
+    const qreal effectiveOffset = effectiveDecorationOffset(decoration, markerIndex, seed);
+    const qreal halfStep = qMax<qreal>(0.001, markerStep * 0.5);
+    const qreal startDistance = qBound<qreal>(0.0, centerDistance - halfStep, pathLength);
+    const qreal endDistance = qBound<qreal>(0.0, centerDistance + halfStep, pathLength);
+    if (endDistance - startDistance <= 0.001) {
+        return {};
+    }
+
+    QPainterPath tooth;
+    bool hasBase = false;
+    const int baseSampleCount = qBound(2,
+                                       static_cast<int>(std::ceil((endDistance - startDistance) / 4.0)) + 1,
+                                       16);
+    for (int sampleIndex = 0; sampleIndex < baseSampleCount; ++sampleIndex) {
+        const qreal distance = sampleIndex == baseSampleCount - 1
+            ? endDistance
+            : startDistance + ((endDistance - startDistance)
+                               * static_cast<qreal>(sampleIndex)
+                               / static_cast<qreal>(baseSampleCount - 1));
+        const std::optional<PreviewSample> sample = samplePathAt(path, distance);
+        if (!sample.has_value()) {
+            continue;
+        }
+
+        const QPointF basePoint = sample->point + (sample->normal * effectiveOffset);
+        if (!hasBase) {
+            tooth.moveTo(basePoint);
+            hasBase = true;
+        } else {
+            tooth.lineTo(basePoint);
+        }
+    }
+
+    const std::optional<PreviewSample> centerSample = samplePathAt(path, centerDistance);
+    if (!hasBase || !centerSample.has_value()) {
+        return {};
+    }
+
+    const QPointF baseCenter = centerSample->point + (centerSample->normal * effectiveOffset);
+    tooth.lineTo(baseCenter + (centerSample->normal * sideFactor * decoration.size));
+    tooth.closeSubpath();
+    return tooth;
 }
 
 void drawLineDecorationsPreview(QPainter *painter,
@@ -615,13 +665,15 @@ void drawLineDecorationsPreview(QPainter *painter,
                                           decoration.dashPattern,
                                           backgroundColor);
                 } else if (decoration.kind == MapEditorLineDecorationKind::Teeth) {
-                    const qreal sideFactor = decoration.side == MapEditorLineDecorationSide::Left ? -1.0 : 1.0;
-                    const qreal halfBase = decoration.size * 0.45;
-                    QPainterPath tooth;
-                    tooth.moveTo(center - sample->tangent * halfBase);
-                    tooth.lineTo(center + sample->normal * sideFactor * decoration.size);
-                    tooth.lineTo(center + sample->tangent * halfBase);
-                    tooth.closeSubpath();
+                    const QPainterPath tooth = previewToothPath(path,
+                                                                decoration,
+                                                                distance,
+                                                                markerDistances.jitterSpacing,
+                                                                markerIndex,
+                                                                seed);
+                    if (tooth.isEmpty()) {
+                        continue;
+                    }
                     const QColor toothFill = decoration.fillColor.value_or(decoration.strokeColor.value_or(fallbackColor));
                     if (needsPreviewContrastUnderlay(toothFill, backgroundColor)) {
                         painter->setBrush(Qt::NoBrush);

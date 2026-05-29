@@ -317,6 +317,36 @@ int runCatalogTest()
         return 1;
     }
 
+    const MapEditorResolvedLineStyle wallSandStyle =
+        resolveMapEditorLineStyle(catalog, QStringLiteral("wall"), QStringLiteral("sand"));
+    if (!expect(!wallSandStyle.decorations.isEmpty(),
+                "Expected wall sand line style to render repeated material dots.")) {
+        return 1;
+    }
+    for (const MapEditorLineDecorationStyle &decoration : wallSandStyle.decorations) {
+        if (!expect(decoration.side == MapEditorLineDecorationSide::Right,
+                    "Expected SKBB wall sand decorations to stay on the Therion right side.")) {
+            return 1;
+        }
+    }
+
+    const MapEditorResolvedLineStyle wallClayStyle =
+        resolveMapEditorLineStyle(catalog, QStringLiteral("wall"), QStringLiteral("clay"));
+    if (!expect(wallClayStyle.decorations.size() == 1
+                    && wallClayStyle.decorations.first().side == MapEditorLineDecorationSide::Right,
+                "Expected SKBB wall clay decorations to stay on the Therion right side.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedLineStyle wallBlocksStyle =
+        resolveMapEditorLineStyle(catalog, QStringLiteral("wall"), QStringLiteral("blocks"));
+    if (!expect(wallBlocksStyle.decorations.size() == 1
+                    && wallBlocksStyle.decorations.first().side == MapEditorLineDecorationSide::Right
+                    && wallBlocksStyle.decorations.first().offset > 0.0,
+                "Expected SKBB wall blocks decorations to extend to the Therion right side.")) {
+        return 1;
+    }
+
     const MapEditorResolvedLineStyle wallIceStyle =
         resolveMapEditorLineStyle(catalog, QStringLiteral("wall"), QStringLiteral("ice"));
     if (!expect(wallIceStyle.decorations.size() == 1
@@ -330,11 +360,31 @@ int runCatalogTest()
                 "Expected wall ice repeated symbols to use adjusted spacing.")) {
         return 1;
     }
+    if (!expect(wallIceStyle.decorations.first().side == MapEditorLineDecorationSide::Right,
+                "Expected SKBB wall ice decorations to stay on the Therion right side.")) {
+        return 1;
+    }
 
     const MapEditorResolvedLineStyle pitStyle = resolveMapEditorLineStyle(catalog, QStringLiteral("pit"));
     if (!expect(pitStyle.decorations.size() == 1
                     && pitStyle.decorations.first().kind == MapEditorLineDecorationKind::Ticks,
                 "Expected pit line style to render repeated ticks.")) {
+        return 1;
+    }
+    if (!expect(pitStyle.decorations.first().side == MapEditorLineDecorationSide::Left,
+                "Expected pit ticks to stay on the Therion left side.")) {
+        return 1;
+    }
+
+    const MapEditorResolvedLineStyle ceilingStepStyle =
+        resolveMapEditorLineStyle(catalog, QStringLiteral("ceiling-step"));
+    if (!expect(ceilingStepStyle.decorations.size() == 1
+                    && ceilingStepStyle.decorations.first().kind == MapEditorLineDecorationKind::Ticks,
+                "Expected ceiling-step line style to render repeated ticks.")) {
+        return 1;
+    }
+    if (!expect(ceilingStepStyle.decorations.first().side == MapEditorLineDecorationSide::Left,
+                "Expected SKBB ceiling-step ticks to stay on the Therion left side.")) {
         return 1;
     }
 
@@ -353,6 +403,12 @@ int runCatalogTest()
     const MapEditorResolvedLineStyle borderStyle = resolveMapEditorLineStyle(catalog, QStringLiteral("border"));
     if (!expect(borderStyle.penStyle == Qt::SolidLine && borderStyle.dashPattern.isEmpty(),
                 "Expected default border line style to be solid.")) {
+        return 1;
+    }
+    const MapEditorResolvedLineStyle rockBorderStyle =
+        resolveMapEditorLineStyle(catalog, QStringLiteral("rock-border"));
+    if (!expect(rockBorderStyle.closedFill.mode == MapEditorLineClosedFillMode::Background,
+                "Expected closed rock-border lines to clean-fill with the map background.")) {
         return 1;
     }
     const MapEditorResolvedLineStyle temporaryBorderStyle =
@@ -429,6 +485,10 @@ int runCatalogTest()
     if (!expect(labelStyle.labelField.has_value()
                     && labelStyle.labelField.value() == QStringLiteral("text"),
                 "Expected label point label field override.")) {
+        return 1;
+    }
+    if (!expect(labelStyle.labelOrientation == MapEditorPointLabelOrientationMode::Orientation,
+                "Expected label point text to use orientation-driven rendering.")) {
         return 1;
     }
 
@@ -687,6 +747,11 @@ int runCatalogTest()
     if (!expect(snowStyle.fillPattern->symbolParts.size() == 1
                     && snowStyle.fillPattern->symbolParts.first().symbol == MapEditorPointSymbol::Asterisk,
                 "Expected asterisk symbol part for snow area fill pattern.")) {
+        return 1;
+    }
+    if (!expect(snowStyle.fillPattern->symbolParts.first().strokeWidth.has_value()
+                    && std::abs(snowStyle.fillPattern->symbolParts.first().strokeWidth.value()) < 1e-6,
+                "Expected zero-width area snow symbol stroke to parse as an explicit thin stroke.")) {
         return 1;
     }
 

@@ -71,9 +71,8 @@ private:
                   const QPointF &normal);
     void drawTooth(QPainter *painter,
                    const MapEditorLineDecorationStyle &decoration,
-                   const QPointF &point,
-                   const QPointF &tangent,
-                   const QPointF &normal,
+                   qreal centerDistance,
+                   qreal markerStep,
                    int markerIndex);
     void drawSymbol(QPainter *painter,
                     const MapEditorLineDecorationStyle &decoration,

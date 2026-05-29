@@ -2,7 +2,7 @@
   "decorations": [
     {
       "kind": "symbols",
-      "side": "left",
+      "side": "right",
       "offset": 6.0,
       "spacing": 9.0,
       "adjust_spacing": true,

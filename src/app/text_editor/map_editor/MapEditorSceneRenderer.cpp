@@ -51,6 +51,12 @@ struct MapCanvasTheme
     QColor controlHandleFill;
 };
 
+struct AreaRenderZValues
+{
+    qreal fill = 2.0;
+    qreal pattern = 2.05;
+};
+
 template <typename T>
 T *makeMouseTransparent(T *item)
 {
@@ -148,6 +154,38 @@ QPen styledGeometricPen(const QColor &color,
         pen.setDashPattern(dashPattern);
     }
     return pen;
+}
+
+AreaRenderZValues areaRenderZValues(MapGeometryAreaPlace place)
+{
+    switch (place) {
+    case MapGeometryAreaPlace::Bottom:
+        return {1.15, 1.20};
+    case MapGeometryAreaPlace::Default:
+        return {1.35, 1.40};
+    case MapGeometryAreaPlace::Top:
+        return {2.85, 2.90};
+    }
+
+    return {};
+}
+
+std::optional<QColor> closedLineFillColor(const MapEditorResolvedLineStyle &style,
+                                          const MapCanvasTheme &canvasTheme)
+{
+    switch (style.closedFill.mode) {
+    case MapEditorLineClosedFillMode::None:
+        return std::nullopt;
+    case MapEditorLineClosedFillMode::Background: {
+        QColor color = canvasTheme.canvasFill;
+        color.setAlpha(255);
+        return color;
+    }
+    case MapEditorLineClosedFillMode::Color:
+        return style.closedFill.color;
+    }
+
+    return std::nullopt;
 }
 
 quint32 stableHashU32(quint32 value)
@@ -1117,6 +1155,12 @@ bool explicitOrientation(const std::optional<qreal> &orientationDegrees)
     return orientationDegrees.has_value();
 }
 
+qreal labelTextRotationForPointOrientation(qreal orientationDegrees)
+{
+    // Point orientation uses 0=north/up; text's unrotated baseline points east/right.
+    return normalizedSceneOrientationDegrees(orientationDegrees - 90.0);
+}
+
 bool linePointOptionTokenMatches(const QString &token, const QStringList &names)
 {
     const QString normalized = token.trimmed().toLower();
@@ -1195,6 +1239,18 @@ QString optionValue(const QStringList &tokens, const QString &option)
     }
 
     return QString();
+}
+
+MapGeometryAreaPlace areaPlaceFromToken(const QString &token)
+{
+    const QString normalized = token.trimmed().toLower();
+    if (normalized == QStringLiteral("bottom")) {
+        return MapGeometryAreaPlace::Bottom;
+    }
+    if (normalized == QStringLiteral("top")) {
+        return MapGeometryAreaPlace::Top;
+    }
+    return MapGeometryAreaPlace::Default;
 }
 
 QString normalizedOptionFieldName(const QString &field)
@@ -1299,6 +1355,9 @@ QString therionLabelTextToHtml(const QString &text)
     QString html;
     bool styleSpanOpen = false;
     int rtlSpanDepth = 0;
+    QString alignment;
+    const bool hasLineBreak = QRegularExpression(QStringLiteral(R"(<\s*br\s*>)"),
+                                                 QRegularExpression::CaseInsensitiveOption).match(text).hasMatch();
 
     auto closeStyleSpan = [&]() {
         if (styleSpanOpen) {
@@ -1382,9 +1441,12 @@ QString therionLabelTextToHtml(const QString &text)
         } else if (normalized == QStringLiteral("left")
                    || normalized == QStringLiteral("right")
                    || normalized == QStringLiteral("center")
-                   || normalized == QStringLiteral("centre")
-                   || normalized.startsWith(QStringLiteral("lang:"))) {
-            // These tags are accepted by Therion labels but do not need visible text.
+                   || normalized == QStringLiteral("centre")) {
+            if (hasLineBreak) {
+                alignment = normalized == QStringLiteral("centre") ? QStringLiteral("center") : normalized;
+            }
+        } else if (normalized.startsWith(QStringLiteral("lang:"))) {
+            // Accepted Therion label metadata; language choice is handled before rendering.
         } else {
             handled = false;
         }
@@ -1401,6 +1463,9 @@ QString therionLabelTextToHtml(const QString &text)
         --rtlSpanDepth;
     }
 
+    if (!alignment.isEmpty()) {
+        return QStringLiteral("<div align=\"%1\">%2</div>").arg(alignment, html);
+    }
     return QStringLiteral("<div>%1</div>").arg(html);
 }
 
@@ -1729,6 +1794,9 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 pointItem->setRect(QRectF(-pointSize / 2.0, -pointSize / 2.0, pointSize, pointSize));
                 pointItem->setSymbol(pointStyle.symbol);
                 pointItem->setSymbolParts(pointStyle.symbolParts);
+                if (feature.orientationSupported && explicitOrientation(feature.orientationDegrees)) {
+                    pointItem->setSymbolRotationDegrees(feature.orientationDegrees.value());
+                }
                 pointItem->setPen(cosmeticPen(pointStrokeColor, qBound(0.6, pointStyle.outlineWidth, 8.0)));
                 pointItem->setBrush(QBrush(pointFillColor));
                 pointItem->setMoveCommittedCallback(recordPointGeometryMove);
@@ -1760,15 +1828,23 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 if (pointStyle.labelField.has_value()) {
                     const QString labelText = optionValueForFieldName(feature.optionValues, pointStyle.labelField.value());
                     if (!labelText.isEmpty()) {
+                        const bool labelTextField = pointStyle.labelField.value() == QStringLiteral("text");
                         QFont labelFont(QStringLiteral("Menlo"), 10);
                         if (feature.stationPoint) {
                             labelFont.setBold(true);
                         }
                         pointItem->setLabel(createPointLabelStaticText(labelText,
-                                                                       pointStyle.labelField.value() == QStringLiteral("text"),
+                                                                       labelTextField,
                                                                        labelFont),
                                             labelFont,
                                             canvasTheme.labelText);
+                        if (labelTextField
+                            && pointStyle.labelOrientation == MapEditorPointLabelOrientationMode::Orientation
+                            && feature.orientationSupported
+                            && explicitOrientation(feature.orientationDegrees)) {
+                            pointItem->setLabelRotationDegrees(
+                                labelTextRotationForPointOrientation(feature.orientationDegrees.value()));
+                        }
                     }
                 }
                 break;
@@ -1787,6 +1863,22 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 QColor baseLineStroke = geometryStroke;
                 if (!lineStyle.strokeVisible) {
                     baseLineStroke.setAlpha(0);
+                }
+
+                if (feature.closed && feature.lineVertices.size() >= 3) {
+                    if (const std::optional<QColor> closedFillColor = closedLineFillColor(lineStyle, canvasTheme)) {
+                        QPainterPath closedFillPath = path;
+                        closedFillPath.closeSubpath();
+                        closedFillPath.setFillRule(Qt::OddEvenFill);
+                        auto *closedFillItem = new MapZoomAwarePathItem(closedFillPath,
+                                                                        QPen(Qt::NoPen),
+                                                                        QBrush(closedFillColor.value()));
+                        scene->addItem(closedFillItem);
+                        closedFillItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
+                        closedFillItem->setZValue(2.49);
+                        markGeometryItem(closedFillItem);
+                        closedFillItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                    }
                 }
 
                 auto *lineItem = new MapZoomAwarePathItem(path,
@@ -2308,6 +2400,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 QColor areaFillColor = areaStyle.fillColor.value_or(canvasTheme.areaFill);
                 areaFillColor.setAlphaF(qBound(0.0, areaStyle.fillOpacity, 1.0));
                 const QColor areaStrokeColor = areaStyle.strokeColor.value_or(canvasTheme.geometryStroke);
+                const AreaRenderZValues areaZ = areaRenderZValues(feature.areaPlace);
                 QPainterPath path;
                 if (feature.verticesEditable || feature.lineVertices.size() < 2) {
                     const QPointF firstPoint = mapGeometryPointToPreview(feature.vertices.first(), sourceBounds, previewBounds);
@@ -2343,7 +2436,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                           areaBrush);
                 scene->addItem(fillItem);
                 fillItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
-                fillItem->setZValue(2.0);
+                fillItem->setZValue(areaZ.fill);
                 markGeometryItem(fillItem);
                 fillItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
                 fillItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeAreaFill);
@@ -2359,7 +2452,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                                         fallbackPatternColor,
                                                                         feature.lineNumber);
                     scene->addItem(patternItem);
-                    patternItem->setZValue(2.05);
+                    patternItem->setZValue(areaZ.pattern);
                     markGeometryItem(patternItem);
                     makeMouseTransparent(patternItem);
                     patternItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
@@ -2626,6 +2719,11 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             } else {
                 currentFeature.clipToScrap = lineOptionToggleValue(parsedLine, QStringLiteral("clip")).value_or(true);
             }
+            QString placeValue = optionValue(parsedLine.tokens, QStringLiteral("-place"));
+            if (placeValue.isEmpty()) {
+                placeValue = optionValue(parsedLine.tokens, QStringLiteral("place"));
+            }
+            currentFeature.areaPlace = areaPlaceFromToken(placeValue);
             currentFeature.vertices.append(pointsFromTokens(parsedLine.tokens.mid(1)));
             appendAreaReferenceIdentifiers(parsedLine, 1, &currentAreaBorderIdentifiers);
             inAreaBlock = true;

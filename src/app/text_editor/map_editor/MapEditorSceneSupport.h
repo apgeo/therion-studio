@@ -50,6 +50,13 @@ enum class DraftGeometryKind
     Area
 };
 
+enum class MapGeometryAreaPlace
+{
+    Bottom,
+    Default,
+    Top
+};
+
 struct MapSceneEntry
 {
     int lineNumber = 0;
@@ -110,6 +117,7 @@ struct MapGeometryFeature
     std::optional<qreal> orientationDegrees;
     bool closed = false;
     bool clipToScrap = true;
+    MapGeometryAreaPlace areaPlace = MapGeometryAreaPlace::Default;
     bool reversed = false;
     bool stationPoint = false;
     bool verticesEditable = true;

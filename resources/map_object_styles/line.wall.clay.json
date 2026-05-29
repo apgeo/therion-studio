@@ -2,7 +2,7 @@
   "decorations": [
     {
       "kind": "waves",
-      "side": "left",
+      "side": "right",
       "offset": 11.0,
       "spacing": 36,
       "adjust_spacing": true,

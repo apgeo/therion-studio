@@ -48,9 +48,9 @@ qreal lineDecorationSideFactor(MapEditorLineDecorationSide side)
 {
     switch (side) {
     case MapEditorLineDecorationSide::Left:
-        return -1.0;
-    case MapEditorLineDecorationSide::Right:
         return 1.0;
+    case MapEditorLineDecorationSide::Right:
+        return -1.0;
     case MapEditorLineDecorationSide::Center:
         return 0.0;
     }
@@ -613,7 +613,7 @@ void MapEditorLineDecorationItem::drawRepeated(QPainter *painter,
             drawRung(painter, decoration, sample->point, sample->normal);
             break;
         case DrawMode::Teeth:
-            drawTooth(painter, decoration, sample->point, sample->tangent, sample->normal, markerIndex);
+            drawTooth(painter, decoration, distance, markers.jitterSpacing, markerIndex);
             break;
         case DrawMode::Symbols:
             drawSymbol(painter, decoration, sample->point, sample->tangent, sample->normal, markerIndex, zoomOutScale);
@@ -655,23 +655,58 @@ void MapEditorLineDecorationItem::drawRung(QPainter *painter,
 
 void MapEditorLineDecorationItem::drawTooth(QPainter *painter,
                                             const MapEditorLineDecorationStyle &decoration,
-                                            const QPointF &point,
-                                            const QPointF &tangent,
-                                            const QPointF &normal,
+                                            qreal centerDistance,
+                                            qreal markerStep,
                                             int markerIndex)
 {
+    const qreal pathLength = path().length();
+    const qreal sideFactor = lineDecorationSideFactor(decoration.side);
+    if (painter == nullptr || pathLength <= 0.001 || std::abs(sideFactor) <= 0.001) {
+        return;
+    }
+
     const int seed = decoration.seed.value_or(fallbackSeed_);
-    const QPointF baseCenter = point + (normal * lineDecorationEffectiveOffset(decoration, markerIndex, seed));
-    const qreal sideFactor = decoration.side == MapEditorLineDecorationSide::Left ? -1.0 : 1.0;
-    const qreal halfBase = decoration.size * 0.45;
-    const QPointF base1 = baseCenter - (tangent * halfBase);
-    const QPointF base2 = baseCenter + (tangent * halfBase);
-    const QPointF tip = baseCenter + (normal * sideFactor * decoration.size);
+    const qreal effectiveOffset = lineDecorationEffectiveOffset(decoration, markerIndex, seed);
+    const qreal halfStep = qMax<qreal>(0.001, markerStep * 0.5);
+    const qreal startDistance = qBound<qreal>(0.0, centerDistance - halfStep, pathLength);
+    const qreal endDistance = qBound<qreal>(0.0, centerDistance + halfStep, pathLength);
+    if (endDistance - startDistance <= 0.001) {
+        return;
+    }
 
     QPainterPath toothPath;
-    toothPath.moveTo(base1);
+    bool hasBase = false;
+    const int baseSampleCount = qBound(2,
+                                       static_cast<int>(std::ceil((endDistance - startDistance) / 4.0)) + 1,
+                                       16);
+    for (int sampleIndex = 0; sampleIndex < baseSampleCount; ++sampleIndex) {
+        const qreal distance = sampleIndex == baseSampleCount - 1
+            ? endDistance
+            : startDistance + ((endDistance - startDistance)
+                               * static_cast<qreal>(sampleIndex)
+                               / static_cast<qreal>(baseSampleCount - 1));
+        const std::optional<LineDecorationSample> sample = lineDecorationSampleAt(path(), distance, reversed_);
+        if (!sample.has_value()) {
+            continue;
+        }
+
+        const QPointF basePoint = sample->point + (sample->normal * effectiveOffset);
+        if (!hasBase) {
+            toothPath.moveTo(basePoint);
+            hasBase = true;
+        } else {
+            toothPath.lineTo(basePoint);
+        }
+    }
+
+    const std::optional<LineDecorationSample> centerSample = lineDecorationSampleAt(path(), centerDistance, reversed_);
+    if (!hasBase || !centerSample.has_value()) {
+        return;
+    }
+
+    const QPointF baseCenter = centerSample->point + (centerSample->normal * effectiveOffset);
+    const QPointF tip = baseCenter + (centerSample->normal * sideFactor * decoration.size);
     toothPath.lineTo(tip);
-    toothPath.lineTo(base2);
     toothPath.closeSubpath();
     painter->setBrush(QBrush(decoration.fillColor.value_or(decoration.strokeColor.value_or(fallbackColor_))));
     painter->drawPath(toothPath);

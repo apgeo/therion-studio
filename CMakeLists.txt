@@ -111,14 +111,22 @@ set(THERION_APP_SOURCES
     src/app/MainWindowProjectLifecycleService.h
     src/app/MainWindowProjectOrchestrationService.cpp
     src/app/MainWindowProjectOrchestrationService.h
+    src/app/MainWindowProjectStepExecutor.cpp
+    src/app/MainWindowProjectStepExecutor.h
     src/app/MainWindowProjectUiFlowService.cpp
     src/app/MainWindowProjectUiFlowService.h
     src/app/MainWindowProjectWorkspaceService.cpp
     src/app/MainWindowProjectWorkspaceService.h
     src/app/MainWindowSessionProjectService.cpp
     src/app/MainWindowSessionProjectService.h
+    src/app/MainWindowSessionRestoreOrchestrationService.cpp
+    src/app/MainWindowSessionRestoreOrchestrationService.h
+    src/app/MainWindowSessionRestoreStepExecutor.cpp
+    src/app/MainWindowSessionRestoreStepExecutor.h
     src/app/MainWindowSessionStateService.cpp
     src/app/MainWindowSessionStateService.h
+    src/app/MainWindowSessionWindowRestoreService.cpp
+    src/app/MainWindowSessionWindowRestoreService.h
     src/app/MainWindowStructureNameOverridesService.cpp
     src/app/MainWindowStructureNameOverridesService.h
     src/app/ProjectStructureScanner.cpp
@@ -706,6 +714,9 @@ therion_add_app_unit_test(MainWindowProjectLifecycleServiceTest
 therion_add_app_unit_test(MainWindowProjectOrchestrationServiceTest
     tests/MainWindowProjectOrchestrationServiceTest.cpp)
 
+therion_add_app_unit_test(MainWindowProjectStepExecutorTest
+    tests/MainWindowProjectStepExecutorTest.cpp)
+
 therion_add_app_unit_test(MainWindowProjectUiFlowServiceTest
     tests/MainWindowProjectUiFlowServiceTest.cpp)
 
@@ -715,8 +726,17 @@ therion_add_app_unit_test(MainWindowProjectWorkspaceServiceTest
 therion_add_app_unit_test(MainWindowSessionProjectServiceTest
     tests/MainWindowSessionProjectServiceTest.cpp)
 
+therion_add_app_unit_test(MainWindowSessionRestoreOrchestrationServiceTest
+    tests/MainWindowSessionRestoreOrchestrationServiceTest.cpp)
+
+therion_add_app_unit_test(MainWindowSessionRestoreStepExecutorTest
+    tests/MainWindowSessionRestoreStepExecutorTest.cpp)
+
 therion_add_app_unit_test(MainWindowSessionStateServiceTest
     tests/MainWindowSessionStateServiceTest.cpp)
+
+therion_add_app_unit_test(MainWindowSessionWindowRestoreServiceTest
+    tests/MainWindowSessionWindowRestoreServiceTest.cpp)
 
 therion_add_app_unit_test(MainWindowStructureNameOverridesServiceTest
     tests/MainWindowStructureNameOverridesServiceTest.cpp)

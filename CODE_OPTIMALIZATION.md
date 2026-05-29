@@ -51,6 +51,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 2 partial: open/close project lifecycle decision logic extracted from `MainWindow` into `MainWindowProjectLifecycleService` with focused app-unit coverage.
 - [x] Phase 2 partial: project workspace state transitions for open/close flows extracted from `MainWindow` into `MainWindowProjectWorkspaceService` with focused app-unit coverage.
 - [x] Phase 2 partial: open/close project UI-flow presentation extracted from `MainWindow` into `MainWindowProjectUiFlowService` with focused app-unit coverage.
+- [x] Phase 2 partial: open/close project side-effect ordering extracted from `MainWindow` into `MainWindowProjectOrchestrationService` with focused app-unit coverage.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.
@@ -655,7 +656,7 @@ Actions:
 
 - Move open/save/reload tab workflows into `DocumentManager`.
 - Move session restore/save decisions into `SessionController`; incremental slices are in place via `MainWindowSessionDocumentService` (session document restore-target planning, open-document path persistence merging, and active-document precedence decisions), `MainWindowSessionProjectService` (automatic project-restore decision and protected-folder restore guard), `MainWindowSessionStateService` (session state persistence writes), and `MainWindowStructureNameOverridesService` (structure-name override JSON parse/serialize).
-- Move structure-browser scanning and status updates into `ProjectStructureController`; incremental slices are in place via `MainWindowProjectLifecycleService` (open/close project decisions), `MainWindowProjectWorkspaceService` (project workspace state transitions), and `MainWindowProjectUiFlowService` (open/close project UI presentation) while UI side effects remain in `MainWindow`.
+- Move structure-browser scanning and status updates into `ProjectStructureController`; incremental slices are in place via `MainWindowProjectLifecycleService` (open/close project decisions), `MainWindowProjectWorkspaceService` (project workspace state transitions), `MainWindowProjectUiFlowService` (open/close project UI presentation), and `MainWindowProjectOrchestrationService` (open/close side-effect ordering) while UI effects are still executed in `MainWindow`.
 - Move external Therion execution into `TherionRunnerController` using an injected process runner.
 - Keep dialogs and menu/action creation in `MainWindow`.
 

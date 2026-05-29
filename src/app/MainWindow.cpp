@@ -56,6 +56,7 @@
 #include "MainWindowHelpDialog.h"
 #include "MainWindowSessionDocumentService.h"
 #include "MainWindowProjectLifecycleService.h"
+#include "MainWindowProjectOrchestrationService.h"
 #include "MainWindowProjectUiFlowService.h"
 #include "MainWindowProjectWorkspaceService.h"
 #include "MainWindowSessionProjectService.h"
@@ -1319,16 +1320,35 @@ void MainWindow::openProject()
         TherionStudio::MainWindowProjectWorkspaceService::buildOpenProjectWorkspaceState(
             decision.projectPath, editorTabs_->count() == 0, findWelcomeTabIndex(editorTabs_) >= 0);
     projectRootPath_ = workspaceState.projectRootPath;
-    projectModel_->setRootPath(projectRootPath_);
-    projectTree_->setRootIndex(projectModel_->index(projectRootPath_));
-    loadStructureNameOverrides();
-    syncOpenDocumentsToProjectRoot();
-    sessionStore_->setLastProjectPath(workspaceState.sessionLastProjectPath);
-    rebuildStructureSidebar();
-    refreshTherionConfigDisplay();
-    updateProjectActionState();
-    if (workspaceState.shouldEnsureWelcomeTab) {
-        addWelcomeTab();
+    for (const TherionStudio::MainWindowProjectOrchestrationService::OpenProjectStep step :
+         TherionStudio::MainWindowProjectOrchestrationService::buildOpenProjectSteps(workspaceState.shouldEnsureWelcomeTab)) {
+        switch (step) {
+        case TherionStudio::MainWindowProjectOrchestrationService::OpenProjectStep::ApplyProjectRootToBrowser:
+            projectModel_->setRootPath(projectRootPath_);
+            projectTree_->setRootIndex(projectModel_->index(projectRootPath_));
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::OpenProjectStep::LoadStructureNameOverrides:
+            loadStructureNameOverrides();
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::OpenProjectStep::SyncOpenDocumentsToProjectRoot:
+            syncOpenDocumentsToProjectRoot();
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::OpenProjectStep::PersistSessionLastProjectPath:
+            sessionStore_->setLastProjectPath(workspaceState.sessionLastProjectPath);
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::OpenProjectStep::RebuildStructureSidebar:
+            rebuildStructureSidebar();
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::OpenProjectStep::RefreshTherionConfigDisplay:
+            refreshTherionConfigDisplay();
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::OpenProjectStep::UpdateProjectActionState:
+            updateProjectActionState();
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::OpenProjectStep::EnsureWelcomeTab:
+            addWelcomeTab();
+            break;
+        }
     }
     const TherionStudio::MainWindowProjectUiFlowService::SuccessPresentation successPresentation =
         TherionStudio::MainWindowProjectUiFlowService::presentOpenProjectSuccess(projectRootPath_);
@@ -1366,17 +1386,37 @@ void MainWindow::closeProject()
     const QString closedProjectPath = workspaceState.closedProjectPath;
     projectRootPath_ = workspaceState.projectRootPath;
 
-    clearDocumentTabs();
-    resetProjectBrowser();
-    sessionStore_->setLastProjectPath(workspaceState.sessionLastProjectPath);
-    persistOpenDocuments();
-    rebuildStructureSidebar();
+    for (const TherionStudio::MainWindowProjectOrchestrationService::CloseProjectStep step :
+         TherionStudio::MainWindowProjectOrchestrationService::buildCloseProjectSteps()) {
+        switch (step) {
+        case TherionStudio::MainWindowProjectOrchestrationService::CloseProjectStep::ClearDocumentTabs:
+            clearDocumentTabs();
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::CloseProjectStep::ResetProjectBrowser:
+            resetProjectBrowser();
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::CloseProjectStep::PersistSessionLastProjectPath:
+            sessionStore_->setLastProjectPath(workspaceState.sessionLastProjectPath);
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::CloseProjectStep::PersistOpenDocuments:
+            persistOpenDocuments();
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::CloseProjectStep::RebuildStructureSidebar:
+            rebuildStructureSidebar();
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::CloseProjectStep::RefreshTherionConfigDisplay:
+            refreshTherionConfigDisplay();
+            break;
+        case TherionStudio::MainWindowProjectOrchestrationService::CloseProjectStep::UpdateProjectActionState:
+            updateProjectActionState();
+            break;
+        }
+    }
+
     const TherionStudio::MainWindowProjectUiFlowService::SuccessPresentation successPresentation =
         TherionStudio::MainWindowProjectUiFlowService::presentCloseProjectSuccess(closedProjectPath);
     statusBar()->showMessage(successPresentation.statusBarMessage, successPresentation.statusBarTimeoutMs);
     appendConsoleLine(successPresentation.consoleMessage);
-    refreshTherionConfigDisplay();
-    updateProjectActionState();
 }
 void MainWindow::handleProjectTreeActivated(const QModelIndex &index)
 {

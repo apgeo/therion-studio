@@ -77,6 +77,46 @@ int runOpenDocumentPathMergeTest()
     return 0;
 }
 
+int runOpenDocumentsStateBuildTest()
+{
+    const QStringList tabDocumentPaths = {
+        QStringLiteral("/tmp/a.th"),
+        QStringLiteral("/tmp/b.th")};
+    const QStringList detachedMapDocumentPaths = {
+        QStringLiteral("/tmp/b.th"),
+        QStringLiteral("/tmp/c.th2")};
+
+    const MainWindowSessionDocumentService::OpenDocumentsState detachedActiveState =
+        MainWindowSessionDocumentService::buildOpenDocumentsState(tabDocumentPaths,
+                                                                  detachedMapDocumentPaths,
+                                                                  {QStringLiteral("/tmp/c.th2")},
+                                                                  QStringLiteral("/tmp/b.th"));
+    const QStringList expectedOpenPaths = {
+        QStringLiteral("/tmp/a.th"),
+        QStringLiteral("/tmp/b.th"),
+        QStringLiteral("/tmp/c.th2")};
+    if (!expect(detachedActiveState.openDocumentPaths == expectedOpenPaths,
+                "Open-documents state should merge tab and detached paths.")) {
+        return 1;
+    }
+    if (!expect(detachedActiveState.activeDocumentPath == QStringLiteral("/tmp/c.th2"),
+                "Detached active document should take precedence for active document path.")) {
+        return 1;
+    }
+
+    const MainWindowSessionDocumentService::OpenDocumentsState currentActiveState =
+        MainWindowSessionDocumentService::buildOpenDocumentsState(tabDocumentPaths,
+                                                                  detachedMapDocumentPaths,
+                                                                  {},
+                                                                  QStringLiteral("/tmp/b.th"));
+    if (!expect(currentActiveState.activeDocumentPath == QStringLiteral("/tmp/b.th"),
+                "Current tab document should be used when no detached window is active.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runMapDocumentDetectionTest()
 {
     if (!expect(MainWindowSessionDocumentService::isMapDocumentPath(QStringLiteral("/tmp/map.th2")),
@@ -102,6 +142,9 @@ int main()
         return 1;
     }
     if (runOpenDocumentPathMergeTest() != 0) {
+        return 1;
+    }
+    if (runOpenDocumentsStateBuildTest() != 0) {
         return 1;
     }
     if (runMapDocumentDetectionTest() != 0) {

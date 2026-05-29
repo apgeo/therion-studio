@@ -47,6 +47,25 @@ QStringList MainWindowSessionDocumentService::mergeOpenDocumentPaths(const QStri
     return mergedPaths;
 }
 
+MainWindowSessionDocumentService::OpenDocumentsState MainWindowSessionDocumentService::buildOpenDocumentsState(const QStringList &tabDocumentPaths,
+                                                                                                                const QStringList &detachedMapDocumentPaths,
+                                                                                                                const QStringList &activeDetachedDocumentPaths,
+                                                                                                                const QString &currentDocumentPath)
+{
+    OpenDocumentsState state;
+    state.openDocumentPaths = mergeOpenDocumentPaths(tabDocumentPaths, detachedMapDocumentPaths);
+
+    for (const QString &detachedPath : activeDetachedDocumentPaths) {
+        if (!detachedPath.isEmpty()) {
+            state.activeDocumentPath = detachedPath;
+            return state;
+        }
+    }
+
+    state.activeDocumentPath = currentDocumentPath;
+    return state;
+}
+
 bool MainWindowSessionDocumentService::isMapDocumentPath(const QString &filePath)
 {
     return QFileInfo(filePath).suffix().compare(QStringLiteral("th2"), Qt::CaseInsensitive) == 0;

@@ -99,7 +99,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Refactor Tracks
 
-- Architecture refactor roadmap: `CODE_OPTIMALIZATION.md` is the staged plan; Phase 1 dependency-injection seams are complete after removing legacy real-adapter constructor shortcuts, and Phase 2 is now active with extracted `MainWindowSessionDocumentService`, `MainWindowSessionProjectService`, and `MainWindowSessionStateService` slices for session restore/persist decisions.
+- Architecture refactor roadmap: `CODE_OPTIMALIZATION.md` is the staged plan; Phase 1 dependency-injection seams are complete after removing legacy real-adapter constructor shortcuts, and Phase 2 is now active with extracted `MainWindowSessionDocumentService`, `MainWindowSessionProjectService`, and `MainWindowSessionStateService` slices for session restore/persist decisions, including active-document persistence precedence.
 - Track A: continue Phase 2 with focused `MainWindow` extraction, extending current session-document, project-restore, and session-state persistence service slices toward full document/session orchestration before broader UI shell cleanup.
 - Track B: continue extracting `MapEditorTab` responsibilities into focused controllers for drawing, inspectors, selection details, scene lifecycle, and undo/snapshot orchestration.
 - Track C: consolidate shared source-edit/rewrite primitives used by Raw, Blocks, and Map modes into focused non-UI services.

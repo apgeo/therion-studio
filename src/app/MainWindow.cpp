@@ -1261,24 +1261,26 @@ void MainWindow::persistOpenDocuments()
         detachedDocumentPaths.append(filePath);
     }
 
-    const QStringList documentPaths =
-        TherionStudio::MainWindowSessionDocumentService::mergeOpenDocumentPaths(tabDocumentPaths, detachedDocumentPaths);
-    QString activeDocumentPath;
+    QStringList activeDetachedDocumentPaths;
     for (auto iterator = detachedMapWindowsByPath_.constBegin(); iterator != detachedMapWindowsByPath_.constEnd(); ++iterator) {
         QMainWindow *window = iterator.value();
         if (window != nullptr && window->isActiveWindow()) {
-            activeDocumentPath = iterator.key();
+            activeDetachedDocumentPaths.append(iterator.key());
             break;
         }
     }
-    if (activeDocumentPath.isEmpty()) {
-        QWidget *currentWidget = currentDocumentWidget();
-        activeDocumentPath = currentWidget != nullptr ? documentPathForWidget(currentWidget) : QString();
-    }
+    QWidget *currentWidget = currentDocumentWidget();
+    const QString currentDocumentPath = currentWidget != nullptr ? documentPathForWidget(currentWidget) : QString();
+
+    const TherionStudio::MainWindowSessionDocumentService::OpenDocumentsState state =
+        TherionStudio::MainWindowSessionDocumentService::buildOpenDocumentsState(tabDocumentPaths,
+                                                                                 detachedDocumentPaths,
+                                                                                 activeDetachedDocumentPaths,
+                                                                                 currentDocumentPath);
 
     TherionStudio::MainWindowSessionStateService::OpenDocumentsSnapshot snapshot;
-    snapshot.openDocumentPaths = documentPaths;
-    snapshot.activeDocumentPath = activeDocumentPath;
+    snapshot.openDocumentPaths = state.openDocumentPaths;
+    snapshot.activeDocumentPath = state.activeDocumentPath;
     TherionStudio::MainWindowSessionStateService::persistOpenDocuments(*sessionStore_, snapshot);
 }
 

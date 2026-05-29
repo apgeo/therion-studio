@@ -33,6 +33,7 @@
 #include "TextEditorDocumentController.h"
 #include "TextEditorEncodingController.h"
 #include "TextEditorModeController.h"
+#include "TextEditorTabInteractionController.h"
 #include "TextEditorSourceRewriteController.h"
 #include "TextEditorStatusController.h"
 #include "TextEditorSurfaceStyler.h"
@@ -530,19 +531,32 @@ void TextEditorTab::setInlineStatusVisible(bool visible)
 void TextEditorTab::setModeSelectorVisible(bool visible)
 {
     modeSelectorRequestedVisible_ = visible;
+    TextEditorTabInteractionController::ModeSelectorActions actions;
     if (modeRow_ != nullptr) {
-        modeRow_->setVisible(modeSelectorRequestedVisible_);
-        modeRow_->setMaximumHeight(modeSelectorRequestedVisible_ ? QWIDGETSIZE_MAX : 0);
-        if (!modeSelectorRequestedVisible_) {
-            modeRow_->setMinimumHeight(0);
-        } else {
-            modeRow_->setMinimumHeight(modeRow_->sizeHint().height());
-        }
+        actions.setModeRowVisible = [this](bool rowVisible) {
+            modeRow_->setVisible(rowVisible);
+        };
+        actions.setModeRowMaximumHeight = [this](int maximumHeight) {
+            modeRow_->setMaximumHeight(maximumHeight);
+        };
+        actions.setModeRowMinimumHeight = [this](int minimumHeight) {
+            modeRow_->setMinimumHeight(minimumHeight);
+        };
     }
+
     if (QLayout *rootLayout = layout(); rootLayout != nullptr) {
-        rootLayout->invalidate();
-        rootLayout->activate();
+        actions.invalidateRootLayout = [rootLayout]() {
+            rootLayout->invalidate();
+        };
+        actions.activateRootLayout = [rootLayout]() {
+            rootLayout->activate();
+        };
     }
+
+    const int modeRowSizeHintHeight = modeRow_ == nullptr ? 0 : modeRow_->sizeHint().height();
+    TextEditorTabInteractionController::applyModeSelectorVisibility(modeSelectorRequestedVisible_,
+                                                                    modeRowSizeHintHeight,
+                                                                    actions);
 }
 
 TextEditorTab::EditorMode TextEditorTab::editorMode() const
@@ -855,13 +869,17 @@ void TextEditorTab::applyDirtyStateFromCurrentState()
 
 void TextEditorTab::handleTextChanged()
 {
-    if (loading_) {
-        return;
-    }
-
-    rebuildBlocksCanvasFromText();
-    applyDirtyStateFromCurrentState();
-    emit documentTextChanged();
+    TextEditorTabInteractionController::TextChangedActions actions;
+    actions.rebuildBlocksCanvasFromText = [this]() {
+        rebuildBlocksCanvasFromText();
+    };
+    actions.applyDirtyStateFromCurrentState = [this]() {
+        applyDirtyStateFromCurrentState();
+    };
+    actions.emitDocumentTextChanged = [this]() {
+        emit documentTextChanged();
+    };
+    TextEditorTabInteractionController::handleTextChanged(loading_, actions);
 }
 
 void TextEditorTab::handleFindTextEdited(const QString &)
@@ -922,12 +940,20 @@ void TextEditorTab::handleCloseSearchTriggered()
 
 void TextEditorTab::handleRawModeRequested()
 {
-    setBlocksModeActive(false);
+    TextEditorTabInteractionController::ModeRequestActions actions;
+    actions.setBlocksModeActive = [this](bool active) {
+        setBlocksModeActive(active);
+    };
+    TextEditorTabInteractionController::handleModeRequest(false, actions);
 }
 
 void TextEditorTab::handleBlocksModeRequested()
 {
-    setBlocksModeActive(true);
+    TextEditorTabInteractionController::ModeRequestActions actions;
+    actions.setBlocksModeActive = [this](bool active) {
+        setBlocksModeActive(active);
+    };
+    TextEditorTabInteractionController::handleModeRequest(true, actions);
 }
 
 void TextEditorTab::handleConvertToUtf8Triggered()

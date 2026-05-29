@@ -292,6 +292,8 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/TextEditorDocumentPersistenceStateService.h
     src/app/text_editor/TextEditorDocumentWorkflowController.cpp
     src/app/text_editor/TextEditorDocumentWorkflowController.h
+    src/app/text_editor/TextEditorTabInteractionController.cpp
+    src/app/text_editor/TextEditorTabInteractionController.h
     src/app/text_editor/TextEditorEncodingController.cpp
     src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
@@ -873,6 +875,8 @@ set(THERION_EDITOR_UI_TEST_BASE_SOURCES
     src/app/text_editor/TextEditorDocumentPersistenceStateService.h
     src/app/text_editor/TextEditorDocumentWorkflowController.cpp
     src/app/text_editor/TextEditorDocumentWorkflowController.h
+    src/app/text_editor/TextEditorTabInteractionController.cpp
+    src/app/text_editor/TextEditorTabInteractionController.h
     src/app/text_editor/TextEditorEncodingController.cpp
     src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
@@ -1007,6 +1011,13 @@ qt_add_executable(TextEditorDocumentWorkflowControllerTest
     src/app/text_editor/TextEditorDocumentWorkflowController.h)
 
 target_link_libraries(TextEditorDocumentWorkflowControllerTest PRIVATE therion_core Qt6::Core)
+
+qt_add_executable(TextEditorTabInteractionControllerTest
+    tests/TextEditorTabInteractionControllerTest.cpp
+    src/app/text_editor/TextEditorTabInteractionController.cpp
+    src/app/text_editor/TextEditorTabInteractionController.h)
+
+target_link_libraries(TextEditorTabInteractionControllerTest PRIVATE therion_core Qt6::Core Qt6::Widgets)
 
 set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
@@ -1144,6 +1155,7 @@ set(THERION_UNIT_TEST_TARGETS
     TextEditorDocumentPreconditionsServiceTest
     TextEditorDocumentPersistenceStateServiceTest
     TextEditorDocumentWorkflowControllerTest
+    TextEditorTabInteractionControllerTest
     ProjectStructureScannerTest
     SessionStoreTest
     MainWindowSessionDocumentControllerTest

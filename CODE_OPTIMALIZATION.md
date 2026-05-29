@@ -93,6 +93,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 5 partial: application startup identity/icon/translator bootstrap extracted from `main.cpp` into `src/platform/ApplicationStartupBootstrap.cpp`, with explicit startup state ownership for translator lifetime.
 - [x] Phase 5 partial: duplicated Lucide icon theming/rendering logic consolidated into `src/app/LucideIconFactory.h` and consumed by `MainWindow`, `MainWindowSidebar`, and `MapEditorDetachedPaneWindow`.
 - [x] Phase 5 partial: startup/appearance bootstrap entrypoint consolidated into `src/platform/ApplicationBootstrap.cpp` so `main.cpp` stays a thin composition root.
+- [x] Phase 5 partial: shared workspace command-bar stylesheet policy consolidated into `src/app/WorkspaceCommandBarStyle.h` and reused by `MainWindow` and detached map-pane window UI.
 - [ ] Phase 5: platform and appearance services centralized.
 - [ ] Phase 6: packaging and CI hardening completed.
 

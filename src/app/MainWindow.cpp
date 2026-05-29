@@ -61,6 +61,7 @@
 #include "MainWindowSessionStateService.h"
 #include "MainWindowStructureNameOverridesService.h"
 #include "LucideIconFactory.h"
+#include "WorkspaceCommandBarStyle.h"
 #include "../core/SessionStore.h"
 
 namespace
@@ -101,56 +102,6 @@ void ensureUsableMainWindowSize(QMainWindow *window)
     if (window->width() < minimumSize.width() || window->height() < minimumSize.height()) {
         window->resize(window->size().expandedTo(defaultMainWindowSize()));
     }
-}
-
-QString workspaceCommandBarStyleSheet(const QColor &backgroundColor)
-{
-    return QStringLiteral(
-               "QWidget#workspaceCommandBar {"
-               " border-bottom: none;"
-               " border-top: none;"
-               " border-left: none;"
-               " border-right: none;"
-               " background-color: %1;"
-               "}"
-               "QFrame#workspaceToolbarSeparator {"
-               " color: palette(mid);"
-               " margin-left: 4px;"
-               " margin-right: 4px;"
-               "}"
-               "QWidget#workspaceCommandBar QToolButton {"
-               " min-width: 26px;"
-               " max-width: 26px;"
-               " min-height: 26px;"
-               " max-height: 26px;"
-               " border: 1px solid palette(mid);"
-               " border-radius: 6px;"
-               " padding: 0px;"
-               " background-color: palette(button);"
-               "}"
-               "QWidget#workspaceCommandBar QPushButton {"
-               " min-height: 26px;"
-               " border: 1px solid palette(mid);"
-               " border-radius: 6px;"
-               " padding: 0 10px;"
-               " background-color: palette(button);"
-               "}"
-               "QWidget#workspaceCommandBar QToolButton:hover,"
-               "QWidget#workspaceCommandBar QPushButton:hover {"
-               " background-color: palette(light);"
-               "}"
-               "QWidget#workspaceCommandBar QToolButton:pressed,"
-               "QWidget#workspaceCommandBar QToolButton:checked,"
-               "QWidget#workspaceCommandBar QPushButton:pressed,"
-               "QWidget#workspaceCommandBar QPushButton:checked {"
-               " background-color: palette(midlight);"
-               "}"
-               "QWidget#workspaceCommandBar QToolButton:disabled,"
-               "QWidget#workspaceCommandBar QPushButton:disabled {"
-               " color: palette(mid);"
-               " border-color: palette(mid);"
-               "}")
-        .arg(backgroundColor.name(QColor::HexRgb));
 }
 
 bool isSupportedTextEditorFilePath(const QString &filePath)
@@ -492,7 +443,9 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceModeSwitcher_ = new QWidget(workspaceHost);
     workspaceModeSwitcher_->setObjectName(QStringLiteral("workspaceCommandBar"));
     workspaceModeSwitcher_->setAttribute(Qt::WA_StyledBackground, true);
-    workspaceModeSwitcher_->setStyleSheet(workspaceCommandBarStyleSheet(palette().color(QPalette::Base)));
+    workspaceModeSwitcher_->setStyleSheet(TherionStudio::workspaceCommandBarStyleSheet(palette().color(QPalette::Base),
+                                                                                        false,
+                                                                                        false));
     auto *hostLayout = new QHBoxLayout(workspaceModeSwitcher_);
     hostLayout->setContentsMargins(4, 4, 8, 4);
     hostLayout->setSpacing(4);
@@ -727,7 +680,9 @@ void MainWindow::refreshWorkspaceModeSwitcher()
             commandBarBackground = sourceSurface;
         }
     }
-    workspaceModeSwitcher_->setStyleSheet(workspaceCommandBarStyleSheet(commandBarBackground));
+    workspaceModeSwitcher_->setStyleSheet(TherionStudio::workspaceCommandBarStyleSheet(commandBarBackground,
+                                                                                        false,
+                                                                                        false));
 
     workspaceModeSwitcher_->setVisible(true);
     workspaceMapModeSwitcher_->setVisible(showMapModes);

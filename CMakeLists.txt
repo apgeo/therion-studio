@@ -200,6 +200,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/MainWindowTherionConsoleController.h
     src/app/MainWindowTherionRunner.cpp
     src/app/LucideIconFactory.h
+    src/app/WorkspaceCommandBarStyle.h
     src/app/text_editor/ContextHelpController.cpp
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp

@@ -2,6 +2,7 @@
 
 #include "MapEditorTab.h"
 #include "../../LucideIconFactory.h"
+#include "../../WorkspaceCommandBarStyle.h"
 
 #include <QCloseEvent>
 #include <QFrame>
@@ -58,51 +59,9 @@ MapEditorDetachedPaneWindow::MapEditorDetachedPaneWindow(MapEditorTab *mapTab, Q
     commandBar_ = new QWidget(centralHost);
     commandBar_->setObjectName(QStringLiteral("workspaceCommandBar"));
     commandBar_->setAttribute(Qt::WA_StyledBackground, true);
-    commandBar_->setStyleSheet(QStringLiteral(
-        "QWidget#workspaceCommandBar {"
-        " border-bottom: 1px solid palette(mid);"
-        " border-top: 1px solid palette(midlight);"
-        " border-left: none;"
-        " border-right: none;"
-        " background-color: palette(base);"
-        "}"
-        "QFrame#workspaceToolbarSeparator {"
-        " color: palette(mid);"
-        " margin-left: 4px;"
-        " margin-right: 4px;"
-        "}"
-        "QWidget#workspaceCommandBar QToolButton {"
-        " min-width: 26px;"
-        " max-width: 26px;"
-        " min-height: 26px;"
-        " max-height: 26px;"
-        " border: 1px solid palette(mid);"
-        " border-radius: 6px;"
-        " padding: 0px;"
-        " background-color: palette(button);"
-        "}"
-        "QWidget#workspaceCommandBar QPushButton {"
-        " min-height: 26px;"
-        " border: 1px solid palette(mid);"
-        " border-radius: 6px;"
-        " padding: 0 10px;"
-        " background-color: palette(button);"
-        "}"
-        "QWidget#workspaceCommandBar QToolButton:hover,"
-        "QWidget#workspaceCommandBar QPushButton:hover {"
-        " background-color: palette(light);"
-        "}"
-        "QWidget#workspaceCommandBar QToolButton:pressed,"
-        "QWidget#workspaceCommandBar QToolButton:checked,"
-        "QWidget#workspaceCommandBar QPushButton:pressed,"
-        "QWidget#workspaceCommandBar QPushButton:checked {"
-        " background-color: palette(midlight);"
-        "}"
-        "QWidget#workspaceCommandBar QToolButton:disabled,"
-        "QWidget#workspaceCommandBar QPushButton:disabled {"
-        " color: palette(mid);"
-        " border-color: palette(mid);"
-        "}"));
+    commandBar_->setStyleSheet(TherionStudio::workspaceCommandBarStyleSheet(palette().color(QPalette::Base),
+                                                                             true,
+                                                                             true));
     auto *commandLayout = new QHBoxLayout(commandBar_);
     commandLayout->setContentsMargins(4, 4, 8, 4);
     commandLayout->setSpacing(4);

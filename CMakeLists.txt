@@ -402,6 +402,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
     src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
+    src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/map_editor/MapEditorXviBackgroundItem.cpp
     src/app/text_editor/map_editor/MapEditorXviBackgroundItem.h
@@ -1126,6 +1127,7 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
     src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
+    src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/map_editor/MapEditorXviBackgroundItem.cpp
     src/app/text_editor/map_editor/MapEditorXviBackgroundItem.h)

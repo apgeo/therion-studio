@@ -105,6 +105,8 @@ target_link_libraries(therion_platform
 therion_enable_strict_warnings(therion_platform)
 
 set(THERION_APP_SOURCES
+    src/app/MainWindowSessionDocumentService.cpp
+    src/app/MainWindowSessionDocumentService.h
     src/app/ProjectStructureScanner.cpp
     src/app/ProjectStructureScanner.h
     src/app/TherionExecutableSelectionController.cpp
@@ -680,6 +682,9 @@ therion_add_app_unit_test(TherionRunnerPresenterTest
 
 therion_add_app_unit_test(TherionRunnerServiceTest
     tests/TherionRunnerServiceTest.cpp)
+
+therion_add_app_unit_test(MainWindowSessionDocumentServiceTest
+    tests/MainWindowSessionDocumentServiceTest.cpp)
 
 set(THERION_EDITOR_UI_TEST_BASE_SOURCES
     src/app/text_editor/ContextHelpController.cpp

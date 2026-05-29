@@ -51,11 +51,13 @@
 #include <QSignalBlocker>
 #include <functional>
 #include <utility>
+#include <vector>
 
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
 #include "MainWindowDocumentHelpers.h"
 #include "MainWindowHelpDialog.h"
+#include "MainWindowSessionDocumentService.h"
 #include "../core/SessionStore.h"
 
 namespace
@@ -1205,20 +1207,22 @@ void MainWindow::persistSessionState()
 
 void MainWindow::restoreOpenDocuments()
 {
-    const QStringList openDocumentPaths = sessionStore_->openDocumentPaths();
-    if (openDocumentPaths.isEmpty()) {
+    const std::vector<TherionStudio::MainWindowSessionDocumentService::RestoreEntry> restoreEntries =
+        TherionStudio::MainWindowSessionDocumentService::buildRestoreEntries(sessionStore_->openDocumentPaths());
+    if (restoreEntries.empty()) {
         return;
     }
 
     const QString activeDocumentPath = sessionStore_->activeDocumentPath();
     bool skippedUnsupportedDocument = false;
 
-    for (const QString &documentPath : openDocumentPaths) {
+    for (const auto &entry : restoreEntries) {
+        const QString &documentPath = entry.filePath;
         if (documentPath.isEmpty() || isProtectedMacUserFolder(documentPath)) {
             continue;
         }
 
-        if (QFileInfo(documentPath).suffix().toLower() == QStringLiteral("th2")) {
+        if (entry.target == TherionStudio::MainWindowSessionDocumentService::RestoreTarget::MapEditor) {
             openMapEditorTab(documentPath);
         } else {
             if (openTextTab(documentPath, false) == nullptr) {
@@ -1251,7 +1255,7 @@ void MainWindow::restoreOpenDocuments()
 
 void MainWindow::persistOpenDocuments()
 {
-    QStringList documentPaths;
+    QStringList tabDocumentPaths;
 
     for (int index = 0; index < editorTabs_->count(); ++index) {
         QWidget *tabWidget = editorTabs_->widget(index);
@@ -1260,20 +1264,23 @@ void MainWindow::persistOpenDocuments()
             continue;
         }
 
-        documentPaths.append(filePath);
+        tabDocumentPaths.append(filePath);
     }
 
+    QStringList detachedDocumentPaths;
     for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
         if (detachedTab == nullptr) {
             continue;
         }
         const QString filePath = documentPathForWidget(detachedTab);
-        if (filePath.isEmpty() || documentPaths.contains(filePath)) {
+        if (filePath.isEmpty()) {
             continue;
         }
-        documentPaths.append(filePath);
+        detachedDocumentPaths.append(filePath);
     }
 
+    const QStringList documentPaths =
+        TherionStudio::MainWindowSessionDocumentService::mergeOpenDocumentPaths(tabDocumentPaths, detachedDocumentPaths);
     sessionStore_->setOpenDocumentPaths(documentPaths);
 
     QString activeDocumentPath;

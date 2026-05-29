@@ -43,6 +43,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 1 partial: unused static command-catalog facade removed; catalog access goes through explicit stores.
 - [x] Phase 1 partial: legacy real-adapter convenience constructors removed from editor and main-window shells.
 - [x] Phase 1 complete: document/session/catalog seams are injectable enough for focused tests and no UI command metadata consumer uses static catalog access.
+- [x] Phase 2 partial: session document restore/persist planning extracted from `MainWindow` into `MainWindowSessionDocumentService` with focused app-unit coverage.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.
@@ -646,7 +647,7 @@ Recommended extraction order:
 Actions:
 
 - Move open/save/reload tab workflows into `DocumentManager`.
-- Move session restore/save decisions into `SessionController`.
+- Move session restore/save decisions into `SessionController`; the first incremental slice is in place via `MainWindowSessionDocumentService` for session document restore-target planning and open-document path persistence merging.
 - Move structure-browser scanning and status updates into `ProjectStructureController`.
 - Move external Therion execution into `TherionRunnerController` using an injected process runner.
 - Keep dialogs and menu/action creation in `MainWindow`.

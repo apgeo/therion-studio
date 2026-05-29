@@ -5,7 +5,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 ## In Progress
 
 - P0 - Phase 9: continue map-editor parity polish, focusing on remaining interaction gaps, inspector ergonomics, and unresolved area/line ownership rewrite semantics.
-- P1 - Architecture roadmap: Phase 2 is complete (session/project/runner workflow extraction from MainWindow); continue with Phase 3 TextEditorTab/document-workflow coupling reduction.
+- P1 - Architecture roadmap: Phase 2 is complete (session/project/runner workflow extraction from MainWindow); Phase 3 started with `MainWindowDocumentController` extraction for save/close workflows, continue with TextEditorTab/document-workflow coupling reduction.
 - P1 - MapEditorTab decomposition: keep line-extension workflow in a focused companion translation unit and continue reducing map-editor shell size without changing user-visible behavior.
 - P1 - Phase 10: continue interactive drawing/insertion polish, focusing on Apple Pencil/freehand performance and remaining insertion edge cases.
 - P2 - Phase 11: continue structured block-canvas authoring coverage and BlockEditor extraction/refactor slices.
@@ -100,7 +100,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Refactor Tracks
 
-- Architecture refactor roadmap: `CODE_OPTIMALIZATION.md` is the staged plan; Phase 1 dependency-injection seams are complete and Phase 2 is complete with extracted `MainWindowSessionDocumentService`, `MainWindowSessionDocumentController`, `MainWindowSessionProjectService`, `MainWindowSessionStateService`, `MainWindowSessionRestoreOrchestrationService`, `MainWindowSessionRestoreUiFlowService`, `MainWindowSessionWindowRestoreService`, `MainWindowSessionController`, `MainWindowStructureNameOverridesService`, `MainWindowProjectLifecycleService`, `MainWindowProjectWorkspaceService`, `MainWindowProjectUiFlowService`, `MainWindowProjectOrchestrationService`, `MainWindowProjectController`, and `MainWindowTherionRunnerController` workflows; next focus is Phase 3 coupling reduction around document/editor mode orchestration.
+- Architecture refactor roadmap: `CODE_OPTIMALIZATION.md` is the staged plan; Phase 1 dependency-injection seams are complete and Phase 2 is complete with extracted `MainWindowSessionDocumentService`, `MainWindowSessionDocumentController`, `MainWindowSessionProjectService`, `MainWindowSessionStateService`, `MainWindowSessionRestoreOrchestrationService`, `MainWindowSessionRestoreUiFlowService`, `MainWindowSessionWindowRestoreService`, `MainWindowSessionController`, `MainWindowStructureNameOverridesService`, `MainWindowProjectLifecycleService`, `MainWindowProjectWorkspaceService`, `MainWindowProjectUiFlowService`, `MainWindowProjectOrchestrationService`, `MainWindowProjectController`, and `MainWindowTherionRunnerController` workflows; Phase 3 is in progress with extracted `MainWindowDocumentController` save/close orchestration and next focus is document open/reuse/editor-mode wiring coupling reduction.
 - Track A: start Phase 3 with focused `TextEditorTab`/document-workflow coupling reduction, extracting tab-centric open/save/reload orchestration into focused non-widget collaborators.
 - Track B: continue extracting `MapEditorTab` responsibilities into focused controllers for drawing, inspectors, selection details, scene lifecycle, and undo/snapshot orchestration.
 - Track C: consolidate shared source-edit/rewrite primitives used by Raw, Blocks, and Map modes into focused non-UI services.

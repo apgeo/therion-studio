@@ -53,6 +53,7 @@
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
 #include "MainWindowDocumentHelpers.h"
+#include "MainWindowDocumentController.h"
 #include "MainWindowHelpDialog.h"
 #include "MainWindowSessionDocumentController.h"
 #include "MainWindowSessionController.h"
@@ -1351,24 +1352,25 @@ void MainWindow::handleTextEditorCurrentLineChanged(const QString &filePath, int
 
 void MainWindow::handleTabCloseRequested(int index)
 {
-    if (!confirmCloseTab(index)) {
-        return;
-    }
+    TherionStudio::MainWindowDocumentController::Actions actions;
+    actions.confirmCloseTab = [this](int tabIndex) { return confirmCloseTab(tabIndex); };
+    actions.closeTab = [this](int tabIndex) {
+        QWidget *tabWidget = editorTabs_->widget(tabIndex);
+        if (tabWidget == nullptr) {
+            return false;
+        }
 
-    QWidget *tabWidget = editorTabs_->widget(index);
-    if (tabWidget == nullptr) {
-        return;
-    }
-
-    editorTabs_->removeTab(index);
-    tabWidget->deleteLater();
-
-    if (editorTabs_->count() == 0) {
-        addWelcomeTab();
-    }
-
-    refreshDocumentStatusWidgets();
-    persistOpenDocuments();
+        editorTabs_->removeTab(tabIndex);
+        tabWidget->deleteLater();
+        return true;
+    };
+    actions.hasNoAttachedTabs = [this]() { return editorTabs_->count() == 0; };
+    actions.ensureWelcomeTab = [this]() { addWelcomeTab(); };
+    actions.refreshDocumentStatusWidgets = [this]() { refreshDocumentStatusWidgets(); };
+    actions.persistOpenDocuments = [this]() { persistOpenDocuments(); };
+    TherionStudio::MainWindowDocumentController::CloseTabRequest request;
+    request.tabIndex = index;
+    TherionStudio::MainWindowDocumentController::closeTab(request, actions);
 }
 
 void MainWindow::closeActiveTab()
@@ -1383,24 +1385,22 @@ void MainWindow::closeActiveTab()
 
 void MainWindow::closeAllTabs()
 {
-    bool closedAny = false;
+    TherionStudio::MainWindowDocumentController::CloseAllRequest request;
     for (int index = editorTabs_->count() - 1; index >= 0; --index) {
         QWidget *tabWidget = editorTabs_->widget(index);
         if (tabWidget == nullptr) {
             continue;
         }
 
-        if (documentPathForWidget(tabWidget).isEmpty()) {
+        const QString documentPath = documentPathForWidget(tabWidget);
+        if (documentPath.isEmpty()) {
             continue;
         }
 
-        if (!confirmCloseTab(index)) {
-            break;
-        }
-
-        editorTabs_->removeTab(index);
-        tabWidget->deleteLater();
-        closedAny = true;
+        TherionStudio::MainWindowDocumentController::CloseTabEntry entry;
+        entry.tabIndex = index;
+        entry.documentPath = documentPath;
+        request.tabEntries.append(entry);
     }
 
     const QList<TherionStudio::MapEditorTab *> detachedTabs = detachedMapEditorTabs();
@@ -1408,33 +1408,51 @@ void MainWindow::closeAllTabs()
         if (detachedTab == nullptr) {
             continue;
         }
-        if (!confirmCloseDocumentWidget(detachedTab)) {
-            break;
-        }
 
         const QString path = detachedMapPathsByTab_.value(detachedTab);
         if (path.isEmpty()) {
             continue;
         }
+        request.detachedDocumentPaths.append(path);
+    }
 
-        if (QMainWindow *window = detachedMapWindowsByPath_.value(path)) {
+    TherionStudio::MainWindowDocumentController::Actions actions;
+    actions.confirmCloseTab = [this](int tabIndex) { return confirmCloseTab(tabIndex); };
+    actions.confirmCloseDocumentPath = [this](const QString &documentPath) {
+        if (auto *detachedTab = detachedMapEditorTabForPath(documentPath); detachedTab != nullptr) {
+            return confirmCloseDocumentWidget(detachedTab);
+        }
+        return false;
+    };
+    actions.closeTab = [this](int tabIndex) {
+        QWidget *tabWidget = editorTabs_->widget(tabIndex);
+        if (tabWidget == nullptr) {
+            return false;
+        }
+
+        editorTabs_->removeTab(tabIndex);
+        tabWidget->deleteLater();
+        return true;
+    };
+    actions.closeDetachedDocumentPath = [this](const QString &documentPath) {
+        if (QMainWindow *window = detachedMapWindowsByPath_.value(documentPath)) {
             const bool wasClearingTabs = clearingDocumentTabs_;
             clearingDocumentTabs_ = true;
             window->close();
             clearingDocumentTabs_ = wasClearingTabs;
-            closedAny = true;
+            return true;
         }
-    }
 
-    if (editorTabs_->count() == 0) {
-        addWelcomeTab();
-    }
-
-    refreshDocumentStatusWidgets();
-    persistOpenDocuments();
-    if (closedAny) {
-        statusBar()->showMessage(tr("Closed all open document tabs"), 2000);
-    }
+        return false;
+    };
+    actions.hasNoAttachedTabs = [this]() { return editorTabs_->count() == 0; };
+    actions.ensureWelcomeTab = [this]() { addWelcomeTab(); };
+    actions.refreshDocumentStatusWidgets = [this]() { refreshDocumentStatusWidgets(); };
+    actions.persistOpenDocuments = [this]() { persistOpenDocuments(); };
+    actions.showStatusBarMessage = [this](const QString &message, int timeoutMs) {
+        statusBar()->showMessage(message, timeoutMs);
+    };
+    TherionStudio::MainWindowDocumentController::closeAll(request, actions);
 }
 
 void MainWindow::resetProjectBrowser()
@@ -1510,53 +1528,105 @@ void MainWindow::loadStructureNameOverrides()
 
 void MainWindow::saveActiveDocument()
 {
-    QWidget *tabWidget = currentDocumentWidget();
-    if (tabWidget == nullptr) {
-        showComingSoon(tr("Save"));
-        return;
-    }
+    TherionStudio::MainWindowDocumentController::Actions actions;
+    actions.showComingSoon = [this](const QString &featureName) { showComingSoon(featureName); };
+    actions.saveDocument = [this](const QString &documentPath, QString *errorMessage) {
+        QWidget *tabWidget = documentWidgetForFilePath(documentPath);
+        if (tabWidget == nullptr) {
+            if (errorMessage != nullptr) {
+                *errorMessage = tr("Unable to resolve the active document.");
+            }
+            return false;
+        }
 
-    QString errorMessage;
-    if (!documentSaveForWidget(tabWidget, &errorMessage)) {
-        QMessageBox::warning(this, tr("Save"), errorMessage);
-        return;
-    }
-
-    updateTabTitle(tabWidget);
-    statusBar()->showMessage(tr("Saved %1").arg(documentDisplayNameForWidget(tabWidget)), 2000);
+        return documentSaveForWidget(tabWidget, errorMessage);
+    };
+    actions.showWarningDialog = [this](const QString &title, const QString &message) {
+        QMessageBox::warning(this, title, message);
+    };
+    actions.updateTabTitle = [this](const QString &documentPath) {
+        if (QWidget *tabWidget = documentWidgetForFilePath(documentPath)) {
+            updateTabTitle(tabWidget);
+        }
+    };
+    actions.documentDisplayName = [this](const QString &documentPath) {
+        if (QWidget *tabWidget = documentWidgetForFilePath(documentPath)) {
+            return documentDisplayNameForWidget(tabWidget);
+        }
+        return documentPath;
+    };
+    actions.showStatusBarMessage = [this](const QString &message, int timeoutMs) {
+        statusBar()->showMessage(message, timeoutMs);
+    };
+    TherionStudio::MainWindowDocumentController::SaveActiveRequest request;
+    request.hasActiveDocument = currentDocumentWidget() != nullptr;
+    request.activeDocumentPath = documentPathForWidget(currentDocumentWidget());
+    TherionStudio::MainWindowDocumentController::saveActive(request, actions);
 }
 
 void MainWindow::saveAllDocuments()
 {
-    bool hadFailure = false;
-    QList<QWidget *> allDocuments;
+    QStringList documentPaths;
     for (int index = 0; index < editorTabs_->count(); ++index) {
-        allDocuments.append(editorTabs_->widget(index));
+        QWidget *tabWidget = editorTabs_->widget(index);
+        if (tabWidget == nullptr) {
+            continue;
+        }
+
+        const QString path = documentPathForWidget(tabWidget);
+        if (path.isEmpty()) {
+            continue;
+        }
+
+        documentPaths.append(path);
     }
     for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
-        allDocuments.append(detachedTab);
-    }
-
-    for (QWidget *tabWidget : allDocuments) {
-        if (tabWidget == nullptr || documentPathForWidget(tabWidget).isEmpty()) {
+        if (detachedTab == nullptr) {
             continue;
         }
-        QString errorMessage;
-        if (!documentIsDirtyForWidget(tabWidget) || documentSaveForWidget(tabWidget, &errorMessage)) {
-            if (editorTabs_->indexOf(tabWidget) >= 0) {
-                updateTabTitle(tabWidget);
+
+        const QString path = documentPathForWidget(detachedTab);
+        if (path.isEmpty()) {
+            continue;
+        }
+
+        documentPaths.append(path);
+    }
+
+    TherionStudio::MainWindowDocumentController::Actions actions;
+    actions.documentIsDirty = [this](const QString &documentPath) {
+        QWidget *tabWidget = documentWidgetForFilePath(documentPath);
+        return tabWidget != nullptr && documentIsDirtyForWidget(tabWidget);
+    };
+    actions.saveDocument = [this](const QString &documentPath, QString *errorMessage) {
+        QWidget *tabWidget = documentWidgetForFilePath(documentPath);
+        if (tabWidget == nullptr) {
+            if (errorMessage != nullptr) {
+                *errorMessage = tr("Unable to resolve open document %1").arg(documentPath);
             }
-            continue;
+            return false;
         }
 
-        hadFailure = true;
-        QMessageBox::warning(this, tr("Save All"), errorMessage);
-        break;
-    }
-
-    if (!hadFailure) {
-        statusBar()->showMessage(tr("All open documents saved"), 2000);
-    }
+        return documentSaveForWidget(tabWidget, errorMessage);
+    };
+    actions.isAttachedDocument = [this](const QString &documentPath) {
+        QWidget *tabWidget = documentWidgetForFilePath(documentPath);
+        return tabWidget != nullptr && editorTabs_->indexOf(tabWidget) >= 0;
+    };
+    actions.updateTabTitle = [this](const QString &documentPath) {
+        if (QWidget *tabWidget = documentWidgetForFilePath(documentPath)) {
+            updateTabTitle(tabWidget);
+        }
+    };
+    actions.showWarningDialog = [this](const QString &title, const QString &message) {
+        QMessageBox::warning(this, title, message);
+    };
+    actions.showStatusBarMessage = [this](const QString &message, int timeoutMs) {
+        statusBar()->showMessage(message, timeoutMs);
+    };
+    TherionStudio::MainWindowDocumentController::SaveAllRequest request;
+    request.documentPaths = documentPaths;
+    TherionStudio::MainWindowDocumentController::saveAll(request, actions);
 }
 
 void MainWindow::showFindBar(bool replaceMode)

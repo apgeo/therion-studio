@@ -63,6 +63,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 2 partial: thin `MainWindowProjectStepExecutor` and `MainWindowSessionRestoreStepExecutor` layers removed; equivalent step execution kept in controllers with behavior coverage preserved.
 - [x] Phase 2 partial: external Therion run/resolve workflow rules extracted from `MainWindow` into `MainWindowTherionRunnerController` with focused app-unit coverage.
 - [x] Phase 2: `MainWindow` application services extracted.
+- [x] Phase 3 partial: MainWindow document save/close workflow orchestration extracted into `MainWindowDocumentController` with focused app-unit coverage.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.
 - [ ] Phase 5: platform and appearance services centralized.

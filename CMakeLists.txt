@@ -401,6 +401,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/map_editor/MapEditorXviBackgroundItem.cpp
     src/app/text_editor/map_editor/MapEditorXviBackgroundItem.h
     src/app/text_editor/TextEditorTab.cpp
+    src/app/text_editor/TextEditorTabDocumentModeDelegates.cpp
     src/app/text_editor/TextEditorTabCompletionFacade.cpp
     src/app/text_editor/TextEditorTabAppearanceController.cpp
     src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
@@ -417,6 +418,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/TextEditorTabCursorController.cpp
     src/app/text_editor/TextEditorTabDocumentController.cpp
     src/app/text_editor/TextEditorTabEncodingController.cpp
+    src/app/text_editor/TextEditorTabInteractionController.cpp
     src/app/text_editor/TextEditorTabModeController.cpp
     src/app/text_editor/TextEditorTabSourceRewriteController.cpp
     src/app/text_editor/TextEditorTabStatusController.cpp
@@ -911,6 +913,7 @@ set(THERION_EDITOR_UI_TEST_BASE_SOURCES
 set(THERION_TEXT_EDITOR_UI_TEST_SOURCES
     ${THERION_EDITOR_UI_TEST_BASE_SOURCES}
     src/app/text_editor/TextEditorTab.cpp
+    src/app/text_editor/TextEditorTabDocumentModeDelegates.cpp
     src/app/text_editor/TextEditorTabCompletionFacade.cpp
     src/app/text_editor/TextEditorTabAppearanceController.cpp
     src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
@@ -927,6 +930,7 @@ set(THERION_TEXT_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/TextEditorTabCursorController.cpp
     src/app/text_editor/TextEditorTabDocumentController.cpp
     src/app/text_editor/TextEditorTabEncodingController.cpp
+    src/app/text_editor/TextEditorTabInteractionController.cpp
     src/app/text_editor/TextEditorTabModeController.cpp
     src/app/text_editor/TextEditorTabSourceRewriteController.cpp
     src/app/text_editor/TextEditorTabStatusController.cpp

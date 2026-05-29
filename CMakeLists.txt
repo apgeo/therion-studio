@@ -284,6 +284,8 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/TextEditorCursorController.h
     src/app/text_editor/TextEditorDocumentController.cpp
     src/app/text_editor/TextEditorDocumentController.h
+    src/app/text_editor/TextEditorDocumentPreconditionsService.cpp
+    src/app/text_editor/TextEditorDocumentPreconditionsService.h
     src/app/text_editor/TextEditorDocumentPersistenceStateService.cpp
     src/app/text_editor/TextEditorDocumentPersistenceStateService.h
     src/app/text_editor/TextEditorDocumentWorkflowController.cpp
@@ -861,6 +863,8 @@ set(THERION_EDITOR_UI_TEST_BASE_SOURCES
     src/app/text_editor/TextEditorCursorController.h
     src/app/text_editor/TextEditorDocumentController.cpp
     src/app/text_editor/TextEditorDocumentController.h
+    src/app/text_editor/TextEditorDocumentPreconditionsService.cpp
+    src/app/text_editor/TextEditorDocumentPreconditionsService.h
     src/app/text_editor/TextEditorDocumentPersistenceStateService.cpp
     src/app/text_editor/TextEditorDocumentPersistenceStateService.h
     src/app/text_editor/TextEditorDocumentWorkflowController.cpp
@@ -959,6 +963,8 @@ qt_add_executable(TextEditorDocumentControllerTest
     tests/TextEditorDocumentControllerTest.cpp
     src/app/text_editor/TextEditorDocumentController.cpp
     src/app/text_editor/TextEditorDocumentController.h
+    src/app/text_editor/TextEditorDocumentPreconditionsService.cpp
+    src/app/text_editor/TextEditorDocumentPreconditionsService.h
     src/app/text_editor/TextEditorDocumentPersistenceStateService.cpp
     src/app/text_editor/TextEditorDocumentPersistenceStateService.h
     src/app/text_editor/TextEditorDocumentWorkflowController.cpp
@@ -972,6 +978,13 @@ qt_add_executable(TextEditorDocumentPersistenceStateServiceTest
     src/app/text_editor/TextEditorDocumentPersistenceStateService.h)
 
 target_link_libraries(TextEditorDocumentPersistenceStateServiceTest PRIVATE therion_core Qt6::Core)
+
+qt_add_executable(TextEditorDocumentPreconditionsServiceTest
+    tests/TextEditorDocumentPreconditionsServiceTest.cpp
+    src/app/text_editor/TextEditorDocumentPreconditionsService.cpp
+    src/app/text_editor/TextEditorDocumentPreconditionsService.h)
+
+target_link_libraries(TextEditorDocumentPreconditionsServiceTest PRIVATE therion_core Qt6::Core)
 
 qt_add_executable(TextEditorDocumentWorkflowControllerTest
     tests/TextEditorDocumentWorkflowControllerTest.cpp
@@ -1112,6 +1125,7 @@ set(THERION_UNIT_TEST_TARGETS
     MapEditorLineSplitPlannerTest
     MapEditorObjectMovePlannerTest
     TextEditorDocumentControllerTest
+    TextEditorDocumentPreconditionsServiceTest
     TextEditorDocumentPersistenceStateServiceTest
     TextEditorDocumentWorkflowControllerTest
     ProjectStructureScannerTest

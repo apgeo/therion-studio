@@ -1,5 +1,6 @@
 #include "TextEditorDocumentController.h"
 #include "TextEditorDocumentPersistenceStateService.h"
+#include "TextEditorDocumentPreconditionsService.h"
 #include "TextEditorDocumentWorkflowController.h"
 
 #include "../../core/IFileSystem.h"
@@ -29,21 +30,23 @@ QString TextEditorDocumentController::tr(const char *text) const
 
 bool TextEditorDocumentController::loadFile(const QString &filePath, QString *errorMessage)
 {
-    if (context_.editor == nullptr
-        || context_.filePath == nullptr
-        || context_.fileEncodingName == nullptr
-        || context_.fileEncodingLabel == nullptr
-        || context_.encodingStatusNote == nullptr
-        || context_.loading == nullptr
-        || context_.currentLineNumber == nullptr
-        || context_.currentColumnNumber == nullptr
-        || context_.highlightedLineNumber == nullptr
-        || context_.cleanTextSnapshot == nullptr
-        || context_.cleanEncodingNameSnapshot == nullptr
-        || context_.dirty == nullptr
-        || context_.blocksModeActive == nullptr
-        || context_.blockDetailsSelectedLineNumber == nullptr
-        || context_.blockDetailsSelectedKind == nullptr) {
+    TextEditorDocumentPreconditionsService::LoadPreconditions preconditions;
+    preconditions.hasEditor = context_.editor != nullptr;
+    preconditions.hasFilePath = context_.filePath != nullptr;
+    preconditions.hasFileEncodingName = context_.fileEncodingName != nullptr;
+    preconditions.hasFileEncodingLabel = context_.fileEncodingLabel != nullptr;
+    preconditions.hasEncodingStatusNote = context_.encodingStatusNote != nullptr;
+    preconditions.hasLoadingFlag = context_.loading != nullptr;
+    preconditions.hasCurrentLineNumber = context_.currentLineNumber != nullptr;
+    preconditions.hasCurrentColumnNumber = context_.currentColumnNumber != nullptr;
+    preconditions.hasHighlightedLineNumber = context_.highlightedLineNumber != nullptr;
+    preconditions.hasCleanTextSnapshot = context_.cleanTextSnapshot != nullptr;
+    preconditions.hasCleanEncodingNameSnapshot = context_.cleanEncodingNameSnapshot != nullptr;
+    preconditions.hasDirtyFlag = context_.dirty != nullptr;
+    preconditions.hasBlocksModeActiveFlag = context_.blocksModeActive != nullptr;
+    preconditions.hasBlockDetailsSelectedLineNumber = context_.blockDetailsSelectedLineNumber != nullptr;
+    preconditions.hasBlockDetailsSelectedKind = context_.blockDetailsSelectedKind != nullptr;
+    if (!TextEditorDocumentPreconditionsService::canLoad(preconditions)) {
         return false;
     }
 
@@ -104,20 +107,19 @@ bool TextEditorDocumentController::loadFile(const QString &filePath, QString *er
 
 bool TextEditorDocumentController::save(QString *errorMessage)
 {
-    if (context_.editor == nullptr
-        || context_.filePath == nullptr
-        || context_.fileEncodingName == nullptr
-        || context_.fileEncodingLabel == nullptr
-        || context_.encodingStatusNote == nullptr
-        || context_.cleanTextSnapshot == nullptr
-        || context_.cleanEncodingNameSnapshot == nullptr
-        || context_.dirty == nullptr) {
-        return false;
-    }
-    if ((*context_.filePath).isEmpty()) {
-        if (errorMessage != nullptr) {
-            *errorMessage = tr("This document does not have a file path yet.");
-        }
+    TextEditorDocumentPreconditionsService::SavePreconditions preconditions;
+    preconditions.hasEditor = context_.editor != nullptr;
+    preconditions.hasFilePath = context_.filePath != nullptr;
+    preconditions.hasFileEncodingName = context_.fileEncodingName != nullptr;
+    preconditions.hasFileEncodingLabel = context_.fileEncodingLabel != nullptr;
+    preconditions.hasEncodingStatusNote = context_.encodingStatusNote != nullptr;
+    preconditions.hasCleanTextSnapshot = context_.cleanTextSnapshot != nullptr;
+    preconditions.hasCleanEncodingNameSnapshot = context_.cleanEncodingNameSnapshot != nullptr;
+    preconditions.hasDirtyFlag = context_.dirty != nullptr;
+    preconditions.filePath = context_.filePath == nullptr ? QString() : (*context_.filePath);
+    if (!TextEditorDocumentPreconditionsService::canSave(preconditions,
+                                                         tr("This document does not have a file path yet."),
+                                                         errorMessage)) {
         return false;
     }
 

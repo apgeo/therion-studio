@@ -30,4 +30,18 @@ MainWindowProjectLifecycleService::CloseProjectDecision MainWindowProjectLifecyc
 
     return {CloseProjectStatus::CloseProject, currentProjectPath};
 }
+
+MainWindowProjectLifecycleService::CloseProjectDecision MainWindowProjectLifecycleService::decideCloseProject(const QString &currentProjectPath,
+                                                                                                               const std::function<bool()> &confirmCloseDirtyDocuments)
+{
+    if (currentProjectPath.isEmpty()) {
+        return {};
+    }
+
+    if (!confirmCloseDirtyDocuments || !confirmCloseDirtyDocuments()) {
+        return {CloseProjectStatus::CancelledByDirtyDocuments, currentProjectPath};
+    }
+
+    return {CloseProjectStatus::CloseProject, currentProjectPath};
+}
 }

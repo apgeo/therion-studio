@@ -76,6 +76,55 @@ int runCloseProjectDecisionTest()
 
     return 0;
 }
+
+int runCloseProjectCallbackDecisionTest()
+{
+    int callbackCallCount = 0;
+    const auto noProject = MainWindowProjectLifecycleService::decideCloseProject(QString(), [&callbackCallCount]() {
+        ++callbackCallCount;
+        return true;
+    });
+    if (!expect(noProject.status == MainWindowProjectLifecycleService::CloseProjectStatus::NoProjectOpen,
+                "Callback close decision should keep no-project state for empty project path.")) {
+        return 1;
+    }
+    if (!expect(callbackCallCount == 0,
+                "Close-project confirmation callback should not be called when no project is open.")) {
+        return 1;
+    }
+
+    callbackCallCount = 0;
+    const auto cancelled = MainWindowProjectLifecycleService::decideCloseProject(QStringLiteral("/tmp/project"),
+                                                                                  [&callbackCallCount]() {
+                                                                                      ++callbackCallCount;
+                                                                                      return false;
+                                                                                  });
+    if (!expect(cancelled.status == MainWindowProjectLifecycleService::CloseProjectStatus::CancelledByDirtyDocuments,
+                "Callback close decision should cancel when confirmation callback returns false.")) {
+        return 1;
+    }
+    if (!expect(callbackCallCount == 1,
+                "Close-project confirmation callback should be called once for open projects.")) {
+        return 1;
+    }
+
+    callbackCallCount = 0;
+    const auto close = MainWindowProjectLifecycleService::decideCloseProject(QStringLiteral("/tmp/project"),
+                                                                              [&callbackCallCount]() {
+                                                                                  ++callbackCallCount;
+                                                                                  return true;
+                                                                              });
+    if (!expect(close.status == MainWindowProjectLifecycleService::CloseProjectStatus::CloseProject,
+                "Callback close decision should proceed when confirmation callback returns true.")) {
+        return 1;
+    }
+    if (!expect(callbackCallCount == 1,
+                "Close-project confirmation callback should be called once for close success.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -84,6 +133,9 @@ int main()
         return 1;
     }
     if (runCloseProjectDecisionTest() != 0) {
+        return 1;
+    }
+    if (runCloseProjectCallbackDecisionTest() != 0) {
         return 1;
     }
 

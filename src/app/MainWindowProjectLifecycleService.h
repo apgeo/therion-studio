@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include <QString>
 
 namespace TherionStudio
@@ -36,5 +38,7 @@ public:
     static OpenProjectDecision decideOpenProject(const QString &selectedProjectPath);
     static CloseProjectDecision decideCloseProject(const QString &currentProjectPath,
                                                    bool canCloseDirtyDocuments);
+    static CloseProjectDecision decideCloseProject(const QString &currentProjectPath,
+                                                   const std::function<bool()> &confirmCloseDirtyDocuments);
 };
 }

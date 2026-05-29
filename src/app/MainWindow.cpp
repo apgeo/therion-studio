@@ -1358,20 +1358,10 @@ void MainWindow::openProject()
 
 void MainWindow::closeProject()
 {
-    const TherionStudio::MainWindowProjectLifecycleService::CloseProjectDecision noProjectDecision =
-        TherionStudio::MainWindowProjectLifecycleService::decideCloseProject(projectRootPath_, true);
-    const TherionStudio::MainWindowProjectUiFlowService::DecisionPresentation noProjectPresentation =
-        TherionStudio::MainWindowProjectUiFlowService::presentCloseProjectDecision(noProjectDecision);
-    if (!noProjectPresentation.shouldContinueWorkflow
-        && noProjectDecision.status == TherionStudio::MainWindowProjectLifecycleService::CloseProjectStatus::NoProjectOpen) {
-        if (noProjectPresentation.showStatusBarMessage) {
-            statusBar()->showMessage(noProjectPresentation.statusBarMessage, noProjectPresentation.statusBarTimeoutMs);
-        }
-        return;
-    }
-
     const TherionStudio::MainWindowProjectLifecycleService::CloseProjectDecision decision =
-        TherionStudio::MainWindowProjectLifecycleService::decideCloseProject(projectRootPath_, confirmCloseDirtyDocuments());
+        TherionStudio::MainWindowProjectLifecycleService::decideCloseProject(projectRootPath_, [this]() {
+            return confirmCloseDirtyDocuments();
+        });
     const TherionStudio::MainWindowProjectUiFlowService::DecisionPresentation decisionPresentation =
         TherionStudio::MainWindowProjectUiFlowService::presentCloseProjectDecision(decision);
     if (!decisionPresentation.shouldContinueWorkflow) {

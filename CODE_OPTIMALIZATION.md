@@ -49,6 +49,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 2 partial: session state persistence writes extracted from `MainWindow` into `MainWindowSessionStateService` with focused app-unit coverage.
 - [x] Phase 2 partial: structure-name override JSON parse/serialize extracted from `MainWindow` into `MainWindowStructureNameOverridesService` with focused app-unit coverage.
 - [x] Phase 2 partial: open/close project lifecycle decision logic extracted from `MainWindow` into `MainWindowProjectLifecycleService` with focused app-unit coverage.
+- [x] Phase 2 partial: close-project dirty-document confirmation coordination consolidated into a single `MainWindowProjectLifecycleService` decision call.
 - [x] Phase 2 partial: project workspace state transitions for open/close flows extracted from `MainWindow` into `MainWindowProjectWorkspaceService` with focused app-unit coverage.
 - [x] Phase 2 partial: open/close project UI-flow presentation extracted from `MainWindow` into `MainWindowProjectUiFlowService` with focused app-unit coverage.
 - [x] Phase 2 partial: open/close project side-effect ordering extracted from `MainWindow` into `MainWindowProjectOrchestrationService` with focused app-unit coverage.

@@ -2,11 +2,9 @@
 
 #include "TextEditorDocumentController.h"
 
-#include <utility>
-
 namespace TherionStudio
 {
-void TextEditorTab::buildDocumentController()
+TextEditorDocumentContext TextEditorTab::buildDocumentContext()
 {
     TextEditorDocumentContext documentContext;
     documentContext.editor = editor_;
@@ -65,6 +63,11 @@ void TextEditorTab::buildDocumentController()
         refreshStatus();
     };
 
-    documentController_ = std::make_unique<TextEditorDocumentController>(*fileSystem_, std::move(documentContext));
+    return documentContext;
+}
+
+void TextEditorTab::buildDocumentController()
+{
+    documentController_ = std::make_unique<TextEditorDocumentController>(*fileSystem_, buildDocumentContext());
 }
 }

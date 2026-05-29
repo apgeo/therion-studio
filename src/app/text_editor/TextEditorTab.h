@@ -43,6 +43,7 @@ class TextEditorAppearanceController;
 class TextEditorContextHelpController;
 class TextEditorCursorController;
 class TextEditorDocumentController;
+struct TextEditorDocumentContext;
 class TextEditorEncodingController;
 class TextEditorModeController;
 class TextEditorSourceRewriteController;
@@ -244,12 +245,15 @@ private:
     TextEditorCommandMetadata &mutableCommandMetadata() { return commandMetadata_; }
     QString displayPath() const;
     void buildAll();
+    void buildModeSelectorRow();
+    void initializeEditorUiState();
     void buildHelpPanel();
     void buildContextHelpController();
     void buildRawEditorPanel();
     void buildAppearanceController();
     void buildCursorController();
     void buildDocumentController();
+    TextEditorDocumentContext buildDocumentContext();
     void buildEncodingController();
     void buildModeController();
     void buildSourceRewriteController();

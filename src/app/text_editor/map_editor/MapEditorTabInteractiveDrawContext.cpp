@@ -53,24 +53,24 @@ MapEditorInteractiveDrawContext MapEditorTab::interactiveDrawContext()
         .selectModeActive = &selectModeActive_,
         .commandApplyInProgress = &mapCommandApplyInProgress_,
         .panActive = &mapPanActive_,
-        .sourceVertices = &interactiveDrawSourceVertices_,
-        .sceneVertices = &interactiveDrawSceneVertices_,
-        .lineVertices = &interactiveDrawLineVertices_,
-        .strokeActive = &interactiveDrawStrokeActive_,
-        .anchorPressActive = &interactiveDrawAnchorPressActive_,
-        .anchorPressScenePoint = &interactiveDrawAnchorPressScenePoint_,
-        .anchorDragActive = &interactiveDrawAnchorDragActive_,
-        .anchorDragScenePoint = &interactiveDrawAnchorDragScenePoint_,
-        .controlDragActive = &interactiveDrawControlDragActive_,
-        .hoverActive = &interactiveDrawHoverActive_,
-        .hoverScenePoint = &interactiveDrawHoverScenePoint_,
-        .previewPath = &interactiveDrawPreviewPath_,
-        .previewMarkers = &interactiveDrawPreviewMarkers_,
+        .sourceVertices = &interactiveDrawState_.sourceVertices_,
+        .sceneVertices = &interactiveDrawState_.sceneVertices_,
+        .lineVertices = &interactiveDrawState_.lineVertices_,
+        .strokeActive = &interactiveDrawState_.strokeActive_,
+        .anchorPressActive = &interactiveDrawState_.anchorPressActive_,
+        .anchorPressScenePoint = &interactiveDrawState_.anchorPressScenePoint_,
+        .anchorDragActive = &interactiveDrawState_.anchorDragActive_,
+        .anchorDragScenePoint = &interactiveDrawState_.anchorDragScenePoint_,
+        .controlDragActive = &interactiveDrawState_.controlDragActive_,
+        .hoverActive = &interactiveDrawState_.hoverActive_,
+        .hoverScenePoint = &interactiveDrawState_.hoverScenePoint_,
+        .previewPath = &interactiveDrawState_.previewPath_,
+        .previewMarkers = &interactiveDrawState_.previewMarkers_,
         .drawMode = [this]() {
-            return toInteractiveDrawControllerMode(interactiveDrawMode_);
+            return toInteractiveDrawControllerMode(interactiveDrawState_.mode_);
         },
         .setDrawMode = [this](MapEditorInteractiveDrawMode mode) {
-            interactiveDrawMode_ = toTabInteractiveDrawMode(mode);
+            interactiveDrawState_.mode_ = toTabInteractiveDrawMode(mode);
         },
         .translate = [this](const char *text) {
             return tr(text);
@@ -127,7 +127,7 @@ bool MapEditorTab::handleInteractiveDrawClick(const QPointF &scenePosition)
 
 bool MapEditorTab::commitInteractiveDrawSession(bool closeLineDraft)
 {
-    if (lineExtensionActive_) {
+    if (interactiveDrawState_.lineExtensionActive_) {
         return commitLineExtensionSession();
     }
     return MapEditorInteractiveDrawController(interactiveDrawContext()).commitInteractiveDrawSession(closeLineDraft);
@@ -137,9 +137,9 @@ void MapEditorTab::clearInteractiveDrawSession(bool clearMode)
 {
     MapEditorInteractiveDrawController(interactiveDrawContext()).clearInteractiveDrawSession(clearMode);
     if (clearMode) {
-        lineExtensionActive_ = false;
-        lineExtensionLineNumber_ = 0;
-        lineExtensionPrepend_ = false;
+        interactiveDrawState_.lineExtensionActive_ = false;
+        interactiveDrawState_.lineExtensionLineNumber_ = 0;
+        interactiveDrawState_.lineExtensionPrepend_ = false;
         clearPendingInsertObject();
         refreshObjectDetailsPanel();
     }
@@ -152,7 +152,7 @@ void MapEditorTab::updateInteractiveDrawPreview()
 
 bool MapEditorTab::cancelInteractiveDrawingToSelectMode()
 {
-    if (lineExtensionActive_) {
+    if (interactiveDrawState_.lineExtensionActive_) {
         if (hasCompletableInteractiveDrawSession()) {
             return commitLineExtensionSession();
         }

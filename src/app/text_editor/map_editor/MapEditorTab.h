@@ -209,6 +209,50 @@ private slots:
     void updateCommandSurfaceState();
 
 private:
+    struct DetachedPaneState
+    {
+        QPointer<QMainWindow> window_;
+        bool detached_ = false;
+        bool inlineWorkspaceModeSelectorVisible_ = true;
+        bool reattaching_ = false;
+    };
+
+    struct SelectionSyncState
+    {
+        bool textNavigationInProgress_ = false;
+        int lastCursorSyncedLine_ = -1;
+        int lastCursorSyncedColumn_ = -1;
+        bool pendingClickSelection_ = false;
+        QPointF pendingClickScenePosition_;
+        QElapsedTimer pendingClickElapsed_;
+        int pendingClickLineNumber_ = 0;
+        int pendingClickSourceVertexIndex_ = -1;
+        QString pendingClickGeometryKind_;
+    };
+
+    struct InteractiveDrawState
+    {
+        InteractiveDrawMode mode_ = InteractiveDrawMode::None;
+        InspectorObjectQuickFields pendingInsertFields_;
+        bool lineExtensionActive_ = false;
+        int lineExtensionLineNumber_ = 0;
+        bool lineExtensionPrepend_ = false;
+        QVector<QPointF> sourceVertices_;
+        QVector<QPointF> sceneVertices_;
+        QVector<MapEditorInteractiveLineDraftVertex> lineVertices_;
+        bool strokeActive_ = false;
+        bool anchorPressActive_ = false;
+        QPointF anchorPressScenePoint_;
+        bool anchorDragActive_ = false;
+        QPointF anchorDragScenePoint_;
+        bool controlDragActive_ = false;
+        MapEditorInteractiveLineControlHandleRef controlDragHandle_;
+        bool hoverActive_ = false;
+        QPointF hoverScenePoint_;
+        QGraphicsPathItem *previewPath_ = nullptr;
+        QVector<QGraphicsItem *> previewMarkers_;
+    };
+
     void initializeWorkspace();
     void buildUi();
     void buildMapScene();
@@ -527,37 +571,8 @@ private:
     bool mapCommandApplyInProgress_ = false;
     bool mapSceneRefreshPending_ = false;
     QTimer *sourceDrivenMapRefreshTimer_ = nullptr;
-    QPointer<QMainWindow> detachedMapPaneWindow_;
-    bool mapPaneDetached_ = false;
-    bool inlineWorkspaceModeSelectorVisible_ = true;
-    bool reattachingMapPane_ = false;
-    bool mapSelectionDrivenTextNavigationInProgress_ = false;
-    int lastCursorSyncedLine_ = -1;
-    int lastCursorSyncedColumn_ = -1;
-    bool pendingMapClickSelection_ = false;
-    QPointF pendingMapClickScenePosition_;
-    QElapsedTimer pendingMapClickElapsed_;
-    int pendingMapClickLineNumber_ = 0;
-    int pendingMapClickSourceVertexIndex_ = -1;
-    QString pendingMapClickGeometryKind_;
-    InteractiveDrawMode interactiveDrawMode_ = InteractiveDrawMode::None;
-    InspectorObjectQuickFields pendingInsertFields_;
-    bool lineExtensionActive_ = false;
-    int lineExtensionLineNumber_ = 0;
-    bool lineExtensionPrepend_ = false;
-    QVector<QPointF> interactiveDrawSourceVertices_;
-    QVector<QPointF> interactiveDrawSceneVertices_;
-    QVector<MapEditorInteractiveLineDraftVertex> interactiveDrawLineVertices_;
-    bool interactiveDrawStrokeActive_ = false;
-    bool interactiveDrawAnchorPressActive_ = false;
-    QPointF interactiveDrawAnchorPressScenePoint_;
-    bool interactiveDrawAnchorDragActive_ = false;
-    QPointF interactiveDrawAnchorDragScenePoint_;
-    bool interactiveDrawControlDragActive_ = false;
-    MapEditorInteractiveLineControlHandleRef interactiveDrawControlDragHandle_;
-    bool interactiveDrawHoverActive_ = false;
-    QPointF interactiveDrawHoverScenePoint_;
-    QGraphicsPathItem *interactiveDrawPreviewPath_ = nullptr;
-    QVector<QGraphicsItem *> interactiveDrawPreviewMarkers_;
+    DetachedPaneState detachedPaneState_;
+    SelectionSyncState selectionSyncState_;
+    InteractiveDrawState interactiveDrawState_;
 };
 }

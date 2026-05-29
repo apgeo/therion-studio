@@ -44,17 +44,17 @@ bool MapEditorTab::beginLineExtensionFromSelection(int lineNumber, int sourceVer
     }
 
     clearInteractiveDrawSession(false);
-    lineExtensionActive_ = true;
-    lineExtensionLineNumber_ = lineNumber;
-    lineExtensionPrepend_ = prepend;
-    interactiveDrawMode_ = InteractiveDrawMode::Line;
+    interactiveDrawState_.lineExtensionActive_ = true;
+    interactiveDrawState_.lineExtensionLineNumber_ = lineNumber;
+    interactiveDrawState_.lineExtensionPrepend_ = prepend;
+    interactiveDrawState_.mode_ = InteractiveDrawMode::Line;
     selectModeActive_ = false;
 
     const MapGeometryFeature::TH2LineVertex &endpoint = lineFeature->lineVertices.at(vertexIndex);
     MapEditorInteractiveLineDraftVertex seed;
     seed.anchorSource = endpoint.anchor;
     seed.anchorScene = scenePointFromSourcePosition(endpoint.anchor);
-    interactiveDrawLineVertices_.append(seed);
+    interactiveDrawState_.lineVertices_.append(seed);
     updateInteractiveDrawPreview();
     emit modeStatusChanged();
     updateCommandSurfaceState();
@@ -68,7 +68,7 @@ bool MapEditorTab::beginLineExtensionFromSelection(int lineNumber, int sourceVer
 
 bool MapEditorTab::commitLineExtensionSession()
 {
-    if (!lineExtensionActive_) {
+    if (!interactiveDrawState_.lineExtensionActive_) {
         return false;
     }
     if (textEditor_ == nullptr) {
@@ -77,7 +77,7 @@ bool MapEditorTab::commitLineExtensionSession()
         return true;
     }
     const QString beforeText = textEditor_->text();
-    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(beforeText, lineExtensionLineNumber_);
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(beforeText, interactiveDrawState_.lineExtensionLineNumber_);
     if (!lineFeature.has_value()) {
         toolbarStatusNote_ = tr("Extend line failed: line geometry could not be resolved.");
         refreshToolbarSummary();
@@ -86,8 +86,8 @@ bool MapEditorTab::commitLineExtensionSession()
 
     const MapEditorLineExtensionPlan extensionPlan =
         MapEditorLineExtensionPlanner::planEdit(lineFeature.value(),
-                                                interactiveDrawLineVertices_,
-                                                lineExtensionPrepend_);
+                                                interactiveDrawState_.lineVertices_,
+                                                interactiveDrawState_.lineExtensionPrepend_);
     if (!extensionPlan.resolved) {
         toolbarStatusNote_ = extensionPlan.errorMessage.isEmpty()
             ? tr("Extend line failed.")
@@ -99,7 +99,7 @@ bool MapEditorTab::commitLineExtensionSession()
     const QStringList coordinateRows = coordinateRowsForLineVertices(extensionPlan.editedVertices,
                                                                      lineFeature->closed);
     QString errorMessage;
-    if (!textEditor_->rewriteLineCoordinateRows(lineExtensionLineNumber_, coordinateRows, &errorMessage)) {
+    if (!textEditor_->rewriteLineCoordinateRows(interactiveDrawState_.lineExtensionLineNumber_, coordinateRows, &errorMessage)) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Extend line failed.")
             : tr("Extend line failed: %1").arg(errorMessage);
@@ -107,7 +107,7 @@ bool MapEditorTab::commitLineExtensionSession()
         return true;
     }
 
-    const int extendedLineNumber = lineExtensionLineNumber_;
+    const int extendedLineNumber = interactiveDrawState_.lineExtensionLineNumber_;
     const int restoredVertexIndex = extensionPlan.restoredVertexIndex;
     recordSourceTextSnapshot(tr("Extend Line"), beforeText, textEditor_->text(), extendedLineNumber);
     const std::optional<MapGeometryFeature> refreshedFeature = lineFeatureForLineNumber(textEditor_->text(), extendedLineNumber);
@@ -115,9 +115,9 @@ bool MapEditorTab::commitLineExtensionSession()
         refreshedFeature.has_value() && restoredVertexIndex >= 0 && restoredVertexIndex < refreshedFeature->lineVertices.size()
         ? refreshedFeature->lineVertices.at(restoredVertexIndex).anchorSourceVertexIndex
         : -1;
-    lineExtensionActive_ = false;
-    lineExtensionLineNumber_ = 0;
-    lineExtensionPrepend_ = false;
+    interactiveDrawState_.lineExtensionActive_ = false;
+    interactiveDrawState_.lineExtensionLineNumber_ = 0;
+    interactiveDrawState_.lineExtensionPrepend_ = false;
     clearInteractiveDrawSession(true);
     if (restoredSourceVertexIndex >= 0) {
         restoreLineAnchorSelection(extendedLineNumber, restoredSourceVertexIndex);

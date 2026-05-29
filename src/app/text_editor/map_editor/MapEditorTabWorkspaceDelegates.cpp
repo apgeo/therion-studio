@@ -127,7 +127,7 @@ QString MapEditorTab::statusEncodingText() const
 
 QString MapEditorTab::statusModeText() const
 {
-    return interactiveDrawMode_ == InteractiveDrawMode::None
+    return interactiveDrawState_.mode_ == InteractiveDrawMode::None
         ? tr("Map mode: Select")
         : tr("Map mode: Insert");
 }
@@ -151,7 +151,7 @@ bool MapEditorTab::canRedo() const
 
 MapEditorTab::InteractiveDrawMode MapEditorTab::interactiveDrawMode() const
 {
-    return interactiveDrawMode_;
+    return interactiveDrawState_.mode_;
 }
 
 bool MapEditorTab::canCompleteDraftAction() const
@@ -227,22 +227,22 @@ void MapEditorTab::triggerAddArea()
 
 bool MapEditorTab::isInsertModeActive() const
 {
-    return interactiveDrawMode_ != InteractiveDrawMode::None;
+    return interactiveDrawState_.mode_ != InteractiveDrawMode::None;
 }
 
 bool MapEditorTab::isMapPaneDetached() const
 {
-    return mapPaneDetached_;
+    return detachedPaneState_.detached_;
 }
 
 QString MapEditorTab::mapPaneWindowActionText() const
 {
-    return mapPaneDetached_ ? tr("Return Map") : tr("Separate Map");
+    return detachedPaneState_.detached_ ? tr("Return Map") : tr("Separate Map");
 }
 
 QString MapEditorTab::mapPaneWindowActionToolTip() const
 {
-    return mapPaneDetached_
+    return detachedPaneState_.detached_
         ? tr("Return the map pane from the detached window into this tab.")
         : tr("Open the map pane in a separate window (for multi-monitor workflows).");
 }
@@ -254,11 +254,11 @@ MapEditorTab::WorkspaceMode MapEditorTab::workspaceMode() const
 
 void MapEditorTab::setInlineWorkspaceModeSelectorVisible(bool visible)
 {
-    inlineWorkspaceModeSelectorVisible_ = visible;
+    detachedPaneState_.inlineWorkspaceModeSelectorVisible_ = visible;
     if (workspaceModeRow_ != nullptr) {
-        workspaceModeRow_->setVisible(inlineWorkspaceModeSelectorVisible_);
-        workspaceModeRow_->setMaximumHeight(inlineWorkspaceModeSelectorVisible_ ? QWIDGETSIZE_MAX : 0);
-        if (!inlineWorkspaceModeSelectorVisible_) {
+        workspaceModeRow_->setVisible(detachedPaneState_.inlineWorkspaceModeSelectorVisible_);
+        workspaceModeRow_->setMaximumHeight(detachedPaneState_.inlineWorkspaceModeSelectorVisible_ ? QWIDGETSIZE_MAX : 0);
+        if (!detachedPaneState_.inlineWorkspaceModeSelectorVisible_) {
             workspaceModeRow_->setMinimumHeight(0);
         } else {
             workspaceModeRow_->setMinimumHeight(workspaceModeRow_->sizeHint().height());
@@ -295,7 +295,7 @@ void MapEditorTab::refreshWorkspaceModeUi()
 
 void MapEditorTab::handleTextEditorCurrentLineChanged(int lineNumber)
 {
-    if (!mapSelectionDrivenTextNavigationInProgress_) {
+    if (!selectionSyncState_.textNavigationInProgress_) {
         syncMapSelectionFromTextCursor(lineNumber, textEditor_ != nullptr ? textEditor_->currentColumnNumber() : 1);
     }
     syncInspectorObjectSelectionToLine(lineNumber);
@@ -304,11 +304,11 @@ void MapEditorTab::handleTextEditorCurrentLineChanged(int lineNumber)
 
 void MapEditorTab::handleTextEditorCursorPositionChanged(int lineNumber, int columnNumber)
 {
-    if (mapSelectionDrivenTextNavigationInProgress_) {
+    if (selectionSyncState_.textNavigationInProgress_) {
         return;
     }
 
-    if (lineNumber == lastCursorSyncedLine_ && columnNumber == lastCursorSyncedColumn_) {
+    if (lineNumber == selectionSyncState_.lastCursorSyncedLine_ && columnNumber == selectionSyncState_.lastCursorSyncedColumn_) {
         return;
     }
 
@@ -366,7 +366,7 @@ void MapEditorTab::updateWorkspaceVisibility()
         return;
     }
 
-    if (mapPaneDetached_) {
+    if (detachedPaneState_.detached_) {
         if (workspaceModeRow_ != nullptr) {
             workspaceModeRow_->setEnabled(false);
             workspaceModeRow_->setToolTip(tr("Map pane is detached: raw editor remains in this tab while visual map stays in the detached window."));

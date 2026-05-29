@@ -13,10 +13,10 @@ namespace TherionStudio
 {
 void MapEditorTab::refreshStatus()
 {
-    if (detachedMapPaneWindow_ != nullptr) {
-        detachedMapPaneWindow_->setWindowTitle(tr("%1 — Map").arg(displayName()));
-        detachedMapPaneWindow_->setWindowFilePath(filePath());
-        if (auto *window = dynamic_cast<MapEditorDetachedPaneWindow *>(detachedMapPaneWindow_.data())) {
+    if (detachedPaneState_.window_ != nullptr) {
+        detachedPaneState_.window_->setWindowTitle(tr("%1 — Map").arg(displayName()));
+        detachedPaneState_.window_->setWindowFilePath(filePath());
+        if (auto *window = dynamic_cast<MapEditorDetachedPaneWindow *>(detachedPaneState_.window_.data())) {
             window->setMapStatus(zoomPercent(), isInsertModeActive(), statusModeText());
         }
     }
@@ -29,9 +29,9 @@ QString MapEditorTab::displayPath() const
 
 void MapEditorTab::toggleMapPaneWindow()
 {
-    if (mapPaneDetached_) {
-        if (detachedMapPaneWindow_ != nullptr) {
-            detachedMapPaneWindow_->close();
+    if (detachedPaneState_.detached_) {
+        if (detachedPaneState_.window_ != nullptr) {
+            detachedPaneState_.window_->close();
             return;
         }
 
@@ -44,7 +44,7 @@ void MapEditorTab::toggleMapPaneWindow()
 
 void MapEditorTab::detachMapPaneToWindow()
 {
-    if (mapPaneDetached_ || mapPaneContainer_ == nullptr || splitter_ == nullptr) {
+    if (detachedPaneState_.detached_ || mapPaneContainer_ == nullptr || splitter_ == nullptr) {
         return;
     }
 
@@ -56,8 +56,8 @@ void MapEditorTab::detachMapPaneToWindow()
     window->setMapPaneWidget(mapPaneContainer_);
     window->setCloseCallback([this]() { reattachMapPaneFromWindow(); });
 
-    detachedMapPaneWindow_ = window;
-    mapPaneDetached_ = true;
+    detachedPaneState_.window_ = window;
+    detachedPaneState_.detached_ = true;
     if (mapPaneTopSeparator_ != nullptr) {
         mapPaneTopSeparator_->hide();
     }
@@ -73,11 +73,11 @@ void MapEditorTab::detachMapPaneToWindow()
 
 void MapEditorTab::reattachMapPaneFromWindow()
 {
-    if (!mapPaneDetached_ || mapPaneContainer_ == nullptr || splitter_ == nullptr || reattachingMapPane_) {
+    if (!detachedPaneState_.detached_ || mapPaneContainer_ == nullptr || splitter_ == nullptr || detachedPaneState_.reattaching_) {
         return;
     }
 
-    reattachingMapPane_ = true;
+    detachedPaneState_.reattaching_ = true;
 
     mapPaneContainer_->setParent(splitter_);
     splitter_->insertWidget(0, mapPaneContainer_);
@@ -85,25 +85,25 @@ void MapEditorTab::reattachMapPaneFromWindow()
         mapPaneTopSeparator_->setVisible(workspaceMode_ == WorkspaceMode::Visual);
     }
 
-    mapPaneDetached_ = false;
-    detachedMapPaneWindow_ = nullptr;
+    detachedPaneState_.detached_ = false;
+    detachedPaneState_.window_ = nullptr;
     emit mapPaneDetachStateChanged(false);
     updateWorkspaceVisibility();
     if (mapView_ != nullptr) {
         mapView_->setFocus(Qt::OtherFocusReason);
     }
 
-    reattachingMapPane_ = false;
+    detachedPaneState_.reattaching_ = false;
 }
 
 void MapEditorTab::focusDetachedMapPaneWindow()
 {
-    if (detachedMapPaneWindow_ == nullptr) {
+    if (detachedPaneState_.window_ == nullptr) {
         return;
     }
 
-    detachedMapPaneWindow_->showNormal();
-    detachedMapPaneWindow_->raise();
-    detachedMapPaneWindow_->activateWindow();
+    detachedPaneState_.window_->showNormal();
+    detachedPaneState_.window_->raise();
+    detachedPaneState_.window_->activateWindow();
 }
 }

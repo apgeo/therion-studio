@@ -22,7 +22,7 @@ void MapEditorTab::handleAddPointTriggered()
 
 void MapEditorTab::handleAddLineTriggered()
 {
-    lineExtensionActive_ = false;
+    interactiveDrawState_.lineExtensionActive_ = false;
     setInteractiveDrawMode(InteractiveDrawMode::Line);
     beginPendingInsertObject(QStringLiteral("line"));
     activateSelectionInspector();
@@ -33,7 +33,7 @@ void MapEditorTab::handleAddLineTriggered()
 
 void MapEditorTab::handleAddFreehandLineTriggered()
 {
-    lineExtensionActive_ = false;
+    interactiveDrawState_.lineExtensionActive_ = false;
     setInteractiveDrawMode(InteractiveDrawMode::Freehand);
     beginPendingInsertObject(QStringLiteral("line"));
     activateSelectionInspector();
@@ -44,7 +44,7 @@ void MapEditorTab::handleAddFreehandLineTriggered()
 
 void MapEditorTab::handleAddAreaTriggered()
 {
-    lineExtensionActive_ = false;
+    interactiveDrawState_.lineExtensionActive_ = false;
     setInteractiveDrawMode(InteractiveDrawMode::Area);
     beginPendingInsertObject(QStringLiteral("area"));
     activateSelectionInspector();
@@ -55,7 +55,7 @@ void MapEditorTab::handleAddAreaTriggered()
 
 void MapEditorTab::handleSelectModeTriggered()
 {
-    lineExtensionActive_ = false;
+    interactiveDrawState_.lineExtensionActive_ = false;
     setInteractiveDrawMode(InteractiveDrawMode::None);
     clearPendingInsertObject();
     refreshObjectDetailsPanel();
@@ -75,13 +75,13 @@ void MapEditorTab::handleInsertScrapTriggered()
         return;
     }
 
-    lineExtensionActive_ = false;
-    if (interactiveDrawMode_ != InteractiveDrawMode::None) {
+    interactiveDrawState_.lineExtensionActive_ = false;
+    if (interactiveDrawState_.mode_ != InteractiveDrawMode::None) {
         setInteractiveDrawMode(InteractiveDrawMode::None);
     }
     selectModeActive_ = true;
 
-    if (pendingInsertFields_.commandKind.trimmed().toLower() != QStringLiteral("scrap")) {
+    if (interactiveDrawState_.pendingInsertFields_.commandKind.trimmed().toLower() != QStringLiteral("scrap")) {
         beginPendingInsertObject(QStringLiteral("scrap"));
         activateSelectionInspector();
         refreshObjectDetailsPanel();

@@ -177,8 +177,8 @@ void MapEditorTab::buildUi()
     connect(rawModeButton_, &QPushButton::clicked, this, [this]() {
         setWorkspaceMode(WorkspaceMode::Raw);
     });
-    workspaceModeRow_->setVisible(inlineWorkspaceModeSelectorVisible_);
-    workspaceModeRow_->setMaximumHeight(inlineWorkspaceModeSelectorVisible_ ? QWIDGETSIZE_MAX : 0);
+    workspaceModeRow_->setVisible(detachedPaneState_.inlineWorkspaceModeSelectorVisible_);
+    workspaceModeRow_->setMaximumHeight(detachedPaneState_.inlineWorkspaceModeSelectorVisible_ ? QWIDGETSIZE_MAX : 0);
 
     toolbarStatusNote_ = tr("Ready");
 

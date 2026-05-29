@@ -60,25 +60,25 @@ void MapEditorTab::beginPendingInsertObject(const QString &commandKind)
         fields.name = QStringLiteral("draft-point");
         fields.nameVisible = true;
     }
-    pendingInsertFields_ = fields;
+    interactiveDrawState_.pendingInsertFields_ = fields;
 }
 
 void MapEditorTab::clearPendingInsertObject()
 {
-    pendingInsertFields_ = InspectorObjectQuickFields{};
+    interactiveDrawState_.pendingInsertFields_ = InspectorObjectQuickFields{};
 }
 
 std::optional<InspectorObjectQuickFields> MapEditorTab::pendingInsertQuickFields() const
 {
-    if (pendingInsertFields_.commandKind.trimmed().isEmpty()) {
+    if (interactiveDrawState_.pendingInsertFields_.commandKind.trimmed().isEmpty()) {
         return std::nullopt;
     }
-    return pendingInsertFields_;
+    return interactiveDrawState_.pendingInsertFields_;
 }
 
 void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields &fields)
 {
-    const QString existingCommand = pendingInsertFields_.commandKind;
+    const QString existingCommand = interactiveDrawState_.pendingInsertFields_.commandKind;
     const QString normalizedCommand = normalizedPendingCommandKind(fields.commandKind.isEmpty()
                                                                        ? existingCommand
                                                                        : fields.commandKind);
@@ -87,22 +87,22 @@ void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields 
         return;
     }
 
-    pendingInsertFields_ = fields;
-    pendingInsertFields_.commandKind = normalizedCommand;
-    pendingInsertFields_.typeEditable = normalizedCommand != QStringLiteral("scrap");
-    if (pendingInsertFields_.type.trimmed().isEmpty()) {
-        pendingInsertFields_.type = defaultPendingTypeForCommand(normalizedCommand);
+    interactiveDrawState_.pendingInsertFields_ = fields;
+    interactiveDrawState_.pendingInsertFields_.commandKind = normalizedCommand;
+    interactiveDrawState_.pendingInsertFields_.typeEditable = normalizedCommand != QStringLiteral("scrap");
+    if (interactiveDrawState_.pendingInsertFields_.type.trimmed().isEmpty()) {
+        interactiveDrawState_.pendingInsertFields_.type = defaultPendingTypeForCommand(normalizedCommand);
     }
     if (normalizedCommand == QStringLiteral("point")) {
-        if (pendingInsertFields_.type.trimmed().compare(QStringLiteral("station"), Qt::CaseInsensitive) != 0
-            && pendingInsertFields_.name.trimmed() == QStringLiteral("draft-point")) {
-            pendingInsertFields_.name.clear();
+        if (interactiveDrawState_.pendingInsertFields_.type.trimmed().compare(QStringLiteral("station"), Qt::CaseInsensitive) != 0
+            && interactiveDrawState_.pendingInsertFields_.name.trimmed() == QStringLiteral("draft-point")) {
+            interactiveDrawState_.pendingInsertFields_.name.clear();
         }
-        pendingInsertFields_.nameVisible = pendingPointNameVisible(pendingInsertFields_.type,
-                                                                   pendingInsertFields_.name);
+        interactiveDrawState_.pendingInsertFields_.nameVisible = pendingPointNameVisible(interactiveDrawState_.pendingInsertFields_.type,
+                                                                   interactiveDrawState_.pendingInsertFields_.name);
     } else {
-        pendingInsertFields_.nameVisible = false;
-        pendingInsertFields_.name.clear();
+        interactiveDrawState_.pendingInsertFields_.nameVisible = false;
+        interactiveDrawState_.pendingInsertFields_.name.clear();
     }
 }
 
@@ -111,35 +111,35 @@ TherionDraftObjectOptions MapEditorTab::pendingDraftObjectOptions(const QString 
     TherionDraftObjectOptions options;
     const QString normalizedCommand = normalizedPendingCommandKind(commandKind);
     if (normalizedCommand.isEmpty()
-        || pendingInsertFields_.commandKind.trimmed().toLower() != normalizedCommand) {
+        || interactiveDrawState_.pendingInsertFields_.commandKind.trimmed().toLower() != normalizedCommand) {
         return options;
     }
 
-    options.type = pendingInsertFields_.type;
-    options.subtype = pendingInsertFields_.subtype;
-    options.identifier = pendingInsertFields_.identifier;
+    options.type = interactiveDrawState_.pendingInsertFields_.type;
+    options.subtype = interactiveDrawState_.pendingInsertFields_.subtype;
+    options.identifier = interactiveDrawState_.pendingInsertFields_.identifier;
     if (normalizedCommand == QStringLiteral("point")) {
-        options.name = pendingInsertFields_.name;
-        options.nameEnabled = pendingInsertFields_.nameVisible;
+        options.name = interactiveDrawState_.pendingInsertFields_.name;
+        options.nameEnabled = interactiveDrawState_.pendingInsertFields_.nameVisible;
     }
     return options;
 }
 
 QString MapEditorTab::pendingScrapPreferredName() const
 {
-    if (pendingInsertFields_.commandKind.trimmed().toLower() != QStringLiteral("scrap")) {
+    if (interactiveDrawState_.pendingInsertFields_.commandKind.trimmed().toLower() != QStringLiteral("scrap")) {
         return QStringLiteral("new-scrap");
     }
 
-    const QString identifier = pendingInsertFields_.identifier.trimmed();
+    const QString identifier = interactiveDrawState_.pendingInsertFields_.identifier.trimmed();
     return identifier.isEmpty() ? QStringLiteral("new-scrap") : identifier;
 }
 
 QString MapEditorTab::pendingScrapOptions(const QString &scaleOption) const
 {
     QStringList options;
-    if (pendingInsertFields_.commandKind.trimmed().toLower() == QStringLiteral("scrap")) {
-        const QString projection = pendingInsertFields_.projection.trimmed();
+    if (interactiveDrawState_.pendingInsertFields_.commandKind.trimmed().toLower() == QStringLiteral("scrap")) {
+        const QString projection = interactiveDrawState_.pendingInsertFields_.projection.trimmed();
         if (!projection.isEmpty()) {
             options.append(QStringLiteral("-projection %1").arg(projection));
         }

@@ -99,9 +99,9 @@ bool MapEditorTab::isMapEditorEventReceiver(QObject *receiver) const
         if (isVisible() && window() != nullptr && widget->window() == window()) {
             return true;
         }
-        if (detachedMapPaneWindow_ != nullptr
-            && (widget == detachedMapPaneWindow_.data()
-                || detachedMapPaneWindow_->isAncestorOf(widget))) {
+        if (detachedPaneState_.window_ != nullptr
+            && (widget == detachedPaneState_.window_.data()
+                || detachedPaneState_.window_->isAncestorOf(widget))) {
             return true;
         }
     }
@@ -114,7 +114,7 @@ bool MapEditorTab::isMapEditorEventReceiver(QObject *receiver) const
             || object == mapInspectorTabs_) {
             return true;
         }
-        if (detachedMapPaneWindow_ != nullptr && object == detachedMapPaneWindow_.data()) {
+        if (detachedPaneState_.window_ != nullptr && object == detachedPaneState_.window_.data()) {
             return true;
         }
     }
@@ -127,7 +127,7 @@ bool MapEditorTab::handleMapEditorEscapeKeyEvent(QObject *receiver, QEvent *even
     if (event == nullptr || event->type() != QEvent::KeyPress) {
         return false;
     }
-    if (interactiveDrawMode_ == InteractiveDrawMode::None && !lineExtensionActive_) {
+    if (interactiveDrawState_.mode_ == InteractiveDrawMode::None && !interactiveDrawState_.lineExtensionActive_) {
         return false;
     }
 

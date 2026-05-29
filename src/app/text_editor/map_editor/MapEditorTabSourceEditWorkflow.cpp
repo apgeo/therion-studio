@@ -30,7 +30,7 @@ std::optional<MapEditorInteractiveLineControlHandleRef> MapEditorTab::interactiv
     const QPointF &scenePosition,
     qreal sceneRadius) const
 {
-    return TherionStudio::interactiveLineControlAt(interactiveDrawLineVertices_, scenePosition, sceneRadius);
+    return TherionStudio::interactiveLineControlAt(interactiveDrawState_.lineVertices_, scenePosition, sceneRadius);
 }
 
 QRectF MapEditorTab::mapSourceBoundsForCurrentDocument() const
@@ -82,32 +82,32 @@ QPointF MapEditorTab::sourcePointFromScenePosition(const QPointF &scenePosition)
 
 bool MapEditorTab::hasCompletableInteractiveDrawSession() const
 {
-    if (lineExtensionActive_) {
-        return interactiveDrawMode_ == InteractiveDrawMode::Line && interactiveDrawLineVertices_.size() >= 2;
+    if (interactiveDrawState_.lineExtensionActive_) {
+        return interactiveDrawState_.mode_ == InteractiveDrawMode::Line && interactiveDrawState_.lineVertices_.size() >= 2;
     }
-    if (interactiveDrawMode_ == InteractiveDrawMode::Line) {
-        return interactiveDrawLineVertices_.size() >= 2;
+    if (interactiveDrawState_.mode_ == InteractiveDrawMode::Line) {
+        return interactiveDrawState_.lineVertices_.size() >= 2;
     }
-    if (interactiveDrawMode_ == InteractiveDrawMode::Area) {
-        return interactiveDrawLineVertices_.size() >= 3;
+    if (interactiveDrawState_.mode_ == InteractiveDrawMode::Area) {
+        return interactiveDrawState_.lineVertices_.size() >= 3;
     }
     return false;
 }
 
 QStringList MapEditorTab::lineCoordinateRowsForInteractiveDraft() const
 {
-    return TherionStudio::lineCoordinateRowsForInteractiveDraft(interactiveDrawLineVertices_);
+    return TherionStudio::lineCoordinateRowsForInteractiveDraft(interactiveDrawState_.lineVertices_);
 }
 
 QStringList MapEditorTab::areaCoordinateRowsForInteractiveDraft() const
 {
-    return TherionStudio::areaCoordinateRowsForInteractiveDraft(interactiveDrawLineVertices_);
+    return TherionStudio::areaCoordinateRowsForInteractiveDraft(interactiveDrawState_.lineVertices_);
 }
 
 void MapEditorTab::captureInteractiveLineAnchor(const QPointF &anchorScenePoint,
                                                 const std::optional<QPointF> &dragScenePoint)
 {
-    TherionStudio::captureInteractiveLineAnchor(&interactiveDrawLineVertices_,
+    TherionStudio::captureInteractiveLineAnchor(&interactiveDrawState_.lineVertices_,
                                                 anchorScenePoint,
                                                 sourcePointFromScenePosition(anchorScenePoint),
                                                 dragScenePoint,
@@ -120,7 +120,7 @@ void MapEditorTab::captureInteractiveLineAnchor(const QPointF &anchorScenePoint,
 bool MapEditorTab::setInteractiveLineControlScenePoint(const MapEditorInteractiveLineControlHandleRef &handle,
                                                        const QPointF &scenePoint)
 {
-    return TherionStudio::setInteractiveLineControlScenePoint(&interactiveDrawLineVertices_,
+    return TherionStudio::setInteractiveLineControlScenePoint(&interactiveDrawState_.lineVertices_,
                                                               handle,
                                                               scenePoint,
                                                               [this](const QPointF &scenePointToMap) {

@@ -26,11 +26,11 @@ constexpr int kMagnifierUpdateIntervalMs = 16;
 void MapEditorTab::updateCommandSurfaceState()
 {
     if (cancelDrawShortcut_ != nullptr) {
-        cancelDrawShortcut_->setEnabled(interactiveDrawMode_ != InteractiveDrawMode::None);
+        cancelDrawShortcut_->setEnabled(interactiveDrawState_.mode_ != InteractiveDrawMode::None);
     }
     if (commitDrawShortcut_ != nullptr) {
-        commitDrawShortcut_->setEnabled(interactiveDrawMode_ == InteractiveDrawMode::Line
-                                        || interactiveDrawMode_ == InteractiveDrawMode::Area);
+        commitDrawShortcut_->setEnabled(interactiveDrawState_.mode_ == InteractiveDrawMode::Line
+                                        || interactiveDrawState_.mode_ == InteractiveDrawMode::Area);
     }
     refreshBackgroundLayerControls();
     refreshToolbarSummary();

@@ -80,13 +80,15 @@ Expected artifact pattern:
 
 ```text
 TherionStudio-<version>-Windows-x86_64.exe
+TherionStudio-Windows-installer-manifest.json
 ```
 
 ## 7. Publish GitHub Release
 
 1. Create GitHub Release for tag `v2026.5.1`.
 2. Attach the Windows installer artifact from the workflow run.
-3. Add release notes (key features/fixes/known limitations).
+3. Keep the generated manifest JSON (`TherionStudio-Windows-installer-manifest.json`) with release records for checksum/reference tracking.
+4. Add release notes (key features/fixes/known limitations).
 
 ## 8. Update Homebrew Tap Formula (macOS)
 

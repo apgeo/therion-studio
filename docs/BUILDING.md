@@ -124,7 +124,8 @@ from `main`, a release tag, or a specific commit SHA. When the checked-out commi
 with a CalVer release tag such as `v2026.5.0`, the workflow derives
 `THERION_STUDIO_VERSION=2026.5.0` and passes it to CMake so CPack uses the tag version without
 editing `CMakeLists.txt`. Branch and SHA builds derive a development package label such as
-`2026.5.0-a1b2c3d`.
+`2026.5.0-a1b2c3d`. The workflow also validates that the produced installer file name matches the
+resolved package label and emits a manifest JSON with installer SHA256.
 
 CI build workflows also run staged install-layout smoke checks via
 `scripts/verify_install_layout.py`:

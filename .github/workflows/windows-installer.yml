@@ -174,11 +174,25 @@ jobs:
           -C ${{ inputs.build_type }}
           --verbose
 
+      - name: Verify installer artifact and generate manifest
+        id: verify_installer_artifact
+        shell: pwsh
+        run: |
+          python scripts/verify_windows_installer_artifact.py `
+            --build-dir "$env:GITHUB_WORKSPACE\build-windows" `
+            --expected-package-label "$env:THERION_STUDIO_PACKAGE_LABEL" `
+            --version "$env:THERION_STUDIO_VERSION" `
+            --source-ref "${{ inputs.source_ref }}" `
+            --qt-version "${{ inputs.qt_version }}" `
+            --build-type "${{ inputs.build_type }}" `
+            --manifest-out "$env:GITHUB_WORKSPACE\build-windows\TherionStudio-Windows-installer-manifest.json" `
+            --github-output "$env:GITHUB_OUTPUT"
+
       - name: Upload installer artifact
         uses: actions/upload-artifact@v7.0.1
         with:
           name: TherionStudio-Windows-installer
           path: |
-            build-windows/TherionStudio-*-Windows-x86_64.exe
-            TherionStudio-*-Windows-x86_64.exe
+            ${{ steps.verify_installer_artifact.outputs.installer_path }}
+            ${{ steps.verify_installer_artifact.outputs.manifest_path }}
           if-no-files-found: error

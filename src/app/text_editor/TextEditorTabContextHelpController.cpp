@@ -50,4 +50,25 @@ void TextEditorTab::buildContextHelpController()
     contextHelpController_ =
         std::make_unique<TextEditorContextHelpController>(std::move(contextHelpContext), catalogStore_);
 }
+
+void TextEditorTab::buildHelpPanel()
+{
+    if (contextHelpController_ != nullptr) {
+        contextHelpController_->buildHelpPanel();
+    }
+}
+
+void TextEditorTab::loadHelpMetadata()
+{
+    if (contextHelpController_ != nullptr) {
+        contextHelpController_->loadHelpMetadata();
+    }
+}
+
+void TextEditorTab::loadHelpMetadataFromCommandCatalog()
+{
+    if (contextHelpController_ != nullptr) {
+        contextHelpController_->loadHelpMetadataFromCommandCatalog();
+    }
+}
 }

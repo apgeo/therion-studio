@@ -10,6 +10,20 @@
 
 namespace TherionStudio
 {
+void TextEditorTab::goToLine(int lineNumber)
+{
+    if (cursorController_ != nullptr) {
+        cursorController_->goToLine(lineNumber);
+    }
+}
+
+void TextEditorTab::goToLineColumn(int lineNumber, int columnNumber)
+{
+    if (cursorController_ != nullptr) {
+        cursorController_->goToLineColumn(lineNumber, columnNumber);
+    }
+}
+
 QString TextEditorTab::displayName() const
 {
     return statusController_ != nullptr ? statusController_->displayName() : tr("Untitled");

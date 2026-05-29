@@ -402,7 +402,9 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/map_editor/MapEditorXviBackgroundItem.h
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTabBootstrap.cpp
+    src/app/text_editor/TextEditorTabBlockDetailsDelegates.cpp
     src/app/text_editor/TextEditorTabDocumentModeDelegates.cpp
+    src/app/text_editor/TextEditorTabRawFindDelegates.cpp
     src/app/text_editor/TextEditorTabSourceRewriteDelegates.cpp
     src/app/text_editor/TextEditorTabStatusCursorDelegates.cpp
     src/app/text_editor/TextEditorTabCompletionFacade.cpp
@@ -917,7 +919,9 @@ set(THERION_TEXT_EDITOR_UI_TEST_SOURCES
     ${THERION_EDITOR_UI_TEST_BASE_SOURCES}
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTabBootstrap.cpp
+    src/app/text_editor/TextEditorTabBlockDetailsDelegates.cpp
     src/app/text_editor/TextEditorTabDocumentModeDelegates.cpp
+    src/app/text_editor/TextEditorTabRawFindDelegates.cpp
     src/app/text_editor/TextEditorTabSourceRewriteDelegates.cpp
     src/app/text_editor/TextEditorTabStatusCursorDelegates.cpp
     src/app/text_editor/TextEditorTabCompletionFacade.cpp

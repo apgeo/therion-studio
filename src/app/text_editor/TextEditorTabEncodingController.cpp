@@ -28,4 +28,11 @@ void TextEditorTab::buildEncodingController()
 
     encodingController_ = std::make_unique<TextEditorEncodingController>(std::move(encodingContext));
 }
+
+void TextEditorTab::handleConvertToUtf8Triggered()
+{
+    if (encodingController_ != nullptr) {
+        encodingController_->handleConvertToUtf8Triggered();
+    }
+}
 }

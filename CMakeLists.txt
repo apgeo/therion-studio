@@ -109,6 +109,8 @@ set(THERION_APP_SOURCES
     src/app/MainWindowSessionDocumentService.h
     src/app/MainWindowProjectLifecycleService.cpp
     src/app/MainWindowProjectLifecycleService.h
+    src/app/MainWindowProjectUiFlowService.cpp
+    src/app/MainWindowProjectUiFlowService.h
     src/app/MainWindowProjectWorkspaceService.cpp
     src/app/MainWindowProjectWorkspaceService.h
     src/app/MainWindowSessionProjectService.cpp
@@ -698,6 +700,9 @@ therion_add_app_unit_test(MainWindowSessionDocumentServiceTest
 
 therion_add_app_unit_test(MainWindowProjectLifecycleServiceTest
     tests/MainWindowProjectLifecycleServiceTest.cpp)
+
+therion_add_app_unit_test(MainWindowProjectUiFlowServiceTest
+    tests/MainWindowProjectUiFlowServiceTest.cpp)
 
 therion_add_app_unit_test(MainWindowProjectWorkspaceServiceTest
     tests/MainWindowProjectWorkspaceServiceTest.cpp)

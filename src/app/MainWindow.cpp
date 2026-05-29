@@ -56,6 +56,7 @@
 #include "MainWindowHelpDialog.h"
 #include "MainWindowSessionDocumentService.h"
 #include "MainWindowProjectLifecycleService.h"
+#include "MainWindowProjectUiFlowService.h"
 #include "MainWindowProjectWorkspaceService.h"
 #include "MainWindowSessionProjectService.h"
 #include "MainWindowSessionStateService.h"
@@ -1300,13 +1301,17 @@ void MainWindow::openProject()
     const TherionStudio::MainWindowProjectLifecycleService::OpenProjectDecision decision =
         TherionStudio::MainWindowProjectLifecycleService::decideOpenProject(
             QFileDialog::getExistingDirectory(this, tr("Open Therion Project"), QString()));
-    if (decision.status == TherionStudio::MainWindowProjectLifecycleService::OpenProjectStatus::Cancelled) {
-        statusBar()->showMessage(tr("Open project cancelled"), 2000);
-        return;
-    }
-
-    if (decision.status == TherionStudio::MainWindowProjectLifecycleService::OpenProjectStatus::MissingDirectory) {
-        QMessageBox::warning(this, tr("Open Project"), tr("The selected folder does not exist."));
+    const TherionStudio::MainWindowProjectUiFlowService::DecisionPresentation decisionPresentation =
+        TherionStudio::MainWindowProjectUiFlowService::presentOpenProjectDecision(decision);
+    if (!decisionPresentation.shouldContinueWorkflow) {
+        if (decisionPresentation.showWarningDialog) {
+            QMessageBox::warning(this,
+                                 decisionPresentation.warningDialogTitle,
+                                 decisionPresentation.warningDialogMessage);
+        }
+        if (decisionPresentation.showStatusBarMessage) {
+            statusBar()->showMessage(decisionPresentation.statusBarMessage, decisionPresentation.statusBarTimeoutMs);
+        }
         return;
     }
 
@@ -1325,22 +1330,34 @@ void MainWindow::openProject()
     if (workspaceState.shouldEnsureWelcomeTab) {
         addWelcomeTab();
     }
-    statusBar()->showMessage(tr("Project root set to %1").arg(projectRootPath_), 3000);
-    appendConsoleLine(tr("Project root set to %1").arg(projectRootPath_));
+    const TherionStudio::MainWindowProjectUiFlowService::SuccessPresentation successPresentation =
+        TherionStudio::MainWindowProjectUiFlowService::presentOpenProjectSuccess(projectRootPath_);
+    statusBar()->showMessage(successPresentation.statusBarMessage, successPresentation.statusBarTimeoutMs);
+    appendConsoleLine(successPresentation.consoleMessage);
 }
 
 void MainWindow::closeProject()
 {
     const TherionStudio::MainWindowProjectLifecycleService::CloseProjectDecision noProjectDecision =
         TherionStudio::MainWindowProjectLifecycleService::decideCloseProject(projectRootPath_, true);
-    if (noProjectDecision.status == TherionStudio::MainWindowProjectLifecycleService::CloseProjectStatus::NoProjectOpen) {
-        statusBar()->showMessage(tr("No project is open"), 2000);
+    const TherionStudio::MainWindowProjectUiFlowService::DecisionPresentation noProjectPresentation =
+        TherionStudio::MainWindowProjectUiFlowService::presentCloseProjectDecision(noProjectDecision);
+    if (!noProjectPresentation.shouldContinueWorkflow
+        && noProjectDecision.status == TherionStudio::MainWindowProjectLifecycleService::CloseProjectStatus::NoProjectOpen) {
+        if (noProjectPresentation.showStatusBarMessage) {
+            statusBar()->showMessage(noProjectPresentation.statusBarMessage, noProjectPresentation.statusBarTimeoutMs);
+        }
         return;
     }
 
     const TherionStudio::MainWindowProjectLifecycleService::CloseProjectDecision decision =
         TherionStudio::MainWindowProjectLifecycleService::decideCloseProject(projectRootPath_, confirmCloseDirtyDocuments());
-    if (decision.status == TherionStudio::MainWindowProjectLifecycleService::CloseProjectStatus::CancelledByDirtyDocuments) {
+    const TherionStudio::MainWindowProjectUiFlowService::DecisionPresentation decisionPresentation =
+        TherionStudio::MainWindowProjectUiFlowService::presentCloseProjectDecision(decision);
+    if (!decisionPresentation.shouldContinueWorkflow) {
+        if (decisionPresentation.showStatusBarMessage) {
+            statusBar()->showMessage(decisionPresentation.statusBarMessage, decisionPresentation.statusBarTimeoutMs);
+        }
         return;
     }
 
@@ -1354,8 +1371,10 @@ void MainWindow::closeProject()
     sessionStore_->setLastProjectPath(workspaceState.sessionLastProjectPath);
     persistOpenDocuments();
     rebuildStructureSidebar();
-    statusBar()->showMessage(tr("Project closed"), 3000);
-    appendConsoleLine(tr("Closed project %1").arg(closedProjectPath));
+    const TherionStudio::MainWindowProjectUiFlowService::SuccessPresentation successPresentation =
+        TherionStudio::MainWindowProjectUiFlowService::presentCloseProjectSuccess(closedProjectPath);
+    statusBar()->showMessage(successPresentation.statusBarMessage, successPresentation.statusBarTimeoutMs);
+    appendConsoleLine(successPresentation.consoleMessage);
     refreshTherionConfigDisplay();
     updateProjectActionState();
 }

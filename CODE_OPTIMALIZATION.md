@@ -53,13 +53,14 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 2 partial: project workspace state transitions for open/close flows extracted from `MainWindow` into `MainWindowProjectWorkspaceService` with focused app-unit coverage.
 - [x] Phase 2 partial: open/close project UI-flow presentation extracted from `MainWindow` into `MainWindowProjectUiFlowService` with focused app-unit coverage.
 - [x] Phase 2 partial: open/close project side-effect ordering extracted from `MainWindow` into `MainWindowProjectOrchestrationService` with focused app-unit coverage.
-- [x] Phase 2 partial: open/close project step execution moved behind `MainWindowProjectStepExecutor`, removing direct orchestration `switch` blocks from `MainWindow`.
-- [x] Phase 2 partial: session-restore plan orchestration extracted from `MainWindow` into `MainWindowSessionRestoreOrchestrationService` and `MainWindowSessionRestoreStepExecutor`.
+- [x] Phase 2 partial: open/close project workflow step execution moved out of `MainWindow` and consolidated in `MainWindowProjectController`, driven by `MainWindowProjectOrchestrationService` plans.
+- [x] Phase 2 partial: session-restore plan orchestration extracted from `MainWindow` into `MainWindowSessionRestoreOrchestrationService` and consumed by `MainWindowSessionController`.
 - [x] Phase 2 partial: window geometry/state restore fallback decisions extracted from `MainWindow` into `MainWindowSessionWindowRestoreService`.
 - [x] Phase 2 partial: session-restore console message presentation extracted from `MainWindow` into `MainWindowSessionRestoreUiFlowService`.
 - [x] Phase 2 partial: session-restore workflow composition extracted from `MainWindow` into `MainWindowSessionController` (window-restore decisions + project-restore orchestration wiring).
 - [x] Phase 2 partial: open/close project workflow composition extracted from `MainWindow` into `MainWindowProjectController` (lifecycle decision + workspace/orchestration + UI presentation wiring).
 - [x] Phase 2 partial: open-document restore/persist workflow composition extracted from `MainWindow` into `MainWindowSessionDocumentController` (unsupported restore handling + active document restore + detached-active precedence persistence).
+- [x] Phase 2 partial: thin `MainWindowProjectStepExecutor` and `MainWindowSessionRestoreStepExecutor` layers removed; equivalent step execution kept in controllers with behavior coverage preserved.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.
@@ -663,8 +664,8 @@ Recommended extraction order:
 Actions:
 
 - Move open/save/reload tab workflows into `DocumentManager`.
-- Move session restore/save decisions into `SessionController`; incremental slices are in place via `MainWindowSessionDocumentService` (session document restore-target planning, open-document path persistence merging, and active-document precedence decisions), `MainWindowSessionProjectService` (automatic project-restore decision and protected-folder restore guard), `MainWindowSessionStateService` (session state persistence writes), `MainWindowStructureNameOverridesService` (structure-name override JSON parse/serialize), `MainWindowSessionRestoreOrchestrationService` + `MainWindowSessionRestoreStepExecutor` (session-restore step plan and execution), and `MainWindowSessionWindowRestoreService` (geometry/state restore fallback decisions).
-- Move structure-browser scanning and status updates into `ProjectStructureController`; incremental slices are in place via `MainWindowProjectLifecycleService` (open/close project decisions), `MainWindowProjectWorkspaceService` (project workspace state transitions), `MainWindowProjectUiFlowService` (open/close project UI presentation), and `MainWindowProjectOrchestrationService` (open/close side-effect ordering) while UI effects are still executed in `MainWindow`.
+- Move session restore/save decisions into `SessionController`; incremental slices are in place via `MainWindowSessionDocumentService` + `MainWindowSessionDocumentController` (session document restore/persist workflow and active-path precedence), `MainWindowSessionProjectService` (automatic project-restore decision and protected-folder restore guard), `MainWindowSessionStateService` (session state persistence writes), `MainWindowStructureNameOverridesService` (structure-name override JSON parse/serialize), `MainWindowSessionRestoreOrchestrationService` + `MainWindowSessionController` (session-restore plan and execution), and `MainWindowSessionWindowRestoreService` (geometry/state restore fallback decisions).
+- Move structure-browser scanning and status updates into `ProjectStructureController`; incremental slices are in place via `MainWindowProjectLifecycleService` (open/close project decisions), `MainWindowProjectWorkspaceService` (project workspace state transitions), `MainWindowProjectUiFlowService` (open/close project UI presentation), `MainWindowProjectOrchestrationService` (open/close side-effect ordering), and `MainWindowProjectController` (workflow execution).
 - Move external Therion execution into `TherionRunnerController` using an injected process runner.
 - Keep dialogs and menu/action creation in `MainWindow`.
 

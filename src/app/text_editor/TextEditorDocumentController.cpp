@@ -1,4 +1,5 @@
 #include "TextEditorDocumentController.h"
+#include "TextEditorDocumentIoService.h"
 #include "TextEditorDocumentPersistenceStateService.h"
 #include "TextEditorDocumentPreconditionsService.h"
 #include "TextEditorDocumentWorkflowController.h"
@@ -50,30 +51,29 @@ bool TextEditorDocumentController::loadFile(const QString &filePath, QString *er
         return false;
     }
 
-    QString contents;
-    QString loadedEncoding = QStringLiteral("UTF-8");
-    QString loadedEncodingLabel;
-    if (!fileSystem_.readTextFile(filePath, &contents, &loadedEncoding, &loadedEncodingLabel, errorMessage)) {
+    TextEditorDocumentIoService::ReadDocumentResult readResult;
+    if (!TextEditorDocumentIoService::readDocument(fileSystem_, filePath, errorMessage, &readResult)) {
         return false;
     }
 
     (*context_.filePath) = filePath;
     (*context_.loading) = true;
-    context_.editor->setPlainText(contents);
+    context_.editor->setPlainText(readResult.contents);
     (*context_.loading) = false;
     const QTextCursor cursor = context_.editor->textCursor();
 
-    TextEditorDocumentPersistenceStateService::LoadStateInput loadInput;
-    loadInput.filePath = filePath;
-    loadInput.textContents = context_.editor->toPlainText();
-    loadInput.loadedEncodingName = loadedEncoding;
-    loadInput.loadedEncodingLabel = loadedEncodingLabel;
-    loadInput.cursorLineNumber = cursor.blockNumber() + 1;
-    loadInput.cursorColumnNumber = cursor.positionInBlock() + 1;
-    loadInput.blocksModeActive = *context_.blocksModeActive;
-    loadInput.blocksModeSupportedForCurrentFile = !context_.isBlocksModeSupportedForCurrentFile
+    TextEditorDocumentIoService::BuildLoadStateInputRequest loadInputRequest;
+    loadInputRequest.filePath = filePath;
+    loadInputRequest.contents = context_.editor->toPlainText();
+    loadInputRequest.loadedEncodingName = readResult.loadedEncodingName;
+    loadInputRequest.loadedEncodingLabel = readResult.loadedEncodingLabel;
+    loadInputRequest.cursorLineNumber = cursor.blockNumber() + 1;
+    loadInputRequest.cursorColumnNumber = cursor.positionInBlock() + 1;
+    loadInputRequest.blocksModeActive = *context_.blocksModeActive;
+    loadInputRequest.blocksModeSupportedForCurrentFile = !context_.isBlocksModeSupportedForCurrentFile
         || context_.isBlocksModeSupportedForCurrentFile();
-    loadInput.openedEncodingStatusTemplate = tr("Opened as %1. Save keeps this encoding unless you convert to UTF-8.");
+    loadInputRequest.openedEncodingStatusTemplate = tr("Opened as %1. Save keeps this encoding unless you convert to UTF-8.");
+    const auto loadInput = TextEditorDocumentIoService::buildLoadStateInput(loadInputRequest);
     const auto loadUpdate = TextEditorDocumentPersistenceStateService::buildLoadStateUpdate(loadInput);
 
     (*context_.filePath) = loadUpdate.filePath;
@@ -123,18 +123,20 @@ bool TextEditorDocumentController::save(QString *errorMessage)
         return false;
     }
 
-    if (!fileSystem_.writeTextFile((*context_.filePath),
-                                     context_.editor->toPlainText(),
-                                     (*context_.fileEncodingName),
-                                     errorMessage)) {
+    if (!TextEditorDocumentIoService::writeDocument(fileSystem_,
+                                                    (*context_.filePath),
+                                                    context_.editor->toPlainText(),
+                                                    (*context_.fileEncodingName),
+                                                    errorMessage)) {
         return false;
     }
 
-    TextEditorDocumentPersistenceStateService::SaveStateInput saveInput;
-    saveInput.textContents = context_.editor->toPlainText();
-    saveInput.fileEncodingName = (*context_.fileEncodingName);
-    saveInput.fileEncodingLabel = (*context_.fileEncodingLabel);
-    saveInput.savedEncodingStatusTemplate = tr("Saved using %1 encoding.");
+    TextEditorDocumentIoService::BuildSaveStateInputRequest saveInputRequest;
+    saveInputRequest.textContents = context_.editor->toPlainText();
+    saveInputRequest.fileEncodingName = (*context_.fileEncodingName);
+    saveInputRequest.fileEncodingLabel = (*context_.fileEncodingLabel);
+    saveInputRequest.savedEncodingStatusTemplate = tr("Saved using %1 encoding.");
+    const auto saveInput = TextEditorDocumentIoService::buildSaveStateInput(saveInputRequest);
     const auto saveUpdate = TextEditorDocumentPersistenceStateService::buildSaveStateUpdate(saveInput);
 
     (*context_.cleanTextSnapshot) = saveUpdate.cleanTextSnapshot;

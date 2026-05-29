@@ -69,6 +69,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 3 partial: TextEditor document persistence state transitions (encoding normalization/status notes + clean snapshot/dirty reset) extracted into `TextEditorDocumentPersistenceStateService` with focused unit coverage.
 - [x] Phase 3 partial: TextEditor document callback orchestration order after load/save/project-root updates extracted into `TextEditorDocumentWorkflowController` with focused unit coverage.
 - [x] Phase 3 partial: TextEditor document precondition/guard checks for load/save extracted into `TextEditorDocumentPreconditionsService` with focused unit coverage.
+- [x] Phase 3 partial: TextEditor document file IO and persistence-input assembly extracted into `TextEditorDocumentIoService` with focused unit coverage.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.
 - [ ] Phase 5: platform and appearance services centralized.

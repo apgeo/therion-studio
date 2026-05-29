@@ -123,6 +123,8 @@ set(THERION_APP_SOURCES
     src/app/MainWindowSessionRestoreOrchestrationService.h
     src/app/MainWindowSessionRestoreStepExecutor.cpp
     src/app/MainWindowSessionRestoreStepExecutor.h
+    src/app/MainWindowSessionRestoreUiFlowService.cpp
+    src/app/MainWindowSessionRestoreUiFlowService.h
     src/app/MainWindowSessionStateService.cpp
     src/app/MainWindowSessionStateService.h
     src/app/MainWindowSessionWindowRestoreService.cpp
@@ -731,6 +733,9 @@ therion_add_app_unit_test(MainWindowSessionRestoreOrchestrationServiceTest
 
 therion_add_app_unit_test(MainWindowSessionRestoreStepExecutorTest
     tests/MainWindowSessionRestoreStepExecutorTest.cpp)
+
+therion_add_app_unit_test(MainWindowSessionRestoreUiFlowServiceTest
+    tests/MainWindowSessionRestoreUiFlowServiceTest.cpp)
 
 therion_add_app_unit_test(MainWindowSessionStateServiceTest
     tests/MainWindowSessionStateServiceTest.cpp)

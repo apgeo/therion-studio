@@ -63,6 +63,7 @@
 #include "MainWindowSessionProjectService.h"
 #include "MainWindowSessionRestoreOrchestrationService.h"
 #include "MainWindowSessionRestoreStepExecutor.h"
+#include "MainWindowSessionRestoreUiFlowService.h"
 #include "MainWindowSessionStateService.h"
 #include "MainWindowSessionWindowRestoreService.h"
 #include "MainWindowStructureNameOverridesService.h"
@@ -1141,13 +1142,13 @@ void MainWindow::restoreSessionState()
         projectTree_->setRootIndex(projectModel_->index(projectRootPath_));
     };
     restoreActions.appendRestoredProjectRootConsole = [this](const QString &projectPath) {
-        appendConsoleLine(tr("Restored project root %1").arg(projectPath));
+        appendConsoleLine(TherionStudio::MainWindowSessionRestoreUiFlowService::restoredProjectRootConsoleLine(projectPath));
     };
     restoreActions.loadStructureNameOverrides = [this]() { loadStructureNameOverrides(); };
     restoreActions.syncOpenDocumentsToProjectRoot = [this]() { syncOpenDocumentsToProjectRoot(); };
     restoreActions.rebuildStructureSidebar = [this]() { rebuildStructureSidebar(); };
     restoreActions.appendSkippedProtectedProjectConsole = [this](const QString &projectPath) {
-        appendConsoleLine(tr("Skipped automatic project restore for protected folder %1").arg(projectPath));
+        appendConsoleLine(TherionStudio::MainWindowSessionRestoreUiFlowService::skippedProtectedProjectConsoleLine(projectPath));
     };
     restoreActions.refreshTherionConfigDisplay = [this]() { refreshTherionConfigDisplay(); };
     restoreActions.updateProjectActionState = [this]() { updateProjectActionState(); };

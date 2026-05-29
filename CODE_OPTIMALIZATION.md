@@ -56,6 +56,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 2 partial: open/close project step execution moved behind `MainWindowProjectStepExecutor`, removing direct orchestration `switch` blocks from `MainWindow`.
 - [x] Phase 2 partial: session-restore plan orchestration extracted from `MainWindow` into `MainWindowSessionRestoreOrchestrationService` and `MainWindowSessionRestoreStepExecutor`.
 - [x] Phase 2 partial: window geometry/state restore fallback decisions extracted from `MainWindow` into `MainWindowSessionWindowRestoreService`.
+- [x] Phase 2 partial: session-restore console message presentation extracted from `MainWindow` into `MainWindowSessionRestoreUiFlowService`.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.

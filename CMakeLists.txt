@@ -390,6 +390,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/map_editor/MapEditorSceneSupport.h
     src/app/text_editor/map_editor/MapEditorTabEventRouting.cpp
     src/app/text_editor/map_editor/MapEditorTabControllers.cpp
+    src/app/text_editor/map_editor/MapEditorTabInspectorControllerDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTabCanvasEditContext.cpp
     src/app/text_editor/map_editor/MapEditorTabSceneRefreshLifecycle.cpp
     src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp
@@ -404,6 +405,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
     src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
     src/app/text_editor/map_editor/MapEditorTabDetachedPaneDelegates.cpp
+    src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
@@ -1118,6 +1120,7 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorSceneSupport.h
     src/app/text_editor/map_editor/MapEditorTabEventRouting.cpp
     src/app/text_editor/map_editor/MapEditorTabControllers.cpp
+    src/app/text_editor/map_editor/MapEditorTabInspectorControllerDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTabCanvasEditContext.cpp
     src/app/text_editor/map_editor/MapEditorTabSceneRefreshLifecycle.cpp
     src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp
@@ -1132,6 +1135,7 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
     src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
     src/app/text_editor/map_editor/MapEditorTabDetachedPaneDelegates.cpp
+    src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTab.h

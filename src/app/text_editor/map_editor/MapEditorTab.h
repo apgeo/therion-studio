@@ -255,6 +255,7 @@ private:
 
     void initializeWorkspace();
     void buildUi();
+    void buildInspectorPanelUi();
     void buildMapScene();
     MapEditorViewportInputContext viewportInputContext();
     void refreshMapScene();

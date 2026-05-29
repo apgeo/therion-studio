@@ -78,6 +78,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 3 partial: TextEditorTab raw-find/delegate slots, block-details/canvas delegates, and context-help/encoding delegate slots split into focused companion translation units, reducing `TextEditorTab.cpp` to lifecycle + interaction core orchestration.
 - [x] Phase 3: `TextEditorTab` coupling reduced.
 - [x] Phase 4 partial: MapEditor scene-refresh/appearance lifecycle flow (`buildMapScene`, refresh/schedule/flush source-driven refresh, appearance-triggered scene refresh) split from `MapEditorTab.cpp` into `MapEditorTabSceneRefreshLifecycle.cpp`.
+- [x] Phase 4 partial: MapEditor selection/inspector insert-mode workflow actions (`handleAdd*`, `handleSelectModeTriggered`, `handleInsertScrapTriggered`, `handleCompleteDraftTriggered`) split from `MapEditorTab.cpp` into `MapEditorTabSelectionInspectorWorkflow.cpp`.
 - [ ] Phase 4: map editor responsibilities decomposed.
 - [ ] Phase 5: platform and appearance services centralized.
 - [ ] Phase 6: packaging and CI hardening completed.

@@ -33,6 +33,7 @@ requirements.
 Release packaging is still being hardened.
 
 - Windows installer notes: [`packaging/windows/README.md`](packaging/windows/README.md)
+- Linux package notes (`.deb` + `AppImage`): [`packaging/linux/README.md`](packaging/linux/README.md)
 - Homebrew tap and formula: [`ladislavb/homebrew-therion-studio`](https://github.com/ladislavb/homebrew-therion-studio)
 - Source build instructions: [`docs/BUILDING.md`](docs/BUILDING.md)
 - Release process checklist: [`docs/RELEASING.md`](docs/RELEASING.md)

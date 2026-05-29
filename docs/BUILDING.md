@@ -136,7 +136,21 @@ CI build workflows also run staged install-layout smoke checks via
 
 ## Linux
 
-Linux release packaging is not finalized yet. Development builds should prefer distribution Qt packages so `.deb` packaging remains realistic. CI validates distribution Qt builds on Ubuntu 24.04 and Ubuntu 26.04; Ubuntu 26.04 runs in an official Ubuntu container image until GitHub provides a hosted runner label for it.
+Linux packaging currently targets two distributable artifacts:
+
+- `.deb` package (primary Linux installer channel)
+- `AppImage` (portable supplemental channel)
+
+The manual workflow `.github/workflows/linux-packages.yml` builds both on `ubuntu-24.04`,
+validates install layout and artifact naming, and uploads:
+
+- `therion-studio-<package_label>-linux-x86_64.deb`
+- `TherionStudio-<package_label>-Linux-x86_64.AppImage`
+- `TherionStudio-Linux-artifacts-manifest.json` (SHA256 + build metadata)
+
+Regular CI still validates distribution Qt source builds on Ubuntu 24.04 and Ubuntu 26.04;
+Ubuntu 26.04 runs in an official Ubuntu container image until GitHub provides a hosted runner
+label for it.
 
 On supported Ubuntu and Debian-family systems, install the development dependencies with:
 
@@ -145,3 +159,5 @@ sudo apt-get install qt6-base-dev qt6-base-dev-tools qt6-svg-dev qt6-tools-dev q
 ```
 
 Then use the same CMake configure/build flow as macOS.
+
+Linux packaging details are documented in `packaging/linux/README.md`.

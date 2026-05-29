@@ -7,11 +7,12 @@ This document describes the current release workflow for Therion Studio.
 Current release channels:
 
 - Windows: NSIS installer artifact from GitHub Actions
+- Linux: `.deb` + `AppImage` artifacts from GitHub Actions
 - macOS: Homebrew tap formula in `ladislavb/homebrew-therion-studio`
 
 Not finalized yet:
 
-- Linux release packaging (future `.deb` or Flatpak strategy)
+- Linux packaging strategy beyond `.deb` + `AppImage` (for example Flatpak) is deferred
 
 ## 2. Versioning
 
@@ -61,8 +62,9 @@ Trigger these GitHub Actions workflows manually (`workflow_dispatch`):
 1. `Build Linux` with `run_ui_smoke_tests=true`
 2. `Build macOS` with `run_ui_smoke_tests=true`
 3. `Build Windows` with `run_ui_smoke_tests=true`
+4. `Linux Packages` with `source_ref` set to the target tag/commit
 
-All three should pass before publishing release assets.
+All should pass before publishing release assets.
 
 ## 6. Build Windows Installer Artifact
 
@@ -83,12 +85,36 @@ TherionStudio-<version>-Windows-x86_64.exe
 TherionStudio-Windows-installer-manifest.json
 ```
 
+## 6b. Build Linux Package Artifacts
+
+Run workflow:
+
+- `Linux Packages`
+
+Inputs:
+
+- `source_ref = v2026.5.1`
+- `build_type = Release`
+
+Expected artifact patterns:
+
+```text
+therion-studio-<package_label>-linux-x86_64.deb
+TherionStudio-<package_label>-Linux-x86_64.AppImage
+TherionStudio-Linux-artifacts-manifest.json
+```
+
 ## 7. Publish GitHub Release
 
 1. Create GitHub Release for tag `v2026.5.1`.
 2. Attach the Windows installer artifact from the workflow run.
-3. Keep the generated manifest JSON (`TherionStudio-Windows-installer-manifest.json`) with release records for checksum/reference tracking.
-4. Add release notes (key features/fixes/known limitations).
+3. Attach Linux artifacts from `Linux Packages`:
+   - `therion-studio-<package_label>-linux-x86_64.deb`
+   - `TherionStudio-<package_label>-Linux-x86_64.AppImage`
+4. Keep generated manifest JSON files with release records:
+   - `TherionStudio-Windows-installer-manifest.json`
+   - `TherionStudio-Linux-artifacts-manifest.json`
+5. Add release notes (key features/fixes/known limitations).
 
 ## 8. Update Homebrew Tap Formula (macOS)
 
@@ -132,5 +158,4 @@ Then commit and push in the tap repository.
 
 ## 10. Known Gaps
 
-- Linux packaged release artifacts are not finalized.
 - Code signing/notarization strategy is not yet fully documented/exercised end-to-end.

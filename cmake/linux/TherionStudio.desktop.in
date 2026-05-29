@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Therion Studio
+GenericName=Cave Survey Editor
+Comment=Edit and manage Therion cave survey projects
+Exec=TherionStudio
+Icon=therion-studio
+Terminal=false
+Categories=Science;Education;Graphics;
+StartupNotify=true

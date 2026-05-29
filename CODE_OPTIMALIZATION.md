@@ -101,6 +101,8 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 6 partial: CI build workflows now run staged install-layout smoke checks through `scripts/verify_install_layout.py` on Linux (`bin/TherionStudio`), macOS (`TherionStudio.app`), and Windows (`bin/TherionStudio.exe` + deployed Qt runtime layout).
 - [x] Phase 6 partial: Windows installer workflow now verifies staged install runtime layout (including `bin/platforms/qwindows.dll`) before creating and uploading NSIS artifacts.
 - [x] Phase 6 partial: Windows installer workflow now validates exact installer artifact naming against `THERION_STUDIO_PACKAGE_LABEL` and emits a SHA256 manifest via `scripts/verify_windows_installer_artifact.py` before upload.
+- [x] Phase 6 partial: Linux packaging now provides `.deb` (primary) and `AppImage` (supplemental) artifacts via dedicated `.github/workflows/linux-packages.yml` workflow.
+- [x] Phase 6 partial: Linux release artifacts are now naming-verified and accompanied by SHA256 manifest metadata through `scripts/verify_linux_release_artifacts.py`.
 - [ ] Phase 6: packaging and CI hardening completed.
 
 ## Review Scope And Current State

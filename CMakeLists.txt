@@ -602,6 +602,22 @@ install(TARGETS TherionStudio
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
+if(UNIX AND NOT APPLE)
+    set(THERION_STUDIO_LINUX_DESKTOP_FILE
+        "${CMAKE_CURRENT_BINARY_DIR}/TherionStudio.desktop")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/linux/TherionStudio.desktop.in"
+        "${THERION_STUDIO_LINUX_DESKTOP_FILE}"
+        @ONLY)
+
+    install(FILES "${THERION_STUDIO_LINUX_DESKTOP_FILE}"
+        DESTINATION "share/applications"
+        RENAME "therion-studio.desktop")
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/${THERION_STUDIO_APP_ICON_PNG}"
+        DESTINATION "share/icons/hicolor/256x256/apps"
+        RENAME "therion-studio.png")
+endif()
+
 if(WIN32)
     qt_generate_deploy_app_script(
         TARGET TherionStudio
@@ -626,6 +642,23 @@ if(WIN32)
     set(CPACK_NSIS_INSTALLED_ICON_NAME "${CMAKE_INSTALL_BINDIR}/TherionStudio.exe")
     set(CPACK_NSIS_EXECUTABLES_DIRECTORY "${CMAKE_INSTALL_BINDIR}")
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+elseif(UNIX AND NOT APPLE)
+    set(CPACK_GENERATOR "DEB")
+    set(CPACK_PACKAGE_NAME "therion-studio")
+    set(CPACK_PACKAGE_VENDOR "Therion Studio")
+    set(CPACK_PACKAGE_CONTACT "Therion Studio maintainers")
+    set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+    set(CPACK_PACKAGE_FILE_NAME "therion-studio-${THERION_STUDIO_PACKAGE_LABEL}-linux-x86_64")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Therion Studio desktop editor")
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+    set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Therion Studio maintainers")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+    set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+endif()
+
+if(WIN32 OR (UNIX AND NOT APPLE))
     include(CPack)
 endif()
 

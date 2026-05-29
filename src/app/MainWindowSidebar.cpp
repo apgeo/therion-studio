@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 
+#include "ApplicationStylePolicy.h"
 #include "MainWindowDocumentHelpers.h"
 #include "LucideIconFactory.h"
 
@@ -216,16 +217,6 @@ int sidebarAutoSnapThreshold(int railWidth)
 {
     // Keep a small-but-usable content width below which the sidebar snaps to rail.
     return qMax(240, railWidth + 180);
-}
-
-QString rgbaColorCss(const QColor &color, qreal alpha)
-{
-    const qreal clampedAlpha = std::clamp(alpha, 0.0, 1.0);
-    return QStringLiteral("rgba(%1, %2, %3, %4)")
-        .arg(color.red())
-        .arg(color.green())
-        .arg(color.blue())
-        .arg(clampedAlpha, 0, 'f', 3);
 }
 
 void prepareSidebarContentPane(QWidget *contentWidget)
@@ -801,32 +792,7 @@ void MainWindow::buildStructureSidebar()
         const QPalette palette = QApplication::palette(activityBar);
         activityBar->setPalette(palette);
         activityBar->setAutoFillBackground(true);
-        const QColor railBase = palette.color(QPalette::Window);
-        const QColor railHover = palette.color(QPalette::Highlight);
-        const QColor railChecked = palette.color(QPalette::Highlight);
-        activityBar->setStyleSheet(QStringLiteral(
-                                       "#SidebarActivityRail {"
-                                       "background-color: %1;"
-                                       "}"
-                                       "#SidebarActivityRail QToolButton {"
-                                       "border: none;"
-                                       "background: transparent;"
-                                       "border-radius: 9px;"
-                                       "padding: 0px;"
-                                       "}"
-                                       "#SidebarActivityRail QToolButton:hover {"
-                                       "background-color: %2;"
-                                       "}"
-                                       "#SidebarActivityRail QToolButton:checked {"
-                                       "background-color: %3;"
-                                       "}"
-                                       "#SidebarActivityRail QFrame#SidebarActivitySeparator {"
-                                       "background-color: %4;"
-                                       "}")
-                                       .arg(rgbaColorCss(railBase, 0.78))
-                                       .arg(rgbaColorCss(railHover, 0.24))
-                                       .arg(rgbaColorCss(railChecked, 0.34))
-                                       .arg(rgbaColorCss(palette.color(QPalette::Mid), 0.7)));
+        activityBar->setStyleSheet(TherionStudio::sidebarActivityRailStyleSheet(palette));
 
         const int extent = activityIconSize.width();
         const qreal devicePixelRatio = activityBar->devicePixelRatioF();
@@ -863,27 +829,7 @@ void MainWindow::buildStructureSidebar()
     sidebarContentContainer_->setMinimumWidth(0);
     sidebarContentContainer_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
     sidebarContentContainer_->setAttribute(Qt::WA_StyledBackground, true);
-    sidebarContentContainer_->setStyleSheet(QStringLiteral(
-        "QWidget#mainSidebarSplitterPane {"
-        " background-color: palette(base);"
-        " color: palette(windowText);"
-        " border-left: none;"
-        " border-right: none;"
-        " border-top: none;"
-        " border-bottom: none;"
-        "}"
-        "QWidget#mainSidebarSplitterPane QTreeView {"
-        " background-color: palette(base);"
-        " alternate-background-color: palette(window);"
-        " border: 1px solid palette(mid);"
-        "}"
-        "QWidget#mainSidebarSplitterPane QHeaderView::section {"
-        " background-color: palette(window);"
-        " border: none;"
-        " border-bottom: 1px solid palette(mid);"
-        " padding: 4px 8px;"
-        " font-weight: 600;"
-        "}"));
+    sidebarContentContainer_->setStyleSheet(TherionStudio::sidebarContentPaneStyleSheet());
     auto *sidebarContentLayout = new QVBoxLayout(sidebarContentContainer_);
     sidebarContentLayout->setContentsMargins(0, 0, 0, 0);
     sidebarContentLayout->setSpacing(0);

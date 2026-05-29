@@ -1,8 +1,10 @@
 #include "MainWindow.h"
 
+#include "ApplicationStylePolicy.h"
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
 
+#include <QColor>
 #include <QDir>
 #include <QEvent>
 #include <QLabel>
@@ -116,20 +118,10 @@ void MainWindow::refreshDocumentStatusWidgets()
         statusMapZoomLabel_->setVisible(true);
 
         const QString badgeText = mapModeInsertActive ? tr("Insert") : tr("Select");
-        const QString background = mapModeInsertActive
-            ? QStringLiteral("#d34a4a")
-            : QStringLiteral("#2e9f5c");
         statusMapModeLabel_->setText(badgeText);
         statusMapModeLabel_->setToolTip(mapModeText);
-        statusMapModeLabel_->setStyleSheet(QStringLiteral(
-                                               "QLabel {"
-                                               " color: white;"
-                                               " font-weight: 700;"
-                                               " background-color: %1;"
-                                               " border-radius: 4px;"
-                                               " padding: 1px 8px;"
-                                               " min-height: 18px;"
-                                               "}").arg(background));
+        statusMapModeLabel_->setStyleSheet(
+            TherionStudio::statusBadgeStyleSheet(TherionStudio::mapModeStatusAccentColor(mapModeInsertActive)));
         statusMapModeLabel_->setVisible(true);
     }
 }
@@ -173,16 +165,8 @@ void MainWindow::updateCompilerStatusButton(const QString &text,
 
     statusCompilerButton_->setText(text);
     statusCompilerButton_->setToolTip(toolTip);
-    statusCompilerButton_->setStyleSheet(QStringLiteral(
-                                             "QToolButton {"
-                                             " color: white;"
-                                             " font-weight: 700;"
-                                             " background-color: %1;"
-                                             " border: none;"
-                                             " border-radius: 4px;"
-                                             " padding: 1px 8px;"
-                                             " min-height: 18px;"
-                                             "}").arg(accentColor));
+    statusCompilerButton_->setStyleSheet(
+        TherionStudio::compilerStatusBadgeStyleSheet(QColor(accentColor)));
 }
 
 void MainWindow::resizeEvent(QResizeEvent *event)

@@ -14,7 +14,8 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 LINE_LIMITS = {
     "src/app/text_editor/TextEditorTab.cpp": 1087,
     "src/app/text_editor/raw_editor/RawEditorCompletionController.cpp": 267,
-    "src/app/text_editor/map_editor/MapEditorTab.cpp": 687,
+    "src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp": 567,
+    "src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp": 415,
     "src/app/MainWindow.cpp": 2203,
 }
 
@@ -27,8 +28,9 @@ REQUIRED_PATHS = (
     "src/app/text_editor/raw_editor",
     "src/app/text_editor/block_editor",
     "src/app/text_editor/map_editor",
-    "src/app/text_editor/map_editor/MapEditorTab.cpp",
     "src/app/text_editor/map_editor/MapEditorTab.h",
+    "src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp",
+    "src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp",
 )
 
 FORBIDDEN_PATHS = (

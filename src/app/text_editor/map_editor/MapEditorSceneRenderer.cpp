@@ -1,19 +1,17 @@
 #include "MapEditorSceneSupport.h"
 #include "MapEditorSceneInternals.h"
+#include "MapEditorSceneThemePolicy.h"
 #include "MapEditorLineDecorationItem.h"
 #include "MapEditorObjectStyleCatalog.h"
 #include "MapEditorPointSymbolGeometry.h"
 
 #include <QFont>
-#include <QGuiApplication>
 #include <QGraphicsLineItem>
 #include <QGraphicsPathItem>
 #include <QGraphicsScene>
-#include <QPalette>
 #include <QPainter>
 #include <QPainterPath>
 #include <QRegularExpression>
-#include <QStyleHints>
 #include <QTransform>
 
 #include "../../../core/TherionDocumentParser.h"
@@ -473,61 +471,22 @@ MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
 {
     Q_UNUSED(scene);
 
-    const QPalette appPalette = QGuiApplication::palette();
-    const QColor appWindow = appPalette.color(QPalette::Window);
-    const QColor appBase = appPalette.color(QPalette::Base);
-    const qreal appReferenceLightness = appWindow.isValid()
-        ? appWindow.lightnessF()
-        : (appBase.isValid() ? appBase.lightnessF() : 1.0);
-    const bool appLooksLight = appReferenceLightness > 0.58;
-    const bool appLooksDark = appReferenceLightness < 0.42;
-
-    bool lightMode = appLooksLight;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-    if (QGuiApplication::styleHints() != nullptr) {
-        const Qt::ColorScheme scheme = QGuiApplication::styleHints()->colorScheme();
-        if (scheme == Qt::ColorScheme::Dark) {
-            lightMode = false;
-        } else if (scheme == Qt::ColorScheme::Light) {
-            lightMode = true;
-        }
-    }
-#endif
-
-    // On some platform/style combinations the color-scheme hint can disagree
-    // with the effective application palette; prefer the palette in that case.
-    if ((lightMode && appLooksDark) || (!lightMode && appLooksLight)) {
-        lightMode = appLooksLight;
-    }
+    const bool lightMode = mapEditorUsesLightAppearance();
+    const MapEditorSceneThemeColors colors = mapEditorSceneThemeColors(lightMode);
 
     MapCanvasTheme theme;
     theme.lightMode = lightMode;
-    if (lightMode) {
-        theme.canvasBorder = QColor(QStringLiteral("#bec9d8"));
-        theme.canvasFill = QColor(QStringLiteral("#f4f8fd"));
-        theme.geometryStroke = QColor(QStringLiteral("#1d2837"));
-        theme.areaFill = QColor(48, 73, 105, 28);
-        theme.labelText = QColor(QStringLiteral("#344a67"));
-        theme.mutedText = QColor(QStringLiteral("#556b84"));
-        theme.pointHandleStroke = QColor(18, 26, 37, 220);
-        theme.pointHandleFill = QColor(24, 30, 42, 190);
-        theme.controlConnector = QColor(52, 110, 186, 190);
-        theme.controlHandleStroke = QColor(20, 73, 148, 230);
-        theme.controlHandleFill = QColor(96, 176, 248, 220);
-        return theme;
-    }
-
-    theme.canvasBorder = QColor(QStringLiteral("#596477"));
-    theme.canvasFill = QColor(QStringLiteral("#232833"));
-    theme.geometryStroke = QColor(QStringLiteral("#e1e9f5"));
-    theme.areaFill = QColor(220, 227, 238, 24);
-    theme.labelText = QColor(QStringLiteral("#e6eefb"));
-    theme.mutedText = QColor(QStringLiteral("#a6b4c8"));
-    theme.pointHandleStroke = QColor(228, 236, 246, 220);
-    theme.pointHandleFill = QColor(206, 219, 235, 190);
-    theme.controlConnector = QColor(118, 178, 242, 190);
-    theme.controlHandleStroke = QColor(76, 150, 229, 230);
-    theme.controlHandleFill = QColor(130, 201, 255, 220);
+    theme.canvasBorder = colors.canvasBorder;
+    theme.canvasFill = colors.canvasFill;
+    theme.geometryStroke = colors.geometryStroke;
+    theme.areaFill = colors.areaFill;
+    theme.labelText = colors.labelText;
+    theme.mutedText = colors.mutedText;
+    theme.pointHandleStroke = colors.pointHandleStroke;
+    theme.pointHandleFill = colors.pointHandleFill;
+    theme.controlConnector = colors.controlConnector;
+    theme.controlHandleStroke = colors.controlHandleStroke;
+    theme.controlHandleFill = colors.controlHandleFill;
     return theme;
 }
 
@@ -1912,8 +1871,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 }
                 const qreal lineDirectionTickLength = qBound(12.0, 18.0 * mapScale, 24.0);
                 auto *directionTickItem = new QGraphicsLineItem;
-                directionTickItem->setPen(cosmeticPen(QColor(QStringLiteral("#ffda00")),
-                                               3.4,
+                directionTickItem->setPen(cosmeticPen(mapEditorDirectionTickColor(),
+                                                      3.4,
                                                       Qt::SolidLine,
                                                       Qt::RoundCap,
                                                       Qt::RoundJoin));

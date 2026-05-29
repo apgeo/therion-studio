@@ -60,8 +60,8 @@
 #include "MainWindowProjectController.h"
 #include "MainWindowSessionStateService.h"
 #include "MainWindowStructureNameOverridesService.h"
+#include "ApplicationStylePolicy.h"
 #include "LucideIconFactory.h"
-#include "WorkspaceCommandBarStyle.h"
 #include "../core/SessionStore.h"
 
 namespace
@@ -369,11 +369,7 @@ void MainWindow::buildUi()
     editorAreaHost_ = new QWidget(mainContentSplitter_);
     editorAreaHost_->setObjectName(QStringLiteral("mainEditorArea"));
     editorAreaHost_->setAttribute(Qt::WA_StyledBackground, true);
-    editorAreaHost_->setStyleSheet(QStringLiteral(
-        "QWidget#mainEditorArea {"
-        " background-color: palette(base);"
-        " border: none;"
-        "}"));
+    editorAreaHost_->setStyleSheet(TherionStudio::mainEditorSurfaceStyleSheet());
     auto *editorAreaHostLayout = new QHBoxLayout(editorAreaHost_);
     editorAreaHostLayout->setContentsMargins(0, 0, 0, 0);
     editorAreaHostLayout->setSpacing(0);
@@ -382,20 +378,10 @@ void MainWindow::buildUi()
     editorAreaDivider->setObjectName(QStringLiteral("mainEditorAreaLeftDivider"));
     editorAreaDivider->setFixedWidth(1);
     editorAreaDivider->setFrameShape(QFrame::NoFrame);
-    editorAreaDivider->setStyleSheet(QStringLiteral(
-        "QFrame#mainEditorAreaLeftDivider {"
-        " background-color: palette(mid);"
-        " border: none;"
-        "}"));
 
     editorAreaColumn_ = new QWidget(editorAreaHost_);
     editorAreaColumn_->setObjectName(QStringLiteral("mainEditorAreaColumn"));
     editorAreaColumn_->setAttribute(Qt::WA_StyledBackground, true);
-    editorAreaColumn_->setStyleSheet(QStringLiteral(
-        "QWidget#mainEditorAreaColumn {"
-        " background-color: palette(base);"
-        " border: none;"
-        "}"));
     editorAreaHostLayout->addWidget(editorAreaDivider);
     editorAreaHostLayout->addWidget(editorAreaColumn_, 1);
 

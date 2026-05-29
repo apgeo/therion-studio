@@ -1,8 +1,8 @@
 #include "MapEditorDetachedPaneWindow.h"
 
 #include "MapEditorTab.h"
+#include "../../ApplicationStylePolicy.h"
 #include "../../LucideIconFactory.h"
-#include "../../WorkspaceCommandBarStyle.h"
 
 #include <QCloseEvent>
 #include <QFrame>
@@ -185,20 +185,10 @@ void MapEditorDetachedPaneWindow::setMapStatus(int zoomPercent, bool insertMode,
     }
     if (modeLabel_ != nullptr) {
         const QString badgeText = insertMode ? QObject::tr("Insert") : QObject::tr("Select");
-        const QString background = insertMode
-            ? QStringLiteral("#d34a4a")
-            : QStringLiteral("#2e9f5c");
         modeLabel_->setText(badgeText);
         modeLabel_->setToolTip(modeText);
-        modeLabel_->setStyleSheet(QStringLiteral(
-                                      "QLabel {"
-                                      " color: white;"
-                                      " font-weight: 700;"
-                                      " background-color: %1;"
-                                      " border-radius: 4px;"
-                                      " padding: 1px 8px;"
-                                      " min-height: 18px;"
-                                              "}").arg(background));
+        modeLabel_->setStyleSheet(
+            TherionStudio::statusBadgeStyleSheet(TherionStudio::mapModeStatusAccentColor(insertMode)));
     }
     refreshCommandBarIconTheme();
 }

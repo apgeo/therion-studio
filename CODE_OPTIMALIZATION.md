@@ -94,7 +94,10 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 5 partial: duplicated Lucide icon theming/rendering logic consolidated into `src/app/LucideIconFactory.h` and consumed by `MainWindow`, `MainWindowSidebar`, and `MapEditorDetachedPaneWindow`.
 - [x] Phase 5 partial: startup/appearance bootstrap entrypoint consolidated into `src/platform/ApplicationBootstrap.cpp` so `main.cpp` stays a thin composition root.
 - [x] Phase 5 partial: shared workspace command-bar stylesheet policy consolidated into `src/app/WorkspaceCommandBarStyle.h` and reused by `MainWindow` and detached map-pane window UI.
-- [ ] Phase 5: platform and appearance services centralized.
+- [x] Phase 5 partial: duplicated main-window/sidebar/status/detached-pane stylesheet and status-badge policy centralized into `src/app/ApplicationStylePolicy.h`, with consumers rewired across `MainWindow.cpp`, `MainWindowSidebar.cpp`, `MainWindowStatusUi.cpp`, and `MapEditorDetachedPaneWindow.cpp`.
+- [x] Phase 5 partial: map-canvas light/dark palette resolution and scene color constants centralized into `src/app/text_editor/map_editor/MapEditorSceneThemePolicy.h`, with `MapEditorSceneRenderer.cpp` consuming centralized policy values.
+- [x] Phase 5 partial: structure-constraint guardrails updated to track split `MapEditorTab` translation units (`MapEditorTabInspectorPanelUi.cpp` and `MapEditorTabWorkspaceDelegates.cpp`) instead of retired `MapEditorTab.cpp`.
+- [x] Phase 5: platform and appearance services centralized.
 - [ ] Phase 6: packaging and CI hardening completed.
 
 ## Review Scope And Current State

@@ -54,10 +54,9 @@
 #include "text_editor/map_editor/MapEditorTab.h"
 #include "MainWindowDocumentHelpers.h"
 #include "MainWindowHelpDialog.h"
-#include "MainWindowSessionDocumentService.h"
+#include "MainWindowSessionDocumentController.h"
 #include "MainWindowSessionController.h"
 #include "MainWindowProjectController.h"
-#include "MainWindowSessionProjectService.h"
 #include "MainWindowSessionStateService.h"
 #include "MainWindowStructureNameOverridesService.h"
 #include "../core/SessionStore.h"
@@ -1155,34 +1154,18 @@ void MainWindow::persistSessionState()
 
 void MainWindow::restoreOpenDocuments()
 {
-    const std::vector<TherionStudio::MainWindowSessionDocumentService::RestoreEntry> restoreEntries =
-        TherionStudio::MainWindowSessionDocumentService::buildRestoreEntries(sessionStore_->openDocumentPaths());
-    if (restoreEntries.empty()) {
-        return;
-    }
-
-    const QString activeDocumentPath = sessionStore_->activeDocumentPath();
-    bool skippedUnsupportedDocument = false;
-
-    for (const auto &entry : restoreEntries) {
-        const QString &documentPath = entry.filePath;
-        if (documentPath.isEmpty()
-            || TherionStudio::MainWindowSessionProjectService::isProtectedMacUserFolder(documentPath)) {
-            continue;
-        }
-
-        if (entry.target == TherionStudio::MainWindowSessionDocumentService::RestoreTarget::MapEditor) {
-            openMapEditorTab(documentPath);
-        } else {
-            if (openTextTab(documentPath, false) == nullptr) {
-                skippedUnsupportedDocument = true;
-                appendConsoleLine(tr("Skipped unsupported document during session restore: %1")
-                                      .arg(QDir::toNativeSeparators(documentPath)));
-            }
-        }
-    }
-
-    if (!activeDocumentPath.isEmpty()) {
+    TherionStudio::MainWindowSessionDocumentController::RestoreOpenDocumentsActions actions;
+    actions.openMapEditorDocument = [this](const QString &documentPath) {
+        openMapEditorTab(documentPath);
+    };
+    actions.openTextEditorDocument = [this](const QString &documentPath) {
+        return openTextTab(documentPath, false) != nullptr;
+    };
+    actions.appendSkippedUnsupportedDocumentConsole = [this](const QString &documentPath) {
+        appendConsoleLine(tr("Skipped unsupported document during session restore: %1")
+                              .arg(QDir::toNativeSeparators(documentPath)));
+    };
+    actions.activateRestoredDocumentPath = [this](const QString &activeDocumentPath) {
         QWidget *activeWidget = documentWidgetForFilePath(activeDocumentPath);
         if (activeWidget != nullptr) {
             const int tabIndex = editorTabs_->indexOf(activeWidget);
@@ -1195,16 +1178,16 @@ void MainWindow::restoreOpenDocuments()
                 focusDetachedMapEditorTab(canonicalDocumentPath(activeDocumentPath));
             }
         }
-    }
-
-    if (skippedUnsupportedDocument) {
+    };
+    actions.persistOpenDocuments = [this]() {
         persistOpenDocuments();
-    }
+    };
+    TherionStudio::MainWindowSessionDocumentController::restoreOpenDocuments(*sessionStore_, actions);
 }
 
 void MainWindow::persistOpenDocuments()
 {
-    QStringList tabDocumentPaths;
+    TherionStudio::MainWindowSessionDocumentController::PersistOpenDocumentsSnapshot snapshot;
 
     for (int index = 0; index < editorTabs_->count(); ++index) {
         QWidget *tabWidget = editorTabs_->widget(index);
@@ -1213,10 +1196,9 @@ void MainWindow::persistOpenDocuments()
             continue;
         }
 
-        tabDocumentPaths.append(filePath);
+        snapshot.tabDocumentPaths.append(filePath);
     }
 
-    QStringList detachedDocumentPaths;
     for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
         if (detachedTab == nullptr) {
             continue;
@@ -1225,30 +1207,20 @@ void MainWindow::persistOpenDocuments()
         if (filePath.isEmpty()) {
             continue;
         }
-        detachedDocumentPaths.append(filePath);
+        snapshot.detachedMapDocumentPaths.append(filePath);
     }
 
-    QStringList activeDetachedDocumentPaths;
     for (auto iterator = detachedMapWindowsByPath_.constBegin(); iterator != detachedMapWindowsByPath_.constEnd(); ++iterator) {
         QMainWindow *window = iterator.value();
         if (window != nullptr && window->isActiveWindow()) {
-            activeDetachedDocumentPaths.append(iterator.key());
+            snapshot.activeDetachedDocumentPaths.append(iterator.key());
             break;
         }
     }
     QWidget *currentWidget = currentDocumentWidget();
-    const QString currentDocumentPath = currentWidget != nullptr ? documentPathForWidget(currentWidget) : QString();
+    snapshot.currentDocumentPath = currentWidget != nullptr ? documentPathForWidget(currentWidget) : QString();
 
-    const TherionStudio::MainWindowSessionDocumentService::OpenDocumentsState state =
-        TherionStudio::MainWindowSessionDocumentService::buildOpenDocumentsState(tabDocumentPaths,
-                                                                                 detachedDocumentPaths,
-                                                                                 activeDetachedDocumentPaths,
-                                                                                 currentDocumentPath);
-
-    TherionStudio::MainWindowSessionStateService::OpenDocumentsSnapshot snapshot;
-    snapshot.openDocumentPaths = state.openDocumentPaths;
-    snapshot.activeDocumentPath = state.activeDocumentPath;
-    TherionStudio::MainWindowSessionStateService::persistOpenDocuments(*sessionStore_, snapshot);
+    TherionStudio::MainWindowSessionDocumentController::persistOpenDocuments(snapshot, *sessionStore_);
 }
 
 void MainWindow::addWelcomeTab()

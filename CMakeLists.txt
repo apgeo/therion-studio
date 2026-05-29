@@ -109,6 +109,8 @@ set(THERION_APP_SOURCES
     src/app/MainWindowSessionDocumentService.h
     src/app/MainWindowSessionController.cpp
     src/app/MainWindowSessionController.h
+    src/app/MainWindowProjectController.cpp
+    src/app/MainWindowProjectController.h
     src/app/MainWindowProjectLifecycleService.cpp
     src/app/MainWindowProjectLifecycleService.h
     src/app/MainWindowProjectOrchestrationService.cpp
@@ -715,6 +717,9 @@ therion_add_app_unit_test(MainWindowSessionDocumentServiceTest
 therion_add_app_unit_test(MainWindowSessionControllerTest
     tests/MainWindowSessionControllerTest.cpp)
 
+therion_add_app_unit_test(MainWindowProjectControllerTest
+    tests/MainWindowProjectControllerTest.cpp)
+
 therion_add_app_unit_test(MainWindowProjectLifecycleServiceTest
     tests/MainWindowProjectLifecycleServiceTest.cpp)
 
@@ -1069,6 +1074,7 @@ set(THERION_UNIT_TEST_TARGETS
     ProjectStructureScannerTest
     SessionStoreTest
     MainWindowSessionControllerTest
+    MainWindowProjectControllerTest
     TherionExecutableSelectionControllerTest
     TherionRunnerConfigDisplayControllerTest
     TherionRunnerConfigResolverTest

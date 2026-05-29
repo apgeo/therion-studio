@@ -58,6 +58,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 2 partial: window geometry/state restore fallback decisions extracted from `MainWindow` into `MainWindowSessionWindowRestoreService`.
 - [x] Phase 2 partial: session-restore console message presentation extracted from `MainWindow` into `MainWindowSessionRestoreUiFlowService`.
 - [x] Phase 2 partial: session-restore workflow composition extracted from `MainWindow` into `MainWindowSessionController` (window-restore decisions + project-restore orchestration wiring).
+- [x] Phase 2 partial: open/close project workflow composition extracted from `MainWindow` into `MainWindowProjectController` (lifecycle decision + workspace/orchestration + UI presentation wiring).
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.

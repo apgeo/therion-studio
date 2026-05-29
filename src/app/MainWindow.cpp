@@ -56,11 +56,7 @@
 #include "MainWindowHelpDialog.h"
 #include "MainWindowSessionDocumentService.h"
 #include "MainWindowSessionController.h"
-#include "MainWindowProjectLifecycleService.h"
-#include "MainWindowProjectOrchestrationService.h"
-#include "MainWindowProjectStepExecutor.h"
-#include "MainWindowProjectUiFlowService.h"
-#include "MainWindowProjectWorkspaceService.h"
+#include "MainWindowProjectController.h"
 #include "MainWindowSessionProjectService.h"
 #include "MainWindowSessionStateService.h"
 #include "MainWindowStructureNameOverridesService.h"
@@ -1299,87 +1295,61 @@ void MainWindow::createNewWindow()
 
 void MainWindow::openProject()
 {
-    const TherionStudio::MainWindowProjectLifecycleService::OpenProjectDecision decision =
-        TherionStudio::MainWindowProjectLifecycleService::decideOpenProject(
-            QFileDialog::getExistingDirectory(this, tr("Open Therion Project"), QString()));
-    const TherionStudio::MainWindowProjectUiFlowService::DecisionPresentation decisionPresentation =
-        TherionStudio::MainWindowProjectUiFlowService::presentOpenProjectDecision(decision);
-    if (!decisionPresentation.shouldContinueWorkflow) {
-        if (decisionPresentation.showWarningDialog) {
-            QMessageBox::warning(this,
-                                 decisionPresentation.warningDialogTitle,
-                                 decisionPresentation.warningDialogMessage);
-        }
-        if (decisionPresentation.showStatusBarMessage) {
-            statusBar()->showMessage(decisionPresentation.statusBarMessage, decisionPresentation.statusBarTimeoutMs);
-        }
-        return;
-    }
+    const QString selectedProjectPath =
+        QFileDialog::getExistingDirectory(this, tr("Open Therion Project"), QString());
 
-    const TherionStudio::MainWindowProjectWorkspaceService::OpenProjectWorkspaceState workspaceState =
-        TherionStudio::MainWindowProjectWorkspaceService::buildOpenProjectWorkspaceState(
-            decision.projectPath, editorTabs_->count() == 0, findWelcomeTabIndex(editorTabs_) >= 0);
-    projectRootPath_ = workspaceState.projectRootPath;
-    TherionStudio::MainWindowProjectStepExecutor::OpenProjectActions openActions;
-    openActions.applyProjectRootToBrowser = [this]() {
-        projectModel_->setRootPath(projectRootPath_);
-        projectTree_->setRootIndex(projectModel_->index(projectRootPath_));
+    TherionStudio::MainWindowProjectController::Actions actions;
+    actions.showWarningDialog = [this](const QString &title, const QString &message) {
+        QMessageBox::warning(this, title, message);
     };
-    openActions.loadStructureNameOverrides = [this]() { loadStructureNameOverrides(); };
-    openActions.syncOpenDocumentsToProjectRoot = [this]() { syncOpenDocumentsToProjectRoot(); };
-    openActions.persistSessionLastProjectPath = [this, &workspaceState]() {
-        sessionStore_->setLastProjectPath(workspaceState.sessionLastProjectPath);
+    actions.showStatusBarMessage = [this](const QString &message, int timeoutMs) {
+        statusBar()->showMessage(message, timeoutMs);
     };
-    openActions.rebuildStructureSidebar = [this]() { rebuildStructureSidebar(); };
-    openActions.refreshTherionConfigDisplay = [this]() { refreshTherionConfigDisplay(); };
-    openActions.updateProjectActionState = [this]() { updateProjectActionState(); };
-    openActions.ensureWelcomeTab = [this]() { addWelcomeTab(); };
-    TherionStudio::MainWindowProjectStepExecutor::executeOpenProjectSteps(
-        TherionStudio::MainWindowProjectOrchestrationService::buildOpenProjectSteps(workspaceState.shouldEnsureWelcomeTab),
-        openActions);
-    const TherionStudio::MainWindowProjectUiFlowService::SuccessPresentation successPresentation =
-        TherionStudio::MainWindowProjectUiFlowService::presentOpenProjectSuccess(projectRootPath_);
-    statusBar()->showMessage(successPresentation.statusBarMessage, successPresentation.statusBarTimeoutMs);
-    appendConsoleLine(successPresentation.consoleMessage);
+    actions.appendConsoleLine = [this](const QString &line) {
+        appendConsoleLine(line);
+    };
+    actions.setProjectRootPath = [this](const QString &projectRootPath) {
+        projectRootPath_ = projectRootPath;
+    };
+    actions.applyProjectRootToBrowser = [this](const QString &projectRootPath) {
+        projectModel_->setRootPath(projectRootPath);
+        projectTree_->setRootIndex(projectModel_->index(projectRootPath));
+    };
+    actions.loadStructureNameOverrides = [this]() { loadStructureNameOverrides(); };
+    actions.syncOpenDocumentsToProjectRoot = [this]() { syncOpenDocumentsToProjectRoot(); };
+    actions.rebuildStructureSidebar = [this]() { rebuildStructureSidebar(); };
+    actions.refreshTherionConfigDisplay = [this]() { refreshTherionConfigDisplay(); };
+    actions.updateProjectActionState = [this]() { updateProjectActionState(); };
+    actions.ensureWelcomeTab = [this]() { addWelcomeTab(); };
+    TherionStudio::MainWindowProjectController::openProject(selectedProjectPath,
+                                                            editorTabs_->count() == 0,
+                                                            findWelcomeTabIndex(editorTabs_) >= 0,
+                                                            *sessionStore_,
+                                                            actions);
 }
 
 void MainWindow::closeProject()
 {
-    const TherionStudio::MainWindowProjectLifecycleService::CloseProjectDecision decision =
-        TherionStudio::MainWindowProjectLifecycleService::decideCloseProject(projectRootPath_, [this]() {
-            return confirmCloseDirtyDocuments();
-        });
-    const TherionStudio::MainWindowProjectUiFlowService::DecisionPresentation decisionPresentation =
-        TherionStudio::MainWindowProjectUiFlowService::presentCloseProjectDecision(decision);
-    if (!decisionPresentation.shouldContinueWorkflow) {
-        if (decisionPresentation.showStatusBarMessage) {
-            statusBar()->showMessage(decisionPresentation.statusBarMessage, decisionPresentation.statusBarTimeoutMs);
-        }
-        return;
-    }
-
-    const TherionStudio::MainWindowProjectWorkspaceService::CloseProjectWorkspaceState workspaceState =
-        TherionStudio::MainWindowProjectWorkspaceService::buildCloseProjectWorkspaceState(decision.closedProjectPath);
-    const QString closedProjectPath = workspaceState.closedProjectPath;
-    projectRootPath_ = workspaceState.projectRootPath;
-    TherionStudio::MainWindowProjectStepExecutor::CloseProjectActions closeActions;
-    closeActions.clearDocumentTabs = [this]() { clearDocumentTabs(); };
-    closeActions.resetProjectBrowser = [this]() { resetProjectBrowser(); };
-    closeActions.persistSessionLastProjectPath = [this, &workspaceState]() {
-        sessionStore_->setLastProjectPath(workspaceState.sessionLastProjectPath);
+    TherionStudio::MainWindowProjectController::Actions actions;
+    actions.showStatusBarMessage = [this](const QString &message, int timeoutMs) {
+        statusBar()->showMessage(message, timeoutMs);
     };
-    closeActions.persistOpenDocuments = [this]() { persistOpenDocuments(); };
-    closeActions.rebuildStructureSidebar = [this]() { rebuildStructureSidebar(); };
-    closeActions.refreshTherionConfigDisplay = [this]() { refreshTherionConfigDisplay(); };
-    closeActions.updateProjectActionState = [this]() { updateProjectActionState(); };
-    TherionStudio::MainWindowProjectStepExecutor::executeCloseProjectSteps(
-        TherionStudio::MainWindowProjectOrchestrationService::buildCloseProjectSteps(),
-        closeActions);
-
-    const TherionStudio::MainWindowProjectUiFlowService::SuccessPresentation successPresentation =
-        TherionStudio::MainWindowProjectUiFlowService::presentCloseProjectSuccess(closedProjectPath);
-    statusBar()->showMessage(successPresentation.statusBarMessage, successPresentation.statusBarTimeoutMs);
-    appendConsoleLine(successPresentation.consoleMessage);
+    actions.appendConsoleLine = [this](const QString &line) {
+        appendConsoleLine(line);
+    };
+    actions.setProjectRootPath = [this](const QString &projectRootPath) {
+        projectRootPath_ = projectRootPath;
+    };
+    actions.clearDocumentTabs = [this]() { clearDocumentTabs(); };
+    actions.resetProjectBrowser = [this]() { resetProjectBrowser(); };
+    actions.persistOpenDocuments = [this]() { persistOpenDocuments(); };
+    actions.rebuildStructureSidebar = [this]() { rebuildStructureSidebar(); };
+    actions.refreshTherionConfigDisplay = [this]() { refreshTherionConfigDisplay(); };
+    actions.updateProjectActionState = [this]() { updateProjectActionState(); };
+    TherionStudio::MainWindowProjectController::closeProject(projectRootPath_,
+                                                             [this]() { return confirmCloseDirtyDocuments(); },
+                                                             *sessionStore_,
+                                                             actions);
 }
 void MainWindow::handleProjectTreeActivated(const QModelIndex &index)
 {

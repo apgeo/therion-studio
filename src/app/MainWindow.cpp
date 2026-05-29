@@ -55,6 +55,7 @@
 #include "MainWindowDocumentHelpers.h"
 #include "MainWindowHelpDialog.h"
 #include "MainWindowSessionDocumentService.h"
+#include "MainWindowProjectLifecycleService.h"
 #include "MainWindowSessionProjectService.h"
 #include "MainWindowSessionStateService.h"
 #include "MainWindowStructureNameOverridesService.h"
@@ -1295,20 +1296,20 @@ void MainWindow::createNewWindow()
 
 void MainWindow::openProject()
 {
-    const QString projectPath = QFileDialog::getExistingDirectory(this,
-                                                                  tr("Open Therion Project"),
-                                                                  QString());
-    if (projectPath.isEmpty()) {
+    const TherionStudio::MainWindowProjectLifecycleService::OpenProjectDecision decision =
+        TherionStudio::MainWindowProjectLifecycleService::decideOpenProject(
+            QFileDialog::getExistingDirectory(this, tr("Open Therion Project"), QString()));
+    if (decision.status == TherionStudio::MainWindowProjectLifecycleService::OpenProjectStatus::Cancelled) {
         statusBar()->showMessage(tr("Open project cancelled"), 2000);
         return;
     }
 
-    if (!QDir(projectPath).exists()) {
+    if (decision.status == TherionStudio::MainWindowProjectLifecycleService::OpenProjectStatus::MissingDirectory) {
         QMessageBox::warning(this, tr("Open Project"), tr("The selected folder does not exist."));
         return;
     }
 
-    projectRootPath_ = projectPath;
+    projectRootPath_ = decision.projectPath;
     projectModel_->setRootPath(projectRootPath_);
     projectTree_->setRootIndex(projectModel_->index(projectRootPath_));
     loadStructureNameOverrides();
@@ -1326,16 +1327,20 @@ void MainWindow::openProject()
 
 void MainWindow::closeProject()
 {
-    if (projectRootPath_.isEmpty()) {
+    const TherionStudio::MainWindowProjectLifecycleService::CloseProjectDecision noProjectDecision =
+        TherionStudio::MainWindowProjectLifecycleService::decideCloseProject(projectRootPath_, true);
+    if (noProjectDecision.status == TherionStudio::MainWindowProjectLifecycleService::CloseProjectStatus::NoProjectOpen) {
         statusBar()->showMessage(tr("No project is open"), 2000);
         return;
     }
 
-    if (!confirmCloseDirtyDocuments()) {
+    const TherionStudio::MainWindowProjectLifecycleService::CloseProjectDecision decision =
+        TherionStudio::MainWindowProjectLifecycleService::decideCloseProject(projectRootPath_, confirmCloseDirtyDocuments());
+    if (decision.status == TherionStudio::MainWindowProjectLifecycleService::CloseProjectStatus::CancelledByDirtyDocuments) {
         return;
     }
 
-    const QString closedProjectPath = projectRootPath_;
+    const QString closedProjectPath = decision.closedProjectPath;
     projectRootPath_.clear();
 
     clearDocumentTabs();

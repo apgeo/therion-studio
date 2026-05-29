@@ -49,6 +49,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 2 partial: session state persistence writes extracted from `MainWindow` into `MainWindowSessionStateService` with focused app-unit coverage.
 - [x] Phase 2 partial: structure-name override JSON parse/serialize extracted from `MainWindow` into `MainWindowStructureNameOverridesService` with focused app-unit coverage.
 - [x] Phase 2 partial: open/close project lifecycle decision logic extracted from `MainWindow` into `MainWindowProjectLifecycleService` with focused app-unit coverage.
+- [x] Phase 2 partial: project workspace state transitions for open/close flows extracted from `MainWindow` into `MainWindowProjectWorkspaceService` with focused app-unit coverage.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.
@@ -653,7 +654,7 @@ Actions:
 
 - Move open/save/reload tab workflows into `DocumentManager`.
 - Move session restore/save decisions into `SessionController`; incremental slices are in place via `MainWindowSessionDocumentService` (session document restore-target planning, open-document path persistence merging, and active-document precedence decisions), `MainWindowSessionProjectService` (automatic project-restore decision and protected-folder restore guard), `MainWindowSessionStateService` (session state persistence writes), and `MainWindowStructureNameOverridesService` (structure-name override JSON parse/serialize).
-- Move structure-browser scanning and status updates into `ProjectStructureController`; first incremental slice is in place via `MainWindowProjectLifecycleService` for open/close project decision logic while UI side effects remain in `MainWindow`.
+- Move structure-browser scanning and status updates into `ProjectStructureController`; incremental slices are in place via `MainWindowProjectLifecycleService` (open/close project decisions) and `MainWindowProjectWorkspaceService` (project workspace state transitions) while UI side effects remain in `MainWindow`.
 - Move external Therion execution into `TherionRunnerController` using an injected process runner.
 - Keep dialogs and menu/action creation in `MainWindow`.
 

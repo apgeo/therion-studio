@@ -56,6 +56,7 @@
 #include "MainWindowHelpDialog.h"
 #include "MainWindowSessionDocumentService.h"
 #include "MainWindowProjectLifecycleService.h"
+#include "MainWindowProjectWorkspaceService.h"
 #include "MainWindowSessionProjectService.h"
 #include "MainWindowSessionStateService.h"
 #include "MainWindowStructureNameOverridesService.h"
@@ -1309,16 +1310,19 @@ void MainWindow::openProject()
         return;
     }
 
-    projectRootPath_ = decision.projectPath;
+    const TherionStudio::MainWindowProjectWorkspaceService::OpenProjectWorkspaceState workspaceState =
+        TherionStudio::MainWindowProjectWorkspaceService::buildOpenProjectWorkspaceState(
+            decision.projectPath, editorTabs_->count() == 0, findWelcomeTabIndex(editorTabs_) >= 0);
+    projectRootPath_ = workspaceState.projectRootPath;
     projectModel_->setRootPath(projectRootPath_);
     projectTree_->setRootIndex(projectModel_->index(projectRootPath_));
     loadStructureNameOverrides();
     syncOpenDocumentsToProjectRoot();
-    sessionStore_->setLastProjectPath(projectRootPath_);
+    sessionStore_->setLastProjectPath(workspaceState.sessionLastProjectPath);
     rebuildStructureSidebar();
     refreshTherionConfigDisplay();
     updateProjectActionState();
-    if (editorTabs_->count() == 0 || findWelcomeTabIndex(editorTabs_) >= 0) {
+    if (workspaceState.shouldEnsureWelcomeTab) {
         addWelcomeTab();
     }
     statusBar()->showMessage(tr("Project root set to %1").arg(projectRootPath_), 3000);
@@ -1340,12 +1344,14 @@ void MainWindow::closeProject()
         return;
     }
 
-    const QString closedProjectPath = decision.closedProjectPath;
-    projectRootPath_.clear();
+    const TherionStudio::MainWindowProjectWorkspaceService::CloseProjectWorkspaceState workspaceState =
+        TherionStudio::MainWindowProjectWorkspaceService::buildCloseProjectWorkspaceState(decision.closedProjectPath);
+    const QString closedProjectPath = workspaceState.closedProjectPath;
+    projectRootPath_ = workspaceState.projectRootPath;
 
     clearDocumentTabs();
     resetProjectBrowser();
-    sessionStore_->setLastProjectPath(QString());
+    sessionStore_->setLastProjectPath(workspaceState.sessionLastProjectPath);
     persistOpenDocuments();
     rebuildStructureSidebar();
     statusBar()->showMessage(tr("Project closed"), 3000);

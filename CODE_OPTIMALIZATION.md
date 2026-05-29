@@ -83,6 +83,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 4 partial: MapEditor event-routing shell flow (`eventFilter`, escape-key cancellation routing, map-editor event-receiver resolution) split from `MapEditorTab.cpp` into `MapEditorTabEventRouting.cpp`; parsed-line cache and interactive line-control lookup were moved into source-edit workflow delegates and the legacy `MapEditorTab.cpp` shell TU was retired.
 - [x] Phase 4 partial: MapEditor line-extension rewrite planning extracted into `MapEditorLineExtensionPlanner` and consumed by `MapEditorTabLineExtension.cpp`, with focused unit coverage for prepend/append control-handle mapping and invalid-input guards.
 - [x] Phase 4 partial: MapEditor workspace/document/status delegate methods extracted from `MapEditorTabWorkspace.cpp` into `MapEditorTabWorkspaceDelegates.cpp` (file/document pass-through, mode/visibility orchestration, command-trigger delegates, and undo/redo/zoom-fit handlers) to reduce shell TU breadth while preserving behavior.
+- [x] Phase 4 partial: Detached map-pane window command-surface UI extracted into `MapEditorDetachedPaneWindow`, and detached-pane lifecycle/status methods (`refreshStatus`, `toggle/detach/reattach/focus`) split from `MapEditorTabWorkspace.cpp` into `MapEditorTabDetachedPaneDelegates.cpp`.
 - [ ] Phase 4: map editor responsibilities decomposed.
 - [ ] Phase 5: platform and appearance services centralized.
 - [ ] Phase 6: packaging and CI hardening completed.

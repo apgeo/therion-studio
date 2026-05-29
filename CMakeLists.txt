@@ -327,6 +327,8 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h
+    src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.cpp
+    src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.h
     src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp
     src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.h
     src/app/text_editor/map_editor/MapEditorCanvasEditContext.h
@@ -401,6 +403,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/map_editor/MapEditorTabSceneContexts.cpp
     src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
     src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabDetachedPaneDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
@@ -1052,6 +1055,8 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h
+    src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.cpp
+    src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.h
     src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp
     src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.h
     src/app/text_editor/map_editor/MapEditorCanvasEditContext.h
@@ -1126,6 +1131,7 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorTabSceneContexts.cpp
     src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
     src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabDetachedPaneDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTab.h

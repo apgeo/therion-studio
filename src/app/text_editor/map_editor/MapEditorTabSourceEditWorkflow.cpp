@@ -9,6 +9,30 @@
 
 namespace TherionStudio
 {
+QVector<TherionParsedLine> MapEditorTab::parsedLinesForCurrentDocument() const
+{
+    if (textEditor_ == nullptr) {
+        return {};
+    }
+
+    const int currentRevision = textEditor_->documentRevision();
+    if (cachedParsedLinesValid_ && cachedParsedLinesRevision_ == currentRevision) {
+        return cachedParsedLines_;
+    }
+
+    cachedParsedLines_ = TherionDocumentParser::parseText(textEditor_->text());
+    cachedParsedLinesRevision_ = currentRevision;
+    cachedParsedLinesValid_ = true;
+    return cachedParsedLines_;
+}
+
+std::optional<MapEditorInteractiveLineControlHandleRef> MapEditorTab::interactiveLineControlAt(
+    const QPointF &scenePosition,
+    qreal sceneRadius) const
+{
+    return TherionStudio::interactiveLineControlAt(interactiveDrawLineVertices_, scenePosition, sceneRadius);
+}
+
 QRectF MapEditorTab::mapSourceBoundsForCurrentDocument() const
 {
     if (textEditor_ == nullptr) {

@@ -2,42 +2,16 @@
 
 #include <QApplication>
 #include <QEvent>
-#include <QCursor>
-#include <QGraphicsEllipseItem>
-#include <QGraphicsLineItem>
-#include <QGraphicsPathItem>
-#include <QGraphicsPixmapItem>
-#include <QGraphicsRectItem>
-#include <QGraphicsScene>
+#include <QFrame>
 #include <QGraphicsView>
-#include <QLabel>
 #include <QKeyEvent>
 #include <QMainWindow>
 #include <QMouseEvent>
-#include <QSet>
-#include <QScopedValueRollback>
-#include <QSignalBlocker>
-#include <QShortcut>
-#include <QTimer>
+#include <QTabWidget>
 #include <QTreeView>
-#include <QStandardItemModel>
-#include <QPainterPath>
+#include <QWidget>
 
-#include <optional>
-
-#include "MapEditorSceneSupport.h"
-#include "MapEditorSceneInternals.h"
-#include "MapEditorInputPolicy.h"
 #include "MapEditorViewportInputController.h"
-#include "MapEditorSceneLifecycleController.h"
-#include "MapEditorInspectorData.h"
-#include "MapEditorInspectorBackgroundController.h"
-#include "MapEditorInspectorObjectController.h"
-#include "MapEditorObjectDetailsEditController.h"
-#include "MapEditorObjectDetailsPanelController.h"
-#include "../TextEditorTab.h"
-#include "../../../core/TherionBackgroundMetadata.h"
-#include "../../../core/TherionDocumentParser.h"
 
 namespace TherionStudio
 {
@@ -171,30 +145,6 @@ bool MapEditorTab::handleMapEditorEscapeKeyEvent(QObject *receiver, QEvent *even
 
     keyEvent->accept();
     return true;
-}
-
-QVector<TherionParsedLine> MapEditorTab::parsedLinesForCurrentDocument() const
-{
-    if (textEditor_ == nullptr) {
-        return {};
-    }
-
-    const int currentRevision = textEditor_->documentRevision();
-    if (cachedParsedLinesValid_ && cachedParsedLinesRevision_ == currentRevision) {
-        return cachedParsedLines_;
-    }
-
-    cachedParsedLines_ = TherionDocumentParser::parseText(textEditor_->text());
-    cachedParsedLinesRevision_ = currentRevision;
-    cachedParsedLinesValid_ = true;
-    return cachedParsedLines_;
-}
-
-std::optional<MapEditorInteractiveLineControlHandleRef> MapEditorTab::interactiveLineControlAt(
-    const QPointF &scenePosition,
-    qreal sceneRadius) const
-{
-    return TherionStudio::interactiveLineControlAt(interactiveDrawLineVertices_, scenePosition, sceneRadius);
 }
 
 }

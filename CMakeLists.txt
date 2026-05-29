@@ -135,6 +135,8 @@ set(THERION_APP_SOURCES
     src/app/MainWindowDocumentController.h
     src/app/MainWindowDocumentOpenController.cpp
     src/app/MainWindowDocumentOpenController.h
+    src/app/MainWindowDocumentTabOpenController.cpp
+    src/app/MainWindowDocumentTabOpenController.h
     src/app/MainWindowTherionRunnerController.cpp
     src/app/MainWindowTherionRunnerController.h
     src/app/MainWindowStructureNameOverridesService.cpp
@@ -724,6 +726,9 @@ therion_add_app_unit_test(MainWindowDocumentControllerTest
 therion_add_app_unit_test(MainWindowDocumentOpenControllerTest
     tests/MainWindowDocumentOpenControllerTest.cpp)
 
+therion_add_app_unit_test(MainWindowDocumentTabOpenControllerTest
+    tests/MainWindowDocumentTabOpenControllerTest.cpp)
+
 therion_add_app_unit_test(MainWindowSessionDocumentServiceTest
     tests/MainWindowSessionDocumentServiceTest.cpp)
 
@@ -1088,6 +1093,7 @@ set(THERION_UNIT_TEST_TARGETS
     MainWindowProjectControllerTest
     MainWindowDocumentControllerTest
     MainWindowDocumentOpenControllerTest
+    MainWindowDocumentTabOpenControllerTest
     MainWindowTherionRunnerControllerTest
     TherionExecutableSelectionControllerTest
     TherionRunnerConfigDisplayControllerTest

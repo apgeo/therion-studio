@@ -55,6 +55,7 @@
 #include "MainWindowDocumentHelpers.h"
 #include "MainWindowDocumentController.h"
 #include "MainWindowDocumentOpenController.h"
+#include "MainWindowDocumentTabOpenController.h"
 #include "MainWindowHelpDialog.h"
 #include "MainWindowSessionDocumentController.h"
 #include "MainWindowSessionController.h"
@@ -1676,9 +1677,13 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
 
         existingTab->setProjectRootPath(projectRootPath_);
         existingTab->setModeSelectorVisible(false);
-        editorTabs_->setCurrentIndex(openPlan.reuseTabIndex);
-        refreshDocumentStatusWidgets();
-        refreshWorkspaceModeSwitcher();
+        TherionStudio::MainWindowDocumentTabOpenController::Actions openActions;
+        openActions.setCurrentTabIndex = [this](int index) { editorTabs_->setCurrentIndex(index); };
+        openActions.refreshDocumentStatusWidgets = [this]() { refreshDocumentStatusWidgets(); };
+        openActions.refreshWorkspaceModeSwitcher = [this]() { refreshWorkspaceModeSwitcher(); };
+        TherionStudio::MainWindowDocumentTabOpenController::ActivateExistingTabRequest openRequest;
+        openRequest.tabIndex = openPlan.reuseTabIndex;
+        TherionStudio::MainWindowDocumentTabOpenController::activateExistingTab(openRequest, openActions);
         return existingTab;
     }
 
@@ -1691,18 +1696,6 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
         tab->deleteLater();
         return nullptr;
     }
-
-    const int welcomeTabIndex = findWelcomeTabIndex(editorTabs_);
-    if (welcomeTabIndex >= 0) {
-        QWidget *welcomeWidget = editorTabs_->widget(welcomeTabIndex);
-        editorTabs_->removeTab(welcomeTabIndex);
-        if (welcomeWidget != nullptr) {
-            welcomeWidget->deleteLater();
-        }
-    }
-
-    const int tabIndex = editorTabs_->addTab(tab, tab->displayName());
-    editorTabs_->setCurrentIndex(tabIndex);
 
     connect(tab, &TherionStudio::TextEditorTab::titleChanged, this, [this, tab]() {
         updateTabTitle(tab);
@@ -1737,13 +1730,38 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
         }
     });
 
-    handleTextEditorCurrentLineChanged(tab->filePath(), tab->currentLineNumber());
+    TherionStudio::MainWindowDocumentTabOpenController::Actions openActions;
+    openActions.removeWelcomeTabIfPresent = [this]() {
+        const int welcomeTabIndex = findWelcomeTabIndex(editorTabs_);
+        if (welcomeTabIndex < 0) {
+            return;
+        }
 
-    updateTabTitle(tab);
-    refreshDocumentStatusWidgets();
-    refreshWorkspaceModeSwitcher();
-    persistOpenDocuments();
-    appendConsoleLine(tr("Opened %1").arg(canonicalPath));
+        QWidget *welcomeWidget = editorTabs_->widget(welcomeTabIndex);
+        editorTabs_->removeTab(welcomeTabIndex);
+        if (welcomeWidget != nullptr) {
+            welcomeWidget->deleteLater();
+        }
+    };
+    openActions.addTab = [this, tab](const QString &tabTitle) {
+        return editorTabs_->addTab(tab, tabTitle);
+    };
+    openActions.setCurrentTabIndex = [this](int index) { editorTabs_->setCurrentIndex(index); };
+    openActions.handleCurrentLineChanged = [this](const QString &openedPath, int lineNumber) {
+        handleTextEditorCurrentLineChanged(openedPath, lineNumber);
+    };
+    openActions.updateCurrentTabTitle = [this, tab]() { updateTabTitle(tab); };
+    openActions.refreshDocumentStatusWidgets = [this]() { refreshDocumentStatusWidgets(); };
+    openActions.refreshWorkspaceModeSwitcher = [this]() { refreshWorkspaceModeSwitcher(); };
+    openActions.persistOpenDocuments = [this]() { persistOpenDocuments(); };
+    openActions.appendConsoleLine = [this](const QString &line) { appendConsoleLine(line); };
+
+    TherionStudio::MainWindowDocumentTabOpenController::AttachNewTabRequest openRequest;
+    openRequest.tabTitle = tab->displayName();
+    openRequest.openedDocumentPath = tab->filePath();
+    openRequest.currentLineNumber = tab->currentLineNumber();
+    openRequest.consoleOpenedLine = tr("Opened %1").arg(canonicalPath);
+    TherionStudio::MainWindowDocumentTabOpenController::attachNewTab(openRequest, openActions);
     return tab;
 }
 
@@ -1841,10 +1859,14 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
 
         existingTab->setProjectRootPath(projectRootPath_);
         existingTab->setInlineWorkspaceModeSelectorVisible(false);
-        editorTabs_->setCurrentIndex(openPlan.reuseTabIndex);
         connectMapEditorTabUiSignals(existingTab);
-        refreshDocumentStatusWidgets();
-        refreshWorkspaceModeSwitcher();
+        TherionStudio::MainWindowDocumentTabOpenController::Actions openActions;
+        openActions.setCurrentTabIndex = [this](int index) { editorTabs_->setCurrentIndex(index); };
+        openActions.refreshDocumentStatusWidgets = [this]() { refreshDocumentStatusWidgets(); };
+        openActions.refreshWorkspaceModeSwitcher = [this]() { refreshWorkspaceModeSwitcher(); };
+        TherionStudio::MainWindowDocumentTabOpenController::ActivateExistingTabRequest openRequest;
+        openRequest.tabIndex = openPlan.reuseTabIndex;
+        TherionStudio::MainWindowDocumentTabOpenController::activateExistingTab(openRequest, openActions);
         return existingTab;
     }
 
@@ -1857,18 +1879,6 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         tab->deleteLater();
         return nullptr;
     }
-
-    const int welcomeTabIndex = findWelcomeTabIndex(editorTabs_);
-    if (welcomeTabIndex >= 0) {
-        QWidget *welcomeWidget = editorTabs_->widget(welcomeTabIndex);
-        editorTabs_->removeTab(welcomeTabIndex);
-        if (welcomeWidget != nullptr) {
-            welcomeWidget->deleteLater();
-        }
-    }
-
-    const int tabIndex = editorTabs_->addTab(tab, tab->displayName());
-    editorTabs_->setCurrentIndex(tabIndex);
 
     connect(tab, &TherionStudio::MapEditorTab::titleChanged, this, [this, tab]() {
         updateTabTitle(tab);
@@ -1912,13 +1922,38 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
     });
     connectMapEditorTabUiSignals(tab);
 
-    handleTextEditorCurrentLineChanged(tab->filePath(), tab->currentLineNumber());
+    TherionStudio::MainWindowDocumentTabOpenController::Actions openActions;
+    openActions.removeWelcomeTabIfPresent = [this]() {
+        const int welcomeTabIndex = findWelcomeTabIndex(editorTabs_);
+        if (welcomeTabIndex < 0) {
+            return;
+        }
 
-    updateTabTitle(tab);
-    refreshDocumentStatusWidgets();
-    refreshWorkspaceModeSwitcher();
-    persistOpenDocuments();
-    appendConsoleLine(tr("Opened %1").arg(canonicalPath));
+        QWidget *welcomeWidget = editorTabs_->widget(welcomeTabIndex);
+        editorTabs_->removeTab(welcomeTabIndex);
+        if (welcomeWidget != nullptr) {
+            welcomeWidget->deleteLater();
+        }
+    };
+    openActions.addTab = [this, tab](const QString &tabTitle) {
+        return editorTabs_->addTab(tab, tabTitle);
+    };
+    openActions.setCurrentTabIndex = [this](int index) { editorTabs_->setCurrentIndex(index); };
+    openActions.handleCurrentLineChanged = [this](const QString &openedPath, int lineNumber) {
+        handleTextEditorCurrentLineChanged(openedPath, lineNumber);
+    };
+    openActions.updateCurrentTabTitle = [this, tab]() { updateTabTitle(tab); };
+    openActions.refreshDocumentStatusWidgets = [this]() { refreshDocumentStatusWidgets(); };
+    openActions.refreshWorkspaceModeSwitcher = [this]() { refreshWorkspaceModeSwitcher(); };
+    openActions.persistOpenDocuments = [this]() { persistOpenDocuments(); };
+    openActions.appendConsoleLine = [this](const QString &line) { appendConsoleLine(line); };
+
+    TherionStudio::MainWindowDocumentTabOpenController::AttachNewTabRequest openRequest;
+    openRequest.tabTitle = tab->displayName();
+    openRequest.openedDocumentPath = tab->filePath();
+    openRequest.currentLineNumber = tab->currentLineNumber();
+    openRequest.consoleOpenedLine = tr("Opened %1").arg(canonicalPath);
+    TherionStudio::MainWindowDocumentTabOpenController::attachNewTab(openRequest, openActions);
     return tab;
 }
 

@@ -1,5 +1,6 @@
 #include "MapEditorTab.h"
 
+#include "MapEditorLineExtensionPlanner.h"
 #include "MapEditorSourceReferenceResolver.h"
 #include "../TextEditorTab.h"
 
@@ -24,17 +25,6 @@ int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int so
     return -1;
 }
 
-MapGeometryFeature::TH2LineVertex draftVertexToLineVertex(const MapEditorInteractiveLineDraftVertex &draftVertex)
-{
-    MapGeometryFeature::TH2LineVertex lineVertex;
-    lineVertex.anchor = draftVertex.anchorSource;
-    lineVertex.incomingControl = draftVertex.incomingControlSource;
-    lineVertex.outgoingControl = draftVertex.outgoingControlSource;
-    lineVertex.anchorSourceVertexIndex = -1;
-    lineVertex.incomingSourceVertexIndex = -1;
-    lineVertex.outgoingSourceVertexIndex = -1;
-    return lineVertex;
-}
 }
 
 bool MapEditorTab::beginLineExtensionFromSelection(int lineNumber, int sourceVertexIndex, bool prepend)
@@ -86,44 +76,28 @@ bool MapEditorTab::commitLineExtensionSession()
         refreshToolbarSummary();
         return true;
     }
-    if (interactiveDrawLineVertices_.size() < 2) {
-        toolbarStatusNote_ = tr("Extend line needs at least one new vertex before completion.");
-        refreshToolbarSummary();
-        return true;
-    }
-
     const QString beforeText = textEditor_->text();
     const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(beforeText, lineExtensionLineNumber_);
-    if (!lineFeature.has_value() || lineFeature->lineVertices.size() < 2) {
+    if (!lineFeature.has_value()) {
         toolbarStatusNote_ = tr("Extend line failed: line geometry could not be resolved.");
         refreshToolbarSummary();
         return true;
     }
 
-    QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
-    if (lineExtensionPrepend_) {
-        QVector<MapGeometryFeature::TH2LineVertex> prependedVertices;
-        prependedVertices.reserve(interactiveDrawLineVertices_.size() - 1);
-        for (int index = interactiveDrawLineVertices_.size() - 1; index >= 1; --index) {
-            MapGeometryFeature::TH2LineVertex lineVertex = draftVertexToLineVertex(interactiveDrawLineVertices_.at(index));
-            lineVertex.incomingControl = interactiveDrawLineVertices_.at(index).outgoingControlSource;
-            lineVertex.outgoingControl = interactiveDrawLineVertices_.at(index).incomingControlSource;
-            prependedVertices.append(lineVertex);
-        }
-        if (interactiveDrawLineVertices_.first().outgoingControlSource.has_value()) {
-            editedVertices[0].incomingControl = interactiveDrawLineVertices_.first().outgoingControlSource;
-        }
-        editedVertices = prependedVertices + editedVertices;
-    } else {
-        if (interactiveDrawLineVertices_.first().outgoingControlSource.has_value()) {
-            editedVertices.last().outgoingControl = interactiveDrawLineVertices_.first().outgoingControlSource;
-        }
-        for (int index = 1; index < interactiveDrawLineVertices_.size(); ++index) {
-            editedVertices.append(draftVertexToLineVertex(interactiveDrawLineVertices_.at(index)));
-        }
+    const MapEditorLineExtensionPlan extensionPlan =
+        MapEditorLineExtensionPlanner::planEdit(lineFeature.value(),
+                                                interactiveDrawLineVertices_,
+                                                lineExtensionPrepend_);
+    if (!extensionPlan.resolved) {
+        toolbarStatusNote_ = extensionPlan.errorMessage.isEmpty()
+            ? tr("Extend line failed.")
+            : extensionPlan.errorMessage;
+        refreshToolbarSummary();
+        return true;
     }
 
-    const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
+    const QStringList coordinateRows = coordinateRowsForLineVertices(extensionPlan.editedVertices,
+                                                                     lineFeature->closed);
     QString errorMessage;
     if (!textEditor_->rewriteLineCoordinateRows(lineExtensionLineNumber_, coordinateRows, &errorMessage)) {
         toolbarStatusNote_ = errorMessage.isEmpty()
@@ -134,7 +108,7 @@ bool MapEditorTab::commitLineExtensionSession()
     }
 
     const int extendedLineNumber = lineExtensionLineNumber_;
-    const int restoredVertexIndex = lineExtensionPrepend_ ? 0 : editedVertices.size() - 1;
+    const int restoredVertexIndex = extensionPlan.restoredVertexIndex;
     recordSourceTextSnapshot(tr("Extend Line"), beforeText, textEditor_->text(), extendedLineNumber);
     const std::optional<MapGeometryFeature> refreshedFeature = lineFeatureForLineNumber(textEditor_->text(), extendedLineNumber);
     const int restoredSourceVertexIndex =

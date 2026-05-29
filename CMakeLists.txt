@@ -348,6 +348,8 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
     src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.cpp
     src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.h
+    src/app/text_editor/map_editor/MapEditorLineExtensionPlanner.cpp
+    src/app/text_editor/map_editor/MapEditorLineExtensionPlanner.h
     src/app/text_editor/map_editor/MapEditorLineSplitPlanner.cpp
     src/app/text_editor/map_editor/MapEditorLineSplitPlanner.h
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
@@ -716,6 +718,15 @@ qt_add_executable(MapEditorLineSplitPlannerTest
 
 target_link_libraries(MapEditorLineSplitPlannerTest PRIVATE therion_core Qt6::Core)
 
+qt_add_executable(MapEditorLineExtensionPlannerTest
+    tests/MapEditorLineExtensionPlannerTest.cpp
+    src/app/text_editor/map_editor/MapEditorLineExtensionPlanner.cpp
+    src/app/text_editor/map_editor/MapEditorLineExtensionPlanner.h
+    src/app/text_editor/map_editor/MapEditorSceneSupport.h
+    src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.h)
+
+target_link_libraries(MapEditorLineExtensionPlannerTest PRIVATE Qt6::Widgets Qt6::Gui)
+
 therion_add_core_unit_test(SessionStoreTest
     tests/SessionStoreTest.cpp)
 
@@ -1061,6 +1072,8 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
     src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.cpp
     src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.h
+    src/app/text_editor/map_editor/MapEditorLineExtensionPlanner.cpp
+    src/app/text_editor/map_editor/MapEditorLineExtensionPlanner.h
     src/app/text_editor/map_editor/MapEditorLineSplitPlanner.cpp
     src/app/text_editor/map_editor/MapEditorLineSplitPlanner.h
     src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
@@ -1168,6 +1181,7 @@ set(THERION_UNIT_TEST_TARGETS
     MapEditorObjectStyleCatalogTest
     MapEditorObjectDeletePlannerTest
     MapEditorObjectDetailsLogicTest
+    MapEditorLineExtensionPlannerTest
     MapEditorLineSplitPlannerTest
     MapEditorObjectMovePlannerTest
     TextEditorDocumentControllerTest

@@ -81,6 +81,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 4 partial: MapEditor selection/inspector insert-mode workflow actions (`handleAdd*`, `handleSelectModeTriggered`, `handleInsertScrapTriggered`, `handleCompleteDraftTriggered`) split from `MapEditorTab.cpp` into `MapEditorTabSelectionInspectorWorkflow.cpp`.
 - [x] Phase 4 partial: MapEditor source-edit orchestration delegates (source-bounds mapping, scene/source coordinate conversion, interactive-draft coordinate-row assembly, interactive-vertex capture/control mutation, and draft commit helpers) split from `MapEditorTab.cpp` into `MapEditorTabSourceEditWorkflow.cpp`.
 - [x] Phase 4 partial: MapEditor event-routing shell flow (`eventFilter`, escape-key cancellation routing, map-editor event-receiver resolution) split from `MapEditorTab.cpp` into `MapEditorTabEventRouting.cpp`; parsed-line cache and interactive line-control lookup were moved into source-edit workflow delegates and the legacy `MapEditorTab.cpp` shell TU was retired.
+- [x] Phase 4 partial: MapEditor line-extension rewrite planning extracted into `MapEditorLineExtensionPlanner` and consumed by `MapEditorTabLineExtension.cpp`, with focused unit coverage for prepend/append control-handle mapping and invalid-input guards.
 - [ ] Phase 4: map editor responsibilities decomposed.
 - [ ] Phase 5: platform and appearance services centralized.
 - [ ] Phase 6: packaging and CI hardening completed.

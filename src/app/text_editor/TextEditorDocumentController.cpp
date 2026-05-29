@@ -1,4 +1,5 @@
 #include "TextEditorDocumentController.h"
+#include "TextEditorDocumentPersistenceStateService.h"
 
 #include "../../core/IFileSystem.h"
 
@@ -53,36 +54,43 @@ bool TextEditorDocumentController::loadFile(const QString &filePath, QString *er
     }
 
     (*context_.filePath) = filePath;
-    (*context_.fileEncodingName) = loadedEncoding.trimmed().isEmpty() ? QStringLiteral("UTF-8") : loadedEncoding.trimmed();
-    (*context_.fileEncodingLabel) = loadedEncodingLabel.isEmpty() ? QStringLiteral("UTF-8") : loadedEncodingLabel;
-    if ((*context_.fileEncodingName).compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
-        (*context_.encodingStatusNote).clear();
-    } else {
-        (*context_.encodingStatusNote) = tr("Opened as %1. Save keeps this encoding unless you convert to UTF-8.")
-                                          .arg((*context_.fileEncodingLabel));
-    }
     (*context_.loading) = true;
     context_.editor->setPlainText(contents);
     (*context_.loading) = false;
     const QTextCursor cursor = context_.editor->textCursor();
-    (*context_.currentLineNumber) = cursor.blockNumber() + 1;
-    (*context_.currentColumnNumber) = cursor.positionInBlock() + 1;
-    (*context_.highlightedLineNumber) = (*context_.currentLineNumber);
-    (*context_.cleanTextSnapshot) = context_.editor->toPlainText();
-    (*context_.cleanEncodingNameSnapshot) = (*context_.fileEncodingName);
+
+    TextEditorDocumentPersistenceStateService::LoadStateInput loadInput;
+    loadInput.filePath = filePath;
+    loadInput.textContents = context_.editor->toPlainText();
+    loadInput.loadedEncodingName = loadedEncoding;
+    loadInput.loadedEncodingLabel = loadedEncodingLabel;
+    loadInput.cursorLineNumber = cursor.blockNumber() + 1;
+    loadInput.cursorColumnNumber = cursor.positionInBlock() + 1;
+    loadInput.blocksModeActive = *context_.blocksModeActive;
+    loadInput.blocksModeSupportedForCurrentFile = !context_.isBlocksModeSupportedForCurrentFile
+        || context_.isBlocksModeSupportedForCurrentFile();
+    loadInput.openedEncodingStatusTemplate = tr("Opened as %1. Save keeps this encoding unless you convert to UTF-8.");
+    const auto loadUpdate = TextEditorDocumentPersistenceStateService::buildLoadStateUpdate(loadInput);
+
+    (*context_.filePath) = loadUpdate.filePath;
+    (*context_.fileEncodingName) = loadUpdate.fileEncodingName;
+    (*context_.fileEncodingLabel) = loadUpdate.fileEncodingLabel;
+    (*context_.encodingStatusNote) = loadUpdate.encodingStatusNote;
+    (*context_.currentLineNumber) = loadUpdate.currentLineNumber;
+    (*context_.currentColumnNumber) = loadUpdate.currentColumnNumber;
+    (*context_.highlightedLineNumber) = loadUpdate.highlightedLineNumber;
+    (*context_.cleanTextSnapshot) = loadUpdate.cleanTextSnapshot;
+    (*context_.cleanEncodingNameSnapshot) = loadUpdate.cleanEncodingNameSnapshot;
     context_.editor->document()->setModified(false);
-    (*context_.dirty) = false;
+    (*context_.dirty) = loadUpdate.dirty;
     if (context_.refreshBlocksModeAvailability) {
         context_.refreshBlocksModeAvailability();
     }
-    if ((*context_.blocksModeActive)
-        && context_.isBlocksModeSupportedForCurrentFile
-        && !context_.isBlocksModeSupportedForCurrentFile()
-        && context_.setBlocksModeActive) {
+    if (loadUpdate.disableBlocksMode && context_.setBlocksModeActive) {
         context_.setBlocksModeActive(false);
     }
-    (*context_.blockDetailsSelectedLineNumber) = 0;
-    (*context_.blockDetailsSelectedKind).clear();
+    (*context_.blockDetailsSelectedLineNumber) = loadUpdate.blockDetailsSelectedLineNumber;
+    (*context_.blockDetailsSelectedKind) = loadUpdate.blockDetailsSelectedKind;
     if (context_.rebuildBlocksCanvasFromText) {
         context_.rebuildBlocksCanvasFromText();
     }
@@ -136,15 +144,18 @@ bool TextEditorDocumentController::save(QString *errorMessage)
         return false;
     }
 
-    (*context_.cleanTextSnapshot) = context_.editor->toPlainText();
-    (*context_.cleanEncodingNameSnapshot) = (*context_.fileEncodingName);
+    TextEditorDocumentPersistenceStateService::SaveStateInput saveInput;
+    saveInput.textContents = context_.editor->toPlainText();
+    saveInput.fileEncodingName = (*context_.fileEncodingName);
+    saveInput.fileEncodingLabel = (*context_.fileEncodingLabel);
+    saveInput.savedEncodingStatusTemplate = tr("Saved using %1 encoding.");
+    const auto saveUpdate = TextEditorDocumentPersistenceStateService::buildSaveStateUpdate(saveInput);
+
+    (*context_.cleanTextSnapshot) = saveUpdate.cleanTextSnapshot;
+    (*context_.cleanEncodingNameSnapshot) = saveUpdate.cleanEncodingNameSnapshot;
     context_.editor->document()->setModified(false);
-    (*context_.dirty) = false;
-    if ((*context_.fileEncodingName).compare(QStringLiteral("UTF-8"), Qt::CaseInsensitive) == 0) {
-        (*context_.encodingStatusNote).clear();
-    } else {
-        (*context_.encodingStatusNote) = tr("Saved using %1 encoding.").arg((*context_.fileEncodingLabel));
-    }
+    (*context_.dirty) = saveUpdate.dirty;
+    (*context_.encodingStatusNote) = saveUpdate.encodingStatusNote;
     if (context_.refreshTitle) {
         context_.refreshTitle();
     }

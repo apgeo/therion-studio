@@ -284,6 +284,8 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/TextEditorCursorController.h
     src/app/text_editor/TextEditorDocumentController.cpp
     src/app/text_editor/TextEditorDocumentController.h
+    src/app/text_editor/TextEditorDocumentPersistenceStateService.cpp
+    src/app/text_editor/TextEditorDocumentPersistenceStateService.h
     src/app/text_editor/TextEditorEncodingController.cpp
     src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
@@ -950,9 +952,18 @@ therion_add_text_editor_ui_test(TextEditorCompletionHighlightTest
 qt_add_executable(TextEditorDocumentControllerTest
     tests/TextEditorDocumentControllerTest.cpp
     src/app/text_editor/TextEditorDocumentController.cpp
-    src/app/text_editor/TextEditorDocumentController.h)
+    src/app/text_editor/TextEditorDocumentController.h
+    src/app/text_editor/TextEditorDocumentPersistenceStateService.cpp
+    src/app/text_editor/TextEditorDocumentPersistenceStateService.h)
 
 target_link_libraries(TextEditorDocumentControllerTest PRIVATE therion_core Qt6::Widgets)
+
+qt_add_executable(TextEditorDocumentPersistenceStateServiceTest
+    tests/TextEditorDocumentPersistenceStateServiceTest.cpp
+    src/app/text_editor/TextEditorDocumentPersistenceStateService.cpp
+    src/app/text_editor/TextEditorDocumentPersistenceStateService.h)
+
+target_link_libraries(TextEditorDocumentPersistenceStateServiceTest PRIVATE therion_core Qt6::Core)
 
 set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
@@ -1086,6 +1097,7 @@ set(THERION_UNIT_TEST_TARGETS
     MapEditorLineSplitPlannerTest
     MapEditorObjectMovePlannerTest
     TextEditorDocumentControllerTest
+    TextEditorDocumentPersistenceStateServiceTest
     ProjectStructureScannerTest
     SessionStoreTest
     MainWindowSessionDocumentControllerTest

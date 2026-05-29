@@ -73,6 +73,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 3 partial: TextEditorTab text/mode interaction orchestration (`handleTextChanged`, mode requests, mode-selector visibility wiring) extracted into `TextEditorTabInteractionController` with focused unit coverage.
 - [x] Phase 3 partial: TextEditorTab document/mode delegate implementation split into `TextEditorTabDocumentModeDelegates.cpp` to keep the tab shell focused and reduce monolithic translation-unit coupling.
 - [x] Phase 3 partial: TextEditorTab bootstrap/build flow (`buildAll`) split into `TextEditorTabBootstrap.cpp` and document-context assembly isolated behind `buildDocumentContext()` to reduce shell-level orchestration coupling.
+- [x] Phase 3 partial: TextEditorTab status/cursor/document-state delegates (title/status refresh, dirty-state apply, cursor/status accessors) split into `TextEditorTabStatusCursorDelegates.cpp` to keep shell-level orchestration localized.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.
 - [ ] Phase 5: platform and appearance services centralized.

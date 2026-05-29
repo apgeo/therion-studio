@@ -403,6 +403,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTabBootstrap.cpp
     src/app/text_editor/TextEditorTabDocumentModeDelegates.cpp
+    src/app/text_editor/TextEditorTabStatusCursorDelegates.cpp
     src/app/text_editor/TextEditorTabCompletionFacade.cpp
     src/app/text_editor/TextEditorTabAppearanceController.cpp
     src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
@@ -916,6 +917,7 @@ set(THERION_TEXT_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTabBootstrap.cpp
     src/app/text_editor/TextEditorTabDocumentModeDelegates.cpp
+    src/app/text_editor/TextEditorTabStatusCursorDelegates.cpp
     src/app/text_editor/TextEditorTabCompletionFacade.cpp
     src/app/text_editor/TextEditorTabAppearanceController.cpp
     src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp

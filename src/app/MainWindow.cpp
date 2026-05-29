@@ -54,6 +54,7 @@
 #include "text_editor/map_editor/MapEditorTab.h"
 #include "MainWindowDocumentHelpers.h"
 #include "MainWindowDocumentController.h"
+#include "MainWindowDocumentOpenController.h"
 #include "MainWindowHelpDialog.h"
 #include "MainWindowSessionDocumentController.h"
 #include "MainWindowSessionController.h"
@@ -336,9 +337,7 @@ void applyThinSplitterStyle(QSplitter *splitter, const QString &objectName)
 
 QString canonicalDocumentPath(const QString &filePath)
 {
-    const QFileInfo fileInfo(filePath);
-    const QString canonical = fileInfo.canonicalFilePath();
-    return canonical.isEmpty() ? fileInfo.absoluteFilePath() : canonical;
+    return TherionStudio::MainWindowDocumentOpenController::canonicalDocumentPath(filePath);
 }
 
 class DetachedMapWindow final : public QMainWindow
@@ -1502,17 +1501,18 @@ void MainWindow::refreshProjectBrowserView(const QString &focusPath)
 void MainWindow::openCurrentDocumentInMapEditor()
 {
     QWidget *tabWidget = currentDocumentWidget();
-    if (tabWidget == nullptr) {
+    const auto plan = TherionStudio::MainWindowDocumentOpenController::planOpenCurrentDocumentInMap(
+        tabWidget != nullptr,
+        documentPathForWidget(tabWidget));
+    if (plan.action == TherionStudio::MainWindowDocumentOpenController::OpenCurrentInMapAction::NoActiveDocument) {
         return;
     }
-
-    const QString filePath = documentPathForWidget(tabWidget);
-    if (!filePath.endsWith(QStringLiteral(".th2"), Qt::CaseInsensitive)) {
+    if (plan.action == TherionStudio::MainWindowDocumentOpenController::OpenCurrentInMapAction::UnsupportedDocument) {
         QMessageBox::information(this, tr("Open in Map Editor"), tr("Open a .th2 document first."));
         return;
     }
 
-    openMapEditorTab(filePath);
+    openMapEditorTab(plan.documentPath);
 }
 
 QString MainWindow::structureOverrideKey(const QString &sourceFile, int lineNumber) const
@@ -1642,24 +1642,44 @@ void MainWindow::showFindBar(bool replaceMode)
 
 TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, bool showUnsupportedPrompt)
 {
-    const QString canonicalPath = canonicalDocumentPath(filePath);
-    if (!isSupportedTextEditorFilePath(canonicalPath)) {
+    QList<TherionStudio::MainWindowDocumentOpenController::IndexedDocumentPath> attachedTextTabs;
+    attachedTextTabs.reserve(editorTabs_->count());
+    for (int index = 0; index < editorTabs_->count(); ++index) {
+        auto *existingTab = qobject_cast<TherionStudio::TextEditorTab *>(editorTabs_->widget(index));
+        if (existingTab == nullptr) {
+            continue;
+        }
+
+        TherionStudio::MainWindowDocumentOpenController::IndexedDocumentPath entry;
+        entry.index = index;
+        entry.documentPath = existingTab->filePath();
+        attachedTextTabs.append(entry);
+    }
+
+    const auto openPlan = TherionStudio::MainWindowDocumentOpenController::planOpenTextTab(
+        filePath,
+        isSupportedTextEditorFilePath(canonicalDocumentPath(filePath)),
+        attachedTextTabs);
+    const QString canonicalPath = openPlan.canonicalPath;
+    if (openPlan.action == TherionStudio::MainWindowDocumentOpenController::OpenTextTabAction::UnsupportedDocument) {
         if (showUnsupportedPrompt) {
             showUnsupportedFilePrompt(this, canonicalPath);
         }
         return nullptr;
     }
 
-    for (int index = 0; index < editorTabs_->count(); ++index) {
-        auto *existingTab = qobject_cast<TherionStudio::TextEditorTab *>(editorTabs_->widget(index));
-        if (existingTab != nullptr && existingTab->filePath() == canonicalPath) {
-            existingTab->setProjectRootPath(projectRootPath_);
-            existingTab->setModeSelectorVisible(false);
-            editorTabs_->setCurrentIndex(index);
-            refreshDocumentStatusWidgets();
-            refreshWorkspaceModeSwitcher();
-            return existingTab;
+    if (openPlan.action == TherionStudio::MainWindowDocumentOpenController::OpenTextTabAction::ReuseAttachedTab) {
+        auto *existingTab = qobject_cast<TherionStudio::TextEditorTab *>(editorTabs_->widget(openPlan.reuseTabIndex));
+        if (existingTab == nullptr) {
+            return nullptr;
         }
+
+        existingTab->setProjectRootPath(projectRootPath_);
+        existingTab->setModeSelectorVisible(false);
+        editorTabs_->setCurrentIndex(openPlan.reuseTabIndex);
+        refreshDocumentStatusWidgets();
+        refreshWorkspaceModeSwitcher();
+        return existingTab;
     }
 
     auto *tab = new TherionStudio::TextEditorTab(fileSystem_, commandCatalogStore_);
@@ -1770,9 +1790,41 @@ void MainWindow::connectMapEditorTabUiSignals(TherionStudio::MapEditorTab *tab)
 
 TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePath)
 {
-    const QString canonicalPath = canonicalDocumentPath(filePath);
+    QStringList detachedMapDocumentPaths;
+    for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
+        if (detachedTab == nullptr) {
+            continue;
+        }
 
-    if (auto *detachedTab = detachedMapEditorTabForPath(canonicalPath); detachedTab != nullptr) {
+        detachedMapDocumentPaths.append(detachedTab->filePath());
+    }
+
+    QList<TherionStudio::MainWindowDocumentOpenController::IndexedDocumentPath> attachedMapTabs;
+    attachedMapTabs.reserve(editorTabs_->count());
+    for (int index = 0; index < editorTabs_->count(); ++index) {
+        auto *existingTab = qobject_cast<TherionStudio::MapEditorTab *>(editorTabs_->widget(index));
+        if (existingTab == nullptr) {
+            continue;
+        }
+
+        TherionStudio::MainWindowDocumentOpenController::IndexedDocumentPath entry;
+        entry.index = index;
+        entry.documentPath = existingTab->filePath();
+        attachedMapTabs.append(entry);
+    }
+
+    const auto openPlan = TherionStudio::MainWindowDocumentOpenController::planOpenMapTab(
+        filePath,
+        detachedMapDocumentPaths,
+        attachedMapTabs);
+    const QString canonicalPath = openPlan.canonicalPath;
+
+    if (openPlan.action == TherionStudio::MainWindowDocumentOpenController::OpenMapTabAction::FocusDetachedTab) {
+        auto *detachedTab = detachedMapEditorTabForPath(canonicalPath);
+        if (detachedTab == nullptr) {
+            return nullptr;
+        }
+
         detachedTab->setProjectRootPath(projectRootPath_);
         detachedTab->setInlineWorkspaceModeSelectorVisible(true);
         focusDetachedMapEditorTab(canonicalPath);
@@ -1781,17 +1833,19 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         return detachedTab;
     }
 
-    for (int index = 0; index < editorTabs_->count(); ++index) {
-        auto *existingTab = qobject_cast<TherionStudio::MapEditorTab *>(editorTabs_->widget(index));
-        if (existingTab != nullptr && existingTab->filePath() == canonicalPath) {
-            existingTab->setProjectRootPath(projectRootPath_);
-            existingTab->setInlineWorkspaceModeSelectorVisible(false);
-            editorTabs_->setCurrentIndex(index);
-            connectMapEditorTabUiSignals(existingTab);
-            refreshDocumentStatusWidgets();
-            refreshWorkspaceModeSwitcher();
-            return existingTab;
+    if (openPlan.action == TherionStudio::MainWindowDocumentOpenController::OpenMapTabAction::ReuseAttachedTab) {
+        auto *existingTab = qobject_cast<TherionStudio::MapEditorTab *>(editorTabs_->widget(openPlan.reuseTabIndex));
+        if (existingTab == nullptr) {
+            return nullptr;
         }
+
+        existingTab->setProjectRootPath(projectRootPath_);
+        existingTab->setInlineWorkspaceModeSelectorVisible(false);
+        editorTabs_->setCurrentIndex(openPlan.reuseTabIndex);
+        connectMapEditorTabUiSignals(existingTab);
+        refreshDocumentStatusWidgets();
+        refreshWorkspaceModeSwitcher();
+        return existingTab;
     }
 
     auto *tab = new TherionStudio::MapEditorTab(fileSystem_, *sessionStore_, commandCatalogStore_);

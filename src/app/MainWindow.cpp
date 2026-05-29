@@ -16,7 +16,6 @@
 #include <QIcon>
 #include <QVBoxLayout>
 #include <QCloseEvent>
-#include <QStandardPaths>
 #include <QLabel>
 #include <QMessageBox>
 #include <QMenu>
@@ -58,6 +57,7 @@
 #include "MainWindowDocumentHelpers.h"
 #include "MainWindowHelpDialog.h"
 #include "MainWindowSessionDocumentService.h"
+#include "MainWindowSessionProjectService.h"
 #include "../core/SessionStore.h"
 
 namespace
@@ -268,31 +268,6 @@ QString structureNameOverridesToJson(const QHash<QString, QString> &overrides)
     }
 
     return QString::fromUtf8(QJsonDocument(rootObject).toJson(QJsonDocument::Compact));
-}
-
-bool isProtectedMacUserFolder(const QString &path)
-{
-    const QString canonicalPath = QDir(path).absolutePath();
-    const QStringList protectedRoots = {
-        QStandardPaths::writableLocation(QStandardPaths::DesktopLocation),
-        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
-        QStandardPaths::writableLocation(QStandardPaths::PicturesLocation),
-        QStandardPaths::writableLocation(QStandardPaths::MoviesLocation),
-        QStandardPaths::writableLocation(QStandardPaths::MusicLocation),
-        QStandardPaths::writableLocation(QStandardPaths::DownloadLocation)};
-
-    for (const QString &protectedRoot : protectedRoots) {
-        if (protectedRoot.isEmpty()) {
-            continue;
-        }
-
-        const QString normalizedProtectedRoot = QDir(protectedRoot).absolutePath();
-        if (canonicalPath == normalizedProtectedRoot || canonicalPath.startsWith(normalizedProtectedRoot + QLatin1Char('/'))) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 constexpr auto kWelcomeTabPropertyName = "therionStudioWelcomeTab";
@@ -1173,17 +1148,20 @@ void MainWindow::restoreSessionState()
     }
     ensureUsableMainWindowSize(this);
 
-    const QString lastProjectPath = sessionStore_->lastProjectPath();
-    if (!lastProjectPath.isEmpty() && QDir(lastProjectPath).exists() && !isProtectedMacUserFolder(lastProjectPath)) {
-        projectRootPath_ = lastProjectPath;
+    const TherionStudio::MainWindowSessionProjectService::ProjectRestoreDecision restoreProjectDecision =
+        TherionStudio::MainWindowSessionProjectService::decideProjectRestore(sessionStore_->lastProjectPath());
+    if (restoreProjectDecision.status == TherionStudio::MainWindowSessionProjectService::ProjectRestoreStatus::Restored) {
+        projectRootPath_ = restoreProjectDecision.projectPath;
         projectModel_->setRootPath(projectRootPath_);
         projectTree_->setRootIndex(projectModel_->index(projectRootPath_));
         appendConsoleLine(tr("Restored project root %1").arg(projectRootPath_));
         loadStructureNameOverrides();
         syncOpenDocumentsToProjectRoot();
         rebuildStructureSidebar();
-    } else if (!lastProjectPath.isEmpty() && QDir(lastProjectPath).exists()) {
-        appendConsoleLine(tr("Skipped automatic project restore for protected folder %1").arg(lastProjectPath));
+    } else if (restoreProjectDecision.status
+               == TherionStudio::MainWindowSessionProjectService::ProjectRestoreStatus::SkippedProtectedFolder) {
+        appendConsoleLine(tr("Skipped automatic project restore for protected folder %1")
+                              .arg(restoreProjectDecision.projectPath));
     }
 
     refreshTherionConfigDisplay();
@@ -1218,7 +1196,8 @@ void MainWindow::restoreOpenDocuments()
 
     for (const auto &entry : restoreEntries) {
         const QString &documentPath = entry.filePath;
-        if (documentPath.isEmpty() || isProtectedMacUserFolder(documentPath)) {
+        if (documentPath.isEmpty()
+            || TherionStudio::MainWindowSessionProjectService::isProtectedMacUserFolder(documentPath)) {
             continue;
         }
 

@@ -148,6 +148,9 @@ validates install layout and artifact naming, and uploads:
 - `TherionStudio-<package_label>-Linux-x86_64.AppImage`
 - `TherionStudio-Linux-artifacts-manifest.json` (SHA256 + build metadata)
 
+The same workflow also runs a follow-up smoke job in an `ubuntu:26.04` container that installs
+the produced `.deb`, verifies installed paths, and performs an offscreen launch sanity check.
+
 Regular CI still validates distribution Qt source builds on Ubuntu 24.04 and Ubuntu 26.04;
 Ubuntu 26.04 runs in an official Ubuntu container image until GitHub provides a hosted runner
 label for it.

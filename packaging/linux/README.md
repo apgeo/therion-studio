@@ -22,6 +22,13 @@ Both are built by the manual GitHub Actions workflow:
 
 The manifest includes file names, sizes, and SHA256 checksums.
 
+After artifact creation, the workflow runs a Debian/Ubuntu forward-compatibility smoke check:
+
+- launches an `ubuntu:26.04` container
+- installs the generated `.deb`
+- verifies expected installed paths
+- performs an offscreen app launch sanity check
+
 ## Build Notes
 
 - `.deb` generation uses CPack DEB configuration from `CMakeLists.txt`.

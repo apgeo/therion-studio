@@ -139,3 +139,60 @@ jobs:
             ${{ steps.verify_linux_artifacts.outputs.appimage_path }}
             ${{ steps.verify_linux_artifacts.outputs.manifest_path }}
           if-no-files-found: error
+
+  smoke-ubuntu-26:
+    name: Smoke test .deb on Ubuntu 26.04
+    needs: package
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:26.04
+
+    steps:
+      - name: Install smoke-test dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            ca-certificates \
+            coreutils \
+            file
+
+      - name: Download Linux package artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: TherionStudio-Linux-packages
+          path: /tmp/therion-linux-packages
+
+      - name: Install .deb package
+        shell: bash
+        run: |
+          set -euo pipefail
+          deb_path="$(find /tmp/therion-linux-packages -maxdepth 1 -type f -name '*.deb' | head -n1)"
+          if [[ -z "$deb_path" ]]; then
+            echo "No .deb artifact found in /tmp/therion-linux-packages"
+            ls -la /tmp/therion-linux-packages || true
+            exit 1
+          fi
+          apt-get install -y "$deb_path"
+
+      - name: Verify installed paths
+        run: |
+          test -x /usr/bin/TherionStudio
+          test -f /usr/share/applications/therion-studio.desktop
+          test -f /usr/share/icons/hicolor/256x256/apps/therion-studio.png
+
+      - name: Launch smoke test (offscreen)
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          QT_QPA_PLATFORM=offscreen timeout 10s /usr/bin/TherionStudio -platform offscreen >/tmp/therion-studio-launch.log 2>&1
+          exit_code=$?
+          set -e
+          if [[ "$exit_code" -ne 0 && "$exit_code" -ne 124 ]]; then
+            echo "TherionStudio launch failed with exit code $exit_code"
+            cat /tmp/therion-studio-launch.log
+            exit "$exit_code"
+          fi
+          if [[ "$exit_code" -eq 124 ]]; then
+            echo "TherionStudio started successfully (terminated by timeout as expected)."
+          fi

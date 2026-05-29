@@ -104,6 +104,9 @@ TherionStudio-<package_label>-Linux-x86_64.AppImage
 TherionStudio-Linux-artifacts-manifest.json
 ```
 
+The workflow includes a follow-up Ubuntu 26.04 container smoke job that installs the generated
+`.deb` and performs an offscreen launch sanity check.
+
 ## 7. Publish GitHub Release
 
 1. Create GitHub Release for tag `v2026.5.1`.

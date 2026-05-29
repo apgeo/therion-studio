@@ -47,6 +47,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 2 partial: open-document active-path precedence for session persistence extracted from `MainWindow` into `MainWindowSessionDocumentService` with focused app-unit coverage.
 - [x] Phase 2 partial: automatic project-restore decision and protected-folder guard extracted from `MainWindow` into `MainWindowSessionProjectService` with focused app-unit coverage.
 - [x] Phase 2 partial: session state persistence writes extracted from `MainWindow` into `MainWindowSessionStateService` with focused app-unit coverage.
+- [x] Phase 2 partial: structure-name override JSON parse/serialize extracted from `MainWindow` into `MainWindowStructureNameOverridesService` with focused app-unit coverage.
 - [ ] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.
@@ -650,7 +651,7 @@ Recommended extraction order:
 Actions:
 
 - Move open/save/reload tab workflows into `DocumentManager`.
-- Move session restore/save decisions into `SessionController`; incremental slices are in place via `MainWindowSessionDocumentService` (session document restore-target planning, open-document path persistence merging, and active-document precedence decisions), `MainWindowSessionProjectService` (automatic project-restore decision and protected-folder restore guard), and `MainWindowSessionStateService` (session state persistence writes).
+- Move session restore/save decisions into `SessionController`; incremental slices are in place via `MainWindowSessionDocumentService` (session document restore-target planning, open-document path persistence merging, and active-document precedence decisions), `MainWindowSessionProjectService` (automatic project-restore decision and protected-folder restore guard), `MainWindowSessionStateService` (session state persistence writes), and `MainWindowStructureNameOverridesService` (structure-name override JSON parse/serialize).
 - Move structure-browser scanning and status updates into `ProjectStructureController`.
 - Move external Therion execution into `TherionRunnerController` using an injected process runner.
 - Keep dialogs and menu/action creation in `MainWindow`.

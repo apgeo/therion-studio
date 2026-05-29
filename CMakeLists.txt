@@ -111,6 +111,8 @@ set(THERION_APP_SOURCES
     src/app/MainWindowSessionProjectService.h
     src/app/MainWindowSessionStateService.cpp
     src/app/MainWindowSessionStateService.h
+    src/app/MainWindowStructureNameOverridesService.cpp
+    src/app/MainWindowStructureNameOverridesService.h
     src/app/ProjectStructureScanner.cpp
     src/app/ProjectStructureScanner.h
     src/app/TherionExecutableSelectionController.cpp
@@ -695,6 +697,9 @@ therion_add_app_unit_test(MainWindowSessionProjectServiceTest
 
 therion_add_app_unit_test(MainWindowSessionStateServiceTest
     tests/MainWindowSessionStateServiceTest.cpp)
+
+therion_add_app_unit_test(MainWindowStructureNameOverridesServiceTest
+    tests/MainWindowStructureNameOverridesServiceTest.cpp)
 
 set(THERION_EDITOR_UI_TEST_BASE_SOURCES
     src/app/text_editor/ContextHelpController.cpp

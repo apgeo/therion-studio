@@ -45,8 +45,6 @@
 #include <QVariant>
 #include <QWidget>
 #include <QResizeEvent>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QSignalBlocker>
 #include <functional>
 #include <utility>
@@ -59,6 +57,7 @@
 #include "MainWindowSessionDocumentService.h"
 #include "MainWindowSessionProjectService.h"
 #include "MainWindowSessionStateService.h"
+#include "MainWindowStructureNameOverridesService.h"
 #include "../core/SessionStore.h"
 
 namespace
@@ -236,39 +235,6 @@ void showUnsupportedFilePrompt(QWidget *parent, const QString &filePath)
     if (messageBox.clickedButton() == openExternalButton) {
         openFileExternally(parent, filePath);
     }
-}
-
-QHash<QString, QString> loadStructureNameOverridesFromJson(const QString &json)
-{
-    QHash<QString, QString> overrides;
-    if (json.trimmed().isEmpty()) {
-        return overrides;
-    }
-
-    const QJsonDocument document = QJsonDocument::fromJson(json.toUtf8());
-    if (!document.isObject()) {
-        return overrides;
-    }
-
-    const QJsonObject rootObject = document.object();
-    for (auto iterator = rootObject.begin(); iterator != rootObject.end(); ++iterator) {
-        const QString name = iterator.value().toString().trimmed();
-        if (!name.isEmpty()) {
-            overrides.insert(iterator.key(), name);
-        }
-    }
-
-    return overrides;
-}
-
-QString structureNameOverridesToJson(const QHash<QString, QString> &overrides)
-{
-    QJsonObject rootObject;
-    for (auto iterator = overrides.constBegin(); iterator != overrides.constEnd(); ++iterator) {
-        rootObject.insert(iterator.key(), iterator.value());
-    }
-
-    return QString::fromUtf8(QJsonDocument(rootObject).toJson(QJsonDocument::Compact));
 }
 
 constexpr auto kWelcomeTabPropertyName = "therionStudioWelcomeTab";
@@ -1181,7 +1147,8 @@ void MainWindow::persistSessionState()
     snapshot.therionArguments = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text().trimmed() : QString();
     snapshot.therionRunTargetMode = therionRunTargetMode();
     snapshot.therionTargetConfigPath = therionTargetConfigEdit_ != nullptr ? therionTargetConfigEdit_->text().trimmed() : QString();
-    snapshot.structureNameOverridesJson = structureNameOverridesToJson(structureNameOverrides_);
+    snapshot.structureNameOverridesJson =
+        TherionStudio::MainWindowStructureNameOverridesService::serialize(structureNameOverrides_);
     TherionStudio::MainWindowSessionStateService::persistMainWindowState(*sessionStore_, snapshot);
     persistOpenDocuments();
 }
@@ -1562,7 +1529,8 @@ QString MainWindow::structureOverrideKey(const QString &sourceFile, int lineNumb
 
 void MainWindow::loadStructureNameOverrides()
 {
-    structureNameOverrides_ = loadStructureNameOverridesFromJson(sessionStore_->structureNameOverrides());
+    structureNameOverrides_ = TherionStudio::MainWindowStructureNameOverridesService::parse(
+        sessionStore_->structureNameOverrides());
 }
 
 void MainWindow::saveActiveDocument()

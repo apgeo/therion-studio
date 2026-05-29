@@ -1,5 +1,6 @@
 #include "TextEditorDocumentController.h"
 #include "TextEditorDocumentPersistenceStateService.h"
+#include "TextEditorDocumentWorkflowController.h"
 
 #include "../../core/IFileSystem.h"
 
@@ -83,38 +84,21 @@ bool TextEditorDocumentController::loadFile(const QString &filePath, QString *er
     (*context_.cleanEncodingNameSnapshot) = loadUpdate.cleanEncodingNameSnapshot;
     context_.editor->document()->setModified(false);
     (*context_.dirty) = loadUpdate.dirty;
-    if (context_.refreshBlocksModeAvailability) {
-        context_.refreshBlocksModeAvailability();
-    }
-    if (loadUpdate.disableBlocksMode && context_.setBlocksModeActive) {
-        context_.setBlocksModeActive(false);
-    }
     (*context_.blockDetailsSelectedLineNumber) = loadUpdate.blockDetailsSelectedLineNumber;
     (*context_.blockDetailsSelectedKind) = loadUpdate.blockDetailsSelectedKind;
-    if (context_.rebuildBlocksCanvasFromText) {
-        context_.rebuildBlocksCanvasFromText();
-    }
-    if (context_.clearBlockDetailsPane) {
-        context_.clearBlockDetailsPane();
-    }
-    if (context_.populateBlockToolbox) {
-        context_.populateBlockToolbox();
-    }
-    if (context_.refreshEditorModeUi) {
-        context_.refreshEditorModeUi();
-    }
-    if (context_.refreshTitle) {
-        context_.refreshTitle();
-    }
-    if (context_.refreshCurrentLineHighlight) {
-        context_.refreshCurrentLineHighlight();
-    }
-    if (context_.dirtyStateChanged) {
-        context_.dirtyStateChanged(false);
-    }
-    if (context_.updateContextHelp) {
-        context_.updateContextHelp();
-    }
+
+    TextEditorDocumentWorkflowController::LoadActions loadActions;
+    loadActions.refreshBlocksModeAvailability = context_.refreshBlocksModeAvailability;
+    loadActions.setBlocksModeActive = context_.setBlocksModeActive;
+    loadActions.rebuildBlocksCanvasFromText = context_.rebuildBlocksCanvasFromText;
+    loadActions.clearBlockDetailsPane = context_.clearBlockDetailsPane;
+    loadActions.populateBlockToolbox = context_.populateBlockToolbox;
+    loadActions.refreshEditorModeUi = context_.refreshEditorModeUi;
+    loadActions.refreshTitle = context_.refreshTitle;
+    loadActions.refreshCurrentLineHighlight = context_.refreshCurrentLineHighlight;
+    loadActions.dirtyStateChanged = context_.dirtyStateChanged;
+    loadActions.updateContextHelp = context_.updateContextHelp;
+    TextEditorDocumentWorkflowController::runPostLoadWorkflow(loadUpdate.disableBlocksMode, loadActions);
     return true;
 }
 
@@ -156,12 +140,10 @@ bool TextEditorDocumentController::save(QString *errorMessage)
     context_.editor->document()->setModified(false);
     (*context_.dirty) = saveUpdate.dirty;
     (*context_.encodingStatusNote) = saveUpdate.encodingStatusNote;
-    if (context_.refreshTitle) {
-        context_.refreshTitle();
-    }
-    if (context_.dirtyStateChanged) {
-        context_.dirtyStateChanged(false);
-    }
+    TextEditorDocumentWorkflowController::SaveActions saveActions;
+    saveActions.refreshTitle = context_.refreshTitle;
+    saveActions.dirtyStateChanged = context_.dirtyStateChanged;
+    TextEditorDocumentWorkflowController::runPostSaveWorkflow(saveActions);
     return true;
 }
 
@@ -172,8 +154,8 @@ void TextEditorDocumentController::setProjectRootPath(const QString &projectRoot
     }
 
     (*context_.projectRootPath) = projectRootPath;
-    if (context_.refreshStatus) {
-        context_.refreshStatus();
-    }
+    TextEditorDocumentWorkflowController::ProjectRootActions actions;
+    actions.refreshStatus = context_.refreshStatus;
+    TextEditorDocumentWorkflowController::runPostProjectRootSetWorkflow(actions);
 }
 }

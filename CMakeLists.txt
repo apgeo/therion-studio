@@ -286,6 +286,8 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/TextEditorDocumentController.h
     src/app/text_editor/TextEditorDocumentPersistenceStateService.cpp
     src/app/text_editor/TextEditorDocumentPersistenceStateService.h
+    src/app/text_editor/TextEditorDocumentWorkflowController.cpp
+    src/app/text_editor/TextEditorDocumentWorkflowController.h
     src/app/text_editor/TextEditorEncodingController.cpp
     src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
@@ -859,6 +861,10 @@ set(THERION_EDITOR_UI_TEST_BASE_SOURCES
     src/app/text_editor/TextEditorCursorController.h
     src/app/text_editor/TextEditorDocumentController.cpp
     src/app/text_editor/TextEditorDocumentController.h
+    src/app/text_editor/TextEditorDocumentPersistenceStateService.cpp
+    src/app/text_editor/TextEditorDocumentPersistenceStateService.h
+    src/app/text_editor/TextEditorDocumentWorkflowController.cpp
+    src/app/text_editor/TextEditorDocumentWorkflowController.h
     src/app/text_editor/TextEditorEncodingController.cpp
     src/app/text_editor/TextEditorEncodingController.h
     src/app/text_editor/TextEditorAppearanceController.cpp
@@ -954,7 +960,9 @@ qt_add_executable(TextEditorDocumentControllerTest
     src/app/text_editor/TextEditorDocumentController.cpp
     src/app/text_editor/TextEditorDocumentController.h
     src/app/text_editor/TextEditorDocumentPersistenceStateService.cpp
-    src/app/text_editor/TextEditorDocumentPersistenceStateService.h)
+    src/app/text_editor/TextEditorDocumentPersistenceStateService.h
+    src/app/text_editor/TextEditorDocumentWorkflowController.cpp
+    src/app/text_editor/TextEditorDocumentWorkflowController.h)
 
 target_link_libraries(TextEditorDocumentControllerTest PRIVATE therion_core Qt6::Widgets)
 
@@ -964,6 +972,13 @@ qt_add_executable(TextEditorDocumentPersistenceStateServiceTest
     src/app/text_editor/TextEditorDocumentPersistenceStateService.h)
 
 target_link_libraries(TextEditorDocumentPersistenceStateServiceTest PRIVATE therion_core Qt6::Core)
+
+qt_add_executable(TextEditorDocumentWorkflowControllerTest
+    tests/TextEditorDocumentWorkflowControllerTest.cpp
+    src/app/text_editor/TextEditorDocumentWorkflowController.cpp
+    src/app/text_editor/TextEditorDocumentWorkflowController.h)
+
+target_link_libraries(TextEditorDocumentWorkflowControllerTest PRIVATE therion_core Qt6::Core)
 
 set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
@@ -1098,6 +1113,7 @@ set(THERION_UNIT_TEST_TARGETS
     MapEditorObjectMovePlannerTest
     TextEditorDocumentControllerTest
     TextEditorDocumentPersistenceStateServiceTest
+    TextEditorDocumentWorkflowControllerTest
     ProjectStructureScannerTest
     SessionStoreTest
     MainWindowSessionDocumentControllerTest

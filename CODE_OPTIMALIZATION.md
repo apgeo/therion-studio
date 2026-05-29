@@ -89,6 +89,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 4 partial: Inspector/object-details controller delegate methods extracted from `MapEditorTabControllers.cpp` into `MapEditorTabInspectorControllerDelegates.cpp`, leaving scene-lifecycle/magnifier command-surface orchestration focused in `MapEditorTabControllers.cpp`.
 - [x] Phase 4 partial: `MapEditorTab` object-selection and object-details panel state grouped into focused nested state structs in `MapEditorTab.h`, with context/delegate rewiring across map-editor controllers.
 - [x] Phase 4: map editor responsibilities decomposed.
+- [x] Phase 5 partial: application-level platform style and appearance bootstrap (style selection, dark/light palette, chrome stylesheet, and runtime appearance watcher wiring) extracted from `main.cpp` into `src/platform/ApplicationAppearanceBootstrap.cpp`.
 - [ ] Phase 5: platform and appearance services centralized.
 - [ ] Phase 6: packaging and CI hardening completed.
 

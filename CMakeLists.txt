@@ -441,6 +441,8 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/TextEditorTab.h
     src/editor/TherionSyntaxHighlighter.cpp
     src/editor/TherionSyntaxHighlighter.h
+    src/platform/ApplicationAppearanceBootstrap.cpp
+    src/platform/ApplicationAppearanceBootstrap.h
     src/main.cpp)
 
 if(WIN32)

@@ -19,10 +19,10 @@ MapEditorInspectorObjectContext MapEditorTab::inspectorObjectContext()
         .lastClickedLineNumber = &lastInspectorClickedObjectLineNumber_,
         .suppressedAutoReselectLineNumbers = &suppressedInspectorAutoReselectLineNumbers_,
         .commandApplyInProgress = &mapCommandApplyInProgress_,
-        .selectedObjectLineNumber = &selectedObjectLineNumber_,
-        .selectedObjectVertexIndex = &selectedObjectVertexIndex_,
-        .selectedObjectKind = &selectedObjectKind_,
-        .selectedObjectCoordinate = &selectedObjectCoordinate_,
+        .selectedObjectLineNumber = &objectSelectionState_.selectedObjectLineNumber_,
+        .selectedObjectVertexIndex = &objectSelectionState_.selectedObjectVertexIndex_,
+        .selectedObjectKind = &objectSelectionState_.selectedObjectKind_,
+        .selectedObjectCoordinate = &objectSelectionState_.selectedObjectCoordinate_,
         .toolbarStatusNote = &toolbarStatusNote_,
         .translate = [this](const char *text) {
             return tr(text);

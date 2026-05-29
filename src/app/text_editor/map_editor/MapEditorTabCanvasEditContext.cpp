@@ -22,10 +22,10 @@ MapEditorCanvasEditContext MapEditorTab::canvasEditContext()
         .pendingClickLineNumber = &selectionSyncState_.pendingClickLineNumber_,
         .pendingClickSourceVertexIndex = &selectionSyncState_.pendingClickSourceVertexIndex_,
         .pendingClickGeometryKind = &selectionSyncState_.pendingClickGeometryKind_,
-        .selectedObjectLineNumber = &selectedObjectLineNumber_,
-        .selectedObjectVertexIndex = &selectedObjectVertexIndex_,
-        .selectedObjectKind = &selectedObjectKind_,
-        .selectedObjectCoordinate = &selectedObjectCoordinate_,
+        .selectedObjectLineNumber = &objectSelectionState_.selectedObjectLineNumber_,
+        .selectedObjectVertexIndex = &objectSelectionState_.selectedObjectVertexIndex_,
+        .selectedObjectKind = &objectSelectionState_.selectedObjectKind_,
+        .selectedObjectCoordinate = &objectSelectionState_.selectedObjectCoordinate_,
         .nextDraftGeometryId = &nextDraftGeometryId_,
         .translate = [this](const char *text) {
             return tr(text);

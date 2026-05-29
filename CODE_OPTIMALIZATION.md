@@ -91,6 +91,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 4: map editor responsibilities decomposed.
 - [x] Phase 5 partial: application-level platform style and appearance bootstrap (style selection, dark/light palette, chrome stylesheet, and runtime appearance watcher wiring) extracted from `main.cpp` into `src/platform/ApplicationAppearanceBootstrap.cpp`.
 - [x] Phase 5 partial: application startup identity/icon/translator bootstrap extracted from `main.cpp` into `src/platform/ApplicationStartupBootstrap.cpp`, with explicit startup state ownership for translator lifetime.
+- [x] Phase 5 partial: duplicated Lucide icon theming/rendering logic consolidated into `src/app/LucideIconFactory.h` and consumed by `MainWindow`, `MainWindowSidebar`, and `MapEditorDetachedPaneWindow`.
 - [ ] Phase 5: platform and appearance services centralized.
 - [ ] Phase 6: packaging and CI hardening completed.
 

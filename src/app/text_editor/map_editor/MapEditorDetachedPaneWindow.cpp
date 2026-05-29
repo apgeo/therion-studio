@@ -1,21 +1,19 @@
 #include "MapEditorDetachedPaneWindow.h"
 
 #include "MapEditorTab.h"
+#include "../../LucideIconFactory.h"
 
 #include <QCloseEvent>
-#include <QFile>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
-#include <QPainter>
 #include <QPalette>
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QSizePolicy>
 #include <QStatusBar>
 #include <QStyle>
-#include <QSvgRenderer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -23,43 +21,12 @@ namespace TherionStudio
 {
 namespace
 {
-QPixmap renderLucidePixmap(const QString &iconName, const QColor &color, int extent, qreal devicePixelRatio)
-{
-    QFile file(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
-    if (!file.open(QIODevice::ReadOnly)) {
-        return QPixmap();
-    }
-
-    QString svg = QString::fromUtf8(file.readAll());
-    svg.replace(QStringLiteral("currentColor"), color.name(QColor::HexRgb));
-    QSvgRenderer renderer(svg.toUtf8());
-    if (!renderer.isValid()) {
-        return QPixmap();
-    }
-
-    QPixmap pixmap(QSize(extent, extent) * devicePixelRatio);
-    pixmap.setDevicePixelRatio(devicePixelRatio);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    renderer.render(&painter, QRectF(0, 0, extent, extent));
-    return pixmap;
-}
-
-QIcon themedLucideIcon(const QString &iconName, const QPalette &palette, int extent, qreal devicePixelRatio)
-{
-    QIcon icon;
-    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::ButtonText), extent, devicePixelRatio), QIcon::Normal);
-    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::Disabled, QPalette::ButtonText), extent, devicePixelRatio), QIcon::Disabled);
-    return icon;
-}
-
 QToolButton *createDetachedIconButton(QWidget *parent, const QString &toolTip, const QString &iconName)
 {
     auto *button = new QToolButton(parent);
     button->setAutoRaise(false);
     button->setIconSize(QSize(14, 14));
-    button->setIcon(themedLucideIcon(iconName, button->palette(), 14, button->devicePixelRatioF()));
+    button->setIcon(TherionStudio::themedLucideIcon(iconName, button->palette(), 14, button->devicePixelRatioF()));
     button->setProperty("lucideIconName", iconName);
     button->setToolButtonStyle(Qt::ToolButtonIconOnly);
     button->setToolTip(toolTip);
@@ -336,7 +303,7 @@ void MapEditorDetachedPaneWindow::refreshCommandBarIconTheme()
             continue;
         }
 
-        button->setIcon(themedLucideIcon(iconName, palette, button->iconSize().width(), devicePixelRatio));
+        button->setIcon(TherionStudio::themedLucideIcon(iconName, palette, button->iconSize().width(), devicePixelRatio));
     }
 }
 }

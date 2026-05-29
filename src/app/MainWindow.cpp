@@ -20,7 +20,6 @@
 #include <QMessageBox>
 #include <QMenu>
 #include <QMenuBar>
-#include <QPainter>
 #include <QPushButton>
 #include <QHash>
 #include <QGuiApplication>
@@ -41,7 +40,6 @@
 #include <QTreeView>
 #include <QUrl>
 #include <QKeySequence>
-#include <QSvgRenderer>
 #include <QVariant>
 #include <QWidget>
 #include <QResizeEvent>
@@ -62,6 +60,7 @@
 #include "MainWindowProjectController.h"
 #include "MainWindowSessionStateService.h"
 #include "MainWindowStructureNameOverridesService.h"
+#include "LucideIconFactory.h"
 #include "../core/SessionStore.h"
 
 namespace
@@ -102,37 +101,6 @@ void ensureUsableMainWindowSize(QMainWindow *window)
     if (window->width() < minimumSize.width() || window->height() < minimumSize.height()) {
         window->resize(window->size().expandedTo(defaultMainWindowSize()));
     }
-}
-
-QPixmap renderLucidePixmap(const QString &iconName, const QColor &color, int extent, qreal devicePixelRatio)
-{
-    QFile file(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
-    if (!file.open(QIODevice::ReadOnly)) {
-        return QPixmap();
-    }
-
-    QString svg = QString::fromUtf8(file.readAll());
-    svg.replace(QStringLiteral("currentColor"), color.name(QColor::HexRgb));
-    QSvgRenderer renderer(svg.toUtf8());
-    if (!renderer.isValid()) {
-        return QPixmap();
-    }
-
-    QPixmap pixmap(QSize(extent, extent) * devicePixelRatio);
-    pixmap.setDevicePixelRatio(devicePixelRatio);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    renderer.render(&painter, QRectF(0, 0, extent, extent));
-    return pixmap;
-}
-
-QIcon themedLucideIcon(const QString &iconName, const QPalette &palette, int extent, qreal devicePixelRatio)
-{
-    QIcon icon;
-    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::ButtonText), extent, devicePixelRatio), QIcon::Normal);
-    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::Disabled, QPalette::ButtonText), extent, devicePixelRatio), QIcon::Disabled);
-    return icon;
 }
 
 QString workspaceCommandBarStyleSheet(const QColor &backgroundColor)
@@ -305,7 +273,7 @@ QToolButton *createWorkspaceIconButton(QWidget *parent,
     auto *button = new QToolButton(parent);
     button->setAutoRaise(false);
     button->setIconSize(QSize(14, 14));
-    button->setIcon(themedLucideIcon(iconName, button->palette(), 14, button->devicePixelRatioF()));
+    button->setIcon(TherionStudio::themedLucideIcon(iconName, button->palette(), 14, button->devicePixelRatioF()));
     button->setProperty("lucideIconName", iconName);
     button->setToolButtonStyle(Qt::ToolButtonIconOnly);
     button->setToolTip(toolTip);
@@ -863,7 +831,7 @@ void MainWindow::refreshWorkspaceIconTheme()
             continue;
         }
 
-        button->setIcon(themedLucideIcon(iconName, palette, button->iconSize().width(), devicePixelRatio));
+        button->setIcon(TherionStudio::themedLucideIcon(iconName, palette, button->iconSize().width(), devicePixelRatio));
     }
 }
 

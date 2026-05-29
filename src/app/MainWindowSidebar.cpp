@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include "MainWindowDocumentHelpers.h"
+#include "LucideIconFactory.h"
 
 #include <QAbstractItemView>
 #include <QAction>
@@ -30,13 +31,11 @@
 #include <QStyle>
 #include <QStyledItemDelegate>
 #include <QStyleOptionViewItem>
-#include <QSvgRenderer>
 #include <QTimer>
 #include <QToolButton>
 #include <QTreeView>
 #include <QUrl>
 #include <QVBoxLayout>
-#include <cmath>
 #include <functional>
 
 namespace
@@ -227,40 +226,6 @@ QString rgbaColorCss(const QColor &color, qreal alpha)
         .arg(color.green())
         .arg(color.blue())
         .arg(clampedAlpha, 0, 'f', 3);
-}
-
-QPixmap renderLucidePixmap(const QString &iconName, const QColor &color, int extent, qreal devicePixelRatio)
-{
-    QFile file(QStringLiteral(":/resources/icons/lucide/%1.svg").arg(iconName));
-    if (!file.open(QIODevice::ReadOnly)) {
-        return {};
-    }
-
-    QByteArray svg = file.readAll();
-    svg.replace("currentColor", color.name(QColor::HexRgb).toUtf8());
-
-    QSvgRenderer renderer(svg);
-    if (!renderer.isValid()) {
-        return {};
-    }
-
-    const qreal dpr = qMax<qreal>(1.0, devicePixelRatio);
-    const int pixelExtent = qMax(1, static_cast<int>(std::ceil(extent * dpr)));
-    QPixmap pixmap(pixelExtent, pixelExtent);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    renderer.render(&painter, QRectF(0.0, 0.0, pixelExtent, pixelExtent));
-    pixmap.setDevicePixelRatio(dpr);
-    return pixmap;
-}
-
-QIcon themedLucideIcon(const QString &iconName, const QPalette &palette, int extent, qreal devicePixelRatio)
-{
-    QIcon icon;
-    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::ButtonText), extent, devicePixelRatio), QIcon::Normal);
-    icon.addPixmap(renderLucidePixmap(iconName, palette.color(QPalette::Disabled, QPalette::ButtonText), extent, devicePixelRatio), QIcon::Disabled);
-    return icon;
 }
 
 void prepareSidebarContentPane(QWidget *contentWidget)
@@ -866,16 +831,16 @@ void MainWindow::buildStructureSidebar()
         const int extent = activityIconSize.width();
         const qreal devicePixelRatio = activityBar->devicePixelRatioF();
         if (filesButton != nullptr) {
-            filesButton->setIcon(themedLucideIcon(filesIconName, palette, extent, devicePixelRatio));
+            filesButton->setIcon(TherionStudio::themedLucideIcon(filesIconName, palette, extent, devicePixelRatio));
         }
         if (structureButton != nullptr) {
-            structureButton->setIcon(themedLucideIcon(structureIconName, palette, extent, devicePixelRatio));
+            structureButton->setIcon(TherionStudio::themedLucideIcon(structureIconName, palette, extent, devicePixelRatio));
         }
         if (compilerButton != nullptr) {
-            compilerButton->setIcon(themedLucideIcon(consoleIconName, palette, extent, devicePixelRatio));
+            compilerButton->setIcon(TherionStudio::themedLucideIcon(consoleIconName, palette, extent, devicePixelRatio));
         }
         if (compileButton != nullptr) {
-            compileButton->setIcon(themedLucideIcon(QStringLiteral("play"), palette, extent, devicePixelRatio));
+            compileButton->setIcon(TherionStudio::themedLucideIcon(QStringLiteral("play"), palette, extent, devicePixelRatio));
         }
     };
     applyActivityRailTheme();

@@ -58,6 +58,7 @@
 #include "MainWindowHelpDialog.h"
 #include "MainWindowSessionDocumentService.h"
 #include "MainWindowSessionProjectService.h"
+#include "MainWindowSessionStateService.h"
 #include "../core/SessionStore.h"
 
 namespace
@@ -1171,15 +1172,17 @@ void MainWindow::restoreSessionState()
 
 void MainWindow::persistSessionState()
 {
-    sessionStore_->setMainWindowGeometry(saveGeometry());
-    sessionStore_->setMainWindowState(saveState());
-    sessionStore_->setLastProjectPath(projectRootPath_);
-    sessionStore_->setTherionExecutablePath(therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text().trimmed() : QString());
-    sessionStore_->setTherionWorkingDirectory(therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text().trimmed() : QString());
-    sessionStore_->setTherionArguments(therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text().trimmed() : QString());
-    sessionStore_->setTherionRunTargetMode(therionRunTargetMode());
-    sessionStore_->setTherionTargetConfigPath(therionTargetConfigEdit_ != nullptr ? therionTargetConfigEdit_->text().trimmed() : QString());
-    saveStructureNameOverrides();
+    TherionStudio::MainWindowSessionStateService::MainWindowStateSnapshot snapshot;
+    snapshot.windowGeometry = saveGeometry();
+    snapshot.windowState = saveState();
+    snapshot.projectRootPath = projectRootPath_;
+    snapshot.therionExecutablePath = therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text().trimmed() : QString();
+    snapshot.therionWorkingDirectory = therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text().trimmed() : QString();
+    snapshot.therionArguments = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text().trimmed() : QString();
+    snapshot.therionRunTargetMode = therionRunTargetMode();
+    snapshot.therionTargetConfigPath = therionTargetConfigEdit_ != nullptr ? therionTargetConfigEdit_->text().trimmed() : QString();
+    snapshot.structureNameOverridesJson = structureNameOverridesToJson(structureNameOverrides_);
+    TherionStudio::MainWindowSessionStateService::persistMainWindowState(*sessionStore_, snapshot);
     persistOpenDocuments();
 }
 
@@ -1260,8 +1263,6 @@ void MainWindow::persistOpenDocuments()
 
     const QStringList documentPaths =
         TherionStudio::MainWindowSessionDocumentService::mergeOpenDocumentPaths(tabDocumentPaths, detachedDocumentPaths);
-    sessionStore_->setOpenDocumentPaths(documentPaths);
-
     QString activeDocumentPath;
     for (auto iterator = detachedMapWindowsByPath_.constBegin(); iterator != detachedMapWindowsByPath_.constEnd(); ++iterator) {
         QMainWindow *window = iterator.value();
@@ -1275,7 +1276,10 @@ void MainWindow::persistOpenDocuments()
         activeDocumentPath = currentWidget != nullptr ? documentPathForWidget(currentWidget) : QString();
     }
 
-    sessionStore_->setActiveDocumentPath(activeDocumentPath);
+    TherionStudio::MainWindowSessionStateService::OpenDocumentsSnapshot snapshot;
+    snapshot.openDocumentPaths = documentPaths;
+    snapshot.activeDocumentPath = activeDocumentPath;
+    TherionStudio::MainWindowSessionStateService::persistOpenDocuments(*sessionStore_, snapshot);
 }
 
 void MainWindow::addWelcomeTab()
@@ -1557,11 +1561,6 @@ QString MainWindow::structureOverrideKey(const QString &sourceFile, int lineNumb
 void MainWindow::loadStructureNameOverrides()
 {
     structureNameOverrides_ = loadStructureNameOverridesFromJson(sessionStore_->structureNameOverrides());
-}
-
-void MainWindow::saveStructureNameOverrides()
-{
-    sessionStore_->setStructureNameOverrides(structureNameOverridesToJson(structureNameOverrides_));
 }
 
 void MainWindow::saveActiveDocument()

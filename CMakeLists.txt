@@ -109,6 +109,8 @@ set(THERION_APP_SOURCES
     src/app/MainWindowSessionDocumentService.h
     src/app/MainWindowSessionProjectService.cpp
     src/app/MainWindowSessionProjectService.h
+    src/app/MainWindowSessionStateService.cpp
+    src/app/MainWindowSessionStateService.h
     src/app/ProjectStructureScanner.cpp
     src/app/ProjectStructureScanner.h
     src/app/TherionExecutableSelectionController.cpp
@@ -690,6 +692,9 @@ therion_add_app_unit_test(MainWindowSessionDocumentServiceTest
 
 therion_add_app_unit_test(MainWindowSessionProjectServiceTest
     tests/MainWindowSessionProjectServiceTest.cpp)
+
+therion_add_app_unit_test(MainWindowSessionStateServiceTest
+    tests/MainWindowSessionStateServiceTest.cpp)
 
 set(THERION_EDITOR_UI_TEST_BASE_SOURCES
     src/app/text_editor/ContextHelpController.cpp

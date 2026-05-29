@@ -168,7 +168,6 @@ private:
     void updateMapObjectSelectionFromEditorLocation(const QString &filePath, int lineNumber);
     QString structureOverrideKey(const QString &sourceFile, int lineNumber) const;
     void loadStructureNameOverrides();
-    void saveStructureNameOverrides();
     void refreshMapBackgroundPanel();
     TherionStudio::MapEditorTab *currentMapEditorTab() const;
     void detachMapEditorTab(TherionStudio::MapEditorTab *tab);

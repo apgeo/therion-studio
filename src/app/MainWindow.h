@@ -149,7 +149,6 @@ private:
     QString currentDocumentTherionConfigPath() const;
     QString resolvedTherionTargetConfigPath() const;
     QString resolvedTherionConfigPath() const;
-    QStringList therionArgumentsForRun(const QStringList &baseArguments, const QString &resolvedConfigPath) const;
     void refreshTherionConfigDisplay();
     void refreshTherionRunTargetControls();
     void rememberSidebarWidth();

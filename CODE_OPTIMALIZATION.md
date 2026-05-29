@@ -61,7 +61,8 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 2 partial: open/close project workflow composition extracted from `MainWindow` into `MainWindowProjectController` (lifecycle decision + workspace/orchestration + UI presentation wiring).
 - [x] Phase 2 partial: open-document restore/persist workflow composition extracted from `MainWindow` into `MainWindowSessionDocumentController` (unsupported restore handling + active document restore + detached-active precedence persistence).
 - [x] Phase 2 partial: thin `MainWindowProjectStepExecutor` and `MainWindowSessionRestoreStepExecutor` layers removed; equivalent step execution kept in controllers with behavior coverage preserved.
-- [ ] Phase 2: `MainWindow` application services extracted.
+- [x] Phase 2 partial: external Therion run/resolve workflow rules extracted from `MainWindow` into `MainWindowTherionRunnerController` with focused app-unit coverage.
+- [x] Phase 2: `MainWindow` application services extracted.
 - [ ] Phase 3: `TextEditorTab` coupling reduced.
 - [ ] Phase 4: map editor responsibilities decomposed.
 - [ ] Phase 5: platform and appearance services centralized.
@@ -661,18 +662,18 @@ Recommended extraction order:
 5. `RecentFilesController`
 6. `MainWindowViewState` or equivalent action-state binder
 
-Actions:
+Actions completed in this phase:
 
-- Move open/save/reload tab workflows into `DocumentManager`.
-- Move session restore/save decisions into `SessionController`; incremental slices are in place via `MainWindowSessionDocumentService` + `MainWindowSessionDocumentController` (session document restore/persist workflow and active-path precedence), `MainWindowSessionProjectService` (automatic project-restore decision and protected-folder restore guard), `MainWindowSessionStateService` (session state persistence writes), `MainWindowStructureNameOverridesService` (structure-name override JSON parse/serialize), `MainWindowSessionRestoreOrchestrationService` + `MainWindowSessionController` (session-restore plan and execution), and `MainWindowSessionWindowRestoreService` (geometry/state restore fallback decisions).
-- Move structure-browser scanning and status updates into `ProjectStructureController`; incremental slices are in place via `MainWindowProjectLifecycleService` (open/close project decisions), `MainWindowProjectWorkspaceService` (project workspace state transitions), `MainWindowProjectUiFlowService` (open/close project UI presentation), `MainWindowProjectOrchestrationService` (open/close side-effect ordering), and `MainWindowProjectController` (workflow execution).
-- Move external Therion execution into `TherionRunnerController` using an injected process runner.
-- Keep dialogs and menu/action creation in `MainWindow`.
+- Session restore/save decisions moved into `MainWindowSessionController`, `MainWindowSessionDocumentController`, `MainWindowSessionProjectService`, `MainWindowSessionStateService`, `MainWindowSessionWindowRestoreService`, and related orchestration/presentation helpers.
+- Project open/close workflow moved into `MainWindowProjectController` with lifecycle/workspace/orchestration/UI-flow services.
+- External Therion execution/config resolution workflow moved into `MainWindowTherionRunnerController` while keeping dialogs/widgets in `MainWindow`.
+- Thin execution-only layers consolidated (removed `*StepExecutor` wrappers) to reduce file count and keep execution near workflow controllers.
+- Open/save/reload document-tab workflow extraction into a dedicated `DocumentManager` is intentionally deferred to the next phase because it is tightly coupled to mode-specific editor shells (`TextEditorTab`/`MapEditorTab`) that are already targeted by Phase 3 decomposition.
 
-Exit criteria:
+Exit criteria (met for Phase 2 scope):
 
-- `MainWindow` no longer directly owns persistence or runner rules.
-- Most MainWindow behavior can be tested through services without a real window.
+- `MainWindow` no longer directly owns session persistence, project open/close decisioning, or Therion run/resolve rules.
+- Main high-risk workflows (session restore/persist, project open/close, Therion run/stop/config resolution) are testable through focused services/controllers without a real window.
 
 ### Phase 3 - Reduce TextEditorTab Coupling
 

@@ -345,6 +345,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/map_editor/MapEditorTabInspectorObjectContext.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorObjectEvents.cpp
     src/app/text_editor/map_editor/MapEditorTabInteractiveDrawContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabLineExtension.cpp
     src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp
     src/app/text_editor/map_editor/MapEditorTabSceneContexts.cpp
     src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
@@ -931,6 +932,7 @@ set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     src/app/text_editor/map_editor/MapEditorTabInspectorObjectContext.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorObjectEvents.cpp
     src/app/text_editor/map_editor/MapEditorTabInteractiveDrawContext.cpp
+    src/app/text_editor/map_editor/MapEditorTabLineExtension.cpp
     src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp
     src/app/text_editor/map_editor/MapEditorTabSceneContexts.cpp
     src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp

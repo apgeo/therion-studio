@@ -5,6 +5,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 ## In Progress
 
 - P0 - Phase 9: continue map-editor parity polish, focusing on remaining interaction gaps, inspector ergonomics, and unresolved area/line ownership rewrite semantics.
+- P1 - MapEditorTab decomposition: keep line-extension workflow in a focused companion translation unit and continue reducing map-editor shell size without changing user-visible behavior.
 - P1 - Phase 10: continue interactive drawing/insertion polish, focusing on Apple Pencil/freehand performance and remaining insertion edge cases.
 - P2 - Phase 11: continue structured block-canvas authoring coverage and BlockEditor extraction/refactor slices.
 - P1 - Block-canvas drag-loop crash hardening on macOS: guard drag-preview/drop callbacks during TextEditorTab teardown and verify no stale callback path remains around `.th2` + `.xvi` workflows.

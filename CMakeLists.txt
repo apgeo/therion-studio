@@ -107,6 +107,8 @@ therion_enable_strict_warnings(therion_platform)
 set(THERION_APP_SOURCES
     src/app/MainWindowSessionDocumentService.cpp
     src/app/MainWindowSessionDocumentService.h
+    src/app/MainWindowSessionController.cpp
+    src/app/MainWindowSessionController.h
     src/app/MainWindowProjectLifecycleService.cpp
     src/app/MainWindowProjectLifecycleService.h
     src/app/MainWindowProjectOrchestrationService.cpp
@@ -710,6 +712,9 @@ therion_add_app_unit_test(TherionRunnerServiceTest
 therion_add_app_unit_test(MainWindowSessionDocumentServiceTest
     tests/MainWindowSessionDocumentServiceTest.cpp)
 
+therion_add_app_unit_test(MainWindowSessionControllerTest
+    tests/MainWindowSessionControllerTest.cpp)
+
 therion_add_app_unit_test(MainWindowProjectLifecycleServiceTest
     tests/MainWindowProjectLifecycleServiceTest.cpp)
 
@@ -1063,6 +1068,7 @@ set(THERION_UNIT_TEST_TARGETS
     TextEditorDocumentControllerTest
     ProjectStructureScannerTest
     SessionStoreTest
+    MainWindowSessionControllerTest
     TherionExecutableSelectionControllerTest
     TherionRunnerConfigDisplayControllerTest
     TherionRunnerConfigResolverTest

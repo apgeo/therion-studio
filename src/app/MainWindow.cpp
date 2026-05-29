@@ -55,17 +55,14 @@
 #include "MainWindowDocumentHelpers.h"
 #include "MainWindowHelpDialog.h"
 #include "MainWindowSessionDocumentService.h"
+#include "MainWindowSessionController.h"
 #include "MainWindowProjectLifecycleService.h"
 #include "MainWindowProjectOrchestrationService.h"
 #include "MainWindowProjectStepExecutor.h"
 #include "MainWindowProjectUiFlowService.h"
 #include "MainWindowProjectWorkspaceService.h"
 #include "MainWindowSessionProjectService.h"
-#include "MainWindowSessionRestoreOrchestrationService.h"
-#include "MainWindowSessionRestoreStepExecutor.h"
-#include "MainWindowSessionRestoreUiFlowService.h"
 #include "MainWindowSessionStateService.h"
-#include "MainWindowSessionWindowRestoreService.h"
 #include "MainWindowStructureNameOverridesService.h"
 #include "../core/SessionStore.h"
 
@@ -1113,47 +1110,34 @@ void MainWindow::buildMenus()
 
 void MainWindow::restoreSessionState()
 {
-    const QByteArray geometry = sessionStore_->mainWindowGeometry();
-    const QByteArray state = sessionStore_->mainWindowState();
-    const TherionStudio::MainWindowSessionWindowRestoreService::Plan windowRestorePlan =
-        TherionStudio::MainWindowSessionWindowRestoreService::buildPlan(geometry, state);
-    if (windowRestorePlan.shouldAttemptRestoreGeometry) {
-        const bool geometryRestoreSucceeded = restoreGeometry(geometry);
-        if (TherionStudio::MainWindowSessionWindowRestoreService::shouldResizeToDefaultAfterGeometryRestoreFailure(
-                windowRestorePlan, geometryRestoreSucceeded)) {
-            resize(defaultMainWindowSize());
-        }
-    }
-    if (windowRestorePlan.shouldAttemptRestoreState) {
+    TherionStudio::MainWindowSessionController::RestoreSessionActions actions;
+    actions.restoreGeometry = [this](const QByteArray &geometry) {
+        return restoreGeometry(geometry);
+    };
+    actions.restoreState = [this](const QByteArray &state) {
         restoreState(state);
-    }
-    if (windowRestorePlan.shouldEnsureUsableWindowSize) {
+    };
+    actions.resizeToDefault = [this]() {
+        resize(defaultMainWindowSize());
+    };
+    actions.ensureUsableWindowSize = [this]() {
         ensureUsableMainWindowSize(this);
-    }
-
-    const TherionStudio::MainWindowSessionProjectService::ProjectRestoreDecision restoreProjectDecision =
-        TherionStudio::MainWindowSessionProjectService::decideProjectRestore(sessionStore_->lastProjectPath());
-    const TherionStudio::MainWindowSessionRestoreOrchestrationService::Plan restorePlan =
-        TherionStudio::MainWindowSessionRestoreOrchestrationService::buildPlan(restoreProjectDecision);
-    TherionStudio::MainWindowSessionRestoreStepExecutor::Actions restoreActions;
-    restoreActions.applyProjectRootToBrowser = [this](const QString &projectPath) {
+    };
+    actions.applyProjectRootToBrowser = [this](const QString &projectPath) {
         projectRootPath_ = projectPath;
         projectModel_->setRootPath(projectRootPath_);
         projectTree_->setRootIndex(projectModel_->index(projectRootPath_));
     };
-    restoreActions.appendRestoredProjectRootConsole = [this](const QString &projectPath) {
-        appendConsoleLine(TherionStudio::MainWindowSessionRestoreUiFlowService::restoredProjectRootConsoleLine(projectPath));
+    actions.appendConsoleLine = [this](const QString &line) {
+        appendConsoleLine(line);
     };
-    restoreActions.loadStructureNameOverrides = [this]() { loadStructureNameOverrides(); };
-    restoreActions.syncOpenDocumentsToProjectRoot = [this]() { syncOpenDocumentsToProjectRoot(); };
-    restoreActions.rebuildStructureSidebar = [this]() { rebuildStructureSidebar(); };
-    restoreActions.appendSkippedProtectedProjectConsole = [this](const QString &projectPath) {
-        appendConsoleLine(TherionStudio::MainWindowSessionRestoreUiFlowService::skippedProtectedProjectConsoleLine(projectPath));
-    };
-    restoreActions.refreshTherionConfigDisplay = [this]() { refreshTherionConfigDisplay(); };
-    restoreActions.updateProjectActionState = [this]() { updateProjectActionState(); };
-    restoreActions.restoreOpenDocuments = [this]() { restoreOpenDocuments(); };
-    TherionStudio::MainWindowSessionRestoreStepExecutor::execute(restorePlan, restoreActions);
+    actions.loadStructureNameOverrides = [this]() { loadStructureNameOverrides(); };
+    actions.syncOpenDocumentsToProjectRoot = [this]() { syncOpenDocumentsToProjectRoot(); };
+    actions.rebuildStructureSidebar = [this]() { rebuildStructureSidebar(); };
+    actions.refreshTherionConfigDisplay = [this]() { refreshTherionConfigDisplay(); };
+    actions.updateProjectActionState = [this]() { updateProjectActionState(); };
+    actions.restoreOpenDocuments = [this]() { restoreOpenDocuments(); };
+    TherionStudio::MainWindowSessionController::restoreSession(*sessionStore_, actions);
 }
 
 void MainWindow::persistSessionState()

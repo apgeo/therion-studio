@@ -42,6 +42,12 @@ jobs:
       - name: Build app and unit tests
         run: cmake --build build --config Debug --target TherionStudio therion_unit_tests
 
+      - name: Install app to staging prefix
+        run: cmake --install build --prefix "$PWD/build/install-smoke"
+
+      - name: Verify install layout
+        run: python3 scripts/verify_install_layout.py --platform macos --prefix "$PWD/build/install-smoke"
+
       - name: Run unit tests
         run: >
           ctest --test-dir build
@@ -93,6 +99,12 @@ jobs:
 
       - name: Build app and unit tests
         run: cmake --build build --config Debug --target TherionStudio therion_unit_tests
+
+      - name: Install app to staging prefix
+        run: cmake --install build --prefix "$PWD/build/install-smoke"
+
+      - name: Verify install layout
+        run: python3 scripts/verify_install_layout.py --platform macos --prefix "$PWD/build/install-smoke"
 
       - name: Run unit tests
         run: >

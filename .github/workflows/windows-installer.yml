@@ -157,6 +157,14 @@ jobs:
         shell: pwsh
         run: cmake --build build-windows --target TherionStudio --parallel
 
+      - name: Install app to staging prefix
+        shell: pwsh
+        run: cmake --install build-windows --prefix "$env:GITHUB_WORKSPACE\build-windows\install-smoke" --config ${{ inputs.build_type }}
+
+      - name: Verify install layout
+        shell: pwsh
+        run: python scripts/verify_install_layout.py --platform windows --prefix "$env:GITHUB_WORKSPACE\build-windows\install-smoke"
+
       - name: Create installer
         shell: pwsh
         run: >

@@ -126,6 +126,13 @@ with a CalVer release tag such as `v2026.5.0`, the workflow derives
 editing `CMakeLists.txt`. Branch and SHA builds derive a development package label such as
 `2026.5.0-a1b2c3d`.
 
+CI build workflows also run staged install-layout smoke checks via
+`scripts/verify_install_layout.py`:
+
+- Linux: verify `bin/TherionStudio`
+- macOS: verify `TherionStudio.app/Contents/MacOS/TherionStudio`
+- Windows: verify `bin/TherionStudio.exe` plus deployed Qt runtime layout (including `bin/platforms/qwindows.dll`)
+
 ## Linux
 
 Linux release packaging is not finalized yet. Development builds should prefer distribution Qt packages so `.deb` packaging remains realistic. CI validates distribution Qt builds on Ubuntu 24.04 and Ubuntu 26.04; Ubuntu 26.04 runs in an official Ubuntu container image until GitHub provides a hosted runner label for it.

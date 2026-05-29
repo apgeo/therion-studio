@@ -98,6 +98,8 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 5 partial: map-canvas light/dark palette resolution and scene color constants centralized into `src/app/text_editor/map_editor/MapEditorSceneThemePolicy.h`, with `MapEditorSceneRenderer.cpp` consuming centralized policy values.
 - [x] Phase 5 partial: structure-constraint guardrails updated to track split `MapEditorTab` translation units (`MapEditorTabInspectorPanelUi.cpp` and `MapEditorTabWorkspaceDelegates.cpp`) instead of retired `MapEditorTab.cpp`.
 - [x] Phase 5: platform and appearance services centralized.
+- [x] Phase 6 partial: CI build workflows now run staged install-layout smoke checks through `scripts/verify_install_layout.py` on Linux (`bin/TherionStudio`), macOS (`TherionStudio.app`), and Windows (`bin/TherionStudio.exe` + deployed Qt runtime layout).
+- [x] Phase 6 partial: Windows installer workflow now verifies staged install runtime layout (including `bin/platforms/qwindows.dll`) before creating and uploading NSIS artifacts.
 - [ ] Phase 6: packaging and CI hardening completed.
 
 ## Review Scope And Current State

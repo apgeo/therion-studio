@@ -70,7 +70,9 @@ Recommended release flow:
 5. Attach the installer to the GitHub Release for the tag.
 
 The workflow installs Qt directly with `aqtinstall`, installs NSIS/Ninja with Chocolatey,
-configures a Release Ninja build, runs CPack, and uploads the generated `.exe` installer artifact.
+configures a Release Ninja build, runs a staged `cmake --install`, verifies expected runtime layout
+with `scripts/verify_install_layout.py` (including `bin/TherionStudio.exe` and
+`bin/platforms/qwindows.dll`), then runs CPack and uploads the generated `.exe` installer artifact.
 The upload step uses a Node 24-compatible `actions/upload-artifact` version to avoid GitHub
 Actions Node 20 deprecation warnings.
 

@@ -98,6 +98,14 @@ jobs:
       - name: Build
         run: cmake --build build --target TherionStudio therion_unit_tests
 
+      - name: Install app to staging prefix
+        shell: pwsh
+        run: cmake --install build --prefix "$env:GITHUB_WORKSPACE\build\install-smoke" --config Debug
+
+      - name: Verify install layout
+        shell: pwsh
+        run: python scripts/verify_install_layout.py --platform windows --prefix "$env:GITHUB_WORKSPACE\build\install-smoke"
+
       - name: Run unit tests
         run: >
           ctest --test-dir build

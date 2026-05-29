@@ -18,7 +18,7 @@ on:
 
 jobs:
   package:
-    name: Build .deb and AppImage
+    name: Build .deb package
     runs-on: ubuntu-24.04
 
     steps:
@@ -66,13 +66,11 @@ jobs:
             libxcb-keysyms1 \
             libxcb-render-util0 \
             libxcb-xinerama0 \
-            patchelf \
             qt6-base-dev \
             qt6-base-dev-tools \
             qt6-svg-dev \
             qt6-tools-dev \
-            qt6-tools-dev-tools \
-            wget
+            qt6-tools-dev-tools
 
       - name: Configure
         run: >
@@ -102,22 +100,6 @@ jobs:
           -C ${{ inputs.build_type }}
           --verbose
 
-      - name: Build AppImage
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf build-linux-packages/AppDir
-          DESTDIR="$PWD/build-linux-packages/AppDir" cmake --install build-linux-packages --prefix /usr
-
-          pushd build-linux-packages >/dev/null
-          wget -q https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt.AppImage
-          chmod +x linuxdeployqt.AppImage
-          APPIMAGE_EXTRACT_AND_RUN=1 ./linuxdeployqt.AppImage AppDir/usr/share/applications/therion-studio.desktop \
-            -qmake=/usr/lib/qt6/bin/qmake6 \
-            -unsupported-allow-new-glibc \
-            -appimage
-          popd >/dev/null
-
       - name: Verify Linux artifacts and generate manifest
         id: verify_linux_artifacts
         run: |
@@ -136,7 +118,6 @@ jobs:
           name: TherionStudio-Linux-packages
           path: |
             ${{ steps.verify_linux_artifacts.outputs.deb_path }}
-            ${{ steps.verify_linux_artifacts.outputs.appimage_path }}
             ${{ steps.verify_linux_artifacts.outputs.manifest_path }}
           if-no-files-found: error
 
@@ -195,29 +176,4 @@ jobs:
           fi
           if [[ "$exit_code" -eq 124 ]]; then
             echo "TherionStudio started successfully (terminated by timeout as expected)."
-          fi
-
-      - name: Launch AppImage smoke test (offscreen)
-        shell: bash
-        run: |
-          set -euo pipefail
-          appimage_path="$(find /tmp/therion-linux-packages -maxdepth 1 -type f -name '*.AppImage' | head -n1)"
-          if [[ -z "$appimage_path" ]]; then
-            echo "No AppImage artifact found in /tmp/therion-linux-packages"
-            ls -la /tmp/therion-linux-packages || true
-            exit 1
-          fi
-          chmod +x "$appimage_path"
-
-          set +e
-          QT_QPA_PLATFORM=offscreen timeout 12s "$appimage_path" -platform offscreen >/tmp/therion-studio-appimage-launch.log 2>&1
-          exit_code=$?
-          set -e
-          if [[ "$exit_code" -ne 0 && "$exit_code" -ne 124 ]]; then
-            echo "AppImage launch failed with exit code $exit_code"
-            cat /tmp/therion-studio-appimage-launch.log
-            exit "$exit_code"
-          fi
-          if [[ "$exit_code" -eq 124 ]]; then
-            echo "AppImage started successfully (terminated by timeout as expected)."
           fi

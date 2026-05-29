@@ -136,21 +136,23 @@ CI build workflows also run staged install-layout smoke checks via
 
 ## Linux
 
-Linux packaging currently targets two distributable artifacts:
+Linux packaging currently targets one preview/tester artifact:
 
-- `.deb` package (primary Linux installer channel)
-- `AppImage` (portable supplemental channel)
+- `.deb` package for Debian/Ubuntu-family systems
 
-The manual workflow `.github/workflows/linux-packages.yml` builds both on `ubuntu-24.04`,
-validates install layout and artifact naming, and uploads:
+The manual workflow `.github/workflows/linux-packages.yml` builds the package on
+`ubuntu-24.04`, validates install layout and artifact naming, and uploads:
 
 - `therion-studio-<package_label>-linux-x86_64.deb`
-- `TherionStudio-<package_label>-Linux-x86_64.AppImage`
 - `TherionStudio-Linux-artifacts-manifest.json` (SHA256 + build metadata)
 
 The same workflow also runs a follow-up smoke job in an `ubuntu:26.04` container that installs
-the produced `.deb`, verifies installed paths, and performs offscreen launch sanity checks for
-both the installed `.deb` binary and the generated `AppImage`.
+the produced `.deb`, verifies installed paths, and performs an offscreen launch sanity check.
+
+The production Linux release requirement still needs a maintained broadly portable artifact
+path, such as Flatpak or another reproducible self-contained bundle. Do not use mutable
+`linuxdeployqt` `continuous` AppImage downloads or unmaintained Qt deployment plugins for
+production release artifact generation.
 
 Regular CI still validates distribution Qt source builds on Ubuntu 24.04 and Ubuntu 26.04;
 Ubuntu 26.04 runs in an official Ubuntu container image until GitHub provides a hosted runner

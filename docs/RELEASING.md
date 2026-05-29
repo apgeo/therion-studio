@@ -7,12 +7,13 @@ This document describes the current release workflow for Therion Studio.
 Current release channels:
 
 - Windows: NSIS installer artifact from GitHub Actions
-- Linux: `.deb` + `AppImage` artifacts from GitHub Actions
+- Linux: `.deb` preview/tester artifact from GitHub Actions
 - macOS: Homebrew tap formula in `ladislavb/homebrew-therion-studio`
 
 Not finalized yet:
 
-- Linux packaging strategy beyond `.deb` + `AppImage` (for example Flatpak) is deferred
+- Linux production packaging strategy beyond `.deb` (for example Flatpak or another
+  reproducible self-contained bundle) is deferred
 
 ## 2. Versioning
 
@@ -100,21 +101,23 @@ Expected artifact patterns:
 
 ```text
 therion-studio-<package_label>-linux-x86_64.deb
-TherionStudio-<package_label>-Linux-x86_64.AppImage
 TherionStudio-Linux-artifacts-manifest.json
 ```
 
 The workflow includes a follow-up Ubuntu 26.04 container smoke job that installs the generated
-`.deb` and performs offscreen launch sanity checks for both the installed `.deb` binary and the
-generated `AppImage`.
+`.deb` and performs an offscreen launch sanity check for the installed binary.
+
+The Linux workflow deliberately does not publish an AppImage while the available Qt AppImage
+deployment tooling depends on mutable `continuous` downloads or unmaintained Qt deployment
+plugins. Do not publish a production Linux release until the broadly portable Linux artifact
+path required by the specification is implemented and verified.
 
 ## 7. Publish GitHub Release
 
 1. Create GitHub Release for tag `v2026.5.1`.
 2. Attach the Windows installer artifact from the workflow run.
-3. Attach Linux artifacts from `Linux Packages`:
+3. Attach Linux preview artifacts from `Linux Packages`:
    - `therion-studio-<package_label>-linux-x86_64.deb`
-   - `TherionStudio-<package_label>-Linux-x86_64.AppImage`
 4. Keep generated manifest JSON files with release records:
    - `TherionStudio-Windows-installer-manifest.json`
    - `TherionStudio-Linux-artifacts-manifest.json`

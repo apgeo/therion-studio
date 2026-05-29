@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify Linux release artifacts (.deb + AppImage) and emit a manifest."""
+"""Verify Linux .deb release artifacts and emit a manifest."""
 
 from __future__ import annotations
 
@@ -47,30 +47,10 @@ def main() -> int:
         print(f"Missing expected .deb artifact: {deb_path}")
         return 1
 
-    expected_appimage_name = f"TherionStudio-{args.expected_package_label}-Linux-x86_64.AppImage"
-    expected_appimage_path = build_dir / expected_appimage_name
-    if not expected_appimage_path.exists():
-        appimages = sorted(build_dir.glob("*.AppImage"))
-        if len(appimages) != 1:
-            print(
-                "Expected exactly one AppImage artifact for normalization, "
-                f"found {len(appimages)}"
-            )
-            for path in appimages:
-                print(f"  - {path.name}")
-            return 1
-        appimages[0].rename(expected_appimage_path)
-
     deb_sha = sha256_file(deb_path)
-    appimage_sha = sha256_file(expected_appimage_path)
 
     manifest = {
         "artifacts": {
-            "appimage": {
-                "file_name": expected_appimage_path.name,
-                "sha256": appimage_sha,
-                "size_bytes": expected_appimage_path.stat().st_size,
-            },
             "deb": {
                 "file_name": deb_path.name,
                 "sha256": deb_sha,
@@ -99,7 +79,6 @@ def main() -> int:
             output_path,
             {
                 "deb_path": str(deb_path),
-                "appimage_path": str(expected_appimage_path),
                 "manifest_path": str(manifest_path),
             },
         )

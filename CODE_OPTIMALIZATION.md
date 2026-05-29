@@ -91,9 +91,9 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 4: map editor responsibilities decomposed.
 - [x] Phase 5 partial: application-level platform style and appearance bootstrap (style selection, dark/light palette, chrome stylesheet, and runtime appearance watcher wiring) extracted from `main.cpp` into `src/platform/ApplicationAppearanceBootstrap.cpp`.
 - [x] Phase 5 partial: application startup identity/icon/translator bootstrap extracted from `main.cpp` into `src/platform/ApplicationStartupBootstrap.cpp`, with explicit startup state ownership for translator lifetime.
-- [x] Phase 5 partial: duplicated Lucide icon theming/rendering logic consolidated into `src/app/LucideIconFactory.h` and consumed by `MainWindow`, `MainWindowSidebar`, and `MapEditorDetachedPaneWindow`.
+- [x] Phase 5 partial: main-window/sidebar/detached-pane Lucide icon theming/rendering logic consolidated into `src/app/LucideIconFactory.h`.
 - [x] Phase 5 partial: startup/appearance bootstrap entrypoint consolidated into `src/platform/ApplicationBootstrap.cpp` so `main.cpp` stays a thin composition root.
-- [x] Phase 5 partial: shared workspace command-bar stylesheet policy consolidated into `src/app/WorkspaceCommandBarStyle.h` and reused by `MainWindow` and detached map-pane window UI.
+- [x] Phase 5 partial: shared workspace command-bar stylesheet policy centralized in the application style policy and reused by `MainWindow` and detached map-pane window UI.
 - [x] Phase 5 partial: duplicated main-window/sidebar/status/detached-pane stylesheet and status-badge policy centralized into `src/app/ApplicationStylePolicy.h`, with consumers rewired across `MainWindow.cpp`, `MainWindowSidebar.cpp`, `MainWindowStatusUi.cpp`, and `MapEditorDetachedPaneWindow.cpp`.
 - [x] Phase 5 partial: map-canvas light/dark palette resolution and scene color constants centralized into `src/app/text_editor/map_editor/MapEditorSceneThemePolicy.h`, with `MapEditorSceneRenderer.cpp` consuming centralized policy values.
 - [x] Phase 5 partial: structure-constraint guardrails updated to track split `MapEditorTab` translation units (`MapEditorTabInspectorPanelUi.cpp` and `MapEditorTabWorkspaceDelegates.cpp`) instead of retired `MapEditorTab.cpp`.
@@ -101,15 +101,18 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 6 partial: CI build workflows now run staged install-layout smoke checks through `scripts/verify_install_layout.py` on Linux (`bin/TherionStudio`), macOS (`TherionStudio.app`), and Windows (`bin/TherionStudio.exe` + deployed Qt runtime layout).
 - [x] Phase 6 partial: Windows installer workflow now verifies staged install runtime layout (including `bin/platforms/qwindows.dll`) before creating and uploading NSIS artifacts.
 - [x] Phase 6 partial: Windows installer workflow now validates exact installer artifact naming against `THERION_STUDIO_PACKAGE_LABEL` and emits a SHA256 manifest via `scripts/verify_windows_installer_artifact.py` before upload.
-- [x] Phase 6 partial: Linux packaging now provides `.deb` (primary) and `AppImage` (supplemental) artifacts via dedicated `.github/workflows/linux-packages.yml` workflow.
+- [x] Phase 6 partial: Linux packaging now provides a `.deb` preview/tester artifact via dedicated `.github/workflows/linux-packages.yml` workflow.
 - [x] Phase 6 partial: Linux release artifacts are now naming-verified and accompanied by SHA256 manifest metadata through `scripts/verify_linux_release_artifacts.py`.
 - [x] Phase 6 partial: Linux packaging workflow now runs Ubuntu 26.04 `.deb` install/launch smoke verification in a follow-up containerized job to validate forward-compatibility on the next Ubuntu LTS line.
-- [x] Phase 6 partial: Ubuntu 26.04 containerized Linux packaging smoke workflow now also validates offscreen AppImage launch behavior alongside `.deb` install/launch checks.
+- [x] Phase 6 partial: Linux packaging workflow no longer executes mutable `linuxdeployqt` `continuous` AppImage downloads; AppImage generation is deferred until a maintained portable Linux artifact path is selected.
+- [x] Repo-wide structure, naming, security, performance, and file-granularity review refreshed on 2026-05-30.
+- [ ] Phase 6 partial: choose and verify a maintained broadly portable Linux production artifact path, such as Flatpak or another reproducible self-contained bundle.
+- [ ] Architecture follow-up: reduce CMake source-list duplication and merge only trivial shell-adapter translation units where they share one responsibility.
 - [ ] Phase 6: packaging and CI hardening completed.
 
 ## Review Scope And Current State
 
-The review was based on the current working tree, including active uncommitted refactor work. Important files and areas inspected include:
+The original review was based on the then-current working tree, including active uncommitted refactor work. The 2026-05-30 refresh was based on a clean worktree before this documentation update. Important files and areas inspected include:
 
 - `CMakeLists.txt`
 - `src/main.cpp`
@@ -128,6 +131,79 @@ The review was based on the current working tree, including active uncommitted r
 - existing test wiring in `CMakeLists.txt`
 
 The repository already has useful guardrails: core tests, app tests, GUI smoke tests, structure constraints, and platform-specific path resolver files. The refactor should strengthen those boundaries rather than bypass them.
+
+## 2026-05-30 Repository Review Refresh
+
+Scope:
+
+- `git status --short` was clean before this documentation update.
+- `scripts/check_structure_constraints.py` passed.
+- The tracked repository contains 610 files: 352 under `src`, 163 under `resources`, 56 under `tests`, 8 under `scripts`, 7 under `docs`, 5 GitHub workflows, and 3 files each under `cmake` and `packaging`.
+- The selected tracked code/documentation/resource set contains about 97k lines; `src/**/*.cpp` and `src/**/*.h` account for about 62k lines.
+- Current source concentration is highest in `src/app/text_editor/map_editor` (88 C++/header files), `src/app` (75), `src/app/text_editor/block_editor` (73), `src/app/text_editor` (61), and `src/core` (24).
+
+Current directory-structure verdict:
+
+- The stable editor-mode layout is appropriate and should stay: `src/app/text_editor/`, `raw_editor/`, `block_editor/`, and `map_editor/` match the project contract and are enforced by structure constraints.
+- The repository does not have too many files in the abstract. The many split map/block/text files are justified when they isolate real responsibilities such as planners, parsers, controllers, scene items, style resolution, or focused tests.
+- The problem area is not file count alone; it is duplicated build wiring and a few very broad translation units/headers that still act as shared knowledge surfaces.
+- Do not collapse the `resources/map_object_styles/*.json` catalog back into one file. The split data files are easier to review and align with the resource-catalog roadmap.
+
+High-priority structural findings:
+
+- `CMakeLists.txt` is now buildable but remains a maintenance hotspot at about 1,300 lines. It repeats large UI source lists for the app, text-editor test support, map-editor test support, individual tests, and tools. This makes every file split or rename more expensive than it should be.
+- Header-only policy files such as `src/app/ApplicationStylePolicy.h` and `src/app/text_editor/map_editor/MapEditorSceneThemePolicy.h` are not listed in CMake source sets. That is not a build break, but it weakens IDE/source-list visibility and reinforces the need for source-set hygiene.
+- `src/app/text_editor/TextEditorTab.h` and `src/app/text_editor/map_editor/MapEditorTab.h` remain broad orchestration declarations. Their `.cpp` shells have been reduced, but the headers still expose many private workflow methods, UI members, controller pointers, and state groups.
+- `src/app/MainWindow.cpp` is within the current ratchet limit but still owns too many local helper types and UI orchestration helpers, including a private `DetachedMapWindow` whose name overlaps conceptually with `MapEditorDetachedPaneWindow`.
+- `src/app/MainWindowDocumentHelpers.*` is a pragmatic bridge, but the `Helpers` name is vague. If it grows, rename or replace it with a clearer document-widget adapter contract.
+
+Largest remaining file-granularity risks:
+
+- `src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp` (~2,700 lines) mixes map-theme resolution, parsed-line-to-feature extraction, label formatting, area clipping/pattern logic, and scene item creation. Split into `MapEditorGeometryFeatureExtractor`, `MapEditorLabelRenderer`, `MapEditorAreaPatternRenderer`, and a thinner scene assembly layer when touching related code.
+- `src/core/TherionDocumentEditor.cpp` (~2,400 lines) is still pure enough to remain static, but it combines structure rename, scrap insertion, draft append, point/line rewrites, scrap scale/projection edits, quick fields, and coordinate-row rewrites. Split by rewrite domain only with regression coverage because this is a round-trip safety hotspot.
+- `src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp` (~2,000 lines) combines UI slots, session persistence, xth metadata rewrite, raster image loading/scaling/gamma processing, and `.xvi` parsing/placement caching. Extract background layer model/session metadata and image/xvi loading services before adding more layer features.
+- `src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp`, `MapEditorSceneItems.cpp`, `MapEditorObjectStyleCatalog.cpp`, and `MapEditorStylePreviewWidget.cpp` are each large enough to require care, but they are currently more cohesive than the three files above.
+
+Logical merge candidates:
+
+- Several tiny `TextEditorTab*Controller.cpp` files only build context structs and instantiate one controller. They were useful during extraction, but the file count now adds friction without much isolation. Merge only the context-factory files that share one responsibility, for example into `TextEditorTabControllerContexts.cpp` and `TextEditorTabBlockEditorControllerContexts.cpp`.
+- `src/app/WorkspaceCommandBarStyle.h` is currently a three-line compatibility include of `ApplicationStylePolicy.h`. Remove it or inline the remaining include users once stable.
+- Do not merge planner/logic files such as `MapEditorLineSplitPlanner`, `MapEditorLineExtensionPlanner`, `MapEditorObjectDeletePlanner`, `MapEditorObjectMovePlanner`, `MapEditorInputPolicy`, or block editor planners. They are focused, testable units and should stay split.
+- Do not merge GUI smoke tests just because some are long. Long map/editor smoke tests are expensive, but their length reflects workflow coverage; split only when an extracted fixture/helper improves readability.
+
+Naming review:
+
+- The mode/domain prefixes are mostly consistent: `RawEditor*`, `BlockEditor*`, `MapEditor*`, `TextEditorTab*`, and `MainWindow*` are aligned with the repository naming contract.
+- Remaining vague names are concentrated in legacy bridge/policy areas: `MainWindowDocumentHelpers`, `BlockEditorDetailsSupport`, `MapEditorSceneSupport`, and `MapEditorSceneInternals`. Prefer concrete responsibility names when these are next touched.
+- `MapEditorDetachedPaneWindow` and the private `DetachedMapWindow` in `MainWindow.cpp` describe different detachment scopes. Rename the main-window-local type if it escapes the file or grows, for example `MainWindowDetachedMapTabWindow`.
+- `*Controller` is overused in several places where `*ContextFactory`, `*Presenter`, `*Binder`, `*Planner`, or `*Renderer` would describe the role more precisely. New files should choose the precise suffix rather than defaulting to `Controller`.
+
+Security and supply-chain review:
+
+- Runtime process execution is mostly safe: Therion runs through `QProcess::start(program, arguments)` rather than a shell, and user-supplied arguments are split with `QProcess::splitCommand`.
+- The main runtime security boundary remains user-selected external executables, config paths, and working directories. Continue showing resolved executable/config/working-directory state in the UI before runs and keep failures actionable.
+- Linux packaging no longer runs `linuxdeployqt-continuous-x86_64.AppImage`. A mutable `continuous` AppImage plus changing checksum is not release-grade, and `linuxdeploy-plugin-qt` should not be adopted while its maintenance status is weak.
+- The current Linux workflow is a `.deb` preview/tester path. Production Linux release readiness remains blocked on a maintained broadly portable package format with reproducible tooling and CI smoke coverage.
+- GitHub workflows install external tooling through apt, Chocolatey, pip, and `aqtinstall`. That is normal for CI, but release workflows should minimize unpinned moving parts and emit enough provenance in manifests to make artifacts reproducible.
+- User map-style overrides load local JSON from the application data directory or `THERION_STUDIO_MAP_OBJECT_STYLES_DIR`. Keep this local-file-only model; future SVG-backed styles must reject remote URLs and external references.
+- Direct icon SVG rendering still exists outside `LucideIconFactory` in `BlockEditorCanvasItem.cpp`, `MapEditorInspectorData.cpp`, and `MainWindowStructureBrowser.cpp`. Consolidate these to the shared factory to reduce duplicate resource parsing and inconsistent caching.
+
+Performance review:
+
+- Project-structure scanning is already debounced and runs through `QtConcurrent`, which is the right direction.
+- Raw editor `input` path completion still walks the project tree with `QDirIterator` during suggestion building. For large projects, replace this with a cached project file index refreshed by the existing project scanner or a debounced completion-specific index.
+- Background raster loading, scaling, placement, and gamma processing currently happen synchronously in `MapEditorBackgroundLayers.cpp`. This is acceptable for small images but remains a UI freeze risk for large rasters. Move image decode/gamma/scaling work behind cancellable async jobs when background-layer work resumes.
+- `.xvi` parsing has an in-process cache keyed by path and mtime, which is useful, but the static cache is unbounded. Add a bounded cache policy or clear-on-project-close hook if large `.xvi` projects become common.
+- Map scene refresh is debounced for source-driven edits and has LOD-aware rendering in several items. The remaining risk is full scene rebuild cost after text edits and appearance changes; keep future work focused on incremental scene updates or feature-level diffing rather than more QGraphicsItem churn.
+- `MapEditorSceneRenderer.cpp` should not grow further with new parsing or style rules. Add new rendering/pattern/label behavior behind focused collaborators so performance tuning can be measured in isolation.
+
+Recommended next actions:
+
+1. Refactor CMake source definitions into reusable source-set variables or focused support libraries so app/test/tool source lists do not duplicate whole editor modules.
+2. Add a lightweight source-list hygiene check that reports `src/**/*.cpp` and important header-only policy files missing from expected CMake source groups.
+3. Consolidate remaining Lucide SVG rendering through `LucideIconFactory`.
+4. Extract `MapEditorBackgroundLayerModel`/loader responsibilities before adding more background-layer features.
+5. Split `TherionDocumentEditor` by rewrite domain only after adding/confirming round-trip regression tests for the touched rewrite operations.
 
 ## 1. Flaw Analysis
 
@@ -785,6 +861,8 @@ Actions:
 - Add Windows installer smoke verification for executable, DLLs, and `platforms/qwindows.dll` layout.
 - Add macOS bundle resource/plugin verification.
 - Add Linux resource/path verification.
+- Do not execute mutable `continuous` AppImage tooling in release workflows. Any future Linux portable artifact tooling shall use maintained immutable releases, repository packages, or built-from-source inputs with auditable provenance.
+- Keep release manifests explicit about source ref, package label, build type, tool versions, and artifact hashes.
 - Run headless core/application tests on all three platforms.
 - Keep GUI smoke tests minimal but representative.
 
@@ -792,6 +870,7 @@ Exit criteria:
 
 - Packaging failures are caught before release artifacts are shared.
 - Cross-platform assumptions are verified continuously.
+- Release artifact generation is reproducible enough to audit and does not execute unchecked moving third-party binaries.
 
 ## 6. Cross-Check Against The Claude Draft
 
@@ -984,7 +1063,9 @@ A Qt implementation can load bundled `:/resources/...` files first and user over
 
 These are low-risk and should happen before deep refactoring.
 
-- Fix accidental `CMakeLists.txt` drift and verify build/test health.
+- Reduce `CMakeLists.txt` source-list duplication and verify build/test health.
+- Consolidate remaining direct Lucide SVG rendering into `LucideIconFactory`.
+- Remove obsolete compatibility-only headers such as `WorkspaceCommandBarStyle.h` when include users are stable.
 - Add tests around `IFileSystem` and `ISessionStore` fakes.
 - Stop adding new direct `DocumentFile` calls from widgets.
 - Keep command catalog loading at composition/test setup boundaries; do not reintroduce UI-side static catalog access.

@@ -180,7 +180,7 @@ jobs:
           test -f /usr/share/applications/therion-studio.desktop
           test -f /usr/share/icons/hicolor/256x256/apps/therion-studio.png
 
-      - name: Launch smoke test (offscreen)
+      - name: Launch .deb smoke test (offscreen)
         shell: bash
         run: |
           set -euo pipefail
@@ -195,4 +195,29 @@ jobs:
           fi
           if [[ "$exit_code" -eq 124 ]]; then
             echo "TherionStudio started successfully (terminated by timeout as expected)."
+          fi
+
+      - name: Launch AppImage smoke test (offscreen)
+        shell: bash
+        run: |
+          set -euo pipefail
+          appimage_path="$(find /tmp/therion-linux-packages -maxdepth 1 -type f -name '*.AppImage' | head -n1)"
+          if [[ -z "$appimage_path" ]]; then
+            echo "No AppImage artifact found in /tmp/therion-linux-packages"
+            ls -la /tmp/therion-linux-packages || true
+            exit 1
+          fi
+          chmod +x "$appimage_path"
+
+          set +e
+          QT_QPA_PLATFORM=offscreen timeout 12s "$appimage_path" -platform offscreen >/tmp/therion-studio-appimage-launch.log 2>&1
+          exit_code=$?
+          set -e
+          if [[ "$exit_code" -ne 0 && "$exit_code" -ne 124 ]]; then
+            echo "AppImage launch failed with exit code $exit_code"
+            cat /tmp/therion-studio-appimage-launch.log
+            exit "$exit_code"
+          fi
+          if [[ "$exit_code" -eq 124 ]]; then
+            echo "AppImage started successfully (terminated by timeout as expected)."
           fi

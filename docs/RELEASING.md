@@ -105,7 +105,8 @@ TherionStudio-Linux-artifacts-manifest.json
 ```
 
 The workflow includes a follow-up Ubuntu 26.04 container smoke job that installs the generated
-`.deb` and performs an offscreen launch sanity check.
+`.deb` and performs offscreen launch sanity checks for both the installed `.deb` binary and the
+generated `AppImage`.
 
 ## 7. Publish GitHub Release
 

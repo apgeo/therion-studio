@@ -27,7 +27,8 @@ After artifact creation, the workflow runs a Debian/Ubuntu forward-compatibility
 - launches an `ubuntu:26.04` container
 - installs the generated `.deb`
 - verifies expected installed paths
-- performs an offscreen app launch sanity check
+- performs an offscreen `.deb` launch sanity check
+- performs an offscreen `AppImage` launch sanity check
 
 ## Build Notes
 

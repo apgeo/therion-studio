@@ -104,6 +104,7 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 6 partial: Linux packaging now provides `.deb` (primary) and `AppImage` (supplemental) artifacts via dedicated `.github/workflows/linux-packages.yml` workflow.
 - [x] Phase 6 partial: Linux release artifacts are now naming-verified and accompanied by SHA256 manifest metadata through `scripts/verify_linux_release_artifacts.py`.
 - [x] Phase 6 partial: Linux packaging workflow now runs Ubuntu 26.04 `.deb` install/launch smoke verification in a follow-up containerized job to validate forward-compatibility on the next Ubuntu LTS line.
+- [x] Phase 6 partial: Ubuntu 26.04 containerized Linux packaging smoke workflow now also validates offscreen AppImage launch behavior alongside `.deb` install/launch checks.
 - [ ] Phase 6: packaging and CI hardening completed.
 
 ## Review Scope And Current State

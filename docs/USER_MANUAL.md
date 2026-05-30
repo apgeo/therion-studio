@@ -80,6 +80,7 @@ For `.th` and `thconfig` files:
 
 New `.th` and `.thconfig` tabs open in the default editor selected in Settings (`Raw` by default, or `Blocks`).
 This preference affects newly opened tabs only; it does not change existing open tabs and does not alter Therion source syntax.
+Opening or switching to `Blocks` mode does not insert missing `encoding` directives or otherwise rewrite the file until you make an explicit edit.
 
 For `.th2` files:
 

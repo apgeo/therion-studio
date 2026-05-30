@@ -22,11 +22,9 @@ struct BlockEditorCanvasRebuildContext
     QHash<int, qreal> *containerBoundaryEndYByLine = nullptr;
     const int *selectedLineNumber = nullptr;
     const bool *tearingDown = nullptr;
-    const bool *blocksModeActive = nullptr;
     const TextEditorCommandMetadata *commandMetadata = nullptr;
     std::function<BlockEditorSourceContext()> sourceContext;
     std::function<bool()> isBlocksModeSupportedForCurrentFile;
-    std::function<bool()> ensureEncodingRootDirectiveForBlocks;
     std::function<void(int)> handleBlockDeleteRequest;
     std::function<void(int, const QPointF &)> handleBlockMoveRequest;
     std::function<void(int, const QPointF &)> updateBlockMovePreview;

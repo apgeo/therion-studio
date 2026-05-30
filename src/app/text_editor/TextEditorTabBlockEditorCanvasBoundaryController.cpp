@@ -22,16 +22,12 @@ BlockEditorCanvasRebuildContext TextEditorTab::blockEditorCanvasRebuildContext()
     context.containerBoundaryEndYByLine = &blockContainerBoundaryEndYByLine_;
     context.selectedLineNumber = &blockDetailsSelectedLineNumber_;
     context.tearingDown = &tearingDown_;
-    context.blocksModeActive = &blocksModeActive_;
     context.commandMetadata = &commandMetadata_;
     context.sourceContext = [this]() {
         return blockEditorSourceContext();
     };
     context.isBlocksModeSupportedForCurrentFile = [this]() {
         return isBlocksModeSupportedForCurrentFile();
-    };
-    context.ensureEncodingRootDirectiveForBlocks = [this]() {
-        return ensureEncodingRootDirectiveForBlocks();
     };
     context.handleBlockDeleteRequest = [this](int lineNumber) {
         handleBlockDeleteRequest(lineNumber);

@@ -403,8 +403,8 @@ int main(int argc, char *argv[])
         return 1;
     }
     const QString blocksText = tab.text();
-    if (!expect(blocksText.startsWith(QStringLiteral("encoding utf-8")),
-                "Blocks mode should normalize source to `encoding utf-8` at line 1.")) {
+    if (!expect(!blocksText.startsWith(QStringLiteral("encoding utf-8")),
+                "Opening Blocks mode should not inject `encoding utf-8` into source text.")) {
         return 1;
     }
     int encodingDirectiveCount = 0;
@@ -415,8 +415,8 @@ int main(int argc, char *argv[])
             ++encodingDirectiveCount;
         }
     }
-    if (!expect(encodingDirectiveCount == 1,
-                "Blocks mode should keep exactly one `encoding` directive.")) {
+    if (!expect(encodingDirectiveCount == 0,
+                "Blocks mode should not synthesize an `encoding` directive in source text.")) {
         return 1;
     }
 
@@ -692,6 +692,7 @@ int main(int argc, char *argv[])
             delete crashGuardTab;
             return 1;
         }
+        const QString cleanLoadedText = crashGuardTab->text();
         crashGuardTab->resize(960, 640);
         crashGuardTab->show();
         pumpEvents();
@@ -702,6 +703,11 @@ int main(int argc, char *argv[])
             pumpEvents();
             if (!expect(!crashGuardTab->isDirty(),
                         "Switching to Blocks mode must not mark a clean document as modified.")) {
+                delete crashGuardTab;
+                return 1;
+            }
+            if (!expect(crashGuardTab->text() == cleanLoadedText,
+                        "Switching to Blocks mode must not rewrite clean source text.")) {
                 delete crashGuardTab;
                 return 1;
             }
@@ -716,6 +722,29 @@ int main(int argc, char *argv[])
             guardPrimaryEdit->setText(QStringLiteral("discard-change"));
         }
         delete crashGuardTab;
+        pumpEvents();
+    }
+
+    {
+        auto *defaultBlocksTab = new TextEditorTab(fileSystem, CommandCatalogStore());
+        defaultBlocksTab->setInitialEditorMode(TextEditorTab::EditorMode::Blocks);
+        if (!expect(defaultBlocksTab->loadFile(filePath, &errorMessage),
+                    "Failed to load default-blocks tab instance.")) {
+            delete defaultBlocksTab;
+            return 1;
+        }
+        pumpEvents();
+        if (!expect(!defaultBlocksTab->isDirty(),
+                    "Opening a clean file directly in Blocks mode must not mark it dirty.")) {
+            delete defaultBlocksTab;
+            return 1;
+        }
+        if (!expect(!defaultBlocksTab->text().startsWith(QStringLiteral("encoding utf-8")),
+                    "Opening directly in Blocks mode must not inject `encoding utf-8` into source text.")) {
+            delete defaultBlocksTab;
+            return 1;
+        }
+        delete defaultBlocksTab;
         pumpEvents();
     }
 

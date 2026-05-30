@@ -68,10 +68,8 @@ void TextEditorModeController::setBlocksModeActive(bool active)
         if (context_.hideFindBar) {
             context_.hideFindBar();
         }
-        if (!ensureEncodingRootDirectiveForBlocks()) {
-            if (context_.rebuildBlocksCanvasFromText) {
-                context_.rebuildBlocksCanvasFromText();
-            }
+        if (context_.rebuildBlocksCanvasFromText) {
+            context_.rebuildBlocksCanvasFromText();
         }
         if (context_.populateBlockToolbox) {
             context_.populateBlockToolbox();

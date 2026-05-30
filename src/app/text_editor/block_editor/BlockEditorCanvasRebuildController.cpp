@@ -87,11 +87,6 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         return;
     }
 
-    if ((context_.blocksModeActive != nullptr && *context_.blocksModeActive) && (context_.ensureEncodingRootDirectiveForBlocks != nullptr && context_.ensureEncodingRootDirectiveForBlocks())) {
-        // Normalization replaced the text and triggered a fresh rebuild.
-        return;
-    }
-
     const QStringList lines = blockEditorNormalizedSourceLines(source.text());
     const QVector<BlockEditorLogicalLine> logicalLines = blockEditorBuildLogicalLines(lines);
 
@@ -246,14 +241,18 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         return;
     }
 
+    const bool hasEncodingRoot = std::any_of(roots.cbegin(), roots.cend(), [](const BlockCanvasItem *item) {
+        return item != nullptr && isEncodingDirective(item->kind());
+    });
+
     qreal y = 16.0;
     std::function<void(BlockCanvasItem *, int)> layoutTree = [&](BlockCanvasItem *item, int depth) {
         if (item == nullptr) {
             return;
         }
         int visualDepth = depth;
-        if (!isEncodingDirective(item->kind())) {
-            // Keep `encoding` as visual document root; indent all other content one level below it.
+        if (hasEncodingRoot && !isEncodingDirective(item->kind())) {
+            // Keep an existing `encoding` directive as visual document root.
             ++visualDepth;
         }
         const QPointF scenePosition(24.0 + (visualDepth * 28.0), y);

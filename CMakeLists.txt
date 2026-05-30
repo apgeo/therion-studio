@@ -736,6 +736,15 @@ endif()
 if(WIN32)
     therion_generate_deploy_app_script(TherionStudio THERION_STUDIO_QT_DEPLOY_SCRIPT)
     install(SCRIPT ${THERION_STUDIO_QT_DEPLOY_SCRIPT})
+    if(TARGET Qt6::QWindowsIntegrationPlugin)
+        install(IMPORTED_RUNTIME_ARTIFACTS Qt6::QWindowsIntegrationPlugin
+            LIBRARY DESTINATION "${CMAKE_INSTALL_BINDIR}/platforms"
+            RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/platforms")
+    else()
+        message(WARNING
+            "Qt6::QWindowsIntegrationPlugin target is not available; "
+            "Windows install layout relies on the Qt deploy script to provide qwindows.dll")
+    endif()
 
     set(CPACK_GENERATOR "NSIS")
     set(CPACK_PACKAGE_NAME "Therion Studio")

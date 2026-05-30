@@ -38,7 +38,7 @@ The application is primarily used to:
 
 ### 2.1 Editing Model Principles
 
-- Therion project artifacts shall remain plain-text source documents (`.th`, `.th2`, `thconfig`) as the canonical source of truth.
+- Therion project artifacts shall remain plain-text source documents (`.th`, `.th2`, `thconfig`, `*.thconfig`, and `thconfig.*`) as the canonical source of truth.
 - All editor surfaces shall serialize user-visible changes back into plain-text Therion source without introducing a separate binary/project-only model.
 - The TH2 visual map workspace shall be treated as a specialized editing surface for geometry-intensive `.th2` workflows that are difficult to author directly in raw text.
 - The structured Blocks workspace should prioritize approachability and guided editing for newer users by reducing syntax burden while preserving explicit source round-trip behavior.
@@ -54,7 +54,7 @@ Required capabilities:
 
 - open a project folder
 - display project files and subfolders
-- recognize common Therion-related file types such as `.th`, `.th2`, and `thconfig`
+- recognize common Therion-related file types such as `.th`, `.th2`, `thconfig`, `*.thconfig`, and `thconfig.*`
 - open files in editor tabs
 - support file selection, multi-tab workflows, and recent project reopening
 - preserve folder expansion state where practical
@@ -80,12 +80,12 @@ Required capabilities:
 - preserve unsaved edits and document state across tab changes
 - provide an editor-surface mode switch between raw text editing and a structured block-canvas view for supported Therion source files
 - keep raw text as the canonical source of truth; any structured-view mutation shall be applied through source edits with immediate source synchronization
-- when the active document supports structured Blocks mode (`.th`/`.thconfig`) in the main window, the `Raw`/`Blocks` mode selector shall be hosted in the full-width document command toolbar row directly above the tab strip
+- when the active document supports structured Blocks mode (`.th` or Therion config files) in the main window, the `Raw`/`Blocks` mode selector shall be hosted in the full-width document command toolbar row directly above the tab strip
 
 Structured block-canvas requirements:
 
 - the structured mode shall be available for supported file types and shall remain optional per file type
-- initial scope shall support `.th` and `.thconfig` documents
+- initial scope shall support `.th` and Therion config documents (`thconfig`, `*.thconfig`, and `thconfig.*`)
 - the structured mode shall expose a toolbox of compatible Therion block/command templates that can be inserted via drag and drop into the canvas
 - the structured-mode toolbox shall provide a scope filter with `Auto` as default; `Auto` shall derive insertion scope from the currently selected canvas block context and manual scope selection shall persist until changed by the user.
 - the structured-mode toolbox shall include a first-class `comment` insertion item that inserts full-line comments in source
@@ -95,9 +95,9 @@ Structured block-canvas requirements:
 - `Object Reference` cards shall be insertable only inside `map` blocks, shall support drag/drop reordering with other map children, and shall preserve unresolved target names for round-trip safety
 - map-body commands such as `break` shall be exposed in the structured-mode toolbox from generated command-catalog context metadata, not from Block Editor hardcoded command lists
 - catalog-backed leaf commands without positional arguments, such as map `break`, shall not require or display a synthetic value field in Block Details
-- in `.thconfig` structured mode, top-level configuration directives such as `select`, `export`, and `unselect` shall be rendered as leaf cards at document root when present in source.
+- in Therion config structured mode, top-level configuration directives such as `select`, `export`, and `unselect` shall be rendered as leaf cards at document root when present in source.
 - directives that support both inline and block forms (for example `source`) shall open nested scope only in explicit block form; inline single-line form shall remain a leaf card.
-- in structured mode for `.th` and `.thconfig` documents, an existing `encoding` directive shall be treated as a fixed document-root directive; opening a file or switching editor modes shall not auto-insert a missing `encoding ...` line or otherwise mutate source text, and an existing `encoding` card shall not be insertable from toolbox, movable, or deletable
+- in structured mode for `.th` and Therion config documents, an existing `encoding` directive shall be treated as a fixed document-root directive; opening a file or switching editor modes shall not auto-insert a missing `encoding ...` line or otherwise mutate source text, and an existing `encoding` card shall not be insertable from toolbox, movable, or deletable
 - Block Details for editable blocks shall expose an always-visible optional inline comment field that maps to end-of-line Therion comments and preserves comments on line rewrites.
 - structured block cards should visually indicate presence of inline comment and expose the comment text on hover.
 - selecting or configuring a structure card shall mutate the underlying source text through the same safe-edit pipeline used by raw mode
@@ -281,9 +281,9 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Main-window file tabs shall use native platform tab rendering and shall sit on the `QTabWidget` editor/canvas frame without custom tab-bar geometry overrides.
 - The main window shall provide a usable default size and shall clamp restored session geometry to a usable minimum size so stale or platform-specific saved geometry cannot produce an unusably narrow window, while still permitting common half-screen layouts.
 - When a TH2 document is active, the document command toolbar shall include these left-side groups in order: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`; then `Select`, `Complete Draft`; then a visual separator; then `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`.
-- For `.th` and `.thconfig` documents, the `Raw`/`Blocks` mode selector shall be shown in this document command toolbar instead of a dedicated in-content mode row.
-- The Settings dialog shall allow choosing the default editor mode for newly opened `.th` and `.thconfig` documents: `Raw` or `Blocks`; the default shall be `Raw`.
-- The default text-editor mode preference shall apply only when opening a new `.th` or `.thconfig` tab and shall not modify document source merely because the tab initially opens in Blocks mode.
+- For `.th` and Therion config documents, the `Raw`/`Blocks` mode selector shall be shown in this document command toolbar instead of a dedicated in-content mode row.
+- The Settings dialog shall allow choosing the default editor mode for newly opened `.th` and Therion config documents: `Raw` or `Blocks`; the default shall be `Raw`.
+- The default text-editor mode preference shall apply only when opening a new `.th` or Therion config tab and shall not modify document source merely because the tab initially opens in Blocks mode.
 - The application shall show the active document path and current text encoding in a status area tied to the active document context.
 - When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
 - When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8.
@@ -451,8 +451,8 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Structure indexing shall treat the opened project folder as the root graph boundary and shall prefer an explicitly selected project target config when it resolves inside that project folder.
 - Structure index snapshots shall expose the normalized project root, resolved root config path when one is used, and root traversal files so the UI and future compiler-confirmed checks can report the exact graph input.
 - When no explicit project target config is selected, a root-level `thconfig` file shall define the default project structure graph.
-- When no root-level `thconfig` file exists and exactly one root-level `*.thconfig` file exists, that config may define the project structure graph.
-- When multiple root-level `*.thconfig` files exist without an explicit project target config, the application shall not silently merge those graphs and shall show an actionable message in the structure sidebar asking the user to choose a project target config; the message shall provide a direct action to focus the Compiler pane target-config control.
+- When no root-level `thconfig` file exists and exactly one root-level named config file (`*.thconfig` or `thconfig.*`) exists, that config may define the project structure graph.
+- When multiple root-level named config files (`*.thconfig` or `thconfig.*`) exist without an explicit project target config, the application shall not silently merge those graphs and shall show an actionable message in the structure sidebar asking the user to choose a project target config; the message shall provide a direct action to focus the Compiler pane target-config control.
 - The structure sidebar summary or diagnostic tooltip shall report the root config or inferred root files used to build the current structure graph.
 - The structure sidebar shall provide explicit user controls to collapse and re-expand the panel.
 - The sidebar shall use a fixed-width activity rail plus a resizable content pane so the rail remains available when content is collapsed.
@@ -473,11 +473,12 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The compiler sidebar surface shall remain usable at narrow widths by using stacked field labels, compact browse/reset controls, wrapped runner output, and action buttons that wrap into multiple rows instead of clipping horizontally.
 - The compiler sidebar shall provide a single run surface with an explicit run target selector for `Current Config` and `Project Config`.
 - The status bar compiler indicator shall update when Therion starts, finishes, or reports a runner error, and shall keep the last success/failure result visible while the user continues editing.
-- A `Compile Current Config` toolbar action using the play icon shall be shown for active `thconfig`/`*.thconfig` documents after `Undo`/`Redo`, separated by a toolbar divider, and shall run Therion with `Current Config`.
-- `Current Config` shall run the active document only when the active document is a Therion config file such as `thconfig` or `*.thconfig`.
+- A `Compile Current Config` toolbar action using the play icon shall be shown for active Therion config documents after `Undo`/`Redo`, separated by a toolbar divider, and shall run Therion with `Current Config`.
+- `Current Config` shall run the active document only when the active document is a Therion config file such as `thconfig`, `*.thconfig`, or `thconfig.*`.
 - When the active document is a Therion config file, the run target selector shall automatically switch to `Current Config`.
 - When the active document is not a Therion config file, the run target selector shall be locked to `Project Config`.
-- `Project Config` shall run the configured project target config when one is set, otherwise it shall resolve the default `thconfig` from the project or working-directory context.
+- `Project Config` shall run the configured project target config when one is set, otherwise it shall resolve `thconfig`, or the only named config file (`*.thconfig` or `thconfig.*`) when `thconfig` is absent, from the project or working-directory context.
+- Closing a project shall clear the project-scoped compiler target config and working-directory override while preserving global runner preferences such as executable path. Additional command-line options shall remain only in the current running window/session and shall not be restored from persistent settings on the next application launch.
 - Arbitrary one-off configs shall be run by opening the config file as a document and using `Current Config` rather than a separate custom run-target mode.
 - When no explicit config argument is supplied in the additional command-line options, the selected run-target config shall be passed to Therion as the source/config argument for the run.
 - If no run-target config can be resolved, the application shall block the run and show an actionable message rather than invoking Therion without source files.
@@ -513,7 +514,7 @@ Platform modifier mapping:
 | Action | Menu location | Shortcut | Required behavior |
 |---|---|---|---|
 | New Window | File | Command+N | Open a new empty main window without restoring the current project or open documents |
-| Settings / Preferences | File or native application menu | platform-standard Preferences placement where available | Open application settings for language override, Therion executable path, and default `.th`/`.thconfig` editor mode |
+| Settings / Preferences | File or native application menu | platform-standard Preferences placement where available | Open application settings for language override, Therion executable path, and default `.th` / Therion config editor mode |
 | About Therion Studio | Help or native application menu | none | Show installed version/build metadata, Qt/platform details, repository, license, maintainer, and third-party notice location |
 | Expand/Collapse Sidebar | View | none | Expand or collapse the left sidebar content without changing the active document |
 | Expand/Collapse Context Help | View | none | Expand or collapse the Raw editor's contextual help column without modifying document source |
@@ -611,15 +612,15 @@ Required persistent preferences include:
 - map editor viewport state and automatic input-policy state
 - background image adjustment state, where practical
 - application language override, where the user has set one
-- default `.th` / `.thconfig` editor mode
+- default `.th` / Therion config editor mode
 - Therion executable path or runner configuration, where the user has set one
-- Therion runner working-directory override and command-line options, where the user has set them
 - editor preferences that affect visible behavior, such as folding state and search-bar mode if they are restored by the implementation
 
 Preference behavior rules:
 
 - changes to a visible preference shall take effect immediately when practical
 - preferences shall survive application restart
+- additional Therion runner command-line options shall remain session-only and shall not persist across application restarts
 - if a preference cannot be restored exactly, the application shall fall back to a safe default rather than failing to start
 - file-system refresh and project reload actions shall preserve user selections where possible
 
@@ -959,7 +960,7 @@ The criteria below are intended for implementation verification and QA.
 - Find and Replace show an inline search bar with next, previous, replace, replace all, whole-word, and match-case controls.
 - The editor shows a contextual help/documentation panel for Therion commands and options when metadata is available.
 - In raw text-editing mode, the contextual help panel appears in a resizable right-side inspector column (not a bottom strip), and editor/help spacing remains visually consistent with Blocks mode.
-- For `.th` and `.thconfig` documents, `Raw`/`Blocks` mode controls appear in the full-width document command toolbar row above the tab strip.
+- For `.th` and Therion config documents, `Raw`/`Blocks` mode controls appear in the full-width document command toolbar row above the tab strip.
 - The application shows the active file path and encoding in a status area for the active document.
 - For map-editor documents, the status area shows a color mode badge (`Select` green, `Insert` red) and updates when the mode changes.
 - Non-UTF-8 files can be explicitly converted to UTF-8.

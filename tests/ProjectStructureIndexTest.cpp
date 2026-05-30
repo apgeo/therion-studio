@@ -568,6 +568,48 @@ int runProjectIndexRootConfigDisambiguationTest()
     return 0;
 }
 
+int runProjectIndexThconfigWorkRootTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "The temporary project directory could not be created.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    const QString configFile = projectDir.filePath(QStringLiteral("thconfig.work"));
+    const QString sourceFile = projectDir.filePath(QStringLiteral("work.th"));
+    if (!expect(writeTextFile(configFile,
+                              QStringLiteral("source work.th\n")),
+                "The thconfig.work file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(sourceFile,
+                              QStringLiteral(
+                                  "survey work\n"
+                                  "endsurvey work\n")),
+                "The thconfig.work source file could not be written.")) {
+        return 1;
+    }
+
+    QString errorMessage;
+    const ProjectIndexSnapshot snapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(), &errorMessage);
+    if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(normalizedPathForComparison(snapshot.rootConfigPath) == normalizedPathForComparison(configFile),
+                "A single thconfig.* file should be accepted as the project root config.")) {
+        return 1;
+    }
+    if (!expect(snapshot.entries.size() == 1
+                    && snapshot.entries.first().kind == ProjectStructureEntryKind::Survey
+                    && snapshot.entries.first().name == QStringLiteral("work"),
+                "The thconfig.work root config did not select the expected source graph.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runTh2ObjectIndexGroupingTest()
 {
     const QVector<ProjectStructureEntry> entries = ProjectStructureIndex::scanTh2Objects(
@@ -629,6 +671,9 @@ int main()
         return 1;
     }
     if (runProjectIndexRootConfigDisambiguationTest() != 0) {
+        return 1;
+    }
+    if (runProjectIndexThconfigWorkRootTest() != 0) {
         return 1;
     }
     if (runTh2ObjectIndexGroupingTest() != 0) {

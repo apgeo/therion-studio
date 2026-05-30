@@ -69,7 +69,7 @@ MainWindowSettingsDialog::MainWindowSettingsDialog(const Settings &settings, QWi
     selectComboData(defaultTextEditorModeCombo_,
                     settings.defaultTextEditorMode,
                     QStringLiteral("raw"));
-    formLayout->addRow(tr("Default .th / .thconfig editor"), defaultTextEditorModeCombo_);
+    formLayout->addRow(tr("Default .th / config editor"), defaultTextEditorModeCombo_);
 
     rootLayout->addLayout(formLayout);
 

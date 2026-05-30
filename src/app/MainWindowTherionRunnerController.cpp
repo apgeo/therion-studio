@@ -1,6 +1,7 @@
 #include "MainWindowTherionRunnerController.h"
 
 #include "TherionRunnerConfigResolver.h"
+#include "../core/TherionFileTypes.h"
 
 #include <QFileInfo>
 #include <QProcess>
@@ -9,13 +10,6 @@ namespace
 {
 constexpr auto kTherionRunTargetCurrent = "current";
 constexpr auto kTherionRunTargetProject = "project";
-
-bool isTherionConfigPath(const QString &path)
-{
-    const QFileInfo fileInfo(path);
-    return fileInfo.fileName().compare(QStringLiteral("thconfig"), Qt::CaseInsensitive) == 0
-        || fileInfo.suffix().compare(QStringLiteral("thconfig"), Qt::CaseInsensitive) == 0;
-}
 
 QString canonicalOrAbsolutePath(const QString &path)
 {
@@ -47,7 +41,7 @@ namespace TherionStudio
 {
 QString MainWindowTherionRunnerController::currentDocumentConfigPath(const QString &currentDocumentPath)
 {
-    if (currentDocumentPath.isEmpty() || !isTherionConfigPath(currentDocumentPath)) {
+    if (currentDocumentPath.isEmpty() || !isTherionConfigFilePath(currentDocumentPath)) {
         return QString();
     }
 

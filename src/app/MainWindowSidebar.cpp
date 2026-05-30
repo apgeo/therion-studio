@@ -3,6 +3,7 @@
 #include "ApplicationStylePolicy.h"
 #include "MainWindowDocumentHelpers.h"
 #include "LucideIconFactory.h"
+#include "../core/TherionFileTypes.h"
 
 #include <QAbstractItemView>
 #include <QAction>
@@ -167,14 +168,13 @@ bool isTherionProjectFilePath(const QString &filePath)
     }
 
     const QString fileName = info.fileName();
-    if (fileName.compare(QStringLiteral("thconfig"), Qt::CaseInsensitive) == 0) {
+    if (TherionStudio::isTherionConfigFileName(fileName)) {
         return true;
     }
 
     const QString suffix = info.suffix().toLower();
     return suffix == QStringLiteral("th")
-        || suffix == QStringLiteral("th2")
-        || suffix == QStringLiteral("thconfig");
+        || suffix == QStringLiteral("th2");
 }
 
 QString duplicateFilePath(const QString &sourcePath)

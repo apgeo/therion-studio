@@ -159,8 +159,8 @@
     </message>
     <message>
         <location filename="../src/app/MainWindow.cpp" line="541"/>
-        <source>Structured block canvas for .th and .thconfig files.</source>
-        <translation>Strukturované blokové plátno pro soubory .th a .thconfig.</translation>
+        <source>Structured block canvas for .th and Therion config files.</source>
+        <translation>Strukturované blokové plátno pro soubory .th a konfigurační soubory Therion.</translation>
     </message>
     <message>
         <location filename="../src/app/MainWindow.cpp" line="756"/>
@@ -1017,8 +1017,8 @@
     </message>
     <message>
         <location filename="../src/app/MainWindowTherionRunner.cpp" line="166"/>
-        <source>Therion config files (thconfig *.thconfig);;All files (*)</source>
-        <translation>Konfigurační soubory Therion (thconfig *.thconfig);;Všechny soubory (*)</translation>
+        <source>Therion config files (thconfig thconfig.* *.thconfig);;All files (*)</source>
+        <translation>Konfigurační soubory Therion (thconfig thconfig.* *.thconfig);;Všechny soubory (*)</translation>
     </message>
     <message>
         <location filename="../src/app/MainWindowTherionRunner.cpp" line="196"/>
@@ -1057,8 +1057,8 @@
     </message>
     <message>
         <location filename="../src/app/MainWindowTherionConsoleBuilder.cpp" line="80"/>
-        <source>Path to project .thconfig</source>
-        <translation>Cesta k projektovému .thconfig</translation>
+        <source>Path to project Therion config</source>
+        <translation>Cesta k projektové konfiguraci Therion</translation>
     </message>
     <message>
         <location filename="../src/app/MainWindowTherionConsoleBuilder.cpp" line="83"/>
@@ -1069,8 +1069,8 @@
     <message>
         <location filename="../src/app/MainWindowTherionConsoleBuilder.cpp" line="84"/>
         <location filename="../src/app/MainWindowTherionConsoleBuilder.cpp" line="85"/>
-        <source>Browse for target .thconfig</source>
-        <translation>Vybrat cílový .thconfig</translation>
+        <source>Browse for target Therion config</source>
+        <translation>Vybrat cílovou konfiguraci Therion</translation>
     </message>
     <message>
         <location filename="../src/app/MainWindowTherionConsoleBuilder.cpp" line="94"/>
@@ -1142,8 +1142,8 @@
     </message>
     <message>
         <location filename="../src/app/MainWindowTherionRunner.cpp" line="389"/>
-        <source>Open a thconfig or .thconfig tab to use Current Config.</source>
-        <translation>Pro použití aktuální konfigurace otevřete kartu thconfig nebo .thconfig.</translation>
+        <source>Open a Therion config tab to use Current Config.</source>
+        <translation>Pro použití aktuální konfigurace otevřete kartu s konfigurací Therion.</translation>
     </message>
     <message>
         <location filename="../src/app/MainWindowTherionRunner.cpp" line="404"/>
@@ -1193,8 +1193,8 @@
     </message>
     <message>
         <location filename="../src/app/MainWindowTherionRunner.cpp" line="496"/>
-        <source>Open a thconfig or .thconfig tab before compiling the current config.</source>
-        <translation>Před kompilací aktuální konfigurace otevřete kartu thconfig nebo .thconfig.</translation>
+        <source>Open a Therion config tab before compiling the current config.</source>
+        <translation>Před kompilací aktuální konfigurace otevřete kartu s konfigurací Therion.</translation>
     </message>
     <message>
         <location filename="../src/app/MainWindowTherionRunner.cpp" line="542"/>
@@ -1769,8 +1769,8 @@ Očekávané soubory jsou `docs/USER_MANUAL.&lt;language&gt;.md` nebo `docs/USER
     <name>TherionStudio::BlockEditorCanvasRebuildController</name>
     <message>
         <location filename="../src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.cpp" line="85"/>
-        <source>Blocks mode is currently available only for .th and .thconfig files.</source>
-        <translation>Režim bloků je aktuálně dostupný pouze pro soubory .th a .thconfig.</translation>
+        <source>Blocks mode is currently available only for .th and Therion config files.</source>
+        <translation>Režim bloků je aktuálně dostupný pouze pro soubory .th a konfigurační soubory Therion.</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.cpp" line="244"/>
@@ -2082,8 +2082,8 @@ Očekávané soubory jsou `docs/USER_MANUAL.&lt;language&gt;.md` nebo `docs/USER
     </message>
     <message>
         <location filename="../src/app/text_editor/block_editor/BlockEditorInsertionController.cpp" line="41"/>
-        <source>Blocks mode is available only for .th and .thconfig files.</source>
-        <translation>Režim bloků je dostupný pouze pro soubory .th a .thconfig.</translation>
+        <source>Blocks mode is available only for .th and Therion config files.</source>
+        <translation>Režim bloků je dostupný pouze pro soubory .th a konfigurační soubory Therion.</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/block_editor/BlockEditorInsertionController.cpp" line="91"/>
@@ -2551,8 +2551,8 @@ Očekávané soubory jsou `docs/USER_MANUAL.&lt;language&gt;.md` nebo `docs/USER
     </message>
     <message>
         <location filename="../src/app/MainWindowSettingsDialog.cpp" line="72"/>
-        <source>Default .th / .thconfig editor</source>
-        <translation>Výchozí editor pro .th / .thconfig</translation>
+        <source>Default .th / config editor</source>
+        <translation>Výchozí editor pro .th / konfiguraci</translation>
     </message>
     <message>
         <location filename="../src/app/MainWindowSettingsDialog.cpp" line="103"/>
@@ -4254,8 +4254,8 @@ Očekávané soubory jsou `docs/USER_MANUAL.&lt;language&gt;.md` nebo `docs/USER
     </message>
     <message>
         <location filename="../src/core/ProjectStructureIndex.cpp" line="633"/>
-        <source>Multiple .thconfig files were found in the project root. Select a project target config in the Compiler pane to build the structure graph.</source>
-        <translation>V kořeni projektu bylo nalezeno více souborů .thconfig. Vyberte cílový konfigurační soubor projektu v panelu Kompilátor, aby bylo možné sestavit graf struktury.</translation>
+        <source>Multiple Therion config files were found in the project root. Select a project target config in the Compiler pane to build the structure graph.</source>
+        <translation>V kořeni projektu bylo nalezeno více konfiguračních souborů Therion. Vyberte cílovou konfiguraci projektu v panelu Kompilátor, aby bylo možné sestavit graf struktury.</translation>
     </message>
 </context>
 <context>
@@ -4493,8 +4493,8 @@ Očekávané soubory jsou `docs/USER_MANUAL.&lt;language&gt;.md` nebo `docs/USER
     </message>
     <message>
         <location filename="../src/app/text_editor/TextEditorTabBootstrap.cpp" line="92"/>
-        <source>Structured block canvas for .th and .thconfig files.</source>
-        <translation>Strukturované blokové plátno pro soubory .th a .thconfig.</translation>
+        <source>Structured block canvas for .th and Therion config files.</source>
+        <translation>Strukturované blokové plátno pro soubory .th a konfigurační soubory Therion.</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/TextEditorTabStatusCursorDelegates.cpp" line="67"/>

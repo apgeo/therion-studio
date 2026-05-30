@@ -64,7 +64,7 @@ MainWindowTherionConsoleBuilder::build(const BuildInput &input)
     result.therionArgumentsEdit = new QLineEdit(widget);
     result.therionArgumentsEdit->setPlaceholderText(
         QCoreApplication::translate("MainWindow", "Additional Therion command-line options"));
-    result.therionArgumentsEdit->setText(input.persistedArguments);
+    result.therionArgumentsEdit->setText(input.initialArguments);
     result.therionArgumentsEdit->setCursorPosition(result.therionArgumentsEdit->text().size());
     addLabeledWidget(settingsLayout, QCoreApplication::translate("MainWindow", "Arguments"), result.therionArgumentsEdit, widget);
 
@@ -77,12 +77,12 @@ MainWindowTherionConsoleBuilder::build(const BuildInput &input)
     addLabeledWidget(settingsLayout, QCoreApplication::translate("MainWindow", "Run Target"), result.therionRunTargetCombo, widget);
 
     result.therionTargetConfigEdit = new QLineEdit(widget);
-    result.therionTargetConfigEdit->setPlaceholderText(QCoreApplication::translate("MainWindow", "Path to project .thconfig"));
+    result.therionTargetConfigEdit->setPlaceholderText(QCoreApplication::translate("MainWindow", "Path to project Therion config"));
     result.therionTargetConfigEdit->setText(input.persistedTargetConfigPath);
     result.therionTargetConfigEdit->setCursorPosition(result.therionTargetConfigEdit->text().size());
     result.therionBrowseTargetConfigButton = new QPushButton(QCoreApplication::translate("MainWindow", "..."), widget);
-    result.therionBrowseTargetConfigButton->setToolTip(QCoreApplication::translate("MainWindow", "Browse for target .thconfig"));
-    result.therionBrowseTargetConfigButton->setAccessibleName(QCoreApplication::translate("MainWindow", "Browse for target .thconfig"));
+    result.therionBrowseTargetConfigButton->setToolTip(QCoreApplication::translate("MainWindow", "Browse for target Therion config"));
+    result.therionBrowseTargetConfigButton->setAccessibleName(QCoreApplication::translate("MainWindow", "Browse for target Therion config"));
     result.therionBrowseTargetConfigButton->setFixedWidth(34);
 
     auto *targetConfigRow = new QWidget(widget);

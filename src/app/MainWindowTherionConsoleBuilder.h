@@ -18,7 +18,7 @@ public:
     {
         QWidget *consoleHost = nullptr;
         QString persistedWorkingDirectory;
-        QString persistedArguments;
+        QString initialArguments;
         QString persistedRunTargetMode;
         QString persistedTargetConfigPath;
     };

@@ -27,6 +27,7 @@ public:
         std::function<void()> clearDocumentTabs;
         std::function<void()> resetProjectBrowser;
         std::function<void()> persistOpenDocuments;
+        std::function<void()> resetProjectTherionRunContext;
     };
 
     static void openProject(const QString &selectedProjectPath,

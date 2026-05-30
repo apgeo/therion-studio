@@ -185,6 +185,7 @@ int runCloseProjectSuccessExecutionOrderTest()
     actions.clearDocumentTabs = [&calls]() { calls.append(QStringLiteral("clear_tabs")); };
     actions.resetProjectBrowser = [&calls]() { calls.append(QStringLiteral("reset_browser")); };
     actions.persistOpenDocuments = [&calls]() { calls.append(QStringLiteral("persist_docs")); };
+    actions.resetProjectTherionRunContext = [&calls]() { calls.append(QStringLiteral("reset_compiler_project_context")); };
     actions.rebuildStructureSidebar = [&calls]() { calls.append(QStringLiteral("rebuild_structure")); };
     actions.refreshTherionConfigDisplay = [&calls]() { calls.append(QStringLiteral("refresh_config")); };
     actions.updateProjectActionState = [&calls]() { calls.append(QStringLiteral("update_actions")); };
@@ -208,6 +209,7 @@ int runCloseProjectSuccessExecutionOrderTest()
         QStringLiteral("clear_tabs"),
         QStringLiteral("reset_browser"),
         QStringLiteral("persist_docs"),
+        QStringLiteral("reset_compiler_project_context"),
         QStringLiteral("rebuild_structure"),
         QStringLiteral("refresh_config"),
         QStringLiteral("update_actions"),

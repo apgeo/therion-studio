@@ -4,6 +4,7 @@
 #include "block_editor/BlockEditorSourceText.h"
 
 #include "../../core/TherionDocumentParser.h"
+#include "../../core/TherionFileTypes.h"
 
 #include <QFileInfo>
 #include <QPlainTextEdit>
@@ -30,10 +31,9 @@ bool TextEditorModeController::isBlocksModeSupportedForCurrentFile() const
 
     const QFileInfo fileInfo(*context_.filePath);
     const QString suffix = fileInfo.suffix().trimmed().toLower();
-    const QString fileName = fileInfo.fileName().trimmed().toLower();
+    const QString fileName = fileInfo.fileName();
     return suffix == QStringLiteral("th")
-        || suffix == QStringLiteral("thconfig")
-        || fileName == QStringLiteral("thconfig");
+        || isTherionConfigFileName(fileName);
 }
 
 void TextEditorModeController::refreshBlocksModeAvailability()

@@ -41,9 +41,6 @@ public:
     virtual QString therionWorkingDirectory() const = 0;
     virtual void setTherionWorkingDirectory(const QString &path) = 0;
 
-    virtual QString therionArguments() const = 0;
-    virtual void setTherionArguments(const QString &arguments) = 0;
-
     virtual QString therionRunTargetMode() const = 0;
     virtual void setTherionRunTargetMode(const QString &mode) = 0;
 

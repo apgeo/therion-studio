@@ -37,9 +37,6 @@ public:
     QString therionWorkingDirectory() const override { return therionWorkingDirectory_; }
     void setTherionWorkingDirectory(const QString &path) override { therionWorkingDirectory_ = path; }
 
-    QString therionArguments() const override { return therionArguments_; }
-    void setTherionArguments(const QString &arguments) override { therionArguments_ = arguments; }
-
     QString therionRunTargetMode() const override { return therionRunTargetMode_; }
     void setTherionRunTargetMode(const QString &mode) override { therionRunTargetMode_ = mode; }
 
@@ -66,7 +63,6 @@ private:
     QString defaultTextEditorMode_ = QStringLiteral("raw");
     QString therionExecutablePath_;
     QString therionWorkingDirectory_;
-    QString therionArguments_;
     QString therionRunTargetMode_;
     QString therionTargetConfigPath_;
     bool therionMapTouchFriendlyControlsEnabled_ = false;

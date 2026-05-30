@@ -24,16 +24,23 @@ const auto kTherionTargetConfigPathKey = QStringLiteral("session/therionTargetCo
 const auto kTherionMapTouchFriendlyControlsEnabledKey = QStringLiteral("session/therionMapTouchFriendlyControlsEnabled");
 const auto kTherionMapMagnifierEnabledKey = QStringLiteral("session/therionMapMagnifierEnabled");
 const auto kTherionMapBackgroundLayersKey = QStringLiteral("session/therionMapBackgroundLayers");
+
+void clearDeprecatedSessionOnlyKeys(QSettings &settings)
+{
+    settings.remove(kTherionArgumentsKey);
+}
 }
 
 SessionSettingsStore::SessionSettingsStore()
     : settings_(std::make_unique<QSettings>())
 {
+    clearDeprecatedSessionOnlyKeys(*settings_);
 }
 
 SessionSettingsStore::SessionSettingsStore(const QString &fileName, QSettings::Format format)
     : settings_(std::make_unique<QSettings>(fileName, format))
 {
+    clearDeprecatedSessionOnlyKeys(*settings_);
 }
 
 SessionSettingsStore::SessionSettingsStore(QSettings::Format format,
@@ -42,6 +49,7 @@ SessionSettingsStore::SessionSettingsStore(QSettings::Format format,
                                            const QString &application)
     : settings_(std::make_unique<QSettings>(format, scope, organization, application))
 {
+    clearDeprecatedSessionOnlyKeys(*settings_);
 }
 
 SessionSettingsStore::~SessionSettingsStore() = default;
@@ -148,16 +156,6 @@ QString SessionSettingsStore::therionWorkingDirectory() const
 void SessionSettingsStore::setTherionWorkingDirectory(const QString &path)
 {
     settings_->setValue(kTherionWorkingDirectoryKey, path);
-}
-
-QString SessionSettingsStore::therionArguments() const
-{
-    return settings_->value(kTherionArgumentsKey).toString();
-}
-
-void SessionSettingsStore::setTherionArguments(const QString &arguments)
-{
-    settings_->setValue(kTherionArgumentsKey, arguments);
 }
 
 QString SessionSettingsStore::therionRunTargetMode() const
@@ -308,16 +306,6 @@ QString InMemorySessionStore::therionWorkingDirectory() const
 void InMemorySessionStore::setTherionWorkingDirectory(const QString &path)
 {
     therionWorkingDirectory_ = path;
-}
-
-QString InMemorySessionStore::therionArguments() const
-{
-    return therionArguments_;
-}
-
-void InMemorySessionStore::setTherionArguments(const QString &arguments)
-{
-    therionArguments_ = arguments;
 }
 
 QString InMemorySessionStore::therionRunTargetMode() const

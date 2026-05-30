@@ -27,6 +27,7 @@ std::vector<MainWindowProjectOrchestrationService::CloseProjectStep> MainWindowP
         CloseProjectStep::ResetProjectBrowser,
         CloseProjectStep::PersistSessionLastProjectPath,
         CloseProjectStep::PersistOpenDocuments,
+        CloseProjectStep::ResetProjectTherionRunContext,
         CloseProjectStep::RebuildStructureSidebar,
         CloseProjectStep::RefreshTherionConfigDisplay,
         CloseProjectStep::UpdateProjectActionState};

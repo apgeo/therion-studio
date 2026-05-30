@@ -1,10 +1,53 @@
 #include "TherionRunnerConfigResolver.h"
 
+#include "../core/TherionFileTypes.h"
+
 #include <QDir>
 #include <QFileInfo>
 
+#include <algorithm>
+
 namespace TherionStudio
 {
+namespace
+{
+QString canonicalOrAbsoluteFilePath(const QFileInfo &fileInfo)
+{
+    const QString canonicalPath = fileInfo.canonicalFilePath();
+    return canonicalPath.isEmpty() ? fileInfo.absoluteFilePath() : canonicalPath;
+}
+
+QString resolveDefaultConfigPath(const QString &baseDirectory)
+{
+    if (baseDirectory.isEmpty()) {
+        return QString();
+    }
+
+    const QDir directory(baseDirectory);
+    if (!directory.exists()) {
+        return QString();
+    }
+
+    const QFileInfo defaultConfigInfo(directory.absoluteFilePath(QStringLiteral("thconfig")));
+    if (defaultConfigInfo.isFile()) {
+        return canonicalOrAbsoluteFilePath(defaultConfigInfo);
+    }
+
+    QFileInfoList configInfos = directory.entryInfoList(therionConfigNameFilters(),
+                                                        QDir::Files,
+                                                        QDir::Name | QDir::IgnoreCase);
+    configInfos.erase(std::remove_if(configInfos.begin(),
+                                     configInfos.end(),
+                                     [](const QFileInfo &fileInfo) {
+                                         return fileInfo.fileName().compare(QStringLiteral("thconfig"),
+                                                                            Qt::CaseInsensitive) == 0;
+                                     }),
+                      configInfos.end());
+
+    return configInfos.size() == 1 ? canonicalOrAbsoluteFilePath(configInfos.first()) : QString();
+}
+}
+
 QString TherionRunnerConfigResolver::resolveWorkingDirectory(const QString &typedWorkingDirectory,
                                                              const QString &projectRootPath)
 {
@@ -73,27 +116,15 @@ QString TherionRunnerConfigResolver::resolveConfigPath(const QStringList &argume
         }
     }
 
-    if (activeDocumentPath.endsWith(QStringLiteral(".thconfig"), Qt::CaseInsensitive)) {
+    if (isTherionConfigFilePath(activeDocumentPath)) {
         QFileInfo activeDocumentInfo(activeDocumentPath);
         if (activeDocumentInfo.exists()) {
-            const QString canonicalPath = activeDocumentInfo.canonicalFilePath();
-            return canonicalPath.isEmpty() ? activeDocumentInfo.absoluteFilePath() : canonicalPath;
+            return canonicalOrAbsoluteFilePath(activeDocumentInfo);
         }
     }
 
     const QString baseDirectory = workingDirectory.isEmpty() ? projectRootPath : workingDirectory;
-    if (baseDirectory.isEmpty()) {
-        return QString();
-    }
-
-    const QString defaultConfigPath = QDir(baseDirectory).absoluteFilePath(QStringLiteral("thconfig"));
-    QFileInfo defaultConfigInfo(defaultConfigPath);
-    if (!defaultConfigInfo.exists()) {
-        return QString();
-    }
-
-    const QString canonicalPath = defaultConfigInfo.canonicalFilePath();
-    return canonicalPath.isEmpty() ? defaultConfigInfo.absoluteFilePath() : canonicalPath;
+    return resolveDefaultConfigPath(baseDirectory);
 }
 
 QString TherionRunnerConfigResolver::resolveCandidatePath(const QString &candidate,

@@ -89,7 +89,7 @@ void TextEditorTab::buildModeSelectorRow()
     rawModeButton_->setCheckable(true);
     blocksModeButton_ = new QPushButton(tr("Blocks"), modeRow_);
     blocksModeButton_->setCheckable(true);
-    blocksModeButton_->setToolTip(tr("Structured block canvas for .th and .thconfig files."));
+    blocksModeButton_->setToolTip(tr("Structured block canvas for .th and Therion config files."));
     modeLayout->addWidget(rawModeButton_);
     modeLayout->addWidget(blocksModeButton_);
     modeLayout->addStretch(1);

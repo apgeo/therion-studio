@@ -65,6 +65,7 @@
 #include "ApplicationStylePolicy.h"
 #include "LucideIconFactory.h"
 #include "../core/SessionStore.h"
+#include "../core/TherionFileTypes.h"
 #include "../platform/ApplicationLanguageOverride.h"
 
 namespace
@@ -115,13 +116,12 @@ bool isSupportedTextEditorFilePath(const QString &filePath)
     }
 
     const QString fileName = info.fileName();
-    if (fileName.compare(QStringLiteral("thconfig"), Qt::CaseInsensitive) == 0) {
+    if (TherionStudio::isTherionConfigFileName(fileName)) {
         return true;
     }
 
     const QString suffix = info.suffix().toLower();
     if (suffix == QStringLiteral("th")
-        || suffix == QStringLiteral("thconfig")
         || suffix == QStringLiteral("txt")
         || suffix == QStringLiteral("log")) {
         return true;
@@ -136,9 +136,8 @@ bool supportsConfigurableDefaultTextEditorMode(const QString &filePath)
     const QFileInfo info(filePath);
     const QString fileName = info.fileName().trimmed().toLower();
     const QString suffix = info.suffix().trimmed().toLower();
-    return fileName == QStringLiteral("thconfig")
-        || suffix == QStringLiteral("th")
-        || suffix == QStringLiteral("thconfig");
+    return TherionStudio::isTherionConfigFileName(fileName)
+        || suffix == QStringLiteral("th");
 }
 
 bool openFileExternally(QWidget *parent, const QString &filePath)
@@ -538,7 +537,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceBlocksModeButton_ = createWorkspaceIconButton(workspaceTextModeSwitcher_, tr("Blocks"), QStringLiteral("toy-brick"));
     workspaceTextRawModeButton_->setCheckable(true);
     workspaceBlocksModeButton_->setCheckable(true);
-    workspaceBlocksModeButton_->setToolTip(tr("Structured block canvas for .th and .thconfig files."));
+    workspaceBlocksModeButton_->setToolTip(tr("Structured block canvas for .th and Therion config files."));
     workspaceBlocksModeButton_->setAccessibleName(tr("Blocks"));
     textLayout->addWidget(workspaceTextRawModeButton_);
     textLayout->addWidget(workspaceBlocksModeButton_);
@@ -1083,7 +1082,6 @@ void MainWindow::persistSessionState()
     snapshot.projectRootPath = projectRootPath_;
     snapshot.therionExecutablePath = therionExecutableInput();
     snapshot.therionWorkingDirectory = therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text().trimmed() : QString();
-    snapshot.therionArguments = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text().trimmed() : QString();
     snapshot.therionRunTargetMode = therionRunTargetMode();
     snapshot.therionTargetConfigPath = therionTargetConfigEdit_ != nullptr ? therionTargetConfigEdit_->text().trimmed() : QString();
     snapshot.structureNameOverridesJson =
@@ -1206,10 +1204,7 @@ void MainWindow::createNewWindow()
         sessionStore->setApplicationLanguage(sessionStore_->applicationLanguage());
         sessionStore->setDefaultTextEditorMode(sessionStore_->defaultTextEditorMode());
         sessionStore->setTherionExecutablePath(sessionStore_->therionExecutablePath());
-        sessionStore->setTherionWorkingDirectory(sessionStore_->therionWorkingDirectory());
-        sessionStore->setTherionArguments(sessionStore_->therionArguments());
         sessionStore->setTherionRunTargetMode(sessionStore_->therionRunTargetMode());
-        sessionStore->setTherionTargetConfigPath(sessionStore_->therionTargetConfigPath());
         sessionStore->setTherionMapMagnifierEnabled(sessionStore_->therionMapMagnifierEnabled());
     }
 
@@ -1312,6 +1307,7 @@ void MainWindow::closeProject()
     actions.clearDocumentTabs = [this]() { clearDocumentTabs(); };
     actions.resetProjectBrowser = [this]() { resetProjectBrowser(); };
     actions.persistOpenDocuments = [this]() { persistOpenDocuments(); };
+    actions.resetProjectTherionRunContext = [this]() { resetProjectTherionRunContext(); };
     actions.rebuildStructureSidebar = [this]() { rebuildStructureSidebar(); };
     actions.refreshTherionConfigDisplay = [this]() { refreshTherionConfigDisplay(); };
     actions.updateProjectActionState = [this]() { updateProjectActionState(); };

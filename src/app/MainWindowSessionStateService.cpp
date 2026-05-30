@@ -10,7 +10,6 @@ void MainWindowSessionStateService::persistMainWindowState(ISessionStore &sessio
     sessionStore.setLastProjectPath(snapshot.projectRootPath);
     sessionStore.setTherionExecutablePath(snapshot.therionExecutablePath);
     sessionStore.setTherionWorkingDirectory(snapshot.therionWorkingDirectory);
-    sessionStore.setTherionArguments(snapshot.therionArguments);
     sessionStore.setTherionRunTargetMode(snapshot.therionRunTargetMode);
     sessionStore.setTherionTargetConfigPath(snapshot.therionTargetConfigPath);
     sessionStore.setStructureNameOverrides(snapshot.structureNameOverridesJson);

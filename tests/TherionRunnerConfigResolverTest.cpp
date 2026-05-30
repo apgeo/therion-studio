@@ -153,6 +153,55 @@ int runConfigPathResolutionTest()
 
     return 0;
 }
+
+int runThconfigWorkResolutionTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary directory creation failed.")) {
+        return 1;
+    }
+
+    QDir root(tempDir.path());
+    if (!expect(root.mkpath(QStringLiteral("work")),
+                "Temporary working directory could not be created.")) {
+        return 1;
+    }
+
+    const QString workingDirectory = root.filePath(QStringLiteral("work"));
+    const QString namedConfigPath = QDir(workingDirectory).filePath(QStringLiteral("thconfig.work"));
+    if (!expect(writeTextFile(namedConfigPath, QStringLiteral("source work.th\n")),
+                "thconfig.work fixture could not be written.")) {
+        return 1;
+    }
+
+    const QString resolvedNamedConfig =
+        TherionRunnerConfigResolver::resolveConfigPath({},
+                                                       workingDirectory,
+                                                       QString(),
+                                                       QString());
+    if (!expect(canonicalOrAbsolutePath(resolvedNamedConfig) == canonicalOrAbsolutePath(namedConfigPath),
+                "A single thconfig.* file should resolve as the default config when thconfig is absent.")) {
+        return 1;
+    }
+
+    const QString secondConfigPath = QDir(workingDirectory).filePath(QStringLiteral("thconfig.debug"));
+    if (!expect(writeTextFile(secondConfigPath, QStringLiteral("source debug.th\n")),
+                "Second thconfig.* fixture could not be written.")) {
+        return 1;
+    }
+
+    const QString ambiguousConfig =
+        TherionRunnerConfigResolver::resolveConfigPath({},
+                                                       workingDirectory,
+                                                       QString(),
+                                                       QString());
+    if (!expect(ambiguousConfig.isEmpty(),
+                "Multiple named thconfig.* files should not be auto-selected.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -164,6 +213,9 @@ int main()
         return 1;
     }
     if (runConfigPathResolutionTest() != 0) {
+        return 1;
+    }
+    if (runThconfigWorkResolutionTest() != 0) {
         return 1;
     }
 

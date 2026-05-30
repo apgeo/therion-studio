@@ -28,7 +28,6 @@ int runMainWindowStatePersistTest()
     snapshot.projectRootPath = QStringLiteral("/tmp/project");
     snapshot.therionExecutablePath = QStringLiteral("/opt/therion");
     snapshot.therionWorkingDirectory = QStringLiteral("/tmp/project/work");
-    snapshot.therionArguments = QStringLiteral("--config thconfig");
     snapshot.therionRunTargetMode = QStringLiteral("current");
     snapshot.therionTargetConfigPath = QStringLiteral("/tmp/project/thconfig");
     snapshot.structureNameOverridesJson = QStringLiteral("{\"a\":\"b\"}");
@@ -53,10 +52,6 @@ int runMainWindowStatePersistTest()
     }
     if (!expect(sessionStore.therionWorkingDirectory() == snapshot.therionWorkingDirectory,
                 "Therion working directory should persist into session store.")) {
-        return 1;
-    }
-    if (!expect(sessionStore.therionArguments() == snapshot.therionArguments,
-                "Therion arguments should persist into session store.")) {
         return 1;
     }
     if (!expect(sessionStore.therionRunTargetMode() == snapshot.therionRunTargetMode,

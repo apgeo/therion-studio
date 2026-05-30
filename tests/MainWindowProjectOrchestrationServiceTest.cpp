@@ -61,6 +61,7 @@ int runCloseProjectStepsTest()
         MainWindowProjectOrchestrationService::CloseProjectStep::ResetProjectBrowser,
         MainWindowProjectOrchestrationService::CloseProjectStep::PersistSessionLastProjectPath,
         MainWindowProjectOrchestrationService::CloseProjectStep::PersistOpenDocuments,
+        MainWindowProjectOrchestrationService::CloseProjectStep::ResetProjectTherionRunContext,
         MainWindowProjectOrchestrationService::CloseProjectStep::RebuildStructureSidebar,
         MainWindowProjectOrchestrationService::CloseProjectStep::RefreshTherionConfigDisplay,
         MainWindowProjectOrchestrationService::CloseProjectStep::UpdateProjectActionState};

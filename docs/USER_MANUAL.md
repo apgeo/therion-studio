@@ -37,7 +37,7 @@ The app window has four main areas:
 The main window opens at a usable desktop size and clamps restored session geometry only enough
 to avoid unusably narrow windows while still allowing common half-screen layouts.
 Use `File -> New Window` to open a new empty window. The new window does not duplicate the current project or open documents.
-Use `File -> Settings...` to configure the application language, Therion executable path, and the default editor for new `.th` / `.thconfig` tabs.
+Use `File -> Settings...` to configure the application language, Therion executable path, and the default editor for new `.th` / Therion config tabs.
 Use `View -> Enter Full Screen` or `View -> Exit Full Screen` to toggle full-screen mode.
 Use `View -> Expand Sidebar` / `Collapse Sidebar` to show or hide the left sidebar content.
 Use the active right-panel item in `View` to show or hide the current editor's right column:
@@ -61,7 +61,7 @@ When a project is open but no document tab is active, the `Welcome` tab shows `O
 
 - Double-click a file in `Files`.
 - `.th2` files open in the map editor.
-- Supported text files open in the text editor (`.th`, `.thconfig`, `.log`, `.txt`, and generic plain-text files).
+- Supported text files open in the text editor (`.th`, Therion configs such as `thconfig`, `*.thconfig`, and `thconfig.*`, `.log`, `.txt`, and generic plain-text files).
 - Unsupported files (for example images or PDF) show an `Unsupported file` message with `Open in External App`.
 
 ### 3.3 Save Changes
@@ -73,12 +73,12 @@ When a project is open but no document tab is active, the `Welcome` tab shows `O
 
 ### 4.1 Modes
 
-For `.th` and `thconfig` files:
+For `.th` and Therion config files:
 
 - `Raw` mode: direct text editing with syntax highlighting, find/replace, and autocomplete
 - `Blocks` mode: structured editing of supported commands and blocks
 
-New `.th` and `.thconfig` tabs open in the default editor selected in Settings (`Raw` by default, or `Blocks`).
+New `.th` and Therion config tabs open in the default editor selected in Settings (`Raw` by default, or `Blocks`).
 This preference affects newly opened tabs only; it does not change existing open tabs and does not alter Therion source syntax.
 Opening or switching to `Blocks` mode does not insert missing `encoding` directives or otherwise rewrite the file until you make an explicit edit.
 
@@ -101,8 +101,8 @@ For `.th2` files:
 
 The `Structure` pane shows detected `Survey`, `Map`, and `Scrap` hierarchy from open content. Maps and scraps referenced inside a `map ... endmap` block are nested under that map when the reference is unambiguous. `preview above` / `preview below` relations are shown as map source content, not as ownership hierarchy. Selecting an item opens/synchronizes to its source location.
 For project-level indexing, Therion Studio uses the selected `Target Config` when it points inside the opened project.
-If no `Target Config` is selected, a root `thconfig` is used by default; if there is no root `thconfig` and exactly one root `*.thconfig`, that file is used.
-If the project root contains multiple `*.thconfig` files and no target config is selected, choose the intended `Target Config` in the `Compiler` pane instead of relying on an automatic merged structure.
+If no `Target Config` is selected, a root `thconfig` is used by default; if there is no root `thconfig` and exactly one named root config (`*.thconfig` or `thconfig.*`), that file is used.
+If the project root contains multiple named config files and no target config is selected, choose the intended `Target Config` in the `Compiler` pane instead of relying on an automatic merged structure.
 In this ambiguous state, the `Structure` pane shows a shortcut row that opens the `Compiler` pane and focuses `Target Config`.
 The structure tree tooltip reports the root config or inferred root files used for the current structure graph.
 
@@ -206,6 +206,7 @@ Open the `Compiler` pane from the activity rail.
 - `Working Directory Override`
 
 Set the Therion executable path in `File -> Settings...`. If no explicit path is set, Therion Studio tries `therion` and platform auto-detection.
+Closing a project clears `Target Config` and `Working Directory Override` because those paths are project-specific. The Therion executable path is a global preference. Additional arguments stay only in the current running window/session and are not restored after restarting the application.
 
 ### 7.2 Actions
 
@@ -514,7 +515,7 @@ Symptom:
 Fix:
 
 - set `Target Config`, or
-- open the desired `.thconfig` and run using `Current Config`, or
+- open the desired Therion config and run using `Current Config`, or
 - verify working directory/override path
 
 ### 11.3 Rename/delete is blocked in project tree

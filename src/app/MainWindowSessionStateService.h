@@ -18,7 +18,6 @@ public:
         QString projectRootPath;
         QString therionExecutablePath;
         QString therionWorkingDirectory;
-        QString therionArguments;
         QString therionRunTargetMode;
         QString therionTargetConfigPath;
         QString structureNameOverridesJson;

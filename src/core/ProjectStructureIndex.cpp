@@ -1,6 +1,7 @@
 #include "ProjectStructureIndex.h"
 
 #include "DocumentFile.h"
+#include "TherionFileTypes.h"
 #include "TherionDocumentParser.h"
 
 #include <QCoreApplication>
@@ -622,18 +623,15 @@ QString sectionNameFromLine(const TherionParsedLine &parsedLine)
 bool isInterestingProjectFile(const QFileInfo &fileInfo)
 {
     const QString suffix = fileInfo.suffix().toLower();
-    const QString fileName = fileInfo.fileName().toLower();
+    const QString fileName = fileInfo.fileName();
     return suffix == QStringLiteral("th")
         || suffix == QStringLiteral("th2")
-        || suffix == QStringLiteral("thconfig")
-        || fileName == QStringLiteral("thconfig");
+        || isTherionConfigFileName(fileName);
 }
 
 bool isTherionConfigFile(const QFileInfo &fileInfo)
 {
-    const QString suffix = fileInfo.suffix().toLower();
-    const QString fileName = fileInfo.fileName().toLower();
-    return suffix == QStringLiteral("thconfig") || fileName == QStringLiteral("thconfig");
+    return isTherionConfigFileName(fileInfo.fileName());
 }
 
 QString resolvePreferredProjectConfigPath(const QString &preferredConfigPath, const QString &projectRootPath)
@@ -704,7 +702,7 @@ RootConfigResolution rootConfigFiles(const QVector<QString> &filePaths,
         {},
         QString(),
         QCoreApplication::translate("TherionStudio::ProjectStructureIndex",
-                                    "Multiple .thconfig files were found in the project root. Select a project target config in the Compiler pane to build the structure graph.")
+                                    "Multiple Therion config files were found in the project root. Select a project target config in the Compiler pane to build the structure graph.")
     };
 }
 
@@ -859,7 +857,8 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
                           {QStringLiteral("*.th"),
                            QStringLiteral("*.th2"),
                            QStringLiteral("*.thconfig"),
-                           QStringLiteral("thconfig")},
+                           QStringLiteral("thconfig"),
+                           QStringLiteral("thconfig.*")},
                           QDir::Files,
                           QDirIterator::Subdirectories);
 

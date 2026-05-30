@@ -1,6 +1,7 @@
 #include "../src/core/SessionStore.h"
 
 #include <QCoreApplication>
+#include <QSettings>
 #include <QTemporaryDir>
 
 #include <iostream>
@@ -39,7 +40,6 @@ int runInstanceBackedRoundTripTest()
         store.setDefaultTextEditorMode(QStringLiteral("blocks"));
         store.setTherionExecutablePath(QStringLiteral("/usr/bin/therion"));
         store.setTherionWorkingDirectory(QStringLiteral("/tmp/project"));
-        store.setTherionArguments(QStringLiteral("-q thconfig"));
         store.setTherionRunTargetMode(QStringLiteral("project"));
         store.setTherionTargetConfigPath(QStringLiteral("/tmp/project/thconfig"));
         store.setTherionMapTouchFriendlyControlsEnabled(true);
@@ -89,10 +89,6 @@ int runInstanceBackedRoundTripTest()
                 "Therion working directory should round-trip through the injected settings file.")) {
         return 1;
     }
-    if (!expect(store.therionArguments() == QStringLiteral("-q thconfig"),
-                "Therion arguments should round-trip through the injected settings file.")) {
-        return 1;
-    }
     if (!expect(store.therionRunTargetMode() == QStringLiteral("project"),
                 "Therion run target mode should round-trip through the injected settings file.")) {
         return 1;
@@ -111,6 +107,34 @@ int runInstanceBackedRoundTripTest()
     }
     if (!expect(store.therionMapBackgroundLayers() == QStringLiteral("[]"),
                 "Map background layer metadata should round-trip through the injected settings file.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runDeprecatedTherionArgumentsCleanupTest()
+{
+    QTemporaryDir temporarySettingsDir;
+    if (!expect(temporarySettingsDir.isValid(), "Temporary settings directory creation failed.")) {
+        return 1;
+    }
+
+    const QString settingsPath = temporarySettingsDir.filePath(QStringLiteral("session.ini"));
+    {
+        QSettings settings(settingsPath, QSettings::IniFormat);
+        settings.setValue(QStringLiteral("session/therionArguments"), QStringLiteral("-q thconfig"));
+        settings.sync();
+    }
+
+    {
+        const SessionSettingsStore store(settingsPath);
+        Q_UNUSED(store);
+    }
+
+    const QSettings settings(settingsPath, QSettings::IniFormat);
+    if (!expect(!settings.contains(QStringLiteral("session/therionArguments")),
+                "Deprecated persistent Therion arguments key should be removed on store initialization.")) {
         return 1;
     }
 
@@ -225,6 +249,10 @@ int main(int argc, char **argv)
     }
 
     if (const int result = runDefaultsTest(); result != 0) {
+        return result;
+    }
+
+    if (const int result = runDeprecatedTherionArgumentsCleanupTest(); result != 0) {
         return result;
     }
 

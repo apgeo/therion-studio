@@ -82,7 +82,7 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
 
     if (!(context_.isBlocksModeSupportedForCurrentFile != nullptr && context_.isBlocksModeSupportedForCurrentFile())) {
         auto *note = context_.scene->addText(
-            tr("Blocks mode is currently available only for .th and .thconfig files."));
+            tr("Blocks mode is currently available only for .th and Therion config files."));
         note->setPos(16.0, 16.0);
         return;
     }

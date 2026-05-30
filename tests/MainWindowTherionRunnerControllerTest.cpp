@@ -26,10 +26,10 @@ int runCurrentDocumentConfigModeTest()
         return 1;
     }
 
-    const QString configPath = QDir(tempDir.path()).absoluteFilePath(QStringLiteral("thconfig"));
+    const QString configPath = QDir(tempDir.path()).absoluteFilePath(QStringLiteral("thconfig.work"));
     QFile configFile(configPath);
     if (!configFile.open(QIODevice::WriteOnly)) {
-        std::cerr << "Failed to create thconfig test file.\n";
+        std::cerr << "Failed to create thconfig.work test file.\n";
         return 1;
     }
     configFile.write("# test\n");

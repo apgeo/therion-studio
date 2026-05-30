@@ -38,7 +38,7 @@ void BlockEditorInsertionController::insertFromDrop(const QString &kind, const Q
     if (context_.isBlocksModeSupportedForCurrentFile == nullptr || !context_.isBlocksModeSupportedForCurrentFile()) {
         QMessageBox::information(context_.dialogParent,
                                  tr("Blocks Mode"),
-                                 tr("Blocks mode is available only for .th and .thconfig files."));
+                                 tr("Blocks mode is available only for .th and Therion config files."));
         return;
     }
 

@@ -25,6 +25,7 @@ public:
         ResetProjectBrowser,
         PersistSessionLastProjectPath,
         PersistOpenDocuments,
+        ResetProjectTherionRunContext,
         RebuildStructureSidebar,
         RefreshTherionConfigDisplay,
         UpdateProjectActionState

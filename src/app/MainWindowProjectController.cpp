@@ -83,6 +83,11 @@ void executeCloseProjectSteps(const std::vector<MainWindowProjectOrchestrationSe
                 actions.persistOpenDocuments();
             }
             break;
+        case MainWindowProjectOrchestrationService::CloseProjectStep::ResetProjectTherionRunContext:
+            if (actions.resetProjectTherionRunContext) {
+                actions.resetProjectTherionRunContext();
+            }
+            break;
         case MainWindowProjectOrchestrationService::CloseProjectStep::RebuildStructureSidebar:
             if (actions.rebuildStructureSidebar) {
                 actions.rebuildStructureSidebar();

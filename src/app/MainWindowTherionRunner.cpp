@@ -31,7 +31,7 @@ void MainWindow::buildConsole()
     TherionStudio::MainWindowTherionConsoleBuilder::BuildInput buildInput;
     buildInput.consoleHost = consoleHost;
     buildInput.persistedWorkingDirectory = sessionStore_->therionWorkingDirectory().trimmed();
-    buildInput.persistedArguments = sessionStore_->therionArguments().trimmed();
+    buildInput.initialArguments = QString();
     buildInput.persistedRunTargetMode = sessionStore_->therionRunTargetMode().trimmed();
     buildInput.persistedTargetConfigPath = sessionStore_->therionTargetConfigPath().trimmed();
     const TherionStudio::MainWindowTherionConsoleBuilder::BuildResult buildResult =
@@ -169,7 +169,7 @@ void MainWindow::browseTherionTargetConfig()
         QFileDialog::getOpenFileName(this,
                                      tr("Select Therion Config"),
                                      initialPath,
-                                     tr("Therion config files (thconfig *.thconfig);;All files (*)"));
+                                     tr("Therion config files (thconfig thconfig.* *.thconfig);;All files (*)"));
     if (selectedConfigPath.isEmpty() || therionTargetConfigEdit_ == nullptr) {
         return;
     }
@@ -315,6 +315,24 @@ QString MainWindow::resolvedTherionTargetConfigPath() const
     return TherionStudio::MainWindowTherionRunnerController::computeRuntimeState(input).resolvedTargetConfigPath;
 }
 
+void MainWindow::resetProjectTherionRunContext()
+{
+    if (therionWorkingDirectoryEdit_ != nullptr) {
+        const QSignalBlocker blocker(therionWorkingDirectoryEdit_);
+        therionWorkingDirectoryEdit_->clear();
+    }
+    if (therionTargetConfigEdit_ != nullptr) {
+        const QSignalBlocker blocker(therionTargetConfigEdit_);
+        therionTargetConfigEdit_->clear();
+    }
+    if (sessionStore_ != nullptr) {
+        sessionStore_->setTherionWorkingDirectory(QString());
+        sessionStore_->setTherionTargetConfigPath(QString());
+    }
+
+    activeTherionRunConfigPath_.clear();
+}
+
 QString MainWindow::resolvedTherionConfigPath() const
 {
     const QString currentDocumentPath =
@@ -392,7 +410,7 @@ void MainWindow::refreshTherionRunTargetControls()
         therionRunTargetCombo_->setToolTip(
             currentConfigAvailable
                 ? QString()
-                : tr("Open a thconfig or .thconfig tab to use Current Config."));
+                : tr("Open a Therion config tab to use Current Config."));
     }
 
     const bool projectConfigActive = state.projectConfigActive;
@@ -499,7 +517,7 @@ void MainWindow::runTherionProjectConfig()
 void MainWindow::runTherionCurrentConfig()
 {
     if (currentDocumentTherionConfigPath().isEmpty()) {
-        const QString message = tr("Open a thconfig or .thconfig tab before compiling the current config.");
+        const QString message = tr("Open a Therion config tab before compiling the current config.");
         QMessageBox::warning(this, tr("Run Therion"), message);
         setCompilerStatusResult(false, message);
         return;

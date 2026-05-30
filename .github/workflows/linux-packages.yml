@@ -260,10 +260,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          deb_path="$(find /tmp/therion-linux-packages -maxdepth 1 -type f -name '*.deb' | head -n1)"
+          deb_path="$(find /tmp/therion-linux-packages -type f -name '*.deb' | sort | head -n1)"
           if [[ -z "$deb_path" ]]; then
             echo "No .deb artifact found in /tmp/therion-linux-packages"
-            ls -la /tmp/therion-linux-packages || true
+            find /tmp/therion-linux-packages -maxdepth 3 -print | sort || true
             exit 1
           fi
           apt-get install -y "$deb_path"
@@ -296,10 +296,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          appimage_path="$(find /tmp/therion-linux-packages -maxdepth 1 -type f -name '*.AppImage' | head -n1)"
+          appimage_path="$(find /tmp/therion-linux-packages -type f -name '*.AppImage' | sort | head -n1)"
           if [[ -z "$appimage_path" ]]; then
             echo "No AppImage artifact found in /tmp/therion-linux-packages"
-            ls -la /tmp/therion-linux-packages || true
+            find /tmp/therion-linux-packages -maxdepth 3 -print | sort || true
             exit 1
           fi
           chmod +x "$appimage_path"

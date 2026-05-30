@@ -1,6 +1,8 @@
 name: Linux Packages
 
 on:
+  schedule:
+    - cron: '30 3 * * *'
   workflow_dispatch:
     inputs:
       source_ref:
@@ -46,12 +48,14 @@ jobs:
       DEB_BUILD_IMAGE: ubuntu:26.04
       DEB_PLATFORM_LABEL: ubuntu-26.04
       DEB_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-qpa-plugins,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
+      PACKAGE_BUILD_TYPE: ${{ inputs.build_type || 'Release' }}
+      PACKAGE_SOURCE_REF: ${{ inputs.source_ref || github.ref_name }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_ref }}
+          ref: ${{ env.PACKAGE_SOURCE_REF }}
           fetch-depth: 0
 
       - name: Resolve package version
@@ -91,7 +95,7 @@ jobs:
           set -euo pipefail
           docker run --rm \
             --platform "${{ matrix.docker_platform }}" \
-            -e "BUILD_TYPE=${{ inputs.build_type }}" \
+            -e "BUILD_TYPE=$PACKAGE_BUILD_TYPE" \
             -e "DEB_QT_PACKAGES=$DEB_QT_PACKAGES" \
             -e "HOST_GID=$(id -g)" \
             -e "HOST_UID=$(id -u)" \
@@ -117,7 +121,7 @@ jobs:
             -e "APPIMAGE_QT_PACKAGES=$APPIMAGE_QT_PACKAGES" \
             -e "APPIMAGE_RUNTIME_SHA256=${{ matrix.appimage_runtime_sha256 }}" \
             -e "APPIMAGE_RUNTIME_URL=${{ matrix.appimage_runtime_url }}" \
-            -e "BUILD_TYPE=${{ inputs.build_type }}" \
+            -e "BUILD_TYPE=$PACKAGE_BUILD_TYPE" \
             -e "HOST_GID=$(id -g)" \
             -e "HOST_UID=$(id -u)" \
             -e "THERION_STUDIO_APPIMAGE_ARCHITECTURE_LABEL=${{ matrix.appimage_architecture }}" \
@@ -138,8 +142,8 @@ jobs:
             --appimage-dir "$PWD/build-linux-appimage" \
             --expected-package-label "${{ env.THERION_STUDIO_PACKAGE_LABEL }}" \
             --version "${{ env.THERION_STUDIO_VERSION }}" \
-            --source-ref "${{ inputs.source_ref }}" \
-            --build-type "${{ inputs.build_type }}" \
+            --source-ref "$PACKAGE_SOURCE_REF" \
+            --build-type "$PACKAGE_BUILD_TYPE" \
             --debian-version "${{ env.THERION_STUDIO_DEBIAN_VERSION }}" \
             --deb-platform-label "$DEB_PLATFORM_LABEL" \
             --deb-build-source "$DEB_BUILD_IMAGE apt" \
@@ -215,7 +219,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_ref }}
+          ref: ${{ inputs.source_ref || github.ref_name }}
           fetch-depth: 1
 
       - name: Download Linux package artifacts

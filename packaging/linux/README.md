@@ -5,11 +5,13 @@ Therion Studio currently provides two Linux artifact families:
 - `.deb` packages for Ubuntu 26.04 on `amd64` and `arm64`
 - AppImages as the portable Linux channel on `x86_64` and `aarch64`
 
-They are built by the manual GitHub Actions workflow:
+They are built by the scheduled/manual GitHub Actions workflow:
 
 - `.github/workflows/linux-packages.yml`
 
 ## Workflow Inputs
+
+Scheduled runs package the default branch as `Release`. Manual runs accept:
 
 - `source_ref`: branch/tag/commit to package
 - `build_type`: `Release` or `RelWithDebInfo`

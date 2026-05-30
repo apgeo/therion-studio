@@ -50,10 +50,10 @@ The Windows CMake configuration:
 
 ## GitHub Actions Packaging
 
-The repository includes `.github/workflows/windows-installer.yml` as a manual packaging workflow.
-It intentionally uses `workflow_dispatch` only so installer production is explicit. The workflow
-has a `source_ref` input, so the source can be built from `main`, a release tag such as `v2026.5.0`,
-or a specific commit SHA.
+The repository includes `.github/workflows/windows-installer.yml` as a scheduled/manual packaging
+workflow. Scheduled runs package the default branch with Qt 6.8.3 as `Release`. Manual runs accept
+`source_ref`, `qt_version`, and `build_type` inputs, so the source can be built from `main`, a
+release tag such as `v2026.5.0`, or a specific commit SHA.
 
 If the checked-out commit is exactly tagged with a CalVer release tag such as `v2026.5.0`, the
 workflow passes `-DTHERION_STUDIO_VERSION=2026.5.0` and

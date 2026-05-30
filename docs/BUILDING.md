@@ -119,10 +119,11 @@ Required Windows packaging tools:
 - Ninja or another CMake generator
 - NSIS for installer generation
 
-The manual GitHub Actions workflow `.github/workflows/windows-installer.yml` builds the same
-installer on `windows-2022` and uploads it as an artifact. Use its `source_ref` input to build
-from `main`, a release tag, or a specific commit SHA. When the checked-out commit is exactly tagged
-with a CalVer release tag such as `v2026.5.0`, the workflow derives
+The GitHub Actions workflow `.github/workflows/windows-installer.yml` builds the same installer on
+`windows-2022` and uploads it as an artifact. It runs manually and on a daily schedule. Scheduled
+runs package the default branch with Qt 6.8.3 as `Release`; manual runs can select a branch, tag,
+commit SHA, Qt version, and CMake build type. When the checked-out commit is exactly tagged with a
+CalVer release tag such as `v2026.5.0`, the workflow derives
 `THERION_STUDIO_VERSION=2026.5.0` and passes it to CMake so CPack uses the tag version without
 editing `CMakeLists.txt`. Branch and SHA builds derive a CalVer development application version
 such as `2026.5.0` and a human-readable package label such as `dev-a1b2c3d`, matching the Linux
@@ -143,10 +144,12 @@ Linux packaging currently targets two distributable artifact families:
 - `.deb` packages for Ubuntu 26.04 on `amd64` and `arm64`
 - AppImages as the portable Linux channel on `x86_64` and `aarch64`
 
-The manual workflow `.github/workflows/linux-packages.yml` builds the `.deb` package inside an
-`ubuntu:26.04` container and builds the AppImage inside a `debian:13` container for each supported
-Linux architecture. `x86_64` builds run on `ubuntu-24.04`; `aarch64` builds run on
-`ubuntu-24.04-arm`. It validates install layout and artifact naming, then uploads:
+The `.github/workflows/linux-packages.yml` workflow runs manually and on a daily schedule. Scheduled
+runs package the default branch as `Release`; manual runs can select a branch, tag, commit SHA, and
+CMake build type. The workflow builds the `.deb` package inside an `ubuntu:26.04` container and
+builds the AppImage inside a `debian:13` container for each supported Linux architecture. `x86_64`
+builds run on `ubuntu-24.04`; `aarch64` builds run on `ubuntu-24.04-arm`. It validates install
+layout and artifact naming, then uploads:
 
 - `therion-studio-<package_label>-ubuntu-26.04-amd64.deb`
 - `therion-studio-<package_label>-ubuntu-26.04-arm64.deb`

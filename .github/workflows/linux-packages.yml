@@ -18,20 +18,34 @@ on:
 
 jobs:
   package:
-    name: Build .deb and AppImage
-    runs-on: ubuntu-24.04
+    name: Build .deb and AppImage (${{ matrix.appimage_architecture }})
+    runs-on: ${{ matrix.runner_label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - appimage_architecture: x86_64
+            appimagetool_sha256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
+            appimagetool_url: https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+            appimage_runtime_sha256: 2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
+            appimage_runtime_url: https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
+            deb_qt_architecture: amd64
+            docker_platform: linux/amd64
+            runner_label: ubuntu-24.04
+          - appimage_architecture: aarch64
+            appimagetool_sha256: f0837e7448a0c1e4e650a93bb3e85802546e60654ef287576f46c71c126a9158
+            appimagetool_url: https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-aarch64.AppImage
+            appimage_runtime_sha256: 00cbdfcf917cc6c0ff6d3347d59e0ca1f7f45a6df1a428a0d6d8a78664d87444
+            appimage_runtime_url: https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-aarch64
+            deb_qt_architecture: arm64
+            docker_platform: linux/arm64
+            runner_label: ubuntu-24.04-arm
     env:
-      APPIMAGETOOL_URL: https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
-      APPIMAGETOOL_SHA256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
-      APPIMAGE_RUNTIME_URL: https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
-      APPIMAGE_RUNTIME_SHA256: 2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
+      APPIMAGE_BUILD_IMAGE: debian:13
+      APPIMAGE_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-qpa-plugins,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
       DEB_BUILD_IMAGE: ubuntu:26.04
       DEB_PLATFORM_LABEL: ubuntu-26.04
-      DEB_QT_ARCHITECTURE: amd64
       DEB_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-qpa-plugins,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
-      APPIMAGE_BUILD_IMAGE: debian:13
-      APPIMAGE_QT_ARCHITECTURE: amd64
-      APPIMAGE_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-qpa-plugins,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
 
     steps:
       - name: Check out repository
@@ -76,10 +90,12 @@ jobs:
         run: |
           set -euo pipefail
           docker run --rm \
+            --platform "${{ matrix.docker_platform }}" \
             -e "BUILD_TYPE=${{ inputs.build_type }}" \
             -e "DEB_QT_PACKAGES=$DEB_QT_PACKAGES" \
             -e "HOST_GID=$(id -g)" \
             -e "HOST_UID=$(id -u)" \
+            -e "THERION_STUDIO_DEB_ARCHITECTURE_LABEL=${{ matrix.deb_qt_architecture }}" \
             -e "THERION_STUDIO_DEB_PLATFORM_LABEL=$DEB_PLATFORM_LABEL" \
             -e "THERION_STUDIO_DEBIAN_VERSION=$THERION_STUDIO_DEBIAN_VERSION" \
             -e "THERION_STUDIO_PACKAGE_LABEL=$THERION_STUDIO_PACKAGE_LABEL" \
@@ -87,61 +103,7 @@ jobs:
             -v "$PWD:/workspace" \
             -w /workspace \
             "$DEB_BUILD_IMAGE" \
-            bash -lc '
-              set -euo pipefail
-              export DEBIAN_FRONTEND=noninteractive
-              export LANG=C.UTF-8
-              export LC_ALL=C.UTF-8
-              apt-get update
-              apt-get install -y \
-                ca-certificates \
-                cmake \
-                dpkg-dev \
-                file \
-                g++ \
-                libgl1-mesa-dev \
-                libxkbcommon-dev \
-                libxkbcommon-x11-0 \
-                libxcb-cursor0 \
-                libxcb-icccm4 \
-                libxcb-image0 \
-                libxcb-keysyms1 \
-                libxcb-render-util0 \
-                libxcb-xinerama0 \
-                ninja-build \
-                python3 \
-                qt6-base-dev \
-                qt6-base-dev-tools \
-                qt6-qpa-plugins \
-                qt6-svg-dev \
-                qt6-tools-dev \
-                qt6-tools-dev-tools
-
-              rm -rf build-linux-packages
-              mkdir -p build-linux-packages
-              dpkg-query -W qt6-base-dev | cut -f2 > build-linux-packages/deb-qt-version.txt
-
-              cmake -S . -B build-linux-packages \
-                -G Ninja \
-                -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-                -DCMAKE_INSTALL_PREFIX=/usr \
-                -DTHERION_STUDIO_VERSION="$THERION_STUDIO_VERSION" \
-                -DTHERION_STUDIO_PACKAGE_LABEL="$THERION_STUDIO_PACKAGE_LABEL" \
-                -DTHERION_STUDIO_DEBIAN_VERSION="$THERION_STUDIO_DEBIAN_VERSION" \
-                -DTHERION_STUDIO_DEB_PLATFORM_LABEL="$THERION_STUDIO_DEB_PLATFORM_LABEL" \
-                -DTHERION_STUDIO_DEB_ARCHITECTURE_LABEL="$DEB_QT_ARCHITECTURE" \
-                -DTHERION_ENABLE_STRICT_WARNINGS=ON
-              cmake --build build-linux-packages --target TherionStudio --parallel
-              cmake --install build-linux-packages --prefix "$PWD/build-linux-packages/install-smoke"
-              python3 scripts/verify_install_layout.py --platform linux --prefix "$PWD/build-linux-packages/install-smoke"
-              cpack \
-                --config build-linux-packages/CPackConfig.cmake \
-                -G DEB \
-                -B build-linux-packages \
-                -C "$BUILD_TYPE" \
-                --verbose
-              chown -R "$HOST_UID:$HOST_GID" build-linux-packages
-            '
+            bash scripts/linux-packages/build_deb_package.sh
           echo "DEB_QT_VERSION=$(cat build-linux-packages/deb-qt-version.txt)" >> "$GITHUB_ENV"
 
       - name: Build AppImage in Debian 13 container
@@ -149,96 +111,29 @@ jobs:
         run: |
           set -euo pipefail
           docker run --rm \
-            -e "APPIMAGETOOL_SHA256=$APPIMAGETOOL_SHA256" \
-            -e "APPIMAGETOOL_URL=$APPIMAGETOOL_URL" \
-            -e "APPIMAGE_RUNTIME_SHA256=$APPIMAGE_RUNTIME_SHA256" \
-            -e "APPIMAGE_RUNTIME_URL=$APPIMAGE_RUNTIME_URL" \
+            --platform "${{ matrix.docker_platform }}" \
+            -e "APPIMAGETOOL_SHA256=${{ matrix.appimagetool_sha256 }}" \
+            -e "APPIMAGETOOL_URL=${{ matrix.appimagetool_url }}" \
+            -e "APPIMAGE_QT_PACKAGES=$APPIMAGE_QT_PACKAGES" \
+            -e "APPIMAGE_RUNTIME_SHA256=${{ matrix.appimage_runtime_sha256 }}" \
+            -e "APPIMAGE_RUNTIME_URL=${{ matrix.appimage_runtime_url }}" \
             -e "BUILD_TYPE=${{ inputs.build_type }}" \
+            -e "HOST_GID=$(id -g)" \
+            -e "HOST_UID=$(id -u)" \
+            -e "THERION_STUDIO_APPIMAGE_ARCHITECTURE_LABEL=${{ matrix.appimage_architecture }}" \
             -e "THERION_STUDIO_DEBIAN_VERSION=$THERION_STUDIO_DEBIAN_VERSION" \
             -e "THERION_STUDIO_PACKAGE_LABEL=$THERION_STUDIO_PACKAGE_LABEL" \
             -e "THERION_STUDIO_VERSION=$THERION_STUDIO_VERSION" \
             -v "$PWD:/workspace" \
             -w /workspace \
             "$APPIMAGE_BUILD_IMAGE" \
-            bash -lc '
-              set -euo pipefail
-              export DEBIAN_FRONTEND=noninteractive
-              export LANG=C.UTF-8
-              export LC_ALL=C.UTF-8
-              apt-get update
-              apt-get install -y \
-                ca-certificates \
-                cmake \
-                dpkg-dev \
-                file \
-                libgl1-mesa-dev \
-                libxkbcommon-dev \
-                libxkbcommon-x11-0 \
-                libxcb-cursor0 \
-                libxcb-icccm4 \
-                libxcb-image0 \
-                libxcb-keysyms1 \
-                libxcb-render-util0 \
-                libxcb-xinerama0 \
-                ninja-build \
-                patchelf \
-                qt6-base-dev \
-                qt6-base-dev-tools \
-                qt6-qpa-plugins \
-                qt6-svg-dev \
-                qt6-tools-dev \
-                qt6-tools-dev-tools \
-                wget
-
-              rm -rf build-linux-appimage
-              mkdir -p build-linux-appimage
-              dpkg-query -W qt6-base-dev | cut -f2 > build-linux-appimage/appimage-qt-version.txt
-
-              cmake -S . -B build-linux-appimage \
-                -G Ninja \
-                -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-                -DCMAKE_INSTALL_PREFIX=/usr \
-                -DTHERION_STUDIO_VERSION="$THERION_STUDIO_VERSION" \
-                -DTHERION_STUDIO_PACKAGE_LABEL="$THERION_STUDIO_PACKAGE_LABEL" \
-                -DTHERION_STUDIO_DEBIAN_VERSION="$THERION_STUDIO_DEBIAN_VERSION" \
-                -DTHERION_ENABLE_STRICT_WARNINGS=ON \
-                -DTHERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON
-              cmake --build build-linux-appimage --target TherionStudio --parallel
-
-              rm -rf build-linux-appimage/AppDir
-              DESTDIR="$PWD/build-linux-appimage/AppDir" cmake --install build-linux-appimage --prefix /usr
-
-              appdir="$PWD/build-linux-appimage/AppDir"
-              usr_dir="$appdir/usr"
-              desktop_file="$usr_dir/share/applications/therion-studio.desktop"
-              icon_file="$usr_dir/share/icons/hicolor/256x256/apps/therion-studio.png"
-              test -x "$usr_dir/bin/TherionStudio"
-              test -f "$desktop_file"
-              test -f "$icon_file"
-
-              cp "$desktop_file" "$appdir/therion-studio.desktop"
-              cp "$icon_file" "$appdir/therion-studio.png"
-              ln -sf therion-studio.png "$appdir/.DirIcon"
-              bash scripts/prepare_linux_appimage_appdir.sh "$appdir"
-
-              pushd build-linux-appimage >/dev/null
-              wget -q "$APPIMAGETOOL_URL" -O appimagetool.AppImage
-              echo "$APPIMAGETOOL_SHA256  appimagetool.AppImage" | sha256sum --check --strict
-              wget -q "$APPIMAGE_RUNTIME_URL" -O runtime-x86_64
-              echo "$APPIMAGE_RUNTIME_SHA256  runtime-x86_64" | sha256sum --check --strict
-              chmod +x appimagetool.AppImage
-              ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool.AppImage \
-                --runtime-file runtime-x86_64 \
-                AppDir \
-                "TherionStudio-${THERION_STUDIO_PACKAGE_LABEL}-Linux-x86_64.AppImage"
-              popd >/dev/null
-            '
+            bash scripts/linux-packages/build_appimage_package.sh
           echo "APPIMAGE_QT_VERSION=$(cat build-linux-appimage/appimage-qt-version.txt)" >> "$GITHUB_ENV"
 
       - name: Verify Linux artifacts and generate manifest
         id: verify_linux_artifacts
         run: |
-          python3 scripts/verify_linux_release_artifacts.py \
+          python3 scripts/linux-packages/verify_release_artifacts.py \
             --build-dir "$PWD/build-linux-packages" \
             --appimage-dir "$PWD/build-linux-appimage" \
             --expected-package-label "${{ env.THERION_STUDIO_PACKAGE_LABEL }}" \
@@ -249,23 +144,25 @@ jobs:
             --deb-platform-label "$DEB_PLATFORM_LABEL" \
             --deb-build-source "$DEB_BUILD_IMAGE apt" \
             --deb-qt-version "$DEB_QT_VERSION" \
-            --deb-qt-architecture "$DEB_QT_ARCHITECTURE" \
+            --deb-qt-architecture "${{ matrix.deb_qt_architecture }}" \
             --deb-qt-packages "$DEB_QT_PACKAGES" \
-            --appimagetool-url "$APPIMAGETOOL_URL" \
-            --appimagetool-sha256 "$APPIMAGETOOL_SHA256" \
-            --appimage-runtime-url "$APPIMAGE_RUNTIME_URL" \
-            --appimage-runtime-sha256 "$APPIMAGE_RUNTIME_SHA256" \
+            --appimage-architecture "${{ matrix.appimage_architecture }}" \
+            --appimagetool-url "${{ matrix.appimagetool_url }}" \
+            --appimagetool-sha256 "${{ matrix.appimagetool_sha256 }}" \
+            --appimage-runtime-url "${{ matrix.appimage_runtime_url }}" \
+            --appimage-runtime-sha256 "${{ matrix.appimage_runtime_sha256 }}" \
             --appimage-qt-source "$APPIMAGE_BUILD_IMAGE apt" \
             --appimage-qt-version "$APPIMAGE_QT_VERSION" \
-            --appimage-qt-architecture "$APPIMAGE_QT_ARCHITECTURE" \
+            --appimage-qt-architecture "${{ matrix.deb_qt_architecture }}" \
             --appimage-qt-packages "$APPIMAGE_QT_PACKAGES" \
-            --manifest-out "$PWD/build-linux-packages/TherionStudio-Linux-artifacts-manifest.json" \
+            --runner-label "${{ matrix.runner_label }}" \
+            --manifest-out "$PWD/build-linux-packages/TherionStudio-Linux-${{ matrix.appimage_architecture }}-artifacts-manifest.json" \
             --github-output "$GITHUB_OUTPUT"
 
       - name: Upload Linux package artifacts
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: TherionStudio-Linux-packages
+          name: TherionStudio-Linux-packages-${{ matrix.appimage_architecture }}
           path: |
             ${{ steps.verify_linux_artifacts.outputs.deb_path }}
             ${{ steps.verify_linux_artifacts.outputs.appimage_path }}
@@ -273,98 +170,71 @@ jobs:
           if-no-files-found: error
 
   smoke-linux-targets:
-    name: Smoke test Linux artifacts on ${{ matrix.target_name }}
+    name: Smoke test Linux artifacts on ${{ matrix.target_name }} (${{ matrix.appimage_architecture }})
     needs: package
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner_label }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - target_name: Ubuntu 26.04
+            appimage_architecture: x86_64
             container_image: ubuntu:26.04
+            deb_qt_architecture: amd64
             deb_smoke: true
+            runner_label: ubuntu-24.04
           - target_name: Debian 13
+            appimage_architecture: x86_64
             container_image: debian:13
+            deb_qt_architecture: amd64
             deb_smoke: false
+            runner_label: ubuntu-24.04
+          - target_name: Ubuntu 26.04
+            appimage_architecture: aarch64
+            container_image: ubuntu:26.04
+            deb_qt_architecture: arm64
+            deb_smoke: true
+            runner_label: ubuntu-24.04-arm
+          - target_name: Debian 13
+            appimage_architecture: aarch64
+            container_image: debian:13
+            deb_qt_architecture: arm64
+            deb_smoke: false
+            runner_label: ubuntu-24.04-arm
     container:
       image: ${{ matrix.container_image }}
 
     steps:
-      - name: Install smoke-test dependencies
+      - name: Install checkout dependencies
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y \
             ca-certificates \
-            coreutils \
-            file
+            git
+
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 1
 
       - name: Download Linux package artifacts
         uses: actions/download-artifact@v5
         with:
-          name: TherionStudio-Linux-packages
+          name: TherionStudio-Linux-packages-${{ matrix.appimage_architecture }}
           path: /tmp/therion-linux-packages
 
-      - name: Install .deb package
+      - name: Smoke test .deb package (offscreen)
         if: ${{ matrix.deb_smoke }}
         shell: bash
         run: |
-          set -euo pipefail
-          deb_path="$(find /tmp/therion-linux-packages -type f -name '*.deb' | sort | head -n1)"
-          if [[ -z "$deb_path" ]]; then
-            echo "No .deb artifact found in /tmp/therion-linux-packages"
-            find /tmp/therion-linux-packages -maxdepth 3 -print | sort || true
-            exit 1
-          fi
-          apt-get install -y "$deb_path"
-
-      - name: Verify installed paths
-        if: ${{ matrix.deb_smoke }}
-        run: |
-          test -x /usr/bin/TherionStudio
-          test -f /usr/share/applications/therion-studio.desktop
-          test -f /usr/share/icons/hicolor/256x256/apps/therion-studio.png
-          test -f /usr/share/metainfo/therion-studio.metainfo.xml
-
-      - name: Launch .deb smoke test (offscreen)
-        if: ${{ matrix.deb_smoke }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          set +e
-          QT_QPA_PLATFORM=offscreen timeout 10s /usr/bin/TherionStudio -platform offscreen >/tmp/therion-studio-launch.log 2>&1
-          exit_code=$?
-          set -e
-          if [[ "$exit_code" -ne 0 && "$exit_code" -ne 124 ]]; then
-            echo "TherionStudio launch failed with exit code $exit_code"
-            cat /tmp/therion-studio-launch.log
-            exit "$exit_code"
-          fi
-          if [[ "$exit_code" -eq 124 ]]; then
-            echo "TherionStudio started successfully (terminated by timeout as expected)."
-          fi
+          THERION_STUDIO_ARTIFACT_DIR=/tmp/therion-linux-packages \
+          THERION_STUDIO_DEB_ARCHITECTURE_LABEL=${{ matrix.deb_qt_architecture }} \
+            bash scripts/linux-packages/smoke_deb_package.sh
 
       - name: Launch AppImage smoke test (offscreen)
         shell: bash
         run: |
-          set -euo pipefail
-          appimage_path="$(find /tmp/therion-linux-packages -type f -name '*.AppImage' | sort | head -n1)"
-          if [[ -z "$appimage_path" ]]; then
-            echo "No AppImage artifact found in /tmp/therion-linux-packages"
-            find /tmp/therion-linux-packages -maxdepth 3 -print | sort || true
-            exit 1
-          fi
-          chmod +x "$appimage_path"
-
-          set +e
-          QT_QPA_PLATFORM=offscreen APPIMAGE_EXTRACT_AND_RUN=1 timeout 12s \
-            "$appimage_path" -platform offscreen >/tmp/therion-studio-appimage-launch.log 2>&1
-          exit_code=$?
-          set -e
-          if [[ "$exit_code" -ne 0 && "$exit_code" -ne 124 ]]; then
-            echo "AppImage launch failed with exit code $exit_code"
-            cat /tmp/therion-studio-appimage-launch.log
-            exit "$exit_code"
-          fi
-          if [[ "$exit_code" -eq 124 ]]; then
-            echo "AppImage started successfully (terminated by timeout as expected)."
-          fi
+          THERION_STUDIO_APPIMAGE_ARCHITECTURE_LABEL=${{ matrix.appimage_architecture }} \
+          THERION_STUDIO_ARTIFACT_DIR=/tmp/therion-linux-packages \
+            bash scripts/linux-packages/smoke_appimage_package.sh

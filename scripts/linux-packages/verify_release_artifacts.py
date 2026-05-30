@@ -43,11 +43,13 @@ def main() -> int:
     parser.add_argument("--appimagetool-sha256", required=True)
     parser.add_argument("--appimage-runtime-url", required=True)
     parser.add_argument("--appimage-runtime-sha256", required=True)
+    parser.add_argument("--appimage-architecture", default="x86_64")
     parser.add_argument("--appimage-qt-source", required=True)
     parser.add_argument("--appimage-qt-version", required=True)
     parser.add_argument("--appimage-qt-architecture", required=True)
     parser.add_argument("--appimage-qt-packages", required=True)
     parser.add_argument("--manifest-out", required=True)
+    parser.add_argument("--runner-label", default="ubuntu-24.04")
     parser.add_argument("--github-output")
     args = parser.parse_args()
 
@@ -69,7 +71,9 @@ def main() -> int:
         print(f"Missing expected .deb artifact: {deb_path}")
         return 1
 
-    expected_appimage_name = f"TherionStudio-{args.expected_package_label}-Linux-x86_64.AppImage"
+    expected_appimage_name = (
+        f"TherionStudio-{args.expected_package_label}-Linux-{args.appimage_architecture}.AppImage"
+    )
     appimage_path = appimage_dir / expected_appimage_name
     if not appimage_path.exists():
         print(f"Missing expected AppImage artifact: {appimage_path}")
@@ -106,6 +110,7 @@ def main() -> int:
                 },
             },
             "appimage": {
+                "architecture": args.appimage_architecture,
                 "appimagetool": {
                     "sha256": args.appimagetool_sha256,
                     "url": args.appimagetool_url,
@@ -125,7 +130,7 @@ def main() -> int:
                     "version": args.appimage_qt_version,
                 },
             },
-            "runner": "ubuntu-24.04",
+            "runner": args.runner_label,
             "source_ref": args.source_ref,
         },
         "package": {

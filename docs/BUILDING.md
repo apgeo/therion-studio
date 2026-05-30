@@ -138,18 +138,22 @@ CI build workflows also run staged install-layout smoke checks via
 
 ## Linux
 
-Linux packaging currently targets two distributable artifacts:
+Linux packaging currently targets two distributable artifact families:
 
-- `.deb` package for Ubuntu 26.04
-- AppImage as the portable Linux channel
+- `.deb` packages for Ubuntu 26.04 on `amd64` and `arm64`
+- AppImages as the portable Linux channel on `x86_64` and `aarch64`
 
 The manual workflow `.github/workflows/linux-packages.yml` builds the `.deb` package inside an
-`ubuntu:26.04` container and builds the AppImage inside a `debian:13` container. It validates
-install layout and artifact naming, then uploads:
+`ubuntu:26.04` container and builds the AppImage inside a `debian:13` container for each supported
+Linux architecture. `x86_64` builds run on `ubuntu-24.04`; `aarch64` builds run on
+`ubuntu-24.04-arm`. It validates install layout and artifact naming, then uploads:
 
 - `therion-studio-<package_label>-ubuntu-26.04-amd64.deb`
+- `therion-studio-<package_label>-ubuntu-26.04-arm64.deb`
 - `TherionStudio-<package_label>-Linux-x86_64.AppImage`
-- `TherionStudio-Linux-artifacts-manifest.json` (SHA256 + build metadata)
+- `TherionStudio-<package_label>-Linux-aarch64.AppImage`
+- `TherionStudio-Linux-x86_64-artifacts-manifest.json` (SHA256 + build metadata)
+- `TherionStudio-Linux-aarch64-artifacts-manifest.json` (SHA256 + build metadata)
 
 The `.deb` artifact intentionally includes `ubuntu-26.04` in the file name because Qt package
 dependency metadata is distribution-release-specific. Do not treat that `.deb` as the compatibility
@@ -168,16 +172,87 @@ Linux deploy helper may exclude by default, the workflow also copies selected Qt
 the distro Qt plugin directory, copies the `ldd`-resolved `libQt6*.so*` runtime families into
 `AppDir/usr/lib`, writes an `AppRun` wrapper that sets `LD_LIBRARY_PATH` and `QT_PLUGIN_PATH`, and
 performs an offscreen AppDir launch sanity check before packaging through
-`scripts/prepare_linux_appimage_appdir.sh`. The workflow then packages the AppDir with pinned
-`appimagetool` 1.9.1 and a pinned `type2-runtime` 20251108 runtime, both SHA256-verified before
-execution/use. The manifest records the `.deb` and AppImage Qt package sources, versions, and
-package sets in addition to `appimagetool` and runtime provenance.
+`scripts/linux-packages/prepare_appimage_appdir.sh`. The workflow then packages the AppDir with pinned
+architecture-specific `appimagetool` 1.9.1 and pinned architecture-specific `type2-runtime`
+20251108 runtime inputs, all SHA256-verified before execution/use. The manifest records the
+`.deb` and AppImage Qt package sources, versions, package sets, architecture labels, `appimagetool`,
+and runtime provenance.
 
 The same workflow also runs follow-up smoke jobs in `ubuntu:26.04` and `debian:13` containers.
-The Ubuntu target installs the produced `.deb`, verifies installed paths, and performs an offscreen
-`.deb` launch sanity check. Both Ubuntu 26.04 and Debian 13 launch the generated AppImage. The
-`.deb` package is the Ubuntu 26.04 coverage path only. The AppImage should be documented as tested
-on Debian 13 and Ubuntu 26.04 only when both smoke jobs pass for that artifact.
+The Ubuntu targets install the produced architecture-specific `.deb` packages, verify installed
+paths, and perform offscreen `.deb` launch sanity checks. Both Ubuntu 26.04 and Debian 13 launch
+the generated architecture-specific AppImages. The `.deb` package is the Ubuntu 26.04 coverage path
+only. The AppImage should be documented as tested on Debian 13 and Ubuntu 26.04 only when both smoke
+jobs pass for that architecture.
+
+To reproduce the Ubuntu 26.04 `.deb` build locally, run the same container script used by the
+workflow. This requires Docker and network access for `apt-get`:
+
+```sh
+scripts/linux-packages/build_deb_package_docker.sh
+```
+
+The expected local output is `build-linux-packages/therion-studio-dev-<short_sha>-ubuntu-26.04-amd64.deb`.
+
+To build the Ubuntu 26.04 ARM64 `.deb` locally, set the Linux architecture:
+
+```sh
+THERION_STUDIO_LINUX_ARCH=arm64 scripts/linux-packages/build_deb_package_docker.sh
+```
+
+The ARM64 output is `build-linux-packages/therion-studio-dev-<short_sha>-ubuntu-26.04-arm64.deb`.
+
+For a release-like local build, override the version fields:
+
+```sh
+THERION_STUDIO_VERSION=2026.5.1 \
+THERION_STUDIO_PACKAGE_LABEL=2026.5.1 \
+THERION_STUDIO_DEBIAN_VERSION=2026.5.1 \
+scripts/linux-packages/build_deb_package_docker.sh
+```
+
+To reproduce the Debian 13 AppImage build locally, run:
+
+```sh
+scripts/linux-packages/build_appimage_package_docker.sh
+```
+
+The expected local output is `build-linux-appimage/TherionStudio-dev-<short_sha>-Linux-x86_64.AppImage`.
+
+To build the ARM64 AppImage locally, run:
+
+```sh
+THERION_STUDIO_LINUX_ARCH=arm64 scripts/linux-packages/build_appimage_package_docker.sh
+```
+
+The ARM64 output is `build-linux-appimage/TherionStudio-dev-<short_sha>-Linux-aarch64.AppImage`.
+
+After building local artifacts, smoke-test installation and launch behavior in Docker:
+
+```sh
+scripts/linux-packages/smoke_deb_package_docker.sh
+scripts/linux-packages/smoke_appimage_package_docker.sh ubuntu:26.04 build-linux-appimage
+scripts/linux-packages/smoke_appimage_package_docker.sh debian:13 build-linux-appimage
+```
+
+For ARM64 local smoke tests, use the same commands with `THERION_STUDIO_LINUX_ARCH=arm64`.
+
+To run the full local Linux package pass in one command, including both builds and all smoke tests,
+run:
+
+```sh
+scripts/linux-packages/build_and_smoke_packages_docker.sh
+```
+
+For the full ARM64 pass, run:
+
+```sh
+THERION_STUDIO_LINUX_ARCH=arm64 scripts/linux-packages/build_and_smoke_packages_docker.sh
+```
+
+The `.deb` smoke test installs the package in `ubuntu:26.04`, verifies installed desktop/icon/metainfo
+paths, and launches `TherionStudio` with the offscreen Qt platform. The AppImage smoke tests launch
+the generated AppImage with `APPIMAGE_EXTRACT_AND_RUN=1` in the requested container image.
 
 Do not use mutable `linuxdeployqt` `continuous` AppImage downloads or unmaintained Qt
 deployment plugins for production release artifact generation.

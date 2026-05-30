@@ -7,6 +7,7 @@
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QColor>
+#include <QComboBox>
 #include <QFile>
 #include <QDir>
 #include <QFileInfo>
@@ -14,6 +15,7 @@
 #include <QIcon>
 #include <QItemSelectionModel>
 #include <QLabel>
+#include <QLineEdit>
 #include <QModelIndex>
 #include <QPainter>
 #include <QPalette>
@@ -36,6 +38,8 @@
 
 namespace
 {
+constexpr auto kStructureActionFocusTargetConfig = "focus-target-config";
+
 QString structureObjectKindLabel(const QString &category)
 {
     if (category == QStringLiteral("Stations")) {
@@ -537,8 +541,35 @@ void MainWindow::showStructureSidebarMessage(const QString &message)
     messageItem->setEditable(false);
     messageItem->setToolTip(message);
     structureModel_->appendRow(messageItem);
+
+    auto *actionItem = new QStandardItem(tr("Select Target Config in Compiler"));
+    actionItem->setEditable(false);
+    actionItem->setData(QString::fromLatin1(kStructureActionFocusTargetConfig), ActionRole);
+    actionItem->setToolTip(tr("Open the Compiler pane and focus the Target Config field."));
+    structureModel_->appendRow(actionItem);
+
     projectStructureSummary_ = message;
     structureTree_->expandAll();
+}
+
+bool MainWindow::activateStructureSidebarAction(const QString &action)
+{
+    if (action != QString::fromLatin1(kStructureActionFocusTargetConfig)) {
+        return false;
+    }
+
+    showSidebarPane(SidebarPane::Console);
+    if (therionRunTargetCombo_ != nullptr) {
+        const int projectIndex = therionRunTargetCombo_->findData(QStringLiteral("project"));
+        if (projectIndex >= 0) {
+            therionRunTargetCombo_->setCurrentIndex(projectIndex);
+        }
+    }
+    if (therionTargetConfigEdit_ != nullptr) {
+        therionTargetConfigEdit_->setFocus(Qt::ShortcutFocusReason);
+        therionTargetConfigEdit_->selectAll();
+    }
+    return true;
 }
 
 void MainWindow::updateStructureSidebarSourceLocations(const TherionStudio::ProjectIndexSnapshot &projectIndex)
@@ -606,6 +637,10 @@ void MainWindow::handleStructureSelectionChanged(const QModelIndex &current, con
         return;
     }
 
+    if (activateStructureSidebarAction(current.data(ActionRole).toString())) {
+        return;
+    }
+
     if (isStructureContainerIndex(current)) {
         return;
     }
@@ -628,6 +663,10 @@ void MainWindow::handleStructureItemActivated(const QModelIndex &index, QTreeVie
 {
     QTreeView *tree = sourceTree != nullptr ? sourceTree : structureTree_;
     if (!index.isValid()) {
+        return;
+    }
+
+    if (activateStructureSidebarAction(index.data(ActionRole).toString())) {
         return;
     }
 

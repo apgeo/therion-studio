@@ -10,4 +10,5 @@ constexpr int CategoryRole = Qt::UserRole + 3;
 constexpr int NameRole = Qt::UserRole + 4;
 constexpr int OverrideKeyRole = Qt::UserRole + 5;
 constexpr int ObjectIdRole = Qt::UserRole + 6;
+constexpr int ActionRole = Qt::UserRole + 7;
 }

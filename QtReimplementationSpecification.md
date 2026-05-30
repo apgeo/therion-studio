@@ -450,7 +450,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Structure indexing shall treat the opened project folder as the root graph boundary and shall prefer an explicitly selected project target config when it resolves inside that project folder.
 - When no explicit project target config is selected, a root-level `thconfig` file shall define the default project structure graph.
 - When no root-level `thconfig` file exists and exactly one root-level `*.thconfig` file exists, that config may define the project structure graph.
-- When multiple root-level `*.thconfig` files exist without an explicit project target config, the application shall not silently merge those graphs and shall show an actionable message in the structure sidebar asking the user to choose a project target config.
+- When multiple root-level `*.thconfig` files exist without an explicit project target config, the application shall not silently merge those graphs and shall show an actionable message in the structure sidebar asking the user to choose a project target config; the message shall provide a direct action to focus the Compiler pane target-config control.
 - The structure sidebar shall provide explicit user controls to collapse and re-expand the panel.
 - The sidebar shall use a fixed-width activity rail plus a resizable content pane so the rail remains available when content is collapsed.
 - The activity rail shall provide `Files`, `Structure`, and `Compiler` pane entries plus a visually separated `Compile` action using the play icon. The rail `Compile` action shall run Therion with `Project Config` without requiring the Compiler pane to be focused.

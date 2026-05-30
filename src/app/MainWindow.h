@@ -125,6 +125,7 @@ private:
     void handleStructureSidebarScanFinished(const TherionStudio::ProjectStructureScanner::Result &result);
     void applyStructureSidebarIndex(const TherionStudio::ProjectIndexSnapshot &projectIndex);
     void showStructureSidebarMessage(const QString &message);
+    bool activateStructureSidebarAction(const QString &action);
     void updateStructureSidebarSourceLocations(const TherionStudio::ProjectIndexSnapshot &projectIndex);
     void rebuildMapObjectsTree();
     void showSidebarPane(SidebarPane pane);

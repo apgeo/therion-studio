@@ -930,6 +930,16 @@
         <translation>Ve vybraném projektu nebyly nalezeny žádné survey, mapy ani scrappy</translation>
     </message>
     <message>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="548"/>
+        <source>Select Target Config in Compiler</source>
+        <translation>Vybrat cílový konfigurační soubor v Kompilátoru</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="551"/>
+        <source>Open the Compiler pane and focus the Target Config field.</source>
+        <translation>Otevře panel Kompilátor a zaměří pole cílového konfiguračního souboru.</translation>
+    </message>
+    <message>
         <location filename="../src/app/MainWindowStructureBrowser.cpp" line="515"/>
         <source>Objects</source>
         <translation>Objekty</translation>

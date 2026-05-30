@@ -103,6 +103,7 @@ The `Structure` pane shows detected `Survey`, `Map`, and `Scrap` hierarchy from 
 For project-level indexing, Therion Studio uses the selected `Target Config` when it points inside the opened project.
 If no `Target Config` is selected, a root `thconfig` is used by default; if there is no root `thconfig` and exactly one root `*.thconfig`, that file is used.
 If the project root contains multiple `*.thconfig` files and no target config is selected, choose the intended `Target Config` in the `Compiler` pane instead of relying on an automatic merged structure.
+In this ambiguous state, the `Structure` pane shows a shortcut row that opens the `Compiler` pane and focuses `Target Config`.
 
 ### 5.2 Project Tree Actions
 

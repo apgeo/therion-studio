@@ -40,6 +40,12 @@ struct ProjectObjectIdentityGenerator
                          const QString &parentObjectId);
 };
 
+struct MapScrapReferenceScanResult
+{
+    QHash<QString, QSet<QString>> referencesByMapKey;
+    QVector<ProjectIndexDiagnostic> diagnostics;
+};
+
 QString normalizedFilePathKey(const QString &path)
 {
     if (path.trimmed().isEmpty()) {
@@ -369,7 +375,7 @@ void appendProjectStructureFromFile(const QString &filePath,
     for (const TherionParsedLine &parsedLine : parsedLines) {
         const QString directive = parsedLine.directive;
 
-        if (directive == QStringLiteral("input")) {
+        if (directive == QStringLiteral("input") || directive == QStringLiteral("source")) {
             const QString inputTarget = parsedLine.tokens.value(1);
             const QString resolvedInputPath = resolveInputPath(normalizedPath, inputTarget);
             if (!resolvedInputPath.isEmpty()) {
@@ -434,7 +440,8 @@ QVector<QString> rootProjectFiles(const QVector<QString> &filePaths,
     for (const QString &filePath : filePaths) {
         const QVector<TherionParsedLine> &parsedLines = parsedLinesForFile(filePath, cache, inMemoryFileContentsByPath);
         for (const TherionParsedLine &parsedLine : parsedLines) {
-            if (parsedLine.directive != QStringLiteral("input")) {
+            if (parsedLine.directive != QStringLiteral("input")
+                && parsedLine.directive != QStringLiteral("source")) {
                 continue;
             }
 
@@ -542,23 +549,24 @@ QString sectionNameFromLine(const TherionParsedLine &parsedLine)
 bool isInterestingProjectFile(const QFileInfo &fileInfo)
 {
     const QString suffix = fileInfo.suffix().toLower();
-    return suffix == QStringLiteral("th") || suffix == QStringLiteral("th2");
+    const QString fileName = fileInfo.fileName().toLower();
+    return suffix == QStringLiteral("th")
+        || suffix == QStringLiteral("th2")
+        || suffix == QStringLiteral("thconfig")
+        || fileName == QStringLiteral("thconfig");
 }
 
-QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(const QVector<ProjectStructureEntry> &entries,
-                                                         ParsedFileCache *cache,
-                                                         const QHash<QString, QString> &inMemoryFileContentsByPath)
+MapScrapReferenceScanResult scanMapScrapReferences(const QVector<ProjectStructureEntry> &entries,
+                                                   ParsedFileCache *cache,
+                                                   const QHash<QString, QString> &inMemoryFileContentsByPath)
 {
-    QHash<QString, QSet<QString>> referencesByMap;
+    MapScrapReferenceScanResult result;
 
     QSet<QString> knownScrapNames;
     for (const ProjectStructureEntry &entry : entries) {
         if (entry.kind == ProjectStructureEntryKind::Scrap && !entry.name.trimmed().isEmpty()) {
             knownScrapNames.insert(entry.name.trimmed().toLower());
         }
-    }
-    if (knownScrapNames.isEmpty()) {
-        return referencesByMap;
     }
 
     QHash<QString, QVector<ProjectStructureEntry>> mapsBySourceFile;
@@ -568,7 +576,7 @@ QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(const QVector<ProjectSt
         }
     }
     if (mapsBySourceFile.isEmpty()) {
-        return referencesByMap;
+        return result;
     }
 
     for (auto fileIt = mapsBySourceFile.constBegin(); fileIt != mapsBySourceFile.constEnd(); ++fileIt) {
@@ -617,16 +625,25 @@ QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(const QVector<ProjectSt
                 }
                 if (knownScrapNames.contains(candidate)) {
                     scrapReferences.insert(candidate);
+                    continue;
                 }
+
+                ProjectIndexDiagnostic diagnostic;
+                diagnostic.kind = ProjectIndexDiagnosticKind::UnknownMapScrapReference;
+                diagnostic.sourceObjectId = mapEntry.objectId;
+                diagnostic.sourceFile = fileIt.key();
+                diagnostic.lineNumber = parsedLine.lineNumber;
+                diagnostic.referencedName = parsedLine.tokens.first().trimmed();
+                result.diagnostics.append(diagnostic);
             }
 
             if (!scrapReferences.isEmpty()) {
-                referencesByMap.insert(ProjectStructureIndex::structureEntryNodeKey(mapEntry), scrapReferences);
+                result.referencesByMapKey.insert(ProjectStructureIndex::structureEntryNodeKey(mapEntry), scrapReferences);
             }
         }
     }
 
-    return referencesByMap;
+    return result;
 }
 }
 
@@ -655,7 +672,10 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
 
     QVector<QString> filePaths;
     QDirIterator iterator(projectRootPath,
-                          {QStringLiteral("*.th"), QStringLiteral("*.th2")},
+                          {QStringLiteral("*.th"),
+                           QStringLiteral("*.th2"),
+                           QStringLiteral("*.thconfig"),
+                           QStringLiteral("thconfig")},
                           QDir::Files,
                           QDirIterator::Subdirectories);
 
@@ -687,7 +707,11 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
                                        inMemoryFileContentsByPath);
     }
 
-    snapshot.mapScrapReferencesByMapKey = mapScrapReferencesByMapKey(snapshot.entries, &cache, inMemoryFileContentsByPath);
+    const MapScrapReferenceScanResult mapReferenceScan = scanMapScrapReferences(snapshot.entries,
+                                                                                &cache,
+                                                                                inMemoryFileContentsByPath);
+    snapshot.mapScrapReferencesByMapKey = mapReferenceScan.referencesByMapKey;
+    snapshot.diagnostics = mapReferenceScan.diagnostics;
     return snapshot;
 }
 

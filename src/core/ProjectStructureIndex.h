@@ -20,6 +20,11 @@ enum class ProjectStructureEntryKind
     Area,
 };
 
+enum class ProjectIndexDiagnosticKind
+{
+    UnknownMapScrapReference,
+};
+
 struct ProjectStructureEntry
 {
     ProjectStructureEntryKind kind = ProjectStructureEntryKind::Unknown;
@@ -33,10 +38,20 @@ struct ProjectStructureEntry
     bool createsNamespace = true;
 };
 
+struct ProjectIndexDiagnostic
+{
+    ProjectIndexDiagnosticKind kind = ProjectIndexDiagnosticKind::UnknownMapScrapReference;
+    QString sourceObjectId;
+    QString sourceFile;
+    int lineNumber = 0;
+    QString referencedName;
+};
+
 struct ProjectIndexSnapshot
 {
     QVector<ProjectStructureEntry> entries;
     QHash<QString, QSet<QString>> mapScrapReferencesByMapKey;
+    QVector<ProjectIndexDiagnostic> diagnostics;
 };
 
 class ProjectStructureIndex final

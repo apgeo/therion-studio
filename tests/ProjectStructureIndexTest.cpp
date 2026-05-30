@@ -189,6 +189,7 @@ int runProjectIndexMapScrapReferenceTest()
                                 "  input maps/map.th2\n"
                                 "  map cave-map\n"
                                 "    s1\n"
+                                "    missing-scrap\n"
                                 "  endmap\n"
                                 "endsurvey cave\n"));
 
@@ -229,6 +230,31 @@ int runProjectIndexMapScrapReferenceTest()
                 "The project index used stale on-disk source text for map-to-scrap references.")) {
         return 1;
     }
+    if (!expect(snapshot.diagnostics.size() == 1,
+                "The project index should report one unresolved map scrap reference.")) {
+        return 1;
+    }
+    const ProjectIndexDiagnostic &diagnostic = snapshot.diagnostics.first();
+    if (!expect(diagnostic.kind == ProjectIndexDiagnosticKind::UnknownMapScrapReference,
+                "The project index reported an unexpected diagnostic kind.")) {
+        return 1;
+    }
+    if (!expect(diagnostic.sourceObjectId == mapEntry.objectId,
+                "The unresolved map scrap reference diagnostic should point at the owning map object.")) {
+        return 1;
+    }
+    if (!expect(normalizedPathForComparison(diagnostic.sourceFile) == normalizedPathForComparison(rootFile),
+                "The unresolved map scrap reference diagnostic source file is incorrect.")) {
+        return 1;
+    }
+    if (!expect(diagnostic.lineNumber == 5,
+                "The unresolved map scrap reference diagnostic line number is incorrect.")) {
+        return 1;
+    }
+    if (!expect(diagnostic.referencedName == QStringLiteral("missing-scrap"),
+                "The unresolved map scrap reference diagnostic target name is incorrect.")) {
+        return 1;
+    }
 
     inMemoryContents.insert(normalizedPathForComparison(rootFile),
                             QStringLiteral(
@@ -237,6 +263,7 @@ int runProjectIndexMapScrapReferenceTest()
                                 "  input maps/map.th2\n"
                                 "  map cave-map\n"
                                 "    s1\n"
+                                "    missing-scrap\n"
                                 "  endmap\n"
                                 "endsurvey cave\n"));
     const ProjectIndexSnapshot shiftedSnapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(),
@@ -260,6 +287,55 @@ int runProjectIndexMapScrapReferenceTest()
     }
     if (!expect(shiftedMapEntry.objectId == mapEntry.objectId,
                 "The project index object ID should stay stable when source line numbers shift.")) {
+        return 1;
+    }
+    if (!expect(shiftedSnapshot.diagnostics.size() == 1
+                    && shiftedSnapshot.diagnostics.first().sourceObjectId == shiftedMapEntry.objectId,
+                "The shifted project index diagnostic should stay attached to the map object ID.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runProjectIndexThconfigSourceGraphTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "The temporary project directory could not be created.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    const QString configFile = projectDir.filePath(QStringLiteral("thconfig"));
+    const QString sourceFile = projectDir.filePath(QStringLiteral("main.th"));
+    if (!expect(writeTextFile(configFile,
+                              QStringLiteral(
+                                  "source main\n")),
+                "The temporary thconfig file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(sourceFile,
+                              QStringLiteral(
+                                  "survey from-config\n"
+                                  "endsurvey from-config\n")),
+                "The temporary thconfig source file could not be written.")) {
+        return 1;
+    }
+
+    QString errorMessage;
+    const ProjectIndexSnapshot snapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(), &errorMessage);
+    if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(snapshot.entries.size() == 1, "The thconfig source graph scan returned an unexpected entry count.")) {
+        return 1;
+    }
+
+    const ProjectStructureEntry &entry = snapshot.entries.first();
+    if (!expect(entry.kind == ProjectStructureEntryKind::Survey
+                    && entry.name == QStringLiteral("from-config")
+                    && normalizedPathForComparison(entry.sourceFile) == normalizedPathForComparison(sourceFile),
+                "The thconfig source graph scan did not resolve the source target.")) {
         return 1;
     }
 
@@ -321,6 +397,9 @@ int main()
         return 1;
     }
     if (runProjectIndexMapScrapReferenceTest() != 0) {
+        return 1;
+    }
+    if (runProjectIndexThconfigSourceGraphTest() != 0) {
         return 1;
     }
     if (runTh2ObjectIndexGroupingTest() != 0) {

@@ -40,9 +40,10 @@ struct ProjectObjectIdentityGenerator
                          const QString &parentObjectId);
 };
 
-struct MapScrapReferenceScanResult
+struct MapReferenceScanResult
 {
-    QHash<QString, QSet<QString>> referencesByMapKey;
+    QHash<QString, QSet<QString>> scrapReferencesByMapKey;
+    QHash<QString, QSet<QString>> childMapReferencesByMapKey;
     QVector<ProjectIndexDiagnostic> diagnostics;
 };
 
@@ -101,6 +102,58 @@ QString objectNameIdentityToken(const QString &name)
 {
     const QString normalized = normalizedIdentityToken(name);
     return normalized.isEmpty() ? QStringLiteral("anonymous") : normalized;
+}
+
+QString mapReferenceLookupKey(QString referenceName)
+{
+    referenceName = referenceName.trimmed();
+    const int namespaceIndex = referenceName.indexOf(QLatin1Char('@'));
+    if (namespaceIndex >= 0) {
+        referenceName = referenceName.left(namespaceIndex);
+    }
+
+    return referenceName.trimmed().toLower();
+}
+
+QHash<QString, QVector<QString>> entryKeysByReferenceName(const QVector<ProjectStructureEntry> &entries,
+                                                          ProjectStructureEntryKind kind)
+{
+    QHash<QString, QVector<QString>> entryKeys;
+    for (const ProjectStructureEntry &entry : entries) {
+        if (entry.kind != kind || entry.name.trimmed().isEmpty()) {
+            continue;
+        }
+
+        entryKeys[mapReferenceLookupKey(entry.name)].append(ProjectStructureIndex::structureEntryNodeKey(entry));
+    }
+
+    return entryKeys;
+}
+
+QString resolveUniqueReferenceKey(const QHash<QString, QVector<QString>> &entryKeysByName,
+                                  const QString &referenceName)
+{
+    const QVector<QString> entryKeys = entryKeysByName.value(mapReferenceLookupKey(referenceName));
+    return entryKeys.size() == 1 ? entryKeys.first() : QString();
+}
+
+QString mapCompositionReferenceToken(const TherionParsedLine &parsedLine)
+{
+    // Preview links describe spatial context, not map ownership, and commonly form cycles.
+    if (parsedLine.directive == QStringLiteral("break")
+        || parsedLine.directive == QStringLiteral("preview")) {
+        return QString();
+    }
+    if (parsedLine.tokens.size() != 1) {
+        return QString();
+    }
+
+    const QString token = parsedLine.tokens.first().trimmed();
+    if (token.isEmpty() || token.startsWith(QLatin1Char('-'))) {
+        return QString();
+    }
+
+    return token;
 }
 
 QString escapedIdentityToken(QString value)
@@ -655,18 +708,14 @@ RootConfigResolution rootConfigFiles(const QVector<QString> &filePaths,
     };
 }
 
-MapScrapReferenceScanResult scanMapScrapReferences(const QVector<ProjectStructureEntry> &entries,
-                                                   ParsedFileCache *cache,
-                                                   const QHash<QString, QString> &inMemoryFileContentsByPath)
+MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &entries,
+                                         ParsedFileCache *cache,
+                                         const QHash<QString, QString> &inMemoryFileContentsByPath)
 {
-    MapScrapReferenceScanResult result;
+    MapReferenceScanResult result;
 
-    QSet<QString> knownScrapNames;
-    for (const ProjectStructureEntry &entry : entries) {
-        if (entry.kind == ProjectStructureEntryKind::Scrap && !entry.name.trimmed().isEmpty()) {
-            knownScrapNames.insert(entry.name.trimmed().toLower());
-        }
-    }
+    const QHash<QString, QVector<QString>> mapKeysByName = entryKeysByReferenceName(entries, ProjectStructureEntryKind::Map);
+    const QHash<QString, QVector<QString>> scrapKeysByName = entryKeysByReferenceName(entries, ProjectStructureEntryKind::Scrap);
 
     QHash<QString, QVector<ProjectStructureEntry>> mapsBySourceFile;
     for (const ProjectStructureEntry &entry : entries) {
@@ -698,6 +747,7 @@ MapScrapReferenceScanResult scanMapScrapReferences(const QVector<ProjectStructur
             }
 
             QSet<QString> scrapReferences;
+            QSet<QString> childMapReferences;
             int mapDepth = 0;
             for (int index = mapLineIndex; index < parsedLines.size(); ++index) {
                 const TherionParsedLine &parsedLine = parsedLines.at(index);
@@ -714,30 +764,52 @@ MapScrapReferenceScanResult scanMapScrapReferences(const QVector<ProjectStructur
                     }
                     continue;
                 }
-                if (mapDepth != 1 || parsedLine.tokens.size() != 1) {
+                if (mapDepth != 1) {
                     continue;
                 }
 
-                const QString candidate = parsedLine.tokens.first().trimmed().toLower();
-                if (candidate.isEmpty() || candidate.startsWith(QLatin1Char('-'))) {
+                const QString candidate = mapCompositionReferenceToken(parsedLine);
+                if (candidate.isEmpty()) {
                     continue;
                 }
-                if (knownScrapNames.contains(candidate)) {
-                    scrapReferences.insert(candidate);
+
+                const QString childMapKey = resolveUniqueReferenceKey(mapKeysByName, candidate);
+                if (!childMapKey.isEmpty()) {
+                    const QString owningMapKey = ProjectStructureIndex::structureEntryNodeKey(mapEntry);
+                    if (childMapKey != owningMapKey) {
+                        childMapReferences.insert(childMapKey);
+                    }
+                    continue;
+                }
+
+                const QString scrapKey = resolveUniqueReferenceKey(scrapKeysByName, candidate);
+                if (!scrapKey.isEmpty()) {
+                    scrapReferences.insert(scrapKey);
+                    continue;
+                }
+
+                const QString referenceName = mapReferenceLookupKey(candidate);
+                if (!referenceName.endsWith(QStringLiteral(".m"))
+                    && !referenceName.endsWith(QStringLiteral(".s"))) {
                     continue;
                 }
 
                 ProjectIndexDiagnostic diagnostic;
-                diagnostic.kind = ProjectIndexDiagnosticKind::UnknownMapScrapReference;
+                diagnostic.kind = referenceName.endsWith(QStringLiteral(".m"))
+                    ? ProjectIndexDiagnosticKind::UnknownMapReference
+                    : ProjectIndexDiagnosticKind::UnknownMapScrapReference;
                 diagnostic.sourceObjectId = mapEntry.objectId;
                 diagnostic.sourceFile = fileIt.key();
                 diagnostic.lineNumber = parsedLine.lineNumber;
-                diagnostic.referencedName = parsedLine.tokens.first().trimmed();
+                diagnostic.referencedName = candidate;
                 result.diagnostics.append(diagnostic);
             }
 
             if (!scrapReferences.isEmpty()) {
-                result.referencesByMapKey.insert(ProjectStructureIndex::structureEntryNodeKey(mapEntry), scrapReferences);
+                result.scrapReferencesByMapKey.insert(ProjectStructureIndex::structureEntryNodeKey(mapEntry), scrapReferences);
+            }
+            if (!childMapReferences.isEmpty()) {
+                result.childMapReferencesByMapKey.insert(ProjectStructureIndex::structureEntryNodeKey(mapEntry), childMapReferences);
             }
         }
     }
@@ -834,10 +906,11 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
                                        inMemoryFileContentsByPath);
     }
 
-    const MapScrapReferenceScanResult mapReferenceScan = scanMapScrapReferences(snapshot.entries,
-                                                                                &cache,
-                                                                                inMemoryFileContentsByPath);
-    snapshot.mapScrapReferencesByMapKey = mapReferenceScan.referencesByMapKey;
+    const MapReferenceScanResult mapReferenceScan = scanMapReferences(snapshot.entries,
+                                                                      &cache,
+                                                                      inMemoryFileContentsByPath);
+    snapshot.mapScrapReferencesByMapKey = mapReferenceScan.scrapReferencesByMapKey;
+    snapshot.mapChildReferencesByMapKey = mapReferenceScan.childMapReferencesByMapKey;
     snapshot.diagnostics = mapReferenceScan.diagnostics;
     return snapshot;
 }

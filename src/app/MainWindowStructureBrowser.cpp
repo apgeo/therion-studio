@@ -248,10 +248,21 @@ QString projectIndexStructuralSignature(const TherionStudio::ProjectIndexSnapsho
     parts.append(QStringLiteral("map-scrap-refs"));
     parts.append(QString::number(mapKeys.size()));
     for (const QString &mapKey : mapKeys) {
-        QStringList scrapNames = projectIndex.mapScrapReferencesByMapKey.value(mapKey).values();
-        std::sort(scrapNames.begin(), scrapNames.end());
+        QStringList scrapKeys = projectIndex.mapScrapReferencesByMapKey.value(mapKey).values();
+        std::sort(scrapKeys.begin(), scrapKeys.end());
         parts.append(mapKey);
-        parts.append(scrapNames.join(QLatin1Char(',')));
+        parts.append(scrapKeys.join(QLatin1Char(',')));
+    }
+
+    QStringList parentMapKeys = projectIndex.mapChildReferencesByMapKey.keys();
+    std::sort(parentMapKeys.begin(), parentMapKeys.end());
+    parts.append(QStringLiteral("map-child-refs"));
+    parts.append(QString::number(parentMapKeys.size()));
+    for (const QString &mapKey : parentMapKeys) {
+        QStringList childMapKeys = projectIndex.mapChildReferencesByMapKey.value(mapKey).values();
+        std::sort(childMapKeys.begin(), childMapKeys.end());
+        parts.append(mapKey);
+        parts.append(childMapKeys.join(QLatin1Char(',')));
     }
 
     parts.append(QStringLiteral("diagnostics"));
@@ -264,6 +275,71 @@ QString projectIndexStructuralSignature(const TherionStudio::ProjectIndexSnapsho
     }
 
     return parts.join(QChar(0x1f));
+}
+
+bool forcedParentWouldCreateCycle(const QHash<QString, QString> &parentByChildKey,
+                                  const QString &childKey,
+                                  const QString &parentKey)
+{
+    QString currentKey = parentKey;
+    QSet<QString> visitedKeys;
+    while (!currentKey.isEmpty()) {
+        if (currentKey == childKey) {
+            return true;
+        }
+        if (visitedKeys.contains(currentKey)) {
+            return true;
+        }
+
+        visitedKeys.insert(currentKey);
+        currentKey = parentByChildKey.value(currentKey);
+    }
+
+    return false;
+}
+
+void recordForcedStructureParent(QHash<QString, QString> *parentByChildKey,
+                                 QSet<QString> *ambiguousChildKeys,
+                                 const QString &childKey,
+                                 const QString &parentKey)
+{
+    if (parentByChildKey == nullptr
+        || ambiguousChildKeys == nullptr
+        || childKey.isEmpty()
+        || parentKey.isEmpty()
+        || childKey == parentKey
+        || ambiguousChildKeys->contains(childKey)) {
+        return;
+    }
+
+    const auto existingParent = parentByChildKey->constFind(childKey);
+    if (existingParent != parentByChildKey->constEnd()) {
+        if (existingParent.value() == parentKey) {
+            return;
+        }
+
+        parentByChildKey->remove(childKey);
+        ambiguousChildKeys->insert(childKey);
+        return;
+    }
+
+    if (forcedParentWouldCreateCycle(*parentByChildKey, childKey, parentKey)) {
+        ambiguousChildKeys->insert(childKey);
+        return;
+    }
+
+    parentByChildKey->insert(childKey, parentKey);
+}
+
+void recordMapReferenceParents(QHash<QString, QString> *parentByChildKey,
+                               QSet<QString> *ambiguousChildKeys,
+                               const QHash<QString, QSet<QString>> &referencesByParentKey)
+{
+    for (auto it = referencesByParentKey.constBegin(); it != referencesByParentKey.constEnd(); ++it) {
+        for (const QString &childKey : it.value()) {
+            recordForcedStructureParent(parentByChildKey, ambiguousChildKeys, childKey, it.key());
+        }
+    }
 }
 
 void updateStructureSourceLocationRoles(QStandardItemModel *model,
@@ -464,13 +540,14 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
             QStandardItem *item = nullptr;
         };
 
-        const QHash<QString, QSet<QString>> &mapScrapRefs = projectIndex.mapScrapReferencesByMapKey;
-        QHash<QString, QSet<QString>> mapOwnersByScrapName;
-        for (auto it = mapScrapRefs.constBegin(); it != mapScrapRefs.constEnd(); ++it) {
-            for (const QString &scrapNameLower : it.value()) {
-                mapOwnersByScrapName[scrapNameLower].insert(it.key());
-            }
-        }
+        QHash<QString, QString> forcedParentByChildKey;
+        QSet<QString> ambiguousForcedParentKeys;
+        recordMapReferenceParents(&forcedParentByChildKey,
+                                  &ambiguousForcedParentKeys,
+                                  projectIndex.mapChildReferencesByMapKey);
+        recordMapReferenceParents(&forcedParentByChildKey,
+                                  &ambiguousForcedParentKeys,
+                                  projectIndex.mapScrapReferencesByMapKey);
 
         QVector<VisibleStructureNode> nodes;
         nodes.reserve(entries.size());
@@ -510,14 +587,7 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
             node.entryName = entryName;
             node.nodeKey = TherionStudio::ProjectStructureIndex::structureEntryNodeKey(entry);
             node.item = entryItem;
-
-            if (entry.category == QStringLiteral("Scraps")) {
-                const QString scrapNameLower = entryName.trimmed().toLower();
-                const QSet<QString> owners = mapOwnersByScrapName.value(scrapNameLower);
-                if (owners.size() == 1) {
-                    node.forcedMapParentKey = *owners.constBegin();
-                }
-            }
+            node.forcedMapParentKey = forcedParentByChildKey.value(node.nodeKey);
 
             nodes.append(node);
         }

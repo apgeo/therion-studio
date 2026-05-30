@@ -23,6 +23,7 @@ enum class ProjectStructureEntryKind
 enum class ProjectIndexDiagnosticKind
 {
     UnknownMapScrapReference,
+    UnknownMapReference,
 };
 
 struct ProjectStructureEntry
@@ -54,6 +55,7 @@ struct ProjectIndexSnapshot
     QVector<QString> rootFilePaths;
     QVector<ProjectStructureEntry> entries;
     QHash<QString, QSet<QString>> mapScrapReferencesByMapKey;
+    QHash<QString, QSet<QString>> mapChildReferencesByMapKey;
     QVector<ProjectIndexDiagnostic> diagnostics;
 };
 

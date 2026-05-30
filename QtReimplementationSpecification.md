@@ -443,7 +443,8 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The structure sidebar shall present a navigable project hierarchy limited to surveys, maps, and scraps.
 - The structure sidebar shall not prepend synthetic top rows for project-root path or summary text inside the hierarchy tree.
 - Structure rows shall include category icons for survey, map, and scrap items using the bundled compass, map, and puzzle Lucide icons respectively.
-- Scrap items that are referenced by a map block shall be presented as children of that map node when the reference can be resolved uniquely.
+- Map and scrap items that are referenced by a map block shall be presented as children of that map node when the reference can be resolved uniquely.
+- `preview above` / `preview below` map relations shall not be treated as ownership hierarchy in the Structure sidebar.
 - Selection in the structure sidebar shall change the active document context.
 - The structure sidebar shall remain synchronized with the open project and the currently selected content when possible.
 - For files currently open in editor tabs, structure indexing shall use in-memory document text so unsaved edits are reflected immediately in the structure tree.

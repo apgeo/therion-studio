@@ -167,8 +167,11 @@ int runProjectIndexMapScrapReferenceTest()
                               QStringLiteral(
                                   "survey cave\n"
                                   "  input maps/map.th2\n"
-                                  "  map cave-map\n"
-                                  "    stale-scrap\n"
+                                  "  map child-map.m\n"
+                                  "    s1\n"
+                                  "  endmap\n"
+                                  "  map cave-map.m\n"
+                                  "    stale-scrap.s\n"
                                   "  endmap\n"
                                   "endsurvey cave\n")),
                 "The root Therion file could not be written.")) {
@@ -187,9 +190,16 @@ int runProjectIndexMapScrapReferenceTest()
                             QStringLiteral(
                                 "survey cave\n"
                                 "  input maps/map.th2\n"
-                                "  map cave-map\n"
-                                "    s1\n"
-                                "    missing-scrap\n"
+                                "  map child-map.m\n"
+                                "    s1@branch.cave\n"
+                                "    preview above cave-map.m\n"
+                                "  endmap\n"
+                                "  map cave-map.m\n"
+                                "    child-map.m\n"
+                                "    s1@branch.cave\n"
+                                "    break\n"
+                                "    missing-scrap.s\n"
+                                "    missing-map.m\n"
                                 "  endmap\n"
                                 "endsurvey cave\n"));
 
@@ -210,16 +220,44 @@ int runProjectIndexMapScrapReferenceTest()
         return 1;
     }
 
-    ProjectStructureEntry mapEntry;
-    bool foundMap = false;
-    for (const ProjectStructureEntry &entry : snapshot.entries) {
-        if (entry.kind == ProjectStructureEntryKind::Map && entry.name == QStringLiteral("cave-map")) {
-            mapEntry = entry;
-            foundMap = true;
-            break;
+    auto findEntry = [](const QVector<ProjectStructureEntry> &entries,
+                        ProjectStructureEntryKind kind,
+                        const QString &name,
+                        ProjectStructureEntry *foundEntry) {
+        for (const ProjectStructureEntry &entry : entries) {
+            if (entry.kind == kind && entry.name == name) {
+                if (foundEntry != nullptr) {
+                    *foundEntry = entry;
+                }
+                return true;
+            }
         }
-    }
+
+        return false;
+    };
+
+    ProjectStructureEntry mapEntry;
+    ProjectStructureEntry childMapEntry;
+    ProjectStructureEntry scrapEntry;
+    const bool foundMap = findEntry(snapshot.entries,
+                                    ProjectStructureEntryKind::Map,
+                                    QStringLiteral("cave-map.m"),
+                                    &mapEntry);
+    const bool foundChildMap = findEntry(snapshot.entries,
+                                         ProjectStructureEntryKind::Map,
+                                         QStringLiteral("child-map.m"),
+                                         &childMapEntry);
+    const bool foundScrap = findEntry(snapshot.entries,
+                                      ProjectStructureEntryKind::Scrap,
+                                      QStringLiteral("s1"),
+                                      &scrapEntry);
     if (!expect(foundMap, "The project index did not find the map entry.")) {
+        return 1;
+    }
+    if (!expect(foundChildMap, "The project index did not find the child map entry.")) {
+        return 1;
+    }
+    if (!expect(foundScrap, "The project index did not find the scrap entry.")) {
         return 1;
     }
     if (!expect(!mapEntry.objectId.isEmpty(), "The project index map entry should expose a stable object ID.")) {
@@ -230,38 +268,63 @@ int runProjectIndexMapScrapReferenceTest()
     if (!expect(mapKey == mapEntry.objectId, "The structure node key should prefer the stable object ID.")) {
         return 1;
     }
+    const QString childMapKey = ProjectStructureIndex::structureEntryNodeKey(childMapEntry);
+    const QSet<QString> childMapReferences = snapshot.mapChildReferencesByMapKey.value(mapKey);
+    if (!expect(childMapReferences.contains(childMapKey),
+                "The project index did not resolve the map-to-map composition reference.")) {
+        return 1;
+    }
+    if (!expect(snapshot.mapChildReferencesByMapKey.value(childMapKey).isEmpty(),
+                "Preview references should not be treated as map composition hierarchy.")) {
+        return 1;
+    }
+
+    const QString scrapKey = ProjectStructureIndex::structureEntryNodeKey(scrapEntry);
     const QSet<QString> scrapReferences = snapshot.mapScrapReferencesByMapKey.value(mapKey);
-    if (!expect(scrapReferences.contains(QStringLiteral("s1")),
-                "The project index did not resolve the map-to-scrap reference from in-memory source text.")) {
+    if (!expect(scrapReferences.contains(scrapKey),
+                "The project index did not resolve the namespaced map-to-scrap reference from in-memory source text.")) {
         return 1;
     }
-    if (!expect(!scrapReferences.contains(QStringLiteral("stale-scrap")),
-                "The project index used stale on-disk source text for map-to-scrap references.")) {
+    for (const ProjectIndexDiagnostic &diagnostic : snapshot.diagnostics) {
+        if (!expect(diagnostic.referencedName != QStringLiteral("stale-scrap.s"),
+                    "The project index used stale on-disk source text for map references.")) {
+            return 1;
+        }
+    }
+    if (!expect(snapshot.diagnostics.size() == 2,
+                "The project index should report unresolved map scrap and map references.")) {
         return 1;
     }
-    if (!expect(snapshot.diagnostics.size() == 1,
-                "The project index should report one unresolved map scrap reference.")) {
+    const ProjectIndexDiagnostic &scrapDiagnostic = snapshot.diagnostics.at(0);
+    if (!expect(scrapDiagnostic.kind == ProjectIndexDiagnosticKind::UnknownMapScrapReference,
+                "The project index reported an unexpected unresolved scrap diagnostic kind.")) {
         return 1;
     }
-    const ProjectIndexDiagnostic &diagnostic = snapshot.diagnostics.first();
-    if (!expect(diagnostic.kind == ProjectIndexDiagnosticKind::UnknownMapScrapReference,
-                "The project index reported an unexpected diagnostic kind.")) {
-        return 1;
-    }
-    if (!expect(diagnostic.sourceObjectId == mapEntry.objectId,
+    if (!expect(scrapDiagnostic.sourceObjectId == mapEntry.objectId,
                 "The unresolved map scrap reference diagnostic should point at the owning map object.")) {
         return 1;
     }
-    if (!expect(normalizedPathForComparison(diagnostic.sourceFile) == normalizedPathForComparison(rootFile),
+    if (!expect(normalizedPathForComparison(scrapDiagnostic.sourceFile) == normalizedPathForComparison(rootFile),
                 "The unresolved map scrap reference diagnostic source file is incorrect.")) {
         return 1;
     }
-    if (!expect(diagnostic.lineNumber == 5,
+    if (!expect(scrapDiagnostic.lineNumber == 11,
                 "The unresolved map scrap reference diagnostic line number is incorrect.")) {
         return 1;
     }
-    if (!expect(diagnostic.referencedName == QStringLiteral("missing-scrap"),
+    if (!expect(scrapDiagnostic.referencedName == QStringLiteral("missing-scrap.s"),
                 "The unresolved map scrap reference diagnostic target name is incorrect.")) {
+        return 1;
+    }
+    const ProjectIndexDiagnostic &mapDiagnostic = snapshot.diagnostics.at(1);
+    if (!expect(mapDiagnostic.kind == ProjectIndexDiagnosticKind::UnknownMapReference,
+                "The project index reported an unexpected unresolved map diagnostic kind.")) {
+        return 1;
+    }
+    if (!expect(mapDiagnostic.sourceObjectId == mapEntry.objectId
+                    && mapDiagnostic.lineNumber == 12
+                    && mapDiagnostic.referencedName == QStringLiteral("missing-map.m"),
+                "The unresolved map reference diagnostic payload is incorrect.")) {
         return 1;
     }
 
@@ -270,9 +333,16 @@ int runProjectIndexMapScrapReferenceTest()
                                 "\n"
                                 "survey cave\n"
                                 "  input maps/map.th2\n"
-                                "  map cave-map\n"
-                                "    s1\n"
-                                "    missing-scrap\n"
+                                "  map child-map.m\n"
+                                "    s1@branch.cave\n"
+                                "    preview above cave-map.m\n"
+                                "  endmap\n"
+                                "  map cave-map.m\n"
+                                "    child-map.m\n"
+                                "    s1@branch.cave\n"
+                                "    break\n"
+                                "    missing-scrap.s\n"
+                                "    missing-map.m\n"
                                 "  endmap\n"
                                 "endsurvey cave\n"));
     const ProjectIndexSnapshot shiftedSnapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(),
@@ -283,14 +353,10 @@ int runProjectIndexMapScrapReferenceTest()
     }
 
     ProjectStructureEntry shiftedMapEntry;
-    bool foundShiftedMap = false;
-    for (const ProjectStructureEntry &entry : shiftedSnapshot.entries) {
-        if (entry.kind == ProjectStructureEntryKind::Map && entry.name == QStringLiteral("cave-map")) {
-            shiftedMapEntry = entry;
-            foundShiftedMap = true;
-            break;
-        }
-    }
+    const bool foundShiftedMap = findEntry(shiftedSnapshot.entries,
+                                           ProjectStructureEntryKind::Map,
+                                           QStringLiteral("cave-map.m"),
+                                           &shiftedMapEntry);
     if (!expect(foundShiftedMap, "The shifted project index did not find the map entry.")) {
         return 1;
     }
@@ -298,7 +364,7 @@ int runProjectIndexMapScrapReferenceTest()
                 "The project index object ID should stay stable when source line numbers shift.")) {
         return 1;
     }
-    if (!expect(shiftedSnapshot.diagnostics.size() == 1
+    if (!expect(shiftedSnapshot.diagnostics.size() == 2
                     && shiftedSnapshot.diagnostics.first().sourceObjectId == shiftedMapEntry.objectId,
                 "The shifted project index diagnostic should stay attached to the map object ID.")) {
         return 1;

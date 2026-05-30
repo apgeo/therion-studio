@@ -18,8 +18,8 @@
       "name": "<type>",
       "signature": "<type>",
       "option_key": "",
-      "value_arity": "0",
-      "value_domain": "none",
+      "value_arity": "1",
+      "value_domain": "unknown",
       "description": "The following export types are supported: model = 3D model of the cave map = one page 2D map atlas = 2D atlas in more pages cave-list = summary table of caves survey-list = summary table of surveys continuation-list = list of possible continuations database = SQL database with centreline",
       "allowed_values": [],
       "dependencies": []
@@ -61,8 +61,8 @@
     },
     {
       "raw": "enable <walls/[cave/surface-]centerline/splay-shots/surface/all> and",
-      "name": "enable <walls/[cave/surface-]centerline/splay-shots/surface/all> and",
-      "signature": "enable <walls/[cave/surface-]centerline/splay-shots/surface/all> and",
+      "name": "enable <walls/[cave/surface-]centerline/splay-shots/surface/all>",
+      "signature": "enable <walls/[cave/surface-]centerline/splay-shots/surface/all>",
       "option_key": "-enable",
       "value_arity": "N",
       "value_domain": "enum",

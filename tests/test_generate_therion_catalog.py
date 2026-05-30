@@ -155,6 +155,7 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         line_options = self.commands_by_name["line"]["options"]
         keys = {option.get("option_key") for option in line_options}
         self.assertIn("-subtype", keys)
+        self.assertNotIn("-line", keys)
 
     def test_area_comopt_prose_is_not_parsed_as_option(self) -> None:
         area_options = self.commands_by_name["area"]["options"]
@@ -170,6 +171,27 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         self.assertNotIn("-if", keys)
         self.assertNotIn("-scraps", keys)
         self.assertIn("-preview", keys)
+
+    def test_pipe_signatures_without_equals_are_split_from_descriptions(self) -> None:
+        join = self.commands_by_name["join"]
+        argument = join["arguments"][0]
+        self.assertEqual(argument["signature"], "<pointX>")
+        self.assertEqual(argument["name"], "<pointX>")
+        self.assertIn("can be an ID of a point or line symbol", argument["description"])
+        self.assertNotIn("can be an ID", argument["signature"])
+
+        smooth_option = next((opt for opt in join["options"] if opt.get("option_key") == "-smooth"), None)
+        self.assertIsNotNone(smooth_option)
+        self.assertEqual(smooth_option["signature"], "smooth <on/off>")
+        self.assertEqual(smooth_option["name"], "smooth <on/off>")
+        self.assertIn("indicates whether two lines are to be connected smoothly", smooth_option["description"])
+        self.assertNotIn("indicates whether", smooth_option["signature"])
+
+        map_options = self.commands_by_name["map"]["options"]
+        preview_option = next((opt for opt in map_options if opt.get("option_key") == "-preview"), None)
+        self.assertIsNotNone(preview_option)
+        self.assertEqual(preview_option["signature"], "preview <above/below> <other map id>")
+        self.assertIn("will put the outline of the other map", preview_option["description"])
 
     def test_centreline_inline_commands_are_structured(self) -> None:
         centreline = self.commands_by_name["centreline"]

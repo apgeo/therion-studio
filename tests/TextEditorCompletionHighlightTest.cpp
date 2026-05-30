@@ -1,3 +1,4 @@
+#include "../src/app/text_editor/ContextHelpController.h"
 #include "../src/app/text_editor/TextEditorTab.h"
 #include "../src/core/CommandCatalogStore.h"
 #include "../src/core/QtFileSystem.h"
@@ -176,6 +177,24 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     QtFileSystem fileSystem;
+
+    {
+        const QString helpHtml = ContextHelpController::renderHelpHtml(QStringLiteral("survey"),
+                                                                       QStringLiteral("Survey summary"),
+                                                                       QStringLiteral("survey <id> [OPTIONS]"),
+                                                                       {QStringLiteral("<id> = survey identifier")},
+                                                                       {},
+                                                                       {QStringLiteral("-title <text> = survey title")},
+                                                                       true);
+        if (!expect(helpHtml.contains(QStringLiteral("<code"))
+                        && helpHtml.contains(QStringLiteral("<li"))
+                        && helpHtml.contains(QStringLiteral("<b><tt"))
+                        && helpHtml.contains(QStringLiteral("&lt;id&gt;"))
+                        && helpHtml.contains(QStringLiteral("-title &lt;text&gt;")),
+                    "Contextual help should render argument and option signatures as compact bold monospace bullet items.")) {
+            return 1;
+        }
+    }
 
     QTemporaryDir tempDir;
     if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {

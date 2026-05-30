@@ -63,7 +63,7 @@
       "raw": "[grid data] = a stream of numbers giving the altitude a.s.l. in grid nodes. It starts in the grid-origin and fills the grid in rows (in the row from W to E; rows from S to N).",
       "name": "[grid data]",
       "signature": "[grid data]",
-      "option_key": "-grid",
+      "option_key": "",
       "value_arity": "1",
       "value_domain": "unknown",
       "description": "a stream of numbers giving the altitude a.s.l. in grid nodes. It starts in the grid-origin and fills the grid in rows (in the row from W to E; rows from S to N).",

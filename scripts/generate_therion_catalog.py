@@ -24,6 +24,12 @@ PIPE_TOKEN_RE = re.compile(r"\|([^|]+)\|")
 NEW_TAG_RE = re.compile(r"\\NEW\{[^}]*\}")
 BRACKET_NOTE_RE = re.compile(r"\\\[[^\]]*\\\]")
 TEX_CMD_RE = re.compile(r"\\[a-zA-Z]+\*?(?:\{[^}]*\})?")
+DESCRIPTION_LEAD_RE = re.compile(
+    r"\s+(is|are|can|indicates|determines?|specif(?:y|ies)|will|must|should|allows?|contains?|defines?|sets?|gives?|means?)\b",
+    re.IGNORECASE,
+)
+SIGNATURE_MARKER_RE = re.compile(r"<[^>]+>|\[[^\]]+\]")
+TRAILING_SIGNATURE_CONNECTOR_RE = re.compile(r"\s+(?:and|or)$", re.IGNORECASE)
 CONTEXT_ORDER = [
     "none",
     "all",
@@ -159,9 +165,9 @@ def extract_option_key(signature_core: str) -> str:
     first_alias = first_token.split("/")[0].strip()
     if not first_alias:
         return ""
-    normalized = first_alias.lower().replace("[", "").replace("]", "")
-    if normalized.startswith("<") or normalized.startswith("["):
+    if first_alias.startswith("<") or first_alias.startswith("["):
         return ""
+    normalized = first_alias.lower().replace("[", "").replace("]", "")
     if normalized.startswith("-"):
         normalized = normalized.lstrip("-")
 
@@ -194,6 +200,21 @@ def infer_value_arity(signature_core: str, raw_signature: str) -> str:
     if token_count > 1:
         return "N"
     return "1"
+
+
+def infer_positional_value_arity(signature_core: str, raw_signature: str) -> str:
+    if not signature_core:
+        return "0"
+    if "..." in signature_core or "..." in raw_signature:
+        return "N"
+
+    marker_count = len(SIGNATURE_MARKER_RE.findall(signature_core))
+    if marker_count > 1:
+        return "N"
+    if marker_count == 1:
+        return "1"
+
+    return infer_value_arity(signature_core, raw_signature)
 
 
 def infer_value_domain(signature_core: str, raw_signature: str, allowed_values: list[str], value_arity: str) -> str:
@@ -344,7 +365,35 @@ def item_starts_with_pipe_signature(raw_item: str) -> bool:
     return True
 
 
-def parse_item_block(block_text: str, require_leading_pipe_signature: bool = False) -> list[dict[str, Any]]:
+def strip_trailing_signature_connector(signature: str) -> str:
+    normalized = normalize_whitespace(signature)
+    if SIGNATURE_MARKER_RE.search(normalized):
+        normalized = TRAILING_SIGNATURE_CONNECTOR_RE.sub("", normalized).strip()
+    return normalized
+
+
+def split_item_signature_description(item: str, raw_item: str) -> tuple[str, str]:
+    if "=" in item:
+        lhs, rhs = item.split("=", 1)
+        return strip_trailing_signature_connector(clean_tex_text(lhs)), clean_tex_text(rhs)
+
+    lhs = clean_tex_text(item)
+    if item_starts_with_pipe_signature(raw_item) or SIGNATURE_MARKER_RE.search(lhs):
+        match = DESCRIPTION_LEAD_RE.search(lhs)
+        if match:
+            signature = strip_trailing_signature_connector(lhs[: match.start()])
+            description = lhs[match.start(1) :].strip()
+            if signature:
+                return signature, description
+
+    return strip_trailing_signature_connector(lhs), ""
+
+
+def parse_item_block(
+    block_text: str,
+    require_leading_pipe_signature: bool = False,
+    infer_option_key: bool = True,
+) -> list[dict[str, Any]]:
     items: list[str] = []
     current: list[str] = []
     for raw_line in block_text.splitlines():
@@ -368,21 +417,20 @@ def parse_item_block(block_text: str, require_leading_pipe_signature: bool = Fal
         item = clean_tex_text(raw_item)
         if not item:
             continue
-        lhs, rhs = (item.split("=", 1) + [""])[:2] if "=" in item else (item, "")
-        lhs = clean_tex_text(lhs)
-        rhs = clean_tex_text(rhs)
+        lhs, rhs = split_item_signature_description(item, raw_item)
 
         signature_core = extract_signature_core(lhs)
         name = signature_core if signature_core else lhs
         allowed_values = infer_allowed_values(signature_core, lhs)
 
+        option_key = extract_option_key(signature_core) if infer_option_key else ""
         dependencies = []
-        lowered_rhs = rhs.lower()
-        if "valid only" in lowered_rhs or "only when" in lowered_rhs or "inside" in lowered_rhs:
-            dependencies.append(rhs)
+        if option_key:
+            lowered_rhs = rhs.lower()
+            if "valid only" in lowered_rhs or "only when" in lowered_rhs or "inside" in lowered_rhs:
+                dependencies.append(rhs)
 
-        option_key = extract_option_key(signature_core)
-        value_arity = infer_value_arity(signature_core, lhs)
+        value_arity = infer_value_arity(signature_core, lhs) if option_key else infer_positional_value_arity(signature_core, lhs)
         value_domain = infer_value_domain(signature_core, lhs, allowed_values, value_arity)
 
         parsed_items.append(
@@ -637,7 +685,13 @@ def extract_supported_flag_keywords(description: str, skip: set[str]) -> list[st
     keywords: list[str] = []
     for match in re.finditer(r"supported flags?(?: are)?:\s*([^.]*)", description, re.IGNORECASE):
         clause = match.group(1)
-        for token in PIPE_TOKEN_RE.findall(clause):
+        candidate_tokens = PIPE_TOKEN_RE.findall(clause)
+        if not candidate_tokens:
+            candidate_tokens = [
+                re.sub(r"^and\s+", "", normalize_whitespace(re.sub(r"\([^)]*\)", "", token)).lower())
+                for token in clause.split(",")
+            ]
+        for token in candidate_tokens:
             keyword = symbol_keyword_from_token(token)
             if not keyword or keyword in skip:
                 continue
@@ -826,7 +880,7 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
 
         arguments = []
         for block in argument_blocks:
-            arguments.extend(parse_item_block(block))
+            arguments.extend(parse_item_block(block, infer_option_key=False))
         options = []
         for block in option_blocks:
             options.extend(parse_item_block(block, require_leading_pipe_signature=True))
@@ -1274,7 +1328,7 @@ def build_catalog(inputs: list[Path], source_repo: str, source_ref: str) -> dict
     catalog = {
         "metadata": {
             "generated_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
-            "generator_version": "3",
+            "generator_version": "4",
             "source_repository": source_repo,
             "source_reference": source_ref,
             "source_files": [str(path) for path in inputs],

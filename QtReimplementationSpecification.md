@@ -287,7 +287,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The application shall show the active document path and current text encoding in a status area tied to the active document context.
 - When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
 - When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8.
-- The text editor shall provide a contextual help/documentation panel that shows Therion command summaries, arguments, accepted values, options, and related keywords when metadata is available for the token or item at the caret.
+- The text editor shall provide a contextual help/documentation panel that shows Therion command summaries, arguments, accepted values, options, and related keywords when metadata is available for the token or item at the caret. Argument and option signatures shall be visually distinguished from explanatory text while preserving canonical Therion spelling.
 - The help/documentation panel shall be collapsible and resizable and shall not disturb the active editor selection when it is shown or hidden.
 - In the text-editor workspace, the contextual help panel shall be presented as a persistent right-side inspector column with spacing/padding consistent with the structured Blocks workspace side inspector.
 - When a TH2 file is open, the text editor selection shall stay synchronized with the graphical map selection.
@@ -670,6 +670,7 @@ Required behavior:
 - macOS application bundles shall advertise the shipped UI localizations to the operating system so the native per-app language selector can offer supported languages; macOS builds shall use the app-domain `AppleLanguages` override for explicit language choices
 - Therion language elements such as commands, options, keywords, file-format tokens, and serialized document content shall remain in canonical Therion syntax and shall not be translated
 - contextual help/documentation UI may be localized, but command names, accepted values, and syntax examples shall preserve the canonical Therion spelling used in files
+- generated Therion command metadata shall store argument and option signatures separately from prose descriptions so UI rendering does not need runtime heuristics to identify canonical syntax
 - file paths, project names, editor content, search terms, and user-entered labels shall support Unicode input, display, save, and restore behavior
 - locale-sensitive formatting may be used for user-interface presentation, but Therion file serialization, numeric values, coordinates, and command invocation parameters shall remain locale-invariant
 - the UI shall remain usable with longer translated strings and should avoid layout assumptions that only fit the English source text

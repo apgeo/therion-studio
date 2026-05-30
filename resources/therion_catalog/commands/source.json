@@ -18,8 +18,8 @@
       "name": "<file-name>",
       "signature": "<file-name>",
       "option_key": "",
-      "value_arity": "0",
-      "value_domain": "none",
+      "value_arity": "1",
+      "value_domain": "path",
       "description": "",
       "allowed_values": [],
       "dependencies": []

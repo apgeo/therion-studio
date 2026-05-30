@@ -257,7 +257,8 @@ void RawEditorCommandMetadataLoader::applyCommandOptionCatalogMetadata(const QSt
         QString optionHelpHtml;
         {
             QStringList html;
-            html << QStringLiteral("<p><b>Option:</b> %1</p>").arg(signature.toHtmlEscaped());
+            html << QStringLiteral("<p><b>Option:</b><br><b><tt>%1</tt></b></p>")
+                        .arg(signature.toHtmlEscaped());
             if (!description.isEmpty()) {
                 html << QStringLiteral("<p><b>Description:</b> %1</p>").arg(description.toHtmlEscaped());
             }

@@ -18,8 +18,8 @@
       "name": "<encoding-name>",
       "signature": "<encoding-name>",
       "option_key": "",
-      "value_arity": "0",
-      "value_domain": "none",
+      "value_arity": "1",
+      "value_domain": "encoding",
       "description": "to see a list of all the supported encoding names, run Therion with --print-encodings option. \"UTF-8\" (Unicode) and \"ASCII\" (7 bit) encodings are always supported.",
       "allowed_values": [],
       "dependencies": []

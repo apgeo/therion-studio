@@ -19,8 +19,8 @@
       "name": "<id>",
       "signature": "<id>",
       "option_key": "",
-      "value_arity": "0",
-      "value_domain": "none",
+      "value_arity": "1",
+      "value_domain": "unknown",
       "description": "scrap identifier",
       "allowed_values": [],
       "dependencies": []
@@ -67,12 +67,12 @@
     },
     {
       "raw": "preview <above/below> <other map id> will put the outline of the other map in the specified preview position relative to the current map. Preview is displayed only if the map is in the map-level level as specified by the select command. Use the revise command if you want to add maps from higher levels to the preview.",
-      "name": "preview <above/below> <other map id> will put the outline of the other map in the specified preview position relative to the current map. Preview is displayed only if the map is in the map-level level as specified by the select command. Use the revise command if you want to add maps from higher levels to the preview.",
-      "signature": "preview <above/below> <other map id> will put the outline of the other map in the specified preview position relative to the current map. Preview is displayed only if the map is in the map-level level as specified by the select command. Use the revise command if you want to add maps from higher levels to the preview.",
+      "name": "preview <above/below> <other map id>",
+      "signature": "preview <above/below> <other map id>",
       "option_key": "-preview",
       "value_arity": "N",
       "value_domain": "enum",
-      "description": "",
+      "description": "will put the outline of the other map in the specified preview position relative to the current map. Preview is displayed only if the map is in the map-level level as specified by the select command. Use the revise command if you want to add maps from higher levels to the preview.",
       "allowed_values": [
         "above",
         "below"

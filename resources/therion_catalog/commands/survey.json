@@ -19,8 +19,8 @@
       "name": "<id>",
       "signature": "<id>",
       "option_key": "",
-      "value_arity": "0",
-      "value_domain": "none",
+      "value_arity": "1",
+      "value_domain": "unknown",
       "description": "survey identifier",
       "allowed_values": [],
       "dependencies": []

@@ -15,12 +15,12 @@
   "arguments": [
     {
       "raw": "<type> is one of following: water, sump, sand, debris, blocks, flowstone, moonmilk, snow, ice, clay, pebbles, bedrock (An empty area which can be used to clean the background.) , u (For user defined area symbols, may be followed by arbitrary subtype.) , mudcrack, pillar, pillar-with-curtains, pillars, pillars-with-curtains, stalactite, stalactite-stalagmite, stalagmite.",
-      "name": "<type> is one of following: water, sump, sand, debris, blocks, flowstone, moonmilk, snow, ice, clay, pebbles, bedrock (An empty area which can be used to clean the background.) , u (For user defined area symbols, may be followed by arbitrary subtype.) , mudcrack, pillar, pillar-with-curtains, pillars, pillars-with-curtains, stalactite, stalactite-stalagmite, stalagmite.",
-      "signature": "<type> is one of following: water, sump, sand, debris, blocks, flowstone, moonmilk, snow, ice, clay, pebbles, bedrock (An empty area which can be used to clean the background.) , u (For user defined area symbols, may be followed by arbitrary subtype.) , mudcrack, pillar, pillar-with-curtains, pillars, pillars-with-curtains, stalactite, stalactite-stalagmite, stalagmite.",
+      "name": "<type>",
+      "signature": "<type>",
       "option_key": "",
-      "value_arity": "N",
+      "value_arity": "1",
       "value_domain": "unknown",
-      "description": "",
+      "description": "is one of following: water, sump, sand, debris, blocks, flowstone, moonmilk, snow, ice, clay, pebbles, bedrock (An empty area which can be used to clean the background.) , u (For user defined area symbols, may be followed by arbitrary subtype.) , mudcrack, pillar, pillar-with-curtains, pillars, pillars-with-curtains, stalactite, stalactite-stalagmite, stalagmite.",
       "allowed_values": [],
       "dependencies": []
     }

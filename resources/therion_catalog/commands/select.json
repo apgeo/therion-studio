@@ -18,8 +18,8 @@
       "name": "<object>",
       "signature": "<object>",
       "option_key": "",
-      "value_arity": "0",
-      "value_domain": "none",
+      "value_arity": "1",
+      "value_domain": "unknown",
       "description": "any survey or map, identified by its ID.",
       "allowed_values": [],
       "dependencies": []

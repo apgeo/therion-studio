@@ -51,7 +51,16 @@
   "dependencies": [
     "context: centerline"
   ],
-  "allowed_values": [],
+  "allowed_values": [
+    "entrance",
+    "continuation",
+    "sink",
+    "spring",
+    "doline",
+    "dig",
+    "arch",
+    "overhang"
+  ],
   "block": {
     "role": "leaf"
   }

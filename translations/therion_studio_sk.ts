@@ -455,7 +455,7 @@
     <message>
         <location filename="../src/app/MainWindowMapBackground.cpp" line="136"/>
         <source>Gamma</source>
-        <translation>Gama</translation>
+        <translation>Gamma</translation>
     </message>
     <message>
         <location filename="../src/app/MainWindowMapBackground.cpp" line="259"/>
@@ -3650,7 +3650,7 @@ Očakávané súbory sú `docs/USER_MANUAL.&lt;language&gt;.md` alebo `docs/USER
     <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="1123"/>
         <source>Set Background Gamma</source>
-        <translation>Nastaviť gamu pozadia</translation>
+        <translation>Nastaviť Gamma pozadia</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp" line="1141"/>
@@ -3961,7 +3961,7 @@ Očakávané súbory sú `docs/USER_MANUAL.&lt;language&gt;.md` alebo `docs/USER
     <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="506"/>
         <source>Gamma</source>
-        <translation>Gama</translation>
+        <translation>Gamma</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="518"/>

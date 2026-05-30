@@ -4,15 +4,46 @@
 
 namespace TherionStudio
 {
+namespace
+{
+QString renderSignatureList(const QStringList &items)
+{
+    if (items.isEmpty()) {
+        return QString();
+    }
+
+    QString html = QStringLiteral("<ul style=\"margin-top:0; margin-bottom:8px; margin-left:12px; padding-left:12px; -qt-list-indent:0;\">");
+    for (const QString &item : items) {
+        const QString trimmed = item.trimmed();
+        const int separatorIndex = trimmed.indexOf(QStringLiteral(" = "));
+        const QString signature = separatorIndex >= 0 ? trimmed.left(separatorIndex).trimmed() : trimmed;
+        const QString description = separatorIndex >= 0 ? trimmed.mid(separatorIndex + 3).trimmed() : QString();
+        if (signature.isEmpty()) {
+            html += QStringLiteral("<li style=\"margin-bottom:4px;\">%1</li>").arg(item.toHtmlEscaped());
+            continue;
+        }
+
+        html += QStringLiteral("<li style=\"margin-bottom:4px;\"><b><tt>%1</tt></b>")
+                    .arg(signature.toHtmlEscaped());
+        if (!description.isEmpty()) {
+            html += QStringLiteral(" %1").arg(description.toHtmlEscaped());
+        }
+        html += QStringLiteral("</li>");
+    }
+    html += QStringLiteral("</ul>");
+    return html;
+}
+}
+
 QString ContextHelpController::renderList(const QStringList &items)
 {
     if (items.isEmpty()) {
         return QString();
     }
 
-    QString html = QStringLiteral("<ul>");
+    QString html = QStringLiteral("<ul style=\"margin-top:0; margin-bottom:8px; margin-left:12px; padding-left:12px; -qt-list-indent:0;\">");
     for (const QString &item : items) {
-        html += QStringLiteral("<li>%1</li>").arg(item.toHtmlEscaped());
+        html += QStringLiteral("<li style=\"margin-bottom:4px;\">%1</li>").arg(item.toHtmlEscaped());
     }
     html += QStringLiteral("</ul>");
     return html;
@@ -42,7 +73,7 @@ QString ContextHelpController::renderHelpHtml(const QString &token,
     if (!arguments.isEmpty()) {
         html += QStringLiteral("<h4>%1</h4>")
                     .arg(QCoreApplication::translate("TherionStudio::ContextHelpController", "Arguments"));
-        html += renderList(arguments);
+        html += renderSignatureList(arguments);
     }
     if (!acceptedValues.isEmpty()) {
         html += QStringLiteral("<h4>%1</h4>")
@@ -52,7 +83,7 @@ QString ContextHelpController::renderHelpHtml(const QString &token,
     if (!options.isEmpty()) {
         html += QStringLiteral("<h4>%1</h4>")
                     .arg(QCoreApplication::translate("TherionStudio::ContextHelpController", "Options"));
-        html += renderList(options);
+        html += renderSignatureList(options);
     }
 
     return html;

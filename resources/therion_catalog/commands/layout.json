@@ -596,8 +596,8 @@
     },
     {
       "raw": "statistics <explo/topo/carto/copyright all/off/number> or",
-      "name": "statistics <explo/topo/carto/copyright all/off/number> or",
-      "signature": "statistics <explo/topo/carto/copyright all/off/number> or",
+      "name": "statistics <explo/topo/carto/copyright all/off/number>",
+      "signature": "statistics <explo/topo/carto/copyright all/off/number>",
       "option_key": "-statistics",
       "value_arity": "1",
       "value_domain": "enum",

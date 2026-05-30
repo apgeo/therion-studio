@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "generated_at_utc": "2026-05-26T15:37:48.938996+00:00",
-    "generator_version": "3",
+    "generated_at_utc": "2026-05-30T21:58:20.355022+00:00",
+    "generator_version": "4",
     "source_repository": "snapshot-copy",
     "source_reference": "snapshot-copy",
     "source_files": [
@@ -73,12 +73,12 @@
       "arguments": [
         {
           "raw": "<type> is one of following: water, sump, sand, debris, blocks, flowstone, moonmilk, snow, ice, clay, pebbles, bedrock (An empty area which can be used to clean the background.) , u (For user defined area symbols, may be followed by arbitrary subtype.) , mudcrack, pillar, pillar-with-curtains, pillars, pillars-with-curtains, stalactite, stalactite-stalagmite, stalagmite.",
-          "name": "<type> is one of following: water, sump, sand, debris, blocks, flowstone, moonmilk, snow, ice, clay, pebbles, bedrock (An empty area which can be used to clean the background.) , u (For user defined area symbols, may be followed by arbitrary subtype.) , mudcrack, pillar, pillar-with-curtains, pillars, pillars-with-curtains, stalactite, stalactite-stalagmite, stalagmite.",
-          "signature": "<type> is one of following: water, sump, sand, debris, blocks, flowstone, moonmilk, snow, ice, clay, pebbles, bedrock (An empty area which can be used to clean the background.) , u (For user defined area symbols, may be followed by arbitrary subtype.) , mudcrack, pillar, pillar-with-curtains, pillars, pillars-with-curtains, stalactite, stalactite-stalagmite, stalagmite.",
+          "name": "<type>",
+          "signature": "<type>",
           "option_key": "",
-          "value_arity": "N",
+          "value_arity": "1",
           "value_domain": "unknown",
-          "description": "",
+          "description": "is one of following: water, sump, sand, debris, blocks, flowstone, moonmilk, snow, ice, clay, pebbles, bedrock (An empty area which can be used to clean the background.) , u (For user defined area symbols, may be followed by arbitrary subtype.) , mudcrack, pillar, pillar-with-curtains, pillars, pillars-with-curtains, stalactite, stalactite-stalagmite, stalagmite.",
           "allowed_values": [],
           "dependencies": []
         }
@@ -646,8 +646,8 @@
           "name": "<encoding-name>",
           "signature": "<encoding-name>",
           "option_key": "",
-          "value_arity": "0",
-          "value_domain": "none",
+          "value_arity": "1",
+          "value_domain": "encoding",
           "description": "to see a list of all the supported encoding names, run Therion with --print-encodings option. \"UTF-8\" (Unicode) and \"ASCII\" (7 bit) encodings are always supported.",
           "allowed_values": [],
           "dependencies": []
@@ -817,8 +817,8 @@
           "name": "<type>",
           "signature": "<type>",
           "option_key": "",
-          "value_arity": "0",
-          "value_domain": "none",
+          "value_arity": "1",
+          "value_domain": "unknown",
           "description": "The following export types are supported: model = 3D model of the cave map = one page 2D map atlas = 2D atlas in more pages cave-list = summary table of caves survey-list = summary table of surveys continuation-list = list of possible continuations database = SQL database with centreline",
           "allowed_values": [],
           "dependencies": []
@@ -860,8 +860,8 @@
         },
         {
           "raw": "enable <walls/[cave/surface-]centerline/splay-shots/surface/all> and",
-          "name": "enable <walls/[cave/surface-]centerline/splay-shots/surface/all> and",
-          "signature": "enable <walls/[cave/surface-]centerline/splay-shots/surface/all> and",
+          "name": "enable <walls/[cave/surface-]centerline/splay-shots/surface/all>",
+          "signature": "enable <walls/[cave/surface-]centerline/splay-shots/surface/all>",
           "option_key": "-enable",
           "value_arity": "N",
           "value_domain": "enum",
@@ -1326,7 +1326,11 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": [],
+      "allowed_values": [
+        "surface",
+        "duplicate",
+        "splay"
+      ],
       "block": {
         "role": "leaf"
       }
@@ -1584,8 +1588,8 @@
           "name": "<file-name>",
           "signature": "<file-name>",
           "option_key": "",
-          "value_arity": "0",
-          "value_domain": "none",
+          "value_arity": "1",
+          "value_domain": "path",
           "description": "",
           "allowed_values": [],
           "dependencies": []
@@ -1666,12 +1670,12 @@
       "arguments": [
         {
           "raw": "<pointX> can be an ID of a point or line symbol, optionally followed by a line point mark <id>:<mark> (e.g. podangl_l31@podangl:mark1). <mark> can be also \"end\" (end of the line) or line point index (where 0 is the first point). A special case is when <point1> and <point2> are scrap IDs - than the closest scrap ends are joined together.",
-          "name": "<pointX> can be an ID of a point or line symbol, optionally followed by a line point mark <id>:<mark> (e.g. podangl_l31@podangl:mark1). <mark> can be also \"end\" (end of the line) or line point index (where 0 is the first point). A special case is when <point1> and <point2> are scrap IDs - than the closest scrap ends are joined together.",
-          "signature": "<pointX> can be an ID of a point or line symbol, optionally followed by a line point mark <id>:<mark> (e.g. podangl_l31@podangl:mark1). <mark> can be also \"end\" (end of the line) or line point index (where 0 is the first point). A special case is when <point1> and <point2> are scrap IDs - than the closest scrap ends are joined together.",
+          "name": "<pointX>",
+          "signature": "<pointX>",
           "option_key": "",
-          "value_arity": "N",
+          "value_arity": "1",
           "value_domain": "unknown",
-          "description": "",
+          "description": "can be an ID of a point or line symbol, optionally followed by a line point mark <id>:<mark> (e.g. podangl_l31@podangl:mark1). <mark> can be also \"end\" (end of the line) or line point index (where 0 is the first point). A special case is when <point1> and <point2> are scrap IDs - than the closest scrap ends are joined together.",
           "allowed_values": [],
           "dependencies": []
         }
@@ -1679,12 +1683,12 @@
       "options": [
         {
           "raw": "smooth <on/off> indicates whether two lines are to be connected smoothly.",
-          "name": "smooth <on/off> indicates whether two lines are to be connected smoothly.",
-          "signature": "smooth <on/off> indicates whether two lines are to be connected smoothly.",
+          "name": "smooth <on/off>",
+          "signature": "smooth <on/off>",
           "option_key": "-smooth",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "",
+          "description": "indicates whether two lines are to be connected smoothly.",
           "allowed_values": [
             "on",
             "off"
@@ -2333,8 +2337,8 @@
         },
         {
           "raw": "statistics <explo/topo/carto/copyright all/off/number> or",
-          "name": "statistics <explo/topo/carto/copyright all/off/number> or",
-          "signature": "statistics <explo/topo/carto/copyright all/off/number> or",
+          "name": "statistics <explo/topo/carto/copyright all/off/number>",
+          "signature": "statistics <explo/topo/carto/copyright all/off/number>",
           "option_key": "-statistics",
           "value_arity": "1",
           "value_domain": "enum",
@@ -2599,12 +2603,12 @@
       "arguments": [
         {
           "raw": "<type> is a keyword that determines the type of line. The following types are supported: passages: wall, contour, slope (Slope line marks upper border of the sloping area. It's necessary to specify l-size in at least one point. Gradient lines length and orientation is an average of specified l-sizes and orientations in the nearest points. If there is no orientation specification, gradient marks are perpendicular to the slope line.) , floor-step, pit, pitch (synonym of pit), ceiling-step, chimney, overhang, ceiling-meander, floor-meander, low-ceiling, pit-chimney; passage fills: flowstone, moonmilk, rock-border (Outer outline of large boulders. If the line is closed, it is filled with the background colour.) , rock-edge (Inner edges of large boulders.) , water-flow, abyss-entrance, dripline, fault, gradient, joint, rimstone-dam, rimstone-pool; equipment: fixed-ladder, handrail, rope, rope-ladder, steps, via-ferrata, walkway; labels: label; special: border, arrow, section (Line showing cross-section position.\\ If both control points (red dots) of a B\\'ezier curve (grey line) are given then the section line (blue) is drawn up to the perpendicular projection (dotted) of the first control point and from the projection (dotted) of the section control point. No section curve is displayed. ) , survey (Survey line is automatically drawn by Therion.) , map-connection (Used to indicate connection between maps (in offset, or the same points in extended elevation).) , u (For user defined line symbols.) .",
-          "name": "<type> is a keyword that determines the type of line. The following types are supported: passages: wall, contour, slope (Slope line marks upper border of the sloping area. It's necessary to specify l-size in at least one point. Gradient lines length and orientation is an average of specified l-sizes and orientations in the nearest points. If there is no orientation specification, gradient marks are perpendicular to the slope line.) , floor-step, pit, pitch (synonym of pit), ceiling-step, chimney, overhang, ceiling-meander, floor-meander, low-ceiling, pit-chimney; passage fills: flowstone, moonmilk, rock-border (Outer outline of large boulders. If the line is closed, it is filled with the background colour.) , rock-edge (Inner edges of large boulders.) , water-flow, abyss-entrance, dripline, fault, gradient, joint, rimstone-dam, rimstone-pool; equipment: fixed-ladder, handrail, rope, rope-ladder, steps, via-ferrata, walkway; labels: label; special: border, arrow, section (Line showing cross-section position.\\ If both control points (red dots) of a B\\'ezier curve (grey line) are given then the section line (blue) is drawn up to the perpendicular projection (dotted) of the first control point and from the projection (dotted) of the section control point. No section curve is displayed. ) , survey (Survey line is automatically drawn by Therion.) , map-connection (Used to indicate connection between maps (in offset, or the same points in extended elevation).) , u (For user defined line symbols.) .",
-          "signature": "<type> is a keyword that determines the type of line. The following types are supported: passages: wall, contour, slope (Slope line marks upper border of the sloping area. It's necessary to specify l-size in at least one point. Gradient lines length and orientation is an average of specified l-sizes and orientations in the nearest points. If there is no orientation specification, gradient marks are perpendicular to the slope line.) , floor-step, pit, pitch (synonym of pit), ceiling-step, chimney, overhang, ceiling-meander, floor-meander, low-ceiling, pit-chimney; passage fills: flowstone, moonmilk, rock-border (Outer outline of large boulders. If the line is closed, it is filled with the background colour.) , rock-edge (Inner edges of large boulders.) , water-flow, abyss-entrance, dripline, fault, gradient, joint, rimstone-dam, rimstone-pool; equipment: fixed-ladder, handrail, rope, rope-ladder, steps, via-ferrata, walkway; labels: label; special: border, arrow, section (Line showing cross-section position.\\ If both control points (red dots) of a B\\'ezier curve (grey line) are given then the section line (blue) is drawn up to the perpendicular projection (dotted) of the first control point and from the projection (dotted) of the section control point. No section curve is displayed. ) , survey (Survey line is automatically drawn by Therion.) , map-connection (Used to indicate connection between maps (in offset, or the same points in extended elevation).) , u (For user defined line symbols.) .",
+          "name": "<type>",
+          "signature": "<type>",
           "option_key": "",
-          "value_arity": "N",
-          "value_domain": "keyword",
-          "description": "",
+          "value_arity": "1",
+          "value_domain": "unknown",
+          "description": "is a keyword that determines the type of line. The following types are supported: passages: wall, contour, slope (Slope line marks upper border of the sloping area. It's necessary to specify l-size in at least one point. Gradient lines length and orientation is an average of specified l-sizes and orientations in the nearest points. If there is no orientation specification, gradient marks are perpendicular to the slope line.) , floor-step, pit, pitch (synonym of pit), ceiling-step, chimney, overhang, ceiling-meander, floor-meander, low-ceiling, pit-chimney; passage fills: flowstone, moonmilk, rock-border (Outer outline of large boulders. If the line is closed, it is filled with the background colour.) , rock-edge (Inner edges of large boulders.) , water-flow, abyss-entrance, dripline, fault, gradient, joint, rimstone-dam, rimstone-pool; equipment: fixed-ladder, handrail, rope, rope-ladder, steps, via-ferrata, walkway; labels: label; special: border, arrow, section (Line showing cross-section position.\\ If both control points (red dots) of a B\\'ezier curve (grey line) are given then the section line (blue) is drawn up to the perpendicular projection (dotted) of the first control point and from the projection (dotted) of the section control point. No section curve is displayed. ) , survey (Survey line is automatically drawn by Therion.) , map-connection (Used to indicate connection between maps (in offset, or the same points in extended elevation).) , u (For user defined line symbols.) .",
           "allowed_values": [],
           "dependencies": []
         }
@@ -2634,12 +2638,12 @@
         },
         {
           "raw": "[LINE DATA] specify either the coordinates of a line segment <x> <y>, or coordinates of a B\\'ezier curve arc <c1x> <c1y> <c2x> <c2y> <x> <y>, where c indicates the control point.",
-          "name": "[LINE DATA] specify either the coordinates of a line segment <x> <y>, or coordinates of a B\\'ezier curve arc <c1x> <c1y> <c2x> <c2y> <x> <y>, where c indicates the control point.",
-          "signature": "[LINE DATA] specify either the coordinates of a line segment <x> <y>, or coordinates of a B\\'ezier curve arc <c1x> <c1y> <c2x> <c2y> <x> <y>, where c indicates the control point.",
-          "option_key": "-line",
-          "value_arity": "N",
+          "name": "[LINE DATA]",
+          "signature": "[LINE DATA]",
+          "option_key": "",
+          "value_arity": "1",
           "value_domain": "unknown",
-          "description": "",
+          "description": "specify either the coordinates of a line segment <x> <y>, or coordinates of a B\\'ezier curve arc <c1x> <c1y> <c2x> <c2y> <x> <y>, where c indicates the control point.",
           "allowed_values": [],
           "dependencies": []
         },
@@ -3099,8 +3103,8 @@
           "name": "<type>",
           "signature": "<type>",
           "option_key": "",
-          "value_arity": "0",
-          "value_domain": "none",
+          "value_arity": "1",
+          "value_domain": "unknown",
           "description": "May be altitude, explo-date, topo-date, map or scrap.",
           "allowed_values": [],
           "dependencies": []
@@ -3110,8 +3114,8 @@
           "name": "<index>",
           "signature": "<index>",
           "option_key": "",
-          "value_arity": "0",
-          "value_domain": "none",
+          "value_arity": "1",
+          "value_domain": "unknown",
           "description": "the index is a user defined string that allows to distinguish different lookup maps for the same type.",
           "allowed_values": [],
           "dependencies": []
@@ -3121,8 +3125,8 @@
           "name": "<parameter>",
           "signature": "<parameter>",
           "option_key": "",
-          "value_arity": "0",
-          "value_domain": "none",
+          "value_arity": "1",
+          "value_domain": "unknown",
           "description": "the thing, you want to set the color for, e.g. an altitude with type altitude. May be distinct values or (if appropriate) bands.",
           "allowed_values": [],
           "dependencies": []
@@ -3131,9 +3135,9 @@
           "raw": "[colour] = grayscale value, RGB triplet, CMYK quadruplet or a combination of eight values (RGB, grayscale, CMYK). Use empty brackets ([]) if you want Therion to use it’s default colour palette together with a text label.",
           "name": "[colour]",
           "signature": "[colour]",
-          "option_key": "-colour",
-          "value_arity": "0",
-          "value_domain": "none",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "unknown",
           "description": "grayscale value, RGB triplet, CMYK quadruplet or a combination of eight values (RGB, grayscale, CMYK). Use empty brackets ([]) if you want Therion to use it’s default colour palette together with a text label.",
           "allowed_values": [],
           "dependencies": []
@@ -3142,8 +3146,8 @@
           "raw": "[text in legend] = some optional text to show in the legend.",
           "name": "[text in legend]",
           "signature": "[text in legend]",
-          "option_key": "-text",
-          "value_arity": "N",
+          "option_key": "",
+          "value_arity": "1",
           "value_domain": "string",
           "description": "some optional text to show in the legend.",
           "allowed_values": [],
@@ -3181,8 +3185,8 @@
           "name": "<id>",
           "signature": "<id>",
           "option_key": "",
-          "value_arity": "0",
-          "value_domain": "none",
+          "value_arity": "1",
+          "value_domain": "unknown",
           "description": "scrap identifier",
           "allowed_values": [],
           "dependencies": []
@@ -3229,12 +3233,12 @@
         },
         {
           "raw": "preview <above/below> <other map id> will put the outline of the other map in the specified preview position relative to the current map. Preview is displayed only if the map is in the map-level level as specified by the select command. Use the revise command if you want to add maps from higher levels to the preview.",
-          "name": "preview <above/below> <other map id> will put the outline of the other map in the specified preview position relative to the current map. Preview is displayed only if the map is in the map-level level as specified by the select command. Use the revise command if you want to add maps from higher levels to the preview.",
-          "signature": "preview <above/below> <other map id> will put the outline of the other map in the specified preview position relative to the current map. Preview is displayed only if the map is in the map-level level as specified by the select command. Use the revise command if you want to add maps from higher levels to the preview.",
+          "name": "preview <above/below> <other map id>",
+          "signature": "preview <above/below> <other map id>",
           "option_key": "-preview",
           "value_arity": "N",
           "value_domain": "enum",
-          "description": "",
+          "description": "will put the outline of the other map in the specified preview position relative to the current map. Preview is displayed only if the map is in the map-level level as specified by the select command. Use the revise command if you want to add maps from higher levels to the preview.",
           "allowed_values": [
             "above",
             "below"
@@ -3378,23 +3382,23 @@
       "arguments": [
         {
           "raw": "<x> and <y> are the drawing coordinates of an object.",
-          "name": "<x> and <y> are the drawing coordinates of an object.",
-          "signature": "<x> and <y> are the drawing coordinates of an object.",
+          "name": "<x> and <y>",
+          "signature": "<x> and <y>",
           "option_key": "",
-          "value_arity": "1",
+          "value_arity": "N",
           "value_domain": "unknown",
-          "description": "",
+          "description": "are the drawing coordinates of an object.",
           "allowed_values": [],
           "dependencies": []
         },
         {
           "raw": "<type> determines the type of an object. The following types are supported: special objects: dimensions (Use -value option to specify passage dimensions above/below centerline plane used while creating 3D model.) , section (section is an anchor for placing the cross-section at this point. This symbol has no visual representation. The cross section must be in the separate scrap with \"none\" projection specified. You can specify it through the -scrap option.) , station (Survey station. For each scrap (with the exception of scraps in \"none\" projection) at least one station with station reference (-name option) has to be specified.) ; labels: altitude (General altitude label. All altitudes are exported as a difference against grid Z origin (which is 0 by default). To display altitude on the passage wall, use altitude option for any line point of the passage wall) , date (Set date's value with the -value option) , height (Height of formations inside of the passage (like pit etc.); see below for details.) , label, passage-height (Height of the passage; see below for details.) , remark, station-name (If no text is specified, the name of the nearest station is used.) ; -100 symbolic passage fills: (Unlike other point symbols, these are clipped by the scrap border. See the chapter How the map is put together .) bedrock, blocks, clay, debris, guano, ice, mudcrack, mud, pebbles, raft, sand, snow, water; speleothems: anastomosis, aragonite, cave-pearl, clay-tree, crystal, curtains, curtain, disc-pillar, disc-stalactite, disc-stalagmite, disc-pillars, disc-stalactites, disc-stalagmites, disk, flowstone, flute, gypsum-flower, gypsum, helictites, helictite, karren, moonmilk, pendant, pillar-with-curtains, pillars-with-curtains, pillar, popcorn, raft-cone, rimstone-dam, rimstone-pool, scallop, soda-straw, stalactite-stalagmite, stalactites-stalagmites, stalactite, stalactites, stalagmite, stalagmites, volcano, wall-calcite; equipment: anchor, bridge, camp, fixed-ladder, gate, handrail, masonry, nameplate, no-equipment, no-wheelchair, rope-ladder, rope, steps, traverse, via-ferrata, walkway, wheelchair; passage ends: breakdown-choke, clay-choke, continuation, entrance, flowstone-choke, low-end, narrow-end; others: air-draught (Number of ticks is set according to -scale option) , altar, archeo-excavation, archeo-material, audio, bat, bones, danger, dig, electric-light, ex-voto, extra (Additional morphing point. See -dist and -value options.) , gradient, human-bones, ice-pillar, ice-stalactite, ice-stalagmite, map-connection (Virtual point, used to indicate connection between shifted maps (extended elevation, map offset).) ,",
-          "name": "<type> determines the type of an object. The following types are supported: special objects: dimensions (Use -value option to specify passage dimensions above/below centerline plane used while creating 3D model.) , section (section is an anchor for placing the cross-section at this point. This symbol has no visual representation. The cross section must be in the separate scrap with \"none\" projection specified. You can specify it through the -scrap option.) , station (Survey station. For each scrap (with the exception of scraps in \"none\" projection) at least one station with station reference (-name option) has to be specified.) ; labels: altitude (General altitude label. All altitudes are exported as a difference against grid Z origin (which is 0 by default). To display altitude on the passage wall, use altitude option for any line point of the passage wall) , date (Set date's value with the -value option) , height (Height of formations inside of the passage (like pit etc.); see below for details.) , label, passage-height (Height of the passage; see below for details.) , remark, station-name (If no text is specified, the name of the nearest station is used.) ; -100 symbolic passage fills: (Unlike other point symbols, these are clipped by the scrap border. See the chapter How the map is put together .) bedrock, blocks, clay, debris, guano, ice, mudcrack, mud, pebbles, raft, sand, snow, water; speleothems: anastomosis, aragonite, cave-pearl, clay-tree, crystal, curtains, curtain, disc-pillar, disc-stalactite, disc-stalagmite, disc-pillars, disc-stalactites, disc-stalagmites, disk, flowstone, flute, gypsum-flower, gypsum, helictites, helictite, karren, moonmilk, pendant, pillar-with-curtains, pillars-with-curtains, pillar, popcorn, raft-cone, rimstone-dam, rimstone-pool, scallop, soda-straw, stalactite-stalagmite, stalactites-stalagmites, stalactite, stalactites, stalagmite, stalagmites, volcano, wall-calcite; equipment: anchor, bridge, camp, fixed-ladder, gate, handrail, masonry, nameplate, no-equipment, no-wheelchair, rope-ladder, rope, steps, traverse, via-ferrata, walkway, wheelchair; passage ends: breakdown-choke, clay-choke, continuation, entrance, flowstone-choke, low-end, narrow-end; others: air-draught (Number of ticks is set according to -scale option) , altar, archeo-excavation, archeo-material, audio, bat, bones, danger, dig, electric-light, ex-voto, extra (Additional morphing point. See -dist and -value options.) , gradient, human-bones, ice-pillar, ice-stalactite, ice-stalagmite, map-connection (Virtual point, used to indicate connection between shifted maps (extended elevation, map offset).) ,",
-          "signature": "<type> determines the type of an object. The following types are supported: special objects: dimensions (Use -value option to specify passage dimensions above/below centerline plane used while creating 3D model.) , section (section is an anchor for placing the cross-section at this point. This symbol has no visual representation. The cross section must be in the separate scrap with \"none\" projection specified. You can specify it through the -scrap option.) , station (Survey station. For each scrap (with the exception of scraps in \"none\" projection) at least one station with station reference (-name option) has to be specified.) ; labels: altitude (General altitude label. All altitudes are exported as a difference against grid Z origin (which is 0 by default). To display altitude on the passage wall, use altitude option for any line point of the passage wall) , date (Set date's value with the -value option) , height (Height of formations inside of the passage (like pit etc.); see below for details.) , label, passage-height (Height of the passage; see below for details.) , remark, station-name (If no text is specified, the name of the nearest station is used.) ; -100 symbolic passage fills: (Unlike other point symbols, these are clipped by the scrap border. See the chapter How the map is put together .) bedrock, blocks, clay, debris, guano, ice, mudcrack, mud, pebbles, raft, sand, snow, water; speleothems: anastomosis, aragonite, cave-pearl, clay-tree, crystal, curtains, curtain, disc-pillar, disc-stalactite, disc-stalagmite, disc-pillars, disc-stalactites, disc-stalagmites, disk, flowstone, flute, gypsum-flower, gypsum, helictites, helictite, karren, moonmilk, pendant, pillar-with-curtains, pillars-with-curtains, pillar, popcorn, raft-cone, rimstone-dam, rimstone-pool, scallop, soda-straw, stalactite-stalagmite, stalactites-stalagmites, stalactite, stalactites, stalagmite, stalagmites, volcano, wall-calcite; equipment: anchor, bridge, camp, fixed-ladder, gate, handrail, masonry, nameplate, no-equipment, no-wheelchair, rope-ladder, rope, steps, traverse, via-ferrata, walkway, wheelchair; passage ends: breakdown-choke, clay-choke, continuation, entrance, flowstone-choke, low-end, narrow-end; others: air-draught (Number of ticks is set according to -scale option) , altar, archeo-excavation, archeo-material, audio, bat, bones, danger, dig, electric-light, ex-voto, extra (Additional morphing point. See -dist and -value options.) , gradient, human-bones, ice-pillar, ice-stalactite, ice-stalagmite, map-connection (Virtual point, used to indicate connection between shifted maps (extended elevation, map offset).) ,",
+          "name": "<type>",
+          "signature": "<type>",
           "option_key": "",
-          "value_arity": "N",
-          "value_domain": "date",
-          "description": "",
+          "value_arity": "1",
+          "value_domain": "unknown",
+          "description": "determines the type of an object. The following types are supported: special objects: dimensions (Use -value option to specify passage dimensions above/below centerline plane used while creating 3D model.) , section (section is an anchor for placing the cross-section at this point. This symbol has no visual representation. The cross section must be in the separate scrap with \"none\" projection specified. You can specify it through the -scrap option.) , station (Survey station. For each scrap (with the exception of scraps in \"none\" projection) at least one station with station reference (-name option) has to be specified.) ; labels: altitude (General altitude label. All altitudes are exported as a difference against grid Z origin (which is 0 by default). To display altitude on the passage wall, use altitude option for any line point of the passage wall) , date (Set date's value with the -value option) , height (Height of formations inside of the passage (like pit etc.); see below for details.) , label, passage-height (Height of the passage; see below for details.) , remark, station-name (If no text is specified, the name of the nearest station is used.) ; -100 symbolic passage fills: (Unlike other point symbols, these are clipped by the scrap border. See the chapter How the map is put together .) bedrock, blocks, clay, debris, guano, ice, mudcrack, mud, pebbles, raft, sand, snow, water; speleothems: anastomosis, aragonite, cave-pearl, clay-tree, crystal, curtains, curtain, disc-pillar, disc-stalactite, disc-stalagmite, disc-pillars, disc-stalactites, disc-stalagmites, disk, flowstone, flute, gypsum-flower, gypsum, helictites, helictite, karren, moonmilk, pendant, pillar-with-curtains, pillars-with-curtains, pillar, popcorn, raft-cone, rimstone-dam, rimstone-pool, scallop, soda-straw, stalactite-stalagmite, stalactites-stalagmites, stalactite, stalactites, stalagmite, stalagmites, volcano, wall-calcite; equipment: anchor, bridge, camp, fixed-ladder, gate, handrail, masonry, nameplate, no-equipment, no-wheelchair, rope-ladder, rope, steps, traverse, via-ferrata, walkway, wheelchair; passage ends: breakdown-choke, clay-choke, continuation, entrance, flowstone-choke, low-end, narrow-end; others: air-draught (Number of ticks is set according to -scale option) , altar, archeo-excavation, archeo-material, audio, bat, bones, danger, dig, electric-light, ex-voto, extra (Additional morphing point. See -dist and -value options.) , gradient, human-bones, ice-pillar, ice-stalactite, ice-stalagmite, map-connection (Virtual point, used to indicate connection between shifted maps (extended elevation, map offset).) ,",
           "allowed_values": [],
           "dependencies": []
         }
@@ -3766,8 +3770,8 @@
           "name": "<version>",
           "signature": "<version>",
           "option_key": "",
-          "value_arity": "0",
-          "value_domain": "none",
+          "value_arity": "1",
+          "value_domain": "unknown",
           "description": "The minimum supported Therion version in the form major[.minor[.patch]], e.g. 6.3.",
           "allowed_values": [],
           "dependencies": []
@@ -3828,8 +3832,8 @@
           "name": "<id>",
           "signature": "<id>",
           "option_key": "",
-          "value_arity": "0",
-          "value_domain": "none",
+          "value_arity": "1",
+          "value_domain": "unknown",
           "description": "scrap identifier",
           "allowed_values": [],
           "dependencies": []
@@ -4053,8 +4057,8 @@
           "name": "<object>",
           "signature": "<object>",
           "option_key": "",
-          "value_arity": "0",
-          "value_domain": "none",
+          "value_arity": "1",
+          "value_domain": "unknown",
           "description": "any survey or map, identified by its ID.",
           "allowed_values": [],
           "dependencies": []
@@ -4207,8 +4211,8 @@
           "name": "<file-name>",
           "signature": "<file-name>",
           "option_key": "",
-          "value_arity": "0",
-          "value_domain": "none",
+          "value_arity": "1",
+          "value_domain": "path",
           "description": "",
           "allowed_values": [],
           "dependencies": []
@@ -4277,7 +4281,16 @@
       "dependencies": [
         "context: centerline"
       ],
-      "allowed_values": [],
+      "allowed_values": [
+        "entrance",
+        "continuation",
+        "sink",
+        "spring",
+        "doline",
+        "dig",
+        "arch",
+        "overhang"
+      ],
       "block": {
         "role": "leaf"
       }
@@ -4394,7 +4407,7 @@
           "raw": "[grid data] = a stream of numbers giving the altitude a.s.l. in grid nodes. It starts in the grid-origin and fills the grid in rows (in the row from W to E; rows from S to N).",
           "name": "[grid data]",
           "signature": "[grid data]",
-          "option_key": "-grid",
+          "option_key": "",
           "value_arity": "1",
           "value_domain": "unknown",
           "description": "a stream of numbers giving the altitude a.s.l. in grid nodes. It starts in the grid-origin and fills the grid in rows (in the row from W to E; rows from S to N).",
@@ -4447,8 +4460,8 @@
           "name": "<id>",
           "signature": "<id>",
           "option_key": "",
-          "value_arity": "0",
-          "value_domain": "none",
+          "value_arity": "1",
+          "value_domain": "unknown",
           "description": "survey identifier",
           "allowed_values": [],
           "dependencies": []

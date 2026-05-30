@@ -29,7 +29,11 @@
   "dependencies": [
     "context: centerline"
   ],
-  "allowed_values": [],
+  "allowed_values": [
+    "surface",
+    "duplicate",
+    "splay"
+  ],
   "block": {
     "role": "leaf"
   }

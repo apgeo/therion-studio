@@ -18,8 +18,8 @@
       "name": "<version>",
       "signature": "<version>",
       "option_key": "",
-      "value_arity": "0",
-      "value_domain": "none",
+      "value_arity": "1",
+      "value_domain": "unknown",
       "description": "The minimum supported Therion version in the form major[.minor[.patch]], e.g. 6.3.",
       "allowed_values": [],
       "dependencies": []

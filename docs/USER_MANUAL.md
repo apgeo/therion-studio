@@ -91,6 +91,7 @@ For `.th2` files:
 
 - line numbers and active-line highlight
 - command/option/value autocomplete while typing
+- contextual help for commands and options, with argument and option signatures visually separated from descriptions
 - `Ctrl/Cmd+Space` to open autocomplete manually
 - find and replace via `Edit` menu
 - unsupported file encodings can be converted to UTF-8 with confirmation

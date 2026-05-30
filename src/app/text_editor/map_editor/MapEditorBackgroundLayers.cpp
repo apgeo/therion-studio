@@ -457,6 +457,143 @@ QString upsertXtherionImageMetadataLine(const QString &documentText,
     return updated;
 }
 
+bool findFirstBracedGroupRange(const QString &line, int startPosition, int *openBraceIndex, int *closeBraceIndex)
+{
+    if (openBraceIndex == nullptr || closeBraceIndex == nullptr) {
+        return false;
+    }
+
+    int position = startPosition;
+    while (position < line.size() && line.at(position).isSpace()) {
+        ++position;
+    }
+    if (position >= line.size() || line.at(position) != QLatin1Char('{')) {
+        return false;
+    }
+
+    const int groupStart = position;
+    int depth = 1;
+    ++position;
+    while (position < line.size() && depth > 0) {
+        const QChar character = line.at(position);
+        if (character == QLatin1Char('{')) {
+            ++depth;
+        } else if (character == QLatin1Char('}')) {
+            --depth;
+            if (depth == 0) {
+                break;
+            }
+        }
+        ++position;
+    }
+
+    if (position >= line.size() || line.at(position) != QLatin1Char('}')) {
+        return false;
+    }
+
+    *openBraceIndex = groupStart;
+    *closeBraceIndex = position;
+    return true;
+}
+
+QString imageMetadataLineWithGamma(const QString &line, qreal gamma, bool *updated)
+{
+    if (updated != nullptr) {
+        *updated = false;
+    }
+
+    const int keywordIndex = line.indexOf(QStringLiteral("xth_me_image_insert"));
+    if (keywordIndex < 0) {
+        return line;
+    }
+
+    int openBraceIndex = -1;
+    int closeBraceIndex = -1;
+    if (!findFirstBracedGroupRange(line,
+                                   keywordIndex + QStringLiteral("xth_me_image_insert").size(),
+                                   &openBraceIndex,
+                                   &closeBraceIndex)) {
+        return line;
+    }
+
+    const QString groupText = line.mid(openBraceIndex + 1, closeBraceIndex - openBraceIndex - 1).trimmed();
+    QStringList tokens = groupText.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+    if (tokens.isEmpty()) {
+        return line;
+    }
+    if (tokens.size() == 1) {
+        tokens.append(QStringLiteral("1"));
+    }
+    if (tokens.size() == 2) {
+        tokens.append(formatXtherionNumber(qBound<qreal>(0.2, gamma, 2.5)));
+    } else {
+        tokens[2] = formatXtherionNumber(qBound<qreal>(0.2, gamma, 2.5));
+    }
+
+    const QString replacement = QStringLiteral("{%1}").arg(tokens.join(QLatin1Char(' ')));
+    const QString result = line.left(openBraceIndex) + replacement + line.mid(closeBraceIndex + 1);
+    if (updated != nullptr) {
+        *updated = result != line;
+    }
+    return result;
+}
+
+QString updateExistingXtherionImageMetadataGamma(const QString &documentText,
+                                                 const QString &documentPath,
+                                                 const QString &absolutePath,
+                                                 qreal gamma,
+                                                 bool *updated)
+{
+    if (updated != nullptr) {
+        *updated = false;
+    }
+
+    const QString lineEnding = lineEndingForText(documentText);
+    QStringList lines = documentText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    if (!lines.isEmpty() && lines.last().isEmpty()) {
+        lines.removeLast();
+    }
+    for (QString &line : lines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+
+    const QVector<XtherionBackgroundReference> references = parseXtherionBackgroundReferences(documentText, documentPath);
+    const QString targetPathKey = normalizedPathKey(absolutePath);
+    if (targetPathKey.isEmpty()) {
+        return documentText;
+    }
+
+    for (const XtherionBackgroundReference &reference : references) {
+        if (reference.lineNumber <= 0 || reference.lineNumber > lines.size()) {
+            continue;
+        }
+        if (normalizedPathKey(reference.absolutePath) != targetPathKey) {
+            continue;
+        }
+
+        bool lineUpdated = false;
+        lines[reference.lineNumber - 1] = imageMetadataLineWithGamma(lines.at(reference.lineNumber - 1),
+                                                                      gamma,
+                                                                      &lineUpdated);
+        if (!lineUpdated) {
+            return documentText;
+        }
+
+        QString result = lines.join(lineEnding);
+        if (documentText.endsWith(QLatin1Char('\n')) || !result.isEmpty()) {
+            result += lineEnding;
+        }
+        if (updated != nullptr) {
+            *updated = true;
+        }
+        return result;
+    }
+
+    return documentText;
+}
+
 QRectF rasterModelRectForItem(const QGraphicsPixmapItem *item, const QRectF &sourceBounds, const QRectF &previewBounds)
 {
     if (item == nullptr) {
@@ -1099,7 +1236,7 @@ void MapEditorTab::setSelectedBackgroundLayerOpacity(qreal opacity)
 
     item->setOpacity(qBound(0.05, opacity, 1.0));
     saveBackgroundLayersToSession();
-    refreshBackgroundLayerControls();
+    refreshBackgroundLayerPropertyControls();
 }
 
 void MapEditorTab::resetSelectedBackgroundLayerOpacity()
@@ -1115,14 +1252,16 @@ void MapEditorTab::setSelectedBackgroundLayerGamma(qreal gamma)
     }
     if (isXviBackgroundPath(item->data(0).toString())) {
         item->setData(2, 1.0);
-        refreshBackgroundLayerControls();
+        refreshBackgroundLayerPropertyControls();
         return;
     }
 
     applyBackgroundLayerGamma(item, qBound(0.2, gamma, 2.5));
-    syncBackgroundLayerXtherionMetadata(item, tr("Set Background Gamma"), true);
+    if (!syncBackgroundLayerXtherionGammaMetadata(item, tr("Set Background Gamma"))) {
+        syncBackgroundLayerXtherionMetadata(item, tr("Set Background Gamma"), true);
+    }
     saveBackgroundLayersToSession();
-    refreshBackgroundLayerControls();
+    refreshBackgroundLayerPropertyControls();
 }
 
 void MapEditorTab::resetSelectedBackgroundLayerGamma()
@@ -1140,7 +1279,7 @@ void MapEditorTab::setSelectedBackgroundLayerPosition(const QPointF &position)
     item->setPos(position);
     syncBackgroundLayerXtherionMetadata(item, tr("Move Background Image"));
     saveBackgroundLayersToSession();
-    refreshBackgroundLayerControls();
+    refreshBackgroundLayerPropertyControls();
 }
 
 void MapEditorTab::nudgeSelectedBackgroundLayer(const QPointF &delta)
@@ -1153,7 +1292,7 @@ void MapEditorTab::nudgeSelectedBackgroundLayer(const QPointF &delta)
     item->setPos(item->pos() + delta);
     syncBackgroundLayerXtherionMetadata(item, tr("Move Background Image"));
     saveBackgroundLayersToSession();
-    refreshBackgroundLayerControls();
+    refreshBackgroundLayerPropertyControls();
 }
 
 void MapEditorTab::handleFitWithBackgroundTriggered()
@@ -1198,6 +1337,15 @@ void MapEditorTab::refreshBackgroundLayerControls()
     setSelectedBackgroundLayerIndexInternal(selectedBackgroundLayerIndex_);
     updatingBackgroundLayerControls_ = false;
     emit backgroundLayersChanged();
+}
+
+void MapEditorTab::refreshBackgroundLayerPropertyControls()
+{
+    updatingBackgroundLayerControls_ = true;
+    setSelectedBackgroundLayerIndexInternal(selectedBackgroundLayerIndex_);
+    updatingBackgroundLayerControls_ = false;
+    refreshInspectorBackgroundSelectionControls();
+    emit backgroundLayerPropertiesChanged();
 }
 
 void MapEditorTab::applyBackgroundLayerStackingOrder()
@@ -1815,9 +1963,39 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
         return;
     }
 
+    const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
     const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
     textEditor_->replaceTextForCommand(afterText);
     recordSourceTextSnapshot(label, beforeText, afterText, 0);
+}
+
+bool MapEditorTab::syncBackgroundLayerXtherionGammaMetadata(QGraphicsPixmapItem *item, const QString &label)
+{
+    if (item == nullptr || textEditor_ == nullptr) {
+        return false;
+    }
+
+    const QString layerPath = QFileInfo(item->data(0).toString()).absoluteFilePath();
+    if (layerPath.isEmpty() || layerPath.endsWith(QStringLiteral(".xvi"), Qt::CaseInsensitive)) {
+        return false;
+    }
+
+    const QString beforeText = textEditor_->text();
+    bool updated = false;
+    const QString afterText = updateExistingXtherionImageMetadataGamma(beforeText,
+                                                                       filePath(),
+                                                                       layerPath,
+                                                                       backgroundLayerGammaValue(item),
+                                                                       &updated);
+    if (!updated || afterText == beforeText) {
+        return false;
+    }
+
+    const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
+    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
+    textEditor_->replaceTextForCommand(afterText);
+    recordSourceTextSnapshot(label, beforeText, afterText, 0);
+    return true;
 }
 
 void MapEditorTab::removeBackgroundLayerXtherionMetadata(const QString &layerPath, const QString &label)
@@ -1843,6 +2021,7 @@ void MapEditorTab::removeBackgroundLayerXtherionMetadata(const QString &layerPat
         return;
     }
 
+    const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
     const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
     textEditor_->replaceTextForCommand(afterText);
     recordSourceTextSnapshot(label, beforeText, afterText, 0);

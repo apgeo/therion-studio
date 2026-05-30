@@ -51,6 +51,7 @@ public:
     void handleInspectorBackgroundLayerSelectionChanged(const QModelIndex &current);
     void handleInspectorBackgroundLayerClicked(const QModelIndex &index);
     void refreshInspectorBackgroundPanel();
+    void refreshInspectorBackgroundSelectionControls();
 
 private:
     QString tr(const char *text) const;

@@ -187,6 +187,7 @@ signals:
     void currentLineChanged(int lineNumber);
     void documentTextChanged();
     void backgroundLayersChanged();
+    void backgroundLayerPropertiesChanged();
     void modeStatusChanged();
     void workspaceModeChanged(TherionStudio::MapEditorTab::WorkspaceMode mode);
     void mapPaneDetachStateChanged(bool detached);
@@ -390,6 +391,7 @@ private:
     MapEditorSceneLifecycleContext sceneLifecycleContext() const;
     void addBackgroundImage(const QString &imagePath, bool writeXtherionMetadata = false);
     void refreshBackgroundLayerControls();
+    void refreshBackgroundLayerPropertyControls();
     void applyBackgroundLayerStackingOrder();
     void saveBackgroundLayersToSession() const;
     void loadBackgroundLayersFromSession();
@@ -398,6 +400,7 @@ private:
     void reprojectMetadataBackgroundLayersForCurrentDocument();
     QRectF xtherionAutoAreaAdjustRect() const;
     void syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item, const QString &label, bool preserveExistingPlacement = false);
+    bool syncBackgroundLayerXtherionGammaMetadata(QGraphicsPixmapItem *item, const QString &label);
     void removeBackgroundLayerXtherionMetadata(const QString &layerPath, const QString &label);
     QGraphicsPixmapItem *backgroundLayerItemAt(int index) const;
     QGraphicsPixmapItem *selectedBackgroundLayerItem() const;
@@ -475,6 +478,7 @@ private:
     void handleInspectorBackgroundLayerClicked(const QModelIndex &index);
     MapEditorInspectorBackgroundContext inspectorBackgroundContext();
     void refreshInspectorBackgroundPanel();
+    void refreshInspectorBackgroundSelectionControls();
     MapEditorObjectDetailsContext objectDetailsContext();
     void refreshObjectDetailsPanel();
     void beginPendingInsertObject(const QString &commandKind);
@@ -592,6 +596,7 @@ private:
     bool touchFriendlyControlsEnabled_ = false;
     int selectedBackgroundLayerIndex_ = -1;
     bool mapCommandApplyInProgress_ = false;
+    bool suppressSourceDrivenMapRefresh_ = false;
     bool mapSceneRefreshPending_ = false;
     QTimer *sourceDrivenMapRefreshTimer_ = nullptr;
     DetachedPaneState detachedPaneState_;

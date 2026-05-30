@@ -154,7 +154,18 @@ void MapEditorInspectorBackgroundController::refreshInspectorBackgroundPanel()
         }
     }
 
+    refreshInspectorBackgroundSelectionControls();
+}
+
+void MapEditorInspectorBackgroundController::refreshInspectorBackgroundSelectionControls()
+{
+    if (context_.updatingUi == nullptr) {
+        return;
+    }
+
+    const QScopedValueRollback<bool> guard(*context_.updatingUi, true);
     const int selectedIndex = context_.selectedLayerIndex ? context_.selectedLayerIndex() : -1;
+    const int layerCount = context_.layerCount ? context_.layerCount() : 0;
     const bool hasLayer = selectedIndex >= 0 && selectedIndex < layerCount;
     const bool supportsGamma = hasLayer
         && (!context_.layerSupportsGamma || context_.layerSupportsGamma(selectedIndex));

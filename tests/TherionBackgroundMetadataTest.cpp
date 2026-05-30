@@ -116,6 +116,44 @@ int runBracedRasterPathParsingTest()
     return 0;
 }
 
+int runUnbracedRasterYCoordinateParsingTest()
+{
+    const QString documentPath = documentPathForTest(QStringLiteral("severna.th2"));
+    const QString text =
+        QStringLiteral("encoding utf-8\n"
+                       "##XTHERION## xth_me_area_adjust 1170.74 0.938 25 1560.0\n"
+                       "##XTHERION## xth_me_image_insert {245.0 1.0} 822.0 img/sev1.gif 0 {}\n");
+
+    const QVector<TherionBackgroundReference> references = parseTherionBackgroundReferences(text, documentPath);
+    if (!expect(references.size() == 1,
+                "Expected raster metadata with unbraced y coordinate to parse.")) {
+        return 1;
+    }
+
+    const TherionBackgroundReference &reference = references.first();
+    if (!expect(reference.hasBasePosition
+                && nearlyEqual(reference.basePosition.x(), 245.0)
+                && nearlyEqual(reference.basePosition.y(), 822.0),
+                "Expected unbraced raster metadata coordinates to parse.")) {
+        return 1;
+    }
+    if (!expect(reference.hasVisibility && reference.visible,
+                "Expected unbraced raster metadata visibility to parse from first group.")) {
+        return 1;
+    }
+    if (!expect(!reference.xviReference, "Expected GIF reference to be marked as raster.")) {
+        return 1;
+    }
+
+    const QString expectedPath = QFileInfo(documentPath).dir().filePath(QStringLiteral("img/sev1.gif"));
+    if (!expect(normalizedPathForCompare(reference.absolutePath) == normalizedPathForCompare(expectedPath),
+                "Expected unbraced raster path to resolve against TH2 document directory.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runXviInsertParsingTest()
 {
     const QString documentPath = documentPathForTest(QStringLiteral("create.th2"));
@@ -200,6 +238,9 @@ int main()
         return rc;
     }
     if (const int rc = runBracedRasterPathParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runUnbracedRasterYCoordinateParsingTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runXviInsertParsingTest(); rc != 0) {

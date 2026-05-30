@@ -78,6 +78,10 @@ void MapEditorTab::flushPendingMapSceneRefreshAfterCommand()
 
 void MapEditorTab::scheduleSourceDrivenMapRefresh()
 {
+    if (suppressSourceDrivenMapRefresh_) {
+        return;
+    }
+
     if (mapCommandApplyInProgress_) {
         if (sourceDrivenMapRefreshTimer_ != nullptr) {
             sourceDrivenMapRefreshTimer_->stop();

@@ -85,6 +85,11 @@ void MapEditorTab::refreshInspectorBackgroundPanel()
     MapEditorInspectorBackgroundController(inspectorBackgroundContext()).refreshInspectorBackgroundPanel();
 }
 
+void MapEditorTab::refreshInspectorBackgroundSelectionControls()
+{
+    MapEditorInspectorBackgroundController(inspectorBackgroundContext()).refreshInspectorBackgroundSelectionControls();
+}
+
 void MapEditorTab::refreshObjectDetailsPanel()
 {
     MapEditorObjectDetailsPanelController(objectDetailsContext()).refreshObjectDetailsPanel();

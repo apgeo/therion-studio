@@ -1909,6 +1909,11 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
             refreshMapBackgroundPanel();
         }
     });
+    connect(tab, &TherionStudio::MapEditorTab::backgroundLayerPropertiesChanged, this, [this, tab]() {
+        if (currentDocumentWidget() == tab) {
+            refreshMapBackgroundPanel();
+        }
+    });
     connect(tab, &TherionStudio::MapEditorTab::modeStatusChanged, this, [this, tab]() {
         if (currentDocumentWidget() == tab) {
             refreshDocumentStatusWidgets();

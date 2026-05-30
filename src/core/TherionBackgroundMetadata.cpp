@@ -177,7 +177,13 @@ QVector<TherionBackgroundReference> parseTherionBackgroundReferences(const QStri
         int position = keywordIndex + QStringLiteral("xth_me_image_insert").size();
         QString firstGroup;
         QString secondGroup;
-        if (!readBracedGroup(trimmed, &position, &firstGroup) || !readBracedGroup(trimmed, &position, &secondGroup)) {
+        if (!readBracedGroup(trimmed, &position, &firstGroup)) {
+            continue;
+        }
+        if (!readBracedGroup(trimmed, &position, &secondGroup)) {
+            secondGroup = readSimpleToken(trimmed, &position);
+        }
+        if (secondGroup.isEmpty()) {
             continue;
         }
 

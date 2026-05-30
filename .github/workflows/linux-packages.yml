@@ -25,6 +25,10 @@ jobs:
       APPIMAGETOOL_SHA256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
       APPIMAGE_RUNTIME_URL: https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
       APPIMAGE_RUNTIME_SHA256: 2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
+      APPIMAGE_QT_BASE_URL: https://download.qt.io
+      APPIMAGE_QT_VERSION: 6.8.3
+      APPIMAGE_QT_ARCH: linux_gcc_64
+      APPIMAGE_QT_ARCHIVES: qtbase,qtsvg,qttools
 
     steps:
       - name: Check out repository
@@ -64,6 +68,7 @@ jobs:
             dpkg-dev \
             file \
             libgl1-mesa-dev \
+            libxkbcommon-dev \
             libxkbcommon-x11-0 \
             libxcb-cursor0 \
             libxcb-icccm4 \
@@ -76,6 +81,7 @@ jobs:
             qt6-svg-dev \
             qt6-tools-dev \
             qt6-tools-dev-tools \
+            python3-venv \
             wget
 
       - name: Configure .deb build
@@ -106,16 +112,41 @@ jobs:
           -C ${{ inputs.build_type }}
           --verbose
 
+      - name: Install AppImage Qt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/aqt"
+          "$RUNNER_TEMP/aqt/bin/python" -m pip install --upgrade pip aqtinstall
+          IFS=',' read -r -a qt_archives <<< "$APPIMAGE_QT_ARCHIVES"
+          "$RUNNER_TEMP/aqt/bin/python" -m aqt install-qt linux desktop \
+            "$APPIMAGE_QT_VERSION" "$APPIMAGE_QT_ARCH" \
+            --base "$APPIMAGE_QT_BASE_URL" \
+            --outputdir "$RUNNER_WORKSPACE/Qt" \
+            --archives "${qt_archives[@]}"
+          qt_root="$(find "$RUNNER_WORKSPACE/Qt/$APPIMAGE_QT_VERSION" -mindepth 1 -maxdepth 1 -type d | sort | head -n1)"
+          if [[ -z "$qt_root" ]]; then
+            echo "No Qt root found under $RUNNER_WORKSPACE/Qt/$APPIMAGE_QT_VERSION"
+            find "$RUNNER_WORKSPACE/Qt" -maxdepth 3 -type d | sort
+            exit 1
+          fi
+          test -f "$qt_root/lib/cmake/Qt6/Qt6Config.cmake"
+          echo "APPIMAGE_QT_ROOT=$qt_root" >> "$GITHUB_ENV"
+          echo "Using AppImage Qt from $qt_root"
+
       - name: Configure AppImage build
-        run: >
-          cmake -S . -B build-linux-appimage
-          -G Ninja
-          -DCMAKE_BUILD_TYPE=${{ inputs.build_type }}
-          -DCMAKE_INSTALL_PREFIX=/usr
-          -DTHERION_STUDIO_VERSION=${{ env.THERION_STUDIO_VERSION }}
-          -DTHERION_STUDIO_PACKAGE_LABEL=${{ env.THERION_STUDIO_PACKAGE_LABEL }}
-          -DTHERION_ENABLE_STRICT_WARNINGS=ON
-          -DTHERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S . -B build-linux-appimage \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ inputs.build_type }} \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DCMAKE_PREFIX_PATH="$APPIMAGE_QT_ROOT" \
+            -DTHERION_STUDIO_VERSION=${{ env.THERION_STUDIO_VERSION }} \
+            -DTHERION_STUDIO_PACKAGE_LABEL=${{ env.THERION_STUDIO_PACKAGE_LABEL }} \
+            -DTHERION_ENABLE_STRICT_WARNINGS=ON \
+            -DTHERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON
 
       - name: Build AppImage app
         run: cmake --build build-linux-appimage --target TherionStudio --parallel
@@ -165,6 +196,10 @@ jobs:
             --appimagetool-sha256 "$APPIMAGETOOL_SHA256" \
             --appimage-runtime-url "$APPIMAGE_RUNTIME_URL" \
             --appimage-runtime-sha256 "$APPIMAGE_RUNTIME_SHA256" \
+            --appimage-qt-base-url "$APPIMAGE_QT_BASE_URL" \
+            --appimage-qt-version "$APPIMAGE_QT_VERSION" \
+            --appimage-qt-architecture "$APPIMAGE_QT_ARCH" \
+            --appimage-qt-archives "$APPIMAGE_QT_ARCHIVES" \
             --manifest-out "$PWD/build-linux-packages/TherionStudio-Linux-artifacts-manifest.json" \
             --github-output "$GITHUB_OUTPUT"
 

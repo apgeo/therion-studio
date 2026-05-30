@@ -37,6 +37,10 @@ def main() -> int:
     parser.add_argument("--appimagetool-sha256", required=True)
     parser.add_argument("--appimage-runtime-url", required=True)
     parser.add_argument("--appimage-runtime-sha256", required=True)
+    parser.add_argument("--appimage-qt-base-url", required=True)
+    parser.add_argument("--appimage-qt-version", required=True)
+    parser.add_argument("--appimage-qt-architecture", required=True)
+    parser.add_argument("--appimage-qt-archives", required=True)
     parser.add_argument("--manifest-out", required=True)
     parser.add_argument("--github-output")
     args = parser.parse_args()
@@ -88,6 +92,16 @@ def main() -> int:
                 "runtime": {
                     "sha256": args.appimage_runtime_sha256,
                     "url": args.appimage_runtime_url,
+                },
+                "qt": {
+                    "architecture": args.appimage_qt_architecture,
+                    "archives": [
+                        archive.strip()
+                        for archive in args.appimage_qt_archives.split(",")
+                        if archive.strip()
+                    ],
+                    "base_url": args.appimage_qt_base_url,
+                    "version": args.appimage_qt_version,
                 },
             },
             "platform": "ubuntu-24.04",

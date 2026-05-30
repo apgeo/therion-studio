@@ -113,8 +113,9 @@ AppImage.
 For a release, treat Ubuntu 26.04 and Debian 13 as tested `.deb` targets only when both smoke jobs
 pass in the release workflow run.
 
-The AppImage is generated from Qt's CMake deployment script plus pinned `appimagetool` and
-pinned AppImage runtime inputs. Do not replace this with mutable `continuous` downloads.
+The AppImage is generated from Qt's CMake deployment script using workflow-provisioned Qt 6.8.3
+from `download.qt.io`, plus pinned `appimagetool` and pinned AppImage runtime inputs. Do not
+replace this with mutable `continuous` downloads.
 
 ## 7. Publish GitHub Release
 

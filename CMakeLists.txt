@@ -643,20 +643,35 @@ if(UNIX AND NOT APPLE)
         RENAME "${THERION_STUDIO_LINUX_DESKTOP_ID}.metainfo.xml")
 endif()
 
+function(therion_generate_deploy_app_script target output_var)
+    if(Qt6Core_VERSION VERSION_LESS 6.5)
+        qt_generate_deploy_app_script(
+            TARGET "${target}"
+            FILENAME_VARIABLE deploy_script
+            NO_UNSUPPORTED_PLATFORM_ERROR)
+    else()
+        qt_generate_deploy_app_script(
+            TARGET "${target}"
+            OUTPUT_SCRIPT deploy_script
+            NO_UNSUPPORTED_PLATFORM_ERROR)
+    endif()
+    set("${output_var}" "${deploy_script}" PARENT_SCOPE)
+endfunction()
+
 if(UNIX AND NOT APPLE AND THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL)
-    qt_generate_deploy_app_script(
-        TARGET TherionStudio
-        OUTPUT_SCRIPT THERION_STUDIO_QT_DEPLOY_SCRIPT
-        NO_UNSUPPORTED_PLATFORM_ERROR
-        POST_INCLUDE_REGEXES ".*/libQt6[^/]*\\.so(\\..*)?$")
+    if(Qt6Core_VERSION VERSION_LESS 6.5)
+        message(FATAL_ERROR
+            "THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL requires Qt 6.5 or newer. "
+            "Ubuntu 24.04 distro Qt is supported for the .deb build, but the "
+            "AppImage workflow must configure against the workflow-provisioned "
+            "Qt used for Linux CMake deployment.")
+    endif()
+    therion_generate_deploy_app_script(TherionStudio THERION_STUDIO_QT_DEPLOY_SCRIPT)
     install(SCRIPT ${THERION_STUDIO_QT_DEPLOY_SCRIPT})
 endif()
 
 if(WIN32)
-    qt_generate_deploy_app_script(
-        TARGET TherionStudio
-        OUTPUT_SCRIPT THERION_STUDIO_QT_DEPLOY_SCRIPT
-        NO_UNSUPPORTED_PLATFORM_ERROR)
+    therion_generate_deploy_app_script(TherionStudio THERION_STUDIO_QT_DEPLOY_SCRIPT)
     install(SCRIPT ${THERION_STUDIO_QT_DEPLOY_SCRIPT})
 
     set(CPACK_GENERATOR "NSIS")

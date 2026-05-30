@@ -152,10 +152,13 @@ The `.deb` artifact intentionally keeps a distro-neutral `linux-x86_64` file nam
 package is intended for tested Debian/Ubuntu-family targets rather than a single Ubuntu release.
 
 The AppImage is built from a separate CMake tree with
-`THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON`. That enables Qt's generated Linux deployment
+`THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON` and workflow-provisioned Qt 6.8.3 from
+`download.qt.io`. Ubuntu 24.04's distro Qt remains the `.deb` build baseline, but it is too old
+for Qt's Linux CMake deployment API. The AppImage Qt path enables Qt's generated Linux deployment
 script during install so the AppDir receives the required Qt runtime files and plugins. The
 workflow then packages the AppDir with pinned `appimagetool` 1.9.1 and a pinned
-`type2-runtime` 20251108 runtime, both SHA256-verified before execution/use.
+`type2-runtime` 20251108 runtime, both SHA256-verified before execution/use. The manifest records
+the AppImage Qt version and archive set in addition to `appimagetool` and runtime provenance.
 
 The same workflow also runs follow-up smoke jobs in `ubuntu:26.04` and `debian:13` containers.
 Each target installs the produced `.deb`, verifies installed paths, and performs offscreen launch

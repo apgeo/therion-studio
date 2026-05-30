@@ -336,6 +336,10 @@ void MainWindow::handleStructureSidebarScanFinished(const TherionStudio::Project
     if (result.projectRootPath == projectRootPath_
         && !projectRootPath_.isEmpty()
         && QDir(projectRootPath_).exists()) {
+        if (!result.errorMessage.isEmpty()) {
+            showStructureSidebarMessage(result.errorMessage);
+            return;
+        }
         applyStructureSidebarIndex(result.projectIndex);
     }
 }
@@ -519,6 +523,21 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
         }
     }
 
+    structureTree_->expandAll();
+}
+
+void MainWindow::showStructureSidebarMessage(const QString &message)
+{
+    structureModel_->clear();
+    structureModel_->setHorizontalHeaderLabels({tr("Name")});
+    hasAppliedStructureSidebarIndex_ = false;
+    lastAppliedStructureSidebarSignature_.clear();
+
+    auto *messageItem = new QStandardItem(message);
+    messageItem->setEditable(false);
+    messageItem->setToolTip(message);
+    structureModel_->appendRow(messageItem);
+    projectStructureSummary_ = message;
     structureTree_->expandAll();
 }
 

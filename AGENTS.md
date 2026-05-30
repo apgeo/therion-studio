@@ -28,7 +28,7 @@ These instructions apply to the whole repository.
 
 - Default technology assumptions should match the specification: Qt 6, cross-platform desktop, shared core logic across macOS, Windows, and Linux.
 - Follow established best practices and relevant platform standards for modern Qt and C++ desktop application development unless the specification explicitly requires a different approach.
-- Treat [CODE_OPTIMALIZATION.md](CODE_OPTIMALIZATION.md) as the active architecture optimization roadmap. If a code change conflicts with that plan, either align the code with the plan or update the plan explicitly in the same change.
+- Treat [WORKLOG.md](WORKLOG.md) as the active implementation roadmap and backlog. Keep architectural optimization principles in this file rather than in a separate optimization-plan document.
 - Preserve separation of concerns:
   - domain model, parsing, serialization, and editing rules stay outside UI classes
   - widgets, views, and scene items should not own file I/O or document parsing
@@ -48,6 +48,7 @@ These instructions apply to the whole repository.
   - core/domain code shall not depend on QtWidgets, QGraphicsView, dialogs, windows, or UI event classes
   - infrastructure/platform adapters may use Qt/platform APIs, but should expose narrow interfaces upward
 - Do not add new business rules, persistence rules, parser/serializer logic, process orchestration, command-catalog loading, settings access, or platform-path decisions directly into widgets, dialogs, QGraphicsItems, or scene items.
+- Do not add new direct `DocumentFile` calls from widgets. Route document loading, saving, and encoding decisions through focused document workflow/IO services.
 - Treat `MainWindow`, `TextEditorTab`, and `MapEditorTab` as orchestration shells under active reduction. When touching them, prefer extracting focused non-widget collaborators over adding more unrelated private state, slots, static helper functions, or workflow branches.
 - Do not add convenience constructors to UI shells or controllers that silently instantiate real infrastructure adapters such as filesystem, settings/session stores, resource/catalog loaders, process runners, or platform services.
 - Compose production infrastructure at an explicit composition boundary such as `main.cpp`, `MainWindow` bootstrap code, or a future composition-root class. Tests shall pass fakes or explicit test adapters rather than relying on hidden production defaults.
@@ -59,6 +60,7 @@ These instructions apply to the whole repository.
 - Long-running parsing, indexing, Therion execution, filesystem traversal, asset loading, and expensive map/background rendering shall be asynchronous, cancellable, debounced, or otherwise structured so they do not block the UI thread.
 - Cross-platform behavior shall be centralized behind platform or infrastructure services when practical. New `Q_OS_*` checks should be limited to `src/platform/**`, startup/bootstrap code, packaging code, or a clearly justified platform adapter.
 - Build/resource wiring should not duplicate source-of-truth lists unnecessarily. If resource catalogs are split into many files, prefer scoped CMake globs or generated lists with guardrails over manually duplicated file lists in multiple targets.
+- Keep command catalog and map-style catalog loading at composition, startup, or explicit test setup boundaries. Do not reintroduce UI-side static catalog access or long-lived resource overrides when parser/generator support is the correct fix.
 
 ## Proposal Review Discipline
 

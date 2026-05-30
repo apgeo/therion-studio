@@ -306,8 +306,14 @@ int runProjectIndexThconfigSourceGraphTest()
     }
 
     QDir projectDir(tempDir.path());
+    if (!expect(projectDir.mkpath(QStringLiteral("nested")), "The temporary nested project directory could not be created.")) {
+        return 1;
+    }
+
     const QString configFile = projectDir.filePath(QStringLiteral("thconfig"));
     const QString sourceFile = projectDir.filePath(QStringLiteral("main.th"));
+    const QString nestedConfigFile = projectDir.filePath(QStringLiteral("nested/nested.thconfig"));
+    const QString nestedSourceFile = projectDir.filePath(QStringLiteral("nested/nested.th"));
     if (!expect(writeTextFile(configFile,
                               QStringLiteral(
                                   "source main\n")),
@@ -319,6 +325,19 @@ int runProjectIndexThconfigSourceGraphTest()
                                   "survey from-config\n"
                                   "endsurvey from-config\n")),
                 "The temporary thconfig source file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(nestedConfigFile,
+                              QStringLiteral(
+                                  "source nested.th\n")),
+                "The temporary nested thconfig file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(nestedSourceFile,
+                              QStringLiteral(
+                                  "survey nested-config\n"
+                                  "endsurvey nested-config\n")),
+                "The temporary nested thconfig source file could not be written.")) {
         return 1;
     }
 
@@ -336,6 +355,107 @@ int runProjectIndexThconfigSourceGraphTest()
                     && entry.name == QStringLiteral("from-config")
                     && normalizedPathForComparison(entry.sourceFile) == normalizedPathForComparison(sourceFile),
                 "The thconfig source graph scan did not resolve the source target.")) {
+        return 1;
+    }
+
+    const ProjectIndexSnapshot nestedSnapshot = ProjectStructureIndex::scanProjectIndex(
+        projectDir.filePath(QStringLiteral("nested")),
+        &errorMessage);
+    if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(nestedSnapshot.entries.size() == 1,
+                "Opening a nested directory as the project root should use its root-level config.")) {
+        return 1;
+    }
+
+    const ProjectStructureEntry &nestedEntry = nestedSnapshot.entries.first();
+    if (!expect(nestedEntry.kind == ProjectStructureEntryKind::Survey
+                    && nestedEntry.name == QStringLiteral("nested-config")
+                    && normalizedPathForComparison(nestedEntry.sourceFile) == normalizedPathForComparison(nestedSourceFile),
+                "The nested project root did not resolve its own thconfig source graph.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runProjectIndexRootConfigDisambiguationTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "The temporary project directory could not be created.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("alpha.thconfig")),
+                              QStringLiteral("source alpha.th\n")),
+                "The first root thconfig file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("beta.thconfig")),
+                              QStringLiteral("source beta.th\n")),
+                "The second root thconfig file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("alpha.th")),
+                              QStringLiteral(
+                                  "survey alpha\n"
+                                  "endsurvey alpha\n")),
+                "The alpha source file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("beta.th")),
+                              QStringLiteral(
+                                  "survey beta\n"
+                                  "endsurvey beta\n")),
+                "The beta source file could not be written.")) {
+        return 1;
+    }
+
+    QString errorMessage;
+    const ProjectIndexSnapshot ambiguousSnapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(),
+                                                                                           &errorMessage);
+    if (!expect(!errorMessage.isEmpty(),
+                "Multiple root .thconfig files should require an explicit project target config.")) {
+        return 1;
+    }
+    if (!expect(ambiguousSnapshot.entries.isEmpty(),
+                "The project index should not silently merge multiple root .thconfig graphs.")) {
+        return 1;
+    }
+
+    const ProjectIndexSnapshot betaSnapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(),
+                                                                                      QHash<QString, QString>(),
+                                                                                      QStringLiteral("beta.thconfig"),
+                                                                                      &errorMessage);
+    if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(betaSnapshot.entries.size() == 1,
+                "The preferred project target config should select one root graph.")) {
+        return 1;
+    }
+    if (!expect(betaSnapshot.entries.first().kind == ProjectStructureEntryKind::Survey
+                    && betaSnapshot.entries.first().name == QStringLiteral("beta"),
+                "The preferred project target config did not select the expected graph.")) {
+        return 1;
+    }
+
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("thconfig")),
+                              QStringLiteral("source alpha.th\n")),
+                "The default root thconfig file could not be written.")) {
+        return 1;
+    }
+
+    const ProjectIndexSnapshot defaultSnapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(),
+                                                                                         &errorMessage);
+    if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(defaultSnapshot.entries.size() == 1
+                    && defaultSnapshot.entries.first().name == QStringLiteral("alpha"),
+                "A root thconfig file should be the default project graph when no preferred config is set.")) {
         return 1;
     }
 
@@ -400,6 +520,9 @@ int main()
         return 1;
     }
     if (runProjectIndexThconfigSourceGraphTest() != 0) {
+        return 1;
+    }
+    if (runProjectIndexRootConfigDisambiguationTest() != 0) {
         return 1;
     }
     if (runTh2ObjectIndexGroupingTest() != 0) {

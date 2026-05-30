@@ -46,6 +46,12 @@ struct MapScrapReferenceScanResult
     QVector<ProjectIndexDiagnostic> diagnostics;
 };
 
+struct RootConfigResolution
+{
+    QVector<QString> rootFiles;
+    QString errorMessage;
+};
+
 QString normalizedFilePathKey(const QString &path)
 {
     if (path.trimmed().isEmpty()) {
@@ -56,6 +62,19 @@ QString normalizedFilePathKey(const QString &path)
     const QString canonicalPath = fileInfo.canonicalFilePath();
     const QString resolvedPath = canonicalPath.isEmpty() ? fileInfo.absoluteFilePath() : canonicalPath;
     return QFileInfo(resolvedPath).absoluteFilePath();
+}
+
+bool pathIsInsideDirectory(const QString &path, const QString &directoryPath)
+{
+    if (path.isEmpty() || directoryPath.isEmpty()) {
+        return false;
+    }
+
+    const QString relativePath = QDir(directoryPath).relativeFilePath(path);
+    return relativePath != QStringLiteral("..")
+        && !relativePath.startsWith(QStringLiteral("../"))
+        && !relativePath.startsWith(QStringLiteral("..\\"))
+        && !QDir::isAbsolutePath(relativePath);
 }
 
 QString optionValue(const QStringList &tokens, const QString &option);
@@ -556,6 +575,81 @@ bool isInterestingProjectFile(const QFileInfo &fileInfo)
         || fileName == QStringLiteral("thconfig");
 }
 
+bool isTherionConfigFile(const QFileInfo &fileInfo)
+{
+    const QString suffix = fileInfo.suffix().toLower();
+    const QString fileName = fileInfo.fileName().toLower();
+    return suffix == QStringLiteral("thconfig") || fileName == QStringLiteral("thconfig");
+}
+
+QString resolvePreferredProjectConfigPath(const QString &preferredConfigPath, const QString &projectRootPath)
+{
+    const QString trimmedPath = preferredConfigPath.trimmed();
+    if (trimmedPath.isEmpty()) {
+        return QString();
+    }
+
+    QFileInfo configInfo(trimmedPath);
+    if (!configInfo.isAbsolute()) {
+        configInfo = QFileInfo(QDir(projectRootPath).absoluteFilePath(trimmedPath));
+    }
+    if (!configInfo.exists() || !isTherionConfigFile(configInfo)) {
+        return QString();
+    }
+
+    const QString normalizedProjectRoot = normalizedFilePathKey(projectRootPath);
+    const QString normalizedConfigPath = normalizedFilePathKey(configInfo.absoluteFilePath());
+    if (!pathIsInsideDirectory(normalizedConfigPath, normalizedProjectRoot)) {
+        return QString();
+    }
+
+    return normalizedConfigPath;
+}
+
+RootConfigResolution rootConfigFiles(const QVector<QString> &filePaths,
+                                     const QString &projectRootPath,
+                                     const QString &preferredConfigPath)
+{
+    const QString normalizedProjectRoot = normalizedFilePathKey(projectRootPath);
+    const QString normalizedPreferredConfigPath = resolvePreferredProjectConfigPath(preferredConfigPath, projectRootPath);
+    if (!normalizedPreferredConfigPath.isEmpty()) {
+        return RootConfigResolution{{normalizedPreferredConfigPath}, QString()};
+    }
+
+    QVector<QString> defaultConfigFiles;
+    QVector<QString> namedConfigFiles;
+
+    for (const QString &filePath : filePaths) {
+        const QFileInfo fileInfo(filePath);
+        if (!isTherionConfigFile(fileInfo)) {
+            continue;
+        }
+
+        if (normalizedFilePathKey(fileInfo.dir().absolutePath()) != normalizedProjectRoot) {
+            continue;
+        }
+
+        if (fileInfo.fileName().compare(QStringLiteral("thconfig"), Qt::CaseInsensitive) == 0) {
+            defaultConfigFiles.append(filePath);
+        } else {
+            namedConfigFiles.append(filePath);
+        }
+    }
+
+    if (!defaultConfigFiles.isEmpty()) {
+        return RootConfigResolution{defaultConfigFiles, QString()};
+    }
+    if (namedConfigFiles.size() <= 1) {
+        return RootConfigResolution{namedConfigFiles, QString()};
+    }
+
+    return RootConfigResolution{
+        {},
+        QCoreApplication::translate("TherionStudio::ProjectStructureIndex",
+                                    "Multiple .thconfig files were found in the project root. Select a project target config in the Compiler pane to build the structure graph.")
+    };
+}
+
 MapScrapReferenceScanResult scanMapScrapReferences(const QVector<ProjectStructureEntry> &entries,
                                                    ParsedFileCache *cache,
                                                    const QHash<QString, QString> &inMemoryFileContentsByPath)
@@ -656,6 +750,18 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
                                                              const QHash<QString, QString> &inMemoryFileContentsByPath,
                                                              QString *errorMessage)
 {
+    return scanProjectIndex(projectRootPath, inMemoryFileContentsByPath, QString(), errorMessage);
+}
+
+ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &projectRootPath,
+                                                             const QHash<QString, QString> &inMemoryFileContentsByPath,
+                                                             const QString &preferredConfigPath,
+                                                             QString *errorMessage)
+{
+    if (errorMessage != nullptr) {
+        errorMessage->clear();
+    }
+
     ProjectIndexSnapshot snapshot;
     if (projectRootPath.isEmpty()) {
         return snapshot;
@@ -692,7 +798,18 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
     });
 
     ParsedFileCache cache;
-    const QVector<QString> rootFiles = rootProjectFiles(filePaths, &cache, inMemoryFileContentsByPath);
+    const RootConfigResolution configResolution = rootConfigFiles(filePaths, projectRootPath, preferredConfigPath);
+    if (!configResolution.errorMessage.isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = configResolution.errorMessage;
+        }
+        return snapshot;
+    }
+
+    QVector<QString> rootFiles = configResolution.rootFiles;
+    if (rootFiles.isEmpty()) {
+        rootFiles = rootProjectFiles(filePaths, &cache, inMemoryFileContentsByPath);
+    }
 
     QVector<ProjectBlock> blockStack;
     QSet<QString> activeFiles;

@@ -21,11 +21,13 @@
 #include <QSet>
 #include <QStandardItem>
 #include <QStandardItemModel>
+#include <QStringList>
 #include <QSvgRenderer>
 #include <QTabWidget>
 #include <QToolButton>
 #include <QTreeView>
 
+#include <algorithm>
 #include <functional>
 
 #include "text_editor/TextEditorTab.h"
@@ -88,7 +90,12 @@ QString formatProjectStructureSummary(const QHash<QString, int> &categoryCounts,
         .arg(areaCount);
 }
 
-QStandardItem *createIndexedItem(const QString &text, const QString &sourceFile, int lineNumber, const QString &category, const QString &name)
+QStandardItem *createIndexedItem(const QString &text,
+                                 const QString &sourceFile,
+                                 int lineNumber,
+                                 const QString &category,
+                                 const QString &name,
+                                 const QString &objectId = QString())
 {
     auto *item = new QStandardItem(text);
     item->setEditable(false);
@@ -96,6 +103,7 @@ QStandardItem *createIndexedItem(const QString &text, const QString &sourceFile,
     item->setData(lineNumber, LineNumberRole);
     item->setData(category, CategoryRole);
     item->setData(name, NameRole);
+    item->setData(objectId, ObjectIdRole);
     return item;
 }
 
@@ -183,6 +191,92 @@ QString normalizedStructurePathKey(const QString &path)
     const QString canonicalPath = fileInfo.canonicalFilePath();
     return canonicalPath.isEmpty() ? fileInfo.absoluteFilePath() : canonicalPath;
 }
+
+QString projectIndexStructuralSignature(const TherionStudio::ProjectIndexSnapshot &projectIndex)
+{
+    QStringList parts;
+    parts.reserve(projectIndex.entries.size() * 9
+                  + projectIndex.mapScrapReferencesByMapKey.size() * 4
+                  + projectIndex.diagnostics.size() * 4);
+
+    parts.append(QStringLiteral("entries"));
+    parts.append(QString::number(projectIndex.entries.size()));
+    for (const TherionStudio::ProjectStructureEntry &entry : projectIndex.entries) {
+        parts.append(QString::number(static_cast<int>(entry.kind)));
+        parts.append(entry.objectId);
+        parts.append(entry.parentObjectId);
+        parts.append(entry.category);
+        parts.append(entry.name);
+        parts.append(normalizedStructurePathKey(entry.sourceFile));
+        parts.append(QString::number(entry.depth));
+        parts.append(entry.createsNamespace ? QStringLiteral("1") : QStringLiteral("0"));
+    }
+
+    QStringList mapKeys = projectIndex.mapScrapReferencesByMapKey.keys();
+    std::sort(mapKeys.begin(), mapKeys.end());
+    parts.append(QStringLiteral("map-scrap-refs"));
+    parts.append(QString::number(mapKeys.size()));
+    for (const QString &mapKey : mapKeys) {
+        QStringList scrapNames = projectIndex.mapScrapReferencesByMapKey.value(mapKey).values();
+        std::sort(scrapNames.begin(), scrapNames.end());
+        parts.append(mapKey);
+        parts.append(scrapNames.join(QLatin1Char(',')));
+    }
+
+    parts.append(QStringLiteral("diagnostics"));
+    parts.append(QString::number(projectIndex.diagnostics.size()));
+    for (const TherionStudio::ProjectIndexDiagnostic &diagnostic : projectIndex.diagnostics) {
+        parts.append(QString::number(static_cast<int>(diagnostic.kind)));
+        parts.append(diagnostic.sourceObjectId);
+        parts.append(normalizedStructurePathKey(diagnostic.sourceFile));
+        parts.append(diagnostic.referencedName);
+    }
+
+    return parts.join(QChar(0x1f));
+}
+
+void updateStructureSourceLocationRoles(QStandardItemModel *model,
+                                        const QString &projectRootPath,
+                                        const TherionStudio::ProjectIndexSnapshot &projectIndex)
+{
+    if (model == nullptr) {
+        return;
+    }
+
+    QHash<QString, TherionStudio::ProjectStructureEntry> entriesByObjectId;
+    for (const TherionStudio::ProjectStructureEntry &entry : projectIndex.entries) {
+        if (!entry.objectId.isEmpty()) {
+            entriesByObjectId.insert(entry.objectId, entry);
+        }
+    }
+
+    std::function<void(QStandardItem *)> visitItem = [&](QStandardItem *item) {
+        if (item == nullptr) {
+            return;
+        }
+
+        const QString objectId = item->data(ObjectIdRole).toString();
+        const auto entryIt = entriesByObjectId.constFind(objectId);
+        if (entryIt != entriesByObjectId.constEnd()) {
+            item->setData(entryIt->sourceFile, SourceFileRole);
+            item->setData(entryIt->lineNumber, LineNumberRole);
+            if (entryIt->lineNumber > 0 && entryIt->category != QStringLiteral("File")) {
+                item->setData(QStringLiteral("%1|%2|%3").arg(QDir(projectRootPath).absolutePath(),
+                                                              entryIt->sourceFile)
+                                                   .arg(entryIt->lineNumber),
+                              OverrideKeyRole);
+            }
+        }
+
+        for (int row = 0; row < item->rowCount(); ++row) {
+            visitItem(item->child(row));
+        }
+    };
+
+    for (int row = 0; row < model->rowCount(); ++row) {
+        visitItem(model->item(row));
+    }
+}
 }
 
 void MainWindow::requestStructureSidebarRebuild()
@@ -227,7 +321,10 @@ void MainWindow::requestStructureSidebarRebuild()
         captureInMemoryStructureSource(detachedTab);
     }
 
-    structureSidebarScanner_->requestScan(projectRootPath_, inMemoryProjectContentsByPath);
+    const QString preferredConfigPath = resolvedTherionTargetConfigPath();
+    structureSidebarScanner_->requestScan(projectRootPath_,
+                                          inMemoryProjectContentsByPath,
+                                          preferredConfigPath);
 }
 
 void MainWindow::handleStructureSidebarScanFinished(const TherionStudio::ProjectStructureScanner::Result &result)
@@ -247,6 +344,8 @@ void MainWindow::rebuildStructureSidebar()
 {
     structureModel_->clear();
     structureModel_->setHorizontalHeaderLabels({tr("Name")});
+    hasAppliedStructureSidebarIndex_ = false;
+    lastAppliedStructureSidebarSignature_.clear();
 
     if (projectRootPath_.isEmpty() || !QDir(projectRootPath_).exists()) {
         auto *rootItem = new QStandardItem(tr("Open a project to populate the survey hierarchy"));
@@ -262,6 +361,15 @@ void MainWindow::rebuildStructureSidebar()
 
 void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSnapshot &projectIndex)
 {
+    const QString nextSignature = projectIndexStructuralSignature(projectIndex);
+    if (hasAppliedStructureSidebarIndex_ && nextSignature == lastAppliedStructureSidebarSignature_) {
+        updateStructureSidebarSourceLocations(projectIndex);
+        return;
+    }
+
+    hasAppliedStructureSidebarIndex_ = true;
+    lastAppliedStructureSidebarSignature_ = nextSignature;
+
     const QVector<TherionStudio::ProjectStructureEntry> &entries = projectIndex.entries;
 
     structureModel_->clear();
@@ -329,7 +437,8 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
                                                 entry.sourceFile,
                                                 entry.lineNumber,
                                                 entry.category,
-                                                entryName);
+                                                entryName,
+                                                entry.objectId);
             const QIcon entryIcon = structureItemIconForCategory(entry.category);
             if (!entryIcon.isNull()) {
                 entryItem->setIcon(entryIcon);
@@ -337,7 +446,7 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
 
             if (entry.lineNumber > 0 && entry.category != QStringLiteral("File")) {
                 const QString overrideKey = structureOverrideKey(entry.sourceFile, entry.lineNumber);
-                entryItem->setData(overrideKey, Qt::UserRole + 5);
+                entryItem->setData(overrideKey, OverrideKeyRole);
             }
 
             VisibleStructureNode node;
@@ -411,6 +520,11 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
     }
 
     structureTree_->expandAll();
+}
+
+void MainWindow::updateStructureSidebarSourceLocations(const TherionStudio::ProjectIndexSnapshot &projectIndex)
+{
+    updateStructureSourceLocationRoles(structureModel_, projectRootPath_, projectIndex);
 }
 
 void MainWindow::rebuildMapObjectsTree()

@@ -77,10 +77,16 @@ void MainWindow::buildConsole()
     };
     wiringInput.onClearOutputRequested = [this]() { clearTherionConsoleOutput(); };
     wiringInput.onCopyOutputRequested = [this]() { copyTherionConsoleOutput(); };
-    wiringInput.onWorkingDirectoryChanged = [this](const QString &) { refreshTherionConfigDisplay(); };
+    wiringInput.onWorkingDirectoryChanged = [this](const QString &) {
+        refreshTherionConfigDisplay();
+        requestStructureSidebarRebuild();
+    };
     wiringInput.onArgumentsChanged = [this](const QString &) { refreshTherionConfigDisplay(); };
     wiringInput.onRunTargetChanged = [this]() { refreshTherionConfigDisplay(); };
-    wiringInput.onTargetConfigChanged = [this](const QString &) { refreshTherionConfigDisplay(); };
+    wiringInput.onTargetConfigChanged = [this](const QString &) {
+        refreshTherionConfigDisplay();
+        requestStructureSidebarRebuild();
+    };
     wiringInput.onRunnerStandardOutput = [this](const QString &output) {
         handleTherionRunnerStandardOutput(output);
     };

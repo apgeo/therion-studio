@@ -62,6 +62,10 @@ public:
     static ProjectIndexSnapshot scanProjectIndex(const QString &projectRootPath,
                                                  const QHash<QString, QString> &inMemoryFileContentsByPath,
                                                  QString *errorMessage = nullptr);
+    static ProjectIndexSnapshot scanProjectIndex(const QString &projectRootPath,
+                                                 const QHash<QString, QString> &inMemoryFileContentsByPath,
+                                                 const QString &preferredConfigPath,
+                                                 QString *errorMessage = nullptr);
     static QVector<ProjectStructureEntry> scanProject(const QString &projectRootPath, QString *errorMessage = nullptr);
     static QVector<ProjectStructureEntry> scanProject(const QString &projectRootPath,
                                                       const QHash<QString, QString> &inMemoryFileContentsByPath,

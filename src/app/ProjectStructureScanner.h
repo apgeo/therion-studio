@@ -31,6 +31,9 @@ public:
     explicit ProjectStructureScanner(QObject *parent = nullptr);
     void requestScan(const QString &projectRootPath,
                      const QHash<QString, QString> &inMemoryProjectContentsByPath);
+    void requestScan(const QString &projectRootPath,
+                     const QHash<QString, QString> &inMemoryProjectContentsByPath,
+                     const QString &preferredConfigPath);
     void setDebounceIntervalMs(int intervalMs);
 
 signals:
@@ -44,6 +47,7 @@ private:
     struct Request
     {
         QString projectRootPath;
+        QString preferredConfigPath;
         QHash<QString, QString> inMemoryProjectContentsByPath;
     };
 

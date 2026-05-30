@@ -100,6 +100,9 @@ For `.th2` files:
 ### 5.1 Structure Pane
 
 The `Structure` pane shows detected `Survey`, `Map`, and `Scrap` hierarchy from open content. Selecting an item opens/synchronizes to its source location.
+For project-level indexing, Therion Studio uses the selected `Target Config` when it points inside the opened project.
+If no `Target Config` is selected, a root `thconfig` is used by default; if there is no root `thconfig` and exactly one root `*.thconfig`, that file is used.
+If the project root contains multiple `*.thconfig` files and no target config is selected, choose the intended `Target Config` in the `Compiler` pane instead of relying on an automatic merged structure.
 
 ### 5.2 Project Tree Actions
 

@@ -124,6 +124,7 @@ private:
     void requestStructureSidebarRebuild();
     void handleStructureSidebarScanFinished(const TherionStudio::ProjectStructureScanner::Result &result);
     void applyStructureSidebarIndex(const TherionStudio::ProjectIndexSnapshot &projectIndex);
+    void updateStructureSidebarSourceLocations(const TherionStudio::ProjectIndexSnapshot &projectIndex);
     void rebuildMapObjectsTree();
     void showSidebarPane(SidebarPane pane);
     void setSidebarPane(SidebarPane pane);
@@ -325,6 +326,7 @@ private:
     QStandardItemModel *mapObjectsModel_ = nullptr;
     QString projectRootPath_;
     QString projectStructureSummary_;
+    QString lastAppliedStructureSidebarSignature_;
     QHash<QString, QString> structureNameOverrides_;
     SidebarPane activeSidebarPane_ = SidebarPane::FileBrowser;
     int sidebarExpandedWidth_ = 320;
@@ -335,6 +337,7 @@ private:
     bool updatingSidebarSplitter_ = false;
     bool sidebarCollapseSyncPending_ = false;
     bool updatingMapBackgroundPanel_ = false;
+    bool hasAppliedStructureSidebarIndex_ = false;
     bool clearingDocumentTabs_ = false;
     bool shuttingDown_ = false;
 

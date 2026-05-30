@@ -21,7 +21,15 @@ ProjectStructureScanner::ProjectStructureScanner(QObject *parent)
 void ProjectStructureScanner::requestScan(const QString &projectRootPath,
                                           const QHash<QString, QString> &inMemoryProjectContentsByPath)
 {
+    requestScan(projectRootPath, inMemoryProjectContentsByPath, QString());
+}
+
+void ProjectStructureScanner::requestScan(const QString &projectRootPath,
+                                          const QHash<QString, QString> &inMemoryProjectContentsByPath,
+                                          const QString &preferredConfigPath)
+{
     pendingRequest_.projectRootPath = projectRootPath;
+    pendingRequest_.preferredConfigPath = preferredConfigPath;
     pendingRequest_.inMemoryProjectContentsByPath = inMemoryProjectContentsByPath;
     hasPendingRequest_ = true;
     debounceTimer_->start();
@@ -53,6 +61,7 @@ void ProjectStructureScanner::startScan()
         result.projectRootPath = request.projectRootPath;
         result.projectIndex = ProjectStructureIndex::scanProjectIndex(request.projectRootPath,
                                                                       request.inMemoryProjectContentsByPath,
+                                                                      request.preferredConfigPath,
                                                                       &result.errorMessage);
         result.entries = result.projectIndex.entries;
         return result;

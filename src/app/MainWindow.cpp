@@ -1701,7 +1701,7 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
     });
     connect(tab, &TherionStudio::TextEditorTab::documentTextChanged, this, [this, tab]() {
         if (!projectRootPath_.isEmpty()) {
-            rebuildStructureSidebar();
+            requestStructureSidebarRebuild();
         }
         if (currentDocumentWidget() == tab) {
             rebuildMapObjectsTree();
@@ -1901,7 +1901,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
     });
     connect(tab, &TherionStudio::MapEditorTab::documentTextChanged, this, [this, tab]() {
         if (!projectRootPath_.isEmpty()) {
-            rebuildStructureSidebar();
+            requestStructureSidebarRebuild();
         }
         if (currentDocumentWidget() == tab) {
             rebuildMapObjectsTree();

@@ -4227,6 +4227,11 @@ Očekávané soubory jsou `docs/USER_MANUAL.&lt;language&gt;.md` nebo `docs/USER
         <source>The selected project folder does not exist.</source>
         <translation>Vybraná složka projektu neexistuje.</translation>
     </message>
+    <message>
+        <location filename="../src/core/ProjectStructureIndex.cpp" line="633"/>
+        <source>Multiple .thconfig files were found in the project root. Select a project target config in the Compiler pane to build the structure graph.</source>
+        <translation>V kořeni projektu bylo nalezeno více souborů .thconfig. Vyberte cílový konfigurační soubor projektu v panelu Kompilátor, aby bylo možné sestavit graf struktury.</translation>
+    </message>
 </context>
 <context>
     <name>TherionStudio::TextEditorContextHelpController</name>

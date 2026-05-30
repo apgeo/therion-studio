@@ -133,6 +133,13 @@ int runProjectStructureHierarchyTest()
         if (!expect(entry.createsNamespace == expected.createsNamespace, "The survey namespace flag is incorrect.")) {
             return 1;
         }
+        if (!expect(!entry.objectId.isEmpty(), "The survey hierarchy entry object ID should not be empty.")) {
+            return 1;
+        }
+        if (!expect((expected.depth == 0) == entry.parentObjectId.isEmpty(),
+                    "The survey hierarchy parent object ID does not match the nesting depth.")) {
+            return 1;
+        }
     }
 
     return 0;
@@ -201,8 +208,14 @@ int runProjectIndexMapScrapReferenceTest()
     if (!expect(foundMap, "The project index did not find the map entry.")) {
         return 1;
     }
+    if (!expect(!mapEntry.objectId.isEmpty(), "The project index map entry should expose a stable object ID.")) {
+        return 1;
+    }
 
     const QString mapKey = ProjectStructureIndex::structureEntryNodeKey(mapEntry);
+    if (!expect(mapKey == mapEntry.objectId, "The structure node key should prefer the stable object ID.")) {
+        return 1;
+    }
     const QSet<QString> scrapReferences = snapshot.mapScrapReferencesByMapKey.value(mapKey);
     if (!expect(scrapReferences.contains(QStringLiteral("s1")),
                 "The project index did not resolve the map-to-scrap reference from in-memory source text.")) {
@@ -210,6 +223,87 @@ int runProjectIndexMapScrapReferenceTest()
     }
     if (!expect(!scrapReferences.contains(QStringLiteral("stale-scrap")),
                 "The project index used stale on-disk source text for map-to-scrap references.")) {
+        return 1;
+    }
+
+    inMemoryContents.insert(normalizedPathForComparison(rootFile),
+                            QStringLiteral(
+                                "\n"
+                                "survey cave\n"
+                                "  input maps/map.th2\n"
+                                "  map cave-map\n"
+                                "    s1\n"
+                                "  endmap\n"
+                                "endsurvey cave\n"));
+    const ProjectIndexSnapshot shiftedSnapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(),
+                                                                                         inMemoryContents,
+                                                                                         &errorMessage);
+    if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
+    ProjectStructureEntry shiftedMapEntry;
+    bool foundShiftedMap = false;
+    for (const ProjectStructureEntry &entry : shiftedSnapshot.entries) {
+        if (entry.category == QStringLiteral("Maps") && entry.name == QStringLiteral("cave-map")) {
+            shiftedMapEntry = entry;
+            foundShiftedMap = true;
+            break;
+        }
+    }
+    if (!expect(foundShiftedMap, "The shifted project index did not find the map entry.")) {
+        return 1;
+    }
+    if (!expect(shiftedMapEntry.objectId == mapEntry.objectId,
+                "The project index object ID should stay stable when source line numbers shift.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runTh2ObjectIndexGroupingTest()
+{
+    const QVector<ProjectStructureEntry> entries = ProjectStructureIndex::scanTh2Objects(
+        QStringLiteral("/tmp/example.th2"),
+        QStringLiteral(
+            "scrap s1\n"
+            "point 0 0 station -name a1\n"
+            "point 1 1 station -name a2\n"
+            "endscrap\n"));
+
+    if (!expect(entries.size() == 3, "The TH2 object scan should not duplicate the current scrap group.")) {
+        return 1;
+    }
+    if (!expect(entries.at(0).category == QStringLiteral("Scraps")
+                    && entries.at(1).category == QStringLiteral("Stations")
+                    && entries.at(2).category == QStringLiteral("Stations"),
+                "The TH2 object scan returned unexpected entry categories.")) {
+        return 1;
+    }
+    if (!expect(!entries.at(0).objectId.isEmpty(), "The TH2 scrap object ID should not be empty.")) {
+        return 1;
+    }
+    if (!expect(entries.at(1).parentObjectId == entries.at(0).objectId
+                    && entries.at(2).parentObjectId == entries.at(0).objectId,
+                "The TH2 object scan should attach object entries to the current scrap object ID.")) {
+        return 1;
+    }
+
+    const QVector<ProjectStructureEntry> shiftedEntries = ProjectStructureIndex::scanTh2Objects(
+        QStringLiteral("/tmp/example.th2"),
+        QStringLiteral(
+            "\n"
+            "scrap s1\n"
+            "point 0 0 station -name a1\n"
+            "point 1 1 station -name a2\n"
+            "endscrap\n"));
+
+    if (!expect(shiftedEntries.size() == entries.size(), "The shifted TH2 object scan returned an unexpected entry count.")) {
+        return 1;
+    }
+    if (!expect(shiftedEntries.at(1).objectId == entries.at(1).objectId,
+                "The TH2 object ID should stay stable when source line numbers shift.")) {
         return 1;
     }
 
@@ -223,6 +317,9 @@ int main()
         return 1;
     }
     if (runProjectIndexMapScrapReferenceTest() != 0) {
+        return 1;
+    }
+    if (runTh2ObjectIndexGroupingTest() != 0) {
         return 1;
     }
 

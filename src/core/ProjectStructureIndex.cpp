@@ -21,12 +21,23 @@ struct ProjectBlock
 {
     QString category;
     QString name;
+    QString objectId;
     bool createsNamespace = true;
 };
 
 struct ParsedFileCache
 {
     QHash<QString, QVector<TherionParsedLine>> parsedLines;
+};
+
+struct ProjectObjectIdentityGenerator
+{
+    QHash<QString, int> siblingOrdinalsByScope;
+
+    QString nextObjectId(const QString &category,
+                         const QString &name,
+                         const QString &sourceFile,
+                         const QString &parentObjectId);
 };
 
 QString normalizedFilePathKey(const QString &path)
@@ -45,6 +56,50 @@ QString optionValue(const QStringList &tokens, const QString &option);
 QString sectionNameFromLine(const TherionParsedLine &parsedLine);
 QString objectCategoryFromLine(const TherionParsedLine &parsedLine);
 QString objectNameFromLine(const TherionParsedLine &parsedLine);
+
+QString normalizedIdentityToken(const QString &value)
+{
+    QString normalized = value.trimmed().toLower();
+    normalized.replace(QRegularExpression(QStringLiteral(R"(\s+)")), QStringLiteral(" "));
+    return normalized;
+}
+
+QString categoryIdentityToken(const QString &category)
+{
+    QString normalized = normalizedIdentityToken(category);
+    normalized.replace(QLatin1Char(' '), QLatin1Char('-'));
+    return normalized;
+}
+
+QString objectNameIdentityToken(const QString &name)
+{
+    const QString normalized = normalizedIdentityToken(name);
+    return normalized.isEmpty() ? QStringLiteral("anonymous") : normalized;
+}
+
+QString escapedIdentityToken(QString value)
+{
+    value.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
+    value.replace(QLatin1Char('|'), QStringLiteral("\\|"));
+    return value;
+}
+
+QString ProjectObjectIdentityGenerator::nextObjectId(const QString &category,
+                                                     const QString &name,
+                                                     const QString &sourceFile,
+                                                     const QString &parentObjectId)
+{
+    const QString fileToken = escapedIdentityToken(normalizedFilePathKey(sourceFile));
+    const QString parentToken = parentObjectId.isEmpty() ? QStringLiteral("root") : escapedIdentityToken(parentObjectId);
+    const QString categoryToken = escapedIdentityToken(categoryIdentityToken(category));
+    const QString nameToken = escapedIdentityToken(objectNameIdentityToken(name));
+    const QString scopeKey = QStringList{fileToken, parentToken, categoryToken, nameToken}.join(QLatin1Char('|'));
+    const int ordinal = siblingOrdinalsByScope.value(scopeKey, 0) + 1;
+    siblingOrdinalsByScope.insert(scopeKey, ordinal);
+
+    return QStringList{QStringLiteral("project-object"), fileToken, parentToken, categoryToken, nameToken, QString::number(ordinal)}
+        .join(QLatin1Char('|'));
+}
 
 QString projectCategoryFromDirective(const QString &directive)
 {
@@ -245,15 +300,18 @@ void closeBlock(QVector<ProjectBlock> *blockStack, const QString &category, cons
     }
 }
 
-void appendStructureEntry(QVector<ProjectStructureEntry> *entries,
-                          const QString &category,
-                          const QString &name,
-                          const QString &sourceFile,
-                          int lineNumber,
-                          const QVector<ProjectBlock> &blockStack,
-                          bool createsNamespace = true)
+ProjectStructureEntry appendStructureEntry(QVector<ProjectStructureEntry> *entries,
+                                           const QString &category,
+                                           const QString &name,
+                                           const QString &sourceFile,
+                                           int lineNumber,
+                                           const QVector<ProjectBlock> &blockStack,
+                                           ProjectObjectIdentityGenerator *identityGenerator,
+                                           bool createsNamespace = true)
 {
     ProjectStructureEntry entry;
+    entry.parentObjectId = blockStack.isEmpty() ? QString() : blockStack.last().objectId;
+    entry.objectId = identityGenerator->nextObjectId(category, name, sourceFile, entry.parentObjectId);
     entry.category = category;
     entry.name = name;
     entry.sourceFile = sourceFile;
@@ -261,6 +319,7 @@ void appendStructureEntry(QVector<ProjectStructureEntry> *entries,
     entry.depth = blockStack.size();
     entry.createsNamespace = createsNamespace;
     entries->append(entry);
+    return entry;
 }
 
 void appendProjectStructureFromFile(const QString &filePath,
@@ -268,6 +327,7 @@ void appendProjectStructureFromFile(const QString &filePath,
                                     QVector<ProjectBlock> *blockStack,
                                     QSet<QString> *activeFiles,
                                     QVector<ProjectStructureEntry> *entries,
+                                    ProjectObjectIdentityGenerator *identityGenerator,
                                     const QHash<QString, QString> &inMemoryFileContentsByPath)
 {
     const QString normalizedPath = normalizedFilePathKey(filePath);
@@ -285,7 +345,13 @@ void appendProjectStructureFromFile(const QString &filePath,
             const QString inputTarget = parsedLine.tokens.value(1);
             const QString resolvedInputPath = resolveInputPath(normalizedPath, inputTarget);
             if (!resolvedInputPath.isEmpty()) {
-                appendProjectStructureFromFile(resolvedInputPath, cache, blockStack, activeFiles, entries, inMemoryFileContentsByPath);
+                appendProjectStructureFromFile(resolvedInputPath,
+                                               cache,
+                                               blockStack,
+                                               activeFiles,
+                                               entries,
+                                               identityGenerator,
+                                               inMemoryFileContentsByPath);
             }
             continue;
         }
@@ -303,8 +369,15 @@ void appendProjectStructureFromFile(const QString &filePath,
                 ? surveyNameFromLine(parsedLine)
                 : sectionNameFromLine(parsedLine);
             const bool createsNamespace = directive == QStringLiteral("survey") ? surveyCreatesNamespace(parsedLine) : true;
-            appendStructureEntry(entries, openingCategory, openingName, normalizedPath, parsedLine.lineNumber, *blockStack, createsNamespace);
-            blockStack->append(ProjectBlock{openingCategory, openingName, createsNamespace});
+            const ProjectStructureEntry entry = appendStructureEntry(entries,
+                                                                    openingCategory,
+                                                                    openingName,
+                                                                    normalizedPath,
+                                                                    parsedLine.lineNumber,
+                                                                    *blockStack,
+                                                                    identityGenerator,
+                                                                    createsNamespace);
+            blockStack->append(ProjectBlock{openingCategory, openingName, entry.objectId, createsNamespace});
             continue;
         }
 
@@ -313,7 +386,13 @@ void appendProjectStructureFromFile(const QString &filePath,
             continue;
         }
 
-        appendStructureEntry(entries, objectCategory, objectNameFromLine(parsedLine), normalizedPath, parsedLine.lineNumber, *blockStack);
+        appendStructureEntry(entries,
+                             objectCategory,
+                             objectNameFromLine(parsedLine),
+                             normalizedPath,
+                             parsedLine.lineNumber,
+                             *blockStack,
+                             identityGenerator);
     }
 
     activeFiles->remove(normalizedPath);
@@ -569,12 +648,14 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
 
     QVector<ProjectBlock> blockStack;
     QSet<QString> activeFiles;
+    ProjectObjectIdentityGenerator identityGenerator;
     for (const QString &filePath : rootFiles) {
         appendProjectStructureFromFile(filePath,
                                        &cache,
                                        &blockStack,
                                        &activeFiles,
                                        &snapshot.entries,
+                                       &identityGenerator,
                                        inMemoryFileContentsByPath);
     }
 
@@ -604,19 +685,31 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QStri
     const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
     QString currentScrapName;
     int currentScrapLine = 0;
+    QString currentScrapObjectId;
+    ProjectObjectIdentityGenerator identityGenerator;
 
     auto ensureScrap = [&](const QString &scrapName, int lineNumber) {
-        if (!entries.isEmpty() && entries.last().category == QStringLiteral("Scraps") && entries.last().name == scrapName) {
-            return;
+        if (!currentScrapObjectId.isEmpty()) {
+            return currentScrapObjectId;
         }
 
-        entries.append(ProjectStructureEntry{QStringLiteral("Scraps"), scrapName, sourceFile, lineNumber, 0});
+        ProjectStructureEntry entry;
+        entry.objectId = identityGenerator.nextObjectId(QStringLiteral("Scraps"), scrapName, sourceFile, QString());
+        entry.category = QStringLiteral("Scraps");
+        entry.name = scrapName;
+        entry.sourceFile = sourceFile;
+        entry.lineNumber = lineNumber;
+        entry.depth = 0;
+        entries.append(entry);
+        currentScrapObjectId = entry.objectId;
+        return currentScrapObjectId;
     };
 
     for (const TherionParsedLine &parsedLine : parsedLines) {
         if (parsedLine.directive == QStringLiteral("scrap")) {
             currentScrapName = parsedLine.tokens.value(1, QStringLiteral("Unnamed Scrap"));
             currentScrapLine = parsedLine.lineNumber;
+            currentScrapObjectId.clear();
             ensureScrap(currentScrapName, currentScrapLine);
             continue;
         }
@@ -624,6 +717,7 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QStri
         if (parsedLine.directive == QStringLiteral("endscrap")) {
             currentScrapName.clear();
             currentScrapLine = 0;
+            currentScrapObjectId.clear();
             continue;
         }
 
@@ -635,10 +729,13 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QStri
         if (currentScrapName.isEmpty()) {
             currentScrapName = QObject::tr("Unassigned Objects");
             currentScrapLine = 0;
+            currentScrapObjectId.clear();
             ensureScrap(currentScrapName, currentScrapLine);
         }
+        const QString parentObjectId = ensureScrap(currentScrapName, currentScrapLine);
 
         ProjectStructureEntry entry;
+        entry.parentObjectId = parentObjectId;
         entry.category = category;
         entry.name = objectNameFromLine(parsedLine);
         entry.sourceFile = sourceFile;
@@ -648,6 +745,10 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QStri
         if (entry.name.isEmpty()) {
             entry.name = objectDisplayText(entry, parsedLine);
         }
+        entry.objectId = identityGenerator.nextObjectId(entry.category,
+                                                        entry.name,
+                                                        entry.sourceFile,
+                                                        entry.parentObjectId);
 
         entries.append(entry);
     }
@@ -657,6 +758,10 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QStri
 
 QString ProjectStructureIndex::structureEntryNodeKey(const ProjectStructureEntry &entry)
 {
+    if (!entry.objectId.isEmpty()) {
+        return entry.objectId;
+    }
+
     return QStringLiteral("%1:%2").arg(normalizedFilePathKey(entry.sourceFile)).arg(entry.lineNumber);
 }
 }

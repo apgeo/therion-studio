@@ -9,6 +9,8 @@ namespace TherionStudio
 {
 struct ProjectStructureEntry
 {
+    QString objectId;
+    QString parentObjectId;
     QString category;
     QString name;
     QString sourceFile;

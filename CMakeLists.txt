@@ -199,7 +199,7 @@ function(therion_add_app_unit_test target_name)
     target_link_libraries(${target_name} PRIVATE therion_app)
 endfunction()
 
-qt_add_executable(TherionStudio MACOSX_BUNDLE
+set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindow.cpp
     src/app/MainWindow.h
     src/app/MainWindowTherionConsoleBootstrapper.cpp
@@ -220,8 +220,12 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/MainWindowStructureRoles.h
     src/app/MainWindowTherionConsoleController.h
     src/app/MainWindowTherionRunner.cpp
+    src/app/ApplicationStylePolicy.h
     src/app/LucideIconFactory.h
     src/app/WorkspaceCommandBarStyle.h
+)
+
+set(THERION_TEXT_EDITOR_SHARED_SOURCES
     src/app/text_editor/ContextHelpController.cpp
     src/app/text_editor/ContextHelpController.h
     src/app/text_editor/TextEditorOptionValidation.cpp
@@ -347,6 +351,9 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.h
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
     src/app/text_editor/raw_editor/RawEditorTextEdit.h
+)
+
+set(THERION_MAP_EDITOR_SOURCES
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h
@@ -411,6 +418,7 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/map_editor/MapEditorSceneItems.cpp
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
     src/app/text_editor/map_editor/MapEditorSceneSupport.h
+    src/app/text_editor/map_editor/MapEditorSceneThemePolicy.h
     src/app/text_editor/map_editor/MapEditorTabEventRouting.cpp
     src/app/text_editor/map_editor/MapEditorTabControllers.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorControllerDelegates.cpp
@@ -434,6 +442,9 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/map_editor/MapEditorXviBackgroundItem.cpp
     src/app/text_editor/map_editor/MapEditorXviBackgroundItem.h
+)
+
+set(THERION_TEXT_EDITOR_TAB_SOURCES
     src/app/text_editor/TextEditorTab.cpp
     src/app/text_editor/TextEditorTabBootstrap.cpp
     src/app/text_editor/TextEditorTabBlockDetailsDelegates.cpp
@@ -464,13 +475,24 @@ qt_add_executable(TherionStudio MACOSX_BUNDLE
     src/app/text_editor/TextEditorTab.h
     src/editor/TherionSyntaxHighlighter.cpp
     src/editor/TherionSyntaxHighlighter.h
+)
+
+set(THERION_APPLICATION_BOOTSTRAP_SOURCES
     src/platform/ApplicationAppearanceBootstrap.cpp
     src/platform/ApplicationAppearanceBootstrap.h
     src/platform/ApplicationBootstrap.cpp
     src/platform/ApplicationBootstrap.h
     src/platform/ApplicationStartupBootstrap.cpp
     src/platform/ApplicationStartupBootstrap.h
-    src/main.cpp)
+    src/main.cpp
+)
+
+qt_add_executable(TherionStudio MACOSX_BUNDLE
+    ${THERION_MAIN_WINDOW_SOURCES}
+    ${THERION_TEXT_EDITOR_SHARED_SOURCES}
+    ${THERION_MAP_EDITOR_SOURCES}
+    ${THERION_TEXT_EDITOR_TAB_SOURCES}
+    ${THERION_APPLICATION_BOOTSTRAP_SOURCES})
 
 if(WIN32)
     set_target_properties(TherionStudio PROPERTIES
@@ -918,164 +940,11 @@ therion_add_app_unit_test(MainWindowStructureNameOverridesServiceTest
     tests/MainWindowStructureNameOverridesServiceTest.cpp)
 
 set(THERION_EDITOR_UI_TEST_BASE_SOURCES
-    src/app/text_editor/ContextHelpController.cpp
-    src/app/text_editor/ContextHelpController.h
-    src/app/text_editor/TextEditorOptionValidation.cpp
-    src/app/text_editor/TextEditorCommandMetadata.h
-    src/app/text_editor/TextEditorOptionValidation.h
-    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
-    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
-    src/app/text_editor/TextEditorTabBlockEditorPanel.cpp
-    src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
-    src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
-    src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp
-    src/app/text_editor/block_editor/BlockEditorDetailsHelpController.h
-    src/app/text_editor/block_editor/BlockEditorLineBuildService.cpp
-    src/app/text_editor/block_editor/BlockEditorLineBuildService.h
-    src/app/text_editor/block_editor/BlockEditorApplyStateController.cpp
-    src/app/text_editor/block_editor/BlockEditorApplyStateController.h
-    src/app/text_editor/block_editor/BlockEditorApplyExecutor.cpp
-    src/app/text_editor/block_editor/BlockEditorApplyExecutor.h
-    src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp
-    src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.h
-    src/app/text_editor/block_editor/BlockEditorDetailsPaneController.cpp
-    src/app/text_editor/block_editor/BlockEditorDetailsPaneController.h
-    src/app/text_editor/block_editor/BlockEditorToolboxController.cpp
-    src/app/text_editor/block_editor/BlockEditorToolboxController.h
-    src/app/text_editor/block_editor/BlockEditorToolboxList.cpp
-    src/app/text_editor/block_editor/BlockEditorToolboxList.h
-    src/app/text_editor/block_editor/BlockEditorTokenTagEditor.cpp
-    src/app/text_editor/block_editor/BlockEditorTokenTagEditor.h
-    src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp
-    src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.h
-    src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.cpp
-    src/app/text_editor/block_editor/BlockEditorCanvasSelectionController.h
-    src/app/text_editor/block_editor/BlockEditorCanvasView.cpp
-    src/app/text_editor/block_editor/BlockEditorCanvasView.h
-    src/app/text_editor/block_editor/BlockEditorDragMime.h
-    src/app/text_editor/block_editor/BlockEditorCanvasItem.cpp
-    src/app/text_editor/block_editor/BlockEditorCanvasItem.h
-    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.cpp
-    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
-    src/app/text_editor/block_editor/BlockEditorCommandOptionParser.cpp
-    src/app/text_editor/block_editor/BlockEditorCommandOptionParser.h
-    src/app/text_editor/block_editor/BlockEditorDetailsSupport.cpp
-    src/app/text_editor/block_editor/BlockEditorDetailsSupport.h
-    src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
-    src/app/text_editor/block_editor/BlockEditorConfigureController.h
-    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp
-    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.h
-    src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp
-    src/app/text_editor/block_editor/BlockEditorDataBlockDialog.h
-    src/app/text_editor/block_editor/BlockEditorDeleteExecutor.cpp
-    src/app/text_editor/block_editor/BlockEditorDeleteExecutor.h
-    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.cpp
-    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.h
-    src/app/text_editor/block_editor/BlockEditorSourceText.cpp
-    src/app/text_editor/block_editor/BlockEditorSourceText.h
-    src/app/text_editor/block_editor/BlockEditorSourceController.cpp
-    src/app/text_editor/block_editor/BlockEditorSourceController.h
-    src/app/text_editor/block_editor/BlockEditorCanvasBoundaryController.cpp
-    src/app/text_editor/block_editor/BlockEditorCanvasBoundaryController.h
-    src/app/text_editor/block_editor/BlockEditorDirectiveRules.cpp
-    src/app/text_editor/block_editor/BlockEditorDirectiveRules.h
-    src/app/text_editor/block_editor/BlockEditorDocumentOutlineBuilder.cpp
-    src/app/text_editor/block_editor/BlockEditorDocumentOutlineBuilder.h
-    src/app/text_editor/block_editor/BlockEditorDropTargetResolver.cpp
-    src/app/text_editor/block_editor/BlockEditorDropTargetResolver.h
-    src/app/text_editor/block_editor/BlockEditorInsertionPlanner.cpp
-    src/app/text_editor/block_editor/BlockEditorInsertionPlanner.h
-    src/app/text_editor/block_editor/BlockEditorInsertionController.cpp
-    src/app/text_editor/block_editor/BlockEditorInsertionController.h
-    src/app/text_editor/block_editor/BlockEditorInsertionTemplateBuilder.cpp
-    src/app/text_editor/block_editor/BlockEditorInsertionTemplateBuilder.h
-    src/app/text_editor/block_editor/BlockEditorMovePlanner.cpp
-    src/app/text_editor/block_editor/BlockEditorMovePlanner.h
-    src/app/text_editor/block_editor/BlockEditorMoveController.cpp
-    src/app/text_editor/block_editor/BlockEditorMoveController.h
-    src/app/text_editor/block_editor/BlockEditorMovePreviewController.cpp
-    src/app/text_editor/block_editor/BlockEditorMovePreviewController.h
-    src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.cpp
-    src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.h
-    src/app/text_editor/TextEditorContextHelpController.cpp
-    src/app/text_editor/TextEditorContextHelpController.h
-    src/app/text_editor/TextEditorCursorController.cpp
-    src/app/text_editor/TextEditorCursorController.h
-    src/app/text_editor/TextEditorDocumentController.cpp
-    src/app/text_editor/TextEditorDocumentController.h
-    src/app/text_editor/TextEditorDocumentIoService.cpp
-    src/app/text_editor/TextEditorDocumentIoService.h
-    src/app/text_editor/TextEditorDocumentPreconditionsService.cpp
-    src/app/text_editor/TextEditorDocumentPreconditionsService.h
-    src/app/text_editor/TextEditorDocumentPersistenceStateService.cpp
-    src/app/text_editor/TextEditorDocumentPersistenceStateService.h
-    src/app/text_editor/TextEditorDocumentWorkflowController.cpp
-    src/app/text_editor/TextEditorDocumentWorkflowController.h
-    src/app/text_editor/TextEditorTabInteractionController.cpp
-    src/app/text_editor/TextEditorTabInteractionController.h
-    src/app/text_editor/TextEditorEncodingController.cpp
-    src/app/text_editor/TextEditorEncodingController.h
-    src/app/text_editor/TextEditorAppearanceController.cpp
-    src/app/text_editor/TextEditorAppearanceController.h
-    src/app/text_editor/TextEditorSourceRewriteController.cpp
-    src/app/text_editor/TextEditorSourceRewriteController.h
-    src/app/text_editor/TextEditorStatusController.cpp
-    src/app/text_editor/TextEditorStatusController.h
-    src/app/text_editor/TextEditorModeController.cpp
-    src/app/text_editor/TextEditorModeController.h
-    src/app/text_editor/TextEditorSurfaceStyler.cpp
-    src/app/text_editor/TextEditorSurfaceStyler.h
-    src/app/text_editor/raw_editor/RawEditorPanelBuilder.cpp
-    src/app/text_editor/raw_editor/RawEditorFindController.cpp
-    src/app/text_editor/raw_editor/RawEditorFindController.h
-    src/app/text_editor/raw_editor/RawEditorCompletionController.cpp
-    src/app/text_editor/raw_editor/RawEditorCompletionControllerContext.cpp
-    src/app/text_editor/raw_editor/RawEditorCompletionController.h
-    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.cpp
-    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.h
-    src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.cpp
-    src/app/text_editor/raw_editor/RawEditorCompletionContextAnalyzer.h
-    src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.cpp
-    src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.h
-    src/app/text_editor/raw_editor/RawEditorCompletionPopupController.cpp
-    src/app/text_editor/raw_editor/RawEditorCompletionPopupController.h
-    src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.cpp
-    src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.h
-    src/app/text_editor/raw_editor/RawEditorTextEdit.cpp
-    src/app/text_editor/raw_editor/RawEditorTextEdit.h)
+    ${THERION_TEXT_EDITOR_SHARED_SOURCES})
 
 set(THERION_TEXT_EDITOR_UI_TEST_SOURCES
     ${THERION_EDITOR_UI_TEST_BASE_SOURCES}
-    src/app/text_editor/TextEditorTab.cpp
-    src/app/text_editor/TextEditorTabBootstrap.cpp
-    src/app/text_editor/TextEditorTabBlockDetailsDelegates.cpp
-    src/app/text_editor/TextEditorTabDocumentModeDelegates.cpp
-    src/app/text_editor/TextEditorTabRawFindDelegates.cpp
-    src/app/text_editor/TextEditorTabSourceRewriteDelegates.cpp
-    src/app/text_editor/TextEditorTabStatusCursorDelegates.cpp
-    src/app/text_editor/TextEditorTabCompletionFacade.cpp
-    src/app/text_editor/TextEditorTabAppearanceController.cpp
-    src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
-    src/app/text_editor/TextEditorTabBlockEditorLineBuildService.cpp
-    src/app/text_editor/TextEditorTabBlockEditorOptionArgsController.cpp
-    src/app/text_editor/TextEditorTabBlockEditorResolverContexts.cpp
-    src/app/text_editor/TextEditorTabBlockEditorSelectionContexts.cpp
-    src/app/text_editor/TextEditorTabBlockEditorToolboxController.cpp
-    src/app/text_editor/TextEditorTabBlockEditorApplyExecutor.cpp
-    src/app/text_editor/TextEditorTabBlockEditorApplyStateController.cpp
-    src/app/text_editor/TextEditorTabBlockEditorCanvasBoundaryController.cpp
-    src/app/text_editor/TextEditorTabBlockEditorSourceController.cpp
-    src/app/text_editor/TextEditorTabContextHelpController.cpp
-    src/app/text_editor/TextEditorTabCursorController.cpp
-    src/app/text_editor/TextEditorTabDocumentController.cpp
-    src/app/text_editor/TextEditorTabEncodingController.cpp
-    src/app/text_editor/TextEditorTabInteractionController.cpp
-    src/app/text_editor/TextEditorTabModeController.cpp
-    src/app/text_editor/TextEditorTabSourceRewriteController.cpp
-    src/app/text_editor/TextEditorTabStatusController.cpp
-    src/app/text_editor/TextEditorTab.h
-    src/editor/TherionSyntaxHighlighter.cpp
-    src/editor/TherionSyntaxHighlighter.h)
+    ${THERION_TEXT_EDITOR_TAB_SOURCES})
 
 set(THERION_TEXT_EDITOR_UI_TEST_RESOURCE_FILES
     resources/therion_command_catalog.json
@@ -1163,93 +1032,7 @@ qt_add_executable(TextEditorTabInteractionControllerTest
 target_link_libraries(TextEditorTabInteractionControllerTest PRIVATE therion_core Qt6::Core Qt6::Widgets)
 
 set(THERION_MAP_EDITOR_UI_TEST_SOURCES
-    src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
-    src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
-    src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h
-    src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.cpp
-    src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.h
-    src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp
-    src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.h
-    src/app/text_editor/map_editor/MapEditorCanvasEditContext.h
-    src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp
-    src/app/text_editor/map_editor/MapEditorCanvasEditController.h
-    src/app/text_editor/map_editor/MapEditorInspectorBackgroundController.cpp
-    src/app/text_editor/map_editor/MapEditorInspectorBackgroundController.h
-    src/app/text_editor/map_editor/MapEditorInspectorData.cpp
-    src/app/text_editor/map_editor/MapEditorInspectorData.h
-    src/app/text_editor/map_editor/MapEditorInspectorObjectContext.h
-    src/app/text_editor/map_editor/MapEditorInspectorObjectController.cpp
-    src/app/text_editor/map_editor/MapEditorInspectorObjectController.h
-    src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp
-    src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.h
-    src/app/text_editor/map_editor/MapEditorObjectDetailsContext.h
-    src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp
-    src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.h
-    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.cpp
-    src/app/text_editor/map_editor/MapEditorObjectDetailsLogic.h
-    src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.cpp
-    src/app/text_editor/map_editor/MapEditorObjectDeletePlanner.h
-    src/app/text_editor/map_editor/MapEditorLineExtensionPlanner.cpp
-    src/app/text_editor/map_editor/MapEditorLineExtensionPlanner.h
-    src/app/text_editor/map_editor/MapEditorLineSplitPlanner.cpp
-    src/app/text_editor/map_editor/MapEditorLineSplitPlanner.h
-    src/app/text_editor/map_editor/MapEditorObjectMovePlanner.cpp
-    src/app/text_editor/map_editor/MapEditorObjectMovePlanner.h
-    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.cpp
-    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h
-    src/app/text_editor/map_editor/MapEditorLineDecorationItem.cpp
-    src/app/text_editor/map_editor/MapEditorLineDecorationItem.h
-    src/app/text_editor/map_editor/MapEditorPointSymbolGeometry.h
-    src/app/text_editor/map_editor/MapEditorStylePreviewWidget.cpp
-    src/app/text_editor/map_editor/MapEditorStylePreviewWidget.h
-    src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
-    src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
-    src/app/text_editor/map_editor/MapEditorInteractiveDrawContext.h
-    src/app/text_editor/map_editor/MapEditorInteractiveDrawController.cpp
-    src/app/text_editor/map_editor/MapEditorInteractiveDrawController.h
-    src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.cpp
-    src/app/text_editor/map_editor/MapEditorInteractiveDrawLogic.h
-    src/app/text_editor/map_editor/MapEditorInputPolicy.cpp
-    src/app/text_editor/map_editor/MapEditorInputPolicy.h
-    src/app/text_editor/map_editor/MapEditorMagnifierOverlay.cpp
-    src/app/text_editor/map_editor/MapEditorMagnifierOverlay.h
-    src/app/text_editor/map_editor/MapEditorViewportInputContext.h
-    src/app/text_editor/map_editor/MapEditorViewportInputController.cpp
-    src/app/text_editor/map_editor/MapEditorViewportInputController.h
-    src/app/text_editor/map_editor/MapEditorSceneLifecycleController.cpp
-    src/app/text_editor/map_editor/MapEditorSceneLifecycleController.h
-    src/app/text_editor/map_editor/MapEditorSceneRefreshController.cpp
-    src/app/text_editor/map_editor/MapEditorSceneRefreshController.h
-    src/app/text_editor/map_editor/MapEditorSelectionContext.h
-    src/app/text_editor/map_editor/MapEditorSelectionController.cpp
-    src/app/text_editor/map_editor/MapEditorSelectionController.h
-    src/app/text_editor/map_editor/MapEditorSceneInternals.h
-    src/app/text_editor/map_editor/MapEditorSceneItems.cpp
-    src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
-    src/app/text_editor/map_editor/MapEditorSceneSupport.h
-    src/app/text_editor/map_editor/MapEditorTabEventRouting.cpp
-    src/app/text_editor/map_editor/MapEditorTabControllers.cpp
-    src/app/text_editor/map_editor/MapEditorTabInspectorControllerDelegates.cpp
-    src/app/text_editor/map_editor/MapEditorTabCanvasEditContext.cpp
-    src/app/text_editor/map_editor/MapEditorTabSceneRefreshLifecycle.cpp
-    src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp
-    src/app/text_editor/map_editor/MapEditorTabSourceEditWorkflow.cpp
-    src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundContext.cpp
-    src/app/text_editor/map_editor/MapEditorTabInspectorObjectContext.cpp
-    src/app/text_editor/map_editor/MapEditorTabInspectorObjectEvents.cpp
-    src/app/text_editor/map_editor/MapEditorTabInteractiveDrawContext.cpp
-    src/app/text_editor/map_editor/MapEditorTabLineExtension.cpp
-    src/app/text_editor/map_editor/MapEditorTabObjectDetailsContext.cpp
-    src/app/text_editor/map_editor/MapEditorTabSceneContexts.cpp
-    src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
-    src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
-    src/app/text_editor/map_editor/MapEditorTabDetachedPaneDelegates.cpp
-    src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp
-    src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
-    src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp
-    src/app/text_editor/map_editor/MapEditorTab.h
-    src/app/text_editor/map_editor/MapEditorXviBackgroundItem.cpp
-    src/app/text_editor/map_editor/MapEditorXviBackgroundItem.h)
+    ${THERION_MAP_EDITOR_SOURCES})
 
 add_library(therion_map_editor_ui_test_support STATIC
     ${THERION_MAP_EDITOR_UI_TEST_SOURCES})

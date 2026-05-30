@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
+from collections import Counter
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -154,6 +156,18 @@ MAP_EDITOR_CONTEXT_CONTROLLER_FORBIDDEN_PATTERNS = (
     ),
 )
 
+CMAKE_SOURCE_PATH_PATTERN = re.compile(r"src/[A-Za-z0-9_./+-]+\.(?:cpp|h)")
+CMAKE_SOURCE_SUFFIXES = {".cpp", ".h"}
+CMAKE_UNIQUE_SOURCE_SETS = (
+    "THERION_CORE_SOURCES",
+    "THERION_APP_SOURCES",
+    "THERION_MAIN_WINDOW_SOURCES",
+    "THERION_TEXT_EDITOR_SHARED_SOURCES",
+    "THERION_MAP_EDITOR_SOURCES",
+    "THERION_TEXT_EDITOR_TAB_SOURCES",
+    "THERION_APPLICATION_BOOTSTRAP_SOURCES",
+)
+
 
 def count_lines(path: pathlib.Path) -> int:
     with path.open("r", encoding="utf-8", errors="replace") as handle:
@@ -164,11 +178,46 @@ def contains_text(path: pathlib.Path, text: str) -> bool:
     return text in path.read_text(encoding="utf-8", errors="replace")
 
 
+def repository_source_paths() -> list[str]:
+    source_root = REPO_ROOT / "src"
+    return sorted(
+        path.relative_to(REPO_ROOT).as_posix()
+        for path in source_root.rglob("*")
+        if path.is_file() and path.suffix in CMAKE_SOURCE_SUFFIXES
+    )
+
+
+def cmake_source_paths(cmake_text: str) -> set[str]:
+    return set(CMAKE_SOURCE_PATH_PATTERN.findall(cmake_text))
+
+
+def cmake_set_source_paths(cmake_text: str, variable_name: str) -> list[str]:
+    paths: list[str] = []
+    in_set = False
+    set_prefix = f"set({variable_name}"
+
+    for line in cmake_text.splitlines():
+        stripped = line.strip()
+        if not in_set:
+            if not stripped.startswith(set_prefix):
+                continue
+            in_set = True
+            stripped = stripped[len(set_prefix):]
+
+        line_before_close = stripped.split(")", 1)[0]
+        paths.extend(CMAKE_SOURCE_PATH_PATTERN.findall(line_before_close))
+        if ")" in stripped:
+            break
+
+    return paths
+
+
 def main() -> int:
     violations: list[tuple[str, int, int]] = []
     checked: list[tuple[str, int, int]] = []
     layout_violations: list[str] = []
     dependency_violations: list[str] = []
+    source_list_violations: list[str] = []
 
     for relative_path, limit in LINE_LIMITS.items():
         absolute_path = REPO_ROOT / relative_path
@@ -243,7 +292,27 @@ def main() -> int:
                 if pattern in file_text:
                     dependency_violations.append(f"{relative_path}: forbidden `{pattern}` ({message})")
 
-    if violations or layout_violations or dependency_violations:
+    cmake_text = (REPO_ROOT / "CMakeLists.txt").read_text(encoding="utf-8", errors="replace")
+    repository_sources = repository_source_paths()
+    listed_sources = cmake_source_paths(cmake_text)
+
+    for relative_path in repository_sources:
+        if relative_path not in listed_sources:
+            source_list_violations.append(f"{relative_path}: missing from CMakeLists.txt")
+
+    for relative_path in sorted(listed_sources):
+        if not (REPO_ROOT / relative_path).exists():
+            source_list_violations.append(f"{relative_path}: listed in CMakeLists.txt but file is missing")
+
+    for source_set in CMAKE_UNIQUE_SOURCE_SETS:
+        set_sources = cmake_set_source_paths(cmake_text, source_set)
+        for relative_path, count in sorted(Counter(set_sources).items()):
+            if count > 1:
+                source_list_violations.append(
+                    f"{source_set}: {relative_path} is listed {count} times"
+                )
+
+    if violations or layout_violations or dependency_violations or source_list_violations:
         print("Structure constraint violations detected:")
         for relative_path, actual, limit in violations:
             if actual < 0:
@@ -254,8 +323,13 @@ def main() -> int:
             print(f"  - {violation}")
         for violation in dependency_violations:
             print(f"  - {violation}")
+        for violation in source_list_violations:
+            print(f"  - {violation}")
         print("")
-        print("Keep large UI translation units from growing and preserve stable editor-mode/dependency layout.")
+        print(
+            "Keep large UI translation units from growing, preserve stable editor-mode/dependency layout, "
+            "and keep CMake source lists aligned with src/."
+        )
         return 1
 
     print("Structure constraints passed:")
@@ -278,6 +352,11 @@ def main() -> int:
     print("  - MapEditor selection controller uses an explicit context instead of MapEditorTab friendship")
     print("  - MapEditor viewport-input controller uses an explicit context instead of MapEditorTab friendship")
     print("  - MapEditor canvas-edit controller uses an explicit context instead of MapEditorTab friendship")
+    print("Source-list hygiene passed:")
+    print(f"  - {len(repository_sources)} src/**/*.cpp and src/**/*.h files are listed in CMakeLists.txt")
+    print("  - CMakeLists.txt does not reference missing src/**/*.cpp or src/**/*.h files")
+    for source_set in CMAKE_UNIQUE_SOURCE_SETS:
+        print(f"  - {source_set} has no duplicate direct source entries")
     return 0
 
 

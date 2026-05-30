@@ -109,10 +109,11 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 6 partial: Linux packaging workflow no longer executes mutable `linuxdeployqt` `continuous` AppImage downloads.
 - [x] Phase 6 partial: Linux packaging now builds AppImages through Qt's generated Linux deployment script inside Debian 13 containers, uses `scripts/linux-packages/prepare_appimage_appdir.sh` to stage Qt plugin groups plus `ldd`-resolved Qt runtime libraries and wrap AppRun with runtime library/plugin paths, preflights the AppDir launch, records architecture-specific tool provenance in artifact manifests, and smoke-launches AppImages on Ubuntu 26.04 and Debian 13.
 - [x] Phase 6 partial: Linux packaging workflow now runs daily on the default branch in addition to manual dispatch, using `Release` builds for scheduled validation.
+- [x] Phase 6: packaging and CI hardening completed for the current scope. APT repository publishing is explicitly deferred and signing/notarization remains part of later release-readiness work, not a Phase 6 exit criterion.
+- [x] Architecture follow-up partial: `CMakeLists.txt` now reuses shared source-set variables for main-window, text-editor shared, text-editor tab, map-editor, and startup/bootstrap sources so the app target and UI test support targets no longer duplicate whole editor module source lists.
+- [x] Architecture follow-up partial: `scripts/check_structure_constraints.py` now enforces CMake source-list hygiene for all `src/**/*.cpp`/`src/**/*.h` files, missing CMake source paths, and duplicate direct entries in the primary source sets.
 - [x] Repo-wide structure, naming, security, performance, and file-granularity review refreshed on 2026-05-30.
-- [ ] Phase 6 partial: consider adding an APT repository publishing workflow for the `.deb` channel after `.deb`/AppImage CI is stable.
-- [ ] Architecture follow-up: reduce CMake source-list duplication and merge only trivial shell-adapter translation units where they share one responsibility.
-- [ ] Phase 6: packaging and CI hardening completed.
+- [ ] Architecture follow-up: merge only trivial shell-adapter translation units where they share one responsibility.
 
 ## Review Scope And Current State
 
@@ -155,8 +156,8 @@ Current directory-structure verdict:
 
 High-priority structural findings:
 
-- `CMakeLists.txt` is now buildable but remains a maintenance hotspot at about 1,300 lines. It repeats large UI source lists for the app, text-editor test support, map-editor test support, individual tests, and tools. This makes every file split or rename more expensive than it should be.
-- Header-only policy files such as `src/app/ApplicationStylePolicy.h` and `src/app/text_editor/map_editor/MapEditorSceneThemePolicy.h` are not listed in CMake source sets. That is not a build break, but it weakens IDE/source-list visibility and reinforces the need for source-set hygiene.
+- `CMakeLists.txt` is now buildable but remains a maintenance hotspot at about 1,100 lines. The app, text-editor UI test support, and map-editor UI test support now reuse shared source-set variables, and structure constraints now verify that `src/**/*.cpp`/`src/**/*.h` files stay listed in CMake.
+- Individual focused tests and tools still repeat smaller source subsets where they intentionally avoid linking the full GUI target.
 - `src/app/text_editor/TextEditorTab.h` and `src/app/text_editor/map_editor/MapEditorTab.h` remain broad orchestration declarations. Their `.cpp` shells have been reduced, but the headers still expose many private workflow methods, UI members, controller pointers, and state groups.
 - `src/app/MainWindow.cpp` is within the current ratchet limit but still owns too many local helper types and UI orchestration helpers, including a private `DetachedMapWindow` whose name overlaps conceptually with `MapEditorDetachedPaneWindow`.
 - `src/app/MainWindowDocumentHelpers.*` is a pragmatic bridge, but the `Helpers` name is vague. If it grows, rename or replace it with a clearer document-widget adapter contract.
@@ -203,11 +204,9 @@ Performance review:
 
 Recommended next actions:
 
-1. Refactor CMake source definitions into reusable source-set variables or focused support libraries so app/test/tool source lists do not duplicate whole editor modules.
-2. Add a lightweight source-list hygiene check that reports `src/**/*.cpp` and important header-only policy files missing from expected CMake source groups.
-3. Consolidate remaining Lucide SVG rendering through `LucideIconFactory`.
-4. Extract `MapEditorBackgroundLayerModel`/loader responsibilities before adding more background-layer features.
-5. Split `TherionDocumentEditor` by rewrite domain only after adding/confirming round-trip regression tests for the touched rewrite operations.
+1. Consolidate remaining Lucide SVG rendering through `LucideIconFactory`.
+2. Extract `MapEditorBackgroundLayerModel`/loader responsibilities before adding more background-layer features.
+3. Split `TherionDocumentEditor` by rewrite domain only after adding/confirming round-trip regression tests for the touched rewrite operations.
 
 ## 1. Flaw Analysis
 
@@ -311,8 +310,8 @@ When source/resource lists are manually maintained and duplicated, refactors bec
 
 Current concern:
 
-- The current dirty `CMakeLists.txt` appears to contain duplicated argument/resource list fragments from recent edits. This should be corrected before further architecture work.
-- Large explicit source/resource lists are workable, but they need structure and guardrails.
+- `CMakeLists.txt` still relies on large explicit source/resource lists, but the app and editor UI test targets now share focused source-set variables instead of duplicating whole editor module lists.
+- The remaining risk is source-list drift in smaller test/tool subsets and header-only policy files that are not visible in CMake source sets.
 
 ### 1.2 Application-Specific Risks
 
@@ -734,12 +733,12 @@ Recommended CI jobs:
 
 ### Phase 0 - Stabilize The Current Refactor
 
-Goal: make the current dirty architecture work build-clean before adding more abstractions.
+Goal: keep the current architecture build-clean before adding more abstractions.
 
 Actions:
 
-- Fix current `CMakeLists.txt` drift before deeper changes.
-- Ensure source/resource lists are valid and not accidentally duplicated.
+- Add a lightweight CMake source-list hygiene check before deeper changes.
+- Ensure source/resource lists remain valid and are not accidentally duplicated.
 - Build and run the existing unit test suite.
 - Verify the app still launches on the local platform.
 - Keep `IFileSystem`, `ISessionStore`, and related adapters only if they are fully wired and tested.
@@ -857,6 +856,8 @@ Exit criteria:
 - Appearance behavior is owned by one module.
 
 ### Phase 6 - Packaging And CI Hardening
+
+Status: complete for the current scope. APT repository publishing is deferred, and signing/notarization belongs to later release-readiness work.
 
 Goal: prevent platform regressions from returning.
 
@@ -1067,7 +1068,6 @@ A Qt implementation can load bundled `:/resources/...` files first and user over
 
 These are low-risk and should happen before deep refactoring.
 
-- Reduce `CMakeLists.txt` source-list duplication and verify build/test health.
 - Consolidate remaining direct Lucide SVG rendering into `LucideIconFactory`.
 - Remove obsolete compatibility-only headers such as `WorkspaceCommandBarStyle.h` when include users are stable.
 - Add tests around `IFileSystem` and `ISessionStore` fakes.

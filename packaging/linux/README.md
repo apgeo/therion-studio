@@ -16,7 +16,7 @@ They are built by the manual GitHub Actions workflow:
 
 ## Produced Artifacts
 
-- `therion-studio-<package_label>-ubuntu-26.04-x86_64.deb`
+- `therion-studio-<package_label>-ubuntu-26.04-amd64.deb`
 - `TherionStudio-<package_label>-Linux-x86_64.AppImage`
 - `TherionStudio-Linux-artifacts-manifest.json`
 
@@ -51,9 +51,9 @@ considered tested on Debian 13 and Ubuntu 26.04 only when both AppImage smoke ch
   `THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON` so Qt's generated Linux deployment script
   populates the AppDir during install.
 - The AppImage workflow additionally runs `scripts/prepare_linux_appimage_appdir.sh` to stage
-  `ldd`-resolved `libQt6*.so*` runtime families into `AppDir/usr/lib`, write an `AppRun` wrapper
-  that sets `LD_LIBRARY_PATH` and `QT_PLUGIN_PATH`, verify the offscreen platform plugin, and
-  launch-test the AppDir before packaging.
+  selected Qt plugin groups, stage `ldd`-resolved `libQt6*.so*` runtime families into
+  `AppDir/usr/lib`, write an `AppRun` wrapper that sets `LD_LIBRARY_PATH` and `QT_PLUGIN_PATH`,
+  verify the offscreen platform plugin, and launch-test the AppDir before packaging.
 - The final AppImage is produced with pinned `appimagetool` 1.9.1 and pinned
   `type2-runtime` 20251108 `runtime-x86_64`, both SHA256-verified by the workflow before use.
 - The manifest records the AppImage Qt package source/version/package set, `appimagetool`, and AppImage

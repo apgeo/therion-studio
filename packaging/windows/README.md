@@ -33,7 +33,7 @@ cpack --config build-win/CPackConfig.cmake -C Release --verbose
 Expected artifact:
 
 ```text
-build-win/TherionStudio-<version>-Windows-x86_64.exe
+build-win/TherionStudio-<package_label>-Windows-x86_64.exe
 ```
 
 ## What CPack Does
@@ -58,8 +58,8 @@ or a specific commit SHA.
 If the checked-out commit is exactly tagged with a CalVer release tag such as `v2026.5.0`, the
 workflow passes `-DTHERION_STUDIO_VERSION=2026.5.0` and
 `-DTHERION_STUDIO_PACKAGE_LABEL=2026.5.0` to CMake. Branch and commit builds derive a development
-version from the current UTC year/month, such as `2026.5.0`, and append the short commit SHA to
-the package label, such as `2026.5.0-a1b2c3d`.
+version from the current UTC year/month, such as `2026.5.0`, and use a human-readable snapshot
+package label such as `dev-a1b2c3d`, matching the Linux artifact convention.
 
 Recommended release flow:
 

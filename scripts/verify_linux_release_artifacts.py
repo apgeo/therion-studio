@@ -60,7 +60,10 @@ def main() -> int:
         print(f"AppImage build directory does not exist: {appimage_dir}")
         return 1
 
-    expected_deb_name = f"therion-studio-{args.expected_package_label}-{args.deb_platform_label}-x86_64.deb"
+    expected_deb_name = (
+        f"therion-studio-{args.expected_package_label}-"
+        f"{args.deb_platform_label}-{args.deb_qt_architecture}.deb"
+    )
     deb_path = build_dir / expected_deb_name
     if not deb_path.exists():
         print(f"Missing expected .deb artifact: {deb_path}")

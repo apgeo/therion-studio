@@ -10,9 +10,11 @@ appdir="$1"
 usr_dir="$appdir/usr"
 app_binary="$usr_dir/bin/TherionStudio"
 qt_bundle_lib_dir="$usr_dir/lib"
+qt_bundle_plugin_dir="$usr_dir/plugins"
 
 test -x "$app_binary"
 mkdir -p "$qt_bundle_lib_dir"
+mkdir -p "$qt_bundle_plugin_dir"
 shopt -s nullglob
 
 copy_qt_library_family() {
@@ -60,8 +62,76 @@ collect_qt_dependencies() {
     done < <(ldd "$binary" 2>/dev/null || true)
 }
 
+append_qt_plugin_root() {
+    local plugin_root="$1"
+    local roots_file="$2"
+
+    if [[ -d "$plugin_root" ]] && ! grep -Fxq "$plugin_root" "$roots_file"; then
+        printf "%s\n" "$plugin_root" >> "$roots_file"
+    fi
+}
+
+collect_qt_plugin_roots() {
+    local roots_file="$1"
+    local multiarch
+
+    : > "$roots_file"
+
+    if [[ -n "${THERION_STUDIO_QT_PLUGIN_DIR:-}" ]]; then
+        append_qt_plugin_root "$THERION_STUDIO_QT_PLUGIN_DIR" "$roots_file"
+    fi
+    if command -v qtpaths6 >/dev/null 2>&1; then
+        append_qt_plugin_root "$(qtpaths6 --plugin-dir 2>/dev/null || true)" "$roots_file"
+    fi
+    if command -v qtpaths >/dev/null 2>&1; then
+        append_qt_plugin_root "$(qtpaths --plugin-dir 2>/dev/null || true)" "$roots_file"
+    fi
+    if command -v qmake6 >/dev/null 2>&1; then
+        append_qt_plugin_root "$(qmake6 -query QT_INSTALL_PLUGINS 2>/dev/null || true)" "$roots_file"
+    fi
+    if command -v dpkg-architecture >/dev/null 2>&1; then
+        multiarch="$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || true)"
+        if [[ -n "$multiarch" ]]; then
+            append_qt_plugin_root "/usr/lib/$multiarch/qt6/plugins" "$roots_file"
+        fi
+    fi
+
+    append_qt_plugin_root "/usr/lib/x86_64-linux-gnu/qt6/plugins" "$roots_file"
+    append_qt_plugin_root "/usr/lib/qt6/plugins" "$roots_file"
+}
+
+copy_qt_plugin_groups() {
+    local roots_file="$1"
+    local plugin_root
+    local group
+    local source_dir
+    local -a plugin_groups=(
+        iconengines
+        imageformats
+        platforminputcontexts
+        platforms
+        tls
+        xcbglintegrations
+    )
+
+    while IFS= read -r plugin_root; do
+        for group in "${plugin_groups[@]}"; do
+            source_dir="$plugin_root/$group"
+            if [[ -d "$source_dir" ]]; then
+                mkdir -p "$qt_bundle_plugin_dir/$group"
+                cp -a "$source_dir"/. "$qt_bundle_plugin_dir/$group/"
+            fi
+        done
+    done < "$roots_file"
+}
+
+plugin_roots="$(mktemp)"
 dependency_roots="$(mktemp)"
-trap 'rm -f "$dependency_roots"' EXIT
+trap 'rm -f "$plugin_roots" "$dependency_roots"' EXIT
+
+collect_qt_plugin_roots "$plugin_roots"
+copy_qt_plugin_groups "$plugin_roots"
+
 find "$usr_dir" -type f \( -path "$app_binary" -o -name "*.so" -o -name "*.so.*" \) | sort > "$dependency_roots"
 while IFS= read -r binary; do
     while IFS= read -r qt_lib; do

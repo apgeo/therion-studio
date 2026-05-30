@@ -107,7 +107,8 @@ libraries causes link failures with unresolved `__imp__` Qt symbols.
 CPack runs the CMake install step internally. The install step runs Qt deployment on Windows,
 copying the required Qt runtime next to the installed `bin/TherionStudio.exe`, including the
 Qt platform plugin at `bin/platforms/qwindows.dll`. CPack is configured to use NSIS for the
-Windows installer and emits `TherionStudio-<version>-Windows-x86_64.exe` in the build directory.
+Windows installer and emits `TherionStudio-<package_label>-Windows-x86_64.exe` in the build
+directory.
 The installer metadata uses the root `LICENSE` file for the project license.
 The installed executable is linked as a Windows GUI application and shall not open a console
 window when launched from Explorer, Start Menu, or the desktop shortcut.
@@ -123,9 +124,10 @@ installer on `windows-2022` and uploads it as an artifact. Use its `source_ref` 
 from `main`, a release tag, or a specific commit SHA. When the checked-out commit is exactly tagged
 with a CalVer release tag such as `v2026.5.0`, the workflow derives
 `THERION_STUDIO_VERSION=2026.5.0` and passes it to CMake so CPack uses the tag version without
-editing `CMakeLists.txt`. Branch and SHA builds derive a development package label such as
-`2026.5.0-a1b2c3d`. The workflow also validates that the produced installer file name matches the
-resolved package label and emits a manifest JSON with installer SHA256.
+editing `CMakeLists.txt`. Branch and SHA builds derive a CalVer development application version
+such as `2026.5.0` and a human-readable package label such as `dev-a1b2c3d`, matching the Linux
+snapshot artifact convention. The workflow also validates that the produced installer file name
+matches the resolved package label and emits a manifest JSON with installer SHA256.
 
 CI build workflows also run staged install-layout smoke checks via
 `scripts/verify_install_layout.py`:
@@ -145,7 +147,7 @@ The manual workflow `.github/workflows/linux-packages.yml` builds the `.deb` pac
 `ubuntu:26.04` container and builds the AppImage inside a `debian:13` container. It validates
 install layout and artifact naming, then uploads:
 
-- `therion-studio-<package_label>-ubuntu-26.04-x86_64.deb`
+- `therion-studio-<package_label>-ubuntu-26.04-amd64.deb`
 - `TherionStudio-<package_label>-Linux-x86_64.AppImage`
 - `TherionStudio-Linux-artifacts-manifest.json` (SHA256 + build metadata)
 
@@ -162,13 +164,14 @@ The AppImage is built from a separate CMake tree inside a `debian:13` container 
 `THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON` and Debian's distro Qt packages. The AppImage path
 enables Qt's generated Linux deployment script during install so the AppDir receives Qt plugins and
 deploy metadata. Because Debian's Qt shared libraries live in system library directories that Qt's
-Linux deploy helper may exclude by default, the workflow also copies the `ldd`-resolved
-`libQt6*.so*` runtime families into `AppDir/usr/lib`, writes an `AppRun` wrapper that sets
-`LD_LIBRARY_PATH` and `QT_PLUGIN_PATH`, and performs an offscreen AppDir launch sanity check before
-packaging through `scripts/prepare_linux_appimage_appdir.sh`. The workflow then packages the AppDir
-with pinned `appimagetool` 1.9.1 and a pinned `type2-runtime` 20251108 runtime, both
-SHA256-verified before execution/use. The manifest records the `.deb` and AppImage Qt package
-sources, versions, and package sets in addition to `appimagetool` and runtime provenance.
+Linux deploy helper may exclude by default, the workflow also copies selected Qt plugin groups from
+the distro Qt plugin directory, copies the `ldd`-resolved `libQt6*.so*` runtime families into
+`AppDir/usr/lib`, writes an `AppRun` wrapper that sets `LD_LIBRARY_PATH` and `QT_PLUGIN_PATH`, and
+performs an offscreen AppDir launch sanity check before packaging through
+`scripts/prepare_linux_appimage_appdir.sh`. The workflow then packages the AppDir with pinned
+`appimagetool` 1.9.1 and a pinned `type2-runtime` 20251108 runtime, both SHA256-verified before
+execution/use. The manifest records the `.deb` and AppImage Qt package sources, versions, and
+package sets in addition to `appimagetool` and runtime provenance.
 
 The same workflow also runs follow-up smoke jobs in `ubuntu:26.04` and `debian:13` containers.
 The Ubuntu target installs the produced `.deb`, verifies installed paths, and performs an offscreen

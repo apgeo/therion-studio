@@ -806,6 +806,7 @@ Requirements:
 - Windows release installers shall place the executable and deployed Qt runtime in a consistent runtime directory, preserving Qt plugin subdirectories such as `platforms/qwindows.dll` relative to the executable
 - Windows release executables shall use the GUI subsystem so launching the installed application does not open a console window or tie application lifetime to a console host
 - Windows release installers shall not bundle the external Therion command-line executable; users shall configure or install Therion separately through the existing runner settings
+- Windows snapshot installer artifacts shall use a human-readable development artifact label such as `dev-<short_sha>` while keeping generated application and installer metadata on the current CalVer baseline
 - Windows signed installers are preferred for production releases; unsigned installers may be used only for clearly documented internal preview builds
 - Linux production releases shall provide at least one broadly portable distribution format, such as AppImage or an equivalent self-contained bundle; distro-specific packages may be added in addition to the primary artifact
 - Linux production release workflows shall not execute mutable `continuous` third-party packaging binaries; externally sourced portable-package tooling shall come from maintained immutable releases, repository packages, or audited built-from-source inputs with recorded provenance

@@ -81,9 +81,13 @@ Inputs:
 Expected artifact pattern:
 
 ```text
-TherionStudio-<version>-Windows-x86_64.exe
+TherionStudio-<package_label>-Windows-x86_64.exe
 TherionStudio-Windows-installer-manifest.json
 ```
+
+Release-tagged builds use the tag version as the Windows installer artifact label. Snapshot builds
+from branches or raw SHAs use `dev-<short_sha>` as the artifact label while keeping the generated
+CalVer application/installer version in metadata.
 
 ## 6b. Build Linux Package Artifacts
 
@@ -99,7 +103,7 @@ Inputs:
 Expected artifact patterns:
 
 ```text
-therion-studio-<package_label>-ubuntu-26.04-x86_64.deb
+therion-studio-<package_label>-ubuntu-26.04-amd64.deb
 TherionStudio-<package_label>-Linux-x86_64.AppImage
 TherionStudio-Linux-artifacts-manifest.json
 ```
@@ -120,16 +124,16 @@ when both AppImage smoke checks pass.
 
 The AppImage is generated in a `debian:13` container from Qt's CMake deployment script using
 Debian distro Qt packages, plus the `scripts/prepare_linux_appimage_appdir.sh` AppRun wrapper and
-explicit `ldd`-resolved `libQt6*.so*` staging into `AppDir/usr/lib`. The workflow launch-tests the
-AppDir before packaging, then uses pinned `appimagetool` and pinned AppImage runtime inputs. Do not
-replace this with mutable `continuous` downloads.
+explicit Qt plugin staging plus `ldd`-resolved `libQt6*.so*` staging into `AppDir/usr/lib`. The
+workflow launch-tests the AppDir before packaging, then uses pinned `appimagetool` and pinned
+AppImage runtime inputs. Do not replace this with mutable `continuous` downloads.
 
 ## 7. Publish GitHub Release
 
 1. Create GitHub Release for tag `v2026.5.1`.
 2. Attach the Windows installer artifact from the workflow run.
 3. Attach Linux artifacts from `Linux Packages`:
-   - `therion-studio-<package_label>-ubuntu-26.04-x86_64.deb`
+   - `therion-studio-<package_label>-ubuntu-26.04-amd64.deb`
    - `TherionStudio-<package_label>-Linux-x86_64.AppImage`
 4. Keep generated manifest JSON files with release records:
    - `TherionStudio-Windows-installer-manifest.json`

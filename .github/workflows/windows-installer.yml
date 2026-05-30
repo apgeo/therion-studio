@@ -92,7 +92,7 @@ jobs:
             $month = [int]$now.ToString("MM")
             $shortSha = git rev-parse --short HEAD
             $version = "$year.$month.0"
-            $packageLabel = "$version-$shortSha"
+            $packageLabel = "dev-$shortSha"
             "THERION_STUDIO_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
             "THERION_STUDIO_PACKAGE_LABEL=$packageLabel" | Out-File -FilePath $env:GITHUB_ENV -Append
             "No CalVer release tag points at this commit; using development version $version with package label $packageLabel."

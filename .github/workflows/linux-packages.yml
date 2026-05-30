@@ -28,10 +28,10 @@ jobs:
       DEB_BUILD_IMAGE: ubuntu:26.04
       DEB_PLATFORM_LABEL: ubuntu-26.04
       DEB_QT_ARCHITECTURE: amd64
-      DEB_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
+      DEB_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-qpa-plugins,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
       APPIMAGE_BUILD_IMAGE: debian:13
       APPIMAGE_QT_ARCHITECTURE: amd64
-      APPIMAGE_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
+      APPIMAGE_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-qpa-plugins,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
 
     steps:
       - name: Check out repository
@@ -90,6 +90,8 @@ jobs:
             bash -lc '
               set -euo pipefail
               export DEBIAN_FRONTEND=noninteractive
+              export LANG=C.UTF-8
+              export LC_ALL=C.UTF-8
               apt-get update
               apt-get install -y \
                 ca-certificates \
@@ -110,6 +112,7 @@ jobs:
                 python3 \
                 qt6-base-dev \
                 qt6-base-dev-tools \
+                qt6-qpa-plugins \
                 qt6-svg-dev \
                 qt6-tools-dev \
                 qt6-tools-dev-tools
@@ -126,6 +129,7 @@ jobs:
                 -DTHERION_STUDIO_PACKAGE_LABEL="$THERION_STUDIO_PACKAGE_LABEL" \
                 -DTHERION_STUDIO_DEBIAN_VERSION="$THERION_STUDIO_DEBIAN_VERSION" \
                 -DTHERION_STUDIO_DEB_PLATFORM_LABEL="$THERION_STUDIO_DEB_PLATFORM_LABEL" \
+                -DTHERION_STUDIO_DEB_ARCHITECTURE_LABEL="$DEB_QT_ARCHITECTURE" \
                 -DTHERION_ENABLE_STRICT_WARNINGS=ON
               cmake --build build-linux-packages --target TherionStudio --parallel
               cmake --install build-linux-packages --prefix "$PWD/build-linux-packages/install-smoke"
@@ -159,6 +163,8 @@ jobs:
             bash -lc '
               set -euo pipefail
               export DEBIAN_FRONTEND=noninteractive
+              export LANG=C.UTF-8
+              export LC_ALL=C.UTF-8
               apt-get update
               apt-get install -y \
                 ca-certificates \
@@ -178,6 +184,7 @@ jobs:
                 patchelf \
                 qt6-base-dev \
                 qt6-base-dev-tools \
+                qt6-qpa-plugins \
                 qt6-svg-dev \
                 qt6-tools-dev \
                 qt6-tools-dev-tools \

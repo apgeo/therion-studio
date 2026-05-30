@@ -33,6 +33,7 @@ def main() -> int:
     parser.add_argument("--version", required=True)
     parser.add_argument("--source-ref", required=True)
     parser.add_argument("--build-type", required=True)
+    parser.add_argument("--debian-version", required=True)
     parser.add_argument("--appimagetool-url", required=True)
     parser.add_argument("--appimagetool-sha256", required=True)
     parser.add_argument("--appimage-runtime-url", required=True)
@@ -108,6 +109,7 @@ def main() -> int:
             "source_ref": args.source_ref,
         },
         "package": {
+            "debian_version": args.debian_version,
             "package_label": args.expected_package_label,
             "version": args.version,
         },

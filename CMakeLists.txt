@@ -12,6 +12,12 @@ if(NOT THERION_STUDIO_PACKAGE_LABEL MATCHES "^[A-Za-z0-9._-]+$")
     message(FATAL_ERROR "THERION_STUDIO_PACKAGE_LABEL may contain only letters, numbers, dots, underscores, and hyphens")
 endif()
 
+set(THERION_STUDIO_DEBIAN_VERSION "${THERION_STUDIO_VERSION}" CACHE STRING
+    "Debian package Version field. CI may add snapshot metadata for development .deb builds.")
+if(NOT THERION_STUDIO_DEBIAN_VERSION MATCHES "^[0-9][A-Za-z0-9.+~-]*$")
+    message(FATAL_ERROR "THERION_STUDIO_DEBIAN_VERSION must be a valid Debian version starting with a digit")
+endif()
+
 project(TherionStudio
     VERSION "${THERION_STUDIO_VERSION}"
     LANGUAGES CXX)
@@ -697,6 +703,7 @@ elseif(UNIX AND NOT APPLE)
     set(CPACK_PACKAGE_VENDOR "Therion Studio")
     set(CPACK_PACKAGE_CONTACT "Therion Studio maintainers")
     set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+    set(CPACK_DEBIAN_PACKAGE_VERSION "${THERION_STUDIO_DEBIAN_VERSION}")
     set(CPACK_PACKAGE_FILE_NAME "therion-studio-${THERION_STUDIO_PACKAGE_LABEL}-linux-x86_64")
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Therion Studio desktop editor")
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")

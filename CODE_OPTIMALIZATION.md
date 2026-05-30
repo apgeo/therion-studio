@@ -103,7 +103,8 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 6 partial: Windows installer workflow now validates exact installer artifact naming against `THERION_STUDIO_PACKAGE_LABEL` and emits a SHA256 manifest via `scripts/verify_windows_installer_artifact.py` before upload.
 - [x] Phase 6 partial: Linux packaging now provides a `.deb` preview/tester artifact via dedicated `.github/workflows/linux-packages.yml` workflow.
 - [x] Phase 6 partial: Linux release artifacts are now naming-verified and accompanied by SHA256 manifest metadata through `scripts/verify_linux_release_artifacts.py`.
-- [x] Phase 6 partial: Linux packaging workflow now runs Ubuntu 26.04 and Debian 13 `.deb` install/launch smoke verification in follow-up containerized jobs while keeping the `.deb` artifact name distro-neutral.
+- [x] Phase 6 partial: Linux snapshot artifacts now separate human-readable `dev-<short_sha>` artifact labels from valid Debian `Version` metadata (`<calver>+git<yyyymmdd>.g<short_sha>`).
+- [x] Phase 6 partial: Linux packaging workflow now runs Ubuntu 26.04 `.deb` install/launch smoke verification and uses AppImage smoke coverage for Debian 13, keeping the `.deb` artifact name distro-neutral without treating Ubuntu-built dependency metadata as Debian-compatible.
 - [x] Phase 6 partial: Linux packaging workflow no longer executes mutable `linuxdeployqt` `continuous` AppImage downloads.
 - [x] Phase 6 partial: Linux packaging now builds an AppImage through Qt's generated Linux deployment script inside a Debian 13 container plus pinned `appimagetool`/runtime inputs, records tool provenance in the artifact manifest, and smoke-launches the AppImage on Ubuntu 26.04 and Debian 13.
 - [x] Repo-wide structure, naming, security, performance, and file-granularity review refreshed on 2026-05-30.

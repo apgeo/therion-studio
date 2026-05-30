@@ -138,7 +138,7 @@ CI build workflows also run staged install-layout smoke checks via
 
 Linux packaging currently targets two distributable artifacts:
 
-- `.deb` package for Debian/Ubuntu-family systems
+- `.deb` package for Ubuntu-family systems
 - AppImage as the portable Linux channel
 
 The manual workflow `.github/workflows/linux-packages.yml` builds both packages on
@@ -149,7 +149,13 @@ The manual workflow `.github/workflows/linux-packages.yml` builds both packages 
 - `TherionStudio-Linux-artifacts-manifest.json` (SHA256 + build metadata)
 
 The `.deb` artifact intentionally keeps a distro-neutral `linux-x86_64` file name because the
-package is intended for tested Debian/Ubuntu-family targets rather than a single Ubuntu release.
+package is intended for tested Ubuntu-family targets rather than a single Ubuntu release. The
+Ubuntu-built `.deb` is not treated as the Debian compatibility path because Ubuntu and Debian may
+use different Qt package names in dependency metadata.
+Release-tagged builds use the CalVer tag as both the artifact label and Debian package version.
+Snapshot builds use `dev-<short_sha>` as the artifact label and a Debian package version in the
+form `<calver>+git<yyyymmdd>.g<short_sha>`, so artifact names stay readable while `apt` sees a
+valid, monotonic package version.
 
 The AppImage is built from a separate CMake tree inside a `debian:13` container with
 `THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON` and Debian's distro Qt packages. Ubuntu 24.04's distro
@@ -161,11 +167,11 @@ SHA256-verified before execution/use. The manifest records the AppImage Qt packa
 and package set in addition to `appimagetool` and runtime provenance.
 
 The same workflow also runs follow-up smoke jobs in `ubuntu:26.04` and `debian:13` containers.
-Each target installs the produced `.deb`, verifies installed paths, and performs offscreen launch
-sanity checks for both the installed `.deb` binary and the generated AppImage. The `.deb` package
-is the Ubuntu coverage path, including Ubuntu 24.04 build/install validation. The AppImage should
-be documented as tested on Debian 13 and Ubuntu 26.04 only when both smoke jobs pass for that
-artifact.
+The Ubuntu target installs the produced `.deb`, verifies installed paths, and performs an offscreen
+`.deb` launch sanity check. Both Ubuntu 26.04 and Debian 13 launch the generated AppImage. The
+`.deb` package is the Ubuntu coverage path, including Ubuntu 24.04 build/install validation. The
+AppImage should be documented as tested on Debian 13 and Ubuntu 26.04 only when both smoke jobs
+pass for that artifact.
 
 Do not use mutable `linuxdeployqt` `continuous` AppImage downloads or unmaintained Qt
 deployment plugins for production release artifact generation.

@@ -2,7 +2,7 @@
 
 Therion Studio currently provides two Linux artifacts:
 
-- `.deb` package for Debian/Ubuntu-family systems
+- `.deb` package for Ubuntu-family systems
 - AppImage as the portable Linux channel
 
 They are built by the manual GitHub Actions workflow:
@@ -23,20 +23,25 @@ They are built by the manual GitHub Actions workflow:
 The manifest includes file names, sizes, and SHA256 checksums.
 
 The `.deb` artifact intentionally uses a distro-neutral `linux-x86_64` suffix. Do not add an
-`ubuntu` suffix unless the package becomes tied to a specific Ubuntu release baseline.
+`ubuntu` suffix unless the package becomes tied to a specific Ubuntu release baseline. The
+Ubuntu-built `.deb` is not the Debian compatibility path because Ubuntu and Debian may use
+different Qt package names in dependency metadata.
+Release-tagged builds use the CalVer tag as the artifact label and Debian package version.
+Snapshot builds use `dev-<short_sha>` for artifact names and
+`<calver>+git<yyyymmdd>.g<short_sha>` for the Debian package `Version` field.
 
-After artifact creation, the workflow runs Debian/Ubuntu forward-compatibility smoke checks:
+After artifact creation, the workflow runs Linux artifact smoke checks:
 
 - launches an `ubuntu:26.04` container
 - launches a `debian:13` container
-- installs the generated `.deb`
-- verifies expected installed paths
-- performs an offscreen `.deb` launch sanity check
-- performs an offscreen AppImage launch sanity check
+- installs the generated `.deb` on Ubuntu 26.04
+- verifies expected installed paths for the Ubuntu `.deb`
+- performs an offscreen `.deb` launch sanity check on Ubuntu 26.04
+- performs offscreen AppImage launch sanity checks on Ubuntu 26.04 and Debian 13
 
-Ubuntu 26.04 and Debian 13 are considered tested `.deb` targets for a given artifact only when the
-corresponding workflow smoke jobs pass. Ubuntu 24.04 is covered by the `.deb` build and staged
-install validation. The AppImage is considered tested on Debian 13 and Ubuntu 26.04 only when both
+Ubuntu 26.04 is considered a tested `.deb` target for a given artifact only when the corresponding
+workflow smoke job passes. Ubuntu 24.04 is covered by the `.deb` build and staged install
+validation. The AppImage is considered tested on Debian 13 and Ubuntu 26.04 only when both
 AppImage smoke checks pass.
 
 ## Build Notes

@@ -44,18 +44,27 @@ jobs:
           if [[ -n "$release_tag" ]]; then
             version="${release_tag#v}"
             package_label="$version"
-            echo "THERION_STUDIO_VERSION=$version" >> "$GITHUB_ENV"
-            echo "THERION_STUDIO_PACKAGE_LABEL=$package_label" >> "$GITHUB_ENV"
+            debian_version="$version"
+            {
+              echo "THERION_STUDIO_VERSION=$version"
+              echo "THERION_STUDIO_PACKAGE_LABEL=$package_label"
+              echo "THERION_STUDIO_DEBIAN_VERSION=$debian_version"
+            } >> "$GITHUB_ENV"
             echo "Resolved Therion Studio release version $version from tag $release_tag"
           else
             year="$(date -u +%Y)"
             month="$((10#$(date -u +%m)))"
+            snapshot_date="$(date -u +%Y%m%d)"
             short_sha="$(git rev-parse --short HEAD)"
             version="${year}.${month}.0"
-            package_label="${version}-${short_sha}"
-            echo "THERION_STUDIO_VERSION=$version" >> "$GITHUB_ENV"
-            echo "THERION_STUDIO_PACKAGE_LABEL=$package_label" >> "$GITHUB_ENV"
-            echo "No CalVer release tag points at this commit; using development version $version with package label $package_label."
+            package_label="dev-${short_sha}"
+            debian_version="${version}+git${snapshot_date}.g${short_sha}"
+            {
+              echo "THERION_STUDIO_VERSION=$version"
+              echo "THERION_STUDIO_PACKAGE_LABEL=$package_label"
+              echo "THERION_STUDIO_DEBIAN_VERSION=$debian_version"
+            } >> "$GITHUB_ENV"
+            echo "No CalVer release tag points at this commit; using development version $version, package label $package_label, and Debian version $debian_version."
           fi
 
       - name: Install packaging dependencies
@@ -90,6 +99,7 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=/usr
           -DTHERION_STUDIO_VERSION=${{ env.THERION_STUDIO_VERSION }}
           -DTHERION_STUDIO_PACKAGE_LABEL=${{ env.THERION_STUDIO_PACKAGE_LABEL }}
+          -DTHERION_STUDIO_DEBIAN_VERSION=${{ env.THERION_STUDIO_DEBIAN_VERSION }}
           -DTHERION_ENABLE_STRICT_WARNINGS=ON
 
       - name: Build .deb app
@@ -120,6 +130,7 @@ jobs:
             -e "APPIMAGE_RUNTIME_SHA256=$APPIMAGE_RUNTIME_SHA256" \
             -e "APPIMAGE_RUNTIME_URL=$APPIMAGE_RUNTIME_URL" \
             -e "BUILD_TYPE=${{ inputs.build_type }}" \
+            -e "THERION_STUDIO_DEBIAN_VERSION=$THERION_STUDIO_DEBIAN_VERSION" \
             -e "THERION_STUDIO_PACKAGE_LABEL=$THERION_STUDIO_PACKAGE_LABEL" \
             -e "THERION_STUDIO_VERSION=$THERION_STUDIO_VERSION" \
             -v "$PWD:/workspace" \
@@ -162,6 +173,7 @@ jobs:
                 -DCMAKE_INSTALL_PREFIX=/usr \
                 -DTHERION_STUDIO_VERSION="$THERION_STUDIO_VERSION" \
                 -DTHERION_STUDIO_PACKAGE_LABEL="$THERION_STUDIO_PACKAGE_LABEL" \
+                -DTHERION_STUDIO_DEBIAN_VERSION="$THERION_STUDIO_DEBIAN_VERSION" \
                 -DTHERION_ENABLE_STRICT_WARNINGS=ON \
                 -DTHERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON
               cmake --build build-linux-appimage --target TherionStudio --parallel
@@ -205,6 +217,7 @@ jobs:
             --version "${{ env.THERION_STUDIO_VERSION }}" \
             --source-ref "${{ inputs.source_ref }}" \
             --build-type "${{ inputs.build_type }}" \
+            --debian-version "${{ env.THERION_STUDIO_DEBIAN_VERSION }}" \
             --appimagetool-url "$APPIMAGETOOL_URL" \
             --appimagetool-sha256 "$APPIMAGETOOL_SHA256" \
             --appimage-runtime-url "$APPIMAGE_RUNTIME_URL" \
@@ -227,7 +240,7 @@ jobs:
           if-no-files-found: error
 
   smoke-linux-targets:
-    name: Smoke test .deb and AppImage on ${{ matrix.target_name }}
+    name: Smoke test Linux artifacts on ${{ matrix.target_name }}
     needs: package
     runs-on: ubuntu-24.04
     strategy:
@@ -236,8 +249,10 @@ jobs:
         include:
           - target_name: Ubuntu 26.04
             container_image: ubuntu:26.04
+            deb_smoke: true
           - target_name: Debian 13
             container_image: debian:13
+            deb_smoke: false
     container:
       image: ${{ matrix.container_image }}
 
@@ -257,6 +272,7 @@ jobs:
           path: /tmp/therion-linux-packages
 
       - name: Install .deb package
+        if: ${{ matrix.deb_smoke }}
         shell: bash
         run: |
           set -euo pipefail
@@ -269,6 +285,7 @@ jobs:
           apt-get install -y "$deb_path"
 
       - name: Verify installed paths
+        if: ${{ matrix.deb_smoke }}
         run: |
           test -x /usr/bin/TherionStudio
           test -f /usr/share/applications/therion-studio.desktop
@@ -276,6 +293,7 @@ jobs:
           test -f /usr/share/metainfo/therion-studio.metainfo.xml
 
       - name: Launch .deb smoke test (offscreen)
+        if: ${{ matrix.deb_smoke }}
         shell: bash
         run: |
           set -euo pipefail

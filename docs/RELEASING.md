@@ -104,14 +104,20 @@ TherionStudio-<package_label>-Linux-x86_64.AppImage
 TherionStudio-Linux-artifacts-manifest.json
 ```
 
-The `.deb` artifact name stays distro-neutral because the package is validated against tested
-Debian/Ubuntu-family targets rather than tied to one Ubuntu release. Ubuntu coverage is provided
-by the `.deb` channel, including the Ubuntu 24.04 build baseline. The workflow includes follow-up
-Ubuntu 26.04 and Debian 13 container smoke jobs that install the generated `.deb` and perform
-offscreen launch sanity checks for both the installed `.deb` binary and the generated AppImage.
+Release-tagged builds use the tag version as the Linux artifact label and Debian package version.
+Snapshot builds from branches or raw SHAs use `dev-<short_sha>` as the artifact label and
+`<calver>+git<yyyymmdd>.g<short_sha>` as the Debian package `Version` field.
 
-For a release, treat Ubuntu 26.04 and Debian 13 as tested `.deb` targets only when both smoke jobs
-pass in the release workflow run. Treat the AppImage as tested on Debian 13 and Ubuntu 26.04 only
+The `.deb` artifact name stays distro-neutral because the package is validated against tested
+Ubuntu-family targets rather than tied to one Ubuntu release. Ubuntu coverage is provided by the
+`.deb` channel, including the Ubuntu 24.04 build baseline. The Ubuntu-built `.deb` is not the
+Debian compatibility path because Ubuntu and Debian may use different Qt package names in
+dependency metadata. The workflow includes follow-up Ubuntu 26.04 and Debian 13 container smoke
+jobs; Ubuntu 26.04 installs and launches the generated `.deb`, while both targets launch the
+generated AppImage.
+
+For a release, treat Ubuntu 26.04 as a tested `.deb` target only when the Ubuntu `.deb` smoke job
+passes in the release workflow run. Treat the AppImage as tested on Debian 13 and Ubuntu 26.04 only
 when both AppImage smoke checks pass.
 
 The AppImage is generated in a `debian:13` container from Qt's CMake deployment script using

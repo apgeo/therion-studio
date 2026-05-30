@@ -219,7 +219,7 @@ jobs:
           fetch-depth: 1
 
       - name: Download Linux package artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: TherionStudio-Linux-packages-${{ matrix.appimage_architecture }}
           path: /tmp/therion-linux-packages

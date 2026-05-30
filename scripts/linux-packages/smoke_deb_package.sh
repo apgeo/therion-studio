@@ -20,12 +20,20 @@ apt-get install -y \
     coreutils \
     file
 
-deb_name_pattern="*.deb"
+deb_name_pattern="therion-studio-*.deb"
 if [[ -n "$deb_architecture_label" ]]; then
-    deb_name_pattern="*-${deb_architecture_label}.deb"
+    deb_name_pattern="therion-studio-*-${deb_architecture_label}.deb"
 fi
 
-deb_path="$(find "$artifact_dir" -maxdepth 1 -type f -name "$deb_name_pattern" | sort | head -n1)"
+deb_path="$(
+    find "$artifact_dir" \
+        -maxdepth 3 \
+        -type f \
+        -name "$deb_name_pattern" \
+        ! -path "*/_CPack_Packages/*" \
+        | sort \
+        | head -n1
+)"
 if [[ -z "$deb_path" ]]; then
     echo "No .deb artifact found in $artifact_dir" >&2
     find "$artifact_dir" -maxdepth 3 -print | sort >&2 || true

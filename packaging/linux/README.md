@@ -76,6 +76,8 @@ considered tested on Debian 13 and Ubuntu 26.04 only when both AppImage smoke ch
   `scripts/linux-packages/smoke_deb_package_docker.sh` for the Ubuntu `.deb` and
   `scripts/linux-packages/smoke_appimage_package_docker.sh` for AppImage launch checks on Debian 13 or
   Ubuntu 26.04.
+- Smoke scripts accept either direct local build directories or an `actions/download-artifact`
+  extraction root containing `build-linux-packages/` and `build-linux-appimage/` subdirectories.
 - The full local Linux build and smoke pass can be run with
   `scripts/linux-packages/build_and_smoke_packages_docker.sh`. Set `THERION_STUDIO_LINUX_ARCH=arm64` to run
   the same local path for ARM64.

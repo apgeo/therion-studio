@@ -236,6 +236,9 @@ scripts/linux-packages/smoke_appimage_package_docker.sh debian:13 build-linux-ap
 ```
 
 For ARM64 local smoke tests, use the same commands with `THERION_STUDIO_LINUX_ARCH=arm64`.
+The smoke scripts accept either a direct local build directory such as `build-linux-packages` or
+`build-linux-appimage`, or an `actions/download-artifact` extraction root containing those build
+subdirectories.
 
 To run the full local Linux package pass in one command, including both builds and all smoke tests,
 run:

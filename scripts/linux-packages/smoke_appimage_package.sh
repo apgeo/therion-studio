@@ -28,12 +28,20 @@ apt-get install -y \
     libopengl0 \
     libxkbcommon0
 
-appimage_name_pattern="*.AppImage"
+appimage_name_pattern="TherionStudio-*.AppImage"
 if [[ -n "$appimage_architecture_label" ]]; then
-    appimage_name_pattern="*Linux-${appimage_architecture_label}.AppImage"
+    appimage_name_pattern="TherionStudio-*Linux-${appimage_architecture_label}.AppImage"
 fi
 
-appimage_path="$(find "$artifact_dir" -maxdepth 1 -type f -name "$appimage_name_pattern" | sort | head -n1)"
+appimage_path="$(
+    find "$artifact_dir" \
+        -maxdepth 3 \
+        -type f \
+        -name "$appimage_name_pattern" \
+        ! -path "*/_CPack_Packages/*" \
+        | sort \
+        | head -n1
+)"
 if [[ -z "$appimage_path" ]]; then
     echo "No AppImage artifact found in $artifact_dir" >&2
     find "$artifact_dir" -maxdepth 3 -print | sort >&2 || true

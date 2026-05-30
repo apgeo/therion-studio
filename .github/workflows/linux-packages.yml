@@ -132,6 +132,13 @@ jobs:
           fi
           test -f "$qt_root/lib/cmake/Qt6/Qt6Config.cmake"
           echo "APPIMAGE_QT_ROOT=$qt_root" >> "$GITHUB_ENV"
+          echo "QT_PLUGIN_PATH=$qt_root/plugins" >> "$GITHUB_ENV"
+          if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
+            echo "LD_LIBRARY_PATH=$qt_root/lib:$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
+          else
+            echo "LD_LIBRARY_PATH=$qt_root/lib" >> "$GITHUB_ENV"
+          fi
+          echo "$qt_root/bin" >> "$GITHUB_PATH"
           echo "Using AppImage Qt from $qt_root"
 
       - name: Configure AppImage build

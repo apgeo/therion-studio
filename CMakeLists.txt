@@ -24,6 +24,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(THERION_ENABLE_STRICT_WARNINGS
     "Enable warnings-as-errors for non-UI library targets"
     OFF)
+option(THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL
+    "Run Qt's Linux runtime deployment script during install; intended for AppDir/AppImage builds"
+    OFF)
 
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Widgets Svg Concurrent)
 find_package(Qt6LinguistTools 6.4 QUIET)
@@ -603,19 +606,50 @@ install(TARGETS TherionStudio
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if(UNIX AND NOT APPLE)
+    set(THERION_STUDIO_LINUX_DESKTOP_ID "therion-studio" CACHE STRING
+        "Linux desktop file and AppStream application ID, without the .desktop/.metainfo.xml suffix")
+    set(THERION_STUDIO_LINUX_ICON_ID "${THERION_STUDIO_LINUX_DESKTOP_ID}" CACHE STRING
+        "Linux icon ID installed under hicolor theme, without the .png suffix")
+    foreach(_therion_linux_id IN ITEMS
+            THERION_STUDIO_LINUX_DESKTOP_ID
+            THERION_STUDIO_LINUX_ICON_ID)
+        if(NOT "${${_therion_linux_id}}" MATCHES "^[A-Za-z0-9._-]+$")
+            message(FATAL_ERROR
+                "${_therion_linux_id} may contain only letters, numbers, dots, underscores, and hyphens")
+        endif()
+    endforeach()
+
     set(THERION_STUDIO_LINUX_DESKTOP_FILE
         "${CMAKE_CURRENT_BINARY_DIR}/TherionStudio.desktop")
+    set(THERION_STUDIO_LINUX_METAINFO_FILE
+        "${CMAKE_CURRENT_BINARY_DIR}/TherionStudio.metainfo.xml")
     configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake/linux/TherionStudio.desktop.in"
         "${THERION_STUDIO_LINUX_DESKTOP_FILE}"
         @ONLY)
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/linux/TherionStudio.metainfo.xml.in"
+        "${THERION_STUDIO_LINUX_METAINFO_FILE}"
+        @ONLY)
 
     install(FILES "${THERION_STUDIO_LINUX_DESKTOP_FILE}"
-        DESTINATION "share/applications"
-        RENAME "therion-studio.desktop")
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
+        RENAME "${THERION_STUDIO_LINUX_DESKTOP_ID}.desktop")
     install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/${THERION_STUDIO_APP_ICON_PNG}"
-        DESTINATION "share/icons/hicolor/256x256/apps"
-        RENAME "therion-studio.png")
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps"
+        RENAME "${THERION_STUDIO_LINUX_ICON_ID}.png")
+    install(FILES "${THERION_STUDIO_LINUX_METAINFO_FILE}"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/metainfo"
+        RENAME "${THERION_STUDIO_LINUX_DESKTOP_ID}.metainfo.xml")
+endif()
+
+if(UNIX AND NOT APPLE AND THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL)
+    qt_generate_deploy_app_script(
+        TARGET TherionStudio
+        OUTPUT_SCRIPT THERION_STUDIO_QT_DEPLOY_SCRIPT
+        NO_UNSUPPORTED_PLATFORM_ERROR
+        POST_INCLUDE_REGEXES ".*/libQt6[^/]*\\.so(\\..*)?$")
+    install(SCRIPT ${THERION_STUDIO_QT_DEPLOY_SCRIPT})
 endif()
 
 if(WIN32)

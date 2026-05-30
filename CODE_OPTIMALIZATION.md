@@ -103,10 +103,11 @@ This tracker records architecture optimization progress at phase level. `WORKLOG
 - [x] Phase 6 partial: Windows installer workflow now validates exact installer artifact naming against `THERION_STUDIO_PACKAGE_LABEL` and emits a SHA256 manifest via `scripts/verify_windows_installer_artifact.py` before upload.
 - [x] Phase 6 partial: Linux packaging now provides a `.deb` preview/tester artifact via dedicated `.github/workflows/linux-packages.yml` workflow.
 - [x] Phase 6 partial: Linux release artifacts are now naming-verified and accompanied by SHA256 manifest metadata through `scripts/verify_linux_release_artifacts.py`.
-- [x] Phase 6 partial: Linux packaging workflow now runs Ubuntu 26.04 `.deb` install/launch smoke verification in a follow-up containerized job to validate forward-compatibility on the next Ubuntu LTS line.
-- [x] Phase 6 partial: Linux packaging workflow no longer executes mutable `linuxdeployqt` `continuous` AppImage downloads; AppImage generation is deferred until a maintained portable Linux artifact path is selected.
+- [x] Phase 6 partial: Linux packaging workflow now runs Ubuntu 26.04 and Debian 13 `.deb` install/launch smoke verification in follow-up containerized jobs while keeping the `.deb` artifact name distro-neutral.
+- [x] Phase 6 partial: Linux packaging workflow no longer executes mutable `linuxdeployqt` `continuous` AppImage downloads.
+- [x] Phase 6 partial: Linux packaging now builds an AppImage through Qt's generated Linux deployment script plus pinned `appimagetool`/runtime inputs, records tool provenance in the artifact manifest, and smoke-launches the AppImage on Ubuntu 26.04 and Debian 13.
 - [x] Repo-wide structure, naming, security, performance, and file-granularity review refreshed on 2026-05-30.
-- [ ] Phase 6 partial: choose and verify a maintained broadly portable Linux production artifact path, such as Flatpak or another reproducible self-contained bundle.
+- [ ] Phase 6 partial: consider adding an APT repository publishing workflow for the `.deb` channel after `.deb`/AppImage CI is stable.
 - [ ] Architecture follow-up: reduce CMake source-list duplication and merge only trivial shell-adapter translation units where they share one responsibility.
 - [ ] Phase 6: packaging and CI hardening completed.
 
@@ -183,7 +184,7 @@ Security and supply-chain review:
 - Runtime process execution is mostly safe: Therion runs through `QProcess::start(program, arguments)` rather than a shell, and user-supplied arguments are split with `QProcess::splitCommand`.
 - The main runtime security boundary remains user-selected external executables, config paths, and working directories. Continue showing resolved executable/config/working-directory state in the UI before runs and keep failures actionable.
 - Linux packaging no longer runs `linuxdeployqt-continuous-x86_64.AppImage`. A mutable `continuous` AppImage plus changing checksum is not release-grade, and `linuxdeploy-plugin-qt` should not be adopted while its maintenance status is weak.
-- The current Linux workflow is a `.deb` preview/tester path. Production Linux release readiness remains blocked on a maintained broadly portable package format with reproducible tooling and CI smoke coverage.
+- The current Linux workflow builds both a `.deb` artifact and an AppImage portable artifact. AppImage packaging uses Qt's supported deployment script and pinned `appimagetool`/runtime inputs instead of `linuxdeployqt` or `linuxdeploy-plugin-qt`.
 - GitHub workflows install external tooling through apt, Chocolatey, pip, and `aqtinstall`. That is normal for CI, but release workflows should minimize unpinned moving parts and emit enough provenance in manifests to make artifacts reproducible.
 - User map-style overrides load local JSON from the application data directory or `THERION_STUDIO_MAP_OBJECT_STYLES_DIR`. Keep this local-file-only model; future SVG-backed styles must reject remote URLs and external references.
 - Direct icon SVG rendering still exists outside `LucideIconFactory` in `BlockEditorCanvasItem.cpp`, `MapEditorInspectorData.cpp`, and `MainWindowStructureBrowser.cpp`. Consolidate these to the shared factory to reduce duplicate resource parsing and inconsistent caching.

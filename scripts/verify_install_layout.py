@@ -27,6 +27,9 @@ def required_paths(platform_name: str) -> list[pathlib.Path]:
     if platform_name == "linux":
         return [
             pathlib.Path("bin/TherionStudio"),
+            pathlib.Path("share/applications/therion-studio.desktop"),
+            pathlib.Path("share/icons/hicolor/256x256/apps/therion-studio.png"),
+            pathlib.Path("share/metainfo/therion-studio.metainfo.xml"),
         ]
     raise ValueError(f"Unsupported platform: {platform_name}")
 

@@ -809,7 +809,9 @@ Requirements:
 - Windows signed installers are preferred for production releases; unsigned installers may be used only for clearly documented internal preview builds
 - Linux production releases shall provide at least one broadly portable distribution format, such as AppImage or an equivalent self-contained bundle; distro-specific packages may be added in addition to the primary artifact
 - Linux production release workflows shall not execute mutable `continuous` third-party packaging binaries; externally sourced portable-package tooling shall come from maintained immutable releases, repository packages, or audited built-from-source inputs with recorded provenance
-- Linux `.deb` packaging should remain compatible with the Qt 6 packages shipped by supported Debian/Ubuntu distributions where practical; Linux CI shall include distribution-package Qt builds for supported Ubuntu baselines, including Ubuntu 24.04 and Ubuntu 26.04
+- sandboxed Linux packages that include the integrated Therion run console shall either bundle a supported Therion command-line runtime or use an explicit audited host-execution bridge for user-configured host Therion executables
+- preview sandboxed Linux packages may document sandbox limitations, but production sandboxed Linux releases shall not silently ship a compiler workflow that cannot run Therion under the package's sandbox/process model
+- Linux `.deb` packaging should remain compatible with the Qt 6 packages shipped by supported Debian/Ubuntu distributions where practical; Linux CI shall include distribution-package Qt builds for supported Ubuntu baselines, including Ubuntu 24.04 and Ubuntu 26.04, and release-artifact smoke installation on Ubuntu 26.04 and Debian 13
 - required Qt libraries and other non-system runtime dependencies shall be bundled with the application or installed by the package manager package so that first launch does not depend on a local Qt SDK or developer toolchain
 - release artifacts shall include a branded dark cave-map ThS monogram application icon with yellow S accent for runtime windows and platform launch surfaces, with platform-specific icon metadata wired for macOS and Windows packages
 - packaged releases shall store user settings, recent-project state, session data, and logs in standard user-writable per-platform locations rather than inside the installation directory
@@ -1117,6 +1119,7 @@ The criteria below are intended for implementation verification and QA.
 - Windows installer artifacts do not install the external Therion command-line executable; the runner remains configurable by path.
 - Linux release artifacts launch on the supported target environments using the documented package format.
 - Linux portable release artifact generation records the packaging tool source and does not depend on mutable `continuous` binary downloads.
+- Sandboxed Linux release artifacts verify or explicitly document the integrated Therion runner execution strategy.
 - Updating the application preserves user settings and recent-project/session data when the release notes do not declare a breaking migration.
 - End users can install and run the released product without building from source.
 - Release artifacts expose the `GPL-3.0-or-later` project license and bundled-resource third-party notices.

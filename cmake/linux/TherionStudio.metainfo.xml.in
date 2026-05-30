@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>@THERION_STUDIO_LINUX_DESKTOP_ID@</id>
+  <metadata_license>GPL-3.0-or-later</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Therion Studio</name>
+  <summary>Cave survey editor for Therion projects</summary>
+  <description>
+    <p>
+      Therion Studio is a desktop editor for Therion cave survey projects,
+      including text editing, project navigation, visual map editing, and an
+      integrated Therion run console.
+    </p>
+  </description>
+  <launchable type="desktop-id">@THERION_STUDIO_LINUX_DESKTOP_ID@.desktop</launchable>
+  <categories>
+    <category>Science</category>
+    <category>Education</category>
+    <category>Graphics</category>
+  </categories>
+</component>

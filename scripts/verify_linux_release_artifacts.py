@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify Linux .deb release artifacts and emit a manifest."""
+"""Verify Linux release artifacts (.deb + AppImage) and emit a manifest."""
 
 from __future__ import annotations
 
@@ -28,10 +28,15 @@ def write_github_output(output_path: pathlib.Path, fields: dict[str, str]) -> No
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build-dir", required=True)
+    parser.add_argument("--appimage-dir", required=True)
     parser.add_argument("--expected-package-label", required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--source-ref", required=True)
     parser.add_argument("--build-type", required=True)
+    parser.add_argument("--appimagetool-url", required=True)
+    parser.add_argument("--appimagetool-sha256", required=True)
+    parser.add_argument("--appimage-runtime-url", required=True)
+    parser.add_argument("--appimage-runtime-sha256", required=True)
     parser.add_argument("--manifest-out", required=True)
     parser.add_argument("--github-output")
     args = parser.parse_args()
@@ -40,6 +45,10 @@ def main() -> int:
     if not build_dir.exists():
         print(f"Build directory does not exist: {build_dir}")
         return 1
+    appimage_dir = pathlib.Path(args.appimage_dir).resolve()
+    if not appimage_dir.exists():
+        print(f"AppImage build directory does not exist: {appimage_dir}")
+        return 1
 
     expected_deb_name = f"therion-studio-{args.expected_package_label}-linux-x86_64.deb"
     deb_path = build_dir / expected_deb_name
@@ -47,10 +56,22 @@ def main() -> int:
         print(f"Missing expected .deb artifact: {deb_path}")
         return 1
 
+    expected_appimage_name = f"TherionStudio-{args.expected_package_label}-Linux-x86_64.AppImage"
+    appimage_path = appimage_dir / expected_appimage_name
+    if not appimage_path.exists():
+        print(f"Missing expected AppImage artifact: {appimage_path}")
+        return 1
+
     deb_sha = sha256_file(deb_path)
+    appimage_sha = sha256_file(appimage_path)
 
     manifest = {
         "artifacts": {
+            "appimage": {
+                "file_name": appimage_path.name,
+                "sha256": appimage_sha,
+                "size_bytes": appimage_path.stat().st_size,
+            },
             "deb": {
                 "file_name": deb_path.name,
                 "sha256": deb_sha,
@@ -59,6 +80,16 @@ def main() -> int:
         },
         "build": {
             "build_type": args.build_type,
+            "appimage": {
+                "appimagetool": {
+                    "sha256": args.appimagetool_sha256,
+                    "url": args.appimagetool_url,
+                },
+                "runtime": {
+                    "sha256": args.appimage_runtime_sha256,
+                    "url": args.appimage_runtime_url,
+                },
+            },
             "platform": "ubuntu-24.04",
             "source_ref": args.source_ref,
         },
@@ -78,6 +109,7 @@ def main() -> int:
         write_github_output(
             output_path,
             {
+                "appimage_path": str(appimage_path),
                 "deb_path": str(deb_path),
                 "manifest_path": str(manifest_path),
             },

@@ -136,27 +136,40 @@ CI build workflows also run staged install-layout smoke checks via
 
 ## Linux
 
-Linux packaging currently targets one preview/tester artifact:
+Linux packaging currently targets two distributable artifacts:
 
 - `.deb` package for Debian/Ubuntu-family systems
+- AppImage as the portable Linux channel
 
-The manual workflow `.github/workflows/linux-packages.yml` builds the package on
+The manual workflow `.github/workflows/linux-packages.yml` builds both packages on
 `ubuntu-24.04`, validates install layout and artifact naming, and uploads:
 
 - `therion-studio-<package_label>-linux-x86_64.deb`
+- `TherionStudio-<package_label>-Linux-x86_64.AppImage`
 - `TherionStudio-Linux-artifacts-manifest.json` (SHA256 + build metadata)
 
-The same workflow also runs a follow-up smoke job in an `ubuntu:26.04` container that installs
-the produced `.deb`, verifies installed paths, and performs an offscreen launch sanity check.
+The `.deb` artifact intentionally keeps a distro-neutral `linux-x86_64` file name because the
+package is intended for tested Debian/Ubuntu-family targets rather than a single Ubuntu release.
 
-The production Linux release requirement still needs a maintained broadly portable artifact
-path, such as Flatpak or another reproducible self-contained bundle. Do not use mutable
-`linuxdeployqt` `continuous` AppImage downloads or unmaintained Qt deployment plugins for
-production release artifact generation.
+The AppImage is built from a separate CMake tree with
+`THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON`. That enables Qt's generated Linux deployment
+script during install so the AppDir receives the required Qt runtime files and plugins. The
+workflow then packages the AppDir with pinned `appimagetool` 1.9.1 and a pinned
+`type2-runtime` 20251108 runtime, both SHA256-verified before execution/use.
+
+The same workflow also runs follow-up smoke jobs in `ubuntu:26.04` and `debian:13` containers.
+Each target installs the produced `.deb`, verifies installed paths, and performs offscreen launch
+sanity checks for both the installed `.deb` binary and the generated AppImage. A Linux package
+artifact should be documented as tested on Ubuntu 26.04 and Debian 13 only when the corresponding
+smoke jobs pass for that artifact.
+
+Do not use mutable `linuxdeployqt` `continuous` AppImage downloads or unmaintained Qt
+deployment plugins for production release artifact generation.
 
 Regular CI still validates distribution Qt source builds on Ubuntu 24.04 and Ubuntu 26.04;
 Ubuntu 26.04 runs in an official Ubuntu container image until GitHub provides a hosted runner
-label for it.
+label for it. The Linux packaging workflow additionally smoke-tests generated release artifacts
+on Debian 13.
 
 On supported Ubuntu and Debian-family systems, install the development dependencies with:
 

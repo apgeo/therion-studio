@@ -1,6 +1,6 @@
 # Therion Studio User Manual
 
-Last updated: 2026-05-26
+Last updated: 2026-05-30
 
 This guide covers end-user workflows in Therion Studio.
 

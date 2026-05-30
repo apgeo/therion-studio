@@ -82,11 +82,11 @@ void TextEditorTab::buildBlockEditorPanel()
     blocksLayout->setContentsMargins(0, 0, 0, 0);
     blocksLayout->setSpacing(kPanelSpacing);
 
-    auto *blocksSplitter = new QSplitter(Qt::Horizontal, blocksPanel_);
-    blocksSplitter->setChildrenCollapsible(false);
-    applyThinSplitterStyle(blocksSplitter, QStringLiteral("textBlocksSplitter"));
+    blockEditorSplitter_ = new QSplitter(Qt::Horizontal, blocksPanel_);
+    blockEditorSplitter_->setChildrenCollapsible(false);
+    applyThinSplitterStyle(blockEditorSplitter_, QStringLiteral("textBlocksSplitter"));
 
-    auto *toolboxColumn = new QWidget(blocksSplitter);
+    auto *toolboxColumn = new QWidget(blockEditorSplitter_);
     toolboxColumn->setObjectName(QStringLiteral("blocksToolboxPane"));
     toolboxColumn->setAttribute(Qt::WA_StyledBackground, true);
     toolboxColumn->setStyleSheet(QStringLiteral(
@@ -118,8 +118,8 @@ void TextEditorTab::buildBlockEditorPanel()
         populateBlockToolbox();
     });
 
-    blockCanvasScene_ = new QGraphicsScene(blocksSplitter);
-    auto *typedCanvasView = new BlockEditorCanvasView(blocksSplitter);
+    blockCanvasScene_ = new QGraphicsScene(blockEditorSplitter_);
+    auto *typedCanvasView = new BlockEditorCanvasView(blockEditorSplitter_);
     typedCanvasView->setFrameShape(QFrame::NoFrame);
     typedCanvasView->setObjectName(QStringLiteral("blocksCanvasView"));
     typedCanvasView->setStyleSheet(QStringLiteral(
@@ -154,7 +154,7 @@ void TextEditorTab::buildBlockEditorPanel()
     };
     blockCanvasView_ = typedCanvasView;
 
-    blockDetailsPanel_ = new QFrame(blocksSplitter);
+    blockDetailsPanel_ = new QFrame(blockEditorSplitter_);
     blockDetailsPanel_->setFrameShape(QFrame::NoFrame);
     blockDetailsPanel_->setMinimumWidth(kBlocksSidePaneMinWidth);
     blockDetailsPanel_->setMaximumWidth(kBlocksSidePaneMaxWidth);
@@ -334,14 +334,15 @@ void TextEditorTab::buildBlockEditorPanel()
     blockDetailsHelpPanelLayout->addWidget(blockDetailsHelpBrowser_, 1);
     blockDetailsLayout->addWidget(blockDetailsHelpPanel_, 1);
 
-    blocksSplitter->addWidget(toolboxColumn);
-    blocksSplitter->addWidget(blockCanvasView_);
-    blocksSplitter->addWidget(blockDetailsPanel_);
-    blocksSplitter->setStretchFactor(0, 0);
-    blocksSplitter->setStretchFactor(1, 1);
-    blocksSplitter->setStretchFactor(2, 0);
-    blocksSplitter->setSizes({220, 980, 380});
-    blocksLayout->addWidget(blocksSplitter, 1);
+    blockEditorSplitter_->addWidget(toolboxColumn);
+    blockEditorSplitter_->addWidget(blockCanvasView_);
+    blockEditorSplitter_->addWidget(blockDetailsPanel_);
+    blockEditorSplitter_->setCollapsible(2, true);
+    blockEditorSplitter_->setStretchFactor(0, 0);
+    blockEditorSplitter_->setStretchFactor(1, 1);
+    blockEditorSplitter_->setStretchFactor(2, 0);
+    blockEditorSplitter_->setSizes({220, 980, 380});
+    blocksLayout->addWidget(blockEditorSplitter_, 1);
 
     connect(blockCanvasScene_, &QGraphicsScene::selectionChanged, this, [this]() {
         if (tearingDown_) {

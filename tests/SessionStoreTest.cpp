@@ -41,6 +41,7 @@ int runInstanceBackedRoundTripTest()
         store.setTherionRunTargetMode(QStringLiteral("project"));
         store.setTherionTargetConfigPath(QStringLiteral("/tmp/project/thconfig"));
         store.setTherionMapTouchFriendlyControlsEnabled(true);
+        store.setTherionMapMagnifierEnabled(false);
         store.setTherionMapBackgroundLayers(QStringLiteral("[]"));
     }
 
@@ -94,6 +95,10 @@ int runInstanceBackedRoundTripTest()
                 "Touch-friendly controls flag should round-trip through the injected settings file.")) {
         return 1;
     }
+    if (!expect(!store.therionMapMagnifierEnabled(),
+                "Map magnifier flag should round-trip through the injected settings file.")) {
+        return 1;
+    }
     if (!expect(store.therionMapBackgroundLayers() == QStringLiteral("[]"),
                 "Map background layer metadata should round-trip through the injected settings file.")) {
         return 1;
@@ -124,6 +129,52 @@ int runDefaultsTest()
                 "Default touch-friendly controls flag should be false.")) {
         return 1;
     }
+    if (!expect(store.therionMapMagnifierEnabled(),
+                "Default map magnifier flag should be true.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runInMemoryStoreTest()
+{
+    InMemorySessionStore store;
+    if (!expect(store.lastProjectPath().isEmpty(), "In-memory store should start without a project path.")) {
+        return 1;
+    }
+    if (!expect(store.openDocumentPaths().isEmpty(), "In-memory store should start without open documents.")) {
+        return 1;
+    }
+    if (!expect(store.therionRunTargetMode() == QStringLiteral("project"),
+                "In-memory store should default Therion run target mode to project config.")) {
+        return 1;
+    }
+    if (!expect(store.therionMapMagnifierEnabled(), "In-memory store should default map magnifier to true.")) {
+        return 1;
+    }
+
+    store.setLastProjectPath(QStringLiteral("/tmp/project"));
+    store.setOpenDocumentPaths({QStringLiteral("/tmp/project/a.th")});
+    store.setTherionExecutablePath(QStringLiteral("/usr/bin/therion"));
+    store.setTherionMapMagnifierEnabled(false);
+
+    if (!expect(store.lastProjectPath() == QStringLiteral("/tmp/project"),
+                "In-memory store should retain project path in the current process.")) {
+        return 1;
+    }
+    if (!expect(store.openDocumentPaths() == QStringList({QStringLiteral("/tmp/project/a.th")}),
+                "In-memory store should retain open documents in the current process.")) {
+        return 1;
+    }
+    if (!expect(store.therionExecutablePath() == QStringLiteral("/usr/bin/therion"),
+                "In-memory store should retain runner configuration in the current process.")) {
+        return 1;
+    }
+    if (!expect(!store.therionMapMagnifierEnabled(),
+                "In-memory store should retain map magnifier preference in the current process.")) {
+        return 1;
+    }
 
     return 0;
 }
@@ -137,5 +188,9 @@ int main(int argc, char **argv)
         return result;
     }
 
-    return runDefaultsTest();
+    if (const int result = runDefaultsTest(); result != 0) {
+        return result;
+    }
+
+    return runInMemoryStoreTest();
 }

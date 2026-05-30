@@ -62,6 +62,13 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 - Status: in progress.
 - Remaining work: improve shortcut matrix, menu behavior, focus traversal, high-DPI behavior, dark/light palette transitions, and platform-native expectations.
+- ~~View menu now exposes dynamic `Expand/Collapse Sidebar`, active right-panel labels (`Context Help`, `Block Inspector`, or `Map Inspector`), and `Show/Hide Map Magnifier`; the removed compiler visibility control remains available through the sidebar surface.~~
+- ~~Detached map pane state now exposes both `Map Inspector` and `Context Help` View controls because raw source and visual map panels are visible simultaneously.~~
+- ~~The View sidebar action now derives its label from the effective splitter/content state, so a visually collapsed sidebar shows `Expand Sidebar` even if the legacy collapse flag is stale.~~
+- ~~Map and Window menus were removed; the fullscreen toggle remains under View, matching macOS menu conventions.~~
+- ~~Help menu now keeps only `User Manual` plus About; manual resolution prefers localized `USER_MANUAL.<language>.md` files and falls back to `USER_MANUAL.md`.~~
+- ~~File -> New Window now opens a clean empty window session instead of restoring and duplicating the current project/open documents.~~
+- ~~macOS now relies on the native View -> Enter Full Screen item instead of adding a duplicate explicit Qt action.~~
 - ~~Help -> About Therion Studio now shows installed version/build metadata, Qt/platform details, repository, license, maintainer, and third-party notice location.~~
 
 ### Phase 8 - Release Readiness and Packaging (`MVP`)

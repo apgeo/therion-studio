@@ -3,8 +3,11 @@
 #include <QGraphicsView>
 #include <QPoint>
 #include <QShortcut>
+#include <QSplitter>
 #include <QTimer>
 
+#include "../../../core/ISessionStore.h"
+#include "../TextEditorTab.h"
 #include "MapEditorMagnifierOverlay.h"
 #include "MapEditorSceneLifecycleController.h"
 
@@ -67,7 +70,7 @@ void MapEditorTab::syncZoomFactorFromView()
 void MapEditorTab::applyZoomAtViewportPosition(qreal factor, const QPointF &viewportPosition)
 {
     MapEditorSceneLifecycleController(sceneLifecycleContext()).applyZoomAtViewportPosition(factor, viewportPosition);
-    if (mapMagnifierOverlay_ != nullptr && mapMagnifierOverlay_->isVisible()) {
+    if (magnifierEnabled_ && mapMagnifierOverlay_ != nullptr && mapMagnifierOverlay_->isVisible()) {
         scheduleMagnifierOverlayUpdateFromViewportPosition(viewportPosition.toPoint());
     }
 }
@@ -89,6 +92,10 @@ void MapEditorTab::updateMagnifierOverlayFromViewportPosition(const QPoint &view
     if (mapMagnifierOverlay_ == nullptr || mapView_ == nullptr || mapView_->viewport() == nullptr) {
         return;
     }
+    if (!magnifierEnabled_) {
+        hideMagnifierOverlay();
+        return;
+    }
     if (!mapView_->viewport()->rect().contains(viewportPosition)) {
         hideMagnifierOverlay();
         return;
@@ -104,6 +111,10 @@ void MapEditorTab::updateMagnifierOverlayFromViewportPosition(const QPoint &view
 void MapEditorTab::scheduleMagnifierOverlayUpdateFromViewportPosition(const QPoint &viewportPosition)
 {
     if (mapMagnifierOverlay_ == nullptr || mapView_ == nullptr || mapView_->viewport() == nullptr) {
+        return;
+    }
+    if (!magnifierEnabled_) {
+        hideMagnifierOverlay();
         return;
     }
 
@@ -130,11 +141,117 @@ void MapEditorTab::scheduleMagnifierOverlayUpdateFromViewportPosition(const QPoi
 
 void MapEditorTab::refreshVisibleMagnifierOverlay()
 {
-    if (mapMagnifierOverlay_ == nullptr || !mapMagnifierOverlay_->isVisible() || !magnifierHasViewportPosition_) {
+    if (!magnifierEnabled_
+        || mapMagnifierOverlay_ == nullptr
+        || !mapMagnifierOverlay_->isVisible()
+        || !magnifierHasViewportPosition_) {
         return;
     }
 
     scheduleMagnifierOverlayUpdateFromViewportPosition(magnifierLastViewportPosition_);
+}
+
+bool MapEditorTab::isMagnifierEnabled() const
+{
+    return magnifierEnabled_;
+}
+
+bool MapEditorTab::hasRightPanel() const
+{
+    if (!isMapPaneDetached() && workspaceMode_ == WorkspaceMode::Raw && textEditor_ != nullptr) {
+        return textEditor_->hasRightPanel();
+    }
+    return mapDetailsSplitter_ != nullptr && objectDetailsPanel_ != nullptr;
+}
+
+bool MapEditorTab::isRightPanelCollapsed() const
+{
+    if (!isMapPaneDetached() && workspaceMode_ == WorkspaceMode::Raw && textEditor_ != nullptr) {
+        return textEditor_->isRightPanelCollapsed();
+    }
+    return mapInspectorCollapsed_;
+}
+
+QString MapEditorTab::rightPanelLabel() const
+{
+    if (!isMapPaneDetached() && workspaceMode_ == WorkspaceMode::Raw && textEditor_ != nullptr) {
+        return textEditor_->rightPanelLabel();
+    }
+    return tr("Map Inspector");
+}
+
+bool MapEditorTab::hasContextHelpPanel() const
+{
+    return textEditor_ != nullptr && textEditor_->hasRightPanel();
+}
+
+bool MapEditorTab::isContextHelpPanelCollapsed() const
+{
+    return textEditor_ != nullptr && textEditor_->isRightPanelCollapsed();
+}
+
+void MapEditorTab::setMagnifierEnabled(bool enabled)
+{
+    if (magnifierEnabled_ == enabled) {
+        return;
+    }
+
+    magnifierEnabled_ = enabled;
+    if (sessionStore_ != nullptr) {
+        sessionStore_->setTherionMapMagnifierEnabled(enabled);
+    }
+    if (!magnifierEnabled_) {
+        hideMagnifierOverlay();
+    } else if (magnifierHasViewportPosition_) {
+        scheduleMagnifierOverlayUpdateFromViewportPosition(magnifierLastViewportPosition_);
+    }
+}
+
+void MapEditorTab::setRightPanelCollapsed(bool collapsed)
+{
+    if (!isMapPaneDetached() && workspaceMode_ == WorkspaceMode::Raw && textEditor_ != nullptr) {
+        textEditor_->setRightPanelCollapsed(collapsed);
+        return;
+    }
+    if (mapDetailsSplitter_ == nullptr || objectDetailsPanel_ == nullptr) {
+        return;
+    }
+    if (mapInspectorCollapsed_ == collapsed) {
+        return;
+    }
+
+    const QList<int> sizes = mapDetailsSplitter_->sizes();
+    if (collapsed) {
+        if (sizes.size() >= 2 && sizes.at(1) > 0) {
+            mapInspectorPanelExtent_ = sizes.at(1);
+        }
+        mapInspectorCollapsed_ = true;
+        mapDetailsSplitter_->setSizes({qMax(1, sizes.value(0, 980) + sizes.value(1, 0)), 0});
+        return;
+    }
+
+    mapInspectorCollapsed_ = false;
+    int totalWidth = 0;
+    for (const int size : sizes) {
+        totalWidth += size;
+    }
+    if (totalWidth <= 0) {
+        mapDetailsSplitter_->setSizes({980, mapInspectorPanelExtent_});
+        return;
+    }
+
+    const int inspectorWidth = qBound(objectDetailsPanel_->minimumWidth(),
+                                      mapInspectorPanelExtent_,
+                                      qMax(objectDetailsPanel_->minimumWidth(), totalWidth - 360));
+    const int mapWidth = qMax(240, totalWidth - inspectorWidth);
+    mapDetailsSplitter_->setSizes({mapWidth, inspectorWidth});
+}
+
+void MapEditorTab::setContextHelpPanelCollapsed(bool collapsed)
+{
+    if (textEditor_ != nullptr) {
+        textEditor_->setRightPanelCollapsed(collapsed);
+    }
 }
 
 void MapEditorTab::hideMagnifierOverlay()

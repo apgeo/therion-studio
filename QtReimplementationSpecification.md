@@ -360,6 +360,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Area fill and fill-pattern rendering shall visually honor Therion's default `-clip on` behavior by clipping areas to the owning scrap wall boundary when that boundary can be resolved; areas with `-clip off` shall render without scrap-boundary clipping.
 - The TH2 Visual map editor shall provide a fixed viewport magnifier overlay for precise tracing and placement. The magnifier shall show a zoomed crop around the current cursor position, an exact center crosshair, and the corresponding map/source coordinate readout.
 - The map magnifier shall be rendered as a viewport overlay, not as scene geometry, so it remains pinned to the map viewport and does not pan or zoom with the document.
+- The map magnifier shall be enabled by default and shall be user-toggleable through the `View -> Show Map Magnifier` / `Hide Map Magnifier` menu action. This preference shall be stored as UI/session state and shall not modify the TH2 source document.
 - Background image position, opacity, gamma, and visibility shall be editable per session.
 - Background layers shall support insertion, selection, visibility toggles, opacity adjustment, gamma adjustment, and persisted positioning.
 - Adding a raster background image from the TH2 Visual map editor shall write XTherion-compatible `##XTHERION## xth_me_image_insert` metadata to the TH2 source, using document-relative paths where possible.
@@ -501,7 +502,14 @@ Platform modifier mapping:
 
 | Action | Menu location | Shortcut | Required behavior |
 |---|---|---|---|
-| New Window | File | Command+N | Open a new text editor window |
+| New Window | File | Command+N | Open a new empty main window without restoring the current project or open documents |
+| Expand/Collapse Sidebar | View | none | Expand or collapse the left sidebar content without changing the active document |
+| Expand/Collapse Context Help | View | none | Expand or collapse the Raw editor's contextual help column without modifying document source |
+| Expand/Collapse Block Inspector | View | none | Expand or collapse the Block editor's details/inspector column without modifying document source |
+| Expand/Collapse Map Inspector | View | none | Expand or collapse the TH2 Visual map editor's inspector column without modifying document source |
+| Expand/Collapse Map Inspector and Context Help | View | none | When a TH2 Visual map pane is detached, expose both controls because the detached visual map and raw source context help are visible at the same time |
+| Show/Hide Map Magnifier | View | none | Enable or disable the visual map magnifier overlay as UI/session state only |
+| Enter/Exit Full Screen | View | platform full-screen shortcut | Toggle the main window full-screen state |
 | Create Project… | File | Command+Shift+N | Start the project-creation flow; disabled while a project is already open |
 | Open Project… | File | Command+O | Open a Therion project; disabled while a project is already open |
 | Save | File | Command+S | Save the active document only |
@@ -517,10 +525,8 @@ Platform modifier mapping:
 | Replace… | Find | Command+Option+F | Open the search bar in replace mode |
 | Find Next | Find | Command+G | Jump to the next match |
 | Find Previous | Find | Command+Shift+G | Jump to the previous match |
-| Open in Map Editor | Map | Command+Option+Shift+G | Open the current TH2 document in the map editor; disabled unless a TH2 tab is active |
 | Toggle Debug Sidebar | Debug | none in the current Swift app | Toggle the debug sidebar state from the menu |
-| Quick User Manual | Help | none | Open an in-app short user manual focused on common workflows and map editing shortcuts |
-| User Manual (Full) | Help | none | Open the full user manual document in-app, with fallback to quick manual content if the full document is unavailable |
+| User Manual | Help | none | Open the localized full user manual document in-app, using `USER_MANUAL.<language>.md` with fallback to `USER_MANUAL.md` |
 
 The Qt application may add additional platform-standard shortcuts only if they do not conflict with the behavior above and do not change the documented commands.
 

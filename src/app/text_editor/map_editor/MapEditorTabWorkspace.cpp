@@ -92,6 +92,7 @@ void MapEditorTab::initializeWorkspace()
     undoStack_ = new QUndoStack(this);
     workspaceMode_ = WorkspaceMode::Visual;
     touchFriendlyControlsEnabled_ = false;
+    magnifierEnabled_ = sessionStore_->therionMapMagnifierEnabled();
     sessionStore_->setTherionMapTouchFriendlyControlsEnabled(false);
     buildUi();
     connect(this, &MapEditorTab::zoomStatusChanged, this, [this](int) {
@@ -269,6 +270,7 @@ void MapEditorTab::buildUi()
     buildInspectorPanelUi();
     mapDetailsSplitter_->addWidget(mapView_);
     mapDetailsSplitter_->addWidget(objectDetailsPanel_);
+    mapDetailsSplitter_->setCollapsible(1, true);
     mapDetailsSplitter_->setStretchFactor(0, 1);
     mapDetailsSplitter_->setStretchFactor(1, 0);
     mapDetailsSplitter_->setSizes(QList<int>{980, 320});

@@ -20,6 +20,7 @@ const auto kTherionArgumentsKey = QStringLiteral("session/therionArguments");
 const auto kTherionRunTargetModeKey = QStringLiteral("session/therionRunTargetMode");
 const auto kTherionTargetConfigPathKey = QStringLiteral("session/therionTargetConfigPath");
 const auto kTherionMapTouchFriendlyControlsEnabledKey = QStringLiteral("session/therionMapTouchFriendlyControlsEnabled");
+const auto kTherionMapMagnifierEnabledKey = QStringLiteral("session/therionMapMagnifierEnabled");
 const auto kTherionMapBackgroundLayersKey = QStringLiteral("session/therionMapBackgroundLayers");
 }
 
@@ -167,6 +168,16 @@ void SessionSettingsStore::setTherionMapTouchFriendlyControlsEnabled(bool enable
     settings_->setValue(kTherionMapTouchFriendlyControlsEnabledKey, enabled);
 }
 
+bool SessionSettingsStore::therionMapMagnifierEnabled() const
+{
+    return settings_->value(kTherionMapMagnifierEnabledKey, true).toBool();
+}
+
+void SessionSettingsStore::setTherionMapMagnifierEnabled(bool enabled)
+{
+    settings_->setValue(kTherionMapMagnifierEnabledKey, enabled);
+}
+
 QString SessionSettingsStore::therionMapBackgroundLayers() const
 {
     return settings_->value(kTherionMapBackgroundLayersKey).toString();
@@ -175,6 +186,146 @@ QString SessionSettingsStore::therionMapBackgroundLayers() const
 void SessionSettingsStore::setTherionMapBackgroundLayers(const QString &json)
 {
     settings_->setValue(kTherionMapBackgroundLayersKey, json);
+}
+
+QString InMemorySessionStore::lastProjectPath() const
+{
+    return lastProjectPath_;
+}
+
+void InMemorySessionStore::setLastProjectPath(const QString &projectPath)
+{
+    lastProjectPath_ = projectPath;
+}
+
+QByteArray InMemorySessionStore::mainWindowGeometry() const
+{
+    return mainWindowGeometry_;
+}
+
+void InMemorySessionStore::setMainWindowGeometry(const QByteArray &geometry)
+{
+    mainWindowGeometry_ = geometry;
+}
+
+QByteArray InMemorySessionStore::mainWindowState() const
+{
+    return mainWindowState_;
+}
+
+void InMemorySessionStore::setMainWindowState(const QByteArray &state)
+{
+    mainWindowState_ = state;
+}
+
+QStringList InMemorySessionStore::openDocumentPaths() const
+{
+    return openDocumentPaths_;
+}
+
+void InMemorySessionStore::setOpenDocumentPaths(const QStringList &documentPaths)
+{
+    openDocumentPaths_ = documentPaths;
+}
+
+QString InMemorySessionStore::activeDocumentPath() const
+{
+    return activeDocumentPath_;
+}
+
+void InMemorySessionStore::setActiveDocumentPath(const QString &documentPath)
+{
+    activeDocumentPath_ = documentPath;
+}
+
+QString InMemorySessionStore::structureNameOverrides() const
+{
+    return structureNameOverrides_;
+}
+
+void InMemorySessionStore::setStructureNameOverrides(const QString &json)
+{
+    structureNameOverrides_ = json;
+}
+
+QString InMemorySessionStore::therionExecutablePath() const
+{
+    return therionExecutablePath_;
+}
+
+void InMemorySessionStore::setTherionExecutablePath(const QString &path)
+{
+    therionExecutablePath_ = path;
+}
+
+QString InMemorySessionStore::therionWorkingDirectory() const
+{
+    return therionWorkingDirectory_;
+}
+
+void InMemorySessionStore::setTherionWorkingDirectory(const QString &path)
+{
+    therionWorkingDirectory_ = path;
+}
+
+QString InMemorySessionStore::therionArguments() const
+{
+    return therionArguments_;
+}
+
+void InMemorySessionStore::setTherionArguments(const QString &arguments)
+{
+    therionArguments_ = arguments;
+}
+
+QString InMemorySessionStore::therionRunTargetMode() const
+{
+    return therionRunTargetMode_;
+}
+
+void InMemorySessionStore::setTherionRunTargetMode(const QString &mode)
+{
+    therionRunTargetMode_ = mode;
+}
+
+QString InMemorySessionStore::therionTargetConfigPath() const
+{
+    return therionTargetConfigPath_;
+}
+
+void InMemorySessionStore::setTherionTargetConfigPath(const QString &path)
+{
+    therionTargetConfigPath_ = path;
+}
+
+bool InMemorySessionStore::therionMapTouchFriendlyControlsEnabled() const
+{
+    return therionMapTouchFriendlyControlsEnabled_;
+}
+
+void InMemorySessionStore::setTherionMapTouchFriendlyControlsEnabled(bool enabled)
+{
+    therionMapTouchFriendlyControlsEnabled_ = enabled;
+}
+
+bool InMemorySessionStore::therionMapMagnifierEnabled() const
+{
+    return therionMapMagnifierEnabled_;
+}
+
+void InMemorySessionStore::setTherionMapMagnifierEnabled(bool enabled)
+{
+    therionMapMagnifierEnabled_ = enabled;
+}
+
+QString InMemorySessionStore::therionMapBackgroundLayers() const
+{
+    return therionMapBackgroundLayers_;
+}
+
+void InMemorySessionStore::setTherionMapBackgroundLayers(const QString &json)
+{
+    therionMapBackgroundLayers_ = json;
 }
 
 }

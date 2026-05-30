@@ -43,6 +43,9 @@ public:
     bool therionMapTouchFriendlyControlsEnabled() const override { return therionMapTouchFriendlyControlsEnabled_; }
     void setTherionMapTouchFriendlyControlsEnabled(bool enabled) override { therionMapTouchFriendlyControlsEnabled_ = enabled; }
 
+    bool therionMapMagnifierEnabled() const override { return therionMapMagnifierEnabled_; }
+    void setTherionMapMagnifierEnabled(bool enabled) override { therionMapMagnifierEnabled_ = enabled; }
+
     QString therionMapBackgroundLayers() const override { return therionMapBackgroundLayers_; }
     void setTherionMapBackgroundLayers(const QString &json) override { therionMapBackgroundLayers_ = json; }
 
@@ -59,6 +62,7 @@ private:
     QString therionRunTargetMode_;
     QString therionTargetConfigPath_;
     bool therionMapTouchFriendlyControlsEnabled_ = false;
+    bool therionMapMagnifierEnabled_ = true;
     QString therionMapBackgroundLayers_;
 };
 }

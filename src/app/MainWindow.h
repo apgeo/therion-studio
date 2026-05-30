@@ -52,12 +52,20 @@ class MainWindow final : public QMainWindow
     Q_OBJECT
 
 public:
+    enum class SessionRestoreMode
+    {
+        RestoreSession,
+        StartEmpty
+    };
+
     explicit MainWindow(std::unique_ptr<TherionStudio::ISessionStore> sessionStore,
                         TherionStudio::CommandCatalogStore commandCatalogStore,
-                        QWidget *parent = nullptr);
+                        QWidget *parent = nullptr,
+                        SessionRestoreMode restoreMode = SessionRestoreMode::RestoreSession);
     explicit MainWindow(TherionStudio::ISessionStore &sessionStore,
                         TherionStudio::CommandCatalogStore commandCatalogStore,
-                        QWidget *parent = nullptr);
+                        QWidget *parent = nullptr,
+                        SessionRestoreMode restoreMode = SessionRestoreMode::RestoreSession);
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -71,7 +79,6 @@ private slots:
     void handleProjectTreeActivated(const QModelIndex &index);
     void handleProjectTreeContextMenuRequested(const QPoint &position);
     void handleTextEditorCurrentLineChanged(const QString &filePath, int lineNumber);
-    void openCurrentDocumentInMapEditor();
     void handleTabCloseRequested(int index);
     void closeActiveTab();
     void closeAllTabs();
@@ -140,7 +147,6 @@ private:
     void updateTherionRunnerState();
     void updateProjectActionState();
     void updateMapEditorActionState();
-    bool currentDocumentSupportsMapPane() const;
     QString therionWorkingDirectoryOverride() const;
     QString therionConfigResolutionDirectory() const;
     QString resolvedTherionWorkingDirectory() const;
@@ -153,6 +159,8 @@ private:
     void refreshTherionRunTargetControls();
     void rememberSidebarWidth();
     void restoreSidebarWidth();
+    bool isSidebarEffectivelyCollapsed() const;
+    void scheduleSidebarCollapseLayoutSync();
     void setSidebarCollapsed(bool collapsed);
     void updateSidebarCollapseButton();
     void rememberConsoleHeight();
@@ -185,6 +193,16 @@ private:
     void refreshWorkspaceModeSwitcher();
     void refreshWorkspaceIconTheme();
     void refreshWorkspaceModeSwitcherGeometry();
+    void refreshViewMenuActions();
+    void refreshFullScreenAction();
+    void setMapMagnifierEnabledForOpenTabs(bool enabled);
+    bool currentDocumentHasRightPanel() const;
+    bool currentDocumentRightPanelCollapsed() const;
+    QString currentDocumentRightPanelLabel() const;
+    void setCurrentDocumentRightPanelCollapsed(bool collapsed);
+    TherionStudio::MapEditorTab *currentDetachedMapTabWithContextHelp() const;
+    bool currentDetachedMapContextHelpCollapsed() const;
+    void setCurrentDetachedMapContextHelpCollapsed(bool collapsed);
     void triggerUndoForActiveDocument();
     void triggerRedoForActiveDocument();
     void triggerCompileCurrentConfigForActiveDocument();
@@ -242,8 +260,11 @@ private:
     QAction *closeProjectAction_ = nullptr;
     QAction *undoAction_ = nullptr;
     QAction *redoAction_ = nullptr;
-    QAction *showSidebarAction_ = nullptr;
-    QAction *openMapEditorAction_ = nullptr;
+    QAction *sidebarCollapseAction_ = nullptr;
+    QAction *rightPanelCollapseAction_ = nullptr;
+    QAction *contextHelpCollapseAction_ = nullptr;
+    QAction *mapMagnifierAction_ = nullptr;
+    QAction *fullScreenAction_ = nullptr;
     QPlainTextEdit *consoleView_ = nullptr;
     QLineEdit *therionExecutableEdit_ = nullptr;
     QPushButton *therionBrowseExecutableButton_ = nullptr;
@@ -313,6 +334,7 @@ private:
     bool sidebarCollapsed_ = false;
     bool consoleCollapsed_ = false;
     bool updatingSidebarSplitter_ = false;
+    bool sidebarCollapseSyncPending_ = false;
     bool updatingMapBackgroundPanel_ = false;
     bool clearingDocumentTabs_ = false;
     bool shuttingDown_ = false;

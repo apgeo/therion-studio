@@ -184,6 +184,9 @@ void MainWindow::changeEvent(QEvent *event)
     }
 
     switch (event->type()) {
+    case QEvent::WindowStateChange:
+        refreshFullScreenAction();
+        break;
     case QEvent::ApplicationPaletteChange:
     case QEvent::PaletteChange:
     case QEvent::StyleChange:

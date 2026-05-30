@@ -668,6 +668,7 @@ void MainWindow::buildStructureSidebar()
                 sidebarExpandedWidth_ = qMax(width, sidebarRailWidth_ + 240);
                 prepareSidebarContentPane(sidebarContentContainer_);
                 updateSidebarCollapseButton();
+                refreshViewMenuActions();
             }
             return;
         }
@@ -705,16 +706,7 @@ void MainWindow::buildStructureSidebar()
         button->setCheckable(true);
         button->setFocusPolicy(Qt::NoFocus);
     };
-    const auto isSidebarEffectivelyCollapsed = [this]() -> bool {
-        if (sidebarCollapsed_) {
-            return true;
-        }
-        if (sidebarContentContainer_ != nullptr && sidebarContentContainer_->isVisible()) {
-            return sidebarContentContainer_->width() <= sidebarAutoSnapThreshold(sidebarRailWidth_);
-        }
-        return false;
-    };
-    const auto handleActivityButtonClick = [this, isSidebarEffectivelyCollapsed](SidebarPane pane) {
+    const auto handleActivityButtonClick = [this](SidebarPane pane) {
         if (isSidebarEffectivelyCollapsed()) {
             if (sidebarContainer_ != nullptr && !sidebarContainer_->isVisible()) {
                 sidebarContainer_->setVisible(true);
@@ -730,6 +722,7 @@ void MainWindow::buildStructureSidebar()
                 prepareSidebarContentPane(sidebarContentContainer_);
                 restoreSidebarWidth();
                 updateSidebarCollapseButton();
+                refreshViewMenuActions();
             }
             setSidebarPane(pane);
             return;
@@ -884,11 +877,6 @@ void MainWindow::showSidebarPane(SidebarPane pane)
         return;
     }
 
-    if (showSidebarAction_ != nullptr && !showSidebarAction_->isChecked()) {
-        const QSignalBlocker blocker(showSidebarAction_);
-        showSidebarAction_->setChecked(true);
-    }
-
     sidebarContainer_->setVisible(true);
     if (sidebarContentContainer_ != nullptr) {
         sidebarContentContainer_->setVisible(true);
@@ -971,14 +959,45 @@ void MainWindow::restoreSidebarWidth()
     applyRestore();
 }
 
+bool MainWindow::isSidebarEffectivelyCollapsed() const
+{
+    if (sidebarCollapsed_) {
+        return true;
+    }
+    if (sidebarContentContainer_ == nullptr || !sidebarContentContainer_->isVisible()) {
+        return true;
+    }
+    return sidebarContentContainer_->width() <= sidebarAutoSnapThreshold(sidebarRailWidth_);
+}
+
+void MainWindow::scheduleSidebarCollapseLayoutSync()
+{
+    if (sidebarCollapseSyncPending_) {
+        return;
+    }
+
+    sidebarCollapseSyncPending_ = true;
+    QTimer::singleShot(0, this, [this]() {
+        sidebarCollapseSyncPending_ = false;
+        if (sidebarCollapsed_) {
+            setSidebarCollapsed(true);
+            return;
+        }
+
+        updateSidebarCollapseButton();
+        refreshViewMenuActions();
+    });
+}
+
 void MainWindow::setSidebarCollapsed(bool collapsed)
 {
     if (mainContentSplitter_ == nullptr || sidebarContainer_ == nullptr) {
         return;
     }
 
-    if (collapsed == sidebarCollapsed_ && (!collapsed || sidebarContentContainer_ == nullptr || sidebarContentContainer_->width() == 0)) {
+    if (collapsed == sidebarCollapsed_ && collapsed == isSidebarEffectivelyCollapsed()) {
         updateSidebarCollapseButton();
+        refreshViewMenuActions();
         return;
     }
 
@@ -1016,6 +1035,7 @@ void MainWindow::setSidebarCollapsed(bool collapsed)
     }
 
     updateSidebarCollapseButton();
+    refreshViewMenuActions();
 }
 
 void MainWindow::updateSidebarCollapseButton()
@@ -1024,7 +1044,8 @@ void MainWindow::updateSidebarCollapseButton()
         return;
     }
 
-    const Qt::ArrowType arrowType = sidebarCollapsed_ ? Qt::RightArrow : Qt::LeftArrow;
+    const bool collapsed = isSidebarEffectivelyCollapsed();
+    const Qt::ArrowType arrowType = collapsed ? Qt::RightArrow : Qt::LeftArrow;
     sidebarCollapseButton_->setArrowType(arrowType);
-    sidebarCollapseButton_->setToolTip(sidebarCollapsed_ ? tr("Expand sidebar") : tr("Collapse sidebar"));
+    sidebarCollapseButton_->setToolTip(collapsed ? tr("Expand sidebar") : tr("Collapse sidebar"));
 }

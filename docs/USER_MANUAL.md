@@ -18,7 +18,7 @@ Therion Studio is a desktop editor for Therion cave-mapping projects. It provide
 
 The app window has four main areas:
 
-- menu bar (`File`, `Edit`, `Map`, `View`, `Window`, `Help`)
+- menu bar (`File`, `Edit`, `View`, `Help`)
 - top command bar with quick actions (`Open Project`, `Close Project`, `Save`, editor/map tools)
 - left sidebar with activity icons (`Files`, `Structure`, `Compiler`) and a `Compile` action
 - center tab area for documents
@@ -26,6 +26,14 @@ The app window has four main areas:
 
 The main window opens at a usable desktop size and clamps restored session geometry only enough
 to avoid unusably narrow windows while still allowing common half-screen layouts.
+Use `File -> New Window` to open a new empty window. The new window does not duplicate the current project or open documents.
+Use `View -> Enter Full Screen` or `View -> Exit Full Screen` to toggle full-screen mode.
+Use `View -> Expand Sidebar` / `Collapse Sidebar` to show or hide the left sidebar content.
+Use the active right-panel item in `View` to show or hide the current editor's right column:
+`Expand Context Help` / `Collapse Context Help` in Raw mode,
+`Expand Block Inspector` / `Collapse Block Inspector` in Block mode, and
+`Expand Map Inspector` / `Collapse Map Inspector` in the visual map editor.
+When a map pane is detached, the main window shows both `Map Inspector` and `Context Help` actions because the visual map and raw source are visible at the same time.
 
 ## 3. Getting Started
 
@@ -108,6 +116,8 @@ Toolbar actions include:
 - zoom: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`
 - selection/drafting: `Select`, `Complete Draft`
 - insertion: `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`
+
+Use `View -> Show Map Magnifier` / `Hide Map Magnifier` to enable or disable the visual map magnifier overlay. The magnifier is enabled by default and is a UI preference; toggling it does not change the `.th2` document.
 
 Canvas rendering is zoom-aware: geometry strokes and edit handles are reduced at distant zoom levels so overview remains readable.
 Point, line, and area rendering can be customized with JSON style overrides; see `Configuration -> Custom Map Object Styles`.
@@ -458,8 +468,7 @@ Invalid or missing style fields are ignored and the application falls back to th
 
 ## 10. Help And About
 
-- Use `Help -> Quick User Manual` for a compact workflow summary.
-- Use `Help -> User Manual (Full)` to open this manual from the application.
+- Use `Help -> User Manual` to open the localized user manual from the application. The application looks for `USER_MANUAL.<language>.md` first and falls back to `USER_MANUAL.md`.
 - Use `Help -> About Therion Studio` to view the installed application version, build label, Qt version, platform, GitHub repository, license, maintainer, and third-party notices link.
 
 ## 11. Troubleshooting
@@ -487,17 +496,7 @@ Fix:
 - open the desired `.thconfig` and run using `Current Config`, or
 - verify working directory/override path
 
-### 11.3 “Open Current Document in Map Editor” is disabled
-
-Symptom:
-
-- map-open command is unavailable
-
-Fix:
-
-- activate a `.th2` tab first
-
-### 11.4 Rename/delete is blocked in project tree
+### 11.3 Rename/delete is blocked in project tree
 
 Symptom:
 

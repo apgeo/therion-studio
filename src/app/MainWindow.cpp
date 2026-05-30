@@ -299,15 +299,17 @@ private:
 
 MainWindow::MainWindow(std::unique_ptr<TherionStudio::ISessionStore> sessionStore,
                        TherionStudio::CommandCatalogStore commandCatalogStore,
-                       QWidget *parent)
-    : MainWindow(*sessionStore, std::move(commandCatalogStore), parent)
+                       QWidget *parent,
+                       SessionRestoreMode restoreMode)
+    : MainWindow(*sessionStore, std::move(commandCatalogStore), parent, restoreMode)
 {
     ownedSessionStore_ = std::move(sessionStore);
 }
 
 MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
                        TherionStudio::CommandCatalogStore commandCatalogStore,
-                       QWidget *parent)
+                       QWidget *parent,
+                       SessionRestoreMode restoreMode)
     : QMainWindow(parent)
     , editorTabs_(new QTabWidget(this))
     , projectModel_(new QFileSystemModel(this))
@@ -328,7 +330,9 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
     buildUi();
     setMinimumSize(minimumMainWindowSize());
     resize(defaultMainWindowSize());
-    restoreSessionState();
+    if (restoreMode == SessionRestoreMode::RestoreSession) {
+        restoreSessionState();
+    }
 
     if (editorTabs_->count() == 0) {
         addWelcomeTab();
@@ -355,6 +359,7 @@ void MainWindow::buildUi()
         refreshDocumentStatusWidgets();
         refreshWorkspaceModeSwitcher();
         refreshWorkspaceModeSwitcherGeometry();
+        refreshViewMenuActions();
     });
 
     auto *mainContentHost = new QWidget(this);
@@ -786,6 +791,9 @@ void MainWindow::refreshWorkspaceModeSwitcherGeometry()
     }
 
     workspaceModeSwitcher_->updateGeometry();
+    if (sidebarCollapsed_) {
+        scheduleSidebarCollapseLayoutSync();
+    }
 }
 
 void MainWindow::triggerUndoForActiveDocument()
@@ -949,58 +957,58 @@ void MainWindow::buildMenus()
     replaceAction->setShortcut(QKeySequence::Replace);
     connect(replaceAction, &QAction::triggered, this, [this]() { showFindBar(true); });
 
-    QMenu *mapMenu = menuBar()->addMenu(tr("&Map"));
-    openMapEditorAction_ = mapMenu->addAction(tr("Open Current Document in &Map Editor"));
-    openMapEditorAction_->setShortcut(QKeySequence(Qt::CTRL | Qt::ALT | Qt::SHIFT | Qt::Key_G));
-    connect(openMapEditorAction_, &QAction::triggered, this, &MainWindow::openCurrentDocumentInMapEditor);
-    openMapEditorAction_->setEnabled(false);
-
     QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
-    showSidebarAction_ = viewMenu->addAction(tr("Show Sidebar"));
-    showSidebarAction_->setCheckable(true);
-    showSidebarAction_->setChecked(true);
-    showSidebarAction_->setStatusTip(tr("Show or hide the sidebar panel"));
-    connect(showSidebarAction_, &QAction::toggled, this, [this](bool visible) {
-        if (sidebarContainer_ == nullptr) {
-            return;
-        }
-        if (!visible) {
-            rememberSidebarWidth();
-            sidebarContainer_->setVisible(false);
-            if (sidebarContentContainer_ != nullptr) {
-                sidebarContentContainer_->setVisible(false);
-            }
-            return;
-        }
-        sidebarContainer_->setVisible(true);
-        if (sidebarContentContainer_ != nullptr) {
-            sidebarContentContainer_->setVisible(true);
-        }
-        if (sidebarCollapsed_) {
-            sidebarCollapsed_ = false;
-            setSidebarCollapsed(true);
-            return;
-        }
-        restoreSidebarWidth();
-    });
-    QAction *showConsolePaneAction = viewMenu->addAction(tr("Show Compiler"));
-    showConsolePaneAction->setStatusTip(tr("Switch the sidebar to the compiler pane"));
-    connect(showConsolePaneAction, &QAction::triggered, this, [this]() {
-        showSidebarPane(SidebarPane::Console);
+    sidebarCollapseAction_ = viewMenu->addAction(QString());
+    sidebarCollapseAction_->setStatusTip(tr("Expand or collapse the left sidebar."));
+    connect(sidebarCollapseAction_, &QAction::triggered, this, [this]() {
+        setSidebarCollapsed(!isSidebarEffectivelyCollapsed());
     });
 
-    QMenu *windowMenu = menuBar()->addMenu(tr("&Window"));
-    QAction *windowNewWindowAction = windowMenu->addAction(tr("New &Window"));
-    connect(windowNewWindowAction, &QAction::triggered, this, &MainWindow::createNewWindow);
+    rightPanelCollapseAction_ = viewMenu->addAction(QString());
+    rightPanelCollapseAction_->setStatusTip(tr("Expand or collapse the active document right-side panel."));
+    connect(rightPanelCollapseAction_, &QAction::triggered, this, [this]() {
+        setCurrentDocumentRightPanelCollapsed(!currentDocumentRightPanelCollapsed());
+    });
+    contextHelpCollapseAction_ = viewMenu->addAction(QString());
+    contextHelpCollapseAction_->setStatusTip(tr("Expand or collapse contextual help while the map pane is detached."));
+    connect(contextHelpCollapseAction_, &QAction::triggered, this, [this]() {
+        setCurrentDetachedMapContextHelpCollapsed(!currentDetachedMapContextHelpCollapsed());
+    });
+
+    viewMenu->addSeparator();
+    mapMagnifierAction_ = viewMenu->addAction(QString());
+    mapMagnifierAction_->setData(sessionStore_ == nullptr || sessionStore_->therionMapMagnifierEnabled());
+    mapMagnifierAction_->setStatusTip(tr("Show or hide the map magnifier overlay in map editors."));
+    connect(mapMagnifierAction_, &QAction::triggered, this, [this]() {
+        const bool enabled = !mapMagnifierAction_->data().toBool();
+        mapMagnifierAction_->setData(enabled);
+        if (sessionStore_ != nullptr) {
+            sessionStore_->setTherionMapMagnifierEnabled(enabled);
+        }
+        setMapMagnifierEnabledForOpenTabs(enabled);
+        refreshViewMenuActions();
+    });
+
+#if !defined(Q_OS_MACOS)
+    viewMenu->addSeparator();
+    fullScreenAction_ = viewMenu->addAction(QString());
+    fullScreenAction_->setMenuRole(QAction::NoRole);
+    fullScreenAction_->setShortcut(QKeySequence::FullScreen);
+    fullScreenAction_->setStatusTip(tr("Enter or exit full screen mode."));
+    connect(fullScreenAction_, &QAction::triggered, this, [this]() {
+        if (isFullScreen()) {
+            showNormal();
+        } else {
+            showFullScreen();
+        }
+        refreshFullScreenAction();
+    });
+#endif
 
     QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
-    QAction *quickManualAction = helpMenu->addAction(tr("Quick User Manual"));
-    connect(quickManualAction, &QAction::triggered, this, [this]() {
-        TherionStudio::showQuickUserManualDialog(this);
-    });
-    QAction *fullManualAction = helpMenu->addAction(tr("User Manual (Full)"));
-    connect(fullManualAction, &QAction::triggered, this, [this]() {
-        TherionStudio::showFullUserManualDialog(this);
+    QAction *userManualAction = helpMenu->addAction(tr("User Manual"));
+    connect(userManualAction, &QAction::triggered, this, [this]() {
+        TherionStudio::showUserManualDialog(this);
     });
     helpMenu->addSeparator();
     QAction *aboutAction = helpMenu->addAction(tr("About Therion Studio"));
@@ -1010,6 +1018,7 @@ void MainWindow::buildMenus()
     });
 
     updateProjectActionState();
+    refreshViewMenuActions();
 }
 
 void MainWindow::restoreSessionState()
@@ -1170,7 +1179,20 @@ void MainWindow::addWelcomeTab()
 
 void MainWindow::createNewWindow()
 {
-    auto *window = new MainWindow(std::make_unique<TherionStudio::SessionSettingsStore>(), commandCatalogStore_);
+    auto sessionStore = std::make_unique<TherionStudio::InMemorySessionStore>();
+    if (sessionStore_ != nullptr) {
+        sessionStore->setTherionExecutablePath(sessionStore_->therionExecutablePath());
+        sessionStore->setTherionWorkingDirectory(sessionStore_->therionWorkingDirectory());
+        sessionStore->setTherionArguments(sessionStore_->therionArguments());
+        sessionStore->setTherionRunTargetMode(sessionStore_->therionRunTargetMode());
+        sessionStore->setTherionTargetConfigPath(sessionStore_->therionTargetConfigPath());
+        sessionStore->setTherionMapMagnifierEnabled(sessionStore_->therionMapMagnifierEnabled());
+    }
+
+    auto *window = new MainWindow(std::move(sessionStore),
+                                  commandCatalogStore_,
+                                  nullptr,
+                                  SessionRestoreMode::StartEmpty);
     window->show();
 }
 
@@ -1407,23 +1429,6 @@ void MainWindow::refreshProjectBrowserView(const QString &focusPath)
     });
 }
 
-void MainWindow::openCurrentDocumentInMapEditor()
-{
-    QWidget *tabWidget = currentDocumentWidget();
-    const auto plan = TherionStudio::MainWindowDocumentOpenController::planOpenCurrentDocumentInMap(
-        tabWidget != nullptr,
-        documentPathForWidget(tabWidget));
-    if (plan.action == TherionStudio::MainWindowDocumentOpenController::OpenCurrentInMapAction::NoActiveDocument) {
-        return;
-    }
-    if (plan.action == TherionStudio::MainWindowDocumentOpenController::OpenCurrentInMapAction::UnsupportedDocument) {
-        QMessageBox::information(this, tr("Open in Map Editor"), tr("Open a .th2 document first."));
-        return;
-    }
-
-    openMapEditorTab(plan.documentPath);
-}
-
 QString MainWindow::structureOverrideKey(const QString &sourceFile, int lineNumber) const
 {
     return QStringLiteral("%1|%2|%3").arg(QDir(projectRootPath_).absolutePath(), sourceFile).arg(lineNumber);
@@ -1635,6 +1640,7 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
     connect(tab, &TherionStudio::TextEditorTab::editorModeChanged, this, [this, tab](TherionStudio::TextEditorTab::EditorMode) {
         if (currentDocumentWidget() == tab) {
             refreshWorkspaceModeSwitcher();
+            refreshViewMenuActions();
         }
     });
 
@@ -1696,6 +1702,7 @@ void MainWindow::connectMapEditorTabUiSignals(TherionStudio::MapEditorTab *tab)
             [this, tab](TherionStudio::MapEditorTab::WorkspaceMode) {
                 if (currentDocumentWidget() == tab) {
                     refreshWorkspaceModeSwitcher();
+                    refreshViewMenuActions();
                 }
             });
     connect(tab,
@@ -1705,13 +1712,30 @@ void MainWindow::connectMapEditorTabUiSignals(TherionStudio::MapEditorTab *tab)
                 if (currentDocumentWidget() == tab) {
                     refreshDocumentStatusWidgets();
                     refreshWorkspaceModeSwitcher();
+                    refreshViewMenuActions();
                 }
             });
     connect(tab, &TherionStudio::MapEditorTab::commandSurfaceStateChanged, this, [this, tab]() {
         if (currentDocumentWidget() == tab) {
             refreshWorkspaceModeSwitcher();
+            refreshViewMenuActions();
         }
     });
+}
+
+void MainWindow::setMapMagnifierEnabledForOpenTabs(bool enabled)
+{
+    for (int index = 0; index < editorTabs_->count(); ++index) {
+        if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(editorTabs_->widget(index))) {
+            mapTab->setMagnifierEnabled(enabled);
+        }
+    }
+
+    for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
+        if (detachedTab != nullptr) {
+            detachedTab->setMagnifierEnabled(enabled);
+        }
+    }
 }
 
 TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePath)

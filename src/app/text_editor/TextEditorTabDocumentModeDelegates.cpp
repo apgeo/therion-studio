@@ -5,6 +5,7 @@
 #include "TextEditorTabInteractionController.h"
 
 #include <QLayout>
+#include <QSplitter>
 
 namespace TherionStudio
 {
@@ -68,6 +69,38 @@ bool TextEditorTab::isBlocksModeAvailable() const
     return isBlocksModeSupportedForCurrentFile();
 }
 
+bool TextEditorTab::hasRightPanel() const
+{
+    if (editorMode() == EditorMode::Blocks) {
+        return blockEditorSplitter_ != nullptr && blockDetailsPanel_ != nullptr;
+    }
+    return editorHelpSplitter_ != nullptr && helpPanel_ != nullptr;
+}
+
+bool TextEditorTab::isRightPanelCollapsed() const
+{
+    return editorMode() == EditorMode::Blocks
+        ? blockInspectorCollapsed_
+        : helpCollapsed_;
+}
+
+QString TextEditorTab::rightPanelLabel() const
+{
+    return editorMode() == EditorMode::Blocks
+        ? tr("Block Inspector")
+        : tr("Context Help");
+}
+
+void TextEditorTab::setRightPanelCollapsed(bool collapsed)
+{
+    if (editorMode() == EditorMode::Blocks) {
+        setBlockInspectorCollapsed(collapsed);
+        return;
+    }
+
+    setHelpCollapsed(collapsed);
+}
+
 void TextEditorTab::setEditorMode(EditorMode mode)
 {
     setBlocksModeActive(mode == EditorMode::Blocks);
@@ -91,6 +124,43 @@ void TextEditorTab::setBlocksModeActive(bool active)
     if (editorModeController_ != nullptr) {
         editorModeController_->setBlocksModeActive(active);
     }
+}
+
+void TextEditorTab::setBlockInspectorCollapsed(bool collapsed)
+{
+    if (blockEditorSplitter_ == nullptr || blockDetailsPanel_ == nullptr) {
+        return;
+    }
+    if (blockInspectorCollapsed_ == collapsed) {
+        return;
+    }
+
+    const QList<int> sizes = blockEditorSplitter_->sizes();
+    if (collapsed) {
+        if (sizes.size() >= 3 && sizes.at(2) > 0) {
+            blockInspectorPanelExtent_ = sizes.at(2);
+        }
+        blockInspectorCollapsed_ = true;
+        blockEditorSplitter_->setSizes({sizes.value(0, 220), qMax(1, sizes.value(1, 980) + sizes.value(2, 0)), 0});
+        return;
+    }
+
+    blockInspectorCollapsed_ = false;
+    int totalWidth = 0;
+    for (const int size : sizes) {
+        totalWidth += size;
+    }
+    if (totalWidth <= 0) {
+        blockEditorSplitter_->setSizes({220, 980, blockInspectorPanelExtent_});
+        return;
+    }
+
+    const int inspectorWidth = qBound(blockDetailsPanel_->minimumWidth(),
+                                      blockInspectorPanelExtent_,
+                                      qMax(blockDetailsPanel_->minimumWidth(), totalWidth - 360));
+    const int toolboxWidth = qMax(120, sizes.value(0, 220));
+    const int canvasWidth = qMax(240, totalWidth - toolboxWidth - inspectorWidth);
+    blockEditorSplitter_->setSizes({toolboxWidth, canvasWidth, inspectorWidth});
 }
 
 bool TextEditorTab::ensureEncodingRootDirectiveForBlocks()

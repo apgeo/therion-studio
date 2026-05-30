@@ -47,6 +47,9 @@ public:
     virtual bool therionMapTouchFriendlyControlsEnabled() const = 0;
     virtual void setTherionMapTouchFriendlyControlsEnabled(bool enabled) = 0;
 
+    virtual bool therionMapMagnifierEnabled() const = 0;
+    virtual void setTherionMapMagnifierEnabled(bool enabled) = 0;
+
     virtual QString therionMapBackgroundLayers() const = 0;
     virtual void setTherionMapBackgroundLayers(const QString &json) = 0;
 };

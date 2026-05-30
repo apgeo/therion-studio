@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QLabel>
+#include <QLocale>
 #include <QSysInfo>
 #include <QTextBrowser>
 #include <QVBoxLayout>
@@ -63,58 +64,81 @@ QString aboutMarkdown()
         .arg(version, packageLabel, qtVersion, platform);
 }
 
-QString quickUserManualMarkdown()
+void appendUnique(QStringList &values, const QString &value)
 {
-    return QStringLiteral(
-        "# Therion Studio Quick User Manual\n"
-        "\n"
-        "## Core workflow\n"
-        "\n"
-        "1. Open a project with `File -> Open Project...`.\n"
-        "2. Open `.th`/`.th2` files from the Files sidebar.\n"
-        "3. Use the Structure sidebar to navigate project hierarchy and source context.\n"
-        "4. Use the map workspace for TH2 geometry edits and keep source text in sync.\n"
-        "5. Save with `Save` or `Save All`.\n"
-        "\n"
-        "## Text workspace essentials\n"
-        "\n"
-        "- `.th` / `.thconfig`: use the document toolbar row above tabs for `Raw`/`Blocks` mode switching\n"
-        "\n"
-        "## Map workspace essentials\n"
-        "\n"
-        "- `Visual` and `Raw` workspace modes for TH2 tabs are in the document toolbar row above tabs\n"
-        "- `Separate Map` / `Return Map` is available in the same document toolbar row\n"
-        "- For TH2 tabs, map view controls `Zoom In`, `Zoom Out`, `Fit`, `Fit + BG` are in the same top toolbar (after `Undo`/`Redo`)\n"
-        "- `Select`, `Point`, `Line`, `Freehand`, `Area`\n"
-        "- `Insert Scrap`, `Complete Draft`, `Undo`, `Redo`\n"
-        "\n"
-        "### Line-vertex shortcuts\n"
-        "\n"
-        "- Split selected segment: `Insert` or `I`\n"
-        "- Remove selected middle anchor: `Delete` or `Backspace`\n"
-        "- Toggle smooth/corner: `S`\n"
-        "\n"
-        "## Full manual\n"
-        "\n"
-        "Use `Help -> User Manual (Full)` when you need complete workflow details.\n");
+    const QString trimmed = value.trimmed();
+    if (!trimmed.isEmpty() && !values.contains(trimmed)) {
+        values.append(trimmed);
+    }
 }
 
-QStringList fullUserManualPathCandidates()
+QStringList userManualLocaleTags()
+{
+    QStringList tags;
+    const QLocale locale;
+    for (const QString &uiLanguage : locale.uiLanguages()) {
+        const QString normalized = uiLanguage.trimmed();
+        appendUnique(tags, normalized);
+        appendUnique(tags, normalized.toLower());
+        appendUnique(tags, QString(normalized).replace(QLatin1Char('-'), QLatin1Char('_')));
+        appendUnique(tags, QString(normalized).toLower().replace(QLatin1Char('-'), QLatin1Char('_')));
+
+        const int separatorIndex = normalized.indexOf(QLatin1Char('-'));
+        if (separatorIndex > 0) {
+            appendUnique(tags, normalized.left(separatorIndex).toLower());
+        }
+    }
+
+    const QString localeName = locale.name();
+    if (localeName != QStringLiteral("C")) {
+        appendUnique(tags, localeName);
+        const int separatorIndex = localeName.indexOf(QLatin1Char('_'));
+        if (separatorIndex > 0) {
+            appendUnique(tags, localeName.left(separatorIndex).toLower());
+        }
+    }
+    return tags;
+}
+
+QStringList userManualFileNames()
+{
+    QStringList fileNames;
+    for (const QString &localeTag : userManualLocaleTags()) {
+        appendUnique(fileNames, QStringLiteral("USER_MANUAL.%1.md").arg(localeTag));
+    }
+    appendUnique(fileNames, QStringLiteral("USER_MANUAL.md"));
+    return fileNames;
+}
+
+QStringList userManualRootCandidates()
 {
     const QString appDir = QCoreApplication::applicationDirPath();
     const QString cwd = QDir::currentPath();
     return {
-        QDir(cwd).absoluteFilePath(QStringLiteral("docs/USER_MANUAL.md")),
-        QDir(appDir).absoluteFilePath(QStringLiteral("docs/USER_MANUAL.md")),
-        QDir(appDir).absoluteFilePath(QStringLiteral("../docs/USER_MANUAL.md")),
-        QDir(appDir).absoluteFilePath(QStringLiteral("../../docs/USER_MANUAL.md")),
-        QDir(appDir).absoluteFilePath(QStringLiteral("../../../docs/USER_MANUAL.md")),
-        QDir(appDir).absoluteFilePath(QStringLiteral("../../../../docs/USER_MANUAL.md"))};
+        QDir(cwd).absoluteFilePath(QStringLiteral("docs")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("docs")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../docs")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../../docs")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../../../docs")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../../../../docs"))};
 }
 
-QString resolveFullUserManualPath()
+QStringList userManualPathCandidates()
 {
-    const QStringList candidates = fullUserManualPathCandidates();
+    QStringList candidates;
+    const QStringList fileNames = userManualFileNames();
+    const QStringList roots = userManualRootCandidates();
+    for (const QString &fileName : fileNames) {
+        for (const QString &root : roots) {
+            appendUnique(candidates, QDir(root).absoluteFilePath(fileName));
+        }
+    }
+    return candidates;
+}
+
+QString resolveUserManualPath()
+{
+    const QStringList candidates = userManualPathCandidates();
     for (const QString &candidatePath : candidates) {
         const QFileInfo info(candidatePath);
         if (info.exists() && info.isFile()) {
@@ -122,6 +146,16 @@ QString resolveFullUserManualPath()
         }
     }
     return QString();
+}
+
+QString missingUserManualMarkdown()
+{
+    return QStringLiteral(
+        "# User Manual\n"
+        "\n"
+        "The user manual file was not found.\n"
+        "\n"
+        "Expected files are `docs/USER_MANUAL.<language>.md` or `docs/USER_MANUAL.md`.\n");
 }
 
 QString loadUtf8TextFile(const QString &filePath)
@@ -176,20 +210,15 @@ void showAboutDialog(QWidget *parent)
     showMarkdownDialog(parent, mainWindowText("About Therion Studio"), aboutMarkdown());
 }
 
-void showQuickUserManualDialog(QWidget *parent)
+void showUserManualDialog(QWidget *parent)
 {
-    showMarkdownDialog(parent, mainWindowText("Quick User Manual"), quickUserManualMarkdown());
-}
-
-void showFullUserManualDialog(QWidget *parent)
-{
-    const QString manualPath = resolveFullUserManualPath();
+    const QString manualPath = resolveUserManualPath();
     if (manualPath.isEmpty()) {
         showMarkdownDialog(
             parent,
-            mainWindowText("User Manual (Full)"),
-            quickUserManualMarkdown(),
-            mainWindowText("Full manual file `docs/USER_MANUAL.md` was not found in expected locations. Showing quick manual instead."));
+            mainWindowText("User Manual"),
+            missingUserManualMarkdown(),
+            mainWindowText("User manual file was not found in expected locations."));
         return;
     }
 
@@ -197,14 +226,14 @@ void showFullUserManualDialog(QWidget *parent)
     if (manualText.trimmed().isEmpty()) {
         showMarkdownDialog(
             parent,
-            mainWindowText("User Manual (Full)"),
-            quickUserManualMarkdown(),
-            mainWindowText("Failed to load `%1`. Showing quick manual instead.").arg(QDir::toNativeSeparators(manualPath)));
+            mainWindowText("User Manual"),
+            missingUserManualMarkdown(),
+            mainWindowText("Failed to load `%1`.").arg(QDir::toNativeSeparators(manualPath)));
         return;
     }
 
     showMarkdownDialog(parent,
-                       mainWindowText("User Manual (Full)"),
+                       mainWindowText("User Manual"),
                        manualText,
                        mainWindowText("Source: %1").arg(QDir::toNativeSeparators(manualPath)));
 }

@@ -124,6 +124,12 @@ public:
     QString statusEncodingText() const;
     QString statusModeText() const;
     int zoomPercent() const;
+    bool isMagnifierEnabled() const;
+    bool hasRightPanel() const;
+    bool isRightPanelCollapsed() const;
+    QString rightPanelLabel() const;
+    bool hasContextHelpPanel() const;
+    bool isContextHelpPanelCollapsed() const;
     bool canUndo() const;
     bool canRedo() const;
     InteractiveDrawMode interactiveDrawMode() const;
@@ -141,6 +147,9 @@ public:
     void triggerAddLine();
     void triggerAddFreehandLine();
     void triggerAddArea();
+    void setMagnifierEnabled(bool enabled);
+    void setRightPanelCollapsed(bool collapsed);
+    void setContextHelpPanelCollapsed(bool collapsed);
     bool isInsertModeActive() const;
     bool isMapPaneDetached() const;
     QString mapPaneWindowActionText() const;
@@ -509,6 +518,9 @@ private:
     bool magnifierUpdatePending_ = false;
     bool magnifierHasViewportPosition_ = false;
     bool magnifierThrottleActive_ = false;
+    bool magnifierEnabled_ = true;
+    bool mapInspectorCollapsed_ = false;
+    int mapInspectorPanelExtent_ = 320;
     QGraphicsScene *mapScene_ = nullptr;
     QWidget *mapPaneContainer_ = nullptr;
     QFrame *mapPaneTopSeparator_ = nullptr;

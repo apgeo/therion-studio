@@ -194,6 +194,10 @@ public:
     void setModeSelectorVisible(bool visible);
     EditorMode editorMode() const;
     bool isBlocksModeAvailable() const;
+    bool hasRightPanel() const;
+    bool isRightPanelCollapsed() const;
+    QString rightPanelLabel() const;
+    void setRightPanelCollapsed(bool collapsed);
 
 public slots:
     void setEditorMode(EditorMode mode);
@@ -306,6 +310,7 @@ private:
     bool isContainerDirectiveInstanceForParsedLine(const QString &directive,
                                                    const TherionParsedLine &parsedLine) const;
     void setHelpCollapsed(bool collapsed);
+    void setBlockInspectorCollapsed(bool collapsed);
     void handleApplicationAppearanceChanged();
     void refreshEditorModeUi();
     bool isBlocksModeSupportedForCurrentFile() const;
@@ -384,6 +389,7 @@ private:
     QStackedWidget *editorModeStack_ = nullptr;
     QWidget *rawEditorPanel_ = nullptr;
     QWidget *blocksPanel_ = nullptr;
+    QSplitter *blockEditorSplitter_ = nullptr;
     QLineEdit *blockToolboxFilterEdit_ = nullptr;
     QComboBox *blockToolboxScopeCombo_ = nullptr;
     QListWidget *blockToolboxList_ = nullptr;
@@ -427,7 +433,9 @@ private:
     QStringListModel *completionModel_ = nullptr;
     QString lastValidationTooltipKey_;
     int helpPanelExtent_ = 380;
+    int blockInspectorPanelExtent_ = 380;
     bool helpCollapsed_ = false;
+    bool blockInspectorCollapsed_ = false;
     bool dirty_ = false;
     bool loading_ = false;
     bool inlineStatusRequestedVisible_ = true;

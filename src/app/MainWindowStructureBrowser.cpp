@@ -605,19 +605,7 @@ void MainWindow::handleStructureItemActivated(const QModelIndex &index, QTreeVie
 
 void MainWindow::updateMapEditorActionState()
 {
-    const bool hasTh2Document = currentDocumentSupportsMapPane();
-
-    if (openMapEditorAction_ != nullptr) {
-        openMapEditorAction_->setEnabled(hasTh2Document);
-    }
-
     refreshMapBackgroundPanel();
-}
-
-bool MainWindow::currentDocumentSupportsMapPane() const
-{
-    QWidget *tabWidget = currentDocumentWidget();
-    return tabWidget != nullptr && documentPathForWidget(tabWidget).endsWith(QStringLiteral(".th2"), Qt::CaseInsensitive);
 }
 
 QModelIndex MainWindow::firstStructureSourceIndex(const QModelIndex &index) const

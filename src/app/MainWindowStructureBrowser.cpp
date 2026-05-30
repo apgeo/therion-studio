@@ -18,6 +18,7 @@
 #include <QPainter>
 #include <QPalette>
 #include <QSignalBlocker>
+#include <QSet>
 #include <QStandardItem>
 #include <QStandardItemModel>
 #include <QSvgRenderer>
@@ -30,8 +31,6 @@
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
 #include "../core/ProjectStructureIndex.h"
-#include "../core/IFileSystem.h"
-#include "../core/TherionDocumentParser.h"
 
 namespace
 {
@@ -174,12 +173,6 @@ QIcon structureItemIconForCategory(const QString &category)
     return QIcon();
 }
 
-QString structureEntryNodeKey(const TherionStudio::ProjectStructureEntry &entry)
-{
-    const QString normalizedPath = QFileInfo(entry.sourceFile).absoluteFilePath();
-    return QStringLiteral("%1:%2").arg(normalizedPath).arg(entry.lineNumber);
-}
-
 QString normalizedStructurePathKey(const QString &path)
 {
     if (path.trimmed().isEmpty()) {
@@ -189,93 +182,6 @@ QString normalizedStructurePathKey(const QString &path)
     QFileInfo fileInfo(path);
     const QString canonicalPath = fileInfo.canonicalFilePath();
     return canonicalPath.isEmpty() ? fileInfo.absoluteFilePath() : canonicalPath;
-}
-
-QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(TherionStudio::IFileSystem &fileSystem,
-                                                         const QVector<TherionStudio::ProjectStructureEntry> &entries)
-{
-    QHash<QString, QSet<QString>> referencesByMap;
-    QSet<QString> knownScrapNames;
-    for (const TherionStudio::ProjectStructureEntry &entry : entries) {
-        if (entry.category == QStringLiteral("Scraps") && !entry.name.trimmed().isEmpty()) {
-            knownScrapNames.insert(entry.name.trimmed().toLower());
-        }
-    }
-    if (knownScrapNames.isEmpty()) {
-        return referencesByMap;
-    }
-
-    QHash<QString, QVector<TherionStudio::ProjectStructureEntry>> mapsBySourceFile;
-    for (const TherionStudio::ProjectStructureEntry &entry : entries) {
-        if (entry.category == QStringLiteral("Maps") && !entry.sourceFile.isEmpty() && entry.lineNumber > 0) {
-            mapsBySourceFile[QFileInfo(entry.sourceFile).absoluteFilePath()].append(entry);
-        }
-    }
-    if (mapsBySourceFile.isEmpty()) {
-        return referencesByMap;
-    }
-
-    for (auto fileIt = mapsBySourceFile.constBegin(); fileIt != mapsBySourceFile.constEnd(); ++fileIt) {
-        QString contents;
-        if (!fileSystem.readUtf8TextFile(fileIt.key(), &contents, nullptr)) {
-            continue;
-        }
-        const QVector<TherionStudio::TherionParsedLine> parsedLines = TherionStudio::TherionDocumentParser::parseText(contents);
-        if (parsedLines.isEmpty()) {
-            continue;
-        }
-
-        for (const TherionStudio::ProjectStructureEntry &mapEntry : fileIt.value()) {
-            int mapLineIndex = -1;
-            for (int index = 0; index < parsedLines.size(); ++index) {
-                if (parsedLines.at(index).lineNumber == mapEntry.lineNumber
-                    && parsedLines.at(index).directive == QStringLiteral("map")) {
-                    mapLineIndex = index;
-                    break;
-                }
-            }
-            if (mapLineIndex < 0) {
-                continue;
-            }
-
-            QSet<QString> scrapReferences;
-            int mapDepth = 0;
-            for (int index = mapLineIndex; index < parsedLines.size(); ++index) {
-                const TherionStudio::TherionParsedLine &parsedLine = parsedLines.at(index);
-                const QString directive = parsedLine.directive;
-
-                if (directive == QStringLiteral("map")) {
-                    ++mapDepth;
-                    continue;
-                }
-                if (directive == QStringLiteral("endmap")) {
-                    --mapDepth;
-                    if (mapDepth <= 0) {
-                        break;
-                    }
-                    continue;
-                }
-                if (mapDepth != 1) {
-                    continue;
-                }
-                if (parsedLine.tokens.size() != 1) {
-                    continue;
-                }
-
-                const QString candidate = parsedLine.tokens.first().trimmed().toLower();
-                if (candidate.isEmpty() || candidate.startsWith(QLatin1Char('-'))) {
-                    continue;
-                }
-                if (knownScrapNames.contains(candidate)) {
-                    scrapReferences.insert(candidate);
-                }
-            }
-
-            referencesByMap.insert(structureEntryNodeKey(mapEntry), scrapReferences);
-        }
-    }
-
-    return referencesByMap;
 }
 }
 
@@ -333,7 +239,7 @@ void MainWindow::handleStructureSidebarScanFinished(const TherionStudio::Project
     if (result.projectRootPath == projectRootPath_
         && !projectRootPath_.isEmpty()
         && QDir(projectRootPath_).exists()) {
-        applyStructureSidebarEntries(result.entries);
+        applyStructureSidebarIndex(result.projectIndex);
     }
 }
 
@@ -354,8 +260,10 @@ void MainWindow::rebuildStructureSidebar()
     requestStructureSidebarRebuild();
 }
 
-void MainWindow::applyStructureSidebarEntries(const QVector<TherionStudio::ProjectStructureEntry> &entries)
+void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSnapshot &projectIndex)
 {
+    const QVector<TherionStudio::ProjectStructureEntry> &entries = projectIndex.entries;
+
     structureModel_->clear();
     structureModel_->setHorizontalHeaderLabels({tr("Name")});
 
@@ -392,7 +300,7 @@ void MainWindow::applyStructureSidebarEntries(const QVector<TherionStudio::Proje
             QStandardItem *item = nullptr;
         };
 
-        const QHash<QString, QSet<QString>> mapScrapRefs = mapScrapReferencesByMapKey(fileSystem_, entries);
+        const QHash<QString, QSet<QString>> &mapScrapRefs = projectIndex.mapScrapReferencesByMapKey;
         QHash<QString, QSet<QString>> mapOwnersByScrapName;
         for (auto it = mapScrapRefs.constBegin(); it != mapScrapRefs.constEnd(); ++it) {
             for (const QString &scrapNameLower : it.value()) {
@@ -435,7 +343,7 @@ void MainWindow::applyStructureSidebarEntries(const QVector<TherionStudio::Proje
             VisibleStructureNode node;
             node.entry = entry;
             node.entryName = entryName;
-            node.nodeKey = structureEntryNodeKey(entry);
+            node.nodeKey = TherionStudio::ProjectStructureIndex::structureEntryNodeKey(entry);
             node.item = entryItem;
 
             if (entry.category == QStringLiteral("Scraps")) {

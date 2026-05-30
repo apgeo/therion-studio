@@ -137,9 +137,94 @@ int runProjectStructureHierarchyTest()
 
     return 0;
 }
+
+int runProjectIndexMapScrapReferenceTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "The temporary project directory could not be created.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    if (!expect(projectDir.mkpath(QStringLiteral("maps")), "The temporary maps directory could not be created.")) {
+        return 1;
+    }
+
+    const QString rootFile = projectDir.filePath(QStringLiteral("root.th"));
+    const QString mapFile = projectDir.filePath(QStringLiteral("maps/map.th2"));
+    if (!expect(writeTextFile(rootFile,
+                              QStringLiteral(
+                                  "survey cave\n"
+                                  "  input maps/map.th2\n"
+                                  "  map cave-map\n"
+                                  "    stale-scrap\n"
+                                  "  endmap\n"
+                                  "endsurvey cave\n")),
+                "The root Therion file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(mapFile,
+                              QStringLiteral(
+                                  "scrap s1\n"
+                                  "endscrap\n")),
+                "The TH2 map file could not be written.")) {
+        return 1;
+    }
+
+    QHash<QString, QString> inMemoryContents;
+    inMemoryContents.insert(normalizedPathForComparison(rootFile),
+                            QStringLiteral(
+                                "survey cave\n"
+                                "  input maps/map.th2\n"
+                                "  map cave-map\n"
+                                "    s1\n"
+                                "  endmap\n"
+                                "endsurvey cave\n"));
+
+    QString errorMessage;
+    const ProjectIndexSnapshot snapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(),
+                                                                                  inMemoryContents,
+                                                                                  &errorMessage);
+    if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
+    ProjectStructureEntry mapEntry;
+    bool foundMap = false;
+    for (const ProjectStructureEntry &entry : snapshot.entries) {
+        if (entry.category == QStringLiteral("Maps") && entry.name == QStringLiteral("cave-map")) {
+            mapEntry = entry;
+            foundMap = true;
+            break;
+        }
+    }
+    if (!expect(foundMap, "The project index did not find the map entry.")) {
+        return 1;
+    }
+
+    const QString mapKey = ProjectStructureIndex::structureEntryNodeKey(mapEntry);
+    const QSet<QString> scrapReferences = snapshot.mapScrapReferencesByMapKey.value(mapKey);
+    if (!expect(scrapReferences.contains(QStringLiteral("s1")),
+                "The project index did not resolve the map-to-scrap reference from in-memory source text.")) {
+        return 1;
+    }
+    if (!expect(!scrapReferences.contains(QStringLiteral("stale-scrap")),
+                "The project index used stale on-disk source text for map-to-scrap references.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
 {
-    return runProjectStructureHierarchyTest();
+    if (runProjectStructureHierarchyTest() != 0) {
+        return 1;
+    }
+    if (runProjectIndexMapScrapReferenceTest() != 0) {
+        return 1;
+    }
+
+    return 0;
 }

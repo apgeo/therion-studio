@@ -51,9 +51,10 @@ void ProjectStructureScanner::startScan()
         Result result;
         result.generation = generation;
         result.projectRootPath = request.projectRootPath;
-        result.entries = ProjectStructureIndex::scanProject(request.projectRootPath,
-                                                            request.inMemoryProjectContentsByPath,
-                                                            &result.errorMessage);
+        result.projectIndex = ProjectStructureIndex::scanProjectIndex(request.projectRootPath,
+                                                                      request.inMemoryProjectContentsByPath,
+                                                                      &result.errorMessage);
+        result.entries = result.projectIndex.entries;
         return result;
     });
     scanWatcher_->setFuture(future);

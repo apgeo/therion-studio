@@ -437,20 +437,104 @@ bool isInterestingProjectFile(const QFileInfo &fileInfo)
     const QString suffix = fileInfo.suffix().toLower();
     return suffix == QStringLiteral("th") || suffix == QStringLiteral("th2");
 }
+
+QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(const QVector<ProjectStructureEntry> &entries,
+                                                         ParsedFileCache *cache,
+                                                         const QHash<QString, QString> &inMemoryFileContentsByPath)
+{
+    QHash<QString, QSet<QString>> referencesByMap;
+
+    QSet<QString> knownScrapNames;
+    for (const ProjectStructureEntry &entry : entries) {
+        if (entry.category == QStringLiteral("Scraps") && !entry.name.trimmed().isEmpty()) {
+            knownScrapNames.insert(entry.name.trimmed().toLower());
+        }
+    }
+    if (knownScrapNames.isEmpty()) {
+        return referencesByMap;
+    }
+
+    QHash<QString, QVector<ProjectStructureEntry>> mapsBySourceFile;
+    for (const ProjectStructureEntry &entry : entries) {
+        if (entry.category == QStringLiteral("Maps") && !entry.sourceFile.isEmpty() && entry.lineNumber > 0) {
+            mapsBySourceFile[normalizedFilePathKey(entry.sourceFile)].append(entry);
+        }
+    }
+    if (mapsBySourceFile.isEmpty()) {
+        return referencesByMap;
+    }
+
+    for (auto fileIt = mapsBySourceFile.constBegin(); fileIt != mapsBySourceFile.constEnd(); ++fileIt) {
+        const QVector<TherionParsedLine> &parsedLines = parsedLinesForFile(fileIt.key(), cache, inMemoryFileContentsByPath);
+        if (parsedLines.isEmpty()) {
+            continue;
+        }
+
+        for (const ProjectStructureEntry &mapEntry : fileIt.value()) {
+            int mapLineIndex = -1;
+            for (int index = 0; index < parsedLines.size(); ++index) {
+                if (parsedLines.at(index).lineNumber == mapEntry.lineNumber
+                    && parsedLines.at(index).directive == QStringLiteral("map")) {
+                    mapLineIndex = index;
+                    break;
+                }
+            }
+            if (mapLineIndex < 0) {
+                continue;
+            }
+
+            QSet<QString> scrapReferences;
+            int mapDepth = 0;
+            for (int index = mapLineIndex; index < parsedLines.size(); ++index) {
+                const TherionParsedLine &parsedLine = parsedLines.at(index);
+                const QString directive = parsedLine.directive;
+
+                if (directive == QStringLiteral("map")) {
+                    ++mapDepth;
+                    continue;
+                }
+                if (directive == QStringLiteral("endmap")) {
+                    --mapDepth;
+                    if (mapDepth <= 0) {
+                        break;
+                    }
+                    continue;
+                }
+                if (mapDepth != 1 || parsedLine.tokens.size() != 1) {
+                    continue;
+                }
+
+                const QString candidate = parsedLine.tokens.first().trimmed().toLower();
+                if (candidate.isEmpty() || candidate.startsWith(QLatin1Char('-'))) {
+                    continue;
+                }
+                if (knownScrapNames.contains(candidate)) {
+                    scrapReferences.insert(candidate);
+                }
+            }
+
+            if (!scrapReferences.isEmpty()) {
+                referencesByMap.insert(ProjectStructureIndex::structureEntryNodeKey(mapEntry), scrapReferences);
+            }
+        }
+    }
+
+    return referencesByMap;
+}
 }
 
-QVector<ProjectStructureEntry> ProjectStructureIndex::scanProject(const QString &projectRootPath, QString *errorMessage)
+ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &projectRootPath, QString *errorMessage)
 {
-    return scanProject(projectRootPath, QHash<QString, QString>(), errorMessage);
+    return scanProjectIndex(projectRootPath, QHash<QString, QString>(), errorMessage);
 }
 
-QVector<ProjectStructureEntry> ProjectStructureIndex::scanProject(const QString &projectRootPath,
-                                                                  const QHash<QString, QString> &inMemoryFileContentsByPath,
-                                                                  QString *errorMessage)
+ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &projectRootPath,
+                                                             const QHash<QString, QString> &inMemoryFileContentsByPath,
+                                                             QString *errorMessage)
 {
-    QVector<ProjectStructureEntry> entries;
+    ProjectIndexSnapshot snapshot;
     if (projectRootPath.isEmpty()) {
-        return entries;
+        return snapshot;
     }
 
     QDir projectRoot(projectRootPath);
@@ -459,7 +543,7 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanProject(const QString 
             *errorMessage = QCoreApplication::translate("TherionStudio::ProjectStructureIndex",
                                                         "The selected project folder does not exist.");
         }
-        return entries;
+        return snapshot;
     }
 
     QVector<QString> filePaths;
@@ -486,10 +570,28 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanProject(const QString 
     QVector<ProjectBlock> blockStack;
     QSet<QString> activeFiles;
     for (const QString &filePath : rootFiles) {
-        appendProjectStructureFromFile(filePath, &cache, &blockStack, &activeFiles, &entries, inMemoryFileContentsByPath);
+        appendProjectStructureFromFile(filePath,
+                                       &cache,
+                                       &blockStack,
+                                       &activeFiles,
+                                       &snapshot.entries,
+                                       inMemoryFileContentsByPath);
     }
 
-    return entries;
+    snapshot.mapScrapReferencesByMapKey = mapScrapReferencesByMapKey(snapshot.entries, &cache, inMemoryFileContentsByPath);
+    return snapshot;
+}
+
+QVector<ProjectStructureEntry> ProjectStructureIndex::scanProject(const QString &projectRootPath, QString *errorMessage)
+{
+    return scanProject(projectRootPath, QHash<QString, QString>(), errorMessage);
+}
+
+QVector<ProjectStructureEntry> ProjectStructureIndex::scanProject(const QString &projectRootPath,
+                                                                  const QHash<QString, QString> &inMemoryFileContentsByPath,
+                                                                  QString *errorMessage)
+{
+    return scanProjectIndex(projectRootPath, inMemoryFileContentsByPath, errorMessage).entries;
 }
 
 QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QString &sourceFile, const QString &text)
@@ -551,5 +653,10 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QStri
     }
 
     return entries;
+}
+
+QString ProjectStructureIndex::structureEntryNodeKey(const ProjectStructureEntry &entry)
+{
+    return QStringLiteral("%1:%2").arg(normalizedFilePathKey(entry.sourceFile)).arg(entry.lineNumber);
 }
 }

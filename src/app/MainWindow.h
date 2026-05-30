@@ -123,7 +123,7 @@ private:
     void rebuildStructureSidebar();
     void requestStructureSidebarRebuild();
     void handleStructureSidebarScanFinished(const TherionStudio::ProjectStructureScanner::Result &result);
-    void applyStructureSidebarEntries(const QVector<TherionStudio::ProjectStructureEntry> &entries);
+    void applyStructureSidebarIndex(const TherionStudio::ProjectIndexSnapshot &projectIndex);
     void rebuildMapObjectsTree();
     void showSidebarPane(SidebarPane pane);
     void setSidebarPane(SidebarPane pane);

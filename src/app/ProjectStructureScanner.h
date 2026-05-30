@@ -24,6 +24,7 @@ public:
         quint64 generation = 0;
         QString projectRootPath;
         QString errorMessage;
+        ProjectIndexSnapshot projectIndex;
         QVector<ProjectStructureEntry> entries;
     };
 

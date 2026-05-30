@@ -25,10 +25,9 @@ jobs:
       APPIMAGETOOL_SHA256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
       APPIMAGE_RUNTIME_URL: https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
       APPIMAGE_RUNTIME_SHA256: 2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
-      APPIMAGE_QT_BASE_URL: https://download.qt.io
-      APPIMAGE_QT_VERSION: 6.8.3
-      APPIMAGE_QT_ARCH: linux_gcc_64
-      APPIMAGE_QT_ARCHIVES: qtbase,qtsvg,qttools
+      APPIMAGE_BUILD_IMAGE: debian:13
+      APPIMAGE_QT_ARCHITECTURE: amd64
+      APPIMAGE_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
 
     steps:
       - name: Check out repository
@@ -81,7 +80,6 @@ jobs:
             qt6-svg-dev \
             qt6-tools-dev \
             qt6-tools-dev-tools \
-            python3-venv \
             wget
 
       - name: Configure .deb build
@@ -112,82 +110,90 @@ jobs:
           -C ${{ inputs.build_type }}
           --verbose
 
-      - name: Install AppImage Qt
+      - name: Build AppImage in Debian 13 container
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m venv "$RUNNER_TEMP/aqt"
-          "$RUNNER_TEMP/aqt/bin/python" -m pip install --upgrade pip aqtinstall
-          IFS=',' read -r -a qt_archives <<< "$APPIMAGE_QT_ARCHIVES"
-          "$RUNNER_TEMP/aqt/bin/python" -m aqt install-qt linux desktop \
-            "$APPIMAGE_QT_VERSION" "$APPIMAGE_QT_ARCH" \
-            --base "$APPIMAGE_QT_BASE_URL" \
-            --outputdir "$RUNNER_WORKSPACE/Qt" \
-            --archives "${qt_archives[@]}"
-          qt_root="$(find "$RUNNER_WORKSPACE/Qt/$APPIMAGE_QT_VERSION" -mindepth 1 -maxdepth 1 -type d | sort | head -n1)"
-          if [[ -z "$qt_root" ]]; then
-            echo "No Qt root found under $RUNNER_WORKSPACE/Qt/$APPIMAGE_QT_VERSION"
-            find "$RUNNER_WORKSPACE/Qt" -maxdepth 3 -type d | sort
-            exit 1
-          fi
-          test -f "$qt_root/lib/cmake/Qt6/Qt6Config.cmake"
-          echo "APPIMAGE_QT_ROOT=$qt_root" >> "$GITHUB_ENV"
-          echo "QT_PLUGIN_PATH=$qt_root/plugins" >> "$GITHUB_ENV"
-          if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
-            echo "LD_LIBRARY_PATH=$qt_root/lib:$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
-          else
-            echo "LD_LIBRARY_PATH=$qt_root/lib" >> "$GITHUB_ENV"
-          fi
-          echo "$qt_root/bin" >> "$GITHUB_PATH"
-          echo "Using AppImage Qt from $qt_root"
+          docker run --rm \
+            -e "APPIMAGETOOL_SHA256=$APPIMAGETOOL_SHA256" \
+            -e "APPIMAGETOOL_URL=$APPIMAGETOOL_URL" \
+            -e "APPIMAGE_RUNTIME_SHA256=$APPIMAGE_RUNTIME_SHA256" \
+            -e "APPIMAGE_RUNTIME_URL=$APPIMAGE_RUNTIME_URL" \
+            -e "BUILD_TYPE=${{ inputs.build_type }}" \
+            -e "THERION_STUDIO_PACKAGE_LABEL=$THERION_STUDIO_PACKAGE_LABEL" \
+            -e "THERION_STUDIO_VERSION=$THERION_STUDIO_VERSION" \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            "$APPIMAGE_BUILD_IMAGE" \
+            bash -lc '
+              set -euo pipefail
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y \
+                ca-certificates \
+                cmake \
+                dpkg-dev \
+                file \
+                libgl1-mesa-dev \
+                libxkbcommon-dev \
+                libxkbcommon-x11-0 \
+                libxcb-cursor0 \
+                libxcb-icccm4 \
+                libxcb-image0 \
+                libxcb-keysyms1 \
+                libxcb-render-util0 \
+                libxcb-xinerama0 \
+                ninja-build \
+                patchelf \
+                qt6-base-dev \
+                qt6-base-dev-tools \
+                qt6-svg-dev \
+                qt6-tools-dev \
+                qt6-tools-dev-tools \
+                wget
 
-      - name: Configure AppImage build
-        shell: bash
-        run: |
-          set -euo pipefail
-          cmake -S . -B build-linux-appimage \
-            -G Ninja \
-            -DCMAKE_BUILD_TYPE=${{ inputs.build_type }} \
-            -DCMAKE_INSTALL_PREFIX=/usr \
-            -DCMAKE_PREFIX_PATH="$APPIMAGE_QT_ROOT" \
-            -DTHERION_STUDIO_VERSION=${{ env.THERION_STUDIO_VERSION }} \
-            -DTHERION_STUDIO_PACKAGE_LABEL=${{ env.THERION_STUDIO_PACKAGE_LABEL }} \
-            -DTHERION_ENABLE_STRICT_WARNINGS=ON \
-            -DTHERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON
+              rm -rf build-linux-appimage
+              mkdir -p build-linux-appimage
+              dpkg-query -W qt6-base-dev | cut -f2 > build-linux-appimage/appimage-qt-version.txt
 
-      - name: Build AppImage app
-        run: cmake --build build-linux-appimage --target TherionStudio --parallel
+              cmake -S . -B build-linux-appimage \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+                -DCMAKE_INSTALL_PREFIX=/usr \
+                -DTHERION_STUDIO_VERSION="$THERION_STUDIO_VERSION" \
+                -DTHERION_STUDIO_PACKAGE_LABEL="$THERION_STUDIO_PACKAGE_LABEL" \
+                -DTHERION_ENABLE_STRICT_WARNINGS=ON \
+                -DTHERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON
+              cmake --build build-linux-appimage --target TherionStudio --parallel
 
-      - name: Build AppImage
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf build-linux-appimage/AppDir
-          DESTDIR="$PWD/build-linux-appimage/AppDir" cmake --install build-linux-appimage --prefix /usr
+              rm -rf build-linux-appimage/AppDir
+              DESTDIR="$PWD/build-linux-appimage/AppDir" cmake --install build-linux-appimage --prefix /usr
 
-          appdir="$PWD/build-linux-appimage/AppDir"
-          usr_dir="$appdir/usr"
-          desktop_file="$usr_dir/share/applications/therion-studio.desktop"
-          icon_file="$usr_dir/share/icons/hicolor/256x256/apps/therion-studio.png"
-          test -x "$usr_dir/bin/TherionStudio"
-          test -f "$desktop_file"
-          test -f "$icon_file"
-          cp "$desktop_file" "$appdir/therion-studio.desktop"
-          cp "$icon_file" "$appdir/therion-studio.png"
-          ln -sf therion-studio.png "$appdir/.DirIcon"
-          ln -sf usr/bin/TherionStudio "$appdir/AppRun"
+              appdir="$PWD/build-linux-appimage/AppDir"
+              usr_dir="$appdir/usr"
+              desktop_file="$usr_dir/share/applications/therion-studio.desktop"
+              icon_file="$usr_dir/share/icons/hicolor/256x256/apps/therion-studio.png"
+              test -x "$usr_dir/bin/TherionStudio"
+              test -f "$desktop_file"
+              test -f "$icon_file"
+              cp "$desktop_file" "$appdir/therion-studio.desktop"
+              cp "$icon_file" "$appdir/therion-studio.png"
+              ln -sf therion-studio.png "$appdir/.DirIcon"
+              ln -sf usr/bin/TherionStudio "$appdir/AppRun"
 
-          pushd build-linux-appimage >/dev/null
-          wget -q "$APPIMAGETOOL_URL" -O appimagetool.AppImage
-          echo "$APPIMAGETOOL_SHA256  appimagetool.AppImage" | sha256sum --check --strict
-          wget -q "$APPIMAGE_RUNTIME_URL" -O runtime-x86_64
-          echo "$APPIMAGE_RUNTIME_SHA256  runtime-x86_64" | sha256sum --check --strict
-          chmod +x appimagetool.AppImage
-          ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool.AppImage \
-            --runtime-file runtime-x86_64 \
-            AppDir \
-            "TherionStudio-${THERION_STUDIO_PACKAGE_LABEL}-Linux-x86_64.AppImage"
-          popd >/dev/null
+              pushd build-linux-appimage >/dev/null
+              wget -q "$APPIMAGETOOL_URL" -O appimagetool.AppImage
+              echo "$APPIMAGETOOL_SHA256  appimagetool.AppImage" | sha256sum --check --strict
+              wget -q "$APPIMAGE_RUNTIME_URL" -O runtime-x86_64
+              echo "$APPIMAGE_RUNTIME_SHA256  runtime-x86_64" | sha256sum --check --strict
+              chmod +x appimagetool.AppImage
+              ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool.AppImage \
+                --runtime-file runtime-x86_64 \
+                AppDir \
+                "TherionStudio-${THERION_STUDIO_PACKAGE_LABEL}-Linux-x86_64.AppImage"
+              popd >/dev/null
+            '
+          echo "APPIMAGE_QT_VERSION=$(cat build-linux-appimage/appimage-qt-version.txt)" >> "$GITHUB_ENV"
 
       - name: Verify Linux artifacts and generate manifest
         id: verify_linux_artifacts
@@ -203,10 +209,10 @@ jobs:
             --appimagetool-sha256 "$APPIMAGETOOL_SHA256" \
             --appimage-runtime-url "$APPIMAGE_RUNTIME_URL" \
             --appimage-runtime-sha256 "$APPIMAGE_RUNTIME_SHA256" \
-            --appimage-qt-base-url "$APPIMAGE_QT_BASE_URL" \
+            --appimage-qt-source "$APPIMAGE_BUILD_IMAGE apt" \
             --appimage-qt-version "$APPIMAGE_QT_VERSION" \
-            --appimage-qt-architecture "$APPIMAGE_QT_ARCH" \
-            --appimage-qt-archives "$APPIMAGE_QT_ARCHIVES" \
+            --appimage-qt-architecture "$APPIMAGE_QT_ARCHITECTURE" \
+            --appimage-qt-packages "$APPIMAGE_QT_PACKAGES" \
             --manifest-out "$PWD/build-linux-packages/TherionStudio-Linux-artifacts-manifest.json" \
             --github-output "$GITHUB_OUTPUT"
 

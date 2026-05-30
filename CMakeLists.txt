@@ -663,8 +663,8 @@ if(UNIX AND NOT APPLE AND THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL)
         message(FATAL_ERROR
             "THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL requires Qt 6.5 or newer. "
             "Ubuntu 24.04 distro Qt is supported for the .deb build, but the "
-            "AppImage workflow must configure against the workflow-provisioned "
-            "Qt used for Linux CMake deployment.")
+            "AppImage workflow must configure in the Debian 13 container "
+            "used for Linux CMake deployment.")
     endif()
     therion_generate_deploy_app_script(TherionStudio THERION_STUDIO_QT_DEPLOY_SCRIPT)
     install(SCRIPT ${THERION_STUDIO_QT_DEPLOY_SCRIPT})

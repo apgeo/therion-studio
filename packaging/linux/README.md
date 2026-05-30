@@ -35,18 +35,20 @@ After artifact creation, the workflow runs Debian/Ubuntu forward-compatibility s
 - performs an offscreen AppImage launch sanity check
 
 Ubuntu 26.04 and Debian 13 are considered tested `.deb` targets for a given artifact only when the
-corresponding workflow smoke jobs pass.
+corresponding workflow smoke jobs pass. Ubuntu 24.04 is covered by the `.deb` build and staged
+install validation. The AppImage is considered tested on Debian 13 and Ubuntu 26.04 only when both
+AppImage smoke checks pass.
 
 ## Build Notes
 
 - `.deb` generation uses CPack DEB configuration from `CMakeLists.txt`.
-- AppImage generation uses a separate CMake build with workflow-provisioned Qt 6.8.3 and
+- AppImage generation uses a separate CMake build inside a `debian:13` container with
   `THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON` so Qt's generated Linux deployment script
   populates the AppDir during install. Ubuntu 24.04 distro Qt remains the `.deb` baseline and is
   not used for AppImage deployment.
 - The final AppImage is produced with pinned `appimagetool` 1.9.1 and pinned
   `type2-runtime` 20251108 `runtime-x86_64`, both SHA256-verified by the workflow before use.
-- The manifest records the AppImage Qt source/version/archive set, `appimagetool`, and AppImage
+- The manifest records the AppImage Qt package source/version/package set, `appimagetool`, and AppImage
   runtime inputs for release provenance.
 - The workflow runs install-layout smoke verification using
   `scripts/verify_install_layout.py` before packaging.

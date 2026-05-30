@@ -105,16 +105,17 @@ TherionStudio-Linux-artifacts-manifest.json
 ```
 
 The `.deb` artifact name stays distro-neutral because the package is validated against tested
-Debian/Ubuntu-family targets rather than tied to one Ubuntu release. The workflow includes
-follow-up Ubuntu 26.04 and Debian 13 container smoke jobs that install the generated `.deb` and
-perform offscreen launch sanity checks for both the installed `.deb` binary and the generated
-AppImage.
+Debian/Ubuntu-family targets rather than tied to one Ubuntu release. Ubuntu coverage is provided
+by the `.deb` channel, including the Ubuntu 24.04 build baseline. The workflow includes follow-up
+Ubuntu 26.04 and Debian 13 container smoke jobs that install the generated `.deb` and perform
+offscreen launch sanity checks for both the installed `.deb` binary and the generated AppImage.
 
 For a release, treat Ubuntu 26.04 and Debian 13 as tested `.deb` targets only when both smoke jobs
-pass in the release workflow run.
+pass in the release workflow run. Treat the AppImage as tested on Debian 13 and Ubuntu 26.04 only
+when both AppImage smoke checks pass.
 
-The AppImage is generated from Qt's CMake deployment script using workflow-provisioned Qt 6.8.3
-from `download.qt.io`, plus pinned `appimagetool` and pinned AppImage runtime inputs. Do not
+The AppImage is generated in a `debian:13` container from Qt's CMake deployment script using
+Debian distro Qt packages, plus pinned `appimagetool` and pinned AppImage runtime inputs. Do not
 replace this with mutable `continuous` downloads.
 
 ## 7. Publish GitHub Release

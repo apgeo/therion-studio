@@ -45,14 +45,14 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1: Continue Phase 10 with Apple Pencil/freehand stroke UX, broader parsed-document snapshot use, less-aggressive shape-sensitive bezier simplification, and point/line/area workflow polish.
 - P2: Continue Phase 11 with object-reference target picking/resolution shortcuts, then selection/details glue consolidation without behavior changes.
 - P1: Address the repo review follow-up by first reducing CMake source-list duplication.
-- P2: Stabilize the Docker-reproducible Linux `amd64`/`arm64` `.deb` and `x86_64`/`aarch64` AppImage build and smoke-test scripts across Ubuntu 26.04 and Debian 13, then consider adding GitHub Pages APT repository publishing for the `.deb` channel.
+- P2: Stabilize the Docker-reproducible Linux `amd64`/`arm64` `.deb` and `x86_64`/`aarch64` AppImage build and smoke-test scripts across Ubuntu 26.04 and Debian 13, then enable a daily scheduled Linux packaging run and consider adding GitHub Pages APT repository publishing for the `.deb` channel.
 
 ## Risks / Blockers
 
 - Parser/serializer round-trip coverage is still incomplete for full Therion corpus-level confidence.
 - Pen/touch navigation depends on automatic input-policy behavior; Sidecar and touch-screen edge cases remain a product risk.
 - Map/text undo arbitration still depends on choosing between map `QUndoStack` and embedded text-editor undo until unified command-stack refactor.
-- Linux packaging depends on the local-reproducible helper cluster under `scripts/linux-packages/`, the Ubuntu 26.04 `amd64`/`arm64` `.deb` container script, the Debian 13 `x86_64`/`aarch64` AppImage container script, the full local build+smoke wrapper, Docker-backed install/launch smoke scripts, Debian 13 distro Qt, Qt's Linux deploy script, explicit Qt plugin/runtime library staging, an AppRun runtime-path wrapper, pinned `appimagetool`/runtime inputs, downloaded-artifact-root discovery in smoke jobs that excludes CPack internals, split snapshot artifact/Debian version metadata, and separate `.deb` versus AppImage target expectations; verify the full path in GitHub Actions on Ubuntu 26.04 and Debian 13 before treating it as stable.
+- Fast Linux push/PR CI intentionally stays on the hosted Ubuntu 24.04 runner only. Linux packaging depends on the local-reproducible helper cluster under `scripts/linux-packages/`, the Ubuntu 26.04 `amd64`/`arm64` `.deb` container script, the Debian 13 `x86_64`/`aarch64` AppImage container script, the full local build+smoke wrapper, Docker-backed install/launch smoke scripts, Debian 13 distro Qt, Qt's Linux deploy script, explicit Qt plugin/runtime library staging, an AppRun runtime-path wrapper, pinned `appimagetool`/runtime inputs, downloaded-artifact-root discovery in smoke jobs that excludes CPack internals, split snapshot artifact/Debian version metadata, and separate `.deb` versus AppImage target expectations; verify the full path in GitHub Actions on Ubuntu 26.04 and Debian 13 before treating it as stable.
 - Signing/distribution requirements are not yet exercised end-to-end on all target platforms.
 
 ## Phase Plan

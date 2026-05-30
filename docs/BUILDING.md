@@ -260,10 +260,9 @@ the generated AppImage with `APPIMAGE_EXTRACT_AND_RUN=1` in the requested contai
 Do not use mutable `linuxdeployqt` `continuous` AppImage downloads or unmaintained Qt
 deployment plugins for production release artifact generation.
 
-Regular CI still validates distribution Qt source builds on Ubuntu 24.04 and Ubuntu 26.04;
-Ubuntu 26.04 runs in an official Ubuntu container image until GitHub provides a hosted runner
-label for it. The Linux packaging workflow additionally smoke-tests generated release artifacts
-on Debian 13.
+Regular `build-linux.yml` CI intentionally validates the fast source-build path only on the hosted
+Ubuntu 24.04 runner. Ubuntu 26.04 and Debian 13 coverage belongs to the Linux packaging workflow,
+which builds and smoke-tests generated release artifacts in containers.
 
 On supported Ubuntu and Debian-family systems, install the development dependencies with:
 

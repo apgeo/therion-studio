@@ -34,6 +34,11 @@ def main() -> int:
     parser.add_argument("--source-ref", required=True)
     parser.add_argument("--build-type", required=True)
     parser.add_argument("--debian-version", required=True)
+    parser.add_argument("--deb-platform-label", required=True)
+    parser.add_argument("--deb-build-source", required=True)
+    parser.add_argument("--deb-qt-version", required=True)
+    parser.add_argument("--deb-qt-architecture", required=True)
+    parser.add_argument("--deb-qt-packages", required=True)
     parser.add_argument("--appimagetool-url", required=True)
     parser.add_argument("--appimagetool-sha256", required=True)
     parser.add_argument("--appimage-runtime-url", required=True)
@@ -55,7 +60,7 @@ def main() -> int:
         print(f"AppImage build directory does not exist: {appimage_dir}")
         return 1
 
-    expected_deb_name = f"therion-studio-{args.expected_package_label}-linux-x86_64.deb"
+    expected_deb_name = f"therion-studio-{args.expected_package_label}-{args.deb_platform_label}-x86_64.deb"
     deb_path = build_dir / expected_deb_name
     if not deb_path.exists():
         print(f"Missing expected .deb artifact: {deb_path}")
@@ -85,6 +90,18 @@ def main() -> int:
         },
         "build": {
             "build_type": args.build_type,
+            "deb": {
+                "qt": {
+                    "architecture": args.deb_qt_architecture,
+                    "packages": [
+                        package.strip()
+                        for package in args.deb_qt_packages.split(",")
+                        if package.strip()
+                    ],
+                    "source": args.deb_build_source,
+                    "version": args.deb_qt_version,
+                },
+            },
             "appimage": {
                 "appimagetool": {
                     "sha256": args.appimagetool_sha256,
@@ -105,11 +122,12 @@ def main() -> int:
                     "version": args.appimage_qt_version,
                 },
             },
-            "platform": "ubuntu-24.04",
+            "runner": "ubuntu-24.04",
             "source_ref": args.source_ref,
         },
         "package": {
             "debian_version": args.debian_version,
+            "deb_platform_label": args.deb_platform_label,
             "package_label": args.expected_package_label,
             "version": args.version,
         },

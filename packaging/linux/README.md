@@ -2,7 +2,7 @@
 
 Therion Studio currently provides two Linux artifacts:
 
-- `.deb` package for Ubuntu-family systems
+- `.deb` package for Ubuntu 26.04
 - AppImage as the portable Linux channel
 
 They are built by the manual GitHub Actions workflow:
@@ -16,16 +16,15 @@ They are built by the manual GitHub Actions workflow:
 
 ## Produced Artifacts
 
-- `therion-studio-<package_label>-linux-x86_64.deb`
+- `therion-studio-<package_label>-ubuntu-26.04-x86_64.deb`
 - `TherionStudio-<package_label>-Linux-x86_64.AppImage`
 - `TherionStudio-Linux-artifacts-manifest.json`
 
 The manifest includes file names, sizes, and SHA256 checksums.
 
-The `.deb` artifact intentionally uses a distro-neutral `linux-x86_64` suffix. Do not add an
-`ubuntu` suffix unless the package becomes tied to a specific Ubuntu release baseline. The
-Ubuntu-built `.deb` is not the Debian compatibility path because Ubuntu and Debian may use
-different Qt package names in dependency metadata.
+The `.deb` artifact intentionally uses an `ubuntu-26.04` suffix. The Ubuntu-built `.deb` is not the
+Debian compatibility path and is not a general Ubuntu-family package because Qt package dependency
+metadata can differ between distribution releases.
 Release-tagged builds use the CalVer tag as the artifact label and Debian package version.
 Snapshot builds use `dev-<short_sha>` for artifact names and
 `<calver>+git<yyyymmdd>.g<short_sha>` for the Debian package `Version` field.
@@ -40,17 +39,21 @@ After artifact creation, the workflow runs Linux artifact smoke checks:
 - performs offscreen AppImage launch sanity checks on Ubuntu 26.04 and Debian 13
 
 Ubuntu 26.04 is considered a tested `.deb` target for a given artifact only when the corresponding
-workflow smoke job passes. Ubuntu 24.04 is covered by the `.deb` build and staged install
-validation. The AppImage is considered tested on Debian 13 and Ubuntu 26.04 only when both
-AppImage smoke checks pass.
+workflow smoke job passes. Other Linux distributions and Ubuntu releases are covered by the
+AppImage channel unless a matching distro-specific package is introduced. The AppImage is
+considered tested on Debian 13 and Ubuntu 26.04 only when both AppImage smoke checks pass.
 
 ## Build Notes
 
-- `.deb` generation uses CPack DEB configuration from `CMakeLists.txt`.
+- `.deb` generation uses CPack DEB configuration from `CMakeLists.txt` inside an `ubuntu:26.04`
+  container.
 - AppImage generation uses a separate CMake build inside a `debian:13` container with
   `THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON` so Qt's generated Linux deployment script
-  populates the AppDir during install. Ubuntu 24.04 distro Qt remains the `.deb` baseline and is
-  not used for AppImage deployment.
+  populates the AppDir during install.
+- The AppImage workflow additionally runs `scripts/prepare_linux_appimage_appdir.sh` to stage
+  `ldd`-resolved `libQt6*.so*` runtime families into `AppDir/usr/lib`, write an `AppRun` wrapper
+  that sets `LD_LIBRARY_PATH` and `QT_PLUGIN_PATH`, verify the offscreen platform plugin, and
+  launch-test the AppDir before packaging.
 - The final AppImage is produced with pinned `appimagetool` 1.9.1 and pinned
   `type2-runtime` 20251108 `runtime-x86_64`, both SHA256-verified by the workflow before use.
 - The manifest records the AppImage Qt package source/version/package set, `appimagetool`, and AppImage

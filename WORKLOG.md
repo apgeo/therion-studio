@@ -52,7 +52,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Parser/serializer round-trip coverage is still incomplete for full Therion corpus-level confidence.
 - Pen/touch navigation depends on automatic input-policy behavior; Sidecar and touch-screen edge cases remain a product risk.
 - Map/text undo arbitration still depends on choosing between map `QUndoStack` and embedded text-editor undo until unified command-stack refactor.
-- Linux AppImage packaging depends on Debian 13 distro Qt, Qt's Linux deploy script, pinned `appimagetool`/runtime inputs, recursive downloaded-artifact discovery in smoke jobs, split snapshot artifact/Debian version metadata, and separate `.deb` versus AppImage target expectations; verify the full path in GitHub Actions on Ubuntu 26.04 and Debian 13 before treating it as stable.
+- Linux AppImage packaging depends on Debian 13 distro Qt, Qt's Linux deploy script, explicit Qt runtime library staging, an AppRun runtime-path wrapper, pinned `appimagetool`/runtime inputs, recursive downloaded-artifact discovery in smoke jobs, split snapshot artifact/Debian version metadata, and separate `.deb` versus AppImage target expectations; verify the full path in GitHub Actions on Ubuntu 26.04 and Debian 13 before treating it as stable.
 - Signing/distribution requirements are not yet exercised end-to-end on all target platforms.
 
 ## Phase Plan

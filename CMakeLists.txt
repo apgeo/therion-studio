@@ -18,6 +18,12 @@ if(NOT THERION_STUDIO_DEBIAN_VERSION MATCHES "^[0-9][A-Za-z0-9.+~-]*$")
     message(FATAL_ERROR "THERION_STUDIO_DEBIAN_VERSION must be a valid Debian version starting with a digit")
 endif()
 
+set(THERION_STUDIO_DEB_PLATFORM_LABEL "linux" CACHE STRING
+    ".deb artifact platform label. Official CI may set this to a specific Ubuntu baseline.")
+if(NOT THERION_STUDIO_DEB_PLATFORM_LABEL MATCHES "^[A-Za-z0-9._-]+$")
+    message(FATAL_ERROR "THERION_STUDIO_DEB_PLATFORM_LABEL may contain only letters, numbers, dots, underscores, and hyphens")
+endif()
+
 project(TherionStudio
     VERSION "${THERION_STUDIO_VERSION}"
     LANGUAGES CXX)
@@ -668,9 +674,8 @@ if(UNIX AND NOT APPLE AND THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL)
     if(Qt6Core_VERSION VERSION_LESS 6.5)
         message(FATAL_ERROR
             "THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL requires Qt 6.5 or newer. "
-            "Ubuntu 24.04 distro Qt is supported for the .deb build, but the "
-            "AppImage workflow must configure in the Debian 13 container "
-            "used for Linux CMake deployment.")
+            "The Linux packaging workflow configures AppImage builds in the "
+            "Debian 13 container used for Linux CMake deployment.")
     endif()
     therion_generate_deploy_app_script(TherionStudio THERION_STUDIO_QT_DEPLOY_SCRIPT)
     install(SCRIPT ${THERION_STUDIO_QT_DEPLOY_SCRIPT})
@@ -704,7 +709,7 @@ elseif(UNIX AND NOT APPLE)
     set(CPACK_PACKAGE_CONTACT "Therion Studio maintainers")
     set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
     set(CPACK_DEBIAN_PACKAGE_VERSION "${THERION_STUDIO_DEBIAN_VERSION}")
-    set(CPACK_PACKAGE_FILE_NAME "therion-studio-${THERION_STUDIO_PACKAGE_LABEL}-linux-x86_64")
+    set(CPACK_PACKAGE_FILE_NAME "therion-studio-${THERION_STUDIO_PACKAGE_LABEL}-${THERION_STUDIO_DEB_PLATFORM_LABEL}-x86_64")
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Therion Studio desktop editor")
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
     set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")

@@ -25,6 +25,10 @@ jobs:
       APPIMAGETOOL_SHA256: ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0
       APPIMAGE_RUNTIME_URL: https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
       APPIMAGE_RUNTIME_SHA256: 2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d
+      DEB_BUILD_IMAGE: ubuntu:26.04
+      DEB_PLATFORM_LABEL: ubuntu-26.04
+      DEB_QT_ARCHITECTURE: amd64
+      DEB_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
       APPIMAGE_BUILD_IMAGE: debian:13
       APPIMAGE_QT_ARCHITECTURE: amd64
       APPIMAGE_QT_PACKAGES: qt6-base-dev,qt6-base-dev-tools,qt6-svg-dev,qt6-tools-dev,qt6-tools-dev-tools
@@ -67,58 +71,74 @@ jobs:
             echo "No CalVer release tag points at this commit; using development version $version, package label $package_label, and Debian version $debian_version."
           fi
 
-      - name: Install packaging dependencies
+      - name: Build .deb in Ubuntu 26.04 container
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            cmake \
-            ninja-build \
-            dpkg-dev \
-            file \
-            libgl1-mesa-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-0 \
-            libxcb-cursor0 \
-            libxcb-icccm4 \
-            libxcb-image0 \
-            libxcb-keysyms1 \
-            libxcb-render-util0 \
-            libxcb-xinerama0 \
-            qt6-base-dev \
-            qt6-base-dev-tools \
-            qt6-svg-dev \
-            qt6-tools-dev \
-            qt6-tools-dev-tools \
-            wget
+          set -euo pipefail
+          docker run --rm \
+            -e "BUILD_TYPE=${{ inputs.build_type }}" \
+            -e "DEB_QT_PACKAGES=$DEB_QT_PACKAGES" \
+            -e "HOST_GID=$(id -g)" \
+            -e "HOST_UID=$(id -u)" \
+            -e "THERION_STUDIO_DEB_PLATFORM_LABEL=$DEB_PLATFORM_LABEL" \
+            -e "THERION_STUDIO_DEBIAN_VERSION=$THERION_STUDIO_DEBIAN_VERSION" \
+            -e "THERION_STUDIO_PACKAGE_LABEL=$THERION_STUDIO_PACKAGE_LABEL" \
+            -e "THERION_STUDIO_VERSION=$THERION_STUDIO_VERSION" \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            "$DEB_BUILD_IMAGE" \
+            bash -lc '
+              set -euo pipefail
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y \
+                ca-certificates \
+                cmake \
+                dpkg-dev \
+                file \
+                g++ \
+                libgl1-mesa-dev \
+                libxkbcommon-dev \
+                libxkbcommon-x11-0 \
+                libxcb-cursor0 \
+                libxcb-icccm4 \
+                libxcb-image0 \
+                libxcb-keysyms1 \
+                libxcb-render-util0 \
+                libxcb-xinerama0 \
+                ninja-build \
+                python3 \
+                qt6-base-dev \
+                qt6-base-dev-tools \
+                qt6-svg-dev \
+                qt6-tools-dev \
+                qt6-tools-dev-tools
 
-      - name: Configure .deb build
-        run: >
-          cmake -S . -B build-linux-packages
-          -G Ninja
-          -DCMAKE_BUILD_TYPE=${{ inputs.build_type }}
-          -DCMAKE_INSTALL_PREFIX=/usr
-          -DTHERION_STUDIO_VERSION=${{ env.THERION_STUDIO_VERSION }}
-          -DTHERION_STUDIO_PACKAGE_LABEL=${{ env.THERION_STUDIO_PACKAGE_LABEL }}
-          -DTHERION_STUDIO_DEBIAN_VERSION=${{ env.THERION_STUDIO_DEBIAN_VERSION }}
-          -DTHERION_ENABLE_STRICT_WARNINGS=ON
+              rm -rf build-linux-packages
+              mkdir -p build-linux-packages
+              dpkg-query -W qt6-base-dev | cut -f2 > build-linux-packages/deb-qt-version.txt
 
-      - name: Build .deb app
-        run: cmake --build build-linux-packages --target TherionStudio --parallel
-
-      - name: Install .deb app to staging prefix
-        run: cmake --install build-linux-packages --prefix "$PWD/build-linux-packages/install-smoke"
-
-      - name: Verify install layout
-        run: python3 scripts/verify_install_layout.py --platform linux --prefix "$PWD/build-linux-packages/install-smoke"
-
-      - name: Create .deb package
-        run: >
-          cpack
-          --config build-linux-packages/CPackConfig.cmake
-          -G DEB
-          -B build-linux-packages
-          -C ${{ inputs.build_type }}
-          --verbose
+              cmake -S . -B build-linux-packages \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+                -DCMAKE_INSTALL_PREFIX=/usr \
+                -DTHERION_STUDIO_VERSION="$THERION_STUDIO_VERSION" \
+                -DTHERION_STUDIO_PACKAGE_LABEL="$THERION_STUDIO_PACKAGE_LABEL" \
+                -DTHERION_STUDIO_DEBIAN_VERSION="$THERION_STUDIO_DEBIAN_VERSION" \
+                -DTHERION_STUDIO_DEB_PLATFORM_LABEL="$THERION_STUDIO_DEB_PLATFORM_LABEL" \
+                -DTHERION_ENABLE_STRICT_WARNINGS=ON
+              cmake --build build-linux-packages --target TherionStudio --parallel
+              cmake --install build-linux-packages --prefix "$PWD/build-linux-packages/install-smoke"
+              python3 scripts/verify_install_layout.py --platform linux --prefix "$PWD/build-linux-packages/install-smoke"
+              cpack \
+                --config build-linux-packages/CPackConfig.cmake \
+                -G DEB \
+                -B build-linux-packages \
+                -C "$BUILD_TYPE" \
+                --verbose
+              chown -R "$HOST_UID:$HOST_GID" build-linux-packages
+            '
+          echo "DEB_QT_VERSION=$(cat build-linux-packages/deb-qt-version.txt)" >> "$GITHUB_ENV"
 
       - name: Build AppImage in Debian 13 container
         shell: bash
@@ -188,10 +208,11 @@ jobs:
               test -x "$usr_dir/bin/TherionStudio"
               test -f "$desktop_file"
               test -f "$icon_file"
+
               cp "$desktop_file" "$appdir/therion-studio.desktop"
               cp "$icon_file" "$appdir/therion-studio.png"
               ln -sf therion-studio.png "$appdir/.DirIcon"
-              ln -sf usr/bin/TherionStudio "$appdir/AppRun"
+              bash scripts/prepare_linux_appimage_appdir.sh "$appdir"
 
               pushd build-linux-appimage >/dev/null
               wget -q "$APPIMAGETOOL_URL" -O appimagetool.AppImage
@@ -218,6 +239,11 @@ jobs:
             --source-ref "${{ inputs.source_ref }}" \
             --build-type "${{ inputs.build_type }}" \
             --debian-version "${{ env.THERION_STUDIO_DEBIAN_VERSION }}" \
+            --deb-platform-label "$DEB_PLATFORM_LABEL" \
+            --deb-build-source "$DEB_BUILD_IMAGE apt" \
+            --deb-qt-version "$DEB_QT_VERSION" \
+            --deb-qt-architecture "$DEB_QT_ARCHITECTURE" \
+            --deb-qt-packages "$DEB_QT_PACKAGES" \
             --appimagetool-url "$APPIMAGETOOL_URL" \
             --appimagetool-sha256 "$APPIMAGETOOL_SHA256" \
             --appimage-runtime-url "$APPIMAGE_RUNTIME_URL" \

@@ -99,7 +99,7 @@ Inputs:
 Expected artifact patterns:
 
 ```text
-therion-studio-<package_label>-linux-x86_64.deb
+therion-studio-<package_label>-ubuntu-26.04-x86_64.deb
 TherionStudio-<package_label>-Linux-x86_64.AppImage
 TherionStudio-Linux-artifacts-manifest.json
 ```
@@ -108,20 +108,20 @@ Release-tagged builds use the tag version as the Linux artifact label and Debian
 Snapshot builds from branches or raw SHAs use `dev-<short_sha>` as the artifact label and
 `<calver>+git<yyyymmdd>.g<short_sha>` as the Debian package `Version` field.
 
-The `.deb` artifact name stays distro-neutral because the package is validated against tested
-Ubuntu-family targets rather than tied to one Ubuntu release. Ubuntu coverage is provided by the
-`.deb` channel, including the Ubuntu 24.04 build baseline. The Ubuntu-built `.deb` is not the
-Debian compatibility path because Ubuntu and Debian may use different Qt package names in
-dependency metadata. The workflow includes follow-up Ubuntu 26.04 and Debian 13 container smoke
-jobs; Ubuntu 26.04 installs and launches the generated `.deb`, while both targets launch the
-generated AppImage.
+The `.deb` artifact name includes `ubuntu-26.04` because the package is built and validated only
+against Ubuntu 26.04. The Ubuntu-built `.deb` is not the Debian compatibility path and is not a
+general Ubuntu-family package because Qt package dependency metadata can differ between distro
+releases. The workflow includes follow-up Ubuntu 26.04 and Debian 13 container smoke jobs; Ubuntu
+26.04 installs and launches the generated `.deb`, while both targets launch the generated AppImage.
 
 For a release, treat Ubuntu 26.04 as a tested `.deb` target only when the Ubuntu `.deb` smoke job
 passes in the release workflow run. Treat the AppImage as tested on Debian 13 and Ubuntu 26.04 only
 when both AppImage smoke checks pass.
 
 The AppImage is generated in a `debian:13` container from Qt's CMake deployment script using
-Debian distro Qt packages, plus pinned `appimagetool` and pinned AppImage runtime inputs. Do not
+Debian distro Qt packages, plus the `scripts/prepare_linux_appimage_appdir.sh` AppRun wrapper and
+explicit `ldd`-resolved `libQt6*.so*` staging into `AppDir/usr/lib`. The workflow launch-tests the
+AppDir before packaging, then uses pinned `appimagetool` and pinned AppImage runtime inputs. Do not
 replace this with mutable `continuous` downloads.
 
 ## 7. Publish GitHub Release
@@ -129,7 +129,7 @@ replace this with mutable `continuous` downloads.
 1. Create GitHub Release for tag `v2026.5.1`.
 2. Attach the Windows installer artifact from the workflow run.
 3. Attach Linux artifacts from `Linux Packages`:
-   - `therion-studio-<package_label>-linux-x86_64.deb`
+   - `therion-studio-<package_label>-ubuntu-26.04-x86_64.deb`
    - `TherionStudio-<package_label>-Linux-x86_64.AppImage`
 4. Keep generated manifest JSON files with release records:
    - `TherionStudio-Windows-installer-manifest.json`

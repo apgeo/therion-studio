@@ -138,40 +138,43 @@ CI build workflows also run staged install-layout smoke checks via
 
 Linux packaging currently targets two distributable artifacts:
 
-- `.deb` package for Ubuntu-family systems
+- `.deb` package for Ubuntu 26.04
 - AppImage as the portable Linux channel
 
-The manual workflow `.github/workflows/linux-packages.yml` builds both packages on
-`ubuntu-24.04`, validates install layout and artifact naming, and uploads:
+The manual workflow `.github/workflows/linux-packages.yml` builds the `.deb` package inside an
+`ubuntu:26.04` container and builds the AppImage inside a `debian:13` container. It validates
+install layout and artifact naming, then uploads:
 
-- `therion-studio-<package_label>-linux-x86_64.deb`
+- `therion-studio-<package_label>-ubuntu-26.04-x86_64.deb`
 - `TherionStudio-<package_label>-Linux-x86_64.AppImage`
 - `TherionStudio-Linux-artifacts-manifest.json` (SHA256 + build metadata)
 
-The `.deb` artifact intentionally keeps a distro-neutral `linux-x86_64` file name because the
-package is intended for tested Ubuntu-family targets rather than a single Ubuntu release. The
-Ubuntu-built `.deb` is not treated as the Debian compatibility path because Ubuntu and Debian may
-use different Qt package names in dependency metadata.
+The `.deb` artifact intentionally includes `ubuntu-26.04` in the file name because Qt package
+dependency metadata is distribution-release-specific. Do not treat that `.deb` as the compatibility
+path for Debian, older Ubuntu releases, or newer Ubuntu releases unless a matching package is built
+and smoke-tested for that baseline.
 Release-tagged builds use the CalVer tag as both the artifact label and Debian package version.
 Snapshot builds use `dev-<short_sha>` as the artifact label and a Debian package version in the
 form `<calver>+git<yyyymmdd>.g<short_sha>`, so artifact names stay readable while `apt` sees a
 valid, monotonic package version.
 
 The AppImage is built from a separate CMake tree inside a `debian:13` container with
-`THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON` and Debian's distro Qt packages. Ubuntu 24.04's distro
-Qt remains the `.deb` build baseline, but it is too old for Qt's Linux CMake deployment API. The
-Debian 13 AppImage path enables Qt's generated Linux deployment script during install so the
-AppDir receives the required Qt runtime files and plugins. The workflow then packages the AppDir
+`THERION_ENABLE_QT_LINUX_DEPLOY_INSTALL=ON` and Debian's distro Qt packages. The AppImage path
+enables Qt's generated Linux deployment script during install so the AppDir receives Qt plugins and
+deploy metadata. Because Debian's Qt shared libraries live in system library directories that Qt's
+Linux deploy helper may exclude by default, the workflow also copies the `ldd`-resolved
+`libQt6*.so*` runtime families into `AppDir/usr/lib`, writes an `AppRun` wrapper that sets
+`LD_LIBRARY_PATH` and `QT_PLUGIN_PATH`, and performs an offscreen AppDir launch sanity check before
+packaging through `scripts/prepare_linux_appimage_appdir.sh`. The workflow then packages the AppDir
 with pinned `appimagetool` 1.9.1 and a pinned `type2-runtime` 20251108 runtime, both
-SHA256-verified before execution/use. The manifest records the AppImage Qt package source, version,
-and package set in addition to `appimagetool` and runtime provenance.
+SHA256-verified before execution/use. The manifest records the `.deb` and AppImage Qt package
+sources, versions, and package sets in addition to `appimagetool` and runtime provenance.
 
 The same workflow also runs follow-up smoke jobs in `ubuntu:26.04` and `debian:13` containers.
 The Ubuntu target installs the produced `.deb`, verifies installed paths, and performs an offscreen
 `.deb` launch sanity check. Both Ubuntu 26.04 and Debian 13 launch the generated AppImage. The
-`.deb` package is the Ubuntu coverage path, including Ubuntu 24.04 build/install validation. The
-AppImage should be documented as tested on Debian 13 and Ubuntu 26.04 only when both smoke jobs
-pass for that artifact.
+`.deb` package is the Ubuntu 26.04 coverage path only. The AppImage should be documented as tested
+on Debian 13 and Ubuntu 26.04 only when both smoke jobs pass for that artifact.
 
 Do not use mutable `linuxdeployqt` `continuous` AppImage downloads or unmaintained Qt
 deployment plugins for production release artifact generation.

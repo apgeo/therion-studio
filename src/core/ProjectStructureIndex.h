@@ -7,8 +7,22 @@
 
 namespace TherionStudio
 {
+enum class ProjectStructureEntryKind
+{
+    Unknown,
+    Survey,
+    Centreline,
+    Map,
+    Scrap,
+    Station,
+    Point,
+    Line,
+    Area,
+};
+
 struct ProjectStructureEntry
 {
+    ProjectStructureEntryKind kind = ProjectStructureEntryKind::Unknown;
     QString objectId;
     QString parentObjectId;
     QString category;

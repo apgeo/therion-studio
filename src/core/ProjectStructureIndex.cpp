@@ -19,7 +19,7 @@ namespace
 {
 struct ProjectBlock
 {
-    QString category;
+    ProjectStructureEntryKind kind = ProjectStructureEntryKind::Unknown;
     QString name;
     QString objectId;
     bool createsNamespace = true;
@@ -54,7 +54,7 @@ QString normalizedFilePathKey(const QString &path)
 
 QString optionValue(const QStringList &tokens, const QString &option);
 QString sectionNameFromLine(const TherionParsedLine &parsedLine);
-QString objectCategoryFromLine(const TherionParsedLine &parsedLine);
+ProjectStructureEntryKind objectKindFromLine(const TherionParsedLine &parsedLine);
 QString objectNameFromLine(const TherionParsedLine &parsedLine);
 
 QString normalizedIdentityToken(const QString &value)
@@ -101,32 +101,58 @@ QString ProjectObjectIdentityGenerator::nextObjectId(const QString &category,
         .join(QLatin1Char('|'));
 }
 
-QString projectCategoryFromDirective(const QString &directive)
+ProjectStructureEntryKind projectKindFromDirective(const QString &directive)
 {
     if (directive == QStringLiteral("survey")) {
-        return QStringLiteral("Surveys");
+        return ProjectStructureEntryKind::Survey;
     }
     if (directive == QStringLiteral("centreline")) {
-        return QStringLiteral("Centrelines");
+        return ProjectStructureEntryKind::Centreline;
     }
     if (directive == QStringLiteral("map")) {
-        return QStringLiteral("Maps");
+        return ProjectStructureEntryKind::Map;
     }
     if (directive == QStringLiteral("scrap")) {
-        return QStringLiteral("Scraps");
+        return ProjectStructureEntryKind::Scrap;
     }
     if (directive == QStringLiteral("station")) {
-        return QStringLiteral("Stations");
+        return ProjectStructureEntryKind::Station;
     }
     if (directive == QStringLiteral("point")) {
-        return QStringLiteral("Points");
+        return ProjectStructureEntryKind::Point;
     }
     if (directive == QStringLiteral("line")) {
-        return QStringLiteral("Lines");
+        return ProjectStructureEntryKind::Line;
     }
     if (directive == QStringLiteral("area")) {
-        return QStringLiteral("Areas");
+        return ProjectStructureEntryKind::Area;
     }
+    return ProjectStructureEntryKind::Unknown;
+}
+
+QString projectCategoryFromKind(ProjectStructureEntryKind kind)
+{
+    switch (kind) {
+    case ProjectStructureEntryKind::Survey:
+        return QStringLiteral("Surveys");
+    case ProjectStructureEntryKind::Centreline:
+        return QStringLiteral("Centrelines");
+    case ProjectStructureEntryKind::Map:
+        return QStringLiteral("Maps");
+    case ProjectStructureEntryKind::Scrap:
+        return QStringLiteral("Scraps");
+    case ProjectStructureEntryKind::Station:
+        return QStringLiteral("Stations");
+    case ProjectStructureEntryKind::Point:
+        return QStringLiteral("Points");
+    case ProjectStructureEntryKind::Line:
+        return QStringLiteral("Lines");
+    case ProjectStructureEntryKind::Area:
+        return QStringLiteral("Areas");
+    case ProjectStructureEntryKind::Unknown:
+        break;
+    }
+
     return QString();
 }
 
@@ -144,18 +170,18 @@ bool surveyCreatesNamespace(const TherionParsedLine &parsedLine)
     return namespaceValue.compare(QStringLiteral("off"), Qt::CaseInsensitive) != 0;
 }
 
-QString objectCategoryFromLine(const TherionParsedLine &parsedLine)
+ProjectStructureEntryKind objectKindFromLine(const TherionParsedLine &parsedLine)
 {
     if (parsedLine.tokens.isEmpty()) {
-        return QString();
+        return ProjectStructureEntryKind::Unknown;
     }
 
     const QString directive = parsedLine.directive;
     if (directive == QStringLiteral("line")) {
-        return QStringLiteral("Lines");
+        return ProjectStructureEntryKind::Line;
     }
     if (directive == QStringLiteral("area")) {
-        return QStringLiteral("Areas");
+        return ProjectStructureEntryKind::Area;
     }
     if (directive == QStringLiteral("point")) {
         for (int index = 1; index < parsedLine.tokens.size(); ++index) {
@@ -164,14 +190,14 @@ QString objectCategoryFromLine(const TherionParsedLine &parsedLine)
                 continue;
             }
             if (token == QStringLiteral("station")) {
-                return QStringLiteral("Stations");
+                return ProjectStructureEntryKind::Station;
             }
         }
 
-        return QStringLiteral("Points");
+        return ProjectStructureEntryKind::Point;
     }
 
-    return QString();
+    return ProjectStructureEntryKind::Unknown;
 }
 
 QString optionValue(const QStringList &tokens, const QString &option)
@@ -267,7 +293,7 @@ bool isClosingDirective(const QString &directive)
         || directive == QStringLiteral("endscrap");
 }
 
-void closeBlock(QVector<ProjectBlock> *blockStack, const QString &category, const QString &name = QString())
+void closeBlock(QVector<ProjectBlock> *blockStack, ProjectStructureEntryKind kind, const QString &name = QString())
 {
     if (blockStack->isEmpty()) {
         return;
@@ -276,7 +302,7 @@ void closeBlock(QVector<ProjectBlock> *blockStack, const QString &category, cons
     if (name.isEmpty()) {
         while (!blockStack->isEmpty()) {
             const ProjectBlock block = blockStack->takeLast();
-            if (block.category == category) {
+            if (block.kind == kind) {
                 return;
             }
         }
@@ -286,7 +312,7 @@ void closeBlock(QVector<ProjectBlock> *blockStack, const QString &category, cons
 
     for (int index = blockStack->size() - 1; index >= 0; --index) {
         const ProjectBlock &block = blockStack->at(index);
-        if (block.category == category && block.name.compare(name, Qt::CaseInsensitive) == 0) {
+        if (block.kind == kind && block.name.compare(name, Qt::CaseInsensitive) == 0) {
             blockStack->resize(index);
             return;
         }
@@ -294,14 +320,14 @@ void closeBlock(QVector<ProjectBlock> *blockStack, const QString &category, cons
 
     while (!blockStack->isEmpty()) {
         const ProjectBlock block = blockStack->takeLast();
-        if (block.category == category) {
+        if (block.kind == kind) {
             return;
         }
     }
 }
 
 ProjectStructureEntry appendStructureEntry(QVector<ProjectStructureEntry> *entries,
-                                           const QString &category,
+                                           ProjectStructureEntryKind kind,
                                            const QString &name,
                                            const QString &sourceFile,
                                            int lineNumber,
@@ -310,6 +336,8 @@ ProjectStructureEntry appendStructureEntry(QVector<ProjectStructureEntry> *entri
                                            bool createsNamespace = true)
 {
     ProjectStructureEntry entry;
+    const QString category = projectCategoryFromKind(kind);
+    entry.kind = kind;
     entry.parentObjectId = blockStack.isEmpty() ? QString() : blockStack.last().objectId;
     entry.objectId = identityGenerator->nextObjectId(category, name, sourceFile, entry.parentObjectId);
     entry.category = category;
@@ -357,37 +385,37 @@ void appendProjectStructureFromFile(const QString &filePath,
         }
 
         if (isClosingDirective(directive)) {
-            const QString closingCategory = projectCategoryFromDirective(directive.mid(3));
+            const ProjectStructureEntryKind closingKind = projectKindFromDirective(directive.mid(3));
             const QString closingName = parsedLine.tokens.size() >= 2 ? parsedLine.tokens.value(1) : QString();
-            closeBlock(blockStack, closingCategory, closingName);
+            closeBlock(blockStack, closingKind, closingName);
             continue;
         }
 
-        const QString openingCategory = projectCategoryFromDirective(directive);
+        const ProjectStructureEntryKind openingKind = projectKindFromDirective(directive);
         if (isOpeningDirective(directive)) {
             const QString openingName = directive == QStringLiteral("survey")
                 ? surveyNameFromLine(parsedLine)
                 : sectionNameFromLine(parsedLine);
             const bool createsNamespace = directive == QStringLiteral("survey") ? surveyCreatesNamespace(parsedLine) : true;
             const ProjectStructureEntry entry = appendStructureEntry(entries,
-                                                                    openingCategory,
+                                                                    openingKind,
                                                                     openingName,
                                                                     normalizedPath,
                                                                     parsedLine.lineNumber,
                                                                     *blockStack,
                                                                     identityGenerator,
                                                                     createsNamespace);
-            blockStack->append(ProjectBlock{openingCategory, openingName, entry.objectId, createsNamespace});
+            blockStack->append(ProjectBlock{openingKind, openingName, entry.objectId, createsNamespace});
             continue;
         }
 
-        const QString objectCategory = objectCategoryFromLine(parsedLine);
-        if (objectCategory.isEmpty()) {
+        const ProjectStructureEntryKind objectKind = objectKindFromLine(parsedLine);
+        if (objectKind == ProjectStructureEntryKind::Unknown) {
             continue;
         }
 
         appendStructureEntry(entries,
-                             objectCategory,
+                             objectKind,
                              objectNameFromLine(parsedLine),
                              normalizedPath,
                              parsedLine.lineNumber,
@@ -492,7 +520,7 @@ QString objectNameFromLine(const TherionParsedLine &parsedLine)
 
 QString objectDisplayText(const ProjectStructureEntry &entry, const TherionParsedLine &parsedLine)
 {
-    if (entry.category == QStringLiteral("Lines") || entry.category == QStringLiteral("Areas")) {
+    if (entry.kind == ProjectStructureEntryKind::Line || entry.kind == ProjectStructureEntryKind::Area) {
         const QString subtype = parsedLine.tokens.value(1);
         if (!subtype.isEmpty() && subtype != entry.name) {
             return QStringLiteral("%1 (%2)").arg(subtype, entry.name);
@@ -525,7 +553,7 @@ QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(const QVector<ProjectSt
 
     QSet<QString> knownScrapNames;
     for (const ProjectStructureEntry &entry : entries) {
-        if (entry.category == QStringLiteral("Scraps") && !entry.name.trimmed().isEmpty()) {
+        if (entry.kind == ProjectStructureEntryKind::Scrap && !entry.name.trimmed().isEmpty()) {
             knownScrapNames.insert(entry.name.trimmed().toLower());
         }
     }
@@ -535,7 +563,7 @@ QHash<QString, QSet<QString>> mapScrapReferencesByMapKey(const QVector<ProjectSt
 
     QHash<QString, QVector<ProjectStructureEntry>> mapsBySourceFile;
     for (const ProjectStructureEntry &entry : entries) {
-        if (entry.category == QStringLiteral("Maps") && !entry.sourceFile.isEmpty() && entry.lineNumber > 0) {
+        if (entry.kind == ProjectStructureEntryKind::Map && !entry.sourceFile.isEmpty() && entry.lineNumber > 0) {
             mapsBySourceFile[normalizedFilePathKey(entry.sourceFile)].append(entry);
         }
     }
@@ -694,8 +722,9 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QStri
         }
 
         ProjectStructureEntry entry;
-        entry.objectId = identityGenerator.nextObjectId(QStringLiteral("Scraps"), scrapName, sourceFile, QString());
-        entry.category = QStringLiteral("Scraps");
+        entry.kind = ProjectStructureEntryKind::Scrap;
+        entry.category = projectCategoryFromKind(entry.kind);
+        entry.objectId = identityGenerator.nextObjectId(entry.category, scrapName, sourceFile, QString());
         entry.name = scrapName;
         entry.sourceFile = sourceFile;
         entry.lineNumber = lineNumber;
@@ -721,8 +750,8 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QStri
             continue;
         }
 
-        const QString category = objectCategoryFromLine(parsedLine);
-        if (category.isEmpty()) {
+        const ProjectStructureEntryKind kind = objectKindFromLine(parsedLine);
+        if (kind == ProjectStructureEntryKind::Unknown) {
             continue;
         }
 
@@ -735,8 +764,9 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QStri
         const QString parentObjectId = ensureScrap(currentScrapName, currentScrapLine);
 
         ProjectStructureEntry entry;
+        entry.kind = kind;
         entry.parentObjectId = parentObjectId;
-        entry.category = category;
+        entry.category = projectCategoryFromKind(kind);
         entry.name = objectNameFromLine(parsedLine);
         entry.sourceFile = sourceFile;
         entry.lineNumber = parsedLine.lineNumber;

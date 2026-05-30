@@ -93,6 +93,7 @@ int runProjectStructureHierarchyTest()
 
     struct ExpectedEntry
     {
+        ProjectStructureEntryKind kind = ProjectStructureEntryKind::Unknown;
         QString category;
         QString name;
         int depth = 0;
@@ -102,19 +103,22 @@ int runProjectStructureHierarchyTest()
     };
 
     const QVector<ExpectedEntry> expectedEntries = {
-        {QStringLiteral("Surveys"), QStringLiteral("cave"), 0, projectDir.filePath(QStringLiteral("root.th")), 1, true},
-        {QStringLiteral("Surveys"), QStringLiteral("branch"), 1, projectDir.filePath(QStringLiteral("branch.th")), 1, false},
-        {QStringLiteral("Centrelines"), QStringLiteral("centreline"), 2, projectDir.filePath(QStringLiteral("branch.th")), 2, true},
-        {QStringLiteral("Scraps"), QStringLiteral("s1"), 1, projectDir.filePath(QStringLiteral("maps/map.th2")), 1, true},
-        {QStringLiteral("Stations"), QStringLiteral("1@cave"), 2, projectDir.filePath(QStringLiteral("maps/map.th2")), 2, true},
-        {QStringLiteral("Points"), QStringLiteral("altitude"), 2, projectDir.filePath(QStringLiteral("maps/map.th2")), 3, true},
-        {QStringLiteral("Lines"), QStringLiteral("wall"), 2, projectDir.filePath(QStringLiteral("maps/map.th2")), 4, true},
+        {ProjectStructureEntryKind::Survey, QStringLiteral("Surveys"), QStringLiteral("cave"), 0, projectDir.filePath(QStringLiteral("root.th")), 1, true},
+        {ProjectStructureEntryKind::Survey, QStringLiteral("Surveys"), QStringLiteral("branch"), 1, projectDir.filePath(QStringLiteral("branch.th")), 1, false},
+        {ProjectStructureEntryKind::Centreline, QStringLiteral("Centrelines"), QStringLiteral("centreline"), 2, projectDir.filePath(QStringLiteral("branch.th")), 2, true},
+        {ProjectStructureEntryKind::Scrap, QStringLiteral("Scraps"), QStringLiteral("s1"), 1, projectDir.filePath(QStringLiteral("maps/map.th2")), 1, true},
+        {ProjectStructureEntryKind::Station, QStringLiteral("Stations"), QStringLiteral("1@cave"), 2, projectDir.filePath(QStringLiteral("maps/map.th2")), 2, true},
+        {ProjectStructureEntryKind::Point, QStringLiteral("Points"), QStringLiteral("altitude"), 2, projectDir.filePath(QStringLiteral("maps/map.th2")), 3, true},
+        {ProjectStructureEntryKind::Line, QStringLiteral("Lines"), QStringLiteral("wall"), 2, projectDir.filePath(QStringLiteral("maps/map.th2")), 4, true},
     };
 
     for (int index = 0; index < expectedEntries.size(); ++index) {
         const ProjectStructureEntry &entry = entries.at(index);
         const ExpectedEntry &expected = expectedEntries.at(index);
 
+        if (!expect(entry.kind == expected.kind, "The survey hierarchy kinds are out of order.")) {
+            return 1;
+        }
         if (!expect(entry.category == expected.category, "The survey hierarchy categories are out of order.")) {
             return 1;
         }
@@ -199,7 +203,7 @@ int runProjectIndexMapScrapReferenceTest()
     ProjectStructureEntry mapEntry;
     bool foundMap = false;
     for (const ProjectStructureEntry &entry : snapshot.entries) {
-        if (entry.category == QStringLiteral("Maps") && entry.name == QStringLiteral("cave-map")) {
+        if (entry.kind == ProjectStructureEntryKind::Map && entry.name == QStringLiteral("cave-map")) {
             mapEntry = entry;
             foundMap = true;
             break;
@@ -245,7 +249,7 @@ int runProjectIndexMapScrapReferenceTest()
     ProjectStructureEntry shiftedMapEntry;
     bool foundShiftedMap = false;
     for (const ProjectStructureEntry &entry : shiftedSnapshot.entries) {
-        if (entry.category == QStringLiteral("Maps") && entry.name == QStringLiteral("cave-map")) {
+        if (entry.kind == ProjectStructureEntryKind::Map && entry.name == QStringLiteral("cave-map")) {
             shiftedMapEntry = entry;
             foundShiftedMap = true;
             break;
@@ -275,10 +279,10 @@ int runTh2ObjectIndexGroupingTest()
     if (!expect(entries.size() == 3, "The TH2 object scan should not duplicate the current scrap group.")) {
         return 1;
     }
-    if (!expect(entries.at(0).category == QStringLiteral("Scraps")
-                    && entries.at(1).category == QStringLiteral("Stations")
-                    && entries.at(2).category == QStringLiteral("Stations"),
-                "The TH2 object scan returned unexpected entry categories.")) {
+    if (!expect(entries.at(0).kind == ProjectStructureEntryKind::Scrap
+                    && entries.at(1).kind == ProjectStructureEntryKind::Station
+                    && entries.at(2).kind == ProjectStructureEntryKind::Station,
+                "The TH2 object scan returned unexpected entry kinds.")) {
         return 1;
     }
     if (!expect(!entries.at(0).objectId.isEmpty(), "The TH2 scrap object ID should not be empty.")) {

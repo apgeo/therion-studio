@@ -131,8 +131,7 @@ void setBackgroundLayerVisibleFromUser(QGraphicsPixmapItem *item, bool visible)
     }
 
     item->setVisible(visible);
-    // .xvi visibility is session/UI state because xth metadata updates are raster-only here.
-    item->setData(kBackgroundLayerUserVisibilityRole, isXviBackgroundPath(item->data(0).toString()));
+    item->setData(kBackgroundLayerUserVisibilityRole, true);
 }
 
 QString quantizedNumberToken(qreal value)
@@ -1087,7 +1086,6 @@ void MapEditorTab::toggleSelectedBackgroundLayerVisibility()
     }
 
     setBackgroundLayerVisibleFromUser(item, !item->isVisible());
-    syncBackgroundLayerXtherionMetadata(item, tr("Toggle Background Visibility"), true);
     saveBackgroundLayersToSession();
     refreshBackgroundLayerControls();
 }

@@ -76,6 +76,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 - Status: in progress.
 - Remaining work: continue interaction parity review for inspector ergonomics, command-surface consistency, selection edge cases, and cross-platform input behavior.
+- ~~Background layer Hide/Show now persists as UI/session state only and no longer rewrites `.th2` xth metadata or marks the document dirty.~~
 - ~~Open validation item: confirm robust source rewrite behavior for `Split Here` on open area-referenced borders across mixed area-body layouts; closed-line split remains unsupported.~~
 - ~~Fix `.xvi` background handling: do not treat `.xvi` as raster bitmap (proper scaling path + gamma disabled).~~
 - ~~Fix `.xvi` metadata-load regression causing UI freeze/spinning ball via unbounded offscreen render and mismatched model bounds.~~

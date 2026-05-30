@@ -62,6 +62,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 - Status: in progress.
 - Remaining work: improve shortcut matrix, menu behavior, focus traversal, high-DPI behavior, dark/light palette transitions, and platform-native expectations.
+- ~~Help -> About Therion Studio now shows installed version/build metadata, Qt/platform details, repository, license, maintainer, and third-party notice location.~~
 
 ### Phase 8 - Release Readiness and Packaging (`MVP`)
 

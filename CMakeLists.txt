@@ -638,6 +638,8 @@ endif()
 target_link_libraries(TherionStudio PRIVATE therion_app therion_core therion_platform Qt6::Widgets Qt6::Svg Qt6::Concurrent)
 
 target_compile_definitions(TherionStudio PRIVATE
+    THERION_STUDIO_VERSION_STRING="${PROJECT_VERSION}"
+    THERION_STUDIO_PACKAGE_LABEL_STRING="${THERION_STUDIO_PACKAGE_LABEL}"
     QT_NO_CAST_FROM_ASCII
     QT_NO_CAST_TO_ASCII)
 

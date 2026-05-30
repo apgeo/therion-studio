@@ -456,9 +456,15 @@ Example hatch style:
 
 Invalid or missing style fields are ignored and the application falls back to the default styles.
 
-## 10. Troubleshooting
+## 10. Help And About
 
-### 10.1 Therion executable not found
+- Use `Help -> Quick User Manual` for a compact workflow summary.
+- Use `Help -> User Manual (Full)` to open this manual from the application.
+- Use `Help -> About Therion Studio` to view the installed application version, build label, Qt version, platform, GitHub repository, license, maintainer, and third-party notices link.
+
+## 11. Troubleshooting
+
+### 11.1 Therion executable not found
 
 Symptom:
 
@@ -469,7 +475,7 @@ Fix:
 - set a valid full path in `Compiler -> Executable`
 - verify executable permissions
 
-### 10.2 Config cannot be resolved
+### 11.2 Config cannot be resolved
 
 Symptom:
 
@@ -481,7 +487,7 @@ Fix:
 - open the desired `.thconfig` and run using `Current Config`, or
 - verify working directory/override path
 
-### 10.3 “Open Current Document in Map Editor” is disabled
+### 11.3 “Open Current Document in Map Editor” is disabled
 
 Symptom:
 
@@ -491,7 +497,7 @@ Fix:
 
 - activate a `.th2` tab first
 
-### 10.4 Rename/delete is blocked in project tree
+### 11.4 Rename/delete is blocked in project tree
 
 Symptom:
 

@@ -7,8 +7,18 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QLabel>
+#include <QSysInfo>
 #include <QTextBrowser>
 #include <QVBoxLayout>
+#include <QtGlobal>
+
+#ifndef THERION_STUDIO_VERSION_STRING
+#define THERION_STUDIO_VERSION_STRING "unknown"
+#endif
+
+#ifndef THERION_STUDIO_PACKAGE_LABEL_STRING
+#define THERION_STUDIO_PACKAGE_LABEL_STRING THERION_STUDIO_VERSION_STRING
+#endif
 
 namespace TherionStudio
 {
@@ -17,6 +27,40 @@ namespace
 QString mainWindowText(const char *text)
 {
     return QCoreApplication::translate("MainWindow", text);
+}
+
+QString buildString(const char *value)
+{
+    return QString::fromUtf8(value);
+}
+
+QString aboutMarkdown()
+{
+    const QString version = buildString(THERION_STUDIO_VERSION_STRING);
+    const QString packageLabel = buildString(THERION_STUDIO_PACKAGE_LABEL_STRING);
+    const QString qtVersion = QString::fromLatin1(QT_VERSION_STR);
+    const QString platform = QStringLiteral("%1 (%2)")
+                                 .arg(QSysInfo::prettyProductName(),
+                                      QSysInfo::currentCpuArchitecture());
+
+    return QStringLiteral(
+               "# Therion Studio\n"
+               "\n"
+               "Cross-platform Qt desktop editor for Therion - cave surveying software.\n"
+               "\n"
+               "- **Version:** `%1`\n"
+               "- **Build:** `%2`\n"
+               "- **Qt:** `%3`\n"
+               "- **Platform:** `%4`\n"
+               "- **License:** GNU General Public License v3.0 or later (`GPL-3.0-or-later`)\n"
+               "- **Maintainer:** Ladislav Blazek\n"
+               "\n"
+               "Repository: <https://github.com/ladislavb/therion-studio>\n"
+               "\n"
+               "Third-party notices: <https://github.com/ladislavb/therion-studio/blob/main/docs/THIRD_PARTY_NOTICES.md>\n"
+               "\n"
+               "Therion Studio does not bundle the external Therion compiler. Install Therion separately and configure it in the Compiler pane.\n")
+        .arg(version, packageLabel, qtVersion, platform);
 }
 
 QString quickUserManualMarkdown()
@@ -125,6 +169,11 @@ void showMarkdownDialog(QWidget *parent,
     dialog->raise();
     dialog->activateWindow();
 }
+}
+
+void showAboutDialog(QWidget *parent)
+{
+    showMarkdownDialog(parent, mainWindowText("About Therion Studio"), aboutMarkdown());
 }
 
 void showQuickUserManualDialog(QWidget *parent)

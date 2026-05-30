@@ -1004,10 +1004,9 @@ void MainWindow::buildMenus()
     });
     helpMenu->addSeparator();
     QAction *aboutAction = helpMenu->addAction(tr("About Therion Studio"));
+    aboutAction->setMenuRole(QAction::NoRole);
     connect(aboutAction, &QAction::triggered, this, [this]() {
-        QMessageBox::information(this,
-                                 tr("About Therion Studio"),
-                                 tr("Therion Studio is a Qt-based editor for Therion projects."));
+        TherionStudio::showAboutDialog(this);
     });
 
     updateProjectActionState();

@@ -49,6 +49,7 @@ struct MapScrapReferenceScanResult
 struct RootConfigResolution
 {
     QVector<QString> rootFiles;
+    QString configPath;
     QString errorMessage;
 };
 
@@ -613,7 +614,7 @@ RootConfigResolution rootConfigFiles(const QVector<QString> &filePaths,
     const QString normalizedProjectRoot = normalizedFilePathKey(projectRootPath);
     const QString normalizedPreferredConfigPath = resolvePreferredProjectConfigPath(preferredConfigPath, projectRootPath);
     if (!normalizedPreferredConfigPath.isEmpty()) {
-        return RootConfigResolution{{normalizedPreferredConfigPath}, QString()};
+        return RootConfigResolution{{normalizedPreferredConfigPath}, normalizedPreferredConfigPath, QString()};
     }
 
     QVector<QString> defaultConfigFiles;
@@ -637,14 +638,18 @@ RootConfigResolution rootConfigFiles(const QVector<QString> &filePaths,
     }
 
     if (!defaultConfigFiles.isEmpty()) {
-        return RootConfigResolution{defaultConfigFiles, QString()};
+        return RootConfigResolution{defaultConfigFiles, normalizedFilePathKey(defaultConfigFiles.first()), QString()};
     }
-    if (namedConfigFiles.size() <= 1) {
-        return RootConfigResolution{namedConfigFiles, QString()};
+    if (namedConfigFiles.size() == 1) {
+        return RootConfigResolution{namedConfigFiles, normalizedFilePathKey(namedConfigFiles.first()), QString()};
+    }
+    if (namedConfigFiles.isEmpty()) {
+        return RootConfigResolution{{}, QString(), QString()};
     }
 
     return RootConfigResolution{
         {},
+        QString(),
         QCoreApplication::translate("TherionStudio::ProjectStructureIndex",
                                     "Multiple .thconfig files were found in the project root. Select a project target config in the Compiler pane to build the structure graph.")
     };
@@ -766,6 +771,7 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
     if (projectRootPath.isEmpty()) {
         return snapshot;
     }
+    snapshot.projectRootPath = normalizedFilePathKey(projectRootPath);
 
     QDir projectRoot(projectRootPath);
     if (!projectRoot.exists()) {
@@ -799,6 +805,7 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
 
     ParsedFileCache cache;
     const RootConfigResolution configResolution = rootConfigFiles(filePaths, projectRootPath, preferredConfigPath);
+    snapshot.rootConfigPath = configResolution.configPath;
     if (!configResolution.errorMessage.isEmpty()) {
         if (errorMessage != nullptr) {
             *errorMessage = configResolution.errorMessage;
@@ -809,6 +816,9 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
     QVector<QString> rootFiles = configResolution.rootFiles;
     if (rootFiles.isEmpty()) {
         rootFiles = rootProjectFiles(filePaths, &cache, inMemoryFileContentsByPath);
+    }
+    for (const QString &rootFile : std::as_const(rootFiles)) {
+        snapshot.rootFilePaths.append(normalizedFilePathKey(rootFile));
     }
 
     QVector<ProjectBlock> blockStack;

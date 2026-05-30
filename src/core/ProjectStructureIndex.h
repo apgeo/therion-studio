@@ -49,6 +49,9 @@ struct ProjectIndexDiagnostic
 
 struct ProjectIndexSnapshot
 {
+    QString projectRootPath;
+    QString rootConfigPath;
+    QVector<QString> rootFilePaths;
     QVector<ProjectStructureEntry> entries;
     QHash<QString, QSet<QString>> mapScrapReferencesByMapKey;
     QVector<ProjectIndexDiagnostic> diagnostics;

@@ -200,6 +200,15 @@ int runProjectIndexMapScrapReferenceTest()
     if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
         return 1;
     }
+    if (!expect(snapshot.rootConfigPath.isEmpty(),
+                "The project index should leave root config empty when no thconfig graph is used.")) {
+        return 1;
+    }
+    if (!expect(snapshot.rootFilePaths.size() == 1
+                    && normalizedPathForComparison(snapshot.rootFilePaths.first()) == normalizedPathForComparison(rootFile),
+                "The project index should expose the inferred root source file.")) {
+        return 1;
+    }
 
     ProjectStructureEntry mapEntry;
     bool foundMap = false;
@@ -346,6 +355,19 @@ int runProjectIndexThconfigSourceGraphTest()
     if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
         return 1;
     }
+    if (!expect(normalizedPathForComparison(snapshot.projectRootPath) == normalizedPathForComparison(projectDir.path()),
+                "The thconfig source graph scan should expose the normalized project root path.")) {
+        return 1;
+    }
+    if (!expect(normalizedPathForComparison(snapshot.rootConfigPath) == normalizedPathForComparison(configFile),
+                "The thconfig source graph scan should expose the resolved root config path.")) {
+        return 1;
+    }
+    if (!expect(snapshot.rootFilePaths.size() == 1
+                    && normalizedPathForComparison(snapshot.rootFilePaths.first()) == normalizedPathForComparison(configFile),
+                "The thconfig source graph scan should expose the config as the root traversal file.")) {
+        return 1;
+    }
     if (!expect(snapshot.entries.size() == 1, "The thconfig source graph scan returned an unexpected entry count.")) {
         return 1;
     }
@@ -362,6 +384,10 @@ int runProjectIndexThconfigSourceGraphTest()
         projectDir.filePath(QStringLiteral("nested")),
         &errorMessage);
     if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(normalizedPathForComparison(nestedSnapshot.rootConfigPath) == normalizedPathForComparison(nestedConfigFile),
+                "Opening a nested directory as the project root should expose its own root config path.")) {
         return 1;
     }
     if (!expect(nestedSnapshot.entries.size() == 1,
@@ -424,12 +450,21 @@ int runProjectIndexRootConfigDisambiguationTest()
                 "The project index should not silently merge multiple root .thconfig graphs.")) {
         return 1;
     }
+    if (!expect(ambiguousSnapshot.rootConfigPath.isEmpty() && ambiguousSnapshot.rootFilePaths.isEmpty(),
+                "An ambiguous project index should not expose a resolved root config or traversal root.")) {
+        return 1;
+    }
 
     const ProjectIndexSnapshot betaSnapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(),
                                                                                       QHash<QString, QString>(),
                                                                                       QStringLiteral("beta.thconfig"),
                                                                                       &errorMessage);
     if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(normalizedPathForComparison(betaSnapshot.rootConfigPath)
+                    == normalizedPathForComparison(projectDir.filePath(QStringLiteral("beta.thconfig"))),
+                "The preferred project target config should be exposed as the resolved root config.")) {
         return 1;
     }
     if (!expect(betaSnapshot.entries.size() == 1,
@@ -451,6 +486,11 @@ int runProjectIndexRootConfigDisambiguationTest()
     const ProjectIndexSnapshot defaultSnapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(),
                                                                                          &errorMessage);
     if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(normalizedPathForComparison(defaultSnapshot.rootConfigPath)
+                    == normalizedPathForComparison(projectDir.filePath(QStringLiteral("thconfig"))),
+                "A root thconfig file should be exposed as the resolved default root config.")) {
         return 1;
     }
     if (!expect(defaultSnapshot.entries.size() == 1

@@ -196,12 +196,39 @@ QString normalizedStructurePathKey(const QString &path)
     return canonicalPath.isEmpty() ? fileInfo.absoluteFilePath() : canonicalPath;
 }
 
+QString relativeStructurePath(const QString &projectRootPath, const QString &path)
+{
+    const QString normalizedPath = normalizedStructurePathKey(path);
+    if (normalizedPath.isEmpty()) {
+        return QString();
+    }
+
+    const QString normalizedProjectRoot = normalizedStructurePathKey(projectRootPath);
+    if (normalizedProjectRoot.isEmpty()) {
+        return QDir::toNativeSeparators(normalizedPath);
+    }
+
+    const QString relativePath = QDir(normalizedProjectRoot).relativeFilePath(normalizedPath);
+    return QDir::toNativeSeparators(relativePath);
+}
+
 QString projectIndexStructuralSignature(const TherionStudio::ProjectIndexSnapshot &projectIndex)
 {
     QStringList parts;
     parts.reserve(projectIndex.entries.size() * 9
                   + projectIndex.mapScrapReferencesByMapKey.size() * 4
                   + projectIndex.diagnostics.size() * 4);
+
+    parts.append(QStringLiteral("root"));
+    parts.append(normalizedStructurePathKey(projectIndex.projectRootPath));
+    parts.append(normalizedStructurePathKey(projectIndex.rootConfigPath));
+    QStringList rootFiles;
+    rootFiles.reserve(projectIndex.rootFilePaths.size());
+    for (const QString &rootFilePath : projectIndex.rootFilePaths) {
+        rootFiles.append(normalizedStructurePathKey(rootFilePath));
+    }
+    std::sort(rootFiles.begin(), rootFiles.end());
+    parts.append(rootFiles.join(QLatin1Char(',')));
 
     parts.append(QStringLiteral("entries"));
     parts.append(QString::number(projectIndex.entries.size()));
@@ -396,6 +423,27 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
 
     projectStructureSummary_ = tr("Project structure summary: %1")
                                    .arg(formatProjectStructureSummary(categoryCounts, totalItems, rootSurveyCount));
+    const QString rootSummary = [&]() {
+        if (!projectIndex.rootConfigPath.isEmpty()) {
+            return tr("Root config: %1")
+                .arg(relativeStructurePath(projectRootPath_, projectIndex.rootConfigPath));
+        }
+        if (!projectIndex.rootFilePaths.isEmpty()) {
+            QStringList rootPaths;
+            rootPaths.reserve(projectIndex.rootFilePaths.size());
+            for (const QString &rootFilePath : projectIndex.rootFilePaths) {
+                rootPaths.append(relativeStructurePath(projectRootPath_, rootFilePath));
+            }
+            return tr("Inferred root file(s): %1").arg(rootPaths.join(QStringLiteral(", ")));
+        }
+
+        return tr("No root config or source file resolved.");
+    }();
+    projectStructureSummary_ = QStringLiteral("%1\n%2").arg(projectStructureSummary_, rootSummary);
+    if (structureTree_ != nullptr) {
+        structureTree_->setToolTip(projectStructureSummary_);
+    }
+    structureModel_->setHeaderData(0, Qt::Horizontal, projectStructureSummary_, Qt::ToolTipRole);
     const auto includeInStructureView = [](const QString &category) {
         return category == QStringLiteral("Surveys")
             || category == QStringLiteral("Maps")

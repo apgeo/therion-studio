@@ -920,6 +920,21 @@
         <translation>Souhrn struktury projektu: %1</translation>
     </message>
     <message>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="398"/>
+        <source>Root config: %1</source>
+        <translation>Kořenový konfigurační soubor: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="406"/>
+        <source>Inferred root file(s): %1</source>
+        <translation>Odvozené kořenové soubory: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="409"/>
+        <source>No root config or source file resolved.</source>
+        <translation>Nebyl rozpoznán žádný kořenový konfigurační ani zdrojový soubor.</translation>
+    </message>
+    <message>
         <location filename="../src/app/MainWindowStructureBrowser.cpp" line="382"/>
         <source>No survey hierarchy was found in the selected project</source>
         <translation>Ve vybraném projektu nebyla nalezena žádná hierarchie survey</translation>

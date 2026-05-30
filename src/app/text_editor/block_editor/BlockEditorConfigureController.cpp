@@ -1,5 +1,7 @@
 #include "BlockEditorConfigureController.h"
 
+#include <QCoreApplication>
+
 #include "BlockEditorCommandOptionsDialog.h"
 #include "BlockEditorDataBlockDialog.h"
 #include "BlockEditorDirectiveRules.h"
@@ -23,7 +25,7 @@ BlockEditorConfigureController::BlockEditorConfigureController(BlockEditorConfig
 
 QString BlockEditorConfigureController::tr(const char *text) const
 {
-    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorConfigureController", text);
 }
 
 void BlockEditorConfigureController::configureBlock(const QString &kind, int lineNumber, bool showCommandHelpOnly)

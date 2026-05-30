@@ -3,6 +3,7 @@
 #include "DocumentFile.h"
 #include "TherionDocumentParser.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QDirIterator>
 #include <QFileInfo>
@@ -455,7 +456,8 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanProject(const QString 
     QDir projectRoot(projectRootPath);
     if (!projectRoot.exists()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected project folder does not exist.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::ProjectStructureIndex",
+                                                        "The selected project folder does not exist.");
         }
         return entries;
     }

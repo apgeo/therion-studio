@@ -1,5 +1,7 @@
 #include "MapEditorViewportInputController.h"
 
+#include <QCoreApplication>
+
 #include "MapEditorInputPolicy.h"
 #include "MapEditorSceneInternals.h"
 #include "MapEditorSceneSupport.h"
@@ -203,7 +205,7 @@ MapEditorInteractiveDrawMode MapEditorViewportInputController::drawMode() const
 
 QString MapEditorViewportInputController::tr(const char *text) const
 {
-    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::MapEditorViewportInputController", text);
 }
 
 MapEditorViewportInputController::MapEditorViewportInputController(MapEditorViewportInputContext context)

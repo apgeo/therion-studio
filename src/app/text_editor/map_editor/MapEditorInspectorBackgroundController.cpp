@@ -3,6 +3,7 @@
 #include "MapEditorInspectorData.h"
 
 #include <QDoubleSpinBox>
+#include <QCoreApplication>
 #include <QHeaderView>
 #include <QItemSelectionModel>
 #include <QPushButton>
@@ -30,9 +31,9 @@ MapEditorInspectorBackgroundController::MapEditorInspectorBackgroundController(M
 {
 }
 
-QString MapEditorInspectorBackgroundController::translate(const char *text) const
+QString MapEditorInspectorBackgroundController::tr(const char *text) const
 {
-    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::MapEditorInspectorBackgroundController", text);
 }
 
 void MapEditorInspectorBackgroundController::configureInspectorBackgroundLayerTreeColumns()
@@ -113,7 +114,7 @@ void MapEditorInspectorBackgroundController::refreshInspectorBackgroundPanel()
     const QScopedValueRollback<bool> guard(*context_.updatingUi, true);
     context_.backgroundLayersModel->clear();
     context_.backgroundLayersModel->setColumnCount(kInspectorBackgroundColumnCount);
-    context_.backgroundLayersModel->setHorizontalHeaderLabels({translate("Layers"), QString(), QString()});
+    context_.backgroundLayersModel->setHorizontalHeaderLabels({tr("Layers"), QString(), QString()});
     configureInspectorBackgroundLayerTreeColumns();
 
     const int layerCount = context_.layerCount ? context_.layerCount() : 0;
@@ -128,14 +129,14 @@ void MapEditorInspectorBackgroundController::refreshInspectorBackgroundPanel()
         visibilityItem->setData(index, kInspectorBackgroundLayerIndexRole);
         const bool visible = context_.layerVisible ? context_.layerVisible(index) : false;
         visibilityItem->setIcon(inspectorActionIcon(visible ? QStringLiteral("eye") : QStringLiteral("eye-off")));
-        visibilityItem->setToolTip(visible ? translate("Hide background layer") : translate("Show background layer"));
+        visibilityItem->setToolTip(visible ? tr("Hide background layer") : tr("Show background layer"));
 
         auto *deleteItem = new QStandardItem;
         deleteItem->setEditable(false);
         deleteItem->setTextAlignment(Qt::AlignCenter);
         deleteItem->setData(index, kInspectorBackgroundLayerIndexRole);
         deleteItem->setIcon(inspectorActionIcon(QStringLiteral("trash-2")));
-        deleteItem->setToolTip(translate("Remove background layer"));
+        deleteItem->setToolTip(tr("Remove background layer"));
 
         context_.backgroundLayersModel->appendRow({layerItem, visibilityItem, deleteItem});
     }

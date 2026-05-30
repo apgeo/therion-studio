@@ -1,5 +1,7 @@
 #include "BlockEditorInsertionController.h"
 
+#include <QCoreApplication>
+
 #include "BlockEditorDocumentOutlineBuilder.h"
 #include "BlockEditorDropTargetResolver.h"
 #include "BlockEditorInsertionPlanner.h"
@@ -24,7 +26,7 @@ BlockEditorInsertionController::BlockEditorInsertionController(BlockEditorInsert
 
 QString BlockEditorInsertionController::tr(const char *text) const
 {
-    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorInsertionController", text);
 }
 
 void BlockEditorInsertionController::insertFromDrop(const QString &kind, const QPointF &scenePos)

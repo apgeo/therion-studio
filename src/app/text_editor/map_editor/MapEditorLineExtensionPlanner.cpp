@@ -1,5 +1,7 @@
 #include "MapEditorLineExtensionPlanner.h"
 
+#include <QCoreApplication>
+
 namespace TherionStudio
 {
 namespace
@@ -24,11 +26,14 @@ MapEditorLineExtensionPlan MapEditorLineExtensionPlanner::planEdit(
 {
     MapEditorLineExtensionPlan plan;
     if (lineFeature.lineVertices.size() < 2) {
-        plan.errorMessage = QStringLiteral("Extend line failed: line geometry could not be resolved.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorLineExtensionPlanner",
+                                                        "Extend line failed: line geometry could not be resolved.");
         return plan;
     }
     if (draftVertices.size() < 2) {
-        plan.errorMessage = QStringLiteral("Extend line needs at least one new vertex before completion.");
+        plan.errorMessage = QCoreApplication::translate(
+            "TherionStudio::MapEditorLineExtensionPlanner",
+            "Extend line needs at least one new vertex before completion.");
         return plan;
     }
 

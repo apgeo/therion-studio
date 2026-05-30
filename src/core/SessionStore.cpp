@@ -14,6 +14,8 @@ const auto kMainWindowStateKey = QStringLiteral("session/mainWindowState");
 const auto kOpenDocumentPathsKey = QStringLiteral("session/openDocumentPaths");
 const auto kActiveDocumentPathKey = QStringLiteral("session/activeDocumentPath");
 const auto kStructureNameOverridesKey = QStringLiteral("session/structureNameOverrides");
+const auto kApplicationLanguageKey = QStringLiteral("settings/applicationLanguage");
+const auto kDefaultTextEditorModeKey = QStringLiteral("settings/defaultTextEditorMode");
 const auto kTherionExecutablePathKey = QStringLiteral("session/therionExecutablePath");
 const auto kTherionWorkingDirectoryKey = QStringLiteral("session/therionWorkingDirectory");
 const auto kTherionArgumentsKey = QStringLiteral("session/therionArguments");
@@ -106,6 +108,26 @@ QString SessionSettingsStore::structureNameOverrides() const
 void SessionSettingsStore::setStructureNameOverrides(const QString &json)
 {
     settings_->setValue(kStructureNameOverridesKey, json);
+}
+
+QString SessionSettingsStore::applicationLanguage() const
+{
+    return settings_->value(kApplicationLanguageKey, QStringLiteral("system")).toString();
+}
+
+void SessionSettingsStore::setApplicationLanguage(const QString &language)
+{
+    settings_->setValue(kApplicationLanguageKey, language);
+}
+
+QString SessionSettingsStore::defaultTextEditorMode() const
+{
+    return settings_->value(kDefaultTextEditorModeKey, QStringLiteral("raw")).toString();
+}
+
+void SessionSettingsStore::setDefaultTextEditorMode(const QString &mode)
+{
+    settings_->setValue(kDefaultTextEditorModeKey, mode);
 }
 
 QString SessionSettingsStore::therionExecutablePath() const
@@ -246,6 +268,26 @@ QString InMemorySessionStore::structureNameOverrides() const
 void InMemorySessionStore::setStructureNameOverrides(const QString &json)
 {
     structureNameOverrides_ = json;
+}
+
+QString InMemorySessionStore::applicationLanguage() const
+{
+    return applicationLanguage_;
+}
+
+void InMemorySessionStore::setApplicationLanguage(const QString &language)
+{
+    applicationLanguage_ = language;
+}
+
+QString InMemorySessionStore::defaultTextEditorMode() const
+{
+    return defaultTextEditorMode_;
+}
+
+void InMemorySessionStore::setDefaultTextEditorMode(const QString &mode)
+{
+    defaultTextEditorMode_ = mode;
 }
 
 QString InMemorySessionStore::therionExecutablePath() const

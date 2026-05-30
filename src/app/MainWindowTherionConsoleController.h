@@ -23,16 +23,12 @@ public:
     void bindWidgets(QPlainTextEdit *consoleView,
                      QPushButton *runButton,
                      QPushButton *stopButton,
-                     QLineEdit *executableEdit,
-                     QPushButton *browseExecutableButton,
                      QLineEdit *workingDirectoryEdit,
                      QLineEdit *argumentsEdit)
     {
         consoleView_ = consoleView;
         runButton_ = runButton;
         stopButton_ = stopButton;
-        executableEdit_ = executableEdit;
-        browseExecutableButton_ = browseExecutableButton;
         workingDirectoryEdit_ = workingDirectoryEdit;
         argumentsEdit_ = argumentsEdit;
     }
@@ -99,12 +95,6 @@ public:
         if (stopButton_ != nullptr) {
             stopButton_->setEnabled(isRunning);
         }
-        if (executableEdit_ != nullptr) {
-            executableEdit_->setEnabled(!isRunning);
-        }
-        if (browseExecutableButton_ != nullptr) {
-            browseExecutableButton_->setEnabled(!isRunning);
-        }
         if (workingDirectoryEdit_ != nullptr) {
             workingDirectoryEdit_->setEnabled(!isRunning);
         }
@@ -117,8 +107,6 @@ private:
     QPlainTextEdit *consoleView_ = nullptr;
     QPushButton *runButton_ = nullptr;
     QPushButton *stopButton_ = nullptr;
-    QLineEdit *executableEdit_ = nullptr;
-    QPushButton *browseExecutableButton_ = nullptr;
     QLineEdit *workingDirectoryEdit_ = nullptr;
     QLineEdit *argumentsEdit_ = nullptr;
 };

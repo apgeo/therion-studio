@@ -1,5 +1,7 @@
 #include "MapEditorCanvasEditController.h"
 
+#include <QCoreApplication>
+
 #include "../TextEditorTab.h"
 #include "MapEditorCanvasEditCommandFactory.h"
 #include "MapEditorLineSplitPlanner.h"
@@ -306,7 +308,7 @@ MapEditableGeometryVertexItem *resolveSelectedLineVertexItemForContext(const Map
 
 QString MapEditorCanvasEditController::tr(const char *text) const
 {
-    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::MapEditorCanvasEditController", text);
 }
 
 void MapEditorCanvasEditController::resetPendingClickSelection()

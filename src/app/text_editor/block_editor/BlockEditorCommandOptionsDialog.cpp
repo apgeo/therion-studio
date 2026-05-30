@@ -1,5 +1,7 @@
 #include "BlockEditorCommandOptionsDialog.h"
 
+#include <QCoreApplication>
+
 #include "BlockEditorCommandOptionParser.h"
 #include "BlockEditorOptionTableDelegate.h"
 #include "../ContextHelpController.h"
@@ -233,7 +235,7 @@ BlockEditorCommandOptionsDialog::BlockEditorCommandOptionsDialog(BlockEditorComm
 
 QString BlockEditorCommandOptionsDialog::tr(const char *text) const
 {
-    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorCommandOptionsDialog", text);
 }
 
 std::optional<QString> BlockEditorCommandOptionsDialog::configureLine(

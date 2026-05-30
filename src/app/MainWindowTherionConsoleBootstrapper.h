@@ -23,8 +23,6 @@ public:
         QPlainTextEdit *consoleView = nullptr;
         QPushButton *therionRunButton = nullptr;
         QPushButton *therionStopButton = nullptr;
-        QLineEdit *therionExecutableEdit = nullptr;
-        QPushButton *therionBrowseExecutableButton = nullptr;
         QLineEdit *therionWorkingDirectoryEdit = nullptr;
         QLineEdit *therionArgumentsEdit = nullptr;
         QVBoxLayout *consoleSidebarPageLayout = nullptr;

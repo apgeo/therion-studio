@@ -8,6 +8,7 @@
 #include "../../../core/TherionDocumentParser.h"
 
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
 #include <QLineEdit>
@@ -82,9 +83,9 @@ bool BlockEditorToolboxController::isCompatibleChildKindForBlocks(const QString 
     return context_.isCompatibleChildKindForBlocks ? context_.isCompatibleChildKindForBlocks(parentKind, childKind) : false;
 }
 
-QString BlockEditorToolboxController::translate(const char *text) const
+QString BlockEditorToolboxController::tr(const char *text) const
 {
-    return context_.translate ? context_.translate(text) : QString::fromLatin1(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorToolboxController", text);
 }
 
 void BlockEditorToolboxController::populateBlockToolbox()
@@ -196,7 +197,7 @@ void BlockEditorToolboxController::populateBlockToolbox()
             }
 
             const QString label = isMapObjectReferenceKind(normalizedCommand)
-                ? translate("Object Reference")
+                ? tr("Object Reference")
                 : labelForCommand(normalizedCommand);
             const QString searchable = normalizedCommand + QStringLiteral(" ") + label.toLower();
             if (!filterText.isEmpty() && !searchable.contains(filterText)) {
@@ -220,17 +221,17 @@ void BlockEditorToolboxController::populateBlockToolbox()
 
         for (const QString &commandToken : visibleCommands) {
             const QString label = isMapObjectReferenceKind(commandToken)
-                ? translate("Object Reference")
+                ? tr("Object Reference")
                 : labelForCommand(commandToken);
             auto *item = new QListWidgetItem(QStringLiteral("  %1").arg(label), toolboxList());
             item->setData(Qt::UserRole, commandToken);
-            item->setToolTip(translate("Drag to canvas."));
+            item->setToolTip(tr("Drag to canvas."));
             ++insertedRows;
         }
     }
 
     if (insertedRows == 0) {
-        auto *emptyItem = new QListWidgetItem(translate("[No commands match filter]"), toolboxList());
+        auto *emptyItem = new QListWidgetItem(tr("[No commands match filter]"), toolboxList());
         emptyItem->setFlags(Qt::ItemIsEnabled);
     }
 
@@ -246,9 +247,9 @@ void BlockEditorToolboxController::populateBlockToolboxScopeCombo()
     const QString previousScope = scopeCombo()->currentData().toString().trimmed().toLower();
     const QSignalBlocker scopeSignalBlocker(scopeCombo());
     scopeCombo()->clear();
-    scopeCombo()->addItem(translate("Auto (selected block)"), QStringLiteral("__auto__"));
-    scopeCombo()->addItem(translate("All"), QStringLiteral("all"));
-    scopeCombo()->addItem(translate("Top-level"), QStringLiteral("none"));
+    scopeCombo()->addItem(tr("Auto (selected block)"), QStringLiteral("__auto__"));
+    scopeCombo()->addItem(tr("All"), QStringLiteral("all"));
+    scopeCombo()->addItem(tr("Top-level"), QStringLiteral("none"));
 
     QStringList dynamicContexts;
     for (auto contextIterator = (*context_.commandMetadata).contextCommandTokens.cbegin(); contextIterator != (*context_.commandMetadata).contextCommandTokens.cend(); ++contextIterator) {
@@ -359,19 +360,19 @@ void BlockEditorToolboxController::updateBlockToolboxScopeLabel()
 
     if (selectedScope == QStringLiteral("__auto__")) {
         const QString contextToken = selectedBlockInsertionContextToken();
-        scopeCombo()->setToolTip(translate("Auto scope currently resolves to: %1.")
+        scopeCombo()->setToolTip(tr("Auto scope currently resolves to: %1.")
                                                 .arg(contextDisplayLabel(contextToken)));
         return;
     }
 
     if (selectedScope == QStringLiteral("all")) {
-        scopeCombo()->setToolTip(translate("Shows commands from all supported contexts."));
+        scopeCombo()->setToolTip(tr("Shows commands from all supported contexts."));
         return;
     }
 
     const QString normalizedScope = normalizeCompletionContext(selectedScope);
     const QString labelText = contextDisplayLabel(normalizedScope.isEmpty() ? QStringLiteral("none") : normalizedScope);
-    scopeCombo()->setToolTip(translate("Shows commands for: %1.").arg(labelText));
+    scopeCombo()->setToolTip(tr("Shows commands for: %1.").arg(labelText));
 }
 
 }

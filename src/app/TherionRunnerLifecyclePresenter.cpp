@@ -2,14 +2,6 @@
 
 #include <QCoreApplication>
 
-namespace
-{
-QString translate(const char *sourceText)
-{
-    return QCoreApplication::translate("MainWindow", sourceText);
-}
-}
-
 namespace TherionStudio
 {
 TherionRunnerLifecyclePresenter::StopPresentation
@@ -19,13 +11,13 @@ TherionRunnerLifecyclePresenter::presentStopRequest(bool isRunning)
 
     if (!isRunning) {
         result.shouldUpdateStatusLabel = true;
-        result.statusLabelMessage = translate("Therion is not running.");
+        result.statusLabelMessage = QCoreApplication::translate("MainWindow", "Therion is not running.");
         return result;
     }
 
     result.shouldStopProcess = true;
     result.shouldUpdateStatusLabel = true;
-    result.statusLabelMessage = translate("Stopping Therion...");
+    result.statusLabelMessage = QCoreApplication::translate("MainWindow", "Stopping Therion...");
     return result;
 }
 
@@ -34,8 +26,8 @@ TherionRunnerLifecyclePresenter::presentFinished(int exitCode, QProcess::ExitSta
 {
     EventPresentation result;
     result.statusText = exitStatus == QProcess::NormalExit
-        ? translate("Therion finished with exit code %1.").arg(exitCode)
-        : translate("Therion crashed while running.");
+        ? QCoreApplication::translate("MainWindow", "Therion finished with exit code %1.").arg(exitCode)
+        : QCoreApplication::translate("MainWindow", "Therion crashed while running.");
     return result;
 }
 
@@ -43,7 +35,7 @@ TherionRunnerLifecyclePresenter::EventPresentation
 TherionRunnerLifecyclePresenter::presentError(const QString &errorText)
 {
     EventPresentation result;
-    result.statusText = translate("Therion runner error: %1").arg(errorText);
+    result.statusText = QCoreApplication::translate("MainWindow", "Therion runner error: %1").arg(errorText);
     return result;
 }
 }

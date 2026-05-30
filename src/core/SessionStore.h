@@ -42,6 +42,12 @@ public:
     QString structureNameOverrides() const override;
     void setStructureNameOverrides(const QString &json) override;
 
+    QString applicationLanguage() const override;
+    void setApplicationLanguage(const QString &language) override;
+
+    QString defaultTextEditorMode() const override;
+    void setDefaultTextEditorMode(const QString &mode) override;
+
     QString therionExecutablePath() const override;
     void setTherionExecutablePath(const QString &path) override;
 
@@ -91,6 +97,12 @@ public:
     QString structureNameOverrides() const override;
     void setStructureNameOverrides(const QString &json) override;
 
+    QString applicationLanguage() const override;
+    void setApplicationLanguage(const QString &language) override;
+
+    QString defaultTextEditorMode() const override;
+    void setDefaultTextEditorMode(const QString &mode) override;
+
     QString therionExecutablePath() const override;
     void setTherionExecutablePath(const QString &path) override;
 
@@ -122,6 +134,8 @@ private:
     QStringList openDocumentPaths_;
     QString activeDocumentPath_;
     QString structureNameOverrides_;
+    QString applicationLanguage_ = QStringLiteral("system");
+    QString defaultTextEditorMode_ = QStringLiteral("raw");
     QString therionExecutablePath_;
     QString therionWorkingDirectory_;
     QString therionArguments_;

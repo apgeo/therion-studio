@@ -1,5 +1,6 @@
 #include "BlockEditorDetailsPaneController.h"
 
+#include <QCoreApplication>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -32,8 +33,8 @@ void BlockEditorDetailsPaneController::clearDetailsPane()
         context_.editPanel->setVisible(false);
     }
     context_.setDetailsPopulating(true);
-    const auto tr = [this](const char *text) {
-        return context_.translate ? context_.translate(text) : QString::fromLatin1(text);
+    const auto tr = [](const char *text) {
+        return QCoreApplication::translate("TherionStudio::BlockEditorDetailsPaneController", text);
     };
     if (context_.statusLabel != nullptr) {
         context_.statusLabel->setStyleSheet(QString());

@@ -49,6 +49,6 @@ private:
     QPlainTextEdit *editor() const;
     QString normalizeCompletionContext(const QString &contextToken) const;
     bool isCompatibleChildKindForBlocks(const QString &parentKind, const QString &childKind) const;
-    QString translate(const char *text) const;
+    QString tr(const char *text) const;
 };
 }

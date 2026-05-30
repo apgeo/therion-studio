@@ -101,6 +101,16 @@ void TextEditorTab::setRightPanelCollapsed(bool collapsed)
     setHelpCollapsed(collapsed);
 }
 
+void TextEditorTab::setInitialEditorMode(EditorMode mode)
+{
+    if (!filePath_.isEmpty()) {
+        setEditorMode(mode);
+        return;
+    }
+
+    blocksModeActive_ = mode == EditorMode::Blocks;
+}
+
 void TextEditorTab::setEditorMode(EditorMode mode)
 {
     setBlocksModeActive(mode == EditorMode::Blocks);

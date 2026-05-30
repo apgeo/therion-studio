@@ -22,7 +22,6 @@ public:
         QObject *context = nullptr;
         QPushButton *therionRunButton = nullptr;
         QPushButton *therionStopButton = nullptr;
-        QPushButton *therionBrowseExecutableButton = nullptr;
         QPushButton *therionBrowseTargetConfigButton = nullptr;
         QPushButton *therionBrowseWorkingDirectoryButton = nullptr;
         QPushButton *therionResetWorkingDirectoryButton = nullptr;
@@ -36,7 +35,6 @@ public:
 
         std::function<void()> onRunRequested;
         std::function<void()> onStopRequested;
-        std::function<void()> onBrowseExecutableRequested;
         std::function<void()> onBrowseTargetConfigRequested;
         std::function<void()> onBrowseWorkingDirectoryRequested;
         std::function<void()> onResetWorkingDirectoryRequested;

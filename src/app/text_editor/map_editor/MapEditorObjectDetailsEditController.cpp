@@ -12,6 +12,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDoubleSpinBox>
 #include <QLineEdit>
 #include <QLineF>
@@ -125,9 +126,9 @@ MapEditorObjectDetailsEditController::MapEditorObjectDetailsEditController(MapEd
 {
 }
 
-QString MapEditorObjectDetailsEditController::translate(const char *text) const
+QString MapEditorObjectDetailsEditController::tr(const char *text) const
 {
-    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsEditController", text);
 }
 
 const InspectorSymbolCatalog &MapEditorObjectDetailsEditController::inspectorSymbolCatalog() const
@@ -220,7 +221,7 @@ void MapEditorObjectDetailsEditController::applyScrapScaleEdits()
     }
 
     if (targetLineNumber <= 0) {
-        *context_.toolbarStatusNote = translate("Select a scrap to edit its scale.");
+        *context_.toolbarStatusNote = tr("Select a scrap to edit its scale.");
         context_.refreshToolbarSummary();
         return;
     }
@@ -237,7 +238,7 @@ void MapEditorObjectDetailsEditController::applyScrapScaleEdits()
 
     if (QLineF(scale.sourcePoint1, scale.sourcePoint2).length() <= 1e-6
         || QLineF(scale.realPoint1, scale.realPoint2).length() <= 1e-6) {
-        *context_.toolbarStatusNote = translate("Scrap scale requires two distinct picture points and two distinct real points.");
+        *context_.toolbarStatusNote = tr("Scrap scale requires two distinct picture points and two distinct real points.");
         context_.refreshToolbarSummary();
         return;
     }
@@ -250,8 +251,8 @@ void MapEditorObjectDetailsEditController::applyScrapScaleEdits()
                                                   scrapScaleExpression(scale),
                                                   &errorMessage)) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
-            ? translate("Failed to update scrap scale.")
-            : translate("Failed to update scrap scale: %1").arg(errorMessage);
+            ? tr("Failed to update scrap scale.")
+            : tr("Failed to update scrap scale: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         return;
     }
@@ -262,8 +263,8 @@ void MapEditorObjectDetailsEditController::applyScrapScaleEdits()
 
     const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
     context_.textEditor->replaceTextForCommand(afterText);
-    context_.recordSourceTextSnapshot(translate("Set Scrap Scale"), beforeText, afterText, targetLineNumber);
-    *context_.toolbarStatusNote = translate("Updated scrap scale.");
+    context_.recordSourceTextSnapshot(tr("Set Scrap Scale"), beforeText, afterText, targetLineNumber);
+    *context_.toolbarStatusNote = tr("Updated scrap scale.");
     context_.refreshToolbarSummary();
     context_.refreshObjectDetailsPanel();
 }
@@ -294,7 +295,7 @@ void MapEditorObjectDetailsEditController::handleConfigureObjectSettingsTriggere
     }
 
     if (targetLineNumber <= 0 || !isConfigurableMapObjectKind(targetKind)) {
-        *context_.toolbarStatusNote = translate("Object settings are available for scrap, point, line, and area commands.");
+        *context_.toolbarStatusNote = tr("Object settings are available for scrap, point, line, and area commands.");
         context_.refreshToolbarSummary();
         return;
     }
@@ -315,8 +316,8 @@ void MapEditorObjectDetailsEditController::handleLineClosedToggled(bool checked)
     QString errorMessage;
     if (!context_.rewriteLineOptionToggle(*context_.selectedObjectLineNumber, QStringLiteral("close"), checked, &errorMessage)) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
-            ? translate("Failed to update line closed state.")
-            : translate("Failed to update line closed state: %1").arg(errorMessage);
+            ? tr("Failed to update line closed state.")
+            : tr("Failed to update line closed state: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         context_.refreshObjectDetailsPanel();
     }
@@ -334,8 +335,8 @@ void MapEditorObjectDetailsEditController::handleLineReversedToggled(bool checke
     QString errorMessage;
     if (!context_.rewriteLineOptionToggle(*context_.selectedObjectLineNumber, QStringLiteral("reverse"), checked, &errorMessage)) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
-            ? translate("Failed to update line reverse state.")
-            : translate("Failed to update line reverse state: %1").arg(errorMessage);
+            ? tr("Failed to update line reverse state.")
+            : tr("Failed to update line reverse state: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         context_.refreshObjectDetailsPanel();
     }
@@ -395,7 +396,7 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
         const TherionParsedLine parsedLine =
             TherionDocumentParser::parseLine(documentLines.at(selectedLineNumber - 1), selectedLineNumber);
         if (!isOrientationSupportedForParsedLine(parsedLine, orientationApplicabilityByCommand())) {
-            *context_.toolbarStatusNote = translate("Orientation is not supported for this point type.");
+            *context_.toolbarStatusNote = tr("Orientation is not supported for this point type.");
             context_.refreshToolbarSummary();
             context_.refreshObjectDetailsPanel();
             return;
@@ -413,7 +414,7 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
         if (!lineFeature.has_value()
             || lineFeature->kind != MapGeometryFeature::Kind::Line
             || lineVertexIndexForSourceVertex(lineFeature.value(), selectedSourceVertexIndex) < 0) {
-            *context_.toolbarStatusNote = translate("Orientation editing is available only for selected line anchor vertices.");
+            *context_.toolbarStatusNote = tr("Orientation editing is available only for selected line anchor vertices.");
             context_.refreshToolbarSummary();
             context_.refreshObjectDetailsPanel();
             return;
@@ -426,7 +427,7 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
         const bool orientationSupported = isOrientationSupportedForParsedLine(parsedLine, orientationApplicabilityByCommand());
         const bool leftSizeSupported = isLinePointLeftSizeSupportedForParsedLine(parsedLine);
         if (!orientationSupported && !leftSizeSupported) {
-            *context_.toolbarStatusNote = translate("Orientation is not supported for this line type.");
+            *context_.toolbarStatusNote = tr("Orientation is not supported for this line type.");
             context_.refreshToolbarSummary();
             context_.refreshObjectDetailsPanel();
             return;
@@ -451,15 +452,15 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
 
     if (!rewritten) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
-            ? translate("Failed to update orientation.")
-            : translate("Failed to update orientation: %1").arg(errorMessage);
+            ? tr("Failed to update orientation.")
+            : tr("Failed to update orientation: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         context_.refreshObjectDetailsPanel();
         return;
     }
 
     if (selectedObjectKind == QStringLiteral("line")) {
-        *context_.toolbarStatusNote = translate("Updated line point options.");
+        *context_.toolbarStatusNote = tr("Updated line point options.");
         if (context_.restoreLineAnchorSelectionLater) {
             context_.restoreLineAnchorSelectionLater(selectedLineNumber, selectedSourceVertexIndex);
             QTimer::singleShot(0,
@@ -472,8 +473,8 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
         }
     } else {
         *context_.toolbarStatusNote = enabled
-            ? translate("Updated orientation to %1 degrees.").arg(QString::number(orientation, 'f', 3))
-            : translate("Cleared orientation override.");
+            ? tr("Updated orientation to %1 degrees.").arg(QString::number(orientation, 'f', 3))
+            : tr("Cleared orientation override.");
         if (context_.restorePointSelectionLater) {
             context_.restorePointSelectionLater(selectedLineNumber);
             QTimer::singleShot(0,
@@ -547,7 +548,7 @@ void MapEditorObjectDetailsEditController::deleteSelectedObjectFromSelection()
     const QVector<MapEditorAreaReference> areaReferences =
         mapEditorAreaReferencesForBorderLine(context_.textEditor->text(), targetLineNumber);
     if (!areaReferences.isEmpty()) {
-        *context_.toolbarStatusNote = translate("This line is used as an area border. Delete the area instead.");
+        *context_.toolbarStatusNote = tr("This line is used as an area border. Delete the area instead.");
         context_.refreshToolbarSummary();
         return;
     }
@@ -556,15 +557,15 @@ void MapEditorObjectDetailsEditController::deleteSelectedObjectFromSelection()
     const MapEditorObjectDeletePlan deletePlan = planMapEditorObjectDelete(beforeText, targetLineNumber);
     if (!deletePlan.resolved || !deletePlan.changed) {
         *context_.toolbarStatusNote = deletePlan.errorMessage.isEmpty()
-            ? translate("Object deletion failed.")
-            : translate("Object deletion failed: %1").arg(deletePlan.errorMessage);
+            ? tr("Object deletion failed.")
+            : tr("Object deletion failed: %1").arg(deletePlan.errorMessage);
         context_.refreshToolbarSummary();
         return;
     }
 
     const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
     context_.textEditor->replaceTextForCommand(deletePlan.updatedText);
-    context_.recordSourceTextSnapshot(translate("Delete Map Object"),
+    context_.recordSourceTextSnapshot(tr("Delete Map Object"),
                                       beforeText,
                                       deletePlan.updatedText,
                                       deletePlan.focusLineAfterDelete);
@@ -573,7 +574,7 @@ void MapEditorObjectDetailsEditController::deleteSelectedObjectFromSelection()
     }
     *context_.lastInspectorClickedObjectLineNumber = 0;
     context_.clearInspectorObjectSelection();
-    *context_.toolbarStatusNote = translate("Deleted selected object from source.");
+    *context_.toolbarStatusNote = tr("Deleted selected object from source.");
     context_.refreshToolbarSummary();
 }
 
@@ -621,8 +622,8 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
                                                             context_.quickNameEdit->isVisible(),
                                                             &errorMessage)) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
-            ? translate("Failed to update object fields.")
-            : translate("Failed to update object fields: %1").arg(errorMessage);
+            ? tr("Failed to update object fields.")
+            : tr("Failed to update object fields: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         context_.refreshObjectDetailsPanel();
         return;
@@ -634,8 +635,8 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
 
     const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
     context_.textEditor->replaceTextForCommand(afterText);
-    context_.recordSourceTextSnapshot(translate("Edit Object Fields"), beforeText, afterText, targetLineNumber);
-    *context_.toolbarStatusNote = translate("Updated object fields.");
+    context_.recordSourceTextSnapshot(tr("Edit Object Fields"), beforeText, afterText, targetLineNumber);
+    *context_.toolbarStatusNote = tr("Updated object fields.");
     context_.refreshToolbarSummary();
     context_.refreshObjectDetailsPanel();
 }
@@ -675,8 +676,8 @@ void MapEditorObjectDetailsEditController::applyScrapProjectionEdit()
                                                        context_.quickProjectionCombo->currentText(),
                                                        &errorMessage)) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
-            ? translate("Failed to update scrap projection.")
-            : translate("Failed to update scrap projection: %1").arg(errorMessage);
+            ? tr("Failed to update scrap projection.")
+            : tr("Failed to update scrap projection: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         context_.refreshObjectDetailsPanel();
         return;
@@ -688,8 +689,8 @@ void MapEditorObjectDetailsEditController::applyScrapProjectionEdit()
 
     const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
     context_.textEditor->replaceTextForCommand(afterText);
-    context_.recordSourceTextSnapshot(translate("Edit Scrap Projection"), beforeText, afterText, targetLineNumber);
-    *context_.toolbarStatusNote = translate("Updated scrap projection.");
+    context_.recordSourceTextSnapshot(tr("Edit Scrap Projection"), beforeText, afterText, targetLineNumber);
+    *context_.toolbarStatusNote = tr("Updated scrap projection.");
     context_.refreshToolbarSummary();
     context_.refreshObjectDetailsPanel();
 }

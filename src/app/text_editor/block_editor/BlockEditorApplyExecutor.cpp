@@ -1,5 +1,7 @@
 #include "BlockEditorApplyExecutor.h"
 
+#include <QCoreApplication>
+
 #include "BlockEditorSourceText.h"
 
 #include <QMessageBox>
@@ -15,10 +17,7 @@ BlockEditorApplyExecutor::BlockEditorApplyExecutor(BlockEditorApplyExecutorConte
 
 QString BlockEditorApplyExecutor::tr(const char *text) const
 {
-    if (context_.translate) {
-        return context_.translate(text);
-    }
-    return QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorApplyExecutor", text);
 }
 
 void BlockEditorApplyExecutor::applyChanges()

@@ -4,6 +4,7 @@
 #include "../ContextHelpController.h"
 #include "../TextEditorCommandMetadata.h"
 
+#include <QCoreApplication>
 #include <QGraphicsScene>
 #include <QLabel>
 #include <QLineEdit>
@@ -35,8 +36,8 @@ void BlockEditorToolboxDetailsController::showToolboxCommandDetails(const QStrin
         return;
     }
 
-    const auto tr = [this](const char *text) {
-        return context_.translate ? context_.translate(text) : QString::fromLatin1(text);
+    const auto tr = [](const char *text) {
+        return QCoreApplication::translate("TherionStudio::BlockEditorToolboxDetailsController", text);
     };
 
     if (context_.scene != nullptr) {

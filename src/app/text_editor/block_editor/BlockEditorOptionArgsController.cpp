@@ -1,5 +1,7 @@
 #include "BlockEditorOptionArgsController.h"
 
+#include <QCoreApplication>
+
 #include "../TextEditorCommandMetadata.h"
 #include "../../../core/TherionCommandSyntax.h"
 #include "../../../core/TherionDocumentParser.h"
@@ -23,10 +25,7 @@ BlockEditorOptionArgsController::BlockEditorOptionArgsController(BlockEditorOpti
 
 QString BlockEditorOptionArgsController::tr(const char *text) const
 {
-    if (context_.translate) {
-        return context_.translate(text);
-    }
-    return QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorOptionArgsController", text);
 }
 
 bool BlockEditorOptionArgsController::hasRequiredContext() const

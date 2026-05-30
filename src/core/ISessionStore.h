@@ -29,6 +29,12 @@ public:
     virtual QString structureNameOverrides() const = 0;
     virtual void setStructureNameOverrides(const QString &json) = 0;
 
+    virtual QString applicationLanguage() const = 0;
+    virtual void setApplicationLanguage(const QString &language) = 0;
+
+    virtual QString defaultTextEditorMode() const = 0;
+    virtual void setDefaultTextEditorMode(const QString &mode) = 0;
+
     virtual QString therionExecutablePath() const = 0;
     virtual void setTherionExecutablePath(const QString &path) = 0;
 

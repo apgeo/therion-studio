@@ -5,7 +5,6 @@
 #include "MainWindowTherionConsoleBuilder.h"
 #include "MainWindowTherionConsoleWiring.h"
 #include "MainWindowTherionRunnerController.h"
-#include "TherionExecutableSelectionController.h"
 #include "TherionRunnerConfigDisplayController.h"
 #include "TherionRunnerLifecyclePresenter.h"
 #include "TherionRunnerService.h"
@@ -13,15 +12,12 @@
 
 #include <QComboBox>
 #include <QFileDialog>
-#include <QFileInfo>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
-#include <QPushButton>
 #include <QSignalBlocker>
 #include <QStatusBar>
 #include <QStringList>
-#include <QVBoxLayout>
 
 namespace
 {
@@ -32,12 +28,8 @@ constexpr auto kTherionRunTargetProject = "project";
 void MainWindow::buildConsole()
 {
     QWidget *consoleHost = consoleSidebarPage_ != nullptr ? consoleSidebarPage_ : this;
-    const QString persistedExecutablePath = sessionStore_->therionExecutablePath().trimmed();
-    const QString suggestedExecutablePath = TherionStudio::TherionRunnerService::suggestedDefaultExecutablePath();
     TherionStudio::MainWindowTherionConsoleBuilder::BuildInput buildInput;
     buildInput.consoleHost = consoleHost;
-    buildInput.persistedExecutablePath = persistedExecutablePath;
-    buildInput.suggestedExecutablePath = suggestedExecutablePath;
     buildInput.persistedWorkingDirectory = sessionStore_->therionWorkingDirectory().trimmed();
     buildInput.persistedArguments = sessionStore_->therionArguments().trimmed();
     buildInput.persistedRunTargetMode = sessionStore_->therionRunTargetMode().trimmed();
@@ -45,8 +37,6 @@ void MainWindow::buildConsole()
     const TherionStudio::MainWindowTherionConsoleBuilder::BuildResult buildResult =
         TherionStudio::MainWindowTherionConsoleBuilder::build(buildInput);
 
-    therionExecutableEdit_ = buildResult.therionExecutableEdit;
-    therionBrowseExecutableButton_ = buildResult.therionBrowseExecutableButton;
     therionWorkingDirectoryEdit_ = buildResult.therionWorkingDirectoryEdit;
     therionBrowseWorkingDirectoryButton_ = buildResult.therionBrowseWorkingDirectoryButton;
     therionArgumentsEdit_ = buildResult.therionArgumentsEdit;
@@ -68,7 +58,6 @@ void MainWindow::buildConsole()
     wiringInput.context = this;
     wiringInput.therionRunButton = therionRunButton_;
     wiringInput.therionStopButton = therionStopButton_;
-    wiringInput.therionBrowseExecutableButton = therionBrowseExecutableButton_;
     wiringInput.therionBrowseTargetConfigButton = therionBrowseTargetConfigButton_;
     wiringInput.therionBrowseWorkingDirectoryButton = therionBrowseWorkingDirectoryButton_;
     wiringInput.therionResetWorkingDirectoryButton = therionResetWorkingDirectoryButton_;
@@ -81,7 +70,6 @@ void MainWindow::buildConsole()
     wiringInput.therionRunnerService = therionRunnerService_;
     wiringInput.onRunRequested = [this]() { runTherion(); };
     wiringInput.onStopRequested = [this]() { stopTherion(); };
-    wiringInput.onBrowseExecutableRequested = [this]() { browseTherionExecutable(); };
     wiringInput.onBrowseTargetConfigRequested = [this]() { browseTherionTargetConfig(); };
     wiringInput.onBrowseWorkingDirectoryRequested = [this]() { browseTherionWorkingDirectoryOverride(); };
     wiringInput.onResetWorkingDirectoryRequested = [this]() {
@@ -111,8 +99,6 @@ void MainWindow::buildConsole()
     bootstrapInput.consoleView = consoleView_;
     bootstrapInput.therionRunButton = therionRunButton_;
     bootstrapInput.therionStopButton = therionStopButton_;
-    bootstrapInput.therionExecutableEdit = therionExecutableEdit_;
-    bootstrapInput.therionBrowseExecutableButton = therionBrowseExecutableButton_;
     bootstrapInput.therionWorkingDirectoryEdit = therionWorkingDirectoryEdit_;
     bootstrapInput.therionArgumentsEdit = therionArgumentsEdit_;
     bootstrapInput.consoleSidebarPageLayout = consoleSidebarPageLayout_;
@@ -158,34 +144,6 @@ void MainWindow::clearTherionConsoleOutput()
     }
 
     statusBar()->showMessage(tr("Cleared console output"), 2000);
-}
-
-void MainWindow::browseTherionExecutable()
-{
-    const QString initialPath = TherionStudio::TherionExecutableSelectionController::initialBrowsePath(
-        therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text() : QString());
-    const QString selectedExecutablePath = QFileDialog::getOpenFileName(this,
-                                                                         tr("Select Therion Executable"),
-                                                                         initialPath);
-    const TherionStudio::TherionExecutableSelectionController::SelectionResult selectionResult =
-        TherionStudio::TherionExecutableSelectionController::evaluateSelection(selectedExecutablePath);
-    if (selectionResult.showWarningDialog) {
-        QMessageBox::warning(this,
-                             selectionResult.warningDialogTitle,
-                             selectionResult.warningDialogMessage);
-        return;
-    }
-
-    if (!selectionResult.isAccepted) {
-        return;
-    }
-    if (selectionResult.shouldUpdateExecutableText && therionExecutableEdit_ != nullptr) {
-        therionExecutableEdit_->setText(selectionResult.updatedExecutableText);
-    }
-    if (selectionResult.shouldShowStatusBarMessage) {
-        statusBar()->showMessage(selectionResult.statusBarMessage,
-                                 selectionResult.statusBarTimeoutMs);
-    }
 }
 
 void MainWindow::browseTherionTargetConfig()
@@ -251,7 +209,7 @@ QString MainWindow::therionWorkingDirectoryOverride() const
         currentDocumentWidget() != nullptr ? documentPathForWidget(currentDocumentWidget()) : QString();
     TherionStudio::MainWindowTherionRunnerController::RuntimeInput input;
     input.projectRootPath = projectRootPath_;
-    input.executableText = therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text() : QString();
+    input.executableText = therionExecutableInput();
     input.workingDirectoryOverrideText = therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text() : QString();
     input.argumentsText = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text() : QString();
     input.runTargetMode = therionRunTargetCombo_ != nullptr ? therionRunTargetCombo_->currentData().toString() : QString();
@@ -267,7 +225,7 @@ QString MainWindow::therionConfigResolutionDirectory() const
         currentDocumentWidget() != nullptr ? documentPathForWidget(currentDocumentWidget()) : QString();
     TherionStudio::MainWindowTherionRunnerController::RuntimeInput input;
     input.projectRootPath = projectRootPath_;
-    input.executableText = therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text() : QString();
+    input.executableText = therionExecutableInput();
     input.workingDirectoryOverrideText = therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text() : QString();
     input.argumentsText = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text() : QString();
     input.runTargetMode = therionRunTargetCombo_ != nullptr ? therionRunTargetCombo_->currentData().toString() : QString();
@@ -282,7 +240,7 @@ QString MainWindow::resolvedTherionWorkingDirectory() const
         currentDocumentWidget() != nullptr ? documentPathForWidget(currentDocumentWidget()) : QString();
     TherionStudio::MainWindowTherionRunnerController::RuntimeInput input;
     input.projectRootPath = projectRootPath_;
-    input.executableText = therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text() : QString();
+    input.executableText = therionExecutableInput();
     input.workingDirectoryOverrideText = therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text() : QString();
     input.argumentsText = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text() : QString();
     input.runTargetMode = therionRunTargetCombo_ != nullptr ? therionRunTargetCombo_->currentData().toString() : QString();
@@ -297,7 +255,7 @@ bool MainWindow::hasExplicitTherionConfigArgument() const
         currentDocumentWidget() != nullptr ? documentPathForWidget(currentDocumentWidget()) : QString();
     TherionStudio::MainWindowTherionRunnerController::RuntimeInput input;
     input.projectRootPath = projectRootPath_;
-    input.executableText = therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text() : QString();
+    input.executableText = therionExecutableInput();
     input.workingDirectoryOverrideText = therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text() : QString();
     input.argumentsText = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text() : QString();
     input.runTargetMode = therionRunTargetCombo_ != nullptr ? therionRunTargetCombo_->currentData().toString() : QString();
@@ -306,13 +264,20 @@ bool MainWindow::hasExplicitTherionConfigArgument() const
     return TherionStudio::MainWindowTherionRunnerController::computeRuntimeState(input).hasExplicitConfigArgument;
 }
 
+QString MainWindow::therionExecutableInput() const
+{
+    return sessionStore_ != nullptr
+        ? sessionStore_->therionExecutablePath().trimmed()
+        : QString();
+}
+
 QString MainWindow::therionRunTargetMode() const
 {
     const QString currentDocumentPath =
         currentDocumentWidget() != nullptr ? documentPathForWidget(currentDocumentWidget()) : QString();
     TherionStudio::MainWindowTherionRunnerController::RuntimeInput input;
     input.projectRootPath = projectRootPath_;
-    input.executableText = therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text() : QString();
+    input.executableText = therionExecutableInput();
     input.workingDirectoryOverrideText = therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text() : QString();
     input.argumentsText = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text() : QString();
     input.runTargetMode = therionRunTargetCombo_ != nullptr ? therionRunTargetCombo_->currentData().toString() : QString();
@@ -335,7 +300,7 @@ QString MainWindow::resolvedTherionTargetConfigPath() const
         currentDocumentWidget() != nullptr ? documentPathForWidget(currentDocumentWidget()) : QString();
     TherionStudio::MainWindowTherionRunnerController::RuntimeInput input;
     input.projectRootPath = projectRootPath_;
-    input.executableText = therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text() : QString();
+    input.executableText = therionExecutableInput();
     input.workingDirectoryOverrideText = therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text() : QString();
     input.argumentsText = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text() : QString();
     input.runTargetMode = therionRunTargetCombo_ != nullptr ? therionRunTargetCombo_->currentData().toString() : QString();
@@ -350,7 +315,7 @@ QString MainWindow::resolvedTherionConfigPath() const
         currentDocumentWidget() != nullptr ? documentPathForWidget(currentDocumentWidget()) : QString();
     TherionStudio::MainWindowTherionRunnerController::RuntimeInput input;
     input.projectRootPath = projectRootPath_;
-    input.executableText = therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text() : QString();
+    input.executableText = therionExecutableInput();
     input.workingDirectoryOverrideText = therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text() : QString();
     input.argumentsText = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text() : QString();
     input.runTargetMode = therionRunTargetCombo_ != nullptr ? therionRunTargetCombo_->currentData().toString() : QString();
@@ -397,7 +362,7 @@ void MainWindow::refreshTherionRunTargetControls()
         currentDocumentWidget() != nullptr ? documentPathForWidget(currentDocumentWidget()) : QString();
     TherionStudio::MainWindowTherionRunnerController::RuntimeInput input;
     input.projectRootPath = projectRootPath_;
-    input.executableText = therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text() : QString();
+    input.executableText = therionExecutableInput();
     input.workingDirectoryOverrideText = therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text() : QString();
     input.argumentsText = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text() : QString();
     input.runTargetMode = therionRunTargetCombo_ != nullptr ? therionRunTargetCombo_->currentData().toString() : QString();
@@ -466,7 +431,7 @@ void MainWindow::runTherion()
         currentDocumentWidget() != nullptr ? documentPathForWidget(currentDocumentWidget()) : QString();
     TherionStudio::MainWindowTherionRunnerController::RuntimeInput input;
     input.projectRootPath = projectRootPath_;
-    input.executableText = therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text() : QString();
+    input.executableText = therionExecutableInput();
     input.workingDirectoryOverrideText = therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text() : QString();
     input.argumentsText = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text() : QString();
     input.runTargetMode = therionRunTargetCombo_ != nullptr ? therionRunTargetCombo_->currentData().toString() : QString();

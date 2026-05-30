@@ -198,6 +198,7 @@ public:
     bool isRightPanelCollapsed() const;
     QString rightPanelLabel() const;
     void setRightPanelCollapsed(bool collapsed);
+    void setInitialEditorMode(EditorMode mode);
 
 public slots:
     void setEditorMode(EditorMode mode);

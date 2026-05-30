@@ -2,6 +2,7 @@
 
 #include "../TextEditorTab.h"
 
+#include <QCoreApplication>
 #include <QGraphicsScene>
 #include <QPointer>
 #include <QUndoCommand>
@@ -13,6 +14,106 @@ namespace TherionStudio
 {
 namespace
 {
+QString pointGeometryRevertedMessage(int lineNumber)
+{
+    return QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                       "Reverted point geometry at source line %1.")
+        .arg(lineNumber);
+}
+
+QString pointGeometryUpdatedMessage(int lineNumber)
+{
+    return QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                       "Updated point geometry at source line %1.")
+        .arg(lineNumber);
+}
+
+QString pointMoveFailedMessage(const QString &errorMessage)
+{
+    return errorMessage.isEmpty()
+        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory", "Point move failed.")
+        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory", "Point move failed: %1")
+              .arg(errorMessage);
+}
+
+QString vertexRevertedMessage(const QString &kind, int vertexIndex, int lineNumber)
+{
+    return QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                       "Reverted %1 vertex %2 at source line %3.")
+        .arg(kind)
+        .arg(vertexIndex + 1)
+        .arg(lineNumber);
+}
+
+QString vertexUpdatedMessage(const QString &kind, int vertexIndex, int lineNumber)
+{
+    return QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                       "Updated %1 vertex %2 at source line %3.")
+        .arg(kind)
+        .arg(vertexIndex + 1)
+        .arg(lineNumber);
+}
+
+QString vertexMoveFailedMessage(const QString &kind, const QString &errorMessage)
+{
+    return errorMessage.isEmpty()
+        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory", "%1 vertex move failed.")
+              .arg(kind)
+        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory", "%1 vertex move failed: %2")
+              .arg(kind, errorMessage);
+}
+
+QString coupledVertexMoveFailedMessage(const QString &kind, const QString &errorMessage)
+{
+    return errorMessage.isEmpty()
+        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "%1 coupled vertex move failed.")
+              .arg(kind)
+        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "%1 coupled vertex move failed: %2")
+              .arg(kind, errorMessage);
+}
+
+QString insertedMapObjectRemovedMessage(int lineNumber)
+{
+    return lineNumber > 0
+        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Removed inserted map object at source line %1.")
+              .arg(lineNumber)
+        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Removed inserted map object.");
+}
+
+QString insertedMapObjectRestoredMessage(int lineNumber)
+{
+    return lineNumber > 0
+        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Restored inserted map object at source line %1.")
+              .arg(lineNumber)
+        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Restored inserted map object.");
+}
+
+QString completedDraftRevertedMessage(int lineNumber)
+{
+    return lineNumber > 0
+        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Reverted completed draft at source line %1.")
+              .arg(lineNumber)
+        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Reverted completed draft.");
+}
+
+QString completedDraftRestoredMessage(int lineNumber)
+{
+    return lineNumber > 0
+        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Restored completed draft at source line %1.")
+              .arg(lineNumber)
+        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Restored completed draft.");
+}
+
 class MapPointGeometryMoveCommand final : public QUndoCommand
 {
 public:
@@ -61,7 +162,7 @@ public:
 
         textEditor_->replaceTextForCommand(beforeTextSnapshot_);
         if (statusCallback_ != nullptr) {
-            statusCallback_(QStringLiteral("Reverted point geometry at source line %1.").arg(lineNumber_));
+            statusCallback_(pointGeometryRevertedMessage(lineNumber_));
         }
     }
 
@@ -75,12 +176,12 @@ public:
         if (afterTextSnapshot_.has_value()) {
             textEditor_->replaceTextForCommand(afterTextSnapshot_.value());
             if (statusCallback_ != nullptr) {
-                statusCallback_(QStringLiteral("Updated point geometry at source line %1.").arg(lineNumber_));
+                statusCallback_(pointGeometryUpdatedMessage(lineNumber_));
             }
             return;
         }
 
-        if (!applyPoint(newPoint_, QStringLiteral("Updated point geometry at source line %1.").arg(lineNumber_))) {
+        if (!applyPoint(newPoint_, pointGeometryUpdatedMessage(lineNumber_))) {
             setObsolete(true);
             return;
         }
@@ -98,9 +199,7 @@ private:
         QString errorMessage;
         if (!textEditor_->rewritePointCoordinates(lineNumber_, point, &errorMessage)) {
             if (statusCallback_ != nullptr) {
-                statusCallback_(errorMessage.isEmpty()
-                                    ? QStringLiteral("Point move failed.")
-                                    : QStringLiteral("Point move failed: %1").arg(errorMessage));
+                statusCallback_(pointMoveFailedMessage(errorMessage));
             }
             return false;
         }
@@ -178,10 +277,7 @@ public:
 
         textEditor_->replaceTextForCommand(beforeTextSnapshot_);
         if (statusCallback_ != nullptr) {
-            statusCallback_(QStringLiteral("Reverted %1 vertex %2 at source line %3.")
-                                .arg(kind_)
-                                .arg(vertexIndex_ + 1)
-                                .arg(lineNumber_));
+            statusCallback_(vertexRevertedMessage(kind_, vertexIndex_, lineNumber_));
         }
     }
 
@@ -195,20 +291,14 @@ public:
         if (afterTextSnapshot_.has_value()) {
             textEditor_->replaceTextForCommand(afterTextSnapshot_.value());
             if (statusCallback_ != nullptr) {
-                statusCallback_(QStringLiteral("Updated %1 vertex %2 at source line %3.")
-                                    .arg(kind_)
-                                    .arg(vertexIndex_ + 1)
-                                    .arg(lineNumber_));
+                statusCallback_(vertexUpdatedMessage(kind_, vertexIndex_, lineNumber_));
             }
             return;
         }
 
         if (!applyVertexWithSecondaries(newPoint_,
                                         secondaryMoves_,
-                                        QStringLiteral("Updated %1 vertex %2 at source line %3.")
-                                            .arg(kind_)
-                                            .arg(vertexIndex_ + 1)
-                                            .arg(lineNumber_))) {
+                                        vertexUpdatedMessage(kind_, vertexIndex_, lineNumber_))) {
             setObsolete(true);
             return;
         }
@@ -228,9 +318,7 @@ private:
         QString errorMessage;
         if (!textEditor_->rewriteLineAreaVertex(lineNumber_, kind_, vertexIndex_, point, &errorMessage)) {
             if (statusCallback_ != nullptr) {
-                statusCallback_(errorMessage.isEmpty()
-                                    ? QStringLiteral("%1 vertex move failed.").arg(kind_)
-                                    : QStringLiteral("%1 vertex move failed: %2").arg(kind_, errorMessage));
+                statusCallback_(vertexMoveFailedMessage(kind_, errorMessage));
             }
             return false;
         }
@@ -242,9 +330,7 @@ private:
 
             if (!textEditor_->rewriteLineAreaVertex(lineNumber_, kind_, move.vertexIndex, move.newPoint, &errorMessage)) {
                 if (statusCallback_ != nullptr) {
-                    statusCallback_(errorMessage.isEmpty()
-                                        ? QStringLiteral("%1 coupled vertex move failed.").arg(kind_)
-                                        : QStringLiteral("%1 coupled vertex move failed: %2").arg(kind_, errorMessage));
+                    statusCallback_(coupledVertexMoveFailedMessage(kind_, errorMessage));
                 }
                 return false;
             }
@@ -295,9 +381,7 @@ public:
 
         textEditor_->replaceTextForCommand(beforeText_);
         if (statusCallback_ != nullptr) {
-            statusCallback_(insertedLineNumber_ > 0
-                                ? QStringLiteral("Removed inserted map object at source line %1.").arg(insertedLineNumber_)
-                                : QStringLiteral("Removed inserted map object."));
+            statusCallback_(insertedMapObjectRemovedMessage(insertedLineNumber_));
         }
     }
 
@@ -314,9 +398,7 @@ public:
 
         textEditor_->replaceTextForCommand(afterText_);
         if (statusCallback_ != nullptr) {
-            statusCallback_(insertedLineNumber_ > 0
-                                ? QStringLiteral("Restored inserted map object at source line %1.").arg(insertedLineNumber_)
-                                : QStringLiteral("Restored inserted map object."));
+            statusCallback_(insertedMapObjectRestoredMessage(insertedLineNumber_));
         }
     }
 
@@ -371,9 +453,7 @@ public:
         textEditor_->replaceTextForCommand(beforeText_);
         restoreDraftItem();
         if (statusCallback_ != nullptr) {
-            statusCallback_(insertedLineNumber_ > 0
-                                ? QStringLiteral("Reverted completed draft at source line %1.").arg(insertedLineNumber_)
-                                : QStringLiteral("Reverted completed draft."));
+            statusCallback_(completedDraftRevertedMessage(insertedLineNumber_));
         }
     }
 
@@ -392,9 +472,7 @@ public:
         textEditor_->replaceTextForCommand(afterText_);
         detachDraftItem();
         if (statusCallback_ != nullptr) {
-            statusCallback_(insertedLineNumber_ > 0
-                                ? QStringLiteral("Restored completed draft at source line %1.").arg(insertedLineNumber_)
-                                : QStringLiteral("Restored completed draft."));
+            statusCallback_(completedDraftRestoredMessage(insertedLineNumber_));
         }
     }
 

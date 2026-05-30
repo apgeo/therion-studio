@@ -35,6 +35,8 @@ int runInstanceBackedRoundTripTest()
         store.setOpenDocumentPaths({QStringLiteral("/tmp/project/a.th"), QStringLiteral("/tmp/project/b.th2")});
         store.setActiveDocumentPath(QStringLiteral("/tmp/project/b.th2"));
         store.setStructureNameOverrides(QStringLiteral("{\"a\":\"A\"}"));
+        store.setApplicationLanguage(QStringLiteral("cs"));
+        store.setDefaultTextEditorMode(QStringLiteral("blocks"));
         store.setTherionExecutablePath(QStringLiteral("/usr/bin/therion"));
         store.setTherionWorkingDirectory(QStringLiteral("/tmp/project"));
         store.setTherionArguments(QStringLiteral("-q thconfig"));
@@ -69,6 +71,14 @@ int runInstanceBackedRoundTripTest()
     }
     if (!expect(store.structureNameOverrides() == QStringLiteral("{\"a\":\"A\"}"),
                 "Structure name overrides should round-trip through the injected settings file.")) {
+        return 1;
+    }
+    if (!expect(store.applicationLanguage() == QStringLiteral("cs"),
+                "Application language should round-trip through the injected settings file.")) {
+        return 1;
+    }
+    if (!expect(store.defaultTextEditorMode() == QStringLiteral("blocks"),
+                "Default text editor mode should round-trip through the injected settings file.")) {
         return 1;
     }
     if (!expect(store.therionExecutablePath() == QStringLiteral("/usr/bin/therion"),
@@ -125,6 +135,14 @@ int runDefaultsTest()
                 "Default Therion run target mode should be project config.")) {
         return 1;
     }
+    if (!expect(store.applicationLanguage() == QStringLiteral("system"),
+                "Default application language should follow the system locale.")) {
+        return 1;
+    }
+    if (!expect(store.defaultTextEditorMode() == QStringLiteral("raw"),
+                "Default text editor mode should be raw.")) {
+        return 1;
+    }
     if (!expect(!store.therionMapTouchFriendlyControlsEnabled(),
                 "Default touch-friendly controls flag should be false.")) {
         return 1;
@@ -150,12 +168,22 @@ int runInMemoryStoreTest()
                 "In-memory store should default Therion run target mode to project config.")) {
         return 1;
     }
+    if (!expect(store.applicationLanguage() == QStringLiteral("system"),
+                "In-memory store should default application language to system.")) {
+        return 1;
+    }
+    if (!expect(store.defaultTextEditorMode() == QStringLiteral("raw"),
+                "In-memory store should default text editor mode to raw.")) {
+        return 1;
+    }
     if (!expect(store.therionMapMagnifierEnabled(), "In-memory store should default map magnifier to true.")) {
         return 1;
     }
 
     store.setLastProjectPath(QStringLiteral("/tmp/project"));
     store.setOpenDocumentPaths({QStringLiteral("/tmp/project/a.th")});
+    store.setApplicationLanguage(QStringLiteral("sk"));
+    store.setDefaultTextEditorMode(QStringLiteral("blocks"));
     store.setTherionExecutablePath(QStringLiteral("/usr/bin/therion"));
     store.setTherionMapMagnifierEnabled(false);
 
@@ -165,6 +193,14 @@ int runInMemoryStoreTest()
     }
     if (!expect(store.openDocumentPaths() == QStringList({QStringLiteral("/tmp/project/a.th")}),
                 "In-memory store should retain open documents in the current process.")) {
+        return 1;
+    }
+    if (!expect(store.applicationLanguage() == QStringLiteral("sk"),
+                "In-memory store should retain application language in the current process.")) {
+        return 1;
+    }
+    if (!expect(store.defaultTextEditorMode() == QStringLiteral("blocks"),
+                "In-memory store should retain default text editor mode in the current process.")) {
         return 1;
     }
     if (!expect(store.therionExecutablePath() == QStringLiteral("/usr/bin/therion"),

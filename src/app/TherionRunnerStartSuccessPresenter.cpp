@@ -2,14 +2,6 @@
 
 #include <QCoreApplication>
 
-namespace
-{
-QString translate(const char *sourceText)
-{
-    return QCoreApplication::translate("MainWindow", sourceText);
-}
-}
-
 namespace TherionStudio
 {
 TherionRunnerStartSuccessPresenter::Presentation
@@ -20,8 +12,8 @@ TherionRunnerStartSuccessPresenter::present(const TherionRunnerService::StartRes
     Presentation result;
 
     result.consoleMessage =
-        translate("Running %1 %2 in %3").arg(startResult.resolvedExecutablePath, argumentsText, workingDirectory);
-    result.statusLabelMessage = translate("Starting Therion...");
+        QCoreApplication::translate("MainWindow", "Running %1 %2 in %3").arg(startResult.resolvedExecutablePath, argumentsText, workingDirectory);
+    result.statusLabelMessage = QCoreApplication::translate("MainWindow", "Starting Therion...");
     return result;
 }
 }

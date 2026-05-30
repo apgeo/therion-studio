@@ -1,5 +1,7 @@
 #include "BlockEditorSourceController.h"
 
+#include <QCoreApplication>
+
 #include "BlockEditorSourceText.h"
 
 #include <QPlainTextEdit>
@@ -19,10 +21,7 @@ BlockEditorSourceController::BlockEditorSourceController(BlockEditorSourceContex
 
 QString BlockEditorSourceController::tr(const char *text) const
 {
-    if (context_.translate) {
-        return context_.translate(text);
-    }
-    return QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorSourceController", text);
 }
 
 bool BlockEditorSourceController::canEdit() const

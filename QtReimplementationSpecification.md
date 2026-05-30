@@ -212,7 +212,8 @@ Required capabilities:
 - configure or discover the Therion executable path
 - run Therion from the current project context
 - show the selected config name/path, effective working directory, project-config working-directory override, and additional command-line options
-- order the primary compiler setup fields as executable, arguments, run target, target config, and working-directory override
+- expose Therion executable path configuration in the Settings dialog rather than the Compiler sidebar
+- order the primary compiler setup fields as arguments, run target, target config, and working-directory override
 - show the resolved config path directly below the target-config selector and the effective working directory directly below the working-directory override as subdued helper text, without separate section headers
 - allow clearing the project-config working-directory override so the runner returns to automatic selected-config-folder behavior
 - provide a folder chooser beside the working-directory override and place the override reset action below the effective working-directory value
@@ -281,6 +282,8 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The main window shall provide a usable default size and shall clamp restored session geometry to a usable minimum size so stale or platform-specific saved geometry cannot produce an unusably narrow window, while still permitting common half-screen layouts.
 - When a TH2 document is active, the document command toolbar shall include these left-side groups in order: `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`; then `Select`, `Complete Draft`; then a visual separator; then `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`.
 - For `.th` and `.thconfig` documents, the `Raw`/`Blocks` mode selector shall be shown in this document command toolbar instead of a dedicated in-content mode row.
+- The Settings dialog shall allow choosing the default editor mode for newly opened `.th` and `.thconfig` documents: `Raw` or `Blocks`; the default shall be `Raw`.
+- The default text-editor mode preference shall apply only when opening a new `.th` or `.thconfig` tab and shall not modify document source merely because the tab initially opens in Blocks mode.
 - The application shall show the active document path and current text encoding in a status area tied to the active document context.
 - When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
 - When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8.
@@ -472,7 +475,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - When no explicit config argument is supplied in the additional command-line options, the selected run-target config shall be passed to Therion as the source/config argument for the run.
 - If no run-target config can be resolved, the application shall block the run and show an actionable message rather than invoking Therion without source files.
 - The selected run-target mode and target config path shall persist across restarts.
-- When no user-defined Therion executable is persisted, the compiler sidebar shall populate `Executable` with a platform auto-detected stable executable path rather than a versioned package-internal canonical path when such a stable path exists.
+- When no user-defined Therion executable is persisted, the runner shall use `therion` and platform auto-detection/fallback instead of requiring a visible Compiler-sidebar executable field.
 - The Therion process shall run with a platform-aware `PATH` that includes the resolved Therion executable directory, common package-manager locations, and common TeX tool locations before the inherited environment path so helper tools such as `cavern` and `pdftex` can be found from GUI launches.
 - The user shall be able to reset a non-empty project working-directory override and return to automatic working-directory resolution.
 - The status-bar compiler indicator shall show a visible running, success, or failure state for the most recent run.
@@ -503,6 +506,8 @@ Platform modifier mapping:
 | Action | Menu location | Shortcut | Required behavior |
 |---|---|---|---|
 | New Window | File | Command+N | Open a new empty main window without restoring the current project or open documents |
+| Settings / Preferences | File or native application menu | platform-standard Preferences placement where available | Open application settings for language override, Therion executable path, and default `.th`/`.thconfig` editor mode |
+| About Therion Studio | Help or native application menu | none | Show installed version/build metadata, Qt/platform details, repository, license, maintainer, and third-party notice location |
 | Expand/Collapse Sidebar | View | none | Expand or collapse the left sidebar content without changing the active document |
 | Expand/Collapse Context Help | View | none | Expand or collapse the Raw editor's contextual help column without modifying document source |
 | Expand/Collapse Block Inspector | View | none | Expand or collapse the Block editor's details/inspector column without modifying document source |
@@ -598,6 +603,8 @@ Required persistent preferences include:
 - map editor viewport state, where practical
 - map editor viewport state and automatic input-policy state
 - background image adjustment state, where practical
+- application language override, where the user has set one
+- default `.th` / `.thconfig` editor mode
 - Therion executable path or runner configuration, where the user has set one
 - Therion runner working-directory override and command-line options, where the user has set them
 - editor preferences that affect visible behavior, such as folding state and search-bar mode if they are restored by the implementation
@@ -644,11 +651,14 @@ The Qt application shall support a multilingual user interface and locale-aware 
 
 Required behavior:
 
-- the initial release language set shall be English (`en`) only
+- the initial release language set shall include English (`en`), Czech (`cs`), and Slovak (`sk`)
 - user-facing UI strings shall be localizable, including menus, toolbars, dialogs, alerts, empty states, inspector labels, search controls, console labels, and help-panel chrome
+- platform/Qt-provided standard menu items and standard dialog chrome shall participate in application localization when the relevant Qt translation catalogs are available
 - English shall be the required default source language and fallback language
 - the application shall default to the operating system language when a supported translation is available
-- the application should allow an explicit application-language override in preferences when the target platform and Qt integration make that practical; if immediate language switching is not practical, the change may take effect on next launch
+- the Settings dialog shall allow an explicit application-language override (`System Default`, `English`, `Czech`, `Slovak`); if immediate language switching is not practical, the change may take effect on next launch
+- where the platform exposes a native per-app language mechanism, the Settings dialog shall write the explicit application-language override through that native mechanism and shall clear it when `System Default` is selected
+- macOS application bundles shall advertise the shipped UI localizations to the operating system so the native per-app language selector can offer supported languages; macOS builds shall use the app-domain `AppleLanguages` override for explicit language choices
 - Therion language elements such as commands, options, keywords, file-format tokens, and serialized document content shall remain in canonical Therion syntax and shall not be translated
 - contextual help/documentation UI may be localized, but command names, accepted values, and syntax examples shall preserve the canonical Therion spelling used in files
 - file paths, project names, editor content, search terms, and user-entered labels shall support Unicode input, display, save, and restore behavior
@@ -1068,10 +1078,14 @@ The criteria below are intended for implementation verification and QA.
 
 #### 8.1.12 Localization and Multi-language Support
 
-- The initial release ships with English UI as the only required product language.
+- The initial release ships with English, Czech, and Slovak UI coverage for the core application chrome and workflows.
 - The application displays translated UI strings when launched in a supported non-default language.
+- The Settings dialog can override the operating-system language with English, Czech, or Slovak, with the change applying no later than next launch.
+- On macOS, the packaged app appears in the system per-app language selector as supporting English, Czech, and Slovak, and explicit Settings language choices are reflected through the app-domain language override used by that selector.
 - If a user-selected or system language is unsupported, the application falls back to English without missing labels or broken placeholders.
 - Menus, dialogs, toolbar labels, inspector labels, search controls, and console labels participate in localization.
+- Platform/Qt-provided standard actions such as the macOS application menu `Preferences...` item display in the selected application language when matching Qt translation catalogs are installed.
+- Bundled Czech and Slovak translation catalogs build with no unfinished application-string entries for the shipped UI coverage.
 - Therion commands, options, keywords, and serialized file content remain in canonical Therion syntax and are not translated.
 - Unicode file paths, project names, and editor content can be opened, displayed, searched, and saved correctly.
 - Locale-sensitive UI does not change the numeric formatting written into Therion files.
@@ -1153,7 +1167,7 @@ The MVP shall include the following capabilities at a minimum:
 - edit and save Therion source files
 - provide Therion syntax highlighting and basic completion assistance
 - provide the inline find/replace controls, contextual help panel, and encoding visibility needed for daily text-editing workflows
-- provide localization-ready UI infrastructure and support the initial release language set of English without altering Therion syntax or serialized file content
+- provide localization-ready UI infrastructure and support the initial release language set of English, Czech, and Slovak without altering Therion syntax or serialized file content
 - provide the bundled Therion syntax-highlighting palette and bundled application-theme resources needed for consistent editor and UI presentation
 - support both light and dark appearance modes in the shipped application theme
 - open TH2 files in a graphical editor
@@ -1184,7 +1198,7 @@ The following items may be delivered after the MVP, provided they do not regress
 - expanded debug and diagnostic sidebar tools
 - stronger session restoration of viewport, selection, and window layout state
 - additional quality-of-life shortcuts or menu actions that do not conflict with the documented command set
-- broader translation coverage for extended documentation/help content beyond the core UI language set
+- broader translation coverage for extended documentation/help content beyond the core UI string catalogs
 - deeper pen/stylus ergonomics, including hover, pressure, and tilt handling where available
 - Sidecar-specific refinements for macOS secondary-display workflows
 

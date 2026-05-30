@@ -3,6 +3,7 @@
 #include <QAction>
 #include <QColor>
 #include <QDesktopServices>
+#include <QDialog>
 #include <QDockWidget>
 #include <QEvent>
 #include <QFile>
@@ -55,6 +56,7 @@
 #include "MainWindowDocumentOpenController.h"
 #include "MainWindowDocumentTabOpenController.h"
 #include "MainWindowHelpDialog.h"
+#include "MainWindowSettingsDialog.h"
 #include "MainWindowSessionDocumentController.h"
 #include "MainWindowSessionController.h"
 #include "MainWindowProjectController.h"
@@ -63,6 +65,7 @@
 #include "ApplicationStylePolicy.h"
 #include "LucideIconFactory.h"
 #include "../core/SessionStore.h"
+#include "../platform/ApplicationLanguageOverride.h"
 
 namespace
 {
@@ -126,6 +129,16 @@ bool isSupportedTextEditorFilePath(const QString &filePath)
 
     const QMimeType mimeType = QMimeDatabase().mimeTypeForFile(filePath, QMimeDatabase::MatchDefault);
     return mimeType.isValid() && mimeType.inherits(QStringLiteral("text/plain"));
+}
+
+bool supportsConfigurableDefaultTextEditorMode(const QString &filePath)
+{
+    const QFileInfo info(filePath);
+    const QString fileName = info.fileName().trimmed().toLower();
+    const QString suffix = info.suffix().trimmed().toLower();
+    return fileName == QStringLiteral("thconfig")
+        || suffix == QStringLiteral("th")
+        || suffix == QStringLiteral("thconfig");
 }
 
 bool openFileExternally(QWidget *parent, const QString &filePath)
@@ -933,6 +946,11 @@ void MainWindow::buildMenus()
     connect(closeAllTabsAction, &QAction::triggered, this, &MainWindow::closeAllTabs);
 
     fileMenu->addSeparator();
+    QAction *settingsAction = fileMenu->addAction(tr("Settings..."));
+    settingsAction->setMenuRole(QAction::PreferencesRole);
+    connect(settingsAction, &QAction::triggered, this, &MainWindow::showSettingsDialog);
+
+    fileMenu->addSeparator();
     QAction *exitAction = fileMenu->addAction(tr("E&xit"));
     exitAction->setShortcut(QKeySequence::Quit);
     connect(exitAction, &QAction::triggered, this, &QWidget::close);
@@ -1012,7 +1030,11 @@ void MainWindow::buildMenus()
     });
     helpMenu->addSeparator();
     QAction *aboutAction = helpMenu->addAction(tr("About Therion Studio"));
+#if defined(Q_OS_MACOS)
+    aboutAction->setMenuRole(QAction::AboutRole);
+#else
     aboutAction->setMenuRole(QAction::NoRole);
+#endif
     connect(aboutAction, &QAction::triggered, this, [this]() {
         TherionStudio::showAboutDialog(this);
     });
@@ -1059,7 +1081,7 @@ void MainWindow::persistSessionState()
     snapshot.windowGeometry = saveGeometry();
     snapshot.windowState = saveState();
     snapshot.projectRootPath = projectRootPath_;
-    snapshot.therionExecutablePath = therionExecutableEdit_ != nullptr ? therionExecutableEdit_->text().trimmed() : QString();
+    snapshot.therionExecutablePath = therionExecutableInput();
     snapshot.therionWorkingDirectory = therionWorkingDirectoryEdit_ != nullptr ? therionWorkingDirectoryEdit_->text().trimmed() : QString();
     snapshot.therionArguments = therionArgumentsEdit_ != nullptr ? therionArgumentsEdit_->text().trimmed() : QString();
     snapshot.therionRunTargetMode = therionRunTargetMode();
@@ -1181,6 +1203,8 @@ void MainWindow::createNewWindow()
 {
     auto sessionStore = std::make_unique<TherionStudio::InMemorySessionStore>();
     if (sessionStore_ != nullptr) {
+        sessionStore->setApplicationLanguage(sessionStore_->applicationLanguage());
+        sessionStore->setDefaultTextEditorMode(sessionStore_->defaultTextEditorMode());
         sessionStore->setTherionExecutablePath(sessionStore_->therionExecutablePath());
         sessionStore->setTherionWorkingDirectory(sessionStore_->therionWorkingDirectory());
         sessionStore->setTherionArguments(sessionStore_->therionArguments());
@@ -1194,6 +1218,48 @@ void MainWindow::createNewWindow()
                                   nullptr,
                                   SessionRestoreMode::StartEmpty);
     window->show();
+}
+
+void MainWindow::showSettingsDialog()
+{
+    if (sessionStore_ == nullptr) {
+        return;
+    }
+
+    TherionStudio::MainWindowSettingsDialog::Settings initialSettings;
+    const QString nativeApplicationLanguage =
+        TherionStudio::Platform::applicationLanguageOverride();
+    initialSettings.applicationLanguage = nativeApplicationLanguage != QStringLiteral("system")
+        ? nativeApplicationLanguage
+        : sessionStore_->applicationLanguage();
+    initialSettings.therionExecutablePath = sessionStore_->therionExecutablePath();
+    initialSettings.defaultTextEditorMode = sessionStore_->defaultTextEditorMode();
+
+    TherionStudio::MainWindowSettingsDialog dialog(initialSettings, this);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    const TherionStudio::MainWindowSettingsDialog::Settings updatedSettings = dialog.settings();
+    const QString updatedApplicationLanguage =
+        TherionStudio::Platform::normalizeApplicationLanguageSetting(
+            updatedSettings.applicationLanguage);
+    const bool languageChanged =
+        updatedApplicationLanguage
+        != TherionStudio::Platform::normalizeApplicationLanguageSetting(
+            initialSettings.applicationLanguage);
+
+    sessionStore_->setApplicationLanguage(updatedApplicationLanguage);
+    TherionStudio::Platform::setApplicationLanguageOverride(updatedApplicationLanguage);
+    sessionStore_->setTherionExecutablePath(updatedSettings.therionExecutablePath);
+    sessionStore_->setDefaultTextEditorMode(updatedSettings.defaultTextEditorMode);
+    refreshTherionConfigDisplay();
+
+    if (languageChanged) {
+        QMessageBox::information(this,
+                                 tr("Settings"),
+                                 tr("Language changes will take effect after restarting Therion Studio."));
+    }
 }
 
 void MainWindow::openProject()
@@ -1601,6 +1667,11 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
     }
 
     auto *tab = new TherionStudio::TextEditorTab(fileSystem_, commandCatalogStore_);
+    if (supportsConfigurableDefaultTextEditorMode(canonicalPath)
+        && sessionStore_ != nullptr
+        && sessionStore_->defaultTextEditorMode().trimmed().toLower() == QStringLiteral("blocks")) {
+        tab->setInitialEditorMode(TherionStudio::TextEditorTab::EditorMode::Blocks);
+    }
     tab->setModeSelectorVisible(false);
     tab->setProjectRootPath(projectRootPath_);
     QString errorMessage;

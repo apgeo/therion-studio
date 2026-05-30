@@ -1,5 +1,6 @@
 #include "DocumentFile.h"
 
+#include <QCoreApplication>
 #include <QFile>
 #include <QFileInfo>
 #include <QSaveFile>
@@ -158,7 +159,9 @@ bool DocumentFile::readTextFile(const QString &filePath,
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unable to open %1 for reading.").arg(QFileInfo(filePath).fileName());
+            *errorMessage = QCoreApplication::translate("TherionStudio::DocumentFile",
+                                                        "Unable to open %1 for reading.")
+                                .arg(QFileInfo(filePath).fileName());
         }
         return false;
     }
@@ -232,7 +235,8 @@ bool DocumentFile::readTextFile(const QString &filePath,
     }
 
     if (errorMessage != nullptr) {
-        *errorMessage = QStringLiteral("Unable to decode %1 using supported text encodings.")
+        *errorMessage = QCoreApplication::translate("TherionStudio::DocumentFile",
+                                                    "Unable to decode %1 using supported text encodings.")
                             .arg(QFileInfo(filePath).fileName());
     }
     return false;
@@ -264,7 +268,8 @@ bool DocumentFile::writeTextFile(const QString &filePath,
     QStringEncoder encoder(nameBytes.constData(), encoderFlags);
     if (!encoder.isValid()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unable to encode %1 using %2.")
+            *errorMessage = QCoreApplication::translate("TherionStudio::DocumentFile",
+                                                        "Unable to encode %1 using %2.")
                                 .arg(QFileInfo(filePath).fileName(), encodingDisplayName(resolvedEncodingName));
         }
         return false;
@@ -273,7 +278,8 @@ bool DocumentFile::writeTextFile(const QString &filePath,
     const QByteArray encoded = encoder.encode(contents);
     if (encoder.hasError()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unable to encode %1 using %2.")
+            *errorMessage = QCoreApplication::translate("TherionStudio::DocumentFile",
+                                                        "Unable to encode %1 using %2.")
                                 .arg(QFileInfo(filePath).fileName(), encodingDisplayName(resolvedEncodingName));
         }
         return false;
@@ -282,14 +288,17 @@ bool DocumentFile::writeTextFile(const QString &filePath,
     QSaveFile file(filePath);
     if (!file.open(QIODevice::WriteOnly)) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unable to open %1 for writing.").arg(QFileInfo(filePath).fileName());
+            *errorMessage = QCoreApplication::translate("TherionStudio::DocumentFile",
+                                                        "Unable to open %1 for writing.")
+                                .arg(QFileInfo(filePath).fileName());
         }
         return false;
     }
 
     if (file.write(encoded) != encoded.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unable to write %1.").arg(QFileInfo(filePath).fileName());
+            *errorMessage = QCoreApplication::translate("TherionStudio::DocumentFile", "Unable to write %1.")
+                                .arg(QFileInfo(filePath).fileName());
         }
         file.cancelWriting();
         return false;
@@ -297,7 +306,8 @@ bool DocumentFile::writeTextFile(const QString &filePath,
 
     if (!file.commit()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unable to write %1.").arg(QFileInfo(filePath).fileName());
+            *errorMessage = QCoreApplication::translate("TherionStudio::DocumentFile", "Unable to write %1.")
+                                .arg(QFileInfo(filePath).fileName());
         }
         return false;
     }

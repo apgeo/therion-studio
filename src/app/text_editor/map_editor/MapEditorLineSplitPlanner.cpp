@@ -2,6 +2,7 @@
 
 #include "../../../core/TherionDocumentParser.h"
 
+#include <QCoreApplication>
 #include <QSet>
 
 namespace TherionStudio
@@ -235,24 +236,28 @@ MapEditorLineSplitPlan MapEditorLineSplitPlanner::planSplit(const QString &text,
 {
     MapEditorLineSplitPlan plan;
     if (lineNumber <= 0) {
-        plan.errorMessage = QStringLiteral("Invalid line number.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorLineSplitPlanner",
+                                                        "Invalid line number.");
         return plan;
     }
     if (firstCoordinateRows.isEmpty() || secondCoordinateRows.isEmpty()) {
-        plan.errorMessage = QStringLiteral("Split produced invalid line geometry.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorLineSplitPlanner",
+                                                        "Split produced invalid line geometry.");
         return plan;
     }
 
     QStringList lines = splitLinesNormalized(text);
     if (lineNumber > lines.size()) {
-        plan.errorMessage = QStringLiteral("Selected source line no longer exists.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorLineSplitPlanner",
+                                                        "Selected source line no longer exists.");
         return plan;
     }
 
     const int blockStartLineIndex = lineNumber - 1;
     const TherionParsedLine startLine = TherionDocumentParser::parseLine(lines.at(blockStartLineIndex), lineNumber);
     if (startLine.directive != QStringLiteral("line")) {
-        plan.errorMessage = QStringLiteral("Selected source line is not a line block.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorLineSplitPlanner",
+                                                        "Selected source line is not a line block.");
         return plan;
     }
 
@@ -265,7 +270,8 @@ MapEditorLineSplitPlan MapEditorLineSplitPlanner::planSplit(const QString &text,
         }
     }
     if (blockEndLineIndex < 0) {
-        plan.errorMessage = QStringLiteral("Selected line block is missing endline.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorLineSplitPlanner",
+                                                        "Selected line block is missing endline.");
         return plan;
     }
 

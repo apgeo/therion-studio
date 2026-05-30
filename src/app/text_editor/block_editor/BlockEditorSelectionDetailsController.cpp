@@ -7,6 +7,7 @@
 #include "../ContextHelpController.h"
 #include "../TextEditorCommandMetadata.h"
 
+#include <QCoreApplication>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
@@ -32,8 +33,8 @@ BlockEditorSelectionDetailsController::BlockEditorSelectionDetailsController(Blo
 
 bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &kind, int lineNumber)
 {
-    const auto tr = [this](const char *text) {
-        return context_.translate ? context_.translate(text) : QString::fromLatin1(text);
+    const auto tr = [](const char *text) {
+        return QCoreApplication::translate("TherionStudio::BlockEditorSelectionDetailsController", text);
     };
     if (context_.tearingDown != nullptr && *context_.tearingDown) {
         return false;

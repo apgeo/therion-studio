@@ -1,5 +1,7 @@
 #include "MapEditorInteractiveDrawController.h"
 
+#include <QCoreApplication>
+
 #include "../TextEditorTab.h"
 #include "MapEditorSceneSupport.h"
 
@@ -22,7 +24,7 @@ namespace TherionStudio
 {
 QString MapEditorInteractiveDrawController::tr(const char *text) const
 {
-    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::MapEditorInteractiveDrawController", text);
 }
 
 MapEditorInteractiveDrawMode MapEditorInteractiveDrawController::mode() const

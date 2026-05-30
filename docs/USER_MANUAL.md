@@ -4,6 +4,16 @@ Last updated: 2026-05-30
 
 This guide covers end-user workflows in Therion Studio.
 
+The application UI follows the operating system locale when a bundled translation is available.
+English, Czech, and Slovak UI translations are included; Therion source syntax, command names,
+options, and serialized document content remain in canonical Therion form.
+Use `File -> Settings...` (`Preferences...` in the native macOS application menu) to override the application language.
+Language changes take effect after restarting Therion Studio.
+On macOS, the app bundle also advertises English, Czech, and Slovak to the system per-app language selector;
+choosing a language in Settings writes the same per-app language override that macOS uses, and `System Default`
+clears that per-app override so macOS controls the language.
+Standard Qt and platform menu labels follow the same language when the matching Qt translation catalogs are installed.
+
 ## 1. What Therion Studio Is
 
 Therion Studio is a desktop editor for Therion cave-mapping projects. It provides:
@@ -27,6 +37,7 @@ The app window has four main areas:
 The main window opens at a usable desktop size and clamps restored session geometry only enough
 to avoid unusably narrow windows while still allowing common half-screen layouts.
 Use `File -> New Window` to open a new empty window. The new window does not duplicate the current project or open documents.
+Use `File -> Settings...` to configure the application language, Therion executable path, and the default editor for new `.th` / `.thconfig` tabs.
 Use `View -> Enter Full Screen` or `View -> Exit Full Screen` to toggle full-screen mode.
 Use `View -> Expand Sidebar` / `Collapse Sidebar` to show or hide the left sidebar content.
 Use the active right-panel item in `View` to show or hide the current editor's right column:
@@ -66,6 +77,9 @@ For `.th` and `thconfig` files:
 
 - `Raw` mode: direct text editing with syntax highlighting, find/replace, and autocomplete
 - `Blocks` mode: structured editing of supported commands and blocks
+
+New `.th` and `.thconfig` tabs open in the default editor selected in Settings (`Raw` by default, or `Blocks`).
+This preference affects newly opened tabs only; it does not change existing open tabs and does not alter Therion source syntax.
 
 For `.th2` files:
 
@@ -180,11 +194,12 @@ Open the `Compiler` pane from the activity rail.
 
 ### 7.1 Main Fields
 
-- `Executable`
 - `Arguments`
 - `Run Target` (`Current Config` or `Project Config`)
 - `Target Config`
 - `Working Directory Override`
+
+Set the Therion executable path in `File -> Settings...`. If no explicit path is set, Therion Studio tries `therion` and platform auto-detection.
 
 ### 7.2 Actions
 
@@ -469,7 +484,7 @@ Invalid or missing style fields are ignored and the application falls back to th
 ## 10. Help And About
 
 - Use `Help -> User Manual` to open the localized user manual from the application. The application looks for `USER_MANUAL.<language>.md` first and falls back to `USER_MANUAL.md`.
-- Use `Help -> About Therion Studio` to view the installed application version, build label, Qt version, platform, GitHub repository, license, maintainer, and third-party notices link.
+- Use `Help -> About Therion Studio` to view the installed application version, build label, Qt version, platform, GitHub repository, license, maintainer, and third-party notices link. On macOS, the same About action is placed in the native application menu.
 
 ## 11. Troubleshooting
 
@@ -481,7 +496,7 @@ Symptom:
 
 Fix:
 
-- set a valid full path in `Compiler -> Executable`
+- set a valid full path in `File -> Settings... -> Therion executable`
 - verify executable permissions
 
 ### 11.2 Config cannot be resolved

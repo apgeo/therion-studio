@@ -1,4 +1,6 @@
 #include "TextEditorDocumentController.h"
+
+#include <QCoreApplication>
 #include "TextEditorDocumentIoService.h"
 #include "TextEditorDocumentPersistenceStateService.h"
 #include "TextEditorDocumentPreconditionsService.h"
@@ -23,10 +25,7 @@ TextEditorDocumentController::TextEditorDocumentController(IFileSystem &fileSyst
 
 QString TextEditorDocumentController::tr(const char *text) const
 {
-    if (context_.translate) {
-        return context_.translate(text);
-    }
-    return QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::TextEditorDocumentController", text);
 }
 
 bool TextEditorDocumentController::loadFile(const QString &filePath, QString *errorMessage)

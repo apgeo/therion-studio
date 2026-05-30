@@ -11,6 +11,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDoubleSpinBox>
 #include <QLabel>
 #include <QLineEdit>
@@ -48,9 +49,9 @@ MapEditorObjectDetailsPanelController::MapEditorObjectDetailsPanelController(Map
 {
 }
 
-QString MapEditorObjectDetailsPanelController::translate(const char *text) const
+QString MapEditorObjectDetailsPanelController::tr(const char *text) const
 {
-    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsPanelController", text);
 }
 
 const InspectorSymbolCatalog &MapEditorObjectDetailsPanelController::inspectorSymbolCatalog() const
@@ -149,20 +150,20 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             const QString commandKind = pendingFields->commandKind.trimmed().toLower();
             QString objectSectionTitle = commandKind;
             if (commandKind == QStringLiteral("line")) {
-                objectSectionTitle = translate("New Line");
+                objectSectionTitle = tr("New Line");
             } else if (commandKind == QStringLiteral("area")) {
-                objectSectionTitle = translate("New Area");
+                objectSectionTitle = tr("New Area");
             } else if (commandKind == QStringLiteral("point")) {
-                objectSectionTitle = translate("New Point");
+                objectSectionTitle = tr("New Point");
             } else if (commandKind == QStringLiteral("scrap")) {
-                objectSectionTitle = translate("New Scrap");
+                objectSectionTitle = tr("New Scrap");
             }
 
             context_.selectionLabel->setVisible(false);
             context_.selectionSection->setVisible(true);
             context_.selectionTitleLabel->setText(objectSectionTitle);
-            context_.vertexTitleLabel->setText(translate("Point Details"));
-            context_.metadataLabel->setText(translate("Pending insert"));
+            context_.vertexTitleLabel->setText(tr("Point Details"));
+            context_.metadataLabel->setText(tr("Pending insert"));
             context_.deleteButton->setEnabled(false);
             context_.deleteButton->setToolTip(QString());
             context_.areaReferenceLabel->setVisible(false);
@@ -195,7 +196,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             setEditableComboValues(context_.quickSubtypeCombo,
                                    inspectorSubtypeValuesForCommandType(catalog, commandKind, pendingFields->type),
                                    pendingFields->subtype);
-            context_.quickIdentifierLabel->setText(translate("ID"));
+            context_.quickIdentifierLabel->setText(tr("ID"));
             context_.quickIdentifierEdit->setText(pendingFields->identifier);
             context_.quickNameEdit->setText(pendingFields->name);
             showStylePreview(commandKind, pendingFields->type, pendingFields->subtype);
@@ -219,9 +220,9 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     const QString effectiveKind = context_.selectedObjectKind->trimmed().toLower();
 
     if (effectiveLineNumber <= 0 || effectiveKind.isEmpty()) {
-        context_.selectionLabel->setText(translate("No map object selected."));
+        context_.selectionLabel->setText(tr("No map object selected."));
         context_.selectionLabel->setVisible(true);
-        context_.selectionTitleLabel->setText(translate("Object"));
+        context_.selectionTitleLabel->setText(tr("Object"));
         context_.selectionSection->setVisible(false);
         clearStylePreview();
         context_.vertexSection->setVisible(false);
@@ -259,19 +260,19 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     context_.advancedSection->setVisible(true);
     QString objectSectionTitle = effectiveKind;
     if (effectiveKind == QStringLiteral("line")) {
-        objectSectionTitle = translate("Line");
+        objectSectionTitle = tr("Line");
     } else if (effectiveKind == QStringLiteral("area")) {
-        objectSectionTitle = translate("Area");
+        objectSectionTitle = tr("Area");
     } else if (effectiveKind == QStringLiteral("point")) {
-        objectSectionTitle = translate("Point");
+        objectSectionTitle = tr("Point");
     } else if (effectiveKind == QStringLiteral("scrap")) {
-        objectSectionTitle = translate("Scrap");
+        objectSectionTitle = tr("Scrap");
     }
     context_.selectionTitleLabel->setText(objectSectionTitle);
     context_.vertexTitleLabel->setText(effectiveKind == QStringLiteral("line")
-                                           ? translate("Line Point")
-                                           : translate("Point Details"));
-    context_.metadataLabel->setText(translate("Source line %1").arg(effectiveLineNumber));
+                                           ? tr("Line Point")
+                                           : tr("Point Details"));
+    context_.metadataLabel->setText(tr("Source line %1").arg(effectiveLineNumber));
     QVector<MapEditorAreaReference> areaReferences;
     if (context_.textEditor != nullptr
         && effectiveLineNumber > 0
@@ -281,7 +282,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     const bool deleteBlockedByAreaReference = !areaReferences.isEmpty();
     context_.deleteButton->setEnabled(effectiveLineNumber > 0 && !deleteBlockedByAreaReference);
     context_.deleteButton->setToolTip(deleteBlockedByAreaReference
-        ? translate("This line is used as an area border. Select or delete the area instead.")
+        ? tr("This line is used as an area border. Select or delete the area instead.")
         : QString());
     context_.areaReferenceLabel->setVisible(deleteBlockedByAreaReference);
     if (deleteBlockedByAreaReference) {
@@ -291,8 +292,8 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             const QString label = reference.areaLabel.toHtmlEscaped();
             areaLinks.append(QStringLiteral("<a href=\"%1\">%2</a>").arg(reference.areaLineNumber).arg(label));
         }
-        context_.areaReferenceLabel->setText(translate("Used by area: %1").arg(areaLinks.join(QStringLiteral(", "))));
-        context_.areaReferenceLabel->setToolTip(translate("Click the area name to select the area that owns this border line."));
+        context_.areaReferenceLabel->setText(tr("Used by area: %1").arg(areaLinks.join(QStringLiteral(", "))));
+        context_.areaReferenceLabel->setToolTip(tr("Click the area name to select the area that owns this border line."));
     } else {
         context_.areaReferenceLabel->clear();
         context_.areaReferenceLabel->setToolTip(QString());
@@ -333,7 +334,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                                        inspectorProjectionValues(catalog),
                                        fields->projection);
                 context_.quickIdentifierEdit->setText(fields->identifier);
-                context_.quickIdentifierLabel->setText(translate("ID"));
+                context_.quickIdentifierLabel->setText(tr("ID"));
                 context_.quickNameEdit->setText(fields->name);
                 *context_.objectQuickCommandKind = fields->commandKind;
                 setEditableComboValues(context_.quickSubtypeCombo,
@@ -357,7 +358,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     context_.vertexInsertAfterButton->setEnabled(lineVertexActionsAvailable);
     context_.vertexDeleteButton->setEnabled(lineVertexActionsAvailable);
     context_.vertexSplitButton->setEnabled(false);
-    context_.vertexSplitButton->setToolTip(translate("Split Here is available for interior vertices of open lines."));
+    context_.vertexSplitButton->setToolTip(tr("Split Here is available for interior vertices of open lines."));
     if (lineVertexActionsAvailable) {
         bool firstVertex = false;
         bool lastVertex = false;
@@ -370,24 +371,24 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             const bool interiorVertex = lineVertexIndex > 0 && lineVertexIndex < lineFeature->lineVertices.size() - 1;
             context_.vertexSplitButton->setEnabled(interiorVertex && !lineFeature->closed);
             if (!interiorVertex) {
-                context_.vertexSplitButton->setToolTip(translate("Cannot split at the first or last vertex."));
+                context_.vertexSplitButton->setToolTip(tr("Cannot split at the first or last vertex."));
             } else if (lineFeature->closed) {
-                context_.vertexSplitButton->setToolTip(translate("Cannot split closed lines yet."));
+                context_.vertexSplitButton->setToolTip(tr("Cannot split closed lines yet."));
             } else {
-                context_.vertexSplitButton->setToolTip(translate("Split the selected line at this vertex."));
+                context_.vertexSplitButton->setToolTip(tr("Split the selected line at this vertex."));
             }
         }
-        context_.vertexInsertBeforeButton->setText(firstVertex ? translate("Extend Before") : translate("Insert Before"));
-        context_.vertexInsertAfterButton->setText(lastVertex ? translate("Extend After") : translate("Insert After"));
+        context_.vertexInsertBeforeButton->setText(firstVertex ? tr("Extend Before") : tr("Insert Before"));
+        context_.vertexInsertAfterButton->setText(lastVertex ? tr("Extend After") : tr("Insert After"));
         context_.vertexInsertBeforeButton->setToolTip(firstVertex
-                                                          ? translate("Extend the line before the first vertex.")
-                                                          : translate("Insert a vertex before the selected vertex."));
+                                                          ? tr("Extend the line before the first vertex.")
+                                                          : tr("Insert a vertex before the selected vertex."));
         context_.vertexInsertAfterButton->setToolTip(lastVertex
-                                                         ? translate("Extend the line after the last vertex.")
-                                                         : translate("Insert a vertex after the selected vertex."));
+                                                         ? tr("Extend the line after the last vertex.")
+                                                         : tr("Insert a vertex after the selected vertex."));
     } else {
-        context_.vertexInsertBeforeButton->setText(translate("Insert Before"));
-        context_.vertexInsertAfterButton->setText(translate("Insert After"));
+        context_.vertexInsertBeforeButton->setText(tr("Insert Before"));
+        context_.vertexInsertAfterButton->setText(tr("Insert After"));
         context_.vertexInsertBeforeButton->setToolTip(QString());
         context_.vertexInsertAfterButton->setToolTip(QString());
         context_.vertexSplitButton->setToolTip(QString());

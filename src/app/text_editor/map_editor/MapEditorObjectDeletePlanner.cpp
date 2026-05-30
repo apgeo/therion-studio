@@ -2,6 +2,7 @@
 
 #include "../../../core/TherionDocumentParser.h"
 
+#include <QCoreApplication>
 #include <QHash>
 #include <QSet>
 #include <QStringList>
@@ -237,7 +238,8 @@ MapEditorObjectDeletePlan planMapEditorObjectDelete(const QString &text, int lin
 {
     MapEditorObjectDeletePlan plan;
     if (lineNumber <= 0) {
-        plan.errorMessage = QStringLiteral("Invalid object line.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorObjectDeletePlanner",
+                                                        "Invalid object line.");
         return plan;
     }
 
@@ -246,7 +248,8 @@ MapEditorObjectDeletePlan planMapEditorObjectDelete(const QString &text, int lin
     QString targetDirective;
     const SourceRange targetRange = commandRangeAtLine(lines, lineNumber, &targetDirective);
     if (targetRange.startLine <= 0) {
-        plan.errorMessage = QStringLiteral("Unable to resolve object source block.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorObjectDeletePlanner",
+                                                        "Unable to resolve object source block.");
         return plan;
     }
 
@@ -278,7 +281,10 @@ MapEditorObjectDeletePlan planMapEditorObjectDelete(const QString &text, int lin
         if (!lineId.isEmpty()) {
             for (const AreaReference &area : std::as_const(areas)) {
                 if (area.lineIds.contains(lineId)) {
-                    plan.errorMessage = QStringLiteral("Line `%1` is referenced by an area and cannot be deleted separately.").arg(lineId);
+                    plan.errorMessage = QCoreApplication::translate(
+                        "TherionStudio::MapEditorObjectDeletePlanner",
+                        "Line `%1` is referenced by an area and cannot be deleted separately.")
+                                            .arg(lineId);
                     return plan;
                 }
             }
@@ -314,7 +320,8 @@ MapEditorObjectDeletePlan planMapEditorObjectDelete(const QString &text, int lin
     plan.resolved = true;
     plan.focusLineAfterDelete = ranges.isEmpty() ? std::max(1, targetRange.startLine) : std::max(1, ranges.first().startLine);
     if (!plan.changed) {
-        plan.errorMessage = QStringLiteral("Object deletion did not change the source.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorObjectDeletePlanner",
+                                                        "Object deletion did not change the source.");
     }
     return plan;
 }

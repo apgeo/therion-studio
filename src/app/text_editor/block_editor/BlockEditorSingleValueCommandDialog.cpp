@@ -1,5 +1,7 @@
 #include "BlockEditorSingleValueCommandDialog.h"
 
+#include <QCoreApplication>
+
 #include "BlockEditorDirectiveRules.h"
 #include "../ContextHelpController.h"
 
@@ -27,7 +29,7 @@ BlockEditorSingleValueCommandDialog::BlockEditorSingleValueCommandDialog(BlockEd
 
 QString BlockEditorSingleValueCommandDialog::tr(const char *text) const
 {
-    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorSingleValueCommandDialog", text);
 }
 
 std::optional<QString> BlockEditorSingleValueCommandDialog::configureLine(

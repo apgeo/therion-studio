@@ -1,5 +1,7 @@
 #include "BlockEditorDataBlockDialog.h"
 
+#include <QCoreApplication>
+
 #include "BlockEditorDirectiveRules.h"
 
 #include <QAbstractItemView>
@@ -18,6 +20,7 @@
 #include <QRegularExpression>
 #include <QResizeEvent>
 #include <QSet>
+#include <QSignalBlocker>
 #include <QStyledItemDelegate>
 #include <QTableWidget>
 #include <QTableWidgetItem>
@@ -35,6 +38,17 @@
 namespace
 {
 using namespace TherionStudio::BlockEditorDirectiveRules;
+
+constexpr int kRowTypeRole = Qt::UserRole + 1;
+const QString kDataRowType = QStringLiteral("data");
+const QString kDirectiveRowType = QStringLiteral("directive");
+const QString kCommentRowType = QStringLiteral("comment");
+
+struct RowTypeChoice
+{
+    QString id;
+    QString label;
+};
 
 void appendUnique(QStringList &target, const QString &value)
 {
@@ -190,10 +204,12 @@ public:
 
     explicit DataRowsTableDelegate(SuggestionsProvider suggestionsProvider,
                                    EditableProvider editableProvider,
+                                   QVector<RowTypeChoice> rowTypeChoices,
                                    QObject *parent = nullptr)
         : QStyledItemDelegate(parent)
         , suggestionsProvider_(std::move(suggestionsProvider))
         , editableProvider_(std::move(editableProvider))
+        , rowTypeChoices_(std::move(rowTypeChoices))
     {
     }
 
@@ -203,9 +219,9 @@ public:
     {
         if (index.isValid() && index.column() == 0) {
             auto *combo = new QComboBox(parent);
-            combo->addItem(QStringLiteral("Data"));
-            combo->addItem(QStringLiteral("Directive"));
-            combo->addItem(QStringLiteral("Comment"));
+            for (const RowTypeChoice &choice : rowTypeChoices_) {
+                combo->addItem(choice.label, choice.id);
+            }
             return combo;
         }
 
@@ -229,8 +245,12 @@ public:
     void setEditorData(QWidget *editor, const QModelIndex &index) const override
     {
         if (auto *combo = qobject_cast<QComboBox *>(editor); combo != nullptr) {
-            const QString value = index.data(Qt::EditRole).toString();
-            const int found = combo->findText(value, Qt::MatchFixedString | Qt::MatchCaseSensitive);
+            const QString value = index.data(kRowTypeRole).toString();
+            int found = combo->findData(value);
+            if (found < 0) {
+                found = combo->findText(index.data(Qt::EditRole).toString(),
+                                        Qt::MatchFixedString | Qt::MatchCaseSensitive);
+            }
             combo->setCurrentIndex(found >= 0 ? found : 0);
             return;
         }
@@ -243,6 +263,7 @@ public:
     {
         if (auto *combo = qobject_cast<QComboBox *>(editor); combo != nullptr) {
             model->setData(index, combo->currentText(), Qt::EditRole);
+            model->setData(index, combo->currentData().toString(), kRowTypeRole);
             return;
         }
         QStyledItemDelegate::setModelData(editor, model, index);
@@ -251,6 +272,7 @@ public:
 private:
     SuggestionsProvider suggestionsProvider_;
     EditableProvider editableProvider_;
+    QVector<RowTypeChoice> rowTypeChoices_;
 };
 }
 
@@ -263,7 +285,7 @@ BlockEditorDataBlockDialog::BlockEditorDataBlockDialog(BlockEditorDataBlockDialo
 
 QString BlockEditorDataBlockDialog::tr(const char *text) const
 {
-    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorDataBlockDialog", text);
 }
 
 std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::configureRows(
@@ -477,21 +499,63 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
     const int directiveColumn = headerLabels.size() - 2;
     const int commentColumn = headerLabels.size() - 1;
 
-    auto applyRowType = [rowsTable, directiveColumn, commentColumn](int row, const QString &typeText) {
+    const QVector<RowTypeChoice> rowTypeChoices{
+        {kDataRowType, tr("Data")},
+        {kDirectiveRowType, tr("Directive")},
+        {kCommentRowType, tr("Comment")}};
+    auto rowTypeLabel = [rowTypeChoices](const QString &typeId) {
+        for (const RowTypeChoice &choice : rowTypeChoices) {
+            if (choice.id == typeId) {
+                return choice.label;
+            }
+        }
+        return rowTypeChoices.first().label;
+    };
+    auto normalizedRowTypeId = [rowTypeChoices](const QTableWidgetItem *typeItem) {
+        const QString stored = typeItem != nullptr ? typeItem->data(kRowTypeRole).toString().trimmed().toLower() : QString();
+        if (stored == kDirectiveRowType || stored == kCommentRowType) {
+            return stored;
+        }
+        if (stored == kDataRowType) {
+            return stored;
+        }
+
+        const QString visible = typeItem != nullptr ? typeItem->text().trimmed() : QString();
+        for (const RowTypeChoice &choice : rowTypeChoices) {
+            if (visible.compare(choice.label, Qt::CaseInsensitive) == 0
+                || visible.compare(choice.id, Qt::CaseInsensitive) == 0) {
+                return choice.id;
+            }
+        }
+        return kDataRowType;
+    };
+    auto makeRowTypeItem = [rowTypeLabel](const QString &typeId) {
+        auto *item = new QTableWidgetItem(rowTypeLabel(typeId));
+        item->setData(kRowTypeRole, typeId);
+        return item;
+    };
+
+    auto applyRowType = [rowsTable, directiveColumn, commentColumn, rowTypeLabel, normalizedRowTypeId](int row) {
         if (row < 0 || row >= rowsTable->rowCount()) {
             return;
         }
 
-        const QString normalizedType = typeText.trimmed().toLower();
-        const bool directiveRow = normalizedType == QStringLiteral("directive");
-        const bool commentRow = normalizedType == QStringLiteral("comment");
+        const QSignalBlocker blocker(rowsTable);
+        QTableWidgetItem *typeItem = rowsTable->item(row, 0);
+        const QString rowTypeId = normalizedRowTypeId(typeItem);
+        const bool directiveRow = rowTypeId == kDirectiveRowType;
+        const bool commentRow = rowTypeId == kCommentRowType;
         const bool dataRow = !directiveRow && !commentRow;
         const int dataStartColumn = 1;
 
-        if (auto *typeItem = rowsTable->item(row, 0); typeItem != nullptr) {
-            typeItem->setText(directiveRow ? QStringLiteral("Directive")
-                                           : (commentRow ? QStringLiteral("Comment")
-                                                         : QStringLiteral("Data")));
+        if (typeItem == nullptr) {
+            typeItem = new QTableWidgetItem;
+            rowsTable->setItem(row, 0, typeItem);
+        }
+        typeItem->setData(kRowTypeRole, rowTypeId);
+        const QString label = rowTypeLabel(rowTypeId);
+        if (typeItem->text() != label) {
+            typeItem->setText(label);
         }
 
         for (int column = dataStartColumn; column < directiveColumn; ++column) {
@@ -547,9 +611,9 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
 
     for (int row = 0; row < initialRows.size(); ++row) {
         const MixedRowEntry &entry = initialRows.at(row);
-        const QString typeText = entry.commentOnly ? QStringLiteral("Comment")
-            : (entry.directive ? QStringLiteral("Directive") : QStringLiteral("Data"));
-        rowsTable->setItem(row, 0, new QTableWidgetItem(typeText));
+        const QString typeId = entry.commentOnly ? kCommentRowType
+            : (entry.directive ? kDirectiveRowType : kDataRowType);
+        rowsTable->setItem(row, 0, makeRowTypeItem(typeId));
 
         for (int column = 1; column < directiveColumn; ++column) {
             const int valueIndex = column - 1;
@@ -561,7 +625,7 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
 
         rowsTable->setItem(row, directiveColumn, new QTableWidgetItem(entry.directiveText));
         rowsTable->setItem(row, commentColumn, new QTableWidgetItem(entry.commentText));
-        applyRowType(row, typeText);
+        applyRowType(row);
     }
 
     if (rowsTable->rowCount() > 0) {
@@ -616,52 +680,58 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
             return true;
         }
         QTableWidgetItem *typeItem = rowsTable->item(index.row(), 0);
-        const QString rowType = typeItem != nullptr ? typeItem->text().trimmed().toLower() : QStringLiteral("data");
-        if (rowType == QStringLiteral("directive")) {
+        const QString rowType = typeItem != nullptr
+            ? typeItem->data(kRowTypeRole).toString()
+            : kDataRowType;
+        if (rowType == kDirectiveRowType) {
             return index.column() == directiveColumn || index.column() == rowsTable->columnCount() - 1;
         }
-        if (rowType == QStringLiteral("comment")) {
+        if (rowType == kCommentRowType) {
             return index.column() == rowsTable->columnCount() - 1;
         }
         return index.column() >= 1 && index.column() < rowsTable->columnCount();
     };
 
-    rowsTable->setItemDelegate(new DataRowsTableDelegate(suggestionsProvider, editableProvider, rowsTable));
+    rowsTable->setItemDelegate(new DataRowsTableDelegate(suggestionsProvider, editableProvider, rowTypeChoices, rowsTable));
     rowsTable->onViewportResized();
     layout->addWidget(rowsTable, 1);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     layout->addWidget(buttons);
 
-    QObject::connect(addDataRowButton, &QPushButton::clicked, &dialog, [rowsTable]() {
+    QObject::connect(addDataRowButton, &QPushButton::clicked, &dialog, [rowsTable, makeRowTypeItem, applyRowType]() {
         const int row = rowsTable->rowCount();
         rowsTable->insertRow(row);
-        rowsTable->setItem(row, 0, new QTableWidgetItem(QStringLiteral("Data")));
+        rowsTable->setItem(row, 0, makeRowTypeItem(kDataRowType));
+        applyRowType(row);
         rowsTable->setCurrentCell(row, 0);
     });
 
-    QObject::connect(addDirectiveRowButton, &QPushButton::clicked, &dialog, [rowsTable]() {
+    QObject::connect(addDirectiveRowButton, &QPushButton::clicked, &dialog, [rowsTable, makeRowTypeItem, applyRowType]() {
         const int row = rowsTable->rowCount();
         rowsTable->insertRow(row);
-        rowsTable->setItem(row, 0, new QTableWidgetItem(QStringLiteral("Directive")));
+        rowsTable->setItem(row, 0, makeRowTypeItem(kDirectiveRowType));
+        applyRowType(row);
         rowsTable->setCurrentCell(row, 0);
     });
 
-    QObject::connect(addCommentRowButton, &QPushButton::clicked, &dialog, [rowsTable]() {
+    QObject::connect(addCommentRowButton, &QPushButton::clicked, &dialog, [rowsTable, makeRowTypeItem, applyRowType]() {
         const int row = rowsTable->rowCount();
         rowsTable->insertRow(row);
-        rowsTable->setItem(row, 0, new QTableWidgetItem(QStringLiteral("Comment")));
+        rowsTable->setItem(row, 0, makeRowTypeItem(kCommentRowType));
+        applyRowType(row);
         rowsTable->setCurrentCell(row, rowsTable->columnCount() - 1);
     });
 
-    QObject::connect(removeRowButton, &QPushButton::clicked, &dialog, [rowsTable]() {
+    QObject::connect(removeRowButton, &QPushButton::clicked, &dialog, [rowsTable, makeRowTypeItem, applyRowType]() {
         const int currentRow = rowsTable->currentRow();
         if (currentRow >= 0 && currentRow < rowsTable->rowCount()) {
             rowsTable->removeRow(currentRow);
         }
         if (rowsTable->rowCount() == 0) {
             rowsTable->insertRow(0);
-            rowsTable->setItem(0, 0, new QTableWidgetItem(QStringLiteral("Data")));
+            rowsTable->setItem(0, 0, makeRowTypeItem(kDataRowType));
+            applyRowType(0);
             rowsTable->setCurrentCell(0, 0);
         }
     });
@@ -669,11 +739,11 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
     QObject::connect(rowsTable,
                      &QTableWidget::itemChanged,
                      &dialog,
-                     [rowsTable, applyRowType](QTableWidgetItem *item) {
+                     [applyRowType](QTableWidgetItem *item) {
                          if (item == nullptr || item->column() != 0) {
                              return;
                          }
-                         applyRowType(item->row(), item->text());
+                         applyRowType(item->row());
                      });
 
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
@@ -687,14 +757,12 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
     bool mismatchDetected = schemaMismatchDetected;
 
     for (int row = 0; row < rowsTable->rowCount(); ++row) {
-        const QString rowType = (rowsTable->item(row, 0) != nullptr
-                                     ? rowsTable->item(row, 0)->text().trimmed().toLower()
-                                     : QStringLiteral("data"));
+        const QString rowType = normalizedRowTypeId(rowsTable->item(row, 0));
         const QString commentText = (rowsTable->item(row, rowsTable->columnCount() - 1) != nullptr
                                          ? rowsTable->item(row, rowsTable->columnCount() - 1)->text().trimmed()
                                          : QString());
 
-        if (rowType == QStringLiteral("directive")) {
+        if (rowType == kDirectiveRowType) {
             const QString directiveText = (rowsTable->item(row, rowsTable->columnCount() - 2) != nullptr
                                               ? rowsTable->item(row, rowsTable->columnCount() - 2)->text().trimmed()
                                               : QString());
@@ -712,7 +780,7 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
             continue;
         }
 
-        if (rowType == QStringLiteral("comment")) {
+        if (rowType == kCommentRowType) {
             if (commentText.isEmpty()) {
                 continue;
             }

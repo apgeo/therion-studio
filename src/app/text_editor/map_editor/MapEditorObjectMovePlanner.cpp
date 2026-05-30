@@ -2,6 +2,7 @@
 
 #include "../../../core/TherionDocumentParser.h"
 
+#include <QCoreApplication>
 #include <QStringList>
 #include <QVector>
 
@@ -121,29 +122,35 @@ MapEditorObjectMovePlan MapEditorObjectMovePlanner::planMove(const QString &text
     MapEditorObjectMovePlan plan;
     const QVector<SourceLine> sourceLines = splitSourceLines(text);
     if (sourceLines.isEmpty()) {
-        plan.errorMessage = QStringLiteral("Cannot move a map object in an empty document.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorObjectMovePlanner",
+                                                        "Cannot move a map object in an empty document.");
         return plan;
     }
 
     const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
     const TherionParsedLine *sourceStart = parsedLineAt(parsedLines, sourceLineNumber);
     if (sourceStart == nullptr || !isMovableMapObjectDirective(sourceStart->directive)) {
-        plan.errorMessage = QStringLiteral("The source line is not a movable point, line, or area object.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorObjectMovePlanner",
+                                                        "The source line is not a movable point, line, or area object.");
         return plan;
     }
 
     const TherionParsedLine *targetStart = parsedLineAt(parsedLines, targetLineNumber);
     if (targetStart == nullptr) {
-        plan.errorMessage = QStringLiteral("The target line is not a movable point, line, area, or scrap object.");
+        plan.errorMessage = QCoreApplication::translate(
+            "TherionStudio::MapEditorObjectMovePlanner",
+            "The target line is not a movable point, line, area, or scrap object.");
         return plan;
     }
     if (position == MapEditorObjectMovePosition::IntoTargetScrap) {
         if (targetStart->directive != QStringLiteral("scrap")) {
-            plan.errorMessage = QStringLiteral("The target line is not a scrap object.");
+            plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorObjectMovePlanner",
+                                                            "The target line is not a scrap object.");
             return plan;
         }
     } else if (!isMovableMapObjectDirective(targetStart->directive)) {
-        plan.errorMessage = QStringLiteral("The target line is not a movable point, line, or area object.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorObjectMovePlanner",
+                                                        "The target line is not a movable point, line, or area object.");
         return plan;
     }
 
@@ -151,11 +158,13 @@ MapEditorObjectMovePlan MapEditorObjectMovePlanner::planMove(const QString &text
     const int targetEndLine = objectEndLine(parsedLines, *targetStart);
     const int lineCount = sourceLines.size();
     if (!lineRangeIsValid(sourceStart->lineNumber, sourceEndLine, lineCount)) {
-        plan.errorMessage = QStringLiteral("The source object block is incomplete or malformed.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorObjectMovePlanner",
+                                                        "The source object block is incomplete or malformed.");
         return plan;
     }
     if (!lineRangeIsValid(targetStart->lineNumber, targetEndLine, lineCount)) {
-        plan.errorMessage = QStringLiteral("The target object block is incomplete or malformed.");
+        plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorObjectMovePlanner",
+                                                        "The target object block is incomplete or malformed.");
         return plan;
     }
 
@@ -216,7 +225,8 @@ bool MapEditorObjectMovePlanner::applyMove(QString *text,
 {
     if (text == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Cannot move a map object without document text.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::MapEditorObjectMovePlanner",
+                                                        "Cannot move a map object without document text.");
         }
         return false;
     }

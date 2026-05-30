@@ -4,14 +4,6 @@
 #include <QDir>
 #include <QFileInfo>
 
-namespace
-{
-QString translate(const char *sourceText)
-{
-    return QCoreApplication::translate("MainWindow", sourceText);
-}
-}
-
 namespace TherionStudio
 {
 QString TherionExecutableSelectionController::initialBrowsePath(const QString &currentExecutableText)
@@ -39,8 +31,8 @@ TherionExecutableSelectionController::evaluateSelection(const QString &selectedE
     QFileInfo selectedInfo(selectedExecutablePath);
     if (!selectedInfo.isExecutable()) {
         result.showWarningDialog = true;
-        result.warningDialogTitle = translate("Select Therion Executable");
-        result.warningDialogMessage = translate("The selected file is not executable.");
+        result.warningDialogTitle = QCoreApplication::translate("MainWindow", "Select Therion Executable");
+        result.warningDialogMessage = QCoreApplication::translate("MainWindow", "The selected file is not executable.");
         return result;
     }
 
@@ -48,7 +40,7 @@ TherionExecutableSelectionController::evaluateSelection(const QString &selectedE
     result.shouldUpdateExecutableText = true;
     result.updatedExecutableText = selectedInfo.absoluteFilePath();
     result.shouldShowStatusBarMessage = true;
-    result.statusBarMessage = translate("Therion executable updated");
+    result.statusBarMessage = QCoreApplication::translate("MainWindow", "Therion executable updated");
     result.statusBarTimeoutMs = 2000;
     return result;
 }

@@ -53,7 +53,7 @@ public:
     void refreshInspectorBackgroundPanel();
 
 private:
-    QString translate(const char *text) const;
+    QString tr(const char *text) const;
 
     MapEditorInspectorBackgroundContext context_;
 };

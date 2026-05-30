@@ -25,11 +25,6 @@ namespace TherionStudio
 {
 namespace
 {
-QString mainWindowText(const char *text)
-{
-    return QCoreApplication::translate("MainWindow", text);
-}
-
 QString buildString(const char *value)
 {
     return QString::fromUtf8(value);
@@ -44,10 +39,11 @@ QString aboutMarkdown()
                                  .arg(QSysInfo::prettyProductName(),
                                       QSysInfo::currentCpuArchitecture());
 
-    return QStringLiteral(
+    return QCoreApplication::translate(
+               "MainWindowHelpDialog",
                "# Therion Studio\n"
                "\n"
-               "Cross-platform Qt desktop editor for Therion - cave surveying software.\n"
+               "Cross-platform Qt desktop editor for Therion cave surveying software.\n"
                "\n"
                "- **Version:** `%1`\n"
                "- **Build:** `%2`\n"
@@ -60,7 +56,7 @@ QString aboutMarkdown()
                "\n"
                "Third-party notices: <https://github.com/ladislavb/therion-studio/blob/main/docs/THIRD_PARTY_NOTICES.md>\n"
                "\n"
-               "Therion Studio does not bundle the external Therion compiler. Install Therion separately and configure it in the Compiler pane.\n")
+               "Therion Studio does not bundle the external Therion compiler. Install Therion separately and configure it in Settings.\n")
         .arg(version, packageLabel, qtVersion, platform);
 }
 
@@ -150,7 +146,8 @@ QString resolveUserManualPath()
 
 QString missingUserManualMarkdown()
 {
-    return QStringLiteral(
+    return QCoreApplication::translate(
+        "MainWindowHelpDialog",
         "# User Manual\n"
         "\n"
         "The user manual file was not found.\n"
@@ -207,7 +204,9 @@ void showMarkdownDialog(QWidget *parent,
 
 void showAboutDialog(QWidget *parent)
 {
-    showMarkdownDialog(parent, mainWindowText("About Therion Studio"), aboutMarkdown());
+    showMarkdownDialog(parent,
+                       QCoreApplication::translate("MainWindow", "About Therion Studio"),
+                       aboutMarkdown());
 }
 
 void showUserManualDialog(QWidget *parent)
@@ -216,9 +215,9 @@ void showUserManualDialog(QWidget *parent)
     if (manualPath.isEmpty()) {
         showMarkdownDialog(
             parent,
-            mainWindowText("User Manual"),
+            QCoreApplication::translate("MainWindow", "User Manual"),
             missingUserManualMarkdown(),
-            mainWindowText("User manual file was not found in expected locations."));
+            QCoreApplication::translate("MainWindow", "User manual file was not found in expected locations."));
         return;
     }
 
@@ -226,15 +225,17 @@ void showUserManualDialog(QWidget *parent)
     if (manualText.trimmed().isEmpty()) {
         showMarkdownDialog(
             parent,
-            mainWindowText("User Manual"),
+            QCoreApplication::translate("MainWindow", "User Manual"),
             missingUserManualMarkdown(),
-            mainWindowText("Failed to load `%1`.").arg(QDir::toNativeSeparators(manualPath)));
+            QCoreApplication::translate("MainWindow", "Failed to load `%1`.")
+                .arg(QDir::toNativeSeparators(manualPath)));
         return;
     }
 
     showMarkdownDialog(parent,
-                       mainWindowText("User Manual"),
+                       QCoreApplication::translate("MainWindow", "User Manual"),
                        manualText,
-                       mainWindowText("Source: %1").arg(QDir::toNativeSeparators(manualPath)));
+                       QCoreApplication::translate("MainWindow", "Source: %1")
+                           .arg(QDir::toNativeSeparators(manualPath)));
 }
 } // namespace TherionStudio

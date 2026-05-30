@@ -1,5 +1,7 @@
 #include "TextEditorContextHelpController.h"
 
+#include <QCoreApplication>
+
 #include "ContextHelpController.h"
 #include "TextEditorCommandMetadata.h"
 #include "TextEditorSurfaceStyler.h"
@@ -61,10 +63,7 @@ TextEditorContextHelpController::TextEditorContextHelpController(TextEditorConte
 
 QString TextEditorContextHelpController::tr(const char *text) const
 {
-    if (context_.translate) {
-        return context_.translate(text);
-    }
-    return QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::TextEditorContextHelpController", text);
 }
 
 QPlainTextEdit *TextEditorContextHelpController::editor() const

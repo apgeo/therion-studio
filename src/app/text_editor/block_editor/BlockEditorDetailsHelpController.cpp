@@ -1,5 +1,7 @@
 #include "BlockEditorDetailsHelpController.h"
 
+#include <QCoreApplication>
+
 #include "BlockEditorDirectiveRules.h"
 #include "../ContextHelpController.h"
 #include "../TextEditorCommandMetadata.h"
@@ -19,10 +21,7 @@ BlockEditorDetailsHelpController::BlockEditorDetailsHelpController(BlockEditorDe
 
 QString BlockEditorDetailsHelpController::tr(const char *text) const
 {
-    if (context_.translate) {
-        return context_.translate(text);
-    }
-    return QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorDetailsHelpController", text);
 }
 
 bool BlockEditorDetailsHelpController::hasRequiredContext() const
@@ -77,11 +76,11 @@ QString BlockEditorDetailsHelpController::buildIdHelpHtml(const TherionHelpEntry
     }
 
     QStringList html;
-    html << QStringLiteral("<p><b>Parameter:</b> %1</p>").arg(signature.isEmpty()
-                                                                 ? QStringLiteral("&lt;id&gt;")
-                                                                 : signature.toHtmlEscaped());
+    html << tr("<p><b>Parameter:</b> %1</p>").arg(signature.isEmpty()
+                                                     ? QStringLiteral("&lt;id&gt;")
+                                                     : signature.toHtmlEscaped());
     if (!description.isEmpty()) {
-        html << QStringLiteral("<p><b>Description:</b> %1</p>").arg(description.toHtmlEscaped());
+        html << tr("<p><b>Description:</b> %1</p>").arg(description.toHtmlEscaped());
     }
     return html.join(QString());
 }
@@ -130,9 +129,9 @@ void BlockEditorDetailsHelpController::updateHelpForCurrentFocus()
             return;
         }
         if (context_.isDataHeaderMode()) {
-            const QString html = QStringLiteral("<p><b>Style:</b> first token after <code>data</code> (for example <code>normal</code>).</p>"
-                                                "<p><b>Readings order:</b> remaining tokens that define row column order (for example <code>from to length compass clino</code>).</p>"
-                                                "<p>Use `Edit Data Rows...` to modify measurement rows and directives.</p>%1")
+            const QString html = tr("<p><b>Style:</b> first token after <code>data</code> (for example <code>normal</code>).</p>"
+                                    "<p><b>Readings order:</b> remaining tokens that define row column order (for example <code>from to length compass clino</code>).</p>"
+                                    "<p>Use <b>Edit Data Rows...</b> to modify measurement rows and directives.</p>%1")
                                      .arg(commandHelpHtml);
             context_.helpBrowser->setHtml(html);
             return;
@@ -149,17 +148,17 @@ void BlockEditorDetailsHelpController::updateHelpForCurrentFocus()
     if (context_.isStructuredOptionsMode()
         && context_.additionalPositionalEdit != nullptr
         && context_.additionalPositionalEdit->hasFocus()) {
-        const QString html = QStringLiteral("<p><b>Extra arguments</b> keep unsupported positional tokens intact.</p>"
-                                            "<p>Prefer explicit key/value options where available.</p>%1")
+        const QString html = tr("<p><b>Extra arguments</b> keep unsupported positional tokens intact.</p>"
+                                "<p>Prefer explicit key/value options where available.</p>%1")
                                  .arg(commandHelpHtml);
         context_.helpBrowser->setHtml(html);
         return;
     }
     if (context_.isDataHeaderMode()
         && context_.readingsTagEditorHasEditorFocus()) {
-        const QString html = QStringLiteral("<p><b>Style:</b> first token after <code>data</code> (for example <code>normal</code>).</p>"
-                                            "<p><b>Readings order:</b> tokenized column order. Add a token and confirm with Enter/Space; remove via chip <code>✕</code>.</p>"
-                                            "<p>Use `Edit Data Rows...` to modify measurement rows and directives.</p>%1")
+        const QString html = tr("<p><b>Style:</b> first token after <code>data</code> (for example <code>normal</code>).</p>"
+                                "<p><b>Readings order:</b> tokenized column order. Add a token and confirm with Enter/Space; remove via chip <code>✕</code>.</p>"
+                                "<p>Use <b>Edit Data Rows...</b> to modify measurement rows and directives.</p>%1")
                                  .arg(commandHelpHtml);
         context_.helpBrowser->setHtml(html);
         return;
@@ -168,7 +167,7 @@ void BlockEditorDetailsHelpController::updateHelpForCurrentFocus()
         && context_.commentEdit != nullptr
         && context_.commentEdit->hasFocus()) {
         const QString markerText = QString(*context_.commentMarker);
-        const QString html = QStringLiteral("<p><b>Inline comment:</b> optional end-of-line note appended as <code>%1 ...</code>.</p>%2")
+        const QString html = tr("<p><b>Inline comment:</b> optional end-of-line note appended as <code>%1 ...</code>.</p>%2")
                                  .arg(markerText.toHtmlEscaped(), commandHelpHtml);
         context_.helpBrowser->setHtml(html);
         return;

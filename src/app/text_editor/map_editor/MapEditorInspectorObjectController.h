@@ -25,7 +25,7 @@ public:
     void applyInspectorObjectVisibility();
 
 private:
-    QString translate(const char *text) const;
+    QString tr(const char *text) const;
 
     MapEditorInspectorObjectContext context_;
 };

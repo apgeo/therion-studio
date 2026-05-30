@@ -31,17 +31,6 @@ void MainWindowTherionConsoleWiring::wire(const WiringInput &input)
         });
     }
 
-    if (input.therionBrowseExecutableButton != nullptr) {
-        QObject::connect(input.therionBrowseExecutableButton,
-                         &QPushButton::clicked,
-                         input.context,
-                         [handler = input.onBrowseExecutableRequested]() {
-                             if (handler) {
-                                 handler();
-                             }
-                         });
-    }
-
     if (input.therionBrowseTargetConfigButton != nullptr) {
         QObject::connect(input.therionBrowseTargetConfigButton,
                          &QPushButton::clicked,

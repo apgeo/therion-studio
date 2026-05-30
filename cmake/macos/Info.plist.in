@@ -7,6 +7,12 @@
     <true/>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>cs</string>
+        <string>sk</string>
+    </array>
     <key>CFBundleDisplayName</key>
     <string>${MACOSX_BUNDLE_BUNDLE_NAME}</string>
     <key>CFBundleExecutable</key>

@@ -4,14 +4,6 @@
 
 namespace TherionStudio
 {
-namespace
-{
-QString trMainWindow(const char *sourceText)
-{
-    return QCoreApplication::translate("MainWindow", sourceText);
-}
-}
-
 MainWindowProjectUiFlowService::DecisionPresentation MainWindowProjectUiFlowService::presentOpenProjectDecision(const MainWindowProjectLifecycleService::OpenProjectDecision &decision)
 {
     DecisionPresentation presentation;
@@ -19,13 +11,13 @@ MainWindowProjectUiFlowService::DecisionPresentation MainWindowProjectUiFlowServ
     switch (decision.status) {
     case MainWindowProjectLifecycleService::OpenProjectStatus::Cancelled:
         presentation.showStatusBarMessage = true;
-        presentation.statusBarMessage = trMainWindow("Open project cancelled");
+        presentation.statusBarMessage = QCoreApplication::translate("MainWindow", "Open project cancelled");
         presentation.statusBarTimeoutMs = 2000;
         return presentation;
     case MainWindowProjectLifecycleService::OpenProjectStatus::MissingDirectory:
         presentation.showWarningDialog = true;
-        presentation.warningDialogTitle = trMainWindow("Open Project");
-        presentation.warningDialogMessage = trMainWindow("The selected folder does not exist.");
+        presentation.warningDialogTitle = QCoreApplication::translate("MainWindow", "Open Project");
+        presentation.warningDialogMessage = QCoreApplication::translate("MainWindow", "The selected folder does not exist.");
         return presentation;
     case MainWindowProjectLifecycleService::OpenProjectStatus::OpenProject:
         presentation.shouldContinueWorkflow = true;
@@ -38,9 +30,9 @@ MainWindowProjectUiFlowService::DecisionPresentation MainWindowProjectUiFlowServ
 MainWindowProjectUiFlowService::SuccessPresentation MainWindowProjectUiFlowService::presentOpenProjectSuccess(const QString &projectRootPath)
 {
     SuccessPresentation presentation;
-    presentation.statusBarMessage = trMainWindow("Project root set to %1").arg(projectRootPath);
+    presentation.statusBarMessage = QCoreApplication::translate("MainWindow", "Project root set to %1").arg(projectRootPath);
     presentation.statusBarTimeoutMs = 3000;
-    presentation.consoleMessage = trMainWindow("Project root set to %1").arg(projectRootPath);
+    presentation.consoleMessage = QCoreApplication::translate("MainWindow", "Project root set to %1").arg(projectRootPath);
     return presentation;
 }
 
@@ -51,7 +43,7 @@ MainWindowProjectUiFlowService::DecisionPresentation MainWindowProjectUiFlowServ
     switch (decision.status) {
     case MainWindowProjectLifecycleService::CloseProjectStatus::NoProjectOpen:
         presentation.showStatusBarMessage = true;
-        presentation.statusBarMessage = trMainWindow("No project is open");
+        presentation.statusBarMessage = QCoreApplication::translate("MainWindow", "No project is open");
         presentation.statusBarTimeoutMs = 2000;
         return presentation;
     case MainWindowProjectLifecycleService::CloseProjectStatus::CancelledByDirtyDocuments:
@@ -67,9 +59,9 @@ MainWindowProjectUiFlowService::DecisionPresentation MainWindowProjectUiFlowServ
 MainWindowProjectUiFlowService::SuccessPresentation MainWindowProjectUiFlowService::presentCloseProjectSuccess(const QString &closedProjectPath)
 {
     SuccessPresentation presentation;
-    presentation.statusBarMessage = trMainWindow("Project closed");
+    presentation.statusBarMessage = QCoreApplication::translate("MainWindow", "Project closed");
     presentation.statusBarTimeoutMs = 3000;
-    presentation.consoleMessage = trMainWindow("Closed project %1").arg(closedProjectPath);
+    presentation.consoleMessage = QCoreApplication::translate("MainWindow", "Closed project %1").arg(closedProjectPath);
     return presentation;
 }
 }

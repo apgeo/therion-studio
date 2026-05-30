@@ -88,7 +88,7 @@ private slots:
     void runTherionProjectConfig();
     void runTherionCurrentConfig();
     void stopTherion();
-    void browseTherionExecutable();
+    void showSettingsDialog();
     void browseTherionTargetConfig();
     void browseTherionWorkingDirectoryOverride();
     void handleTherionRunnerStandardOutput(const QString &output);
@@ -151,6 +151,7 @@ private:
     QString therionConfigResolutionDirectory() const;
     QString resolvedTherionWorkingDirectory() const;
     bool hasExplicitTherionConfigArgument() const;
+    QString therionExecutableInput() const;
     QString therionRunTargetMode() const;
     QString currentDocumentTherionConfigPath() const;
     QString resolvedTherionTargetConfigPath() const;
@@ -266,8 +267,6 @@ private:
     QAction *mapMagnifierAction_ = nullptr;
     QAction *fullScreenAction_ = nullptr;
     QPlainTextEdit *consoleView_ = nullptr;
-    QLineEdit *therionExecutableEdit_ = nullptr;
-    QPushButton *therionBrowseExecutableButton_ = nullptr;
     QLineEdit *therionWorkingDirectoryEdit_ = nullptr;
     QPushButton *therionBrowseWorkingDirectoryButton_ = nullptr;
     QLineEdit *therionArgumentsEdit_ = nullptr;

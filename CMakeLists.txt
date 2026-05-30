@@ -106,14 +106,21 @@ function(therion_add_core_unit_test target_name)
 endfunction()
 
 set(THERION_PLATFORM_SOURCES
+    src/platform/ApplicationLanguageOverride.h
     src/platform/PlatformPathResolver.h)
 
 if(APPLE)
-    list(APPEND THERION_PLATFORM_SOURCES src/platform/mac/MacPlatformPathResolver.cpp)
+    list(APPEND THERION_PLATFORM_SOURCES
+        src/platform/mac/MacApplicationLanguageOverride.cpp
+        src/platform/mac/MacPlatformPathResolver.cpp)
 elseif(WIN32)
-    list(APPEND THERION_PLATFORM_SOURCES src/platform/win/WinPlatformPathResolver.cpp)
+    list(APPEND THERION_PLATFORM_SOURCES
+        src/platform/ApplicationLanguageOverride.cpp
+        src/platform/win/WinPlatformPathResolver.cpp)
 else()
-    list(APPEND THERION_PLATFORM_SOURCES src/platform/linux/LinuxPlatformPathResolver.cpp)
+    list(APPEND THERION_PLATFORM_SOURCES
+        src/platform/ApplicationLanguageOverride.cpp
+        src/platform/linux/LinuxPlatformPathResolver.cpp)
 endif()
 
 add_library(therion_platform STATIC
@@ -122,6 +129,16 @@ add_library(therion_platform STATIC
 target_link_libraries(therion_platform
     PUBLIC
         Qt6::Core)
+
+if(APPLE)
+    find_library(THERION_COREFOUNDATION_FRAMEWORK CoreFoundation)
+    if(NOT THERION_COREFOUNDATION_FRAMEWORK)
+        message(FATAL_ERROR "CoreFoundation framework is required on macOS")
+    endif()
+    target_link_libraries(therion_platform
+        PUBLIC
+            ${THERION_COREFOUNDATION_FRAMEWORK})
+endif()
 
 therion_enable_strict_warnings(therion_platform)
 
@@ -214,6 +231,8 @@ set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindowHelpDialog.h
     src/app/MainWindowMapBackground.cpp
     src/app/MainWindowProjectLifecycle.cpp
+    src/app/MainWindowSettingsDialog.cpp
+    src/app/MainWindowSettingsDialog.h
     src/app/MainWindowSidebar.cpp
     src/app/MainWindowStatusUi.cpp
     src/app/MainWindowStructureBrowser.cpp
@@ -613,7 +632,8 @@ add_custom_target(map_object_style_gallery
     COMMENT "Generating map object style gallery in ${CMAKE_BINARY_DIR}/style_gallery")
 
 set(THERION_STUDIO_TRANSLATION_FILES
-    translations/therion_studio_cs.ts)
+    translations/therion_studio_cs.ts
+    translations/therion_studio_sk.ts)
 
 if(COMMAND qt_add_translations AND Qt6LinguistTools_FOUND)
     qt_add_translations(TherionStudio

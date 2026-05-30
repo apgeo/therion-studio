@@ -2,6 +2,7 @@
 
 #include "TherionDocumentParser.h"
 
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QPair>
 #include <QSet>
@@ -627,19 +628,19 @@ bool rewriteLinePointNumericOption(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line number is invalid.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
         }
         return false;
     }
     if (sourceVertexIndex < 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected source vertex index is invalid.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected source vertex index is invalid.");
         }
         return false;
     }
@@ -647,7 +648,7 @@ bool rewriteLinePointNumericOption(QString *contents,
     const QString normalizedOption = canonicalOption.trimmed().toLower();
     if (normalizedOption != QStringLiteral("-orientation") && normalizedOption != QStringLiteral("-l-size")) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unsupported line-point option.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unsupported line-point option.");
         }
         return false;
     }
@@ -656,7 +657,7 @@ bool rewriteLinePointNumericOption(QString *contents,
     QStringList lines = splitLinesNormalized(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line no longer exists.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
@@ -665,7 +666,7 @@ bool rewriteLinePointNumericOption(QString *contents,
     const TherionParsedLine startLine = TherionDocumentParser::parseLine(lines.at(blockStartLineIndex), lineNumber);
     if (startLine.directive != QStringLiteral("line")) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line is not a writable line block.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a writable line block.");
         }
         return false;
     }
@@ -680,7 +681,7 @@ bool rewriteLinePointNumericOption(QString *contents,
     }
     if (blockEndLineIndex < 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line block is missing endline.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line block is missing endline.");
         }
         return false;
     }
@@ -689,7 +690,7 @@ bool rewriteLinePointNumericOption(QString *contents,
         linePointOptionTarget(&lines, blockStartLineIndex, blockEndLineIndex, sourceVertexIndex, normalizedOption);
     if (!target.has_value()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line block does not contain the requested vertex.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line block does not contain the requested vertex.");
         }
         return false;
     }
@@ -703,7 +704,7 @@ bool rewriteLinePointNumericOption(QString *contents,
         const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, existing.lineIndex + 1);
         if (!removeOptionAtTokenIndex(&lineText, parsedLine, existing.optionTokenIndex)) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("Line-point option could not be removed.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Line-point option could not be removed.");
             }
             return false;
         }
@@ -729,7 +730,7 @@ bool rewriteLinePointNumericOption(QString *contents,
                 || valueToken.length < 0
                 || valueToken.start + valueToken.length > lineText.size()) {
                 if (errorMessage != nullptr) {
-                    *errorMessage = QStringLiteral("Line-point option value could not be rewritten.");
+                    *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Line-point option value could not be rewritten.");
                 }
                 return false;
             }
@@ -737,7 +738,7 @@ bool rewriteLinePointNumericOption(QString *contents,
         } else {
             if (existing.optionTokenIndex < 0 || existing.optionTokenIndex >= parsedLine.tokenSpans.size()) {
                 if (errorMessage != nullptr) {
-                    *errorMessage = QStringLiteral("Line-point option could not be rewritten.");
+                    *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Line-point option could not be rewritten.");
                 }
                 return false;
             }
@@ -746,7 +747,7 @@ bool rewriteLinePointNumericOption(QString *contents,
                 || optionToken.length < 0
                 || optionToken.start + optionToken.length > lineText.size()) {
                 if (errorMessage != nullptr) {
-                    *errorMessage = QStringLiteral("Line-point option could not be rewritten.");
+                    *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Line-point option could not be rewritten.");
                 }
                 return false;
             }
@@ -1099,7 +1100,7 @@ bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
@@ -1107,14 +1108,14 @@ bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
     const QString trimmedName = newName.trimmed();
     if (trimmedName.isEmpty()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The new structure name is empty.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The new structure name is empty.");
         }
         return false;
     }
 
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line number is invalid.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
         }
         return false;
     }
@@ -1128,7 +1129,7 @@ bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
     }
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line no longer exists.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
@@ -1137,7 +1138,7 @@ bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
     const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
     if (parsedLine.tokens.isEmpty()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line does not contain a structure object.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line does not contain a structure object.");
         }
         return false;
     }
@@ -1145,7 +1146,7 @@ bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
     const int tokenIndex = nameTokenIndexForCategory(category, parsedLine);
     if (tokenIndex < 0 || tokenIndex >= parsedLine.tokenSpans.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected structure item cannot be rewritten.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected structure item cannot be rewritten.");
         }
         return false;
     }
@@ -1153,7 +1154,7 @@ bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
     const TherionParsedToken tokenSpan = parsedLine.tokenSpans.at(tokenIndex);
     if (tokenSpan.start < 0 || tokenSpan.length < 0 || tokenSpan.start + tokenSpan.length > lineText.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line could not be rewritten.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line could not be rewritten.");
         }
         return false;
     }
@@ -1173,7 +1174,7 @@ bool TherionDocumentEditor::appendScrapBlock(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
@@ -1239,7 +1240,7 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
@@ -1249,7 +1250,7 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         && normalizedKind != QStringLiteral("line")
         && normalizedKind != QStringLiteral("area")) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unsupported draft geometry kind.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unsupported draft geometry kind.");
         }
         return false;
     }
@@ -1259,7 +1260,7 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         : (normalizedKind == QStringLiteral("line") ? 2 : 3);
     if (vertices.size() < minimumVertices) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Draft geometry does not contain enough vertices.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Draft geometry does not contain enough vertices.");
         }
         return false;
     }
@@ -1278,7 +1279,7 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         insertionIndex = lastEndscrapLineIndex(lines);
         if (insertionIndex < 0) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("Unable to resolve a scrap insertion target.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve a scrap insertion target.");
             }
             return false;
         }
@@ -1314,7 +1315,7 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         const int scrapStartIndex = matchingScrapStartIndex(lines, insertionIndex);
         if (scrapStartIndex < 0) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("Unable to resolve scrap boundaries for area insertion.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve scrap boundaries for area insertion.");
             }
             return false;
         }
@@ -1361,7 +1362,7 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
@@ -1377,7 +1378,7 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
 
     if (normalizedRows.size() < 2) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Draft line geometry does not contain enough coordinate rows.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Draft line geometry does not contain enough coordinate rows.");
         }
         return false;
     }
@@ -1396,7 +1397,7 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
         insertionIndex = lastEndscrapLineIndex(lines);
         if (insertionIndex < 0) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("Unable to resolve a scrap insertion target.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve a scrap insertion target.");
             }
             return false;
         }
@@ -1441,7 +1442,7 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
@@ -1457,7 +1458,7 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
 
     if (normalizedRows.size() < 3) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Draft area geometry does not contain enough coordinate rows.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Draft area geometry does not contain enough coordinate rows.");
         }
         return false;
     }
@@ -1476,7 +1477,7 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
         insertionIndex = lastEndscrapLineIndex(lines);
         if (insertionIndex < 0) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("Unable to resolve a scrap insertion target.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve a scrap insertion target.");
             }
             return false;
         }
@@ -1485,7 +1486,7 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
     const int scrapStartIndex = matchingScrapStartIndex(lines, insertionIndex);
     if (scrapStartIndex < 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unable to resolve scrap boundaries for area insertion.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve scrap boundaries for area insertion.");
         }
         return false;
     }
@@ -1529,14 +1530,14 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
 
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line number is invalid.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
         }
         return false;
     }
@@ -1551,7 +1552,7 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
 
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line no longer exists.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
@@ -1560,7 +1561,7 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
     const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
     if (parsedLine.directive != QStringLiteral("point") && parsedLine.directive != QStringLiteral("station")) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line is not a writable point geometry.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a writable point geometry.");
         }
         return false;
     }
@@ -1570,7 +1571,7 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
         || tokenPair.first >= parsedLine.tokenSpans.size()
         || tokenPair.second >= parsedLine.tokenSpans.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected point line does not contain writable coordinates.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected point line does not contain writable coordinates.");
         }
         return false;
     }
@@ -1579,7 +1580,7 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
     const TherionParsedToken firstToken = parsedLine.tokenSpans.at(tokenPair.first);
     if (firstToken.start < 0 || secondToken.start < 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected point coordinates could not be rewritten.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected point coordinates could not be rewritten.");
         }
         return false;
     }
@@ -1606,21 +1607,21 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
 
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line number is invalid.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
         }
         return false;
     }
 
     if (vertexIndex < 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected vertex index is invalid.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected vertex index is invalid.");
         }
         return false;
     }
@@ -1628,7 +1629,7 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
     const QString normalizedKind = kind.trimmed().toLower();
     if (normalizedKind != QStringLiteral("line") && normalizedKind != QStringLiteral("area")) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected geometry kind is not writable.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected geometry kind is not writable.");
         }
         return false;
     }
@@ -1637,7 +1638,7 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
     QStringList lines = splitLinesNormalized(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line no longer exists.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
@@ -1646,7 +1647,7 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
     const TherionParsedLine startLine = TherionDocumentParser::parseLine(lines.at(blockStartLineIndex), lineNumber);
     if (startLine.directive != normalizedKind) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line is not a writable %1 geometry block.").arg(normalizedKind);
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a writable %1 geometry block.").arg(normalizedKind);
         }
         return false;
     }
@@ -1665,7 +1666,7 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
 
     if (blockEndLineIndex < 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected %1 block is missing %2.").arg(normalizedKind, blockEndDirective);
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected %1 block is missing %2.").arg(normalizedKind, blockEndDirective);
         }
         return false;
     }
@@ -1699,7 +1700,7 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
 
     if (vertexIndex >= references.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected %1 block does not contain a writable vertex at index %2.")
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected %1 block does not contain a writable vertex at index %2.")
                                 .arg(normalizedKind)
                                 .arg(vertexIndex);
         }
@@ -1709,7 +1710,7 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
     const CoordinateTokenReference reference = references.at(vertexIndex);
     if (reference.lineIndex < 0 || reference.lineIndex >= lines.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected %1 vertex could not be rewritten.").arg(normalizedKind);
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected %1 vertex could not be rewritten.").arg(normalizedKind);
         }
         return false;
     }
@@ -1720,7 +1721,7 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
         || reference.xToken.start + reference.xToken.length > lineText.size()
         || reference.yToken.start + reference.yToken.length > lineText.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected %1 vertex coordinates could not be rewritten.").arg(normalizedKind);
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected %1 vertex coordinates could not be rewritten.").arg(normalizedKind);
         }
         return false;
     }
@@ -1746,14 +1747,14 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
 
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line number is invalid.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
         }
         return false;
     }
@@ -1761,7 +1762,7 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
     const std::optional<QString> normalizedOption = normalizedLineToggleOptionName(optionName);
     if (!normalizedOption.has_value()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Unsupported line option toggle.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unsupported line option toggle.");
         }
         return false;
     }
@@ -1770,7 +1771,7 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
     QStringList lines = splitLinesNormalized(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line no longer exists.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
@@ -1780,7 +1781,7 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
     const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
     if (parsedLine.directive != QStringLiteral("line")) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line is not a writable line directive.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a writable line directive.");
         }
         return false;
     }
@@ -1810,7 +1811,7 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
                 || valueToken.length < 0
                 || valueToken.start + valueToken.length > lineText.size()) {
                 if (errorMessage != nullptr) {
-                    *errorMessage = QStringLiteral("The selected line option value could not be rewritten.");
+                    *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line option value could not be rewritten.");
                 }
                 return false;
             }
@@ -1819,7 +1820,7 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
         } else {
             if (optionTokenIndex >= parsedLine.tokenSpans.size()) {
                 if (errorMessage != nullptr) {
-                    *errorMessage = QStringLiteral("The selected line option could not be rewritten.");
+                    *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line option could not be rewritten.");
                 }
                 return false;
             }
@@ -1829,7 +1830,7 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
                 || optionToken.length < 0
                 || optionToken.start + optionToken.length > lineText.size()) {
                 if (errorMessage != nullptr) {
-                    *errorMessage = QStringLiteral("The selected line option could not be rewritten.");
+                    *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line option could not be rewritten.");
                 }
                 return false;
             }
@@ -1863,13 +1864,13 @@ bool TherionDocumentEditor::rewritePointOrientation(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line number is invalid.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
         }
         return false;
     }
@@ -1878,7 +1879,7 @@ bool TherionDocumentEditor::rewritePointOrientation(QString *contents,
     QStringList lines = splitLinesNormalized(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line no longer exists.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
@@ -1889,7 +1890,7 @@ bool TherionDocumentEditor::rewritePointOrientation(QString *contents,
     if (parsedLine.directive != QStringLiteral("point")
         && parsedLine.directive != QStringLiteral("station")) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line is not a writable point command.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a writable point command.");
         }
         return false;
     }
@@ -1916,7 +1917,7 @@ bool TherionDocumentEditor::rewritePointOrientation(QString *contents,
         }
         if (!removeOptionAtTokenIndex(&lineText, parsedLine, optionTokenIndex)) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("Point orientation could not be removed.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Point orientation could not be removed.");
             }
             return false;
         }
@@ -1933,7 +1934,7 @@ bool TherionDocumentEditor::rewritePointOrientation(QString *contents,
                 || valueToken.length < 0
                 || valueToken.start + valueToken.length > lineText.size()) {
                 if (errorMessage != nullptr) {
-                    *errorMessage = QStringLiteral("Point orientation value could not be rewritten.");
+                    *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Point orientation value could not be rewritten.");
                 }
                 return false;
             }
@@ -1941,7 +1942,7 @@ bool TherionDocumentEditor::rewritePointOrientation(QString *contents,
         } else {
             if (optionTokenIndex >= parsedLine.tokenSpans.size()) {
                 if (errorMessage != nullptr) {
-                    *errorMessage = QStringLiteral("Point orientation option could not be rewritten.");
+                    *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Point orientation option could not be rewritten.");
                 }
                 return false;
             }
@@ -1950,7 +1951,7 @@ bool TherionDocumentEditor::rewritePointOrientation(QString *contents,
                 || optionToken.length < 0
                 || optionToken.start + optionToken.length > lineText.size()) {
                 if (errorMessage != nullptr) {
-                    *errorMessage = QStringLiteral("Point orientation option could not be rewritten.");
+                    *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Point orientation option could not be rewritten.");
                 }
                 return false;
             }
@@ -2015,14 +2016,14 @@ bool TherionDocumentEditor::rewriteScrapScale(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
 
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line number is invalid.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
         }
         return false;
     }
@@ -2030,7 +2031,7 @@ bool TherionDocumentEditor::rewriteScrapScale(QString *contents,
     const QString normalizedScale = scaleExpression.trimmed();
     if (normalizedScale.isEmpty()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The scrap scale expression is empty.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The scrap scale expression is empty.");
         }
         return false;
     }
@@ -2039,7 +2040,7 @@ bool TherionDocumentEditor::rewriteScrapScale(QString *contents,
     QStringList lines = splitLinesNormalized(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line no longer exists.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
@@ -2049,7 +2050,7 @@ bool TherionDocumentEditor::rewriteScrapScale(QString *contents,
     const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
     if (parsedLine.directive != QStringLiteral("scrap")) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line is not a scrap command.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a scrap command.");
         }
         return false;
     }
@@ -2060,7 +2061,7 @@ bool TherionDocumentEditor::rewriteScrapScale(QString *contents,
         const QPair<int, int> range = optionRangeWithBracketedValue(parsedLine, scaleOptionIndex, lineText);
         if (range.first < 0 || range.second < range.first || range.second > lineText.size()) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("The existing scrap scale option could not be rewritten.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The existing scrap scale option could not be rewritten.");
             }
             return false;
         }
@@ -2093,14 +2094,14 @@ bool TherionDocumentEditor::rewriteScrapProjection(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
 
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line number is invalid.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
         }
         return false;
     }
@@ -2109,7 +2110,7 @@ bool TherionDocumentEditor::rewriteScrapProjection(QString *contents,
     QStringList lines = splitLinesNormalized(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line no longer exists.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
@@ -2119,7 +2120,7 @@ bool TherionDocumentEditor::rewriteScrapProjection(QString *contents,
     const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
     if (parsedLine.directive != QStringLiteral("scrap")) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line is not a scrap command.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a scrap command.");
         }
         return false;
     }
@@ -2130,7 +2131,7 @@ bool TherionDocumentEditor::rewriteScrapProjection(QString *contents,
         const QPair<int, int> range = optionRangeWithBracketedValue(parsedLine, projectionOptionIndex, lineText);
         if (range.first < 0 || range.second < range.first || range.second > lineText.size()) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("The existing scrap projection option could not be rewritten.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The existing scrap projection option could not be rewritten.");
             }
             return false;
         }
@@ -2176,14 +2177,14 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
 
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line number is invalid.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
         }
         return false;
     }
@@ -2192,7 +2193,7 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
     QStringList lines = splitLinesNormalized(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line no longer exists.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
@@ -2202,7 +2203,7 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
     TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
     if (parsedLine.directive.isEmpty()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line is not a map object command.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a map object command.");
         }
         return false;
     }
@@ -2212,20 +2213,20 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
         const QString normalizedIdentifier = identifier.trimmed();
         if (normalizedIdentifier.isEmpty()) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("Scrap ID cannot be empty.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Scrap ID cannot be empty.");
             }
             return false;
         }
         if (parsedLine.tokens.size() < 2 || parsedLine.tokenSpans.size() < 2) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("The selected scrap command has no writable ID token.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected scrap command has no writable ID token.");
             }
             return false;
         }
         const QString replacement = replacementTokenForLine(normalizedIdentifier, lineText, parsedLine.tokenSpans.at(1));
         if (!replaceTokenText(&lineText, parsedLine, 1, replacement)) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("The selected scrap ID could not be rewritten.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected scrap ID could not be rewritten.");
             }
             return false;
         }
@@ -2238,7 +2239,7 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
         && directive != QStringLiteral("line")
         && directive != QStringLiteral("area")) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Quick object fields are available only for scrap, point, line, and area commands.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Quick object fields are available only for scrap, point, line, and area commands.");
         }
         return false;
     }
@@ -2246,7 +2247,7 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
     const QString normalizedType = type.trimmed();
     if (normalizedType.isEmpty()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Object type cannot be empty.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Object type cannot be empty.");
         }
         return false;
     }
@@ -2259,7 +2260,7 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
         const int insertAfterTokenIndex = coordinatePair.second;
         if (insertAfterTokenIndex < 0 || insertAfterTokenIndex >= parsedLine.tokenSpans.size()) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("The selected point command has no writable coordinate pair for inserting type.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected point command has no writable coordinate pair for inserting type.");
             }
             return false;
         }
@@ -2268,7 +2269,7 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
             || coordinateToken.length < 0
             || coordinateToken.start + coordinateToken.length > lineText.size()) {
             if (errorMessage != nullptr) {
-                *errorMessage = QStringLiteral("The selected point type insertion target is invalid.");
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected point type insertion target is invalid.");
             }
             return false;
         }
@@ -2276,26 +2277,26 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
                         QStringLiteral(" ") + serializedInlineToken(normalizedType));
     } else if (typeTokenIndex <= 0 || typeTokenIndex >= parsedLine.tokenSpans.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected %1 command has no writable type token.").arg(directive);
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected %1 command has no writable type token.").arg(directive);
         }
         return false;
     } else if (!replaceTokenText(&lineText, parsedLine, typeTokenIndex, serializedInlineToken(normalizedType))) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected object type could not be rewritten.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected object type could not be rewritten.");
         }
         return false;
     }
 
     if (!upsertSingleValueOption(&lineText, QStringLiteral("-subtype"), subtype)) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected object subtype could not be rewritten.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected object subtype could not be rewritten.");
         }
         return false;
     }
 
     if (!upsertSingleValueOption(&lineText, QStringLiteral("-id"), identifier)) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected object identifier could not be rewritten.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected object identifier could not be rewritten.");
         }
         return false;
     }
@@ -2304,7 +2305,7 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
         && nameEnabled
         && !upsertSingleValueOption(&lineText, QStringLiteral("-name"), name)) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected point name could not be rewritten.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected point name could not be rewritten.");
         }
         return false;
     }
@@ -2321,19 +2322,19 @@ bool TherionDocumentEditor::rewriteLineCoordinateRows(QString *contents,
 {
     if (contents == nullptr) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No document contents are available.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
         }
         return false;
     }
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line number is invalid.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
         }
         return false;
     }
     if (coordinateRows.isEmpty()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("No coordinate rows were provided for rewrite.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No coordinate rows were provided for rewrite.");
         }
         return false;
     }
@@ -2342,7 +2343,7 @@ bool TherionDocumentEditor::rewriteLineCoordinateRows(QString *contents,
     QStringList lines = splitLinesNormalized(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line no longer exists.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
@@ -2351,14 +2352,14 @@ bool TherionDocumentEditor::rewriteLineCoordinateRows(QString *contents,
     const TherionParsedLine startLine = TherionDocumentParser::parseLine(lines.at(blockStartLineIndex), lineNumber);
     if (startLine.directive != QStringLiteral("line")) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line is not a writable line block.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a writable line block.");
         }
         return false;
     }
 
     if (!coordinateTokenPairsForLine(startLine, 1).isEmpty()) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Line rewrite is not supported when start line contains inline coordinates.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Line rewrite is not supported when start line contains inline coordinates.");
         }
         return false;
     }
@@ -2373,7 +2374,7 @@ bool TherionDocumentEditor::rewriteLineCoordinateRows(QString *contents,
     }
     if (blockEndLineIndex < 0) {
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("The selected line block is missing endline.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line block is missing endline.");
         }
         return false;
     }
@@ -2394,7 +2395,7 @@ bool TherionDocumentEditor::rewriteLineCoordinateRows(QString *contents,
         }
 
         if (errorMessage != nullptr) {
-            *errorMessage = QStringLiteral("Line rewrite is only supported for coordinate-only line blocks.");
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Line rewrite is only supported for coordinate-only line blocks.");
         }
         return false;
     }

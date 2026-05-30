@@ -17,8 +17,6 @@ public:
     struct BuildInput
     {
         QWidget *consoleHost = nullptr;
-        QString persistedExecutablePath;
-        QString suggestedExecutablePath;
         QString persistedWorkingDirectory;
         QString persistedArguments;
         QString persistedRunTargetMode;
@@ -28,8 +26,6 @@ public:
     struct BuildResult
     {
         QWidget *rootWidget = nullptr;
-        QLineEdit *therionExecutableEdit = nullptr;
-        QPushButton *therionBrowseExecutableButton = nullptr;
         QLineEdit *therionWorkingDirectoryEdit = nullptr;
         QPushButton *therionBrowseWorkingDirectoryButton = nullptr;
         QLineEdit *therionArgumentsEdit = nullptr;

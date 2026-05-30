@@ -102,20 +102,28 @@ QStandardItem *createIndexedItem(const QString &text, const QString &sourceFile,
 
 QString structureBrowserItemText(const TherionStudio::ProjectStructureEntry &entry)
 {
+    const QString displayName = entry.category == QStringLiteral("Scraps")
+            && entry.name == QStringLiteral("Unnamed Scrap")
+        ? QObject::tr("Unnamed Scrap")
+        : entry.name;
     if (entry.category == QStringLiteral("Surveys") && !entry.createsNamespace) {
-        return QObject::tr("%1 (namespace off)").arg(entry.name);
+        return QObject::tr("%1 (namespace off)").arg(displayName);
     }
 
-    return entry.name;
+    return displayName;
 }
 
 QString mapObjectItemText(const TherionStudio::ProjectStructureEntry &entry)
 {
+    const QString displayName = entry.category == QStringLiteral("Scraps")
+            && entry.name == QStringLiteral("Unnamed Scrap")
+        ? QObject::tr("Unnamed Scrap")
+        : entry.name;
     if (entry.category == QStringLiteral("Scraps")) {
-        return entry.name;
+        return displayName;
     }
 
-    return QStringLiteral("%1: %2").arg(structureObjectKindLabel(entry.category), entry.name);
+    return QStringLiteral("%1: %2").arg(structureObjectKindLabel(entry.category), displayName);
 }
 
 QPixmap renderStructureLucidePixmap(const QString &iconName, const QColor &color, int extent)

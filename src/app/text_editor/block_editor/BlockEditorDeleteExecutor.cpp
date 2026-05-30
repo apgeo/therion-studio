@@ -1,5 +1,7 @@
 #include "BlockEditorDeleteExecutor.h"
 
+#include <QCoreApplication>
+
 #include "BlockEditorDirectiveRules.h"
 #include "BlockEditorSourceText.h"
 
@@ -24,7 +26,7 @@ BlockEditorDeleteExecutor::BlockEditorDeleteExecutor(BlockEditorDeleteContext co
 
 QString BlockEditorDeleteExecutor::tr(const char *text) const
 {
-    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorDeleteExecutor", text);
 }
 
 bool BlockEditorDeleteExecutor::deleteCommandAtLine(int lineNumber)

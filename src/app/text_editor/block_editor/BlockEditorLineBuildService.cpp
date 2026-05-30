@@ -1,5 +1,7 @@
 #include "BlockEditorLineBuildService.h"
 
+#include <QCoreApplication>
+
 #include "BlockEditorDirectiveRules.h"
 #include "BlockEditorSourceText.h"
 #include "../TextEditorCommandMetadata.h"
@@ -26,10 +28,7 @@ BlockEditorLineBuildService::BlockEditorLineBuildService(BlockEditorLineBuildCon
 
 QString BlockEditorLineBuildService::tr(const char *text) const
 {
-    if (context_.translate) {
-        return context_.translate(text);
-    }
-    return QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorLineBuildService", text);
 }
 
 bool BlockEditorLineBuildService::hasRequiredContext() const

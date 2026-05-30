@@ -1,5 +1,7 @@
 #include "BlockEditorMoveController.h"
 
+#include <QCoreApplication>
+
 #include "BlockEditorDocumentOutlineBuilder.h"
 #include "BlockEditorDropTargetResolver.h"
 #include "BlockEditorMovePlanner.h"
@@ -22,7 +24,7 @@ BlockEditorMoveController::BlockEditorMoveController(BlockEditorMoveContext cont
 
 QString BlockEditorMoveController::tr(const char *text) const
 {
-    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorMoveController", text);
 }
 
 void BlockEditorMoveController::moveBlock(int lineNumber, const QPointF &scenePos)

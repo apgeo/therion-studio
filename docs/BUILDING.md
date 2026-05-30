@@ -9,6 +9,7 @@ This document describes the current build and packaging workflow.
 - Qt 6.4 or newer with `Widgets`, `Svg`, and `Concurrent`
 
 The bundled command catalog, syntax palette, and UI icons are compiled into Qt resources.
+Localization maintenance is documented in `docs/LOCALIZATION.md`.
 
 ## Map Object Style Gallery
 
@@ -68,6 +69,7 @@ The install step places `TherionStudio.app` in the prefix. Do not run `macdeploy
 Formula dependencies should include:
 
 - `qt`
+- `qttranslations`
 
 The maintained source-build Homebrew formula is published in the dedicated tap repository:
 

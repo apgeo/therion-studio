@@ -10,6 +10,7 @@
 #include "../../../core/TherionDocumentParser.h"
 
 #include <QAbstractItemView>
+#include <QCoreApplication>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
 #include <QHeaderView>
@@ -49,9 +50,9 @@ MapEditorInspectorObjectController::MapEditorInspectorObjectController(MapEditor
 {
 }
 
-QString MapEditorInspectorObjectController::translate(const char *text) const
+QString MapEditorInspectorObjectController::tr(const char *text) const
 {
-    return context_.translate ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::MapEditorInspectorObjectController", text);
 }
 
 void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
@@ -64,12 +65,12 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
     *context_.pressedWasSelected = false;
     context_.objectsModel->clear();
     context_.objectsModel->setColumnCount(kInspectorObjectColumnCount);
-    context_.objectsModel->setHorizontalHeaderLabels({translate("Objects"), QString(), QString(), QString()});
+    context_.objectsModel->setHorizontalHeaderLabels({tr("Objects"), QString(), QString(), QString()});
     configureInspectorObjectTreeColumns();
 
     const QString th2Path = context_.filePath();
     if (context_.textEditor == nullptr || !th2Path.endsWith(QStringLiteral(".th2"), Qt::CaseInsensitive)) {
-        auto *placeholderItem = new QStandardItem(translate("Open a TH2 document to browse its objects by scrap"));
+        auto *placeholderItem = new QStandardItem(tr("Open a TH2 document to browse its objects by scrap"));
         placeholderItem->setEditable(false);
         context_.objectsModel->appendRow({placeholderItem, new QStandardItem, new QStandardItem});
         return;
@@ -79,7 +80,7 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
     const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument();
     const QVector<ProjectStructureEntry> entries = ProjectStructureIndex::scanTh2Objects(th2Path, currentText);
     if (entries.isEmpty()) {
-        auto *placeholderItem = new QStandardItem(translate("No TH2 scraps, points, lines, or areas were found in the current document"));
+        auto *placeholderItem = new QStandardItem(tr("No TH2 scraps, points, lines, or areas were found in the current document"));
         placeholderItem->setEditable(false);
         context_.objectsModel->appendRow({placeholderItem, new QStandardItem, new QStandardItem});
         return;
@@ -124,7 +125,7 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
         dragItem->setData(entry.category, kInspectorObjectCategoryRole);
         if (entry.lineNumber > 0 && !isScrapCategory(entry.category)) {
             dragItem->setIcon(inspectorActionIcon(QStringLiteral("grip-vertical")));
-            dragItem->setToolTip(translate("Drag to move this object"));
+            dragItem->setToolTip(tr("Drag to move this object"));
         }
 
         auto *visibilityItem = new QStandardItem;
@@ -136,7 +137,7 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
         if (entry.lineNumber > 0) {
             const bool visible = !context_.hiddenObjectLines->contains(entry.lineNumber);
             visibilityItem->setIcon(inspectorActionIcon(visible ? QStringLiteral("eye") : QStringLiteral("eye-off")));
-            visibilityItem->setToolTip(visible ? translate("Hide object") : translate("Show object"));
+            visibilityItem->setToolTip(visible ? tr("Hide object") : tr("Show object"));
         }
 
         auto *deleteItem = new QStandardItem;
@@ -153,8 +154,8 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
             deleteItem->setData(deleteBlockedByAreaReference, kInspectorObjectDeleteBlockedRole);
             deleteItem->setEnabled(!deleteBlockedByAreaReference);
             deleteItem->setToolTip(deleteBlockedByAreaReference
-                ? translate("This line is used as an area border. Delete the area instead.")
-                : translate("Delete object from source"));
+                ? tr("This line is used as an area border. Delete the area instead.")
+                : tr("Delete object from source"));
         }
 
         QStandardItem *parentItem = parentStack.isEmpty() ? context_.objectsModel->invisibleRootItem() : parentStack.last();
@@ -382,7 +383,7 @@ void MapEditorInspectorObjectController::handleInspectorObjectClicked(const QMod
     if (index.column() == kInspectorObjectDeleteColumn) {
         if (index.data(kInspectorObjectDeleteBlockedRole).toBool()) {
             if (context_.toolbarStatusNote != nullptr) {
-                *context_.toolbarStatusNote = translate("This line is used as an area border. Delete the area instead.");
+                *context_.toolbarStatusNote = tr("This line is used as an area border. Delete the area instead.");
             }
             if (context_.refreshToolbarSummary) {
                 context_.refreshToolbarSummary();
@@ -394,8 +395,8 @@ void MapEditorInspectorObjectController::handleInspectorObjectClicked(const QMod
         if (!deletePlan.resolved || !deletePlan.changed) {
             if (context_.toolbarStatusNote != nullptr) {
                 *context_.toolbarStatusNote = deletePlan.errorMessage.isEmpty()
-                    ? translate("Object deletion failed.")
-                    : translate("Object deletion failed: %1").arg(deletePlan.errorMessage);
+                    ? tr("Object deletion failed.")
+                    : tr("Object deletion failed: %1").arg(deletePlan.errorMessage);
             }
             if (context_.refreshToolbarSummary) {
                 context_.refreshToolbarSummary();
@@ -406,7 +407,7 @@ void MapEditorInspectorObjectController::handleInspectorObjectClicked(const QMod
         auto applyDeleteText = [&]() {
             context_.textEditor->replaceTextForCommand(deletePlan.updatedText);
             if (context_.recordSourceTextSnapshot) {
-                context_.recordSourceTextSnapshot(translate("Delete Map Object"),
+                context_.recordSourceTextSnapshot(tr("Delete Map Object"),
                                                   beforeText,
                                                   deletePlan.updatedText,
                                                   deletePlan.focusLineAfterDelete);
@@ -423,7 +424,7 @@ void MapEditorInspectorObjectController::handleInspectorObjectClicked(const QMod
         }
         *context_.lastClickedLineNumber = 0;
         if (context_.toolbarStatusNote != nullptr) {
-            *context_.toolbarStatusNote = translate("Deleted selected object from source.");
+            *context_.toolbarStatusNote = tr("Deleted selected object from source.");
         }
         if (context_.refreshToolbarSummary) {
             context_.refreshToolbarSummary();
@@ -494,8 +495,8 @@ bool MapEditorInspectorObjectController::moveInspectorObject(const QModelIndex &
     if (!movePlan.resolved) {
         if (context_.toolbarStatusNote != nullptr) {
             *context_.toolbarStatusNote = movePlan.errorMessage.isEmpty()
-                ? translate("Object move failed.")
-                : translate("Object move failed: %1").arg(movePlan.errorMessage);
+                ? tr("Object move failed.")
+                : tr("Object move failed: %1").arg(movePlan.errorMessage);
         }
         if (context_.refreshToolbarSummary) {
             context_.refreshToolbarSummary();
@@ -505,7 +506,7 @@ bool MapEditorInspectorObjectController::moveInspectorObject(const QModelIndex &
 
     if (!movePlan.changed) {
         if (context_.toolbarStatusNote != nullptr) {
-            *context_.toolbarStatusNote = translate("Object already at requested position.");
+            *context_.toolbarStatusNote = tr("Object already at requested position.");
         }
         if (context_.refreshToolbarSummary) {
             context_.refreshToolbarSummary();
@@ -516,7 +517,7 @@ bool MapEditorInspectorObjectController::moveInspectorObject(const QModelIndex &
     auto applyMoveText = [&]() {
         context_.textEditor->replaceTextForCommand(movePlan.movedText);
         if (context_.recordSourceTextSnapshot) {
-            context_.recordSourceTextSnapshot(translate("Move Map Object"),
+            context_.recordSourceTextSnapshot(tr("Move Map Object"),
                                               beforeText,
                                               movePlan.movedText,
                                               movePlan.insertBeforeLineAfterRemoval);
@@ -536,7 +537,7 @@ bool MapEditorInspectorObjectController::moveInspectorObject(const QModelIndex &
     syncInspectorObjectSelectionToLine(movePlan.insertBeforeLineAfterRemoval, true);
 
     if (context_.toolbarStatusNote != nullptr) {
-        *context_.toolbarStatusNote = translate("Moved map object to line %1.").arg(movePlan.insertBeforeLineAfterRemoval);
+        *context_.toolbarStatusNote = tr("Moved map object to line %1.").arg(movePlan.insertBeforeLineAfterRemoval);
     }
     if (context_.refreshToolbarSummary) {
         context_.refreshToolbarSummary();

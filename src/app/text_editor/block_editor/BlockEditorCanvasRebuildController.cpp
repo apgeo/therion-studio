@@ -1,5 +1,7 @@
 #include "BlockEditorCanvasRebuildController.h"
 
+#include <QCoreApplication>
+
 #include "BlockEditorCanvasItem.h"
 #include "BlockEditorDirectiveRules.h"
 #include "BlockEditorSourceText.h"
@@ -44,7 +46,7 @@ BlockEditorCanvasRebuildController::BlockEditorCanvasRebuildController(BlockEdit
 
 QString BlockEditorCanvasRebuildController::tr(const char *text) const
 {
-    return context_.translate != nullptr ? context_.translate(text) : QString::fromUtf8(text);
+    return QCoreApplication::translate("TherionStudio::BlockEditorCanvasRebuildController", text);
 }
 
 void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()

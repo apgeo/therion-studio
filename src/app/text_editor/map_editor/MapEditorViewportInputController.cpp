@@ -220,6 +220,66 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
     }
 
     QWidget *viewport = context_.view->viewport();
+    const auto handleDeleteKeyPress = [&](QKeyEvent *keyEvent) -> bool {
+        if (keyEvent == nullptr) {
+            return false;
+        }
+        const Qt::KeyboardModifiers disallowedModifiers =
+            keyEvent->modifiers() & ~(Qt::KeyboardModifier::KeypadModifier);
+        const bool deleteKeyNoModifier = disallowedModifiers == Qt::NoModifier;
+
+        if (drawMode() == MapEditorInteractiveDrawMode::Line
+            || drawMode() == MapEditorInteractiveDrawMode::Area
+            || drawMode() == MapEditorInteractiveDrawMode::Freehand) {
+            if ((keyEvent->key() == Qt::Key_Backspace || keyEvent->key() == Qt::Key_Delete)
+                && deleteKeyNoModifier
+                && drawMode() != MapEditorInteractiveDrawMode::Freehand) {
+                if (drawMode() == MapEditorInteractiveDrawMode::Line
+                    && !(*context_.interactiveDrawLineVertices).isEmpty()) {
+                    (*context_.interactiveDrawLineVertices).removeLast();
+                    if (!(*context_.interactiveDrawLineVertices).isEmpty()) {
+                        MapEditorInteractiveLineDraftVertex &tail = (*context_.interactiveDrawLineVertices).last();
+                        tail.outgoingControlScene.reset();
+                        tail.outgoingControlSource.reset();
+                    }
+                    context_.updateInteractiveDrawPreview();
+                    (*context_.toolbarStatusNote) = tr("Vertex removed from current draft (%1 remaining).")
+                                             .arg((*context_.interactiveDrawLineVertices).size());
+                    context_.refreshToolbarSummary();
+                    context_.updateCommandSurfaceState();
+                    return true;
+                }
+                if (drawMode() == MapEditorInteractiveDrawMode::Area
+                    && !(*context_.interactiveDrawLineVertices).isEmpty()) {
+                    (*context_.interactiveDrawLineVertices).removeLast();
+                    if (!(*context_.interactiveDrawLineVertices).isEmpty()) {
+                        MapEditorInteractiveLineDraftVertex &tail = (*context_.interactiveDrawLineVertices).last();
+                        tail.outgoingControlScene.reset();
+                        tail.outgoingControlSource.reset();
+                    }
+                    context_.updateInteractiveDrawPreview();
+                    (*context_.toolbarStatusNote) = tr("Vertex removed from current draft (%1 remaining).")
+                                             .arg((*context_.interactiveDrawLineVertices).size());
+                    context_.refreshToolbarSummary();
+                    context_.updateCommandSurfaceState();
+                    return true;
+                }
+            }
+        }
+
+        if ((keyEvent->key() == Qt::Key_Delete || keyEvent->key() == Qt::Key_Backspace)
+            && deleteKeyNoModifier) {
+            if (context_.removeLineVertexFromSelection()) {
+                return true;
+            }
+            if (context_.deleteSelectedObjectFromSelection
+                && context_.deleteSelectedObjectFromSelection()) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     if (watched == viewport) {
         switch (event->type()) {
         case QEvent::TabletPress:
@@ -230,6 +290,8 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
         case QEvent::MouseButtonPress: {
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
             if (mouseEvent->button() == Qt::LeftButton) {
+                context_.view->setFocus(Qt::MouseFocusReason);
+                viewport->setFocus(Qt::MouseFocusReason);
                 if (drawMode() == MapEditorInteractiveDrawMode::Freehand) {
                     if (context_.textEditor == nullptr) {
                         (*context_.toolbarStatusNote) = tr("Drawing failed: no active TH2 text editor.");
@@ -735,67 +797,32 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
             break;
         case QEvent::KeyPress: {
             auto *keyEvent = static_cast<QKeyEvent *>(event);
-            if (drawMode() == MapEditorInteractiveDrawMode::Line
-                || drawMode() == MapEditorInteractiveDrawMode::Area
-                || drawMode() == MapEditorInteractiveDrawMode::Freehand) {
-                if ((keyEvent->key() == Qt::Key_Backspace || keyEvent->key() == Qt::Key_Delete)
-                    && keyEvent->modifiers() == Qt::NoModifier
-                    && drawMode() != MapEditorInteractiveDrawMode::Freehand) {
-                    if (drawMode() == MapEditorInteractiveDrawMode::Line
-                        && !(*context_.interactiveDrawLineVertices).isEmpty()) {
-                        (*context_.interactiveDrawLineVertices).removeLast();
-                        if (!(*context_.interactiveDrawLineVertices).isEmpty()) {
-                            MapEditorInteractiveLineDraftVertex &tail = (*context_.interactiveDrawLineVertices).last();
-                            tail.outgoingControlScene.reset();
-                            tail.outgoingControlSource.reset();
-                        }
-                        context_.updateInteractiveDrawPreview();
-                        (*context_.toolbarStatusNote) = tr("Vertex removed from current draft (%1 remaining).")
-                                                 .arg((*context_.interactiveDrawLineVertices).size());
-                        context_.refreshToolbarSummary();
-                        context_.updateCommandSurfaceState();
-                        event->accept();
-                        return true;
-                    }
-                    if (drawMode() == MapEditorInteractiveDrawMode::Area
-                        && !(*context_.interactiveDrawLineVertices).isEmpty()) {
-                        (*context_.interactiveDrawLineVertices).removeLast();
-                        if (!(*context_.interactiveDrawLineVertices).isEmpty()) {
-                            MapEditorInteractiveLineDraftVertex &tail = (*context_.interactiveDrawLineVertices).last();
-                            tail.outgoingControlScene.reset();
-                            tail.outgoingControlSource.reset();
-                        }
-                        context_.updateInteractiveDrawPreview();
-                        (*context_.toolbarStatusNote) = tr("Vertex removed from current draft (%1 remaining).")
-                                                 .arg((*context_.interactiveDrawLineVertices).size());
-                        context_.refreshToolbarSummary();
-                        context_.updateCommandSurfaceState();
-                        event->accept();
-                        return true;
-                    }
-                }
-            }
-
-            if ((keyEvent->key() == Qt::Key_Delete || keyEvent->key() == Qt::Key_Backspace)
-                && keyEvent->modifiers() == Qt::NoModifier) {
-                if (context_.removeLineVertexFromSelection()) {
-                    event->accept();
-                    return true;
-                }
-                if (context_.deleteSelectedObjectFromSelection
-                    && context_.deleteSelectedObjectFromSelection()) {
-                    event->accept();
-                    return true;
-                }
+            if (handleDeleteKeyPress(keyEvent)) {
+                event->accept();
+                return true;
             }
             break;
         }
         default:
             break;
         }
-    } else if (watched == context_.view && event->type() == QEvent::Resize) {
-        if ((*context_.autoFitEnabled) && context_.view->isVisible()) {
-            context_.fitMapToView((*context_.fitBackgroundRequested));
+    } else if (watched == context_.view) {
+        switch (event->type()) {
+        case QEvent::Resize:
+            if ((*context_.autoFitEnabled) && context_.view->isVisible()) {
+                context_.fitMapToView((*context_.fitBackgroundRequested));
+            }
+            break;
+        case QEvent::KeyPress: {
+            auto *keyEvent = static_cast<QKeyEvent *>(event);
+            if (handleDeleteKeyPress(keyEvent)) {
+                event->accept();
+                return true;
+            }
+            break;
+        }
+        default:
+            break;
         }
     }
 

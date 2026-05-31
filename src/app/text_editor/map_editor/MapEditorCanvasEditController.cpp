@@ -511,8 +511,7 @@ void MapEditorCanvasEditController::recordPointOrientationHandleChange(int lineN
         return;
     }
 
-    context_.textEditor->replaceTextForCommand(afterText);
-    recordSourceTextSnapshot(tr("Edit Point Orientation"), beforeText, afterText, lineNumber);
+    applySourceTextChangeWithSnapshot(tr("Edit Point Orientation"), beforeText, afterText, lineNumber);
     restorePointSelection(lineNumber);
     QTimer::singleShot(0, context_.callbackContext, [restorePointSelectionLater = context_.restorePointSelectionLater, lineNumber]() {
         restorePointSelectionLater(lineNumber);
@@ -566,8 +565,7 @@ void MapEditorCanvasEditController::recordLinePointLeftHandleChange(int lineNumb
         return;
     }
 
-    context_.textEditor->replaceTextForCommand(afterText);
-    recordSourceTextSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
+    applySourceTextChangeWithSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
     restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
     QTimer::singleShot(0,
                        context_.callbackContext,
@@ -673,18 +671,53 @@ void MapEditorCanvasEditController::recordSourceTextSnapshot(const QString &labe
     }
 }
 
+void MapEditorCanvasEditController::applySourceTextChangeWithSnapshot(const QString &label,
+                                                                      const QString &beforeText,
+                                                                      const QString &afterText,
+                                                                      int insertedLineNumber)
+{
+    if (context_.textEditor == nullptr || beforeText == afterText) {
+        return;
+    }
+
+    if (context_.commandApplyInProgress != nullptr) {
+        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
+        context_.textEditor->replaceTextForCommand(afterText);
+        recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
+        return;
+    }
+
+    context_.textEditor->replaceTextForCommand(afterText);
+    recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
+}
+
 bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineVertexInsertPlacement placement)
 {
     if (context_.scene == nullptr || context_.textEditor == nullptr) {
         return false;
     }
 
-    MapEditableGeometryVertexItem *vertexItem = resolveSelectedLineVertexItemForContext(context_);
-    if (vertexItem == nullptr) {
+    int lineNumber = 0;
+    int selectedSourceVertexIndex = -1;
+    if (MapEditableGeometryVertexItem *vertexItem = resolveSelectedLineVertexItemForContext(context_);
+        vertexItem != nullptr && vertexItem->geometryKind().startsWith(QStringLiteral("line"))) {
+        lineNumber = vertexItem->lineNumber();
+        selectedSourceVertexIndex = vertexItem->vertexIndex();
+    }
+    if (lineNumber <= 0
+        && context_.selectedObjectLineNumber != nullptr
+        && context_.selectedObjectVertexIndex != nullptr
+        && context_.selectedObjectKind != nullptr
+        && (*context_.selectedObjectKind) == QStringLiteral("line")
+        && (*context_.selectedObjectLineNumber) > 0
+        && (*context_.selectedObjectVertexIndex) >= 0) {
+        lineNumber = (*context_.selectedObjectLineNumber);
+        selectedSourceVertexIndex = (*context_.selectedObjectVertexIndex);
+    }
+    if (lineNumber <= 0 || selectedSourceVertexIndex < 0) {
         return false;
     }
 
-    const int lineNumber = vertexItem->lineNumber();
     const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
     if (!lineFeature.has_value()) {
         (*context_.toolbarStatusNote) = tr("Insert vertex failed: line geometry could not be resolved.");
@@ -692,12 +725,15 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineV
         return true;
     }
 
-    const int anchorIndex = lineVertexIndexForSourceVertex(lineFeature.value(), vertexItem->vertexIndex());
+    const int anchorIndex = lineVertexOwnerIndexForSourceVertex(lineFeature.value(), selectedSourceVertexIndex);
     if (anchorIndex < 0) {
         (*context_.toolbarStatusNote) = tr("Insert vertex failed: selected line anchor could not be resolved.");
         context_.refreshToolbarSummary();
         return true;
     }
+    const int anchorSourceVertexIndex = lineFeature->lineVertices.at(anchorIndex).anchorSourceVertexIndex >= 0
+        ? lineFeature->lineVertices.at(anchorIndex).anchorSourceVertexIndex
+        : anchorIndex;
 
     const bool insertBefore = placement == MapEditorLineVertexInsertPlacement::Before;
     const bool prependExtension = insertBefore && anchorIndex == 0;
@@ -705,7 +741,7 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineV
     const bool endpointExtension = prependExtension || appendExtension;
     if (endpointExtension) {
         if (!context_.beginLineExtensionFromSelection
-            || !context_.beginLineExtensionFromSelection(lineNumber, vertexItem->vertexIndex(), prependExtension)) {
+            || !context_.beginLineExtensionFromSelection(lineNumber, anchorSourceVertexIndex, prependExtension)) {
             (*context_.toolbarStatusNote) = tr("Extend line failed: selected endpoint could not start continuation mode.");
             context_.refreshToolbarSummary();
         }
@@ -754,12 +790,27 @@ bool MapEditorCanvasEditController::splitLineAtSelection()
         return false;
     }
 
-    MapEditableGeometryVertexItem *vertexItem = resolveSelectedLineVertexItemForContext(context_);
-    if (vertexItem == nullptr || !vertexItem->geometryKind().startsWith(QStringLiteral("line"))) {
+    int lineNumber = 0;
+    int selectedSourceVertexIndex = -1;
+    if (MapEditableGeometryVertexItem *vertexItem = resolveSelectedLineVertexItemForContext(context_);
+        vertexItem != nullptr && vertexItem->geometryKind().startsWith(QStringLiteral("line"))) {
+        lineNumber = vertexItem->lineNumber();
+        selectedSourceVertexIndex = vertexItem->vertexIndex();
+    }
+    if (lineNumber <= 0
+        && context_.selectedObjectLineNumber != nullptr
+        && context_.selectedObjectVertexIndex != nullptr
+        && context_.selectedObjectKind != nullptr
+        && (*context_.selectedObjectKind) == QStringLiteral("line")
+        && (*context_.selectedObjectLineNumber) > 0
+        && (*context_.selectedObjectVertexIndex) >= 0) {
+        lineNumber = (*context_.selectedObjectLineNumber);
+        selectedSourceVertexIndex = (*context_.selectedObjectVertexIndex);
+    }
+    if (lineNumber <= 0 || selectedSourceVertexIndex < 0) {
         return false;
     }
 
-    const int lineNumber = vertexItem->lineNumber();
     const QString beforeText = context_.textEditor->text();
 
     const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(beforeText, lineNumber);
@@ -774,7 +825,7 @@ bool MapEditorCanvasEditController::splitLineAtSelection()
         return true;
     }
 
-    const int anchorIndex = lineVertexIndexForSourceVertex(lineFeature.value(), vertexItem->vertexIndex());
+    const int anchorIndex = lineVertexOwnerIndexForSourceVertex(lineFeature.value(), selectedSourceVertexIndex);
     if (anchorIndex <= 0 || anchorIndex >= lineFeature->lineVertices.size() - 1) {
         (*context_.toolbarStatusNote) = tr("Split line failed: select an interior line vertex.");
         context_.refreshToolbarSummary();
@@ -807,8 +858,7 @@ bool MapEditorCanvasEditController::splitLineAtSelection()
     }
 
     const QString afterText = splitPlan.updatedText;
-    context_.textEditor->replaceTextForCommand(afterText);
-    recordSourceTextSnapshot(tr("Split Line"), beforeText, afterText, lineNumber);
+    applySourceTextChangeWithSnapshot(tr("Split Line"), beforeText, afterText, lineNumber);
 
     (*context_.toolbarStatusNote) = splitPlan.areaReferencesUpdated
         ? tr("Split line at vertex %1 on source line %2 and updated area references.").arg(anchorIndex + 1).arg(lineNumber)
@@ -829,12 +879,27 @@ bool MapEditorCanvasEditController::removeLineVertexFromSelection()
         return false;
     }
 
-    MapEditableGeometryVertexItem *vertexItem = resolveSelectedLineVertexItemForContext(context_);
-    if (vertexItem == nullptr || !vertexItem->geometryKind().startsWith(QStringLiteral("line"))) {
+    int lineNumber = 0;
+    int selectedSourceVertexIndex = -1;
+    if (MapEditableGeometryVertexItem *vertexItem = resolveSelectedLineVertexItemForContext(context_);
+        vertexItem != nullptr && vertexItem->geometryKind().startsWith(QStringLiteral("line"))) {
+        lineNumber = vertexItem->lineNumber();
+        selectedSourceVertexIndex = vertexItem->vertexIndex();
+    }
+    if (lineNumber <= 0
+        && context_.selectedObjectLineNumber != nullptr
+        && context_.selectedObjectVertexIndex != nullptr
+        && context_.selectedObjectKind != nullptr
+        && (*context_.selectedObjectKind) == QStringLiteral("line")
+        && (*context_.selectedObjectLineNumber) > 0
+        && (*context_.selectedObjectVertexIndex) >= 0) {
+        lineNumber = (*context_.selectedObjectLineNumber);
+        selectedSourceVertexIndex = (*context_.selectedObjectVertexIndex);
+    }
+    if (lineNumber <= 0 || selectedSourceVertexIndex < 0) {
         return false;
     }
 
-    const int lineNumber = vertexItem->lineNumber();
     const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
     if (!lineFeature.has_value()) {
         (*context_.toolbarStatusNote) = tr("Delete vertex failed: line geometry could not be resolved.");
@@ -842,32 +907,42 @@ bool MapEditorCanvasEditController::removeLineVertexFromSelection()
         return true;
     }
 
-    const int anchorIndex = lineVertexIndexForSourceVertex(lineFeature.value(), vertexItem->vertexIndex());
-    if (anchorIndex < 0) {
+    const int ownerIndex = lineVertexOwnerIndexForSourceVertex(lineFeature.value(), selectedSourceVertexIndex);
+    if (ownerIndex < 0) {
         (*context_.toolbarStatusNote) = tr("Delete vertex failed: selected line anchor could not be resolved.");
         context_.refreshToolbarSummary();
         return true;
     }
 
     QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
-    if (anchorIndex == 0 || anchorIndex == editedVertices.size() - 1) {
+    if (ownerIndex == 0 || ownerIndex == editedVertices.size() - 1) {
         if (editedVertices.size() <= 2) {
             (*context_.toolbarStatusNote) = tr("Delete vertex failed: line needs at least two vertices.");
             context_.refreshToolbarSummary();
             return true;
         }
-        editedVertices.removeAt(anchorIndex);
+        editedVertices.removeAt(ownerIndex);
     } else {
-        if (!removeLineVertexWithReconnect(&editedVertices, anchorIndex)) {
+        if (!removeLineVertexWithReconnect(&editedVertices, ownerIndex)) {
             (*context_.toolbarStatusNote) = tr("Delete vertex failed: selected anchor could not be removed while keeping a valid line.");
             context_.refreshToolbarSummary();
             return true;
         }
     }
 
+    int restoredOwnerIndex = ownerIndex;
+    if (restoredOwnerIndex >= editedVertices.size()) {
+        restoredOwnerIndex = editedVertices.size() - 1;
+    }
+    if (restoredOwnerIndex < 0) {
+        restoredOwnerIndex = 0;
+    }
+
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
+    const QString beforeText = context_.textEditor->text();
+    QString afterText = beforeText;
     QString errorMessage;
-    if (!context_.textEditor->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Delete vertex failed.")
             : tr("Delete vertex failed: %1").arg(errorMessage);
@@ -875,8 +950,11 @@ bool MapEditorCanvasEditController::removeLineVertexFromSelection()
         return true;
     }
 
-    (*context_.toolbarStatusNote) = tr("Removed line vertex %1 on source line %2.").arg(anchorIndex + 1).arg(lineNumber);
+    applySourceTextChangeWithSnapshot(tr("Delete Line Vertex"), beforeText, afterText, lineNumber);
+    (*context_.toolbarStatusNote) = tr("Removed line vertex %1 on source line %2.").arg(ownerIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
+    restoreLineVertexOwnerSelection(lineNumber, restoredOwnerIndex);
+    scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, restoredOwnerIndex);
     return true;
 }
 

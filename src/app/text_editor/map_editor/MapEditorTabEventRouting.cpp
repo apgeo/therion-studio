@@ -35,6 +35,25 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         return QWidget::eventFilter(watched, event);
     }
 
+    if (mapView_ != nullptr
+        && mapScene_ != nullptr
+        && event->type() == QEvent::KeyPress
+        && isMapEditorEventReceiver(watched)) {
+        auto *keyEvent = static_cast<QKeyEvent *>(event);
+        const Qt::KeyboardModifiers disallowedModifiers =
+            keyEvent->modifiers() & ~(Qt::KeyboardModifier::KeypadModifier);
+        const bool deleteKeyNoModifier = disallowedModifiers == Qt::NoModifier;
+        const bool deleteKeyPressed =
+            (keyEvent->key() == Qt::Key_Backspace || keyEvent->key() == Qt::Key_Delete)
+            && deleteKeyNoModifier;
+        if (deleteKeyPressed && !mapScene_->selectedItems().isEmpty()) {
+            if (const std::optional<bool> keyResult =
+                    MapEditorViewportInputController(viewportInputContext()).handleEvent(mapView_, event)) {
+                return keyResult.value();
+            }
+        }
+    }
+
     if (handleMapEditorEscapeKeyEvent(watched, event)) {
         return true;
     }

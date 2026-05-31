@@ -66,6 +66,10 @@ public:
 private:
     QString tr(const char *text) const;
     void resetPendingClickSelection();
+    void applySourceTextChangeWithSnapshot(const QString &label,
+                                           const QString &beforeText,
+                                           const QString &afterText,
+                                           int insertedLineNumber);
     void restoreLineVertexOwnerSelection(int lineNumber, int ownerIndex);
 
     MapEditorCanvasEditContext context_;

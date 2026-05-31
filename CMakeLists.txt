@@ -1113,6 +1113,10 @@ therion_add_map_editor_ui_test(MapEditorBackgroundLayerVisibilityTest
     tests/MapEditorBackgroundLayerVisibilityTest.cpp
     "MapEditorBackgroundLayerVisibilityResources")
 
+therion_add_map_editor_ui_test(MapEditorViewportInputControllerTest
+    tests/MapEditorViewportInputControllerTest.cpp
+    "MapEditorViewportInputControllerResources")
+
 set(THERION_UNIT_TEST_TARGETS
     CommandCatalogStoreTest
     TherionDocumentEditorTest
@@ -1159,7 +1163,8 @@ set(THERION_UI_TEST_TARGETS
     MapEditorDragUndoRedoSmokeTest
     MapEditorSplitAreaBorderSmokeTest
     MapEditorSelectionPanelTypeOptionsTest
-    MapEditorBackgroundLayerVisibilityTest)
+    MapEditorBackgroundLayerVisibilityTest
+    MapEditorViewportInputControllerTest)
 
 set(THERION_TEST_EXECUTABLE_TARGETS
     ${THERION_UNIT_TEST_TARGETS}

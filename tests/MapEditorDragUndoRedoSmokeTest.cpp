@@ -22,6 +22,7 @@
 #include <QSet>
 #include <QTabWidget>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QTreeView>
 #include <QVBoxLayout>
 
@@ -464,6 +465,18 @@ void pumpEvents()
 {
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+}
+
+void waitForMs(int delayMs)
+{
+    if (delayMs <= 0) {
+        return;
+    }
+
+    QEventLoop loop;
+    QTimer::singleShot(delayMs, &loop, &QEventLoop::quit);
+    loop.exec();
+    pumpEvents();
 }
 
 MapEditableGeometryVertexItem *findCenteredLineAnchor(QGraphicsScene *scene, const QRectF &visibleSceneRect)
@@ -1520,6 +1533,54 @@ int runDragUndoRedoSmoke()
                 "Text-to-map vertex sync should select line vertex index 2 for source row line 7.")) {
         return 1;
     }
+
+    const QString textBeforeVertexDelete = mapTab->text();
+    if (!expect(!textBeforeVertexDelete.isEmpty(), "TH2 text should not be empty before vertex delete test.")) {
+        return 1;
+    }
+    mapView->setFocus(Qt::OtherFocusReason);
+    mapView->viewport()->setFocus(Qt::OtherFocusReason);
+    pumpEvents();
+    sendKey(mapView->viewport(), QEvent::KeyPress, Qt::Key_Backspace);
+    sendKey(mapView->viewport(), QEvent::KeyRelease, Qt::Key_Backspace);
+    pumpEvents();
+    waitForMs(140);
+
+    const QString textAfterVertexDelete = mapTab->text();
+    if (!expect(textAfterVertexDelete != textBeforeVertexDelete,
+                "Backspace on a selected line vertex should modify TH2 text by deleting the selected vertex.")) {
+        return 1;
+    }
+    if (!expect(mapTab->canUndo(), "Vertex delete should be undoable.")) {
+        return 1;
+    }
+
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textBeforeVertexDelete,
+                "Undo after vertex delete should restore original TH2 text.")) {
+        return 1;
+    }
+    if (!expect(mapTab->canRedo(), "Vertex delete undo should enable redo.")) {
+        return 1;
+    }
+
+    mapTab->triggerRedo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterVertexDelete,
+                "Redo after vertex delete undo should restore edited TH2 text.")) {
+        return 1;
+    }
+
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textBeforeVertexDelete,
+                "Final undo after vertex-delete redo should return the TH2 text to baseline for subsequent tests.")) {
+        return 1;
+    }
+
+    mapTab->goToLine(4);
+    pumpEvents();
 
     const QString originalText = mapTab->text();
     if (!expect(!originalText.isEmpty(), "Loaded TH2 text should not be empty.")) {

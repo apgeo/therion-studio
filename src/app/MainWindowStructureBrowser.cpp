@@ -23,6 +23,7 @@
 #include <QSet>
 #include <QStandardItem>
 #include <QStandardItemModel>
+#include <QStyle>
 #include <QStringList>
 #include <QSvgRenderer>
 #include <QTabWidget>
@@ -39,6 +40,9 @@
 namespace
 {
 constexpr auto kStructureActionFocusTargetConfig = "focus-target-config";
+
+QString normalizedStructurePathKey(const QString &path);
+QString relativeStructurePath(const QString &projectRootPath, const QString &path);
 
 QString structureObjectKindLabel(const QString &category)
 {
@@ -108,6 +112,50 @@ QStandardItem *createIndexedItem(const QString &text,
     item->setData(category, CategoryRole);
     item->setData(name, NameRole);
     item->setData(objectId, ObjectIdRole);
+    return item;
+}
+
+QString diagnosticStructureKey(const TherionStudio::ProjectIndexDiagnostic &diagnostic)
+{
+    return QStringLiteral("%1|%2|%3|%4")
+        .arg(QString::number(static_cast<int>(diagnostic.kind)),
+             diagnostic.sourceObjectId,
+             normalizedStructurePathKey(diagnostic.sourceFile),
+             diagnostic.referencedName);
+}
+
+QString diagnosticStructureItemText(const TherionStudio::ProjectIndexDiagnostic &diagnostic)
+{
+    switch (diagnostic.kind) {
+    case TherionStudio::ProjectIndexDiagnosticKind::UnknownMapReference:
+        return QObject::tr("Unresolved map: %1").arg(diagnostic.referencedName);
+    case TherionStudio::ProjectIndexDiagnosticKind::UnknownMapScrapReference:
+        return QObject::tr("Unresolved scrap: %1").arg(diagnostic.referencedName);
+    }
+
+    return QObject::tr("Unresolved reference: %1").arg(diagnostic.referencedName);
+}
+
+QStandardItem *createDiagnosticItem(const TherionStudio::ProjectIndexDiagnostic &diagnostic,
+                                    const QString &projectRootPath)
+{
+    auto *item = createIndexedItem(diagnosticStructureItemText(diagnostic),
+                                   diagnostic.sourceFile,
+                                   diagnostic.lineNumber,
+                                   QStringLiteral("Diagnostics"),
+                                   diagnostic.referencedName);
+    item->setData(diagnosticStructureKey(diagnostic), DiagnosticKeyRole);
+
+    const QString relativePath = relativeStructurePath(projectRootPath, diagnostic.sourceFile);
+    item->setToolTip(QObject::tr("%1\nSource: %2:%3")
+                         .arg(diagnosticStructureItemText(diagnostic),
+                              relativePath.isEmpty() ? QDir::toNativeSeparators(diagnostic.sourceFile) : relativePath,
+                              QString::number(diagnostic.lineNumber)));
+
+    if (QApplication::style() != nullptr) {
+        item->setIcon(QApplication::style()->standardIcon(QStyle::SP_MessageBoxWarning));
+    }
+    item->setData(QColor(156, 96, 0), Qt::ForegroundRole);
     return item;
 }
 
@@ -357,6 +405,10 @@ void updateStructureSourceLocationRoles(QStandardItemModel *model,
             entriesByObjectId.insert(entry.objectId, entry);
         }
     }
+    QHash<QString, TherionStudio::ProjectIndexDiagnostic> diagnosticsByKey;
+    for (const TherionStudio::ProjectIndexDiagnostic &diagnostic : projectIndex.diagnostics) {
+        diagnosticsByKey.insert(diagnosticStructureKey(diagnostic), diagnostic);
+    }
 
     std::function<void(QStandardItem *)> visitItem = [&](QStandardItem *item) {
         if (item == nullptr) {
@@ -374,6 +426,17 @@ void updateStructureSourceLocationRoles(QStandardItemModel *model,
                                                    .arg(entryIt->lineNumber),
                               OverrideKeyRole);
             }
+        }
+        const QString diagnosticKey = item->data(DiagnosticKeyRole).toString();
+        const auto diagnosticIt = diagnosticsByKey.constFind(diagnosticKey);
+        if (diagnosticIt != diagnosticsByKey.constEnd()) {
+            item->setData(diagnosticIt->sourceFile, SourceFileRole);
+            item->setData(diagnosticIt->lineNumber, LineNumberRole);
+            const QString relativePath = relativeStructurePath(projectRootPath, diagnosticIt->sourceFile);
+            item->setToolTip(QObject::tr("%1\nSource: %2:%3")
+                                 .arg(diagnosticStructureItemText(*diagnosticIt),
+                                      relativePath.isEmpty() ? QDir::toNativeSeparators(diagnosticIt->sourceFile) : relativePath,
+                                      QString::number(diagnosticIt->lineNumber)));
         }
 
         for (int row = 0; row < item->rowCount(); ++row) {
@@ -643,6 +706,15 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
             }
 
             visibleNodeIndexByDepth[node.entry.depth] = nodeIndex;
+        }
+
+        for (const TherionStudio::ProjectIndexDiagnostic &diagnostic : projectIndex.diagnostics) {
+            QStandardItem *parentItem = mapItemByKey.value(diagnostic.sourceObjectId, nullptr);
+            if (parentItem == nullptr) {
+                parentItem = structureModel_->invisibleRootItem();
+            }
+
+            parentItem->appendRow(createDiagnosticItem(diagnostic, projectRootPath_));
         }
     }
 

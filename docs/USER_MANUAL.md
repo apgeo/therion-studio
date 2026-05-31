@@ -100,7 +100,7 @@ For `.th2` files:
 
 ### 5.1 Structure Pane
 
-The `Structure` pane shows detected `Survey`, `Map`, and `Scrap` hierarchy from open content. Maps and scraps referenced inside a `map ... endmap` block are nested under that map when the reference is unambiguous. Namespaced references such as `name@survey.parent` are resolved before same-namespace or globally unique fallback names. `preview above` / `preview below` relations are shown as map source content, not as ownership hierarchy. Selecting an item opens/synchronizes to its source location.
+The `Structure` pane shows detected `Survey`, `Map`, and `Scrap` hierarchy from open content. Maps and scraps referenced inside a `map ... endmap` block are nested under that map when the reference is unambiguous. Namespaced references such as `name@survey.parent` are resolved before same-namespace or globally unique fallback names. Unresolved map/scrap references appear as warning rows under the owning map and open the source reference line when selected. `preview above` / `preview below` relations are shown as map source content, not as ownership hierarchy. Selecting an item opens/synchronizes to its source location.
 For project-level indexing, Therion Studio uses the selected `Target Config` when it points inside the opened project.
 If no `Target Config` is selected, a root `thconfig` is used by default; if there is no root `thconfig` and exactly one named root config (`*.thconfig` or `thconfig.*`), that file is used.
 If the project root contains multiple named config files and no target config is selected, choose the intended `Target Config` in the `Compiler` pane instead of relying on an automatic merged structure.

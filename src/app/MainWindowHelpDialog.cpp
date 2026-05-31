@@ -1,15 +1,21 @@
 #include "MainWindowHelpDialog.h"
 
 #include <QCoreApplication>
+#include <QDesktopServices>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
 #include <QLabel>
 #include <QLocale>
+#include <QPalette>
+#include <QRegularExpression>
 #include <QSysInfo>
 #include <QTextBrowser>
+#include <QTextDocument>
+#include <QUrl>
 #include <QVBoxLayout>
 #include <QtGlobal>
 
@@ -116,7 +122,12 @@ QStringList userManualRootCandidates()
         QDir(appDir).absoluteFilePath(QStringLiteral("../docs")),
         QDir(appDir).absoluteFilePath(QStringLiteral("../../docs")),
         QDir(appDir).absoluteFilePath(QStringLiteral("../../../docs")),
-        QDir(appDir).absoluteFilePath(QStringLiteral("../../../../docs"))};
+        QDir(appDir).absoluteFilePath(QStringLiteral("../../../../docs")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../Resources/docs")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../share/doc/therion-studio")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../../share/doc/therion-studio")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../../../share/doc/therion-studio")),
+        QDir(appDir).absoluteFilePath(QStringLiteral("../../../../share/doc/therion-studio"))};
 }
 
 QStringList userManualPathCandidates()
@@ -164,6 +175,143 @@ QString loadUtf8TextFile(const QString &filePath)
     return QString::fromUtf8(file.readAll());
 }
 
+QString plainHeadingText(QString headingText)
+{
+    headingText = headingText.trimmed();
+    headingText.replace(QRegularExpression(QStringLiteral("`([^`]*)`")), QStringLiteral("\\1"));
+    headingText.replace(QRegularExpression(QStringLiteral("\\[([^\\]]+)\\]\\([^\\)]*\\)")),
+                        QStringLiteral("\\1"));
+    headingText.remove(QRegularExpression(QStringLiteral("<[^>]*>")));
+    headingText.remove(QRegularExpression(QStringLiteral("[*_~]")));
+    return headingText.simplified();
+}
+
+QString anchorSlugForHeading(const QString &headingText)
+{
+    const QString normalized = plainHeadingText(headingText).toLower();
+    QString slug;
+    bool pendingDash = false;
+    for (const QChar character : normalized) {
+        if (character.isLetterOrNumber()) {
+            if (pendingDash && !slug.isEmpty()) {
+                slug.append(QLatin1Char('-'));
+            }
+            slug.append(character);
+            pendingDash = false;
+        } else if (character.isSpace()
+                   || character == QLatin1Char('-')
+                   || character == QLatin1Char('_')
+                   || character == QLatin1Char('/')) {
+            pendingDash = true;
+        }
+    }
+
+    return !slug.isEmpty() ? slug : QStringLiteral("section");
+}
+
+QStringList markdownHeadingAnchorSlugs(const QString &markdown)
+{
+    static const QRegularExpression headingExpression(QStringLiteral("^(#{1,6})\\s+(.+?)\\s*#*\\s*$"));
+
+    const QStringList lines = markdown.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    QStringList anchors;
+    QHash<QString, int> anchorCounts;
+    bool inCodeFence = false;
+    QString fenceMarker;
+
+    anchors.reserve(lines.size());
+    for (const QString &line : lines) {
+        const QString trimmed = line.trimmed();
+        if (trimmed.startsWith(QStringLiteral("```")) || trimmed.startsWith(QStringLiteral("~~~"))) {
+            const QString marker = trimmed.left(3);
+            if (!inCodeFence) {
+                inCodeFence = true;
+                fenceMarker = marker;
+            } else if (marker == fenceMarker) {
+                inCodeFence = false;
+                fenceMarker.clear();
+            }
+            continue;
+        }
+
+        if (!inCodeFence) {
+            const QRegularExpressionMatch match = headingExpression.match(line);
+            if (match.hasMatch()) {
+                const QString baseSlug = anchorSlugForHeading(match.captured(2));
+                const int occurrence = anchorCounts.value(baseSlug) + 1;
+                anchorCounts.insert(baseSlug, occurrence);
+                const QString slug = occurrence == 1
+                                         ? baseSlug
+                                         : QStringLiteral("%1-%2").arg(baseSlug).arg(occurrence);
+                anchors.append(slug);
+            }
+        }
+    }
+
+    return anchors;
+}
+
+QString markdownToHtmlWithHeadingAnchors(const QString &markdown)
+{
+    static const QRegularExpression headingTagExpression(QStringLiteral("<h[1-6]\\b[^>]*>"),
+                                                         QRegularExpression::CaseInsensitiveOption);
+
+    QTextDocument document;
+    document.setMarkdown(markdown, QTextDocument::MarkdownDialectGitHub);
+    QString html = document.toHtml();
+
+    const QStringList anchors = markdownHeadingAnchorSlugs(markdown);
+    QRegularExpressionMatchIterator matches = headingTagExpression.globalMatch(html);
+    int insertedLength = 0;
+    int anchorIndex = 0;
+    while (matches.hasNext() && anchorIndex < anchors.size()) {
+        const QRegularExpressionMatch match = matches.next();
+        const QString anchorHtml = QStringLiteral("<a name=\"%1\" id=\"%1\"></a>")
+                                       .arg(anchors.at(anchorIndex).toHtmlEscaped());
+        html.insert(match.capturedEnd() + insertedLength, anchorHtml);
+        insertedLength += anchorHtml.size();
+        ++anchorIndex;
+    }
+
+    return html;
+}
+
+QString markdownStyleSheet(const QPalette &palette)
+{
+    const QString textColor = palette.color(QPalette::Text).name(QColor::HexRgb);
+    const QString linkColor = palette.color(QPalette::Link).name(QColor::HexRgb);
+    const QString borderColor = palette.color(QPalette::Mid).name(QColor::HexRgb);
+    const QString codeBackground = palette.color(QPalette::AlternateBase).name(QColor::HexRgb);
+
+    return QStringLiteral(
+               "body { color: %1; font-size: 14px; line-height: 1.45; }"
+               "h1 { font-size: 26px; margin-top: 0; margin-bottom: 18px; }"
+               "h2 { font-size: 22px; margin-top: 28px; margin-bottom: 12px; }"
+               "h3 { font-size: 18px; margin-top: 20px; margin-bottom: 8px; }"
+               "h4 { font-size: 15px; margin-top: 16px; margin-bottom: 6px; }"
+               "p { margin-top: 0; margin-bottom: 12px; }"
+               "ul, ol { margin-top: 6px; margin-bottom: 14px; margin-left: 22px; }"
+               "li { margin-bottom: 6px; }"
+               "table { border-collapse: collapse; margin-top: 10px; margin-bottom: 18px; }"
+               "th, td { border: 1px solid %3; padding: 6px 8px; }"
+               "th { font-weight: bold; }"
+               "code { background-color: %4; padding: 1px 3px; }"
+               "pre { background-color: %4; margin-top: 10px; margin-bottom: 16px; padding: 10px; }"
+               "a { color: %2; text-decoration: none; }")
+        .arg(textColor, linkColor, borderColor, codeBackground);
+}
+
+void openHelpLink(QTextBrowser *browser, const QUrl &url)
+{
+    const QString fragment = url.fragment(QUrl::FullyDecoded);
+    if (!fragment.isEmpty() && (url.isRelative() || url.scheme().isEmpty())) {
+        browser->scrollToAnchor(fragment);
+        return;
+    }
+
+    QDesktopServices::openUrl(url);
+}
+
 void showMarkdownDialog(QWidget *parent,
                         const QString &title,
                         const QString &markdown,
@@ -186,9 +334,15 @@ void showMarkdownDialog(QWidget *parent,
     }
 
     auto *browser = new QTextBrowser(dialog);
-    browser->setOpenExternalLinks(true);
+    browser->setOpenExternalLinks(false);
+    browser->setOpenLinks(false);
     browser->setReadOnly(true);
-    browser->document()->setMarkdown(markdown);
+    browser->document()->setDocumentMargin(18.0);
+    browser->document()->setDefaultStyleSheet(markdownStyleSheet(browser->palette()));
+    browser->setHtml(markdownToHtmlWithHeadingAnchors(markdown));
+    QObject::connect(browser, &QTextBrowser::anchorClicked, browser, [browser](const QUrl &url) {
+        openHelpLink(browser, url);
+    });
     layout->addWidget(browser, 1);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
@@ -234,8 +388,6 @@ void showUserManualDialog(QWidget *parent)
 
     showMarkdownDialog(parent,
                        QCoreApplication::translate("MainWindow", "User Manual"),
-                       manualText,
-                       QCoreApplication::translate("MainWindow", "Source: %1")
-                           .arg(QDir::toNativeSeparators(manualPath)));
+                       manualText);
 }
 } // namespace TherionStudio

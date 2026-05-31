@@ -776,20 +776,14 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                 }
             }
 
-            const bool insertShortcut = keyEvent->key() == Qt::Key_Insert
-                || (keyEvent->key() == Qt::Key_I && keyEvent->modifiers() == Qt::NoModifier);
-            if (insertShortcut) {
-                if (context_.insertLineVertexFromSelection()) {
-                    event->accept();
-                    return true;
-                }
-            } else if (keyEvent->key() == Qt::Key_Delete || keyEvent->key() == Qt::Key_Backspace) {
+            if ((keyEvent->key() == Qt::Key_Delete || keyEvent->key() == Qt::Key_Backspace)
+                && keyEvent->modifiers() == Qt::NoModifier) {
                 if (context_.removeLineVertexFromSelection()) {
                     event->accept();
                     return true;
                 }
-            } else if (keyEvent->key() == Qt::Key_S && keyEvent->modifiers() == Qt::NoModifier) {
-                if (context_.toggleLineVertexSmoothFromSelection()) {
+                if (context_.deleteSelectedObjectFromSelection
+                    && context_.deleteSelectedObjectFromSelection()) {
                     event->accept();
                     return true;
                 }

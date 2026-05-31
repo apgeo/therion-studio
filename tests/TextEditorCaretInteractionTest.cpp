@@ -432,6 +432,28 @@ int main(int argc, char *argv[])
     scopeCombo->setCurrentIndex(allScopeIndex);
     pumpEvents();
 
+    if (!expect(findToolboxCommandItem(toolboxList, QStringLiteral("source")) == nullptr,
+                ".th toolbox should not expose thconfig `source` command templates.")) {
+        return 1;
+    }
+    if (!expect(findToolboxCommandItem(toolboxList, QStringLiteral("select")) == nullptr,
+                ".th toolbox should not expose thconfig `select` command templates.")) {
+        return 1;
+    }
+    if (!expect(findToolboxCommandItem(toolboxList, QStringLiteral("export")) == nullptr,
+                ".th toolbox should not expose thconfig `export` command templates.")) {
+        return 1;
+    }
+    for (const QString &mapObjectCommand : {QStringLiteral("scrap"),
+                                            QStringLiteral("point"),
+                                            QStringLiteral("line"),
+                                            QStringLiteral("area")}) {
+        if (!expect(findToolboxCommandItem(toolboxList, mapObjectCommand) == nullptr,
+                    ".th toolbox should not expose .th2 map object command templates.")) {
+            return 1;
+        }
+    }
+
     QListWidgetItem *toolboxDataItem = findToolboxCommandItem(toolboxList, QStringLiteral("data"));
     if (!expect(toolboxDataItem != nullptr, "Failed to find `data` command in block toolbox list.")) {
         return 1;
@@ -822,6 +844,21 @@ int main(int argc, char *argv[])
         }
         if (!expect(findToolboxCommandItem(configToolboxList, QStringLiteral("export")) != nullptr,
                     "Top-level toolbox commands for thconfig should include `export`.")) {
+            delete configTab;
+            return 1;
+        }
+        if (!expect(findToolboxCommandItem(configToolboxList, QStringLiteral("source")) != nullptr,
+                    "Top-level toolbox commands for thconfig should include `source`.")) {
+            delete configTab;
+            return 1;
+        }
+        if (!expect(findToolboxCommandItem(configToolboxList, QStringLiteral("survey")) == nullptr,
+                    "thconfig toolbox should not expose `.th` survey command templates.")) {
+            delete configTab;
+            return 1;
+        }
+        if (!expect(findToolboxCommandItem(configToolboxList, QStringLiteral("input")) == nullptr,
+                    "thconfig toolbox should not expose `.th` input command templates.")) {
             delete configTab;
             return 1;
         }

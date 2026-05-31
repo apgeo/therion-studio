@@ -28,9 +28,6 @@ void TextEditorTab::buildAppearanceController()
     appearanceContext.updateBlockDetailsHelpForCurrentFocus = [this]() {
         updateBlockDetailsHelpForCurrentFocus();
     };
-    appearanceContext.rebuildBlocksCanvasFromText = [this]() {
-        rebuildBlocksCanvasFromText();
-    };
 
     appearanceController_ = std::make_unique<TextEditorAppearanceController>(std::move(appearanceContext));
 }

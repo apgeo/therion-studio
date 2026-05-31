@@ -34,6 +34,7 @@ struct TextEditorCommandMetadata
     QHash<QString, int> commandRequiredPositionalCount;
     QHash<QString, QStringList> commandArgumentSignaturesByToken;
     QHash<QString, bool> commandPrimaryValueIsPerson;
+    QHash<QString, QString> commandSourceFileByToken;
     QHash<QString, QStringList> contextCommandTokens;
     QHash<QString, QStringList> blockCommandContextsByKind;
 
@@ -55,6 +56,7 @@ struct TextEditorCommandMetadata
         commandRequiredPositionalCount.clear();
         commandArgumentSignaturesByToken.clear();
         commandPrimaryValueIsPerson.clear();
+        commandSourceFileByToken.clear();
         contextCommandTokens.clear();
         blockCommandContextsByKind.clear();
     }

@@ -78,6 +78,7 @@ struct MapEditorViewportInputContext
     std::function<void(bool)> fitMapToView;
     std::function<bool()> insertLineVertexFromSelection;
     std::function<bool()> removeLineVertexFromSelection;
+    std::function<bool()> deleteSelectedObjectFromSelection;
     std::function<bool()> toggleLineVertexSmoothFromSelection;
 };
 }

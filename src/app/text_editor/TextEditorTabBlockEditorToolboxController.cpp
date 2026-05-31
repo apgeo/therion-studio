@@ -21,6 +21,9 @@ BlockEditorToolboxContext TextEditorTab::blockEditorToolboxContext()
     context.canvasScene = &blockCanvasScene_;
     context.editor = &editor_;
     context.commandMetadata = &commandMetadata_;
+    context.documentPath = [this]() {
+        return filePath_;
+    };
     context.normalizeCompletionContext = [this](const QString &contextToken) {
         return normalizeCompletionContext(contextToken);
     };

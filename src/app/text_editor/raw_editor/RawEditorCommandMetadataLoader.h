@@ -47,7 +47,8 @@ private:
                                           const TherionHelpEntry &entry,
                                           int requiredPositionalCount,
                                           bool primaryValueIsPerson,
-                                          const QStringList &commandArgumentSignatures) const;
+                                          const QStringList &commandArgumentSignatures,
+                                          const QString &sourceFile) const;
     void applyCommandAliasMetadata(const QString &commandName,
                                    const QJsonObject &commandObject,
                                    const TherionHelpEntry &entry,

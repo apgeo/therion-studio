@@ -87,6 +87,7 @@ Structured block-canvas requirements:
 - the structured mode shall be available for supported file types and shall remain optional per file type
 - initial scope shall support `.th` and Therion config documents (`thconfig`, `*.thconfig`, and `thconfig.*`)
 - the structured mode shall expose a toolbox of compatible Therion block/command templates that can be inserted via drag and drop into the canvas
+- the structured-mode toolbox shall filter command templates by document domain using generated Therion Book metadata: `.th` documents shall show commands from "Creating data files", Therion config documents shall show commands from "Processing data", and `.th` toolbox templates shall not expose `.th2` map-object commands (`scrap`, `point`, `line`, `area`) because those are edited through the TH2 map editor
 - the structured-mode toolbox shall provide a scope filter with `Auto` as default; `Auto` shall derive insertion scope from the currently selected canvas block context and manual scope selection shall persist until changed by the user.
 - the structured-mode toolbox shall include a first-class `comment` insertion item that inserts full-line comments in source
 - the structured mode shall render parsed structure cards in source order with parent-child nesting for supported directives
@@ -549,7 +550,7 @@ Platform modifier mapping:
 | Find Next | Find | Command+G | Jump to the next match |
 | Find Previous | Find | Command+Shift+G | Jump to the previous match |
 | Toggle Debug Sidebar | Debug | none in the current Swift app | Toggle the debug sidebar state from the menu |
-| User Manual | Help | none | Open the localized full user manual document in-app, using `USER_MANUAL.<language>.md` with fallback to `USER_MANUAL.md` |
+| User Manual | Help | none | Open the localized full user manual document in-app, using `USER_MANUAL.<language>.md` with fallback to `USER_MANUAL.md`; the in-app manual reader shall render readable Markdown spacing and support local table-of-contents links |
 
 The Qt application may add additional platform-standard shortcuts only if they do not conflict with the behavior above and do not change the documented commands.
 

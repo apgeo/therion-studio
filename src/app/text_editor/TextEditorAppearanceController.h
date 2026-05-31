@@ -27,7 +27,6 @@ struct TextEditorAppearanceContext
     bool *blocksModeActive = nullptr;
     std::function<void()> updateContextHelp;
     std::function<void()> updateBlockDetailsHelpForCurrentFocus;
-    std::function<void()> rebuildBlocksCanvasFromText;
 };
 
 class TextEditorAppearanceController final

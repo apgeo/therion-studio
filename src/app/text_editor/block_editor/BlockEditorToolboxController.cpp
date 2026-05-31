@@ -6,9 +6,11 @@
 #include "../TextEditorCommandMetadata.h"
 
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionFileTypes.h"
 
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QFileInfo>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
 #include <QLineEdit>
@@ -43,6 +45,52 @@ void appendUniqueList(QStringList &target, const QStringList &values)
 
 namespace TherionStudio
 {
+namespace
+{
+enum class BlockToolboxDocumentKind
+{
+    Unknown,
+    DataFile,
+    ConfigFile,
+};
+
+BlockToolboxDocumentKind documentKindForPath(const QString &documentPath)
+{
+    const QString trimmedPath = documentPath.trimmed();
+    if (trimmedPath.isEmpty()) {
+        return BlockToolboxDocumentKind::Unknown;
+    }
+    if (isTherionConfigFilePath(trimmedPath)) {
+        return BlockToolboxDocumentKind::ConfigFile;
+    }
+
+    const QString suffix = QFileInfo(trimmedPath).suffix().trimmed().toLower();
+    if (suffix == QStringLiteral("th") || suffix == QStringLiteral("th2")) {
+        return BlockToolboxDocumentKind::DataFile;
+    }
+    return BlockToolboxDocumentKind::Unknown;
+}
+
+bool sourceFileBelongsToCreatingDataFilesChapter(const QString &sourceFile)
+{
+    return sourceFile.contains(QStringLiteral("therion/thbook/ch02.tex"), Qt::CaseInsensitive);
+}
+
+bool sourceFileBelongsToProcessingDataChapter(const QString &sourceFile)
+{
+    return sourceFile.contains(QStringLiteral("therion/thbook/ch03.tex"), Qt::CaseInsensitive);
+}
+
+bool isTh2MapObjectCommand(const QString &commandToken)
+{
+    const QString normalized = normalizeDirective(commandToken);
+    return normalized == QStringLiteral("scrap")
+        || normalized == QStringLiteral("point")
+        || normalized == QStringLiteral("line")
+        || normalized == QStringLiteral("area");
+}
+}
+
 BlockEditorToolboxController::BlockEditorToolboxController(BlockEditorToolboxContext context)
     : context_(std::move(context))
 {
@@ -81,6 +129,45 @@ QString BlockEditorToolboxController::normalizeCompletionContext(const QString &
 bool BlockEditorToolboxController::isCompatibleChildKindForBlocks(const QString &parentKind, const QString &childKind) const
 {
     return context_.isCompatibleChildKindForBlocks ? context_.isCompatibleChildKindForBlocks(parentKind, childKind) : false;
+}
+
+bool BlockEditorToolboxController::isCommandAllowedForDocument(const QString &commandToken) const
+{
+    if (context_.commandMetadata == nullptr) {
+        return true;
+    }
+
+    const QString normalizedCommand = normalizeDirective(commandToken);
+    if (normalizedCommand.isEmpty()) {
+        return false;
+    }
+
+    const BlockToolboxDocumentKind documentKind = documentKindForPath(context_.documentPath ? context_.documentPath() : QString());
+    if (normalizedCommand == QStringLiteral("comment")) {
+        return true;
+    }
+    if (isMapObjectReferenceKind(normalizedCommand)) {
+        return documentKind != BlockToolboxDocumentKind::ConfigFile;
+    }
+    if (documentKind == BlockToolboxDocumentKind::Unknown) {
+        return true;
+    }
+
+    const QString sourceFile = context_.commandMetadata->commandSourceFileByToken.value(normalizedCommand);
+    if (sourceFile.trimmed().isEmpty()) {
+        return true;
+    }
+
+    switch (documentKind) {
+    case BlockToolboxDocumentKind::DataFile:
+        return sourceFileBelongsToCreatingDataFilesChapter(sourceFile)
+            && !isTh2MapObjectCommand(normalizedCommand);
+    case BlockToolboxDocumentKind::ConfigFile:
+        return sourceFileBelongsToProcessingDataChapter(sourceFile);
+    case BlockToolboxDocumentKind::Unknown:
+        break;
+    }
+    return true;
 }
 
 QString BlockEditorToolboxController::tr(const char *text) const
@@ -187,6 +274,9 @@ void BlockEditorToolboxController::populateBlockToolbox()
             }
             const QString parentKind = contextToken == QStringLiteral("none") ? QString() : contextToken;
             if (!isCompatibleChildKindForBlocks(parentKind, normalizedCommand)) {
+                continue;
+            }
+            if (!isCommandAllowedForDocument(normalizedCommand)) {
                 continue;
             }
             const QString closingDirective = completionClosingDirectiveForOpening(normalizedCommand);

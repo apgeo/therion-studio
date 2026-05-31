@@ -24,6 +24,7 @@ struct BlockEditorToolboxContext
     QGraphicsScene **canvasScene = nullptr;
     QPlainTextEdit **editor = nullptr;
     const TextEditorCommandMetadata *commandMetadata = nullptr;
+    std::function<QString()> documentPath;
     std::function<QString(const QString &)> normalizeCompletionContext;
     std::function<bool(const QString &, const QString &)> isCompatibleChildKindForBlocks;
     std::function<QString(const char *)> translate;
@@ -49,6 +50,7 @@ private:
     QPlainTextEdit *editor() const;
     QString normalizeCompletionContext(const QString &contextToken) const;
     bool isCompatibleChildKindForBlocks(const QString &parentKind, const QString &childKind) const;
+    bool isCommandAllowedForDocument(const QString &commandToken) const;
     QString tr(const char *text) const;
 };
 }

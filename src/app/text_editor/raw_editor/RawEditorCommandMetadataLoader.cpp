@@ -313,7 +313,8 @@ void RawEditorCommandMetadataLoader::applyCommandRegistrationMetadata(const QStr
                                                                       const TherionHelpEntry &entry,
                                                                       int requiredPositionalCount,
                                                                       bool primaryValueIsPerson,
-                                                                      const QStringList &commandArgumentSignatures) const
+                                                                      const QStringList &commandArgumentSignatures,
+                                                                      const QString &sourceFile) const
 {
     if (context_.metadata == nullptr) {
         return;
@@ -325,6 +326,9 @@ void RawEditorCommandMetadataLoader::applyCommandRegistrationMetadata(const QStr
         metadata().commandArgumentSignaturesByToken.insert(commandName, commandArgumentSignatures);
     }
     metadata().commandPrimaryValueIsPerson.insert(commandName, primaryValueIsPerson);
+    if (!sourceFile.trimmed().isEmpty()) {
+        metadata().commandSourceFileByToken.insert(commandName, sourceFile.trimmed());
+    }
     registerCompletionToken(commandName);
     for (const QString &keyword : entry.relatedKeywords) {
         registerCompletionToken(keyword);
@@ -357,6 +361,9 @@ void RawEditorCommandMetadataLoader::applyCommandAliasMetadata(const QString &co
         appendUniqueList(metadata().commandArgumentSignaturesByToken[alias],
                          metadata().commandArgumentSignaturesByToken.value(commandName));
         metadata().commandPrimaryValueIsPerson.insert(alias, metadata().commandPrimaryValueIsPerson.value(commandName));
+        if (metadata().commandSourceFileByToken.contains(commandName)) {
+            metadata().commandSourceFileByToken.insert(alias, metadata().commandSourceFileByToken.value(commandName));
+        }
         registerCompletionToken(alias);
         TherionHelpEntry aliasEntry = entry;
         appendUnique(aliasEntry.relatedKeywords, commandName);
@@ -436,6 +443,11 @@ void RawEditorCommandMetadataLoader::applyCatalogCommandsMetadata(const QJsonObj
         int requiredPositionalCount = 0;
         QStringList commandArgumentSignatures;
         bool primaryValueIsPerson = false;
+        const QString sourceFile = commandObject.value(QStringLiteral("source"))
+                                       .toObject()
+                                       .value(QStringLiteral("file"))
+                                       .toString()
+                                       .trimmed();
 
         const QJsonArray syntaxArray = commandObject.value(QStringLiteral("syntax")).toArray();
         QStringList syntaxRows;
@@ -460,7 +472,8 @@ void RawEditorCommandMetadataLoader::applyCatalogCommandsMetadata(const QJsonObj
                                          entry,
                                          requiredPositionalCount,
                                          primaryValueIsPerson,
-                                         commandArgumentSignatures);
+                                         commandArgumentSignatures,
+                                         sourceFile);
         applyCommandAliasMetadata(commandName, commandObject, entry, normalizedCommandContexts);
     }
 }

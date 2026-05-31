@@ -669,6 +669,12 @@ install(TARGETS TherionStudio
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
+install(FILES
+        docs/USER_MANUAL.md
+        docs/USER_MANUAL.cs.md
+        docs/USER_MANUAL.sk.md
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/therion-studio")
+
 if(UNIX AND NOT APPLE)
     set(THERION_STUDIO_LINUX_DESKTOP_ID "therion-studio" CACHE STRING
         "Linux desktop file and AppStream application ID, without the .desktop/.metainfo.xml suffix")

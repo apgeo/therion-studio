@@ -1,18 +1,79 @@
 #include "TextEditorAppearanceController.h"
 
+#include "block_editor/BlockEditorCanvasItem.h"
 #include "TextEditorSurfaceStyler.h"
 
+#include <QApplication>
+#include <QGraphicsLineItem>
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QPalette>
+#include <QPen>
 #include <QPlainTextEdit>
 #include <QTextBrowser>
 #include <QWidget>
 
+#include <QHash>
 #include <utility>
 
 namespace TherionStudio
 {
+namespace
+{
+void refreshBlockCanvasSceneAppearance(QGraphicsScene *scene)
+{
+    if (scene == nullptr) {
+        return;
+    }
+
+    QHash<int, QString> blockKindByLine;
+    for (QGraphicsItem *item : scene->items()) {
+        if (auto *blockItem = dynamic_cast<BlockCanvasItem *>(item)) {
+            blockKindByLine.insert(blockItem->lineNumber(), blockItem->kind());
+        }
+    }
+
+    const QPalette palette = QApplication::palette();
+    QPen connectorPen(palette.color(QPalette::Mid));
+    connectorPen.setWidthF(1.2);
+    connectorPen.setStyle(Qt::SolidLine);
+
+    for (QGraphicsItem *item : scene->items()) {
+        auto *lineItem = qgraphicsitem_cast<QGraphicsLineItem *>(item);
+        if (lineItem == nullptr) {
+            continue;
+        }
+
+        if (qFuzzyCompare(lineItem->zValue(), -100.0)) {
+            lineItem->setPen(connectorPen);
+            continue;
+        }
+
+        if (!qFuzzyCompare(lineItem->zValue(), -99.0)) {
+            continue;
+        }
+
+        bool ok = false;
+        const int sourceLine = lineItem->data(kBlockEditorCanvasEndHintContainerLineDataRole).toInt(&ok);
+        if (!ok) {
+            continue;
+        }
+
+        const QColor baseColor = blockEditorCanvasBaseColorForDirective(blockKindByLine.value(sourceLine));
+        QColor closeColor = baseColor.lightnessF() < 0.5
+            ? baseColor.lighter(155)
+            : baseColor.darker(130);
+        closeColor.setAlpha(245);
+        QPen closePen(closeColor);
+        closePen.setWidthF(3.4);
+        closePen.setStyle(Qt::SolidLine);
+        lineItem->setPen(closePen);
+    }
+
+    scene->update();
+}
+}
+
 TextEditorAppearanceController::TextEditorAppearanceController(TextEditorAppearanceContext context)
     : context_(std::move(context))
 {
@@ -88,9 +149,8 @@ void TextEditorAppearanceController::handleApplicationAppearanceChanged()
 
     if (context_.blocksModeActive != nullptr
         && *context_.blocksModeActive
-        && context_.blockCanvasScene != nullptr
-        && context_.rebuildBlocksCanvasFromText) {
-        context_.rebuildBlocksCanvasFromText();
+        && context_.blockCanvasScene != nullptr) {
+        refreshBlockCanvasSceneAppearance(context_.blockCanvasScene);
     }
 }
 }

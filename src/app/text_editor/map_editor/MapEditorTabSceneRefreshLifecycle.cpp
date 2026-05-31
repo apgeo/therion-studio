@@ -39,10 +39,11 @@ void MapEditorTab::handleApplicationAppearanceChanged()
     }
 
     if (mapScene_ != nullptr) {
-        refreshMapScenePreservingUndoStack();
+        mapScene_->update();
     }
-    rebuildInspectorObjectsTree();
-    refreshInspectorBackgroundPanel();
+    if (mapMagnifierOverlay_ != nullptr) {
+        mapMagnifierOverlay_->update();
+    }
     refreshStatus();
 }
 

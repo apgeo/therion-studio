@@ -1,6 +1,7 @@
 #include "MapEditorTab.h"
 
 #include "MapEditorViewportInputContext.h"
+#include "../TextEditorTab.h"
 
 namespace TherionStudio
 {
@@ -123,6 +124,14 @@ MapEditorViewportInputContext MapEditorTab::viewportInputContext()
         },
         .removeLineVertexFromSelection = [this]() {
             return removeLineVertexFromSelection();
+        },
+        .deleteSelectedObjectFromSelection = [this]() {
+            if (textEditor_ == nullptr) {
+                return false;
+            }
+            const QString beforeText = textEditor_->text();
+            deleteSelectedObjectFromSelection();
+            return textEditor_->text() != beforeText;
         },
         .toggleLineVertexSmoothFromSelection = [this]() {
             return toggleLineVertexSmoothFromSelection();

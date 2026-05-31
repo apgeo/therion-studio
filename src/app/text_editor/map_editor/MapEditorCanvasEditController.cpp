@@ -263,45 +263,57 @@ MapEditableGeometryVertexItem *resolveSelectedLineVertexItemForContext(const Map
         return nullptr;
     }
 
+    if (context.selectedObjectLineNumber != nullptr
+        && context.selectedObjectVertexIndex != nullptr
+        && context.selectedObjectKind != nullptr
+        && (*context.selectedObjectLineNumber) > 0
+        && (*context.selectedObjectVertexIndex) >= 0
+        && (*context.selectedObjectKind) == QStringLiteral("line")) {
+        MapEditableGeometryVertexItem *selectedAnchor = findGeometryVertexItem(context.scene,
+                                                                               (*context.selectedObjectLineNumber),
+                                                                               (*context.selectedObjectVertexIndex),
+                                                                               QStringLiteral("line"));
+        if (selectedAnchor != nullptr) {
+            return selectedAnchor;
+        }
+    }
+
     const QList<QGraphicsItem *> selectedItems = context.scene->selectedItems();
     if (!selectedItems.isEmpty()) {
-        if (selectedItems.size() != 1) {
-            return nullptr;
+        int resolvedLineNumber = 0;
+        int resolvedOwnerVertexIndex = -1;
+        MapEditableGeometryVertexItem *fallbackVertex = nullptr;
+        for (QGraphicsItem *selectedItem : selectedItems) {
+            auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItem);
+            if (vertexItem == nullptr || !vertexItem->geometryKind().startsWith(QStringLiteral("line"))) {
+                continue;
+            }
+            const int ownerVertexIndex = selectedItem->data(kMapSceneOwnerVertexRole).toInt();
+            const int candidateOwnerVertexIndex = ownerVertexIndex >= 0 ? ownerVertexIndex : vertexItem->vertexIndex();
+            if (resolvedLineNumber == 0) {
+                resolvedLineNumber = vertexItem->lineNumber();
+                resolvedOwnerVertexIndex = candidateOwnerVertexIndex;
+                fallbackVertex = vertexItem;
+                continue;
+            }
+            if (resolvedLineNumber != vertexItem->lineNumber()
+                || resolvedOwnerVertexIndex != candidateOwnerVertexIndex) {
+                return nullptr;
+            }
         }
-        auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItems.first());
-        if (vertexItem == nullptr || !vertexItem->geometryKind().startsWith(QStringLiteral("line"))) {
-            return nullptr;
-        }
-        if (vertexItem->geometryKind() == QStringLiteral("line")) {
-            return vertexItem;
-        }
-
-        const int ownerVertexIndex = selectedItems.first()->data(kMapSceneOwnerVertexRole).toInt();
-        if (ownerVertexIndex >= 0) {
+        if (resolvedLineNumber > 0 && resolvedOwnerVertexIndex >= 0) {
             MapEditableGeometryVertexItem *ownerAnchor = findGeometryVertexItem(context.scene,
-                                                                                vertexItem->lineNumber(),
-                                                                                ownerVertexIndex,
+                                                                                resolvedLineNumber,
+                                                                                resolvedOwnerVertexIndex,
                                                                                 QStringLiteral("line"));
             if (ownerAnchor != nullptr) {
                 return ownerAnchor;
             }
         }
-        return vertexItem;
+        return fallbackVertex;
     }
 
-    if (context.selectedObjectLineNumber == nullptr
-        || context.selectedObjectVertexIndex == nullptr
-        || context.selectedObjectKind == nullptr
-        || (*context.selectedObjectLineNumber) <= 0
-        || (*context.selectedObjectVertexIndex) < 0
-        || (*context.selectedObjectKind) != QStringLiteral("line")) {
-        return nullptr;
-    }
-
-    return findGeometryVertexItem(context.scene,
-                                  (*context.selectedObjectLineNumber),
-                                  (*context.selectedObjectVertexIndex),
-                                  QStringLiteral("line"));
+    return nullptr;
 }
 
 }
@@ -667,18 +679,7 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineV
         return false;
     }
 
-    const QList<QGraphicsItem *> selectedItems = context_.scene->selectedItems();
-    MapEditableGeometryVertexItem *vertexItem = nullptr;
-    for (QGraphicsItem *selectedItem : selectedItems) {
-        auto *candidate = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItem);
-        if (candidate == nullptr || !candidate->geometryKind().startsWith(QStringLiteral("line"))) {
-            continue;
-        }
-        if (vertexItem != nullptr && candidate != vertexItem) {
-            return false;
-        }
-        vertexItem = candidate;
-    }
+    MapEditableGeometryVertexItem *vertexItem = resolveSelectedLineVertexItemForContext(context_);
     if (vertexItem == nullptr) {
         return false;
     }
@@ -753,33 +754,7 @@ bool MapEditorCanvasEditController::splitLineAtSelection()
         return false;
     }
 
-    const QList<QGraphicsItem *> selectedItems = context_.scene->selectedItems();
-    MapEditableGeometryVertexItem *vertexItem = nullptr;
-    for (QGraphicsItem *selectedItem : selectedItems) {
-        auto *candidate = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItem);
-        if (candidate == nullptr || !candidate->geometryKind().startsWith(QStringLiteral("line"))) {
-            continue;
-        }
-        if (candidate->geometryKind() == QStringLiteral("line")) {
-            vertexItem = candidate;
-            break;
-        }
-        if (vertexItem == nullptr) {
-            vertexItem = candidate;
-        }
-    }
-    if (vertexItem == nullptr
-        && context_.selectedObjectLineNumber != nullptr
-        && context_.selectedObjectVertexIndex != nullptr
-        && context_.selectedObjectKind != nullptr
-        && (*context_.selectedObjectLineNumber) > 0
-        && (*context_.selectedObjectVertexIndex) >= 0
-        && (*context_.selectedObjectKind) == QStringLiteral("line")) {
-        vertexItem = findGeometryVertexItem(context_.scene,
-                                            (*context_.selectedObjectLineNumber),
-                                            (*context_.selectedObjectVertexIndex),
-                                            QStringLiteral("line"));
-    }
+    MapEditableGeometryVertexItem *vertexItem = resolveSelectedLineVertexItemForContext(context_);
     if (vertexItem == nullptr || !vertexItem->geometryKind().startsWith(QStringLiteral("line"))) {
         return false;
     }
@@ -854,13 +829,8 @@ bool MapEditorCanvasEditController::removeLineVertexFromSelection()
         return false;
     }
 
-    const QList<QGraphicsItem *> selectedItems = context_.scene->selectedItems();
-    if (selectedItems.size() != 1) {
-        return false;
-    }
-
-    auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(selectedItems.first());
-    if (vertexItem == nullptr || vertexItem->geometryKind() != QStringLiteral("line")) {
+    MapEditableGeometryVertexItem *vertexItem = resolveSelectedLineVertexItemForContext(context_);
+    if (vertexItem == nullptr || !vertexItem->geometryKind().startsWith(QStringLiteral("line"))) {
         return false;
     }
 

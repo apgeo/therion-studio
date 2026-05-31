@@ -106,6 +106,7 @@ If no `Target Config` is selected, a root `thconfig` is used by default; if ther
 If the project root contains multiple named config files and no target config is selected, choose the intended `Target Config` in the `Compiler` pane instead of relying on an automatic merged structure.
 In this ambiguous state, the `Structure` pane shows a shortcut row that opens the `Compiler` pane and focuses `Target Config`.
 The structure tree tooltip reports the root config or inferred root files used for the current structure graph.
+When the structure refreshes after edits or file changes, previously expanded and collapsed rows are preserved for stable items in the current project.
 
 ### 5.2 Project Tree Actions
 

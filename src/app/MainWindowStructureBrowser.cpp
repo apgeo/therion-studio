@@ -115,6 +115,94 @@ QStandardItem *createIndexedItem(const QString &text,
     return item;
 }
 
+QString structureExpansionKeyForIndex(const QModelIndex &index)
+{
+    if (!index.isValid()) {
+        return QString();
+    }
+
+    const QString objectId = index.data(ObjectIdRole).toString();
+    if (!objectId.isEmpty()) {
+        return QStringLiteral("object:%1").arg(objectId);
+    }
+
+    const QString diagnosticKey = index.data(DiagnosticKeyRole).toString();
+    if (!diagnosticKey.isEmpty()) {
+        return QStringLiteral("diagnostic:%1").arg(diagnosticKey);
+    }
+
+    const QString action = index.data(ActionRole).toString();
+    if (!action.isEmpty()) {
+        return QStringLiteral("action:%1").arg(action);
+    }
+
+    const QString sourceFile = index.data(SourceFileRole).toString();
+    const int lineNumber = index.data(LineNumberRole).toInt();
+    const QString category = index.data(CategoryRole).toString();
+    const QString name = index.data(NameRole).toString();
+    if (!sourceFile.isEmpty() || !category.isEmpty() || !name.isEmpty()) {
+        return QStringLiteral("source:%1:%2:%3:%4")
+            .arg(normalizedStructurePathKey(sourceFile),
+                 QString::number(lineNumber),
+                 category,
+                 name);
+    }
+
+    return QString();
+}
+
+QSet<QString> expandedStructureNodeKeys(QTreeView *tree)
+{
+    QSet<QString> expandedKeys;
+    if (tree == nullptr || tree->model() == nullptr) {
+        return expandedKeys;
+    }
+
+    const QAbstractItemModel *model = tree->model();
+    std::function<void(const QModelIndex &)> visit = [&](const QModelIndex &parentIndex) {
+        const int rowCount = model->rowCount(parentIndex);
+        for (int row = 0; row < rowCount; ++row) {
+            const QModelIndex index = model->index(row, 0, parentIndex);
+            if (!index.isValid()) {
+                continue;
+            }
+
+            const QString expansionKey = structureExpansionKeyForIndex(index);
+            if (!expansionKey.isEmpty() && tree->isExpanded(index)) {
+                expandedKeys.insert(expansionKey);
+            }
+            visit(index);
+        }
+    };
+    visit(QModelIndex());
+    return expandedKeys;
+}
+
+void restoreStructureNodeExpansion(QTreeView *tree, const QSet<QString> &expandedKeys)
+{
+    if (tree == nullptr || tree->model() == nullptr) {
+        return;
+    }
+
+    const QAbstractItemModel *model = tree->model();
+    std::function<void(const QModelIndex &)> visit = [&](const QModelIndex &parentIndex) {
+        const int rowCount = model->rowCount(parentIndex);
+        for (int row = 0; row < rowCount; ++row) {
+            const QModelIndex index = model->index(row, 0, parentIndex);
+            if (!index.isValid()) {
+                continue;
+            }
+
+            const QString expansionKey = structureExpansionKeyForIndex(index);
+            if (!expansionKey.isEmpty()) {
+                tree->setExpanded(index, expandedKeys.contains(expansionKey));
+            }
+            visit(index);
+        }
+    };
+    visit(QModelIndex());
+}
+
 QString diagnosticStructureKey(const TherionStudio::ProjectIndexDiagnostic &diagnostic)
 {
     return QStringLiteral("%1|%2|%3|%4")
@@ -517,12 +605,21 @@ void MainWindow::handleStructureSidebarScanFinished(const TherionStudio::Project
 
 void MainWindow::rebuildStructureSidebar()
 {
+    if (hasAppliedStructureSidebarIndex_ && structureTree_ != nullptr) {
+        structureExpandedNodeKeys_ = expandedStructureNodeKeys(structureTree_);
+        hasStructureExpansionState_ = true;
+    }
+
     structureModel_->clear();
     structureModel_->setHorizontalHeaderLabels({tr("Name")});
     hasAppliedStructureSidebarIndex_ = false;
     lastAppliedStructureSidebarSignature_.clear();
 
     if (projectRootPath_.isEmpty() || !QDir(projectRootPath_).exists()) {
+        structureExpandedNodeKeys_.clear();
+        structureExpansionProjectRootPath_.clear();
+        hasStructureExpansionState_ = false;
+
         auto *rootItem = new QStandardItem(tr("Open a project to populate the survey hierarchy"));
         rootItem->setEditable(false);
         structureModel_->appendRow(rootItem);
@@ -536,10 +633,24 @@ void MainWindow::rebuildStructureSidebar()
 
 void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSnapshot &projectIndex)
 {
+    const QString currentExpansionProjectRootPath = normalizedStructurePathKey(projectRootPath_);
+    if (structureExpansionProjectRootPath_ != currentExpansionProjectRootPath) {
+        structureExpansionProjectRootPath_ = currentExpansionProjectRootPath;
+        structureExpandedNodeKeys_.clear();
+        hasStructureExpansionState_ = false;
+    }
+
     const QString nextSignature = projectIndexStructuralSignature(projectIndex);
     if (hasAppliedStructureSidebarIndex_ && nextSignature == lastAppliedStructureSidebarSignature_) {
         updateStructureSidebarSourceLocations(projectIndex);
         return;
+    }
+
+    QSet<QString> expandedNodeKeys = structureExpandedNodeKeys_;
+    bool hasExpansionState = hasStructureExpansionState_;
+    if (hasAppliedStructureSidebarIndex_ && structureTree_ != nullptr) {
+        expandedNodeKeys = expandedStructureNodeKeys(structureTree_);
+        hasExpansionState = true;
     }
 
     hasAppliedStructureSidebarIndex_ = true;
@@ -660,7 +771,13 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
             auto *emptyItem = new QStandardItem(tr("No surveys, maps, or scraps were found in the selected project"));
             emptyItem->setEditable(false);
             structureModel_->appendRow(emptyItem);
-            structureTree_->expandAll();
+            if (hasExpansionState) {
+                restoreStructureNodeExpansion(structureTree_, expandedNodeKeys);
+            } else {
+                structureTree_->expandAll();
+            }
+            structureExpandedNodeKeys_ = expandedStructureNodeKeys(structureTree_);
+            hasStructureExpansionState_ = true;
             return;
         }
 
@@ -702,7 +819,7 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
             if (parentItem != nullptr) {
                 parentItem->appendRow(node.item);
             } else {
-            structureModel_->appendRow(node.item);
+                structureModel_->appendRow(node.item);
             }
 
             visibleNodeIndexByDepth[node.entry.depth] = nodeIndex;
@@ -718,7 +835,13 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
         }
     }
 
-    structureTree_->expandAll();
+    if (hasExpansionState) {
+        restoreStructureNodeExpansion(structureTree_, expandedNodeKeys);
+    } else {
+        structureTree_->expandAll();
+    }
+    structureExpandedNodeKeys_ = expandedStructureNodeKeys(structureTree_);
+    hasStructureExpansionState_ = true;
 }
 
 void MainWindow::showStructureSidebarMessage(const QString &message)

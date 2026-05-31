@@ -450,6 +450,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - `preview above` / `preview below` map relations shall not be treated as ownership hierarchy in the Structure sidebar.
 - Selection in the structure sidebar shall change the active document context.
 - The structure sidebar shall remain synchronized with the open project and the currently selected content when possible.
+- Structure refreshes shall preserve user-controlled expand/collapse state for stable survey, map, scrap, and diagnostic rows within the current project session.
 - For files currently open in editor tabs, structure indexing shall use in-memory document text so unsaved edits are reflected immediately in the structure tree.
 - Structure indexing shall treat the opened project folder as the root graph boundary and shall prefer an explicitly selected project target config when it resolves inside that project folder.
 - Structure index snapshots shall expose the normalized project root, resolved root config path when one is used, and root traversal files so the UI and future compiler-confirmed checks can report the exact graph input.

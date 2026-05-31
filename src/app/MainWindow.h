@@ -6,6 +6,7 @@
 #include <QPointer>
 #include <QPoint>
 #include <QProcess>
+#include <QSet>
 
 #include <memory>
 
@@ -330,6 +331,8 @@ private:
     QString projectRootPath_;
     QString projectStructureSummary_;
     QString lastAppliedStructureSidebarSignature_;
+    QString structureExpansionProjectRootPath_;
+    QSet<QString> structureExpandedNodeKeys_;
     QHash<QString, QString> structureNameOverrides_;
     SidebarPane activeSidebarPane_ = SidebarPane::FileBrowser;
     int sidebarExpandedWidth_ = 320;
@@ -341,6 +344,7 @@ private:
     bool sidebarCollapseSyncPending_ = false;
     bool updatingMapBackgroundPanel_ = false;
     bool hasAppliedStructureSidebarIndex_ = false;
+    bool hasStructureExpansionState_ = false;
     bool clearingDocumentTabs_ = false;
     bool shuttingDown_ = false;
 

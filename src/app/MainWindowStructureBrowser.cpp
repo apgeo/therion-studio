@@ -238,6 +238,7 @@ QString projectIndexStructuralSignature(const TherionStudio::ProjectIndexSnapsho
         parts.append(entry.parentObjectId);
         parts.append(entry.category);
         parts.append(entry.name);
+        parts.append(entry.namespacePath);
         parts.append(normalizedStructurePathKey(entry.sourceFile));
         parts.append(QString::number(entry.depth));
         parts.append(entry.createsNamespace ? QStringLiteral("1") : QStringLiteral("0"));

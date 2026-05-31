@@ -23,6 +23,7 @@ struct ProjectBlock
     ProjectStructureEntryKind kind = ProjectStructureEntryKind::Unknown;
     QString name;
     QString objectId;
+    QString namespacePath;
     bool createsNamespace = true;
 };
 
@@ -116,26 +117,106 @@ QString mapReferenceLookupKey(QString referenceName)
     return referenceName.trimmed().toLower();
 }
 
-QHash<QString, QVector<QString>> entryKeysByReferenceName(const QVector<ProjectStructureEntry> &entries,
-                                                          ProjectStructureEntryKind kind)
+QString normalizedNamespaceToken(QString namespacePath)
 {
-    QHash<QString, QVector<QString>> entryKeys;
+    namespacePath = namespacePath.trimmed().toLower();
+    namespacePath.replace(QRegularExpression(QStringLiteral(R"(\s+)")), QString());
+    return namespacePath;
+}
+
+QString namespacePathWithChild(const QString &currentNamespacePath, const QString &childName)
+{
+    const QString child = childName.trimmed();
+    if (child.isEmpty()) {
+        return currentNamespacePath;
+    }
+    if (currentNamespacePath.trimmed().isEmpty()) {
+        return child;
+    }
+
+    return QStringLiteral("%1.%2").arg(child, currentNamespacePath);
+}
+
+struct MapReferenceParts
+{
+    QString name;
+    QString namespacePath;
+    bool hasNamespace = false;
+};
+
+MapReferenceParts parseMapReference(const QString &referenceName)
+{
+    MapReferenceParts parts;
+    const QString trimmedReference = referenceName.trimmed();
+    const int namespaceIndex = trimmedReference.indexOf(QLatin1Char('@'));
+    if (namespaceIndex < 0) {
+        parts.name = trimmedReference;
+        return parts;
+    }
+
+    parts.name = trimmedReference.left(namespaceIndex).trimmed();
+    parts.namespacePath = trimmedReference.mid(namespaceIndex + 1).trimmed();
+    parts.hasNamespace = true;
+    return parts;
+}
+
+QString namespacedReferenceLookupKey(const QString &name, const QString &namespacePath)
+{
+    return QStringLiteral("%1@%2").arg(mapReferenceLookupKey(name), normalizedNamespaceToken(namespacePath));
+}
+
+struct ReferenceKeyIndex
+{
+    QHash<QString, QVector<QString>> keysByName;
+    QHash<QString, QVector<QString>> keysByNameAndNamespace;
+};
+
+ReferenceKeyIndex entryKeysByReferenceName(const QVector<ProjectStructureEntry> &entries,
+                                           ProjectStructureEntryKind kind)
+{
+    ReferenceKeyIndex entryKeys;
     for (const ProjectStructureEntry &entry : entries) {
         if (entry.kind != kind || entry.name.trimmed().isEmpty()) {
             continue;
         }
 
-        entryKeys[mapReferenceLookupKey(entry.name)].append(ProjectStructureIndex::structureEntryNodeKey(entry));
+        const QString nodeKey = ProjectStructureIndex::structureEntryNodeKey(entry);
+        entryKeys.keysByName[mapReferenceLookupKey(entry.name)].append(nodeKey);
+        entryKeys.keysByNameAndNamespace[namespacedReferenceLookupKey(entry.name, entry.namespacePath)].append(nodeKey);
     }
 
     return entryKeys;
 }
 
-QString resolveUniqueReferenceKey(const QHash<QString, QVector<QString>> &entryKeysByName,
-                                  const QString &referenceName)
+QString uniqueKeyFromCandidates(const QVector<QString> &entryKeys)
 {
-    const QVector<QString> entryKeys = entryKeysByName.value(mapReferenceLookupKey(referenceName));
     return entryKeys.size() == 1 ? entryKeys.first() : QString();
+}
+
+QString resolveUniqueReferenceKey(const ReferenceKeyIndex &entryKeys,
+                                  const QString &referenceName,
+                                  const QString &ownerNamespacePath)
+{
+    const MapReferenceParts reference = parseMapReference(referenceName);
+    if (reference.name.isEmpty()) {
+        return QString();
+    }
+
+    if (reference.hasNamespace) {
+        const QString namespacedKey = uniqueKeyFromCandidates(
+            entryKeys.keysByNameAndNamespace.value(namespacedReferenceLookupKey(reference.name, reference.namespacePath)));
+        if (!namespacedKey.isEmpty()) {
+            return namespacedKey;
+        }
+    } else if (!ownerNamespacePath.trimmed().isEmpty()) {
+        const QString sameNamespaceKey = uniqueKeyFromCandidates(
+            entryKeys.keysByNameAndNamespace.value(namespacedReferenceLookupKey(reference.name, ownerNamespacePath)));
+        if (!sameNamespaceKey.isEmpty()) {
+            return sameNamespaceKey;
+        }
+    }
+
+    return uniqueKeyFromCandidates(entryKeys.keysByName.value(mapReferenceLookupKey(reference.name)));
 }
 
 QString mapCompositionReferenceToken(const TherionParsedLine &parsedLine)
@@ -422,6 +503,10 @@ ProjectStructureEntry appendStructureEntry(QVector<ProjectStructureEntry> *entri
     entry.objectId = identityGenerator->nextObjectId(category, name, sourceFile, entry.parentObjectId);
     entry.category = category;
     entry.name = name;
+    const QString currentNamespacePath = blockStack.isEmpty() ? QString() : blockStack.last().namespacePath;
+    entry.namespacePath = kind == ProjectStructureEntryKind::Survey && createsNamespace
+        ? namespacePathWithChild(currentNamespacePath, name)
+        : currentNamespacePath;
     entry.sourceFile = sourceFile;
     entry.lineNumber = lineNumber;
     entry.depth = blockStack.size();
@@ -485,7 +570,7 @@ void appendProjectStructureFromFile(const QString &filePath,
                                                                     *blockStack,
                                                                     identityGenerator,
                                                                     createsNamespace);
-            blockStack->append(ProjectBlock{openingKind, openingName, entry.objectId, createsNamespace});
+            blockStack->append(ProjectBlock{openingKind, openingName, entry.objectId, entry.namespacePath, createsNamespace});
             continue;
         }
 
@@ -712,8 +797,8 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
 {
     MapReferenceScanResult result;
 
-    const QHash<QString, QVector<QString>> mapKeysByName = entryKeysByReferenceName(entries, ProjectStructureEntryKind::Map);
-    const QHash<QString, QVector<QString>> scrapKeysByName = entryKeysByReferenceName(entries, ProjectStructureEntryKind::Scrap);
+    const ReferenceKeyIndex mapKeysByName = entryKeysByReferenceName(entries, ProjectStructureEntryKind::Map);
+    const ReferenceKeyIndex scrapKeysByName = entryKeysByReferenceName(entries, ProjectStructureEntryKind::Scrap);
 
     QHash<QString, QVector<ProjectStructureEntry>> mapsBySourceFile;
     for (const ProjectStructureEntry &entry : entries) {
@@ -771,7 +856,7 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
                     continue;
                 }
 
-                const QString childMapKey = resolveUniqueReferenceKey(mapKeysByName, candidate);
+                const QString childMapKey = resolveUniqueReferenceKey(mapKeysByName, candidate, mapEntry.namespacePath);
                 if (!childMapKey.isEmpty()) {
                     const QString owningMapKey = ProjectStructureIndex::structureEntryNodeKey(mapEntry);
                     if (childMapKey != owningMapKey) {
@@ -780,7 +865,7 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
                     continue;
                 }
 
-                const QString scrapKey = resolveUniqueReferenceKey(scrapKeysByName, candidate);
+                const QString scrapKey = resolveUniqueReferenceKey(scrapKeysByName, candidate, mapEntry.namespacePath);
                 if (!scrapKey.isEmpty()) {
                     scrapReferences.insert(scrapKey);
                     continue;

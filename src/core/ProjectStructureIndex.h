@@ -33,6 +33,7 @@ struct ProjectStructureEntry
     QString parentObjectId;
     QString category;
     QString name;
+    QString namespacePath;
     QString sourceFile;
     int lineNumber = 0;
     int depth = 0;

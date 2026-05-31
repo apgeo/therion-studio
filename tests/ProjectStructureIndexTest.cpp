@@ -373,6 +373,138 @@ int runProjectIndexMapScrapReferenceTest()
     return 0;
 }
 
+int runProjectIndexNamespacedMapReferenceTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "The temporary project directory could not be created.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    if (!expect(projectDir.mkpath(QStringLiteral("maps/a"))
+                    && projectDir.mkpath(QStringLiteral("maps/b")),
+                "The temporary maps directories could not be created.")) {
+        return 1;
+    }
+
+    const QString rootFile = projectDir.filePath(QStringLiteral("root.th"));
+    const QString branchAFile = projectDir.filePath(QStringLiteral("branch-a.th"));
+    const QString branchBFile = projectDir.filePath(QStringLiteral("branch-b.th"));
+    const QString mapAFile = projectDir.filePath(QStringLiteral("maps/a/map.th2"));
+    const QString mapBFile = projectDir.filePath(QStringLiteral("maps/b/map.th2"));
+
+    if (!expect(writeTextFile(rootFile,
+                              QStringLiteral(
+                                  "survey cave\n"
+                                  "  input branch-a.th\n"
+                                  "  input branch-b.th\n"
+                                  "  map root-map.m\n"
+                                  "    target.s@branch_b.cave\n"
+                                  "  endmap\n"
+                                  "endsurvey cave\n")),
+                "The root Therion file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(branchAFile,
+                              QStringLiteral(
+                                  "survey branch_a\n"
+                                  "  input maps/a/map.th2\n"
+                                  "endsurvey branch_a\n")),
+                "The branch A Therion file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(branchBFile,
+                              QStringLiteral(
+                                  "survey branch_b\n"
+                                  "  input maps/b/map.th2\n"
+                                  "endsurvey branch_b\n")),
+                "The branch B Therion file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(mapAFile,
+                              QStringLiteral(
+                                  "scrap target.s\n"
+                                  "endscrap\n")),
+                "The branch A TH2 map file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(mapBFile,
+                              QStringLiteral(
+                                  "scrap target.s\n"
+                                  "endscrap\n")),
+                "The branch B TH2 map file could not be written.")) {
+        return 1;
+    }
+
+    QString errorMessage;
+    const ProjectIndexSnapshot snapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(), &errorMessage);
+    if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
+    auto findEntry = [](const QVector<ProjectStructureEntry> &entries,
+                        ProjectStructureEntryKind kind,
+                        const QString &name,
+                        const QString &namespacePath,
+                        ProjectStructureEntry *foundEntry) {
+        for (const ProjectStructureEntry &entry : entries) {
+            if (entry.kind == kind && entry.name == name && entry.namespacePath == namespacePath) {
+                if (foundEntry != nullptr) {
+                    *foundEntry = entry;
+                }
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    ProjectStructureEntry rootMapEntry;
+    ProjectStructureEntry branchAScrapEntry;
+    ProjectStructureEntry branchBScrapEntry;
+    if (!expect(findEntry(snapshot.entries,
+                          ProjectStructureEntryKind::Map,
+                          QStringLiteral("root-map.m"),
+                          QStringLiteral("cave"),
+                          &rootMapEntry),
+                "The namespaced reference test did not find the root map entry.")) {
+        return 1;
+    }
+    if (!expect(findEntry(snapshot.entries,
+                          ProjectStructureEntryKind::Scrap,
+                          QStringLiteral("target.s"),
+                          QStringLiteral("branch_a.cave"),
+                          &branchAScrapEntry),
+                "The namespaced reference test did not find the branch A scrap entry.")) {
+        return 1;
+    }
+    if (!expect(findEntry(snapshot.entries,
+                          ProjectStructureEntryKind::Scrap,
+                          QStringLiteral("target.s"),
+                          QStringLiteral("branch_b.cave"),
+                          &branchBScrapEntry),
+                "The namespaced reference test did not find the branch B scrap entry.")) {
+        return 1;
+    }
+
+    const QSet<QString> rootMapScraps = snapshot.mapScrapReferencesByMapKey.value(
+        ProjectStructureIndex::structureEntryNodeKey(rootMapEntry));
+    if (!expect(rootMapScraps.contains(ProjectStructureIndex::structureEntryNodeKey(branchBScrapEntry)),
+                "The namespaced map reference did not resolve to the explicitly referenced scrap namespace.")) {
+        return 1;
+    }
+    if (!expect(!rootMapScraps.contains(ProjectStructureIndex::structureEntryNodeKey(branchAScrapEntry)),
+                "The namespaced map reference incorrectly resolved to the same-named scrap in another namespace.")) {
+        return 1;
+    }
+    if (!expect(snapshot.diagnostics.isEmpty(),
+                "The namespaced map reference should not produce unresolved-reference diagnostics.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runProjectIndexThconfigSourceGraphTest()
 {
     QTemporaryDir tempDir;
@@ -665,6 +797,9 @@ int main()
         return 1;
     }
     if (runProjectIndexMapScrapReferenceTest() != 0) {
+        return 1;
+    }
+    if (runProjectIndexNamespacedMapReferenceTest() != 0) {
         return 1;
     }
     if (runProjectIndexThconfigSourceGraphTest() != 0) {

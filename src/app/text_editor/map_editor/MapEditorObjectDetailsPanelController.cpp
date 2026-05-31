@@ -84,6 +84,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.quickFieldsEditor == nullptr
         || context_.quickIdentifierLabel == nullptr
         || context_.quickNameLabel == nullptr
+        || context_.quickTextLabel == nullptr
         || context_.quickProjectionLabel == nullptr
         || context_.quickTypeLabel == nullptr
         || context_.quickSubtypeLabel == nullptr
@@ -93,6 +94,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.quickProjectionCombo == nullptr
         || context_.quickIdentifierEdit == nullptr
         || context_.quickNameEdit == nullptr
+        || context_.quickTextEdit == nullptr
         || context_.stylePreview == nullptr
         || context_.vertexActionsEditor == nullptr
         || context_.vertexInsertBeforeButton == nullptr
@@ -174,11 +176,14 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
 
             const bool typeFieldsVisible = commandKind != QStringLiteral("scrap");
             const bool projectionFieldVisible = commandKind == QStringLiteral("scrap");
+            const bool textFieldVisible = pendingFields->textVisible;
             context_.quickNameLabel->setVisible(pendingFields->nameVisible);
+            context_.quickTextLabel->setVisible(textFieldVisible);
             context_.quickProjectionLabel->setVisible(projectionFieldVisible);
             context_.quickTypeLabel->setVisible(typeFieldsVisible);
             context_.quickSubtypeLabel->setVisible(typeFieldsVisible);
             context_.quickNameEdit->setVisible(pendingFields->nameVisible);
+            context_.quickTextEdit->setVisible(textFieldVisible);
             context_.quickProjectionCombo->setVisible(projectionFieldVisible);
             context_.quickTypeCombo->setVisible(typeFieldsVisible);
             context_.quickSubtypeCombo->setVisible(typeFieldsVisible);
@@ -199,6 +204,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             context_.quickIdentifierLabel->setText(tr("ID"));
             context_.quickIdentifierEdit->setText(pendingFields->identifier);
             context_.quickNameEdit->setText(pendingFields->name);
+            context_.quickTextEdit->setText(pendingFields->text);
             showStylePreview(commandKind, pendingFields->type, pendingFields->subtype);
 
             context_.vertexSection->setVisible(false);
@@ -314,12 +320,15 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             if (const std::optional<InspectorObjectQuickFields> fields = inspectorObjectQuickFieldsFromParsedLine(parsedLine)) {
                 const bool typeFieldsVisible = fields->commandKind != QStringLiteral("scrap");
                 const bool projectionFieldVisible = fields->commandKind == QStringLiteral("scrap");
+                const bool textFieldVisible = fields->textVisible;
                 context_.quickFieldsEditor->setVisible(true);
                 context_.quickNameLabel->setVisible(fields->nameVisible);
+                context_.quickTextLabel->setVisible(textFieldVisible);
                 context_.quickProjectionLabel->setVisible(projectionFieldVisible);
                 context_.quickTypeLabel->setVisible(typeFieldsVisible);
                 context_.quickSubtypeLabel->setVisible(typeFieldsVisible);
                 context_.quickNameEdit->setVisible(fields->nameVisible);
+                context_.quickTextEdit->setVisible(textFieldVisible);
                 context_.quickProjectionCombo->setVisible(projectionFieldVisible);
                 context_.quickTypeCombo->setVisible(typeFieldsVisible);
                 context_.quickSubtypeCombo->setVisible(typeFieldsVisible);
@@ -336,6 +345,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                 context_.quickIdentifierEdit->setText(fields->identifier);
                 context_.quickIdentifierLabel->setText(tr("ID"));
                 context_.quickNameEdit->setText(fields->name);
+                context_.quickTextEdit->setText(fields->text);
                 *context_.objectQuickCommandKind = fields->commandKind;
                 setEditableComboValues(context_.quickSubtypeCombo,
                                        inspectorSubtypeValuesForCommandType(catalog, fields->commandKind, fields->type),

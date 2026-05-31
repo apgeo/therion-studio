@@ -1443,42 +1443,42 @@ Očakávané súbory sú `docs/USER_MANUAL.&lt;language&gt;.md` alebo `docs/USER
         <location filename="../src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.cpp" line="91"/>
         <location filename="../src/app/text_editor/map_editor/MapEditorSceneItems.cpp" line="751"/>
         <location filename="../src/app/text_editor/map_editor/MapEditorSceneItems.cpp" line="758"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1574"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1655"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1631"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1712"/>
         <source>Point</source>
         <translation>Bod</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.cpp" line="92"/>
         <location filename="../src/app/text_editor/map_editor/MapEditorSceneItems.cpp" line="753"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1562"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1646"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1619"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1703"/>
         <source>Line</source>
         <translation>Línia</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.cpp" line="94"/>
         <location filename="../src/app/text_editor/map_editor/MapEditorSceneItems.cpp" line="755"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1565"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1649"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1622"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1706"/>
         <source>Area</source>
         <translation>Plocha</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1559"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1643"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1616"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1700"/>
         <source>Scrap</source>
         <translation>Scrap</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1556"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1640"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1613"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1697"/>
         <source>Map</source>
         <translation>Mapa</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1553"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1637"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1610"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1694"/>
         <source>Survey</source>
         <translation>Survey</translation>
     </message>
@@ -1727,29 +1727,29 @@ Zdroj: %2:%3</translation>
         <translation>Obrys navrhovanej plochy</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1568"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1571"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1652"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1625"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1628"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1709"/>
         <source>Station</source>
         <translation>Stanica</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1619"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1676"/>
         <source>closed</source>
         <translation>uzavreté</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1622"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1679"/>
         <source>reversed</source>
         <translation>obrátené</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1734"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1791"/>
         <source>No parseable point, line, or area geometry was found in this document yet.</source>
         <translation>V tomto dokumente zatiaľ nebola nájdená spracovateľná geometria bodov, línií ani plôch.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="2498"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="2574"/>
         <source>No Therion map objects were detected in this document.</source>
         <translation>V tomto dokumente neboli zistené žiadne mapové objekty Therion.</translation>
     </message>
@@ -1922,54 +1922,54 @@ Zdroj: %2:%3</translation>
         <translation>Nemožno určiť koniec bloku nadradeného rozsahu dát.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="456"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="455"/>
         <source>Configure Data Block</source>
         <translation>Nastaviť dátový blok</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="464"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="463"/>
         <source>Rows (mix measurement rows, directives, and comments)</source>
         <translation>Riadky (kombinácia meraní, direktív a komentárov)</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="468"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="467"/>
         <source>Add Data Row</source>
         <translation>Pridať dátový riadok</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="469"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="468"/>
         <source>Add Directive Row</source>
         <translation>Pridať riadok direktívy</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="470"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="469"/>
         <source>Add Comment Row</source>
         <translation>Pridať riadok komentára</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="471"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="470"/>
         <source>Remove Row</source>
         <translation>Odstrániť riadok</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="491"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="490"/>
         <source>Type</source>
         <translation>Typ</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="495"/>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="504"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="494"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="503"/>
         <source>Directive</source>
         <translation>Direktíva</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="495"/>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="505"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="494"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="504"/>
         <source>Comment</source>
         <translation>Komentár</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="503"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp" line="502"/>
         <source>Data</source>
         <translation>Dáta</translation>
     </message>
@@ -3408,42 +3408,52 @@ Zdroj: %2:%3</translation>
         <translation>Vybraný objekt bol odstránený zo zdroja.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="625"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="628"/>
         <source>Failed to update object fields.</source>
         <translation>Nepodarilo sa aktualizovať polia objektu.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="626"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="629"/>
         <source>Failed to update object fields: %1</source>
         <translation>Nepodarilo sa aktualizovať polia objektu: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="638"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="643"/>
+        <source>Failed to update label text.</source>
+        <translation>Nepodarilo sa aktualizovať text labelu.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="644"/>
+        <source>Failed to update label text: %1</source>
+        <translation>Nepodarilo sa aktualizovať text labelu: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="656"/>
         <source>Edit Object Fields</source>
         <translation>Upraviť polia objektu</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="639"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="657"/>
         <source>Updated object fields.</source>
         <translation>Polia objektu boli aktualizované.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="679"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="697"/>
         <source>Failed to update scrap projection.</source>
         <translation>Nepodarilo sa aktualizovať projekciu scrapu.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="680"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="698"/>
         <source>Failed to update scrap projection: %1</source>
         <translation>Nepodarilo sa aktualizovať projekciu scrapu: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="692"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="710"/>
         <source>Edit Scrap Projection</source>
         <translation>Upraviť projekciu scrapu</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="693"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsEditController.cpp" line="711"/>
         <source>Updated scrap projection.</source>
         <translation>Projekcia scrapu bola aktualizovaná.</translation>
     </message>
@@ -3451,156 +3461,156 @@ Zdroj: %2:%3</translation>
 <context>
     <name>TherionStudio::MapEditorObjectDetailsPanelController</name>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="153"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="155"/>
         <source>New Line</source>
         <translation>Nová línia</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="155"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="157"/>
         <source>New Area</source>
         <translation>Nová plocha</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="157"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="159"/>
         <source>New Point</source>
         <translation>Nový bod</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="159"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="161"/>
         <source>New Scrap</source>
         <translation>Nový scrap</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="165"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="274"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="167"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="280"/>
         <source>Point Details</source>
         <translation>Detaily bodu</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="166"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="168"/>
         <source>Pending insert</source>
         <translation>Čakajúce vloženie</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="199"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="337"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="204"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="346"/>
         <source>ID</source>
         <translation>ID</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="223"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="229"/>
         <source>No map object selected.</source>
         <translation>Nie je vybraný žiadny mapový objekt.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="225"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="231"/>
         <source>Object</source>
         <translation>Objekt</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="263"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="269"/>
         <source>Line</source>
         <translation>Línia</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="265"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="271"/>
         <source>Area</source>
         <translation>Plocha</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="267"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="273"/>
         <source>Point</source>
         <translation>Bod</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="269"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="275"/>
         <source>Scrap</source>
         <translation>Scrap</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="273"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="279"/>
         <source>Line Point</source>
         <translation>Bod línie</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="275"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="281"/>
         <source>Source line %1</source>
         <translation>Zdrojový riadok %1</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="285"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="291"/>
         <source>This line is used as an area border. Select or delete the area instead.</source>
         <translation>Táto línia sa používa ako hranica plochy. Namiesto nej vyberte alebo odstráňte plochu.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="295"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="301"/>
         <source>Used by area: %1</source>
         <translation>Používa plocha: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="296"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="302"/>
         <source>Click the area name to select the area that owns this border line.</source>
         <translation>Kliknutím na názov plochy vyberiete plochu, ktorej táto hraničná línia patrí.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="361"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="371"/>
         <source>Split Here is available for interior vertices of open lines.</source>
         <translation>Rozdelenie tu je dostupné pre vnútorné vrcholy otvorených línií.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="374"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="384"/>
         <source>Cannot split at the first or last vertex.</source>
         <translation>Nemožno rozdeliť v prvom ani poslednom vrchole.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="376"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="386"/>
         <source>Cannot split closed lines yet.</source>
         <translation>Uzavreté línie zatiaľ nemožno deliť.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="378"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="388"/>
         <source>Split the selected line at this vertex.</source>
         <translation>Rozdeliť vybranú líniu v tomto vrchole.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="381"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="391"/>
         <source>Extend Before</source>
         <translation>Predĺžiť pred</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="381"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="390"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="391"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="400"/>
         <source>Insert Before</source>
         <translation>Vložiť pred</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="382"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="392"/>
         <source>Extend After</source>
         <translation>Predĺžiť za</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="382"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="391"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="392"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="401"/>
         <source>Insert After</source>
         <translation>Vložiť za</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="384"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="394"/>
         <source>Extend the line before the first vertex.</source>
         <translation>Predĺžiť líniu pred prvým vrcholom.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="385"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="395"/>
         <source>Insert a vertex before the selected vertex.</source>
         <translation>Vložiť vrchol pred vybraný vrchol.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="387"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="397"/>
         <source>Extend the line after the last vertex.</source>
         <translation>Predĺžiť líniu za posledným vrcholom.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="388"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="398"/>
         <source>Insert a vertex after the selected vertex.</source>
         <translation>Vložiť vrchol za vybraný vrchol.</translation>
     </message>
@@ -3786,102 +3796,107 @@ Zdroj: %2:%3</translation>
         <translation>Objekt</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="184"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="185"/>
         <source>ID</source>
         <translation>ID</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="185"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="186"/>
         <source>Name</source>
         <translation>Názov</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="186"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="187"/>
+        <source>Text (-text)</source>
+        <translation>Text (-text)</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="188"/>
         <source>Projection</source>
         <translation>Projekcia</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="187"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="189"/>
         <source>Type</source>
         <translation>Typ</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="188"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="190"/>
         <source>Subtype</source>
         <translation>Podtyp</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="189"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="191"/>
         <source>Style preview</source>
         <translation>Náhľad štýlu</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="224"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="228"/>
         <source>Geometry</source>
         <translation>Geometria</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="230"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="234"/>
         <source>Closed (-close)</source>
         <translation>Uzavreté (-close)</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="231"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="235"/>
         <source>Reversed (-reverse)</source>
         <translation>Obrátené (-reverse)</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="240"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="244"/>
         <source>Point Details</source>
         <translation>Detaily bodu</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="246"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="250"/>
         <source>Orientation override (-orientation)</source>
         <translation>Prepísanie orientácie (-orientation)</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="251"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="255"/>
         <source> deg</source>
         <translation> °</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="256"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="260"/>
         <source>&lt;&lt;</source>
         <translation>&lt;&lt;</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="257"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="261"/>
         <source>Smooth (-smooth)</source>
         <translation>Hladké (-smooth)</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="258"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="262"/>
         <source>&gt;&gt;</source>
         <translation>&gt;&gt;</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="259"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="263"/>
         <source>Left size (-l-size)</source>
         <translation>Ľavý rozmer (-l-size)</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="286"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="290"/>
         <source>Insert Before</source>
         <translation>Vložiť pred</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="287"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="291"/>
         <source>Insert After</source>
         <translation>Vložiť za</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="288"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="292"/>
         <source>Delete Vertex</source>
         <translation>Odstrániť vrchol</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="289"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="293"/>
         <source>Split Here</source>
         <translation>Rozdeliť tu</translation>
     </message>
@@ -3891,128 +3906,128 @@ Zdroj: %2:%3</translation>
         <translation>Mierka scrapu</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="358"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="354"/>
         <source>Picture point 1 (px)</source>
         <translation>Obrazový bod 1 (px)</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="359"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="355"/>
         <source>Picture point 2 (px)</source>
         <translation>Obrazový bod 2 (px)</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="360"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="356"/>
         <source>Real point 1</source>
         <translation>Skutočný bod 1</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="361"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="357"/>
         <source>Real point 2</source>
         <translation>Skutočný bod 2</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="367"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="363"/>
         <source>Unit</source>
         <translation>Jednotka</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="375"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="371"/>
         <source>Use Bounds</source>
         <translation>Použiť hranice</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="377"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="373"/>
         <source>Use current source bounds as the XTherion default scrap scale.</source>
         <translation>Použiť aktuálne hranice zdroja ako predvolenú mierku scrapu XTherion.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="378"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="374"/>
         <source>Apply Scale</source>
         <translation>Použiť mierku</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="388"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="384"/>
         <source>Object Actions</source>
         <translation>Akcie objektu</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="389"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="385"/>
         <source>Edit Object Settings...</source>
         <translation>Upraviť nastavenia objektu...</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="393"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="389"/>
         <source>Delete Object</source>
         <translation>Odstrániť objekt</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="400"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="396"/>
         <source>Selection</source>
         <translation>Výber</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="401"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="397"/>
         <source>Objects</source>
         <translation>Objekty</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="432"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="428"/>
         <source>Layers</source>
         <translation>Vrstvy</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="440"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="436"/>
         <source>Add background images</source>
         <translation>Pridať obrázky na pozadí</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="461"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="457"/>
         <source>Up</source>
         <translation>Nahor</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="462"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="458"/>
         <source>Down</source>
         <translation>Nadol</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="471"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="467"/>
         <source>Position</source>
         <translation>Poloha</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="474"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="470"/>
         <source>X</source>
         <translation>X</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="482"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="478"/>
         <source>Y</source>
         <translation>Y</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="492"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="488"/>
         <source>Adjustments</source>
         <translation>Úpravy</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="495"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="491"/>
         <source>Opacity</source>
         <translation>Krytie</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="497"/>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="508"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="493"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="504"/>
         <source>Reset</source>
         <translation>Resetovať</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="506"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="502"/>
         <source>Gamma</source>
         <translation>Gamma</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="518"/>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="514"/>
         <source>Backgrounds</source>
         <translation>Pozadia</translation>
     </message>
@@ -4569,337 +4584,360 @@ Zdroj: %2:%3</translation>
 <context>
     <name>TherionStudio::TherionDocumentEditor</name>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="631"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1103"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1177"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1243"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1365"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1445"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1533"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1610"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1750"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1867"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2019"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2097"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2180"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2325"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="636"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1108"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1182"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1248"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1370"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1450"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1538"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1615"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1755"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1872"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2024"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2102"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2185"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2330"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2400"/>
         <source>No document contents are available.</source>
         <translation>Obsah dokumentu nie je k dispozícii.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="637"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1118"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1540"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1617"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1757"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1873"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2026"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2104"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2187"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2331"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="642"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1123"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1545"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1622"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1762"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1878"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2031"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2109"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2192"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2337"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2406"/>
         <source>The selected line number is invalid.</source>
         <translation>Vybrané číslo riadka je neplatné.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="643"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="648"/>
         <source>The selected source vertex index is invalid.</source>
         <translation>Vybraný index zdrojového vrcholu je neplatný.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="651"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="656"/>
         <source>Unsupported line-point option.</source>
         <translation>Nepodporovaná voľba bodu línie.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="660"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1132"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1555"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1641"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1774"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1882"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2043"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2113"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2196"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="665"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1137"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1560"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1646"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1779"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1887"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2048"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2118"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2201"/>
         <location filename="../src/core/TherionDocumentEditor.cpp" line="2346"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2421"/>
         <source>The selected line no longer exists.</source>
         <translation>Vybraný riadok už neexistuje.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="669"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2355"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="674"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2430"/>
         <source>The selected line is not a writable line block.</source>
         <translation>Vybraný riadok nie je zapisovateľný blok `line`.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="684"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2377"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="689"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2452"/>
         <source>The selected line block is missing endline.</source>
         <translation>Vybranému bloku `line` chýba `endline`.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="693"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="698"/>
         <source>The selected line block does not contain the requested vertex.</source>
         <translation>Vybraný blok `line` neobsahuje požadovaný vrchol.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="707"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="712"/>
         <source>Line-point option could not be removed.</source>
         <translation>Voľbu bodu línie sa nepodarilo odstrániť.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="733"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="738"/>
         <source>Line-point option value could not be rewritten.</source>
         <translation>Hodnotu voľby bodu línie sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="741"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="750"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="746"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="755"/>
         <source>Line-point option could not be rewritten.</source>
         <translation>Voľbu bodu línie sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1111"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1116"/>
         <source>The new structure name is empty.</source>
         <translation>Nový názov štruktúry je prázdny.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1141"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1146"/>
         <source>The selected line does not contain a structure object.</source>
         <translation>Vybraný riadok neobsahuje objekt štruktúry.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1149"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1154"/>
         <source>The selected structure item cannot be rewritten.</source>
         <translation>Vybranú položku štruktúry nemožno prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1157"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1162"/>
         <source>The selected line could not be rewritten.</source>
         <translation>Vybraný riadok sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1253"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1258"/>
         <source>Unsupported draft geometry kind.</source>
         <translation>Nepodporovaný druh geometrie náčrtu.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1263"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1268"/>
         <source>Draft geometry does not contain enough vertices.</source>
         <translation>Geometria náčrtu neobsahuje dostatok vrcholov.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1282"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1400"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1480"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1287"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1405"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1485"/>
         <source>Unable to resolve a scrap insertion target.</source>
         <translation>Nie je možné určiť cieľ vloženia scrapu.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1318"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1489"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1323"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1494"/>
         <source>Unable to resolve scrap boundaries for area insertion.</source>
         <translation>Nie je možné určiť hranice scrapu pre vloženie plochy.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1381"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1386"/>
         <source>Draft line geometry does not contain enough coordinate rows.</source>
         <translation>Geometria náčrtu línie neobsahuje dostatok riadkov súradníc.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1461"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1466"/>
         <source>Draft area geometry does not contain enough coordinate rows.</source>
         <translation>Geometria náčrtu plochy neobsahuje dostatok riadkov súradníc.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1564"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1569"/>
         <source>The selected line is not a writable point geometry.</source>
         <translation>Vybraný riadok nie je zapisovateľná geometria bodu.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1574"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1579"/>
         <source>The selected point line does not contain writable coordinates.</source>
         <translation>Vybraný riadok bodu neobsahuje zapisovateľné súradnice.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1583"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1588"/>
         <source>The selected point coordinates could not be rewritten.</source>
         <translation>Súradnice vybraného bodu sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1624"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1629"/>
         <source>The selected vertex index is invalid.</source>
         <translation>Vybraný index vrcholu je neplatný.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1632"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1637"/>
         <source>The selected geometry kind is not writable.</source>
         <translation>Vybraný druh geometrie nie je zapisovateľný.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1650"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1655"/>
         <source>The selected line is not a writable %1 geometry block.</source>
         <translation>Vybraný riadok nie je zapisovateľný blok geometrie %1.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1669"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1674"/>
         <source>The selected %1 block is missing %2.</source>
         <translation>Vybranému bloku %1 chýba %2.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1703"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1708"/>
         <source>The selected %1 block does not contain a writable vertex at index %2.</source>
         <translation>Vybraný blok %1 neobsahuje zapisovateľný vrchol na indexe %2.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1713"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1718"/>
         <source>The selected %1 vertex could not be rewritten.</source>
         <translation>Vybraný vrchol %1 sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1724"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1729"/>
         <source>The selected %1 vertex coordinates could not be rewritten.</source>
         <translation>Súradnice vybraného vrcholu %1 sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1765"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1770"/>
         <source>Unsupported line option toggle.</source>
         <translation>Nepodporované prepnutie voľby `line`.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1784"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1789"/>
         <source>The selected line is not a writable line directive.</source>
         <translation>Vybraný riadok nie je zapisovateľná direktíva `line`.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1814"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1819"/>
         <source>The selected line option value could not be rewritten.</source>
         <translation>Hodnotu voľby `line` sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1823"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1833"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1828"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1838"/>
         <source>The selected line option could not be rewritten.</source>
         <translation>Voľbu `line` sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1893"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1898"/>
         <source>The selected line is not a writable point command.</source>
         <translation>Vybraný riadok nie je zapisovateľný príkaz `point`.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1920"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1925"/>
         <source>Point orientation could not be removed.</source>
         <translation>Orientáciu bodu sa nepodarilo odstrániť.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1937"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1942"/>
         <source>Point orientation value could not be rewritten.</source>
         <translation>Hodnotu orientácie bodu sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1945"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="1954"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1950"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1959"/>
         <source>Point orientation option could not be rewritten.</source>
         <translation>Voľbu orientácie bodu sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2034"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2039"/>
         <source>The scrap scale expression is empty.</source>
         <translation>Výraz mierky scrapu je prázdny.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2053"/>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2123"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2058"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2128"/>
         <source>The selected line is not a scrap command.</source>
         <translation>Vybraný riadok nie je príkaz `scrap`.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2064"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2069"/>
         <source>The existing scrap scale option could not be rewritten.</source>
         <translation>Existujúcu voľbu mierky scrapu sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2134"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2139"/>
         <source>The existing scrap projection option could not be rewritten.</source>
         <translation>Existujúcu voľbu projekcie scrapu sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2206"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2211"/>
         <source>The selected line is not a map object command.</source>
         <translation>Vybraný riadok nie je príkaz mapového objektu.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2216"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2221"/>
         <source>Scrap ID cannot be empty.</source>
         <translation>ID scrapu nesmie byť prázdne.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2222"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2227"/>
         <source>The selected scrap command has no writable ID token.</source>
         <translation>Vybraný príkaz `scrap` nemá zapisovateľný token ID.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2229"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2234"/>
         <source>The selected scrap ID could not be rewritten.</source>
         <translation>Vybrané ID scrapu sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2242"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2247"/>
         <source>Quick object fields are available only for scrap, point, line, and area commands.</source>
         <translation>Rýchle polia objektu sú dostupné iba pre príkazy `scrap`, `point`, `line` a `area`.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2250"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2255"/>
         <source>Object type cannot be empty.</source>
         <translation>Typ objektu nesmie byť prázdny.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2263"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2268"/>
         <source>The selected point command has no writable coordinate pair for inserting type.</source>
         <translation>Vybraný príkaz `point` nemá zapisovateľný pár súradníc pre vloženie typu.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2272"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2277"/>
         <source>The selected point type insertion target is invalid.</source>
         <translation>Vybraný cieľ vloženia typu bodu je neplatný.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2280"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2285"/>
         <source>The selected %1 command has no writable type token.</source>
         <translation>Vybraný príkaz %1 nemá zapisovateľný token typu.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2285"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2290"/>
         <source>The selected object type could not be rewritten.</source>
         <translation>Typ vybraného objektu sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2292"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2297"/>
         <source>The selected object subtype could not be rewritten.</source>
         <translation>Podtyp vybraného objektu sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2299"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2304"/>
         <source>The selected object identifier could not be rewritten.</source>
         <translation>Identifikátor vybraného objektu sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2308"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2313"/>
         <source>The selected point name could not be rewritten.</source>
         <translation>Názov vybraného bodu sa nepodarilo prepísať.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2337"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2357"/>
+        <source>Text is available only for point and line label commands.</source>
+        <translation>Text je dostupný iba pre príkazy point a line s typom label.</translation>
+    </message>
+    <message>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2365"/>
+        <source>The selected object has no writable type token.</source>
+        <translation>Vybraný objekt nemá zapisovateľný token typu.</translation>
+    </message>
+    <message>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2376"/>
+        <source>Text is available only for label objects.</source>
+        <translation>Text je dostupný iba pre objekty typu label.</translation>
+    </message>
+    <message>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2383"/>
+        <source>The selected label text could not be rewritten.</source>
+        <translation>Text vybraného labelu sa nepodarilo prepísať.</translation>
+    </message>
+    <message>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2412"/>
         <source>No coordinate rows were provided for rewrite.</source>
         <translation>Na prepis neboli poskytnuté žiadne riadky súradníc.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2362"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2437"/>
         <source>Line rewrite is not supported when start line contains inline coordinates.</source>
         <translation>Prepis línie nie je podporovaný, keď počiatočný riadok obsahuje vložené súradnice.</translation>
     </message>
     <message>
-        <location filename="../src/core/TherionDocumentEditor.cpp" line="2398"/>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="2473"/>
         <source>Line rewrite is only supported for coordinate-only line blocks.</source>
         <translation>Prepis línie je podporovaný iba pre bloky `line` obsahujúce iba súradnice.</translation>
     </message>

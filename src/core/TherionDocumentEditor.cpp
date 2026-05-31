@@ -329,6 +329,11 @@ QString draftObjectOptionsSuffix(const TherionDraftObjectOptions &options, bool 
     if (includeName && options.nameEnabled && !name.isEmpty()) {
         suffix += QStringLiteral(" -name %1").arg(name);
     }
+
+    const QString text = serializedInlineToken(options.text);
+    if (options.textEnabled && !text.isEmpty()) {
+        suffix += QStringLiteral(" -text %1").arg(text);
+    }
     return suffix;
 }
 
@@ -2306,6 +2311,76 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
         && !upsertSingleValueOption(&lineText, QStringLiteral("-name"), name)) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected point name could not be rewritten.");
+        }
+        return false;
+    }
+
+    lines[lineIndex] = lineText;
+    *contents = lines.join(lineEnding);
+    return true;
+}
+
+bool TherionDocumentEditor::rewriteMapObjectTextOption(QString *contents,
+                                                       int lineNumber,
+                                                       const QString &text,
+                                                       QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
+        }
+        return false;
+    }
+
+    if (lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
+        }
+        return false;
+    }
+
+    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = splitLinesNormalized(*contents);
+    if (lineNumber > lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
+        }
+        return false;
+    }
+
+    const int lineIndex = lineNumber - 1;
+    QString lineText = lines.at(lineIndex);
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    const QString directive = parsedLine.directive;
+    if (directive != QStringLiteral("point") && directive != QStringLiteral("line")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Text is available only for point and line label commands.");
+        }
+        return false;
+    }
+
+    const int typeTokenIndex = directive == QStringLiteral("point") ? pointTypeTokenIndex(parsedLine) : 1;
+    if (typeTokenIndex <= 0 || typeTokenIndex >= parsedLine.tokens.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected object has no writable type token.");
+        }
+        return false;
+    }
+
+    const QString normalizedType = parsedLine.tokens.at(typeTokenIndex)
+        .section(QLatin1Char(':'), 0, 0)
+        .trimmed()
+        .toLower();
+    if (normalizedType != QStringLiteral("label") && !text.trimmed().isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Text is available only for label objects.");
+        }
+        return false;
+    }
+
+    if (!upsertSingleValueOption(&lineText, QStringLiteral("-text"), text)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected label text could not be rewritten.");
         }
         return false;
     }

@@ -421,7 +421,6 @@ std::optional<BlockEditorDataBlockDialogResult> BlockEditorDataBlockDialog::conf
         }
 
         if (rowText.trimmed().isEmpty() && commentText.isEmpty()) {
-            initialRows.append(MixedRowEntry{false, false, QString(), {}, QString(), commentMarker});
             continue;
         }
 

@@ -96,6 +96,10 @@ For `.th2` files:
 - find and replace via `Edit` menu
 - unsupported file encodings can be converted to UTF-8 with confirmation
 
+### 4.3 Block Data Rows
+
+In Blocks mode, `data ...` blocks can be edited through a row table based on the active data header. Empty body lines are ignored when the table opens, so blank spacing in the source does not become fake measurement rows. Use explicit data rows, directive rows, or comment rows when you want serialized content in the block body.
+
 ## 5. Structure and File Operations
 
 ### 5.1 Structure Pane
@@ -165,6 +169,10 @@ While drafting line/area:
 ### 6.4 Selection and Object Editing
 
 In `Inspector -> Selection`, you can edit properties for selected `Scrap`, `Point`, `Line`, or `Area`, including common fields like ID/type/subtype where supported.
+
+For selected scraps, the Selection inspector shows scrap identity fields first and a separate `Scrap Scale` section below them. The scale section edits XTherion/Therion-compatible `-scale [...]` calibration values without mixing those controls into the basic scrap identity fields.
+
+For `point label` and `line label` objects, the Selection inspector exposes `Text (-text)`. Editing this field rewrites the object's `-text` option while preserving unrelated options where practical. `line label` text is rendered along the label line path, so the line controls the text length and orientation.
 
 For point types that support Therion `-orientation`, the Selection inspector shows an orientation override. Enabling it writes `-orientation`; the point symbol rotates around its anchor using `0` as north/up and `90` as east/right. Station names stay screen-aligned for readability. Bundled `point.label` text follows `-orientation`, with the text baseline aligned to the orientation direction. A selected orientable point with explicit `-orientation` also shows a draggable direction handle on the canvas.
 
@@ -287,6 +295,7 @@ Point style files support:
 | `stroke_color` | color string | Symbol outline color, for example `#1C1C1E` or `#F4F4F2E6`. |
 | `fill_color` | color string | Fill color for filled symbols. `plus`, `x`, and `asterisk` are stroke-only symbols. |
 | `label_field` | string | Optional Therion option name to render next to the point, without the leading dash. For example `name` reads `-name`; `text` reads `-text`. |
+| `label_font_size` | number | Optional point label font size in points. When omitted, point labels use the canvas default. |
 | `label_orientation` | string | `screen` keeps style-driven labels horizontal. `orientation` rotates label text from `-orientation`; this is used by bundled `point.label`. |
 
 Example:
@@ -306,7 +315,7 @@ Example:
 
 For built-in symbol parts, use `x`, `y`, `size`, and optional `angle`. For `line`, use `x1`, `y1`, `x2`, `y2`. For `polyline` and `polygon`, use `points` as arrays such as `[[-3, 0], [0, -4], [3, 0]]`; `polygon` may use `fill: true`. For `ellipse`, use `x`, `y`, `width`, `height`, optional `angle`, and optional `fill: true`. Any part may override `fill_color`, `stroke_color`, and `stroke_width`; `stroke_width: 0` means the thinnest supported rendered stroke. When omitted, the owning point, line decoration, or area pattern color is used. All coordinates are relative to the owning style's `size`.
 
-Bundled `point.station.json` renders `-name` next to station points. Bundled `point.label.json` renders `-text` next to label points and rotates that text according to `-orientation` when present. For `label_field: "text"`, the map canvas interprets common Therion label formatting tags such as `<br>`, `<center>/<centre>`, `<left>`, `<right>`, `<thsp>`, `<rm>`, `<it>`, `<bf>`, `<ss>`, `<si>`, `<rtl>`, `</rtl>`, and `<size:...>` when drawing the label. Alignment tags affect multi-line labels with `<br>`.
+Bundled `point.station.json` renders `-name` next to station points. Bundled `point.label.json` renders `-text` next to label points with a smaller label font and rotates that text according to `-orientation` when present. Bundled `line.label.json` renders `-text` for label lines along the line path, keeps the underlying label path as a subtle guide line, and scales the path text down when it would not fit. For point labels with `label_field: "text"`, the map canvas interprets common Therion label formatting tags such as `<br>`, `<center>/<centre>`, `<left>`, `<right>`, `<thsp>`, `<rm>`, `<it>`, `<bf>`, `<ss>`, `<si>`, `<rtl>`, `</rtl>`, and `<size:...>` when drawing the label. Alignment tags affect multi-line labels with `<br>`. Line label path text normalizes common inline label tags such as `<br>` and `<thsp>` before laying glyphs along the path.
 
 Several bundled point styles are approximated from Therion's SKBB or UIS MetaPost symbols using `symbol_parts`, including simple sand, debris, pebbles, blocks, ice, snow, crystal, gypsum, and cave-pearl symbols.
 
@@ -322,6 +331,7 @@ Line style files support:
 | `stroke_color` | color string | Line stroke color. |
 | `dash_pattern` | number array | Custom dash pattern, for example `[8, 4]`. |
 | `closed_fill` | string | Optional fill for closed lines before drawing the stroke. Use `background` to emulate Therion `thclean` behavior, or a color string such as `#FFFFFF`. Defaults to `none`. |
+| `label_field` | string | Optional Therion option name to render on the line, without the leading dash. The bundled `line.label.json` uses `text` to render `-text`. |
 | `decorations` | array | Optional repeated or offset line decorations drawn along the line geometry. |
 
 Example:

@@ -181,8 +181,10 @@ void MapEditorTab::buildInspectorPanelUi()
     configureSelectionEditableCombo(objectDetailsUiState_.objectQuickProjectionCombo_, QStringLiteral("mapObjectQuickProjectionCombo"));
     objectDetailsUiState_.objectQuickIdentifierEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickNameEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
+    objectDetailsUiState_.objectQuickTextEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickIdentifierLabel_ = new QLabel(tr("ID"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickNameLabel_ = new QLabel(tr("Name"), objectDetailsUiState_.objectQuickFieldsEditor_);
+    objectDetailsUiState_.objectQuickTextLabel_ = new QLabel(tr("Text (-text)"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickProjectionLabel_ = new QLabel(tr("Projection"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickTypeLabel_ = new QLabel(tr("Type"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickSubtypeLabel_ = new QLabel(tr("Subtype"), objectDetailsUiState_.objectQuickFieldsEditor_);
@@ -192,6 +194,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.objectStylePreview_->clearStyleSelection();
     connect(objectDetailsUiState_.objectQuickIdentifierEdit_, &QLineEdit::editingFinished, this, &MapEditorTab::applyObjectQuickFieldEdits);
     connect(objectDetailsUiState_.objectQuickNameEdit_, &QLineEdit::editingFinished, this, &MapEditorTab::applyObjectQuickFieldEdits);
+    connect(objectDetailsUiState_.objectQuickTextEdit_, &QLineEdit::editingFinished, this, &MapEditorTab::applyObjectQuickFieldEdits);
     connect(objectDetailsUiState_.objectQuickTypeCombo_, qOverload<int>(&QComboBox::activated), this, [this]() {
         updateObjectQuickSubtypeChoices();
         applyObjectQuickFieldEdits();
@@ -217,6 +220,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectQuickForm->addRow(objectDetailsUiState_.objectStylePreviewLabel_);
     objectQuickForm->addRow(objectDetailsUiState_.objectStylePreview_);
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickNameLabel_, objectDetailsUiState_.objectQuickNameEdit_);
+    objectQuickForm->addRow(objectDetailsUiState_.objectQuickTextLabel_, objectDetailsUiState_.objectQuickTextEdit_);
     objectSelectionLayout->addWidget(objectDetailsUiState_.objectQuickFieldsEditor_);
     selectionLayout->addWidget(objectDetailsUiState_.objectSelectionSection_);
 
@@ -302,16 +306,8 @@ void MapEditorTab::buildInspectorPanelUi()
     vertexSelectionLayout->addWidget(objectDetailsUiState_.vertexActionsEditor_);
     selectionLayout->addWidget(objectDetailsUiState_.vertexSelectionSection_);
 
-    objectDetailsUiState_.scrapScaleEditor_ = new QFrame(objectDetailsUiState_.objectSelectionSection_);
-    static_cast<QFrame *>(objectDetailsUiState_.scrapScaleEditor_)->setFrameShape(QFrame::StyledPanel);
-    auto *scrapScaleLayout = new QVBoxLayout(objectDetailsUiState_.scrapScaleEditor_);
-    scrapScaleLayout->setContentsMargins(8, 8, 8, 8);
-    scrapScaleLayout->setSpacing(6);
-    auto *scrapScaleTitle = new QLabel(tr("Scrap Scale"), objectDetailsUiState_.scrapScaleEditor_);
-    QFont scrapScaleTitleFont = scrapScaleTitle->font();
-    scrapScaleTitleFont.setBold(true);
-    scrapScaleTitle->setFont(scrapScaleTitleFont);
-    scrapScaleLayout->addWidget(scrapScaleTitle);
+    QVBoxLayout *scrapScaleLayout = nullptr;
+    objectDetailsUiState_.scrapScaleEditor_ = createSelectionSection(tr("Scrap Scale"), &scrapScaleLayout);
 
     auto createScrapScaleSpin = [](QWidget *parent, int decimals) {
         auto *spin = new QDoubleSpinBox(parent);
@@ -382,7 +378,7 @@ void MapEditorTab::buildInspectorPanelUi()
     scrapScaleButtons->addWidget(objectDetailsUiState_.scrapScaleUseBoundsButton_);
     scrapScaleButtons->addWidget(objectDetailsUiState_.scrapScaleApplyButton_);
     scrapScaleLayout->addLayout(scrapScaleButtons);
-    objectSelectionLayout->addWidget(objectDetailsUiState_.scrapScaleEditor_);
+    selectionLayout->addWidget(objectDetailsUiState_.scrapScaleEditor_);
 
     QVBoxLayout *advancedSelectionLayout = nullptr;
     objectDetailsUiState_.advancedSelectionSection_ = createSelectionSection(tr("Object Actions"), &advancedSelectionLayout);

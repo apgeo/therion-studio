@@ -121,6 +121,7 @@ Structured block-canvas requirements:
 - when a fixed-arity option is edited through parameter fields, serialization shall preserve Therion token boundaries (including quoting of values containing spaces) so round-tripped options remain arity-correct.
 - data-block configuration should render measurement rows in a table derived from the active `data ...` field definition so row editing follows the declared column schema
 - data-block row editor should not duplicate a second editable header/column-definition input; it should use the currently active `data ...` header as the single source of row-column schema
+- data-block row editor shall ignore blank body lines that contain no data tokens and no comment so source spacing is not parsed as editable measurement data
 - data-block row editor should expose a trailing `Comment` column for every row (measurement or directive) so inline row comments are first-class editable data
 - data-block row editor should support explicit comment-only rows and preserve them as standalone comment lines in serialized source
 - data-block row editor should provide inline directive suggestions/templates in the `Directive` column to reduce typing errors
@@ -318,7 +319,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Map hit testing shall use screen-space stroke tolerance for line bodies so line selection remains precise across zoom levels; clicking inside an area fill shall select the area unless the click is on a higher-priority handle/vertex or within the visible line-stroke hit tolerance.
 - Activating `Point`, `Line`, `Freehand`, or `Area` insertion shall activate the `Selection` tab before the first point or vertex is placed and shall expose pending object fields for type, subtype, ID, and point name where applicable; edits to those fields shall not mutate source text until the new object is inserted, and the inserted command shall use the pending values.
 - Activating `Insert Scrap` shall first expose a pending scrap in the `Selection` tab so the user may set scrap ID/projection; activating `Insert Scrap` again while that pending scrap is active shall write the scrap block using those pending values.
-- When the selected object is a `scrap`, the `Selection` tab shall expose manual scrap scale editing for XTherion/Therion-compatible 8-parameter `-scale` calibration values, including picture point 1/2 in pixels, real point 1/2, unit, and an action that writes the resulting `-scale [...]` option to the selected scrap command.
+- When the selected object is a `scrap`, the `Selection` tab shall expose manual scrap scale editing as a separate `Scrap Scale` section below the basic scrap identity/projection section. The scale section shall edit XTherion/Therion-compatible 8-parameter `-scale` calibration values, including picture point 1/2 in pixels, real point 1/2, unit, and an action that writes the resulting `-scale [...]` option to the selected scrap command.
 - In embedded `Raw` mode, the workspace shall present the source text editor together with the contextual help inspector and no embedded map pane.
 - The embedded graphical map pane shall stay dedicated to map editing and shall not include a separate persistent map-help panel.
 - The user shall be able to detach the current TH2 session into a dedicated map editor window without creating a separate document state.
@@ -703,10 +704,13 @@ Required behavior:
 - the repository shall provide a developer style-gallery generator that renders all catalog-supported `point`, `line`, and `area` type/subtype combinations, including combinations with no specific style that therefore use type or global defaults, so bundled and override styles can be visually reviewed.
 - point styles shall support at least fill color, stroke color, stroke width, `symbol_parts` geometry, symbol size, and label style
 - point styles shall support an optional `label_field` style attribute that identifies a Therion option value to render next to the point symbol without hardcoding point-type-specific label extraction in the renderer
+- point styles shall support an optional label font-size style attribute so bundled and user style metadata can tune label readability without renderer-specific type checks
 - point styles shall support a label-orientation mode so text labels may either remain screen-aligned or rotate according to point `-orientation`
+- line styles shall support an optional `label_field` style attribute that identifies a Therion option value to render along the line path without hardcoding line-type-specific label extraction in the renderer
 - area styles shall support at least fill style and optional stroke style
 - label styles shall support font size, weight, color, and positional offset relative to the rendered point symbol
 - bundled station point styles shall render the point `-name` value when present, and bundled label point styles shall render the point `-text` value when present
+- bundled label line styles shall render the line `-text` value when present by laying text along the line path; the line geometry shall determine text direction, spacing, and maximum fitted length
 - point label rendering shall interpret common Therion label text markup used in `-text` values, including line breaks, multi-line alignment switches, thin spaces, basic font switches, right-to-left spans, and supported size switches; unsupported Therion label markup shall not be shown as literal control text when it is safe to ignore
 - area fill styles shall support at least solid fill, hatch, and dot-pattern rendering
 - area rendering shall honor Therion `-place bottom`, `-place default`, and `-place top` by assigning area fills and patterns to bottom, normal, or top render layers; default and bottom area rendering shall remain below normal line work, while explicit top area rendering may overlap normal line work
@@ -1004,7 +1008,7 @@ The criteria below are intended for implementation verification and QA.
 - Raster background image add/move/show-hide/gamma/remove operations write and maintain XTherion-compatible `xth_me_area_adjust`, `xth_me_area_zoom_to`, and `xth_me_image_insert` metadata in the TH2 source.
 - The Backgrounds inspector exposes layer controls without editor-generated grid toggles or spacing fields; `.xvi` grid lines render only as part of `.xvi` background content.
 - Map-driven scrap insertion writes XTherion-compatible default `-scale` metadata, while existing Therion/XTherion `-scale` forms are preserved unless explicitly edited.
-- Selecting a scrap in `Selection` exposes manual scale calibration controls and writes XTherion-compatible 8-parameter `-scale [...]` metadata to the scrap command.
+- Selecting a scrap in `Selection` exposes manual scale calibration controls in a separate `Scrap Scale` section and writes XTherion-compatible 8-parameter `-scale [...]` metadata to the scrap command.
 - Automatic input-policy handling supports pen-first workflows without a dedicated touch-controls toolbar button.
 - Zoom, pan, and background-image adjustments persist for the session.
 
@@ -1017,6 +1021,7 @@ The criteria below are intended for implementation verification and QA.
 - The `Selection` inspector shall group controls in this order: selected-object section, `Geometry`, contextual point/line-point details, and `Object Actions`, so object identity edits, object-level geometry state controls, point/line-point actions, and object actions remain visually distinct.
 - The selected-object section title shall use the selected object kind (`Scrap`, `Point`, `Line`, or `Area`) instead of a generic `Object` heading, and shall show source location as a compact `Source line N` metadata line.
 - The selected-object section shall expose quick-edit fields for common map-object identity attributes in a stable command-focused order. Scrap objects shall expose ID and `-projection`; scraps shall not expose type/subtype because scraps do not have type/subtype. Point, line, and area objects shall expose `ID (-id)`, type, and subtype where supported. Station points shall additionally expose `Name (-name)` after subtype rather than using station name as the ID field. Type, subtype, and scrap projection shall be editable pick lists that allow catalog/default choices and manual custom values. Field changes shall rewrite the selected command line through the safe source-edit path without a separate `Apply` button and preserve unrelated options/comments where practical.
+- For selected or pending point/line objects with type `label`, the selected-object section shall expose a `Text (-text)` quick-edit field. Editing it shall rewrite the object's `-text` option through the safe source-edit path and shall preserve unrelated options/comments where practical.
 - The `Object Actions` section shall provide catalog-driven object settings and selected-object deletion through the standard confirmed source-delete workflow.
 - The contextual point/line-point details section shall be titled `Point Details` when a standalone point is selected and `Line Point` when a line anchor or its control handle is selected.
 - The contextual point/line-point details section shall not expose coordinate text fields; exact point, vertex, and control-point coordinates shall remain editable in Raw mode.
@@ -1116,6 +1121,7 @@ The criteria below are intended for implementation verification and QA.
 - Point symbols support configurable `symbol_parts` geometry, size, fill, stroke, and label presentation.
 - Point styles support an optional `label_field` that reads one Therion option value, for example `name` for `-name` or `text` for `-text`, and renders it next to the point symbol when present.
 - Station point defaults render `-name`; label point defaults render `-text` with common Therion label formatting such as `<br>` line breaks, multi-line alignment tags, and `<thsp>` thin spaces, and rotate that text when explicit `-orientation` is present.
+- Line styles support an optional `label_field`; bundled label line styles render `-text` along the line path so the label line geometry determines text direction, spacing, and maximum fitted length.
 - Line symbols support configurable base stroke visibility, stroke width, dash pattern, optional closed-line fill, and optional decorations such as offset strokes, parallel strokes, ticks, rungs, teeth, repeated symbols, or slope ticks driven by line-point `orientation` and `l-size`.
 - Line decoration side semantics match Therion orientation; the selected-line side marker points to the same side used by `side: "left"` decorations before `-reverse`.
 - Closed `rock-border` lines clean-fill their interior with the map background before drawing the outline, so they cover default area fills and patterns like Therion's UIS MetaPost symbol.

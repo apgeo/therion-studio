@@ -285,6 +285,7 @@ private:
         QWidget *objectQuickFieldsEditor_ = nullptr;
         QLabel *objectQuickIdentifierLabel_ = nullptr;
         QLabel *objectQuickNameLabel_ = nullptr;
+        QLabel *objectQuickTextLabel_ = nullptr;
         QLabel *objectQuickProjectionLabel_ = nullptr;
         QLabel *objectQuickTypeLabel_ = nullptr;
         QLabel *objectQuickSubtypeLabel_ = nullptr;
@@ -294,6 +295,7 @@ private:
         QComboBox *objectQuickProjectionCombo_ = nullptr;
         QLineEdit *objectQuickIdentifierEdit_ = nullptr;
         QLineEdit *objectQuickNameEdit_ = nullptr;
+        QLineEdit *objectQuickTextEdit_ = nullptr;
         MapEditorStylePreviewWidget *objectStylePreview_ = nullptr;
         QString objectQuickCommandKind_;
         QWidget *vertexActionsEditor_ = nullptr;

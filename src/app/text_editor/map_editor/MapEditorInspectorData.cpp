@@ -180,6 +180,17 @@ QString inspectorObjectSubtype(const TherionParsedLine &parsedLine, const QStrin
     return inspectorInlineSubtypePart(typeToken);
 }
 
+bool inspectorObjectUsesTextField(const QString &commandKind, const QString &type, const QString &text)
+{
+    const QString normalizedCommand = commandKind.trimmed().toLower();
+    if (normalizedCommand != QStringLiteral("point") && normalizedCommand != QStringLiteral("line")) {
+        return false;
+    }
+
+    return type.trimmed().compare(QStringLiteral("label"), Qt::CaseInsensitive) == 0
+        || !text.trimmed().isEmpty();
+}
+
 QString inspectorMapObjectIconName(const ProjectStructureEntry &entry)
 {
     if (entry.category == QStringLiteral("Scraps")) {
@@ -642,10 +653,12 @@ std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLi
         const bool station = fields.type.compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0;
         fields.identifier = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-id"));
         fields.name = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-name"));
+        fields.text = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-text"));
         if (fields.name.isEmpty() && station) {
             fields.name = inspectorStationNameToken(parsedLine);
         }
         fields.nameVisible = station || !fields.name.isEmpty();
+        fields.textVisible = inspectorObjectUsesTextField(fields.commandKind, fields.type, fields.text);
         return fields;
     }
 
@@ -660,6 +673,8 @@ std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLi
         fields.type = inspectorTypePart(typeToken);
         fields.subtype = inspectorObjectSubtype(parsedLine, typeToken);
         fields.identifier = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-id"));
+        fields.text = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-text"));
+        fields.textVisible = inspectorObjectUsesTextField(fields.commandKind, fields.type, fields.text);
         return fields;
     }
 

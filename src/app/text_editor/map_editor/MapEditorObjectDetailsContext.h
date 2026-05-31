@@ -52,6 +52,7 @@ struct MapEditorObjectDetailsContext
     QWidget *quickFieldsEditor = nullptr;
     QLabel *quickIdentifierLabel = nullptr;
     QLabel *quickNameLabel = nullptr;
+    QLabel *quickTextLabel = nullptr;
     QLabel *quickProjectionLabel = nullptr;
     QLabel *quickTypeLabel = nullptr;
     QLabel *quickSubtypeLabel = nullptr;
@@ -61,6 +62,7 @@ struct MapEditorObjectDetailsContext
     QComboBox *quickProjectionCombo = nullptr;
     QLineEdit *quickIdentifierEdit = nullptr;
     QLineEdit *quickNameEdit = nullptr;
+    QLineEdit *quickTextEdit = nullptr;
     MapEditorStylePreviewWidget *stylePreview = nullptr;
     QWidget *vertexActionsEditor = nullptr;
     QPushButton *vertexInsertBeforeButton = nullptr;

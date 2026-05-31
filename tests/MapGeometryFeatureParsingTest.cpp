@@ -48,6 +48,18 @@ const MapGeometryFeature *firstLineFeature(const QVector<MapGeometryFeature> &fe
     return nullptr;
 }
 
+const MapGeometryFeature *firstLineFeatureByLabel(const QVector<MapGeometryFeature> &features, const QString &label)
+{
+    for (const MapGeometryFeature &feature : features) {
+        if (feature.kind == MapGeometryFeature::Kind::Line
+            && feature.label == label) {
+            return &feature;
+        }
+    }
+
+    return nullptr;
+}
+
 QVector<const MapGeometryFeature *> pointFeatures(const QVector<MapGeometryFeature> &features)
 {
     QVector<const MapGeometryFeature *> points;
@@ -63,7 +75,11 @@ int runPointTypeAndLabelOptionParsingTest()
 {
     const QString text =
         QStringLiteral("point 10 20 station -name P1 -orientation 450\n"
-                       "point 30 40 label -text \"large<br>dome\" -orient -45\n");
+                       "point 30 40 label -text \"large<br>dome\" -orient -45\n"
+                       "line label -text \"stream<br>label\"\n"
+                       "  10 10\n"
+                       "  40 10\n"
+                       "endline\n");
 
     const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
@@ -103,6 +119,15 @@ int runPointTypeAndLabelOptionParsingTest()
     if (!expect(label->orientationDegrees.has_value()
                     && std::abs(label->orientationDegrees.value() - 315.0) < 1e-6,
                 "Expected point -orient alias to parse and normalize negative degrees.")) {
+        return 1;
+    }
+
+    const MapGeometryFeature *lineLabel = firstLineFeatureByLabel(features, QStringLiteral("label"));
+    if (!expect(lineLabel != nullptr, "Expected line label feature to parse.")) {
+        return 1;
+    }
+    if (!expect(lineLabel->optionValues.value(QStringLiteral("text")) == QStringLiteral("stream<br>label"),
+                "Expected line label -text option to be available for style-driven labels.")) {
         return 1;
     }
 

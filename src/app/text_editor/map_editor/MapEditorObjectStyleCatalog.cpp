@@ -730,6 +730,9 @@ void applyPointDefaults(MapEditorObjectStyleCatalog *catalog, const QJsonObject 
     if (const std::optional<QString> labelField = optionalFieldName(point, "label_field")) {
         catalog->point.labelField = labelField;
     }
+    if (const std::optional<qreal> labelFontSize = optionalPositiveNumber(point, "label_font_size")) {
+        catalog->point.labelFontSize = labelFontSize;
+    }
     if (const std::optional<MapEditorPointLabelOrientationMode> labelOrientation =
             optionalPointLabelOrientation(point, "label_orientation")) {
         catalog->point.labelOrientation = labelOrientation.value();
@@ -762,6 +765,9 @@ void applyLineDefaults(MapEditorObjectStyleCatalog *catalog, const QJsonObject &
     }
     if (const std::optional<MapEditorLineClosedFillStyle> closedFill = optionalLineClosedFill(line, "closed_fill")) {
         catalog->line.closedFill = closedFill.value();
+    }
+    if (const std::optional<QString> labelField = optionalFieldName(line, "label_field")) {
+        catalog->line.labelField = labelField;
     }
 }
 
@@ -808,6 +814,7 @@ std::optional<MapEditorPointStyleRule> readPointStyleRule(const QJsonObject &obj
     rule.fillColor = optionalColor(object, "fill_color");
     rule.strokeColor = optionalColor(object, "stroke_color");
     rule.labelField = optionalFieldName(object, "label_field");
+    rule.labelFontSize = optionalPositiveNumber(object, "label_font_size");
     rule.labelOrientation = optionalPointLabelOrientation(object, "label_orientation");
     return rule;
 }
@@ -831,6 +838,7 @@ std::optional<MapEditorLineStyleRule> readLineStyleRule(const QJsonObject &objec
     }
     rule.decorations = readLineDecorations(object);
     rule.closedFill = optionalLineClosedFill(object, "closed_fill");
+    rule.labelField = optionalFieldName(object, "label_field");
     return rule;
 }
 
@@ -1020,6 +1028,7 @@ MapEditorResolvedPointStyle resolveMapEditorPointStyle(const MapEditorObjectStyl
     resolved.fillColor = catalog.point.fillColor;
     resolved.strokeColor = catalog.point.strokeColor;
     resolved.labelField = catalog.point.labelField;
+    resolved.labelFontSize = catalog.point.labelFontSize;
     resolved.labelOrientation = catalog.point.labelOrientation;
 
     const QString normalizedRawType = normalizedToken(rawType);
@@ -1046,6 +1055,9 @@ MapEditorResolvedPointStyle resolveMapEditorPointStyle(const MapEditorObjectStyl
         if (rule.labelField.has_value()) {
             resolved.labelField = rule.labelField;
         }
+        if (rule.labelFontSize.has_value()) {
+            resolved.labelFontSize = rule.labelFontSize;
+        }
         if (rule.labelOrientation.has_value()) {
             resolved.labelOrientation = rule.labelOrientation.value();
         }
@@ -1066,6 +1078,7 @@ MapEditorResolvedLineStyle resolveMapEditorLineStyle(const MapEditorObjectStyleC
     resolved.dashPattern = catalog.line.dashPattern;
     resolved.decorations = catalog.line.decorations;
     resolved.closedFill = catalog.line.closedFill;
+    resolved.labelField = catalog.line.labelField;
 
     const QString normalizedRawType = normalizedToken(rawType);
     const QString normalizedSubtype = normalizedToken(subtype);
@@ -1093,6 +1106,9 @@ MapEditorResolvedLineStyle resolveMapEditorLineStyle(const MapEditorObjectStyleC
         }
         if (rule.closedFill.has_value()) {
             resolved.closedFill = rule.closedFill.value();
+        }
+        if (rule.labelField.has_value()) {
+            resolved.labelField = rule.labelField;
         }
     }
 

@@ -428,6 +428,8 @@ int runAppendDraftGeometryTest()
     pointObjectOptions.type = QStringLiteral("label");
     pointObjectOptions.subtype = QStringLiteral("remark");
     pointObjectOptions.identifier = QStringLiteral("p-1");
+    pointObjectOptions.text = QStringLiteral("Entrance label");
+    pointObjectOptions.textEnabled = true;
     if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
                                                            QStringLiteral("point"),
                                                            {QPointF(12.0, 34.0)},
@@ -438,9 +440,9 @@ int runAppendDraftGeometryTest()
         return 1;
     }
     if (!expect(contents == QStringLiteral("scrap custom\n"
-                                           "  point 12.0 34.0 label -subtype remark -id p-1\n"
+                                           "  point 12.0 34.0 label -subtype remark -id p-1 -text \"Entrance label\"\n"
                                            "endscrap\n"),
-                "appendDraftGeometry should apply caller-provided point type, subtype, and ID options.")) {
+                "appendDraftGeometry should apply caller-provided point type, subtype, ID, and text options.")) {
         return 1;
     }
 
@@ -1629,6 +1631,62 @@ int runRewriteMapObjectQuickFieldsTest()
     }
     if (!expect(contents == QStringLiteral("area sand\nendarea\n"),
                 "rewriteMapObjectQuickFields should remove cleared area subtype and ID options.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line label -id l1 # keep\n  0 0\n  10 0\nendline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectTextOption(&contents,
+                                                                  1,
+                                                                  QStringLiteral("Main passage"),
+                                                                  &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line label -id l1 -text \"Main passage\" # keep\n  0 0\n  10 0\nendline\n"),
+                "rewriteMapObjectTextOption should insert line label text before comments.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("point 10 20 label -text old\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectTextOption(&contents,
+                                                                  1,
+                                                                  QStringLiteral("New label"),
+                                                                  &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 10 20 label -text \"New label\"\n"),
+                "rewriteMapObjectTextOption should replace point label text.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall -text stale\nendline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectTextOption(&contents,
+                                                                  1,
+                                                                  QString(),
+                                                                  &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\nendline\n"),
+                "rewriteMapObjectTextOption should allow clearing stale label text after type changes.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall\nendline\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteMapObjectTextOption(&contents,
+                                                                   1,
+                                                                   QStringLiteral("Invalid"),
+                                                                   &errorMessage),
+                "rewriteMapObjectTextOption should reject non-label object text.")) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\nendline\n"),
+                "rewriteMapObjectTextOption should not mutate rejected non-label objects.")) {
         return 1;
     }
 

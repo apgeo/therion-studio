@@ -405,6 +405,18 @@ int runCatalogTest()
                 "Expected default border line style to be solid.")) {
         return 1;
     }
+    const MapEditorResolvedLineStyle labelLineStyle = resolveMapEditorLineStyle(catalog, QStringLiteral("label"));
+    if (!expect(labelLineStyle.labelField.has_value()
+                    && labelLineStyle.labelField.value() == QStringLiteral("text"),
+                "Expected line label style to expose -text as its label field.")) {
+        return 1;
+    }
+    if (!expect(labelLineStyle.strokeColor.has_value()
+                    && labelLineStyle.strokeColor->alpha() < 255
+                    && labelLineStyle.strokeWidth < 1.0,
+                "Expected line label geometry to render as a subtle guide line.")) {
+        return 1;
+    }
     const MapEditorResolvedLineStyle rockBorderStyle =
         resolveMapEditorLineStyle(catalog, QStringLiteral("rock-border"));
     if (!expect(rockBorderStyle.closedFill.mode == MapEditorLineClosedFillMode::Background,
@@ -489,6 +501,11 @@ int runCatalogTest()
     }
     if (!expect(labelStyle.labelOrientation == MapEditorPointLabelOrientationMode::Orientation,
                 "Expected label point text to use orientation-driven rendering.")) {
+        return 1;
+    }
+    if (!expect(labelStyle.labelFontSize.has_value()
+                    && std::abs(labelStyle.labelFontSize.value() - 8.5) < 1e-6,
+                "Expected label point text to use the configured smaller font size.")) {
         return 1;
     }
 

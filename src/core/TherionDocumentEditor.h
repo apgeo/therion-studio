@@ -13,7 +13,9 @@ struct TherionDraftObjectOptions
     QString subtype;
     QString identifier;
     QString name;
+    QString text;
     bool nameEnabled = false;
+    bool textEnabled = false;
 };
 
 class TherionDocumentEditor final
@@ -94,6 +96,10 @@ public:
                                                           const QString &name,
                                                           bool nameEnabled,
                                                           QString *errorMessage = nullptr);
+    [[nodiscard]] static bool rewriteMapObjectTextOption(QString *contents,
+                                                         int lineNumber,
+                                                         const QString &text,
+                                                         QString *errorMessage = nullptr);
     [[nodiscard]] static bool rewriteLineCoordinateRows(QString *contents,
                                                         int lineNumber,
                                                         const QStringList &coordinateRows,

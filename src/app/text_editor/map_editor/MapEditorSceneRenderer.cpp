@@ -6,12 +6,15 @@
 #include "MapEditorPointSymbolGeometry.h"
 
 #include <QFont>
+#include <QFontMetricsF>
 #include <QGraphicsLineItem>
 #include <QGraphicsPathItem>
+#include <QGraphicsItem>
 #include <QGraphicsScene>
 #include <QPainter>
 #include <QPainterPath>
 #include <QRegularExpression>
+#include <QStaticText>
 #include <QTransform>
 
 #include "../../../core/TherionDocumentParser.h"
@@ -137,6 +140,98 @@ protected:
 
 private:
     QPen basePen_;
+};
+
+class MapPathLabelItem final : public QGraphicsItem
+{
+public:
+    MapPathLabelItem(QString text, QPainterPath path, const QFont &font, const QColor &color)
+        : text_(std::move(text))
+        , path_(std::move(path))
+        , font_(font)
+        , color_(color)
+    {
+        setAcceptedMouseButtons(Qt::NoButton);
+    }
+
+    QRectF boundingRect() const override
+    {
+        const qreal margin = QFontMetricsF(font_).height() * 2.0;
+        return path_.boundingRect().adjusted(-margin, -margin, margin, margin);
+    }
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
+    {
+        Q_UNUSED(option);
+        Q_UNUSED(widget);
+        if (painter == nullptr || text_.isEmpty()) {
+            return;
+        }
+
+        const qreal pathLength = path_.length();
+        if (pathLength <= 1e-6) {
+            return;
+        }
+
+        const QFontMetricsF metrics(font_);
+        QVector<qreal> advances;
+        advances.reserve(text_.size());
+        qreal naturalTextWidth = 0.0;
+        for (const QChar character : text_) {
+            const qreal advance = qMax<qreal>(metrics.horizontalAdvance(QString(character)), 0.1);
+            advances.append(advance);
+            naturalTextWidth += advance;
+        }
+        if (naturalTextWidth <= 1e-6) {
+            return;
+        }
+
+        // Therion's MetaPost l_label lays glyphs along the whole path and scales
+        // text down only when it would not fit.
+        const qreal fontScale = pathLength < naturalTextWidth ? pathLength / naturalTextWidth : 1.0;
+        const qreal effectiveTextWidth = naturalTextWidth * fontScale;
+        const qreal pathSpacingScale = effectiveTextWidth > 1e-6 ? pathLength / effectiveTextWidth : 1.0;
+
+        painter->save();
+        painter->setFont(font_);
+        painter->setPen(color_);
+
+        qreal textCursor = 0.0;
+        for (int index = 0; index < text_.size(); ++index) {
+            const qreal effectiveAdvance = advances.at(index) * fontScale;
+            const qreal distance = qBound<qreal>(0.0,
+                                                 (textCursor + effectiveAdvance / 2.0) * pathSpacingScale,
+                                                 pathLength);
+            const qreal percent = path_.percentAtLength(distance);
+            const QPointF position = path_.pointAtPercent(percent);
+
+            const qreal beforeDistance = qMax<qreal>(0.0, distance - 0.5);
+            const qreal afterDistance = qMin<qreal>(pathLength, distance + 0.5);
+            const QPointF before = path_.pointAtPercent(path_.percentAtLength(beforeDistance));
+            const QPointF after = path_.pointAtPercent(path_.percentAtLength(afterDistance));
+            const QPointF tangent = after - before;
+            constexpr qreal kPi = 3.14159265358979323846;
+            const qreal angleDegrees = std::atan2(tangent.y(), tangent.x()) * 180.0 / kPi;
+
+            painter->save();
+            painter->translate(position);
+            painter->rotate(angleDegrees);
+            painter->scale(fontScale, fontScale);
+            painter->drawText(QPointF(-advances.at(index) / 2.0,
+                                      metrics.ascent() - metrics.height() / 2.0),
+                              QString(text_.at(index)));
+            painter->restore();
+            textCursor += effectiveAdvance;
+        }
+
+        painter->restore();
+    }
+
+private:
+    QString text_;
+    QPainterPath path_;
+    QFont font_;
+    QColor color_;
 };
 
 QPen styledGeometricPen(const QColor &color,
@@ -1451,6 +1546,25 @@ QStaticText createPointLabelStaticText(const QString &text, bool useTherionForma
     return staticText;
 }
 
+QString lineLabelPathText(QString text)
+{
+    static const QRegularExpression breakPattern(QStringLiteral(R"(<\s*br\s*/?\s*>)"),
+                                                 QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression thinSpacePattern(QStringLiteral(R"(<\s*thsp\s*/?\s*>)"),
+                                                     QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression ignoredLabelTagPattern(
+        QStringLiteral(R"(<\s*/?\s*(?:rm|it|bf|ss|si|rtl|left|right|center|centre)\s*>)"),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression metadataLabelTagPattern(
+        QStringLiteral(R"(<\s*(?:lang|size):[^>]*>)"),
+        QRegularExpression::CaseInsensitiveOption);
+    text.replace(breakPattern, QStringLiteral(" "));
+    text.replace(thinSpacePattern, QString(QChar(0x2009)));
+    text.replace(ignoredLabelTagPattern, QString());
+    text.replace(metadataLabelTagPattern, QString());
+    return text.trimmed();
+}
+
 void appendAreaReferenceIdentifiers(const TherionParsedLine &parsedLine,
                                     int startTokenIndex,
                                     QStringList *identifiers)
@@ -1787,8 +1901,9 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 if (pointStyle.labelField.has_value()) {
                     const QString labelText = optionValueForFieldName(feature.optionValues, pointStyle.labelField.value());
                     if (!labelText.isEmpty()) {
-                        const bool labelTextField = pointStyle.labelField.value() == QStringLiteral("text");
-                        QFont labelFont(QStringLiteral("Menlo"), 10);
+                        const bool labelTextField = normalizedOptionFieldName(pointStyle.labelField.value()) == QStringLiteral("text");
+                        QFont labelFont(QStringLiteral("Menlo"));
+                        labelFont.setPointSizeF(pointStyle.labelFontSize.value_or(10.0));
                         if (feature.stationPoint) {
                             labelFont.setBold(true);
                         }
@@ -1892,6 +2007,22 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 scene->addItem(directionTickItem);
                 if (mapItemsByLine != nullptr && feature.lineNumber > 0) {
                     mapItemsByLine->insert(feature.lineNumber, lineItem);
+                }
+
+                if (lineStyle.labelField.has_value()) {
+                    const QString labelText = optionValueForFieldName(feature.optionValues, lineStyle.labelField.value());
+                    if (!labelText.isEmpty()) {
+                        QFont labelFont(QStringLiteral("Menlo"), 10);
+                        auto *lineLabelItem = new MapPathLabelItem(lineLabelPathText(labelText),
+                                                                   path,
+                                                                   labelFont,
+                                                                   canvasTheme.labelText);
+                        scene->addItem(lineLabelItem);
+                        lineLabelItem->setZValue(3.1);
+                        markGeometryItem(lineLabelItem);
+                        makeMouseTransparent(lineLabelItem);
+                        lineLabelItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                    }
                 }
 
                 auto anchorItemsByOrder = std::make_shared<QVector<MapEditableGeometryVertexItem *>>(feature.lineVertices.size(), nullptr);
@@ -2653,6 +2784,7 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.label = mapEntryTitleForLine(parsedLine);
             currentFeature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
+            currentFeature.optionValues = optionValuesByFieldName(parsedLine.tokens);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
             currentFeature.closed = lineOptionToggleValue(parsedLine, QStringLiteral("-close")).value_or(false);
             currentFeature.reversed = lineOptionToggleValue(parsedLine, QStringLiteral("-reverse")).value_or(false);

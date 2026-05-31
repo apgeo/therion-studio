@@ -585,7 +585,8 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
         || context_.quickTypeCombo == nullptr
         || context_.quickSubtypeCombo == nullptr
         || context_.quickIdentifierEdit == nullptr
-        || context_.quickNameEdit == nullptr) {
+        || context_.quickNameEdit == nullptr
+        || context_.quickTextEdit == nullptr) {
         return;
     }
 
@@ -596,6 +597,8 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
             pendingFields->subtype = context_.quickSubtypeCombo->currentText();
             pendingFields->identifier = context_.quickIdentifierEdit->text();
             pendingFields->name = context_.quickNameEdit->text();
+            pendingFields->text = context_.quickTextEdit->text();
+            pendingFields->textVisible = context_.quickTextEdit->isVisible();
             context_.setPendingInsertQuickFields(pendingFields.value());
             context_.refreshObjectDetailsPanel();
             return;
@@ -624,6 +627,21 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
         *context_.toolbarStatusNote = errorMessage.isEmpty()
             ? tr("Failed to update object fields.")
             : tr("Failed to update object fields: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        context_.refreshObjectDetailsPanel();
+        return;
+    }
+
+    const bool currentTypeIsLabel =
+        context_.quickTypeCombo->currentText().trimmed().compare(QStringLiteral("label"), Qt::CaseInsensitive) == 0;
+    if (context_.quickTextEdit->isVisible()
+        && !TherionDocumentEditor::rewriteMapObjectTextOption(&afterText,
+                                                              targetLineNumber,
+                                                              currentTypeIsLabel ? context_.quickTextEdit->text() : QString(),
+                                                              &errorMessage)) {
+        *context_.toolbarStatusNote = errorMessage.isEmpty()
+            ? tr("Failed to update label text.")
+            : tr("Failed to update label text: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         context_.refreshObjectDetailsPanel();
         return;

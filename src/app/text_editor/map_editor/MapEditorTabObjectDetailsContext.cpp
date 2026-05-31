@@ -40,6 +40,14 @@ bool pendingPointNameVisible(const QString &type, const QString &name)
     return type.trimmed().compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0
         || !name.trimmed().isEmpty();
 }
+
+bool pendingLabelTextVisible(const QString &commandKind, const QString &type, const QString &text)
+{
+    const QString normalizedCommand = commandKind.trimmed().toLower();
+    return (normalizedCommand == QStringLiteral("point") || normalizedCommand == QStringLiteral("line"))
+        && (type.trimmed().compare(QStringLiteral("label"), Qt::CaseInsensitive) == 0
+            || !text.trimmed().isEmpty());
+}
 }
 
 void MapEditorTab::beginPendingInsertObject(const QString &commandKind)
@@ -60,6 +68,7 @@ void MapEditorTab::beginPendingInsertObject(const QString &commandKind)
         fields.name = QStringLiteral("draft-point");
         fields.nameVisible = true;
     }
+    fields.textVisible = pendingLabelTextVisible(normalizedCommand, fields.type, fields.text);
     interactiveDrawState_.pendingInsertFields_ = fields;
 }
 
@@ -104,6 +113,10 @@ void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields 
         interactiveDrawState_.pendingInsertFields_.nameVisible = false;
         interactiveDrawState_.pendingInsertFields_.name.clear();
     }
+    interactiveDrawState_.pendingInsertFields_.textVisible =
+        pendingLabelTextVisible(normalizedCommand,
+                                interactiveDrawState_.pendingInsertFields_.type,
+                                interactiveDrawState_.pendingInsertFields_.text);
 }
 
 TherionDraftObjectOptions MapEditorTab::pendingDraftObjectOptions(const QString &commandKind) const
@@ -122,6 +135,8 @@ TherionDraftObjectOptions MapEditorTab::pendingDraftObjectOptions(const QString 
         options.name = interactiveDrawState_.pendingInsertFields_.name;
         options.nameEnabled = interactiveDrawState_.pendingInsertFields_.nameVisible;
     }
+    options.text = interactiveDrawState_.pendingInsertFields_.text;
+    options.textEnabled = interactiveDrawState_.pendingInsertFields_.textVisible;
     return options;
 }
 
@@ -185,6 +200,7 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .quickFieldsEditor = objectDetailsUiState_.objectQuickFieldsEditor_,
         .quickIdentifierLabel = objectDetailsUiState_.objectQuickIdentifierLabel_,
         .quickNameLabel = objectDetailsUiState_.objectQuickNameLabel_,
+        .quickTextLabel = objectDetailsUiState_.objectQuickTextLabel_,
         .quickProjectionLabel = objectDetailsUiState_.objectQuickProjectionLabel_,
         .quickTypeLabel = objectDetailsUiState_.objectQuickTypeLabel_,
         .quickSubtypeLabel = objectDetailsUiState_.objectQuickSubtypeLabel_,
@@ -194,6 +210,7 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .quickProjectionCombo = objectDetailsUiState_.objectQuickProjectionCombo_,
         .quickIdentifierEdit = objectDetailsUiState_.objectQuickIdentifierEdit_,
         .quickNameEdit = objectDetailsUiState_.objectQuickNameEdit_,
+        .quickTextEdit = objectDetailsUiState_.objectQuickTextEdit_,
         .stylePreview = objectDetailsUiState_.objectStylePreview_,
         .vertexActionsEditor = objectDetailsUiState_.vertexActionsEditor_,
         .vertexInsertBeforeButton = objectDetailsUiState_.vertexInsertBeforeButton_,

@@ -26,7 +26,9 @@ struct InspectorObjectQuickFields
     QString projection;
     QString identifier;
     QString name;
+    QString text;
     bool nameVisible = false;
+    bool textVisible = false;
     bool typeEditable = true;
 };
 

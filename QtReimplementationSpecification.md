@@ -444,9 +444,11 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The structure sidebar shall present a navigable project hierarchy limited to surveys, maps, and scraps.
 - The structure sidebar shall not prepend synthetic top rows for project-root path or summary text inside the hierarchy tree.
 - Structure rows shall include category icons for survey, map, and scrap items using the bundled compass, map, and puzzle Lucide icons respectively.
+- Structure parsing shall treat Therion spelling aliases `centreline` / `centerline` and `endcentreline` / `endcenterline` equivalently.
+- Structure graph object-kind labels and summaries shall preserve canonical Therion source terms such as `survey`, `centerline`, `map`, `scrap`, `station`, `point`, `line`, and `area` instead of translating them.
 - Map and scrap items that are referenced by a map block shall be presented as children of that map node when the reference can be resolved uniquely.
-- Map and scrap reference resolution shall prefer explicit Therion namespace qualifiers such as `name@survey.parent`, then the owning map namespace for unqualified references, before falling back to globally unique names.
-- Unresolved map/scrap references detected inside a map block shall be shown as warning child rows under the owning map node and shall navigate to the source reference line when selected.
+- Map and scrap reference resolution shall follow Therion namespace rules: unqualified references resolve in the owning map namespace, and explicit `name@child.parent` qualifiers resolve relative to the owning map namespace.
+- Unresolved and ambiguous map/scrap references detected inside a map block shall be shown as warning child rows under the owning map node and shall navigate to the source reference line when selected.
 - `preview above` / `preview below` map relations shall not be treated as ownership hierarchy in the Structure sidebar.
 - Selection in the structure sidebar shall change the active document context.
 - The structure sidebar shall remain synchronized with the open project and the currently selected content when possible.

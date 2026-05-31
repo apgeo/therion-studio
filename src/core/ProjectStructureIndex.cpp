@@ -85,6 +85,7 @@ QString optionValue(const QStringList &tokens, const QString &option);
 QString sectionNameFromLine(const TherionParsedLine &parsedLine);
 ProjectStructureEntryKind objectKindFromLine(const TherionParsedLine &parsedLine);
 QString objectNameFromLine(const TherionParsedLine &parsedLine);
+QString normalizedStructureDirective(const QString &directive);
 
 QString normalizedIdentityToken(const QString &value)
 {
@@ -167,8 +168,21 @@ QString namespacedReferenceLookupKey(const QString &name, const QString &namespa
 
 struct ReferenceKeyIndex
 {
-    QHash<QString, QVector<QString>> keysByName;
     QHash<QString, QVector<QString>> keysByNameAndNamespace;
+};
+
+enum class ReferenceResolutionState
+{
+    Missing,
+    Unique,
+    Ambiguous,
+};
+
+struct ReferenceResolution
+{
+    ReferenceResolutionState state = ReferenceResolutionState::Missing;
+    QString key;
+    int candidateCount = 0;
 };
 
 ReferenceKeyIndex entryKeysByReferenceName(const QVector<ProjectStructureEntry> &entries,
@@ -181,42 +195,39 @@ ReferenceKeyIndex entryKeysByReferenceName(const QVector<ProjectStructureEntry> 
         }
 
         const QString nodeKey = ProjectStructureIndex::structureEntryNodeKey(entry);
-        entryKeys.keysByName[mapReferenceLookupKey(entry.name)].append(nodeKey);
         entryKeys.keysByNameAndNamespace[namespacedReferenceLookupKey(entry.name, entry.namespacePath)].append(nodeKey);
     }
 
     return entryKeys;
 }
 
-QString uniqueKeyFromCandidates(const QVector<QString> &entryKeys)
+ReferenceResolution resolveCandidates(const QVector<QString> &entryKeys)
 {
-    return entryKeys.size() == 1 ? entryKeys.first() : QString();
+    if (entryKeys.size() == 1) {
+        return ReferenceResolution{ReferenceResolutionState::Unique, entryKeys.first(), 1};
+    }
+    if (entryKeys.size() > 1) {
+        return ReferenceResolution{ReferenceResolutionState::Ambiguous, QString(), static_cast<int>(entryKeys.size())};
+    }
+
+    return {};
 }
 
-QString resolveUniqueReferenceKey(const ReferenceKeyIndex &entryKeys,
-                                  const QString &referenceName,
-                                  const QString &ownerNamespacePath)
+ReferenceResolution resolveReferenceKey(const ReferenceKeyIndex &entryKeys,
+                                        const QString &referenceName,
+                                        const QString &ownerNamespacePath)
 {
     const MapReferenceParts reference = parseMapReference(referenceName);
     if (reference.name.isEmpty()) {
-        return QString();
+        return {};
     }
 
-    if (reference.hasNamespace) {
-        const QString namespacedKey = uniqueKeyFromCandidates(
-            entryKeys.keysByNameAndNamespace.value(namespacedReferenceLookupKey(reference.name, reference.namespacePath)));
-        if (!namespacedKey.isEmpty()) {
-            return namespacedKey;
-        }
-    } else if (!ownerNamespacePath.trimmed().isEmpty()) {
-        const QString sameNamespaceKey = uniqueKeyFromCandidates(
-            entryKeys.keysByNameAndNamespace.value(namespacedReferenceLookupKey(reference.name, ownerNamespacePath)));
-        if (!sameNamespaceKey.isEmpty()) {
-            return sameNamespaceKey;
-        }
-    }
+    const QString targetNamespacePath = reference.hasNamespace
+        ? namespacePathWithChild(ownerNamespacePath, reference.namespacePath)
+        : ownerNamespacePath;
 
-    return uniqueKeyFromCandidates(entryKeys.keysByName.value(mapReferenceLookupKey(reference.name)));
+    return resolveCandidates(
+        entryKeys.keysByNameAndNamespace.value(namespacedReferenceLookupKey(reference.name, targetNamespacePath)));
 }
 
 QString mapCompositionReferenceToken(const TherionParsedLine &parsedLine)
@@ -236,6 +247,28 @@ QString mapCompositionReferenceToken(const TherionParsedLine &parsedLine)
     }
 
     return token;
+}
+
+void appendMapReferenceDiagnostic(QVector<ProjectIndexDiagnostic> *diagnostics,
+                                  ProjectIndexDiagnosticKind kind,
+                                  const ProjectStructureEntry &mapEntry,
+                                  const QString &sourceFile,
+                                  int lineNumber,
+                                  const QString &referencedName,
+                                  int candidateCount = 0)
+{
+    if (diagnostics == nullptr) {
+        return;
+    }
+
+    ProjectIndexDiagnostic diagnostic;
+    diagnostic.kind = kind;
+    diagnostic.sourceObjectId = mapEntry.objectId;
+    diagnostic.sourceFile = sourceFile;
+    diagnostic.lineNumber = lineNumber;
+    diagnostic.referencedName = referencedName;
+    diagnostic.candidateCount = candidateCount;
+    diagnostics->append(diagnostic);
 }
 
 QString escapedIdentityToken(QString value)
@@ -264,28 +297,29 @@ QString ProjectObjectIdentityGenerator::nextObjectId(const QString &category,
 
 ProjectStructureEntryKind projectKindFromDirective(const QString &directive)
 {
-    if (directive == QStringLiteral("survey")) {
+    const QString normalizedDirective = normalizedStructureDirective(directive);
+    if (normalizedDirective == QStringLiteral("survey")) {
         return ProjectStructureEntryKind::Survey;
     }
-    if (directive == QStringLiteral("centreline")) {
+    if (normalizedDirective == QStringLiteral("centreline")) {
         return ProjectStructureEntryKind::Centreline;
     }
-    if (directive == QStringLiteral("map")) {
+    if (normalizedDirective == QStringLiteral("map")) {
         return ProjectStructureEntryKind::Map;
     }
-    if (directive == QStringLiteral("scrap")) {
+    if (normalizedDirective == QStringLiteral("scrap")) {
         return ProjectStructureEntryKind::Scrap;
     }
-    if (directive == QStringLiteral("station")) {
+    if (normalizedDirective == QStringLiteral("station")) {
         return ProjectStructureEntryKind::Station;
     }
-    if (directive == QStringLiteral("point")) {
+    if (normalizedDirective == QStringLiteral("point")) {
         return ProjectStructureEntryKind::Point;
     }
-    if (directive == QStringLiteral("line")) {
+    if (normalizedDirective == QStringLiteral("line")) {
         return ProjectStructureEntryKind::Line;
     }
-    if (directive == QStringLiteral("area")) {
+    if (normalizedDirective == QStringLiteral("area")) {
         return ProjectStructureEntryKind::Area;
     }
     return ProjectStructureEntryKind::Unknown;
@@ -329,6 +363,18 @@ bool surveyCreatesNamespace(const TherionParsedLine &parsedLine)
         namespaceValue = optionValue(parsedLine.tokens, QStringLiteral("-namespace"));
     }
     return namespaceValue.compare(QStringLiteral("off"), Qt::CaseInsensitive) != 0;
+}
+
+QString normalizedStructureDirective(const QString &directive)
+{
+    if (directive == QStringLiteral("centerline")) {
+        return QStringLiteral("centreline");
+    }
+    if (directive == QStringLiteral("endcenterline")) {
+        return QStringLiteral("endcentreline");
+    }
+
+    return directive;
 }
 
 ProjectStructureEntryKind objectKindFromLine(const TherionParsedLine &parsedLine)
@@ -440,18 +486,20 @@ const QVector<TherionParsedLine> &parsedLinesForFile(const QString &filePath,
 
 bool isOpeningDirective(const QString &directive)
 {
-    return directive == QStringLiteral("survey")
-        || directive == QStringLiteral("centreline")
-        || directive == QStringLiteral("map")
-        || directive == QStringLiteral("scrap");
+    const QString normalizedDirective = normalizedStructureDirective(directive);
+    return normalizedDirective == QStringLiteral("survey")
+        || normalizedDirective == QStringLiteral("centreline")
+        || normalizedDirective == QStringLiteral("map")
+        || normalizedDirective == QStringLiteral("scrap");
 }
 
 bool isClosingDirective(const QString &directive)
 {
-    return directive == QStringLiteral("endsurvey")
-        || directive == QStringLiteral("endcentreline")
-        || directive == QStringLiteral("endmap")
-        || directive == QStringLiteral("endscrap");
+    const QString normalizedDirective = normalizedStructureDirective(directive);
+    return normalizedDirective == QStringLiteral("endsurvey")
+        || normalizedDirective == QStringLiteral("endcentreline")
+        || normalizedDirective == QStringLiteral("endmap")
+        || normalizedDirective == QStringLiteral("endscrap");
 }
 
 void closeBlock(QVector<ProjectBlock> *blockStack, ProjectStructureEntryKind kind, const QString &name = QString())
@@ -532,7 +580,7 @@ void appendProjectStructureFromFile(const QString &filePath,
     const QVector<TherionParsedLine> &parsedLines = parsedLinesForFile(normalizedPath, cache, inMemoryFileContentsByPath);
 
     for (const TherionParsedLine &parsedLine : parsedLines) {
-        const QString directive = parsedLine.directive;
+        const QString directive = normalizedStructureDirective(parsedLine.directive);
 
         if (directive == QStringLiteral("input") || directive == QStringLiteral("source")) {
             const QString inputTarget = parsedLine.tokens.value(1);
@@ -856,18 +904,38 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
                     continue;
                 }
 
-                const QString childMapKey = resolveUniqueReferenceKey(mapKeysByName, candidate, mapEntry.namespacePath);
-                if (!childMapKey.isEmpty()) {
+                const ReferenceResolution childMapResolution = resolveReferenceKey(mapKeysByName, candidate, mapEntry.namespacePath);
+                if (childMapResolution.state == ReferenceResolutionState::Unique) {
                     const QString owningMapKey = ProjectStructureIndex::structureEntryNodeKey(mapEntry);
-                    if (childMapKey != owningMapKey) {
-                        childMapReferences.insert(childMapKey);
+                    if (childMapResolution.key != owningMapKey) {
+                        childMapReferences.insert(childMapResolution.key);
                     }
                     continue;
                 }
+                if (childMapResolution.state == ReferenceResolutionState::Ambiguous) {
+                    appendMapReferenceDiagnostic(&result.diagnostics,
+                                                 ProjectIndexDiagnosticKind::AmbiguousMapReference,
+                                                 mapEntry,
+                                                 fileIt.key(),
+                                                 parsedLine.lineNumber,
+                                                 candidate,
+                                                 childMapResolution.candidateCount);
+                    continue;
+                }
 
-                const QString scrapKey = resolveUniqueReferenceKey(scrapKeysByName, candidate, mapEntry.namespacePath);
-                if (!scrapKey.isEmpty()) {
-                    scrapReferences.insert(scrapKey);
+                const ReferenceResolution scrapResolution = resolveReferenceKey(scrapKeysByName, candidate, mapEntry.namespacePath);
+                if (scrapResolution.state == ReferenceResolutionState::Unique) {
+                    scrapReferences.insert(scrapResolution.key);
+                    continue;
+                }
+                if (scrapResolution.state == ReferenceResolutionState::Ambiguous) {
+                    appendMapReferenceDiagnostic(&result.diagnostics,
+                                                 ProjectIndexDiagnosticKind::AmbiguousMapScrapReference,
+                                                 mapEntry,
+                                                 fileIt.key(),
+                                                 parsedLine.lineNumber,
+                                                 candidate,
+                                                 scrapResolution.candidateCount);
                     continue;
                 }
 
@@ -877,15 +945,14 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
                     continue;
                 }
 
-                ProjectIndexDiagnostic diagnostic;
-                diagnostic.kind = referenceName.endsWith(QStringLiteral(".m"))
-                    ? ProjectIndexDiagnosticKind::UnknownMapReference
-                    : ProjectIndexDiagnosticKind::UnknownMapScrapReference;
-                diagnostic.sourceObjectId = mapEntry.objectId;
-                diagnostic.sourceFile = fileIt.key();
-                diagnostic.lineNumber = parsedLine.lineNumber;
-                diagnostic.referencedName = candidate;
-                result.diagnostics.append(diagnostic);
+                appendMapReferenceDiagnostic(&result.diagnostics,
+                                             referenceName.endsWith(QStringLiteral(".m"))
+                                                 ? ProjectIndexDiagnosticKind::UnknownMapReference
+                                                 : ProjectIndexDiagnosticKind::UnknownMapScrapReference,
+                                             mapEntry,
+                                             fileIt.key(),
+                                             parsedLine.lineNumber,
+                                             candidate);
             }
 
             if (!scrapReferences.isEmpty()) {

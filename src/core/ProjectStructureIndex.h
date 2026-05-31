@@ -24,6 +24,8 @@ enum class ProjectIndexDiagnosticKind
 {
     UnknownMapScrapReference,
     UnknownMapReference,
+    AmbiguousMapScrapReference,
+    AmbiguousMapReference,
 };
 
 struct ProjectStructureEntry
@@ -47,6 +49,7 @@ struct ProjectIndexDiagnostic
     QString sourceFile;
     int lineNumber = 0;
     QString referencedName;
+    int candidateCount = 0;
 };
 
 struct ProjectIndexSnapshot

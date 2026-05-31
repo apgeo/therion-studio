@@ -47,28 +47,28 @@ QString relativeStructurePath(const QString &projectRootPath, const QString &pat
 QString structureObjectKindLabel(const QString &category)
 {
     if (category == QStringLiteral("Stations")) {
-        return QObject::tr("Station Point");
+        return QStringLiteral("station");
     }
     if (category == QStringLiteral("Points")) {
-        return QObject::tr("Point");
+        return QStringLiteral("point");
     }
     if (category == QStringLiteral("Lines")) {
-        return QObject::tr("Line");
+        return QStringLiteral("line");
     }
     if (category == QStringLiteral("Areas")) {
-        return QObject::tr("Area");
+        return QStringLiteral("area");
     }
     if (category == QStringLiteral("Scraps")) {
-        return QObject::tr("Scrap");
+        return QStringLiteral("scrap");
     }
     if (category == QStringLiteral("Maps")) {
-        return QObject::tr("Map");
+        return QStringLiteral("map");
     }
     if (category == QStringLiteral("Surveys")) {
-        return QObject::tr("Survey");
+        return QStringLiteral("survey");
     }
     if (category == QStringLiteral("Centrelines")) {
-        return QObject::tr("Centreline");
+        return QStringLiteral("centerline");
     }
 
     return category;
@@ -85,7 +85,7 @@ QString formatProjectStructureSummary(const QHash<QString, int> &categoryCounts,
     const int lineCount = categoryCounts.value(QStringLiteral("Lines"));
     const int areaCount = categoryCounts.value(QStringLiteral("Areas"));
 
-    return QObject::tr("%1 structure item(s) across %2 survey root(s): %3 survey, %4 centreline, %5 map, %6 scrap, %7 station, %8 point, %9 line, %10 area")
+    return QObject::tr("Structure items: %1; survey roots: %2; surveys: %3; centerlines: %4; maps: %5; scraps: %6; stations: %7; points: %8; lines: %9; areas: %10")
         .arg(totalItems)
         .arg(rootSurveyCount)
         .arg(surveyCount)
@@ -205,16 +205,21 @@ void restoreStructureNodeExpansion(QTreeView *tree, const QSet<QString> &expande
 
 QString diagnosticStructureKey(const TherionStudio::ProjectIndexDiagnostic &diagnostic)
 {
-    return QStringLiteral("%1|%2|%3|%4")
+    return QStringLiteral("%1|%2|%3|%4|%5")
         .arg(QString::number(static_cast<int>(diagnostic.kind)),
              diagnostic.sourceObjectId,
              normalizedStructurePathKey(diagnostic.sourceFile),
-             diagnostic.referencedName);
+             diagnostic.referencedName,
+             QString::number(diagnostic.candidateCount));
 }
 
 QString diagnosticStructureItemText(const TherionStudio::ProjectIndexDiagnostic &diagnostic)
 {
     switch (diagnostic.kind) {
+    case TherionStudio::ProjectIndexDiagnosticKind::AmbiguousMapReference:
+        return QObject::tr("Ambiguous map: %1").arg(diagnostic.referencedName);
+    case TherionStudio::ProjectIndexDiagnosticKind::AmbiguousMapScrapReference:
+        return QObject::tr("Ambiguous scrap: %1").arg(diagnostic.referencedName);
     case TherionStudio::ProjectIndexDiagnosticKind::UnknownMapReference:
         return QObject::tr("Unresolved map: %1").arg(diagnostic.referencedName);
     case TherionStudio::ProjectIndexDiagnosticKind::UnknownMapScrapReference:
@@ -222,6 +227,29 @@ QString diagnosticStructureItemText(const TherionStudio::ProjectIndexDiagnostic 
     }
 
     return QObject::tr("Unresolved reference: %1").arg(diagnostic.referencedName);
+}
+
+QString diagnosticStructureToolTip(const TherionStudio::ProjectIndexDiagnostic &diagnostic,
+                                   const QString &projectRootPath)
+{
+    const QString relativePath = relativeStructurePath(projectRootPath, diagnostic.sourceFile);
+    const QString sourceText = relativePath.isEmpty()
+        ? QDir::toNativeSeparators(diagnostic.sourceFile)
+        : relativePath;
+
+    if (diagnostic.kind == TherionStudio::ProjectIndexDiagnosticKind::AmbiguousMapReference
+        || diagnostic.kind == TherionStudio::ProjectIndexDiagnosticKind::AmbiguousMapScrapReference) {
+        return QObject::tr("%1\nSource: %2:%3\nCandidates: %4")
+            .arg(diagnosticStructureItemText(diagnostic),
+                 sourceText,
+                 QString::number(diagnostic.lineNumber),
+                 QString::number(diagnostic.candidateCount));
+    }
+
+    return QObject::tr("%1\nSource: %2:%3")
+        .arg(diagnosticStructureItemText(diagnostic),
+             sourceText,
+             QString::number(diagnostic.lineNumber));
 }
 
 QStandardItem *createDiagnosticItem(const TherionStudio::ProjectIndexDiagnostic &diagnostic,
@@ -234,11 +262,7 @@ QStandardItem *createDiagnosticItem(const TherionStudio::ProjectIndexDiagnostic 
                                    diagnostic.referencedName);
     item->setData(diagnosticStructureKey(diagnostic), DiagnosticKeyRole);
 
-    const QString relativePath = relativeStructurePath(projectRootPath, diagnostic.sourceFile);
-    item->setToolTip(QObject::tr("%1\nSource: %2:%3")
-                         .arg(diagnosticStructureItemText(diagnostic),
-                              relativePath.isEmpty() ? QDir::toNativeSeparators(diagnostic.sourceFile) : relativePath,
-                              QString::number(diagnostic.lineNumber)));
+    item->setToolTip(diagnosticStructureToolTip(diagnostic, projectRootPath));
 
     if (QApplication::style() != nullptr) {
         item->setIcon(QApplication::style()->standardIcon(QStyle::SP_MessageBoxWarning));
@@ -409,6 +433,7 @@ QString projectIndexStructuralSignature(const TherionStudio::ProjectIndexSnapsho
         parts.append(diagnostic.sourceObjectId);
         parts.append(normalizedStructurePathKey(diagnostic.sourceFile));
         parts.append(diagnostic.referencedName);
+        parts.append(QString::number(diagnostic.candidateCount));
     }
 
     return parts.join(QChar(0x1f));
@@ -520,11 +545,7 @@ void updateStructureSourceLocationRoles(QStandardItemModel *model,
         if (diagnosticIt != diagnosticsByKey.constEnd()) {
             item->setData(diagnosticIt->sourceFile, SourceFileRole);
             item->setData(diagnosticIt->lineNumber, LineNumberRole);
-            const QString relativePath = relativeStructurePath(projectRootPath, diagnosticIt->sourceFile);
-            item->setToolTip(QObject::tr("%1\nSource: %2:%3")
-                                 .arg(diagnosticStructureItemText(*diagnosticIt),
-                                      relativePath.isEmpty() ? QDir::toNativeSeparators(diagnosticIt->sourceFile) : relativePath,
-                                      QString::number(diagnosticIt->lineNumber)));
+            item->setToolTip(diagnosticStructureToolTip(*diagnosticIt, projectRootPath));
         }
 
         for (int row = 0; row < item->rowCount(); ++row) {

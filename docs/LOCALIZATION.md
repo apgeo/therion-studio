@@ -14,7 +14,8 @@ Translate:
 
 Do not translate:
 
-- Therion commands such as `survey`, `centreline`, `scrap`, `point`, `line`, `area`, `map`, `data`, `endline`, and related closing directives
+- Therion commands such as `survey`, `centreline`, `centerline`, `scrap`, `point`, `line`, `area`, `map`, `data`, `endline`, and related closing directives
+- Structure graph object-kind labels and summaries that represent Therion source concepts, such as `survey`, `centerline`, `map`, `scrap`, `station`, `point`, `line`, and `area`
 - Therion options such as `-id`, `-name`, `-projection`, `-scale`, `-orientation`, `-close`, `-reverse`, and `-subtype`
 - accepted values, argument tokens, file-format keywords, command syntax examples, and serialized document content
 - generated or user-entered file paths, object IDs, project names, station names, labels, and editor text

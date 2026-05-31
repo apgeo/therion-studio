@@ -447,9 +447,12 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Structure parsing shall treat Therion spelling aliases `centreline` / `centerline` and `endcentreline` / `endcenterline` equivalently.
 - Structure graph object-kind labels and summaries shall preserve canonical Therion source terms such as `survey`, `centerline`, `map`, `scrap`, `station`, `point`, `line`, and `area` instead of translating them.
 - Map and scrap items that are referenced by a map block shall be presented as children of that map node when the reference can be resolved uniquely.
+- Map item parsing for Structure shall recognize both bare references and Therion offset syntax of the form `<map reference> [<offset X> <offset Y> <units>] <above/below/none>`.
 - Map and scrap reference resolution shall follow Therion namespace rules: unqualified references resolve in the owning map namespace, and explicit `name@child.parent` qualifiers resolve relative to the owning map namespace.
 - Unresolved and ambiguous map/scrap references detected inside a map block shall be shown as warning child rows under the owning map node and shall navigate to the source reference line when selected.
+- A map block that mixes map references and scrap references shall be shown with a navigable warning child row because Therion map content expects one content kind per map block.
 - `preview above` / `preview below` map relations shall not be treated as ownership hierarchy in the Structure sidebar.
+- The Structure sidebar shall remain a lightweight navigation/indexing aid; it shall not be presented as a full substitute for Therion compiler validation or export selection semantics.
 - Selection in the structure sidebar shall change the active document context.
 - The structure sidebar shall remain synchronized with the open project and the currently selected content when possible.
 - Structure refreshes shall preserve user-controlled expand/collapse state for stable survey, map, scrap, and diagnostic rows within the current project session.

@@ -224,6 +224,8 @@ QString diagnosticStructureItemText(const TherionStudio::ProjectIndexDiagnostic 
         return QObject::tr("Unresolved map: %1").arg(diagnostic.referencedName);
     case TherionStudio::ProjectIndexDiagnosticKind::UnknownMapScrapReference:
         return QObject::tr("Unresolved scrap: %1").arg(diagnostic.referencedName);
+    case TherionStudio::ProjectIndexDiagnosticKind::MixedMapAndScrapReferences:
+        return QObject::tr("Mixed map/scrap content near: %1").arg(diagnostic.referencedName);
     }
 
     return QObject::tr("Unresolved reference: %1").arg(diagnostic.referencedName);

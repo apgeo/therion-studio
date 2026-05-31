@@ -899,74 +899,74 @@
         <translation>%1 Kliknutím otvoríte výstup kompilátora.</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="635"/>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="683"/>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="871"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="637"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="685"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="873"/>
         <source>Name</source>
         <translation>Názov</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="644"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="646"/>
         <source>Open a project to populate the survey hierarchy</source>
         <translation>Otvorte projekt na načítanie hierarchie survey</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="647"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="649"/>
         <source>Open a project to view its survey hierarchy summary.</source>
         <translation>Otvorte projekt na zobrazenie súhrnu hierarchie survey.</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="696"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="698"/>
         <source>Project structure summary: %1</source>
         <translation>Súhrn štruktúry projektu: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="700"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="702"/>
         <source>Root config: %1</source>
         <translation>Koreňový konfiguračný súbor: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="709"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="711"/>
         <source>Inferred root file(s): %1</source>
         <translation>Odvodené koreňové súbory: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="712"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="714"/>
         <source>No root config or source file resolved.</source>
         <translation>Nebol rozpoznaný žiadny koreňový konfiguračný ani zdrojový súbor.</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="726"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="728"/>
         <source>No survey hierarchy was found in the selected project</source>
         <translation>Vo vybranom projekte nebola nájdená žiadna hierarchia survey</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="792"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="794"/>
         <source>No surveys, maps, or scraps were found in the selected project</source>
         <translation>Vo vybranom projekte neboli nájdené žiadne survey, mapy ani scrappy</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="880"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="882"/>
         <source>Select Target Config in Compiler</source>
         <translation>Vybrať cieľový konfiguračný súbor v Kompilátore</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="883"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="885"/>
         <source>Open the Compiler pane and focus the Target Config field.</source>
         <translation>Otvorí panel Kompilátor a zameria pole cieľového konfiguračného súboru.</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="922"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="924"/>
         <source>Objects</source>
         <translation>Objekty</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="927"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="929"/>
         <source>Open a TH2 document to browse its objects by scrap</source>
         <translation>Otvorte dokument TH2 a prehliadajte jeho objekty podľa scrapu</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="943"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="945"/>
         <source>No TH2 scraps, points, lines, or areas were found in the current document</source>
         <translation>V aktuálnom dokumente neboli nájdené žiadne TH2 scrappy, body, línie ani plochy</translation>
     </message>
@@ -1520,12 +1520,17 @@ Očakávané súbory sú `docs/USER_MANUAL.&lt;language&gt;.md` alebo `docs/USER
         <translation>Nevyriešený scrap: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="229"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="228"/>
+        <source>Mixed map/scrap content near: %1</source>
+        <translation>Zmiešaný obsah map/scrap pri: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="231"/>
         <source>Unresolved reference: %1</source>
         <translation>Nevyriešená referencia: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="242"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="244"/>
         <source>%1
 Source: %2:%3
 Candidates: %4</source>
@@ -1534,20 +1539,20 @@ Zdroj: %2:%3
 Kandidáti: %4</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="249"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="251"/>
         <source>%1
 Source: %2:%3</source>
         <translation>%1
 Zdroj: %2:%3</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="278"/>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="291"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="280"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="293"/>
         <source>Unnamed Scrap</source>
         <translation>Nepomenovaný scrap</translation>
     </message>
     <message>
-        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="281"/>
+        <location filename="../src/app/MainWindowStructureBrowser.cpp" line="283"/>
         <source>%1 (namespace off)</source>
         <translation>%1 (namespace vypnutý)</translation>
     </message>
@@ -1794,7 +1799,7 @@ Zdroj: %2:%3</translation>
         <translation>Hodnota `%2` pre voľbu `%1` nie je povolená. Povolené hodnoty: %3.</translation>
     </message>
     <message>
-        <location filename="../src/core/ProjectStructureIndex.cpp" line="1134"/>
+        <location filename="../src/core/ProjectStructureIndex.cpp" line="1209"/>
         <source>Unassigned Objects</source>
         <translation>Nepriradené objekty</translation>
     </message>
@@ -4291,12 +4296,12 @@ Zdroj: %2:%3</translation>
 <context>
     <name>TherionStudio::ProjectStructureIndex</name>
     <message>
-        <location filename="../src/core/ProjectStructureIndex.cpp" line="1001"/>
+        <location filename="../src/core/ProjectStructureIndex.cpp" line="1076"/>
         <source>The selected project folder does not exist.</source>
         <translation>Vybraný priečinok projektu neexistuje.</translation>
     </message>
     <message>
-        <location filename="../src/core/ProjectStructureIndex.cpp" line="837"/>
+        <location filename="../src/core/ProjectStructureIndex.cpp" line="878"/>
         <source>Multiple Therion config files were found in the project root. Select a project target config in the Compiler pane to build the structure graph.</source>
         <translation>V koreni projektu bolo nájdených viac súborov .thconfig. Vyberte cieľový konfiguračný súbor projektu v paneli Kompilátor, aby bolo možné zostaviť graf štruktúry.</translation>
     </message>

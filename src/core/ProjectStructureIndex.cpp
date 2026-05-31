@@ -178,6 +178,13 @@ enum class ReferenceResolutionState
     Ambiguous,
 };
 
+enum class MapCompositionContentKind
+{
+    Unknown,
+    Map,
+    Scrap,
+};
+
 struct ReferenceResolution
 {
     ReferenceResolutionState state = ReferenceResolutionState::Missing;
@@ -237,16 +244,50 @@ QString mapCompositionReferenceToken(const TherionParsedLine &parsedLine)
         || parsedLine.directive == QStringLiteral("preview")) {
         return QString();
     }
-    if (parsedLine.tokens.size() != 1) {
+
+    const QStringList &tokens = parsedLine.tokens;
+    if (tokens.isEmpty()) {
         return QString();
     }
 
-    const QString token = parsedLine.tokens.first().trimmed();
+    const QString token = tokens.first().trimmed();
     if (token.isEmpty() || token.startsWith(QLatin1Char('-'))) {
         return QString();
     }
 
+    if (tokens.size() == 1) {
+        return token;
+    }
+
+    const QString previewMode = tokens.last().toLower();
+    if (tokens.size() < 3
+        || (previewMode != QStringLiteral("above")
+            && previewMode != QStringLiteral("below")
+            && previewMode != QStringLiteral("none"))) {
+        return QString();
+    }
+
+    const QString firstOffsetToken = tokens.value(1).trimmed();
+    const QString lastOffsetToken = tokens.value(tokens.size() - 2).trimmed();
+    if (!firstOffsetToken.startsWith(QLatin1Char('['))
+        || !lastOffsetToken.endsWith(QLatin1Char(']'))) {
+        return QString();
+    }
+
     return token;
+}
+
+MapCompositionContentKind mapCompositionContentKind(const QString &referenceName)
+{
+    const QString lookupName = mapReferenceLookupKey(referenceName);
+    if (lookupName.endsWith(QStringLiteral(".m"))) {
+        return MapCompositionContentKind::Map;
+    }
+    if (lookupName.endsWith(QStringLiteral(".s"))) {
+        return MapCompositionContentKind::Scrap;
+    }
+
+    return MapCompositionContentKind::Unknown;
 }
 
 void appendMapReferenceDiagnostic(QVector<ProjectIndexDiagnostic> *diagnostics,
@@ -879,6 +920,36 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
 
             QSet<QString> scrapReferences;
             QSet<QString> childMapReferences;
+            bool sawMapContent = false;
+            bool sawScrapContent = false;
+            bool mixedContentDiagnosticAdded = false;
+            auto registerContentKind = [&](MapCompositionContentKind contentKind,
+                                           const TherionParsedLine &sourceLine,
+                                           const QString &referenceName) {
+                if (contentKind == MapCompositionContentKind::Unknown) {
+                    return;
+                }
+
+                const bool mixedWithPreviousContent =
+                    (contentKind == MapCompositionContentKind::Map && sawScrapContent)
+                    || (contentKind == MapCompositionContentKind::Scrap && sawMapContent);
+                if (mixedWithPreviousContent && !mixedContentDiagnosticAdded) {
+                    appendMapReferenceDiagnostic(&result.diagnostics,
+                                                 ProjectIndexDiagnosticKind::MixedMapAndScrapReferences,
+                                                 mapEntry,
+                                                 fileIt.key(),
+                                                 sourceLine.lineNumber,
+                                                 referenceName);
+                    mixedContentDiagnosticAdded = true;
+                }
+
+                if (contentKind == MapCompositionContentKind::Map) {
+                    sawMapContent = true;
+                } else if (contentKind == MapCompositionContentKind::Scrap) {
+                    sawScrapContent = true;
+                }
+            };
+
             int mapDepth = 0;
             for (int index = mapLineIndex; index < parsedLines.size(); ++index) {
                 const TherionParsedLine &parsedLine = parsedLines.at(index);
@@ -906,6 +977,7 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
 
                 const ReferenceResolution childMapResolution = resolveReferenceKey(mapKeysByName, candidate, mapEntry.namespacePath);
                 if (childMapResolution.state == ReferenceResolutionState::Unique) {
+                    registerContentKind(MapCompositionContentKind::Map, parsedLine, candidate);
                     const QString owningMapKey = ProjectStructureIndex::structureEntryNodeKey(mapEntry);
                     if (childMapResolution.key != owningMapKey) {
                         childMapReferences.insert(childMapResolution.key);
@@ -913,6 +985,7 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
                     continue;
                 }
                 if (childMapResolution.state == ReferenceResolutionState::Ambiguous) {
+                    registerContentKind(MapCompositionContentKind::Map, parsedLine, candidate);
                     appendMapReferenceDiagnostic(&result.diagnostics,
                                                  ProjectIndexDiagnosticKind::AmbiguousMapReference,
                                                  mapEntry,
@@ -925,10 +998,12 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
 
                 const ReferenceResolution scrapResolution = resolveReferenceKey(scrapKeysByName, candidate, mapEntry.namespacePath);
                 if (scrapResolution.state == ReferenceResolutionState::Unique) {
+                    registerContentKind(MapCompositionContentKind::Scrap, parsedLine, candidate);
                     scrapReferences.insert(scrapResolution.key);
                     continue;
                 }
                 if (scrapResolution.state == ReferenceResolutionState::Ambiguous) {
+                    registerContentKind(MapCompositionContentKind::Scrap, parsedLine, candidate);
                     appendMapReferenceDiagnostic(&result.diagnostics,
                                                  ProjectIndexDiagnosticKind::AmbiguousMapScrapReference,
                                                  mapEntry,
@@ -939,14 +1014,14 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
                     continue;
                 }
 
-                const QString referenceName = mapReferenceLookupKey(candidate);
-                if (!referenceName.endsWith(QStringLiteral(".m"))
-                    && !referenceName.endsWith(QStringLiteral(".s"))) {
+                const MapCompositionContentKind unresolvedContentKind = mapCompositionContentKind(candidate);
+                if (unresolvedContentKind == MapCompositionContentKind::Unknown) {
                     continue;
                 }
 
+                registerContentKind(unresolvedContentKind, parsedLine, candidate);
                 appendMapReferenceDiagnostic(&result.diagnostics,
-                                             referenceName.endsWith(QStringLiteral(".m"))
+                                             unresolvedContentKind == MapCompositionContentKind::Map
                                                  ? ProjectIndexDiagnosticKind::UnknownMapReference
                                                  : ProjectIndexDiagnosticKind::UnknownMapScrapReference,
                                              mapEntry,

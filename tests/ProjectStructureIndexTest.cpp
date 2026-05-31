@@ -195,7 +195,7 @@ int runProjectIndexMapScrapReferenceTest()
                                 "    preview above cave-map.m\n"
                                 "  endmap\n"
                                 "  map cave-map.m\n"
-                                "    child-map.m\n"
+                                "    child-map.m [1 2 m] above\n"
                                 "    s1\n"
                                 "    break\n"
                                 "    missing-scrap.s\n"
@@ -291,39 +291,44 @@ int runProjectIndexMapScrapReferenceTest()
             return 1;
         }
     }
-    if (!expect(snapshot.diagnostics.size() == 2,
-                "The project index should report unresolved map scrap and map references.")) {
+    if (!expect(snapshot.diagnostics.size() == 3,
+                "The project index should report mixed content plus unresolved map scrap and map references.")) {
         return 1;
     }
-    const ProjectIndexDiagnostic &scrapDiagnostic = snapshot.diagnostics.at(0);
-    if (!expect(scrapDiagnostic.kind == ProjectIndexDiagnosticKind::UnknownMapScrapReference,
-                "The project index reported an unexpected unresolved scrap diagnostic kind.")) {
+
+    bool foundMixedContentDiagnostic = false;
+    bool foundMissingScrapDiagnostic = false;
+    bool foundMissingMapDiagnostic = false;
+    for (const ProjectIndexDiagnostic &diagnostic : snapshot.diagnostics) {
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::MixedMapAndScrapReferences
+            && diagnostic.sourceObjectId == mapEntry.objectId
+            && diagnostic.lineNumber == 9
+            && diagnostic.referencedName == QStringLiteral("s1")) {
+            foundMixedContentDiagnostic = true;
+        }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::UnknownMapScrapReference
+            && diagnostic.sourceObjectId == mapEntry.objectId
+            && normalizedPathForComparison(diagnostic.sourceFile) == normalizedPathForComparison(rootFile)
+            && diagnostic.lineNumber == 11
+            && diagnostic.referencedName == QStringLiteral("missing-scrap.s")) {
+            foundMissingScrapDiagnostic = true;
+        }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::UnknownMapReference
+            && diagnostic.sourceObjectId == mapEntry.objectId
+            && diagnostic.lineNumber == 12
+            && diagnostic.referencedName == QStringLiteral("missing-map.m")) {
+            foundMissingMapDiagnostic = true;
+        }
+    }
+    if (!expect(foundMixedContentDiagnostic,
+                "The project index did not report mixed map/scrap content.")) {
         return 1;
     }
-    if (!expect(scrapDiagnostic.sourceObjectId == mapEntry.objectId,
-                "The unresolved map scrap reference diagnostic should point at the owning map object.")) {
+    if (!expect(foundMissingScrapDiagnostic,
+                "The unresolved map scrap reference diagnostic payload is incorrect.")) {
         return 1;
     }
-    if (!expect(normalizedPathForComparison(scrapDiagnostic.sourceFile) == normalizedPathForComparison(rootFile),
-                "The unresolved map scrap reference diagnostic source file is incorrect.")) {
-        return 1;
-    }
-    if (!expect(scrapDiagnostic.lineNumber == 11,
-                "The unresolved map scrap reference diagnostic line number is incorrect.")) {
-        return 1;
-    }
-    if (!expect(scrapDiagnostic.referencedName == QStringLiteral("missing-scrap.s"),
-                "The unresolved map scrap reference diagnostic target name is incorrect.")) {
-        return 1;
-    }
-    const ProjectIndexDiagnostic &mapDiagnostic = snapshot.diagnostics.at(1);
-    if (!expect(mapDiagnostic.kind == ProjectIndexDiagnosticKind::UnknownMapReference,
-                "The project index reported an unexpected unresolved map diagnostic kind.")) {
-        return 1;
-    }
-    if (!expect(mapDiagnostic.sourceObjectId == mapEntry.objectId
-                    && mapDiagnostic.lineNumber == 12
-                    && mapDiagnostic.referencedName == QStringLiteral("missing-map.m"),
+    if (!expect(foundMissingMapDiagnostic,
                 "The unresolved map reference diagnostic payload is incorrect.")) {
         return 1;
     }
@@ -338,7 +343,7 @@ int runProjectIndexMapScrapReferenceTest()
                                 "    preview above cave-map.m\n"
                                 "  endmap\n"
                                 "  map cave-map.m\n"
-                                "    child-map.m\n"
+                                "    child-map.m [1 2 m] above\n"
                                 "    s1\n"
                                 "    break\n"
                                 "    missing-scrap.s\n"
@@ -364,7 +369,7 @@ int runProjectIndexMapScrapReferenceTest()
                 "The project index object ID should stay stable when source line numbers shift.")) {
         return 1;
     }
-    if (!expect(shiftedSnapshot.diagnostics.size() == 2
+    if (!expect(shiftedSnapshot.diagnostics.size() == 3
                     && shiftedSnapshot.diagnostics.first().sourceObjectId == shiftedMapEntry.objectId,
                 "The shifted project index diagnostic should stay attached to the map object ID.")) {
         return 1;
@@ -556,13 +561,14 @@ int runProjectIndexAmbiguousMapReferenceDiagnosticsTest()
     if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(snapshot.diagnostics.size() == 2,
-                "The project index should report ambiguous map and scrap references.")) {
+    if (!expect(snapshot.diagnostics.size() == 3,
+                "The project index should report ambiguous map/scrap references and mixed content.")) {
         return 1;
     }
 
     bool foundAmbiguousScrap = false;
     bool foundAmbiguousMap = false;
+    bool foundMixedContent = false;
     for (const ProjectIndexDiagnostic &diagnostic : snapshot.diagnostics) {
         if (diagnostic.kind == ProjectIndexDiagnosticKind::AmbiguousMapScrapReference
             && diagnostic.referencedName == QStringLiteral("target.s")
@@ -576,6 +582,11 @@ int runProjectIndexAmbiguousMapReferenceDiagnosticsTest()
             && diagnostic.lineNumber == 10) {
             foundAmbiguousMap = true;
         }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::MixedMapAndScrapReferences
+            && diagnostic.referencedName == QStringLiteral("branch-map.m")
+            && diagnostic.lineNumber == 10) {
+            foundMixedContent = true;
+        }
     }
 
     if (!expect(foundAmbiguousScrap,
@@ -584,6 +595,10 @@ int runProjectIndexAmbiguousMapReferenceDiagnosticsTest()
     }
     if (!expect(foundAmbiguousMap,
                 "The project index did not report the ambiguous map reference diagnostic.")) {
+        return 1;
+    }
+    if (!expect(foundMixedContent,
+                "The project index did not report the mixed map/scrap diagnostic.")) {
         return 1;
     }
 

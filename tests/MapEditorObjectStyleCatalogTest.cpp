@@ -523,6 +523,11 @@ int runCatalogTest()
                 "Expected debris point symbol parts to render without fill.")) {
         return 1;
     }
+    if (!expect(std::abs(debrisPointStyle.size - 15.5) < 1e-6
+                    && std::abs(debrisPointStyle.symbolParts.first().angle - 28.0) < 1e-6,
+                "Expected debris point style to use the tuned smaller irregular triangle motif.")) {
+        return 1;
+    }
 
     const MapEditorResolvedPointStyle pebblesPointStyle =
         resolveMapEditorPointStyle(catalog, QStringLiteral("pebbles"));
@@ -547,6 +552,11 @@ int runCatalogTest()
         resolveMapEditorPointStyle(catalog, QStringLiteral("blocks"));
     if (!expect(blocksPointStyle.symbolParts.size() == 3,
                 "Expected blocks point style to use composite symbol parts.")) {
+        return 1;
+    }
+    if (!expect(blocksPointStyle.size > debrisPointStyle.size
+                    && blocksPointStyle.symbolParts.first().size > debrisPointStyle.symbolParts.first().size,
+                "Expected blocks point style to render larger than debris point style.")) {
         return 1;
     }
 

@@ -1,28 +1,28 @@
 {
-  "size": 17.0,
-  "stroke_width": 1.2,
+  "size": 15.5,
+  "stroke_width": 1.1,
   "stroke_color": "#1C1C1E",
   "fill_color": "#00000000",
   "symbol_parts": [
     {
-      "x": 0.0,
-      "y": -4.9,
-      "size": 6.8,
-      "angle": 180.0,
+      "x": -4.0,
+      "y": 2.4,
+      "size": 5.6,
+      "angle": 28.0,
       "kind": "triangle"
     },
     {
-      "x": -5.1,
-      "y": 3.9,
-      "size": 6.6,
-      "angle": 78.0,
+      "x": 3.8,
+      "y": 2.0,
+      "size": 5.4,
+      "angle": -34.0,
       "kind": "triangle"
     },
     {
-      "x": 5.1,
-      "y": 3.9,
-      "size": 6.6,
-      "angle": -78.0,
+      "x": -0.6,
+      "y": -3.8,
+      "size": 5.8,
+      "angle": 188.0,
       "kind": "triangle"
     }
   ]

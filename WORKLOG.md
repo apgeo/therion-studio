@@ -16,7 +16,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P2 - Phase 11: continue structured block-canvas authoring coverage and BlockEditor extraction/refactor slices.
 - P1 - Block-canvas drag-loop crash hardening on macOS: guard drag-preview/drop callbacks during TextEditorTab teardown and verify no stale callback path remains around `.th2` + `.xvi` workflows.
 - P1 - Block editor logical-line continuation support: treat trailing `\` command continuations as one command block across parsing/details/apply/configure/delete paths and verify with UI regression coverage.
-- P1 - Map canvas zoom-level rendering balance: keep zoomed-out overview readable by reducing dominant geometry and `.xvi` stroke/handle visual weight without hurting editability at normal zoom, remove the unreliable editor-generated metric grid, and render embedded `.xvi` grids only as background-layer content.
+- P1 - Map canvas zoom-level rendering balance: keep the visual canvas on a stable light paper-style surface in both light/dark app modes, keep zoomed-out overview readable by reducing dominant geometry and `.xvi` stroke/handle visual weight without hurting editability at normal zoom, remove the unreliable editor-generated metric grid, and render embedded `.xvi` grids only as background-layer content.
 - P1 - Background layer visibility persistence: keep manual `.xvi` show/hide state stable across zoom/reprojection refreshes and session reloads without treating old session `visible` values as metadata overrides.
 - P1 - Block editor source-mutation safety: keep opening/switching to Blocks mode non-mutating, including missing `encoding` directives, and only dirty documents after explicit user edits or encoding conversion.
 - P1 - Compiler project-context hygiene: keep `Target Config` and `Working Directory Override` project-scoped so closing a project clears those paths, keep the executable path as a global preference, and keep additional runner arguments session-only rather than persistent.
@@ -49,6 +49,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 ## Next Up
 
 - P0: Continue Phase 9 with remaining map-editor parity polish in selection/details ergonomics and cross-platform input edge cases.
+- P0: Verify native macOS menu placement for File actions, including `File -> New Window` staying in the File menu instead of being handled by Qt menu-role heuristics.
 - P0: Complete manual release QA on the latest map-inspector polish: separate `Scrap Scale`, blank data-row filtering, `Text (-text)` quick editing for point/line labels, and path-following line-label canvas rendering on representative `.th2` files.
 - P1: Continue Phase 10 with Apple Pencil/freehand stroke UX, broader parsed-document snapshot use, less-aggressive shape-sensitive bezier simplification, and point/line/area workflow polish.
 - P2: Continue Phase 11 with object-reference target picking/resolution shortcuts, then selection/details glue consolidation without behavior changes.

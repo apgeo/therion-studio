@@ -566,11 +566,10 @@ MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
 {
     Q_UNUSED(scene);
 
-    const bool lightMode = mapEditorUsesLightAppearance();
-    const MapEditorSceneThemeColors colors = mapEditorSceneThemeColors(lightMode);
+    const MapEditorSceneThemeColors colors = mapEditorSceneThemeColors();
 
     MapCanvasTheme theme;
-    theme.lightMode = lightMode;
+    theme.lightMode = true;
     theme.canvasBorder = colors.canvasBorder;
     theme.canvasFill = colors.canvasFill;
     theme.geometryStroke = colors.geometryStroke;

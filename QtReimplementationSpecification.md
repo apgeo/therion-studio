@@ -757,6 +757,7 @@ Required behavior:
 - the application theme shall centrally define at least line numbers, gutter dividers, expanded fold toggles, collapsed fold toggles, and fold-toggle hover state
 - the application shall support both light and dark appearance modes
 - the application theme shall provide coherent colors and contrast for both light and dark appearance modes across the main window, sidebars, inspectors, console surfaces, and editor chrome
+- the TH2 visual map canvas shall use a stable light paper-style document surface and pasteboard in both light and dark application appearance modes so raster background images, `.xvi` sketch references, and Therion map symbols remain color-stable and readable
 - the application may follow the operating-system appearance automatically or expose an explicit appearance preference, but dark mode support itself is mandatory
 - when the effective operating-system appearance changes at runtime, the application shall update active light/dark theme rendering without requiring an application restart
 - the application theme may use system colors, bundled theme tokens, or a combination of both, provided the resulting appearance remains consistent and accessible across supported platforms

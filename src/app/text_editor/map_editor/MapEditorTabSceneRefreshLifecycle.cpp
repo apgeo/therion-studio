@@ -2,10 +2,10 @@
 
 #include "MapEditorMagnifierOverlay.h"
 #include "MapEditorSceneRefreshController.h"
+#include "MapEditorSceneThemePolicy.h"
 
 #include <QEvent>
 #include <QGraphicsView>
-#include <QPalette>
 #include <QTimer>
 #include <QWidget>
 
@@ -32,7 +32,7 @@ void MapEditorTab::changeEvent(QEvent *event)
 void MapEditorTab::handleApplicationAppearanceChanged()
 {
     if (mapView_ != nullptr) {
-        mapView_->setBackgroundBrush(mapView_->palette().color(QPalette::Window));
+        mapView_->setBackgroundBrush(mapEditorCanvasViewportBackgroundColor());
         if (QWidget *viewport = mapView_->viewport(); viewport != nullptr) {
             viewport->update();
         }

@@ -193,7 +193,11 @@ In `Inspector -> Objects`, you can:
 
 Use `Separate Map` to move the visual map pane into its own window (for multi-monitor workflows). Use `Return Map` or close that window to reattach.
 
-### 6.6 Background Images
+### 6.6 Canvas Appearance
+
+The visual map canvas uses a stable light paper-style surface in both light and dark application modes. Toolbars, tabs, inspectors, and other application chrome follow the operating-system appearance, but the map canvas keeps raster background images, `.xvi` sketch references, and Therion symbols color-stable instead of tinting or inverting them for dark mode.
+
+### 6.7 Background Images
 
 In `Inspector -> Backgrounds`, you can:
 

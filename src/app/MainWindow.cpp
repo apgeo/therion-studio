@@ -918,6 +918,7 @@ void MainWindow::buildMenus()
 {
     QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
     QAction *newWindowAction = fileMenu->addAction(tr("New &Window"));
+    newWindowAction->setMenuRole(QAction::NoRole);
     newWindowAction->setShortcut(QKeySequence::New);
     connect(newWindowAction, &QAction::triggered, this, &MainWindow::createNewWindow);
 

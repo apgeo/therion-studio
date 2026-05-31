@@ -1,6 +1,7 @@
 #include "MapEditorTab.h"
 
 #include "MapEditorMagnifierOverlay.h"
+#include "MapEditorSceneThemePolicy.h"
 #include "MapEditorStylePreviewWidget.h"
 
 #include <QApplication>
@@ -228,7 +229,7 @@ void MapEditorTab::buildUi()
     mapView_->setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
     mapView_->setCacheMode(QGraphicsView::CacheBackground);
     mapView_->setRenderHint(QPainter::Antialiasing, true);
-    mapView_->setBackgroundBrush(palette().color(QPalette::Window));
+    mapView_->setBackgroundBrush(mapEditorCanvasViewportBackgroundColor());
     mapView_->setFocusPolicy(Qt::StrongFocus);
     mapView_->installEventFilter(this);
     if (mapView_->viewport() != nullptr) {

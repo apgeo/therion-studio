@@ -266,6 +266,154 @@ int runSlopeLinePointOptionsParsingTest()
     return 0;
 }
 
+int runLineStandaloneRowsPreservedForRewriteRowsTest()
+{
+    const QString text =
+        QStringLiteral("line slope\n"
+                       "  0 0\n"
+                       "  altitude .\n"
+                       "  l-size 20\n"
+                       "  orientation 45\n"
+                       "  10 0\n"
+                       "  adjust horizontal\n"
+                       "endline\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    const MapGeometryFeature *line = firstLineFeature(features);
+    if (!expect(line != nullptr, "Expected one parsed line feature for standalone-row preservation test.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.size() == 2,
+                "Expected two parsed anchor vertices in standalone-row preservation test.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.at(0).standaloneOptionRows.contains(QStringLiteral("altitude .")),
+                "Expected first line vertex to preserve unknown standalone row 'altitude .' for rewrite output.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.at(1).standaloneOptionRows.contains(QStringLiteral("adjust horizontal")),
+                "Expected second line vertex to preserve unknown standalone row 'adjust horizontal' for rewrite output.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runLineStandaloneRowsCoverageTest()
+{
+    const QString text =
+        QStringLiteral("line wall\n"
+                       "  0 0\n"
+                       "  smooth auto\n"
+                       "  adjust horizontal\n"
+                       "  mark section\n"
+                       "  altitude [fix 1510 m]\n"
+                       "  direction point\n"
+                       "  gradient point\n"
+                       "  10 0\n"
+                       "endline\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    const MapGeometryFeature *line = firstLineFeature(features);
+    if (!expect(line != nullptr, "Expected one parsed line feature for standalone-row coverage test.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.size() == 2,
+                "Expected two parsed anchor vertices in standalone-row coverage test.")) {
+        return 1;
+    }
+    const QStringList firstVertexRows = line->lineVertices.at(0).standaloneOptionRows;
+    if (!expect(firstVertexRows.contains(QStringLiteral("smooth auto")),
+                "Expected first line vertex to preserve 'smooth auto' standalone row.")) {
+        return 1;
+    }
+    if (!expect(firstVertexRows.contains(QStringLiteral("adjust horizontal")),
+                "Expected first line vertex to preserve 'adjust horizontal' standalone row.")) {
+        return 1;
+    }
+    if (!expect(firstVertexRows.contains(QStringLiteral("mark section")),
+                "Expected first line vertex to preserve 'mark section' standalone row.")) {
+        return 1;
+    }
+    if (!expect(firstVertexRows.contains(QStringLiteral("altitude [fix 1510 m]")),
+                "Expected first line vertex to preserve 'altitude [fix 1510 m]' standalone row.")) {
+        return 1;
+    }
+    if (!expect(firstVertexRows.contains(QStringLiteral("direction point")),
+                "Expected first line vertex to preserve 'direction point' standalone row.")) {
+        return 1;
+    }
+    if (!expect(firstVertexRows.contains(QStringLiteral("gradient point")),
+                "Expected first line vertex to preserve 'gradient point' standalone row.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runLineStandaloneKnownOptionsNormalizationTest()
+{
+    const QString slopeText =
+        QStringLiteral("line slope\n"
+                       "  0 0\n"
+                       "  -orientation 45\n"
+                       "  -size 20\n"
+                       "  10 0\n"
+                       "endline\n");
+
+    QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(slopeText);
+    QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    const MapGeometryFeature *slopeLine = firstLineFeature(features);
+    if (!expect(slopeLine != nullptr, "Expected one parsed slope line feature for normalization test.")) {
+        return 1;
+    }
+    if (!expect(slopeLine->lineVertices.size() == 2,
+                "Expected two parsed slope anchors in normalization test.")) {
+        return 1;
+    }
+    if (!expect(slopeLine->lineVertices.at(0).orientationDegrees.has_value()
+                    && std::abs(slopeLine->lineVertices.at(0).orientationDegrees.value() - 45.0) < 1e-6,
+                "Expected -orientation option row to normalize into first slope vertex orientation.")) {
+        return 1;
+    }
+    if (!expect(slopeLine->lineVertices.at(0).leftSize.has_value()
+                    && std::abs(slopeLine->lineVertices.at(0).leftSize.value() - 20.0) < 1e-6,
+                "Expected -size option row to normalize into first slope vertex l-size metadata.")) {
+        return 1;
+    }
+    if (!expect(!slopeLine->lineVertices.at(0).standaloneOptionRows.contains(QStringLiteral("-orientation 45"))
+                    && !slopeLine->lineVertices.at(0).standaloneOptionRows.contains(QStringLiteral("-size 20")),
+                "Expected recognized dashed slope option rows to avoid duplicate standalone preservation.")) {
+        return 1;
+    }
+
+    const QString wallText =
+        QStringLiteral("line wall\n"
+                       "  0 0\n"
+                       "  size 15\n"
+                       "  10 0\n"
+                       "endline\n");
+
+    parsedLines = TherionDocumentParser::parseText(wallText);
+    features = collectGeometryFeatures(parsedLines);
+    const MapGeometryFeature *wallLine = firstLineFeature(features);
+    if (!expect(wallLine != nullptr, "Expected one parsed wall line feature in normalization test.")) {
+        return 1;
+    }
+    if (!expect(wallLine->lineVertices.size() == 2,
+                "Expected two parsed wall anchors in normalization test.")) {
+        return 1;
+    }
+    if (!expect(wallLine->lineVertices.at(0).standaloneOptionRows.contains(QStringLiteral("size 15")),
+                "Expected non-slope size row to remain preserved as standalone data for round-trip safety.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runAnchorEquivalentControlNormalizationTest()
 {
     const QString text =
@@ -1006,6 +1154,15 @@ int main()
         return rc;
     }
     if (const int rc = runSlopeLinePointOptionsParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runLineStandaloneRowsPreservedForRewriteRowsTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runLineStandaloneRowsCoverageTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runLineStandaloneKnownOptionsNormalizationTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runAnchorEquivalentControlNormalizationTest(); rc != 0) {

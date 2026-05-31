@@ -1247,10 +1247,35 @@ std::optional<qreal> linePointNumericOptionValue(const TherionParsedLine &parsed
     return value;
 }
 
-void applyLinePointOptionsFromLine(const TherionParsedLine &parsedLine, MapGeometryFeature *feature)
+struct ParsedLinePointOptionFlags
 {
+    bool parsedOrientation = false;
+    bool parsedLeftSize = false;
+};
+
+bool isOrientationStandaloneDirective(const QString &directive)
+{
+    const QString normalized = directive.trimmed().toLower();
+    return normalized == QStringLiteral("orientation")
+        || normalized == QStringLiteral("-orientation")
+        || normalized == QStringLiteral("orient")
+        || normalized == QStringLiteral("-orient");
+}
+
+bool isLeftSizeStandaloneDirective(const QString &directive)
+{
+    const QString normalized = directive.trimmed().toLower();
+    return normalized == QStringLiteral("l-size")
+        || normalized == QStringLiteral("-l-size")
+        || normalized == QStringLiteral("size")
+        || normalized == QStringLiteral("-size");
+}
+
+ParsedLinePointOptionFlags applyLinePointOptionsFromLine(const TherionParsedLine &parsedLine, MapGeometryFeature *feature)
+{
+    ParsedLinePointOptionFlags flags;
     if (feature == nullptr || feature->lineVertices.isEmpty()) {
-        return;
+        return flags;
     }
 
     MapGeometryFeature::TH2LineVertex &vertex = feature->lineVertices.last();
@@ -1260,6 +1285,7 @@ void applyLinePointOptionsFromLine(const TherionParsedLine &parsedLine, MapGeome
                                                     QStringLiteral("orientation"),
                                                     QStringLiteral("-orient"),
                                                     QStringLiteral("orient")})) {
+        flags.parsedOrientation = true;
         vertex.orientationDegrees = normalizedSceneOrientationDegrees(orientation.value());
     }
 
@@ -1271,10 +1297,12 @@ void applyLinePointOptionsFromLine(const TherionParsedLine &parsedLine, MapGeome
                                                         QStringLiteral("-l-size"),
                                                         QStringLiteral("l-size")})) {
             if (leftSize.value() > 0.0) {
+                flags.parsedLeftSize = true;
                 vertex.leftSize = leftSize.value();
             }
         }
     }
+    return flags;
 }
 
 QString optionValue(const QStringList &tokens, const QString &option)
@@ -1648,7 +1676,7 @@ QString mapWorkspaceHelpHtml()
         "<li><strong>Fit</strong> recenters the geometry preview.</li>"
         "<li><strong>Fit + BG</strong> fits the viewport to geometry plus all loaded background image layers.</li>"
         "</ul>"
-        "<p>Line-anchor editing shortcuts: <code>Insert</code> (or <code>I</code> on keyboards without Insert) splits the selected segment; <code>Delete</code>/<code>Backspace</code> removes a selected middle anchor; <code>S</code> toggles smooth/corner behavior for the selected line vertex.</p>"
+        "<p>Line-anchor editing shortcut: <code>Delete</code>/<code>Backspace</code> removes a selected middle anchor.</p>"
         "<p>Background image layers are managed from the Map sidebar, including layer order, visibility, position, opacity, and gamma.</p>"
         "<p>When present, <code>##XTHERION## xth_me_image_insert</code> metadata is used to auto-load referenced background images.</p>"
         "<p>Drag parsed geometry handles to rewrite source coordinates. Select a draft item to move or toggle it.</p>");
@@ -2830,8 +2858,20 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
                 continue;
             }
 
-            appendLineDataPoints(&currentFeature, sourceCoordinatePointsFromLine(parsedLine, 0, &lineSourceVertexIndex));
-            applyLinePointOptionsFromLine(parsedLine, &currentFeature);
+            const QVector<SourceCoordinatePoint> sourcePoints =
+                sourceCoordinatePointsFromLine(parsedLine, 0, &lineSourceVertexIndex);
+            appendLineDataPoints(&currentFeature, sourcePoints);
+            const ParsedLinePointOptionFlags parsedOptionFlags = applyLinePointOptionsFromLine(parsedLine, &currentFeature);
+            if (sourcePoints.isEmpty()
+                && !currentFeature.lineVertices.isEmpty()) {
+                const QString trimmedRow = parsedLine.rawText.trimmed();
+                const bool consumedAsStructuredStandaloneRow =
+                    (parsedOptionFlags.parsedOrientation && isOrientationStandaloneDirective(parsedLine.directive))
+                    || (parsedOptionFlags.parsedLeftSize && isLeftSizeStandaloneDirective(parsedLine.directive));
+                if (!trimmedRow.isEmpty() && !consumedAsStructuredStandaloneRow) {
+                    currentFeature.lineVertices.last().standaloneOptionRows.append(trimmedRow);
+                }
+            }
             continue;
         }
 

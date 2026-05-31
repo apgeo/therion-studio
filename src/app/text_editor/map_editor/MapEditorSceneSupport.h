@@ -94,6 +94,7 @@ struct MapGeometryFeature
         std::optional<qreal> orientationDegrees;
         std::optional<qreal> leftSize;
         bool isSmooth = true;
+        QStringList standaloneOptionRows;
         int anchorSourceVertexIndex = -1;
         int incomingSourceVertexIndex = -1;
         int outgoingSourceVertexIndex = -1;

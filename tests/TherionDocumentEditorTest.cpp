@@ -1136,6 +1136,33 @@ int runRewriteLineCoordinateRowsTest()
         return 1;
     }
 
+    contents = QStringLiteral("line wall\n"
+                              "  1 2\n"
+                              "  altitude .\n"
+                              "  adjust horizontal\n"
+                              "  3 4\n"
+                              "endline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineCoordinateRows(&contents,
+                                                                  1,
+                                                                  {QStringLiteral("10 20"),
+                                                                   QStringLiteral("altitude ."),
+                                                                   QStringLiteral("adjust horizontal"),
+                                                                   QStringLiteral("30 40")},
+                                                                  &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\n"
+                                           "  10 20\n"
+                                           "  altitude .\n"
+                                           "  adjust horizontal\n"
+                                           "  30 40\n"
+                                           "endline\n"),
+                "rewriteLineCoordinateRows should allow arbitrary standalone line-point rows and keep them in output.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("line wall -id line-1 # keep\n"
                               "  10 20 30 40\n"
                               "  50 60\n"

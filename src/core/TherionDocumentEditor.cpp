@@ -418,16 +418,6 @@ bool isLinePointOptionToken(const QString &token, const QString &canonicalOption
     return normalized == canonical;
 }
 
-bool isSupportedLinePointStandaloneOptionDirective(const QString &directive)
-{
-    const QString normalized = directive.trimmed().toLower();
-    return normalized == QStringLiteral("smooth")
-        || normalized == QStringLiteral("orientation")
-        || normalized == QStringLiteral("orient")
-        || normalized == QStringLiteral("l-size")
-        || normalized == QStringLiteral("size");
-}
-
 QString linePointOptionOutputToken(const QString &canonicalOption)
 {
     const QString normalized = canonicalOption.trimmed().toLower();
@@ -2462,17 +2452,9 @@ bool TherionDocumentEditor::rewriteLineCoordinateRows(QString *contents,
         if (parsedLine.commentStart == 0) {
             continue;
         }
-        if (isSupportedLinePointStandaloneOptionDirective(parsedLine.directive)) {
-            continue;
-        }
         if (!coordinateTokenPairsForLine(parsedLine, 0).isEmpty()) {
             continue;
         }
-
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Line rewrite is only supported for coordinate-only line blocks.");
-        }
-        return false;
     }
 
     QStringList rewrittenBlock;

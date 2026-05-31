@@ -61,6 +61,12 @@ void appendLinePointOptionRows(QStringList *rows, const MapGeometryFeature::TH2L
     if (vertex.leftSize.has_value()) {
         rows->append(QStringLiteral("l-size %1").arg(formatSourceCoordinate(vertex.leftSize.value())));
     }
+    for (const QString &standaloneRow : vertex.standaloneOptionRows) {
+        const QString trimmed = standaloneRow.trimmed();
+        if (!trimmed.isEmpty()) {
+            rows->append(trimmed);
+        }
+    }
 }
 
 QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2LineVertex> &lineVertices,

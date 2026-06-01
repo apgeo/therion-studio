@@ -8,6 +8,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QScopedValueRollback>
+#include <QSet>
 #include <QTransform>
 
 #include <cmath>
@@ -45,9 +46,25 @@ void MapEditorSceneLifecycleController::clearMapScene()
 
     QVector<QGraphicsRectItem *> preservedDrafts;
     QVector<QGraphicsPixmapItem *> preservedBackgrounds;
+    QSet<QGraphicsPixmapItem *> preservedBackgroundSet;
+    preservedBackgrounds.reserve(context_.backgroundImageItems->size());
+
+    for (QGraphicsPixmapItem *backgroundItem : std::as_const(*context_.backgroundImageItems)) {
+        if (backgroundItem == nullptr || backgroundItem->scene() != mapScene) {
+            continue;
+        }
+
+        mapScene->removeItem(backgroundItem);
+        preservedBackgrounds.append(backgroundItem);
+        preservedBackgroundSet.insert(backgroundItem);
+    }
+
     const QList<QGraphicsItem *> items = mapScene->items();
     for (QGraphicsItem *item : items) {
         if (auto *backgroundItem = dynamic_cast<QGraphicsPixmapItem *>(item)) {
+            if (preservedBackgroundSet.contains(backgroundItem)) {
+                continue;
+            }
             mapScene->removeItem(backgroundItem);
             preservedBackgrounds.append(backgroundItem);
             continue;

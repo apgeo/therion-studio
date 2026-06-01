@@ -366,7 +366,7 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
         return false;
     };
 
-    if (watched == viewport) {
+    if (watched == viewport || watched == context_.view) {
         switch (event->type()) {
         case QEvent::TabletPress:
         case QEvent::TabletMove:
@@ -814,6 +814,16 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                 event->accept();
                 return true;
             }
+
+            // On some platforms/devices, pinch can interleave non-zoom native gestures.
+            // While a zoom sequence is active, suppress them so pinch never pans the viewport.
+            if ((*context_.nativeZoomGestureActive)
+                && (gestureEvent->gestureType() == Qt::PanNativeGesture
+                    || gestureEvent->gestureType() == Qt::RotateNativeGesture)) {
+                (*context_.lastNativeZoomGestureUtc) = QDateTime::currentDateTimeUtc();
+                event->accept();
+                return true;
+            }
             break;
         }
         case QEvent::TouchBegin: {
@@ -899,24 +909,6 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                 context_.updateInteractiveDrawPreview();
             }
             break;
-        case QEvent::Resize:
-            if ((*context_.autoFitEnabled) && context_.view->isVisible()) {
-                context_.fitMapToView((*context_.fitBackgroundRequested));
-            }
-            break;
-        case QEvent::KeyPress: {
-            auto *keyEvent = static_cast<QKeyEvent *>(event);
-            if (handleDeleteKeyPress(keyEvent)) {
-                event->accept();
-                return true;
-            }
-            break;
-        }
-        default:
-            break;
-        }
-    } else if (watched == context_.view) {
-        switch (event->type()) {
         case QEvent::Resize:
             if ((*context_.autoFitEnabled) && context_.view->isVisible()) {
                 context_.fitMapToView((*context_.fitBackgroundRequested));

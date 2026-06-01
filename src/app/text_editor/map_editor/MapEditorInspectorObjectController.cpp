@@ -404,20 +404,27 @@ void MapEditorInspectorObjectController::handleInspectorObjectClicked(const QMod
             return;
         }
 
-        auto applyDeleteText = [&]() {
-            context_.textEditor->replaceTextForCommand(deletePlan.updatedText);
-            if (context_.recordSourceTextSnapshot) {
-                context_.recordSourceTextSnapshot(tr("Delete Map Object"),
-                                                  beforeText,
-                                                  deletePlan.updatedText,
-                                                  deletePlan.focusLineAfterDelete);
-            }
-        };
-        if (context_.commandApplyInProgress != nullptr) {
-            const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-            applyDeleteText();
+        if (context_.applySourceTextChangeWithSnapshot) {
+            context_.applySourceTextChangeWithSnapshot(tr("Delete Map Object"),
+                                                       beforeText,
+                                                       deletePlan.updatedText,
+                                                       deletePlan.focusLineAfterDelete);
         } else {
-            applyDeleteText();
+            auto applyDeleteText = [&]() {
+                context_.textEditor->replaceTextForCommand(deletePlan.updatedText);
+                if (context_.recordSourceTextSnapshot) {
+                    context_.recordSourceTextSnapshot(tr("Delete Map Object"),
+                                                      beforeText,
+                                                      deletePlan.updatedText,
+                                                      deletePlan.focusLineAfterDelete);
+                }
+            };
+            if (context_.commandApplyInProgress != nullptr) {
+                const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+                applyDeleteText();
+            } else {
+                applyDeleteText();
+            }
         }
         for (int removedLineNumber : deletePlan.removedLineNumbers) {
             context_.hiddenObjectLines->remove(removedLineNumber);
@@ -514,20 +521,27 @@ bool MapEditorInspectorObjectController::moveInspectorObject(const QModelIndex &
         return false;
     }
 
-    auto applyMoveText = [&]() {
-        context_.textEditor->replaceTextForCommand(movePlan.movedText);
-        if (context_.recordSourceTextSnapshot) {
-            context_.recordSourceTextSnapshot(tr("Move Map Object"),
-                                              beforeText,
-                                              movePlan.movedText,
-                                              movePlan.insertBeforeLineAfterRemoval);
-        }
-    };
-    if (context_.commandApplyInProgress != nullptr) {
-        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-        applyMoveText();
+    if (context_.applySourceTextChangeWithSnapshot) {
+        context_.applySourceTextChangeWithSnapshot(tr("Move Map Object"),
+                                                   beforeText,
+                                                   movePlan.movedText,
+                                                   movePlan.insertBeforeLineAfterRemoval);
     } else {
-        applyMoveText();
+        auto applyMoveText = [&]() {
+            context_.textEditor->replaceTextForCommand(movePlan.movedText);
+            if (context_.recordSourceTextSnapshot) {
+                context_.recordSourceTextSnapshot(tr("Move Map Object"),
+                                                  beforeText,
+                                                  movePlan.movedText,
+                                                  movePlan.insertBeforeLineAfterRemoval);
+            }
+        };
+        if (context_.commandApplyInProgress != nullptr) {
+            const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+            applyMoveText();
+        } else {
+            applyMoveText();
+        }
     }
 
     context_.hiddenObjectLines->clear();

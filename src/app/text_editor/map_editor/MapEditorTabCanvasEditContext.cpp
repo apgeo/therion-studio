@@ -133,6 +133,15 @@ void MapEditorTab::recordSourceTextSnapshot(const QString &label,
     MapEditorCanvasEditController(canvasEditContext()).recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
 }
 
+void MapEditorTab::applySourceTextChangeWithSnapshot(const QString &label,
+                                                     const QString &beforeText,
+                                                     const QString &afterText,
+                                                     int insertedLineNumber)
+{
+    MapEditorCanvasEditController(canvasEditContext())
+        .applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
+}
+
 bool MapEditorTab::insertLineVertexFromSelection(bool before)
 {
     return MapEditorCanvasEditController(canvasEditContext())

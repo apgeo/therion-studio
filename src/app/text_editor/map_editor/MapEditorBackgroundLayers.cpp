@@ -1964,9 +1964,7 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
     }
 
     const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
-    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
-    textEditor_->replaceTextForCommand(afterText);
-    recordSourceTextSnapshot(label, beforeText, afterText, 0);
+    applySourceTextChangeWithSnapshot(label, beforeText, afterText, 0);
 }
 
 bool MapEditorTab::syncBackgroundLayerXtherionGammaMetadata(QGraphicsPixmapItem *item, const QString &label)
@@ -1992,9 +1990,7 @@ bool MapEditorTab::syncBackgroundLayerXtherionGammaMetadata(QGraphicsPixmapItem 
     }
 
     const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
-    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
-    textEditor_->replaceTextForCommand(afterText);
-    recordSourceTextSnapshot(label, beforeText, afterText, 0);
+    applySourceTextChangeWithSnapshot(label, beforeText, afterText, 0);
     return true;
 }
 
@@ -2022,9 +2018,7 @@ void MapEditorTab::removeBackgroundLayerXtherionMetadata(const QString &layerPat
     }
 
     const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
-    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
-    textEditor_->replaceTextForCommand(afterText);
-    recordSourceTextSnapshot(label, beforeText, afterText, 0);
+    applySourceTextChangeWithSnapshot(label, beforeText, afterText, 0);
 }
 
 void MapEditorTab::addBackgroundImage(const QString &imagePath, bool writeXtherionMetadata)

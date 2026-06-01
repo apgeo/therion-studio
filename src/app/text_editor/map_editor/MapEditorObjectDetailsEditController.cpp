@@ -261,9 +261,13 @@ void MapEditorObjectDetailsEditController::applyScrapScaleEdits()
         return;
     }
 
-    const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-    context_.textEditor->replaceTextForCommand(afterText);
-    context_.recordSourceTextSnapshot(tr("Set Scrap Scale"), beforeText, afterText, targetLineNumber);
+    if (context_.applySourceTextChangeWithSnapshot) {
+        context_.applySourceTextChangeWithSnapshot(tr("Set Scrap Scale"), beforeText, afterText, targetLineNumber);
+    } else {
+        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+        context_.textEditor->replaceTextForCommand(afterText);
+        context_.recordSourceTextSnapshot(tr("Set Scrap Scale"), beforeText, afterText, targetLineNumber);
+    }
     *context_.toolbarStatusNote = tr("Updated scrap scale.");
     context_.refreshToolbarSummary();
     context_.refreshObjectDetailsPanel();
@@ -313,13 +317,39 @@ void MapEditorObjectDetailsEditController::handleLineClosedToggled(bool checked)
         return;
     }
 
+    const int targetLineNumber = *context_.selectedObjectLineNumber;
+    const QString beforeText = context_.textEditor->text();
+    QString afterText = beforeText;
     QString errorMessage;
-    if (!context_.rewriteLineOptionToggle(*context_.selectedObjectLineNumber, QStringLiteral("close"), checked, &errorMessage)) {
+    if (!TherionDocumentEditor::rewriteLineOptionToggle(&afterText,
+                                                        targetLineNumber,
+                                                        QStringLiteral("close"),
+                                                        checked,
+                                                        &errorMessage)) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
             ? tr("Failed to update line closed state.")
             : tr("Failed to update line closed state: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         context_.refreshObjectDetailsPanel();
+        return;
+    }
+
+    if (afterText == beforeText) {
+        return;
+    }
+
+    if (context_.applySourceTextChangeWithSnapshot) {
+        context_.applySourceTextChangeWithSnapshot(tr("Edit Line Closed"),
+                                                   beforeText,
+                                                   afterText,
+                                                   targetLineNumber);
+    } else {
+        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+        context_.textEditor->replaceTextForCommand(afterText);
+        context_.recordSourceTextSnapshot(tr("Edit Line Closed"),
+                                          beforeText,
+                                          afterText,
+                                          targetLineNumber);
     }
 }
 
@@ -332,13 +362,39 @@ void MapEditorObjectDetailsEditController::handleLineReversedToggled(bool checke
         return;
     }
 
+    const int targetLineNumber = *context_.selectedObjectLineNumber;
+    const QString beforeText = context_.textEditor->text();
+    QString afterText = beforeText;
     QString errorMessage;
-    if (!context_.rewriteLineOptionToggle(*context_.selectedObjectLineNumber, QStringLiteral("reverse"), checked, &errorMessage)) {
+    if (!TherionDocumentEditor::rewriteLineOptionToggle(&afterText,
+                                                        targetLineNumber,
+                                                        QStringLiteral("reverse"),
+                                                        checked,
+                                                        &errorMessage)) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
             ? tr("Failed to update line reverse state.")
             : tr("Failed to update line reverse state: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         context_.refreshObjectDetailsPanel();
+        return;
+    }
+
+    if (afterText == beforeText) {
+        return;
+    }
+
+    if (context_.applySourceTextChangeWithSnapshot) {
+        context_.applySourceTextChangeWithSnapshot(tr("Edit Line Reversed"),
+                                                   beforeText,
+                                                   afterText,
+                                                   targetLineNumber);
+    } else {
+        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+        context_.textEditor->replaceTextForCommand(afterText);
+        context_.recordSourceTextSnapshot(tr("Edit Line Reversed"),
+                                          beforeText,
+                                          afterText,
+                                          targetLineNumber);
     }
 }
 
@@ -360,16 +416,19 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
         return;
     }
 
+    const QString beforeText = context_.textEditor->text();
+    QString afterText = beforeText;
+
     const bool enabled = context_.orientationEnabledCheck->isChecked();
     qreal orientation = normalizeOrientationDegreesForMapDetails(context_.orientationSpin->value());
     if (enabled && selectedObjectKind == QStringLiteral("line")) {
         const std::optional<qreal> existingOrientation =
-            linePointOrientationForSourceVertex(context_.textEditor->text(),
+            linePointOrientationForSourceVertex(beforeText,
                                                 selectedLineNumber,
                                                 selectedSourceVertexIndex);
         if (!existingOrientation.has_value()) {
             if (const std::optional<qreal> defaultOrientation =
-                    defaultLinePointOrientationForSourceVertex(context_.textEditor->text(),
+                    defaultLinePointOrientationForSourceVertex(beforeText,
                                                                selectedLineNumber,
                                                                selectedSourceVertexIndex)) {
                 orientation = defaultOrientation.value();
@@ -381,7 +440,7 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
     const bool leftSizeEnabled = context_.linePointLeftSizeEnabledCheck->isVisible()
         && context_.linePointLeftSizeEnabledCheck->isChecked();
     const qreal leftSize = qMax<qreal>(0.1, context_.linePointLeftSizeSpin->value());
-    QStringList documentLines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    QStringList documentLines = beforeText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
     for (QString &line : documentLines) {
         if (line.endsWith(QLatin1Char('\r'))) {
             line.chop(1);
@@ -401,16 +460,17 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
             context_.refreshObjectDetailsPanel();
             return;
         }
-        rewritten = context_.textEditor->rewritePointOrientation(selectedLineNumber,
-                                                         enabled,
-                                                         orientation,
-                                                         &errorMessage);
+        rewritten = TherionDocumentEditor::rewritePointOrientation(&afterText,
+                                                                   selectedLineNumber,
+                                                                   enabled,
+                                                                   orientation,
+                                                                   &errorMessage);
     } else {
         if (selectedSourceVertexIndex < 0) {
             return;
         }
 
-        const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), selectedLineNumber);
+        const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(beforeText, selectedLineNumber);
         if (!lineFeature.has_value()
             || lineFeature->kind != MapGeometryFeature::Kind::Line
             || lineVertexIndexForSourceVertex(lineFeature.value(), selectedSourceVertexIndex) < 0) {
@@ -435,18 +495,20 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
 
         rewritten = true;
         if (orientationSupported) {
-            rewritten = context_.textEditor->rewriteLinePointOrientation(selectedLineNumber,
-                                                                 selectedSourceVertexIndex,
-                                                                 enabled,
-                                                                 orientation,
-                                                                 &errorMessage);
+            rewritten = TherionDocumentEditor::rewriteLinePointOrientation(&afterText,
+                                                                           selectedLineNumber,
+                                                                           selectedSourceVertexIndex,
+                                                                           enabled,
+                                                                           orientation,
+                                                                           &errorMessage);
         }
         if (rewritten && leftSizeSupported) {
-            rewritten = context_.textEditor->rewriteLinePointLeftSize(selectedLineNumber,
-                                                             selectedSourceVertexIndex,
-                                                             leftSizeEnabled,
-                                                             leftSize,
-                                                             &errorMessage);
+            rewritten = TherionDocumentEditor::rewriteLinePointLeftSize(&afterText,
+                                                                        selectedLineNumber,
+                                                                        selectedSourceVertexIndex,
+                                                                        leftSizeEnabled,
+                                                                        leftSize,
+                                                                        &errorMessage);
         }
     }
 
@@ -457,6 +519,22 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
         context_.refreshToolbarSummary();
         context_.refreshObjectDetailsPanel();
         return;
+    }
+
+    if (afterText != beforeText) {
+        if (context_.applySourceTextChangeWithSnapshot) {
+            context_.applySourceTextChangeWithSnapshot(tr("Edit Object Orientation"),
+                                                       beforeText,
+                                                       afterText,
+                                                       selectedLineNumber);
+        } else {
+            const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+            context_.textEditor->replaceTextForCommand(afterText);
+            context_.recordSourceTextSnapshot(tr("Edit Object Orientation"),
+                                              beforeText,
+                                              afterText,
+                                              selectedLineNumber);
+        }
     }
 
     if (selectedObjectKind == QStringLiteral("line")) {
@@ -563,12 +641,19 @@ void MapEditorObjectDetailsEditController::deleteSelectedObjectFromSelection()
         return;
     }
 
-    const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-    context_.textEditor->replaceTextForCommand(deletePlan.updatedText);
-    context_.recordSourceTextSnapshot(tr("Delete Map Object"),
-                                      beforeText,
-                                      deletePlan.updatedText,
-                                      deletePlan.focusLineAfterDelete);
+    if (context_.applySourceTextChangeWithSnapshot) {
+        context_.applySourceTextChangeWithSnapshot(tr("Delete Map Object"),
+                                                   beforeText,
+                                                   deletePlan.updatedText,
+                                                   deletePlan.focusLineAfterDelete);
+    } else {
+        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+        context_.textEditor->replaceTextForCommand(deletePlan.updatedText);
+        context_.recordSourceTextSnapshot(tr("Delete Map Object"),
+                                          beforeText,
+                                          deletePlan.updatedText,
+                                          deletePlan.focusLineAfterDelete);
+    }
     for (int removedLineNumber : deletePlan.removedLineNumbers) {
         context_.hiddenInspectorObjectLines->remove(removedLineNumber);
     }
@@ -651,9 +736,13 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
         return;
     }
 
-    const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-    context_.textEditor->replaceTextForCommand(afterText);
-    context_.recordSourceTextSnapshot(tr("Edit Object Fields"), beforeText, afterText, targetLineNumber);
+    if (context_.applySourceTextChangeWithSnapshot) {
+        context_.applySourceTextChangeWithSnapshot(tr("Edit Object Fields"), beforeText, afterText, targetLineNumber);
+    } else {
+        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+        context_.textEditor->replaceTextForCommand(afterText);
+        context_.recordSourceTextSnapshot(tr("Edit Object Fields"), beforeText, afterText, targetLineNumber);
+    }
     *context_.toolbarStatusNote = tr("Updated object fields.");
     context_.refreshToolbarSummary();
     context_.refreshObjectDetailsPanel();
@@ -705,9 +794,13 @@ void MapEditorObjectDetailsEditController::applyScrapProjectionEdit()
         return;
     }
 
-    const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-    context_.textEditor->replaceTextForCommand(afterText);
-    context_.recordSourceTextSnapshot(tr("Edit Scrap Projection"), beforeText, afterText, targetLineNumber);
+    if (context_.applySourceTextChangeWithSnapshot) {
+        context_.applySourceTextChangeWithSnapshot(tr("Edit Scrap Projection"), beforeText, afterText, targetLineNumber);
+    } else {
+        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+        context_.textEditor->replaceTextForCommand(afterText);
+        context_.recordSourceTextSnapshot(tr("Edit Scrap Projection"), beforeText, afterText, targetLineNumber);
+    }
     *context_.toolbarStatusNote = tr("Updated scrap projection.");
     context_.refreshToolbarSummary();
     context_.refreshObjectDetailsPanel();

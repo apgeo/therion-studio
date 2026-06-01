@@ -277,6 +277,12 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .recordSourceTextSnapshot = [this](const QString &label, const QString &beforeText, const QString &afterText, int insertedLineNumber) {
             recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
         },
+        .applySourceTextChangeWithSnapshot = [this](const QString &label,
+                                                    const QString &beforeText,
+                                                    const QString &afterText,
+                                                    int insertedLineNumber) {
+            applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
+        },
         .insertLineVertexFromSelection = [this](bool before) {
             return insertLineVertexFromSelection(before);
         },

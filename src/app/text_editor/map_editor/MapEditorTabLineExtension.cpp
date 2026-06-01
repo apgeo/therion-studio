@@ -3,6 +3,7 @@
 #include "MapEditorLineExtensionPlanner.h"
 #include "MapEditorSourceReferenceResolver.h"
 #include "../TextEditorTab.h"
+#include "../../../core/TherionDocumentEditor.h"
 
 #include <QTimer>
 
@@ -98,8 +99,12 @@ bool MapEditorTab::commitLineExtensionSession()
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(extensionPlan.editedVertices,
                                                                      lineFeature->closed);
+    QString afterText = beforeText;
     QString errorMessage;
-    if (!textEditor_->rewriteLineCoordinateRows(interactiveDrawState_.lineExtensionLineNumber_, coordinateRows, &errorMessage)) {
+    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText,
+                                                          interactiveDrawState_.lineExtensionLineNumber_,
+                                                          coordinateRows,
+                                                          &errorMessage)) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Extend line failed.")
             : tr("Extend line failed: %1").arg(errorMessage);
@@ -109,8 +114,8 @@ bool MapEditorTab::commitLineExtensionSession()
 
     const int extendedLineNumber = interactiveDrawState_.lineExtensionLineNumber_;
     const int restoredVertexIndex = extensionPlan.restoredVertexIndex;
-    recordSourceTextSnapshot(tr("Extend Line"), beforeText, textEditor_->text(), extendedLineNumber);
-    const std::optional<MapGeometryFeature> refreshedFeature = lineFeatureForLineNumber(textEditor_->text(), extendedLineNumber);
+    applySourceTextChangeWithSnapshot(tr("Extend Line"), beforeText, afterText, extendedLineNumber);
+    const std::optional<MapGeometryFeature> refreshedFeature = lineFeatureForLineNumber(afterText, extendedLineNumber);
     const int restoredSourceVertexIndex =
         refreshedFeature.has_value() && restoredVertexIndex >= 0 && restoredVertexIndex < refreshedFeature->lineVertices.size()
         ? refreshedFeature->lineVertices.at(restoredVertexIndex).anchorSourceVertexIndex

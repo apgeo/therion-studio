@@ -718,7 +718,8 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineV
         return false;
     }
 
-    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
+    const QString beforeText = context_.textEditor->text();
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(beforeText, lineNumber);
     if (!lineFeature.has_value()) {
         (*context_.toolbarStatusNote) = tr("Insert vertex failed: line geometry could not be resolved.");
         context_.refreshToolbarSummary();
@@ -764,14 +765,17 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineV
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
+    QString afterText = beforeText;
     QString errorMessage;
-    if (!context_.textEditor->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Insert vertex failed.")
             : tr("Insert vertex failed: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         return true;
     }
+
+    applySourceTextChangeWithSnapshot(tr("Insert Line Vertex"), beforeText, afterText, lineNumber);
 
     (*context_.toolbarStatusNote) = tr("Inserted line vertex %1 on source line %2.").arg(insertedIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
@@ -970,7 +974,8 @@ bool MapEditorCanvasEditController::toggleLineVertexSmoothFromSelection()
     }
 
     const int lineNumber = vertexItem->lineNumber();
-    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
+    const QString beforeText = context_.textEditor->text();
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(beforeText, lineNumber);
     if (!lineFeature.has_value()) {
         (*context_.toolbarStatusNote) = tr("Toggle smooth failed: line geometry could not be resolved.");
         context_.refreshToolbarSummary();
@@ -993,20 +998,21 @@ bool MapEditorCanvasEditController::toggleLineVertexSmoothFromSelection()
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
+    QString afterText = beforeText;
     QString errorMessage;
-    if (!context_.textEditor->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Toggle smooth failed.")
             : tr("Toggle smooth failed: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         return true;
     }
+    applySourceTextChangeWithSnapshot(tr("Toggle Line Vertex Smooth"), beforeText, afterText, lineNumber);
 
     (*context_.toolbarStatusNote) = target.isSmooth
         ? tr("Line vertex %1 on source line %2 set to smooth.").arg(ownerIndex + 1).arg(lineNumber)
         : tr("Line vertex %1 on source line %2 set to corner (smooth off).").arg(ownerIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
-    context_.flushPendingSceneRefreshAfterCommand();
     restoreLineVertexOwnerSelection(lineNumber, ownerIndex);
     scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, ownerIndex);
     return true;
@@ -1024,7 +1030,8 @@ bool MapEditorCanvasEditController::setLineVertexSmoothForSelection(bool smooth)
     }
 
     const int lineNumber = vertexItem->lineNumber();
-    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
+    const QString beforeText = context_.textEditor->text();
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(beforeText, lineNumber);
     if (!lineFeature.has_value()) {
         (*context_.toolbarStatusNote) = tr("Set smooth failed: line geometry could not be resolved.");
         context_.refreshToolbarSummary();
@@ -1052,20 +1059,21 @@ bool MapEditorCanvasEditController::setLineVertexSmoothForSelection(bool smooth)
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
+    QString afterText = beforeText;
     QString errorMessage;
-    if (!context_.textEditor->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Set smooth failed.")
             : tr("Set smooth failed: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         return true;
     }
+    applySourceTextChangeWithSnapshot(tr("Set Line Vertex Smooth"), beforeText, afterText, lineNumber);
 
     (*context_.toolbarStatusNote) = target.isSmooth
         ? tr("Line vertex %1 on source line %2 set to smooth.").arg(ownerIndex + 1).arg(lineNumber)
         : tr("Line vertex %1 on source line %2 set to corner (smooth off).").arg(ownerIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
-    context_.flushPendingSceneRefreshAfterCommand();
     restoreLineVertexOwnerSelection(lineNumber, ownerIndex);
     scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, ownerIndex);
     return true;
@@ -1083,7 +1091,8 @@ bool MapEditorCanvasEditController::setLineVertexControlHandleForSelection(bool 
     }
 
     const int lineNumber = vertexItem->lineNumber();
-    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), lineNumber);
+    const QString beforeText = context_.textEditor->text();
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(beforeText, lineNumber);
     if (!lineFeature.has_value()) {
         (*context_.toolbarStatusNote) = tr("Set control handle failed: line geometry could not be resolved.");
         context_.refreshToolbarSummary();
@@ -1124,21 +1133,22 @@ bool MapEditorCanvasEditController::setLineVertexControlHandleForSelection(bool 
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
+    QString afterText = beforeText;
     QString errorMessage;
-    if (!context_.textEditor->rewriteLineCoordinateRows(lineNumber, coordinateRows, &errorMessage)) {
+    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Set control handle failed.")
             : tr("Set control handle failed: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         return true;
     }
+    applySourceTextChangeWithSnapshot(tr("Set Line Vertex Control Handle"), beforeText, afterText, lineNumber);
 
     const QString handleLabel = incoming ? tr("previous") : tr("next");
     (*context_.toolbarStatusNote) = enabled
         ? tr("Line vertex %1 on source line %2 now uses %3 control handle.").arg(ownerIndex + 1).arg(lineNumber).arg(handleLabel)
         : tr("Line vertex %1 on source line %2 no longer uses %3 control handle.").arg(ownerIndex + 1).arg(lineNumber).arg(handleLabel);
     context_.refreshToolbarSummary();
-    context_.flushPendingSceneRefreshAfterCommand();
     restoreLineVertexOwnerSelection(lineNumber, ownerIndex);
     scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, ownerIndex);
     return true;

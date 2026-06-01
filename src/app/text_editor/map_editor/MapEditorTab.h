@@ -431,6 +431,10 @@ private:
                                   const QString &beforeText,
                                   const QString &afterText,
                                   int insertedLineNumber);
+    void applySourceTextChangeWithSnapshot(const QString &label,
+                                           const QString &beforeText,
+                                           const QString &afterText,
+                                           int insertedLineNumber);
     bool insertLineVertexFromSelection(bool before);
     bool splitLineAtSelection();
     bool removeLineVertexFromSelection();

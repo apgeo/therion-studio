@@ -3,8 +3,7 @@
   "decorations": [
     {
       "kind": "symbols",
-      "side": "right",
-      "offset": 4.5,
+      "side": "center",
       "spacing": 12,
       "adjust_spacing": true,
       "size": 9,

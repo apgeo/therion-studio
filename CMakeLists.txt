@@ -249,6 +249,14 @@ set(THERION_MAIN_WINDOW_SOURCES
 set(THERION_TEXT_EDITOR_SHARED_SOURCES
     src/app/text_editor/ContextHelpController.cpp
     src/app/text_editor/ContextHelpController.h
+    src/app/text_editor/ContextHelpInspector.cpp
+    src/app/text_editor/ContextHelpInspector.h
+    src/app/text_editor/DocumentFileInspector.cpp
+    src/app/text_editor/DocumentFileInspector.h
+    src/app/text_editor/DocumentInspectorPanel.cpp
+    src/app/text_editor/DocumentInspectorPanel.h
+    src/app/text_editor/InspectorPanel.cpp
+    src/app/text_editor/InspectorPanel.h
     src/app/text_editor/TextEditorOptionValidation.cpp
     src/app/text_editor/TextEditorCommandMetadata.h
     src/app/text_editor/TextEditorOptionValidation.h
@@ -564,6 +572,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/code.svg
     resources/icons/lucide/cog.svg
     resources/icons/lucide/compass.svg
+    resources/icons/lucide/copy.svg
     resources/icons/lucide/external-link.svg
     resources/icons/lucide/grip-vertical.svg
     resources/icons/lucide/eye.svg

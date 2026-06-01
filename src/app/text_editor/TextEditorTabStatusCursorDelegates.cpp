@@ -2,6 +2,7 @@
 
 #include "TextEditorAppearanceController.h"
 #include "TextEditorCursorController.h"
+#include "DocumentFileInspector.h"
 #include "TextEditorStatusController.h"
 
 #include <QPalette>
@@ -72,6 +73,21 @@ QString TextEditorTab::statusEncodingText() const
     return statusController_ != nullptr ? statusController_->statusEncodingText() : QStringLiteral("UTF-8");
 }
 
+QString TextEditorTab::fileEncodingName() const
+{
+    return fileEncodingName_;
+}
+
+QString TextEditorTab::fileEncodingLabel() const
+{
+    return fileEncodingLabel_;
+}
+
+void TextEditorTab::triggerConvertToUtf8()
+{
+    handleConvertToUtf8Triggered();
+}
+
 bool TextEditorTab::canUndo() const
 {
     return editor_ != nullptr && editor_->document() != nullptr && editor_->document()->isUndoAvailable();
@@ -140,6 +156,12 @@ void TextEditorTab::refreshStatus()
 {
     if (statusController_ != nullptr) {
         statusController_->refreshStatus();
+    }
+    if (rawFileInspector_ != nullptr) {
+        rawFileInspector_->refresh();
+    }
+    if (blockFileInspector_ != nullptr) {
+        blockFileInspector_->refresh();
     }
 }
 }

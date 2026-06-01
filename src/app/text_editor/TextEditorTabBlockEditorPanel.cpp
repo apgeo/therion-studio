@@ -6,6 +6,10 @@
 #include "block_editor/BlockEditorOptionTableDelegate.h"
 #include "block_editor/BlockEditorTokenTagEditor.h"
 #include "block_editor/BlockEditorToolboxList.h"
+#include "ContextHelpInspector.h"
+#include "DocumentFileInspector.h"
+#include "DocumentInspectorPanel.h"
+#include "InspectorPanel.h"
 #include "TextEditorSurfaceStyler.h"
 
 #include "../../core/TherionCommandSyntax.h"
@@ -13,7 +17,6 @@
 #include <QAbstractItemView>
 #include <QComboBox>
 #include <QFormLayout>
-#include <QFont>
 #include <QFrame>
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -34,6 +37,8 @@
 #include <QTableWidgetItem>
 #include <QTextBrowser>
 #include <QVBoxLayout>
+
+#include <utility>
 
 namespace
 {
@@ -154,43 +159,49 @@ void TextEditorTab::buildBlockEditorPanel()
     };
     blockCanvasView_ = typedCanvasView;
 
-    blockDetailsPanel_ = new QFrame(blockEditorSplitter_);
-    blockDetailsPanel_->setFrameShape(QFrame::NoFrame);
+    auto *inspectorPanel = new DocumentInspectorPanel(blockEditorSplitter_);
+    blockDetailsPanel_ = inspectorPanel;
+    blockDetailsPanel_->setObjectName(QStringLiteral("blockInspectorPanel"));
     blockDetailsPanel_->setMinimumWidth(kBlocksSidePaneMinWidth);
     blockDetailsPanel_->setMaximumWidth(kBlocksSidePaneMaxWidth);
     syncPanelSurfaceToBaseTone(blockDetailsPanel_);
-    auto *blockDetailsLayout = new QVBoxLayout(blockDetailsPanel_);
-    blockDetailsLayout->setContentsMargins(kPanelPadding, kPanelPadding, kPanelPadding, kPanelPadding);
-    blockDetailsLayout->setSpacing(kPanelSpacing);
 
-    blockDetailsEditPanel_ = new QWidget(blockDetailsPanel_);
+    auto *detailsTabPanel = inspectorPanel->addScrollTab(tr("Details"));
+    auto *detailsTabLayout = qobject_cast<QVBoxLayout *>(detailsTabPanel->layout());
+
+    blockDetailsEditPanel_ = new QWidget(detailsTabPanel);
     syncPanelSurfaceToBaseTone(blockDetailsEditPanel_);
     auto *blockDetailsEditLayout = new QVBoxLayout(blockDetailsEditPanel_);
     blockDetailsEditLayout->setContentsMargins(0, 0, 0, 0);
     blockDetailsEditLayout->setSpacing(kPanelSpacing);
 
-    auto *blockDetailsHeader = new QLabel(tr("Block Details"), blockDetailsEditPanel_);
-    QFont blockDetailsHeaderFont = blockDetailsHeader->font();
-    blockDetailsHeaderFont.setBold(true);
-    blockDetailsHeader->setFont(blockDetailsHeaderFont);
-    blockDetailsEditLayout->addWidget(blockDetailsHeader);
+    auto createDetailsSection = [](QWidget *parent,
+                                   const QString &title,
+                                   QVBoxLayout **contentLayout) {
+        return InspectorPanel::createSection(parent, title, contentLayout);
+    };
 
-    blockDetailsStatusLabel_ = new QLabel(blockDetailsEditPanel_);
+    QVBoxLayout *blockDetailsSectionLayout = nullptr;
+    auto *blockDetailsSection = createDetailsSection(blockDetailsEditPanel_,
+                                                     tr("Block Details"),
+                                                     &blockDetailsSectionLayout);
+
+    blockDetailsStatusLabel_ = new QLabel(blockDetailsSection);
     blockDetailsStatusLabel_->setObjectName(QStringLiteral("blockDetailsStatusLabel"));
     blockDetailsStatusLabel_->setWordWrap(true);
-    blockDetailsEditLayout->addWidget(blockDetailsStatusLabel_);
+    blockDetailsSectionLayout->addWidget(blockDetailsStatusLabel_);
 
     auto *blockDetailsFormLayout = new QFormLayout;
     blockDetailsFormLayout->setContentsMargins(0, 0, 0, 0);
     blockDetailsFormLayout->setSpacing(kPanelSpacing);
-    blockDetailsPrimaryFieldLabel_ = new QLabel(tr("ID"), blockDetailsEditPanel_);
+    blockDetailsPrimaryFieldLabel_ = new QLabel(tr("ID"), blockDetailsSection);
     blockDetailsPrimaryFieldLabel_->setObjectName(QStringLiteral("blockDetailsPrimaryLabel"));
-    blockDetailsIdEdit_ = new QLineEdit(blockDetailsEditPanel_);
+    blockDetailsIdEdit_ = new QLineEdit(blockDetailsSection);
     blockDetailsIdEdit_->setObjectName(QStringLiteral("blockDetailsPrimaryEdit"));
     blockDetailsFormLayout->addRow(blockDetailsPrimaryFieldLabel_, blockDetailsIdEdit_);
-    blockDetailsSecondaryFieldLabel_ = new QLabel(tr("Extra Arguments (Advanced)"), blockDetailsEditPanel_);
+    blockDetailsSecondaryFieldLabel_ = new QLabel(tr("Extra Arguments (Advanced)"), blockDetailsSection);
     blockDetailsSecondaryFieldLabel_->setObjectName(QStringLiteral("blockDetailsSecondaryLabel"));
-    blockDetailsSecondaryFieldStack_ = new QStackedWidget(blockDetailsEditPanel_);
+    blockDetailsSecondaryFieldStack_ = new QStackedWidget(blockDetailsSection);
     blockDetailsSecondaryFieldStack_->setObjectName(QStringLiteral("blockDetailsSecondaryFieldStack"));
     blockDetailsAdditionalPositionalEdit_ = new QLineEdit(blockDetailsSecondaryFieldStack_);
     blockDetailsAdditionalPositionalEdit_->setObjectName(QStringLiteral("blockDetailsSecondaryEdit"));
@@ -203,16 +214,16 @@ void TextEditorTab::buildBlockEditorPanel()
     blockDetailsSecondaryFieldStack_->addWidget(blockDetailsReadingsTagEditor_);
     blockDetailsSecondaryFieldStack_->setCurrentWidget(blockDetailsAdditionalPositionalEdit_);
     blockDetailsFormLayout->addRow(blockDetailsSecondaryFieldLabel_, blockDetailsSecondaryFieldStack_);
-    blockDetailsCommentFieldLabel_ = new QLabel(tr("Comment"), blockDetailsEditPanel_);
+    blockDetailsCommentFieldLabel_ = new QLabel(tr("Comment"), blockDetailsSection);
     blockDetailsCommentFieldLabel_->setObjectName(QStringLiteral("blockDetailsCommentLabel"));
-    blockDetailsCommentEdit_ = new QLineEdit(blockDetailsEditPanel_);
+    blockDetailsCommentEdit_ = new QLineEdit(blockDetailsSection);
     blockDetailsCommentEdit_->setObjectName(QStringLiteral("blockDetailsCommentEdit"));
     blockDetailsCommentEdit_->setPlaceholderText(tr("optional"));
     blockDetailsFormLayout->addRow(blockDetailsCommentFieldLabel_, blockDetailsCommentEdit_);
-    blockDetailsEditLayout->addLayout(blockDetailsFormLayout);
+    blockDetailsSectionLayout->addLayout(blockDetailsFormLayout);
 
-    blockDetailsAddOptionButton_ = new QPushButton(QStringLiteral("+"), blockDetailsEditPanel_);
-    blockDetailsRemoveOptionButton_ = new QPushButton(QStringLiteral("-"), blockDetailsEditPanel_);
+    blockDetailsAddOptionButton_ = new QPushButton(QStringLiteral("+"), blockDetailsSection);
+    blockDetailsRemoveOptionButton_ = new QPushButton(QStringLiteral("-"), blockDetailsSection);
     blockDetailsAddOptionButton_->setObjectName(QStringLiteral("blockDetailsAddOptionButton"));
     blockDetailsRemoveOptionButton_->setObjectName(QStringLiteral("blockDetailsRemoveOptionButton"));
     blockDetailsAddOptionButton_->setAutoDefault(false);
@@ -225,15 +236,15 @@ void TextEditorTab::buildBlockEditorPanel()
     auto *blockDetailsOptionsHeaderRow = new QHBoxLayout;
     blockDetailsOptionsHeaderRow->setContentsMargins(0, 0, 0, 0);
     blockDetailsOptionsHeaderRow->setSpacing(kPanelSpacing);
-    blockDetailsOptionsLabel_ = new QLabel(tr("Options"), blockDetailsEditPanel_);
+    blockDetailsOptionsLabel_ = new QLabel(tr("Options"), blockDetailsSection);
     blockDetailsOptionsLabel_->setObjectName(QStringLiteral("blockDetailsOptionsLabel"));
     blockDetailsOptionsHeaderRow->addWidget(blockDetailsOptionsLabel_);
     blockDetailsOptionsHeaderRow->addStretch(1);
     blockDetailsOptionsHeaderRow->addWidget(blockDetailsAddOptionButton_);
     blockDetailsOptionsHeaderRow->addWidget(blockDetailsRemoveOptionButton_);
-    blockDetailsEditLayout->addLayout(blockDetailsOptionsHeaderRow);
+    blockDetailsSectionLayout->addLayout(blockDetailsOptionsHeaderRow);
 
-    blockDetailsOptionsTable_ = new QTableWidget(blockDetailsEditPanel_);
+    blockDetailsOptionsTable_ = new QTableWidget(blockDetailsSection);
     blockDetailsOptionsTable_->setObjectName(QStringLiteral("blockDetailsOptionsTable"));
     blockDetailsOptionsTable_->setColumnCount(2);
     blockDetailsOptionsTable_->setHorizontalHeaderLabels({tr("Option"), tr("Value")});
@@ -244,7 +255,8 @@ void TextEditorTab::buildBlockEditorPanel()
     blockDetailsOptionsTable_->setSelectionBehavior(QAbstractItemView::SelectRows);
     blockDetailsOptionsTable_->setSelectionMode(QAbstractItemView::SingleSelection);
     blockDetailsOptionsTable_->setAlternatingRowColors(true);
-    blockDetailsOptionsTable_->setMinimumHeight(140);
+    blockDetailsOptionsTable_->setMinimumHeight(120);
+    blockDetailsOptionsTable_->setMaximumHeight(260);
     blockDetailsOptionsTable_->setItemDelegate(
         new BlockEditorOptionTableDelegate(
             [this](const QModelIndex &index) {
@@ -270,20 +282,22 @@ void TextEditorTab::buildBlockEditorPanel()
                 return QStringList{};
             },
             blockDetailsOptionsTable_));
-    blockDetailsEditLayout->addWidget(blockDetailsOptionsTable_, 1);
+    blockDetailsSectionLayout->addWidget(blockDetailsOptionsTable_);
 
-    blockDetailsOptionArgsLabel_ = new QLabel(tr("Selected Option Parameters"), blockDetailsEditPanel_);
+    blockDetailsOptionArgsLabel_ = new QLabel(tr("Selected Option Parameters"), blockDetailsSection);
     blockDetailsOptionArgsLabel_->setObjectName(QStringLiteral("blockDetailsOptionArgsLabel"));
-    blockDetailsEditLayout->addWidget(blockDetailsOptionArgsLabel_);
+    blockDetailsSectionLayout->addWidget(blockDetailsOptionArgsLabel_);
 
-    blockDetailsOptionArgsPanel_ = new QWidget(blockDetailsEditPanel_);
+    blockDetailsOptionArgsPanel_ = new QWidget(blockDetailsSection);
     blockDetailsOptionArgsPanel_->setObjectName(QStringLiteral("blockDetailsOptionArgsPanel"));
     blockDetailsOptionArgsFormLayout_ = new QFormLayout(blockDetailsOptionArgsPanel_);
     blockDetailsOptionArgsFormLayout_->setContentsMargins(0, 0, 0, 0);
     blockDetailsOptionArgsFormLayout_->setSpacing(kPanelSpacing);
     blockDetailsOptionArgsLabel_->setVisible(false);
     blockDetailsOptionArgsPanel_->setVisible(false);
-    blockDetailsEditLayout->addWidget(blockDetailsOptionArgsPanel_);
+    blockDetailsSectionLayout->addWidget(blockDetailsOptionArgsPanel_);
+
+    blockDetailsEditLayout->addWidget(blockDetailsSection);
 
     auto *blockDetailsButtonsRow = new QHBoxLayout;
     blockDetailsButtonsRow->setContentsMargins(0, 0, 0, 0);
@@ -297,42 +311,38 @@ void TextEditorTab::buildBlockEditorPanel()
     blockDetailsButtonsRow->addStretch(1);
     blockDetailsButtonsRow->addWidget(blockDetailsLegacyConfigureButton_);
     blockDetailsButtonsRow->addWidget(blockDetailsApplyButton_);
-    blockDetailsEditLayout->addLayout(blockDetailsButtonsRow);
-    blockDetailsEditLayout->addSpacing(10);
+    QVBoxLayout *blockActionsSectionLayout = nullptr;
+    auto *blockActionsSection = createDetailsSection(blockDetailsEditPanel_,
+                                                     tr("Actions"),
+                                                     &blockActionsSectionLayout);
+    blockActionsSectionLayout->addLayout(blockDetailsButtonsRow);
+    blockDetailsEditLayout->addWidget(blockActionsSection);
 
-    blockDetailsLayout->addWidget(blockDetailsEditPanel_);
+    detailsTabLayout->addWidget(blockDetailsEditPanel_);
+    detailsTabLayout->addStretch(1);
+    auto *helpTabPanel = inspectorPanel->addScrollTab(tr("Context Help"));
+    auto *helpTabLayout = qobject_cast<QVBoxLayout *>(helpTabPanel->layout());
 
-    blockDetailsHelpPanel_ = new QFrame(blockDetailsPanel_);
-    auto *blockDetailsHelpFrame = qobject_cast<QFrame *>(blockDetailsHelpPanel_);
-    if (blockDetailsHelpFrame != nullptr) {
-        blockDetailsHelpFrame->setFrameShape(QFrame::NoFrame);
-    }
-    blockDetailsHelpPanel_->setObjectName(QStringLiteral("blocksContextHelpPanel"));
-    syncPanelSurfaceToBaseTone(blockDetailsHelpPanel_);
-    auto *blockDetailsHelpPanelLayout = new QVBoxLayout(blockDetailsHelpPanel_);
-    blockDetailsHelpPanelLayout->setContentsMargins(0, 0, 0, 0);
-    blockDetailsHelpPanelLayout->setSpacing(kPanelSpacing);
-
-    auto *blockDetailsHelpHeaderRow = new QHBoxLayout;
-    blockDetailsHelpHeaderRow->setContentsMargins(0, 0, 0, 0);
-    auto *blockDetailsHelpLabel = new QLabel(tr("Contextual Help"), blockDetailsHelpPanel_);
-    QFont blockDetailsHelpLabelFont = blockDetailsHelpLabel->font();
-    blockDetailsHelpLabelFont.setBold(true);
-    blockDetailsHelpLabel->setFont(blockDetailsHelpLabelFont);
-    blockDetailsHelpHeaderRow->addWidget(blockDetailsHelpLabel);
-    blockDetailsHelpHeaderRow->addStretch(1);
-
-    blockDetailsHelpBrowser_ = new QTextBrowser(blockDetailsHelpPanel_);
+    blockDetailsHelpInspector_ = new ContextHelpInspector(helpTabPanel, tr("Context Help"));
+    blockDetailsHelpPanel_ = blockDetailsHelpInspector_;
+    blockDetailsHelpBrowser_ = blockDetailsHelpInspector_->browser();
     blockDetailsHelpBrowser_->setObjectName(QStringLiteral("blockDetailsHelpBrowser"));
-    blockDetailsHelpBrowser_->setFrameShape(QFrame::NoFrame);
-    blockDetailsHelpBrowser_->setOpenLinks(false);
-    blockDetailsHelpBrowser_->setOpenExternalLinks(false);
-    blockDetailsHelpBrowser_->setMinimumHeight(140);
-    syncTextBrowserSurfaceToParent(blockDetailsHelpBrowser_);
+    helpTabLayout->addWidget(blockDetailsHelpInspector_, 1);
 
-    blockDetailsHelpPanelLayout->addLayout(blockDetailsHelpHeaderRow);
-    blockDetailsHelpPanelLayout->addWidget(blockDetailsHelpBrowser_, 1);
-    blockDetailsLayout->addWidget(blockDetailsHelpPanel_, 1);
+    DocumentFileInspectorContext fileContext;
+    fileContext.filePath = [this]() {
+        return filePath_;
+    };
+    fileContext.encodingName = [this]() {
+        return fileEncodingName_;
+    };
+    fileContext.encodingLabel = [this]() {
+        return fileEncodingLabel_;
+    };
+    fileContext.convertToUtf8 = [this]() {
+        triggerConvertToUtf8();
+    };
+    blockFileInspector_ = inspectorPanel->addFileTab(std::move(fileContext));
 
     blockEditorSplitter_->addWidget(toolboxColumn);
     blockEditorSplitter_->addWidget(blockCanvasView_);

@@ -4,6 +4,7 @@
 
 #include "BlockEditorDirectiveRules.h"
 #include "../ContextHelpController.h"
+#include "../ContextHelpInspector.h"
 #include "../TextEditorCommandMetadata.h"
 
 #include <QLabel>
@@ -28,6 +29,7 @@ bool BlockEditorDetailsHelpController::hasRequiredContext() const
 {
     return context_.tearingDown != nullptr
         && context_.helpBrowser != nullptr
+        && context_.helpInspector != nullptr
         && context_.commentMarker != nullptr
         && context_.commandMetadata != nullptr
         && context_.selectedKind
@@ -93,20 +95,21 @@ void BlockEditorDetailsHelpController::updateHelpForCurrentFocus()
 
     const QString selectedKind = context_.selectedKind();
     if (selectedKind.isEmpty()) {
+        context_.helpInspector->setTitle(tr("Context Help"));
         context_.helpBrowser->setHtml(tr("<p>Select a block parameter to see contextual help.</p>"));
         return;
     }
 
     const QString normalizedKind = context_.normalizeDirectiveToken(selectedKind);
     if (BlockEditorDirectiveRules::isMapObjectReferenceKind(normalizedKind)) {
-        context_.helpBrowser->setHtml(tr("<p><b>Object Reference</b></p>"
-                                         "<p>References an existing scrap or map from inside a <code>map</code> block. "
+        context_.helpInspector->setTitle(tr("Object Reference"));
+        context_.helpBrowser->setHtml(tr("<p>References an existing scrap or map from inside a <code>map</code> block. "
                                          "Edit the target to the referenced object name. Unresolved names are preserved so incomplete maps stay round-trip safe.</p>"));
         return;
     }
     if (BlockEditorDirectiveRules::isUnrecognizedKind(normalizedKind)) {
-        context_.helpBrowser->setHtml(tr("<p><b>Unrecognized line</b></p>"
-                                         "<p>This source line could not be mapped to a known Block-editor command in the current context.</p>"
+        context_.helpInspector->setTitle(tr("Unrecognized line"));
+        context_.helpBrowser->setHtml(tr("<p>This source line could not be mapped to a known Block-editor command in the current context.</p>"
                                          "<p>Edit the full raw line directly. The source text is preserved exactly as entered.</p>"));
         return;
     }
@@ -117,7 +120,9 @@ void BlockEditorDetailsHelpController::updateHelpForCurrentFocus()
                                                                            commandHelpEntry.arguments,
                                                                            commandHelpEntry.acceptedValues,
                                                                            commandHelpEntry.options,
+                                                                           true,
                                                                            false);
+    context_.helpInspector->setTitle(normalizedKind);
 
     if (isDetailsModeWithEditableFields()
         && context_.idEdit != nullptr

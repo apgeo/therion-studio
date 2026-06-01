@@ -15,6 +15,8 @@ class QWidget;
 
 namespace TherionStudio
 {
+class InspectorPanel;
+class ContextHelpInspector;
 struct TextEditorCommandMetadata;
 
 struct TextEditorContextHelpContext
@@ -35,6 +37,8 @@ struct TextEditorContextHelpContext
     std::function<void()> rebuildCompletionModel;
     std::function<void(const QJsonObject &)> applyCatalogCommandsMetadata;
     std::function<void()> populateBlockToolboxScopeCombo;
+    std::function<InspectorPanel *(QWidget *)> createInspectorPanel;
+    std::function<void(InspectorPanel *)> configureInspectorPanel;
 };
 
 class TextEditorContextHelpController final
@@ -63,8 +67,10 @@ private:
     QTextBrowser *helpBrowser() const;
     void setHelpPanel(QWidget *helpPanel);
     void setHelpBrowser(QTextBrowser *helpBrowser);
+    void setHelpTitle(const QString &title);
 
     TextEditorContextHelpContext context_;
     CommandCatalogStore catalogStore_;
+    ContextHelpInspector *helpInspector_ = nullptr;
 };
 }

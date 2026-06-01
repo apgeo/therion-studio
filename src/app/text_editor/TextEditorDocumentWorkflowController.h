@@ -16,6 +16,7 @@ public:
         std::function<void()> populateBlockToolbox;
         std::function<void()> refreshEditorModeUi;
         std::function<void()> refreshTitle;
+        std::function<void()> refreshStatus;
         std::function<void()> refreshCurrentLineHighlight;
         std::function<void(bool)> dirtyStateChanged;
         std::function<void()> updateContextHelp;
@@ -24,6 +25,7 @@ public:
     struct SaveActions
     {
         std::function<void()> refreshTitle;
+        std::function<void()> refreshStatus;
         std::function<void(bool)> dirtyStateChanged;
     };
 

@@ -286,12 +286,17 @@ The rules below define the expected day-to-day interaction model. If a later req
 - For `.th` and Therion config documents, the `Raw`/`Blocks` mode selector shall be shown in this document command toolbar instead of a dedicated in-content mode row.
 - The Settings dialog shall allow choosing the default editor mode for newly opened `.th` and Therion config documents: `Raw` or `Blocks`; the default shall be `Raw`.
 - The default text-editor mode preference shall apply only when opening a new `.th` or Therion config tab and shall not modify document source merely because the tab initially opens in Blocks mode.
-- The application shall show the active document path and current text encoding in a status area tied to the active document context.
+- The application shall show the active document's current text encoding as a compact status-bar value tied to the active document context.
+- Text, Blocks, and TH2 Visual inspector surfaces shall provide a `File` tab with a document panel titled by the active file name; the panel shall show the active document's full path, a copy-path action, on-disk size, last-modified timestamp, current text encoding, and any non-UTF-8 conversion warning/action.
+- Shared document inspector tabs such as `File` shall be composed through a common document-inspector implementation so Raw, Blocks, and TH2 Visual surfaces do not duplicate layout, styling, or metadata behavior.
 - When the active document is open in the map editor, the status area shall also show the current map interaction mode in a distinct color badge: `Select` shall be green and `Insert` shall be red.
-- When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8.
+- When a file is opened in a non-UTF-8 encoding, the editor shall expose an explicit conversion action to UTF-8 in the `File` inspector tab.
 - The text editor shall provide a contextual help/documentation panel that shows Therion command summaries, arguments, accepted values, options, and related keywords when metadata is available for the token or item at the caret. Argument and option signatures shall be visually distinguished from explanatory text while preserving canonical Therion spelling.
 - The help/documentation panel shall be collapsible and resizable and shall not disturb the active editor selection when it is shown or hidden.
 - In the text-editor workspace, the contextual help panel shall be presented as a persistent right-side inspector column with spacing/padding consistent with the structured Blocks workspace side inspector.
+- Raw and Blocks modes shall use the same contextual-help renderer and metadata scope for command-level help, including syntax, arguments, accepted values, options, summaries, and related keyword data where available.
+- Contextual help inspector content shall be wrapped in a standard inspector panel whose header reflects the current command, validation context, or special help target; the help content shall use the available panel height without adding a redundant inner `Contextual Help` heading.
+- Inspector tabs shall use one outer tab-level vertical scrollbar for overflow content; inner content widgets such as contextual help renderers shall not introduce a second nested scrollbar when they are hosted inside an inspector tab.
 - When a TH2 file is open, the text editor selection shall stay synchronized with the graphical map selection.
 - When map/object selection reveals a source location in the text editor, the corresponding source line shall be visibly highlighted in the editor viewport.
 - When the text cursor is on a `scrap` or `endscrap` directive, the map selection shall include all selectable map objects that belong to that scrap block.
@@ -309,7 +314,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - When a TH2 map editor is presented outside the main tab strip (for example in a detached dedicated map-editor window), the top command toolbar shall omit `Visual`/`Raw` mode switching and keep only actions relevant to the detached visual workspace.
 - Detached map-window command toolbars shall draw a top separator below the native titlebar area and one bottom separator above the detached map canvas/inspector content.
 - In embedded `Visual` mode, the workspace shall present the graphical map canvas together with a right-side map inspector.
-- The right-side map inspector in `Visual` mode shall provide tabs for `Selection`, `Objects`, and `Backgrounds`, in that order.
+- The right-side map inspector in `Visual` mode shall provide tabs for `Selection`, `Objects`, `Backgrounds`, and `File`.
 - The right-side map inspector shall use the tab labels as its primary heading and shall not add a redundant standalone `Inspector` title above the tab bar.
 - The right-side map inspector may reinforce only the left edge of the tab pane when needed for visual consistency; other tab pane borders shall remain native.
 - The `Selection` and `Backgrounds` tabs shall use the same framed-section pattern, with each section heading placed inside its box rather than as a standalone label above the box.
@@ -561,7 +566,7 @@ The Qt application shall define a consistent window and document model.
 - The main application window shall present the project browser, tabbed text editor, structure sidebar, and console-related views used for project work.
 - The main application window shall support a text workspace for all supported text files and, for TH2 files, an embedded mode-based `Visual`/`Raw` workspace presentation.
 - The text editor shall provide a collapsible contextual help/documentation inspector below the editor or in an equivalent persistent surface.
-- The Qt implementation shall use an equivalent persistent right-side help inspector surface for raw text editing to keep editor/help spatial structure consistent with the Blocks workspace.
+- The Qt implementation shall use an equivalent persistent right-side help inspector surface for raw text editing to keep editor/help spatial structure consistent with the Blocks workspace, and both modes shall use the same command-help content renderer.
 - A TH2 map shall open in a dedicated map editor window or equivalent dedicated top-level surface that remains associated with the same document session.
 - A TH2 map may also be embedded in the main application window as part of a mode-focused workspace and detached into a dedicated map window.
 - Opening the same TH2 document again shall prefer focusing the existing map editor window or session rather than creating a duplicate map editor, where the platform and implementation allow it.
@@ -1421,6 +1426,7 @@ Required parity scope:
 - object settings inspector for scrap/line/point/area
 - line-point options editing (orientation and l-size)
 - debug sidebar and inspector diagnostic surfaces
+- shared document inspector infrastructure for common tabs such as `File`, with editor-specific tabs supplying only their own content panels
 
 ### 14.8 JSON/Metadata-Driven Runtime Configuration
 

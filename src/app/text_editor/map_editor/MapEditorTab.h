@@ -60,6 +60,7 @@ enum class DraftGeometryKind;
 namespace TherionStudio
 {
 class TextEditorTab;
+class DocumentFileInspector;
 struct MapEditorCanvasEditContext;
 struct MapEditorInteractiveDrawContext;
 class MapEditorInspectorBackgroundController;
@@ -544,6 +545,7 @@ private:
     QFrame *mapPaneTopSeparator_ = nullptr;
     QSplitter *mapDetailsSplitter_ = nullptr;
     QFrame *objectDetailsPanel_ = nullptr;
+    DocumentFileInspector *mapFileInspector_ = nullptr;
     QTabWidget *mapInspectorTabs_ = nullptr;
     QFrame *mapInspectorLeftEdge_ = nullptr;
     QTreeView *mapObjectsTree_ = nullptr;

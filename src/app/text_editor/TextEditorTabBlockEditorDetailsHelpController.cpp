@@ -17,6 +17,7 @@ BlockEditorDetailsHelpContext TextEditorTab::blockEditorDetailsHelpContext()
     BlockEditorDetailsHelpContext context;
     context.tearingDown = &tearingDown_;
     context.helpBrowser = blockDetailsHelpBrowser_;
+    context.helpInspector = blockDetailsHelpInspector_;
     context.idEdit = blockDetailsIdEdit_;
     context.primaryFieldLabel = blockDetailsPrimaryFieldLabel_;
     context.additionalPositionalEdit = blockDetailsAdditionalPositionalEdit_;

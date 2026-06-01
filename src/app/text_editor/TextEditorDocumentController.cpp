@@ -97,6 +97,7 @@ bool TextEditorDocumentController::loadFile(const QString &filePath, QString *er
     loadActions.populateBlockToolbox = context_.populateBlockToolbox;
     loadActions.refreshEditorModeUi = context_.refreshEditorModeUi;
     loadActions.refreshTitle = context_.refreshTitle;
+    loadActions.refreshStatus = context_.refreshStatus;
     loadActions.refreshCurrentLineHighlight = context_.refreshCurrentLineHighlight;
     loadActions.dirtyStateChanged = context_.dirtyStateChanged;
     loadActions.updateContextHelp = context_.updateContextHelp;
@@ -145,6 +146,7 @@ bool TextEditorDocumentController::save(QString *errorMessage)
     (*context_.encodingStatusNote) = saveUpdate.encodingStatusNote;
     TextEditorDocumentWorkflowController::SaveActions saveActions;
     saveActions.refreshTitle = context_.refreshTitle;
+    saveActions.refreshStatus = context_.refreshStatus;
     saveActions.dirtyStateChanged = context_.dirtyStateChanged;
     TextEditorDocumentWorkflowController::runPostSaveWorkflow(saveActions);
     return true;

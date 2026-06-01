@@ -41,6 +41,8 @@ class IFileSystem;
 class TherionSyntaxHighlighter;
 class TextEditorAppearanceController;
 class TextEditorContextHelpController;
+class DocumentFileInspector;
+class ContextHelpInspector;
 class TextEditorCursorController;
 class TextEditorDocumentController;
 struct TextEditorDocumentContext;
@@ -186,6 +188,9 @@ public:
     QColor sourceSurfaceColor() const;
     QString statusPathText() const;
     QString statusEncodingText() const;
+    QString fileEncodingName() const;
+    QString fileEncodingLabel() const;
+    void triggerConvertToUtf8();
     bool canUndo() const;
     bool canRedo() const;
     void triggerUndo();
@@ -373,6 +378,8 @@ private:
     QSplitter *editorHelpSplitter_ = nullptr;
     QWidget *helpPanel_ = nullptr;
     QTextBrowser *helpBrowser_ = nullptr;
+    DocumentFileInspector *rawFileInspector_ = nullptr;
+    DocumentFileInspector *blockFileInspector_ = nullptr;
     QWidget *replaceRow_ = nullptr;
     QLineEdit *findEdit_ = nullptr;
     QLineEdit *replaceEdit_ = nullptr;
@@ -402,6 +409,7 @@ private:
     QFrame *blockDetailsPanel_ = nullptr;
     QWidget *blockDetailsEditPanel_ = nullptr;
     QWidget *blockDetailsHelpPanel_ = nullptr;
+    ContextHelpInspector *blockDetailsHelpInspector_ = nullptr;
     QLabel *blockDetailsStatusLabel_ = nullptr;
     QLabel *blockDetailsPrimaryFieldLabel_ = nullptr;
     QLabel *blockDetailsSecondaryFieldLabel_ = nullptr;

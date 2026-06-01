@@ -55,10 +55,13 @@ QString ContextHelpController::renderHelpHtml(const QString &token,
                                               const QStringList &arguments,
                                               const QStringList &acceptedValues,
                                               const QStringList &options,
-                                              bool includeSyntax)
+                                              bool includeSyntax,
+                                              bool includeTitle)
 {
     QString html;
-    html += QStringLiteral("<h3>%1</h3>").arg(token.toHtmlEscaped());
+    if (includeTitle) {
+        html += QStringLiteral("<h3>%1</h3>").arg(token.toHtmlEscaped());
+    }
 
     if (!summary.isEmpty()) {
         html += QStringLiteral("<p><strong>%1:</strong> %2</p>")
@@ -109,11 +112,14 @@ QString ContextHelpController::renderHelpSummaryHtml(const QString &token,
 
 QString ContextHelpController::renderValidationHtml(const QString &cursorToken,
                                                     const QString &detailMessage,
-                                                    const QStringList &allowedValues)
+                                                    const QStringList &allowedValues,
+                                                    bool includeTitle)
 {
     QString html;
-    html += QStringLiteral("<h3>%1</h3>")
-                .arg(QCoreApplication::translate("TherionStudio::ContextHelpController", "Validation"));
+    if (includeTitle) {
+        html += QStringLiteral("<h3>%1</h3>")
+                    .arg(QCoreApplication::translate("TherionStudio::ContextHelpController", "Validation"));
+    }
     html += QStringLiteral("<p><strong>%1:</strong> <code>%2</code></p>")
                 .arg(QCoreApplication::translate("TherionStudio::ContextHelpController", "Token"),
                      cursorToken.toHtmlEscaped());

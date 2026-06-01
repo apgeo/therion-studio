@@ -1,5 +1,6 @@
 #include "MapEditorTab.h"
 
+#include "../DocumentFileInspector.h"
 #include "MapEditorDetachedPaneWindow.h"
 
 #include <QFrame>
@@ -13,6 +14,9 @@ namespace TherionStudio
 {
 void MapEditorTab::refreshStatus()
 {
+    if (mapFileInspector_ != nullptr) {
+        mapFileInspector_->refresh();
+    }
     if (detachedPaneState_.window_ != nullptr) {
         detachedPaneState_.window_->setWindowTitle(tr("%1 — Map").arg(displayName()));
         detachedPaneState_.window_->setWindowFilePath(filePath());

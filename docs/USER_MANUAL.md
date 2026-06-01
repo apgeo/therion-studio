@@ -91,7 +91,7 @@ For `.th` and Therion config files:
 | Mode | Use |
 |---|---|
 | `Raw` | Direct source editing with syntax highlighting, search, replace, autocomplete, and contextual help. |
-| `Blocks` | Structured editing of supported commands and blocks. |
+| `Blocks` | Structured editing of supported commands and blocks, with the same command help metadata as Raw mode. |
 
 New `.th` and Therion config tabs open in the default editor selected in Settings. `Raw` is the default. Switching to `Blocks` does not insert missing `encoding` directives and does not rewrite the source until you make an explicit edit.
 
@@ -114,9 +114,9 @@ For `.th2` files:
 - line numbers and active-line highlight
 - command, option, value, and path autocomplete while typing
 - `Ctrl+Space` to open autocomplete manually
-- contextual help for the current command or option
+- contextual help for the current command or option; Raw and Blocks show the same complete command help, and the help panel is titled with the current command, validation context, or selected help target
 - find and replace from the `Edit` menu
-- conversion of unsupported encodings to UTF-8 after confirmation
+- a `File` inspector tab with a panel titled by the current file name, full path, copy-path action, on-disk size, last-modified timestamp, current encoding, and UTF-8 conversion for non-UTF-8 files
 
 ### 4.3 Blocks Data Rows
 
@@ -137,7 +137,7 @@ Maps and scraps referenced inside `map ... endmap` are shown under that map when
 `Visual` mode contains:
 
 - the map canvas
-- inspector tabs: `Selection`, `Objects`, `Backgrounds`
+- inspector tabs: `Selection`, `Objects`, `Backgrounds`, `File`
 
 `Raw` mode remains available for direct source editing.
 

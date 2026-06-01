@@ -11,6 +11,7 @@ class QTextBrowser;
 
 namespace TherionStudio
 {
+class ContextHelpInspector;
 struct TextEditorCommandMetadata;
 struct TherionHelpEntry;
 
@@ -18,6 +19,7 @@ struct BlockEditorDetailsHelpContext
 {
     bool *tearingDown = nullptr;
     QTextBrowser *helpBrowser = nullptr;
+    ContextHelpInspector *helpInspector = nullptr;
     QLineEdit *idEdit = nullptr;
     QLabel *primaryFieldLabel = nullptr;
     QLineEdit *additionalPositionalEdit = nullptr;

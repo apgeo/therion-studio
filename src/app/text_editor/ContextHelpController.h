@@ -15,12 +15,14 @@ public:
                                   const QStringList &arguments,
                                   const QStringList &acceptedValues,
                                   const QStringList &options,
-                                  bool includeSyntax);
+                                  bool includeSyntax,
+                                  bool includeTitle = true);
     static QString renderHelpSummaryHtml(const QString &token,
                                          const QString &summary,
                                          const QString &noSummaryFallback);
     static QString renderValidationHtml(const QString &cursorToken,
                                         const QString &detailMessage,
-                                        const QStringList &allowedValues);
+                                        const QStringList &allowedValues,
+                                        bool includeTitle = true);
 };
 }

@@ -100,8 +100,10 @@ void MainWindow::refreshDocumentStatusWidgets()
 
     if (encodingText.trimmed().isEmpty()) {
         statusDocumentEncodingLabel_->clear();
+        statusDocumentEncodingLabel_->setToolTip(QString());
     } else {
-        statusDocumentEncodingLabel_->setText(tr("Encoding: %1").arg(encodingText));
+        statusDocumentEncodingLabel_->setText(encodingText);
+        statusDocumentEncodingLabel_->setToolTip(tr("Document encoding"));
     }
 
     if (!mapModeVisible) {

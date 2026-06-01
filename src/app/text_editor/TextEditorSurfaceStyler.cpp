@@ -114,6 +114,11 @@ void syncPanelSurfaceToPalette(QWidget *panelWidget, const QPalette &sourcePalet
     panelPalette.setColor(QPalette::AlternateBase, surfaceColor);
     panelWidget->setPalette(panelPalette);
     panelWidget->setAutoFillBackground(true);
+    if (panelWidget->property("preserveNativeChildControls").toBool()) {
+        panelWidget->setStyleSheet(QString());
+        panelWidget->update();
+        return;
+    }
     if (panelWidget->property("leftBorderOnly").toBool()) {
         if (panelWidget->objectName().isEmpty()) {
             panelWidget->setObjectName(QStringLiteral("leftBorderPanel"));

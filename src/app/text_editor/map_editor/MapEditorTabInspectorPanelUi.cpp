@@ -1,5 +1,9 @@
 #include "MapEditorTab.h"
 
+#include "../DocumentFileInspector.h"
+#include "../DocumentInspectorPanel.h"
+#include "../InspectorPanel.h"
+#include "../TextEditorTab.h"
 #include "MapEditorStylePreviewWidget.h"
 
 #include <QAbstractItemView>
@@ -17,16 +21,16 @@
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
-#include <QScrollArea>
 #include <QSizePolicy>
 #include <QSlider>
 #include <QSplitter>
 #include <QStandardItemModel>
-#include <QTabBar>
 #include <QTabWidget>
 #include <QToolButton>
 #include <QTreeView>
 #include <QVBoxLayout>
+
+#include <utility>
 
 namespace TherionStudio
 {
@@ -50,84 +54,16 @@ void configureSelectionEditableCombo(QComboBox *combo, const QString &objectName
 
 void MapEditorTab::buildInspectorPanelUi()
 {
-    objectDetailsPanel_ = new QFrame(mapDetailsSplitter_);
+    auto *inspectorPanel = new DocumentInspectorPanel(mapDetailsSplitter_);
+    objectDetailsPanel_ = inspectorPanel;
     objectDetailsPanel_->setObjectName(QStringLiteral("mapObjectDetailsPanel"));
-    objectDetailsPanel_->setFrameShape(QFrame::NoFrame);
-    objectDetailsPanel_->setAttribute(Qt::WA_StyledBackground, true);
-    objectDetailsPanel_->setStyleSheet(QStringLiteral(
-        "QFrame#mapObjectDetailsPanel {"
-        " background-color: palette(base);"
-        " border: none;"
-        "}"));
     objectDetailsPanel_->setMinimumWidth(280);
-    auto *objectDetailsLayout = new QVBoxLayout(objectDetailsPanel_);
-    objectDetailsLayout->setContentsMargins(8, 8, 8, 8);
-    objectDetailsLayout->setSpacing(8);
+    mapInspectorTabs_ = inspectorPanel->tabs();
+    mapInspectorLeftEdge_ = inspectorPanel->leftEdge();
 
-    mapInspectorTabs_ = new QTabWidget(objectDetailsPanel_);
-    mapInspectorTabs_->installEventFilter(this);
-    mapInspectorLeftEdge_ = new QFrame(mapInspectorTabs_);
-    mapInspectorLeftEdge_->setObjectName(QStringLiteral("mapInspectorLeftEdge"));
-    mapInspectorLeftEdge_->setAttribute(Qt::WA_TransparentForMouseEvents, true);
-    mapInspectorLeftEdge_->setFrameShape(QFrame::NoFrame);
-    mapInspectorLeftEdge_->setFixedWidth(1);
-    mapInspectorLeftEdge_->setStyleSheet(QStringLiteral(
-        "QFrame#mapInspectorLeftEdge {"
-        " background-color: palette(mid);"
-        " border: none;"
-        "}"));
-    mapInspectorLeftEdge_->raise();
-    objectDetailsLayout->addWidget(mapInspectorTabs_, 1);
-
-    auto *objectsTab = new QWidget(mapInspectorTabs_);
-    auto *objectsLayout = new QVBoxLayout(objectsTab);
-    objectsLayout->setContentsMargins(4, 4, 4, 4);
-    objectsLayout->setSpacing(8);
-
-    mapObjectsTree_ = new QTreeView(objectsTab);
-    mapObjectsTree_->setObjectName(QStringLiteral("mapObjectsTree"));
-    mapObjectsTree_->setRootIsDecorated(true);
-    mapObjectsTree_->setAnimated(true);
-    mapObjectsTree_->setSelectionBehavior(QAbstractItemView::SelectRows);
-    mapObjectsTree_->setSelectionMode(QAbstractItemView::SingleSelection);
-    mapObjectsTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    mapObjectsTree_->setAlternatingRowColors(true);
-    mapObjectsTree_->setHeaderHidden(true);
-    mapObjectsTree_->setIconSize(QSize(16, 16));
-    mapObjectsModel_ = new QStandardItemModel(mapObjectsTree_);
-    mapObjectsTree_->setModel(mapObjectsModel_);
-    configureInspectorObjectTreeColumns();
-    if (mapObjectsTree_->viewport() != nullptr) {
-        mapObjectsTree_->viewport()->installEventFilter(this);
-    }
-    connect(mapObjectsTree_, &QTreeView::clicked, this, &MapEditorTab::handleInspectorObjectClicked);
-    objectsLayout->addWidget(mapObjectsTree_, 1);
-    if (mapObjectsTree_->selectionModel() != nullptr) {
-        connect(mapObjectsTree_->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex &current, const QModelIndex &) {
-            handleInspectorObjectSelectionChanged(current);
-        });
-    }
-
-    QFont sectionFont = objectsTab->font();
-    sectionFont.setBold(true);
-
-    auto *selectionScroll = new QScrollArea(mapInspectorTabs_);
-    selectionScroll->setWidgetResizable(true);
-    selectionScroll->setFrameShape(QFrame::NoFrame);
-    selectionScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    selectionScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    if (QWidget *viewport = selectionScroll->viewport(); viewport != nullptr) {
-        viewport->setBackgroundRole(QPalette::Base);
-        viewport->setAutoFillBackground(true);
-    }
-    auto *selectionPanel = new QWidget(selectionScroll);
-    selectionPanel->setBackgroundRole(QPalette::Base);
-    selectionPanel->setAutoFillBackground(true);
-    selectionPanel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    auto *selectionPanel = inspectorPanel->addScrollTab(tr("Selection"));
     selectionPanel->setMinimumWidth(0);
-    auto *selectionLayout = new QVBoxLayout(selectionPanel);
-    selectionLayout->setContentsMargins(4, 4, 4, 4);
-    selectionLayout->setSpacing(8);
+    auto *selectionLayout = qobject_cast<QVBoxLayout *>(selectionPanel->layout());
 
     objectDetailsUiState_.objectDetailsSelectionLabel_ = new QLabel(tr("No map object selected."), selectionPanel);
     objectDetailsUiState_.objectDetailsSelectionLabel_->setWordWrap(true);
@@ -136,23 +72,7 @@ void MapEditorTab::buildInspectorPanelUi()
     auto createSelectionSection = [selectionPanel](const QString &title,
                                                    QVBoxLayout **contentLayout,
                                                    QLabel **titleLabelOut = nullptr) {
-        auto *section = new QFrame(selectionPanel);
-        section->setFrameShape(QFrame::StyledPanel);
-        auto *sectionLayout = new QVBoxLayout(section);
-        sectionLayout->setContentsMargins(8, 8, 8, 8);
-        sectionLayout->setSpacing(6);
-        auto *titleLabel = new QLabel(title, section);
-        QFont titleFont = titleLabel->font();
-        titleFont.setBold(true);
-        titleLabel->setFont(titleFont);
-        sectionLayout->addWidget(titleLabel);
-        if (titleLabelOut != nullptr) {
-            *titleLabelOut = titleLabel;
-        }
-        if (contentLayout != nullptr) {
-            *contentLayout = sectionLayout;
-        }
-        return section;
+        return InspectorPanel::createSection(selectionPanel, title, contentLayout, titleLabelOut);
     };
 
     QVBoxLayout *objectSelectionLayout = nullptr;
@@ -429,30 +349,39 @@ void MapEditorTab::buildInspectorPanelUi()
     advancedSelectionLayout->addWidget(objectDetailsUiState_.objectDeleteButton_);
     selectionLayout->addWidget(objectDetailsUiState_.advancedSelectionSection_);
     selectionLayout->addStretch(1);
-    selectionScroll->setWidget(selectionPanel);
-    mapInspectorTabs_->addTab(selectionScroll, tr("Selection"));
-    mapInspectorTabs_->addTab(objectsTab, tr("Objects"));
 
-    auto *backgroundTab = new QWidget(mapInspectorTabs_);
-    auto *backgroundLayout = new QVBoxLayout(backgroundTab);
-    backgroundLayout->setContentsMargins(4, 4, 4, 4);
-    backgroundLayout->setSpacing(8);
+    auto *objectsTab = inspectorPanel->addPlainTab(tr("Objects"));
+    auto *objectsLayout = qobject_cast<QVBoxLayout *>(objectsTab->layout());
+
+    mapObjectsTree_ = new QTreeView(objectsTab);
+    mapObjectsTree_->setObjectName(QStringLiteral("mapObjectsTree"));
+    mapObjectsTree_->setRootIsDecorated(true);
+    mapObjectsTree_->setAnimated(true);
+    mapObjectsTree_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    mapObjectsTree_->setSelectionMode(QAbstractItemView::SingleSelection);
+    mapObjectsTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    mapObjectsTree_->setAlternatingRowColors(true);
+    mapObjectsTree_->setHeaderHidden(true);
+    mapObjectsTree_->setIconSize(QSize(16, 16));
+    mapObjectsModel_ = new QStandardItemModel(mapObjectsTree_);
+    mapObjectsTree_->setModel(mapObjectsModel_);
+    configureInspectorObjectTreeColumns();
+    if (mapObjectsTree_->viewport() != nullptr) {
+        mapObjectsTree_->viewport()->installEventFilter(this);
+    }
+    connect(mapObjectsTree_, &QTreeView::clicked, this, &MapEditorTab::handleInspectorObjectClicked);
+    objectsLayout->addWidget(mapObjectsTree_, 1);
+    if (mapObjectsTree_->selectionModel() != nullptr) {
+        connect(mapObjectsTree_->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex &current, const QModelIndex &) {
+            handleInspectorObjectSelectionChanged(current);
+        });
+    }
+
+    auto *backgroundTab = inspectorPanel->addPlainTab(tr("Backgrounds"));
+    auto *backgroundLayout = qobject_cast<QVBoxLayout *>(backgroundTab->layout());
 
     auto createBackgroundSection = [backgroundTab](const QString &title, QVBoxLayout **contentLayout) {
-        auto *section = new QFrame(backgroundTab);
-        section->setFrameShape(QFrame::StyledPanel);
-        auto *sectionLayout = new QVBoxLayout(section);
-        sectionLayout->setContentsMargins(8, 8, 8, 8);
-        sectionLayout->setSpacing(6);
-        auto *titleLabel = new QLabel(title, section);
-        QFont titleFont = titleLabel->font();
-        titleFont.setBold(true);
-        titleLabel->setFont(titleFont);
-        sectionLayout->addWidget(titleLabel);
-        if (contentLayout != nullptr) {
-            *contentLayout = sectionLayout;
-        }
-        return section;
+        return InspectorPanel::createSection(backgroundTab, title, contentLayout);
     };
 
     auto *layersFrame = new QFrame(backgroundTab);
@@ -463,7 +392,7 @@ void MapEditorTab::buildInspectorPanelUi()
 
     auto *layersRow = new QHBoxLayout;
     auto *layersLabel = new QLabel(tr("Layers"), layersFrame);
-    sectionFont = layersLabel->font();
+    QFont sectionFont = layersLabel->font();
     sectionFont.setBold(true);
     layersLabel->setFont(sectionFont);
     layersRow->addWidget(layersLabel);
@@ -548,7 +477,24 @@ void MapEditorTab::buildInspectorPanelUi()
     backgroundLayout->addWidget(adjustmentsFrame);
 
     backgroundLayout->addStretch(1);
-    mapInspectorTabs_->addTab(backgroundTab, tr("Backgrounds"));
+
+    DocumentFileInspectorContext fileContext;
+    fileContext.filePath = [this]() {
+        return textEditor_ != nullptr ? textEditor_->filePath() : QString();
+    };
+    fileContext.encodingName = [this]() {
+        return textEditor_ != nullptr ? textEditor_->fileEncodingName() : QStringLiteral("UTF-8");
+    };
+    fileContext.encodingLabel = [this]() {
+        return textEditor_ != nullptr ? textEditor_->fileEncodingLabel() : QStringLiteral("UTF-8");
+    };
+    fileContext.convertToUtf8 = [this]() {
+        if (textEditor_ != nullptr) {
+            textEditor_->triggerConvertToUtf8();
+        }
+    };
+    mapFileInspector_ = inspectorPanel->addFileTab(std::move(fileContext));
+
     updateMapInspectorLeftEdgeGeometry();
 
     connect(mapBackgroundAddButton_, &QToolButton::clicked, this, [this]() {

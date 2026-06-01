@@ -91,7 +91,7 @@ Pre `.th` a Therion config súbory:
 | Režim | Použitie |
 |---|---|
 | `Zdroj` (`Raw`) | Priama editácia zdroja so zvýraznením syntaxe, hľadaním, nahradením, dopĺňaním a kontextovou nápovedou. |
-| `Bloky` (`Blocks`) | Štruktúrovaná editácia podporovaných príkazov a blokov. |
+| `Bloky` (`Blocks`) | Štruktúrovaná editácia podporovaných príkazov a blokov s rovnakými metadátami nápovedy príkazov ako režim Zdroj. |
 
 Nové `.th` a Therion config záložky sa otvárajú vo východiskovom editore vybranom v Nastaveniach. Východiskový je `Zdroj`. Prepnutie do režimu `Bloky` nevloží chýbajúci `encoding` a nijako neprepíše zdroj, kým neurobíte explicitnú editáciu.
 
@@ -114,9 +114,9 @@ Pre `.th2` súbory:
 - čísla riadkov a zvýraznenie aktívneho riadka,
 - dopĺňanie príkazov, volieb, hodnôt a ciest pri písaní,
 - `Ctrl+Space` na ručné otvorenie dopĺňania,
-- kontextová nápoveda pre aktuálny príkaz alebo voľbu,
+- kontextová nápoveda pre aktuálny príkaz alebo voľbu; režimy Zdroj aj Bloky zobrazujú rovnakú úplnú nápovedu príkazov a panel nápovedy je pomenovaný podľa aktuálneho príkazu, validačného kontextu alebo vybraného cieľa nápovedy,
 - hľadanie a nahradenie z menu `Úpravy`,
-- prevod nepodporovaného kódovania do UTF-8 po potvrdení.
+- záložku `Súbor` v inšpektore s panelom pomenovaným podľa aktuálneho súboru, plnou cestou, akciou na skopírovanie cesty, veľkosťou na disku, časom poslednej zmeny, aktuálnym kódovaním a prevodom do UTF-8 pre súbory mimo UTF-8.
 
 ### 4.3 Dátové riadky v režime Bloky
 
@@ -137,7 +137,7 @@ Mapy a scrapy referencované vnútri `map ... endmap` sa zobrazia pod danou mapo
 Režim `Vizuálne` obsahuje:
 
 - mapové plátno,
-- inšpektor so záložkami `Výber`, `Objekty`, `Pozadia`.
+- inšpektor so záložkami `Výber`, `Objekty`, `Pozadia`, `Súbor`.
 
 Režim `Zdroj` zostáva dostupný pre priamu editáciu zdroja.
 

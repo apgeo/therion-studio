@@ -85,11 +85,8 @@ void TextEditorStatusController::refreshStatus()
         context_.convertEncodingButton->setEnabled(showConversion);
     }
 
-    const bool showInlineRow = *context_.inlineStatusRequestedVisible
-        && (!context_.encodingStatusNote->isEmpty()
-            || (context_.convertEncodingButton != nullptr && context_.convertEncodingButton->isVisible()));
     if (context_.statusRow != nullptr) {
-        context_.statusRow->setVisible(showInlineRow);
+        context_.statusRow->setVisible(false);
     }
 }
 

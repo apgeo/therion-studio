@@ -1,5 +1,8 @@
 #include "TextEditorTab.h"
 
+#include "DocumentFileInspector.h"
+#include "DocumentInspectorPanel.h"
+#include "InspectorPanel.h"
 #include "TextEditorContextHelpController.h"
 #include "raw_editor/RawEditorCompletionController.h"
 
@@ -45,6 +48,29 @@ void TextEditorTab::buildContextHelpController()
     };
     contextHelpContext.populateBlockToolboxScopeCombo = [this]() {
         populateBlockToolboxScopeCombo();
+    };
+    contextHelpContext.createInspectorPanel = [](QWidget *parent) {
+        return new DocumentInspectorPanel(parent);
+    };
+    contextHelpContext.configureInspectorPanel = [this](InspectorPanel *inspectorPanel) {
+        auto *documentInspectorPanel = qobject_cast<DocumentInspectorPanel *>(inspectorPanel);
+        if (documentInspectorPanel == nullptr) {
+            return;
+        }
+        DocumentFileInspectorContext fileContext;
+        fileContext.filePath = [this]() {
+            return filePath_;
+        };
+        fileContext.encodingName = [this]() {
+            return fileEncodingName_;
+        };
+        fileContext.encodingLabel = [this]() {
+            return fileEncodingLabel_;
+        };
+        fileContext.convertToUtf8 = [this]() {
+            triggerConvertToUtf8();
+        };
+        rawFileInspector_ = documentInspectorPanel->addFileTab(std::move(fileContext));
     };
 
     contextHelpController_ =

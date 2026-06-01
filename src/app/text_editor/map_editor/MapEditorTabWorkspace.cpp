@@ -1,5 +1,6 @@
 #include "MapEditorTab.h"
 
+#include "../InspectorPanel.h"
 #include "MapEditorMagnifierOverlay.h"
 #include "MapEditorSceneThemePolicy.h"
 #include "MapEditorStylePreviewWidget.h"
@@ -41,7 +42,6 @@
 #include <QStatusBar>
 #include <QStyleHints>
 #include <QSvgRenderer>
-#include <QTabBar>
 #include <QTabWidget>
 #include <QTimer>
 #include <QToolButton>
@@ -296,19 +296,12 @@ void MapEditorTab::buildUi()
 
 void MapEditorTab::updateMapInspectorLeftEdgeGeometry()
 {
-    if (mapInspectorTabs_ == nullptr || mapInspectorLeftEdge_ == nullptr) {
+    auto *inspectorPanel = qobject_cast<InspectorPanel *>(objectDetailsPanel_);
+    if (inspectorPanel == nullptr) {
         return;
     }
 
-    int paneTop = 0;
-    if (QTabBar *tabBar = mapInspectorTabs_->tabBar(); tabBar != nullptr) {
-        paneTop = qMax(0, tabBar->geometry().bottom());
-    }
-
-    const int paneHeight = qMax(0, mapInspectorTabs_->height() - paneTop);
-    mapInspectorLeftEdge_->setGeometry(0, paneTop, 1, paneHeight);
-    mapInspectorLeftEdge_->raise();
-    mapInspectorLeftEdge_->setVisible(paneHeight > 0);
+    inspectorPanel->updateLeftEdgeGeometry();
 }
 
 }

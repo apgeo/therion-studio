@@ -3,8 +3,9 @@
 #include <QCoreApplication>
 
 #include "ContextHelpController.h"
+#include "ContextHelpInspector.h"
+#include "InspectorPanel.h"
 #include "TextEditorCommandMetadata.h"
-#include "TextEditorSurfaceStyler.h"
 #include "block_editor/BlockEditorDirectiveRules.h"
 
 #include "../../core/TherionCommandSyntax.h"
@@ -12,11 +13,7 @@
 
 #include <algorithm>
 #include <utility>
-#include <QFrame>
-#include <QFont>
-#include <QHBoxLayout>
 #include <QJsonObject>
-#include <QLabel>
 #include <QRect>
 #include <QPlainTextEdit>
 #include <QSplitter>
@@ -27,9 +24,6 @@
 
 namespace
 {
-constexpr int kHelpPanelPadding = 12;
-constexpr int kHelpPanelSpacing = 8;
-
 void appendUniqueCaseInsensitive(QStringList &target, const QString &value)
 {
     const QString trimmed = value.trimmed();
@@ -100,43 +94,41 @@ void TextEditorContextHelpController::setHelpBrowser(QTextBrowser *helpBrowser)
     }
 }
 
+void TextEditorContextHelpController::setHelpTitle(const QString &title)
+{
+    if (helpInspector_ != nullptr) {
+        helpInspector_->setTitle(title);
+    }
+}
+
 void TextEditorContextHelpController::buildHelpPanel()
 {
     if (context_.rootWidget == nullptr) {
         return;
     }
 
-    auto *framedHelpPanel = new QFrame(context_.rootWidget);
-    framedHelpPanel->setFrameShape(QFrame::NoFrame);
-    setHelpPanel(framedHelpPanel);
+    auto *inspectorPanel = context_.createInspectorPanel
+        ? context_.createInspectorPanel(context_.rootWidget)
+        : new InspectorPanel(context_.rootWidget);
+    if (inspectorPanel == nullptr) {
+        return;
+    }
+    setHelpPanel(inspectorPanel);
     helpPanel()->setObjectName(QStringLiteral("textContextHelpPanel"));
-    syncPanelSurfaceToBaseTone(helpPanel());
-    auto *panelLayout = new QVBoxLayout(helpPanel());
-    panelLayout->setContentsMargins(kHelpPanelPadding, kHelpPanelPadding, kHelpPanelPadding, kHelpPanelPadding);
-    panelLayout->setSpacing(kHelpPanelSpacing);
 
-    auto *headerRow = new QHBoxLayout;
-    headerRow->setContentsMargins(0, 0, 0, 0);
+    auto *contextTab = inspectorPanel->addScrollTab(tr("Context Help"));
+    auto *contextLayout = qobject_cast<QVBoxLayout *>(contextTab->layout());
 
-    auto *headerLabel = new QLabel(tr("Contextual Help"), helpPanel());
-    QFont headerFont = headerLabel->font();
-    headerFont.setBold(true);
-    headerLabel->setFont(headerFont);
-
-    headerRow->addWidget(headerLabel);
-    headerRow->addStretch(1);
-
-    setHelpBrowser(new QTextBrowser(helpPanel()));
-    helpBrowser()->setFrameShape(QFrame::NoFrame);
-    helpBrowser()->setOpenLinks(false);
-    helpBrowser()->setOpenExternalLinks(false);
-    helpBrowser()->setMinimumHeight(120);
-    syncTextBrowserSurfaceToParent(helpBrowser());
+    helpInspector_ = new ContextHelpInspector(contextTab, tr("Context Help"));
+    setHelpBrowser(helpInspector_->browser());
     helpBrowser()->setHtml(
         tr("<p>Select a Therion command or item to see contextual help.</p>"));
 
-    panelLayout->addLayout(headerRow);
-    panelLayout->addWidget(helpBrowser(), 1);
+    contextLayout->addWidget(helpInspector_, 1);
+
+    if (context_.configureInspectorPanel) {
+        context_.configureInspectorPanel(inspectorPanel);
+    }
 }
 
 void TextEditorContextHelpController::loadHelpMetadata()
@@ -204,6 +196,7 @@ void TextEditorContextHelpController::updateContextHelp()
 
     const QString validationHtml = validationHelpHtmlForCursor();
     if (!validationHtml.isEmpty()) {
+        setHelpTitle(tr("Validation"));
         helpBrowser()->setHtml(validationHtml);
         return;
     }
@@ -216,16 +209,19 @@ void TextEditorContextHelpController::updateContextHelp()
         }
 
         const TherionHelpEntry &entry = entryIt.value();
+        setHelpTitle(candidate);
         helpBrowser()->setHtml(ContextHelpController::renderHelpHtml(candidate,
                                                                              entry.summary,
                                                                              entry.syntax,
                                                                              entry.arguments,
                                                                              entry.acceptedValues,
                                                                              entry.options,
-                                                                             true));
+                                                                             true,
+                                                                             false));
         return;
     }
 
+    setHelpTitle(tr("Context Help"));
     helpBrowser()->setHtml(tr("<p>No contextual help is available for the current token.</p>"));
 }
 
@@ -479,6 +475,6 @@ QString TextEditorContextHelpController::validationHelpHtmlForCursor(QString *to
         *tooltipKey = issueKey;
     }
 
-    return ContextHelpController::renderValidationHtml(cursorToken, detailMessage, normalizedAllowed);
+    return ContextHelpController::renderValidationHtml(cursorToken, detailMessage, normalizedAllowed, false);
 }
 }

@@ -26,6 +26,9 @@ void TextEditorDocumentWorkflowController::runPostLoadWorkflow(bool disableBlock
     if (actions.refreshTitle) {
         actions.refreshTitle();
     }
+    if (actions.refreshStatus) {
+        actions.refreshStatus();
+    }
     if (actions.refreshCurrentLineHighlight) {
         actions.refreshCurrentLineHighlight();
     }
@@ -41,6 +44,9 @@ void TextEditorDocumentWorkflowController::runPostSaveWorkflow(const SaveActions
 {
     if (actions.refreshTitle) {
         actions.refreshTitle();
+    }
+    if (actions.refreshStatus) {
+        actions.refreshStatus();
     }
     if (actions.dirtyStateChanged) {
         actions.dirtyStateChanged(false);

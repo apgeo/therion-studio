@@ -64,6 +64,8 @@ MapEditorViewportInputContext MapEditorTab::viewportInputContext()
         .interactiveDrawControlDragHandle = &interactiveDrawState_.controlDragHandle_,
         .interactiveDrawHoverActive = &interactiveDrawState_.hoverActive_,
         .interactiveDrawHoverScenePoint = &interactiveDrawState_.hoverScenePoint_,
+        .interactiveDrawHoverSnapActive = &interactiveDrawState_.hoverSnapActive_,
+        .interactiveDrawHoverSnapScenePoint = &interactiveDrawState_.hoverSnapScenePoint_,
         .drawMode = [this]() {
             return toViewportInteractiveDrawMode(interactiveDrawState_.mode_);
         },

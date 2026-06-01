@@ -49,6 +49,8 @@ struct MapEditorInteractiveDrawContext
     bool *controlDragActive = nullptr;
     bool *hoverActive = nullptr;
     QPointF *hoverScenePoint = nullptr;
+    bool *hoverSnapActive = nullptr;
+    QPointF *hoverSnapScenePoint = nullptr;
     QGraphicsPathItem **previewPath = nullptr;
     QVector<QGraphicsItem *> *previewMarkers = nullptr;
 

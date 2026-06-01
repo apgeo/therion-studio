@@ -259,6 +259,8 @@ private:
         MapEditorInteractiveLineControlHandleRef controlDragHandle_;
         bool hoverActive_ = false;
         QPointF hoverScenePoint_;
+        bool hoverSnapActive_ = false;
+        QPointF hoverSnapScenePoint_;
         QGraphicsPathItem *previewPath_ = nullptr;
         QVector<QGraphicsItem *> previewMarkers_;
     };

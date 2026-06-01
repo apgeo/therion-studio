@@ -64,6 +64,8 @@ MapEditorInteractiveDrawContext MapEditorTab::interactiveDrawContext()
         .controlDragActive = &interactiveDrawState_.controlDragActive_,
         .hoverActive = &interactiveDrawState_.hoverActive_,
         .hoverScenePoint = &interactiveDrawState_.hoverScenePoint_,
+        .hoverSnapActive = &interactiveDrawState_.hoverSnapActive_,
+        .hoverSnapScenePoint = &interactiveDrawState_.hoverSnapScenePoint_,
         .previewPath = &interactiveDrawState_.previewPath_,
         .previewMarkers = &interactiveDrawState_.previewMarkers_,
         .drawMode = [this]() {

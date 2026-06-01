@@ -207,6 +207,9 @@ void MapEditorInteractiveDrawController::clearInteractiveDrawSession(bool clearM
     (*context_.anchorDragActive) = false;
     (*context_.controlDragActive) = false;
     (*context_.hoverActive) = false;
+    if (context_.hoverSnapActive != nullptr) {
+        (*context_.hoverSnapActive) = false;
+    }
     if (context_.view != nullptr && context_.view->viewport() != nullptr && !(*context_.panActive)) {
         context_.view->viewport()->unsetCursor();
     }
@@ -349,6 +352,7 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
     QVector<QPointF> anchorMarkers;
     QVector<QPointF> controlMarkers;
     QVector<QLineF> controlConnectors;
+    std::optional<QPointF> hoverSnapTargetMarker;
     if (mode() == MapEditorInteractiveDrawMode::Line
         || mode() == MapEditorInteractiveDrawMode::Area) {
         struct DraftPreviewVertex
@@ -401,10 +405,17 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
             if ((*context_.anchorDragActive)) {
                 appendBezierControlsForLastSegment((*context_.anchorDragScenePoint));
             }
-        } else if ((*context_.hoverActive) && !previewVertices.isEmpty()) {
+        } else if ((*context_.hoverActive)) {
             DraftPreviewVertex candidate;
             candidate.anchorScene = (*context_.hoverScenePoint);
             previewVertices.append(candidate);
+            anchorMarkers.append(candidate.anchorScene);
+            if (context_.hoverSnapActive != nullptr && (*context_.hoverSnapActive)) {
+                const QPointF snapPoint = (context_.hoverSnapScenePoint != nullptr)
+                    ? (*context_.hoverSnapScenePoint)
+                    : candidate.anchorScene;
+                hoverSnapTargetMarker = snapPoint;
+            }
         }
 
         if (!previewVertices.isEmpty()) {
@@ -516,6 +527,16 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         marker->setPen(markerPen);
         marker->setBrush(QBrush(accent));
         marker->setZValue(28.5);
+    }
+
+    if (hoverSnapTargetMarker.has_value()) {
+        QGraphicsEllipseItem *snapMarker = ensurePreviewEllipseMarker(previewMarkerIndex++, QRectF(-8.5, -8.5, 17.0, 17.0));
+        snapMarker->setPos(hoverSnapTargetMarker.value());
+        QPen snapMarkerPen(QColor(QStringLiteral("#ffe16a")), 2.0);
+        snapMarkerPen.setCosmetic(true);
+        snapMarker->setPen(snapMarkerPen);
+        snapMarker->setBrush(Qt::NoBrush);
+        snapMarker->setZValue(28.8);
     }
 
     for (const QLineF &connector : std::as_const(controlConnectors)) {

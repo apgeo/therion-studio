@@ -440,10 +440,7 @@ public:
         setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
         setAcceptHoverEvents(true);
         setCursor(Qt::OpenHandCursor);
-        setToolTip(QObject::tr("%1 vertex %2 (line %3)")
-                       .arg(geometryKind_.isEmpty() ? QObject::tr("Geometry") : geometryKind_)
-                       .arg(vertexIndex_ + 1)
-                       .arg(lineNumber_));
+        updateToolTip();
         setPos(sceneCoordsSourceToPreview(sourcePoint, sourceBounds, previewBounds));
     }
 
@@ -478,6 +475,14 @@ public:
                                                    bool)> callback)
     {
         movePreviewCallback_ = std::move(callback);
+    }
+
+    void setStandaloneOptionRows(const QStringList &rows)
+    {
+        standaloneOptionRows_ = rows;
+        hasStandaloneOptionRows_ = !standaloneOptionRows_.isEmpty();
+        updateToolTip();
+        update();
     }
 
 protected:
@@ -523,6 +528,25 @@ protected:
         painter->setPen(QPen(outline, qMax<qreal>(0.5, outlineWidth)));
         painter->setBrush(fill);
         painter->drawEllipse(drawRect);
+
+        if (hasStandaloneOptionRows_) {
+            const qreal markerRadius = qMax<qreal>(1.1, 1.6 * zoomOutScale);
+            const QPointF markerCenter(drawRect.right() - markerRadius, drawRect.top() + markerRadius);
+            QPolygonF marker;
+            marker << QPointF(markerCenter.x(), markerCenter.y() - markerRadius)
+                   << QPointF(markerCenter.x() + markerRadius, markerCenter.y())
+                   << QPointF(markerCenter.x(), markerCenter.y() + markerRadius)
+                   << QPointF(markerCenter.x() - markerRadius, markerCenter.y());
+            QColor markerFill = selected ? QColor(QStringLiteral("#ffd166")) : QColor(QStringLiteral("#f59e0b"));
+            markerFill.setAlpha(235);
+            QColor markerOutline = QColor(QStringLiteral("#1f2937"));
+            markerOutline.setAlpha(210);
+            QPen markerPen(markerOutline, qMax<qreal>(0.45, 0.75 * zoomOutScale));
+            markerPen.setJoinStyle(Qt::MiterJoin);
+            painter->setPen(markerPen);
+            painter->setBrush(markerFill);
+            painter->drawPolygon(marker);
+        }
     }
 
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override
@@ -580,6 +604,24 @@ protected:
     }
 
 private:
+    void updateToolTip()
+    {
+        QString tooltip = QObject::tr("%1 vertex %2 (line %3)")
+                              .arg(geometryKind_.isEmpty() ? QObject::tr("Geometry") : geometryKind_)
+                              .arg(vertexIndex_ + 1)
+                              .arg(lineNumber_);
+        if (hasStandaloneOptionRows_) {
+            const int previewLimit = 4;
+            QStringList previewRows = standaloneOptionRows_.mid(0, previewLimit);
+            QString suffix = previewRows.join(QStringLiteral("; "));
+            if (standaloneOptionRows_.size() > previewLimit) {
+                suffix += QStringLiteral("; ...");
+            }
+            tooltip += QObject::tr("\nLine-point rows: %1").arg(suffix);
+        }
+        setToolTip(tooltip);
+    }
+
     QPointF sourcePointForPreviewPos(const QPointF &previewPoint) const
     {
         return mapDisplayToSource(previewToSource(previewPoint));
@@ -609,6 +651,8 @@ private:
     QPointF lastPreviewSourcePoint_;
     bool hoverActive_ = false;
     bool dragActive_ = false;
+    bool hasStandaloneOptionRows_ = false;
+    QStringList standaloneOptionRows_;
     std::function<QPointF(const QPointF &)> displayToSourceMapper_;
     std::function<void(MapEditableGeometryVertexItem *, const QPointF &, const QPointF &, bool)> movePreviewCallback_;
     std::function<void(int, const QString &, int, const QPointF &, const QPointF &)> moveCommittedCallback_;

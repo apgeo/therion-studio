@@ -15,6 +15,7 @@ class QComboBox;
 class QDoubleSpinBox;
 class QLabel;
 class QLineEdit;
+class QPlainTextEdit;
 class QObject;
 class QPushButton;
 class QWidget;
@@ -45,6 +46,7 @@ struct MapEditorObjectDetailsContext
     QLabel *selectionTitleLabel = nullptr;
     QWidget *vertexSection = nullptr;
     QLabel *vertexTitleLabel = nullptr;
+    QWidget *linePointActionsSection = nullptr;
     QWidget *geometrySection = nullptr;
     QWidget *advancedSection = nullptr;
     QPushButton *deleteButton = nullptr;
@@ -78,6 +80,8 @@ struct MapEditorObjectDetailsContext
     QDoubleSpinBox *orientationSpin = nullptr;
     QCheckBox *linePointLeftSizeEnabledCheck = nullptr;
     QDoubleSpinBox *linePointLeftSizeSpin = nullptr;
+    QWidget *linePointFlagsEditor = nullptr;
+    QPlainTextEdit *linePointFlagsEdit = nullptr;
     QWidget *lineOptionsEditor = nullptr;
     QCheckBox *lineClosedCheck = nullptr;
     QCheckBox *lineReversedCheck = nullptr;

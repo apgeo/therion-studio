@@ -180,6 +180,7 @@ For lines and area borders:
 - use `Insert Before` / `Insert After` to add vertices near the selected vertex
 - use `Extend Before` / `Extend After` at line endpoints to continue an existing line
 - use `Delete` / `Backspace` to remove the selected line vertex; if no line vertex is selected, `Delete` / `Backspace` deletes the selected object
+- when deleting a line vertex that has additional line-point options (for example `altitude .` or `subtype ...`), Therion Studio asks for confirmation before deletion
 - use `<<` and `>>` to enable or remove incoming/outgoing Bezier handles
 - drag Bezier handles directly on the canvas to reshape the curve
 
@@ -193,6 +194,9 @@ In `Inspector -> Selection`, you can edit properties for selected `Scrap`, `Poin
 - `Point`, `Line`, and `Area` expose common fields such as ID, type, subtype, and supported options.
 - `point label` and `line label` expose `Text (-text)`. Point labels render near the point; line labels render along the label line path, so the line controls the text length and orientation.
 - Point types that support `-orientation` show an orientation override and a draggable orientation handle. Station names stay screen-aligned for readability.
+- selected line vertices expose an `Additional line-point options` editor in `Selection` for per-vertex standalone options such as `altitude`, `subtype`, `direction`, or `adjust`, so these can be edited without switching to Raw mode.
+- `Additional line-point options` edits are applied automatically when the field loses focus (no separate Apply/Clear buttons).
+- line vertices with additional line-point options display a small marker on the vertex handle and include option preview text in the vertex tooltip.
 
 The style preview under `Subtype` shows how the selected or pending object will look. The preview uses a light map-like background even in dark mode.
 

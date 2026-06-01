@@ -25,6 +25,7 @@ public:
     void handleLinePointPreviousControlToggled(bool checked);
     void handleLinePointSmoothToggled(bool checked);
     void handleLinePointNextControlToggled(bool checked);
+    void applyLinePointFlagsEdits();
     void populateScrapScaleFromSourceBounds();
     void applyScrapScaleEdits();
     void handleConfigureObjectSettingsTriggered();

@@ -15,8 +15,10 @@
 #include <QDoubleSpinBox>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScopedValueRollback>
+#include <QSignalBlocker>
 #include <QWidget>
 
 #include <utility>
@@ -41,6 +43,15 @@ int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int so
     }
 
     return -1;
+}
+
+QStringList linePointStandaloneOptionRowsForSelection(const MapGeometryFeature &lineFeature, int sourceVertexIndex)
+{
+    const int lineVertexIndex = lineVertexIndexForSourceVertex(lineFeature, sourceVertexIndex);
+    if (lineVertexIndex < 0 || lineVertexIndex >= lineFeature.lineVertices.size()) {
+        return {};
+    }
+    return lineFeature.lineVertices.at(lineVertexIndex).standaloneOptionRows;
 }
 }
 
@@ -110,6 +121,8 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.orientationSpin == nullptr
         || context_.linePointLeftSizeEnabledCheck == nullptr
         || context_.linePointLeftSizeSpin == nullptr
+        || context_.linePointFlagsEditor == nullptr
+        || context_.linePointFlagsEdit == nullptr
         || context_.lineOptionsEditor == nullptr
         || context_.lineClosedCheck == nullptr
         || context_.lineReversedCheck == nullptr
@@ -240,6 +253,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.areaReferenceLabel->clear();
         context_.quickFieldsEditor->setVisible(false);
         context_.objectQuickCommandKind->clear();
+        context_.linePointActionsSection->setVisible(false);
         context_.vertexActionsEditor->setVisible(false);
         context_.metadataLabel->setText(QStringLiteral("-"));
         context_.orientationEditor->setVisible(false);
@@ -252,6 +266,12 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.linePointLeftSizeEnabledCheck->setChecked(false);
         context_.linePointLeftSizeSpin->setEnabled(false);
         context_.linePointLeftSizeSpin->setValue(40.0);
+        {
+            const QSignalBlocker blocker(context_.linePointFlagsEdit);
+            context_.linePointFlagsEdit->clear();
+        }
+        context_.linePointFlagsEditor->setVisible(false);
+        context_.linePointFlagsEdit->setEnabled(false);
         context_.lineOptionsEditor->setVisible(false);
         context_.scrapScaleEditor->setVisible(false);
         context_.configureButton->setVisible(false);
@@ -363,6 +383,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     const bool lineVertexActionsAvailable = *context_.selectedObjectKind == QStringLiteral("line")
         && *context_.selectedObjectVertexIndex >= 0
         && context_.textEditor != nullptr;
+    context_.linePointActionsSection->setVisible(lineVertexActionsAvailable);
     context_.vertexActionsEditor->setVisible(lineVertexActionsAvailable);
     context_.vertexInsertBeforeButton->setEnabled(lineVertexActionsAvailable);
     context_.vertexInsertAfterButton->setEnabled(lineVertexActionsAvailable);
@@ -474,12 +495,14 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
 
     bool orientationApplicable = false;
     bool linePointLeftSizeApplicable = false;
+    bool linePointFlagsApplicable = false;
     bool linePointSmoothApplicable = false;
     bool linePointSmooth = false;
     bool linePointPreviousControl = false;
     bool linePointNextControl = false;
     std::optional<qreal> orientationDegrees;
     std::optional<qreal> linePointLeftSize;
+    QStringList linePointFlagsRows;
     if (context_.textEditor != nullptr && *context_.selectedObjectLineNumber > 0) {
         if (*context_.selectedObjectKind == QStringLiteral("point")) {
             QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
@@ -530,13 +553,16 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                                                                                  *context_.selectedObjectLineNumber,
                                                                                  *context_.selectedObjectVertexIndex);
                         }
+                        linePointFlagsApplicable = true;
+                        linePointFlagsRows = linePointStandaloneOptionRowsForSelection(lineFeature.value(),
+                                                                                       *context_.selectedObjectVertexIndex);
                     }
                 }
             }
         }
     }
 
-    context_.orientationEditor->setVisible(linePointSmoothApplicable || orientationApplicable || linePointLeftSizeApplicable);
+    context_.orientationEditor->setVisible(linePointSmoothApplicable || orientationApplicable || linePointLeftSizeApplicable || linePointFlagsApplicable);
     context_.linePointPreviousControlCheck->setVisible(linePointSmoothApplicable);
     context_.linePointPreviousControlCheck->setEnabled(linePointSmoothApplicable);
     context_.linePointPreviousControlCheck->setChecked(linePointSmoothApplicable && linePointPreviousControl);
@@ -568,9 +594,16 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.linePointLeftSizeSpin->setEnabled(false);
         context_.linePointLeftSizeSpin->setValue(40.0);
     }
+    context_.linePointFlagsEditor->setVisible(linePointFlagsApplicable);
+    context_.linePointFlagsEdit->setEnabled(linePointFlagsApplicable);
+    {
+        const QSignalBlocker blocker(context_.linePointFlagsEdit);
+        context_.linePointFlagsEdit->setPlainText(linePointFlagsRows.join(QLatin1Char('\n')));
+    }
     context_.vertexSection->setVisible(lineVertexActionsAvailable
                                        || linePointSmoothApplicable
                                        || orientationApplicable
-                                       || linePointLeftSizeApplicable);
+                                       || linePointLeftSizeApplicable
+                                       || linePointFlagsApplicable);
 }
 }

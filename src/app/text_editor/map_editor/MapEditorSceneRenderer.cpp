@@ -2091,6 +2091,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     vertexOutline.setAlpha(220);
                     vertexItem->setPen(cosmeticPen(vertexOutline, 1.0));
                     vertexItem->setBrush(QBrush(vertexFill));
+                    vertexItem->setStandaloneOptionRows(vertex.standaloneOptionRows);
                     vertexItem->setMoveCommittedCallback(recordLineAreaVertexMove);
                     scene->addItem(vertexItem);
                     vertexItem->setZValue(4.0);

@@ -16,6 +16,7 @@
 #include <QDoubleSpinBox>
 #include <QLineEdit>
 #include <QLineF>
+#include <QPlainTextEdit>
 #include <QScopedValueRollback>
 #include <QSignalBlocker>
 #include <QTimer>
@@ -42,6 +43,37 @@ int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int so
     }
 
     return -1;
+}
+
+std::optional<std::pair<int, int>> selectedLineAndSourceVertex(const MapEditorObjectDetailsContext &context)
+{
+    if (context.selectedObjectLineNumber == nullptr
+        || context.selectedObjectVertexIndex == nullptr
+        || context.selectedObjectKind == nullptr
+        || (*context.selectedObjectKind) != QStringLiteral("line")
+        || (*context.selectedObjectLineNumber) <= 0
+        || (*context.selectedObjectVertexIndex) < 0) {
+        return std::nullopt;
+    }
+
+    return std::make_pair(*context.selectedObjectLineNumber, *context.selectedObjectVertexIndex);
+}
+
+QStringList trimmedLinePointStandaloneRows(const QString &rawRowsText)
+{
+    QStringList rows = rawRowsText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    QStringList trimmedRows;
+    trimmedRows.reserve(rows.size());
+    for (QString row : rows) {
+        if (row.endsWith(QLatin1Char('\r'))) {
+            row.chop(1);
+        }
+        row = row.trimmed();
+        if (!row.isEmpty()) {
+            trimmedRows.append(row);
+        }
+    }
+    return trimmedRows;
 }
 
 qreal defaultLinePointOrientationDegrees(const MapGeometryFeature &feature, int vertexIndex)
@@ -873,4 +905,77 @@ void MapEditorObjectDetailsEditController::handleLinePointNextControlToggled(boo
     context_.setLineVertexControlHandleForSelection(false, checked);
     context_.refreshObjectDetailsPanel();
 }
+
+void MapEditorObjectDetailsEditController::applyLinePointFlagsEdits()
+{
+    if (context_.textEditor == nullptr
+        || context_.linePointFlagsEdit == nullptr
+        || context_.toolbarStatusNote == nullptr
+        || context_.refreshToolbarSummary == nullptr) {
+        return;
+    }
+    const std::optional<std::pair<int, int>> lineAndVertex = selectedLineAndSourceVertex(context_);
+    if (!lineAndVertex.has_value()) {
+        return;
+    }
+
+    const int lineNumber = lineAndVertex->first;
+    const int sourceVertexIndex = lineAndVertex->second;
+    const QString beforeText = context_.textEditor->text();
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(beforeText, lineNumber);
+    if (!lineFeature.has_value() || lineFeature->kind != MapGeometryFeature::Kind::Line) {
+        (*context_.toolbarStatusNote) = tr("Edit line-point options failed: line geometry could not be resolved.");
+        context_.refreshToolbarSummary();
+        return;
+    }
+
+    const int vertexIndex = lineVertexIndexForSourceVertex(lineFeature.value(), sourceVertexIndex);
+    if (vertexIndex < 0 || vertexIndex >= lineFeature->lineVertices.size()) {
+        (*context_.toolbarStatusNote) = tr("Edit line-point options failed: selected line point could not be resolved.");
+        context_.refreshToolbarSummary();
+        return;
+    }
+
+    QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
+    const QStringList updatedRows = trimmedLinePointStandaloneRows(context_.linePointFlagsEdit->toPlainText());
+    if (editedVertices.at(vertexIndex).standaloneOptionRows == updatedRows) {
+        return;
+    }
+    editedVertices[vertexIndex].standaloneOptionRows = updatedRows;
+    const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
+
+    QString afterText = beforeText;
+    QString errorMessage;
+    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
+        (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+            ? tr("Edit line-point options failed.")
+            : tr("Edit line-point options failed: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        return;
+    }
+    if (afterText == beforeText) {
+        return;
+    }
+
+    if (context_.applySourceTextChangeWithSnapshot) {
+        context_.applySourceTextChangeWithSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
+    } else {
+        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
+        context_.textEditor->replaceTextForCommand(afterText);
+        context_.recordSourceTextSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
+    }
+
+    (*context_.toolbarStatusNote) = updatedRows.isEmpty()
+        ? tr("Cleared additional line-point options for line %1, point %2.").arg(lineNumber).arg(vertexIndex + 1)
+        : tr("Updated additional line-point options for line %1, point %2.").arg(lineNumber).arg(vertexIndex + 1);
+    context_.refreshToolbarSummary();
+    if (context_.restoreLineAnchorSelectionLater != nullptr) {
+        const int restoredVertex = editedVertices.at(vertexIndex).anchorSourceVertexIndex >= 0
+            ? editedVertices.at(vertexIndex).anchorSourceVertexIndex
+            : sourceVertexIndex;
+        context_.restoreLineAnchorSelectionLater(lineNumber, restoredVertex);
+    }
+    context_.refreshObjectDetailsPanel();
+}
+
 }

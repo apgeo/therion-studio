@@ -170,6 +170,12 @@ void MapEditorTab::handleLinePointNextControlToggled(bool checked)
     MapEditorObjectDetailsEditController(objectDetailsContext()).handleLinePointNextControlToggled(checked);
 }
 
+void MapEditorTab::applyLinePointFlagsEdits()
+{
+    MapEditorObjectDetailsEditController(objectDetailsContext()).applyLinePointFlagsEdits();
+    objectDetailsUiState_.linePointFlagsDirty_ = false;
+}
+
 void MapEditorTab::populateScrapScaleFromSourceBounds()
 {
     MapEditorObjectDetailsEditController(objectDetailsContext()).populateScrapScaleFromSourceBounds();

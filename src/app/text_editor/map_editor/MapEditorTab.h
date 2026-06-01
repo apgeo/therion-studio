@@ -29,6 +29,7 @@ class QFrame;
 class QGraphicsScene;
 class QGraphicsView;
 class QLineEdit;
+class QPlainTextEdit;
 class QSplitter;
 class QToolButton;
 class QPushButton;
@@ -280,6 +281,7 @@ private:
         QLabel *objectSelectionTitleLabel_ = nullptr;
         QWidget *vertexSelectionSection_ = nullptr;
         QLabel *vertexSelectionTitleLabel_ = nullptr;
+        QWidget *linePointActionsSection_ = nullptr;
         QWidget *geometrySelectionSection_ = nullptr;
         QWidget *advancedSelectionSection_ = nullptr;
         QPushButton *objectDeleteButton_ = nullptr;
@@ -329,6 +331,9 @@ private:
         QDoubleSpinBox *objectOrientationSpin_ = nullptr;
         QCheckBox *linePointLeftSizeEnabledCheck_ = nullptr;
         QDoubleSpinBox *linePointLeftSizeSpin_ = nullptr;
+        QWidget *linePointFlagsEditor_ = nullptr;
+        QPlainTextEdit *linePointFlagsEdit_ = nullptr;
+        bool linePointFlagsDirty_ = false;
         QPushButton *objectConfigureButton_ = nullptr;
         bool updatingObjectDetailsUi_ = false;
     };
@@ -510,6 +515,7 @@ private:
     void handleLinePointPreviousControlToggled(bool checked);
     void handleLinePointSmoothToggled(bool checked);
     void handleLinePointNextControlToggled(bool checked);
+    void applyLinePointFlagsEdits();
     void populateScrapScaleFromSourceBounds();
     void applyScrapScaleEdits();
     void handleConfigureObjectSettingsTriggered();

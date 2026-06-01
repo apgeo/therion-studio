@@ -1,13 +1,18 @@
 #include "MapEditorTab.h"
 
 #include <QApplication>
+#include <QAbstractSpinBox>
+#include <QComboBox>
 #include <QEvent>
 #include <QFrame>
 #include <QGraphicsView>
 #include <QKeyEvent>
+#include <QLineEdit>
 #include <QMainWindow>
 #include <QMouseEvent>
+#include <QPlainTextEdit>
 #include <QTabWidget>
+#include <QTextEdit>
 #include <QTreeView>
 #include <QWidget>
 
@@ -15,6 +20,27 @@
 
 namespace TherionStudio
 {
+namespace
+{
+bool isTextEditingReceiver(QObject *receiver)
+{
+    for (QObject *object = receiver; object != nullptr; object = object->parent()) {
+        if (qobject_cast<QLineEdit *>(object) != nullptr
+            || qobject_cast<QPlainTextEdit *>(object) != nullptr
+            || qobject_cast<QTextEdit *>(object) != nullptr) {
+            return true;
+        }
+        if (qobject_cast<QAbstractSpinBox *>(object) != nullptr) {
+            return true;
+        }
+        if (auto *combo = qobject_cast<QComboBox *>(object); combo != nullptr && combo->isEditable()) {
+            return true;
+        }
+    }
+
+    return false;
+}
+}
 
 bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
 {
@@ -35,6 +61,12 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         return QWidget::eventFilter(watched, event);
     }
 
+    if (watched == objectDetailsUiState_.linePointFlagsEdit_
+        && event->type() == QEvent::FocusOut
+        && objectDetailsUiState_.linePointFlagsDirty_) {
+        applyLinePointFlagsEdits();
+    }
+
     if (mapView_ != nullptr
         && mapScene_ != nullptr
         && event->type() == QEvent::KeyPress
@@ -46,7 +78,9 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         const bool deleteKeyPressed =
             (keyEvent->key() == Qt::Key_Backspace || keyEvent->key() == Qt::Key_Delete)
             && deleteKeyNoModifier;
-        if (deleteKeyPressed && !mapScene_->selectedItems().isEmpty()) {
+        if (deleteKeyPressed
+            && !isTextEditingReceiver(watched)
+            && !mapScene_->selectedItems().isEmpty()) {
             if (const std::optional<bool> keyResult =
                     MapEditorViewportInputController(viewportInputContext()).handleEvent(mapView_, event)) {
                 return keyResult.value();

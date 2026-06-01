@@ -1369,6 +1369,46 @@ QString optionValueForFieldName(const QHash<QString, QString> &values, const QSt
     return normalizedFieldName.isEmpty() ? QString() : values.value(normalizedFieldName).trimmed();
 }
 
+QString geometryKindLabel(MapGeometryFeature::Kind kind)
+{
+    switch (kind) {
+    case MapGeometryFeature::Kind::Point:
+        return QStringLiteral("point");
+    case MapGeometryFeature::Kind::Line:
+        return QStringLiteral("line");
+    case MapGeometryFeature::Kind::Area:
+        return QStringLiteral("area");
+    }
+
+    return QStringLiteral("geometry");
+}
+
+QString geometryTooltipForFeature(const MapGeometryFeature &feature)
+{
+    QStringList lines;
+    const QString kindLabel = geometryKindLabel(feature.kind);
+    const QString typeLabel = feature.label.trimmed();
+    lines.append(typeLabel.isEmpty() ? kindLabel : QStringLiteral("%1 %2").arg(kindLabel, typeLabel));
+
+    QStringList detailParts;
+    const QString objectId = optionValueForFieldName(feature.optionValues, QStringLiteral("id"));
+    if (!objectId.isEmpty()) {
+        detailParts.append(QStringLiteral("-id %1").arg(objectId));
+    }
+    const QString subtype = feature.subtype.trimmed();
+    if (!subtype.isEmpty()) {
+        detailParts.append(QStringLiteral("-subtype %1").arg(subtype));
+    }
+    if (!detailParts.isEmpty()) {
+        lines.append(detailParts.join(QStringLiteral(" ")));
+    }
+    if (feature.lineNumber > 0) {
+        lines.append(QObject::tr("Source line %1").arg(feature.lineNumber));
+    }
+
+    return lines.join(QLatin1Char('\n'));
+}
+
 QString pointTypeTokenFromLine(const TherionParsedLine &parsedLine)
 {
     if (parsedLine.directive != QStringLiteral("point")) {
@@ -1882,6 +1922,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 if (!feature.hasAnchor) {
                     break;
                 }
+                const QString featureTooltip = geometryTooltipForFeature(feature);
 
                 const MapEditorResolvedPointStyle pointStyle = resolveMapEditorPointStyle(styleCatalog,
                                                                                            feature.stationPoint ? QStringLiteral("station") : feature.label,
@@ -1900,6 +1941,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 pointItem->setPen(cosmeticPen(pointStrokeColor, qBound(0.6, pointStyle.outlineWidth, 8.0)));
                 pointItem->setBrush(QBrush(pointFillColor));
                 pointItem->setMoveCommittedCallback(recordPointGeometryMove);
+                pointItem->setToolTip(featureTooltip);
                 scene->addItem(pointItem);
                 pointItem->setZValue(3.0);
                 markGeometryItem(pointItem);
@@ -1957,6 +1999,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 if (feature.lineVertices.size() < 2) {
                     break;
                 }
+                const QString featureTooltip = geometryTooltipForFeature(feature);
 
                 const MapEditorResolvedLineStyle lineStyle = resolveMapEditorLineStyle(styleCatalog,
                                                                                        feature.label,
@@ -1980,6 +2023,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         scene->addItem(closedFillItem);
                         closedFillItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
                         closedFillItem->setZValue(2.49);
+                        closedFillItem->setToolTip(featureTooltip);
                         markGeometryItem(closedFillItem);
                         closedFillItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
                     }
@@ -1995,6 +2039,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 scene->addItem(lineItem);
                 lineItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
                 lineItem->setZValue(2.5);
+                lineItem->setToolTip(featureTooltip);
                 markGeometryItem(lineItem);
                 lineItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
                 MapEditorLineDecorationItem *lineDecorationItem = nullptr;
@@ -2028,6 +2073,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     scene->addItem(lineGuideItem);
                     lineGuideItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
                     lineGuideItem->setZValue(2.58);
+                    lineGuideItem->setToolTip(featureTooltip);
                     markGeometryItem(lineGuideItem);
                     lineGuideItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
                 }
@@ -2529,6 +2575,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 if (feature.vertices.size() < 3) {
                     break;
                 }
+                const QString featureTooltip = geometryTooltipForFeature(feature);
 
                 const MapEditorResolvedAreaStyle areaStyle = resolveMapEditorAreaStyle(styleCatalog,
                                                                                        feature.label,
@@ -2575,6 +2622,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 scene->addItem(fillItem);
                 fillItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
                 fillItem->setZValue(areaZ.fill);
+                fillItem->setToolTip(featureTooltip);
                 markGeometryItem(fillItem);
                 fillItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
                 fillItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeAreaFill);

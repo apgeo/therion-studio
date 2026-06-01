@@ -978,7 +978,6 @@ MapEditorXviBackgroundItem *createXviBackgroundItem(const XviDocument &xvi,
                                       rootStationName,
                                       modelBounds,
                                       previewBounds));
-    item->setToolTip(QFileInfo(absolutePath).fileName());
     item->setPos(topLeft);
     return item;
 }
@@ -2054,7 +2053,6 @@ void MapEditorTab::addBackgroundImage(const QString &imagePath, bool writeXtheri
     backgroundItem->setOpacity(0.58);
     backgroundItem->setData(0, QFileInfo(imagePath).absoluteFilePath());
     backgroundItem->setData(2, 1.0);
-    backgroundItem->setToolTip(QFileInfo(imagePath).fileName());
 
     const QPointF topLeft(previewBounds.center().x() - (pixmap.width() / 2.0),
                           previewBounds.center().y() - (pixmap.height() / 2.0));

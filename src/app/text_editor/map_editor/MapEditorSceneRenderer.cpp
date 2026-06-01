@@ -1939,6 +1939,9 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                                        labelFont),
                                             labelFont,
                                             canvasTheme.labelText);
+                        if (feature.stationPoint) {
+                            pointItem->setStationLabelAutoVisibilityEnabled(true);
+                        }
                         if (labelTextField
                             && pointStyle.labelOrientation == MapEditorPointLabelOrientationMode::Orientation
                             && feature.orientationSupported

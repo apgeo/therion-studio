@@ -162,6 +162,15 @@ public:
         update();
     }
 
+    void setStationLabelAutoVisibilityEnabled(bool enabled)
+    {
+        stationLabelAutoVisibility_ = enabled;
+        if (!enabled) {
+            stationLabelVisibleByZoom_ = true;
+        }
+        update();
+    }
+
     QPointF sourcePoint() const
     {
         return mapDisplayToSource(previewToSource(pos()));
@@ -260,7 +269,27 @@ protected:
         }
         painter->restore();
 
-        if (hasLabel_ && (lod >= 0.55 || emphasize)) {
+        bool renderLabel = false;
+        if (hasLabel_) {
+            if (emphasize) {
+                renderLabel = true;
+            } else if (stationLabelAutoVisibility_) {
+                if (stationLabelVisibleByZoom_) {
+                    if (lod < 1.04) {
+                        stationLabelVisibleByZoom_ = false;
+                    }
+                } else {
+                    if (lod >= 1.22) {
+                        stationLabelVisibleByZoom_ = true;
+                    }
+                }
+                renderLabel = stationLabelVisibleByZoom_;
+            } else {
+                renderLabel = lod >= 0.55;
+            }
+        }
+
+        if (renderLabel) {
             painter->setFont(labelFont_);
             painter->setPen(labelColor_.isValid() ? labelColor_ : outline);
             painter->setBrush(Qt::NoBrush);
@@ -379,6 +408,8 @@ private:
     QColor labelColor_;
     std::optional<qreal> labelRotationDegrees_;
     bool hasLabel_ = false;
+    bool stationLabelAutoVisibility_ = false;
+    bool stationLabelVisibleByZoom_ = true;
     QPointF pressSourcePoint_;
     bool hoverActive_ = false;
     bool dragActive_ = false;

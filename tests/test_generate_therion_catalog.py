@@ -334,6 +334,15 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         self.assertNotIn("\\Nobreak", summary)
         self.assertNotIn("\\it", summary)
 
+    def test_revise_contains_object_id_argument_and_object_options(self) -> None:
+        revise = self.commands_by_name["revise"]
+        arguments = revise.get("arguments", [])
+        self.assertGreaterEqual(len(arguments), 1)
+        self.assertEqual(arguments[0].get("signature"), "<id>")
+
+        option_keys = {option.get("option_key") for option in revise.get("options", [])}
+        self.assertIn("-stations", option_keys)
+
 
 if __name__ == "__main__":
     unittest.main()

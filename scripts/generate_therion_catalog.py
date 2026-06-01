@@ -1093,6 +1093,140 @@ def apply_map_body_command_contexts(catalog: dict[str, Any]) -> None:
         append_unique(dependencies, "context: map")
 
 
+def choose_revise_option_arity(arity_tokens: set[str]) -> str:
+    normalized: set[str] = set()
+    for token in arity_tokens:
+        raw = str(token).strip().upper()
+        if not raw:
+            continue
+        if raw in {"0", "NONE"}:
+            normalized.add("NONE")
+        elif raw in {"1", "EXACTLY_ONE"}:
+            normalized.add("EXACTLY_ONE")
+        elif raw in {"N", "ONE_OR_MORE"}:
+            normalized.add("ONE_OR_MORE")
+        elif raw in {"*", "ZERO_OR_MORE"}:
+            normalized.add("ZERO_OR_MORE")
+        else:
+            normalized.add(raw)
+    if not normalized:
+        return "1"
+    if "ONE_OR_MORE" in normalized:
+        return "N"
+    if "EXACTLY_ONE" in normalized:
+        return "1"
+    if "NONE" in normalized:
+        return "0"
+    return "1"
+
+
+def apply_revise_command_option_union(catalog: dict[str, Any]) -> None:
+    commands = catalog.get("commands", [])
+    if not isinstance(commands, list):
+        return
+
+    revise_command = None
+    for command in commands:
+        if not isinstance(command, dict):
+            continue
+        if normalize_directive_token(str(command.get("directive", command.get("name", "")))) == "revise":
+            revise_command = command
+            break
+    if revise_command is None:
+        return
+
+    arguments = revise_command.setdefault("arguments", [])
+    if isinstance(arguments, list) and not arguments:
+        arguments.append(
+            {
+                "raw": "<id>",
+                "name": "<id>",
+                "signature": "<id>",
+                "option_key": "",
+                "value_arity": "1",
+                "value_domain": "keyword",
+                "description": "identifier of the object to revise",
+                "allowed_values": [],
+                "dependencies": [],
+            }
+        )
+
+    options_by_key: dict[str, dict[str, Any]] = {}
+    for command in commands:
+        if not isinstance(command, dict):
+            continue
+        command_directive = normalize_directive_token(str(command.get("directive", command.get("name", ""))))
+        if command_directive == "revise":
+            continue
+
+        for option in command.get("options", []):
+            if not isinstance(option, dict):
+                continue
+            option_key = normalize_whitespace(str(option.get("option_key", ""))).lower()
+            if not option_key.startswith("-"):
+                continue
+
+            bucket = options_by_key.setdefault(
+                option_key,
+                {
+                    "signatures": set(),
+                    "descriptions": set(),
+                    "allowed_values": set(),
+                    "arity_tokens": set(),
+                    "value_domains": set(),
+                },
+            )
+            signature = clean_tex_text(str(option.get("signature", "")))
+            description = clean_tex_text(str(option.get("description", "")))
+            value_arity = str(option.get("value_arity", "")).strip()
+            value_domain = str(option.get("value_domain", "")).strip()
+
+            if signature:
+                bucket["signatures"].add(signature)
+            if description:
+                bucket["descriptions"].add(description)
+            if value_arity:
+                bucket["arity_tokens"].add(value_arity)
+            if value_domain:
+                bucket["value_domains"].add(value_domain)
+            for allowed_value in option.get("allowed_values", []):
+                normalized_allowed = normalize_whitespace(str(allowed_value))
+                if normalized_allowed:
+                    bucket["allowed_values"].add(normalized_allowed)
+
+    synthesized_options: list[dict[str, Any]] = []
+    for option_key in sorted(options_by_key.keys()):
+        bucket = options_by_key[option_key]
+        signatures = sorted(bucket["signatures"])
+        description_candidates = sorted(bucket["descriptions"])
+        allowed_values = sorted(bucket["allowed_values"], key=lambda value: value.lower())
+        value_domains = {domain.lower() for domain in bucket["value_domains"]}
+
+        signature = signatures[0] if signatures else f"{option_key} <value>"
+        description = (
+            "object-specific option accepted by revise; semantics depend on the revised object type."
+            if not description_candidates
+            else description_candidates[0]
+        )
+
+        synthesized_options.append(
+            {
+                "raw": signature if not description else f"{signature} = {description}",
+                "name": signature,
+                "signature": signature,
+                "option_key": option_key,
+                "value_arity": choose_revise_option_arity(bucket["arity_tokens"]),
+                "value_domain": "enum" if allowed_values else ("unknown" if not value_domains else sorted(value_domains)[0]),
+                "description": description,
+                "allowed_values": allowed_values,
+                "dependencies": [],
+            }
+        )
+
+    if synthesized_options:
+        revise_command["options"] = synthesized_options
+
+
 def merge_command_entries(target: dict[str, Any], source: dict[str, Any]) -> None:
     list_union_fields = (
         "aliases",
@@ -1337,6 +1471,7 @@ def build_catalog(inputs: list[Path], source_repo: str, source_ref: str) -> dict
         "commands": sorted_commands,
     }
     apply_map_body_command_contexts(catalog)
+    apply_revise_command_option_union(catalog)
     return catalog
 
 

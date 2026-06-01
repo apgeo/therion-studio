@@ -2010,6 +2010,23 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     markGeometryItem(lineDecorationItem);
                     makeMouseTransparent(lineDecorationItem);
                     lineDecorationItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+
+                    QColor guideStroke = canvasTheme.mutedText;
+                    guideStroke.setAlpha(210);
+                    QVector<qreal> guideDashPattern;
+                    guideDashPattern << 2.0 << 2.4;
+                    auto *lineGuideItem = new MapZoomAwarePathItem(path,
+                                                                    styledGeometricPen(guideStroke,
+                                                                                       qBound(0.7, thickLineWidth * 0.34, 2.2),
+                                                                                       Qt::DashLine,
+                                                                                       guideDashPattern,
+                                                                                       Qt::RoundCap,
+                                                                                       Qt::RoundJoin));
+                    scene->addItem(lineGuideItem);
+                    lineGuideItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
+                    lineGuideItem->setZValue(2.58);
+                    markGeometryItem(lineGuideItem);
+                    lineGuideItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
                 }
                 const qreal lineDirectionTickLength = qBound(12.0, 18.0 * mapScale, 24.0);
                 auto *directionTickItem = new QGraphicsLineItem;

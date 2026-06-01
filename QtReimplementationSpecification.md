@@ -601,6 +601,7 @@ Required behavior:
 - a continuous drag gesture on map geometry shall commit as one undo step
 - freehand line creation shall commit as one undo step per explicit completed draft
 - batch inspector edits applied by one explicit commit action shall commit as one undo step
+- any TH2 map-editor operation that mutates source text shall use one atomic source-write transaction that applies the text change and records its undo snapshot together via the shared map-source helper (`applySourceTextChangeWithSnapshot`) or an equivalent single abstraction
 - text-driven and map-driven mutations shall both participate in the same document undo history for the active TH2 session
 - failed or invalid operations shall not create empty undo entries
 

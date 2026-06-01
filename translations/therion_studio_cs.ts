@@ -3892,8 +3892,8 @@ Zdroj: %2:%3</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="292"/>
-        <source>Delete Vertex</source>
-        <translation>Odstranit vrchol</translation>
+        <source>Delete Point</source>
+        <translation>Odstranit bod</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="293"/>

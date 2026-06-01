@@ -15,7 +15,9 @@
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPlainTextEdit>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QSizePolicy>
 #include <QSlider>
 #include <QSplitter>
@@ -109,14 +111,22 @@ void MapEditorTab::buildInspectorPanelUi()
     QFont sectionFont = objectsTab->font();
     sectionFont.setBold(true);
 
-    auto *selectionTab = new QWidget(mapInspectorTabs_);
-    auto *selectionTabLayout = new QVBoxLayout(selectionTab);
-    selectionTabLayout->setContentsMargins(4, 4, 4, 4);
-    selectionTabLayout->setSpacing(8);
-
-    auto *selectionPanel = new QWidget(selectionTab);
+    auto *selectionScroll = new QScrollArea(mapInspectorTabs_);
+    selectionScroll->setWidgetResizable(true);
+    selectionScroll->setFrameShape(QFrame::NoFrame);
+    selectionScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    selectionScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    if (QWidget *viewport = selectionScroll->viewport(); viewport != nullptr) {
+        viewport->setBackgroundRole(QPalette::Base);
+        viewport->setAutoFillBackground(true);
+    }
+    auto *selectionPanel = new QWidget(selectionScroll);
+    selectionPanel->setBackgroundRole(QPalette::Base);
+    selectionPanel->setAutoFillBackground(true);
+    selectionPanel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    selectionPanel->setMinimumWidth(0);
     auto *selectionLayout = new QVBoxLayout(selectionPanel);
-    selectionLayout->setContentsMargins(0, 0, 0, 0);
+    selectionLayout->setContentsMargins(4, 4, 4, 4);
     selectionLayout->setSpacing(8);
 
     objectDetailsUiState_.objectDetailsSelectionLabel_ = new QLabel(tr("No map object selected."), selectionPanel);
@@ -265,6 +275,29 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.linePointLeftSizeSpin_->setDecimals(1);
     objectDetailsUiState_.linePointLeftSizeSpin_->setRange(0.1, 100000.0);
     objectDetailsUiState_.linePointLeftSizeSpin_->setSingleStep(1.0);
+    objectDetailsUiState_.linePointFlagsEditor_ = new QWidget(objectDetailsUiState_.objectOrientationEditor_);
+    auto *linePointFlagsLayout = new QVBoxLayout(objectDetailsUiState_.linePointFlagsEditor_);
+    linePointFlagsLayout->setContentsMargins(0, 0, 0, 0);
+    linePointFlagsLayout->setSpacing(4);
+    auto *linePointFlagsLabel = new QLabel(tr("Additional line-point options"), objectDetailsUiState_.linePointFlagsEditor_);
+    objectDetailsUiState_.linePointFlagsEdit_ = new QPlainTextEdit(objectDetailsUiState_.linePointFlagsEditor_);
+    objectDetailsUiState_.linePointFlagsEdit_->setObjectName(QStringLiteral("linePointFlagsEdit"));
+    objectDetailsUiState_.linePointFlagsEdit_->setPlaceholderText(tr("Examples: altitude .\nsubtype blocks"));
+    objectDetailsUiState_.linePointFlagsEdit_->setTabChangesFocus(true);
+    {
+        const int visibleLineCount = 5;
+        const int textHeight = objectDetailsUiState_.linePointFlagsEdit_->fontMetrics().lineSpacing() * visibleLineCount;
+        const int framePadding = 12;
+        objectDetailsUiState_.linePointFlagsEdit_->setFixedHeight(textHeight + framePadding);
+    }
+    objectDetailsUiState_.linePointFlagsEdit_->installEventFilter(this);
+    connect(objectDetailsUiState_.linePointFlagsEdit_, &QPlainTextEdit::textChanged, this, [this]() {
+        if (!objectDetailsUiState_.updatingObjectDetailsUi_) {
+            objectDetailsUiState_.linePointFlagsDirty_ = true;
+        }
+    });
+    linePointFlagsLayout->addWidget(linePointFlagsLabel);
+    linePointFlagsLayout->addWidget(objectDetailsUiState_.linePointFlagsEdit_);
     connect(objectDetailsUiState_.objectOrientationEnabledCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleObjectOrientationEnabledToggled);
     connect(objectDetailsUiState_.objectOrientationSpin_, &QDoubleSpinBox::valueChanged, this, &MapEditorTab::handleObjectOrientationValueChanged);
     connect(objectDetailsUiState_.linePointPreviousControlCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLinePointPreviousControlToggled);
@@ -281,15 +314,18 @@ void MapEditorTab::buildInspectorPanelUi()
     orientationLayout->addWidget(objectDetailsUiState_.objectOrientationSpin_);
     orientationLayout->addWidget(objectDetailsUiState_.linePointLeftSizeEnabledCheck_);
     orientationLayout->addWidget(objectDetailsUiState_.linePointLeftSizeSpin_);
+    orientationLayout->addWidget(objectDetailsUiState_.linePointFlagsEditor_);
     vertexSelectionLayout->addWidget(objectDetailsUiState_.objectOrientationEditor_);
 
-    objectDetailsUiState_.vertexActionsEditor_ = new QWidget(objectDetailsUiState_.vertexSelectionSection_);
+    QVBoxLayout *linePointActionsLayout = nullptr;
+    objectDetailsUiState_.linePointActionsSection_ = createSelectionSection(tr("Line Point Actions"), &linePointActionsLayout);
+    objectDetailsUiState_.vertexActionsEditor_ = new QWidget(objectDetailsUiState_.linePointActionsSection_);
     auto *vertexActionsLayout = new QGridLayout(objectDetailsUiState_.vertexActionsEditor_);
     vertexActionsLayout->setContentsMargins(0, 0, 0, 0);
     vertexActionsLayout->setSpacing(6);
     objectDetailsUiState_.vertexInsertBeforeButton_ = new QPushButton(tr("Insert Before"), objectDetailsUiState_.vertexActionsEditor_);
     objectDetailsUiState_.vertexInsertAfterButton_ = new QPushButton(tr("Insert After"), objectDetailsUiState_.vertexActionsEditor_);
-    objectDetailsUiState_.vertexDeleteButton_ = new QPushButton(tr("Delete Vertex"), objectDetailsUiState_.vertexActionsEditor_);
+    objectDetailsUiState_.vertexDeleteButton_ = new QPushButton(tr("Delete Point"), objectDetailsUiState_.vertexActionsEditor_);
     objectDetailsUiState_.vertexSplitButton_ = new QPushButton(tr("Split Here"), objectDetailsUiState_.vertexActionsEditor_);
     objectDetailsUiState_.vertexInsertBeforeButton_->setAutoDefault(false);
     objectDetailsUiState_.vertexInsertAfterButton_->setAutoDefault(false);
@@ -303,8 +339,9 @@ void MapEditorTab::buildInspectorPanelUi()
     vertexActionsLayout->addWidget(objectDetailsUiState_.vertexInsertAfterButton_, 0, 1);
     vertexActionsLayout->addWidget(objectDetailsUiState_.vertexDeleteButton_, 1, 0);
     vertexActionsLayout->addWidget(objectDetailsUiState_.vertexSplitButton_, 1, 1);
-    vertexSelectionLayout->addWidget(objectDetailsUiState_.vertexActionsEditor_);
+    linePointActionsLayout->addWidget(objectDetailsUiState_.vertexActionsEditor_);
     selectionLayout->addWidget(objectDetailsUiState_.vertexSelectionSection_);
+    selectionLayout->addWidget(objectDetailsUiState_.linePointActionsSection_);
 
     QVBoxLayout *scrapScaleLayout = nullptr;
     objectDetailsUiState_.scrapScaleEditor_ = createSelectionSection(tr("Scrap Scale"), &scrapScaleLayout);
@@ -391,9 +428,9 @@ void MapEditorTab::buildInspectorPanelUi()
     connect(objectDetailsUiState_.objectDeleteButton_, &QPushButton::clicked, this, &MapEditorTab::deleteSelectedObjectFromSelection);
     advancedSelectionLayout->addWidget(objectDetailsUiState_.objectDeleteButton_);
     selectionLayout->addWidget(objectDetailsUiState_.advancedSelectionSection_);
-    selectionTabLayout->addWidget(selectionPanel);
-    selectionTabLayout->addStretch(1);
-    mapInspectorTabs_->addTab(selectionTab, tr("Selection"));
+    selectionLayout->addStretch(1);
+    selectionScroll->setWidget(selectionPanel);
+    mapInspectorTabs_->addTab(selectionScroll, tr("Selection"));
     mapInspectorTabs_->addTab(objectsTab, tr("Objects"));
 
     auto *backgroundTab = new QWidget(mapInspectorTabs_);

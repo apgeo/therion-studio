@@ -14,11 +14,13 @@
 #include <QGraphicsItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsScene>
+#include <QMessageBox>
 #include <QScopedValueRollback>
 #include <QTimer>
 #include <QObject>
 #include <QUndoCommand>
 #include <QUndoStack>
+#include <QWidget>
 
 #include <memory>
 #include <optional>
@@ -59,6 +61,33 @@ int lineVertexOwnerIndexForSourceVertex(const MapGeometryFeature &lineFeature, i
     }
 
     return -1;
+}
+
+bool confirmLinePointRowDelete(const MapEditorCanvasEditContext &context,
+                               const QStringList &rows,
+                               int lineNumber,
+                               int vertexOneBasedIndex)
+{
+    if (rows.isEmpty()) {
+        return true;
+    }
+
+    QWidget *parentWidget = qobject_cast<QWidget *>(context.callbackContext);
+    QStringList previewRows = rows.mid(0, 4);
+    QString details = previewRows.join(QLatin1Char('\n'));
+    if (rows.size() > previewRows.size()) {
+        details += QStringLiteral("\n...");
+    }
+    const QString message = QCoreApplication::translate("TherionStudio::MapEditorCanvasEditController",
+                                                         "This vertex has additional line-point options (for example altitude/direction settings).\n\nLine %1, point %2:\n%3\n\nDelete the vertex anyway?")
+                                .arg(lineNumber)
+                                .arg(vertexOneBasedIndex)
+                                .arg(details);
+    return QMessageBox::question(parentWidget,
+                                 QCoreApplication::translate("TherionStudio::MapEditorCanvasEditController", "Delete Point"),
+                                 message,
+                                 QMessageBox::Yes | QMessageBox::No,
+                                 QMessageBox::No) == QMessageBox::Yes;
 }
 
 std::optional<QPointF> normalizedLineControlPoint(const QPointF &anchor, const QPointF &control)
@@ -917,6 +946,12 @@ bool MapEditorCanvasEditController::removeLineVertexFromSelection()
     }
 
     QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
+    const QStringList standaloneRows = editedVertices.at(ownerIndex).standaloneOptionRows;
+    if (!confirmLinePointRowDelete(context_, standaloneRows, lineNumber, ownerIndex + 1)) {
+        (*context_.toolbarStatusNote) = tr("Vertex delete canceled.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
     if (ownerIndex == 0 || ownerIndex == editedVertices.size() - 1) {
         if (editedVertices.size() <= 2) {
             (*context_.toolbarStatusNote) = tr("Delete vertex failed: line needs at least two vertices.");

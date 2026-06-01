@@ -1,12 +1,12 @@
 {
-  "size": 11.2,
+  "size": 7.2,
   "stroke_width": 1.1,
   "stroke_color": "#0E151FE0",
   "fill_color": "#1E2430BE",
   "symbol_parts": [
     {
       "kind": "circle",
-      "size": 11.2
+      "size": 7.2
     }
   ]
 }

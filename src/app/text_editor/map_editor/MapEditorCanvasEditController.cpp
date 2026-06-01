@@ -255,6 +255,8 @@ void scheduleLineVertexOwnerSelectionRecovery(const MapEditorCanvasEditContext &
     QTimer::singleShot(0, context.callbackContext, attemptRestore);
     QTimer::singleShot(20, context.callbackContext, attemptRestore);
     QTimer::singleShot(80, context.callbackContext, attemptRestore);
+    QTimer::singleShot(160, context.callbackContext, attemptRestore);
+    QTimer::singleShot(320, context.callbackContext, attemptRestore);
 }
 
 MapEditableGeometryVertexItem *resolveSelectedLineVertexItemForContext(const MapEditorCanvasEditContext &context)
@@ -780,11 +782,7 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineV
     (*context_.toolbarStatusNote) = tr("Inserted line vertex %1 on source line %2.").arg(insertedIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
     restoreLineVertexOwnerSelection(lineNumber, insertedIndex);
-    if (context_.callbackContext != nullptr && context_.restoreLineAnchorSelectionLater) {
-        QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, insertedIndex]() {
-            restoreLineVertexOwnerSelectionForContext(context, lineNumber, insertedIndex);
-        });
-    }
+    scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, insertedIndex);
     return true;
 }
 

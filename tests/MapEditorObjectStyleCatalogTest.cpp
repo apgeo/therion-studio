@@ -246,7 +246,7 @@ int runCatalogTest()
                 "Expected point default symbol part from resource catalog.")) {
         return 1;
     }
-    if (!expect(std::abs(catalog.point.size - 11.2) < 1e-6,
+    if (!expect(std::abs(catalog.point.size - 7.2) < 1e-6,
                 "Expected point default size from resource catalog.")) {
         return 1;
     }
@@ -276,7 +276,7 @@ int runCatalogTest()
     }
 
     const MapEditorResolvedLineStyle wallStyle = resolveMapEditorLineStyle(catalog, QStringLiteral("wall"));
-    if (!expect(std::abs(wallStyle.strokeWidth - 5.0) < 1e-6,
+    if (!expect(std::abs(wallStyle.strokeWidth - 4.0) < 1e-6,
                 "Expected line style override width for wall.")) {
         return 1;
     }
@@ -341,9 +341,10 @@ int runCatalogTest()
     const MapEditorResolvedLineStyle wallBlocksStyle =
         resolveMapEditorLineStyle(catalog, QStringLiteral("wall"), QStringLiteral("blocks"));
     if (!expect(wallBlocksStyle.decorations.size() == 1
-                    && wallBlocksStyle.decorations.first().side == MapEditorLineDecorationSide::Right
-                    && wallBlocksStyle.decorations.first().offset > 0.0,
-                "Expected SKBB wall blocks decorations to extend to the Therion right side.")) {
+                    && wallBlocksStyle.decorations.first().side == MapEditorLineDecorationSide::Center
+                    && wallBlocksStyle.decorations.first().symbolParts.size() == 1
+                    && wallBlocksStyle.decorations.first().symbolParts.first().symbol == MapEditorPointSymbol::Square,
+                "Expected wall blocks line style to render centered square decorations.")) {
         return 1;
     }
 

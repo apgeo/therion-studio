@@ -3,7 +3,7 @@
 #include "block_editor/BlockEditorCanvasView.h"
 #include "block_editor/BlockEditorDetailsSupport.h"
 #include "block_editor/BlockEditorDirectiveRules.h"
-#include "block_editor/BlockEditorOptionTableDelegate.h"
+#include "CommandOptionTableDelegate.h"
 #include "block_editor/BlockEditorTokenTagEditor.h"
 #include "block_editor/BlockEditorToolboxList.h"
 #include "ContextHelpInspector.h"
@@ -264,7 +264,7 @@ void TextEditorTab::buildBlockEditorPanel()
     blockDetailsOptionsTable_->setMinimumHeight(120);
     blockDetailsOptionsTable_->setMaximumHeight(260);
     blockDetailsOptionsTable_->setItemDelegate(
-        new BlockEditorOptionTableDelegate(
+        new CommandOptionTableDelegate(
             [this](const QModelIndex &index) {
                 if (index.column() == 0) {
                     return filteredOptionTokenSuggestions(

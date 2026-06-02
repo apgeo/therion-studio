@@ -193,6 +193,7 @@ V `Inspektor -> Výběr` lze upravovat vlastnosti vybraných objektů `Scrap`, `
 
 - `Scrap` zobrazuje ID/projekci a samostatnou sekci `Scrap Scale` pro XTherion/Therion kompatibilní kalibrační hodnoty `-scale [...]`.
 - `Point`, `Line` a `Area` zobrazují běžná pole jako ID, typ, podtyp a podporované volby.
+- `Upravit nastavení objektu...` otevře úplný catalog-backed editor voleb pro vybraný příkaz `scrap`, `point`, `line` nebo `area`. Poziční atributy jako `x`/`y` bodu, `type` čáry a `id` scrapu se zobrazují jako chráněné řádky atributů, zatímco `-id`, `-text`, `-orientation` a další volby zůstávají editovatelné jako řádky voleb.
 - `point label` a `line label` mají pole `Text (-text)`. Point label se vykresluje u bodu; line label se vykresluje podél čáry, takže čára určuje délku a orientaci textu.
 - Bodové typy podporující `-orientation` zobrazují přepsání orientace a tažitelný orientační kontrolní bod. Jména stanic zůstávají kvůli čitelnosti vodorovná.
 

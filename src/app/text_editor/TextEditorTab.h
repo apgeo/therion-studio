@@ -188,6 +188,7 @@ public:
     QString statusEncodingText() const;
     QString fileEncodingName() const;
     QString fileEncodingLabel() const;
+    const TextEditorCommandMetadata &commandMetadata() const { return commandMetadata_; }
     void triggerConvertToUtf8();
     bool canUndo() const;
     bool canRedo() const;
@@ -249,7 +250,6 @@ private:
     bool isCurrentStateDirty() const;
     void applyDirtyStateFromCurrentState();
     void replaceTextForSystemNormalization(const QString &contents);
-    const TextEditorCommandMetadata &commandMetadata() const { return commandMetadata_; }
     TextEditorCommandMetadata &mutableCommandMetadata() { return commandMetadata_; }
     QString displayPath() const;
     void buildAll();

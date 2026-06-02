@@ -1,6 +1,6 @@
 #include "BlockEditorSelectionDetailsController.h"
 
-#include "BlockEditorCommandOptionParser.h"
+#include "../CommandOptionParser.h"
 #include "BlockEditorDetailsSupport.h"
 #include "BlockEditorDirectiveRules.h"
 #include "BlockEditorSourceText.h"
@@ -298,8 +298,8 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         const bool explicitIdMode = context_.commandSupportsInlineIdField ? context_.commandSupportsInlineIdField(normalizedKind) : false;
         const bool requiresId = context_.commandHasRequiredIdArgument ? context_.commandHasRequiredIdArgument(normalizedKind) : false;
 
-        const BlockEditorParsedCommandOptions parsedOptions =
-            parseBlockEditorCommandOptions(normalizedKind,
+        const ParsedCommandOptions parsedOptions =
+            parseCommandOptions(normalizedKind,
                                            parsedLine.tokens,
                                            (*context_.commandMetadata).commandOptionFixedArityByKey,
                                            true);

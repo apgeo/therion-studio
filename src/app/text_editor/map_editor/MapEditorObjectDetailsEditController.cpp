@@ -1,5 +1,6 @@
 #include "MapEditorObjectDetailsEditController.h"
 
+#include "../CommandOptionsDialog.h"
 #include "../TextEditorTab.h"
 #include "MapEditorAreaReferenceResolver.h"
 #include "MapEditorInspectorData.h"
@@ -22,6 +23,7 @@
 #include <QTimer>
 
 #include <cmath>
+#include <optional>
 #include <utility>
 
 namespace TherionStudio
@@ -311,17 +313,19 @@ void MapEditorObjectDetailsEditController::handleConfigureObjectSettingsTriggere
         return;
     }
 
+    QString beforeText = context_.textEditor->text();
+    QStringList lines = beforeText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    for (QString &line : lines) {
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+    }
+
     int targetLineNumber = *context_.selectedObjectLineNumber;
     QString targetKind = context_.selectedObjectKind->trimmed().toLower();
     if (!(targetLineNumber > 0 && isConfigurableMapObjectKind(targetKind))) {
         targetLineNumber = context_.textEditor->currentLineNumber();
         if (targetLineNumber > 0) {
-            QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-            for (QString &line : lines) {
-                if (line.endsWith(QLatin1Char('\r'))) {
-                    line.chop(1);
-                }
-            }
             if (targetLineNumber <= lines.size()) {
                 const TherionParsedLine parsedLine =
                     TherionDocumentParser::parseLine(lines.at(targetLineNumber - 1), targetLineNumber);
@@ -336,7 +340,56 @@ void MapEditorObjectDetailsEditController::handleConfigureObjectSettingsTriggere
         return;
     }
 
-    context_.textEditor->configureCommandAtLine(targetKind, targetLineNumber, true);
+    if (targetLineNumber > lines.size()) {
+        *context_.toolbarStatusNote = tr("Selected map object is out of range.");
+        context_.refreshToolbarSummary();
+        return;
+    }
+
+    const QString sourceLine = lines.at(targetLineNumber - 1);
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(sourceLine, targetLineNumber);
+    const QString parsedKind = objectKindForDirective(parsedLine.directive);
+    if (parsedKind != targetKind) {
+        *context_.toolbarStatusNote = tr("Selected map object source line no longer matches the selection.");
+        context_.refreshToolbarSummary();
+        return;
+    }
+
+    CommandOptionsDialog dialog(CommandOptionsDialogContext{
+        .dialogParent = context_.textEditor,
+        .commandMetadata = &context_.textEditor->commandMetadata(),
+    });
+    std::optional<QString> configuredLine =
+        dialog.configureLine(targetKind,
+                             sourceLine,
+                             targetLineNumber,
+                             CommandOptionsIdFieldMode::None,
+                             CommandOptionsHelpMode::CommandOnly);
+    if (!configuredLine.has_value()) {
+        return;
+    }
+
+    QString updatedLine = configuredLine.value();
+    if (parsedLine.commentStart >= 0) {
+        const QString comment = sourceLine.mid(parsedLine.commentStart).trimmed();
+        if (!comment.isEmpty()) {
+            updatedLine += QStringLiteral(" ") + comment;
+        }
+    }
+    if (updatedLine == sourceLine) {
+        return;
+    }
+
+    lines[targetLineNumber - 1] = updatedLine;
+    const QString afterText = lines.join(QLatin1Char('\n'));
+    if (!context_.applySourceTextChangeWithSnapshot) {
+        *context_.toolbarStatusNote = tr("Cannot edit object settings without map source transaction support.");
+        context_.refreshToolbarSummary();
+        context_.refreshObjectDetailsPanel();
+        return;
+    }
+
+    context_.applySourceTextChangeWithSnapshot(tr("Edit Object Settings"), beforeText, afterText, targetLineNumber);
     context_.refreshObjectDetailsPanel();
 }
 

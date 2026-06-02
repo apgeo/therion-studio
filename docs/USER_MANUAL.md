@@ -194,6 +194,7 @@ In `Inspector -> Selection`, you can edit properties for selected `Scrap`, `Poin
 
 - `Scrap` shows ID/projection and a separate `Scrap Scale` section for XTherion/Therion-compatible `-scale [...]` calibration values.
 - `Point`, `Line`, and `Area` expose common fields such as ID, type, subtype, and supported options.
+- `Edit Object Settings...` opens the full catalog-backed option editor for the selected `scrap`, `point`, `line`, or `area` command. Positional attributes such as point `x`/`y`, line `type`, and scrap `id` are shown as protected attribute rows, while `-id`, `-text`, `-orientation`, and other options remain editable option rows.
 - `point label` and `line label` expose `Text (-text)`. Point labels render near the point; line labels render along the label line path, so the line controls the text length and orientation.
 - Point types that support `-orientation` show an orientation override and a draggable orientation handle. Station names stay screen-aligned for readability.
 - selected line vertices expose an `Additional line-point options` editor in `Selection` for per-vertex standalone options such as `altitude`, `subtype`, `direction`, or `adjust`, so these can be edited without switching to Raw mode.

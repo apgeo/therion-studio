@@ -260,8 +260,10 @@ set(THERION_TEXT_EDITOR_SHARED_SOURCES
     src/app/text_editor/TextEditorOptionValidation.cpp
     src/app/text_editor/TextEditorCommandMetadata.h
     src/app/text_editor/TextEditorOptionValidation.h
-    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.cpp
-    src/app/text_editor/block_editor/BlockEditorOptionTableDelegate.h
+    src/app/text_editor/CommandOptionsDialog.cpp
+    src/app/text_editor/CommandOptionsDialog.h
+    src/app/text_editor/CommandOptionTableDelegate.cpp
+    src/app/text_editor/CommandOptionTableDelegate.h
     src/app/text_editor/TextEditorTabBlockEditorPanel.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.cpp
     src/app/text_editor/block_editor/BlockEditorOptionArgsController.h
@@ -294,8 +296,8 @@ set(THERION_TEXT_EDITOR_SHARED_SOURCES
     src/app/text_editor/block_editor/BlockEditorCanvasItem.h
     src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
-    src/app/text_editor/block_editor/BlockEditorCommandOptionParser.cpp
-    src/app/text_editor/block_editor/BlockEditorCommandOptionParser.h
+    src/app/text_editor/CommandOptionParser.cpp
+    src/app/text_editor/CommandOptionParser.h
     src/app/text_editor/block_editor/BlockEditorDetailsSupport.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsSupport.h
     src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
@@ -802,6 +804,11 @@ therion_add_core_unit_test(TherionDocumentEditorTest
 therion_add_core_unit_test(CommandCatalogStoreTest
     tests/CommandCatalogStoreTest.cpp)
 
+therion_add_core_unit_test(CommandOptionParserTest
+    tests/CommandOptionParserTest.cpp
+    src/app/text_editor/CommandOptionParser.cpp
+    src/app/text_editor/CommandOptionParser.h)
+
 therion_add_core_unit_test(TherionProjectStructureIndexTest
     tests/ProjectStructureIndexTest.cpp)
 
@@ -1124,6 +1131,7 @@ therion_add_map_editor_ui_test(MapEditorViewportInputControllerTest
 
 set(THERION_UNIT_TEST_TARGETS
     CommandCatalogStoreTest
+    CommandOptionParserTest
     TherionDocumentEditorTest
     TherionProjectStructureIndexTest
     MapBackgroundPlacementTest

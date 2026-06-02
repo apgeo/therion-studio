@@ -1,6 +1,6 @@
-#include "BlockEditorCommandOptionParser.h"
+#include "CommandOptionParser.h"
 
-#include "../../../core/TherionCommandSyntax.h"
+#include "../../core/TherionCommandSyntax.h"
 
 namespace
 {
@@ -25,14 +25,14 @@ bool optionTokenLooksNumeric(QString token)
 
 namespace TherionStudio
 {
-bool blockEditorTokenStartsNewOption(const QString &token)
+bool commandTokenStartsNewOption(const QString &token)
 {
     const QString trimmed = token.trimmed();
     return trimmed.startsWith(QLatin1Char('-'))
         && !optionTokenLooksNumeric(trimmed);
 }
 
-int nextBlockEditorOptionIndex(const QStringList &tokens, int optionIndex)
+int nextCommandOptionIndex(const QStringList &tokens, int optionIndex)
 {
     bool inBracketedValue = false;
     for (int scan = optionIndex + 1; scan < tokens.size(); ++scan) {
@@ -49,7 +49,7 @@ int nextBlockEditorOptionIndex(const QStringList &tokens, int optionIndex)
             continue;
         }
 
-        if (blockEditorTokenStartsNewOption(token)) {
+        if (commandTokenStartsNewOption(token)) {
             return scan;
         }
     }
@@ -57,13 +57,13 @@ int nextBlockEditorOptionIndex(const QStringList &tokens, int optionIndex)
     return tokens.size();
 }
 
-BlockEditorParsedCommandOptions parseBlockEditorCommandOptions(
+ParsedCommandOptions parseCommandOptions(
     const QString &commandName,
     const QStringList &tokens,
     const QHash<QString, int> &commandOptionFixedArityByKey,
     bool leadingValueAllowed)
 {
-    BlockEditorParsedCommandOptions parsed;
+    ParsedCommandOptions parsed;
     if (leadingValueAllowed
         && tokens.size() > 1
         && !tokens.at(1).trimmed().startsWith(QLatin1Char('-'))) {
@@ -73,8 +73,8 @@ BlockEditorParsedCommandOptions parseBlockEditorCommandOptions(
 
     for (int index = parsed.optionsStartIndex; index < tokens.size();) {
         const QString token = tokens.at(index).trimmed();
-        if (blockEditorTokenStartsNewOption(token)) {
-            const int nextOptionIndex = nextBlockEditorOptionIndex(tokens, index);
+        if (commandTokenStartsNewOption(token)) {
+            const int nextOptionIndex = nextCommandOptionIndex(tokens, index);
             const QStringList rawOptionValues = tokens.mid(index + 1, nextOptionIndex - index - 1);
             QString optionDisplayValue = rawOptionValues.join(QLatin1Char(' '));
             const int fixedArity = commandOptionFixedArityByKey.value(
@@ -87,7 +87,7 @@ BlockEditorParsedCommandOptions parseBlockEditorCommandOptions(
                 }
                 optionDisplayValue = serializedValues.join(QLatin1Char(' '));
             }
-            parsed.optionEntries.append(BlockEditorParsedOptionEntry{token, optionDisplayValue});
+            parsed.optionEntries.append(CommandOptionEntry{token, optionDisplayValue});
             index = nextOptionIndex;
             continue;
         }

@@ -1,4 +1,4 @@
-#include "BlockEditorOptionTableDelegate.h"
+#include "CommandOptionTableDelegate.h"
 
 #include <QAbstractItemView>
 #include <QCompleter>
@@ -7,17 +7,19 @@
 #include <QScrollBar>
 #include <QStringListModel>
 
+#include <utility>
+
 namespace TherionStudio
 {
-BlockEditorOptionTableDelegate::BlockEditorOptionTableDelegate(SuggestionsProvider provider, QObject *parent)
+CommandOptionTableDelegate::CommandOptionTableDelegate(SuggestionsProvider provider, QObject *parent)
     : QStyledItemDelegate(parent)
     , provider_(std::move(provider))
 {
 }
 
-QWidget *BlockEditorOptionTableDelegate::createEditor(QWidget *parent,
-                                                      const QStyleOptionViewItem &option,
-                                                      const QModelIndex &index) const
+QWidget *CommandOptionTableDelegate::createEditor(QWidget *parent,
+                                                  const QStyleOptionViewItem &option,
+                                                  const QModelIndex &index) const
 {
     QWidget *editor = QStyledItemDelegate::createEditor(parent, option, index);
     auto *lineEdit = qobject_cast<QLineEdit *>(editor);

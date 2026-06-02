@@ -406,12 +406,15 @@ private:
     QWidget *blockDetailsEditPanel_ = nullptr;
     QWidget *blockDetailsHelpPanel_ = nullptr;
     ContextHelpInspector *blockDetailsHelpInspector_ = nullptr;
+    QLabel *blockDetailsTitleLabel_ = nullptr;
     QLabel *blockDetailsStatusLabel_ = nullptr;
     QLabel *blockDetailsPrimaryFieldLabel_ = nullptr;
     QLabel *blockDetailsSecondaryFieldLabel_ = nullptr;
     QLabel *blockDetailsCommentFieldLabel_ = nullptr;
     QLabel *blockDetailsOptionsLabel_ = nullptr;
     QLabel *blockDetailsOptionArgsLabel_ = nullptr;
+    QLabel *blockDetailsReadOnlyValueLabel_ = nullptr;
+    QStackedWidget *blockDetailsPrimaryFieldStack_ = nullptr;
     QLineEdit *blockDetailsIdEdit_ = nullptr;
     QStackedWidget *blockDetailsSecondaryFieldStack_ = nullptr;
     QLineEdit *blockDetailsAdditionalPositionalEdit_ = nullptr;

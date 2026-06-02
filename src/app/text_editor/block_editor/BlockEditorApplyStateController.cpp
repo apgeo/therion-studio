@@ -44,7 +44,7 @@ void BlockEditorApplyStateController::refreshApplyState()
             QStringLiteral("%1 — %2").arg(*context_.baseStatusText, validationError));
         return;
     }
-    statusLabel()->setStyleSheet(QString());
+    statusLabel()->setStyleSheet(QStringLiteral("color: palette(mid);"));
     statusLabel()->setText(*context_.baseStatusText);
 }
 }

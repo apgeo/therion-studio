@@ -167,7 +167,7 @@ void TextEditorTab::buildBlockEditorPanel()
     blockDetailsPanel_->setMaximumWidth(kBlocksSidePaneMaxWidth);
     syncPanelSurfaceToBaseTone(blockDetailsPanel_);
 
-    auto *detailsTabPanel = inspectorPanel->addScrollTab(tr("Details"));
+    auto *detailsTabPanel = inspectorPanel->addScrollTab(tr("Selection"));
     auto *detailsTabLayout = qobject_cast<QVBoxLayout *>(detailsTabPanel->layout());
 
     blockDetailsEditPanel_ = new QWidget(detailsTabPanel);
@@ -177,20 +177,16 @@ void TextEditorTab::buildBlockEditorPanel()
     blockDetailsEditLayout->setContentsMargins(0, 0, 0, 0);
     blockDetailsEditLayout->setSpacing(kPanelSpacing);
 
-    auto createDetailsSection = [](QWidget *parent,
-                                   const QString &title,
-                                   QVBoxLayout **contentLayout) {
-        return InspectorPanel::createSection(parent, title, contentLayout);
-    };
-
     QVBoxLayout *blockDetailsSectionLayout = nullptr;
-    auto *blockDetailsSection = createDetailsSection(blockDetailsEditPanel_,
-                                                     tr("Block Details"),
-                                                     &blockDetailsSectionLayout);
+    auto *blockDetailsSection = InspectorPanel::createSection(blockDetailsEditPanel_,
+                                                              tr("Selection"),
+                                                              &blockDetailsSectionLayout,
+                                                              &blockDetailsTitleLabel_);
 
     blockDetailsStatusLabel_ = new QLabel(blockDetailsSection);
     blockDetailsStatusLabel_->setObjectName(QStringLiteral("blockDetailsStatusLabel"));
     blockDetailsStatusLabel_->setWordWrap(true);
+    blockDetailsStatusLabel_->setStyleSheet(QStringLiteral("color: palette(mid);"));
     blockDetailsSectionLayout->addWidget(blockDetailsStatusLabel_);
 
     auto *blockDetailsFormLayout = new QFormLayout;
@@ -198,9 +194,17 @@ void TextEditorTab::buildBlockEditorPanel()
     blockDetailsFormLayout->setSpacing(kPanelSpacing);
     blockDetailsPrimaryFieldLabel_ = new QLabel(tr("ID"), blockDetailsSection);
     blockDetailsPrimaryFieldLabel_->setObjectName(QStringLiteral("blockDetailsPrimaryLabel"));
-    blockDetailsIdEdit_ = new QLineEdit(blockDetailsSection);
+    blockDetailsPrimaryFieldStack_ = new QStackedWidget(blockDetailsSection);
+    blockDetailsPrimaryFieldStack_->setObjectName(QStringLiteral("blockDetailsPrimaryFieldStack"));
+    blockDetailsIdEdit_ = new QLineEdit(blockDetailsPrimaryFieldStack_);
     blockDetailsIdEdit_->setObjectName(QStringLiteral("blockDetailsPrimaryEdit"));
-    blockDetailsFormLayout->addRow(blockDetailsPrimaryFieldLabel_, blockDetailsIdEdit_);
+    blockDetailsReadOnlyValueLabel_ = new QLabel(blockDetailsPrimaryFieldStack_);
+    blockDetailsReadOnlyValueLabel_->setObjectName(QStringLiteral("blockDetailsReadOnlyValueLabel"));
+    blockDetailsReadOnlyValueLabel_->setWordWrap(true);
+    blockDetailsPrimaryFieldStack_->addWidget(blockDetailsIdEdit_);
+    blockDetailsPrimaryFieldStack_->addWidget(blockDetailsReadOnlyValueLabel_);
+    blockDetailsPrimaryFieldStack_->setCurrentWidget(blockDetailsIdEdit_);
+    blockDetailsFormLayout->addRow(blockDetailsPrimaryFieldLabel_, blockDetailsPrimaryFieldStack_);
     blockDetailsSecondaryFieldLabel_ = new QLabel(tr("Extra Arguments (Advanced)"), blockDetailsSection);
     blockDetailsSecondaryFieldLabel_->setObjectName(QStringLiteral("blockDetailsSecondaryLabel"));
     blockDetailsSecondaryFieldStack_ = new QStackedWidget(blockDetailsSection);

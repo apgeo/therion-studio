@@ -115,6 +115,8 @@ Pre `.th2` súbory:
 - dopĺňanie príkazov, volieb, hodnôt a ciest pri písaní,
 - `Ctrl+Space` na ručné otvorenie dopĺňania,
 - kontextová nápoveda pre aktuálny príkaz alebo voľbu; režimy Zdroj aj Bloky zobrazujú rovnakú úplnú nápovedu príkazov a panel nápovedy je pomenovaný podľa aktuálneho príkazu, validačného kontextu alebo vybraného cieľa nápovedy,
+- záložku `Výber` v inšpektore režimu Bloky na editáciu hlavičky vybraného bloku a podporovaných inline volieb; prvý panel je pomenovaný podľa vybraného príkazu Therionu a ukazuje zdrojový riadok,
+- keď nie je vybraný žiadny blok, záložka `Výber` v režime Bloky ukazuje `Nie je vybraný žiadny blok.`; pri výbere pevnej koreňovej karty `encoding` ukazuje príkaz a hodnotu kódovania ako text iba na čítanie,
 - hľadanie a nahradenie z menu `Úpravy`,
 - záložku `Súbor` v inšpektore s panelom pomenovaným podľa aktuálneho súboru, plnou cestou, akciou na skopírovanie cesty, veľkosťou na disku, časom poslednej zmeny, aktuálnym kódovaním a prevodom do UTF-8 pre súbory mimo UTF-8.
 
@@ -265,7 +267,12 @@ Používajte `Command` na macOS a `Ctrl` na Windows/Linux, ak menu platformy nez
 | Znovu | `Command/Ctrl+Shift+Z` alebo platformné východiskové |
 | Nájsť | `Command/Ctrl+F` |
 | Nájsť a nahradiť | platformná východisková skratka pre replace |
+| Prepnúť do editora Zdroj (`Raw`) | `Command/Ctrl+horný 1` |
+| Prepnúť do editora Bloky pre `.th` / config, alebo do editora Vizuálne pre `.th2` | `Command/Ctrl+horný 2` |
 | Ručné otvorenie dopĺňania (textový editor) | `Ctrl+Space` |
+| Dokončiť aktuálny mapový návrh | `Enter` |
+| Zrušiť vkladanie/kreslenie v mape | `Esc` |
+| Zmazať vybraný mapový objekt alebo vybraný line point; pri kreslení zmazať posledný bod návrhu | `Delete` / `Backspace` |
 
 ## 10. Pomocník a O aplikácii
 

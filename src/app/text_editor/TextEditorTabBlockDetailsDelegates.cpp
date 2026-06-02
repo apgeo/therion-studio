@@ -101,9 +101,6 @@ bool TextEditorTab::supportsDetailsPaneForKind(const QString &kind) const
     if (normalizedKind.isEmpty() || isBlockClosingDirective(normalizedKind)) {
         return false;
     }
-    if (normalizedKind == QStringLiteral("encoding")) {
-        return false;
-    }
     if (isContainerBlockDirective(normalizedKind) || normalizedKind == QStringLiteral("data")) {
         return true;
     }

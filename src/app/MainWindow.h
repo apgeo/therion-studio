@@ -72,6 +72,7 @@ protected:
     void closeEvent(QCloseEvent *event) override;
     void changeEvent(QEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
     void createNewWindow();
@@ -211,6 +212,8 @@ private:
     void setCurrentDetachedMapContextHelpCollapsed(bool collapsed);
     void triggerUndoForActiveDocument();
     void triggerRedoForActiveDocument();
+    void triggerRawModeForActiveDocument();
+    void triggerSecondaryEditorModeForActiveDocument();
     void triggerCompileCurrentConfigForActiveDocument();
     void triggerZoomInForActiveDocument();
     void triggerZoomOutForActiveDocument();

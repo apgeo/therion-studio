@@ -84,6 +84,7 @@ const MapEditorOrientationApplicabilityByCommand &MapEditorObjectDetailsPanelCon
 void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
 {
     if (context_.selectionLabel == nullptr
+        || context_.emptySelectionSection == nullptr
         || context_.selectionSection == nullptr
         || context_.selectionTitleLabel == nullptr
         || context_.vertexSection == nullptr
@@ -175,6 +176,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             }
 
             context_.selectionLabel->setVisible(false);
+            context_.emptySelectionSection->setVisible(false);
             context_.selectionSection->setVisible(true);
             context_.selectionTitleLabel->setText(objectSectionTitle);
             context_.vertexTitleLabel->setText(tr("Point Details"));
@@ -241,6 +243,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     if (effectiveLineNumber <= 0 || effectiveKind.isEmpty()) {
         context_.selectionLabel->setText(tr("No map object selected."));
         context_.selectionLabel->setVisible(true);
+        context_.emptySelectionSection->setVisible(true);
         context_.selectionTitleLabel->setText(tr("Object"));
         context_.selectionSection->setVisible(false);
         clearStylePreview();
@@ -282,6 +285,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     }
 
     context_.selectionLabel->setVisible(false);
+    context_.emptySelectionSection->setVisible(false);
     context_.selectionSection->setVisible(true);
     context_.advancedSection->setVisible(true);
     QString objectSectionTitle = effectiveKind;

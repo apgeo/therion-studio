@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include <QAction>
+#include <QApplication>
 #include <QColor>
 #include <QDesktopServices>
 #include <QDialog>
@@ -40,6 +41,7 @@
 #include <QToolButton>
 #include <QTreeView>
 #include <QUrl>
+#include <QKeyEvent>
 #include <QKeySequence>
 #include <QVariant>
 #include <QWidget>
@@ -71,6 +73,10 @@
 namespace
 {
 constexpr const char *kMapEditorUiSignalsConnectedProperty = "_therionStudioMapEditorUiSignalsConnected";
+#if defined(Q_OS_MACOS)
+constexpr quint32 kMacVirtualKeyAnsi1 = 0x12;
+constexpr quint32 kMacVirtualKeyAnsi2 = 0x13;
+#endif
 
 QSize minimumMainWindowSize()
 {
@@ -272,6 +278,50 @@ QString canonicalDocumentPath(const QString &filePath)
     return TherionStudio::MainWindowDocumentOpenController::canonicalDocumentPath(filePath);
 }
 
+bool hasOnlyEditorModeShortcutModifier(const QKeyEvent *event)
+{
+    if (event == nullptr) {
+        return false;
+    }
+
+    const Qt::KeyboardModifiers relevantModifiers =
+        event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier);
+#if defined(Q_OS_MACOS)
+    return relevantModifiers == Qt::ControlModifier || relevantModifiers == Qt::MetaModifier;
+#else
+    return relevantModifiers == Qt::ControlModifier;
+#endif
+}
+
+int editorModeShortcutIndexForKeyEvent(const QKeyEvent *event)
+{
+    if (!hasOnlyEditorModeShortcutModifier(event)) {
+        return 0;
+    }
+
+    if (event->key() == Qt::Key_1) {
+        return 1;
+    }
+    if (event->key() == Qt::Key_2) {
+        return 2;
+    }
+
+#if defined(Q_OS_MACOS)
+    // Use the physical top-row keys above Q/W so localized layouts such as Czech
+    // do not require Shift to type the digit character.
+    switch (event->nativeVirtualKey()) {
+    case kMacVirtualKeyAnsi1:
+        return 1;
+    case kMacVirtualKeyAnsi2:
+        return 2;
+    default:
+        break;
+    }
+#endif
+
+    return 0;
+}
+
 class DetachedMapWindow final : public QMainWindow
 {
 public:
@@ -340,6 +390,7 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
             this, &MainWindow::handleStructureSidebarScanFinished);
 
     buildUi();
+    qApp->installEventFilter(this);
     setMinimumSize(minimumMainWindowSize());
     resize(defaultMainWindowSize());
     if (restoreMode == SessionRestoreMode::RestoreSession) {
@@ -525,8 +576,8 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceRawModeButton_->setCheckable(true);
     workspaceMapPaneWindowButton_ = createWorkspaceIconButton(workspaceMapModeSwitcher_, tr("Separate Map"), QStringLiteral("screen-share"));
     workspaceMapPaneWindowButton_->setObjectName(QStringLiteral("workspaceMapPaneWindowButton"));
-    mapLayout->addWidget(workspaceVisualModeButton_);
     mapLayout->addWidget(workspaceRawModeButton_);
+    mapLayout->addWidget(workspaceVisualModeButton_);
     mapLayout->addWidget(workspaceMapPaneWindowButton_);
 
     workspaceTextModeSwitcher_ = new QWidget(workspaceModeSwitcher_);
@@ -832,6 +883,34 @@ void MainWindow::triggerRedoForActiveDocument()
     }
 }
 
+void MainWindow::triggerRawModeForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        if (!mapTab->isMapPaneDetached()) {
+            mapTab->setWorkspaceMode(TherionStudio::MapEditorTab::WorkspaceMode::Raw);
+        }
+        return;
+    }
+
+    if (auto *textTab = currentTextTab(); textTab != nullptr) {
+        textTab->setEditorMode(TherionStudio::TextEditorTab::EditorMode::Raw);
+    }
+}
+
+void MainWindow::triggerSecondaryEditorModeForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        if (!mapTab->isMapPaneDetached()) {
+            mapTab->setWorkspaceMode(TherionStudio::MapEditorTab::WorkspaceMode::Visual);
+        }
+        return;
+    }
+
+    if (auto *textTab = currentTextTab(); textTab != nullptr && textTab->isBlocksModeAvailable()) {
+        textTab->setEditorMode(TherionStudio::TextEditorTab::EditorMode::Blocks);
+    }
+}
+
 void MainWindow::triggerCompileCurrentConfigForActiveDocument()
 {
     runTherionCurrentConfig();
@@ -974,6 +1053,18 @@ void MainWindow::buildMenus()
     QAction *replaceAction = editMenu->addAction(tr("Find and &Replace"));
     replaceAction->setShortcut(QKeySequence::Replace);
     connect(replaceAction, &QAction::triggered, this, [this]() { showFindBar(true); });
+
+    auto *rawModeShortcut = new QAction(this);
+    rawModeShortcut->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_1));
+    rawModeShortcut->setShortcutContext(Qt::WindowShortcut);
+    addAction(rawModeShortcut);
+    connect(rawModeShortcut, &QAction::triggered, this, &MainWindow::triggerRawModeForActiveDocument);
+
+    auto *secondaryModeShortcut = new QAction(this);
+    secondaryModeShortcut->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_2));
+    secondaryModeShortcut->setShortcutContext(Qt::WindowShortcut);
+    addAction(secondaryModeShortcut);
+    connect(secondaryModeShortcut, &QAction::triggered, this, &MainWindow::triggerSecondaryEditorModeForActiveDocument);
 
     QMenu *viewMenu = menuBar()->addMenu(tr("&View"));
     sidebarCollapseAction_ = viewMenu->addAction(QString());
@@ -2199,4 +2290,28 @@ void MainWindow::closeEvent(QCloseEvent *event)
     shuttingDown_ = true;
     persistSessionState();
     QMainWindow::closeEvent(event);
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    Q_UNUSED(watched);
+
+    if ((event->type() == QEvent::ShortcutOverride || event->type() == QEvent::KeyPress)
+        && QApplication::activeWindow() == this) {
+        auto *keyEvent = static_cast<QKeyEvent *>(event);
+        const int editorModeShortcutIndex = editorModeShortcutIndexForKeyEvent(keyEvent);
+        if (editorModeShortcutIndex != 0) {
+            keyEvent->accept();
+            if (event->type() == QEvent::KeyPress) {
+                if (editorModeShortcutIndex == 1) {
+                    triggerRawModeForActiveDocument();
+                } else {
+                    triggerSecondaryEditorModeForActiveDocument();
+                }
+            }
+            return true;
+        }
+    }
+
+    return QMainWindow::eventFilter(watched, event);
 }

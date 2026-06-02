@@ -65,15 +65,24 @@ void MapEditorTab::buildInspectorPanelUi()
     selectionPanel->setMinimumWidth(0);
     auto *selectionLayout = qobject_cast<QVBoxLayout *>(selectionPanel->layout());
 
-    objectDetailsUiState_.objectDetailsSelectionLabel_ = new QLabel(tr("No map object selected."), selectionPanel);
-    objectDetailsUiState_.objectDetailsSelectionLabel_->setWordWrap(true);
-    selectionLayout->addWidget(objectDetailsUiState_.objectDetailsSelectionLabel_);
-
     auto createSelectionSection = [selectionPanel](const QString &title,
                                                    QVBoxLayout **contentLayout,
                                                    QLabel **titleLabelOut = nullptr) {
         return InspectorPanel::createSection(selectionPanel, title, contentLayout, titleLabelOut);
     };
+
+    QVBoxLayout *emptySelectionLayout = nullptr;
+    QLabel *emptySelectionTitleLabel = nullptr;
+    objectDetailsUiState_.objectDetailsEmptySelectionSection_ =
+        createSelectionSection(tr("Selection"), &emptySelectionLayout, &emptySelectionTitleLabel);
+    if (emptySelectionTitleLabel != nullptr) {
+        emptySelectionTitleLabel->setVisible(false);
+    }
+    objectDetailsUiState_.objectDetailsSelectionLabel_ =
+        new QLabel(tr("No map object selected."), objectDetailsUiState_.objectDetailsEmptySelectionSection_);
+    objectDetailsUiState_.objectDetailsSelectionLabel_->setWordWrap(true);
+    emptySelectionLayout->addWidget(objectDetailsUiState_.objectDetailsSelectionLabel_);
+    selectionLayout->addWidget(objectDetailsUiState_.objectDetailsEmptySelectionSection_);
 
     QVBoxLayout *objectSelectionLayout = nullptr;
     objectDetailsUiState_.objectSelectionSection_ = createSelectionSection(tr("Object"), &objectSelectionLayout, &objectDetailsUiState_.objectSelectionTitleLabel_);

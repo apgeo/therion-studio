@@ -17,9 +17,6 @@ public:
                                   const QStringList &options,
                                   bool includeSyntax,
                                   bool includeTitle = true);
-    static QString renderHelpSummaryHtml(const QString &token,
-                                         const QString &summary,
-                                         const QString &noSummaryFallback);
     static QString renderValidationHtml(const QString &cursorToken,
                                         const QString &detailMessage,
                                         const QStringList &allowedValues,

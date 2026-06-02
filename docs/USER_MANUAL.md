@@ -115,6 +115,8 @@ For `.th2` files:
 - command, option, value, and path autocomplete while typing
 - `Ctrl+Space` to open autocomplete manually
 - contextual help for the current command or option; Raw and Blocks show the same complete command help, and the help panel is titled with the current command, validation context, or selected help target
+- a `Selection` inspector tab in Blocks mode for editing the selected block header and supported inline options; the first panel is titled with the selected Therion command and shows its source line
+- when no block is selected, the Blocks `Selection` tab shows `No block selected.`; when the fixed root `encoding` card is selected, it shows the command and encoding value as read-only text
 - find and replace from the `Edit` menu
 - a `File` inspector tab with a panel titled by the current file name, full path, copy-path action, on-disk size, last-modified timestamp, current encoding, and UTF-8 conversion for non-UTF-8 files
 
@@ -269,7 +271,12 @@ Use `Command` on macOS and `Ctrl` on Windows/Linux unless the platform menu show
 | Redo | `Command/Ctrl+Shift+Z` or platform default |
 | Find | `Command/Ctrl+F` |
 | Find and replace | platform default replace shortcut |
+| Switch to Raw editor | `Command/Ctrl+top-row 1` |
+| Switch to Blocks editor for `.th` / config, or Visual editor for `.th2` | `Command/Ctrl+top-row 2` |
 | Manual completion popup (text editor) | `Ctrl+Space` |
+| Complete the current map draft | `Enter` |
+| Cancel map insertion/drawing | `Esc` |
+| Delete the selected map object or selected line point; while drawing, delete the last draft point | `Delete` / `Backspace` |
 
 ## 10. Help And About
 

@@ -123,15 +123,19 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         if (context_.setDetailsMode) { context_.setDetailsMode(BlockEditorSelectionDetailsMode::Unsupported); }
     }
 
-    if (isMapObjectReferenceKind(normalizedKind)) {
-        *context_.baseStatusText = tr("Object Reference");
-    } else if (isUnrecognizedKind(normalizedKind)) {
-        *context_.baseStatusText = tr("Command: unrecognized");
-    } else {
-        *context_.baseStatusText = tr("Command: %1").arg(normalizedKind);
+    const QString titleText = isMapObjectReferenceKind(normalizedKind)
+                                  ? tr("Object Reference")
+                                  : (isUnrecognizedKind(normalizedKind)
+                                         ? tr("Unrecognized command")
+                                         : normalizedKind);
+    const QString sourceLineText = tr("Source line %1").arg(logicalLine.startLine);
+    if (context_.titleLabel != nullptr) {
+        context_.titleLabel->setText(titleText);
+        context_.titleLabel->setVisible(true);
     }
+    *context_.baseStatusText = sourceLineText;
     if (context_.statusLabel != nullptr) {
-        context_.statusLabel->setStyleSheet(QString());
+        context_.statusLabel->setStyleSheet(QStringLiteral("color: palette(mid);"));
         context_.statusLabel->setText(*context_.baseStatusText);
     }
 
@@ -152,6 +156,16 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             context_.idEdit->clear();
             context_.idEdit->setEnabled(false);
             context_.idEdit->setVisible(false);
+        }
+        if (context_.readOnlyValueLabel != nullptr) {
+            context_.readOnlyValueLabel->clear();
+            context_.readOnlyValueLabel->setVisible(false);
+        }
+        if (context_.primaryFieldStack != nullptr) {
+            context_.primaryFieldStack->setVisible(false);
+            if (context_.idEdit != nullptr) {
+                context_.primaryFieldStack->setCurrentWidget(context_.idEdit);
+            }
         }
         if (context_.additionalPositionalEdit != nullptr) {
             context_.additionalPositionalEdit->clear();
@@ -222,10 +236,22 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
     }
     if (context_.idEdit != nullptr) {
         context_.idEdit->setVisible(true);
+        context_.idEdit->setReadOnly(false);
         context_.installLineEditCompleter(context_.idEdit, {});
+    }
+    if (context_.readOnlyValueLabel != nullptr) {
+        context_.readOnlyValueLabel->clear();
+        context_.readOnlyValueLabel->setVisible(false);
+    }
+    if (context_.primaryFieldStack != nullptr) {
+        context_.primaryFieldStack->setVisible(true);
+        if (context_.idEdit != nullptr) {
+            context_.primaryFieldStack->setCurrentWidget(context_.idEdit);
+        }
     }
     if (context_.additionalPositionalEdit != nullptr) {
         context_.additionalPositionalEdit->setVisible(true);
+        context_.additionalPositionalEdit->setReadOnly(false);
         context_.installLineEditCompleter(context_.additionalPositionalEdit, {});
     }
     if (context_.secondaryFieldStack != nullptr) {
@@ -236,6 +262,7 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
     }
     if (context_.commentEdit != nullptr) {
         context_.commentEdit->setVisible(true);
+        context_.commentEdit->setReadOnly(false);
         context_.commentEdit->setEnabled(true);
         context_.commentEdit->setPlaceholderText(tr("optional"));
         context_.commentEdit->setText(inlineComment);
@@ -345,6 +372,7 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             context_.removeOptionButton->setEnabled(showOptionsSection && !parsedOptions.optionEntries.isEmpty());
         }
     } else if (simpleValueMode) {
+        const bool readOnlyRootEncoding = normalizedKind == QStringLiteral("encoding");
         const TherionHelpEntry helpEntry = (*context_.commandMetadata).helpEntries.value(normalizedKind);
         QStringList argumentSignatures;
         for (const QString &argumentLine : helpEntry.arguments) {
@@ -385,6 +413,8 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
                 context_.primaryFieldLabel->setVisible(true);
             } else if (isMapObjectReferenceKind(normalizedKind)) {
                 context_.primaryFieldLabel->setText(tr("Target"));
+            } else if (readOnlyRootEncoding) {
+                context_.primaryFieldLabel->setText(tr("Value"));
             } else if (noValueCommand) {
                 context_.primaryFieldLabel->setVisible(false);
             } else if ((*context_.commandMetadata).commandPrimaryValueIsPerson.value(normalizedKind, false)) {
@@ -430,9 +460,33 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         context_.setReadingsTagEditor(QString(), {}, {});
         if (context_.idEdit != nullptr) {
             context_.idEdit->setEnabled(unrecognizedLineKind || commentOnlyLine || !noValueCommand);
-            context_.idEdit->setVisible(unrecognizedLineKind || commentOnlyLine || !noValueCommand);
+            context_.idEdit->setVisible(true);
+            context_.idEdit->setReadOnly(readOnlyRootEncoding);
             context_.idEdit->setPlaceholderText((unrecognizedLineKind || commentOnlyLine || !noValueCommand) ? tr("required") : QString());
             context_.idEdit->setText(currentValue);
+        }
+        if (context_.readOnlyValueLabel != nullptr) {
+            context_.readOnlyValueLabel->setText(readOnlyRootEncoding ? currentValue : QString());
+            context_.readOnlyValueLabel->setVisible(readOnlyRootEncoding);
+        }
+        if (context_.primaryFieldStack != nullptr) {
+            context_.primaryFieldStack->setVisible(unrecognizedLineKind || commentOnlyLine || !noValueCommand);
+            if (readOnlyRootEncoding && context_.readOnlyValueLabel != nullptr) {
+                context_.primaryFieldStack->setCurrentWidget(context_.readOnlyValueLabel);
+            } else if (context_.idEdit != nullptr) {
+                context_.primaryFieldStack->setCurrentWidget(context_.idEdit);
+            }
+        }
+        if (readOnlyRootEncoding) {
+            if (context_.commentFieldLabel != nullptr) {
+                context_.commentFieldLabel->setVisible(false);
+            }
+            if (context_.commentEdit != nullptr) {
+                context_.commentEdit->clear();
+                context_.commentEdit->setReadOnly(true);
+                context_.commentEdit->setEnabled(false);
+                context_.commentEdit->setVisible(false);
+            }
         }
         if (commentOnlyLine || unrecognizedLineKind) {
             if (context_.commentFieldLabel != nullptr) {

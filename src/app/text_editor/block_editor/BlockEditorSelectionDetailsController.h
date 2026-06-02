@@ -35,13 +35,16 @@ struct BlockEditorSelectionDetailsContext
     QString *baseStatusText = nullptr;
     QChar *commentMarker = nullptr;
     QWidget *editPanel = nullptr;
+    QLabel *titleLabel = nullptr;
     QLabel *statusLabel = nullptr;
     QLabel *primaryFieldLabel = nullptr;
     QLabel *secondaryFieldLabel = nullptr;
     QLabel *commentFieldLabel = nullptr;
     QLabel *optionsLabel = nullptr;
     QLabel *optionArgsLabel = nullptr;
+    QStackedWidget *primaryFieldStack = nullptr;
     QLineEdit *idEdit = nullptr;
+    QLabel *readOnlyValueLabel = nullptr;
     QLineEdit *additionalPositionalEdit = nullptr;
     QLineEdit *commentEdit = nullptr;
     QWidget *readingsTagEditor = nullptr;

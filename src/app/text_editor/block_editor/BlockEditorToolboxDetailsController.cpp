@@ -2,6 +2,7 @@
 
 #include "BlockEditorDirectiveRules.h"
 #include "../ContextHelpController.h"
+#include "../ContextHelpInspector.h"
 #include "../TextEditorCommandMetadata.h"
 
 #include <QCoreApplication>
@@ -109,16 +110,26 @@ void BlockEditorToolboxDetailsController::showToolboxCommandDetails(const QStrin
     }
     if (context_.helpBrowser != nullptr && context_.commandMetadata != nullptr) {
         if (mapReference) {
-            context_.helpBrowser->setHtml(tr("<p><b>Object Reference</b></p>"
-                                             "<p>References an existing scrap or map from inside a <code>map</code> block. "
+            if (context_.helpInspector != nullptr) {
+                context_.helpInspector->setTitle(tr("Object Reference"));
+            }
+            context_.helpBrowser->setHtml(tr("<p>References an existing scrap or map from inside a <code>map</code> block. "
                                              "The block serializes as a single map body line, for example <code>scrap-a</code>.</p>"));
         } else {
+            if (context_.helpInspector != nullptr) {
+                context_.helpInspector->setTitle(normalizedCommand);
+            }
             const TherionHelpEntry entry = context_.commandMetadata->helpEntries.value(normalizedCommand);
             context_.helpBrowser->setHtml(
-                ContextHelpController::renderHelpSummaryHtml(
+                ContextHelpController::renderHelpHtml(
                     normalizedCommand,
                     entry.summary,
-                    tr("No summary is available for this command.")));
+                    entry.syntax,
+                    entry.arguments,
+                    entry.acceptedValues,
+                    entry.options,
+                    true,
+                    false));
         }
     }
     if (context_.refreshOptionArgumentEditors) {

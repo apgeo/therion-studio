@@ -92,24 +92,6 @@ QString ContextHelpController::renderHelpHtml(const QString &token,
     return html;
 }
 
-QString ContextHelpController::renderHelpSummaryHtml(const QString &token,
-                                                     const QString &summary,
-                                                     const QString &noSummaryFallback)
-{
-    QString html;
-    html += QStringLiteral("<h3>%1</h3>").arg(token.toHtmlEscaped());
-    if (!summary.trimmed().isEmpty()) {
-        html += QStringLiteral("<p><strong>%1:</strong> %2</p>")
-                    .arg(QCoreApplication::translate("TherionStudio::ContextHelpController", "Summary"),
-                         summary.toHtmlEscaped());
-    } else {
-        html += QStringLiteral("<p><strong>%1:</strong> %2</p>")
-                    .arg(QCoreApplication::translate("TherionStudio::ContextHelpController", "Summary"),
-                         noSummaryFallback.toHtmlEscaped());
-    }
-    return html;
-}
-
 QString ContextHelpController::renderValidationHtml(const QString &cursorToken,
                                                     const QString &detailMessage,
                                                     const QStringList &allowedValues,

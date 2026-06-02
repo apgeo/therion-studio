@@ -26,13 +26,16 @@ BlockEditorSelectionDetailsContext TextEditorTab::blockEditorSelectionDetailsCon
     context.baseStatusText = &blockDetailsBaseStatusText_;
     context.commentMarker = &blockDetailsCommentMarker_;
     context.editPanel = blockDetailsEditPanel_;
+    context.titleLabel = blockDetailsTitleLabel_;
     context.statusLabel = blockDetailsStatusLabel_;
     context.primaryFieldLabel = blockDetailsPrimaryFieldLabel_;
     context.secondaryFieldLabel = blockDetailsSecondaryFieldLabel_;
     context.commentFieldLabel = blockDetailsCommentFieldLabel_;
     context.optionsLabel = blockDetailsOptionsLabel_;
     context.optionArgsLabel = blockDetailsOptionArgsLabel_;
+    context.primaryFieldStack = blockDetailsPrimaryFieldStack_;
     context.idEdit = blockDetailsIdEdit_;
+    context.readOnlyValueLabel = blockDetailsReadOnlyValueLabel_;
     context.additionalPositionalEdit = blockDetailsAdditionalPositionalEdit_;
     context.commentEdit = blockDetailsCommentEdit_;
     context.readingsTagEditor = blockDetailsReadingsTagEditor_;
@@ -123,19 +126,24 @@ BlockEditorDetailsPaneContext TextEditorTab::blockEditorDetailsPaneContext()
     BlockEditorDetailsPaneContext context;
     context.tearingDown = &tearingDown_;
     context.editPanel = blockDetailsEditPanel_;
+    context.titleLabel = blockDetailsTitleLabel_;
     context.statusLabel = blockDetailsStatusLabel_;
+    context.primaryFieldStack = blockDetailsPrimaryFieldStack_;
     context.idEdit = blockDetailsIdEdit_;
+    context.readOnlyValueLabel = blockDetailsReadOnlyValueLabel_;
     context.additionalPositionalEdit = blockDetailsAdditionalPositionalEdit_;
     context.secondaryFieldStack = blockDetailsSecondaryFieldStack_;
     context.commentEdit = blockDetailsCommentEdit_;
     context.primaryFieldLabel = blockDetailsPrimaryFieldLabel_;
     context.secondaryFieldLabel = blockDetailsSecondaryFieldLabel_;
     context.commentFieldLabel = blockDetailsCommentFieldLabel_;
+    context.optionsLabel = blockDetailsOptionsLabel_;
     context.optionsTable = blockDetailsOptionsTable_;
     context.optionArgsLabel = blockDetailsOptionArgsLabel_;
     context.optionArgsPanel = blockDetailsOptionArgsPanel_;
     context.addOptionButton = blockDetailsAddOptionButton_;
     context.removeOptionButton = blockDetailsRemoveOptionButton_;
+    context.dataRowsButton = blockDetailsDataRowsButton_;
     context.helpBrowser = blockDetailsHelpBrowser_;
     context.resetDetailsState = [this](bool teardownOnly) {
         blockDetailsMode_ = BlockDetailsMode::None;
@@ -186,6 +194,7 @@ BlockEditorToolboxDetailsContext TextEditorTab::blockEditorToolboxDetailsContext
     context.optionArgsLabel = blockDetailsOptionArgsLabel_;
     context.optionArgsPanel = blockDetailsOptionArgsPanel_;
     context.helpBrowser = blockDetailsHelpBrowser_;
+    context.helpInspector = blockDetailsHelpInspector_;
     context.commandMetadata = &commandMetadata_;
     context.normalizeDirectiveToken = [this](const QString &directive) {
         return normalizedDirectiveToken(directive);

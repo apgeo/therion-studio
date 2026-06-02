@@ -278,6 +278,7 @@ private:
     struct ObjectDetailsUiState
     {
         QLabel *objectDetailsSelectionLabel_ = nullptr;
+        QWidget *objectDetailsEmptySelectionSection_ = nullptr;
         QWidget *objectSelectionSection_ = nullptr;
         QLabel *objectSelectionTitleLabel_ = nullptr;
         QWidget *vertexSelectionSection_ = nullptr;

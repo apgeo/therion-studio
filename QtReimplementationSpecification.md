@@ -98,13 +98,17 @@ Structured block-canvas requirements:
 - catalog-backed leaf commands without positional arguments, such as map `break`, shall not require or display a synthetic value field in Block Details
 - in Therion config structured mode, top-level configuration directives such as `select`, `export`, and `unselect` shall be rendered as leaf cards at document root when present in source.
 - directives that support both inline and block forms (for example `source`) shall open nested scope only in explicit block form; inline single-line form shall remain a leaf card.
-- in structured mode for `.th` and Therion config documents, an existing `encoding` directive shall be treated as a fixed document-root directive; opening a file or switching editor modes shall not auto-insert a missing `encoding ...` line or otherwise mutate source text, and an existing `encoding` card shall not be insertable from toolbox, movable, or deletable
+- in structured mode for `.th` and Therion config documents, an existing `encoding` directive shall be treated as a fixed document-root directive; opening a file or switching editor modes shall not auto-insert a missing `encoding ...` line or otherwise mutate source text, and an existing `encoding` card shall not be insertable from toolbox, movable, or deletable.
+- The Blocks inspector tab that edits the currently selected block shall be titled `Selection` to align with the Map editor inspector convention.
+- The first section in the Blocks `Selection` tab shall use the selected command token or object-reference label as its section title and shall show source location as a compact `Source line N` metadata line instead of a generic `Block Details` / `Command: ...` header.
+- When no canvas block is selected, the Blocks `Selection` tab shall show an explicit empty state message (`No block selected.`) rather than an empty panel.
+- When the fixed document-root `encoding` card is selected in Blocks mode, the Blocks `Selection` tab shall show its command title, source line, and encoding value in non-editable read-only text form; interacting with that value shall not mark the document dirty.
 - Block Details for editable blocks shall expose an always-visible optional inline comment field that maps to end-of-line Therion comments and preserves comments on line rewrites.
 - Block Details shall auto-commit inline field and option edits on editing completion or focus-out; it shall not require or expose a separate `Apply` button.
 - Block Details shall expose only workflow-specific action buttons that cannot be represented as safe inline fields; for MVP this means `Edit Data Rows...` for `data` block body rows. The Blocks inspector shall not introduce a separate `Actions` section for these controls.
 - structured block cards should visually indicate presence of inline comment and expose the comment text on hover.
 - selecting or configuring a structure card shall mutate the underlying source text through the same safe-edit pipeline used by raw mode
-- when no canvas block is selected, the editable Block Details section shall be hidden and the third column shall show toolbox-command contextual preview only.
+- when no canvas block is selected, the third column shall keep the Blocks inspector visible with its explicit empty selection state while toolbox-command contextual preview remains available through the `Context Help` tab.
 - in Blocks mode, contextual help focus shall stay at command/parameter level while editing options; selecting an option row shall not permanently replace command-level help with option-only help.
 - dragging a structure card in the canvas should reorder the corresponding source block; for container directives, reordering shall move the full block span including nested lines
 - dropping a toolbox command below the lowest canvas block shall append it at document top-level end; dropping above the first block shall insert at document start.
@@ -147,7 +151,7 @@ Required capabilities:
 
 - render the current TH2 document as an editable 2D map
 - support an embedded map workspace inside the main editor for TH2 files
-- support a mode-based TH2 workspace in the main editor with explicit `Visual` and `Raw` modes
+- support a mode-based TH2 workspace in the main editor with explicit `Raw` and `Visual` modes
 - support detaching and reattaching the map pane into a dedicated top-level window without losing synchronization with the source document
 - support the main TH2 object types:
   - scraps
@@ -309,10 +313,10 @@ The rules below define the expected day-to-day interaction model. If a later req
 
 - The map editor shall render the currently open TH2 document as an editable two-dimensional workspace.
 - The map workspace shall maintain sufficient contrast for geometry strokes, handles, labels, and grid lines in both light and dark system appearance modes.
-- When a TH2 document is active in the main window, the embedded workspace shall provide explicit `Visual` and `Raw` modes.
-- When a TH2 document is active in the main window, the `Visual`/`Raw` mode selector shall be hosted in the right-aligned controls of the full-width document command toolbar above the tab strip rather than in a dedicated row inside the tab content.
-- When a TH2 document is active in the main window, map-pane detach/reattach (`Separate Map` / `Return Map`) shall be provided in the same document command toolbar control area as the `Visual`/`Raw` mode selector.
-- Right-aligned document command toolbar controls such as `Visual`, `Raw`, `Blocks`, and map-pane detach/reattach shall be compact square icon-only controls with accessible names and tooltips; map-pane detach shall use the screen-share icon and map-pane return shall use the monitor-x icon.
+- When a TH2 document is active in the main window, the embedded workspace shall provide explicit `Raw` and `Visual` modes.
+- When a TH2 document is active in the main window, the `Raw`/`Visual` mode selector shall be hosted in the right-aligned controls of the full-width document command toolbar above the tab strip rather than in a dedicated row inside the tab content.
+- When a TH2 document is active in the main window, map-pane detach/reattach (`Separate Map` / `Return Map`) shall be provided in the same document command toolbar control area as the `Raw`/`Visual` mode selector.
+- Right-aligned document command toolbar controls such as `Raw`, `Visual`, `Blocks`, and map-pane detach/reattach shall be compact square icon-only controls with accessible names and tooltips; map-pane detach shall use the screen-share icon and map-pane return shall use the monitor-x icon.
 - Embedded TH2 `Visual` mode shall align its canvas/inspector content edge with the same thin top separator used by Raw and Blocks editor content under the main file tabs.
 - TH2 `Visual` inspector tabs shall use native `QTabWidget` rendering and shall not override platform tab geometry or tab shape.
 - When a TH2 map editor is presented outside the main tab strip (for example in a detached dedicated map-editor window), the top command toolbar shall omit `Visual`/`Raw` mode switching and keep only actions relevant to the detached visual workspace.
@@ -324,7 +328,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The `Selection` and `Backgrounds` tabs shall use the same framed-section pattern, with each section heading placed inside its box rather than as a standalone label above the box.
 - The `Objects` tab shall provide source-linked object-tree navigation grouped by scrap.
 - The `Selection` tab shall provide selection details/settings editing for the currently selected map object.
-- When no map object or pending insert object is selected, the `Selection` tab shall show an explicit empty state and shall not infer an editable selection from the current text cursor line.
+- When no map object or pending insert object is selected, the `Selection` tab shall show an explicit framed empty state consistent with the Blocks `Selection` inspector and shall not infer an editable selection from the current text cursor line.
 - For selected or pending-insert `point`, `line`, and `area` objects, the `Selection` tab shall show a full-width style preview tile below the subtype control and its `Style preview` label, using the same map object style catalog resolution as the canvas renderer. The preview tile shall use a map-like light preview surface in both light and dark themes so dark map symbols remain readable without inverting their configured colors. Area previews shall use the available preview tile area for fill-pattern readability, including deterministic dot-pattern jitter when configured. The preview shall preserve readability with preview-only contrast treatment when necessary; this shall not alter the configured style colors used by the canvas renderer.
 - Map hit testing shall use screen-space stroke tolerance for line bodies so line selection remains precise across zoom levels; clicking inside an area fill shall select the area unless the click is on a higher-priority handle/vertex or within the visible line-stroke hit tolerance.
 - Activating `Point`, `Line`, `Freehand`, or `Area` insertion shall activate the `Selection` tab before the first point or vertex is placed and shall expose pending object fields for type, subtype, ID, and point name where applicable; edits to those fields shall not mutate source text until the new object is inserted, and the inserted command shall use the pending values.
@@ -550,6 +554,8 @@ Platform modifier mapping:
 | Close | File | none in the current Swift app | Expose the action in the menu even if no explicit shortcut is assigned |
 | Close All Tabs | File | Command+Shift+W | Close every open editor tab |
 | Close Project | File | none in the current Swift app | Close the active project and its project-scoped documents after unsaved changes are resolved |
+| Switch to Raw editor | document workspace | Command+top-row 1 | Switch the active `.th`, Therion config, or `.th2` document to Raw/source editing when supported; localized keyboard layouts shall not require Shift to type the digit character |
+| Switch to secondary editor mode | document workspace | Command+top-row 2 | Switch the active `.th` or Therion config document to Blocks mode, or the active `.th2` document to Visual mode, when supported; localized keyboard layouts shall not require Shift to type the digit character |
 | Undo | Edit | platform-standard Undo | Undo the last available change in the active document, including raw text edits and supported map-editing commands |
 | Redo | Edit | platform-standard Redo | Redo the last undone change in the active document, including raw text edits and supported map-editing commands |
 | Fold All | Editor | Command+Option+[ | Fold all foldable blocks in the active text editor |
@@ -568,7 +574,7 @@ The Qt application may add additional platform-standard shortcuts only if they d
 The Qt application shall define a consistent window and document model.
 
 - The main application window shall present the project browser, tabbed text editor, structure sidebar, and console-related views used for project work.
-- The main application window shall support a text workspace for all supported text files and, for TH2 files, an embedded mode-based `Visual`/`Raw` workspace presentation.
+- The main application window shall support a text workspace for all supported text files and, for TH2 files, an embedded mode-based `Raw`/`Visual` workspace presentation.
 - The text editor shall provide a collapsible contextual help/documentation inspector below the editor or in an equivalent persistent surface.
 - The Qt implementation shall use an equivalent persistent right-side help inspector surface for raw text editing to keep editor/help spatial structure consistent with the Blocks workspace, and both modes shall use the same command-help content renderer.
 - A TH2 map shall open in a dedicated map editor window or equivalent dedicated top-level surface that remains associated with the same document session.
@@ -996,8 +1002,8 @@ The criteria below are intended for implementation verification and QA.
 #### 8.1.3 TH2 Map Editor
 
 - The map editor renders the currently open TH2 file as a 2D editable workspace.
-- A TH2 document exposes an embedded mode selector with `Visual` and `Raw` modes.
-- In the main window, the TH2 `Visual`/`Raw` mode selector is shown in the right-aligned controls of the full-width document command toolbar row above the tab strip.
+- A TH2 document exposes an embedded mode selector with `Raw` and `Visual` modes.
+- In the main window, the TH2 `Raw`/`Visual` mode selector is shown in the right-aligned controls of the full-width document command toolbar row above the tab strip.
 - In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same document command toolbar control area, after `Raw`, using screen-share/monitor-x icons for detach/return state.
 - In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, separator, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`) after `Undo`/`Redo`.
 - In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window top command toolbar remains available.
@@ -1388,7 +1394,7 @@ Required parity scope:
 
 Required parity scope:
 
-- embedded TH2 workspace with `Visual`/`Raw` modes plus detachable map window for the same TH2 session
+- embedded TH2 workspace with `Raw`/`Visual` modes plus detachable map window for the same TH2 session
 - selection, hover, visibility toggles, and object-focused editing
 - viewport controls: pan, zoom, fit geometry, fit geometry+background
 - input-mode-aware navigation behavior for touchpad, mouse, and stylus workflows

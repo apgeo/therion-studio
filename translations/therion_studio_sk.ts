@@ -2034,8 +2034,13 @@ Line-point rows: %1</source>
     <name>TherionStudio::BlockEditorDetailsPaneController</name>
     <message>
         <location filename="../src/app/text_editor/block_editor/BlockEditorDetailsPaneController.cpp" line="41"/>
-        <source>Select a block in the canvas to edit its parameters.</source>
-        <translation>Vyberte blok na plátne na úpravu jeho parametrov.</translation>
+        <source>Selection</source>
+        <translation>Výber</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDetailsPaneController.cpp" line="41"/>
+        <source>No block selected.</source>
+        <translation>Nie je vybraný žiadny blok.</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/block_editor/BlockEditorDetailsPaneController.cpp" line="68"/>
@@ -2196,13 +2201,13 @@ Line-point rows: %1</source>
     </message>
     <message>
         <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="129"/>
-        <source>Command: unrecognized</source>
-        <translation>Príkaz: nerozpoznaný</translation>
+        <source>Unrecognized command</source>
+        <translation>Nerozpoznaný príkaz</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="131"/>
-        <source>Command: %1</source>
-        <translation>Príkaz: %1</translation>
+        <source>Source line %1</source>
+        <translation>Zdrojový riadok %1</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="220"/>
@@ -4556,8 +4561,8 @@ subtype blocks</source>
     </message>
     <message>
         <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="169"/>
-        <source>Details</source>
-        <translation>Podrobnosti</translation>
+        <source>Selection</source>
+        <translation>Výber</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="186"/>

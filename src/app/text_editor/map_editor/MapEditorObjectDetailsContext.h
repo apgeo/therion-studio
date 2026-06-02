@@ -42,6 +42,7 @@ struct MapEditorObjectDetailsContext
     QString *toolbarStatusNote = nullptr;
 
     QLabel *selectionLabel = nullptr;
+    QWidget *emptySelectionSection = nullptr;
     QWidget *selectionSection = nullptr;
     QLabel *selectionTitleLabel = nullptr;
     QWidget *vertexSection = nullptr;

@@ -189,6 +189,7 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .lastInspectorClickedObjectLineNumber = &lastInspectorClickedObjectLineNumber_,
         .toolbarStatusNote = &toolbarStatusNote_,
         .selectionLabel = objectDetailsUiState_.objectDetailsSelectionLabel_,
+        .emptySelectionSection = objectDetailsUiState_.objectDetailsEmptySelectionSection_,
         .selectionSection = objectDetailsUiState_.objectSelectionSection_,
         .selectionTitleLabel = objectDetailsUiState_.objectSelectionTitleLabel_,
         .vertexSection = objectDetailsUiState_.vertexSelectionSection_,

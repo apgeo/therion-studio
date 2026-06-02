@@ -15,6 +15,7 @@ class QWidget;
 
 namespace TherionStudio
 {
+class ContextHelpInspector;
 struct TextEditorCommandMetadata;
 
 struct BlockEditorToolboxDetailsContext
@@ -36,6 +37,7 @@ struct BlockEditorToolboxDetailsContext
     QLabel *optionArgsLabel = nullptr;
     QWidget *optionArgsPanel = nullptr;
     QTextBrowser *helpBrowser = nullptr;
+    ContextHelpInspector *helpInspector = nullptr;
     const TextEditorCommandMetadata *commandMetadata = nullptr;
     std::function<QString(const QString &)> normalizeDirectiveToken;
     std::function<void(const QString &, const QString &)> beginToolboxCommandDetails;

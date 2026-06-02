@@ -239,6 +239,7 @@ set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindowStructureBrowser.cpp
     src/app/MainWindowStructureRoles.h
     src/app/MainWindowViewMenu.cpp
+    src/app/MainWindowWorkspaceCommandBar.cpp
     src/app/MainWindowTherionConsoleController.h
     src/app/MainWindowTherionRunner.cpp
     src/app/ApplicationStylePolicy.h

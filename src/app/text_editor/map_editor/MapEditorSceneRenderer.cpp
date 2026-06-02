@@ -2042,6 +2042,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 lineItem->setToolTip(featureTooltip);
                 markGeometryItem(lineItem);
                 lineItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                const bool renderLineGuideSpine = lineStyle.guideSpineVisible || !lineStyle.decorations.isEmpty();
                 MapEditorLineDecorationItem *lineDecorationItem = nullptr;
                 if (!lineStyle.decorations.isEmpty()) {
                     lineDecorationItem = new MapEditorLineDecorationItem(path,
@@ -2058,7 +2059,8 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     markGeometryItem(lineDecorationItem);
                     makeMouseTransparent(lineDecorationItem);
                     lineDecorationItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
-
+                }
+                if (renderLineGuideSpine) {
                     QColor guideStroke = canvasTheme.mutedText;
                     guideStroke.setAlpha(210);
                     QVector<qreal> guideDashPattern;

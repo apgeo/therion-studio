@@ -169,6 +169,7 @@ struct MapEditorPointStyleDefaults
 struct MapEditorLineStyleDefaults
 {
     bool strokeVisible = true;
+    bool guideSpineVisible = false;
     qreal strokeWidth = 3.2;
     Qt::PenStyle penStyle = Qt::SolidLine;
     std::optional<QColor> strokeColor;
@@ -212,6 +213,7 @@ struct MapEditorLineStyleRule
 {
     MapEditorStyleSelector selector;
     std::optional<bool> strokeVisible;
+    std::optional<bool> guideSpineVisible;
     std::optional<qreal> strokeWidth;
     std::optional<Qt::PenStyle> penStyle;
     std::optional<QColor> strokeColor;
@@ -261,6 +263,7 @@ struct MapEditorResolvedPointStyle
 struct MapEditorResolvedLineStyle
 {
     bool strokeVisible = true;
+    bool guideSpineVisible = false;
     qreal strokeWidth = 3.2;
     Qt::PenStyle penStyle = Qt::SolidLine;
     std::optional<QColor> strokeColor;

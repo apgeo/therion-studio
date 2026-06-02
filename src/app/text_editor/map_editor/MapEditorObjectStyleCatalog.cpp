@@ -748,6 +748,9 @@ void applyLineDefaults(MapEditorObjectStyleCatalog *catalog, const QJsonObject &
     if (const std::optional<bool> strokeVisible = optionalBool(line, "stroke_visible")) {
         catalog->line.strokeVisible = strokeVisible.value();
     }
+    if (const std::optional<bool> guideSpineVisible = optionalBool(line, "guide_spine_visible")) {
+        catalog->line.guideSpineVisible = guideSpineVisible.value();
+    }
     if (const std::optional<qreal> strokeWidth = optionalPositiveNumber(line, "stroke_width")) {
         catalog->line.strokeWidth = strokeWidth.value();
     }
@@ -828,6 +831,7 @@ std::optional<MapEditorLineStyleRule> readLineStyleRule(const QJsonObject &objec
     }
 
     rule.strokeVisible = optionalBool(object, "stroke_visible");
+    rule.guideSpineVisible = optionalBool(object, "guide_spine_visible");
     rule.strokeWidth = optionalPositiveNumber(object, "stroke_width");
     if (object.value(QStringLiteral("stroke_style")).isString()) {
         rule.penStyle = penStyleFromString(object.value(QStringLiteral("stroke_style")).toString());
@@ -1072,6 +1076,7 @@ MapEditorResolvedLineStyle resolveMapEditorLineStyle(const MapEditorObjectStyleC
 {
     MapEditorResolvedLineStyle resolved;
     resolved.strokeVisible = catalog.line.strokeVisible;
+    resolved.guideSpineVisible = catalog.line.guideSpineVisible;
     resolved.strokeWidth = catalog.line.strokeWidth;
     resolved.penStyle = catalog.line.penStyle;
     resolved.strokeColor = catalog.line.strokeColor;
@@ -1088,6 +1093,9 @@ MapEditorResolvedLineStyle resolveMapEditorLineStyle(const MapEditorObjectStyleC
         }
         if (rule.strokeVisible.has_value()) {
             resolved.strokeVisible = rule.strokeVisible.value();
+        }
+        if (rule.guideSpineVisible.has_value()) {
+            resolved.guideSpineVisible = rule.guideSpineVisible.value();
         }
         if (rule.strokeWidth.has_value()) {
             resolved.strokeWidth = rule.strokeWidth.value();

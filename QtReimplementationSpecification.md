@@ -705,7 +705,7 @@ Required behavior:
 - line, point, and area rendering shall be style-driven based on Therion object type and, where applicable, subtype
 - the style system shall support separate definitions for line styles, point styles, area styles, and global interaction styles
 - bundled map-style definitions shall prefer Therion's SKBB MetaPost symbol definitions when available and shall use UIS definitions as the next fallback reference before using project-specific approximations
-- line styles shall support at least stroke visibility, stroke color, stroke width, dash pattern, optional closed-line fill, and optional directional or repeated decorations
+- line styles shall support at least stroke visibility, optional edit-guide spine visibility, stroke color, stroke width, dash pattern, optional closed-line fill, and optional directional or repeated decorations
 - closed-line fills shall support a background-clean mode so symbols such as `line rock-border -close on` can erase/fill their interior before the outline is drawn, matching Therion MetaPost `thclean` semantics
 - line style decorations shall support built-in repeated or offset primitives including offset strokes, parallel strokes, ticks, rungs, teeth, repeated symbols, repeated wave marks, and `line slope` ticks driven by per-line-point `orientation` and `l-size`
 - `teeth` line decorations shall render as Therion/MetaPost-like filled sawtooth segments based on the decorated line path, not as disconnected point-symbol triangles

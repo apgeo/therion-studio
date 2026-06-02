@@ -15,9 +15,11 @@ void TextEditorTab::buildBlockDetailsApplyExecutor()
 BlockEditorApplyExecutorContext TextEditorTab::blockEditorApplyExecutorContext()
 {
     BlockEditorApplyExecutorContext context;
-    context.dialogParent = this;
     context.tearingDown = &tearingDown_;
+    context.detailsPopulating = &blockDetailsPopulating_;
     context.selectedLineNumber = &blockDetailsSelectedLineNumber_;
+    context.baseStatusText = &blockDetailsBaseStatusText_;
+    context.statusLabel = blockDetailsStatusLabel_;
     context.sourceContext = [this]() {
         return blockEditorSourceContext();
     };
@@ -29,9 +31,6 @@ BlockEditorApplyExecutorContext TextEditorTab::blockEditorApplyExecutorContext()
     };
     context.refreshApplyState = [this]() {
         refreshBlockDetailsApplyState();
-    };
-    context.translate = [this](const char *text) {
-        return tr(text);
     };
     return context;
 }

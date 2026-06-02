@@ -35,6 +35,9 @@ BlockEditorOptionArgsContext TextEditorTab::blockEditorOptionArgsContext()
     context.refreshApplyState = [this]() {
         refreshBlockDetailsApplyState();
     };
+    context.applyChanges = [this]() {
+        applyBlockDetailsChanges();
+    };
     context.updateHelpForCurrentFocus = [this]() {
         updateBlockDetailsHelpForCurrentFocus();
     };

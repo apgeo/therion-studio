@@ -17,7 +17,6 @@ BlockEditorApplyStateContext TextEditorTab::blockEditorApplyStateContext()
     BlockEditorApplyStateContext context;
     context.tearingDown = &tearingDown_;
     context.detailsPopulating = &blockDetailsPopulating_;
-    context.applyButton = &blockDetailsApplyButton_;
     context.statusLabel = &blockDetailsStatusLabel_;
     context.selectedLineNumber = &blockDetailsSelectedLineNumber_;
     context.baseStatusText = &blockDetailsBaseStatusText_;

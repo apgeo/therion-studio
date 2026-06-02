@@ -35,8 +35,6 @@ struct BlockEditorToolboxDetailsContext
     QPushButton *removeOptionButton = nullptr;
     QLabel *optionArgsLabel = nullptr;
     QWidget *optionArgsPanel = nullptr;
-    QPushButton *legacyConfigureButton = nullptr;
-    QPushButton *applyButton = nullptr;
     QTextBrowser *helpBrowser = nullptr;
     const TextEditorCommandMetadata *commandMetadata = nullptr;
     std::function<QString(const QString &)> normalizeDirectiveToken;

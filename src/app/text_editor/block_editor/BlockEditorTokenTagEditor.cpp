@@ -3,29 +3,155 @@
 #include "../../../core/TherionDocumentParser.h"
 
 #include <QCompleter>
-#include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QLayout>
 #include <QLineEdit>
 #include <QRegularExpression>
+#include <QSizePolicy>
 #include <QTimer>
 #include <QToolButton>
+#include <QVBoxLayout>
 #include <QAbstractItemView>
 
 #include <algorithm>
 
 namespace TherionStudio
 {
+namespace
+{
+class TokenFlowLayout final : public QLayout
+{
+public:
+    explicit TokenFlowLayout(QWidget *parent)
+        : QLayout(parent)
+    {
+        setContentsMargins(0, 0, 0, 0);
+        setSpacing(4);
+    }
+
+    ~TokenFlowLayout() override
+    {
+        while (QLayoutItem *item = takeAt(0)) {
+            delete item;
+        }
+    }
+
+    void addItem(QLayoutItem *item) override
+    {
+        items_.append(item);
+    }
+
+    int count() const override
+    {
+        return items_.size();
+    }
+
+    QLayoutItem *itemAt(int index) const override
+    {
+        return index >= 0 && index < items_.size() ? items_.at(index) : nullptr;
+    }
+
+    QLayoutItem *takeAt(int index) override
+    {
+        if (index < 0 || index >= items_.size()) {
+            return nullptr;
+        }
+        return items_.takeAt(index);
+    }
+
+    Qt::Orientations expandingDirections() const override
+    {
+        return {};
+    }
+
+    bool hasHeightForWidth() const override
+    {
+        return true;
+    }
+
+    int heightForWidth(int width) const override
+    {
+        return doLayout(QRect(0, 0, width, 0), true);
+    }
+
+    QSize minimumSize() const override
+    {
+        QSize size;
+        for (const QLayoutItem *item : items_) {
+            size = size.expandedTo(item->minimumSize());
+        }
+        QMargins margins = contentsMargins();
+        size += QSize(margins.left() + margins.right(), margins.top() + margins.bottom());
+        return size;
+    }
+
+    void setGeometry(const QRect &rect) override
+    {
+        QLayout::setGeometry(rect);
+        doLayout(rect, false);
+    }
+
+    QSize sizeHint() const override
+    {
+        return minimumSize();
+    }
+
+private:
+    int doLayout(const QRect &rect, bool testOnly) const
+    {
+        QMargins margins = contentsMargins();
+        const QRect effectiveRect = rect.adjusted(margins.left(), margins.top(), -margins.right(), -margins.bottom());
+        int x = effectiveRect.x();
+        int y = effectiveRect.y();
+        int lineHeight = 0;
+        const int hSpace = spacing();
+        const int vSpace = spacing();
+
+        for (QLayoutItem *item : items_) {
+            if (item == nullptr || item->isEmpty()) {
+                continue;
+            }
+            const QSize itemSize = item->sizeHint();
+            const int nextX = x + itemSize.width() + hSpace;
+            if (nextX - hSpace > effectiveRect.right() && lineHeight > 0) {
+                x = effectiveRect.x();
+                y += lineHeight + vSpace;
+                lineHeight = 0;
+            }
+
+            if (!testOnly) {
+                item->setGeometry(QRect(QPoint(x, y), itemSize));
+            }
+            x += itemSize.width() + hSpace;
+            lineHeight = std::max(lineHeight, itemSize.height());
+        }
+        return y + lineHeight - rect.y() + margins.bottom();
+    }
+
+    QList<QLayoutItem *> items_;
+};
+}
+
 BlockEditorTokenTagEditor::BlockEditorTokenTagEditor(QWidget *parent)
     : QWidget(parent)
 {
-    auto *layout = new QHBoxLayout(this);
+    auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(4);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+
+    chipsContainer_ = new QWidget(this);
+    chipsContainer_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    chipsLayout_ = new TokenFlowLayout(chipsContainer_);
+    chipsContainer_->setVisible(false);
+    layout->addWidget(chipsContainer_);
 
     input_ = new QLineEdit(this);
     input_->setObjectName(QStringLiteral("tokenTagEditorInput"));
+    input_->setMinimumWidth(96);
+    input_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     input_->installEventFilter(this);
-    layout->addWidget(input_, 1);
+    layout->addWidget(input_);
 
     connect(input_, &QLineEdit::returnPressed, this, [this]() {
         commitInputTokens();
@@ -76,6 +202,7 @@ void BlockEditorTokenTagEditor::setTokens(const QStringList &tokens)
     tokens_ = normalized;
     rebuildChips();
     refreshInputPlaceholder();
+    updateGeometry();
 }
 
 QStringList BlockEditorTokenTagEditor::tokens() const
@@ -192,15 +319,14 @@ bool BlockEditorTokenTagEditor::commitInputTokens()
 
 void BlockEditorTokenTagEditor::rebuildChips()
 {
-    auto *layout = qobject_cast<QHBoxLayout *>(this->layout());
-    if (layout == nullptr || input_ == nullptr) {
+    if (chipsLayout_ == nullptr || input_ == nullptr) {
         return;
     }
     for (QToolButton *chip : chipButtons_) {
         if (chip == nullptr) {
             continue;
         }
-        layout->removeWidget(chip);
+        chipsLayout_->removeWidget(chip);
         chip->deleteLater();
     }
     chipButtons_.clear();
@@ -208,10 +334,22 @@ void BlockEditorTokenTagEditor::rebuildChips()
     for (int index = 0; index < tokens_.size(); ++index) {
         const QString token = tokens_.at(index);
         auto *chip = new QToolButton(this);
-        chip->setText(QStringLiteral("%1  ✕").arg(token));
+        chip->setObjectName(QStringLiteral("tokenTagEditorChip"));
+        chip->setText(QStringLiteral("%1  ×").arg(token));
         chip->setProperty("token_index", index);
-        chip->setAutoRaise(true);
+        chip->setAutoRaise(false);
         chip->setFocusPolicy(Qt::StrongFocus);
+        chip->setStyleSheet(QStringLiteral(
+            "QToolButton#tokenTagEditorChip {"
+            " border: 1px solid palette(mid);"
+            " border-radius: 10px;"
+            " padding: 1px 8px;"
+            " background: palette(button);"
+            "}"
+            "QToolButton#tokenTagEditorChip:hover {"
+            " background: palette(light);"
+            "}"
+        ));
         connect(chip, &QToolButton::clicked, this, [this, chip]() {
             const int tokenIndex = chip->property("token_index").toInt();
             if (tokenIndex < 0 || tokenIndex >= tokens_.size()) {
@@ -229,9 +367,14 @@ void BlockEditorTokenTagEditor::rebuildChips()
                 onFocusContextChanged();
             }
         });
-        layout->insertWidget(layout->count() - 1, chip);
+        chipsLayout_->addWidget(chip);
         chipButtons_.append(chip);
     }
+    if (chipsContainer_ != nullptr) {
+        chipsContainer_->setVisible(!chipButtons_.isEmpty());
+        chipsContainer_->updateGeometry();
+    }
+    updateGeometry();
 }
 
 bool BlockEditorTokenTagEditor::eventFilter(QObject *watched, QEvent *event)
@@ -261,16 +404,13 @@ bool BlockEditorTokenTagEditor::eventFilter(QObject *watched, QEvent *event)
             if (commitInputTokens()) {
                 return true;
             }
-        } else if (keyEvent->key() == Qt::Key_Backspace && input_->text().isEmpty() && !tokens_.isEmpty()) {
-            tokens_.removeLast();
-            rebuildChips();
-            refreshInputPlaceholder();
-            if (onTokensChanged) {
-                onTokensChanged();
-            }
-            return true;
         }
     } else if (event->type() == QEvent::FocusIn) {
+        if (onFocusContextChanged) {
+            onFocusContextChanged();
+        }
+    } else if (event->type() == QEvent::FocusOut) {
+        commitInputTokens();
         if (onFocusContextChanged) {
             onFocusContextChanged();
         }

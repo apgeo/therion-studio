@@ -50,8 +50,7 @@ struct BlockEditorSelectionDetailsContext
     QWidget *optionArgsPanel = nullptr;
     QPushButton *addOptionButton = nullptr;
     QPushButton *removeOptionButton = nullptr;
-    QPushButton *applyButton = nullptr;
-    QPushButton *legacyConfigureButton = nullptr;
+    QPushButton *dataRowsButton = nullptr;
     QTextBrowser *helpBrowser = nullptr;
     const TextEditorCommandMetadata *commandMetadata = nullptr;
     std::function<bool(QStringList *)> loadNormalizedLines;

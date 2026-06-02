@@ -30,6 +30,7 @@ struct BlockEditorOptionArgsContext
     std::function<QString()> selectedKind;
     std::function<QString(const QString &)> normalizeDirectiveToken;
     std::function<void()> refreshApplyState;
+    std::function<void()> applyChanges;
     std::function<void()> updateHelpForCurrentFocus;
     std::function<QString(const char *)> translate;
 };

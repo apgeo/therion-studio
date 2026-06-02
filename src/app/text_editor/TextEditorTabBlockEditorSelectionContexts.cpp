@@ -41,8 +41,7 @@ BlockEditorSelectionDetailsContext TextEditorTab::blockEditorSelectionDetailsCon
     context.optionArgsPanel = blockDetailsOptionArgsPanel_;
     context.addOptionButton = blockDetailsAddOptionButton_;
     context.removeOptionButton = blockDetailsRemoveOptionButton_;
-    context.applyButton = blockDetailsApplyButton_;
-    context.legacyConfigureButton = blockDetailsLegacyConfigureButton_;
+    context.dataRowsButton = blockDetailsDataRowsButton_;
     context.helpBrowser = blockDetailsHelpBrowser_;
     context.commandMetadata = &commandMetadata_;
     context.loadNormalizedLines = [this](QStringList *lines) {
@@ -137,8 +136,6 @@ BlockEditorDetailsPaneContext TextEditorTab::blockEditorDetailsPaneContext()
     context.optionArgsPanel = blockDetailsOptionArgsPanel_;
     context.addOptionButton = blockDetailsAddOptionButton_;
     context.removeOptionButton = blockDetailsRemoveOptionButton_;
-    context.applyButton = blockDetailsApplyButton_;
-    context.legacyConfigureButton = blockDetailsLegacyConfigureButton_;
     context.helpBrowser = blockDetailsHelpBrowser_;
     context.resetDetailsState = [this](bool teardownOnly) {
         blockDetailsMode_ = BlockDetailsMode::None;
@@ -188,8 +185,6 @@ BlockEditorToolboxDetailsContext TextEditorTab::blockEditorToolboxDetailsContext
     context.removeOptionButton = blockDetailsRemoveOptionButton_;
     context.optionArgsLabel = blockDetailsOptionArgsLabel_;
     context.optionArgsPanel = blockDetailsOptionArgsPanel_;
-    context.legacyConfigureButton = blockDetailsLegacyConfigureButton_;
-    context.applyButton = blockDetailsApplyButton_;
     context.helpBrowser = blockDetailsHelpBrowser_;
     context.commandMetadata = &commandMetadata_;
     context.normalizeDirectiveToken = [this](const QString &directive) {

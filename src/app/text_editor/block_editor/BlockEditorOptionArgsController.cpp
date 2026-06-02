@@ -222,6 +222,11 @@ void BlockEditorOptionArgsController::refreshOptionArgumentEditors()
         QObject::connect(edit, &QLineEdit::selectionChanged, context_.signalContext, [this]() {
             context_.updateHelpForCurrentFocus();
         });
+        QObject::connect(edit, &QLineEdit::editingFinished, context_.signalContext, [this]() {
+            if (!*context_.optionArgsSyncing && context_.applyChanges) {
+                context_.applyChanges();
+            }
+        });
     }
     *context_.optionArgsSyncing = false;
 

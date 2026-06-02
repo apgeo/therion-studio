@@ -839,10 +839,6 @@
         <translation>%1 %</translation>
     </message>
     <message>
-        <source>Encoding: %1</source>
-        <translation type="vanished">Kódovanie: %1</translation>
-    </message>
-    <message>
         <location filename="../src/app/MainWindowStatusUi.cpp" line="106"/>
         <source>Document encoding</source>
         <translation>Kódovanie dokumentu</translation>
@@ -1316,10 +1312,6 @@
         <source>Failed to load `%1`.</source>
         <translation>Nepodarilo sa načítať `%1`.</translation>
     </message>
-    <message>
-        <source>Source: %1</source>
-        <translation type="vanished">Zdroj: %1</translation>
-    </message>
 </context>
 <context>
     <name>MainWindowHelpDialog</name>
@@ -1439,10 +1431,6 @@ Očakávané súbory sú `docs/USER_MANUAL.&lt;language&gt;.md` alebo `docs/USER
         <translation>Aktuálny dokument nemožno uložiť.</translation>
     </message>
     <message>
-        <source>Station Point</source>
-        <translation type="vanished">Bod stanice</translation>
-    </message>
-    <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorDetachedPaneWindow.cpp" line="91"/>
         <location filename="../src/app/text_editor/map_editor/MapEditorSceneItems.cpp" line="751"/>
         <location filename="../src/app/text_editor/map_editor/MapEditorSceneItems.cpp" line="758"/>
@@ -1489,18 +1477,6 @@ Očakávané súbory sú `docs/USER_MANUAL.&lt;language&gt;.md` alebo `docs/USER
         <location filename="../src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp" line="1818"/>
         <source>Survey</source>
         <translation>Survey</translation>
-    </message>
-    <message>
-        <source>Centreline</source>
-        <translation type="vanished">Meračská os</translation>
-    </message>
-    <message>
-        <source>%1 structure item(s) across %2 survey root(s): %3 survey, %4 centreline, %5 map, %6 scrap, %7 station, %8 point, %9 line, %10 area</source>
-        <translation type="vanished">%1 položiek štruktúry v %2 koreňoch survey: %3 survey, %4 meračská os, %5 mapa, %6 scrap, %7 stanica, %8 bod, %9 línia, %10 plocha</translation>
-    </message>
-    <message>
-        <source>Structure items: %1; survey roots: %2; surveys: %3; centrelines: %4; maps: %5; scraps: %6; stations: %7; points: %8; lines: %9; areas: %10</source>
-        <translation type="vanished">Položky štruktúry: %1; korene survey: %2; survey: %3; meračské osi: %4; mapy: %5; scrappy: %6; stanice: %7; body: %8; línie: %9; plochy: %10</translation>
     </message>
     <message>
         <location filename="../src/app/MainWindowStructureBrowser.cpp" line="88"/>
@@ -1819,14 +1795,6 @@ Line-point rows: %1</source>
     </message>
 </context>
 <context>
-    <name>TherionStudio::BlockEditorApplyExecutor</name>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorApplyExecutor.cpp" line="39"/>
-        <source>Configure Block</source>
-        <translation>Nastaviť blok</translation>
-    </message>
-</context>
-<context>
     <name>TherionStudio::BlockEditorCanvasRebuildController</name>
     <message>
         <location filename="../src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.cpp" line="85"/>
@@ -1840,75 +1808,16 @@ Line-point rows: %1</source>
     </message>
 </context>
 <context>
-    <name>TherionStudio::BlockEditorCommandOptionsDialog</name>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp" line="272"/>
-        <source>Configure %1</source>
-        <translation>Nastaviť %1</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp" line="280"/>
-        <source>Options</source>
-        <translation>Voľby</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp" line="286"/>
-        <source>Add New Option</source>
-        <translation>Pridať novú voľbu</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp" line="287"/>
-        <source>Remove Option</source>
-        <translation>Odstrániť voľbu</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp" line="297"/>
-        <source>Option</source>
-        <translation>Voľba</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp" line="297"/>
-        <source>Value</source>
-        <translation>Hodnota</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp" line="329"/>
-        <source>Contextual Help</source>
-        <translation>Kontextová pomoc</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp" line="457"/>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp" line="486"/>
-        <source>Configure Block</source>
-        <translation>Nastaviť blok</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp" line="458"/>
-        <source>Attribute `%1` cannot be empty.</source>
-        <translation>Atribút `%1` nesmie byť prázdny.</translation>
-    </message>
-</context>
-<context>
     <name>TherionStudio::BlockEditorConfigureController</name>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorConfigureController.cpp" line="116"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorConfigureController.cpp" line="72"/>
         <source>Schema no longer matches</source>
         <translation>Schéma už nezodpovedá</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorConfigureController.cpp" line="117"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorConfigureController.cpp" line="73"/>
         <source>Some existing data rows did not match the current columns schema and were preserved as best effort. Please review rows in Raw mode if needed.</source>
         <translation>Niektoré existujúce dátové riadky nezodpovedali aktuálnej schéme stĺpcov a boli zachované podľa možností. V prípade potreby ich skontrolujte v režime Zdroj.</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorConfigureController.cpp" line="144"/>
-        <source>Configure Block</source>
-        <translation>Nastaviť blok</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorConfigureController.cpp" line="145"/>
-        <source>Configuration for `%1` is not implemented yet.</source>
-        <translation>Konfigurácia pre `%1` zatiaľ nie je implementovaná.</translation>
     </message>
 </context>
 <context>
@@ -2076,14 +1985,6 @@ Line-point rows: %1</source>
         <translation>&lt;p&gt;Vyberte parameter bloku na zobrazenie kontextovej pomoci.&lt;/p&gt;</translation>
     </message>
     <message>
-        <source>&lt;p&gt;&lt;b&gt;Object Reference&lt;/b&gt;&lt;/p&gt;&lt;p&gt;References an existing scrap or map from inside a &lt;code&gt;map&lt;/code&gt; block. Edit the target to the referenced object name. Unresolved names are preserved so incomplete maps stay round-trip safe.&lt;/p&gt;</source>
-        <translation type="vanished">&lt;p&gt;&lt;b&gt;Odkaz na objekt&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Odkazuje na existujúci scrap alebo mapu vnútri bloku &lt;code&gt;map&lt;/code&gt;. Upravte cieľ na názov odkazovaného objektu. Nerozpoznané názvy sa zachovajú, aby neúplné mapy zostali bezpečné pre opakované uloženie.&lt;/p&gt;</translation>
-    </message>
-    <message>
-        <source>&lt;p&gt;&lt;b&gt;Unrecognized line&lt;/b&gt;&lt;/p&gt;&lt;p&gt;This source line could not be mapped to a known Block-editor command in the current context.&lt;/p&gt;&lt;p&gt;Edit the full raw line directly. The source text is preserved exactly as entered.&lt;/p&gt;</source>
-        <translation type="vanished">&lt;p&gt;&lt;b&gt;Nerozpoznaný riadok&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Tento zdrojový riadok nemožno v aktuálnom kontexte priradiť k známemu príkazu blokového editora.&lt;/p&gt;&lt;p&gt;Upravte celý zdrojový riadok priamo. Zdrojový text zostane zachovaný presne tak, ako bol zadaný.&lt;/p&gt;</translation>
-    </message>
-    <message>
         <location filename="../src/app/text_editor/block_editor/BlockEditorDetailsHelpController.cpp" line="105"/>
         <source>Object Reference</source>
         <translation>Odkaz na objekt</translation>
@@ -2152,7 +2053,7 @@ Line-point rows: %1</source>
         <translation>Komentár</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorDetailsPaneController.cpp" line="106"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorDetailsPaneController.cpp" line="99"/>
         <source>&lt;p&gt;Select a block parameter to see contextual help.&lt;/p&gt;</source>
         <translation>&lt;p&gt;Vyberte parameter bloku na zobrazenie kontextovej pomoci.&lt;/p&gt;</translation>
     </message>
@@ -2304,115 +2205,76 @@ Line-point rows: %1</source>
         <translation>Príkaz: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="223"/>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="428"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="220"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="384"/>
         <source>Comment</source>
         <translation>Komentár</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="243"/>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="340"/>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="342"/>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="460"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="240"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="296"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="298"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="416"/>
         <source>optional</source>
         <translation>voliteľné</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="274"/>
-        <source>Legacy Configure...</source>
-        <translation>Staršie nastavenie...</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="278"/>
-        <source>Edit Data Rows...</source>
-        <translation>Upraviť dátové riadky...</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="300"/>
-        <source>&lt;p&gt;This block currently uses legacy dialog-based configuration.&lt;/p&gt;</source>
-        <translation>&lt;p&gt;Tento blok aktuálne používa staršiu konfiguráciu cez dialóg.&lt;/p&gt;</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="326"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="282"/>
         <source>ID</source>
         <translation>ID</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="332"/>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="439"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="288"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="395"/>
         <source>Value</source>
         <translation>Hodnota</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="339"/>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="478"/>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="530"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="295"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="434"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="486"/>
         <source>required</source>
         <translation>povinné</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="348"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="304"/>
         <source>Extra Arguments (Advanced)</source>
         <translation>Ďalšie argumenty (pokročilé)</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="425"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="381"/>
         <source>Raw line</source>
         <translation>Zdrojový riadok</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="431"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="387"/>
         <source>Target</source>
         <translation>Cieľ</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="435"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="391"/>
         <source>Person</source>
         <translation>Osoba</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="449"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="405"/>
         <source>Value 2</source>
         <translation>Hodnota 2</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="508"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="464"/>
         <source>Style</source>
         <translation>Štýl</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="511"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="467"/>
         <source>Readings Order</source>
         <translation>Poradie meraní</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="525"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorSelectionDetailsController.cpp" line="481"/>
         <source>Type token and press Enter/Space</source>
         <translation>Zadajte token a stlačte Enter alebo medzerník</translation>
-    </message>
-</context>
-<context>
-    <name>TherionStudio::BlockEditorSingleValueCommandDialog</name>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.cpp" line="54"/>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.cpp" line="108"/>
-        <source>Configure Block</source>
-        <translation>Nastaviť blok</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.cpp" line="63"/>
-        <source>Value</source>
-        <translation>Hodnota</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.cpp" line="78"/>
-        <source>Contextual Help</source>
-        <translation>Kontextová pomoc</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.cpp" line="108"/>
-        <source>Value cannot be empty.</source>
-        <translation>Hodnota nesmie byť prázdna.</translation>
     </message>
 </context>
 <context>
@@ -2491,12 +2353,12 @@ Line-point rows: %1</source>
         <translation>Príkaz: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp" line="119"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp" line="112"/>
         <source>&lt;p&gt;&lt;b&gt;Object Reference&lt;/b&gt;&lt;/p&gt;&lt;p&gt;References an existing scrap or map from inside a &lt;code&gt;map&lt;/code&gt; block. The block serializes as a single map body line, for example &lt;code&gt;scrap-a&lt;/code&gt;.&lt;/p&gt;</source>
         <translation>&lt;p&gt;&lt;b&gt;Odkaz na objekt&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Odkazuje na existujúci scrap alebo mapu vnútri bloku &lt;code&gt;map&lt;/code&gt;. Blok sa serializuje ako jeden riadok tela mapy, napríklad &lt;code&gt;scrap-a&lt;/code&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp" line="128"/>
+        <location filename="../src/app/text_editor/block_editor/BlockEditorToolboxDetailsController.cpp" line="121"/>
         <source>No summary is available for this command.</source>
         <translation>Pre tento príkaz nie je dostupný žiadny súhrn.</translation>
     </message>
@@ -2549,8 +2411,8 @@ Line-point rows: %1</source>
 <context>
     <name>TherionStudio::ContextHelpInspector</name>
     <message>
-        <location filename="../src/app/text_editor/ContextHelpInspector.cpp" line="24"/>
-        <location filename="../src/app/text_editor/ContextHelpInspector.cpp" line="57"/>
+        <location filename="../src/app/text_editor/ContextHelpInspector.cpp" line="25"/>
+        <location filename="../src/app/text_editor/ContextHelpInspector.cpp" line="76"/>
         <source>Context Help</source>
         <translation>Kontextová pomoc</translation>
     </message>
@@ -2634,14 +2496,6 @@ Line-point rows: %1</source>
         <location filename="../src/app/text_editor/DocumentFileInspector.cpp" line="185"/>
         <source>This file is opened as %1. Saving keeps this encoding unless you convert it to UTF-8.</source>
         <translation>Súbor je otvorený ako %1. Uloženie zachová toto kódovanie, ak ho neprevediete do UTF-8.</translation>
-    </message>
-    <message>
-        <source>Convert this file to UTF-8</source>
-        <translation type="vanished">Previesť tento súbor do UTF-8</translation>
-    </message>
-    <message>
-        <source>This file is already UTF-8</source>
-        <translation type="vanished">Tento súbor už je UTF-8</translation>
     </message>
 </context>
 <context>
@@ -4195,10 +4049,6 @@ subtype blocks</source>
         <translation>Odstrániť objekt</translation>
     </message>
     <message>
-        <source>File</source>
-        <translation type="vanished">Súbor</translation>
-    </message>
-    <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="64"/>
         <source>Selection</source>
         <translation>Výber</translation>
@@ -4569,10 +4419,6 @@ subtype blocks</source>
         <translation>Kontextová pomoc</translation>
     </message>
     <message>
-        <source>Contextual Help</source>
-        <translation type="vanished">Kontextová pomoc</translation>
-    </message>
-    <message>
         <location filename="../src/app/text_editor/TextEditorContextHelpController.cpp" line="125"/>
         <source>&lt;p&gt;Select a Therion command or item to see contextual help.&lt;/p&gt;</source>
         <translation>&lt;p&gt;Vyberte príkaz alebo položku Therion na zobrazenie kontextovej pomoci.&lt;/p&gt;</translation>
@@ -4711,7 +4557,7 @@ subtype blocks</source>
     <message>
         <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="169"/>
         <source>Details</source>
-        <translation type="unfinished"></translation>
+        <translation>Podrobnosti</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="186"/>
@@ -4779,27 +4625,9 @@ subtype blocks</source>
         <translation>Parametre vybranej voľby</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="305"/>
-        <source>Legacy Configure...</source>
-        <translation>Staršie nastavenie...</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="308"/>
-        <source>Apply</source>
-        <translation>Použiť</translation>
-    </message>
-    <message>
-        <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="316"/>
-        <source>Actions</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Contextual Help</source>
-        <translation type="vanished">Kontextová pomoc</translation>
-    </message>
-    <message>
-        <source>File</source>
-        <translation type="vanished">Súbor</translation>
+        <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="303"/>
+        <source>Edit Data Rows...</source>
+        <translation>Upraviť dátové riadky...</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/TextEditorTabBootstrap.cpp" line="87"/>
@@ -4833,8 +4661,8 @@ subtype blocks</source>
         <translation>Inšpektor bloku</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="323"/>
-        <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="326"/>
+        <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="316"/>
+        <location filename="../src/app/text_editor/TextEditorTabBlockEditorPanel.cpp" line="319"/>
         <location filename="../src/app/text_editor/TextEditorTabDocumentModeDelegates.cpp" line="91"/>
         <source>Context Help</source>
         <translation>Kontextová pomoc</translation>
@@ -5199,10 +5027,6 @@ subtype blocks</source>
         <location filename="../src/core/TherionDocumentEditor.cpp" line="2427"/>
         <source>Line rewrite is not supported when start line contains inline coordinates.</source>
         <translation>Prepis línie nie je podporovaný, keď počiatočný riadok obsahuje vložené súradnice.</translation>
-    </message>
-    <message>
-        <source>Line rewrite is only supported for coordinate-only line blocks.</source>
-        <translation type="vanished">Prepis línie je podporovaný iba pre bloky `line` obsahujúce iba súradnice.</translation>
     </message>
 </context>
 </TS>

@@ -95,13 +95,6 @@ void BlockEditorDetailsPaneController::clearDetailsPane()
         context_.removeOptionButton->setEnabled(false);
         context_.removeOptionButton->setVisible(true);
     }
-    if (context_.applyButton != nullptr) {
-        context_.applyButton->setEnabled(false);
-    }
-    if (context_.legacyConfigureButton != nullptr) {
-        context_.legacyConfigureButton->setEnabled(false);
-        context_.legacyConfigureButton->setVisible(false);
-    }
     if (context_.helpBrowser != nullptr) {
         context_.helpBrowser->setHtml(tr("<p>Select a block parameter to see contextual help.</p>"));
     }

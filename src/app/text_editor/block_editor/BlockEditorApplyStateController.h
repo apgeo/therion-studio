@@ -7,7 +7,6 @@
 #include <QString>
 
 class QLabel;
-class QPushButton;
 
 namespace TherionStudio
 {
@@ -15,7 +14,6 @@ struct BlockEditorApplyStateContext
 {
     bool *tearingDown = nullptr;
     bool *detailsPopulating = nullptr;
-    QPushButton **applyButton = nullptr;
     QLabel **statusLabel = nullptr;
     int *selectedLineNumber = nullptr;
     QString *baseStatusText = nullptr;
@@ -31,7 +29,6 @@ public:
     void refreshApplyState();
 
 private:
-    QPushButton *applyButton() const;
     QLabel *statusLabel() const;
 
     BlockEditorApplyStateContext context_;

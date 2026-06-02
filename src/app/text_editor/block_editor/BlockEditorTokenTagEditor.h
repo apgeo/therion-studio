@@ -8,6 +8,7 @@
 #include <functional>
 
 class QEvent;
+class QLayout;
 class QLineEdit;
 class QToolButton;
 
@@ -37,6 +38,8 @@ private:
     void rebuildChips();
     bool eventFilter(QObject *watched, QEvent *event) override;
 
+    QWidget *chipsContainer_ = nullptr;
+    QLayout *chipsLayout_ = nullptr;
     QLineEdit *input_ = nullptr;
     QString placeholderText_;
     QStringList suggestions_;

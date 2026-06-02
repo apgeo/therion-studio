@@ -300,14 +300,10 @@ set(THERION_TEXT_EDITOR_SHARED_SOURCES
     src/app/text_editor/block_editor/BlockEditorDetailsSupport.h
     src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
     src/app/text_editor/block_editor/BlockEditorConfigureController.h
-    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.cpp
-    src/app/text_editor/block_editor/BlockEditorCommandOptionsDialog.h
     src/app/text_editor/block_editor/BlockEditorDataBlockDialog.cpp
     src/app/text_editor/block_editor/BlockEditorDataBlockDialog.h
     src/app/text_editor/block_editor/BlockEditorDeleteExecutor.cpp
     src/app/text_editor/block_editor/BlockEditorDeleteExecutor.h
-    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.cpp
-    src/app/text_editor/block_editor/BlockEditorSingleValueCommandDialog.h
     src/app/text_editor/block_editor/BlockEditorSourceText.cpp
     src/app/text_editor/block_editor/BlockEditorSourceText.h
     src/app/text_editor/block_editor/BlockEditorSourceController.cpp

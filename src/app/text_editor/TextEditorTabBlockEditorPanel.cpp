@@ -31,6 +31,7 @@
 #include <QPointer>
 #include <QPushButton>
 #include <QRectF>
+#include <QSignalBlocker>
 #include <QSplitter>
 #include <QStackedWidget>
 #include <QTableWidget>
@@ -170,6 +171,7 @@ void TextEditorTab::buildBlockEditorPanel()
     auto *detailsTabLayout = qobject_cast<QVBoxLayout *>(detailsTabPanel->layout());
 
     blockDetailsEditPanel_ = new QWidget(detailsTabPanel);
+    blockDetailsEditPanel_->setProperty("preserveNativeChildControls", true);
     syncPanelSurfaceToBaseTone(blockDetailsEditPanel_);
     auto *blockDetailsEditLayout = new QVBoxLayout(blockDetailsEditPanel_);
     blockDetailsEditLayout->setContentsMargins(0, 0, 0, 0);
@@ -297,26 +299,19 @@ void TextEditorTab::buildBlockEditorPanel()
     blockDetailsOptionArgsPanel_->setVisible(false);
     blockDetailsSectionLayout->addWidget(blockDetailsOptionArgsPanel_);
 
-    blockDetailsEditLayout->addWidget(blockDetailsSection);
-
     auto *blockDetailsButtonsRow = new QHBoxLayout;
     blockDetailsButtonsRow->setContentsMargins(0, 0, 0, 0);
     blockDetailsButtonsRow->setSpacing(kPanelSpacing);
-    blockDetailsLegacyConfigureButton_ = new QPushButton(tr("Legacy Configure..."), blockDetailsEditPanel_);
-    blockDetailsLegacyConfigureButton_->setObjectName(QStringLiteral("blockDetailsLegacyButton"));
-    blockDetailsLegacyConfigureButton_->setAutoDefault(false);
-    blockDetailsApplyButton_ = new QPushButton(tr("Apply"), blockDetailsEditPanel_);
-    blockDetailsApplyButton_->setObjectName(QStringLiteral("blockDetailsApplyButton"));
-    blockDetailsApplyButton_->setAutoDefault(false);
+    blockDetailsDataRowsButton_ = new QPushButton(tr("Edit Data Rows..."), blockDetailsSection);
+    blockDetailsDataRowsButton_->setObjectName(QStringLiteral("blockDetailsDataRowsButton"));
+    blockDetailsDataRowsButton_->setAutoDefault(false);
+    blockDetailsDataRowsButton_->setVisible(false);
+    blockDetailsDataRowsButton_->setEnabled(false);
     blockDetailsButtonsRow->addStretch(1);
-    blockDetailsButtonsRow->addWidget(blockDetailsLegacyConfigureButton_);
-    blockDetailsButtonsRow->addWidget(blockDetailsApplyButton_);
-    QVBoxLayout *blockActionsSectionLayout = nullptr;
-    auto *blockActionsSection = createDetailsSection(blockDetailsEditPanel_,
-                                                     tr("Actions"),
-                                                     &blockActionsSectionLayout);
-    blockActionsSectionLayout->addLayout(blockDetailsButtonsRow);
-    blockDetailsEditLayout->addWidget(blockActionsSection);
+    blockDetailsButtonsRow->addWidget(blockDetailsDataRowsButton_);
+    blockDetailsSectionLayout->addLayout(blockDetailsButtonsRow);
+
+    blockDetailsEditLayout->addWidget(blockDetailsSection);
 
     detailsTabLayout->addWidget(blockDetailsEditPanel_);
     detailsTabLayout->addStretch(1);
@@ -394,6 +389,7 @@ void TextEditorTab::buildBlockEditorPanel()
             refreshBlockDetailsOptionArgumentEditors();
             updateBlockDetailsHelpForCurrentFocus();
             refreshBlockDetailsApplyState();
+            applyBlockDetailsChanges();
         }
     });
     connect(blockDetailsIdEdit_, &QLineEdit::selectionChanged, this, [this]() {
@@ -403,12 +399,18 @@ void TextEditorTab::buildBlockEditorPanel()
         updateBlockDetailsHelpForCurrentFocus();
         refreshBlockDetailsApplyState();
     });
+    connect(blockDetailsIdEdit_, &QLineEdit::editingFinished, this, [this]() {
+        applyBlockDetailsChanges();
+    });
     connect(blockDetailsAdditionalPositionalEdit_, &QLineEdit::selectionChanged, this, [this]() {
         updateBlockDetailsHelpForCurrentFocus();
     });
     connect(blockDetailsAdditionalPositionalEdit_, &QLineEdit::textChanged, this, [this](const QString &) {
         updateBlockDetailsHelpForCurrentFocus();
         refreshBlockDetailsApplyState();
+    });
+    connect(blockDetailsAdditionalPositionalEdit_, &QLineEdit::editingFinished, this, [this]() {
+        applyBlockDetailsChanges();
     });
     if (auto *readingsTagEditor = blockEditorTokenTagEditor(blockDetailsReadingsTagEditor_); readingsTagEditor != nullptr) {
         readingsTagEditor->onTokensChanged = [this, readingsTagEditor]() {
@@ -417,6 +419,7 @@ void TextEditorTab::buildBlockEditorPanel()
             }
             updateBlockDetailsHelpForCurrentFocus();
             refreshBlockDetailsApplyState();
+            applyBlockDetailsChanges();
         };
         readingsTagEditor->onFocusContextChanged = [this]() {
             updateBlockDetailsHelpForCurrentFocus();
@@ -429,6 +432,9 @@ void TextEditorTab::buildBlockEditorPanel()
         updateBlockDetailsHelpForCurrentFocus();
         refreshBlockDetailsApplyState();
     });
+    connect(blockDetailsCommentEdit_, &QLineEdit::editingFinished, this, [this]() {
+        applyBlockDetailsChanges();
+    });
     connect(blockDetailsAddOptionButton_, &QPushButton::clicked, this, [this]() {
         if (blockDetailsOptionsTable_ == nullptr
             || blockDetailsPopulating_
@@ -436,9 +442,12 @@ void TextEditorTab::buildBlockEditorPanel()
             return;
         }
         const int row = blockDetailsOptionsTable_->rowCount();
-        blockDetailsOptionsTable_->insertRow(row);
-        blockDetailsOptionsTable_->setItem(row, 0, new QTableWidgetItem(QString()));
-        blockDetailsOptionsTable_->setItem(row, 1, new QTableWidgetItem(QString()));
+        {
+            const QSignalBlocker blocker(blockDetailsOptionsTable_);
+            blockDetailsOptionsTable_->insertRow(row);
+            blockDetailsOptionsTable_->setItem(row, 0, new QTableWidgetItem(QString()));
+            blockDetailsOptionsTable_->setItem(row, 1, new QTableWidgetItem(QString()));
+        }
         blockDetailsOptionsTable_->setCurrentCell(row, 0);
         blockDetailsOptionsTable_->editItem(blockDetailsOptionsTable_->item(row, 0));
         if (blockDetailsRemoveOptionButton_ != nullptr) {
@@ -465,9 +474,9 @@ void TextEditorTab::buildBlockEditorPanel()
         refreshBlockDetailsOptionArgumentEditors();
         updateBlockDetailsHelpForCurrentFocus();
         refreshBlockDetailsApplyState();
+        applyBlockDetailsChanges();
     });
-    connect(blockDetailsApplyButton_, &QPushButton::clicked, this, &TextEditorTab::applyBlockDetailsChanges);
-    connect(blockDetailsLegacyConfigureButton_, &QPushButton::clicked, this, [this]() {
+    connect(blockDetailsDataRowsButton_, &QPushButton::clicked, this, [this]() {
         if (blockDetailsSelectedLineNumber_ <= 0 || blockDetailsSelectedKind_.isEmpty()) {
             return;
         }

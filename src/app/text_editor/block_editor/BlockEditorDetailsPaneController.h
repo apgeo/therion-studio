@@ -31,8 +31,6 @@ struct BlockEditorDetailsPaneContext
     QWidget *optionArgsPanel = nullptr;
     QPushButton *addOptionButton = nullptr;
     QPushButton *removeOptionButton = nullptr;
-    QPushButton *applyButton = nullptr;
-    QPushButton *legacyConfigureButton = nullptr;
     QTextBrowser *helpBrowser = nullptr;
     std::function<void(bool)> resetDetailsState;
     std::function<void(bool)> setDetailsPopulating;

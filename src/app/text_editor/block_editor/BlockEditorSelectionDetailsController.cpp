@@ -187,18 +187,15 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
             context_.removeOptionButton->setEnabled(false);
             context_.removeOptionButton->setVisible(false);
         }
-        if (context_.legacyConfigureButton != nullptr) {
-            context_.legacyConfigureButton->setEnabled(false);
-            context_.legacyConfigureButton->setVisible(false);
+        if (context_.dataRowsButton != nullptr) {
+            context_.dataRowsButton->setEnabled(false);
+            context_.dataRowsButton->setVisible(false);
         }
         if (context_.optionArgsLabel != nullptr) {
             context_.optionArgsLabel->setVisible(false);
         }
         if (context_.optionArgsPanel != nullptr) {
             context_.optionArgsPanel->setVisible(false);
-        }
-        if (context_.applyButton != nullptr) {
-            context_.applyButton->setEnabled(false);
         }
         *context_.detailsPopulating = false;
         if (context_.refreshOptionArgumentEditors) {
@@ -265,50 +262,9 @@ bool BlockEditorSelectionDetailsController::loadSelectionDetails(const QString &
         context_.removeOptionButton->setEnabled(false);
         context_.removeOptionButton->setVisible(false);
     }
-    if (context_.applyButton != nullptr) {
-        context_.applyButton->setEnabled(false);
-    }
-
-    if (context_.legacyConfigureButton != nullptr) {
-        if (!supported) {
-            context_.legacyConfigureButton->setText(tr("Legacy Configure..."));
-            context_.legacyConfigureButton->setVisible(true);
-            context_.legacyConfigureButton->setEnabled(true);
-        } else if (dataHeaderMode) {
-            context_.legacyConfigureButton->setText(tr("Edit Data Rows..."));
-            context_.legacyConfigureButton->setVisible(true);
-            context_.legacyConfigureButton->setEnabled(true);
-        } else {
-            context_.legacyConfigureButton->setVisible(false);
-            context_.legacyConfigureButton->setEnabled(false);
-        }
-    }
-
-    if (!supported) {
-        if (context_.idEdit != nullptr) {
-            context_.idEdit->clear();
-            context_.idEdit->setEnabled(false);
-            context_.idEdit->setPlaceholderText(QString());
-        }
-        if (context_.additionalPositionalEdit != nullptr) {
-            context_.additionalPositionalEdit->clear();
-            context_.additionalPositionalEdit->setEnabled(false);
-        }
-        context_.setReadingsTagEditor(QString(), {}, {});
-        if (context_.helpBrowser != nullptr) {
-            const TherionHelpEntry entry = (*context_.commandMetadata).helpEntries.value(normalizedKind);
-            QString html = tr("<p>This block currently uses legacy dialog-based configuration.</p>");
-            html += ContextHelpController::renderHelpHtml(normalizedKind,
-                                                          entry.summary,
-                                                          entry.syntax,
-                                                          entry.arguments,
-                                                          entry.acceptedValues,
-                                                          entry.options,
-                                                          false);
-            context_.helpBrowser->setHtml(html);
-        }
-        *context_.detailsPopulating = false;
-        return false;
+    if (context_.dataRowsButton != nullptr) {
+        context_.dataRowsButton->setVisible(dataHeaderMode);
+        context_.dataRowsButton->setEnabled(dataHeaderMode);
     }
 
     if (structuredOptionsMode) {

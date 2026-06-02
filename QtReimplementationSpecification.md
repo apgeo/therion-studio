@@ -100,6 +100,8 @@ Structured block-canvas requirements:
 - directives that support both inline and block forms (for example `source`) shall open nested scope only in explicit block form; inline single-line form shall remain a leaf card.
 - in structured mode for `.th` and Therion config documents, an existing `encoding` directive shall be treated as a fixed document-root directive; opening a file or switching editor modes shall not auto-insert a missing `encoding ...` line or otherwise mutate source text, and an existing `encoding` card shall not be insertable from toolbox, movable, or deletable
 - Block Details for editable blocks shall expose an always-visible optional inline comment field that maps to end-of-line Therion comments and preserves comments on line rewrites.
+- Block Details shall auto-commit inline field and option edits on editing completion or focus-out; it shall not require or expose a separate `Apply` button.
+- Block Details shall expose only workflow-specific action buttons that cannot be represented as safe inline fields; for MVP this means `Edit Data Rows...` for `data` block body rows. The Blocks inspector shall not introduce a separate `Actions` section for these controls.
 - structured block cards should visually indicate presence of inline comment and expose the comment text on hover.
 - selecting or configuring a structure card shall mutate the underlying source text through the same safe-edit pipeline used by raw mode
 - when no canvas block is selected, the editable Block Details section shall be hidden and the third column shall show toolbox-command contextual preview only.
@@ -116,9 +118,11 @@ Structured block-canvas requirements:
 - data-block header editing in the Block Details pane should expose separate `style` and `readings order` fields and shall serialize them back as `data <style> <readings order>`
 - data-block `readings order` editing should use tokenized tag semantics (add token chips, remove individual chips) so completion accepts/replaces only the active token and preserves previously entered readings tokens
 - data-block `readings order` tag editing shall prevent duplicate chips and shall not double-insert a token when completion popup acceptance keys (`Enter`/`Tab`) are used
+- data-block `readings order` tag editing shall remain usable in narrow inspectors: existing tokens shall render as removable pill chips that wrap within the available field width, and the add-token input shall stay on a separate row after the chips instead of clipping horizontally
+- data-block `readings order` tag chips shall be removable only through their explicit remove control; pressing Backspace in an empty add-token input shall not remove an existing readings token
 - Block Details option editing should provide catalog-backed suggestions for option keys/values while remaining free-form to allow unknown but valid Therion options.
-- when catalog metadata defines explicit allowed values for an option, Block Details validation shall reject values outside that set before apply.
-- when catalog metadata defines fixed option value arity greater than one, Block Details shall present one parameter field per required value label and shall enforce exact value count validation before apply.
+- when catalog metadata defines explicit allowed values for an option, Block Details validation shall reject values outside that set before source rewrite.
+- when catalog metadata defines fixed option value arity greater than one, Block Details shall present one parameter field per required value label and shall enforce exact value count validation before source rewrite.
 - when a fixed-arity option is edited through parameter fields, serialization shall preserve Therion token boundaries (including quoting of values containing spaces) so round-tripped options remain arity-correct.
 - data-block configuration should render measurement rows in a table derived from the active `data ...` field definition so row editing follows the declared column schema
 - data-block row editor should not duplicate a second editable header/column-definition input; it should use the currently active `data ...` header as the single source of row-column schema
@@ -128,7 +132,7 @@ Structured block-canvas requirements:
 - data-block row editor should provide inline directive suggestions/templates in the `Directive` column to reduce typing errors
 - row-type-specific editability shall be enforced in the row editor (`Directive` locked for `data`/`comment` rows, measurement-value columns locked for `directive`/`comment` rows)
 - row editor should expose a row-type selector with explicit `Data` / `Directive` / `Comment` values
-- when existing row tokens no longer align with active data schema, row editor should present an explicit schema-mismatch warning before apply
+- when existing row tokens no longer align with active data schema, row editor should present an explicit schema-mismatch warning before committing row edits
 - data-block row editor should present data-field column labels in a consistent humanized form while preserving raw Therion token values during serialization
 - data-block table presentation should auto-size visible column widths from the active field definition and should provide enter-key row flow where pressing Enter in the last column advances to a new row at column one
 - data-block configuration should support mixed ordering of measurement and non-tabular directive rows (for example `extend ...`) in one structured row sequence without introducing one dedicated UI button per possible Therion command

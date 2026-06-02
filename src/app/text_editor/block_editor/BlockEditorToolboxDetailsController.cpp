@@ -107,13 +107,6 @@ void BlockEditorToolboxDetailsController::showToolboxCommandDetails(const QStrin
     if (context_.optionArgsPanel != nullptr) {
         context_.optionArgsPanel->setVisible(false);
     }
-    if (context_.legacyConfigureButton != nullptr) {
-        context_.legacyConfigureButton->setVisible(false);
-        context_.legacyConfigureButton->setEnabled(false);
-    }
-    if (context_.applyButton != nullptr) {
-        context_.applyButton->setEnabled(false);
-    }
     if (context_.helpBrowser != nullptr && context_.commandMetadata != nullptr) {
         if (mapReference) {
             context_.helpBrowser->setHtml(tr("<p><b>Object Reference</b></p>"

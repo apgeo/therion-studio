@@ -1,10 +1,8 @@
 #include "BlockEditorApplyExecutor.h"
 
-#include <QCoreApplication>
-
 #include "BlockEditorSourceText.h"
 
-#include <QMessageBox>
+#include <QLabel>
 
 #include <utility>
 
@@ -15,28 +13,28 @@ BlockEditorApplyExecutor::BlockEditorApplyExecutor(BlockEditorApplyExecutorConte
 {
 }
 
-QString BlockEditorApplyExecutor::tr(const char *text) const
-{
-    return QCoreApplication::translate("TherionStudio::BlockEditorApplyExecutor", text);
-}
-
 void BlockEditorApplyExecutor::applyChanges()
 {
     if (context_.tearingDown == nullptr
+        || context_.detailsPopulating == nullptr
         || context_.selectedLineNumber == nullptr
         || !context_.sourceContext
         || !context_.buildUpdatedLine
         || !context_.selectBlockInCanvasAndDetails
         || !context_.refreshApplyState
-        || (*context_.tearingDown)) {
+        || (*context_.tearingDown)
+        || (*context_.detailsPopulating)) {
         return;
     }
 
     QString updatedLine;
     QString validationError;
     if (!context_.buildUpdatedLine(&updatedLine, &validationError)) {
-        if (!validationError.isEmpty()) {
-            QMessageBox::warning(context_.dialogParent, tr("Configure Block"), validationError);
+        if (!validationError.isEmpty() && context_.statusLabel != nullptr) {
+            context_.statusLabel->setStyleSheet(QStringLiteral("color: #c0392b;"));
+            context_.statusLabel->setText(context_.baseStatusText != nullptr
+                                              ? QStringLiteral("%1 — %2").arg(*context_.baseStatusText, validationError)
+                                              : validationError);
         }
         return;
     }
@@ -45,6 +43,11 @@ void BlockEditorApplyExecutor::applyChanges()
     QStringList lines = source.normalizedLines();
     BlockEditorLogicalLine logicalLine;
     if (!blockEditorResolveLogicalLineAtLine(lines, *context_.selectedLineNumber, &logicalLine)) {
+        return;
+    }
+
+    if (updatedLine == logicalLine.text) {
+        context_.refreshApplyState();
         return;
     }
 

@@ -4,6 +4,8 @@
 #include <QLabel>
 #include <QScrollArea>
 #include <QSizePolicy>
+#include <QStyle>
+#include <QStyleOption>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -125,13 +127,19 @@ void InspectorPanel::updateLeftEdgeGeometry()
         return;
     }
 
-    int paneTop = 0;
+    QStyleOptionTabWidgetFrame option;
+    option.initFrom(tabs_);
+    option.lineWidth = tabs_->style()->pixelMetric(QStyle::PM_DefaultFrameWidth, nullptr, tabs_);
     if (QTabBar *tabBar = tabs_->tabBar(); tabBar != nullptr) {
-        paneTop = qMax(0, tabBar->geometry().bottom());
+        option.shape = tabBar->shape();
+        option.tabBarSize = tabBar->size();
+        option.selectedTabRect = tabBar->tabRect(tabBar->currentIndex());
     }
 
-    const int paneHeight = qMax(0, tabs_->height() - paneTop);
-    leftEdge_->setGeometry(0, paneTop, 1, paneHeight);
+    const QRect paneRect = tabs_->style()->subElementRect(QStyle::SE_TabWidgetTabPane, &option, tabs_);
+    const int paneTop = qMax(0, paneRect.top());
+    const int paneHeight = qMax(0, paneRect.height());
+    leftEdge_->setGeometry(paneRect.left(), paneTop, 1, paneHeight);
     leftEdge_->raise();
     leftEdge_->setVisible(paneHeight > 0);
 }

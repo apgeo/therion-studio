@@ -1,18 +1,14 @@
 #include "TherionXviParser.h"
 
+#include "TherionStringUtils.h"
+
 #include <QFile>
-#include <QRegularExpression>
 #include <QtMath>
 
 namespace TherionStudio
 {
 namespace
 {
-QStringList tokenizeWhitespace(const QString &text)
-{
-    return text.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
-}
-
 bool tryParseLeadingNumber(QString token, qreal *value)
 {
     if (value == nullptr) {

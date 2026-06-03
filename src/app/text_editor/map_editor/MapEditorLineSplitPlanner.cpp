@@ -1,6 +1,7 @@
 #include "MapEditorLineSplitPlanner.h"
 
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionStringUtils.h"
 
 #include <QCoreApplication>
 #include <QSet>
@@ -9,14 +10,6 @@ namespace TherionStudio
 {
 namespace
 {
-QStringList splitLinesNormalized(const QString &contents)
-{
-    QString normalized = contents;
-    normalized.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
-    normalized.replace(QLatin1Char('\r'), QLatin1Char('\n'));
-    return normalized.split(QLatin1Char('\n'));
-}
-
 QString lineEndingForText(const QString &contents)
 {
     return contents.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
@@ -246,7 +239,7 @@ MapEditorLineSplitPlan MapEditorLineSplitPlanner::planSplit(const QString &text,
         return plan;
     }
 
-    QStringList lines = splitLinesNormalized(text);
+    QStringList lines = splitLinesNormalizingLineEndings(text);
     if (lineNumber > lines.size()) {
         plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorLineSplitPlanner",
                                                         "Selected source line no longer exists.");

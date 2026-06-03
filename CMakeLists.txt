@@ -81,6 +81,7 @@ set(THERION_CORE_SOURCES
     src/core/TherionXviParser.cpp
     src/core/TherionXviParser.h
     src/core/TherionFileTypes.h
+    src/core/TherionStringUtils.h
     src/core/TherionDocumentEditor.cpp
     src/core/TherionDocumentEditor.h
     src/core/ProjectStructureIndex.cpp

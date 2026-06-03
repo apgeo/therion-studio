@@ -31,7 +31,6 @@ struct MapEditorInspectorObjectContext
     bool *updatingSelection = nullptr;
     int *lastClickedLineNumber = nullptr;
     QSet<int> *suppressedAutoReselectLineNumbers = nullptr;
-    bool *commandApplyInProgress = nullptr;
     int *selectedObjectLineNumber = nullptr;
     int *selectedObjectVertexIndex = nullptr;
     QString *selectedObjectKind = nullptr;
@@ -48,7 +47,6 @@ struct MapEditorInspectorObjectContext
     std::function<void()> updateGeometrySelectionPresentation;
     std::function<void(int, int)> syncMapSelectionFromTextCursor;
     std::function<void(const QSet<int> &, bool)> selectMapLines;
-    std::function<void(const QString &, const QString &, const QString &, int)> recordSourceTextSnapshot;
     std::function<void(const QString &, const QString &, const QString &, int)> applySourceTextChangeWithSnapshot;
 };
 }

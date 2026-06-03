@@ -18,7 +18,6 @@
 #include <QLineEdit>
 #include <QLineF>
 #include <QPlainTextEdit>
-#include <QScopedValueRollback>
 #include <QSignalBlocker>
 #include <QTimer>
 
@@ -30,7 +29,7 @@ namespace TherionStudio
 {
 namespace
 {
-constexpr int kImmediatePointOptionApplyDelayMs = 0;
+constexpr int kApplyObjectOrientationOnNextEventLoopMs = 0;
 
 int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int sourceVertexIndex)
 {
@@ -76,6 +75,25 @@ QStringList trimmedLinePointStandaloneRows(const QString &rawRowsText)
         }
     }
     return trimmedRows;
+}
+
+bool requireSourceTransaction(const MapEditorObjectDetailsContext &context, const QString &message)
+{
+    if (context.applySourceTextChangeWithSnapshot) {
+        return true;
+    }
+
+    Q_ASSERT(context.applySourceTextChangeWithSnapshot);
+    if (context.toolbarStatusNote != nullptr) {
+        *context.toolbarStatusNote = message;
+    }
+    if (context.refreshToolbarSummary) {
+        context.refreshToolbarSummary();
+    }
+    if (context.refreshObjectDetailsPanel) {
+        context.refreshObjectDetailsPanel();
+    }
+    return false;
 }
 
 qreal defaultLinePointOrientationDegrees(const MapGeometryFeature &feature, int vertexIndex)
@@ -146,7 +164,7 @@ void scheduleObjectOrientationApply(const MapEditorObjectDetailsContext &context
         return;
     }
 
-    QTimer::singleShot(kImmediatePointOptionApplyDelayMs, context.callbackContext, [context]() {
+    QTimer::singleShot(kApplyObjectOrientationOnNextEventLoopMs, context.callbackContext, [context]() {
         if (context.updatingUi == nullptr || *context.updatingUi) {
             return;
         }
@@ -295,13 +313,10 @@ void MapEditorObjectDetailsEditController::applyScrapScaleEdits()
         return;
     }
 
-    if (context_.applySourceTextChangeWithSnapshot) {
-        context_.applySourceTextChangeWithSnapshot(tr("Set Scrap Scale"), beforeText, afterText, targetLineNumber);
-    } else {
-        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-        context_.textEditor->replaceTextForCommand(afterText);
-        context_.recordSourceTextSnapshot(tr("Set Scrap Scale"), beforeText, afterText, targetLineNumber);
+    if (!requireSourceTransaction(context_, tr("Cannot update scrap scale without map source transaction support."))) {
+        return;
     }
+    context_.applySourceTextChangeWithSnapshot(tr("Set Scrap Scale"), beforeText, afterText, targetLineNumber);
     *context_.toolbarStatusNote = tr("Updated scrap scale.");
     context_.refreshToolbarSummary();
     context_.refreshObjectDetailsPanel();
@@ -382,10 +397,7 @@ void MapEditorObjectDetailsEditController::handleConfigureObjectSettingsTriggere
 
     lines[targetLineNumber - 1] = updatedLine;
     const QString afterText = lines.join(QLatin1Char('\n'));
-    if (!context_.applySourceTextChangeWithSnapshot) {
-        *context_.toolbarStatusNote = tr("Cannot edit object settings without map source transaction support.");
-        context_.refreshToolbarSummary();
-        context_.refreshObjectDetailsPanel();
+    if (!requireSourceTransaction(context_, tr("Cannot edit object settings without map source transaction support."))) {
         return;
     }
 
@@ -423,19 +435,13 @@ void MapEditorObjectDetailsEditController::handleLineClosedToggled(bool checked)
         return;
     }
 
-    if (context_.applySourceTextChangeWithSnapshot) {
-        context_.applySourceTextChangeWithSnapshot(tr("Edit Line Closed"),
-                                                   beforeText,
-                                                   afterText,
-                                                   targetLineNumber);
-    } else {
-        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-        context_.textEditor->replaceTextForCommand(afterText);
-        context_.recordSourceTextSnapshot(tr("Edit Line Closed"),
-                                          beforeText,
-                                          afterText,
-                                          targetLineNumber);
+    if (!requireSourceTransaction(context_, tr("Cannot update line closed state without map source transaction support."))) {
+        return;
     }
+    context_.applySourceTextChangeWithSnapshot(tr("Edit Line Closed"),
+                                               beforeText,
+                                               afterText,
+                                               targetLineNumber);
 }
 
 void MapEditorObjectDetailsEditController::handleLineReversedToggled(bool checked)
@@ -468,19 +474,13 @@ void MapEditorObjectDetailsEditController::handleLineReversedToggled(bool checke
         return;
     }
 
-    if (context_.applySourceTextChangeWithSnapshot) {
-        context_.applySourceTextChangeWithSnapshot(tr("Edit Line Reversed"),
-                                                   beforeText,
-                                                   afterText,
-                                                   targetLineNumber);
-    } else {
-        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-        context_.textEditor->replaceTextForCommand(afterText);
-        context_.recordSourceTextSnapshot(tr("Edit Line Reversed"),
-                                          beforeText,
-                                          afterText,
-                                          targetLineNumber);
+    if (!requireSourceTransaction(context_, tr("Cannot update line reversed state without map source transaction support."))) {
+        return;
     }
+    context_.applySourceTextChangeWithSnapshot(tr("Edit Line Reversed"),
+                                               beforeText,
+                                               afterText,
+                                               targetLineNumber);
 }
 
 void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
@@ -607,19 +607,13 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
     }
 
     if (afterText != beforeText) {
-        if (context_.applySourceTextChangeWithSnapshot) {
-            context_.applySourceTextChangeWithSnapshot(tr("Edit Object Orientation"),
-                                                       beforeText,
-                                                       afterText,
-                                                       selectedLineNumber);
-        } else {
-            const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-            context_.textEditor->replaceTextForCommand(afterText);
-            context_.recordSourceTextSnapshot(tr("Edit Object Orientation"),
-                                              beforeText,
-                                              afterText,
-                                              selectedLineNumber);
+        if (!requireSourceTransaction(context_, tr("Cannot update object orientation without map source transaction support."))) {
+            return;
         }
+        context_.applySourceTextChangeWithSnapshot(tr("Edit Object Orientation"),
+                                                   beforeText,
+                                                   afterText,
+                                                   selectedLineNumber);
     }
 
     if (selectedObjectKind == QStringLiteral("line")) {
@@ -726,19 +720,13 @@ void MapEditorObjectDetailsEditController::deleteSelectedObjectFromSelection()
         return;
     }
 
-    if (context_.applySourceTextChangeWithSnapshot) {
-        context_.applySourceTextChangeWithSnapshot(tr("Delete Map Object"),
-                                                   beforeText,
-                                                   deletePlan.updatedText,
-                                                   deletePlan.focusLineAfterDelete);
-    } else {
-        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-        context_.textEditor->replaceTextForCommand(deletePlan.updatedText);
-        context_.recordSourceTextSnapshot(tr("Delete Map Object"),
-                                          beforeText,
-                                          deletePlan.updatedText,
-                                          deletePlan.focusLineAfterDelete);
+    if (!requireSourceTransaction(context_, tr("Cannot delete map object without map source transaction support."))) {
+        return;
     }
+    context_.applySourceTextChangeWithSnapshot(tr("Delete Map Object"),
+                                               beforeText,
+                                               deletePlan.updatedText,
+                                               deletePlan.focusLineAfterDelete);
     for (int removedLineNumber : deletePlan.removedLineNumbers) {
         context_.hiddenInspectorObjectLines->remove(removedLineNumber);
     }
@@ -821,13 +809,10 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
         return;
     }
 
-    if (context_.applySourceTextChangeWithSnapshot) {
-        context_.applySourceTextChangeWithSnapshot(tr("Edit Object Fields"), beforeText, afterText, targetLineNumber);
-    } else {
-        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-        context_.textEditor->replaceTextForCommand(afterText);
-        context_.recordSourceTextSnapshot(tr("Edit Object Fields"), beforeText, afterText, targetLineNumber);
+    if (!requireSourceTransaction(context_, tr("Cannot update object fields without map source transaction support."))) {
+        return;
     }
+    context_.applySourceTextChangeWithSnapshot(tr("Edit Object Fields"), beforeText, afterText, targetLineNumber);
     *context_.toolbarStatusNote = tr("Updated object fields.");
     context_.refreshToolbarSummary();
     context_.refreshObjectDetailsPanel();
@@ -879,13 +864,10 @@ void MapEditorObjectDetailsEditController::applyScrapProjectionEdit()
         return;
     }
 
-    if (context_.applySourceTextChangeWithSnapshot) {
-        context_.applySourceTextChangeWithSnapshot(tr("Edit Scrap Projection"), beforeText, afterText, targetLineNumber);
-    } else {
-        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-        context_.textEditor->replaceTextForCommand(afterText);
-        context_.recordSourceTextSnapshot(tr("Edit Scrap Projection"), beforeText, afterText, targetLineNumber);
+    if (!requireSourceTransaction(context_, tr("Cannot update scrap projection without map source transaction support."))) {
+        return;
     }
+    context_.applySourceTextChangeWithSnapshot(tr("Edit Scrap Projection"), beforeText, afterText, targetLineNumber);
     *context_.toolbarStatusNote = tr("Updated scrap projection.");
     context_.refreshToolbarSummary();
     context_.refreshObjectDetailsPanel();
@@ -1010,13 +992,10 @@ void MapEditorObjectDetailsEditController::applyLinePointFlagsEdits()
         return;
     }
 
-    if (context_.applySourceTextChangeWithSnapshot) {
-        context_.applySourceTextChangeWithSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
-    } else {
-        const QScopedValueRollback<bool> commandGuard(*context_.commandApplyInProgress, true);
-        context_.textEditor->replaceTextForCommand(afterText);
-        context_.recordSourceTextSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
+    if (!requireSourceTransaction(context_, tr("Cannot update line-point options without map source transaction support."))) {
+        return;
     }
+    context_.applySourceTextChangeWithSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
 
     (*context_.toolbarStatusNote) = updatedRows.isEmpty()
         ? tr("Cleared additional line-point options for line %1, point %2.").arg(lineNumber).arg(vertexIndex + 1)

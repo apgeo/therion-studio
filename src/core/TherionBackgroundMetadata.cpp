@@ -1,8 +1,9 @@
 #include "TherionBackgroundMetadata.h"
 
+#include "TherionStringUtils.h"
+
 #include <QDir>
 #include <QFileInfo>
-#include <QRegularExpression>
 
 namespace TherionStudio
 {
@@ -95,11 +96,6 @@ QString readSimpleToken(const QString &text, int *position)
         ++(*position);
     }
     return text.mid(start, *position - start).trimmed();
-}
-
-QStringList tokenizeWhitespace(const QString &text)
-{
-    return text.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
 }
 
 bool tryParseLeadingNumber(QString token, qreal *value)

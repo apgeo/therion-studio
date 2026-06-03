@@ -180,7 +180,6 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .inspectorSymbolCatalog = &inspectorSymbolCatalog_,
         .orientationApplicabilityByCommand = &orientationApplicabilityByCommand_,
         .updatingUi = &objectDetailsUiState_.updatingObjectDetailsUi_,
-        .commandApplyInProgress = &mapCommandApplyInProgress_,
         .selectedObjectLineNumber = &objectSelectionState_.selectedObjectLineNumber_,
         .selectedObjectVertexIndex = &objectSelectionState_.selectedObjectVertexIndex_,
         .selectedObjectKind = &objectSelectionState_.selectedObjectKind_,
@@ -277,9 +276,6 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         },
         .rewriteLineOptionToggle = [this](int lineNumber, const QString &optionName, bool enabled, QString *errorMessage) {
             return rewriteLineOptionToggle(lineNumber, optionName, enabled, errorMessage);
-        },
-        .recordSourceTextSnapshot = [this](const QString &label, const QString &beforeText, const QString &afterText, int insertedLineNumber) {
-            recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
         },
         .applySourceTextChangeWithSnapshot = [this](const QString &label,
                                                     const QString &beforeText,

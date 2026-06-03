@@ -1,6 +1,7 @@
 #include "TherionDocumentEditor.h"
 
 #include "TherionDocumentParser.h"
+#include "TherionStringUtils.h"
 
 #include <QCoreApplication>
 #include <QFileInfo>
@@ -541,7 +542,6 @@ struct LinePointOptionTarget
 };
 
 QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &parsedLine, int startTokenIndex);
-QStringList splitLinesNormalized(const QString &contents);
 
 std::optional<LinePointOptionTarget> linePointOptionTarget(QStringList *lines,
                                                           int blockStartLineIndex,
@@ -649,7 +649,7 @@ bool rewriteLinePointNumericOption(QString *contents,
     }
 
     const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(*contents);
+    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -1074,17 +1074,6 @@ int lastEndscrapLineIndex(const QStringList &lines)
     return foundIndex;
 }
 
-QStringList splitLinesNormalized(const QString &contents)
-{
-    QStringList lines = contents.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-    for (QString &line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-    }
-
-    return lines;
-}
 }
 
 bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
@@ -1262,7 +1251,7 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
 
     QString updated = *contents;
     const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(updated);
+    QStringList lines = splitLinesTrimmingCarriageReturns(updated);
     int insertionIndex = lastEndscrapLineIndex(lines);
 
     if (insertionIndex < 0) {
@@ -1270,7 +1259,7 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
             return false;
         }
 
-        lines = splitLinesNormalized(updated);
+        lines = splitLinesTrimmingCarriageReturns(updated);
         insertionIndex = lastEndscrapLineIndex(lines);
         if (insertionIndex < 0) {
             if (errorMessage != nullptr) {
@@ -1380,7 +1369,7 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
 
     QString updated = *contents;
     const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(updated);
+    QStringList lines = splitLinesTrimmingCarriageReturns(updated);
     int insertionIndex = lastEndscrapLineIndex(lines);
 
     if (insertionIndex < 0) {
@@ -1388,7 +1377,7 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
             return false;
         }
 
-        lines = splitLinesNormalized(updated);
+        lines = splitLinesTrimmingCarriageReturns(updated);
         insertionIndex = lastEndscrapLineIndex(lines);
         if (insertionIndex < 0) {
             if (errorMessage != nullptr) {
@@ -1460,7 +1449,7 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
 
     QString updated = *contents;
     const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(updated);
+    QStringList lines = splitLinesTrimmingCarriageReturns(updated);
     int insertionIndex = lastEndscrapLineIndex(lines);
 
     if (insertionIndex < 0) {
@@ -1468,7 +1457,7 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
             return false;
         }
 
-        lines = splitLinesNormalized(updated);
+        lines = splitLinesTrimmingCarriageReturns(updated);
         insertionIndex = lastEndscrapLineIndex(lines);
         if (insertionIndex < 0) {
             if (errorMessage != nullptr) {
@@ -1630,7 +1619,7 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
     }
 
     const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(*contents);
+    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -1763,7 +1752,7 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
     }
 
     const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(*contents);
+    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -1871,7 +1860,7 @@ bool TherionDocumentEditor::rewritePointOrientation(QString *contents,
     }
 
     const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(*contents);
+    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -2032,7 +2021,7 @@ bool TherionDocumentEditor::rewriteScrapScale(QString *contents,
     }
 
     const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(*contents);
+    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -2102,7 +2091,7 @@ bool TherionDocumentEditor::rewriteScrapProjection(QString *contents,
     }
 
     const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(*contents);
+    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -2185,7 +2174,7 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
     }
 
     const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(*contents);
+    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -2330,7 +2319,7 @@ bool TherionDocumentEditor::rewriteMapObjectTextOption(QString *contents,
     }
 
     const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(*contents);
+    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -2405,7 +2394,7 @@ bool TherionDocumentEditor::rewriteLineCoordinateRows(QString *contents,
     }
 
     const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesNormalized(*contents);
+    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");

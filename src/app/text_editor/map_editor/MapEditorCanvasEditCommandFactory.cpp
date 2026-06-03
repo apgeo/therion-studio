@@ -74,26 +74,6 @@ QString coupledVertexMoveFailedMessage(const QString &kind, const QString &error
               .arg(kind, errorMessage);
 }
 
-QString insertedMapObjectRemovedMessage(int lineNumber)
-{
-    return lineNumber > 0
-        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
-                                      "Removed inserted map object at source line %1.")
-              .arg(lineNumber)
-        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
-                                      "Removed inserted map object.");
-}
-
-QString insertedMapObjectRestoredMessage(int lineNumber)
-{
-    return lineNumber > 0
-        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
-                                      "Restored inserted map object at source line %1.")
-              .arg(lineNumber)
-        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
-                                      "Restored inserted map object.");
-}
-
 QString completedDraftRevertedMessage(int lineNumber)
 {
     return lineNumber > 0
@@ -354,63 +334,6 @@ private:
     std::optional<QString> afterTextSnapshot_;
 };
 
-class MapSourceTextSnapshotCommand final : public QUndoCommand
-{
-public:
-    MapSourceTextSnapshotCommand(TextEditorTab *textEditor,
-                                 QString label,
-                                 QString beforeText,
-                                 QString afterText,
-                                 int insertedLineNumber,
-                                 std::function<void(const QString &)> statusCallback)
-        : textEditor_(textEditor)
-        , beforeText_(std::move(beforeText))
-        , afterText_(std::move(afterText))
-        , insertedLineNumber_(insertedLineNumber)
-        , statusCallback_(std::move(statusCallback))
-    {
-        setText(std::move(label));
-    }
-
-    void undo() override
-    {
-        if (textEditor_ == nullptr) {
-            setObsolete(true);
-            return;
-        }
-
-        textEditor_->replaceTextForCommand(beforeText_);
-        if (statusCallback_ != nullptr) {
-            statusCallback_(insertedMapObjectRemovedMessage(insertedLineNumber_));
-        }
-    }
-
-    void redo() override
-    {
-        if (firstRedo_) {
-            firstRedo_ = false;
-            return;
-        }
-        if (textEditor_ == nullptr) {
-            setObsolete(true);
-            return;
-        }
-
-        textEditor_->replaceTextForCommand(afterText_);
-        if (statusCallback_ != nullptr) {
-            statusCallback_(insertedMapObjectRestoredMessage(insertedLineNumber_));
-        }
-    }
-
-private:
-    QPointer<TextEditorTab> textEditor_;
-    QString beforeText_;
-    QString afterText_;
-    int insertedLineNumber_ = 0;
-    std::function<void(const QString &)> statusCallback_;
-    bool firstRedo_ = true;
-};
-
 class MapDraftCompletionCommand final : public QUndoCommand
 {
 public:
@@ -550,21 +473,6 @@ QUndoCommand *createMapLineAreaVertexMoveCommand(TextEditorTab *textEditor,
                                             oldPoint,
                                             newPoint,
                                             secondaryMoves,
-                                            std::move(statusCallback));
-}
-
-QUndoCommand *createMapSourceTextSnapshotCommand(TextEditorTab *textEditor,
-                                                 const QString &label,
-                                                 const QString &beforeText,
-                                                 const QString &afterText,
-                                                 int insertedLineNumber,
-                                                 MapCanvasEditStatusCallback statusCallback)
-{
-    return new MapSourceTextSnapshotCommand(textEditor,
-                                            label,
-                                            beforeText,
-                                            afterText,
-                                            insertedLineNumber,
                                             std::move(statusCallback));
 }
 

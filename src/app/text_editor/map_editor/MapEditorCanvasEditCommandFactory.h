@@ -44,12 +44,6 @@ QUndoCommand *createMapLineAreaVertexMoveCommand(TextEditorTab *textEditor,
                                                  const QPointF &newPoint,
                                                  const QVector<MapLineAreaVertexSecondaryMove> &secondaryMoves,
                                                  MapCanvasEditStatusCallback statusCallback);
-QUndoCommand *createMapSourceTextSnapshotCommand(TextEditorTab *textEditor,
-                                                 const QString &label,
-                                                 const QString &beforeText,
-                                                 const QString &afterText,
-                                                 int insertedLineNumber,
-                                                 MapCanvasEditStatusCallback statusCallback);
 QUndoCommand *createMapDraftCompletionCommand(TextEditorTab *textEditor,
                                               QGraphicsScene *scene,
                                               QVector<QGraphicsRectItem *> *draftItems,

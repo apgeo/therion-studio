@@ -165,13 +165,10 @@ MAP_EDITOR_SOURCE_MUTATION_LOW_LEVEL_PATTERNS = (
 )
 
 # Low-level TextEditorTab source writes are intentionally confined to:
-# - the atomic source-change helper, which creates one source replacement +
-#   undo snapshot transaction, and
+# - the shared text-editor source transaction controller outside map_editor,
+#   which creates one source replacement + undo snapshot transaction, and
 # - QUndoCommand implementations that store before/after snapshots internally.
 MAP_EDITOR_SOURCE_MUTATION_ALLOWED_PATTERNS_BY_FILE = {
-    "src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp": {
-        "->replaceTextForCommand(",
-    },
     "src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp": {
         "->replaceTextForCommand(",
         "->rewritePointCoordinates(",

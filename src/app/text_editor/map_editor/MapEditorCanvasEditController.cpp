@@ -2,6 +2,7 @@
 
 #include <QCoreApplication>
 
+#include "../TextEditorSourceTransactionController.h"
 #include "../TextEditorTab.h"
 #include "MapEditorCanvasEditCommandFactory.h"
 #include "MapEditorLineSplitPlanner.h"
@@ -88,6 +89,57 @@ bool confirmLinePointRowDelete(const MapEditorCanvasEditContext &context,
                                  message,
                                  QMessageBox::Yes | QMessageBox::No,
                                  QMessageBox::No) == QMessageBox::Yes;
+}
+
+QString sourceSnapshotUndoMessage(int lineNumber)
+{
+    return lineNumber > 0
+        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Removed inserted map object at source line %1.")
+              .arg(lineNumber)
+        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Removed inserted map object.");
+}
+
+QString sourceSnapshotRedoMessage(int lineNumber)
+{
+    return lineNumber > 0
+        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Restored inserted map object at source line %1.")
+              .arg(lineNumber)
+        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Restored inserted map object.");
+}
+
+TextEditorSourceTransactionRequest sourceTransactionRequest(const QString &label,
+                                                            const QString &beforeText,
+                                                            const QString &afterText,
+                                                            int insertedLineNumber)
+{
+    return {
+        .label = label,
+        .beforeText = beforeText,
+        .afterText = afterText,
+        .undoStatusMessage = sourceSnapshotUndoMessage(insertedLineNumber),
+        .redoStatusMessage = sourceSnapshotRedoMessage(insertedLineNumber),
+    };
+}
+
+TextEditorSourceTransactionController sourceTransactionController(const MapEditorCanvasEditContext &context)
+{
+    auto statusCallback = [statusNote = context.toolbarStatusNote,
+                           refreshToolbarSummary = context.refreshToolbarSummary](const QString &statusMessage) {
+        *statusNote = statusMessage;
+        refreshToolbarSummary();
+    };
+
+    return TextEditorSourceTransactionController({
+        .textEditor = context.textEditor,
+        .undoStack = context.undoStack,
+        .commandApplyInProgress = context.commandApplyInProgress,
+        .flushPendingRefresh = context.flushPendingSceneRefreshAfterCommand,
+        .statusCallback = std::move(statusCallback),
+    });
 }
 
 std::optional<QPointF> normalizedLineControlPoint(const QPointF &anchor, const QPointF &control)
@@ -680,26 +732,8 @@ void MapEditorCanvasEditController::recordSourceTextSnapshot(const QString &labe
                                             const QString &afterText,
                                             int insertedLineNumber)
 {
-    if (context_.textEditor == nullptr || beforeText == afterText) {
-        return;
-    }
-
-    auto statusCallback = [statusNote = context_.toolbarStatusNote,
-                           refreshToolbarSummary = context_.refreshToolbarSummary](const QString &statusMessage) {
-        *statusNote = statusMessage;
-        refreshToolbarSummary();
-    };
-
-    if (context_.undoStack != nullptr) {
-        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-        context_.undoStack->push(createMapSourceTextSnapshotCommand(context_.textEditor,
-                                                        label,
-                                                        beforeText,
-                                                        afterText,
-                                                        insertedLineNumber,
-                                                        statusCallback));
-        context_.flushPendingSceneRefreshAfterCommand();
-    }
+    sourceTransactionController(context_).recordSnapshot(
+        sourceTransactionRequest(label, beforeText, afterText, insertedLineNumber));
 }
 
 void MapEditorCanvasEditController::applySourceTextChangeWithSnapshot(const QString &label,
@@ -707,19 +741,8 @@ void MapEditorCanvasEditController::applySourceTextChangeWithSnapshot(const QStr
                                                                       const QString &afterText,
                                                                       int insertedLineNumber)
 {
-    if (context_.textEditor == nullptr || beforeText == afterText) {
-        return;
-    }
-
-    if (context_.commandApplyInProgress != nullptr) {
-        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-        context_.textEditor->replaceTextForCommand(afterText);
-        recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
-        return;
-    }
-
-    context_.textEditor->replaceTextForCommand(afterText);
-    recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
+    sourceTransactionController(context_).applyChangeWithSnapshot(
+        sourceTransactionRequest(label, beforeText, afterText, insertedLineNumber));
 }
 
 bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineVertexInsertPlacement placement)

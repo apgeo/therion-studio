@@ -356,6 +356,8 @@ set(THERION_TEXT_EDITOR_SHARED_SOURCES
     src/app/text_editor/TextEditorAppearanceController.h
     src/app/text_editor/TextEditorSourceRewriteController.cpp
     src/app/text_editor/TextEditorSourceRewriteController.h
+    src/app/text_editor/TextEditorSourceTransactionController.cpp
+    src/app/text_editor/TextEditorSourceTransactionController.h
     src/app/text_editor/TextEditorStatusController.cpp
     src/app/text_editor/TextEditorStatusController.h
     src/app/text_editor/TextEditorModeController.cpp
@@ -1032,6 +1034,10 @@ therion_add_text_editor_ui_test(TextEditorCompletionHighlightTest
     tests/TextEditorCompletionHighlightTest.cpp
     "TextEditorCompletionHighlightResources")
 
+therion_add_text_editor_ui_test(TextEditorSourceTransactionControllerTest
+    tests/TextEditorSourceTransactionControllerTest.cpp
+    "TextEditorSourceTransactionControllerResources")
+
 qt_add_executable(TextEditorDocumentControllerTest
     tests/TextEditorDocumentControllerTest.cpp
     src/app/text_editor/TextEditorDocumentController.cpp
@@ -1174,6 +1180,7 @@ set(THERION_UNIT_TEST_TARGETS
 set(THERION_UI_TEST_TARGETS
     TextEditorCaretInteractionTest
     TextEditorCompletionHighlightTest
+    TextEditorSourceTransactionControllerTest
     MapEditorDetachedPaneTest
     MapEditorDragUndoRedoSmokeTest
     MapEditorSplitAreaBorderSmokeTest

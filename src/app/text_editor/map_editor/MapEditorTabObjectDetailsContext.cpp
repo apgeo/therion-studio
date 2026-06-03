@@ -274,9 +274,6 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .restoreLineAnchorSelectionLater = [this](int lineNumber, int sourceVertexIndex) {
             restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
         },
-        .rewriteLineOptionToggle = [this](int lineNumber, const QString &optionName, bool enabled, QString *errorMessage) {
-            return rewriteLineOptionToggle(lineNumber, optionName, enabled, errorMessage);
-        },
         .applySourceTextChangeWithSnapshot = [this](const QString &label,
                                                     const QString &beforeText,
                                                     const QString &afterText,

@@ -108,11 +108,6 @@ public:
 
     bool loadFile(const QString &filePath, QString *errorMessage = nullptr);
     bool save(QString *errorMessage = nullptr);
-    bool rewriteStructureEntryName(int lineNumber, const QString &category, const QString &newName, QString *errorMessage = nullptr);
-    bool rewriteLineOptionToggle(int lineNumber,
-                                 const QString &optionName,
-                                 bool enabled,
-                                 QString *errorMessage = nullptr);
     void setProjectRootPath(const QString &projectRootPath);
     void showFindBar(bool replaceMode = false);
     void hideFindBar();

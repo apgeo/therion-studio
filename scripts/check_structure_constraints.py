@@ -156,6 +156,29 @@ MAP_EDITOR_CONTEXT_CONTROLLER_FORBIDDEN_PATTERNS = (
     ),
 )
 
+MAP_EDITOR_SOURCE_MUTATION_LOW_LEVEL_PATTERNS = (
+    "->replaceTextForCommand(",
+    "->rewritePointCoordinates(",
+    "->rewriteLineAreaVertex(",
+    "->rewriteStructureEntryName(",
+    "->rewriteLineOptionToggle(",
+)
+
+# Low-level TextEditorTab source writes are intentionally confined to:
+# - the atomic source-change helper, which creates one source replacement +
+#   undo snapshot transaction, and
+# - QUndoCommand implementations that store before/after snapshots internally.
+MAP_EDITOR_SOURCE_MUTATION_ALLOWED_PATTERNS_BY_FILE = {
+    "src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp": {
+        "->replaceTextForCommand(",
+    },
+    "src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp": {
+        "->replaceTextForCommand(",
+        "->rewritePointCoordinates(",
+        "->rewriteLineAreaVertex(",
+    },
+}
+
 CMAKE_SOURCE_PATH_PATTERN = re.compile(r"src/[A-Za-z0-9_./+-]+\.(?:cpp|h)")
 CMAKE_SOURCE_SUFFIXES = {".cpp", ".h"}
 CMAKE_UNIQUE_SOURCE_SETS = (
@@ -176,6 +199,11 @@ def count_lines(path: pathlib.Path) -> int:
 
 def contains_text(path: pathlib.Path, text: str) -> bool:
     return text in path.read_text(encoding="utf-8", errors="replace")
+
+
+def map_source_mutation_is_allowed(relative_path: str, line_text: str) -> bool:
+    allowed_patterns = MAP_EDITOR_SOURCE_MUTATION_ALLOWED_PATTERNS_BY_FILE.get(relative_path, set())
+    return any(pattern in line_text for pattern in allowed_patterns)
 
 
 def repository_source_paths() -> list[str]:
@@ -292,6 +320,21 @@ def main() -> int:
                 if pattern in file_text:
                     dependency_violations.append(f"{relative_path}: forbidden `{pattern}` ({message})")
 
+    for absolute_path in sorted(map_inspector_background_root.rglob("*.[ch]*")):
+        relative_path = absolute_path.relative_to(REPO_ROOT).as_posix()
+        with absolute_path.open("r", encoding="utf-8", errors="replace") as handle:
+            for line_number, line_text in enumerate(handle, start=1):
+                for pattern in MAP_EDITOR_SOURCE_MUTATION_LOW_LEVEL_PATTERNS:
+                    if pattern not in line_text:
+                        continue
+                    if map_source_mutation_is_allowed(relative_path, line_text):
+                        continue
+                    dependency_violations.append(
+                        f"{relative_path}:{line_number}: forbidden low-level map source mutation `{pattern}` "
+                        "(map editor source writes shall use applySourceTextChangeWithSnapshot "
+                        "or an approved snapshot command)"
+                    )
+
     cmake_text = (REPO_ROOT / "CMakeLists.txt").read_text(encoding="utf-8", errors="replace")
     repository_sources = repository_source_paths()
     listed_sources = cmake_source_paths(cmake_text)
@@ -328,7 +371,7 @@ def main() -> int:
         print("")
         print(
             "Keep large UI translation units from growing, preserve stable editor-mode/dependency layout, "
-            "and keep CMake source lists aligned with src/."
+            "keep map source mutations atomic, and keep CMake source lists aligned with src/."
         )
         return 1
 
@@ -352,6 +395,7 @@ def main() -> int:
     print("  - MapEditor selection controller uses an explicit context instead of MapEditorTab friendship")
     print("  - MapEditor viewport-input controller uses an explicit context instead of MapEditorTab friendship")
     print("  - MapEditor canvas-edit controller uses an explicit context instead of MapEditorTab friendship")
+    print("  - MapEditor source mutations are confined to the atomic helper or approved snapshot commands")
     print("Source-list hygiene passed:")
     print(f"  - {len(repository_sources)} src/**/*.cpp and src/**/*.h files are listed in CMakeLists.txt")
     print("  - CMakeLists.txt does not reference missing src/**/*.cpp or src/**/*.h files")

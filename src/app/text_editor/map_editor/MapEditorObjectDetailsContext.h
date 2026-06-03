@@ -107,7 +107,6 @@ struct MapEditorObjectDetailsContext
     std::function<void(int, bool)> selectMapLine;
     std::function<void(int)> restorePointSelectionLater;
     std::function<void(int, int)> restoreLineAnchorSelectionLater;
-    std::function<bool(int, const QString &, bool, QString *)> rewriteLineOptionToggle;
     std::function<void(const QString &, const QString &, const QString &, int)> applySourceTextChangeWithSnapshot;
     std::function<bool(bool)> insertLineVertexFromSelection;
     std::function<bool()> splitLineAtSelection;

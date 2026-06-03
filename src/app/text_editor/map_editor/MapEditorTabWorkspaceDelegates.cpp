@@ -41,33 +41,6 @@ bool MapEditorTab::save(QString *errorMessage)
     return textEditor_->save(errorMessage);
 }
 
-bool MapEditorTab::rewriteStructureEntryName(int lineNumber, const QString &category, const QString &newName, QString *errorMessage)
-{
-    const bool rewritten = textEditor_->rewriteStructureEntryName(lineNumber, category, newName, errorMessage);
-    if (rewritten) {
-        refreshMapScene();
-        refreshTitle();
-        refreshStatus();
-    }
-
-    return rewritten;
-}
-
-bool MapEditorTab::rewriteLineOptionToggle(int lineNumber,
-                                           const QString &optionName,
-                                           bool enabled,
-                                           QString *errorMessage)
-{
-    const bool rewritten = textEditor_->rewriteLineOptionToggle(lineNumber, optionName, enabled, errorMessage);
-    if (rewritten) {
-        refreshMapScene();
-        refreshTitle();
-        refreshStatus();
-    }
-
-    return rewritten;
-}
-
 void MapEditorTab::setProjectRootPath(const QString &projectRootPath)
 {
     projectRootPath_ = projectRootPath;

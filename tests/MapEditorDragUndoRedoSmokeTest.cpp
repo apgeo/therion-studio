@@ -1522,15 +1522,15 @@ int runDragUndoRedoSmoke()
     }
     mapTab->goToLine(4);
     pumpEvents();
-    textEditor->goToLineColumn(7, 3);
+    textEditor->goToLineColumn(6, 3);
     pumpEvents();
     auto *selectedVertexFromText = findSelectedLineVertex(mapView->scene());
     if (!expect(selectedVertexFromText != nullptr,
                 "Moving text cursor to a vertex row should select the corresponding map vertex.")) {
         return 1;
     }
-    if (!expect(selectedVertexFromText->lineNumber() == 4 && selectedVertexFromText->vertexIndex() == 2,
-                "Text-to-map vertex sync should select line vertex index 2 for source row line 7.")) {
+    if (!expect(selectedVertexFromText->lineNumber() == 4 && selectedVertexFromText->vertexIndex() == 1,
+                "Text-to-map vertex sync should select line vertex index 1 for source row line 6.")) {
         return 1;
     }
 

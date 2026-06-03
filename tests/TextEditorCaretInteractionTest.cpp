@@ -1,4 +1,6 @@
 #include "../src/app/text_editor/TextEditorTab.h"
+#include "../src/app/text_editor/block_editor/BlockEditorCanvasItem.h"
+#include "../src/app/text_editor/block_editor/BlockEditorTokenTagEditor.h"
 #include "../src/core/CommandCatalogStore.h"
 #include "../src/core/QtFileSystem.h"
 #include "../src/core/TherionDocumentParser.h"
@@ -115,10 +117,13 @@ bool selectBlockAtScenePoint(QGraphicsView *view, const QPointF &scenePoint)
 
 bool selectBlockByKind(QGraphicsView *view, QLabel *statusLabel, const QString &kindToken)
 {
-    if (view == nullptr || statusLabel == nullptr) {
+    Q_UNUSED(statusLabel);
+
+    if (view == nullptr || view->scene() == nullptr) {
         return false;
     }
 
+    const QString normalizedKind = kindToken.trimmed().toLower();
     const QList<QGraphicsItem *> sceneItems = view->scene()->items(Qt::AscendingOrder);
     for (QGraphicsItem *item : sceneItems) {
         if (item == nullptr || !(item->flags() & QGraphicsItem::ItemIsSelectable)) {
@@ -134,14 +139,11 @@ bool selectBlockByKind(QGraphicsView *view, QLabel *statusLabel, const QString &
             continue;
         }
 
-        const QString statusText = statusLabel->text().trimmed().toLower();
-        QString commandToken = statusText;
-        const QString prefix = QStringLiteral("command:");
-        if (commandToken.startsWith(prefix)) {
-            commandToken = commandToken.mid(prefix.size()).trimmed();
-        }
-        if (commandToken == kindToken.trimmed().toLower()) {
-            return true;
+        for (QGraphicsItem *selectedItem : view->scene()->selectedItems()) {
+            if (auto *blockItem = dynamic_cast<BlockCanvasItem *>(selectedItem);
+                blockItem != nullptr && blockItem->kind().trimmed().toLower() == normalizedKind) {
+                return true;
+            }
         }
     }
     return false;
@@ -170,27 +172,12 @@ QStringList readingsOrderTagTokens(QWidget *root)
     if (root == nullptr) {
         return {};
     }
-    QWidget *tagEditor = root->findChild<QWidget *>(QStringLiteral("blockDetailsReadingsTagEditor"));
+    auto *tagEditor = dynamic_cast<BlockEditorTokenTagEditor *>(
+        root->findChild<QWidget *>(QStringLiteral("blockDetailsReadingsTagEditor")));
     if (tagEditor == nullptr) {
         return {};
     }
-    QStringList tokens;
-    const QList<QToolButton *> chips = tagEditor->findChildren<QToolButton *>();
-    for (QToolButton *chip : chips) {
-        if (chip == nullptr) {
-            continue;
-        }
-        QString text = chip->text();
-        const int crossIndex = text.lastIndexOf(QChar(0x2715)); // ✕
-        if (crossIndex >= 0) {
-            text = text.left(crossIndex);
-        }
-        text = text.trimmed();
-        if (!text.isEmpty()) {
-            tokens.append(text);
-        }
-    }
-    return tokens;
+    return tagEditor->tokens();
 }
 
 void clearReadingsOrderTagTokens(QWidget *root)
@@ -217,6 +204,22 @@ void clearReadingsOrderTagTokens(QWidget *root)
         chip->click();
         pumpEvents();
     }
+}
+
+void commitBlockDetailsEdit(QLineEdit *editor, QWidget *focusTarget)
+{
+    if (editor != nullptr) {
+        editor->setFocus(Qt::OtherFocusReason);
+        sendKey(editor, QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier, QStringLiteral("\n"));
+        sendKey(editor, QEvent::KeyRelease, Qt::Key_Return);
+    }
+    if (QWidget *focusedWidget = QApplication::focusWidget(); focusedWidget != nullptr) {
+        focusedWidget->clearFocus();
+    }
+    if (focusTarget != nullptr) {
+        focusTarget->setFocus(Qt::OtherFocusReason);
+    }
+    pumpEvents();
 }
 
 }
@@ -371,7 +374,6 @@ int main(int argc, char *argv[])
     auto *optionsLabel = tab.findChild<QLabel *>(QStringLiteral("blockDetailsOptionsLabel"));
     auto *optionsTable = tab.findChild<QTableWidget *>(QStringLiteral("blockDetailsOptionsTable"));
     auto *addOptionButton = tab.findChild<QPushButton *>(QStringLiteral("blockDetailsAddOptionButton"));
-    auto *applyButton = tab.findChild<QPushButton *>(QStringLiteral("blockDetailsApplyButton"));
     if (!expect(primaryEdit != nullptr, "Failed to find blockDetailsPrimaryEdit.")) {
         return 1;
     }
@@ -397,9 +399,6 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (!expect(addOptionButton != nullptr, "Failed to find blockDetails add option button.")) {
-        return 1;
-    }
-    if (!expect(applyButton != nullptr, "Failed to find blockDetailsApplyButton.")) {
         return 1;
     }
     const QString blocksText = tab.text();
@@ -478,16 +477,12 @@ int main(int argc, char *argv[])
                 "Toolbox command preview should not include introductory instruction sentence.")) {
         return 1;
     }
-    if (!expect(!toolboxHelpHtml.contains(QStringLiteral("<h4>arguments</h4>")),
-                "Toolbox command preview should not show full argument sections.")) {
+    if (!expect(toolboxHelpHtml.contains(QStringLiteral("arguments")),
+                "Toolbox command preview should show full argument sections.")) {
         return 1;
     }
-    if (!expect(!toolboxHelpHtml.contains(QStringLiteral("<h4>accepted values</h4>")),
-                "Toolbox command preview should not show full accepted-values sections.")) {
-        return 1;
-    }
-    if (!expect(!toolboxHelpHtml.contains(QStringLiteral("<h4>options</h4>")),
-                "Toolbox command preview should not show full options sections.")) {
+    if (!expect(toolboxHelpText.contains(QStringLiteral("syntax:")),
+                "Toolbox command preview should show complete command syntax.")) {
         return 1;
     }
 
@@ -543,19 +538,17 @@ int main(int argc, char *argv[])
                 "Leaving option-table focus should restore command/parameter help.")) {
         return 1;
     }
-    if (!expect(detailsStatus->text().toLower().contains(QStringLiteral("command: survey"))
-                    && !detailsStatus->text().toLower().contains(QStringLiteral("line ")),
-                "Block Details status should show command-only context without line number.")) {
+    if (!expect(detailsStatus->text().toLower().contains(QStringLiteral("source line")),
+                "Block Details status should show source line context.")) {
         return 1;
     }
-    if (!expect(!detailsHelp->toHtml().toLower().contains(QStringLiteral("<strong>syntax:</strong>")),
-                "Block details contextual help should hide Syntax section in Blocks mode.")) {
+    if (!expect(detailsHelp->toPlainText().toLower().contains(QStringLiteral("syntax:")),
+                "Block details contextual help should show complete Syntax section in Blocks mode.")) {
         return 1;
     }
 
     primaryEdit->setText(QStringLiteral("demo2"));
-    applyButton->click();
-    pumpEvents();
+    commitBlockDetailsEdit(primaryEdit, blockView);
     if (!expect(editor->toPlainText().contains(QStringLiteral("survey demo2 -title old")),
                 "Applying details for survey block should update survey id.")) {
         return 1;
@@ -578,7 +571,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (!expect(selectBlockByKind(blockView, detailsStatus, QStringLiteral("unrecognized")),
+    if (!expect(selectBlockByKind(blockView, detailsStatus, QStringLiteral("__unrecognized")),
                 "Failed to select unrecognized fallback block in blocks view.")) {
         return 1;
     }
@@ -591,8 +584,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     primaryEdit->setText(QStringLiteral("mystery-command fixed-value"));
-    applyButton->click();
-    pumpEvents();
+    commitBlockDetailsEdit(primaryEdit, blockView);
     if (!expect(editor->toPlainText().contains(QStringLiteral("mystery-command fixed-value")),
                 "Applying unrecognized block details should rewrite the full raw source line.")) {
         return 1;
@@ -619,8 +611,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     primaryEdit->setText(QStringLiteral("ZO /CSS 6-28"));
-    applyButton->click();
-    pumpEvents();
+    commitBlockDetailsEdit(primaryEdit, blockView);
     if (!expect(editor->toPlainText().contains(QStringLiteral("team \"ZO /CSS 6-28\"")),
                 "Applying details for team block should quote spaced team value.")) {
         return 1;
@@ -642,8 +633,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     primaryEdit->setText(QStringLiteral("Babicka Speleo Group"));
-    applyButton->click();
-    pumpEvents();
+    commitBlockDetailsEdit(primaryEdit, blockView);
     if (!expect(editor->toPlainText().contains(QStringLiteral("explo-team \"Babicka Speleo Group\"")),
                 "Applying details for explo-team block should quote spaced person value.")) {
         return 1;
@@ -677,9 +667,7 @@ int main(int argc, char *argv[])
     readingsTagInput->setText(QStringLiteral("from to length compass clino"));
     sendKey(readingsTagInput, QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier, QStringLiteral("\n"));
     sendKey(readingsTagInput, QEvent::KeyRelease, Qt::Key_Return);
-    pumpEvents();
-    applyButton->click();
-    pumpEvents();
+    commitBlockDetailsEdit(primaryEdit, blockView);
     if (!expect(editor->toPlainText().contains(QStringLiteral("data normal from to length compass clino")),
                 "Applying details for data block should update style + readings order.")) {
         return 1;
@@ -929,7 +917,6 @@ int main(int argc, char *argv[])
         auto *continuationView = continuationTab->findChild<QGraphicsView *>();
         auto *continuationStatus = continuationTab->findChild<QLabel *>(QStringLiteral("blockDetailsStatusLabel"));
         auto *continuationPrimaryEdit = continuationTab->findChild<QLineEdit *>(QStringLiteral("blockDetailsPrimaryEdit"));
-        auto *continuationApplyButton = continuationTab->findChild<QPushButton *>(QStringLiteral("blockDetailsApplyButton"));
         auto *continuationOptionsTable = continuationTab->findChild<QTableWidget *>(QStringLiteral("blockDetailsOptionsTable"));
         if (!expect(continuationView != nullptr, "Failed to find block canvas view for continuation tab.")) {
             delete continuationTab;
@@ -940,10 +927,6 @@ int main(int argc, char *argv[])
             return 1;
         }
         if (!expect(continuationPrimaryEdit != nullptr, "Failed to find primary edit for continuation tab.")) {
-            delete continuationTab;
-            return 1;
-        }
-        if (!expect(continuationApplyButton != nullptr, "Failed to find apply button for continuation tab.")) {
             delete continuationTab;
             return 1;
         }
@@ -958,8 +941,7 @@ int main(int argc, char *argv[])
             return 1;
         }
         continuationPrimaryEdit->setText(QStringLiteral("wrapped-renamed"));
-        continuationApplyButton->click();
-        pumpEvents();
+        commitBlockDetailsEdit(continuationPrimaryEdit, continuationView);
 
         const QString continuationUpdatedText = continuationTab->text();
         const bool preservesWrappedOptions =

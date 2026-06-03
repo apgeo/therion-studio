@@ -18,6 +18,7 @@
 #include <QRegularExpression>
 #include <QScopedValueRollback>
 #include <QSet>
+#include <QVariant>
 #include <QtMath>
 
 #include <cmath>
@@ -43,6 +44,7 @@ using XtherionAreaAdjust = TherionAreaAdjust;
 
 constexpr int kBackgroundLayerXviGeometryKeyRole = 100;
 constexpr int kBackgroundLayerUserVisibilityRole = 101;
+constexpr int kBackgroundLayerSourceImageRole = 102;
 
 struct CachedXviDocumentEntry
 {
@@ -260,6 +262,45 @@ QSizeF rasterModelSize(const QString &layerPath, qreal imageScale)
     }
 
     return QSizeF(imageSize.width(), imageSize.height());
+}
+
+QImage readRasterSourceImage(const QString &layerPath)
+{
+    if (layerPath.isEmpty() || isXviBackgroundPath(layerPath)) {
+        return QImage();
+    }
+
+    QImageReader imageReader(layerPath);
+    imageReader.setAutoTransform(true);
+    return imageReader.read();
+}
+
+void cacheRasterSourceImage(QGraphicsPixmapItem *item, const QImage &sourceImage)
+{
+    if (item == nullptr || sourceImage.isNull()) {
+        return;
+    }
+
+    item->setData(kBackgroundLayerSourceImageRole, QVariant::fromValue(sourceImage));
+}
+
+QImage rasterSourceImageForItem(QGraphicsPixmapItem *item)
+{
+    if (item == nullptr) {
+        return QImage();
+    }
+
+    const QVariant cachedValue = item->data(kBackgroundLayerSourceImageRole);
+    if (cachedValue.canConvert<QImage>()) {
+        const QImage cachedImage = cachedValue.value<QImage>();
+        if (!cachedImage.isNull()) {
+            return cachedImage;
+        }
+    }
+
+    const QImage sourceImage = readRasterSourceImage(item->data(0).toString());
+    cacheRasterSourceImage(item, sourceImage);
+    return sourceImage;
 }
 
 QString formatXtherionNumber(qreal value)
@@ -623,14 +664,7 @@ bool placeRasterLayerByModelRect(QGraphicsPixmapItem *item,
         return false;
     }
 
-    const QString layerPath = item->data(0).toString();
-    if (layerPath.isEmpty()) {
-        return false;
-    }
-
-    QImageReader imageReader(layerPath);
-    imageReader.setAutoTransform(true);
-    const QImage sourceImage = imageReader.read();
+    const QImage sourceImage = rasterSourceImageForItem(item);
     if (sourceImage.isNull()) {
         return false;
     }
@@ -2053,6 +2087,7 @@ void MapEditorTab::addBackgroundImage(const QString &imagePath, bool writeXtheri
     backgroundItem->setOpacity(0.58);
     backgroundItem->setData(0, QFileInfo(imagePath).absoluteFilePath());
     backgroundItem->setData(2, 1.0);
+    cacheRasterSourceImage(backgroundItem, image);
 
     const QPointF topLeft(previewBounds.center().x() - (pixmap.width() / 2.0),
                           previewBounds.center().y() - (pixmap.height() / 2.0));
@@ -2088,9 +2123,7 @@ void MapEditorTab::applyBackgroundLayerGamma(QGraphicsPixmapItem *item, qreal ga
         return;
     }
 
-    QImageReader imageReader(layerPath);
-    imageReader.setAutoTransform(true);
-    QImage sourceImage = imageReader.read();
+    QImage sourceImage = rasterSourceImageForItem(item);
     if (sourceImage.isNull()) {
         return;
     }

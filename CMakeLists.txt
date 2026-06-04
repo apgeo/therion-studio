@@ -68,6 +68,8 @@ set(THERION_CORE_SOURCES
     src/core/CommandCatalogStore.h
     src/core/TherionCommandSyntax.cpp
     src/core/TherionCommandSyntax.h
+    src/core/TherionCommandLineModel.cpp
+    src/core/TherionCommandLineModel.h
     src/core/DocumentFile.cpp
     src/core/DocumentFile.h
     src/core/IFileSystem.h
@@ -82,6 +84,7 @@ set(THERION_CORE_SOURCES
     src/core/TherionXviParser.h
     src/core/TherionFileTypes.h
     src/core/TherionStringUtils.h
+    src/core/TherionTokenRules.h
     src/core/TherionDocumentEditor.cpp
     src/core/TherionDocumentEditor.h
     src/core/ProjectStructureIndex.cpp
@@ -298,8 +301,6 @@ set(THERION_TEXT_EDITOR_SHARED_SOURCES
     src/app/text_editor/block_editor/BlockEditorCanvasItem.h
     src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
-    src/app/text_editor/CommandOptionParser.cpp
-    src/app/text_editor/CommandOptionParser.h
     src/app/text_editor/block_editor/BlockEditorDetailsSupport.cpp
     src/app/text_editor/block_editor/BlockEditorDetailsSupport.h
     src/app/text_editor/block_editor/BlockEditorConfigureController.cpp
@@ -805,13 +806,14 @@ endif()
 therion_add_core_unit_test(TherionDocumentEditorTest
     tests/TherionDocumentEditorTest.cpp)
 
+therion_add_core_unit_test(TherionTokenRulesTest
+    tests/TherionTokenRulesTest.cpp)
+
 therion_add_core_unit_test(CommandCatalogStoreTest
     tests/CommandCatalogStoreTest.cpp)
 
 therion_add_core_unit_test(CommandOptionParserTest
-    tests/CommandOptionParserTest.cpp
-    src/app/text_editor/CommandOptionParser.cpp
-    src/app/text_editor/CommandOptionParser.h)
+    tests/CommandOptionParserTest.cpp)
 
 therion_add_core_unit_test(TherionProjectStructureIndexTest
     tests/ProjectStructureIndexTest.cpp)
@@ -1141,6 +1143,7 @@ set(THERION_UNIT_TEST_TARGETS
     CommandCatalogStoreTest
     CommandOptionParserTest
     TherionDocumentEditorTest
+    TherionTokenRulesTest
     TherionProjectStructureIndexTest
     MapBackgroundPlacementTest
     TherionBackgroundMetadataTest

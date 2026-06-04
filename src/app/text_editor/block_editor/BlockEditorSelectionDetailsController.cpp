@@ -1,11 +1,11 @@
 #include "BlockEditorSelectionDetailsController.h"
 
-#include "../CommandOptionParser.h"
 #include "BlockEditorDetailsSupport.h"
 #include "BlockEditorDirectiveRules.h"
 #include "BlockEditorSourceText.h"
 #include "../ContextHelpController.h"
 #include "../TextEditorCommandMetadata.h"
+#include "../../../core/TherionCommandLineModel.h"
 
 #include <QCoreApplication>
 #include <QLabel>

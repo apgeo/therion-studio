@@ -1,9 +1,9 @@
 #include "CommandOptionsDialog.h"
 
-#include "CommandOptionParser.h"
 #include "CommandOptionTableDelegate.h"
 #include "ContextHelpController.h"
 #include "TextEditorOptionValidation.h"
+#include "../../core/TherionCommandLineModel.h"
 
 #include <QAbstractItemView>
 #include <QCoreApplication>
@@ -500,10 +500,10 @@ std::optional<QString> CommandOptionsDialog::configureLine(const QString &comman
         QStringList updatedPositionalArguments;
         updatedPositionalArguments.reserve(positionalRows.size());
         for (const QPair<int, QString> &row : positionalRows) {
-            updatedPositionalArguments.append(serializeTherionArgumentToken(row.second.trimmed()));
+            updatedPositionalArguments.append(row.second.trimmed());
         }
         if (!updatedPositionalArguments.isEmpty()) {
-            updatedLine += QStringLiteral(" ") + updatedPositionalArguments.join(QLatin1Char(' '));
+            updatedLine += QStringLiteral(" ") + serializeCommandArgumentValues(updatedPositionalArguments);
         }
         if (!validation.serializedOptions.isEmpty()) {
             updatedLine += QStringLiteral(" ") + validation.serializedOptions.join(QLatin1Char(' '));

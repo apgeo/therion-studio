@@ -12,6 +12,30 @@ The desired direction is correct: parse `.th`, `.th2`, and `thconfig` into one s
 
 For the first stable public release, I would not attempt a full parser rewrite. I would add guardrails and keep the existing behavior stable. The unified parser/source transaction migration should be planned as the next major architecture phase because it touches every high-risk area: round-trip safety, map/text synchronization, encoding, undo/redo, and performance.
 
+## Status Update - 2026-06-04
+
+Completed follow-ups from this review:
+
+- ~~Low-level whitespace tokenization and normalized line splitting duplicates have been consolidated into `src/core/TherionStringUtils.h`.~~
+- ~~Map editor inspector/object source mutations now require `applySourceTextChangeWithSnapshot`; the previous silent `replaceTextForCommand(...)` fallback path is gone.~~
+- ~~`applySourceTextChangeWithSnapshot` is now backed by the shared `TextEditorSourceTransactionController`, with focused tests in `TextEditorSourceTransactionControllerTest`.~~
+- ~~`StructureConstraintsTest` now guards low-level map-editor source mutations against unapproved `replaceTextForCommand(...)` / rewrite bypasses.~~
+- ~~`TherionTokenRules` now centralizes numeric-token classification and option-boundary checks used by parser, source rewriting, structure indexing, syntax highlighting, command option parsing, and map projections/details.~~
+- ~~`TherionCommandLineModel` now moves the existing catalog-backed command option parsing model into `src/core/`, and Map/Block option UI call sites use it directly.~~
+- ~~`TherionCommandLineModel` now owns shared command argument and option-row serialization helpers used by option validation, Blocks option argument editing, and Map/Block command options dialog flows.~~
+- ~~Raster background source images now use a bounded path/mtime/size cache so repeated gamma and placement operations do not decode the same raster file repeatedly.~~
+
+Still open:
+
+- The shared source transaction controller is not yet the single source-write path for Raw, Blocks, Map, and all inspector workflows.
+- Command-line modeling and higher-level option parsing/serialization are still duplicated across command option parsing, Block editor details, Map object settings, and source rewriters.
+- The unified lossless parser/source document model remains post-release architecture work.
+- Large map/background/rewriter files are still large and should be split only when a focused behavior change gives a natural extraction point.
+
+Recommended next step:
+
+- Next, continue the lower-risk performance track by moving background raster decode/scale preparation off the UI thread with cancellation/version checks, or start the later lossless parser/source-document phase once release stabilization allows broader parser work.
+
 ## Priority Findings
 
 ### P0 - Missing Unified Lossless Parser
@@ -60,8 +84,9 @@ Evidence:
 
 Current follow-up status:
 
-- The ad hoc `MapEditorObjectDetailsEditController` / `MapEditorInspectorObjectController` fallback path that silently used `replaceTextForCommand(...)` when `applySourceTextChangeWithSnapshot` was missing has been removed in the current cleanup branch. Map inspector source mutations now require the atomic map-source transaction callback.
-- The remaining architecture gap is that the transaction mechanism is not yet promoted to one shared source-edit service for Raw, Blocks, Map, and inspector workflows.
+- ~~The ad hoc `MapEditorObjectDetailsEditController` / `MapEditorInspectorObjectController` fallback path that silently used `replaceTextForCommand(...)` when `applySourceTextChangeWithSnapshot` was missing has been removed. Map inspector source mutations now require the atomic map-source transaction callback.~~
+- ~~The map helper is now backed by `TextEditorSourceTransactionController`, which owns the text replacement plus undo snapshot transaction for these map-editor flows.~~
+- The remaining architecture gap is that `TextEditorSourceTransactionController` is not yet the single required source-edit service for Raw, Blocks, Map, and all inspector workflows.
 
 Risk:
 
@@ -72,8 +97,9 @@ Risk:
 
 Recommended direction:
 
-- Promote the map helper into a shared source-edit service, for example `TextEditorSourceTransactionController` or `TherionSourceChangeService`.
-- Keep the source transaction callback/interface required for map object edit controllers; do not reintroduce an ad hoc `replaceTextForCommand(...)` fallback in map-editing code.
+- ~~Promote the map helper into a shared source-edit service, for example `TextEditorSourceTransactionController` or `TherionSourceChangeService`.~~
+- ~~Keep the source transaction callback/interface required for map object edit controllers; do not reintroduce an ad hoc `replaceTextForCommand(...)` fallback in map-editing code.~~
+- Continue expanding `TextEditorSourceTransactionController` until Raw, Blocks, Map, and inspector source mutations submit through one required source-edit path.
 - Every source mutation should submit a single `SourceChangeRequest`:
   - before text/version,
   - after text or line-range patch,
@@ -142,28 +168,31 @@ Recommended splits:
 
 Examples:
 
-- Numeric-token checks exist in multiple places:
-  - `TherionDocumentParser.cpp::isNumericToken`
-  - `TherionDocumentEditor.cpp::tokenLooksNumeric`
-  - `ProjectStructureIndex.cpp::tokenLooksNumeric`
-  - `MapEditorObjectDetailsLogic.cpp::tokenLooksNumericForMapDetails`
-  - `MapEditorSceneItems.cpp::tokenLooksNumeric`
-  - `MapEditorSourceReferenceResolver.cpp::tokenLooksNumeric`
-  - `MapEditorSceneRenderer.cpp::tokenLooksNumeric`
+- ~~Numeric-token checks existed in multiple places:~~
+  - ~~`TherionDocumentParser.cpp::isNumericToken`~~
+  - ~~`TherionDocumentEditor.cpp::tokenLooksNumeric`~~
+  - ~~`ProjectStructureIndex.cpp::tokenLooksNumeric`~~
+  - ~~`MapEditorObjectDetailsLogic.cpp::tokenLooksNumericForMapDetails`~~
+  - ~~`MapEditorSceneItems.cpp::tokenLooksNumeric`~~
+  - ~~`MapEditorSourceReferenceResolver.cpp::tokenLooksNumeric`~~
+  - ~~`MapEditorSceneRenderer.cpp::tokenLooksNumeric`~~
 - Line-ending and source-line splitting are duplicated across:
   - `TherionDocumentEditor.cpp`
   - `MapEditorBackgroundLayers.cpp`
   - `MapEditorObjectMovePlanner.cpp`
   - `MapEditorObjectDeletePlanner.cpp`
   - `MapEditorLineSplitPlanner.cpp`
-- `tokenizeWhitespace()` was duplicated in `TherionXviParser.cpp` and `TherionBackgroundMetadata.cpp`.
-- `splitLinesNormalized()` was duplicated in `TherionDocumentEditor.cpp` and `MapEditorLineSplitPlanner.cpp`.
-- Command option parsing exists in `CommandOptionParser`, Block editor details, Map object settings, and source rewriters.
+- ~~`tokenizeWhitespace()` was duplicated in `TherionXviParser.cpp` and `TherionBackgroundMetadata.cpp`.~~
+- ~~`splitLinesNormalized()` was duplicated in `TherionDocumentEditor.cpp` and `MapEditorLineSplitPlanner.cpp`.~~
+- ~~Command option parsing existed in app-level `CommandOptionParser`.~~
+- Command option serialization/editing behavior still exists across Block editor details, Map object settings, and source rewriters.
 
 Current follow-up status:
 
 - The low-level whitespace tokenization and line-splitting duplicates above have been consolidated into `src/core/TherionStringUtils.h` in the current cleanup branch.
-- Numeric-token classification, option parsing, and command-line modeling are still duplicated and should be handled by focused follow-up types rather than broader generic utilities.
+- Numeric-token classification and option-boundary checks have been consolidated into `src/core/TherionTokenRules.h`.
+- The first shared command-line model has been extracted into `src/core/TherionCommandLineModel.h`; the legacy app-level `CommandOptionParser` wrapper has been removed.
+- Command-line option parsing plus option-row/value serialization now lives behind focused command-line model APIs rather than broader generic utilities.
 
 Risk:
 
@@ -172,10 +201,11 @@ Risk:
 
 Recommended direction:
 
-- Centralize token classification in `TherionTokenRules`.
+- ~~Centralize token classification in `TherionTokenRules`.~~
 - Centralize line splitting/newline preservation in `TherionSourceText`.
-- Extract low-level text helpers such as whitespace tokenization and normalized line splitting into a focused core utility such as `TherionStringUtils`, not broad generic `Utils`.
-- Centralize command option parsing/serialization in a shared catalog-backed `TherionCommandLineModel`.
+- ~~Extract low-level text helpers such as whitespace tokenization and normalized line splitting into a focused core utility such as `TherionStringUtils`, not broad generic `Utils`.~~
+- ~~Centralize command option parsing in a shared catalog-backed `TherionCommandLineModel`.~~
+- ~~Continue centralizing option serialization/editing helpers in the same command-line model.~~
 - Make renderers and inspectors consume already-parsed command/option data instead of re-tokenizing.
 
 ## Parser Architecture Recommendation
@@ -222,7 +252,7 @@ Introduce these layers incrementally:
 Do not rewrite everything at once. Use this order:
 
 1. Extract shared `TherionSourceText` for line splitting/newline preservation.
-2. Replace duplicate numeric/token helpers with one shared `TherionTokenRules`.
+2. ~~Replace duplicate numeric/token helpers with one shared `TherionTokenRules`.~~
 3. Make `TherionDocumentParser::parseText()` optionally return all physical lines, not only token lines.
 4. Move geometry extraction from `MapEditorSceneRenderer.cpp` into a standalone `TherionMapProjection` or `Th2GeometryProjection`.
 5. Move project structure parsing to consume the same source document/projection.
@@ -347,7 +377,7 @@ Recommendations:
 
 - Move image decoding to a background job, for example `QtConcurrent::run()` with completion delivered back to the UI thread.
 - Show an existing image or placeholder while a new image decode is pending.
-- Cache original decoded `QImage` per file path/mtime.
+- ~~Cache original decoded `QImage` per file path/mtime.~~
 - Cache adjusted/scaled pixmaps by:
   - file path,
   - source mtime,
@@ -432,8 +462,8 @@ Create a dedicated phase in `WORKLOG.md` for "Unified Source Parser and Transact
 
 These are lower-risk and useful before release:
 
-- Keep map-object inspector source transactions mandatory and avoid reintroducing non-undo fallback writes.
-- Keep duplicated low-level source string helpers consolidated in a focused shared core helper.
+- ~~Keep map-object inspector source transactions mandatory and avoid reintroducing non-undo fallback writes.~~
+- ~~Keep duplicated low-level source string helpers consolidated in a focused shared core helper.~~
 - Add tests for `applySourceTextChangeWithSnapshot` equivalent behavior for all map source operations.
 - Add tests that Block editor auto-commit creates undoable text changes.
 - Add regression tests for parser/token rules:
@@ -479,3 +509,5 @@ For each parser/source-write migration step:
 For release, keep the current implementation stable and avoid major parser rewrites. The biggest actionable pre-release work is to add guardrail tests around source writes and known parser edge cases.
 
 For the next major development phase, make the unified lossless parser and shared source transaction service the central architecture objective. This will reduce dead/duplicated code, improve undo/redo consistency, make Map/Block/Raw views coherent, and provide the best leverage for performance and battery improvements.
+
+Immediate next step: continue the release-safe performance track with async/cancellable background raster decode/scale preparation and version-checked UI application. Keep the full lossless parser/source-document model as the later architecture phase.

@@ -2,6 +2,7 @@
 
 #include <QColor>
 #include <QCryptographicHash>
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -47,6 +48,7 @@ constexpr int kBackgroundLayerXviGeometryKeyRole = 100;
 constexpr int kBackgroundLayerUserVisibilityRole = 101;
 constexpr int kBackgroundLayerSourceImageRole = 102;
 constexpr int kBackgroundLayerXviExpectedTopLeftRole = 103;
+constexpr qsizetype kRasterSourceImageCacheLimit = 8;
 constexpr qreal kDefaultXviLayerOpacity = 1.0;
 constexpr qreal kDefaultRasterLayerOpacity = 0.58;
 
@@ -54,6 +56,12 @@ struct CachedXviDocumentEntry
 {
     QByteArray contentHash;
     XviDocument document;
+};
+
+struct CachedRasterSourceImageEntry
+{
+    QString cacheKey;
+    QImage image;
 };
 
 struct XviSketchStrokeStyle
@@ -114,6 +122,66 @@ XtherionAreaAdjust parseXtherionAreaAdjust(const QString &documentText)
 bool isXviBackgroundPath(const QString &layerPath)
 {
     return layerPath.endsWith(QStringLiteral(".xvi"), Qt::CaseInsensitive);
+}
+
+QString rasterSourceImageCacheKey(const QString &layerPath)
+{
+    if (layerPath.isEmpty() || isXviBackgroundPath(layerPath)) {
+        return QString();
+    }
+
+    const QFileInfo fileInfo(layerPath);
+    if (!fileInfo.exists() || !fileInfo.isFile()) {
+        return QString();
+    }
+
+    return QStringLiteral("raster-source-v1|%1|%2|%3")
+        .arg(normalizedPathKey(fileInfo.absoluteFilePath()),
+             QString::number(fileInfo.lastModified().toMSecsSinceEpoch()),
+             QString::number(fileInfo.size()));
+}
+
+QHash<QString, CachedRasterSourceImageEntry> &rasterSourceImageCache()
+{
+    static QHash<QString, CachedRasterSourceImageEntry> cache;
+    return cache;
+}
+
+QStringList &rasterSourceImageCacheOrder()
+{
+    static QStringList order;
+    return order;
+}
+
+void touchRasterSourceImageCacheKey(const QString &cacheKey)
+{
+    if (cacheKey.isEmpty()) {
+        return;
+    }
+
+    QStringList &order = rasterSourceImageCacheOrder();
+    order.removeAll(cacheKey);
+    order.append(cacheKey);
+
+    QHash<QString, CachedRasterSourceImageEntry> &cache = rasterSourceImageCache();
+    while (order.size() > kRasterSourceImageCacheLimit) {
+        cache.remove(order.takeFirst());
+    }
+}
+
+void rememberRasterSourceImage(const QString &layerPath, const QImage &image)
+{
+    if (image.isNull()) {
+        return;
+    }
+
+    const QString cacheKey = rasterSourceImageCacheKey(layerPath);
+    if (cacheKey.isEmpty()) {
+        return;
+    }
+
+    rasterSourceImageCache().insert(cacheKey, CachedRasterSourceImageEntry{cacheKey, image});
+    touchRasterSourceImageCacheKey(cacheKey);
 }
 
 bool hasUserVisibilityOverride(const QGraphicsPixmapItem *item)
@@ -280,9 +348,20 @@ QImage readRasterSourceImage(const QString &layerPath)
         return QImage();
     }
 
+    const QString cacheKey = rasterSourceImageCacheKey(layerPath);
+    if (!cacheKey.isEmpty()) {
+        const auto cacheIt = rasterSourceImageCache().constFind(cacheKey);
+        if (cacheIt != rasterSourceImageCache().constEnd()) {
+            touchRasterSourceImageCacheKey(cacheKey);
+            return cacheIt->image;
+        }
+    }
+
     QImageReader imageReader(layerPath);
     imageReader.setAutoTransform(true);
-    return imageReader.read();
+    const QImage image = imageReader.read();
+    rememberRasterSourceImage(layerPath, image);
+    return image;
 }
 
 void cacheRasterSourceImage(QGraphicsPixmapItem *item, const QImage &sourceImage)
@@ -2101,6 +2180,7 @@ void MapEditorTab::addBackgroundImage(const QString &imagePath, bool writeXtheri
     if (image.isNull()) {
         return;
     }
+    rememberRasterSourceImage(imagePath, image);
 
     const QRectF previewBounds = mapPreviewBounds();
     if (!previewBounds.isValid() || previewBounds.width() < 2.0 || previewBounds.height() < 2.0) {

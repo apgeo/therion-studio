@@ -22,7 +22,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P0: Manually smoke-test public-release workflows: open project, edit `.th`, edit `.th2`, map insertion/selection, background layer visibility/Gamma, Blocks mode command filtering, compiler run config, language selection, Help manual, and About dialog.
 - P0: Verify daily scheduled Windows installer and Linux package workflows after the final release branch state lands.
 - P1: Review localized manual wording during UI smoke testing and adjust only user-facing workflow text.
-- P1: Continue `REVIEW_CODEX.md` cleanup with async/cancellable background image decode and bounded cache policy work after the interim per-layer raster source cache, before taking larger parser/unified-document-model steps.
+- P1: Continue `REVIEW_CODEX.md` cleanup with async/cancellable background image decode/scale preparation and version-checked UI application before larger parser/unified-document-model steps.
 
 ## Risks / Blockers
 

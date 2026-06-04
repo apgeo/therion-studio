@@ -3,13 +3,13 @@
 #include "DocumentFile.h"
 #include "TherionFileTypes.h"
 #include "TherionDocumentParser.h"
+#include "TherionTokenRules.h"
 
 #include <QCoreApplication>
 #include <QDir>
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QHash>
-#include <QRegularExpression>
 #include <QSet>
 
 #include <algorithm>
@@ -715,22 +715,11 @@ QVector<QString> rootProjectFiles(const QVector<QString> &filePaths,
     return roots;
 }
 
-bool tokenLooksNumeric(const QString &token)
-{
-    if (token.isEmpty()) {
-        return false;
-    }
-
-    static const QRegularExpression numericPattern(
-        QStringLiteral(R"(^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$)"));
-    return numericPattern.match(token).hasMatch();
-}
-
 QString pointTypeToken(const TherionParsedLine &parsedLine)
 {
     for (int index = 1; index < parsedLine.tokens.size(); ++index) {
         const QString token = parsedLine.tokens.at(index);
-        if (token.startsWith(QLatin1Char('-')) || tokenLooksNumeric(token)) {
+        if (TherionTokenRules::tokenStartsOption(token) || TherionTokenRules::isNumericToken(token)) {
             continue;
         }
 

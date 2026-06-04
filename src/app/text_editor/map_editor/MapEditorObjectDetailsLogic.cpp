@@ -1,6 +1,7 @@
 #include "MapEditorObjectDetailsLogic.h"
 
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionTokenRules.h"
 
 #include <QHash>
 #include <QJsonArray>
@@ -39,16 +40,6 @@ QString objectKindForDirective(const QString &directiveToken)
         return directive;
     }
     return QString();
-}
-
-bool tokenLooksNumericForMapDetails(const QString &token)
-{
-    if (token.isEmpty()) {
-        return false;
-    }
-    static const QRegularExpression numericPattern(
-        QStringLiteral(R"(^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$)"));
-    return numericPattern.match(token).hasMatch();
 }
 
 bool isOrientationOptionTokenForMapDetails(const QString &token)
@@ -105,10 +96,10 @@ QString pointTypeTokenForMapDetails(const TherionParsedLine &parsedLine)
         if (token.isEmpty()) {
             continue;
         }
-        if (token.startsWith(QLatin1Char('-')) && !tokenLooksNumericForMapDetails(token)) {
+        if (TherionTokenRules::tokenStartsOption(token)) {
             break;
         }
-        if (tokenLooksNumericForMapDetails(token)) {
+        if (TherionTokenRules::isNumericToken(token)) {
             ++numericCoordinateTokens;
             continue;
         }
@@ -326,7 +317,7 @@ QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &pa
             break;
         }
 
-        if (firstNonQuotedIndex >= 0 && !tokenLooksNumericForMapDetails(parsedLine.tokens.at(firstNonQuotedIndex))) {
+        if (firstNonQuotedIndex >= 0 && !TherionTokenRules::isNumericToken(parsedLine.tokens.at(firstNonQuotedIndex))) {
             return pairs;
         }
     }
@@ -335,7 +326,7 @@ QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &pa
         const QString firstToken = parsedLine.tokens.at(firstTokenIndex);
         if (firstTokenIndex == 0
             && firstToken.startsWith(QLatin1Char('-'))
-            && !tokenLooksNumericForMapDetails(firstToken)) {
+            && !TherionTokenRules::isNumericToken(firstToken)) {
             return pairs;
         }
     }
@@ -352,17 +343,17 @@ QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &pa
         if (!sawCoordinateToken
             && firstTokenIndex > 0
             && token.startsWith(QLatin1Char('-'))
-            && !tokenLooksNumericForMapDetails(token)) {
+            && !TherionTokenRules::isNumericToken(token)) {
             if (index + 1 < parsedLine.tokens.size()) {
                 const QString nextToken = parsedLine.tokens.at(index + 1);
-                if (!nextToken.startsWith(QLatin1Char('-')) || tokenLooksNumericForMapDetails(nextToken)) {
+                if (!TherionTokenRules::tokenStartsOption(nextToken)) {
                     skipOptionValueToken = true;
                 }
             }
             continue;
         }
 
-        const bool numeric = tokenLooksNumericForMapDetails(token);
+        const bool numeric = TherionTokenRules::isNumericToken(token);
         if (!numeric) {
             if (sawCoordinateToken) {
                 break;
@@ -396,7 +387,7 @@ std::optional<qreal> pointOrientationFromParsedLine(const TherionParsedLine &par
             continue;
         }
         const QString valueToken = parsedLine.tokens.at(index + 1).trimmed();
-        if (valueToken.startsWith(QLatin1Char('-')) && !tokenLooksNumericForMapDetails(valueToken)) {
+        if (TherionTokenRules::tokenStartsOption(valueToken)) {
             continue;
         }
         bool ok = false;
@@ -484,7 +475,7 @@ std::optional<qreal> linePointNumericOptionForSourceVertex(const QString &docume
                     continue;
                 }
                 const QString valueToken = optionLine.tokens.at(optionIndex + 1).trimmed();
-                if (valueToken.startsWith(QLatin1Char('-')) && !tokenLooksNumericForMapDetails(valueToken)) {
+                if (TherionTokenRules::tokenStartsOption(valueToken)) {
                     continue;
                 }
                 bool ok = false;

@@ -1,4 +1,5 @@
-#include "../src/app/text_editor/CommandOptionParser.h"
+#include "../src/core/TherionCommandLineModel.h"
+#include "../src/core/TherionCommandSyntax.h"
 
 #include <QCoreApplication>
 #include <QHash>
@@ -9,8 +10,11 @@
 #include <cstdlib>
 
 using TherionStudio::ParsedCommandOptions;
+using TherionStudio::commandOptionValueKey;
 using TherionStudio::commandTokenStartsNewOption;
 using TherionStudio::parseCommandOptions;
+using TherionStudio::serializeCommandArgumentValues;
+using TherionStudio::serializeCommandOptionTokens;
 
 namespace
 {
@@ -25,8 +29,8 @@ void require(bool condition, const char *message)
 void parsesMapObjectAttributesAndOptions()
 {
     QHash<QString, int> arity;
-    arity.insert(QStringLiteral("point:-orientation"), 1);
-    arity.insert(QStringLiteral("point:-text"), 1);
+    arity.insert(commandOptionValueKey(QStringLiteral("point"), QStringLiteral("-orientation")), 1);
+    arity.insert(commandOptionValueKey(QStringLiteral("point"), QStringLiteral("-text")), 1);
 
     const ParsedCommandOptions parsed = parseCommandOptions(QStringLiteral("point"),
                                                             {QStringLiteral("point"),
@@ -55,7 +59,7 @@ void parsesMapObjectAttributesAndOptions()
 void keepsNegativeNumbersAsValues()
 {
     QHash<QString, int> arity;
-    arity.insert(QStringLiteral("point:-orientation"), 1);
+    arity.insert(commandOptionValueKey(QStringLiteral("point"), QStringLiteral("-orientation")), 1);
 
     const ParsedCommandOptions parsed = parseCommandOptions(QStringLiteral("point"),
                                                             {QStringLiteral("point"),
@@ -93,6 +97,86 @@ void keepsBracketedValuesTogether()
     require(parsed.optionEntries.at(0).value == QStringLiteral("[4@monum.dur_dom 5@monum.dur_dom 6@monum.dur_dom]"),
             "bracketed stations value should preserve inner spaces");
 }
+
+void serializesFixedArityOptionValues()
+{
+    QHash<QString, int> arity;
+    arity.insert(commandOptionValueKey(QStringLiteral("line"), QStringLiteral("-clip")), 2);
+
+    const ParsedCommandOptions parsed = parseCommandOptions(QStringLiteral("line"),
+                                                            {QStringLiteral("line"),
+                                                             QStringLiteral("wall"),
+                                                             QStringLiteral("-clip"),
+                                                             QStringLiteral("left wall"),
+                                                             QStringLiteral("right")},
+                                                            arity,
+                                                            false);
+
+    require(parsed.extraPositionalTokens == QStringList({QStringLiteral("wall")}),
+            "line type should stay as a positional argument");
+    require(parsed.optionEntries.size() == 1, "fixed-arity option should be parsed as one option row");
+    require(parsed.optionEntries.at(0).key == QStringLiteral("-clip"), "fixed-arity option key should be preserved");
+    require(parsed.optionEntries.at(0).value == QStringLiteral("\"left wall\" right"),
+            "fixed-arity values should be serialized with Therion quoting rules");
+}
+
+void keepsLeadingValueSeparateWhenAllowed()
+{
+    QHash<QString, int> arity;
+    arity.insert(commandOptionValueKey(QStringLiteral("scrap"), QStringLiteral("-projection")), 1);
+
+    const ParsedCommandOptions parsed = parseCommandOptions(QStringLiteral("scrap"),
+                                                            {QStringLiteral("scrap"),
+                                                             QStringLiteral("s1"),
+                                                             QStringLiteral("-projection"),
+                                                             QStringLiteral("plan")},
+                                                            arity,
+                                                            true);
+
+    require(parsed.leadingValue == QStringLiteral("s1"), "leading id value should be separated when allowed");
+    require(parsed.optionsStartIndex == 2, "options should start after the leading value");
+    require(parsed.extraPositionalTokens.isEmpty(), "leading id should not also appear as a positional token");
+    require(parsed.optionEntries.size() == 1
+                && parsed.optionEntries.at(0).key == QStringLiteral("-projection")
+                && parsed.optionEntries.at(0).value == QStringLiteral("plan"),
+            "options after a leading id should still parse normally");
+}
+
+void doesNotTreatDashPrefixedTokenAsLeadingValue()
+{
+    QHash<QString, int> arity;
+
+    const ParsedCommandOptions parsed = parseCommandOptions(QStringLiteral("point"),
+                                                            {QStringLiteral("point"),
+                                                             QStringLiteral("-45"),
+                                                             QStringLiteral("12")},
+                                                            arity,
+                                                            true);
+
+    require(parsed.leadingValue.isEmpty(), "dash-prefixed first argument should not be consumed as a leading id");
+    require(parsed.optionsStartIndex == 1, "options should still start after the command token");
+    require(parsed.extraPositionalTokens == QStringList({QStringLiteral("-45"), QStringLiteral("12")}),
+            "dash-prefixed numeric positional tokens should stay in positional arguments");
+}
+
+void serializesCommandArguments()
+{
+    require(serializeCommandArgumentValues({QStringLiteral("plain"),
+                                            QStringLiteral("left wall"),
+                                            QStringLiteral("[a b]")})
+                == QStringLiteral("plain \"left wall\" [a b]"),
+            "command argument serialization should quote values and preserve bracketed groups");
+}
+
+void serializesCommandOptionTokens()
+{
+    require(serializeCommandOptionTokens(QStringLiteral("-clip"),
+                                         {QStringLiteral("left wall"), QStringLiteral("right")})
+                == QStringList({QStringLiteral("-clip"), QStringLiteral("\"left wall\" right")}),
+            "option token serialization should keep the option key and join serialized values");
+    require(serializeCommandOptionTokens(QStringLiteral(""), {QStringLiteral("ignored")}).isEmpty(),
+            "empty option keys should not emit serialized option tokens");
+}
 }
 
 int main(int argc, char **argv)
@@ -101,5 +185,10 @@ int main(int argc, char **argv)
     parsesMapObjectAttributesAndOptions();
     keepsNegativeNumbersAsValues();
     keepsBracketedValuesTogether();
+    serializesFixedArityOptionValues();
+    keepsLeadingValueSeparateWhenAllowed();
+    doesNotTreatDashPrefixedTokenAsLeadingValue();
+    serializesCommandArguments();
+    serializesCommandOptionTokens();
     return 0;
 }

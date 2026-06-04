@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 
 #include "../TextEditorCommandMetadata.h"
+#include "../../../core/TherionCommandLineModel.h"
 #include "../../../core/TherionCommandSyntax.h"
 #include "../../../core/TherionDocumentParser.h"
 
@@ -199,11 +200,11 @@ void BlockEditorOptionArgsController::refreshOptionArgumentEditors()
                 return;
             }
 
-            QStringList serializedValues;
-            serializedValues.reserve(context_.optionArgEditors->size());
+            QStringList rawValues;
+            rawValues.reserve(context_.optionArgEditors->size());
             for (QLineEdit *valueEdit : *context_.optionArgEditors) {
                 const QString rawValue = valueEdit != nullptr ? valueEdit->text().trimmed() : QString();
-                serializedValues.append(serializeTherionArgumentToken(rawValue));
+                rawValues.append(rawValue);
             }
 
             QSignalBlocker blocker(context_.optionsTable);
@@ -213,7 +214,7 @@ void BlockEditorOptionArgsController::refreshOptionArgumentEditors()
                 valueItem = new QTableWidgetItem;
                 context_.optionsTable->setItem(row, 1, valueItem);
             }
-            valueItem->setText(serializedValues.join(QLatin1Char(' ')));
+            valueItem->setText(serializeCommandArgumentValues(rawValues));
             *context_.optionArgsSyncing = false;
 
             context_.refreshApplyState();

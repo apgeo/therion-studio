@@ -1,5 +1,6 @@
 #include "TextEditorOptionValidation.h"
 
+#include "../../core/TherionCommandLineModel.h"
 #include "../../core/TherionCommandSyntax.h"
 
 #include <QObject>
@@ -113,15 +114,7 @@ TextEditorOptionValidationResult validateAndSerializeCommandOptions(
             }
         }
 
-        result.serializedOptions.append(key);
-        if (!providedValues.isEmpty()) {
-            QStringList serializedValues;
-            serializedValues.reserve(providedValues.size());
-            for (const QString &providedValue : providedValues) {
-                serializedValues.append(serializeTherionArgumentToken(providedValue.trimmed()));
-            }
-            result.serializedOptions.append(serializedValues.join(QLatin1Char(' ')));
-        }
+        result.serializedOptions.append(serializeCommandOptionTokens(key, providedValues));
     }
 
     result.ok = true;

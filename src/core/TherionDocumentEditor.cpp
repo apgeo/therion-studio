@@ -2,12 +2,12 @@
 
 #include "TherionDocumentParser.h"
 #include "TherionStringUtils.h"
+#include "TherionTokenRules.h"
 
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QPair>
 #include <QSet>
-#include <QRegularExpression>
 #include <cmath>
 #include <optional>
 #include <utility>
@@ -16,17 +16,6 @@ namespace TherionStudio
 {
 namespace
 {
-bool tokenLooksNumeric(const QString &token)
-{
-    if (token.isEmpty()) {
-        return false;
-    }
-
-    static const QRegularExpression numericPattern(
-        QStringLiteral(R"(^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$)"));
-    return numericPattern.match(token).hasMatch();
-}
-
 int optionValueTokenIndex(const TherionParsedLine &parsedLine, const QString &option)
 {
     const QString normalizedOption = option.toLower();
@@ -53,7 +42,7 @@ int pointTypeTokenIndex(const TherionParsedLine &parsedLine)
             skipOptionValue = false;
             continue;
         }
-        if (tokenLooksNumeric(token)) {
+        if (TherionTokenRules::isNumericToken(token)) {
             continue;
         }
         if (token.startsWith(QLatin1Char('-'))) {
@@ -864,7 +853,7 @@ QPair<int, int> optionRangeWithBracketedValue(const TherionParsedLine &parsedLin
         if (firstValueToken.contains(QLatin1Char('[')) && !firstValueToken.contains(QLatin1Char(']'))) {
             for (int index = valueEndTokenIndex + 1; index < parsedLine.tokens.size(); ++index) {
                 const QString token = parsedLine.tokens.at(index);
-                if (token.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(token)) {
+                if (TherionTokenRules::tokenStartsOption(token)) {
                     break;
                 }
                 valueEndTokenIndex = index;
@@ -875,7 +864,7 @@ QPair<int, int> optionRangeWithBracketedValue(const TherionParsedLine &parsedLin
         } else if (!firstValueToken.contains(QLatin1Char('['))) {
             for (int index = valueEndTokenIndex + 1; index < parsedLine.tokens.size(); ++index) {
                 const QString token = parsedLine.tokens.at(index);
-                if (token.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(token)) {
+                if (TherionTokenRules::tokenStartsOption(token)) {
                     break;
                 }
                 valueEndTokenIndex = index;
@@ -902,7 +891,7 @@ QPair<int, int> coordinateTokenPair(const TherionParsedLine &parsedLine)
     int firstIndex = -1;
     int secondIndex = -1;
     for (int index = 1; index < parsedLine.tokens.size(); ++index) {
-        if (!tokenLooksNumeric(parsedLine.tokens.at(index))) {
+        if (!TherionTokenRules::isNumericToken(parsedLine.tokens.at(index))) {
             continue;
         }
 
@@ -941,7 +930,7 @@ QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &pa
             break;
         }
 
-        if (firstNonQuotedIndex >= 0 && !tokenLooksNumeric(parsedLine.tokens.at(firstNonQuotedIndex))) {
+        if (firstNonQuotedIndex >= 0 && !TherionTokenRules::isNumericToken(parsedLine.tokens.at(firstNonQuotedIndex))) {
             return pairs;
         }
     }
@@ -950,7 +939,7 @@ QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &pa
         const QString firstToken = parsedLine.tokens.at(firstTokenIndex);
         if (firstTokenIndex == 0
             && firstToken.startsWith(QLatin1Char('-'))
-            && !tokenLooksNumeric(firstToken)) {
+            && !TherionTokenRules::isNumericToken(firstToken)) {
             return pairs;
         }
     }
@@ -968,17 +957,17 @@ QVector<QPair<int, int>> coordinateTokenPairsForLine(const TherionParsedLine &pa
         if (!sawCoordinateToken
             && firstTokenIndex > 0
             && token.startsWith(QLatin1Char('-'))
-            && !tokenLooksNumeric(token)) {
+            && !TherionTokenRules::isNumericToken(token)) {
             if (index + 1 < parsedLine.tokens.size()) {
                 const QString nextToken = parsedLine.tokens.at(index + 1);
-                if (!nextToken.startsWith(QLatin1Char('-')) || tokenLooksNumeric(nextToken)) {
+                if (!TherionTokenRules::tokenStartsOption(nextToken)) {
                     skipOptionValueToken = true;
                 }
             }
             continue;
         }
 
-        const bool numeric = tokenLooksNumeric(token);
+        const bool numeric = TherionTokenRules::isNumericToken(token);
         if (!numeric) {
             if (sawCoordinateToken) {
                 break;

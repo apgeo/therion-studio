@@ -1,6 +1,7 @@
 #include "TherionSyntaxHighlighter.h"
 
 #include "../core/TherionDocumentParser.h"
+#include "../core/TherionTokenRules.h"
 
 #include <QColor>
 #include <QFile>
@@ -124,53 +125,6 @@ QSet<QString> lowerSetFromArray(const QJsonArray &values)
         }
     }
     return lowered;
-}
-
-bool tokenLooksNumeric(const QString &text)
-{
-    QString normalized = text.trimmed();
-    while (!normalized.isEmpty()
-           && (normalized.startsWith(QLatin1Char('['))
-               || normalized.startsWith(QLatin1Char('('))
-               || normalized.startsWith(QLatin1Char('{')))) {
-        normalized.remove(0, 1);
-    }
-    while (!normalized.isEmpty()
-           && (normalized.endsWith(QLatin1Char(']'))
-               || normalized.endsWith(QLatin1Char(')'))
-               || normalized.endsWith(QLatin1Char('}'))
-               || normalized.endsWith(QLatin1Char(','))
-               || normalized.endsWith(QLatin1Char(';')))) {
-        normalized.chop(1);
-    }
-
-    if (normalized.isEmpty()) {
-        return false;
-    }
-
-    bool isNumber = true;
-    bool sawDigit = false;
-    bool sawDecimalPoint = false;
-    int characterIndex = 0;
-    if (normalized.at(characterIndex) == QLatin1Char('+') || normalized.at(characterIndex) == QLatin1Char('-')) {
-        ++characterIndex;
-    }
-
-    for (; characterIndex < normalized.length(); ++characterIndex) {
-        const QChar character = normalized.at(characterIndex);
-        if (character.isDigit()) {
-            sawDigit = true;
-            continue;
-        }
-        if (character == QLatin1Char('.') && !sawDecimalPoint) {
-            sawDecimalPoint = true;
-            continue;
-        }
-        isNumber = false;
-        break;
-    }
-
-    return isNumber && sawDigit;
 }
 
 QSet<QString> extractClosingDirectiveTokens(const QJsonArray &syntaxArray)
@@ -442,7 +396,8 @@ void TherionSyntaxHighlighter::highlightBlock(const QString &text)
                 setFormat(tokenSpan.start, tokenSpan.length, optionFormat_);
             } else if (keywordTokens_.contains(normalizedToken)) {
                 setFormat(tokenSpan.start, tokenSpan.length, keywordFormat_);
-            } else if (tokenLooksNumeric(tokenSpan.text)) {
+            } else if (TherionTokenRules::isNumericToken(tokenSpan.text,
+                                                         TherionTokenRules::NumericTokenContext::SyntaxToken)) {
                 setFormat(tokenSpan.start, tokenSpan.length, numberFormat_);
             }
         }

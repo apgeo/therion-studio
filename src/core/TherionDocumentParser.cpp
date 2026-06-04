@@ -1,41 +1,9 @@
 #include "TherionDocumentParser.h"
 
+#include "TherionTokenRules.h"
+
 namespace TherionStudio
 {
-namespace
-{
-bool isNumericToken(const QString &token)
-{
-    if (token.isEmpty()) {
-        return false;
-    }
-
-    int index = 0;
-    if (token.at(index) == QLatin1Char('+') || token.at(index) == QLatin1Char('-')) {
-        ++index;
-    }
-
-    bool sawDigit = false;
-    bool sawDecimalPoint = false;
-    for (; index < token.size(); ++index) {
-        const QChar character = token.at(index);
-        if (character.isDigit()) {
-            sawDigit = true;
-            continue;
-        }
-
-        if (character == QLatin1Char('.') && !sawDecimalPoint) {
-            sawDecimalPoint = true;
-            continue;
-        }
-
-        return false;
-    }
-
-    return sawDigit;
-}
-}
-
 TherionParsedLine TherionDocumentParser::parseLine(const QString &line, int lineNumber)
 {
     TherionParsedLine parsedLine;
@@ -190,7 +158,7 @@ TherionParsedLine TherionDocumentParser::parseLine(const QString &line, int line
                 continue;
             }
 
-            if (isNumericToken(tokenSpan.text)) {
+            if (TherionTokenRules::isNumericToken(tokenSpan.text)) {
                 tokenSpan.type = TherionTokenType::Other;
             }
         }

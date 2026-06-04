@@ -2,8 +2,7 @@
 
 #include "MapEditorSceneInternals.h"
 #include "../../../core/TherionDocumentParser.h"
-
-#include <QRegularExpression>
+#include "../../../core/TherionTokenRules.h"
 
 #include <cmath>
 #include <limits>
@@ -122,17 +121,6 @@ QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2L
     return rows;
 }
 
-bool tokenLooksNumeric(const QString &token)
-{
-    if (token.isEmpty()) {
-        return false;
-    }
-
-    static const QRegularExpression numericPattern(
-        QStringLiteral(R"(^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$)"));
-    return numericPattern.match(token).hasMatch();
-}
-
 QPair<int, int> tokenColumnsForParsedLine(const TherionParsedLine &parsedLine, int tokenIndex)
 {
     if (tokenIndex < 0 || tokenIndex >= parsedLine.tokenSpans.size()) {
@@ -164,7 +152,7 @@ QVector<int> coordinateTokenIndicesFromLine(const TherionParsedLine &parsedLine,
             break;
         }
 
-        if (firstNonQuotedIndex >= 0 && !tokenLooksNumeric(parsedLine.tokens.at(firstNonQuotedIndex))) {
+        if (firstNonQuotedIndex >= 0 && !TherionTokenRules::isNumericToken(parsedLine.tokens.at(firstNonQuotedIndex))) {
             return numericIndices;
         }
     }
@@ -172,7 +160,7 @@ QVector<int> coordinateTokenIndicesFromLine(const TherionParsedLine &parsedLine,
     const QString firstToken = parsedLine.tokens.at(firstTokenIndex);
     if (firstTokenIndex == 0
         && firstToken.startsWith(QLatin1Char('-'))
-        && !tokenLooksNumeric(firstToken)) {
+        && !TherionTokenRules::isNumericToken(firstToken)) {
         return numericIndices;
     }
 
@@ -188,17 +176,17 @@ QVector<int> coordinateTokenIndicesFromLine(const TherionParsedLine &parsedLine,
         if (!sawCoordinateToken
             && firstTokenIndex > 0
             && token.startsWith(QLatin1Char('-'))
-            && !tokenLooksNumeric(token)) {
+            && !TherionTokenRules::isNumericToken(token)) {
             if (index + 1 < parsedLine.tokens.size()) {
                 const QString nextToken = parsedLine.tokens.at(index + 1);
-                if (!nextToken.startsWith(QLatin1Char('-')) || tokenLooksNumeric(nextToken)) {
+                if (!TherionTokenRules::tokenStartsOption(nextToken)) {
                     skipOptionValueToken = true;
                 }
             }
             continue;
         }
 
-        if (!tokenLooksNumeric(token)) {
+        if (!TherionTokenRules::isNumericToken(token)) {
             if (sawCoordinateToken) {
                 break;
             }
@@ -256,7 +244,7 @@ QVector<SourceVertexTextReference> areaSourceVertexReferencesFromParsedLine(cons
     QVector<int> numericIndices;
     for (int index = qMax(0, startTokenIndex); index < parsedLine.tokens.size(); ++index) {
         const QString token = parsedLine.tokens.at(index);
-        if (!tokenLooksNumeric(token)) {
+        if (!TherionTokenRules::isNumericToken(token)) {
             continue;
         }
         if (index < parsedLine.tokenSpans.size()

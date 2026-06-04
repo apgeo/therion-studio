@@ -28,4 +28,6 @@ ParsedCommandOptions parseCommandOptions(const QString &commandName,
 
 bool commandTokenStartsNewOption(const QString &token);
 int nextCommandOptionIndex(const QStringList &tokens, int optionIndex);
+QString serializeCommandArgumentValues(const QStringList &values);
+QStringList serializeCommandOptionTokens(const QString &optionToken, const QStringList &values);
 }

@@ -18,6 +18,7 @@
 #include <QTransform>
 
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionTokenRules.h"
 
 #include <cmath>
 #include <limits>
@@ -584,17 +585,6 @@ MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
     return theme;
 }
 
-bool tokenLooksNumeric(const QString &token)
-{
-    if (token.isEmpty()) {
-        return false;
-    }
-
-    static const QRegularExpression numericPattern(
-        QStringLiteral(R"(^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$)"));
-    return numericPattern.match(token).hasMatch();
-}
-
 std::optional<bool> parseToggleToken(const QString &token)
 {
     const QString normalized = token.trimmed().toLower();
@@ -634,7 +624,7 @@ std::optional<bool> lineOptionToggleValue(const TherionParsedLine &parsedLine, c
         }
 
         const QString nextToken = parsedLine.tokens.at(index + 1).trimmed();
-        if (nextToken.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(nextToken)) {
+        if (TherionTokenRules::tokenStartsOption(nextToken)) {
             value = true;
             continue;
         }
@@ -663,7 +653,7 @@ QVector<QPointF> coordinatePointsFromLine(const TherionParsedLine &parsedLine, i
             break;
         }
 
-        if (firstNonQuotedIndex >= 0 && !tokenLooksNumeric(parsedLine.tokens.at(firstNonQuotedIndex))) {
+        if (firstNonQuotedIndex >= 0 && !TherionTokenRules::isNumericToken(parsedLine.tokens.at(firstNonQuotedIndex))) {
             return points;
         }
     }
@@ -672,7 +662,7 @@ QVector<QPointF> coordinatePointsFromLine(const TherionParsedLine &parsedLine, i
         const QString firstToken = parsedLine.tokens.at(firstTokenIndex);
         if (firstTokenIndex == 0
             && firstToken.startsWith(QLatin1Char('-'))
-            && !tokenLooksNumeric(firstToken)) {
+            && !TherionTokenRules::isNumericToken(firstToken)) {
             return points;
         }
     }
@@ -689,17 +679,17 @@ QVector<QPointF> coordinatePointsFromLine(const TherionParsedLine &parsedLine, i
         if (!sawCoordinateToken
             && firstTokenIndex > 0
             && token.startsWith(QLatin1Char('-'))
-            && !tokenLooksNumeric(token)) {
+            && !TherionTokenRules::isNumericToken(token)) {
             if (index + 1 < parsedLine.tokens.size()) {
                 const QString nextToken = parsedLine.tokens.at(index + 1);
-                if (!nextToken.startsWith(QLatin1Char('-')) || tokenLooksNumeric(nextToken)) {
+                if (!TherionTokenRules::tokenStartsOption(nextToken)) {
                     skipOptionValueToken = true;
                 }
             }
             continue;
         }
 
-        const bool numeric = tokenLooksNumeric(token);
+        const bool numeric = TherionTokenRules::isNumericToken(token);
         if (!numeric) {
             if (sawCoordinateToken) {
                 break;
@@ -1234,7 +1224,7 @@ std::optional<qreal> linePointNumericOptionValue(const TherionParsedLine &parsed
         }
 
         const QString valueToken = parsedLine.tokens.at(index + 1).trimmed();
-        if (valueToken.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(valueToken)) {
+        if (TherionTokenRules::tokenStartsOption(valueToken)) {
             continue;
         }
 
@@ -1348,13 +1338,13 @@ QHash<QString, QString> optionValuesByFieldName(const QStringList &tokens)
     QHash<QString, QString> values;
     for (int index = 0; index + 1 < tokens.size(); ++index) {
         const QString token = tokens.at(index).trimmed();
-        if (!token.startsWith(QLatin1Char('-')) || tokenLooksNumeric(token)) {
+        if (!TherionTokenRules::tokenStartsOption(token)) {
             continue;
         }
 
         const QString fieldName = normalizedOptionFieldName(token);
         const QString candidate = tokens.at(index + 1);
-        if (fieldName.isEmpty() || (candidate.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(candidate))) {
+        if (fieldName.isEmpty() || TherionTokenRules::tokenStartsOption(candidate)) {
             continue;
         }
 
@@ -1421,10 +1411,10 @@ QString pointTypeTokenFromLine(const TherionParsedLine &parsedLine)
         if (token.isEmpty()) {
             continue;
         }
-        if (token.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(token)) {
+        if (TherionTokenRules::tokenStartsOption(token)) {
             break;
         }
-        if (tokenLooksNumeric(token)) {
+        if (TherionTokenRules::isNumericToken(token)) {
             ++numericCoordinateTokens;
             continue;
         }
@@ -1455,7 +1445,7 @@ QString stationPointNameFromLine(const TherionParsedLine &parsedLine)
         if (token.isEmpty()) {
             continue;
         }
-        if (token.startsWith(QLatin1Char('-')) && !tokenLooksNumeric(token)) {
+        if (TherionTokenRules::tokenStartsOption(token)) {
             break;
         }
         if (!sawTypeToken) {
@@ -1464,7 +1454,7 @@ QString stationPointNameFromLine(const TherionParsedLine &parsedLine)
             }
             continue;
         }
-        if (!tokenLooksNumeric(token)) {
+        if (!TherionTokenRules::isNumericToken(token)) {
             return token;
         }
     }
@@ -1642,7 +1632,9 @@ void appendAreaReferenceIdentifiers(const TherionParsedLine &parsedLine,
 
     for (int index = qMax(0, startTokenIndex); index < parsedLine.tokens.size(); ++index) {
         const QString token = parsedLine.tokens.at(index).trimmed();
-        if (token.isEmpty() || tokenLooksNumeric(token) || token.startsWith(QLatin1Char('-'))) {
+        if (token.isEmpty()
+            || TherionTokenRules::isNumericToken(token)
+            || TherionTokenRules::tokenStartsOption(token)) {
             continue;
         }
         identifiers->append(token);

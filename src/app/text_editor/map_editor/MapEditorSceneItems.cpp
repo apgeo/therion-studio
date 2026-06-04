@@ -11,11 +11,11 @@
 #include <QStyle>
 #include <QStyleOptionGraphicsItem>
 #include <QUndoCommand>
-#include <QRegularExpression>
 
 #include <cmath>
 
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionTokenRules.h"
 
 namespace TherionStudio {
 
@@ -56,17 +56,6 @@ bool parseScaleNumber(const QString &token, qreal *value)
 
     *value = parsedValue;
     return true;
-}
-
-bool tokenLooksNumeric(const QString &token)
-{
-    if (token.isEmpty()) {
-        return false;
-    }
-
-    static const QRegularExpression numericPattern(
-        QStringLiteral(R"(^[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?$)"));
-    return numericPattern.match(token).hasMatch();
 }
 
 QString normalizedScaleUnitToken(const QString &token)
@@ -571,7 +560,7 @@ QVector<QPointF> pointsFromTokens(const QStringList &tokens)
     numericValues.reserve(tokens.size());
 
     for (const QString &token : tokens) {
-        if (!tokenLooksNumeric(token)) {
+        if (!TherionTokenRules::isNumericToken(token)) {
             continue;
         }
 

@@ -1,35 +1,13 @@
-#include "CommandOptionParser.h"
+#include "TherionCommandLineModel.h"
 
-#include "../../core/TherionCommandSyntax.h"
-
-namespace
-{
-bool optionTokenLooksNumeric(QString token)
-{
-    token = token.trimmed();
-    while (token.startsWith(QLatin1Char('['))) {
-        token.remove(0, 1);
-    }
-    while (token.endsWith(QLatin1Char(']'))) {
-        token.chop(1);
-    }
-    if (token.isEmpty()) {
-        return false;
-    }
-
-    bool ok = false;
-    token.toDouble(&ok);
-    return ok;
-}
-}
+#include "TherionCommandSyntax.h"
+#include "TherionTokenRules.h"
 
 namespace TherionStudio
 {
 bool commandTokenStartsNewOption(const QString &token)
 {
-    const QString trimmed = token.trimmed();
-    return trimmed.startsWith(QLatin1Char('-'))
-        && !optionTokenLooksNumeric(trimmed);
+    return TherionTokenRules::tokenStartsOption(token);
 }
 
 int nextCommandOptionIndex(const QStringList &tokens, int optionIndex)
@@ -57,6 +35,31 @@ int nextCommandOptionIndex(const QStringList &tokens, int optionIndex)
     return tokens.size();
 }
 
+QString serializeCommandArgumentValues(const QStringList &values)
+{
+    QStringList serializedValues;
+    serializedValues.reserve(values.size());
+    for (const QString &value : values) {
+        serializedValues.append(serializeTherionArgumentToken(value.trimmed()));
+    }
+    return serializedValues.join(QLatin1Char(' '));
+}
+
+QStringList serializeCommandOptionTokens(const QString &optionToken, const QStringList &values)
+{
+    QStringList tokens;
+    const QString key = optionToken.trimmed();
+    if (key.isEmpty()) {
+        return tokens;
+    }
+
+    tokens.append(key);
+    if (!values.isEmpty()) {
+        tokens.append(serializeCommandArgumentValues(values));
+    }
+    return tokens;
+}
+
 ParsedCommandOptions parseCommandOptions(
     const QString &commandName,
     const QStringList &tokens,
@@ -80,12 +83,7 @@ ParsedCommandOptions parseCommandOptions(
             const int fixedArity = commandOptionFixedArityByKey.value(
                 commandOptionValueKey(commandName, token.toLower().trimmed()), -1);
             if (fixedArity > 1 && !rawOptionValues.isEmpty()) {
-                QStringList serializedValues;
-                serializedValues.reserve(rawOptionValues.size());
-                for (const QString &rawOptionValue : rawOptionValues) {
-                    serializedValues.append(serializeTherionArgumentToken(rawOptionValue));
-                }
-                optionDisplayValue = serializedValues.join(QLatin1Char(' '));
+                optionDisplayValue = serializeCommandArgumentValues(rawOptionValues);
             }
             parsed.optionEntries.append(CommandOptionEntry{token, optionDisplayValue});
             index = nextOptionIndex;

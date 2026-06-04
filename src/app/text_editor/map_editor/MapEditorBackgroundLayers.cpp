@@ -2211,6 +2211,7 @@ void MapEditorTab::applyBackgroundLayerGamma(QGraphicsPixmapItem *item, qreal ga
         item->setPixmap(QPixmap::fromImage(adjustedImage));
     });
     watcher->setFuture(QtConcurrent::run(gammaCorrectAndScaleMapEditorRasterSourceImage,
+                                         layerPath,
                                          sourceImage,
                                          targetSize,
                                          boundedGamma));

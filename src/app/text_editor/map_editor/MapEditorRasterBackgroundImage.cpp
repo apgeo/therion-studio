@@ -5,6 +5,8 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QImageReader>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QStringList>
 #include <QtMath>
 
@@ -15,8 +17,15 @@ namespace TherionStudio
 namespace
 {
 constexpr qsizetype kRasterSourceImageCacheLimit = 8;
+constexpr qsizetype kAdjustedRasterImageCacheLimit = 12;
 
 struct CachedRasterSourceImageEntry
+{
+    QString cacheKey;
+    QImage image;
+};
+
+struct CachedAdjustedRasterImageEntry
 {
     QString cacheKey;
     QImage image;
@@ -65,10 +74,28 @@ QHash<QString, CachedRasterSourceImageEntry> &rasterSourceImageCache()
     return cache;
 }
 
+QHash<QString, CachedAdjustedRasterImageEntry> &adjustedRasterImageCache()
+{
+    static QHash<QString, CachedAdjustedRasterImageEntry> cache;
+    return cache;
+}
+
 QStringList &rasterSourceImageCacheOrder()
 {
     static QStringList order;
     return order;
+}
+
+QStringList &adjustedRasterImageCacheOrder()
+{
+    static QStringList order;
+    return order;
+}
+
+QMutex &adjustedRasterImageCacheMutex()
+{
+    static QMutex mutex;
+    return mutex;
 }
 
 void touchRasterSourceImageCacheKey(const QString &cacheKey)
@@ -85,6 +112,64 @@ void touchRasterSourceImageCacheKey(const QString &cacheKey)
     while (order.size() > kRasterSourceImageCacheLimit) {
         cache.remove(order.takeFirst());
     }
+}
+
+QString adjustedRasterImageCacheKey(const QString &layerPath, const QSize &targetSize, qreal gamma)
+{
+    const QString sourceKey = rasterSourceImageCacheKey(layerPath);
+    if (sourceKey.isEmpty() || targetSize.width() <= 1 || targetSize.height() <= 1) {
+        return QString();
+    }
+
+    const qreal boundedGamma = qBound(0.2, gamma, 2.5);
+    return QStringLiteral("raster-adjusted-v1|%1|%2x%3|%4")
+        .arg(sourceKey,
+             QString::number(targetSize.width()),
+             QString::number(targetSize.height()),
+             QString::number(qRound(boundedGamma * 1000.0)));
+}
+
+void touchAdjustedRasterImageCacheKey(const QString &cacheKey)
+{
+    if (cacheKey.isEmpty()) {
+        return;
+    }
+
+    QStringList &order = adjustedRasterImageCacheOrder();
+    order.removeAll(cacheKey);
+    order.append(cacheKey);
+
+    QHash<QString, CachedAdjustedRasterImageEntry> &cache = adjustedRasterImageCache();
+    while (order.size() > kAdjustedRasterImageCacheLimit) {
+        cache.remove(order.takeFirst());
+    }
+}
+
+std::optional<QImage> cachedAdjustedRasterImage(const QString &cacheKey)
+{
+    if (cacheKey.isEmpty()) {
+        return std::nullopt;
+    }
+
+    QMutexLocker locker(&adjustedRasterImageCacheMutex());
+    const auto cacheIt = adjustedRasterImageCache().constFind(cacheKey);
+    if (cacheIt == adjustedRasterImageCache().constEnd() || cacheIt->image.isNull()) {
+        return std::nullopt;
+    }
+
+    touchAdjustedRasterImageCacheKey(cacheKey);
+    return cacheIt->image;
+}
+
+void rememberAdjustedRasterImage(const QString &cacheKey, const QImage &image)
+{
+    if (cacheKey.isEmpty() || image.isNull()) {
+        return;
+    }
+
+    QMutexLocker locker(&adjustedRasterImageCacheMutex());
+    adjustedRasterImageCache().insert(cacheKey, CachedAdjustedRasterImageEntry{cacheKey, image});
+    touchAdjustedRasterImageCacheKey(cacheKey);
 }
 }
 
@@ -171,10 +256,18 @@ QSizeF mapEditorRasterModelSize(const QString &layerPath, qreal imageScale)
     return QSizeF(imageSize.width(), imageSize.height());
 }
 
-QImage gammaCorrectAndScaleMapEditorRasterSourceImage(QImage sourceImage, const QSize &targetSize, qreal gamma)
+QImage gammaCorrectAndScaleMapEditorRasterSourceImage(const QString &layerPath,
+                                                      QImage sourceImage,
+                                                      const QSize &targetSize,
+                                                      qreal gamma)
 {
     if (sourceImage.isNull()) {
         return QImage();
+    }
+
+    const QString adjustedCacheKey = adjustedRasterImageCacheKey(layerPath, targetSize, gamma);
+    if (const std::optional<QImage> cachedImage = cachedAdjustedRasterImage(adjustedCacheKey); cachedImage.has_value()) {
+        return cachedImage.value();
     }
 
     sourceImage = sourceImage.convertToFormat(QImage::Format_RGBA8888);
@@ -197,7 +290,9 @@ QImage gammaCorrectAndScaleMapEditorRasterSourceImage(QImage sourceImage, const 
     }
 
     if (targetSize.width() > 1 && targetSize.height() > 1) {
-        return sourceImage.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        QImage scaledImage = sourceImage.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        rememberAdjustedRasterImage(adjustedCacheKey, scaledImage);
+        return scaledImage;
     }
     return sourceImage;
 }

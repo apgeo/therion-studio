@@ -22,7 +22,10 @@ void rememberMapEditorRasterSourceImage(const QString &layerPath, const QImage &
 MapEditorRasterSourceImageLoadResult readMapEditorRasterSourceImageUncached(const QString &layerPath);
 QImage readMapEditorRasterSourceImage(const QString &layerPath);
 QSizeF mapEditorRasterModelSize(const QString &layerPath, qreal imageScale);
-QImage gammaCorrectAndScaleMapEditorRasterSourceImage(QImage sourceImage, const QSize &targetSize, qreal gamma);
+QImage gammaCorrectAndScaleMapEditorRasterSourceImage(const QString &layerPath,
+                                                      QImage sourceImage,
+                                                      const QSize &targetSize,
+                                                      qreal gamma);
 quint64 nextMapEditorRasterGammaRequestId();
 quint64 nextMapEditorRasterLoadRequestId();
 

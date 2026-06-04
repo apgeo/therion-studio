@@ -28,6 +28,7 @@
 #include <optional>
 
 #include "MapEditorRasterBackgroundImage.h"
+#include "MapEditorRasterBackgroundPlacement.h"
 #include "MapEditorSceneSupport.h"
 #include "../TextEditorTab.h"
 #include "../../../core/MapBackgroundPlacement.h"
@@ -202,58 +203,6 @@ bool parseXviDocumentFileCached(const QString &absolutePath, XviDocument *docume
     cache.insert(pathKey, CachedXviDocumentEntry{contentHash, parsed});
     *document = parsed;
     return true;
-}
-
-QRectF fittedModelBoundsInPreview(const QRectF &modelBounds, const QRectF &previewBounds)
-{
-    if (!modelBounds.isValid() || !previewBounds.isValid()) {
-        return previewBounds;
-    }
-
-    const qreal modelWidth = qMax(1.0, modelBounds.width());
-    const qreal modelHeight = qMax(1.0, modelBounds.height());
-    const qreal previewWidth = qMax(1.0, previewBounds.width());
-    const qreal previewHeight = qMax(1.0, previewBounds.height());
-    const qreal zoom = qMin(previewWidth / modelWidth, previewHeight / modelHeight);
-    const qreal fittedWidth = modelWidth * zoom;
-    const qreal fittedHeight = modelHeight * zoom;
-    const qreal left = previewBounds.left() + ((previewWidth - fittedWidth) / 2.0);
-    const qreal top = previewBounds.top() + ((previewHeight - fittedHeight) / 2.0);
-    return QRectF(left, top, fittedWidth, fittedHeight);
-}
-
-QPointF modelToPreviewPoint(const QPointF &modelPoint, const QRectF &modelBounds, const QRectF &previewBounds)
-{
-    if (!modelBounds.isValid() || !previewBounds.isValid()) {
-        return modelPoint;
-    }
-
-    const QRectF fitted = fittedModelBoundsInPreview(modelBounds, previewBounds);
-    const qreal zoom = qMin(fitted.width() / qMax(1.0, modelBounds.width()),
-                            fitted.height() / qMax(1.0, modelBounds.height()));
-    const qreal panX = fitted.left() - (modelBounds.left() * zoom);
-    const qreal panY = fitted.top() + (modelBounds.bottom() * zoom);
-    return QPointF((modelPoint.x() * zoom) + panX,
-                   panY - (modelPoint.y() * zoom));
-}
-
-QPointF previewToModelPoint(const QPointF &previewPoint, const QRectF &modelBounds, const QRectF &previewBounds)
-{
-    if (!modelBounds.isValid() || !previewBounds.isValid()) {
-        return previewPoint;
-    }
-
-    const QRectF fitted = fittedModelBoundsInPreview(modelBounds, previewBounds);
-    const qreal zoom = qMin(fitted.width() / qMax(1.0, modelBounds.width()),
-                            fitted.height() / qMax(1.0, modelBounds.height()));
-    if (zoom < 1e-9) {
-        return previewPoint;
-    }
-
-    const qreal panX = fitted.left() - (modelBounds.left() * zoom);
-    const qreal panY = fitted.top() + (modelBounds.bottom() * zoom);
-    return QPointF((previewPoint.x() - panX) / zoom,
-                   (panY - previewPoint.y()) / zoom);
 }
 
 void cacheRasterSourceImage(QGraphicsPixmapItem *item, const QImage &sourceImage)
@@ -616,152 +565,6 @@ QString updateExistingXtherionImageMetadataGamma(const QString &documentText,
     return documentText;
 }
 
-QRectF rasterModelRectForItem(const QGraphicsPixmapItem *item, const QRectF &sourceBounds, const QRectF &previewBounds)
-{
-    if (item == nullptr) {
-        return QRectF();
-    }
-
-    const QString layerPath = item->data(0).toString();
-    const QSizeF modelSize = mapEditorRasterModelSize(layerPath, 1.0);
-    if (!modelSize.isValid() || modelSize.width() <= 0.0 || modelSize.height() <= 0.0) {
-        return QRectF();
-    }
-
-    if (!sourceBounds.isValid() || !previewBounds.isValid()) {
-        return QRectF(QPointF(0.0, -modelSize.height()), modelSize);
-    }
-
-    const QPointF modelTopLeft = previewToModelPoint(item->pos(), sourceBounds, previewBounds);
-    return QRectF(modelTopLeft, modelSize);
-}
-
-QRectF previewRectForRasterModelRect(const QRectF &modelRect,
-                                     const QRectF &modelBounds,
-                                     const QRectF &previewBounds)
-{
-    if (!modelRect.isValid() || !modelBounds.isValid() || !previewBounds.isValid()) {
-        return QRectF();
-    }
-
-    const QPointF modelUpperLeft(modelRect.left(), modelRect.bottom());
-    const QPointF modelLowerRight(modelRect.right(), modelRect.top());
-    const QPointF viewA = modelToPreviewPoint(modelUpperLeft, modelBounds, previewBounds);
-    const QPointF viewB = modelToPreviewPoint(modelLowerRight, modelBounds, previewBounds);
-    return QRectF(QPointF(qMin(viewA.x(), viewB.x()), qMin(viewA.y(), viewB.y())),
-                  QPointF(qMax(viewA.x(), viewB.x()), qMax(viewA.y(), viewB.y())));
-}
-
-bool setRasterLayerPixmapForPreviewRect(QGraphicsPixmapItem *item,
-                                        const QImage &sourceImage,
-                                        const QRectF &viewRect)
-{
-    if (item == nullptr || sourceImage.isNull() || !viewRect.isValid() || viewRect.width() < 1.0 || viewRect.height() < 1.0) {
-        return false;
-    }
-
-    QImage scaled = sourceImage.scaled(qMax(2, qRound(viewRect.width())),
-                                       qMax(2, qRound(viewRect.height())),
-                                       Qt::IgnoreAspectRatio,
-                                       Qt::SmoothTransformation);
-    item->setPixmap(QPixmap::fromImage(scaled));
-    item->setPos(viewRect.topLeft());
-    return true;
-}
-
-bool setRasterLayerPlaceholderForPreviewRect(QGraphicsPixmapItem *item, const QRectF &viewRect)
-{
-    if (item == nullptr || !viewRect.isValid() || viewRect.width() < 1.0 || viewRect.height() < 1.0) {
-        return false;
-    }
-
-    QImage placeholder(qMax(2, qRound(viewRect.width())),
-                       qMax(2, qRound(viewRect.height())),
-                       QImage::Format_ARGB32_Premultiplied);
-    placeholder.fill(Qt::transparent);
-    item->setPixmap(QPixmap::fromImage(placeholder));
-    item->setPos(viewRect.topLeft());
-    return true;
-}
-
-bool placeRasterLayerByModelRect(QGraphicsPixmapItem *item,
-                                 const QRectF &modelRect,
-                                 const QRectF &modelBounds,
-                                 const QRectF &previewBounds)
-{
-    if (item == nullptr) {
-        return false;
-    }
-
-    const QImage sourceImage = rasterSourceImageForItem(item);
-    return setRasterLayerPixmapForPreviewRect(item,
-                                             sourceImage,
-                                             previewRectForRasterModelRect(modelRect, modelBounds, previewBounds));
-}
-
-bool placeRasterLayerPlaceholderByModelRect(QGraphicsPixmapItem *item,
-                                            const QRectF &modelRect,
-                                            const QRectF &modelBounds,
-                                            const QRectF &previewBounds)
-{
-    return setRasterLayerPlaceholderForPreviewRect(item,
-                                                  previewRectForRasterModelRect(modelRect, modelBounds, previewBounds));
-}
-
-QRectF rasterModelRectFromMetadata(const QString &layerPath,
-                                   const XtherionBackgroundReference &reference,
-                                   const XtherionAreaAdjust &areaAdjust)
-{
-    const QSizeF modelSize = mapEditorRasterModelSize(layerPath, reference.hasImageScale ? reference.imageScale : 1.0);
-    RasterPlacementMetadata placement{};
-    placement.basePosition = reference.basePosition;
-    placement.hasBasePosition = reference.hasBasePosition;
-    placement.topEdgeAnchor = reference.metadataTopEdgeAnchor;
-
-    AreaAdjustMetadata areaMetadata{};
-    areaMetadata.modelRect = areaAdjust.modelRect;
-    areaMetadata.valid = areaAdjust.valid;
-
-    return resolveRasterModelRect(modelSize, placement, areaMetadata);
-}
-
-bool placeRasterLayerFromMetadata(QGraphicsPixmapItem *item,
-                                  const XtherionBackgroundReference &reference,
-                                  const XtherionAreaAdjust &areaAdjust,
-                                  const QRectF &modelBounds,
-                                  const QRectF &previewBounds)
-{
-    if (item == nullptr || !reference.hasBasePosition) {
-        return false;
-    }
-
-    const QString layerPath = item->data(0).toString();
-    const QRectF modelRect = rasterModelRectFromMetadata(layerPath, reference, areaAdjust);
-    if (!modelRect.isValid()) {
-        return false;
-    }
-
-    return placeRasterLayerByModelRect(item, modelRect, modelBounds, previewBounds);
-}
-
-bool placeRasterLayerPlaceholderFromMetadata(QGraphicsPixmapItem *item,
-                                             const XtherionBackgroundReference &reference,
-                                             const XtherionAreaAdjust &areaAdjust,
-                                             const QRectF &modelBounds,
-                                             const QRectF &previewBounds)
-{
-    if (item == nullptr || !reference.hasBasePosition) {
-        return false;
-    }
-
-    const QRectF modelRect = rasterModelRectFromMetadata(item->data(0).toString(), reference, areaAdjust);
-    if (!modelRect.isValid()) {
-        return false;
-    }
-
-    return placeRasterLayerPlaceholderByModelRect(item, modelRect, modelBounds, previewBounds);
-}
-
 const XtherionBackgroundReference *findMetadataReferenceForPath(
     const QString &layerPath,
     const QHash<QString, XtherionBackgroundReference> &metadataByPath,
@@ -883,8 +686,8 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
         for (int xIndex = 0; xIndex <= spanX; ++xIndex) {
             const QPointF start = gridP00 + (xvi.gridVectorX * xIndex);
             const QPointF end = start + (xvi.gridVectorY * spanY);
-            const QPointF projectedStart = modelToPreviewPoint(start, effectiveModelBounds, previewBounds);
-            const QPointF projectedEnd = modelToPreviewPoint(end, effectiveModelBounds, previewBounds);
+            const QPointF projectedStart = mapEditorModelToPreviewPoint(start, effectiveModelBounds, previewBounds);
+            const QPointF projectedEnd = mapEditorModelToPreviewPoint(end, effectiveModelBounds, previewBounds);
             includePoint(projectedStart);
             includePoint(projectedEnd);
             gridLines.append(QLineF(projectedStart, projectedEnd));
@@ -892,8 +695,8 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
         for (int yIndex = 0; yIndex <= spanY; ++yIndex) {
             const QPointF start = gridP00 + (xvi.gridVectorY * yIndex);
             const QPointF end = start + (xvi.gridVectorX * spanX);
-            const QPointF projectedStart = modelToPreviewPoint(start, effectiveModelBounds, previewBounds);
-            const QPointF projectedEnd = modelToPreviewPoint(end, effectiveModelBounds, previewBounds);
+            const QPointF projectedStart = mapEditorModelToPreviewPoint(start, effectiveModelBounds, previewBounds);
+            const QPointF projectedEnd = mapEditorModelToPreviewPoint(end, effectiveModelBounds, previewBounds);
             includePoint(projectedStart);
             includePoint(projectedEnd);
             gridLines.append(QLineF(projectedStart, projectedEnd));
@@ -929,8 +732,8 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
         const bool toStation = matchesStation(rawEnd);
         const bool isSplay = fromStation != toStation;
 
-        const QPointF projectedStart = modelToPreviewPoint(rawStart + offset, effectiveModelBounds, previewBounds);
-        const QPointF projectedEnd = modelToPreviewPoint(rawEnd + offset, effectiveModelBounds, previewBounds);
+        const QPointF projectedStart = mapEditorModelToPreviewPoint(rawStart + offset, effectiveModelBounds, previewBounds);
+        const QPointF projectedEnd = mapEditorModelToPreviewPoint(rawEnd + offset, effectiveModelBounds, previewBounds);
         includePoint(projectedStart);
         includePoint(projectedEnd);
         QVector<QLineF> &targetLines = isSplay ? splayShotLines : traverseShotLines;
@@ -961,10 +764,10 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
         }
         QVector<QLineF> &targetLines = sketchPaths[targetPathIndex].lines;
 
-        QPointF previousPoint = modelToPreviewPoint(polyline.first() + offset, effectiveModelBounds, previewBounds);
+        QPointF previousPoint = mapEditorModelToPreviewPoint(polyline.first() + offset, effectiveModelBounds, previewBounds);
         includePoint(previousPoint);
         for (int index = 1; index < polyline.size(); ++index) {
-            const QPointF point = modelToPreviewPoint(polyline.at(index) + offset, effectiveModelBounds, previewBounds);
+            const QPointF point = mapEditorModelToPreviewPoint(polyline.at(index) + offset, effectiveModelBounds, previewBounds);
             includePoint(point);
             targetLines.append(QLineF(previousPoint, point));
             previousPoint = point;
@@ -1686,7 +1489,7 @@ void MapEditorTab::loadBackgroundLayersFromSession()
             if (metadataReference->xviReference) {
                 item->setData(4, true);
             } else {
-                placeRasterLayerPlaceholderFromMetadata(item,
+                placeMapEditorRasterLayerPlaceholderFromMetadata(item,
                                                         *metadataReference,
                                                         areaAdjust,
                                                         sourceBounds,
@@ -1765,17 +1568,18 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
             const bool pendingRasterLoad = existingLayer->data(kBackgroundLayerRasterLoadRequestRole).toULongLong() != 0
                 && !existingLayer->data(kBackgroundLayerSourceImageRole).canConvert<QImage>();
             if (pendingRasterLoad) {
-                placeRasterLayerPlaceholderFromMetadata(existingLayer,
+                placeMapEditorRasterLayerPlaceholderFromMetadata(existingLayer,
                                                         *existingMetadata,
                                                         areaAdjust,
                                                         sourceBounds,
                                                         previewBounds);
             } else {
-                placeRasterLayerFromMetadata(existingLayer,
-                                             *existingMetadata,
-                                             areaAdjust,
-                                             sourceBounds,
-                                             previewBounds);
+                placeMapEditorRasterLayerFromMetadata(existingLayer,
+                                                      rasterSourceImageForItem(existingLayer),
+                                                      *existingMetadata,
+                                                      areaAdjust,
+                                                      sourceBounds,
+                                                      previewBounds);
             }
             existingLayer->setData(4, true);
             if (existingMetadata->hasImageScale) {
@@ -1840,7 +1644,7 @@ void MapEditorTab::syncAutoBackgroundLayersFromCurrentDocument()
             setBackgroundLayerVisibleFromMetadata(item, reference.visible);
         }
         if (reference.hasBasePosition && sourceBounds.isValid() && previewBounds.isValid()) {
-            placeRasterLayerPlaceholderFromMetadata(item,
+            placeMapEditorRasterLayerPlaceholderFromMetadata(item,
                                                     reference,
                                                     areaAdjust,
                                                     sourceBounds,
@@ -1941,16 +1745,17 @@ void MapEditorTab::reprojectMetadataBackgroundLayersForCurrentDocument()
         const bool pendingRasterLoad = existingLayer->data(kBackgroundLayerRasterLoadRequestRole).toULongLong() != 0
             && !existingLayer->data(kBackgroundLayerSourceImageRole).canConvert<QImage>();
         const bool placedLayer = pendingRasterLoad
-            ? placeRasterLayerPlaceholderFromMetadata(existingLayer,
+            ? placeMapEditorRasterLayerPlaceholderFromMetadata(existingLayer,
                                                       *metadataReference,
                                                       areaAdjust,
                                                       sourceBounds,
                                                       previewBounds)
-            : placeRasterLayerFromMetadata(existingLayer,
-                                           *metadataReference,
-                                           areaAdjust,
-                                           sourceBounds,
-                                           previewBounds);
+            : placeMapEditorRasterLayerFromMetadata(existingLayer,
+                                                    rasterSourceImageForItem(existingLayer),
+                                                    *metadataReference,
+                                                    areaAdjust,
+                                                    sourceBounds,
+                                                    previewBounds);
         if (placedLayer) {
             existingLayer->setData(4, true);
             const qreal gamma = metadataReference->hasImageScale
@@ -1995,7 +1800,7 @@ QRectF MapEditorTab::xtherionAutoAreaAdjustRect() const
         if (item == nullptr || item->data(0).toString().endsWith(QStringLiteral(".xvi"), Qt::CaseInsensitive)) {
             continue;
         }
-        includeRect(rasterModelRectForItem(item, currentSourceBounds, previewBounds));
+        includeRect(mapEditorRasterModelRectForItem(item, currentSourceBounds, previewBounds));
     }
 
     if (textEditor_ != nullptr) {
@@ -2059,7 +1864,7 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
             return;
         }
 
-        const QPointF modelTopLeft = previewToModelPoint(item->pos(), sourceBounds, previewBounds);
+        const QPointF modelTopLeft = mapEditorPreviewToModelPoint(item->pos(), sourceBounds, previewBounds);
         basePosition = QPointF(modelTopLeft.x(), modelTopLeft.y() + modelSize.height());
     }
 
@@ -2341,7 +2146,7 @@ bool MapEditorTab::addBackgroundImageFromSourceImage(const QString &imagePath,
         const QSizeF modelSize = mapEditorRasterModelSize(imagePath, 1.0);
         const QRectF modelRect(QPointF(0.0, -modelSize.height()), modelSize);
         const QRectF modelBounds = modelRect.adjusted(-128.0, -128.0, 128.0, 128.0);
-        placeRasterLayerByModelRect(backgroundItem, modelRect, modelBounds, previewBounds);
+        placeMapEditorRasterLayerByModelRect(backgroundItem, image, modelRect, modelBounds, previewBounds);
     }
     mapScene_->addItem(backgroundItem);
     backgroundImageItems_.append(backgroundItem);

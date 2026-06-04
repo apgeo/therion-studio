@@ -1,0 +1,214 @@
+#include "MapEditorRasterBackgroundPlacement.h"
+
+#include <QGraphicsPixmapItem>
+#include <QImage>
+#include <QPixmap>
+#include <QtMath>
+
+#include "MapEditorRasterBackgroundImage.h"
+#include "../../../core/MapBackgroundPlacement.h"
+#include "../../../core/TherionBackgroundMetadata.h"
+
+namespace TherionStudio
+{
+namespace
+{
+QRectF previewRectForRasterModelRect(const QRectF &modelRect,
+                                     const QRectF &modelBounds,
+                                     const QRectF &previewBounds)
+{
+    if (!modelRect.isValid() || !modelBounds.isValid() || !previewBounds.isValid()) {
+        return QRectF();
+    }
+
+    const QPointF modelUpperLeft(modelRect.left(), modelRect.bottom());
+    const QPointF modelLowerRight(modelRect.right(), modelRect.top());
+    const QPointF viewA = mapEditorModelToPreviewPoint(modelUpperLeft, modelBounds, previewBounds);
+    const QPointF viewB = mapEditorModelToPreviewPoint(modelLowerRight, modelBounds, previewBounds);
+    return QRectF(QPointF(qMin(viewA.x(), viewB.x()), qMin(viewA.y(), viewB.y())),
+                  QPointF(qMax(viewA.x(), viewB.x()), qMax(viewA.y(), viewB.y())));
+}
+
+bool setRasterLayerPixmapForPreviewRect(QGraphicsPixmapItem *item,
+                                        const QImage &sourceImage,
+                                        const QRectF &viewRect)
+{
+    if (item == nullptr || sourceImage.isNull() || !viewRect.isValid() || viewRect.width() < 1.0 || viewRect.height() < 1.0) {
+        return false;
+    }
+
+    QImage scaled = sourceImage.scaled(qMax(2, qRound(viewRect.width())),
+                                       qMax(2, qRound(viewRect.height())),
+                                       Qt::IgnoreAspectRatio,
+                                       Qt::SmoothTransformation);
+    item->setPixmap(QPixmap::fromImage(scaled));
+    item->setPos(viewRect.topLeft());
+    return true;
+}
+
+bool setRasterLayerPlaceholderForPreviewRect(QGraphicsPixmapItem *item, const QRectF &viewRect)
+{
+    if (item == nullptr || !viewRect.isValid() || viewRect.width() < 1.0 || viewRect.height() < 1.0) {
+        return false;
+    }
+
+    QImage placeholder(qMax(2, qRound(viewRect.width())),
+                       qMax(2, qRound(viewRect.height())),
+                       QImage::Format_ARGB32_Premultiplied);
+    placeholder.fill(Qt::transparent);
+    item->setPixmap(QPixmap::fromImage(placeholder));
+    item->setPos(viewRect.topLeft());
+    return true;
+}
+
+QRectF rasterModelRectFromMetadata(const QString &layerPath,
+                                   const TherionBackgroundReference &reference,
+                                   const TherionAreaAdjust &areaAdjust)
+{
+    const QSizeF modelSize = mapEditorRasterModelSize(layerPath, reference.hasImageScale ? reference.imageScale : 1.0);
+    RasterPlacementMetadata placement{};
+    placement.basePosition = reference.basePosition;
+    placement.hasBasePosition = reference.hasBasePosition;
+    placement.topEdgeAnchor = reference.metadataTopEdgeAnchor;
+
+    AreaAdjustMetadata areaMetadata{};
+    areaMetadata.modelRect = areaAdjust.modelRect;
+    areaMetadata.valid = areaAdjust.valid;
+
+    return resolveRasterModelRect(modelSize, placement, areaMetadata);
+}
+}
+
+QRectF fittedMapEditorModelBoundsInPreview(const QRectF &modelBounds, const QRectF &previewBounds)
+{
+    if (!modelBounds.isValid() || !previewBounds.isValid()) {
+        return previewBounds;
+    }
+
+    const qreal modelWidth = qMax(1.0, modelBounds.width());
+    const qreal modelHeight = qMax(1.0, modelBounds.height());
+    const qreal previewWidth = qMax(1.0, previewBounds.width());
+    const qreal previewHeight = qMax(1.0, previewBounds.height());
+    const qreal zoom = qMin(previewWidth / modelWidth, previewHeight / modelHeight);
+    const qreal fittedWidth = modelWidth * zoom;
+    const qreal fittedHeight = modelHeight * zoom;
+    const qreal left = previewBounds.left() + ((previewWidth - fittedWidth) / 2.0);
+    const qreal top = previewBounds.top() + ((previewHeight - fittedHeight) / 2.0);
+    return QRectF(left, top, fittedWidth, fittedHeight);
+}
+
+QPointF mapEditorModelToPreviewPoint(const QPointF &modelPoint, const QRectF &modelBounds, const QRectF &previewBounds)
+{
+    if (!modelBounds.isValid() || !previewBounds.isValid()) {
+        return modelPoint;
+    }
+
+    const QRectF fitted = fittedMapEditorModelBoundsInPreview(modelBounds, previewBounds);
+    const qreal zoom = qMin(fitted.width() / qMax(1.0, modelBounds.width()),
+                            fitted.height() / qMax(1.0, modelBounds.height()));
+    const qreal panX = fitted.left() - (modelBounds.left() * zoom);
+    const qreal panY = fitted.top() + (modelBounds.bottom() * zoom);
+    return QPointF((modelPoint.x() * zoom) + panX,
+                   panY - (modelPoint.y() * zoom));
+}
+
+QPointF mapEditorPreviewToModelPoint(const QPointF &previewPoint, const QRectF &modelBounds, const QRectF &previewBounds)
+{
+    if (!modelBounds.isValid() || !previewBounds.isValid()) {
+        return previewPoint;
+    }
+
+    const QRectF fitted = fittedMapEditorModelBoundsInPreview(modelBounds, previewBounds);
+    const qreal zoom = qMin(fitted.width() / qMax(1.0, modelBounds.width()),
+                            fitted.height() / qMax(1.0, modelBounds.height()));
+    if (zoom < 1e-9) {
+        return previewPoint;
+    }
+
+    const qreal panX = fitted.left() - (modelBounds.left() * zoom);
+    const qreal panY = fitted.top() + (modelBounds.bottom() * zoom);
+    return QPointF((previewPoint.x() - panX) / zoom,
+                   (panY - previewPoint.y()) / zoom);
+}
+
+QRectF mapEditorRasterModelRectForItem(const QGraphicsPixmapItem *item,
+                                       const QRectF &sourceBounds,
+                                       const QRectF &previewBounds)
+{
+    if (item == nullptr) {
+        return QRectF();
+    }
+
+    const QString layerPath = item->data(0).toString();
+    const QSizeF modelSize = mapEditorRasterModelSize(layerPath, 1.0);
+    if (!modelSize.isValid() || modelSize.width() <= 0.0 || modelSize.height() <= 0.0) {
+        return QRectF();
+    }
+
+    if (!sourceBounds.isValid() || !previewBounds.isValid()) {
+        return QRectF(QPointF(0.0, -modelSize.height()), modelSize);
+    }
+
+    const QPointF modelTopLeft = mapEditorPreviewToModelPoint(item->pos(), sourceBounds, previewBounds);
+    return QRectF(modelTopLeft, modelSize);
+}
+
+bool placeMapEditorRasterLayerByModelRect(QGraphicsPixmapItem *item,
+                                          const QImage &sourceImage,
+                                          const QRectF &modelRect,
+                                          const QRectF &modelBounds,
+                                          const QRectF &previewBounds)
+{
+    return setRasterLayerPixmapForPreviewRect(item,
+                                             sourceImage,
+                                             previewRectForRasterModelRect(modelRect, modelBounds, previewBounds));
+}
+
+bool placeMapEditorRasterLayerPlaceholderByModelRect(QGraphicsPixmapItem *item,
+                                                     const QRectF &modelRect,
+                                                     const QRectF &modelBounds,
+                                                     const QRectF &previewBounds)
+{
+    return setRasterLayerPlaceholderForPreviewRect(item,
+                                                  previewRectForRasterModelRect(modelRect, modelBounds, previewBounds));
+}
+
+bool placeMapEditorRasterLayerFromMetadata(QGraphicsPixmapItem *item,
+                                           const QImage &sourceImage,
+                                           const TherionBackgroundReference &reference,
+                                           const TherionAreaAdjust &areaAdjust,
+                                           const QRectF &modelBounds,
+                                           const QRectF &previewBounds)
+{
+    if (item == nullptr || !reference.hasBasePosition) {
+        return false;
+    }
+
+    const QString layerPath = item->data(0).toString();
+    const QRectF modelRect = rasterModelRectFromMetadata(layerPath, reference, areaAdjust);
+    if (!modelRect.isValid()) {
+        return false;
+    }
+
+    return placeMapEditorRasterLayerByModelRect(item, sourceImage, modelRect, modelBounds, previewBounds);
+}
+
+bool placeMapEditorRasterLayerPlaceholderFromMetadata(QGraphicsPixmapItem *item,
+                                                      const TherionBackgroundReference &reference,
+                                                      const TherionAreaAdjust &areaAdjust,
+                                                      const QRectF &modelBounds,
+                                                      const QRectF &previewBounds)
+{
+    if (item == nullptr || !reference.hasBasePosition) {
+        return false;
+    }
+
+    const QRectF modelRect = rasterModelRectFromMetadata(item->data(0).toString(), reference, areaAdjust);
+    if (!modelRect.isValid()) {
+        return false;
+    }
+
+    return placeMapEditorRasterLayerPlaceholderByModelRect(item, modelRect, modelBounds, previewBounds);
+}
+
+}

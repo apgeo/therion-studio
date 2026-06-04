@@ -1457,6 +1457,7 @@ void MapEditorTab::removeSelectedBackgroundLayer()
     }
 
     QGraphicsPixmapItem *item = backgroundImageItems_.takeAt(selectedBackgroundLayerIndex_);
+    invalidateBackgroundLayerRasterJobs(item);
     const QString layerPath = item != nullptr ? item->data(0).toString() : QString();
     if (item != nullptr && mapScene_ != nullptr) {
         mapScene_->removeItem(item);
@@ -2328,6 +2329,24 @@ void MapEditorTab::removeBackgroundLayerXtherionMetadata(const QString &layerPat
     applySourceTextChangeWithSnapshot(label, beforeText, afterText, 0);
 }
 
+void MapEditorTab::invalidateBackgroundLayerRasterJobs(QGraphicsPixmapItem *item)
+{
+    if (item == nullptr) {
+        return;
+    }
+
+    item->setData(kBackgroundLayerRasterLoadRequestRole, QVariant::fromValue<qulonglong>(nextRasterLoadRequestId()));
+    item->setData(kBackgroundLayerRasterGammaRequestRole, QVariant::fromValue<qulonglong>(nextRasterGammaRequestId()));
+}
+
+void MapEditorTab::invalidateBackgroundRasterJobs()
+{
+    ++backgroundRasterJobGeneration_;
+    for (QGraphicsPixmapItem *item : std::as_const(backgroundImageItems_)) {
+        invalidateBackgroundLayerRasterJobs(item);
+    }
+}
+
 void MapEditorTab::addBackgroundImage(const QString &imagePath, bool writeXtherionMetadata)
 {
     if (mapScene_ == nullptr || imagePath.isEmpty()) {
@@ -2349,11 +2368,15 @@ void MapEditorTab::addBackgroundImageAsync(const QString &imagePath, bool writeX
         return;
     }
 
+    const quint64 requestGeneration = backgroundRasterJobGeneration_;
     auto *watcher = new QFutureWatcher<RasterSourceImageLoadResult>(this);
-    connect(watcher, &QFutureWatcher<RasterSourceImageLoadResult>::finished, this, [this, watcher, writeXtherionMetadata]() {
+    connect(watcher, &QFutureWatcher<RasterSourceImageLoadResult>::finished, this, [this, watcher, writeXtherionMetadata, requestGeneration]() {
         const RasterSourceImageLoadResult result = watcher->result();
         watcher->deleteLater();
 
+        if (backgroundRasterJobGeneration_ != requestGeneration) {
+            return;
+        }
         if (result.image.isNull()) {
             toolbarStatusNote_ = tr("Could not load background image.");
             updateCommandSurfaceState();
@@ -2430,20 +2453,29 @@ void MapEditorTab::loadBackgroundImageSourceAsync(QGraphicsPixmapItem *item)
     }
 
     const quint64 requestId = nextRasterLoadRequestId();
+    const quint64 requestGeneration = backgroundRasterJobGeneration_;
     item->setData(kBackgroundLayerRasterLoadRequestRole, QVariant::fromValue<qulonglong>(requestId));
 
     auto *watcher = new QFutureWatcher<RasterSourceImageLoadResult>(this);
-    connect(watcher, &QFutureWatcher<RasterSourceImageLoadResult>::finished, this, [this, watcher, item, requestId]() {
+    connect(watcher, &QFutureWatcher<RasterSourceImageLoadResult>::finished, this, [this, watcher, item, requestId, requestGeneration]() {
         const RasterSourceImageLoadResult result = watcher->result();
         watcher->deleteLater();
 
-        if (result.image.isNull()) {
+        if (backgroundRasterJobGeneration_ != requestGeneration) {
             return;
         }
         if (!backgroundImageItems_.contains(item)) {
             return;
         }
         if (item->data(kBackgroundLayerRasterLoadRequestRole).toULongLong() != requestId) {
+            return;
+        }
+        if (result.image.isNull()) {
+            const QString fileName = QFileInfo(result.imagePath).fileName();
+            toolbarStatusNote_ = fileName.isEmpty()
+                ? tr("Could not load background image.")
+                : tr("Could not load background image: %1.").arg(fileName);
+            refreshToolbarSummary();
             return;
         }
 

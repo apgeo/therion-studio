@@ -415,6 +415,8 @@ private:
     void syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item, const QString &label, bool preserveExistingPlacement = false);
     bool syncBackgroundLayerXtherionGammaMetadata(QGraphicsPixmapItem *item, const QString &label);
     void removeBackgroundLayerXtherionMetadata(const QString &layerPath, const QString &label);
+    void invalidateBackgroundLayerRasterJobs(QGraphicsPixmapItem *item);
+    void invalidateBackgroundRasterJobs();
     QGraphicsPixmapItem *backgroundLayerItemAt(int index) const;
     QGraphicsPixmapItem *selectedBackgroundLayerItem() const;
     qreal backgroundLayerGammaValue(const QGraphicsPixmapItem *item) const;
@@ -580,6 +582,7 @@ private:
     QHash<int, QGraphicsItem *> mapItemsByLine_;
     QVector<QGraphicsRectItem *> draftGeometryItems_;
     QVector<QGraphicsPixmapItem *> backgroundImageItems_;
+    quint64 backgroundRasterJobGeneration_ = 0;
     QUndoStack *undoStack_ = nullptr;
     int nextDraftGeometryId_ = 1;
     WorkspaceMode workspaceMode_ = WorkspaceMode::Visual;

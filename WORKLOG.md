@@ -22,7 +22,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P0: Manually smoke-test public-release workflows: open project, edit `.th`, edit `.th2`, map insertion/selection, background layer visibility/Gamma, Blocks mode command filtering, compiler run config, language selection, Help manual, and About dialog.
 - P0: Verify daily scheduled Windows installer and Linux package workflows after the final release branch state lands.
 - P1: Review localized manual wording during UI smoke testing and adjust only user-facing workflow text.
-- P1: Continue `REVIEW_CODEX.md` cleanup with cancellation/error-reporting guardrails for background raster decode jobs and a focused raster cache/loader/placement extraction from `MapEditorBackgroundLayers.cpp` before larger parser/unified-document-model steps.
+- P1: Continue `REVIEW_CODEX.md` cleanup with a focused raster cache/loader/placement extraction from `MapEditorBackgroundLayers.cpp` and evaluate adjusted/scaled pixmap caching before larger parser/unified-document-model steps.
 
 ## Risks / Blockers
 
@@ -39,7 +39,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Optional Structure graph view alongside the current tree for relationships such as `preview`, `revise`, `join`, `equate`, diagnostics, and station-network edges.
 - Compiler-confirmed project-index comparison once lightweight indexing is no longer sufficient.
 - Broader Therion corpus regression tests for parsing, serialization, source rewrites, indexing, and map/text synchronization.
-- Cancellable background raster decode job tracking, user-visible raster load failure reporting, and bounded `.xvi` cache policy for very large projects.
+- Adjusted/scaled background pixmap caching and bounded `.xvi` cache policy for very large projects.
 - Station-label declutter follow-up: add viewport-space overlap suppression/priority ranking for station point names (in addition to current zoom-hysteresis visibility) and optional user-facing `Auto/All/None` label mode.
 - Consider making line guide-spine rendering fully explicit in style JSON (`guide_spine_visible`) and removing the current compatibility fallback that enables it automatically for all decorated line styles.
 - Apple Pencil/freehand stroke UX and shape-sensitive simplification polish.

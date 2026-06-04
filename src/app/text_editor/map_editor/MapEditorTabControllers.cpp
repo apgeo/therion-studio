@@ -44,6 +44,7 @@ void MapEditorTab::clearDraftGeometryItems()
 
 void MapEditorTab::clearBackgroundImageItems()
 {
+    invalidateBackgroundRasterJobs();
     MapEditorSceneLifecycleController(sceneLifecycleContext()).clearBackgroundImageItems();
 }
 

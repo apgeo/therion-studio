@@ -27,6 +27,7 @@ Completed follow-ups from this review:
 - ~~Raster background gamma correction and scaled image preparation now run through `QtConcurrent` with request-id checks before applying the pixmap back on the UI thread.~~
 - ~~Manual raster background adds now decode initial source images through `QtConcurrent`.~~
 - ~~Metadata/session raster background auto-load now creates deterministic placeholder scene layers synchronously and decodes source images through `QtConcurrent` before applying scaled/gamma-adjusted pixmaps back on the UI thread.~~
+- ~~Background raster decode jobs now use document/layer generation guardrails so stale manual-add, auto-load, and gamma results are ignored after layer removal or scene reload; failed async auto-loads report a toolbar status instead of failing silently.~~
 
 Still open:
 
@@ -37,7 +38,7 @@ Still open:
 
 Recommended next step:
 
-- Next, finish the lower-risk performance track by adding cancellation/error-reporting guardrails for background raster decode jobs and then extract the raster image cache/loader/placement helpers from `MapEditorBackgroundLayers.cpp`, or start the later lossless parser/source-document phase once release stabilization allows broader parser work.
+- Next, finish the lower-risk performance track by extracting the raster image cache/loader/placement helpers from `MapEditorBackgroundLayers.cpp` and considering adjusted/scaled pixmap caching, or start the later lossless parser/source-document phase once release stabilization allows broader parser work.
 
 ## Priority Findings
 
@@ -383,6 +384,7 @@ Recommendations:
 - ~~Show an existing image or placeholder while a new image decode is pending.~~
 - ~~Cache original decoded `QImage` per file path/mtime.~~
 - ~~Move gamma-adjusted scaled image preparation off the UI thread with stale-result checks.~~
+- ~~Ignore stale async decode/gamma results after layer removal or scene reload, and surface async raster load failures in the toolbar status.~~
 - Cache adjusted/scaled pixmaps by:
   - file path,
   - source mtime,
@@ -515,4 +517,4 @@ For release, keep the current implementation stable and avoid major parser rewri
 
 For the next major development phase, make the unified lossless parser and shared source transaction service the central architecture objective. This will reduce dead/duplicated code, improve undo/redo consistency, make Map/Block/Raw views coherent, and provide the best leverage for performance and battery improvements.
 
-Immediate next step: continue the release-safe performance track with cancellable background raster decode job tracking, user-visible load failure reporting, and a focused raster cache/loader/placement extraction from `MapEditorBackgroundLayers.cpp`. Keep the full lossless parser/source-document model as the later architecture phase.
+Immediate next step: continue the release-safe performance track with a focused raster cache/loader/placement extraction from `MapEditorBackgroundLayers.cpp` and evaluate adjusted/scaled pixmap caching. Keep the full lossless parser/source-document model as the later architecture phase.

@@ -24,6 +24,9 @@ Completed follow-ups from this review:
 - ~~`TherionCommandLineModel` now moves the existing catalog-backed command option parsing model into `src/core/`, and Map/Block option UI call sites use it directly.~~
 - ~~`TherionCommandLineModel` now owns shared command argument and option-row serialization helpers used by option validation, Blocks option argument editing, and Map/Block command options dialog flows.~~
 - ~~Raster background source images now use a bounded path/mtime/size cache so repeated gamma and placement operations do not decode the same raster file repeatedly.~~
+- ~~Raster background gamma correction and scaled image preparation now run through `QtConcurrent` with request-id checks before applying the pixmap back on the UI thread.~~
+- ~~Manual raster background adds now decode initial source images through `QtConcurrent`.~~
+- ~~Metadata/session raster background auto-load now creates deterministic placeholder scene layers synchronously and decodes source images through `QtConcurrent` before applying scaled/gamma-adjusted pixmaps back on the UI thread.~~
 
 Still open:
 
@@ -34,7 +37,7 @@ Still open:
 
 Recommended next step:
 
-- Next, continue the lower-risk performance track by moving background raster decode/scale preparation off the UI thread with cancellation/version checks, or start the later lossless parser/source-document phase once release stabilization allows broader parser work.
+- Next, finish the lower-risk performance track by adding cancellation/error-reporting guardrails for background raster decode jobs and then extract the raster image cache/loader/placement helpers from `MapEditorBackgroundLayers.cpp`, or start the later lossless parser/source-document phase once release stabilization allows broader parser work.
 
 ## Priority Findings
 
@@ -375,9 +378,11 @@ Risk:
 
 Recommendations:
 
-- Move image decoding to a background job, for example `QtConcurrent::run()` with completion delivered back to the UI thread.
-- Show an existing image or placeholder while a new image decode is pending.
+- ~~Move manual image-add decoding to a background job, for example `QtConcurrent::run()` with completion delivered back to the UI thread.~~
+- ~~Move metadata/session image auto-load decoding to a background job without breaking load-time layer availability.~~
+- ~~Show an existing image or placeholder while a new image decode is pending.~~
 - ~~Cache original decoded `QImage` per file path/mtime.~~
+- ~~Move gamma-adjusted scaled image preparation off the UI thread with stale-result checks.~~
 - Cache adjusted/scaled pixmaps by:
   - file path,
   - source mtime,
@@ -510,4 +515,4 @@ For release, keep the current implementation stable and avoid major parser rewri
 
 For the next major development phase, make the unified lossless parser and shared source transaction service the central architecture objective. This will reduce dead/duplicated code, improve undo/redo consistency, make Map/Block/Raw views coherent, and provide the best leverage for performance and battery improvements.
 
-Immediate next step: continue the release-safe performance track with async/cancellable background raster decode/scale preparation and version-checked UI application. Keep the full lossless parser/source-document model as the later architecture phase.
+Immediate next step: continue the release-safe performance track with cancellable background raster decode job tracking, user-visible load failure reporting, and a focused raster cache/loader/placement extraction from `MapEditorBackgroundLayers.cpp`. Keep the full lossless parser/source-document model as the later architecture phase.

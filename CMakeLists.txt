@@ -1101,6 +1101,7 @@ add_library(therion_map_editor_ui_test_support STATIC
 target_link_libraries(therion_map_editor_ui_test_support
     PUBLIC
         therion_text_editor_ui_test_support
+        Qt6::Concurrent
         Qt6::Svg)
 
 function(therion_add_map_editor_ui_test target_name test_source resource_name)

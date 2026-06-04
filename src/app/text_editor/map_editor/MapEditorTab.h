@@ -50,6 +50,7 @@ class QGraphicsItem;
 class QShortcut;
 class QTimer;
 class QModelIndex;
+class QImage;
 
 namespace TherionStudio
 {
@@ -396,6 +397,12 @@ private:
     QRectF mapPreviewBounds() const;
     MapEditorSceneLifecycleContext sceneLifecycleContext() const;
     void addBackgroundImage(const QString &imagePath, bool writeXtherionMetadata = false);
+    void addBackgroundImageAsync(const QString &imagePath, bool writeXtherionMetadata = false);
+    QGraphicsPixmapItem *addBackgroundImagePlaceholder(const QString &imagePath);
+    bool addBackgroundImageFromSourceImage(const QString &imagePath,
+                                           const QImage &image,
+                                           bool writeXtherionMetadata = false);
+    void loadBackgroundImageSourceAsync(QGraphicsPixmapItem *item);
     void refreshBackgroundLayerControls();
     void refreshBackgroundLayerPropertyControls();
     void applyBackgroundLayerStackingOrder();

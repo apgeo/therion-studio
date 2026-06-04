@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QHash>
+#include <QByteArray>
 #include <QList>
 #include <QMainWindow>
 #include <QPointer>
@@ -29,6 +30,7 @@ class QLineEdit;
 class QListWidget;
 class QPlainTextEdit;
 class QPushButton;
+class QFileSystemWatcher;
 class QSlider;
 class QSplitter;
 class QStackedWidget;
@@ -134,6 +136,12 @@ private:
     void setSidebarPane(SidebarPane pane);
     void syncOpenDocumentsToProjectRoot();
     QWidget *documentWidgetForFilePath(const QString &filePath) const;
+    void registerDocumentFileWatcher(const QString &filePath);
+    void unregisterDocumentFileWatcherIfUnused(const QString &filePath);
+    void handleWatchedDocumentFileChanged(const QString &filePath);
+    void processWatchedDocumentFileChange(const QString &filePath);
+    bool reloadDocumentWidgetFromDisk(QWidget *documentWidget, QString *errorMessage = nullptr);
+    QByteArray documentFileFingerprint(const QString &filePath) const;
     void handleStructureSelectionChanged(const QModelIndex &current, const QModelIndex &previous, QTreeView *sourceTree);
     void handleStructureItemActivated(const QModelIndex &index, QTreeView *sourceTree);
     bool confirmCloseTab(int index);
@@ -289,6 +297,9 @@ private:
     QPushButton *therionResetWorkingDirectoryButton_ = nullptr;
     QPushButton *therionClearOutputButton_ = nullptr;
     QPushButton *therionCopyOutputButton_ = nullptr;
+    QFileSystemWatcher *documentFileWatcher_ = nullptr;
+    QHash<QString, QByteArray> watchedDocumentFingerprints_;
+    QSet<QString> pendingWatchedDocumentChanges_;
     TherionStudio::TherionRunnerService *therionRunnerService_ = nullptr;
     TherionStudio::MainWindowTherionConsoleController therionConsoleController_;
     QLabel *statusMapZoomLabel_ = nullptr;

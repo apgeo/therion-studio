@@ -81,6 +81,7 @@ Rename and delete are blocked when the target file or folder is open in a docume
 - `File -> Save` saves the active tab.
 - `File -> Save All` saves all modified tabs.
 - Closing a dirty tab asks whether to save, discard, or cancel.
+- If an open file changes on disk while its Therion Studio tab has no unsaved edits, Therion Studio reloads it automatically. If the tab has unsaved edits, Therion Studio asks whether to reload from disk or keep the in-memory version.
 
 ## 4. Text Editing
 

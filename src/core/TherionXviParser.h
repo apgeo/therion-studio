@@ -14,6 +14,12 @@ struct TherionXviSketchLine
     QVector<QPointF> points;
 };
 
+struct TherionXviStation
+{
+    QString name;
+    QPointF position;
+};
+
 struct TherionXviDocument
 {
     QPointF gridOrigin;
@@ -23,6 +29,7 @@ struct TherionXviDocument
     int gridCountX = 0;
     int gridCountY = 0;
     bool hasGridDefinition = false;
+    QVector<TherionXviStation> stationEntries;
     QHash<QString, QPointF> stations;
     QVector<QLineF> shots;
     QVector<TherionXviSketchLine> sketchLines;

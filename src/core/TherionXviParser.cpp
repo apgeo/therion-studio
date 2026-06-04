@@ -74,6 +74,21 @@ QVector<QPointF> parsePointPairs(const QStringList &tokens, int startIndex)
     }
     return points;
 }
+
+bool isXviGridDefinitionLine(const QString &trimmed)
+{
+    const QString prefix = QStringLiteral("set XVIgrid");
+    if (!trimmed.startsWith(prefix)) {
+        return false;
+    }
+
+    if (trimmed.size() == prefix.size()) {
+        return true;
+    }
+
+    const QChar next = trimmed.at(prefix.size());
+    return next.isSpace() || next == QLatin1Char('{');
+}
 }
 
 bool parseTherionXviDocumentText(const QString &content, TherionXviDocument *document)
@@ -115,7 +130,7 @@ bool parseTherionXviDocumentText(const QString &content, TherionXviDocument *doc
             block = Block::SketchLines;
             continue;
         }
-        if (trimmed.startsWith(QStringLiteral("set XVIgrid"))) {
+        if (isXviGridDefinitionLine(trimmed)) {
             const int open = trimmed.indexOf(QLatin1Char('{'));
             const int close = trimmed.lastIndexOf(QLatin1Char('}'));
             if (open >= 0 && close > open) {
@@ -176,9 +191,14 @@ bool parseTherionXviDocumentText(const QString &content, TherionXviDocument *doc
             if (!tryParseLeadingNumber(tokens.at(0), &x) || !tryParseLeadingNumber(tokens.at(1), &y)) {
                 continue;
             }
-            const QString stationName = normalizeStationToken(tokens.last());
+            const QString stationName = normalizeStationToken(tokens.at(2));
             if (!stationName.isEmpty()) {
-                document->stations.insert(stationName, QPointF(x, y));
+                const QPointF stationPosition(x, y);
+                document->stationEntries.append(TherionXviStation{stationName, stationPosition});
+                if (!document->stations.contains(stationName)) {
+                    // XTherion root placement scans the station table in order and uses the first matching name.
+                    document->stations.insert(stationName, stationPosition);
+                }
             }
             continue;
         }

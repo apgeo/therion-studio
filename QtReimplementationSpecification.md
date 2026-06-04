@@ -167,6 +167,9 @@ Required capabilities:
 - support zooming, panning, and viewport restoration
 - support fitting the viewport to geometry only or to geometry plus background layers
 - support background imagery and sketch references used by TH2 documents, including multiple layers and `.xvi` vector references
+- `.xvi` vector background references loaded from `##XTHERION## xth_me_image_insert` metadata shall follow XTherion placement semantics: when a referenced root station resolves in the `.xvi` station table, the station shall be aligned to the metadata base position; otherwise the metadata base position shall anchor the `.xvi` grid origin.
+- `.xvi` vector background references shall apply the XTherion placement offset in TH2 model coordinates and then render `XVIgrid`, `XVIshots`, and `XVIsketchlines` through the same TH2 scene projection as map geometry; they shall not be independently fitted like raster preview imagery.
+- `.xvi` station table rows shall be interpreted using XTherion field semantics, where the first two fields are station coordinates and the third field is the station name used for root-station matching; when duplicate station names occur, root-station placement shall use the first matching station table row, matching XTherion.
 - support freehand line drawing with simplified bezier output
 - support automatic input behavior for mouse, touchpad, stylus, and platform touch gestures
 
@@ -275,6 +278,8 @@ The rules below define the expected day-to-day interaction model. If a later req
 - A dirty tab shall visibly indicate unsaved changes.
 - Save shall write only the active document.
 - Save All shall write every dirty open document.
+- When an open document changes on disk and the in-memory document is clean, the application shall reload it from disk automatically where practical.
+- When an open document changes on disk while the in-memory document is dirty, the application shall prompt before discarding in-memory edits and shall allow the user to keep the in-memory version.
 - The editor shall preserve caret position, selection, and folding state per document where possible.
 - Therion syntax highlighting shall reflect the current token type, not only the file extension.
 - Completion suggestions shall be context-sensitive and based on the current Therion syntax position.
@@ -596,7 +601,7 @@ The Qt application shall handle recoverable errors in a user-visible and actiona
 - Parse failures shall identify the document and, where possible, the line or region that failed.
 - If Therion documentation/help metadata is unavailable, the text editor shall remain fully usable and the help panel shall fall back to empty or placeholder content.
 - Save failures shall leave the document dirty and shall explain the reason to the user.
-- If a file changes on disk while it is open, the application shall detect the change when practical and prompt the user to reload, keep the local version, or postpone the decision.
+- If a file changes on disk while it is open, the application shall detect the change when practical; clean in-memory documents shall reload automatically, and dirty in-memory documents shall prompt the user to reload or keep the local version.
 - If a file is missing when the user attempts to open it, the application shall show an actionable error and keep the project browser usable.
 - If an external asset referenced by a project is missing, the project shall still open, and the missing reference shall be reported as a warning rather than as a fatal error.
 - If TH2 background imagery or sketch references fail to load, the document shall still open and the failure shall be reported in the UI.

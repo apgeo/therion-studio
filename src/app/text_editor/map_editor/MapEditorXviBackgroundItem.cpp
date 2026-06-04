@@ -233,15 +233,15 @@ void MapEditorXviBackgroundItem::paint(QPainter *painter,
             }
 
             QColor strokeColor = sketch.color.isValid() ? sketch.color : QColor(0, 0, 0);
-            if (strokeColor.alpha() > 96) {
-                strokeColor.setAlpha(96);
+            if (strokeColor.alpha() > 220) {
+                strokeColor.setAlpha(220);
             } else if (strokeColor.alpha() <= 0) {
-                strokeColor.setAlpha(86);
+                strokeColor.setAlpha(200);
             }
 
             QPen sketchPen(strokeColor);
             sketchPen.setStyle(sketch.style);
-            sketchPen.setWidthF(1.15 * zoomOutScale);
+            sketchPen.setWidthF(1.3 * zoomOutScale);
             sketchPen.setCosmetic(true);
             sketchPen.setCapStyle(Qt::RoundCap);
             sketchPen.setJoinStyle(Qt::RoundJoin);

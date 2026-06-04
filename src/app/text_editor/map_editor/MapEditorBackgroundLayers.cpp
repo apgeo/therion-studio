@@ -1,8 +1,9 @@
 #include "MapEditorTab.h"
 
 #include <QColor>
+#include <QCryptographicHash>
 #include <QDir>
-#include <QDateTime>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QGraphicsPixmapItem>
@@ -45,10 +46,13 @@ using XtherionAreaAdjust = TherionAreaAdjust;
 constexpr int kBackgroundLayerXviGeometryKeyRole = 100;
 constexpr int kBackgroundLayerUserVisibilityRole = 101;
 constexpr int kBackgroundLayerSourceImageRole = 102;
+constexpr int kBackgroundLayerXviExpectedTopLeftRole = 103;
+constexpr qreal kDefaultXviLayerOpacity = 1.0;
+constexpr qreal kDefaultRasterLayerOpacity = 0.58;
 
 struct CachedXviDocumentEntry
 {
-    QDateTime lastModifiedUtc;
+    QByteArray contentHash;
     XviDocument document;
 };
 
@@ -67,11 +71,11 @@ XviSketchStrokeStyle xviSketchStrokeStyleForToken(const QString &token)
 
     QColor parsedColor(normalizedToken);
     if (!parsedColor.isValid()) {
-        parsedColor = QColor(0, 0, 0, 86);
+        parsedColor = QColor(0, 0, 0, 200);
     } else if (parsedColor.alpha() <= 0) {
-        parsedColor.setAlpha(86);
-    } else if (parsedColor.alpha() > 96) {
-        parsedColor.setAlpha(96);
+        parsedColor.setAlpha(200);
+    } else if (parsedColor.alpha() > 220) {
+        parsedColor.setAlpha(220);
     }
 
     return XviSketchStrokeStyle{parsedColor, Qt::SolidLine};
@@ -147,7 +151,7 @@ QString xviGeometryCacheKey(const QString &absolutePath,
                             const QRectF &modelBounds,
                             const QRectF &previewBounds)
 {
-    return QStringLiteral("%1|%2|%3|%4|%5|%6|%7|%8|%9|%10|%11")
+    return QStringLiteral("xvi-geometry-v4|%1|%2|%3|%4|%5|%6|%7|%8|%9|%10|%11")
         .arg(normalizedPathKey(absolutePath),
              rootStationName.normalized(QString::NormalizationForm_C),
              quantizedNumberToken(anchoredBasePosition.x()),
@@ -177,19 +181,25 @@ bool parseXviDocumentFileCached(const QString &absolutePath, XviDocument *docume
     }
 
     const QString pathKey = normalizedPathKey(fileInfo.absoluteFilePath());
-    const QDateTime modified = fileInfo.lastModified().toUTC();
+    QFile file(fileInfo.absoluteFilePath());
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return false;
+    }
+    const QByteArray fileBytes = file.readAll();
+    const QByteArray contentHash = QCryptographicHash::hash(fileBytes, QCryptographicHash::Sha256);
+
     const auto cacheIt = cache.constFind(pathKey);
-    if (cacheIt != cache.constEnd() && cacheIt->lastModifiedUtc == modified) {
+    if (cacheIt != cache.constEnd() && cacheIt->contentHash == contentHash) {
         *document = cacheIt->document;
         return true;
     }
 
     XviDocument parsed;
-    if (!parseTherionXviDocumentFile(fileInfo.absoluteFilePath(), &parsed)) {
+    if (!parseTherionXviDocumentText(QString::fromUtf8(fileBytes), &parsed)) {
         return false;
     }
 
-    cache.insert(pathKey, CachedXviDocumentEntry{modified, parsed});
+    cache.insert(pathKey, CachedXviDocumentEntry{contentHash, parsed});
     *document = parsed;
     return true;
 }
@@ -760,15 +770,20 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
         return false;
     }
 
-    QPointF anchoredPosition = anchoredBasePosition;
-    if (!rootStationName.isEmpty()) {
-        const auto stationIt = xvi.stations.constFind(rootStationName);
-        if (stationIt != xvi.stations.constEnd()) {
-            anchoredPosition = xvi.gridOrigin + anchoredBasePosition - stationIt.value();
-        }
+    XviPlacementMetadata placement;
+    placement.basePosition = anchoredBasePosition;
+    placement.hasBasePosition = true;
+    placement.rootStationName = rootStationName;
+    QVector<XviStationPlacementEntry> stationEntries;
+    stationEntries.reserve(xvi.stationEntries.size());
+    for (const TherionXviStation &station : xvi.stationEntries) {
+        stationEntries.append(XviStationPlacementEntry{station.name, station.position});
     }
+    const XviPlacementResult placementResult = stationEntries.isEmpty()
+        ? resolveXviModelOffset(xvi.gridOrigin, xvi.stations, placement)
+        : resolveXviModelOffset(xvi.gridOrigin, stationEntries, placement);
+    const QPointF offset = placementResult.modelOffset;
 
-    const QPointF offset = anchoredPosition - xvi.gridOrigin;
     QRectF effectiveModelBounds = modelBounds;
     if (!effectiveModelBounds.isValid() || effectiveModelBounds.width() <= 0.0 || effectiveModelBounds.height() <= 0.0) {
         bool hasSourceBounds = false;
@@ -784,8 +799,8 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
         };
 
         if (xvi.hasGridDefinition) {
-            const int spanX = qMax(0, xvi.gridCountX - 1);
-            const int spanY = qMax(0, xvi.gridCountY - 1);
+            const int spanX = qMax(0, xvi.gridCountX);
+            const int spanY = qMax(0, xvi.gridCountY);
             const QPointF gridP00 = xvi.gridOrigin + offset;
             const QPointF gridP10 = gridP00 + (xvi.gridVectorX * spanX);
             const QPointF gridP01 = gridP00 + (xvi.gridVectorY * spanY);
@@ -827,8 +842,8 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
 
     QVector<QLineF> gridLines;
     if (xvi.hasGridDefinition) {
-        const int spanX = qMax(0, xvi.gridCountX - 1);
-        const int spanY = qMax(0, xvi.gridCountY - 1);
+        const int spanX = qMax(0, xvi.gridCountX);
+        const int spanY = qMax(0, xvi.gridCountY);
         const QPointF gridP00 = xvi.gridOrigin + offset;
         for (int xIndex = 0; xIndex <= spanX; ++xIndex) {
             const QPointF start = gridP00 + (xvi.gridVectorX * xIndex);
@@ -856,9 +871,15 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
         return QStringLiteral("%1:%2").arg(ix).arg(iy);
     };
     QSet<QString> stationPointKeys;
-    stationPointKeys.reserve(xvi.stations.size());
-    for (auto it = xvi.stations.constBegin(); it != xvi.stations.constEnd(); ++it) {
-        stationPointKeys.insert(stationKey(it.value()));
+    stationPointKeys.reserve(!xvi.stationEntries.isEmpty() ? xvi.stationEntries.size() : xvi.stations.size());
+    if (!xvi.stationEntries.isEmpty()) {
+        for (const TherionXviStation &station : xvi.stationEntries) {
+            stationPointKeys.insert(stationKey(station.position));
+        }
+    } else {
+        for (auto it = xvi.stations.constBegin(); it != xvi.stations.constEnd(); ++it) {
+            stationPointKeys.insert(stationKey(it.value()));
+        }
     }
     auto matchesStation = [&](const QPointF &point) {
         return stationPointKeys.contains(stationKey(point));
@@ -932,13 +953,12 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
     }
 
     const qreal padding = 2.0;
-    const QRectF paddedBounds = bounds.adjusted(-padding, -padding, padding, padding);
-    const QRectF clippedBounds = paddedBounds.intersected(previewBounds.adjusted(-padding, -padding, padding, padding));
-    if (!clippedBounds.isValid() || clippedBounds.width() < 1.0 || clippedBounds.height() < 1.0) {
+    const QRectF layerBounds = bounds.adjusted(-padding, -padding, padding, padding);
+    if (!layerBounds.isValid() || layerBounds.width() < 1.0 || layerBounds.height() < 1.0) {
         return false;
     }
 
-    const QPointF layerTopLeft = clippedBounds.topLeft();
+    const QPointF layerTopLeft = layerBounds.topLeft();
 
     auto normalizedLines = [&](const QVector<QLineF> &sourceLines) {
         QVector<QLineF> lines;
@@ -972,7 +992,7 @@ bool buildXviLayerGeometry(const XviDocument &xvi,
     result.traverseShotLines = normalizedTraverseShots;
     result.splayShotLines = normalizedSplayShots;
     result.sketchPaths = normalizedSketchPaths;
-    result.contentBounds = QRectF(QPointF(0.0, 0.0), clippedBounds.size());
+    result.contentBounds = QRectF(QPointF(0.0, 0.0), layerBounds.size());
     if (!result.hasContent()) {
         return false;
     }
@@ -1003,7 +1023,7 @@ MapEditorXviBackgroundItem *createXviBackgroundItem(const XviDocument &xvi,
 
     auto *item = new MapEditorXviBackgroundItem();
     item->setGeometryData(geometry);
-    item->setOpacity(0.58);
+    item->setOpacity(kDefaultXviLayerOpacity);
     item->setData(0, absolutePath);
     item->setData(2, 1.0);
     item->setData(kBackgroundLayerXviGeometryKeyRole,
@@ -1012,6 +1032,7 @@ MapEditorXviBackgroundItem *createXviBackgroundItem(const XviDocument &xvi,
                                       rootStationName,
                                       modelBounds,
                                       previewBounds));
+    item->setData(kBackgroundLayerXviExpectedTopLeftRole, topLeft);
     item->setPos(topLeft);
     return item;
 }
@@ -1034,7 +1055,11 @@ bool updateXviBackgroundItemGeometry(MapEditorXviBackgroundItem *item,
                                                  modelBounds,
                                                  previewBounds);
     if (item->data(kBackgroundLayerXviGeometryKeyRole).toString() == cacheKey) {
-        return true;
+        const QVariant expectedTopLeft = item->data(kBackgroundLayerXviExpectedTopLeftRole);
+        if (expectedTopLeft.canConvert<QPointF>()) {
+            item->setPos(expectedTopLeft.toPointF());
+            return true;
+        }
     }
 
     MapEditorXviLayerGeometryData geometry;
@@ -1052,6 +1077,7 @@ bool updateXviBackgroundItemGeometry(MapEditorXviBackgroundItem *item,
     item->setGeometryData(geometry);
     item->setPos(topLeft);
     item->setData(kBackgroundLayerXviGeometryKeyRole, cacheKey);
+    item->setData(kBackgroundLayerXviExpectedTopLeftRole, topLeft);
     return true;
 }
 
@@ -1274,7 +1300,11 @@ void MapEditorTab::setSelectedBackgroundLayerOpacity(qreal opacity)
 
 void MapEditorTab::resetSelectedBackgroundLayerOpacity()
 {
-    setSelectedBackgroundLayerOpacity(0.58);
+    QGraphicsPixmapItem *item = selectedBackgroundLayerItem();
+    const qreal defaultOpacity = item != nullptr && isXviBackgroundPath(item->data(0).toString())
+        ? kDefaultXviLayerOpacity
+        : kDefaultRasterLayerOpacity;
+    setSelectedBackgroundLayerOpacity(defaultOpacity);
 }
 
 void MapEditorTab::setSelectedBackgroundLayerGamma(qreal gamma)
@@ -1610,15 +1640,20 @@ void MapEditorTab::loadBackgroundLayersFromSession()
             : legacyHiddenXviOverride;
         item->setVisible((hasVisibilityOverride || !metadataHasVisibility) ? sessionVisible : metadataVisible);
         item->setData(kBackgroundLayerUserVisibilityRole, hasVisibilityOverride);
-        const qreal opacity = layerObject.value(QStringLiteral("opacity")).toDouble(0.58);
+        const qreal defaultOpacity = isXviBackgroundPath(layerPath) ? kDefaultXviLayerOpacity : kDefaultRasterLayerOpacity;
+        const qreal opacity = layerObject.value(QStringLiteral("opacity")).toDouble(defaultOpacity);
         item->setOpacity(qBound(0.05, opacity, 1.0));
-        if (hasMetadata && metadataReference->hasBasePosition && !metadataReference->xviReference) {
-            placeRasterLayerFromMetadata(item,
-                                         *metadataReference,
-                                         areaAdjust,
-                                         sourceBounds,
-                                         previewBounds);
-            item->setData(4, true);
+        if (hasMetadata && metadataReference->hasBasePosition) {
+            if (metadataReference->xviReference) {
+                item->setData(4, true);
+            } else {
+                placeRasterLayerFromMetadata(item,
+                                             *metadataReference,
+                                             areaAdjust,
+                                             sourceBounds,
+                                             previewBounds);
+                item->setData(4, true);
+            }
         } else {
             const qreal layerX = layerObject.value(QStringLiteral("x")).toDouble(item->pos().x());
             const qreal layerY = layerObject.value(QStringLiteral("y")).toDouble(item->pos().y());
@@ -2084,7 +2119,7 @@ void MapEditorTab::addBackgroundImage(const QString &imagePath, bool writeXtheri
 
     auto *backgroundItem = new QGraphicsPixmapItem(pixmap);
     backgroundItem->setTransformationMode(Qt::SmoothTransformation);
-    backgroundItem->setOpacity(0.58);
+    backgroundItem->setOpacity(kDefaultRasterLayerOpacity);
     backgroundItem->setData(0, QFileInfo(imagePath).absoluteFilePath());
     backgroundItem->setData(2, 1.0);
     cacheRasterSourceImage(backgroundItem, image);

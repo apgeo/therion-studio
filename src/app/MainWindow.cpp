@@ -9,7 +9,9 @@
 #include <QEvent>
 #include <QFile>
 #include <QFileInfo>
+#include <QCryptographicHash>
 #include <QFileSystemModel>
+#include <QFileSystemWatcher>
 #include <QFileDialog>
 #include <QFont>
 #include <QDir>
@@ -352,6 +354,7 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
     , projectModel_(new QFileSystemModel(this))
     , structureModel_(new QStandardItemModel(this))
     , mapObjectsModel_(new QStandardItemModel(this))
+    , documentFileWatcher_(new QFileSystemWatcher(this))
     , sessionStore_(&sessionStore)
     , commandCatalogStore_(std::move(commandCatalogStore))
     , structureSidebarScanner_(new TherionStudio::ProjectStructureScanner(this))
@@ -363,6 +366,8 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
 
     connect(structureSidebarScanner_, &TherionStudio::ProjectStructureScanner::scanFinished,
             this, &MainWindow::handleStructureSidebarScanFinished);
+    connect(documentFileWatcher_, &QFileSystemWatcher::fileChanged,
+            this, &MainWindow::handleWatchedDocumentFileChanged);
 
     buildUi();
     qApp->installEventFilter(this);
@@ -905,7 +910,9 @@ void MainWindow::handleTabCloseRequested(int index)
             return false;
         }
 
+        const QString documentPath = documentPathForWidget(tabWidget);
         editorTabs_->removeTab(tabIndex);
+        unregisterDocumentFileWatcherIfUnused(documentPath);
         tabWidget->deleteLater();
         return true;
     };
@@ -975,7 +982,9 @@ void MainWindow::closeAllTabs()
             return false;
         }
 
+        const QString documentPath = documentPathForWidget(tabWidget);
         editorTabs_->removeTab(tabIndex);
+        unregisterDocumentFileWatcherIfUnused(documentPath);
         tabWidget->deleteLater();
         return true;
     };
@@ -1239,6 +1248,9 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
 
     connect(tab, &TherionStudio::TextEditorTab::dirtyStateChanged, this, [this, tab](bool) {
         updateTabTitle(tab);
+        if (!tab->isDirty()) {
+            registerDocumentFileWatcher(tab->filePath());
+        }
         if (currentDocumentWidget() == tab) {
             refreshDocumentStatusWidgets();
             refreshWorkspaceModeSwitcher();
@@ -1296,6 +1308,7 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
     openRequest.currentLineNumber = tab->currentLineNumber();
     openRequest.consoleOpenedLine = tr("Opened %1").arg(canonicalPath);
     TherionStudio::MainWindowDocumentTabOpenController::attachNewTab(openRequest, openActions);
+    registerDocumentFileWatcher(tab->filePath());
     return tab;
 }
 
@@ -1440,6 +1453,9 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
     });
     connect(tab, &TherionStudio::MapEditorTab::dirtyStateChanged, this, [this, tab](bool) {
         updateTabTitle(tab);
+        if (!tab->isDirty()) {
+            registerDocumentFileWatcher(tab->filePath());
+        }
         if (currentDocumentWidget() == tab) {
             refreshDocumentStatusWidgets();
             refreshWorkspaceModeSwitcher();
@@ -1511,6 +1527,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
     openRequest.currentLineNumber = tab->currentLineNumber();
     openRequest.consoleOpenedLine = tr("Opened %1").arg(canonicalPath);
     TherionStudio::MainWindowDocumentTabOpenController::attachNewTab(openRequest, openActions);
+    registerDocumentFileWatcher(tab->filePath());
     return tab;
 }
 
@@ -1530,6 +1547,153 @@ QWidget *MainWindow::documentWidgetForFilePath(const QString &filePath) const
     }
 
     return nullptr;
+}
+
+QByteArray MainWindow::documentFileFingerprint(const QString &filePath) const
+{
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+
+    return QCryptographicHash::hash(file.readAll(), QCryptographicHash::Sha256);
+}
+
+void MainWindow::registerDocumentFileWatcher(const QString &filePath)
+{
+    if (documentFileWatcher_ == nullptr) {
+        return;
+    }
+
+    const QString canonicalPath = canonicalDocumentPath(filePath);
+    if (canonicalPath.isEmpty() || !QFileInfo::exists(canonicalPath)) {
+        return;
+    }
+
+    watchedDocumentFingerprints_.insert(canonicalPath, documentFileFingerprint(canonicalPath));
+    if (!documentFileWatcher_->files().contains(canonicalPath)) {
+        documentFileWatcher_->addPath(canonicalPath);
+    }
+}
+
+void MainWindow::unregisterDocumentFileWatcherIfUnused(const QString &filePath)
+{
+    if (documentFileWatcher_ == nullptr) {
+        return;
+    }
+
+    const QString canonicalPath = canonicalDocumentPath(filePath);
+    if (canonicalPath.isEmpty() || documentWidgetForFilePath(canonicalPath) != nullptr) {
+        return;
+    }
+
+    watchedDocumentFingerprints_.remove(canonicalPath);
+    pendingWatchedDocumentChanges_.remove(canonicalPath);
+    if (documentFileWatcher_->files().contains(canonicalPath)) {
+        documentFileWatcher_->removePath(canonicalPath);
+    }
+}
+
+bool MainWindow::reloadDocumentWidgetFromDisk(QWidget *documentWidget, QString *errorMessage)
+{
+    if (documentWidget == nullptr) {
+        return false;
+    }
+
+    const QString documentPath = documentPathForWidget(documentWidget);
+    if (documentPath.isEmpty()) {
+        return false;
+    }
+
+    bool loaded = false;
+    if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(documentWidget)) {
+        loaded = textTab->loadFile(documentPath, errorMessage);
+    } else if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(documentWidget)) {
+        loaded = mapTab->loadFile(documentPath, errorMessage);
+    }
+
+    if (loaded) {
+        updateTabTitle(documentWidget);
+        if (currentDocumentWidget() == documentWidget) {
+            refreshDocumentStatusWidgets();
+            refreshWorkspaceModeSwitcher();
+            rebuildMapObjectsTree();
+        }
+        registerDocumentFileWatcher(documentPath);
+    }
+
+    return loaded;
+}
+
+void MainWindow::handleWatchedDocumentFileChanged(const QString &filePath)
+{
+    const QString canonicalPath = canonicalDocumentPath(filePath);
+    if (canonicalPath.isEmpty() || pendingWatchedDocumentChanges_.contains(canonicalPath)) {
+        return;
+    }
+
+    pendingWatchedDocumentChanges_.insert(canonicalPath);
+    QTimer::singleShot(150, this, [this, canonicalPath]() {
+        pendingWatchedDocumentChanges_.remove(canonicalPath);
+        processWatchedDocumentFileChange(canonicalPath);
+    });
+}
+
+void MainWindow::processWatchedDocumentFileChange(const QString &filePath)
+{
+    const QString canonicalPath = canonicalDocumentPath(filePath);
+    QWidget *documentWidget = documentWidgetForFilePath(canonicalPath);
+    if (documentWidget == nullptr) {
+        unregisterDocumentFileWatcherIfUnused(canonicalPath);
+        return;
+    }
+
+    if (!QFileInfo::exists(canonicalPath)) {
+        watchedDocumentFingerprints_.remove(canonicalPath);
+        return;
+    }
+
+    if (documentFileWatcher_ != nullptr && !documentFileWatcher_->files().contains(canonicalPath)) {
+        documentFileWatcher_->addPath(canonicalPath);
+    }
+
+    const QByteArray currentFingerprint = documentFileFingerprint(canonicalPath);
+    const QByteArray previousFingerprint = watchedDocumentFingerprints_.value(canonicalPath);
+    if (currentFingerprint.isEmpty() || (!previousFingerprint.isEmpty() && currentFingerprint == previousFingerprint)) {
+        watchedDocumentFingerprints_.insert(canonicalPath, currentFingerprint);
+        return;
+    }
+
+    const bool dirty = documentIsDirtyForWidget(documentWidget);
+    if (dirty) {
+        const QMessageBox::StandardButton decision = QMessageBox::question(
+            this,
+            tr("File Changed on Disk"),
+            tr("The file %1 changed on disk while it has unsaved changes in Therion Studio.\n\nReload from disk and discard the in-memory changes?")
+                .arg(QFileInfo(canonicalPath).fileName()),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+        if (decision != QMessageBox::Yes) {
+            watchedDocumentFingerprints_.insert(canonicalPath, currentFingerprint);
+            registerDocumentFileWatcher(canonicalPath);
+            statusBar()->showMessage(tr("Kept in-memory version of %1.").arg(QFileInfo(canonicalPath).fileName()), 5000);
+            return;
+        }
+    }
+
+    QString errorMessage;
+    if (!reloadDocumentWidgetFromDisk(documentWidget, &errorMessage)) {
+        QMessageBox::warning(this,
+                             tr("Reload File"),
+                             errorMessage.isEmpty()
+                                 ? tr("Unable to reload %1 from disk.").arg(canonicalPath)
+                                 : errorMessage);
+        watchedDocumentFingerprints_.insert(canonicalPath, currentFingerprint);
+        registerDocumentFileWatcher(canonicalPath);
+        return;
+    }
+
+    statusBar()->showMessage(tr("Reloaded %1 from disk.").arg(QFileInfo(canonicalPath).fileName()), 5000);
 }
 
 void MainWindow::syncOpenDocumentsToProjectRoot()
@@ -1593,6 +1757,7 @@ void MainWindow::detachMapEditorTab(TherionStudio::MapEditorTab *tab)
         const QString path = detachedMapPathsByTab_.take(mapTab);
         if (!path.isEmpty()) {
             detachedMapWindowsByPath_.remove(path);
+            unregisterDocumentFileWatcherIfUnused(path);
         }
     });
 
@@ -1613,6 +1778,7 @@ void MainWindow::detachMapEditorTab(TherionStudio::MapEditorTab *tab)
         const QString path = detachedMapPathsByTab_.take(tab);
         if (!path.isEmpty()) {
             detachedMapWindowsByPath_.remove(path);
+            unregisterDocumentFileWatcherIfUnused(path);
         }
     });
     connect(window, &QObject::destroyed, this, [this, canonicalPath]() {

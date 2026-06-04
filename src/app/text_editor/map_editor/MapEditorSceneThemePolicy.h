@@ -22,14 +22,14 @@ struct MapEditorSceneThemeColors
 
 inline QColor mapEditorCanvasViewportBackgroundColor()
 {
-    return QColor(QStringLiteral("#eef3f9"));
+    return QColor(QStringLiteral("#f2f0df"));
 }
 
 inline MapEditorSceneThemeColors mapEditorSceneThemeColors()
 {
     return {
-        QColor(QStringLiteral("#bec9d8")),
-        QColor(QStringLiteral("#f4f8fd")),
+        QColor(QStringLiteral("#cfc9a7")),
+        QColor(QStringLiteral("#fffde7")),
         QColor(QStringLiteral("#1d2837")),
         QColor(48, 73, 105, 28),
         QColor(QStringLiteral("#344a67")),

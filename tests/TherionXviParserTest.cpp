@@ -57,6 +57,9 @@ int runParseTextTest()
     if (!expect(document.stations.size() == 2, "Expected parsed XVI stations collection size.")) {
         return 1;
     }
+    if (!expect(document.stationEntries.size() == 2, "Expected parsed XVI station table entry count.")) {
+        return 1;
+    }
     if (!expect(document.shots.size() == 1, "Expected parsed XVI shots collection size.")) {
         return 1;
     }
@@ -110,6 +113,116 @@ int runParseFileTest()
     return 0;
 }
 
+int runStationNameFieldTest()
+{
+    const QString xviText = QStringLiteral(
+        "set XVIgrid {0 0 1 0 0 1 2 2}\n"
+        "set XVIstations {\n"
+        "  {1950.0348031500002 1497.5492126 1.4 trailing-token}\n"
+        "}\n");
+
+    TherionXviDocument document;
+    if (!expect(parseTherionXviDocumentText(xviText, &document),
+                "Expected XVI text with station trailing fields to parse.")) {
+        return 1;
+    }
+    if (!expect(document.stations.contains(QStringLiteral("1.4")),
+                "Expected XVI station name to be parsed from the third station field.")) {
+        return 1;
+    }
+    if (!expect(document.stationEntries.size() == 1,
+                "Expected XVI station table entry to be preserved.")) {
+        return 1;
+    }
+    if (!expect(!document.stations.contains(QStringLiteral("trailing-token")),
+                "Expected trailing XVI station fields not to be used as station names.")) {
+        return 1;
+    }
+    const QPointF station = document.stations.value(QStringLiteral("1.4"));
+    if (!expect(nearlyEqual(station.x(), 1950.0348031500002)
+                    && nearlyEqual(station.y(), 1497.5492126),
+                "Expected XVI station coordinates to be preserved when trailing fields are present.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runDuplicateStationNameOrderTest()
+{
+    const QString xviText = QStringLiteral(
+        "set XVIgrid {-2651.57480315 -4006.2992126 78.7401574803 0.0 0.0 78.7401574803 76.0 98.0}\n"
+        "set XVIstations {\n"
+        "  {-701.54 -2508.75 1.4}\n"
+        "  {253.15 -2651.97 1.4}\n"
+        "}\n"
+        "set XVIshots {\n"
+        "  {-701.54 -2508.75 253.15 -2651.97}\n"
+        "}\n");
+
+    TherionXviDocument document;
+    if (!expect(parseTherionXviDocumentText(xviText, &document),
+                "Expected XVI text with duplicate station names to parse.")) {
+        return 1;
+    }
+    if (!expect(document.stationEntries.size() == 2,
+                "Expected duplicate XVI station rows to be preserved in order.")) {
+        return 1;
+    }
+    if (!expect(document.stationEntries.first().name == QStringLiteral("1.4"),
+                "Expected first duplicate station row to preserve its station name.")) {
+        return 1;
+    }
+    const QPointF firstStation = document.stationEntries.first().position;
+    const QPointF secondStation = document.stationEntries.at(1).position;
+    if (!expect(nearlyEqual(firstStation.x(), -701.54) && nearlyEqual(firstStation.y(), -2508.75),
+                "Expected first duplicate station row coordinates to be preserved.")) {
+        return 1;
+    }
+    if (!expect(nearlyEqual(secondStation.x(), 253.15) && nearlyEqual(secondStation.y(), -2651.97),
+                "Expected second duplicate station row coordinates to be preserved.")) {
+        return 1;
+    }
+    const QPointF lookupStation = document.stations.value(QStringLiteral("1.4"));
+    if (!expect(nearlyEqual(lookupStation.x(), -701.54) && nearlyEqual(lookupStation.y(), -2508.75),
+                "Expected station lookup to keep the first duplicate station, matching XTherion root placement.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runXviGridsHeaderDoesNotMaskGridDefinitionTest()
+{
+    const QString xviText = QStringLiteral(
+        "set XVIgrids {1.0 m}\n"
+        "set XVIstations {\n"
+        "  {862.52 3307.56 5.1}\n"
+        "}\n"
+        "set XVIgrid {219.37007874 2224.40944882 157.480314961 0.0 0.0 157.480314961 11 9}\n");
+
+    TherionXviDocument document;
+    if (!expect(parseTherionXviDocumentText(xviText, &document),
+                "Expected XVI text with both XVIgrids and XVIgrid records to parse.")) {
+        return 1;
+    }
+    if (!expect(document.hasGridOrigin && document.hasGridDefinition,
+                "Expected parser to use the singular XVIgrid record as grid geometry.")) {
+        return 1;
+    }
+    if (!expect(nearlyEqual(document.gridOrigin.x(), 219.37007874)
+                    && nearlyEqual(document.gridOrigin.y(), 2224.40944882),
+                "Expected parser not to treat the plural XVIgrids units record as grid geometry.")) {
+        return 1;
+    }
+    if (!expect(document.gridCountX == 11 && document.gridCountY == 9,
+                "Expected parser to preserve XVIgrid counts after an XVIgrids header.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runRejectInvalidContentTest()
 {
     const QString invalidText = QStringLiteral("set XVIgrid {0 0 1 0}\n");
@@ -155,6 +268,15 @@ int main()
         return rc;
     }
     if (const int rc = runParseFileTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runStationNameFieldTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runDuplicateStationNameOrderTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runXviGridsHeaderDoesNotMaskGridDefinitionTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runRejectInvalidContentTest(); rc != 0) {

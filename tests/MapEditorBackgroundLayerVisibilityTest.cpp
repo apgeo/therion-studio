@@ -5,8 +5,12 @@
 #include "FakeSessionStore.h"
 
 #include <QApplication>
+#include <QDateTime>
 #include <QFile>
 #include <QImage>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMainWindow>
 #include <QTemporaryDir>
 #include <QVBoxLayout>
@@ -35,6 +39,15 @@ bool nearlyEqual(qreal a, qreal b, qreal epsilon = 0.0001)
 void pumpEvents()
 {
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+}
+
+bool writeTextFile(const QString &path, const QByteArray &content)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        return false;
+    }
+    return file.write(content) == content.size();
 }
 
 int runBackgroundVisibilityDoesNotDirtyDocumentTest()
@@ -348,6 +361,267 @@ int runBackgroundGammaPreservesSelectedLayerTest()
 
     return 0;
 }
+
+int runMetadataXviPlacementIgnoresSessionScenePositionTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for XVI placement test.")) {
+        return 1;
+    }
+
+    const QString xviPath = tempDir.filePath(QStringLiteral("placed.xvi"));
+    QFile xviFile(xviPath);
+    if (!expect(xviFile.open(QIODevice::WriteOnly | QIODevice::Text),
+                "Failed to create temporary XVI file for placement test.")) {
+        return 1;
+    }
+    xviFile.write(
+        "set XVIgrid {-2651.57480315 -4006.2992126 78.7401574803 0.0 0.0 78.7401574803 76.0 98.0}\n"
+        "set XVIstations {\n"
+        "  {-701.54 -2508.75 1.4}\n"
+        "  {0.0 0.0 1.0}\n"
+        "}\n"
+        "set XVIshots {\n"
+        "  {-701.54 -2508.75 0.0 0.0}\n"
+        "}\n"
+        "set XVIsketchlines {\n"
+        "  {black -701.54 -2508.75 -640.0 -2450.0}\n"
+        "}\n");
+    xviFile.close();
+
+    const QString filePath = tempDir.filePath(QStringLiteral("metadata_xvi_restore.th2"));
+    QFile th2File(filePath);
+    if (!expect(th2File.open(QIODevice::WriteOnly | QIODevice::Text),
+                "Failed to create temporary TH2 file for XVI placement test.")) {
+        return 1;
+    }
+    const QString th2Contents = QStringLiteral(
+        "encoding utf-8\n"
+        "##XTHERION## xth_me_area_adjust -128.0 -128.0 6033.5118110225 7797.7952755891\n"
+        "##XTHERION## xth_me_area_zoom_to 25\n"
+        "##XTHERION## xth_me_image_insert {1950.0348031500002 1 1.0} {1497.5492126 1.4} placed.xvi 0 {}\n"
+        "\n"
+        "scrap xvi-restore -projection plan -scale [0 0 787.4 787.4 0 0 10 10 m]\n"
+        "point 1950.0348031500002 1497.5492126 station -name 1.4\n"
+        "point 2651.57480315 4006.2992126 station -name 1.0\n"
+        "endscrap\n");
+    th2File.write(th2Contents.toUtf8());
+    th2File.close();
+
+    QtFileSystem fileSystem;
+    FakeSessionStore cleanSessionStore;
+    QPointF metadataPosition;
+    {
+        QMainWindow hostWindow;
+        hostWindow.resize(960, 720);
+        auto *central = new QWidget(&hostWindow);
+        auto *layout = new QVBoxLayout(central);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(0);
+
+        auto *mapTab = new MapEditorTab(fileSystem, cleanSessionStore, CommandCatalogStore(), central);
+        layout->addWidget(mapTab);
+        hostWindow.setCentralWidget(central);
+        hostWindow.show();
+        pumpEvents();
+
+        QString errorMessage;
+        if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                    "MapEditorTab failed to load TH2 file for clean XVI placement test.")) {
+            if (!errorMessage.isEmpty()) {
+                std::cerr << errorMessage.toStdString() << '\n';
+            }
+            return 1;
+        }
+        pumpEvents();
+
+        if (!expect(mapTab->backgroundLayerCount() == 1,
+                    "Expected one metadata XVI layer in clean placement test.")) {
+            return 1;
+        }
+        metadataPosition = mapTab->backgroundLayerPosition(0);
+    }
+
+    FakeSessionStore staleSessionStore;
+    const QString documentKey = QFileInfo(filePath).canonicalFilePath();
+    QJsonObject staleLayer;
+    staleLayer.insert(QStringLiteral("path"), QFileInfo(xviPath).absoluteFilePath());
+    staleLayer.insert(QStringLiteral("visible"), true);
+    staleLayer.insert(QStringLiteral("opacity"), 0.58);
+    staleLayer.insert(QStringLiteral("gamma"), 1.0);
+    staleLayer.insert(QStringLiteral("x"), metadataPosition.x() + 197.0);
+    staleLayer.insert(QStringLiteral("y"), metadataPosition.y() + 42.0);
+    QJsonArray layers;
+    layers.append(staleLayer);
+    QJsonObject root;
+    root.insert(documentKey, layers);
+    staleSessionStore.setTherionMapBackgroundLayers(QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Compact)));
+
+    QMainWindow hostWindow;
+    hostWindow.resize(960, 720);
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto *mapTab = new MapEditorTab(fileSystem, staleSessionStore, CommandCatalogStore(), central);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to load TH2 file for stale-session XVI placement test.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEvents();
+
+    if (!expect(mapTab->backgroundLayerCount() == 1,
+                "Expected one metadata XVI layer restored from stale session.")) {
+        return 1;
+    }
+    const QPointF restoredPosition = mapTab->backgroundLayerPosition(0);
+    if (!expect(nearlyEqual(restoredPosition.x(), metadataPosition.x())
+                    && nearlyEqual(restoredPosition.y(), metadataPosition.y()),
+                "Metadata-backed XVI layer should ignore stale session scene position and keep XTherion placement.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runXviCacheReloadsSameTimestampContentChangeTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory for XVI cache reload test.")) {
+        return 1;
+    }
+
+    const QString xviPath = tempDir.filePath(QStringLiteral("cached.xvi"));
+    const QByteArray firstXvi =
+        "set XVIgrid {0 0}\n"
+        "set XVIstations {\n"
+        "  {0 0 root}\n"
+        "}\n"
+        "set XVIsketchlines {\n"
+        "  {black 0 0 100 100}\n"
+        "}\n";
+    if (!expect(writeTextFile(xviPath, firstXvi), "Failed to write initial XVI cache test file.")) {
+        return 1;
+    }
+    const QDateTime originalModified = QFileInfo(xviPath).lastModified();
+
+    const QString filePath = tempDir.filePath(QStringLiteral("xvi_cache_reload.th2"));
+    const QByteArray th2Contents =
+        "encoding utf-8\n"
+        "##XTHERION## xth_me_area_adjust 0 0 1000 1000\n"
+        "##XTHERION## xth_me_area_zoom_to 100\n"
+        "##XTHERION## xth_me_image_insert {100 1 1.0} {100 root} cached.xvi 0 {}\n"
+        "\n"
+        "scrap cache-reload -projection plan\n"
+        "point 100 100 station -name root\n"
+        "endscrap\n";
+    if (!expect(writeTextFile(filePath, th2Contents), "Failed to write TH2 cache reload test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    QPointF firstPosition;
+    {
+        FakeSessionStore sessionStore;
+        QMainWindow hostWindow;
+        hostWindow.resize(960, 720);
+        auto *central = new QWidget(&hostWindow);
+        auto *layout = new QVBoxLayout(central);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(0);
+
+        auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), central);
+        layout->addWidget(mapTab);
+        hostWindow.setCentralWidget(central);
+        hostWindow.show();
+        pumpEvents();
+
+        QString errorMessage;
+        if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                    "MapEditorTab failed to load initial XVI cache reload file.")) {
+            if (!errorMessage.isEmpty()) {
+                std::cerr << errorMessage.toStdString() << '\n';
+            }
+            return 1;
+        }
+        pumpEvents();
+
+        if (!expect(mapTab->backgroundLayerCount() == 1,
+                    "Expected one metadata XVI layer before cache reload.")) {
+            return 1;
+        }
+        firstPosition = mapTab->backgroundLayerPosition(0);
+    }
+
+    const QByteArray secondXvi =
+        "set XVIgrid {0 0}\n"
+        "set XVIstations {\n"
+        "  {0 0 root}\n"
+        "}\n"
+        "set XVIsketchlines {\n"
+        "  {black 800 800 900 900}\n"
+        "}\n";
+    if (!expect(writeTextFile(xviPath, secondXvi), "Failed to rewrite XVI cache test file.")) {
+        return 1;
+    }
+    QFile timestampFile(xviPath);
+    if (!expect(timestampFile.open(QIODevice::ReadWrite),
+                "Failed to reopen XVI cache test file for timestamp reset.")) {
+        return 1;
+    }
+    if (!expect(timestampFile.setFileTime(originalModified, QFileDevice::FileModificationTime),
+                "Failed to restore original XVI cache test modification timestamp.")) {
+        return 1;
+    }
+    timestampFile.close();
+
+    FakeSessionStore sessionStore;
+    QMainWindow hostWindow;
+    hostWindow.resize(960, 720);
+    auto *central = new QWidget(&hostWindow);
+    auto *layout = new QVBoxLayout(central);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto *mapTab = new MapEditorTab(fileSystem, sessionStore, CommandCatalogStore(), central);
+    layout->addWidget(mapTab);
+    hostWindow.setCentralWidget(central);
+    hostWindow.show();
+    pumpEvents();
+
+    QString errorMessage;
+    if (!expect(mapTab->loadFile(filePath, &errorMessage),
+                "MapEditorTab failed to reload TH2 after same-timestamp XVI content change.")) {
+        if (!errorMessage.isEmpty()) {
+            std::cerr << errorMessage.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEvents();
+
+    if (!expect(mapTab->backgroundLayerCount() == 1,
+                "Expected one metadata XVI layer after same-timestamp cache reload.")) {
+        return 1;
+    }
+    const QPointF secondPosition = mapTab->backgroundLayerPosition(0);
+    if (!expect(!nearlyEqual(secondPosition.x(), firstPosition.x())
+                    || !nearlyEqual(secondPosition.y(), firstPosition.y()),
+                "XVI cache should reload changed content even when the file timestamp is unchanged.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
@@ -359,5 +633,11 @@ int main(int argc, char **argv)
     if (const int rc = runBackgroundGammaPreservesPlacementTest(); rc != 0) {
         return rc;
     }
-    return runBackgroundGammaPreservesSelectedLayerTest();
+    if (const int rc = runBackgroundGammaPreservesSelectedLayerTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runMetadataXviPlacementIgnoresSessionScenePositionTest(); rc != 0) {
+        return rc;
+    }
+    return runXviCacheReloadsSameTimestampContentChangeTest();
 }

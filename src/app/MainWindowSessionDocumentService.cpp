@@ -1,6 +1,7 @@
 #include "MainWindowSessionDocumentService.h"
 
 #include <QFileInfo>
+#include <QSet>
 
 #include <utility>
 
@@ -30,17 +31,24 @@ QStringList MainWindowSessionDocumentService::mergeOpenDocumentPaths(const QStri
 {
     QStringList mergedPaths;
     mergedPaths.reserve(tabDocumentPaths.size() + detachedMapDocumentPaths.size());
+    QSet<QString> seenPaths;
+    seenPaths.reserve(tabDocumentPaths.size() + detachedMapDocumentPaths.size());
 
     for (const QString &documentPath : tabDocumentPaths) {
         if (!documentPath.isEmpty()) {
+            if (seenPaths.contains(documentPath)) {
+                continue;
+            }
+            seenPaths.insert(documentPath);
             mergedPaths.append(documentPath);
         }
     }
 
     for (const QString &documentPath : detachedMapDocumentPaths) {
-        if (documentPath.isEmpty() || mergedPaths.contains(documentPath)) {
+        if (documentPath.isEmpty() || seenPaths.contains(documentPath)) {
             continue;
         }
+        seenPaths.insert(documentPath);
         mergedPaths.append(documentPath);
     }
 

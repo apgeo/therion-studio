@@ -57,10 +57,12 @@ int runOpenDocumentPathMergeTest()
     const QStringList tabDocumentPaths = {
         QStringLiteral("/tmp/a.th"),
         QString(),
+        QStringLiteral("/tmp/a.th"),
         QStringLiteral("/tmp/b.th")};
     const QStringList detachedMapDocumentPaths = {
         QStringLiteral("/tmp/b.th"),
         QString(),
+        QStringLiteral("/tmp/c.th2"),
         QStringLiteral("/tmp/c.th2")};
 
     const QStringList merged = MainWindowSessionDocumentService::mergeOpenDocumentPaths(tabDocumentPaths,
@@ -70,7 +72,7 @@ int runOpenDocumentPathMergeTest()
         QStringLiteral("/tmp/b.th"),
         QStringLiteral("/tmp/c.th2")};
     if (!expect(merged == expected,
-                "Merged document paths should keep tab order and append unique detached map paths.")) {
+                "Merged document paths should keep first-seen tab order and append unique detached map paths.")) {
         return 1;
     }
 

@@ -61,7 +61,13 @@ When a map pane is detached into a separate window, the main window can show bot
 2. Choose the project folder.
 3. Open documents from the `Files` pane.
 
+The project folder chooser starts in your home folder when opened from `Open Project...`.
+
 When no project is open, the welcome tab shows an `Open Project...` button. When a project is open but no document tab is active, the welcome tab offers opening a file from the sidebar.
+
+The welcome tab and `File -> Recent Projects` list up to five recently opened projects. Select a project from either list to reopen it.
+
+When a project is open, the welcome tab shows the active project name and path. It also lists up to ten recent files from that project; select a recent file to reopen it. The same project-scoped list is available from `File -> Recent Files`.
 
 ### 3.2 Open Documents
 

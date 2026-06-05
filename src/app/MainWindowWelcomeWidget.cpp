@@ -1,0 +1,166 @@
+#include "MainWindowWelcomeWidget.h"
+
+#include "MainWindowRecentFilesService.h"
+#include "MainWindowRecentProjectsService.h"
+
+#include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
+#include <QFont>
+#include <QLabel>
+#include <QPushButton>
+#include <QSizePolicy>
+#include <QVBoxLayout>
+#include <QWidget>
+
+namespace TherionStudio
+{
+namespace
+{
+QLabel *createRecentItemLink(QWidget *parent,
+                             const QString &displayText,
+                             const QString &toolTip,
+                             const QString &targetPath,
+                             std::function<void(const QString &)> onActivated)
+{
+    auto *link = new QLabel(parent);
+    link->setText(QStringLiteral("<a href=\"open\">%1</a>").arg(displayText.toHtmlEscaped()));
+    link->setTextFormat(Qt::RichText);
+    link->setTextInteractionFlags(Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard);
+    link->setOpenExternalLinks(false);
+    link->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    link->setToolTip(toolTip);
+    QObject::connect(link, &QLabel::linkActivated, link, [onActivated, targetPath](const QString &) {
+        if (onActivated) {
+            onActivated(targetPath);
+        }
+    });
+    return link;
+}
+}
+
+QWidget *createMainWindowProjectWelcomeWidget(const QString &title,
+                                              const QString &body,
+                                              const QString &buttonText,
+                                              std::function<void()> onButtonClick,
+                                              const QStringList &recentProjectPaths,
+                                              std::function<void(const QString &)> onRecentProjectClick)
+{
+    auto *widget = new QWidget;
+    auto *layout = new QVBoxLayout(widget);
+    layout->setContentsMargins(24, 24, 24, 24);
+    layout->setSpacing(12);
+
+    auto *titleLabel = new QLabel(title);
+    QFont titleFont = titleLabel->font();
+    titleFont.setPointSize(titleFont.pointSize() + 4);
+    titleFont.setBold(true);
+    titleLabel->setFont(titleFont);
+
+    auto *bodyLabel = new QLabel(body);
+    bodyLabel->setWordWrap(true);
+
+    layout->addStretch(1);
+    layout->addWidget(titleLabel);
+    layout->addWidget(bodyLabel);
+
+    auto *button = new QPushButton(buttonText);
+    button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    QObject::connect(button, &QPushButton::clicked, widget, [onButtonClick]() {
+        if (onButtonClick) {
+            onButtonClick();
+        }
+    });
+    layout->addWidget(button);
+
+    const QStringList normalizedRecentProjectPaths =
+        MainWindowRecentProjectsService::normalizedRecentProjectPaths(recentProjectPaths);
+    if (!normalizedRecentProjectPaths.isEmpty()) {
+        auto *recentTitleLabel =
+            new QLabel(QCoreApplication::translate("MainWindow", "Recent Projects"));
+        QFont recentTitleFont = recentTitleLabel->font();
+        recentTitleFont.setBold(true);
+        recentTitleLabel->setFont(recentTitleFont);
+        layout->addSpacing(16);
+        layout->addWidget(recentTitleLabel);
+
+        for (const QString &projectPath : normalizedRecentProjectPaths) {
+            layout->addWidget(createRecentItemLink(widget,
+                                                   QDir::toNativeSeparators(projectPath),
+                                                   QDir::toNativeSeparators(projectPath),
+                                                   projectPath,
+                                                   onRecentProjectClick));
+        }
+    }
+
+    layout->addStretch(1);
+
+    return widget;
+}
+
+QWidget *createMainWindowActiveProjectWelcomeWidget(const QString &title,
+                                                    const QString &projectPath,
+                                                    const QString &body,
+                                                    const QStringList &recentFilePaths,
+                                                    std::function<void(const QString &)> onRecentFileClick)
+{
+    auto *widget = new QWidget;
+    auto *layout = new QVBoxLayout(widget);
+    layout->setContentsMargins(24, 24, 24, 24);
+    layout->setSpacing(12);
+
+    auto *titleLabel = new QLabel(title);
+    QFont titleFont = titleLabel->font();
+    titleFont.setPointSize(titleFont.pointSize() + 4);
+    titleFont.setBold(true);
+    titleLabel->setFont(titleFont);
+
+    auto *projectLabel =
+        new QLabel(QCoreApplication::translate("MainWindow", "Project: %1")
+                       .arg(QFileInfo(projectPath).fileName()));
+    QFont projectFont = projectLabel->font();
+    projectFont.setBold(true);
+    projectLabel->setFont(projectFont);
+
+    auto *projectPathLabel = new QLabel(QDir::toNativeSeparators(projectPath));
+    projectPathLabel->setWordWrap(true);
+    projectPathLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+
+    auto *bodyLabel = new QLabel(body);
+    bodyLabel->setWordWrap(true);
+
+    layout->addStretch(1);
+    layout->addWidget(titleLabel);
+    layout->addWidget(projectLabel);
+    layout->addWidget(projectPathLabel);
+    layout->addWidget(bodyLabel);
+
+    const QStringList normalizedRecentFilePaths =
+        MainWindowRecentFilesService::normalizedRecentFilePaths(projectPath, recentFilePaths);
+    auto *recentTitleLabel =
+        new QLabel(QCoreApplication::translate("MainWindow", "Recent Files"));
+    QFont recentTitleFont = recentTitleLabel->font();
+    recentTitleFont.setBold(true);
+    recentTitleLabel->setFont(recentTitleFont);
+    layout->addSpacing(16);
+    layout->addWidget(recentTitleLabel);
+
+    if (normalizedRecentFilePaths.isEmpty()) {
+        auto *emptyLabel = new QLabel(QCoreApplication::translate("MainWindow", "No recent files yet."));
+        layout->addWidget(emptyLabel);
+    } else {
+        for (const QString &filePath : normalizedRecentFilePaths) {
+            layout->addWidget(createRecentItemLink(
+                widget,
+                MainWindowRecentFilesService::projectRelativeDisplayPath(projectPath, filePath),
+                QDir::toNativeSeparators(filePath),
+                filePath,
+                onRecentFileClick));
+        }
+    }
+
+    layout->addStretch(1);
+
+    return widget;
+}
+}

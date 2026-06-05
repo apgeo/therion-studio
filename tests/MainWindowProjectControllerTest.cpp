@@ -134,6 +134,10 @@ int runOpenProjectSuccessExecutionOrderTest()
                 "Open-project controller should persist project path into session store.")) {
         return 1;
     }
+    if (!expect(sessionStore.recentProjectPaths() == QStringList({projectPath}),
+                "Open-project controller should record the opened project in recent project history.")) {
+        return 1;
+    }
 
     return 0;
 }

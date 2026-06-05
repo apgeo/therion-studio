@@ -124,4 +124,6 @@ void MainWindow::updateProjectActionState()
     if (workspaceCloseProjectButton_ != nullptr) {
         workspaceCloseProjectButton_->setEnabled(hasOpenProject);
     }
+    refreshRecentProjectsUi();
+    refreshRecentFilesUi();
 }

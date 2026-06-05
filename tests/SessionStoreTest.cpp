@@ -31,9 +31,13 @@ int runInstanceBackedRoundTripTest()
     {
         SessionSettingsStore store(settingsPath);
         store.setLastProjectPath(QStringLiteral("/tmp/project"));
+        store.setRecentProjectPaths({QStringLiteral("/tmp/project"), QStringLiteral("/tmp/other")});
         store.setMainWindowGeometry(QByteArray("geometry-bytes"));
         store.setMainWindowState(QByteArray("state-bytes"));
         store.setOpenDocumentPaths({QStringLiteral("/tmp/project/a.th"), QStringLiteral("/tmp/project/b.th2")});
+        store.setRecentFilePathsForProject(QStringLiteral("/tmp/project"),
+                                           {QStringLiteral("/tmp/project/recent.th"),
+                                            QStringLiteral("/tmp/project/recent.th2")});
         store.setActiveDocumentPath(QStringLiteral("/tmp/project/b.th2"));
         store.setStructureNameOverrides(QStringLiteral("{\"a\":\"A\"}"));
         store.setApplicationLanguage(QStringLiteral("cs"));
@@ -52,6 +56,11 @@ int runInstanceBackedRoundTripTest()
                 "Last project path should round-trip through the injected settings file.")) {
         return 1;
     }
+    if (!expect(store.recentProjectPaths()
+                    == QStringList({QStringLiteral("/tmp/project"), QStringLiteral("/tmp/other")}),
+                "Recent project paths should round-trip through the injected settings file.")) {
+        return 1;
+    }
     if (!expect(store.mainWindowGeometry() == QByteArray("geometry-bytes"),
                 "Main window geometry should round-trip through the injected settings file.")) {
         return 1;
@@ -63,6 +72,12 @@ int runInstanceBackedRoundTripTest()
     if (!expect(store.openDocumentPaths()
                     == QStringList({QStringLiteral("/tmp/project/a.th"), QStringLiteral("/tmp/project/b.th2")}),
                 "Open document paths should round-trip through the injected settings file.")) {
+        return 1;
+    }
+    if (!expect(store.recentFilePathsForProject(QStringLiteral("/tmp/project"))
+                    == QStringList({QStringLiteral("/tmp/project/recent.th"),
+                                    QStringLiteral("/tmp/project/recent.th2")}),
+                "Recent file paths should round-trip per project through the injected settings file.")) {
         return 1;
     }
     if (!expect(store.activeDocumentPath() == QStringLiteral("/tmp/project/b.th2"),
@@ -141,6 +156,29 @@ int runDeprecatedTherionArgumentsCleanupTest()
     return 0;
 }
 
+int runRecentProjectsFallbackTest()
+{
+    QTemporaryDir temporarySettingsDir;
+    if (!expect(temporarySettingsDir.isValid(), "Temporary settings directory creation failed.")) {
+        return 1;
+    }
+
+    const QString settingsPath = temporarySettingsDir.filePath(QStringLiteral("session.ini"));
+    {
+        QSettings settings(settingsPath, QSettings::IniFormat);
+        settings.setValue(QStringLiteral("session/lastProjectPath"), QStringLiteral("/tmp/legacy-project"));
+        settings.sync();
+    }
+
+    const SessionSettingsStore store(settingsPath);
+    if (!expect(store.recentProjectPaths() == QStringList({QStringLiteral("/tmp/legacy-project")}),
+                "Recent project paths should fall back to legacy last project path when no recent list exists.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runDefaultsTest()
 {
     QTemporaryDir temporarySettingsDir;
@@ -153,6 +191,13 @@ int runDefaultsTest()
         return 1;
     }
     if (!expect(store.openDocumentPaths().isEmpty(), "Default open document path list should be empty.")) {
+        return 1;
+    }
+    if (!expect(store.recentProjectPaths().isEmpty(), "Default recent project path list should be empty.")) {
+        return 1;
+    }
+    if (!expect(store.recentFilePathsForProject(QStringLiteral("/tmp/project")).isEmpty(),
+                "Default recent file path list should be empty.")) {
         return 1;
     }
     if (!expect(store.therionRunTargetMode() == QStringLiteral("project"),
@@ -205,7 +250,10 @@ int runInMemoryStoreTest()
     }
 
     store.setLastProjectPath(QStringLiteral("/tmp/project"));
+    store.setRecentProjectPaths({QStringLiteral("/tmp/project"), QStringLiteral("/tmp/other")});
     store.setOpenDocumentPaths({QStringLiteral("/tmp/project/a.th")});
+    store.setRecentFilePathsForProject(QStringLiteral("/tmp/project"),
+                                       {QStringLiteral("/tmp/project/recent.th")});
     store.setApplicationLanguage(QStringLiteral("sk"));
     store.setDefaultTextEditorMode(QStringLiteral("blocks"));
     store.setTherionExecutablePath(QStringLiteral("/usr/bin/therion"));
@@ -215,8 +263,18 @@ int runInMemoryStoreTest()
                 "In-memory store should retain project path in the current process.")) {
         return 1;
     }
+    if (!expect(store.recentProjectPaths()
+                    == QStringList({QStringLiteral("/tmp/project"), QStringLiteral("/tmp/other")}),
+                "In-memory store should retain recent project paths in the current process.")) {
+        return 1;
+    }
     if (!expect(store.openDocumentPaths() == QStringList({QStringLiteral("/tmp/project/a.th")}),
                 "In-memory store should retain open documents in the current process.")) {
+        return 1;
+    }
+    if (!expect(store.recentFilePathsForProject(QStringLiteral("/tmp/project"))
+                    == QStringList({QStringLiteral("/tmp/project/recent.th")}),
+                "In-memory store should retain project-scoped recent files in the current process.")) {
         return 1;
     }
     if (!expect(store.applicationLanguage() == QStringLiteral("sk"),
@@ -253,6 +311,10 @@ int main(int argc, char **argv)
     }
 
     if (const int result = runDeprecatedTherionArgumentsCleanupTest(); result != 0) {
+        return result;
+    }
+
+    if (const int result = runRecentProjectsFallbackTest(); result != 0) {
         return result;
     }
 

@@ -2,6 +2,7 @@
 
 #include "ISessionStore.h"
 
+#include <QHash>
 #include <QSettings>
 
 #include <memory>
@@ -27,6 +28,9 @@ public:
     QString lastProjectPath() const override;
     void setLastProjectPath(const QString &projectPath) override;
 
+    QStringList recentProjectPaths() const override;
+    void setRecentProjectPaths(const QStringList &projectPaths) override;
+
     QByteArray mainWindowGeometry() const override;
     void setMainWindowGeometry(const QByteArray &geometry) override;
 
@@ -35,6 +39,9 @@ public:
 
     QStringList openDocumentPaths() const override;
     void setOpenDocumentPaths(const QStringList &documentPaths) override;
+
+    QStringList recentFilePathsForProject(const QString &projectPath) const override;
+    void setRecentFilePathsForProject(const QString &projectPath, const QStringList &filePaths) override;
 
     QString activeDocumentPath() const override;
     void setActiveDocumentPath(const QString &documentPath) override;
@@ -79,6 +86,9 @@ public:
     QString lastProjectPath() const override;
     void setLastProjectPath(const QString &projectPath) override;
 
+    QStringList recentProjectPaths() const override;
+    void setRecentProjectPaths(const QStringList &projectPaths) override;
+
     QByteArray mainWindowGeometry() const override;
     void setMainWindowGeometry(const QByteArray &geometry) override;
 
@@ -87,6 +97,9 @@ public:
 
     QStringList openDocumentPaths() const override;
     void setOpenDocumentPaths(const QStringList &documentPaths) override;
+
+    QStringList recentFilePathsForProject(const QString &projectPath) const override;
+    void setRecentFilePathsForProject(const QString &projectPath, const QStringList &filePaths) override;
 
     QString activeDocumentPath() const override;
     void setActiveDocumentPath(const QString &documentPath) override;
@@ -123,9 +136,11 @@ public:
 
 private:
     QString lastProjectPath_;
+    QStringList recentProjectPaths_;
     QByteArray mainWindowGeometry_;
     QByteArray mainWindowState_;
     QStringList openDocumentPaths_;
+    QHash<QString, QStringList> recentFilePathsByProject_;
     QString activeDocumentPath_;
     QString structureNameOverrides_;
     QString applicationLanguage_ = QStringLiteral("system");

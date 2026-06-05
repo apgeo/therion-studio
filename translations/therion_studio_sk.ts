@@ -188,6 +188,39 @@
         <translation>&amp;Zavrieť projekt</translation>
     </message>
     <message>
+        <location filename="../src/app/MainWindowWelcomeWidget.cpp" line="54"/>
+        <location filename="../src/app/MainWindow.cpp" line="477"/>
+        <source>Recent Projects</source>
+        <translation>Posledné projekty</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindow.cpp" line="915"/>
+        <source>No Recent Projects</source>
+        <translation>Žiadne posledné projekty</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindowWelcomeWidget.cpp" line="99"/>
+        <source>Project: %1</source>
+        <translation>Projekt: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindowWelcomeWidget.cpp" line="121"/>
+        <location filename="../src/app/MainWindow.cpp" line="478"/>
+        <source>Recent Files</source>
+        <translation>Posledné súbory</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindow.cpp" line="943"/>
+        <location filename="../src/app/MainWindow.cpp" line="949"/>
+        <source>No Recent Files</source>
+        <translation>Žiadne posledné súbory</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindowWelcomeWidget.cpp" line="129"/>
+        <source>No recent files yet.</source>
+        <translation>Zatiaľ žiadne posledné súbory.</translation>
+    </message>
+    <message>
         <location filename="../src/app/MainWindow.cpp" line="1012"/>
         <source>&amp;Save</source>
         <translation>&amp;Uložiť</translation>

@@ -4,6 +4,7 @@
 #include "MainWindowProjectOrchestrationService.h"
 #include "MainWindowProjectUiFlowService.h"
 #include "MainWindowProjectWorkspaceService.h"
+#include "MainWindowRecentProjectsService.h"
 
 namespace TherionStudio
 {
@@ -33,6 +34,10 @@ void executeOpenProjectSteps(const std::vector<MainWindowProjectOrchestrationSer
             break;
         case MainWindowProjectOrchestrationService::OpenProjectStep::PersistSessionLastProjectPath:
             sessionStore.setLastProjectPath(workspaceState.sessionLastProjectPath);
+            sessionStore.setRecentProjectPaths(
+                MainWindowRecentProjectsService::recordOpenedProject(
+                    sessionStore.recentProjectPaths(),
+                    workspaceState.projectRootPath));
             break;
         case MainWindowProjectOrchestrationService::OpenProjectStep::RebuildStructureSidebar:
             if (actions.rebuildStructureSidebar) {

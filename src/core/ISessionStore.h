@@ -14,6 +14,9 @@ public:
     virtual QString lastProjectPath() const = 0;
     virtual void setLastProjectPath(const QString &projectPath) = 0;
 
+    virtual QStringList recentProjectPaths() const = 0;
+    virtual void setRecentProjectPaths(const QStringList &projectPaths) = 0;
+
     virtual QByteArray mainWindowGeometry() const = 0;
     virtual void setMainWindowGeometry(const QByteArray &geometry) = 0;
 
@@ -22,6 +25,9 @@ public:
 
     virtual QStringList openDocumentPaths() const = 0;
     virtual void setOpenDocumentPaths(const QStringList &documentPaths) = 0;
+
+    virtual QStringList recentFilePathsForProject(const QString &projectPath) const = 0;
+    virtual void setRecentFilePathsForProject(const QString &projectPath, const QStringList &filePaths) = 0;
 
     virtual QString activeDocumentPath() const = 0;
     virtual void setActiveDocumentPath(const QString &documentPath) = 0;

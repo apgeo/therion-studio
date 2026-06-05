@@ -246,6 +246,8 @@ Required capabilities:
 
 - reopen the last project
 - restore the last project using a platform-appropriate persisted access mechanism where the operating system requires it
+- maintain a recent-projects list with up to five most recently opened project folders
+- expose recent projects on the welcome surface when no project is open and in the `File` menu
 - restore previously opened tabs
 - restore the active tab where possible
 - preserve editor state such as selection and viewport state where appropriate
@@ -526,6 +528,14 @@ The rules below define the expected day-to-day interaction model. If a later req
 #### 3.8.8 Session Restore Behavior
 
 - The application shall reopen the last project when available.
+- Opening a project shall move that project to the front of the recent-projects list, remove duplicate entries for the same normalized project path, and keep no more than five recent projects.
+- When no project is open, the welcome surface shall allow reopening a recent project by selecting it from the recent-projects list.
+- The `File` menu shall provide a `Recent Projects` submenu that allows reopening recent projects through the same project-open workflow as `Open Project...`.
+- The project folder chooser opened by `Open Project...` shall start in the user's home folder when no more specific project-picking context is available, rather than the filesystem root or platform volume root.
+- When a project is open and the welcome surface is visible, it shall show the active project name and path.
+- When a project is open and the welcome surface is visible, it shall show up to ten recent files from that project and allow reopening them through the same document-open workflow as the project file browser.
+- The `File` menu shall provide a `Recent Files` submenu for the active project when a project is open.
+- Recent files shall be scoped to the normalized project root and shall not include files outside the active project.
 - The application shall restore previously open tabs where possible.
 - The application shall restore the active tab when the corresponding document still exists.
 - The application shall restore viewport and selection anchors only when the underlying source locations still resolve.
@@ -554,6 +564,8 @@ Platform modifier mapping:
 | Enter/Exit Full Screen | View | platform full-screen shortcut | Toggle the main window full-screen state |
 | Create Project… | File | Command+Shift+N | Start the project-creation flow; disabled while a project is already open |
 | Open Project… | File | Command+O | Open a Therion project; disabled while a project is already open |
+| Recent Projects | File | none | Reopen one of the five most recently opened projects; disabled while a project is already open |
+| Recent Files | File | none | Reopen one of the active project's ten most recently opened files; disabled when no project is open |
 | Save | File | Command+S | Save the active document only |
 | Save All | File | Command+Option+S | Save all dirty open documents |
 | Close | File | none in the current Swift app | Expose the action in the menu even if no explicit shortcut is assigned |
@@ -1088,6 +1100,11 @@ The criteria below are intended for implementation verification and QA.
 #### 8.1.7 Session Restore
 
 - The last project reopens after restart when it is still accessible.
+- The five most recently opened projects are available from the welcome surface and `File -> Recent Projects` when no project is open.
+- Selecting a recent project reuses the normal open-project validation and updates recent-project ordering without duplicate paths.
+- The open-project welcome surface identifies the active project and offers up to ten recent files from that project.
+- The active project's ten most recent files are available from `File -> Recent Files`.
+- Selecting a recent file reopens it in the appropriate editor and updates recent-file ordering without duplicate paths.
 - Previously opened tabs are restored where possible.
 - The active tab is restored when the underlying document still exists.
 - Restoring state does not fail the application if a previously selected source location no longer exists.

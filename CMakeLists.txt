@@ -164,6 +164,10 @@ set(THERION_APP_SOURCES
     src/app/MainWindowProjectUiFlowService.h
     src/app/MainWindowProjectWorkspaceService.cpp
     src/app/MainWindowProjectWorkspaceService.h
+    src/app/MainWindowRecentFilesService.cpp
+    src/app/MainWindowRecentFilesService.h
+    src/app/MainWindowRecentProjectsService.cpp
+    src/app/MainWindowRecentProjectsService.h
     src/app/MainWindowSessionProjectService.cpp
     src/app/MainWindowSessionProjectService.h
     src/app/MainWindowSessionRestoreOrchestrationService.cpp
@@ -244,6 +248,8 @@ set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindowStructureRoles.h
     src/app/MainWindowViewMenu.cpp
     src/app/MainWindowWorkspaceCommandBar.cpp
+    src/app/MainWindowWelcomeWidget.cpp
+    src/app/MainWindowWelcomeWidget.h
     src/app/MainWindowTherionConsoleController.h
     src/app/MainWindowTherionRunner.cpp
     src/app/ApplicationStylePolicy.h
@@ -982,6 +988,12 @@ therion_add_app_unit_test(MainWindowProjectUiFlowServiceTest
 therion_add_app_unit_test(MainWindowProjectWorkspaceServiceTest
     tests/MainWindowProjectWorkspaceServiceTest.cpp)
 
+therion_add_app_unit_test(MainWindowRecentProjectsServiceTest
+    tests/MainWindowRecentProjectsServiceTest.cpp)
+
+therion_add_app_unit_test(MainWindowRecentFilesServiceTest
+    tests/MainWindowRecentFilesServiceTest.cpp)
+
 therion_add_app_unit_test(MainWindowSessionProjectServiceTest
     tests/MainWindowSessionProjectServiceTest.cpp)
 
@@ -1175,6 +1187,8 @@ set(THERION_UNIT_TEST_TARGETS
     MainWindowSessionDocumentControllerTest
     MainWindowSessionControllerTest
     MainWindowProjectControllerTest
+    MainWindowRecentFilesServiceTest
+    MainWindowRecentProjectsServiceTest
     MainWindowDocumentControllerTest
     MainWindowDocumentOpenControllerTest
     MainWindowDocumentTabOpenControllerTest

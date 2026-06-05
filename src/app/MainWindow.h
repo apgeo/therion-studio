@@ -28,6 +28,7 @@ class QDockWidget;
 class QFrame;
 class QLineEdit;
 class QListWidget;
+class QMenu;
 class QPlainTextEdit;
 class QPushButton;
 class QFileSystemWatcher;
@@ -118,6 +119,11 @@ private:
     void buildMapBackgroundPanel(QWidget *parent, QVBoxLayout *parentLayout);
     void buildConsole();
     void addWelcomeTab();
+    void openProjectPath(const QString &selectedProjectPath);
+    void openProjectFilePath(const QString &filePath);
+    void refreshRecentProjectsUi();
+    void refreshRecentFilesUi();
+    void recordRecentFilePath(const QString &filePath);
     void restoreSessionState();
     void persistSessionState();
     void restoreOpenDocuments();
@@ -147,8 +153,11 @@ private:
     bool confirmCloseTab(int index);
     bool confirmCloseDirtyDocuments();
     void clearDocumentTabs();
-    TherionStudio::TextEditorTab *openTextTab(const QString &filePath, bool showUnsupportedPrompt = true);
-    TherionStudio::MapEditorTab *openMapEditorTab(const QString &filePath);
+    TherionStudio::TextEditorTab *openTextTab(const QString &filePath,
+                                              bool showUnsupportedPrompt = true,
+                                              bool recordRecentFile = true);
+    TherionStudio::MapEditorTab *openMapEditorTab(const QString &filePath,
+                                                  bool recordRecentFile = true);
     void connectMapEditorTabUiSignals(TherionStudio::MapEditorTab *tab);
     QWidget *currentDocumentWidget() const;
     TherionStudio::TextEditorTab *currentTextTab() const;
@@ -275,6 +284,8 @@ private:
     QToolButton *consoleCollapseButton_ = nullptr;
     QAction *openProjectAction_ = nullptr;
     QAction *closeProjectAction_ = nullptr;
+    QMenu *recentProjectsMenu_ = nullptr;
+    QMenu *recentFilesMenu_ = nullptr;
     QAction *undoAction_ = nullptr;
     QAction *redoAction_ = nullptr;
     QAction *sidebarCollapseAction_ = nullptr;

@@ -2,6 +2,8 @@
 
 #include "../src/core/ISessionStore.h"
 
+#include <QHash>
+
 namespace TherionStudio
 {
 class FakeSessionStore final : public ISessionStore
@@ -9,6 +11,9 @@ class FakeSessionStore final : public ISessionStore
 public:
     QString lastProjectPath() const override { return lastProjectPath_; }
     void setLastProjectPath(const QString &projectPath) override { lastProjectPath_ = projectPath; }
+
+    QStringList recentProjectPaths() const override { return recentProjectPaths_; }
+    void setRecentProjectPaths(const QStringList &projectPaths) override { recentProjectPaths_ = projectPaths; }
 
     QByteArray mainWindowGeometry() const override { return mainWindowGeometry_; }
     void setMainWindowGeometry(const QByteArray &geometry) override { mainWindowGeometry_ = geometry; }
@@ -18,6 +23,15 @@ public:
 
     QStringList openDocumentPaths() const override { return openDocumentPaths_; }
     void setOpenDocumentPaths(const QStringList &documentPaths) override { openDocumentPaths_ = documentPaths; }
+
+    QStringList recentFilePathsForProject(const QString &projectPath) const override
+    {
+        return recentFilePathsByProject_.value(projectPath);
+    }
+    void setRecentFilePathsForProject(const QString &projectPath, const QStringList &filePaths) override
+    {
+        recentFilePathsByProject_.insert(projectPath, filePaths);
+    }
 
     QString activeDocumentPath() const override { return activeDocumentPath_; }
     void setActiveDocumentPath(const QString &documentPath) override { activeDocumentPath_ = documentPath; }
@@ -54,9 +68,11 @@ public:
 
 private:
     QString lastProjectPath_;
+    QStringList recentProjectPaths_;
     QByteArray mainWindowGeometry_;
     QByteArray mainWindowState_;
     QStringList openDocumentPaths_;
+    QHash<QString, QStringList> recentFilePathsByProject_;
     QString activeDocumentPath_;
     QString structureNameOverrides_;
     QString applicationLanguage_ = QStringLiteral("system");

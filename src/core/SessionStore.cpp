@@ -1,5 +1,6 @@
 #include "SessionStore.h"
 
+#include <QCryptographicHash>
 #include <QSettings>
 
 #include <memory>
@@ -9,9 +10,11 @@ namespace TherionStudio
 namespace
 {
 const auto kLastProjectPathKey = QStringLiteral("session/lastProjectPath");
+const auto kRecentProjectPathsKey = QStringLiteral("session/recentProjectPaths");
 const auto kMainWindowGeometryKey = QStringLiteral("session/mainWindowGeometry");
 const auto kMainWindowStateKey = QStringLiteral("session/mainWindowState");
 const auto kOpenDocumentPathsKey = QStringLiteral("session/openDocumentPaths");
+const auto kRecentFilePathsForProjectPrefix = QStringLiteral("session/recentFilePathsByProject/");
 const auto kActiveDocumentPathKey = QStringLiteral("session/activeDocumentPath");
 const auto kStructureNameOverridesKey = QStringLiteral("session/structureNameOverrides");
 const auto kApplicationLanguageKey = QStringLiteral("settings/applicationLanguage");
@@ -28,6 +31,13 @@ const auto kTherionMapBackgroundLayersKey = QStringLiteral("session/therionMapBa
 void clearDeprecatedSessionOnlyKeys(QSettings &settings)
 {
     settings.remove(kTherionArgumentsKey);
+}
+
+QString recentFilePathsKeyForProject(const QString &projectPath)
+{
+    const QByteArray projectHash =
+        QCryptographicHash::hash(projectPath.toUtf8(), QCryptographicHash::Sha1).toHex();
+    return kRecentFilePathsForProjectPrefix + QString::fromLatin1(projectHash);
 }
 }
 
@@ -68,6 +78,22 @@ void SessionSettingsStore::setLastProjectPath(const QString &projectPath)
     settings_->setValue(kLastProjectPathKey, projectPath);
 }
 
+QStringList SessionSettingsStore::recentProjectPaths() const
+{
+    const QStringList recentProjectPaths = settings_->value(kRecentProjectPathsKey).toStringList();
+    if (!recentProjectPaths.isEmpty()) {
+        return recentProjectPaths;
+    }
+
+    const QString lastProject = lastProjectPath();
+    return lastProject.isEmpty() ? QStringList() : QStringList({lastProject});
+}
+
+void SessionSettingsStore::setRecentProjectPaths(const QStringList &projectPaths)
+{
+    settings_->setValue(kRecentProjectPathsKey, projectPaths);
+}
+
 QByteArray SessionSettingsStore::mainWindowGeometry() const
 {
     return settings_->value(kMainWindowGeometryKey).toByteArray();
@@ -96,6 +122,24 @@ QStringList SessionSettingsStore::openDocumentPaths() const
 void SessionSettingsStore::setOpenDocumentPaths(const QStringList &documentPaths)
 {
     settings_->setValue(kOpenDocumentPathsKey, documentPaths);
+}
+
+QStringList SessionSettingsStore::recentFilePathsForProject(const QString &projectPath) const
+{
+    if (projectPath.trimmed().isEmpty()) {
+        return {};
+    }
+
+    return settings_->value(recentFilePathsKeyForProject(projectPath)).toStringList();
+}
+
+void SessionSettingsStore::setRecentFilePathsForProject(const QString &projectPath, const QStringList &filePaths)
+{
+    if (projectPath.trimmed().isEmpty()) {
+        return;
+    }
+
+    settings_->setValue(recentFilePathsKeyForProject(projectPath), filePaths);
 }
 
 QString SessionSettingsStore::activeDocumentPath() const
@@ -218,6 +262,16 @@ void InMemorySessionStore::setLastProjectPath(const QString &projectPath)
     lastProjectPath_ = projectPath;
 }
 
+QStringList InMemorySessionStore::recentProjectPaths() const
+{
+    return recentProjectPaths_;
+}
+
+void InMemorySessionStore::setRecentProjectPaths(const QStringList &projectPaths)
+{
+    recentProjectPaths_ = projectPaths;
+}
+
 QByteArray InMemorySessionStore::mainWindowGeometry() const
 {
     return mainWindowGeometry_;
@@ -246,6 +300,20 @@ QStringList InMemorySessionStore::openDocumentPaths() const
 void InMemorySessionStore::setOpenDocumentPaths(const QStringList &documentPaths)
 {
     openDocumentPaths_ = documentPaths;
+}
+
+QStringList InMemorySessionStore::recentFilePathsForProject(const QString &projectPath) const
+{
+    return recentFilePathsByProject_.value(projectPath);
+}
+
+void InMemorySessionStore::setRecentFilePathsForProject(const QString &projectPath, const QStringList &filePaths)
+{
+    if (projectPath.trimmed().isEmpty()) {
+        return;
+    }
+
+    recentFilePathsByProject_.insert(projectPath, filePaths);
 }
 
 QString InMemorySessionStore::activeDocumentPath() const

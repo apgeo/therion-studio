@@ -61,7 +61,13 @@ Ak je mapa oddelená do samostatného okna, hlavné okno môže zároveň zobraz
 2. Vyberte priečinok projektu.
 3. Otvorte dokumenty z panelu `Súbory`.
 
+Dialóg na výber priečinka projektu začína v domovskom priečinku používateľa, ak ho otvoríte cez `Otvoriť projekt...`.
+
 Bez otvoreného projektu sa zobrazí uvítacia karta s tlačidlom `Otvoriť projekt...`. Ak je projekt otvorený, ale nie je aktívna žiadna záložka, uvítacia karta ponúkne otvorenie súboru z bočného panelu.
+
+Uvítacia karta a `Súbor -> Posledné projekty` zobrazujú najviac päť naposledy otvorených projektov. Výberom projektu z ktoréhokoľvek zoznamu ho znovu otvoríte.
+
+Ak je projekt otvorený, uvítacia karta zobrazuje názov a cestu aktívneho projektu. Zobrazuje tiež najviac desať posledných súborov z tohto projektu; výberom súbor znovu otvoríte. Rovnaký projektový zoznam je dostupný cez `Súbor -> Posledné súbory`.
 
 ### 3.2 Otvorenie dokumentov
 

@@ -64,6 +64,9 @@
 #include "MainWindowSessionDocumentController.h"
 #include "MainWindowSessionController.h"
 #include "MainWindowProjectController.h"
+#include "MainWindowRecentFilesService.h"
+#include "MainWindowRecentProjectsService.h"
+#include "MainWindowWelcomeWidget.h"
 #include "MainWindowSessionStateService.h"
 #include "MainWindowStructureNameOverridesService.h"
 #include "ApplicationStylePolicy.h"
@@ -236,7 +239,6 @@ QWidget *createCenteredMessage(const QString &title,
 
     return widget;
 }
-
 
 void applyThinSplitterStyle(QSplitter *splitter, const QString &objectName)
 {
@@ -473,7 +475,9 @@ void MainWindow::buildMenus()
 
     closeProjectAction_ = fileMenu->addAction(tr("&Close Project"));
     connect(closeProjectAction_, &QAction::triggered, this, &MainWindow::closeProject);
+    recentProjectsMenu_ = fileMenu->addMenu(tr("Recent Projects"));
     fileMenu->addSeparator();
+    recentFilesMenu_ = fileMenu->addMenu(tr("Recent Files"));
 
     QAction *saveAction = fileMenu->addAction(tr("&Save"));
     saveAction->setShortcut(QKeySequence::Save);
@@ -652,10 +656,10 @@ void MainWindow::restoreOpenDocuments()
 {
     TherionStudio::MainWindowSessionDocumentController::RestoreOpenDocumentsActions actions;
     actions.openMapEditorDocument = [this](const QString &documentPath) {
-        openMapEditorTab(documentPath);
+        openMapEditorTab(documentPath, false);
     };
     actions.openTextEditorDocument = [this](const QString &documentPath) {
-        return openTextTab(documentPath, false) != nullptr;
+        return openTextTab(documentPath, false, false) != nullptr;
     };
     actions.appendSkippedUnsupportedDocumentConsole = [this](const QString &documentPath) {
         appendConsoleLine(tr("Skipped unsupported document during session restore: %1")
@@ -723,15 +727,26 @@ void MainWindow::addWelcomeTab()
 {
     QWidget *welcomeWidget = nullptr;
     if (projectRootPath_.isEmpty()) {
-        welcomeWidget = createCenteredMessage(tr("Therion Studio"),
-                                              tr("Open a project to begin working with Therion documents, maps, and structure views."),
-                                              tr("Open Project..."),
-                                              [this]() {
-                                                  openProject();
-                                              });
+        welcomeWidget = TherionStudio::createMainWindowProjectWelcomeWidget(
+            tr("Therion Studio"),
+            tr("Open a project to begin working with Therion documents, maps, and structure views."),
+            tr("Open Project..."),
+            [this]() {
+                openProject();
+            },
+            sessionStore_ != nullptr ? sessionStore_->recentProjectPaths() : QStringList(),
+            [this](const QString &projectPath) {
+                openProjectPath(projectPath);
+            });
     } else {
-        welcomeWidget = createCenteredMessage(tr("Therion Studio"),
-                                              tr("Open file from sidebar to begin editing this project."));
+        welcomeWidget = TherionStudio::createMainWindowActiveProjectWelcomeWidget(
+            tr("Therion Studio"),
+            projectRootPath_,
+            tr("Open file from sidebar to begin editing this project."),
+            sessionStore_ != nullptr ? sessionStore_->recentFilePathsForProject(projectRootPath_) : QStringList(),
+            [this](const QString &filePath) {
+                openProjectFilePath(filePath);
+            });
     }
     welcomeWidget->setProperty(kWelcomeTabPropertyName, true);
 
@@ -764,6 +779,7 @@ void MainWindow::createNewWindow()
         sessionStore->setTherionExecutablePath(sessionStore_->therionExecutablePath());
         sessionStore->setTherionRunTargetMode(sessionStore_->therionRunTargetMode());
         sessionStore->setTherionMapMagnifierEnabled(sessionStore_->therionMapMagnifierEnabled());
+        sessionStore->setRecentProjectPaths(sessionStore_->recentProjectPaths());
     }
 
     auto *window = new MainWindow(std::move(sessionStore),
@@ -818,8 +834,13 @@ void MainWindow::showSettingsDialog()
 void MainWindow::openProject()
 {
     const QString selectedProjectPath =
-        QFileDialog::getExistingDirectory(this, tr("Open Therion Project"), QString());
+        QFileDialog::getExistingDirectory(this, tr("Open Therion Project"), QDir::homePath());
 
+    openProjectPath(selectedProjectPath);
+}
+
+void MainWindow::openProjectPath(const QString &selectedProjectPath)
+{
     TherionStudio::MainWindowProjectController::Actions actions;
     actions.showWarningDialog = [this](const QString &title, const QString &message) {
         QMessageBox::warning(this, title, message);
@@ -874,6 +895,108 @@ void MainWindow::closeProject()
                                                              *sessionStore_,
                                                              actions);
 }
+
+void MainWindow::refreshRecentProjectsUi()
+{
+    if (recentProjectsMenu_ == nullptr) {
+        return;
+    }
+
+    recentProjectsMenu_->clear();
+
+    const QStringList recentProjectPaths =
+        sessionStore_ != nullptr
+        ? TherionStudio::MainWindowRecentProjectsService::normalizedRecentProjectPaths(
+              sessionStore_->recentProjectPaths())
+        : QStringList();
+    const bool hasOpenProject = !projectRootPath_.trimmed().isEmpty() && QDir(projectRootPath_).exists();
+    recentProjectsMenu_->setEnabled(!hasOpenProject && !recentProjectPaths.isEmpty());
+
+    if (recentProjectPaths.isEmpty()) {
+        QAction *emptyAction = recentProjectsMenu_->addAction(tr("No Recent Projects"));
+        emptyAction->setEnabled(false);
+        return;
+    }
+
+    for (int index = 0; index < recentProjectPaths.size(); ++index) {
+        const QString projectPath = recentProjectPaths.at(index);
+        QAction *recentAction = recentProjectsMenu_->addAction(
+            QStringLiteral("&%1 %2").arg(index + 1).arg(QDir::toNativeSeparators(projectPath)));
+        recentAction->setStatusTip(QDir::toNativeSeparators(projectPath));
+        connect(recentAction, &QAction::triggered, this, [this, projectPath]() {
+            openProjectPath(projectPath);
+        });
+    }
+}
+
+void MainWindow::refreshRecentFilesUi()
+{
+    if (recentFilesMenu_ == nullptr) {
+        return;
+    }
+
+    recentFilesMenu_->clear();
+
+    const bool hasOpenProject = !projectRootPath_.trimmed().isEmpty() && QDir(projectRootPath_).exists();
+    const QStringList recentFilePaths =
+        hasOpenProject && sessionStore_ != nullptr
+        ? TherionStudio::MainWindowRecentFilesService::normalizedRecentFilePaths(
+              projectRootPath_,
+              sessionStore_->recentFilePathsForProject(projectRootPath_))
+        : QStringList();
+    recentFilesMenu_->setEnabled(hasOpenProject);
+
+    if (!hasOpenProject) {
+        QAction *emptyAction = recentFilesMenu_->addAction(tr("No Recent Files"));
+        emptyAction->setEnabled(false);
+        return;
+    }
+
+    if (recentFilePaths.isEmpty()) {
+        QAction *emptyAction = recentFilesMenu_->addAction(tr("No Recent Files"));
+        emptyAction->setEnabled(false);
+        return;
+    }
+
+    for (int index = 0; index < recentFilePaths.size(); ++index) {
+        const QString filePath = recentFilePaths.at(index);
+        QAction *recentAction = recentFilesMenu_->addAction(
+            QStringLiteral("&%1 %2")
+                .arg(index + 1)
+                .arg(TherionStudio::MainWindowRecentFilesService::projectRelativeDisplayPath(projectRootPath_, filePath)));
+        recentAction->setStatusTip(QDir::toNativeSeparators(filePath));
+        connect(recentAction, &QAction::triggered, this, [this, filePath]() {
+            openProjectFilePath(filePath);
+        });
+    }
+}
+
+void MainWindow::openProjectFilePath(const QString &filePath)
+{
+    if (QFileInfo(filePath).suffix().toLower() == QStringLiteral("th2")) {
+        openMapEditorTab(filePath);
+    } else if (isSupportedTextEditorFilePath(filePath)) {
+        openTextTab(filePath);
+    } else {
+        showUnsupportedFilePrompt(this, filePath);
+    }
+}
+
+void MainWindow::recordRecentFilePath(const QString &filePath)
+{
+    if (sessionStore_ == nullptr || projectRootPath_.trimmed().isEmpty()) {
+        return;
+    }
+
+    sessionStore_->setRecentFilePathsForProject(
+        projectRootPath_,
+        TherionStudio::MainWindowRecentFilesService::recordOpenedFile(
+            projectRootPath_,
+            sessionStore_->recentFilePathsForProject(projectRootPath_),
+            filePath));
+    refreshRecentFilesUi();
+}
+
 void MainWindow::handleProjectTreeActivated(const QModelIndex &index)
 {
     if (projectModel_ == nullptr || !index.isValid() || projectModel_->isDir(index)) {
@@ -1178,7 +1301,9 @@ void MainWindow::showFindBar(bool replaceMode)
     documentShowFindBarForWidget(tabWidget, replaceMode);
 }
 
-TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, bool showUnsupportedPrompt)
+TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath,
+                                                      bool showUnsupportedPrompt,
+                                                      bool recordRecentFile)
 {
     QList<TherionStudio::MainWindowDocumentOpenController::IndexedDocumentPath> attachedTextTabs;
     attachedTextTabs.reserve(editorTabs_->count());
@@ -1221,6 +1346,9 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
         TherionStudio::MainWindowDocumentTabOpenController::ActivateExistingTabRequest openRequest;
         openRequest.tabIndex = openPlan.reuseTabIndex;
         TherionStudio::MainWindowDocumentTabOpenController::activateExistingTab(openRequest, openActions);
+        if (recordRecentFile) {
+            recordRecentFilePath(existingTab->filePath());
+        }
         return existingTab;
     }
 
@@ -1309,6 +1437,9 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath, b
     openRequest.consoleOpenedLine = tr("Opened %1").arg(canonicalPath);
     TherionStudio::MainWindowDocumentTabOpenController::attachNewTab(openRequest, openActions);
     registerDocumentFileWatcher(tab->filePath());
+    if (recordRecentFile) {
+        recordRecentFilePath(tab->filePath());
+    }
     return tab;
 }
 
@@ -1371,7 +1502,8 @@ void MainWindow::setMapMagnifierEnabledForOpenTabs(bool enabled)
     }
 }
 
-TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePath)
+TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePath,
+                                                          bool recordRecentFile)
 {
     QStringList detachedMapDocumentPaths;
     for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
@@ -1413,6 +1545,9 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         focusDetachedMapEditorTab(canonicalPath);
         refreshDocumentStatusWidgets();
         refreshWorkspaceModeSwitcher();
+        if (recordRecentFile) {
+            recordRecentFilePath(detachedTab->filePath());
+        }
         return detachedTab;
     }
 
@@ -1432,6 +1567,9 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         TherionStudio::MainWindowDocumentTabOpenController::ActivateExistingTabRequest openRequest;
         openRequest.tabIndex = openPlan.reuseTabIndex;
         TherionStudio::MainWindowDocumentTabOpenController::activateExistingTab(openRequest, openActions);
+        if (recordRecentFile) {
+            recordRecentFilePath(existingTab->filePath());
+        }
         return existingTab;
     }
 
@@ -1528,6 +1666,9 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
     openRequest.consoleOpenedLine = tr("Opened %1").arg(canonicalPath);
     TherionStudio::MainWindowDocumentTabOpenController::attachNewTab(openRequest, openActions);
     registerDocumentFileWatcher(tab->filePath());
+    if (recordRecentFile) {
+        recordRecentFilePath(tab->filePath());
+    }
     return tab;
 }
 

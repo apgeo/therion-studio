@@ -61,7 +61,13 @@ Pokud je mapa oddělená do samostatného okna, hlavní okno může současně z
 2. Vyberte složku projektu.
 3. Otevřete dokumenty z panelu `Soubory`.
 
+Dialog pro výběr složky projektu začíná v domovské složce uživatele, pokud ho otevřete přes `Otevřít projekt...`.
+
 Bez otevřeného projektu se zobrazí uvítací karta s tlačítkem `Otevřít projekt...`. Pokud je projekt otevřený, ale není aktivní žádná záložka, uvítací karta nabídne otevření souboru z postranního panelu.
+
+Uvítací karta a `Soubor -> Poslední projekty` zobrazují až pět naposledy otevřených projektů. Výběrem projektu z libovolného seznamu jej znovu otevřete.
+
+Pokud je projekt otevřený, uvítací karta zobrazuje název a cestu aktivního projektu. Zobrazuje také až deset posledních souborů z tohoto projektu; výběrem soubor znovu otevřete. Stejný projektový seznam je dostupný přes `Soubor -> Poslední soubory`.
 
 ### 3.2 Otevření dokumentů
 

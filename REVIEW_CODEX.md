@@ -31,6 +31,8 @@ Completed follow-ups from this review:
 - ~~Raster source image cache, image loading, raster size probing, and gamma/scale worker logic have been extracted from `MapEditorBackgroundLayers.cpp` into focused `MapEditorRasterBackgroundImage` helpers.~~
 - ~~Raster model/preview projection and placement helpers have been extracted from `MapEditorBackgroundLayers.cpp` into focused `MapEditorRasterBackgroundPlacement` helpers.~~
 - ~~Gamma-adjusted scaled raster `QImage` results now use a bounded worker-safe cache keyed by source path/mtime/size, target size, and gamma.~~
+- ~~Focused `TherionDocumentParserTest` coverage now locks quoted strings, comment spans, comment-only line behavior, CRLF stripping, and the current `parseText()` token-line-only behavior before the later lossless source model work.~~
+- ~~`BlockEditorApplyExecutorTest` now verifies block-details auto-commit produces an undoable text edit and redo restores the edited source.~~
 
 Still open:
 
@@ -471,7 +473,7 @@ These are lower-risk and useful before release:
 - ~~Keep map-object inspector source transactions mandatory and avoid reintroducing non-undo fallback writes.~~
 - ~~Keep duplicated low-level source string helpers consolidated in a focused shared core helper.~~
 - Add tests for `applySourceTextChangeWithSnapshot` equivalent behavior for all map source operations.
-- Add tests that Block editor auto-commit creates undoable text changes.
+- ~~Add tests that Block editor auto-commit creates undoable text changes.~~
 - Add regression tests for parser/token rules:
   - negative numbers,
   - exponent notation,

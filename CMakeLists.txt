@@ -816,6 +816,9 @@ endif()
 therion_add_core_unit_test(TherionDocumentEditorTest
     tests/TherionDocumentEditorTest.cpp)
 
+therion_add_core_unit_test(TherionDocumentParserTest
+    tests/TherionDocumentParserTest.cpp)
+
 therion_add_core_unit_test(TherionTokenRulesTest
     tests/TherionTokenRulesTest.cpp)
 
@@ -1012,6 +1015,17 @@ therion_add_app_unit_test(MainWindowSessionWindowRestoreServiceTest
 therion_add_app_unit_test(MainWindowStructureNameOverridesServiceTest
     tests/MainWindowStructureNameOverridesServiceTest.cpp)
 
+qt_add_executable(BlockEditorApplyExecutorTest
+    tests/BlockEditorApplyExecutorTest.cpp
+    src/app/text_editor/block_editor/BlockEditorApplyExecutor.cpp
+    src/app/text_editor/block_editor/BlockEditorApplyExecutor.h
+    src/app/text_editor/block_editor/BlockEditorSourceController.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceController.h
+    src/app/text_editor/block_editor/BlockEditorSourceText.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceText.h)
+
+target_link_libraries(BlockEditorApplyExecutorTest PRIVATE Qt6::Widgets)
+
 set(THERION_EDITOR_UI_TEST_BASE_SOURCES
     ${THERION_TEXT_EDITOR_SHARED_SOURCES})
 
@@ -1160,6 +1174,7 @@ set(THERION_UNIT_TEST_TARGETS
     CommandCatalogStoreTest
     CommandOptionParserTest
     TherionDocumentEditorTest
+    TherionDocumentParserTest
     TherionTokenRulesTest
     TherionProjectStructureIndexTest
     MapBackgroundPlacementTest
@@ -1193,6 +1208,7 @@ set(THERION_UNIT_TEST_TARGETS
     MainWindowDocumentOpenControllerTest
     MainWindowDocumentTabOpenControllerTest
     MainWindowTherionRunnerControllerTest
+    BlockEditorApplyExecutorTest
     TherionExecutableSelectionControllerTest
     TherionRunnerConfigDisplayControllerTest
     TherionRunnerConfigResolverTest

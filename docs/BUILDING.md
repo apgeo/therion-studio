@@ -107,10 +107,13 @@ Use a matching toolchain/Qt pair on Windows. If `CMAKE_PREFIX_PATH` points to
 libraries causes link failures with unresolved `__imp__` Qt symbols.
 
 CPack runs the CMake install step internally. The install step runs Qt deployment on Windows,
-copying the required Qt runtime next to the installed `bin/TherionStudio.exe`, including the
-Qt platform plugin at `bin/platforms/qwindows.dll`. CPack is configured to use NSIS for the
-Windows installer and emits `TherionStudio-<package_label>-Windows-x86_64.exe` in the build
-directory.
+copying the required Qt runtime next to the installed `bin/TherionStudio.exe`, including
+`Qt6*.dll` runtime libraries and the Qt platform plugin at `bin/platforms/qwindows.dll`
+(or Debug-build variants such as `Qt6Cored.dll` and `qwindowsd.dll` in Debug CI jobs).
+CMake runs Qt's deployment helper and an explicit `windeployqt` install step so CI
+install-smoke checks verify the same runtime layout that the NSIS package consumes. CPack is
+configured to use NSIS for the Windows installer and emits
+`TherionStudio-<package_label>-Windows-x86_64.exe` in the build directory.
 The installer metadata uses the root `LICENSE` file for the project license.
 The installed executable is linked as a Windows GUI application and shall not open a console
 window when launched from Explorer, Start Menu, or the desktop shortcut.
@@ -137,7 +140,7 @@ CI build workflows also run staged install-layout smoke checks via
 
 - Linux: verify `bin/TherionStudio`
 - macOS: verify `TherionStudio.app/Contents/MacOS/TherionStudio`
-- Windows: verify `bin/TherionStudio.exe` plus deployed Qt runtime layout (including `bin/platforms/qwindows.dll`)
+- Windows: verify `bin/TherionStudio.exe` plus deployed Qt runtime layout, accepting release and Debug Qt runtime names
 
 ## Linux
 

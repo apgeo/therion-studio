@@ -9,27 +9,42 @@ import pathlib
 import sys
 
 
-def required_paths(platform_name: str) -> list[pathlib.Path]:
+def required_path_groups(platform_name: str) -> list[list[pathlib.Path]]:
     if platform_name == "windows":
         return [
-            pathlib.Path("bin/TherionStudio.exe"),
-            pathlib.Path("bin/platforms/qwindows.dll"),
-            pathlib.Path("bin/Qt6Core.dll"),
-            pathlib.Path("bin/Qt6Gui.dll"),
-            pathlib.Path("bin/Qt6Widgets.dll"),
-            pathlib.Path("bin/Qt6Svg.dll"),
+            [pathlib.Path("bin/TherionStudio.exe")],
+            [
+                pathlib.Path("bin/platforms/qwindows.dll"),
+                pathlib.Path("bin/platforms/qwindowsd.dll"),
+            ],
+            [
+                pathlib.Path("bin/Qt6Core.dll"),
+                pathlib.Path("bin/Qt6Cored.dll"),
+            ],
+            [
+                pathlib.Path("bin/Qt6Gui.dll"),
+                pathlib.Path("bin/Qt6Guid.dll"),
+            ],
+            [
+                pathlib.Path("bin/Qt6Widgets.dll"),
+                pathlib.Path("bin/Qt6Widgetsd.dll"),
+            ],
+            [
+                pathlib.Path("bin/Qt6Svg.dll"),
+                pathlib.Path("bin/Qt6Svgd.dll"),
+            ],
         ]
     if platform_name == "macos":
         return [
-            pathlib.Path("TherionStudio.app/Contents/MacOS/TherionStudio"),
-            pathlib.Path("TherionStudio.app/Contents/Info.plist"),
+            [pathlib.Path("TherionStudio.app/Contents/MacOS/TherionStudio")],
+            [pathlib.Path("TherionStudio.app/Contents/Info.plist")],
         ]
     if platform_name == "linux":
         return [
-            pathlib.Path("bin/TherionStudio"),
-            pathlib.Path("share/applications/therion-studio.desktop"),
-            pathlib.Path("share/icons/hicolor/256x256/apps/therion-studio.png"),
-            pathlib.Path("share/metainfo/therion-studio.metainfo.xml"),
+            [pathlib.Path("bin/TherionStudio")],
+            [pathlib.Path("share/applications/therion-studio.desktop")],
+            [pathlib.Path("share/icons/hicolor/256x256/apps/therion-studio.png")],
+            [pathlib.Path("share/metainfo/therion-studio.metainfo.xml")],
         ]
     raise ValueError(f"Unsupported platform: {platform_name}")
 
@@ -49,16 +64,19 @@ def main() -> int:
         print(f"Install layout verification failed: prefix does not exist: {prefix}")
         return 1
 
-    missing: list[pathlib.Path] = []
-    for relative_path in required_paths(args.platform):
-        absolute_path = prefix / relative_path
-        if not absolute_path.exists():
-            missing.append(relative_path)
+    missing: list[list[pathlib.Path]] = []
+    for alternatives in required_path_groups(args.platform):
+        if not any((prefix / relative_path).exists() for relative_path in alternatives):
+            missing.append(alternatives)
 
     if missing:
         print(f"Install layout verification failed for {args.platform} at {prefix}:")
-        for relative_path in missing:
-            print(f"  - missing: {relative_path.as_posix()}")
+        for alternatives in missing:
+            if len(alternatives) == 1:
+                print(f"  - missing: {alternatives[0].as_posix()}")
+            else:
+                alternatives_label = " or ".join(path.as_posix() for path in alternatives)
+                print(f"  - missing one of: {alternatives_label}")
         return 1
 
     executable_relative = {

@@ -764,6 +764,33 @@ endif()
 if(WIN32)
     therion_generate_deploy_app_script(TherionStudio THERION_STUDIO_QT_DEPLOY_SCRIPT)
     install(SCRIPT ${THERION_STUDIO_QT_DEPLOY_SCRIPT})
+    if(TARGET Qt6::windeployqt)
+        get_target_property(THERION_STUDIO_WINDEPLOYQT_EXECUTABLE Qt6::windeployqt IMPORTED_LOCATION)
+    endif()
+    if(NOT THERION_STUDIO_WINDEPLOYQT_EXECUTABLE)
+        find_program(THERION_STUDIO_WINDEPLOYQT_EXECUTABLE NAMES windeployqt)
+    endif()
+    if(THERION_STUDIO_WINDEPLOYQT_EXECUTABLE)
+        install(CODE "
+            set(_therion_studio_windows_executable \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/TherionStudio.exe\")
+            set(_therion_studio_windows_runtime_dir \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}\")
+            if(NOT EXISTS \"\${_therion_studio_windows_executable}\")
+                message(FATAL_ERROR \"Windows Qt runtime deployment failed: missing installed executable \${_therion_studio_windows_executable}\")
+            endif()
+            execute_process(
+                COMMAND \"${THERION_STUDIO_WINDEPLOYQT_EXECUTABLE}\"
+                    --dir \"\${_therion_studio_windows_runtime_dir}\"
+                    \"\${_therion_studio_windows_executable}\"
+                RESULT_VARIABLE _therion_studio_windeployqt_result)
+            if(NOT _therion_studio_windeployqt_result EQUAL 0)
+                message(FATAL_ERROR \"windeployqt failed with exit code \${_therion_studio_windeployqt_result}\")
+            endif()
+        ")
+    else()
+        message(WARNING
+            "Qt6::windeployqt target is not available; "
+            "Windows install layout relies on Qt's deploy script only")
+    endif()
     if(TARGET Qt6::QWindowsIntegrationPlugin)
         install(IMPORTED_RUNTIME_ARTIFACTS Qt6::QWindowsIntegrationPlugin
             LIBRARY DESTINATION "${CMAKE_INSTALL_BINDIR}/platforms"

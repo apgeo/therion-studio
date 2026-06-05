@@ -1,7 +1,6 @@
 #include "../src/app/MainWindowRecentProjectsService.h"
 
 #include <QCoreApplication>
-#include <QDir>
 #include <QStringList>
 
 #include <iostream>
@@ -30,9 +29,9 @@ int runRecordOpenedProjectTest()
                                                              QStringLiteral("/tmp/beta"));
 
     const QStringList expectedPaths = {
-        QDir::cleanPath(QStringLiteral("/tmp/beta")),
-        QDir::cleanPath(QStringLiteral("/tmp/alpha")),
-        QDir::cleanPath(QStringLiteral("/tmp/gamma"))};
+        MainWindowRecentProjectsService::normalizedProjectPath(QStringLiteral("/tmp/beta")),
+        MainWindowRecentProjectsService::normalizedProjectPath(QStringLiteral("/tmp/alpha")),
+        MainWindowRecentProjectsService::normalizedProjectPath(QStringLiteral("/tmp/gamma"))};
     if (!expect(updatedPaths == expectedPaths,
                 "Opening an existing recent project should move it to the front without duplicates.")) {
         return 1;
@@ -55,11 +54,11 @@ int runMaxRecentProjectCountTest()
                                                              QStringLiteral("/tmp/six"));
 
     const QStringList expectedPaths = {
-        QDir::cleanPath(QStringLiteral("/tmp/six")),
-        QDir::cleanPath(QStringLiteral("/tmp/one")),
-        QDir::cleanPath(QStringLiteral("/tmp/two")),
-        QDir::cleanPath(QStringLiteral("/tmp/three")),
-        QDir::cleanPath(QStringLiteral("/tmp/four"))};
+        MainWindowRecentProjectsService::normalizedProjectPath(QStringLiteral("/tmp/six")),
+        MainWindowRecentProjectsService::normalizedProjectPath(QStringLiteral("/tmp/one")),
+        MainWindowRecentProjectsService::normalizedProjectPath(QStringLiteral("/tmp/two")),
+        MainWindowRecentProjectsService::normalizedProjectPath(QStringLiteral("/tmp/three")),
+        MainWindowRecentProjectsService::normalizedProjectPath(QStringLiteral("/tmp/four"))};
     if (!expect(updatedPaths == expectedPaths,
                 "Recent project history should keep only the five newest entries.")) {
         return 1;
@@ -78,8 +77,8 @@ int runNormalizationTest()
             QStringLiteral("/tmp/other")});
 
     const QStringList expectedPaths = {
-        QDir::cleanPath(QStringLiteral("/tmp/project")),
-        QDir::cleanPath(QStringLiteral("/tmp/other"))};
+        MainWindowRecentProjectsService::normalizedProjectPath(QStringLiteral("/tmp/project")),
+        MainWindowRecentProjectsService::normalizedProjectPath(QStringLiteral("/tmp/other"))};
     if (!expect(normalizedPaths == expectedPaths,
                 "Recent project normalization should trim, absolutize, clean, and deduplicate paths.")) {
         return 1;

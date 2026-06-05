@@ -177,7 +177,7 @@ Starting `Point`, `Line`, `Freehand`, or `Area` activates `Inspector -> Selectio
 While drafting a line or area:
 
 - click to add a straight vertex
-- press-drag-release while placing a vertex to create a curved Bezier segment
+- press-drag-release while placing a vertex to pull that vertex's Bezier handle pair, matching XTherion-style curve entry
 - drag visible Bezier control handles before committing to refine the draft curve
 - click the first line vertex again to finish a closed line (`-close on`)
 - closed lines render the final segment back to the first vertex, including two-point closed Bezier curves

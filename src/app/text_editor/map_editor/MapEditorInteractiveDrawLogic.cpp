@@ -292,25 +292,11 @@ void captureInteractiveLineAnchor(QVector<MapEditorInteractiveLineDraftVertex> *
     vertices->append(vertex);
 
     if (dragScenePoint.has_value() && vertices->size() >= 2) {
-        MapEditorInteractiveLineDraftVertex &previous = (*vertices)[vertices->size() - 2];
         MapEditorInteractiveLineDraftVertex &current = vertices->last();
-        constexpr qreal quadraticToCubicFactor = 2.0 / 3.0;
-        const QPointF quadraticControlScene = dragScenePoint.value();
-        previous.outgoingControlScene = previous.anchorScene
-            + ((quadraticControlScene - previous.anchorScene) * quadraticToCubicFactor);
-        current.incomingControlScene = current.anchorScene
-            + ((quadraticControlScene - current.anchorScene) * quadraticToCubicFactor);
-        previous.outgoingControlSource = sceneToSource(previous.outgoingControlScene.value());
+        current.outgoingControlScene = dragScenePoint.value();
+        current.outgoingControlSource = sceneToSource(dragScenePoint.value());
+        current.incomingControlScene = current.anchorScene - (dragScenePoint.value() - current.anchorScene);
         current.incomingControlSource = sceneToSource(current.incomingControlScene.value());
-        if (previous.incomingControlScene.has_value()) {
-            const std::optional<QPointF> mirrored = mirroredSmoothControlPoint(previous.anchorScene,
-                                                                               previous.outgoingControlScene.value(),
-                                                                               previous.incomingControlScene);
-            if (mirrored.has_value()) {
-                previous.incomingControlScene = mirrored.value();
-                previous.incomingControlSource = sceneToSource(mirrored.value());
-            }
-        }
     }
 }
 

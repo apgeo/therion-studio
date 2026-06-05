@@ -77,6 +77,46 @@ int countGraphicsEllipseItems(const QGraphicsScene *scene)
 
 bool runFreehandBezierRowLogicSmoke()
 {
+    QVector<MapEditorInteractiveLineDraftVertex> xtherionDraft;
+    const auto identitySceneToSource = [](const QPointF &point) {
+        return point;
+    };
+    captureInteractiveLineAnchor(&xtherionDraft,
+                                 QPointF(0.0, 0.0),
+                                 QPointF(0.0, 0.0),
+                                 std::nullopt,
+                                 identitySceneToSource);
+    captureInteractiveLineAnchor(&xtherionDraft,
+                                 QPointF(10.0, 0.0),
+                                 QPointF(10.0, 0.0),
+                                 QPointF(10.0, 5.0),
+                                 identitySceneToSource);
+    if (!expect(xtherionDraft.size() == 2
+                    && !xtherionDraft.first().outgoingControlScene.has_value()
+                    && xtherionDraft.at(1).incomingControlScene == QPointF(10.0, -5.0)
+                    && xtherionDraft.at(1).outgoingControlScene == QPointF(10.0, 5.0),
+                "XTherion-style draft insertion should attach mirrored controls to the inserted point only.")) {
+        return false;
+    }
+    captureInteractiveLineAnchor(&xtherionDraft,
+                                 QPointF(20.0, 0.0),
+                                 QPointF(20.0, 0.0),
+                                 QPointF(20.0, 6.0),
+                                 identitySceneToSource);
+    if (!expect(xtherionDraft.at(1).outgoingControlScene == QPointF(10.0, 5.0)
+                    && xtherionDraft.at(2).incomingControlScene == QPointF(20.0, -6.0)
+                    && xtherionDraft.at(2).outgoingControlScene == QPointF(20.0, 6.0),
+                "Inserting the next XTherion-style draft point should not rewrite the previous point's next control.")) {
+        return false;
+    }
+    const QStringList xtherionRows = lineCoordinateRowsForInteractiveDraft(xtherionDraft);
+    if (!expect(xtherionRows.size() == 3
+                    && xtherionRows.at(1) == QStringLiteral("0.0 0.0 10.0 -5.0 10.0 0.0")
+                    && xtherionRows.at(2) == QStringLiteral("10.0 5.0 20.0 -6.0 20.0 0.0"),
+                "XTherion-style draft rows should serialize each point's next control in the following segment row.")) {
+        return false;
+    }
+
     QVector<QPointF> straightStroke;
     straightStroke.reserve(64);
     for (int index = 0; index < 64; ++index) {
@@ -1796,6 +1836,22 @@ int runDragUndoRedoSmoke()
                 "Bezier insert should expose a parseable coordinate row with control-point values.")) {
         return 1;
     }
+    const QVector<QVector<double>> baselineBezierRows = lastDraftLineNumericRows(mapTab->text());
+    if (!expect(baselineBezierRows.size() >= 2 && baselineBezierRows.first().size() >= 2,
+                "Bezier insert should expose the start anchor row for XTherion-style control checks.")) {
+        return 1;
+    }
+    if (!expect(std::abs(baselineBezierRow->at(0) - baselineBezierRows.first().at(0)) < 0.001
+                    && std::abs(baselineBezierRow->at(1) - baselineBezierRows.first().at(1)) < 0.001,
+                "XTherion-style two-point draft should serialize the inserted point's next control only once a following segment exists.")) {
+        return 1;
+    }
+    const QPointF baselineBezierAnchor2Source(baselineBezierRow->at(4), baselineBezierRow->at(5));
+    const QPointF baselineBezierIncomingSource(baselineBezierRow->at(2), baselineBezierRow->at(3));
+    if (!expect(QLineF(baselineBezierAnchor2Source, baselineBezierIncomingSource).length() > 0.01,
+                "XTherion-style dragged vertex placement should seed the inserted point's previous control.")) {
+        return 1;
+    }
 
     const int lineDirectivesBeforeBezierAdjustInsert = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
     mapTab->triggerAddLine();
@@ -1810,9 +1866,7 @@ int runDragUndoRedoSmoke()
     sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, adjustedBezierDrag, Qt::LeftButton, Qt::NoButton);
     pumpEvents();
 
-    const QPointF anchor1Scene = mapView->mapToScene(adjustedBezierAnchor1);
-    const QPointF dragScene = mapView->mapToScene(adjustedBezierDrag);
-    const QPointF initialControlScene = anchor1Scene + ((dragScene - anchor1Scene) * (2.0 / 3.0));
+    const QPointF initialControlScene = mapView->mapToScene(adjustedBezierDrag);
     const QPoint controlPress = mapView->mapFromScene(initialControlScene);
     const QPoint controlDrag = mapView->mapFromScene(initialControlScene + QPointF(48.0, -30.0));
     sendMouse(mapView->viewport(), QEvent::MouseButtonPress, controlPress, Qt::LeftButton, Qt::LeftButton);
@@ -1831,8 +1885,8 @@ int runDragUndoRedoSmoke()
                 "Adjusted bezier insert should keep a parseable coordinate row with control-point values.")) {
         return 1;
     }
-    if (!expect(std::abs(adjustedBezierRow->first() - baselineBezierRow->first()) > 0.001
-                || std::abs(adjustedBezierRow->at(1) - baselineBezierRow->at(1)) > 0.001,
+    if (!expect(std::abs(adjustedBezierRow->at(2) - baselineBezierRow->at(2)) > 0.001
+                || std::abs(adjustedBezierRow->at(3) - baselineBezierRow->at(3)) > 0.001,
                 "Dragging a bezier control handle should change serialized control-point coordinates.")) {
         return 1;
     }
@@ -1872,18 +1926,17 @@ int runDragUndoRedoSmoke()
     const QPointF anchorMirrorOutgoingVector = anchorMirrorMiddleOutgoingSource - anchorMirrorMiddleAnchorSource;
     const qreal anchorMirrorIncomingLength = std::hypot(anchorMirrorIncomingVector.x(), anchorMirrorIncomingVector.y());
     const qreal anchorMirrorOutgoingLength = std::hypot(anchorMirrorOutgoingVector.x(), anchorMirrorOutgoingVector.y());
+    if (!expect(anchorMirrorIncomingLength > 0.01 && anchorMirrorOutgoingLength > 0.01,
+                "Consecutive XTherion-style dragged anchors should keep both controls on the middle vertex.")) {
+        return 1;
+    }
     const qreal anchorMirrorCross = anchorMirrorIncomingVector.x() * anchorMirrorOutgoingVector.y()
         - anchorMirrorIncomingVector.y() * anchorMirrorOutgoingVector.x();
     const qreal anchorMirrorDot = anchorMirrorIncomingVector.x() * anchorMirrorOutgoingVector.x()
         + anchorMirrorIncomingVector.y() * anchorMirrorOutgoingVector.y();
-    if (!expect(anchorMirrorIncomingLength > 0.01 && anchorMirrorOutgoingLength > 0.01,
-                "Consecutive curved anchors should keep non-zero incoming/outgoing control vectors on middle vertex.")) {
-        return 1;
-    }
-    const qreal anchorMirrorNormalizedCross = std::abs(anchorMirrorCross / (anchorMirrorIncomingLength * anchorMirrorOutgoingLength));
-    const qreal anchorMirrorNormalizedDot = anchorMirrorDot / (anchorMirrorIncomingLength * anchorMirrorOutgoingLength);
-    if (!expect(anchorMirrorNormalizedCross < 0.08 && anchorMirrorNormalizedDot < -0.9,
-                "Consecutive curved anchors should keep middle draft controls collinear/opposed.")) {
+    if (!expect(std::abs(anchorMirrorCross / (anchorMirrorIncomingLength * anchorMirrorOutgoingLength)) < 0.08
+                    && anchorMirrorDot / (anchorMirrorIncomingLength * anchorMirrorOutgoingLength) < -0.9,
+                "Consecutive XTherion-style dragged anchors should keep middle controls collinear/opposed.")) {
         return 1;
     }
 
@@ -1905,10 +1958,7 @@ int runDragUndoRedoSmoke()
     sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, mirroredDrag3, Qt::LeftButton, Qt::NoButton);
     pumpEvents();
 
-    const QPointF mirroredAnchor2Scene = mapView->mapToScene(mirroredAnchor2);
-    const QPointF mirroredDrag3Scene = mapView->mapToScene(mirroredDrag3);
-    const QPointF middleOutgoingControlScene
-        = mirroredAnchor2Scene + ((mirroredDrag3Scene - mirroredAnchor2Scene) * (2.0 / 3.0));
+    const QPointF middleOutgoingControlScene = mapView->mapToScene(mirroredDrag3);
     const QPoint mirroredControlPress = mapView->mapFromScene(middleOutgoingControlScene);
     const QPoint mirroredControlDrag = mapView->mapFromScene(middleOutgoingControlScene + QPointF(52.0, -24.0));
     sendMouse(mapView->viewport(), QEvent::MouseButtonPress, mirroredControlPress, Qt::LeftButton, Qt::LeftButton);
@@ -1934,16 +1984,15 @@ int runDragUndoRedoSmoke()
     const QPointF outgoingVector = middleOutgoingSource - middleAnchorSource;
     const qreal incomingLength = std::hypot(incomingVector.x(), incomingVector.y());
     const qreal outgoingLength = std::hypot(outgoingVector.x(), outgoingVector.y());
-    const qreal cross = incomingVector.x() * outgoingVector.y() - incomingVector.y() * outgoingVector.x();
-    const qreal dot = incomingVector.x() * outgoingVector.x() + incomingVector.y() * outgoingVector.y();
     if (!expect(incomingLength > 0.01 && outgoingLength > 0.01,
-                "Middle draft vertex should keep non-zero incoming/outgoing control vectors.")) {
+                "Dragging a visible XTherion-style draft handle should keep both middle controls.")) {
         return 1;
     }
-    const qreal normalizedCross = std::abs(cross / (incomingLength * outgoingLength));
-    const qreal normalizedDot = dot / (incomingLength * outgoingLength);
-    if (!expect(normalizedCross < 0.05 && normalizedDot < -0.95,
-                "Dragging one control on a smooth draft vertex should mirror-adapt the opposite control.")) {
+    const qreal cross = incomingVector.x() * outgoingVector.y() - incomingVector.y() * outgoingVector.x();
+    const qreal dot = incomingVector.x() * outgoingVector.x() + incomingVector.y() * outgoingVector.y();
+    if (!expect(std::abs(cross / (incomingLength * outgoingLength)) < 0.05
+                    && dot / (incomingLength * outgoingLength) < -0.95,
+                "Dragging a visible XTherion-style draft handle should mirror-adapt the opposite middle control.")) {
         return 1;
     }
 
@@ -2024,17 +2073,10 @@ int runDragUndoRedoSmoke()
     const QVector<QVector<double>> areaBorderRows = areaBorderId.has_value()
         ? lineBlockByIdNumericRows(mapTab->text(), areaBorderId.value())
         : QVector<QVector<double>>();
-    if (!expect(areaBorderRows.size() >= 4
+    if (!expect(areaBorderRows.size() >= 3
                 && areaBorderRows.first().size() >= 2
-                && areaBorderRows.last().size() >= 6,
-                "Bezier area close should append an explicit closing cubic row in the referenced border line.")) {
-        return 1;
-    }
-    const QVector<double> &areaFirstRow = areaBorderRows.first();
-    const QVector<double> &areaLastRow = areaBorderRows.last();
-    if (!expect(std::abs(areaLastRow.at(areaLastRow.size() - 2) - areaFirstRow.at(0)) < 0.01
-                && std::abs(areaLastRow.at(areaLastRow.size() - 1) - areaFirstRow.at(1)) < 0.01,
-                "Bezier area closing row should terminate at the first area anchor.")) {
+                && areaBorderRows.at(1).size() >= 6,
+                "Bezier area draft should keep the dragged segment as a cubic row in the referenced border line.")) {
         return 1;
     }
 

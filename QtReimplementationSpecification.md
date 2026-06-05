@@ -409,9 +409,8 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Geometry editing shall support point placement, line vertex editing, area editing, and selection of individual vertices or control points.
 - When a visible bezier control point overlaps or is near another selectable line/area shape, hit testing shall prioritize the control point so it remains selectable and draggable.
 - During interactive line insertion, click-only anchor placement shall create straight segments between consecutive anchors.
-- During interactive line insertion, click-and-drag anchor placement shall create a curved segment with editable bezier control points so the inserted shape matches the drafted curve intent.
-- During interactive line insertion, click-and-drag curve seeding shall treat the drag location as a curve pull point and derive cubic control points from it; midpoint-coupled parallel handle seeding shall not be used.
-- During interactive line insertion, if click-and-drag updates a draft vertex that already has the opposite bezier control, the opposite control shall auto-mirror so both handles remain collinear around that vertex.
+- During interactive line insertion, press-drag-release anchor placement shall follow XTherion-style Bezier entry: the press location shall place the new anchor, and the drag/release location shall seed the same anchor's outgoing Bezier control while the opposite incoming control is mirrored around that anchor.
+- During interactive line insertion, dragging either visible draft control for a vertex that has both Bezier controls shall auto-mirror the opposite control so both handles remain collinear around that same vertex.
 - During interactive line insertion, existing bezier control points shall remain visible in the draft preview and shall support direct drag adjustment before the draft is committed.
 - During interactive line insertion, when a draft vertex has both incoming and outgoing bezier controls, dragging one control shall mirror-adapt the opposite control to preserve smooth tangent continuity.
 - During interactive line insertion, hovering a draggable draft bezier control point shall present a hand cursor and active drag shall present a closed-hand cursor.
@@ -419,7 +418,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Freehand stroke simplification shall be geometry-sensitive rather than based on a fixed point count: simpler strokes shall collapse to fewer bezier anchors, while more complex strokes shall retain proportionally more anchors needed to preserve the drawn shape.
 - Completing an interactive map insertion or map-edit command shall preserve the current map viewport center and zoom; the scene refresh shall not automatically refit or recenter on the inserted/rewritten object unless the user explicitly invokes a Fit command.
 - During interactive area insertion, click-only anchor placement shall create straight segments between consecutive anchors.
-- During interactive area insertion, click-and-drag anchor placement shall create curved segments with editable bezier control points, using the same seeding and handle-edit workflow as interactive line insertion.
+- During interactive area insertion, press-drag-release anchor placement shall create curved segments with editable Bezier control points, using the same XTherion-style mirrored-handle seeding and handle-edit workflow as interactive line insertion.
 - During interactive area insertion, when a draft vertex has both incoming and outgoing bezier controls, dragging one control shall mirror-adapt the opposite control to preserve smooth tangent continuity.
 - During interactive area insertion, when a curved close can be resolved from first/last area-vertex tangents, the closing segment from last anchor to first anchor shall be serialized as an explicit cubic row in the generated border line so the closed outline preserves smooth curvature.
 - During interactive area insertion, the committed geometry shall be serialized as a closed `line border -id ... -close on` block followed by an `area ...` block that references the generated border line identifier.

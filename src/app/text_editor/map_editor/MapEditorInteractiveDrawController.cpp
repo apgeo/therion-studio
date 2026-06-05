@@ -373,28 +373,13 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
             anchorMarkers.append(vertex.anchorScene);
         }
 
-        auto appendBezierControlsForLastSegment = [&previewVertices](const QPointF &dragScenePoint) {
-            if (previewVertices.size() < 2) {
+        auto applyDraggedControlsToCurrentVertex = [&previewVertices](const QPointF &dragScenePoint) {
+            if (previewVertices.isEmpty()) {
                 return;
             }
-            DraftPreviewVertex &previous = previewVertices[previewVertices.size() - 2];
             DraftPreviewVertex &current = previewVertices[previewVertices.size() - 1];
-            // Treat drag location as a quadratic control point, then elevate to cubic.
-            // This avoids midpoint-coupled handles that feel artificially parallel.
-            constexpr qreal quadraticToCubicFactor = 2.0 / 3.0;
-            const QPointF quadraticControlScene = dragScenePoint;
-            previous.outgoingControlScene = previous.anchorScene
-                + ((quadraticControlScene - previous.anchorScene) * quadraticToCubicFactor);
-            current.incomingControlScene = current.anchorScene
-                + ((quadraticControlScene - current.anchorScene) * quadraticToCubicFactor);
-            if (previous.incomingControlScene.has_value()) {
-                const std::optional<QPointF> mirrored = mirroredSmoothControlPoint(previous.anchorScene,
-                                                                                    previous.outgoingControlScene.value(),
-                                                                                    previous.incomingControlScene);
-                if (mirrored.has_value()) {
-                    previous.incomingControlScene = mirrored.value();
-                }
-            }
+            current.outgoingControlScene = dragScenePoint;
+            current.incomingControlScene = current.anchorScene - (dragScenePoint - current.anchorScene);
         };
 
         if ((*context_.anchorPressActive)) {
@@ -403,7 +388,7 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
             previewVertices.append(candidate);
             anchorMarkers.append(candidate.anchorScene);
             if ((*context_.anchorDragActive)) {
-                appendBezierControlsForLastSegment((*context_.anchorDragScenePoint));
+                applyDraggedControlsToCurrentVertex((*context_.anchorDragScenePoint));
             }
         } else if ((*context_.hoverActive)) {
             DraftPreviewVertex candidate;

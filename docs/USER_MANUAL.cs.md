@@ -176,7 +176,7 @@ Po spuštění `Bod`, `Linie`, `Volná kresba` nebo `Plocha` se aktivuje `Inspek
 Během kreslení čáry nebo plochy:
 
 - kliknutím přidáte rovný vrchol,
-- stisknutím, tažením a puštěním při pokládání vrcholu vytvoříte zakřivený Bezier segment,
+- stisknutím, tažením a puštěním při pokládání vrcholu vytáhnete dvojici Bezier kontrolních bodů tohoto vrcholu stejně jako v XTherionu,
 - viditelné Bezier kontrolní body lze před dokončením tažením doladit,
 - kliknutím na první vrchol čáry ji dokončíte jako uzavřenou (`-close on`),
 - uzavřené čáry vykreslují poslední segment zpět na první vrchol, včetně dvoubodových uzavřených Bezier křivek,

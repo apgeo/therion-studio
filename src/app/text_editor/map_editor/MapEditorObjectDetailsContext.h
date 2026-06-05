@@ -4,6 +4,7 @@
 #include <QRectF>
 #include <QSet>
 #include <QString>
+#include <QVector>
 
 #include <functional>
 
@@ -99,6 +100,8 @@ struct MapEditorObjectDetailsContext
 
     std::function<QString(const char *)> translate;
     std::function<QRectF()> mapSourceBoundsForCurrentDocument;
+    std::function<QVector<TherionParsedLine>()> parsedLinesForCurrentDocument;
+    std::function<std::optional<InspectorScrapContext>()> pendingInsertTargetScrapContext;
     std::function<void()> refreshToolbarSummary;
     std::function<void()> refreshObjectDetailsPanel;
     std::function<std::optional<InspectorObjectQuickFields>()> pendingInsertQuickFields;

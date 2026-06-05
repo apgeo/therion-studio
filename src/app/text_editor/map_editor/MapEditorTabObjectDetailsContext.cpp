@@ -70,11 +70,20 @@ void MapEditorTab::beginPendingInsertObject(const QString &commandKind)
     }
     fields.textVisible = pendingLabelTextVisible(normalizedCommand, fields.type, fields.text);
     interactiveDrawState_.pendingInsertFields_ = fields;
+    interactiveDrawState_.pendingTargetScrapIdentifier_.clear();
+    if (normalizedCommand != QStringLiteral("scrap")) {
+        if (const std::optional<InspectorScrapContext> targetContext = pendingInsertTargetScrapContext()) {
+            if (!targetContext->willBeCreated) {
+                interactiveDrawState_.pendingTargetScrapIdentifier_ = targetContext->identifier.trimmed();
+            }
+        }
+    }
 }
 
 void MapEditorTab::clearPendingInsertObject()
 {
     interactiveDrawState_.pendingInsertFields_ = InspectorObjectQuickFields{};
+    interactiveDrawState_.pendingTargetScrapIdentifier_.clear();
 }
 
 std::optional<InspectorObjectQuickFields> MapEditorTab::pendingInsertQuickFields() const
@@ -83,6 +92,36 @@ std::optional<InspectorObjectQuickFields> MapEditorTab::pendingInsertQuickFields
         return std::nullopt;
     }
     return interactiveDrawState_.pendingInsertFields_;
+}
+
+std::optional<InspectorScrapContext> MapEditorTab::pendingInsertTargetScrapContext() const
+{
+    const QVector<TherionParsedLine> parsedLines = parsedLinesForCurrentDocument();
+    const QString explicitTarget = interactiveDrawState_.pendingTargetScrapIdentifier_.trimmed();
+    if (!explicitTarget.isEmpty()) {
+        for (const TherionParsedLine &parsedLine : parsedLines) {
+            if (parsedLine.directive == QStringLiteral("scrap")
+                && parsedLine.tokens.value(1).compare(explicitTarget, Qt::CaseInsensitive) == 0) {
+                InspectorScrapContext context;
+                context.identifier = parsedLine.tokens.value(1);
+                context.lineNumber = parsedLine.lineNumber;
+                return context;
+            }
+        }
+
+        InspectorScrapContext staleContext;
+        staleContext.identifier = explicitTarget;
+        return staleContext;
+    }
+
+    if (objectSelectionState_.selectedObjectLineNumber_ > 0) {
+        if (const std::optional<InspectorScrapContext> selectionContext =
+                inspectorScrapContextForSourceLine(parsedLines, objectSelectionState_.selectedObjectLineNumber_)) {
+            return selectionContext;
+        }
+    }
+
+    return inspectorDraftInsertionScrapContext(parsedLines);
 }
 
 void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields &fields)
@@ -131,6 +170,7 @@ TherionDraftObjectOptions MapEditorTab::pendingDraftObjectOptions(const QString 
     options.type = interactiveDrawState_.pendingInsertFields_.type;
     options.subtype = interactiveDrawState_.pendingInsertFields_.subtype;
     options.identifier = interactiveDrawState_.pendingInsertFields_.identifier;
+    options.targetScrapIdentifier = interactiveDrawState_.pendingTargetScrapIdentifier_;
     if (normalizedCommand == QStringLiteral("point")) {
         options.name = interactiveDrawState_.pendingInsertFields_.name;
         options.nameEnabled = interactiveDrawState_.pendingInsertFields_.nameVisible;
@@ -248,6 +288,12 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         },
         .mapSourceBoundsForCurrentDocument = [this]() {
             return mapSourceBoundsForCurrentDocument();
+        },
+        .parsedLinesForCurrentDocument = [this]() {
+            return parsedLinesForCurrentDocument();
+        },
+        .pendingInsertTargetScrapContext = [this]() -> std::optional<InspectorScrapContext> {
+            return pendingInsertTargetScrapContext();
         },
         .refreshToolbarSummary = [this]() {
             refreshToolbarSummary();

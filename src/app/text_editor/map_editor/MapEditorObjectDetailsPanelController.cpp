@@ -53,6 +53,52 @@ QStringList linePointStandaloneOptionRowsForSelection(const MapGeometryFeature &
     }
     return lineFeature.lineVertices.at(lineVertexIndex).standaloneOptionRows;
 }
+
+QString scrapContextMetadataSuffix(const std::optional<InspectorScrapContext> &scrapContext)
+{
+    if (!scrapContext.has_value() || scrapContext->identifier.trimmed().isEmpty()) {
+        return QString();
+    }
+
+    return QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsPanelController",
+                                       " - Scrap %1")
+        .arg(scrapContext->identifier.trimmed());
+}
+
+QString targetScrapMetadataSuffix(const std::optional<InspectorScrapContext> &scrapContext)
+{
+    if (!scrapContext.has_value() || scrapContext->identifier.trimmed().isEmpty()) {
+        return QString();
+    }
+
+    return QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsPanelController",
+                                       " - Target scrap %1")
+        .arg(scrapContext->identifier.trimmed());
+}
+
+QString metadataForPendingInsert(const std::optional<InspectorScrapContext> &scrapContext)
+{
+    const QString suffix = targetScrapMetadataSuffix(scrapContext);
+    if (scrapContext.has_value() && scrapContext->willBeCreated) {
+        return QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsPanelController",
+                                           "Pending insert%1 (will create scrap)")
+            .arg(suffix);
+    }
+
+    return QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsPanelController",
+                                       "Pending insert%1")
+        .arg(suffix);
+}
+
+QString metadataForSourceLine(const QVector<TherionParsedLine> &parsedLines, int lineNumber)
+{
+    const std::optional<InspectorScrapContext> scrapContext = inspectorScrapContextForSourceLine(parsedLines,
+                                                                                                  lineNumber);
+    return QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsPanelController",
+                                       "Source line %1%2")
+        .arg(lineNumber)
+        .arg(scrapContextMetadataSuffix(scrapContext));
+}
 }
 
 MapEditorObjectDetailsPanelController::MapEditorObjectDetailsPanelController(MapEditorObjectDetailsContext context)
@@ -180,7 +226,10 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             context_.selectionSection->setVisible(true);
             context_.selectionTitleLabel->setText(objectSectionTitle);
             context_.vertexTitleLabel->setText(tr("Point Details"));
-            context_.metadataLabel->setText(tr("Pending insert"));
+            const std::optional<InspectorScrapContext> targetScrapContext = context_.pendingInsertTargetScrapContext
+                ? context_.pendingInsertTargetScrapContext()
+                : std::nullopt;
+            context_.metadataLabel->setText(metadataForPendingInsert(targetScrapContext));
             context_.deleteButton->setEnabled(false);
             context_.deleteButton->setToolTip(QString());
             context_.areaReferenceLabel->setVisible(false);
@@ -302,7 +351,10 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     context_.vertexTitleLabel->setText(effectiveKind == QStringLiteral("line")
                                            ? tr("Line Point")
                                            : tr("Point Details"));
-    context_.metadataLabel->setText(tr("Source line %1").arg(effectiveLineNumber));
+    const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument
+        ? context_.parsedLinesForCurrentDocument()
+        : QVector<TherionParsedLine>();
+    context_.metadataLabel->setText(metadataForSourceLine(parsedLines, effectiveLineNumber));
     QVector<MapEditorAreaReference> areaReferences;
     if (context_.textEditor != nullptr
         && effectiveLineNumber > 0

@@ -48,11 +48,21 @@ struct InspectorScrapScale
     QString unitToken = QStringLiteral("m");
 };
 
+struct InspectorScrapContext
+{
+    QString identifier;
+    int lineNumber = 0;
+    bool willBeCreated = false;
+};
+
 qreal mapSourceUnitsPerMeterFromParsedLines(const QVector<TherionParsedLine> &parsedLines);
 QString xtherionDefaultScrapScaleOption(const QRectF &sourceBounds);
 std::optional<InspectorScrapScale> inspectorScrapScaleFromTokens(const QStringList &tokens);
 QString scrapScaleExpression(const InspectorScrapScale &scale);
 InspectorScrapScale defaultInspectorScrapScale(const QRectF &sourceBounds);
+std::optional<InspectorScrapContext> inspectorScrapContextForSourceLine(const QVector<TherionParsedLine> &parsedLines,
+                                                                        int lineNumber);
+InspectorScrapContext inspectorDraftInsertionScrapContext(const QVector<TherionParsedLine> &parsedLines);
 QString inspectorMapObjectIconName(const ProjectStructureEntry &entry);
 QString inspectorMapObjectItemText(const ProjectStructureEntry &entry, const TherionParsedLine *parsedLine);
 QIcon inspectorActionIcon(const QString &iconName);

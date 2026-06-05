@@ -169,7 +169,7 @@ Mapové plátno používa stabilný svetlý „papierový“ povrch vo svetlom a
 - `Voľná kresba`: stlačte, ťahajte a pustite; vloží sa zjednodušená Bezier čiara.
 - `Vložiť scrap`: nastavte pripravované scrap ID/projekciu vo `Výbere` a potom kliknite znova na `Vložiť scrap`.
 
-Po spustení `Bod`, `Línia`, `Voľná kresba` alebo `Plocha` sa aktivuje `Inšpektor -> Výber` ešte pred prvým vložením. Nastavte tam typ, podtyp, ID, názov bodu alebo text popisku ešte pred potvrdením nového objektu.
+Po spustení `Bod`, `Línia`, `Voľná kresba` alebo `Plocha` sa aktivuje `Inšpektor -> Výber` ešte pred prvým vložením. Nastavte tam typ, podtyp, ID, názov bodu alebo text popisku ešte pred potvrdením nového objektu. Ak bol pri spustení nástroja vybraný scrap alebo objekt vnútri scrapu, nový objekt sa vloží do tohto scrapu; metadata pripraveného vloženia ukazujú ID cieľového scrapu.
 
 Počas kreslenia čiary alebo plochy:
 
@@ -182,7 +182,7 @@ Počas kreslenia čiary alebo plochy:
 
 ### 6.4 Editácia geometrie
 
-Vyberte mapový objekt alebo jeho vrchol/kontrolný bod na mapovom plátne. Inšpektor `Výber` zobrazí zodpovedajúce ovládanie.
+Vyberte mapový objekt alebo jeho vrchol/kontrolný bod na mapovom plátne. Inšpektor `Výber` zobrazí zodpovedajúce ovládanie vrátane zdrojového riadka a ID obklopujúceho scrapu.
 
 Pre čiary a hranice plôch:
 

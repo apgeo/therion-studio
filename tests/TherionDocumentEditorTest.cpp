@@ -446,6 +446,88 @@ int runAppendDraftGeometryTest()
         return 1;
     }
 
+    contents = QStringLiteral("scrap first\n"
+                              "endscrap\n"
+                              "scrap second\n"
+                              "endscrap\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    TherionDraftObjectOptions targetedPointOptions;
+    targetedPointOptions.targetScrapIdentifier = QStringLiteral("first");
+    if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
+                                                           QStringLiteral("point"),
+                                                           {QPointF(9.0, 10.0)},
+                                                           &lineNumber,
+                                                           &errorMessage,
+                                                           targetedPointOptions),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap first\n"
+                                           "  point 9.0 10.0 station -name draft-point\n"
+                                           "endscrap\n"
+                                           "scrap second\n"
+                                           "endscrap\n"),
+                "appendDraftGeometry should insert point geometry into the requested target scrap.")) {
+        return 1;
+    }
+    if (!expect(lineNumber == 2, "appendDraftGeometry should report the targeted point line number.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap first\n"
+                              "endscrap\n"
+                              "scrap second\n"
+                              "endscrap\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    TherionDraftObjectOptions missingTargetOptions;
+    missingTargetOptions.targetScrapIdentifier = QStringLiteral("missing");
+    if (!expect(!TherionDocumentEditor::appendDraftGeometry(&contents,
+                                                            QStringLiteral("point"),
+                                                            {QPointF(9.0, 10.0)},
+                                                            &lineNumber,
+                                                            &errorMessage,
+                                                            missingTargetOptions),
+                "appendDraftGeometry should reject an explicit target scrap that no longer exists.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "appendDraftGeometry should report a missing target scrap error.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap first\n"
+                              "endscrap\n"
+                              "scrap second\n"
+                              "endscrap\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    TherionDraftObjectOptions targetedLineOptions;
+    targetedLineOptions.targetScrapIdentifier = QStringLiteral("second");
+    if (!expect(TherionDocumentEditor::appendDraftLineGeometry(&contents,
+                                                               {QStringLiteral("1 2"), QStringLiteral("3 4")},
+                                                               &lineNumber,
+                                                               &errorMessage,
+                                                               QString(),
+                                                               targetedLineOptions),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap first\n"
+                                           "endscrap\n"
+                                           "scrap second\n"
+                                           "  line wall\n"
+                                           "    1 2\n"
+                                           "    3 4\n"
+                                           "  endline\n"
+                                           "endscrap\n"),
+                "appendDraftLineGeometry should insert line geometry into the requested target scrap.")) {
+        return 1;
+    }
+    if (!expect(lineNumber == 4, "appendDraftLineGeometry should report the targeted line header line number.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("scrap a\nendscrap\n");
     errorMessage.clear();
     if (!expect(!TherionDocumentEditor::appendDraftGeometry(&contents, QStringLiteral("area"), {QPointF(1.0, 2.0), QPointF(3.0, 4.0)}, nullptr, &errorMessage),
@@ -530,6 +612,47 @@ int runAppendDraftGeometryTest()
         return 1;
     }
     if (!expect(lineNumber == 9, "appendDraftAreaGeometry should report the inserted area line number.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap first\n"
+                              "endscrap\n"
+                              "scrap second\n"
+                              "  line wall -id line-1\n"
+                              "  endline\n"
+                              "endscrap\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    TherionDraftObjectOptions targetedAreaOptions;
+    targetedAreaOptions.targetScrapIdentifier = QStringLiteral("second");
+    if (!expect(TherionDocumentEditor::appendDraftAreaGeometry(&contents,
+                                                               {QStringLiteral("1 2"),
+                                                                QStringLiteral("3 4"),
+                                                                QStringLiteral("5 6")},
+                                                               &lineNumber,
+                                                               &errorMessage,
+                                                               targetedAreaOptions),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap first\n"
+                                           "endscrap\n"
+                                           "scrap second\n"
+                                           "  line wall -id line-1\n"
+                                           "  endline\n"
+                                           "  line border -id line-2 -close on\n"
+                                           "    1 2\n"
+                                           "    3 4\n"
+                                           "    5 6\n"
+                                           "  endline\n"
+                                           "  area water\n"
+                                           "    line-2\n"
+                                           "  endarea\n"
+                                           "endscrap\n"),
+                "appendDraftAreaGeometry should insert area geometry into the requested target scrap and use IDs from that scrap.")) {
+        return 1;
+    }
+    if (!expect(lineNumber == 11, "appendDraftAreaGeometry should report the targeted area line number.")) {
         return 1;
     }
 

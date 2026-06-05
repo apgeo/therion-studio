@@ -1063,6 +1063,71 @@ int lastEndscrapLineIndex(const QStringList &lines)
     return foundIndex;
 }
 
+int matchingEndscrapIndex(const QStringList &lines, int scrapStartIndex)
+{
+    if (scrapStartIndex < 0 || scrapStartIndex >= lines.size()) {
+        return -1;
+    }
+
+    int depth = 0;
+    for (int index = scrapStartIndex; index < lines.size(); ++index) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(index), index + 1);
+        if (parsedLine.directive == QStringLiteral("scrap")) {
+            ++depth;
+            continue;
+        }
+        if (parsedLine.directive != QStringLiteral("endscrap")) {
+            continue;
+        }
+        --depth;
+        if (depth == 0) {
+            return index;
+        }
+    }
+
+    return -1;
+}
+
+int endscrapLineIndexForScrapIdentifier(const QStringList &lines, const QString &scrapIdentifier)
+{
+    const QString normalizedIdentifier = scrapIdentifier.trimmed();
+    if (normalizedIdentifier.isEmpty()) {
+        return -1;
+    }
+
+    for (int index = 0; index < lines.size(); ++index) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(index), index + 1);
+        if (parsedLine.directive != QStringLiteral("scrap")
+            || parsedLine.tokens.value(1).compare(normalizedIdentifier, Qt::CaseInsensitive) != 0) {
+            continue;
+        }
+        return matchingEndscrapIndex(lines, index);
+    }
+
+    return -1;
+}
+
+int draftInsertionEndscrapLineIndex(const QStringList &lines,
+                                    const TherionDraftObjectOptions &objectOptions,
+                                    QString *errorMessage)
+{
+    const QString targetScrapIdentifier = objectOptions.targetScrapIdentifier.trimmed();
+    if (!targetScrapIdentifier.isEmpty()) {
+        const int targetedIndex = endscrapLineIndexForScrapIdentifier(lines, targetScrapIdentifier);
+        if (targetedIndex >= 0) {
+            return targetedIndex;
+        }
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor",
+                                                        "Target scrap '%1' no longer exists.")
+                .arg(targetScrapIdentifier);
+        }
+        return -1;
+    }
+
+    return lastEndscrapLineIndex(lines);
+}
+
 }
 
 bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
@@ -1241,21 +1306,23 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
     QString updated = *contents;
     const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
     QStringList lines = splitLinesTrimmingCarriageReturns(updated);
-    int insertionIndex = lastEndscrapLineIndex(lines);
+    int insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
 
-    if (insertionIndex < 0) {
+    if (insertionIndex < 0 && objectOptions.targetScrapIdentifier.trimmed().isEmpty()) {
         if (!appendScrapBlock(&updated, QStringLiteral("map-draft"), nullptr, errorMessage)) {
             return false;
         }
 
         lines = splitLinesTrimmingCarriageReturns(updated);
-        insertionIndex = lastEndscrapLineIndex(lines);
+        insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
         if (insertionIndex < 0) {
             if (errorMessage != nullptr) {
                 *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve a scrap insertion target.");
             }
             return false;
         }
+    } else if (insertionIndex < 0) {
+        return false;
     }
 
     QStringList geometryLines;
@@ -1359,21 +1426,23 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
     QString updated = *contents;
     const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
     QStringList lines = splitLinesTrimmingCarriageReturns(updated);
-    int insertionIndex = lastEndscrapLineIndex(lines);
+    int insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
 
-    if (insertionIndex < 0) {
+    if (insertionIndex < 0 && objectOptions.targetScrapIdentifier.trimmed().isEmpty()) {
         if (!appendScrapBlock(&updated, QStringLiteral("map-draft"), nullptr, errorMessage)) {
             return false;
         }
 
         lines = splitLinesTrimmingCarriageReturns(updated);
-        insertionIndex = lastEndscrapLineIndex(lines);
+        insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
         if (insertionIndex < 0) {
             if (errorMessage != nullptr) {
                 *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve a scrap insertion target.");
             }
             return false;
         }
+    } else if (insertionIndex < 0) {
+        return false;
     }
 
     QStringList geometryLines;
@@ -1439,21 +1508,23 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
     QString updated = *contents;
     const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
     QStringList lines = splitLinesTrimmingCarriageReturns(updated);
-    int insertionIndex = lastEndscrapLineIndex(lines);
+    int insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
 
-    if (insertionIndex < 0) {
+    if (insertionIndex < 0 && objectOptions.targetScrapIdentifier.trimmed().isEmpty()) {
         if (!appendScrapBlock(&updated, QStringLiteral("map-draft"), nullptr, errorMessage)) {
             return false;
         }
 
         lines = splitLinesTrimmingCarriageReturns(updated);
-        insertionIndex = lastEndscrapLineIndex(lines);
+        insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
         if (insertionIndex < 0) {
             if (errorMessage != nullptr) {
                 *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve a scrap insertion target.");
             }
             return false;
         }
+    } else if (insertionIndex < 0) {
+        return false;
     }
 
     const int scrapStartIndex = matchingScrapStartIndex(lines, insertionIndex);

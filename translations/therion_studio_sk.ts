@@ -3690,6 +3690,31 @@ Napriek tomu bod zmazať?</translation>
         <translation>Čakajúce vloženie</translation>
     </message>
     <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="57"/>
+        <source> - Scrap %1</source>
+        <translation> - Scrap %1</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="69"/>
+        <source> - Target scrap %1</source>
+        <translation> - Cieľový scrap %1</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="78"/>
+        <source>Pending insert%1 (will create scrap)</source>
+        <translation>Čakajúce vloženie%1 (vytvorí scrap)</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="83"/>
+        <source>Pending insert%1</source>
+        <translation>Čakajúce vloženie%1</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="93"/>
+        <source>Source line %1%2</source>
+        <translation>Zdrojový riadok %1%2</translation>
+    </message>
+    <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="219"/>
         <location filename="../src/app/text_editor/map_editor/MapEditorObjectDetailsPanelController.cpp" line="370"/>
         <source>ID</source>
@@ -4899,6 +4924,11 @@ subtype blocks</translation>
         <location filename="../src/core/TherionDocumentEditor.cpp" line="1106"/>
         <source>The new structure name is empty.</source>
         <translation>Nový názov štruktúry je prázdny.</translation>
+    </message>
+    <message>
+        <location filename="../src/core/TherionDocumentEditor.cpp" line="1121"/>
+        <source>Target scrap '%1' no longer exists.</source>
+        <translation>Cieľový scrap '%1' už neexistuje.</translation>
     </message>
     <message>
         <location filename="../src/core/TherionDocumentEditor.cpp" line="1136"/>

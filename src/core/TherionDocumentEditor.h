@@ -14,6 +14,7 @@ struct TherionDraftObjectOptions
     QString identifier;
     QString name;
     QString text;
+    QString targetScrapIdentifier;
     bool nameEnabled = false;
     bool textEnabled = false;
 };

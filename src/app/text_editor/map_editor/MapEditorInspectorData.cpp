@@ -446,6 +446,68 @@ InspectorScrapScale defaultInspectorScrapScale(const QRectF &sourceBounds)
     return scale;
 }
 
+std::optional<InspectorScrapContext> inspectorScrapContextForSourceLine(const QVector<TherionParsedLine> &parsedLines,
+                                                                        int lineNumber)
+{
+    if (lineNumber <= 0) {
+        return std::nullopt;
+    }
+
+    QVector<InspectorScrapContext> scrapStack;
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        const QString directive = parsedLine.directive.trimmed().toLower();
+        if (directive == QStringLiteral("scrap")) {
+            InspectorScrapContext context;
+            context.identifier = parsedLine.tokens.value(1, QStringLiteral("Unnamed Scrap"));
+            context.lineNumber = parsedLine.lineNumber;
+            scrapStack.append(context);
+        }
+
+        if (parsedLine.lineNumber == lineNumber) {
+            if (scrapStack.isEmpty()) {
+                return std::nullopt;
+            }
+            return scrapStack.last();
+        }
+
+        if (directive == QStringLiteral("endscrap") && !scrapStack.isEmpty()) {
+            scrapStack.removeLast();
+        }
+    }
+
+    return std::nullopt;
+}
+
+InspectorScrapContext inspectorDraftInsertionScrapContext(const QVector<TherionParsedLine> &parsedLines)
+{
+    QVector<InspectorScrapContext> scrapStack;
+    std::optional<InspectorScrapContext> lastClosedScrap;
+
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        const QString directive = parsedLine.directive.trimmed().toLower();
+        if (directive == QStringLiteral("scrap")) {
+            InspectorScrapContext context;
+            context.identifier = parsedLine.tokens.value(1, QStringLiteral("Unnamed Scrap"));
+            context.lineNumber = parsedLine.lineNumber;
+            scrapStack.append(context);
+        } else if (directive == QStringLiteral("endscrap") && !scrapStack.isEmpty()) {
+            lastClosedScrap = scrapStack.takeLast();
+        }
+    }
+
+    if (lastClosedScrap.has_value()) {
+        return lastClosedScrap.value();
+    }
+    if (!scrapStack.isEmpty()) {
+        return scrapStack.last();
+    }
+
+    InspectorScrapContext createdContext;
+    createdContext.identifier = QStringLiteral("map-draft");
+    createdContext.willBeCreated = true;
+    return createdContext;
+}
+
 struct InspectorCatalogCommandEntry
 {
     QString key;

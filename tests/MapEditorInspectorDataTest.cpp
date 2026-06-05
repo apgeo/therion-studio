@@ -130,6 +130,46 @@ int runInjectedCatalogTest()
 
     return 0;
 }
+
+int runScrapContextMetadataTest()
+{
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(QStringLiteral(
+        "scrap first\n"
+        "point 0 0 station -name a1\n"
+        "endscrap\n"
+        "scrap second\n"
+        "line wall\n"
+        "  0 0\n"
+        "  1 1\n"
+        "endline\n"
+        "endscrap\n"));
+
+    const std::optional<InspectorScrapContext> firstScrap = inspectorScrapContextForSourceLine(parsedLines, 2);
+    if (!expect(firstScrap.has_value() && firstScrap->identifier == QStringLiteral("first"),
+                "A selected point should report its enclosing first scrap.")) {
+        return 1;
+    }
+
+    const std::optional<InspectorScrapContext> secondScrap = inspectorScrapContextForSourceLine(parsedLines, 5);
+    if (!expect(secondScrap.has_value() && secondScrap->identifier == QStringLiteral("second"),
+                "A selected line should report its enclosing second scrap.")) {
+        return 1;
+    }
+
+    const InspectorScrapContext insertionScrap = inspectorDraftInsertionScrapContext(parsedLines);
+    if (!expect(insertionScrap.identifier == QStringLiteral("second") && !insertionScrap.willBeCreated,
+                "Pending draft insertion should target the last existing scrap.")) {
+        return 1;
+    }
+
+    const InspectorScrapContext createdScrap = inspectorDraftInsertionScrapContext({});
+    if (!expect(createdScrap.identifier == QStringLiteral("map-draft") && createdScrap.willBeCreated,
+                "Pending draft insertion should report the generated scrap when no scrap exists.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
@@ -139,6 +179,9 @@ int main(int argc, char **argv)
         return result;
     }
     if (const int result = runInjectedCatalogTest(); result != 0) {
+        return result;
+    }
+    if (const int result = runScrapContextMetadataTest(); result != 0) {
         return result;
     }
     return runAreaQuickTypeComboPopulationTest();

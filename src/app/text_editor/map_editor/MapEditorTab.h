@@ -243,6 +243,7 @@ private:
     {
         InteractiveDrawMode mode_ = InteractiveDrawMode::None;
         InspectorObjectQuickFields pendingInsertFields_;
+        QString pendingTargetScrapIdentifier_;
         bool lineExtensionActive_ = false;
         int lineExtensionLineNumber_ = 0;
         bool lineExtensionPrepend_ = false;
@@ -506,6 +507,7 @@ private:
     void clearPendingInsertObject();
     std::optional<InspectorObjectQuickFields> pendingInsertQuickFields() const;
     void setPendingInsertQuickFields(const InspectorObjectQuickFields &fields);
+    std::optional<InspectorScrapContext> pendingInsertTargetScrapContext() const;
     TherionDraftObjectOptions pendingDraftObjectOptions(const QString &commandKind) const;
     QString pendingScrapPreferredName() const;
     QString pendingScrapOptions(const QString &scaleOption) const;

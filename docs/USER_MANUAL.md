@@ -170,7 +170,7 @@ The map canvas uses a stable light paper-style surface in both light and dark ap
 - `Freehand`: press, drag, and release to insert a simplified Bezier line.
 - `Insert Scrap`: set the pending scrap ID/projection in `Selection`, then click `Insert Scrap` again.
 
-Starting `Point`, `Line`, `Freehand`, or `Area` activates `Inspector -> Selection` before the first point or vertex is placed. Set type, subtype, ID, point name, or label text there before committing the new object.
+Starting `Point`, `Line`, `Freehand`, or `Area` activates `Inspector -> Selection` before the first point or vertex is placed. Set type, subtype, ID, point name, or label text there before committing the new object. If a scrap or an object inside a scrap was selected when you started the tool, the new object is inserted into that scrap; the pending metadata line shows the target scrap ID.
 
 While drafting a line or area:
 
@@ -183,7 +183,7 @@ While drafting a line or area:
 
 ### 6.4 Edit Geometry
 
-Select a map object or one of its vertices/control handles in the canvas. The `Selection` inspector then shows the relevant controls.
+Select a map object or one of its vertices/control handles in the canvas. The `Selection` inspector then shows the relevant controls, including the source line and enclosing scrap ID.
 
 For lines and area borders:
 

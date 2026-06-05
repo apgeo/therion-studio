@@ -293,10 +293,12 @@ private:
         QLabel *objectQuickProjectionLabel_ = nullptr;
         QLabel *objectQuickTypeLabel_ = nullptr;
         QLabel *objectQuickSubtypeLabel_ = nullptr;
+        QLabel *objectQuickTargetScrapLabel_ = nullptr;
         QLabel *objectStylePreviewLabel_ = nullptr;
         QComboBox *objectQuickTypeCombo_ = nullptr;
         QComboBox *objectQuickSubtypeCombo_ = nullptr;
         QComboBox *objectQuickProjectionCombo_ = nullptr;
+        QComboBox *objectQuickTargetScrapCombo_ = nullptr;
         QLineEdit *objectQuickIdentifierEdit_ = nullptr;
         QLineEdit *objectQuickNameEdit_ = nullptr;
         QLineEdit *objectQuickTextEdit_ = nullptr;
@@ -508,6 +510,7 @@ private:
     std::optional<InspectorObjectQuickFields> pendingInsertQuickFields() const;
     void setPendingInsertQuickFields(const InspectorObjectQuickFields &fields);
     std::optional<InspectorScrapContext> pendingInsertTargetScrapContext() const;
+    void setPendingInsertTargetScrapIdentifier(const QString &identifier);
     TherionDraftObjectOptions pendingDraftObjectOptions(const QString &commandKind) const;
     QString pendingScrapPreferredName() const;
     QString pendingScrapOptions(const QString &scaleOption) const;

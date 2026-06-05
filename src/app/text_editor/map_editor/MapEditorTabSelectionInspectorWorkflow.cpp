@@ -7,9 +7,31 @@
 
 #include <QGraphicsView>
 #include <QScopedValueRollback>
+#include <QStringList>
 
 namespace TherionStudio
 {
+namespace
+{
+QString insertedScrapIdentifier(const QString &text, int lineNumber, const QString &fallback)
+{
+    if (lineNumber <= 0) {
+        return fallback;
+    }
+
+    const QStringList lines = text.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    if (lineNumber > lines.size()) {
+        return fallback;
+    }
+
+    const QStringList tokens = lines.at(lineNumber - 1).simplified().split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    if (tokens.size() >= 2 && tokens.at(0).compare(QStringLiteral("scrap"), Qt::CaseInsensitive) == 0) {
+        return tokens.at(1);
+    }
+    return fallback;
+}
+}
+
 void MapEditorTab::handleAddPointTriggered()
 {
     setInteractiveDrawMode(InteractiveDrawMode::Point);
@@ -81,21 +103,15 @@ void MapEditorTab::handleInsertScrapTriggered()
     }
     selectModeActive_ = true;
 
-    if (interactiveDrawState_.pendingInsertFields_.commandKind.trimmed().toLower() != QStringLiteral("scrap")) {
-        beginPendingInsertObject(QStringLiteral("scrap"));
-        activateSelectionInspector();
-        refreshObjectDetailsPanel();
-        toolbarStatusNote_ = tr("Scrap insert: set ID/projection in Selection, then click Insert Scrap again.");
-        refreshToolbarSummary();
-        return;
-    }
+    clearPendingInsertObject();
 
     QString errorMessage;
     int insertedLineNumber = 0;
     const QString beforeText = textEditor_->text();
+    const QString scrapIdentifier;
     const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
     const QString scrapScaleOption = xtherionDefaultScrapScaleOption(mapSourceBoundsForCurrentDocument());
-    if (!textEditor_->insertScrapBlock(pendingScrapPreferredName(),
+    if (!textEditor_->insertScrapBlock(scrapIdentifier,
                                        &insertedLineNumber,
                                        &errorMessage,
                                        pendingScrapOptions(scrapScaleOption))) {
@@ -105,12 +121,20 @@ void MapEditorTab::handleInsertScrapTriggered()
         refreshToolbarSummary();
         return;
     }
-    recordSourceTextSnapshot(tr("Insert Scrap"), beforeText, textEditor_->text(), insertedLineNumber);
+    const QString afterText = textEditor_->text();
+    const QString createdScrapIdentifier = insertedScrapIdentifier(afterText, insertedLineNumber, scrapIdentifier);
+    clearPendingInsertObject();
+    recordSourceTextSnapshot(tr("Insert Scrap"), beforeText, afterText, insertedLineNumber);
 
     toolbarStatusNote_ = insertedLineNumber > 0
-        ? tr("Inserted scrap block at line %1.").arg(insertedLineNumber)
-        : tr("Inserted scrap block.");
-    clearPendingInsertObject();
+        ? tr("Created scrap \"%1\" at source line %2.").arg(createdScrapIdentifier, QString::number(insertedLineNumber))
+        : tr("Created scrap \"%1\".").arg(createdScrapIdentifier);
+    if (insertedLineNumber > 0) {
+        rebuildInspectorObjectsTree();
+        goToLine(insertedLineNumber);
+        syncInspectorObjectSelectionToLine(insertedLineNumber, true);
+        activateSelectionInspector();
+    }
     refreshObjectDetailsPanel();
     refreshToolbarSummary();
 }

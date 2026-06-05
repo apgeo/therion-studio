@@ -118,6 +118,10 @@ void MapEditorTab::buildInspectorPanelUi()
     configureSelectionEditableCombo(objectDetailsUiState_.objectQuickSubtypeCombo_, QStringLiteral("mapObjectQuickSubtypeCombo"));
     objectDetailsUiState_.objectQuickProjectionCombo_ = new QComboBox(objectDetailsUiState_.objectQuickFieldsEditor_);
     configureSelectionEditableCombo(objectDetailsUiState_.objectQuickProjectionCombo_, QStringLiteral("mapObjectQuickProjectionCombo"));
+    objectDetailsUiState_.objectQuickTargetScrapCombo_ = new QComboBox(objectDetailsUiState_.objectQuickFieldsEditor_);
+    objectDetailsUiState_.objectQuickTargetScrapCombo_->setObjectName(QStringLiteral("mapObjectQuickTargetScrapCombo"));
+    objectDetailsUiState_.objectQuickTargetScrapCombo_->setEditable(false);
+    objectDetailsUiState_.objectQuickTargetScrapCombo_->setInsertPolicy(QComboBox::NoInsert);
     objectDetailsUiState_.objectQuickIdentifierEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickNameEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickTextEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
@@ -127,6 +131,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.objectQuickProjectionLabel_ = new QLabel(tr("Projection"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickTypeLabel_ = new QLabel(tr("Type"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickSubtypeLabel_ = new QLabel(tr("Subtype"), objectDetailsUiState_.objectQuickFieldsEditor_);
+    objectDetailsUiState_.objectQuickTargetScrapLabel_ = new QLabel(tr("Insert into"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectStylePreviewLabel_ = new QLabel(tr("Style preview"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectStylePreview_ = new MapEditorStylePreviewWidget(objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectStylePreview_->setObjectName(QStringLiteral("mapObjectStylePreview"));
@@ -140,6 +145,10 @@ void MapEditorTab::buildInspectorPanelUi()
     });
     connect(objectDetailsUiState_.objectQuickSubtypeCombo_, qOverload<int>(&QComboBox::activated), this, &MapEditorTab::applyObjectQuickFieldEdits);
     connect(objectDetailsUiState_.objectQuickProjectionCombo_, qOverload<int>(&QComboBox::activated), this, &MapEditorTab::applyScrapProjectionEdit);
+    connect(objectDetailsUiState_.objectQuickTargetScrapCombo_, &QComboBox::textActivated, this, [this](const QString &identifier) {
+        setPendingInsertTargetScrapIdentifier(identifier);
+        refreshObjectDetailsPanel();
+    });
     if (objectDetailsUiState_.objectQuickTypeCombo_->lineEdit() != nullptr) {
         connect(objectDetailsUiState_.objectQuickTypeCombo_->lineEdit(), &QLineEdit::editingFinished, this, [this]() {
             updateObjectQuickSubtypeChoices();
@@ -152,6 +161,7 @@ void MapEditorTab::buildInspectorPanelUi()
     if (objectDetailsUiState_.objectQuickProjectionCombo_->lineEdit() != nullptr) {
         connect(objectDetailsUiState_.objectQuickProjectionCombo_->lineEdit(), &QLineEdit::editingFinished, this, &MapEditorTab::applyScrapProjectionEdit);
     }
+    objectQuickForm->addRow(objectDetailsUiState_.objectQuickTargetScrapLabel_, objectDetailsUiState_.objectQuickTargetScrapCombo_);
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickIdentifierLabel_, objectDetailsUiState_.objectQuickIdentifierEdit_);
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickProjectionLabel_, objectDetailsUiState_.objectQuickProjectionCombo_);
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickTypeLabel_, objectDetailsUiState_.objectQuickTypeCombo_);

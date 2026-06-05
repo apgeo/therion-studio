@@ -162,6 +162,14 @@ int runScrapContextMetadataTest()
         return 1;
     }
 
+    const QVector<InspectorScrapContext> scrapContexts = inspectorScrapContexts(parsedLines);
+    if (!expect(scrapContexts.size() == 2
+                    && scrapContexts.at(0).identifier == QStringLiteral("first")
+                    && scrapContexts.at(1).identifier == QStringLiteral("second"),
+                "Scrap target choices should list existing scrap identifiers in source order.")) {
+        return 1;
+    }
+
     const InspectorScrapContext createdScrap = inspectorDraftInsertionScrapContext({});
     if (!expect(createdScrap.identifier == QStringLiteral("map-draft") && createdScrap.willBeCreated,
                 "Pending draft insertion should report the generated scrap when no scrap exists.")) {

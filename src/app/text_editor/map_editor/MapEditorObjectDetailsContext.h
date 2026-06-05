@@ -59,10 +59,12 @@ struct MapEditorObjectDetailsContext
     QLabel *quickProjectionLabel = nullptr;
     QLabel *quickTypeLabel = nullptr;
     QLabel *quickSubtypeLabel = nullptr;
+    QLabel *quickTargetScrapLabel = nullptr;
     QLabel *stylePreviewLabel = nullptr;
     QComboBox *quickTypeCombo = nullptr;
     QComboBox *quickSubtypeCombo = nullptr;
     QComboBox *quickProjectionCombo = nullptr;
+    QComboBox *quickTargetScrapCombo = nullptr;
     QLineEdit *quickIdentifierEdit = nullptr;
     QLineEdit *quickNameEdit = nullptr;
     QLineEdit *quickTextEdit = nullptr;

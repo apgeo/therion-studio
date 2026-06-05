@@ -124,6 +124,11 @@ std::optional<InspectorScrapContext> MapEditorTab::pendingInsertTargetScrapConte
     return inspectorDraftInsertionScrapContext(parsedLines);
 }
 
+void MapEditorTab::setPendingInsertTargetScrapIdentifier(const QString &identifier)
+{
+    interactiveDrawState_.pendingTargetScrapIdentifier_ = identifier.trimmed();
+}
+
 void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields &fields)
 {
     const QString existingCommand = interactiveDrawState_.pendingInsertFields_.commandKind;
@@ -245,10 +250,12 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .quickProjectionLabel = objectDetailsUiState_.objectQuickProjectionLabel_,
         .quickTypeLabel = objectDetailsUiState_.objectQuickTypeLabel_,
         .quickSubtypeLabel = objectDetailsUiState_.objectQuickSubtypeLabel_,
+        .quickTargetScrapLabel = objectDetailsUiState_.objectQuickTargetScrapLabel_,
         .stylePreviewLabel = objectDetailsUiState_.objectStylePreviewLabel_,
         .quickTypeCombo = objectDetailsUiState_.objectQuickTypeCombo_,
         .quickSubtypeCombo = objectDetailsUiState_.objectQuickSubtypeCombo_,
         .quickProjectionCombo = objectDetailsUiState_.objectQuickProjectionCombo_,
+        .quickTargetScrapCombo = objectDetailsUiState_.objectQuickTargetScrapCombo_,
         .quickIdentifierEdit = objectDetailsUiState_.objectQuickIdentifierEdit_,
         .quickNameEdit = objectDetailsUiState_.objectQuickNameEdit_,
         .quickTextEdit = objectDetailsUiState_.objectQuickTextEdit_,

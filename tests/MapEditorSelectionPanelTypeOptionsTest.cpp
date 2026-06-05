@@ -9,6 +9,7 @@
 #include <QCompleter>
 #include <QCoreApplication>
 #include <QEventLoop>
+#include <QFormLayout>
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QKeyEvent>
@@ -17,6 +18,7 @@
 #include <QPushButton>
 #include <QTemporaryDir>
 #include <QTabWidget>
+#include <QTreeView>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QFile>
@@ -67,6 +69,46 @@ bool visibleNoSelectionLabel(QWidget *root)
         }
     }
     return false;
+}
+
+bool visibleLabelStartingWith(QWidget *root, const QString &prefix)
+{
+    if (root == nullptr) {
+        return false;
+    }
+
+    const QList<QLabel *> labels = root->findChildren<QLabel *>();
+    for (QLabel *label : labels) {
+        if (label != nullptr
+            && label->isVisible()
+            && label->text().startsWith(prefix)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int formRowForLabelText(QWidget *root, const QString &labelText)
+{
+    if (root == nullptr) {
+        return -1;
+    }
+
+    const QList<QFormLayout *> forms = root->findChildren<QFormLayout *>();
+    for (QFormLayout *form : forms) {
+        if (form == nullptr) {
+            continue;
+        }
+        for (int row = 0; row < form->rowCount(); ++row) {
+            QLayoutItem *labelItem = form->itemAt(row, QFormLayout::LabelRole);
+            auto *label = labelItem != nullptr ? qobject_cast<QLabel *>(labelItem->widget()) : nullptr;
+            if (label != nullptr && label->text() == labelText) {
+                return row;
+            }
+        }
+    }
+
+    return -1;
 }
 
 int runSelectionPanelTypeValuesTest()
@@ -140,6 +182,10 @@ int runSelectionPanelTypeValuesTest()
     if (!expect(typeCombo != nullptr, "Selection panel type combo was not found.")) {
         return 1;
     }
+    auto *targetScrapCombo = mapTab->findChild<QComboBox *>(QStringLiteral("mapObjectQuickTargetScrapCombo"));
+    if (!expect(targetScrapCombo != nullptr, "Selection panel target scrap combo was not found.")) {
+        return 1;
+    }
 
     if (!expect(typeCombo->completer() != nullptr
                 && typeCombo->completer()->completionMode() == QCompleter::UnfilteredPopupCompletion,
@@ -196,6 +242,20 @@ int runSelectionPanelTypeValuesTest()
                 "Line insert should expose pending type fields with the default wall type.")) {
         return 1;
     }
+    if (!expect(targetScrapCombo->isVisible()
+                    && targetScrapCombo->count() == 1
+                    && targetScrapCombo->currentText() == QStringLiteral("selection-panel-test"),
+                "Line insert should expose the existing scrap as the pending insertion target.")) {
+        return 1;
+    }
+    if (!expect(formRowForLabelText(mapTab, QStringLiteral("Insert into")) < formRowForLabelText(mapTab, QStringLiteral("ID")),
+                "Pending insert target scrap should be shown before the object ID field.")) {
+        return 1;
+    }
+    if (!expect(!visibleLabelStartingWith(mapTab, QStringLiteral("Pending insert")),
+                "Pending insert metadata should be hidden when the target scrap selector is visible.")) {
+        return 1;
+    }
     if (!expect(stylePreview->isVisible(),
                 "Line insert should show the style preview for the pending object.")) {
         return 1;
@@ -235,6 +295,46 @@ int runSelectionPanelTypeValuesTest()
     pumpEvents();
     if (!expect(!mapTab->isInsertModeActive(),
                 "Esc from the main-window command surface focus should leave map insert mode.")) {
+        return 1;
+    }
+
+    mapTab->triggerInsertScrap();
+    pumpEvents();
+    const QStringList sourceLines = mapTab->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    const int currentLine = mapTab->currentLineNumber();
+    if (!expect(inspectorTabs->currentIndex() == 0,
+                "Insert Scrap should keep the Selection inspector active for immediate scrap ID/projection editing.")) {
+        return 1;
+    }
+    if (!expect(!targetScrapCombo->isVisible(),
+                "Scrap insert should not show a target scrap selector because scraps are not nested in scraps.")) {
+        return 1;
+    }
+    if (!expect(currentLine > 0
+                    && currentLine <= sourceLines.size()
+                    && sourceLines.at(currentLine - 1).startsWith(QStringLiteral("scrap ")),
+                "Insert Scrap should immediately create and select the new scrap source line.")) {
+        return 1;
+    }
+    if (!expect(visibleLabelStartingWith(mapTab, QStringLiteral("Scrap")),
+                "Insert Scrap should select the created scrap in the Selection panel.")) {
+        return 1;
+    }
+    if (!expect(!visibleLabelStartingWith(mapTab, QStringLiteral("New Scrap")),
+                "Insert Scrap should not leave the Selection panel in a pending New Scrap state.")) {
+        return 1;
+    }
+    auto *objectsTree = mapTab->findChild<QTreeView *>(QStringLiteral("mapObjectsTree"));
+    if (!expect(objectsTree != nullptr && objectsTree->currentIndex().data(Qt::UserRole + 700).toInt() == currentLine,
+                "Insert Scrap should select the newly created scrap in the Objects tree.")) {
+        return 1;
+    }
+
+    mapTab->goToLine(4);
+    inspectorTabs->setCurrentIndex(0);
+    pumpEvents();
+    if (!expect(!visibleLabelStartingWith(mapTab, QStringLiteral("New Scrap")),
+                "Selecting another object after confirmed scrap insert should leave the pending New Scrap state.")) {
         return 1;
     }
 

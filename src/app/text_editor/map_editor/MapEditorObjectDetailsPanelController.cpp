@@ -99,6 +99,35 @@ QString metadataForSourceLine(const QVector<TherionParsedLine> &parsedLines, int
         .arg(lineNumber)
         .arg(scrapContextMetadataSuffix(scrapContext));
 }
+
+void setTargetScrapComboValues(QComboBox *combo,
+                               const QVector<InspectorScrapContext> &scrapContexts,
+                               const std::optional<InspectorScrapContext> &currentContext)
+{
+    if (combo == nullptr) {
+        return;
+    }
+
+    const QSignalBlocker blocker(combo);
+    combo->clear();
+    for (const InspectorScrapContext &scrapContext : scrapContexts) {
+        if (!scrapContext.identifier.trimmed().isEmpty()) {
+            combo->addItem(scrapContext.identifier.trimmed());
+        }
+    }
+
+    const QString currentIdentifier = currentContext.has_value()
+        ? currentContext->identifier.trimmed()
+        : QString();
+    int currentIndex = -1;
+    for (int index = 0; index < combo->count(); ++index) {
+        if (combo->itemText(index).compare(currentIdentifier, Qt::CaseInsensitive) == 0) {
+            currentIndex = index;
+            break;
+        }
+    }
+    combo->setCurrentIndex(currentIndex);
+}
 }
 
 MapEditorObjectDetailsPanelController::MapEditorObjectDetailsPanelController(MapEditorObjectDetailsContext context)
@@ -146,10 +175,12 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.quickProjectionLabel == nullptr
         || context_.quickTypeLabel == nullptr
         || context_.quickSubtypeLabel == nullptr
+        || context_.quickTargetScrapLabel == nullptr
         || context_.stylePreviewLabel == nullptr
         || context_.quickTypeCombo == nullptr
         || context_.quickSubtypeCombo == nullptr
         || context_.quickProjectionCombo == nullptr
+        || context_.quickTargetScrapCombo == nullptr
         || context_.quickIdentifierEdit == nullptr
         || context_.quickNameEdit == nullptr
         || context_.quickTextEdit == nullptr
@@ -226,10 +257,10 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             context_.selectionSection->setVisible(true);
             context_.selectionTitleLabel->setText(objectSectionTitle);
             context_.vertexTitleLabel->setText(tr("Point Details"));
-            const std::optional<InspectorScrapContext> targetScrapContext = context_.pendingInsertTargetScrapContext
+            const std::optional<InspectorScrapContext> targetScrapContext = commandKind != QStringLiteral("scrap")
+                    && context_.pendingInsertTargetScrapContext
                 ? context_.pendingInsertTargetScrapContext()
                 : std::nullopt;
-            context_.metadataLabel->setText(metadataForPendingInsert(targetScrapContext));
             context_.deleteButton->setEnabled(false);
             context_.deleteButton->setToolTip(QString());
             context_.areaReferenceLabel->setVisible(false);
@@ -246,14 +277,24 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             context_.quickProjectionLabel->setVisible(projectionFieldVisible);
             context_.quickTypeLabel->setVisible(typeFieldsVisible);
             context_.quickSubtypeLabel->setVisible(typeFieldsVisible);
+            const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument
+                ? context_.parsedLinesForCurrentDocument()
+                : QVector<TherionParsedLine>();
+            const QVector<InspectorScrapContext> scrapContexts = inspectorScrapContexts(parsedLines);
+            const bool targetScrapVisible = commandKind != QStringLiteral("scrap") && !scrapContexts.isEmpty();
+            context_.metadataLabel->setVisible(commandKind != QStringLiteral("scrap") && !targetScrapVisible);
+            context_.metadataLabel->setText(metadataForPendingInsert(targetScrapContext));
+            context_.quickTargetScrapLabel->setVisible(targetScrapVisible);
             context_.quickNameEdit->setVisible(pendingFields->nameVisible);
             context_.quickTextEdit->setVisible(textFieldVisible);
             context_.quickProjectionCombo->setVisible(projectionFieldVisible);
             context_.quickTypeCombo->setVisible(typeFieldsVisible);
             context_.quickSubtypeCombo->setVisible(typeFieldsVisible);
+            context_.quickTargetScrapCombo->setVisible(targetScrapVisible);
             context_.quickProjectionCombo->setEnabled(projectionFieldVisible);
             context_.quickTypeCombo->setEnabled(typeFieldsVisible && pendingFields->typeEditable);
             context_.quickSubtypeCombo->setEnabled(typeFieldsVisible && pendingFields->typeEditable);
+            context_.quickTargetScrapCombo->setEnabled(targetScrapVisible);
 
             const InspectorSymbolCatalog &catalog = inspectorSymbolCatalog();
             setEditableComboValues(context_.quickTypeCombo,
@@ -265,6 +306,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             setEditableComboValues(context_.quickSubtypeCombo,
                                    inspectorSubtypeValuesForCommandType(catalog, commandKind, pendingFields->type),
                                    pendingFields->subtype);
+            setTargetScrapComboValues(context_.quickTargetScrapCombo, scrapContexts, targetScrapContext);
             context_.quickIdentifierLabel->setText(tr("ID"));
             context_.quickIdentifierEdit->setText(pendingFields->identifier);
             context_.quickNameEdit->setText(pendingFields->name);
@@ -305,6 +347,9 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.areaReferenceLabel->clear();
         context_.quickFieldsEditor->setVisible(false);
         context_.objectQuickCommandKind->clear();
+        context_.quickTargetScrapLabel->setVisible(false);
+        context_.quickTargetScrapCombo->setVisible(false);
+        context_.metadataLabel->setVisible(true);
         context_.linePointActionsSection->setVisible(false);
         context_.vertexActionsEditor->setVisible(false);
         context_.metadataLabel->setText(QStringLiteral("-"));
@@ -383,6 +428,9 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
 
     context_.quickFieldsEditor->setVisible(false);
     context_.objectQuickCommandKind->clear();
+    context_.quickTargetScrapLabel->setVisible(false);
+    context_.quickTargetScrapCombo->setVisible(false);
+    context_.metadataLabel->setVisible(true);
     if (context_.textEditor != nullptr && effectiveLineNumber > 0) {
         QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
         for (QString &line : lines) {
@@ -403,11 +451,13 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                 context_.quickProjectionLabel->setVisible(projectionFieldVisible);
                 context_.quickTypeLabel->setVisible(typeFieldsVisible);
                 context_.quickSubtypeLabel->setVisible(typeFieldsVisible);
+                context_.quickTargetScrapLabel->setVisible(false);
                 context_.quickNameEdit->setVisible(fields->nameVisible);
                 context_.quickTextEdit->setVisible(textFieldVisible);
                 context_.quickProjectionCombo->setVisible(projectionFieldVisible);
                 context_.quickTypeCombo->setVisible(typeFieldsVisible);
                 context_.quickSubtypeCombo->setVisible(typeFieldsVisible);
+                context_.quickTargetScrapCombo->setVisible(false);
                 context_.quickProjectionCombo->setEnabled(projectionFieldVisible);
                 context_.quickTypeCombo->setEnabled(typeFieldsVisible && fields->typeEditable);
                 context_.quickSubtypeCombo->setEnabled(typeFieldsVisible && fields->typeEditable);

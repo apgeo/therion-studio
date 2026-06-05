@@ -4050,6 +4050,11 @@ Přesto bod smazat?</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="130"/>
+        <source>Insert into</source>
+        <translation>Vložit do</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp" line="130"/>
         <source>Style preview</source>
         <translation>Náhled stylu</translation>
     </message>
@@ -4369,14 +4374,14 @@ subtype blocks</translation>
         <translation>Vložit scrap</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp" line="111"/>
-        <source>Inserted scrap block at line %1.</source>
-        <translation>Blok scrapu vložen na řádku %1.</translation>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp" line="112"/>
+        <source>Created scrap "%1" at source line %2.</source>
+        <translation>Scrap „%1“ vytvořen na zdrojovém řádku %2.</translation>
     </message>
     <message>
-        <location filename="../src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp" line="112"/>
-        <source>Inserted scrap block.</source>
-        <translation>Blok scrapu vložen.</translation>
+        <location filename="../src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp" line="113"/>
+        <source>Created scrap "%1".</source>
+        <translation>Scrap „%1“ vytvořen.</translation>
     </message>
     <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorTabSelectionInspectorWorkflow.cpp" line="131"/>

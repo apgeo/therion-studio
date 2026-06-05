@@ -167,9 +167,9 @@ Mapové plátno používa stabilný svetlý „papierový“ povrch vo svetlom a
 - `Línia`: klikajte vrcholy a dokončite `Enter` alebo `Dokončiť návrh`.
 - `Plocha`: klikajte vrcholy a dokončite `Enter` alebo `Dokončiť návrh`.
 - `Voľná kresba`: stlačte, ťahajte a pustite; vloží sa zjednodušená Bezier čiara.
-- `Vložiť scrap`: nastavte pripravované scrap ID/projekciu vo `Výbere` a potom kliknite znova na `Vložiť scrap`.
+- `Vložiť scrap`: okamžite vytvorí nový scrap, vyberie ho vo `Výbere` aj v `Objektoch` a potom môžete upraviť jeho ID/projekciu pred vkladaním bodov, línií, voľnej kresby alebo plôch.
 
-Po spustení `Bod`, `Línia`, `Voľná kresba` alebo `Plocha` sa aktivuje `Inšpektor -> Výber` ešte pred prvým vložením. Nastavte tam typ, podtyp, ID, názov bodu alebo text popisku ešte pred potvrdením nového objektu. Ak bol pri spustení nástroja vybraný scrap alebo objekt vnútri scrapu, nový objekt sa vloží do tohto scrapu; metadata pripraveného vloženia ukazujú ID cieľového scrapu.
+Po spustení `Bod`, `Línia`, `Voľná kresba` alebo `Plocha` sa aktivuje `Inšpektor -> Výber` ešte pred prvým vložením. Nastavte tam typ, podtyp, ID, názov bodu alebo text popisku ešte pred potvrdením nového objektu. Ak bol pri spustení nástroja vybraný scrap alebo objekt vnútri scrapu, nový objekt sa vloží do tohto scrapu; metadata pripraveného vloženia ukazujú ID cieľového scrapu. Pomocou `Vložiť do` môžete pred potvrdením vybrať iný existujúci cieľový scrap.
 
 Počas kreslenia čiary alebo plochy:
 

@@ -508,6 +508,25 @@ InspectorScrapContext inspectorDraftInsertionScrapContext(const QVector<TherionP
     return createdContext;
 }
 
+QVector<InspectorScrapContext> inspectorScrapContexts(const QVector<TherionParsedLine> &parsedLines)
+{
+    QVector<InspectorScrapContext> contexts;
+    for (const TherionParsedLine &parsedLine : parsedLines) {
+        if (parsedLine.directive.trimmed().toLower() != QStringLiteral("scrap")) {
+            continue;
+        }
+
+        InspectorScrapContext context;
+        context.identifier = parsedLine.tokens.value(1).trimmed();
+        if (context.identifier.isEmpty()) {
+            continue;
+        }
+        context.lineNumber = parsedLine.lineNumber;
+        contexts.append(context);
+    }
+    return contexts;
+}
+
 struct InspectorCatalogCommandEntry
 {
     QString key;

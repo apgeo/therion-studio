@@ -63,6 +63,7 @@ InspectorScrapScale defaultInspectorScrapScale(const QRectF &sourceBounds);
 std::optional<InspectorScrapContext> inspectorScrapContextForSourceLine(const QVector<TherionParsedLine> &parsedLines,
                                                                         int lineNumber);
 InspectorScrapContext inspectorDraftInsertionScrapContext(const QVector<TherionParsedLine> &parsedLines);
+QVector<InspectorScrapContext> inspectorScrapContexts(const QVector<TherionParsedLine> &parsedLines);
 QString inspectorMapObjectIconName(const ProjectStructureEntry &entry);
 QString inspectorMapObjectItemText(const ProjectStructureEntry &entry, const TherionParsedLine *parsedLine);
 QIcon inspectorActionIcon(const QString &iconName);

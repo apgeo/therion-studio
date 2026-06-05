@@ -1,5 +1,6 @@
 #include "MapEditorObjectDetailsLogic.h"
 
+#include "../../../core/TherionCommandSyntax.h"
 #include "../../../core/TherionDocumentParser.h"
 #include "../../../core/TherionTokenRules.h"
 
@@ -110,6 +111,26 @@ QString pointTypeTokenForMapDetails(const TherionParsedLine &parsedLine)
     }
 
     return QString();
+}
+
+bool linePointRowDirectiveMatches(const TherionParsedLine &parsedLine, const QString &directive)
+{
+    const QString normalizedDirective = directive.trimmed().toLower();
+    const QString parsedDirective = parsedLine.directive.trimmed().toLower();
+    return parsedDirective == normalizedDirective
+        || parsedDirective == QStringLiteral("-%1").arg(normalizedDirective);
+}
+
+bool linePointRowIsSegmentSubtype(const QString &row)
+{
+    return linePointRowDirectiveMatches(TherionDocumentParser::parseLine(row), QStringLiteral("subtype"));
+}
+
+bool linePointRowIsAltitudeAuto(const QString &row)
+{
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(row);
+    return linePointRowDirectiveMatches(parsedLine, QStringLiteral("altitude"))
+        && parsedLine.tokens.value(1).trimmed() == QStringLiteral(".");
 }
 
 QSet<QString> parseOrientationAllowedTypesFromText(const QString &text)
@@ -534,6 +555,67 @@ std::optional<qreal> linePointLeftSizeForSourceVertex(const QString &documentTex
         return size;
     }
     return std::nullopt;
+}
+
+QString linePointSegmentSubtypeFromStandaloneRows(const QStringList &rows)
+{
+    QString subtype;
+    for (const QString &row : rows) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(row);
+        if (linePointRowDirectiveMatches(parsedLine, QStringLiteral("subtype"))
+            && parsedLine.tokens.size() > 1) {
+            subtype = parsedLine.tokens.value(1).trimmed();
+        }
+    }
+    return subtype;
+}
+
+bool linePointAltitudeAutoFromStandaloneRows(const QStringList &rows)
+{
+    for (const QString &row : rows) {
+        if (linePointRowIsAltitudeAuto(row)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QStringList linePointRowsWithoutStructuredStandaloneOptions(const QStringList &rows,
+                                                            bool manageSegmentSubtype,
+                                                            bool manageAltitudeAuto)
+{
+    QStringList filteredRows;
+    filteredRows.reserve(rows.size());
+    for (const QString &row : rows) {
+        if ((manageSegmentSubtype && linePointRowIsSegmentSubtype(row))
+            || (manageAltitudeAuto && linePointRowIsAltitudeAuto(row))) {
+            continue;
+        }
+        filteredRows.append(row);
+    }
+    return filteredRows;
+}
+
+QStringList linePointRowsWithStructuredStandaloneOptions(const QStringList &rows,
+                                                         const QString &segmentSubtype,
+                                                         bool altitudeAuto,
+                                                         bool manageSegmentSubtype,
+                                                         bool manageAltitudeAuto)
+{
+    QStringList updatedRows = linePointRowsWithoutStructuredStandaloneOptions(rows,
+                                                                              manageSegmentSubtype,
+                                                                              manageAltitudeAuto);
+    const QString trimmedSubtype = segmentSubtype.trimmed();
+    if (manageSegmentSubtype && !trimmedSubtype.isEmpty()) {
+        const QString serializedSubtype = serializeTherionArgumentToken(trimmedSubtype);
+        if (!serializedSubtype.isEmpty()) {
+            updatedRows.append(QStringLiteral("subtype %1").arg(serializedSubtype));
+        }
+    }
+    if (manageAltitudeAuto && altitudeAuto) {
+        updatedRows.append(QStringLiteral("altitude ."));
+    }
+    return updatedRows;
 }
 
 }

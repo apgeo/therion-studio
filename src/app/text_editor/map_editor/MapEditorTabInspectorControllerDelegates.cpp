@@ -1,11 +1,25 @@
 #include "MapEditorTab.h"
 
+#include <QAction>
+#include <QCheckBox>
+#include <QComboBox>
+#include <QDoubleSpinBox>
+#include <QGraphicsScene>
+#include <QLabel>
+#include <QLineEdit>
+#include <QMenu>
 #include <QModelIndex>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QSignalBlocker>
+#include <QTimer>
 
 #include "MapEditorInspectorBackgroundController.h"
 #include "MapEditorInspectorObjectController.h"
 #include "MapEditorObjectDetailsEditController.h"
 #include "MapEditorObjectDetailsPanelController.h"
+
+#include <optional>
 
 namespace TherionStudio
 {
@@ -115,6 +129,16 @@ void MapEditorTab::handleLinePointLeftSizeEnabledToggled(bool checked)
     MapEditorObjectDetailsEditController(objectDetailsContext()).handleLinePointLeftSizeEnabledToggled(checked);
 }
 
+void MapEditorTab::handleLinePointSegmentSubtypeChanged()
+{
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleLinePointSegmentSubtypeChanged();
+}
+
+void MapEditorTab::handleLinePointAltitudeAutoToggled(bool checked)
+{
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleLinePointAltitudeAutoToggled(checked);
+}
+
 void MapEditorTab::deleteSelectedObjectFromSelection()
 {
     MapEditorObjectDetailsEditController(objectDetailsContext()).deleteSelectedObjectFromSelection();
@@ -189,6 +213,454 @@ void MapEditorTab::applyScrapScaleEdits()
 void MapEditorTab::handleConfigureObjectSettingsTriggered()
 {
     MapEditorObjectDetailsEditController(objectDetailsContext()).handleConfigureObjectSettingsTriggered();
+}
+
+void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
+{
+    if (QMenu *previousMenu = mapSelectionContextMenu_.data()) {
+        mapSelectionContextMenu_.clear();
+        previousMenu->close();
+    }
+
+    if (mapScene_ != nullptr && !mapScene_->selectedItems().isEmpty()) {
+        handleMapSceneSelectionChanged();
+    }
+
+    auto *menu = new QMenu(this);
+    mapSelectionContextMenu_ = menu;
+    connect(menu, &QMenu::aboutToHide, this, [this, menu]() {
+        if (mapSelectionContextMenu_ == menu) {
+            mapSelectionContextMenu_.clear();
+        }
+        menu->deleteLater();
+    });
+
+    const bool hasObjectSelection = objectSelectionState_.selectedObjectLineNumber_ > 0
+        && !objectSelectionState_.selectedObjectKind_.trimmed().isEmpty();
+    if (!hasObjectSelection) {
+        QAction *emptyAction = menu->addAction(tr("No map object selected"));
+        emptyAction->setEnabled(false);
+        menu->popup(globalPosition);
+        return;
+    }
+
+    auto addComboMenu = [this, menu](const QString &title,
+                                     QComboBox *combo,
+                                     bool refreshSubtypeChoices,
+                                     const QString &emptyValueLabel = QString()) -> QMenu * {
+        if (combo == nullptr || !combo->isEnabled() || combo->count() <= 0) {
+            return nullptr;
+        }
+        QMenu *targetMenu = menu->addMenu(title);
+        const QString currentValue = combo->currentText().trimmed().toLower();
+        for (int index = 0; index < combo->count(); ++index) {
+            const QString value = combo->itemText(index);
+            const QString actionText = value.isEmpty() && !emptyValueLabel.isEmpty()
+                ? emptyValueLabel
+                : value;
+            QAction *action = targetMenu->addAction(actionText);
+            action->setCheckable(true);
+            action->setChecked(value.trimmed().toLower() == currentValue);
+            connect(action, &QAction::triggered, this, [this, combo, value, refreshSubtypeChoices]() {
+                combo->setCurrentText(value);
+                if (refreshSubtypeChoices) {
+                    updateObjectQuickSubtypeChoices();
+                }
+                applyObjectQuickFieldEdits();
+                refreshObjectDetailsPanel();
+            });
+        }
+        return targetMenu;
+    };
+    auto addLinePointComboMenu = [this](QMenu *targetMenu,
+                                        const QString &title,
+                                        QComboBox *combo,
+                                        const QString &emptyValueLabel = QString()) -> QMenu * {
+        if (targetMenu == nullptr || combo == nullptr || !combo->isEnabled() || combo->count() <= 0) {
+            return nullptr;
+        }
+        QMenu *comboMenu = targetMenu->addMenu(title);
+        const QString currentValue = combo->currentText().trimmed().toLower();
+        for (int index = 0; index < combo->count(); ++index) {
+            const QString value = combo->itemText(index);
+            const QString actionText = value.isEmpty() && !emptyValueLabel.isEmpty()
+                ? emptyValueLabel
+                : value;
+            QAction *action = comboMenu->addAction(actionText);
+            action->setCheckable(true);
+            action->setChecked(value.trimmed().toLower() == currentValue);
+            connect(action, &QAction::triggered, this, [this, combo, value]() {
+                const QSignalBlocker blocker(combo);
+                combo->setCurrentText(value);
+                MapEditorObjectDetailsEditController(objectDetailsContext()).handleLinePointSegmentSubtypeChanged();
+            });
+        }
+        return comboMenu;
+    };
+    auto addFocusAction = [this](QMenu *targetMenu, const QString &title, QWidget *editor) {
+        if (targetMenu == nullptr || editor == nullptr || !editor->isVisible() || !editor->isEnabled()) {
+            return;
+        }
+        QAction *action = targetMenu->addAction(title);
+        connect(action, &QAction::triggered, this, [this, editor]() {
+            activateSelectionInspector();
+            QTimer::singleShot(0, this, [editor]() {
+                editor->setFocus(Qt::ShortcutFocusReason);
+                if (auto *lineEdit = qobject_cast<QLineEdit *>(editor)) {
+                    lineEdit->selectAll();
+                } else if (auto *plainTextEdit = qobject_cast<QPlainTextEdit *>(editor)) {
+                    plainTextEdit->selectAll();
+                } else if (auto *spin = qobject_cast<QDoubleSpinBox *>(editor)) {
+                    spin->selectAll();
+                }
+            });
+        });
+    };
+    auto applyObjectOrientation = [this](bool enabled, std::optional<qreal> value) {
+        if (objectDetailsUiState_.objectOrientationEnabledCheck_ == nullptr
+            || objectDetailsUiState_.objectOrientationSpin_ == nullptr) {
+            return;
+        }
+        const QSignalBlocker enabledBlocker(objectDetailsUiState_.objectOrientationEnabledCheck_);
+        const QSignalBlocker spinBlocker(objectDetailsUiState_.objectOrientationSpin_);
+        objectDetailsUiState_.objectOrientationEnabledCheck_->setChecked(enabled);
+        objectDetailsUiState_.objectOrientationSpin_->setEnabled(enabled);
+        if (value.has_value()) {
+            objectDetailsUiState_.objectOrientationSpin_->setValue(value.value());
+        }
+        MapEditorObjectDetailsEditController(objectDetailsContext()).applyObjectOrientationEdits();
+        refreshObjectDetailsPanel();
+    };
+    auto addOrientationMenu = [this, applyObjectOrientation, addFocusAction](QMenu *targetMenu) {
+        if (targetMenu == nullptr
+            || objectDetailsUiState_.objectOrientationEnabledCheck_ == nullptr
+            || objectDetailsUiState_.objectOrientationSpin_ == nullptr
+            || !objectDetailsUiState_.objectOrientationEnabledCheck_->isVisible()
+            || !objectDetailsUiState_.objectOrientationEnabledCheck_->isEnabled()) {
+            return;
+        }
+
+        QAction *orientationAction = targetMenu->addAction(tr("Orientation override (-orientation)"));
+        orientationAction->setCheckable(true);
+        orientationAction->setChecked(objectDetailsUiState_.objectOrientationEnabledCheck_->isChecked());
+        connect(orientationAction, &QAction::triggered, this, [applyObjectOrientation](bool checked) {
+            applyObjectOrientation(checked, std::nullopt);
+        });
+
+        QMenu *orientationMenu = targetMenu->addMenu(tr("Orientation"));
+        const qreal currentOrientation = objectDetailsUiState_.objectOrientationSpin_->value();
+        QAction *currentOrientationAction = orientationMenu->addAction(
+            tr("Current (%1 deg)").arg(QString::number(currentOrientation, 'f', 3)));
+        currentOrientationAction->setCheckable(true);
+        currentOrientationAction->setChecked(objectDetailsUiState_.objectOrientationEnabledCheck_->isChecked());
+        connect(currentOrientationAction, &QAction::triggered, this, [applyObjectOrientation, currentOrientation]() {
+            applyObjectOrientation(true, currentOrientation);
+        });
+        orientationMenu->addSeparator();
+        for (qreal orientation : {0.0, 90.0, 180.0, 270.0}) {
+            QAction *orientationValueAction = orientationMenu->addAction(
+                tr("%1 deg").arg(QString::number(orientation, 'f', 0)));
+            orientationValueAction->setCheckable(true);
+            orientationValueAction->setChecked(objectDetailsUiState_.objectOrientationEnabledCheck_->isChecked()
+                                               && qAbs(currentOrientation - orientation) < 0.001);
+            connect(orientationValueAction, &QAction::triggered, this, [applyObjectOrientation, orientation]() {
+                applyObjectOrientation(true, orientation);
+            });
+        }
+        addFocusAction(orientationMenu, tr("Edit orientation..."), objectDetailsUiState_.objectOrientationSpin_);
+    };
+
+    const QString typeText = objectDetailsUiState_.objectQuickTypeCombo_ != nullptr
+        ? objectDetailsUiState_.objectQuickTypeCombo_->currentText().trimmed()
+        : QString();
+    addComboMenu(typeText.isEmpty() ? tr("Type") : tr("Type (%1)").arg(typeText),
+                 objectDetailsUiState_.objectQuickTypeCombo_,
+                 true);
+    addComboMenu(tr("Subtype"),
+                 objectDetailsUiState_.objectQuickSubtypeCombo_,
+                 false,
+                 tr("No subtype"));
+
+    QMenu *objectFieldsMenu = nullptr;
+    auto ensureObjectFieldsMenu = [&menu, &objectFieldsMenu, this]() -> QMenu * {
+        if (objectFieldsMenu == nullptr) {
+            objectFieldsMenu = menu->addMenu(
+                objectDetailsUiState_.objectSelectionTitleLabel_ != nullptr
+                    ? objectDetailsUiState_.objectSelectionTitleLabel_->text()
+                    : tr("Object"));
+        }
+        return objectFieldsMenu;
+    };
+    auto addObjectFocusAction = [addFocusAction, ensureObjectFieldsMenu](const QString &title, QWidget *editor) {
+        if (editor == nullptr || !editor->isVisible() || !editor->isEnabled()) {
+            return;
+        }
+        addFocusAction(ensureObjectFieldsMenu(), title, editor);
+    };
+    if (objectDetailsUiState_.objectQuickProjectionCombo_ != nullptr
+        && objectDetailsUiState_.objectQuickProjectionCombo_->isVisible()
+        && objectDetailsUiState_.objectQuickProjectionCombo_->isEnabled()) {
+        addComboMenu(tr("projection"), objectDetailsUiState_.objectQuickProjectionCombo_, false);
+    }
+    addObjectFocusAction(tr("Edit ID..."), objectDetailsUiState_.objectQuickIdentifierEdit_);
+    addObjectFocusAction(tr("Edit Name..."), objectDetailsUiState_.objectQuickNameEdit_);
+    addObjectFocusAction(tr("Edit Text..."), objectDetailsUiState_.objectQuickTextEdit_);
+    addObjectFocusAction(tr("Edit Value..."), objectDetailsUiState_.objectQuickValueEdit_);
+
+    const bool lineVertexSelected = objectSelectionState_.selectedObjectKind_ == QStringLiteral("line")
+        && objectSelectionState_.selectedObjectVertexIndex_ >= 0;
+    const bool lineSelected = objectSelectionState_.selectedObjectKind_ == QStringLiteral("line");
+    const bool pointSelected = objectSelectionState_.selectedObjectKind_ == QStringLiteral("point");
+
+    const bool geometryAvailable = lineSelected
+        && objectDetailsUiState_.lineClosedCheck_ != nullptr
+        && objectDetailsUiState_.lineReversedCheck_ != nullptr
+        && objectDetailsUiState_.lineClosedCheck_->isVisible()
+        && objectDetailsUiState_.lineReversedCheck_->isVisible();
+    if (geometryAvailable) {
+        QMenu *geometryMenu = menu->addMenu(tr("Geometry"));
+        QAction *closedAction = geometryMenu->addAction(tr("Closed (-close)"));
+        closedAction->setCheckable(true);
+        closedAction->setChecked(objectDetailsUiState_.lineClosedCheck_ != nullptr
+                                 && objectDetailsUiState_.lineClosedCheck_->isChecked());
+        connect(closedAction, &QAction::triggered, this, [this](bool checked) {
+            handleLineClosedToggled(checked);
+            refreshObjectDetailsPanel();
+        });
+
+        QAction *reversedAction = geometryMenu->addAction(tr("Reversed (-reverse)"));
+        reversedAction->setCheckable(true);
+        reversedAction->setChecked(objectDetailsUiState_.lineReversedCheck_ != nullptr
+                                   && objectDetailsUiState_.lineReversedCheck_->isChecked());
+        connect(reversedAction, &QAction::triggered, this, [this](bool checked) {
+            handleLineReversedToggled(checked);
+            refreshObjectDetailsPanel();
+        });
+    }
+
+    const bool previousControlAvailable = lineVertexSelected
+        && objectDetailsUiState_.linePointPreviousControlCheck_ != nullptr
+        && objectDetailsUiState_.linePointPreviousControlCheck_->isVisible()
+        && objectDetailsUiState_.linePointPreviousControlCheck_->isEnabled();
+    const bool smoothAvailable = lineVertexSelected
+        && objectDetailsUiState_.linePointSmoothCheck_ != nullptr
+        && objectDetailsUiState_.linePointSmoothCheck_->isVisible()
+        && objectDetailsUiState_.linePointSmoothCheck_->isEnabled();
+    const bool nextControlAvailable = lineVertexSelected
+        && objectDetailsUiState_.linePointNextControlCheck_ != nullptr
+        && objectDetailsUiState_.linePointNextControlCheck_->isVisible()
+        && objectDetailsUiState_.linePointNextControlCheck_->isEnabled();
+    const bool linePointOrientationAvailable = lineVertexSelected
+        && objectDetailsUiState_.objectOrientationEnabledCheck_ != nullptr
+        && objectDetailsUiState_.objectOrientationSpin_ != nullptr
+        && objectDetailsUiState_.objectOrientationEnabledCheck_->isVisible()
+        && objectDetailsUiState_.objectOrientationEnabledCheck_->isEnabled();
+    const bool leftSizeAvailable = lineVertexSelected
+        && objectDetailsUiState_.linePointLeftSizeEnabledCheck_ != nullptr
+        && objectDetailsUiState_.linePointLeftSizeSpin_ != nullptr
+        && objectDetailsUiState_.linePointLeftSizeEnabledCheck_->isVisible()
+        && objectDetailsUiState_.linePointLeftSizeEnabledCheck_->isEnabled();
+    const bool linePointFlagsAvailable = lineVertexSelected
+        && objectDetailsUiState_.linePointFlagsEdit_ != nullptr
+        && objectDetailsUiState_.linePointFlagsEdit_->isVisible()
+        && objectDetailsUiState_.linePointFlagsEdit_->isEnabled();
+    const bool linePointSegmentSubtypeAvailable = lineVertexSelected
+        && objectDetailsUiState_.linePointSegmentSubtypeCombo_ != nullptr
+        && objectDetailsUiState_.linePointSegmentSubtypeCombo_->isVisible()
+        && objectDetailsUiState_.linePointSegmentSubtypeCombo_->isEnabled();
+    const bool linePointAltitudeAutoAvailable = lineVertexSelected
+        && objectDetailsUiState_.linePointAltitudeAutoCheck_ != nullptr
+        && objectDetailsUiState_.linePointAltitudeAutoCheck_->isVisible()
+        && objectDetailsUiState_.linePointAltitudeAutoCheck_->isEnabled();
+    if (previousControlAvailable || smoothAvailable || nextControlAvailable
+        || linePointOrientationAvailable || leftSizeAvailable || linePointSegmentSubtypeAvailable
+        || linePointAltitudeAutoAvailable || linePointFlagsAvailable) {
+        QMenu *linePointMenu = menu->addMenu(tr("Line Point"));
+        if (previousControlAvailable) {
+            QAction *previousControlAction = linePointMenu->addAction(tr("Previous control (<<)"));
+            previousControlAction->setCheckable(true);
+            previousControlAction->setChecked(objectDetailsUiState_.linePointPreviousControlCheck_->isChecked());
+            connect(previousControlAction, &QAction::triggered, this, [this](bool checked) {
+                setLineVertexControlHandleForSelection(true, checked);
+                refreshObjectDetailsPanel();
+            });
+        }
+
+        if (smoothAvailable) {
+            QAction *smoothAction = linePointMenu->addAction(tr("Smooth (-smooth)"));
+            smoothAction->setCheckable(true);
+            smoothAction->setChecked(objectDetailsUiState_.linePointSmoothCheck_->isChecked());
+            connect(smoothAction, &QAction::triggered, this, [this](bool checked) {
+                setLineVertexSmoothForSelection(checked);
+                refreshObjectDetailsPanel();
+            });
+        }
+
+        if (nextControlAvailable) {
+            QAction *nextControlAction = linePointMenu->addAction(tr("Next control (>>)"));
+            nextControlAction->setCheckable(true);
+            nextControlAction->setChecked(objectDetailsUiState_.linePointNextControlCheck_->isChecked());
+            connect(nextControlAction, &QAction::triggered, this, [this](bool checked) {
+                setLineVertexControlHandleForSelection(false, checked);
+                refreshObjectDetailsPanel();
+            });
+        }
+
+        if (linePointOrientationAvailable) {
+            linePointMenu->addSeparator();
+            addOrientationMenu(linePointMenu);
+        }
+
+        if (leftSizeAvailable) {
+            linePointMenu->addSeparator();
+            QAction *leftSizeAction = linePointMenu->addAction(tr("Left size (-l-size)"));
+            leftSizeAction->setCheckable(true);
+            leftSizeAction->setChecked(objectDetailsUiState_.linePointLeftSizeEnabledCheck_->isChecked());
+            connect(leftSizeAction, &QAction::triggered, this, [this](bool checked) {
+                if (objectDetailsUiState_.linePointLeftSizeEnabledCheck_ == nullptr
+                    || objectDetailsUiState_.linePointLeftSizeSpin_ == nullptr) {
+                    return;
+                }
+                const QSignalBlocker enabledBlocker(objectDetailsUiState_.linePointLeftSizeEnabledCheck_);
+                objectDetailsUiState_.linePointLeftSizeEnabledCheck_->setChecked(checked);
+                objectDetailsUiState_.linePointLeftSizeSpin_->setEnabled(checked);
+                MapEditorObjectDetailsEditController(objectDetailsContext()).applyObjectOrientationEdits();
+                refreshObjectDetailsPanel();
+            });
+            QMenu *leftSizeMenu = linePointMenu->addMenu(tr("Left size"));
+            const qreal currentLeftSize = objectDetailsUiState_.linePointLeftSizeSpin_->value();
+            QAction *currentLeftSizeAction = leftSizeMenu->addAction(
+                tr("Current (%1)").arg(QString::number(currentLeftSize, 'f', 1)));
+            currentLeftSizeAction->setCheckable(true);
+            currentLeftSizeAction->setChecked(objectDetailsUiState_.linePointLeftSizeEnabledCheck_->isChecked());
+            connect(currentLeftSizeAction, &QAction::triggered, this, [this, currentLeftSize]() {
+                if (objectDetailsUiState_.linePointLeftSizeEnabledCheck_ == nullptr
+                    || objectDetailsUiState_.linePointLeftSizeSpin_ == nullptr) {
+                    return;
+                }
+                const QSignalBlocker enabledBlocker(objectDetailsUiState_.linePointLeftSizeEnabledCheck_);
+                const QSignalBlocker spinBlocker(objectDetailsUiState_.linePointLeftSizeSpin_);
+                objectDetailsUiState_.linePointLeftSizeEnabledCheck_->setChecked(true);
+                objectDetailsUiState_.linePointLeftSizeSpin_->setEnabled(true);
+                objectDetailsUiState_.linePointLeftSizeSpin_->setValue(currentLeftSize);
+                MapEditorObjectDetailsEditController(objectDetailsContext()).applyObjectOrientationEdits();
+                refreshObjectDetailsPanel();
+            });
+            leftSizeMenu->addSeparator();
+            for (qreal leftSize : {10.0, 20.0, 40.0, 80.0}) {
+                QAction *leftSizeValueAction = leftSizeMenu->addAction(QString::number(leftSize, 'f', 0));
+                leftSizeValueAction->setCheckable(true);
+                leftSizeValueAction->setChecked(objectDetailsUiState_.linePointLeftSizeEnabledCheck_->isChecked()
+                                                && qAbs(currentLeftSize - leftSize) < 0.001);
+                connect(leftSizeValueAction, &QAction::triggered, this, [this, leftSize]() {
+                    if (objectDetailsUiState_.linePointLeftSizeEnabledCheck_ == nullptr
+                        || objectDetailsUiState_.linePointLeftSizeSpin_ == nullptr) {
+                        return;
+                    }
+                    const QSignalBlocker enabledBlocker(objectDetailsUiState_.linePointLeftSizeEnabledCheck_);
+                    const QSignalBlocker spinBlocker(objectDetailsUiState_.linePointLeftSizeSpin_);
+                    objectDetailsUiState_.linePointLeftSizeEnabledCheck_->setChecked(true);
+                    objectDetailsUiState_.linePointLeftSizeSpin_->setEnabled(true);
+                    objectDetailsUiState_.linePointLeftSizeSpin_->setValue(leftSize);
+                    MapEditorObjectDetailsEditController(objectDetailsContext()).applyObjectOrientationEdits();
+                    refreshObjectDetailsPanel();
+                });
+            }
+            addFocusAction(leftSizeMenu, tr("Edit left size..."), objectDetailsUiState_.linePointLeftSizeSpin_);
+        }
+
+        if (linePointSegmentSubtypeAvailable) {
+            linePointMenu->addSeparator();
+            addLinePointComboMenu(linePointMenu,
+                                  tr("Subtype"),
+                                  objectDetailsUiState_.linePointSegmentSubtypeCombo_,
+                                  tr("No subtype"));
+        }
+
+        if (linePointAltitudeAutoAvailable) {
+            QAction *altitudeAutoAction = linePointMenu->addAction(tr("Altitude (auto)"));
+            altitudeAutoAction->setCheckable(true);
+            altitudeAutoAction->setChecked(objectDetailsUiState_.linePointAltitudeAutoCheck_->isChecked());
+            connect(altitudeAutoAction, &QAction::triggered, this, [this](bool checked) {
+                if (objectDetailsUiState_.linePointAltitudeAutoCheck_ == nullptr) {
+                    return;
+                }
+                const QSignalBlocker blocker(objectDetailsUiState_.linePointAltitudeAutoCheck_);
+                objectDetailsUiState_.linePointAltitudeAutoCheck_->setChecked(checked);
+                MapEditorObjectDetailsEditController(objectDetailsContext()).handleLinePointAltitudeAutoToggled(checked);
+            });
+        }
+
+        if (linePointFlagsAvailable) {
+            linePointMenu->addSeparator();
+            addFocusAction(linePointMenu, tr("Edit additional line-point options..."), objectDetailsUiState_.linePointFlagsEdit_);
+        }
+    }
+
+    const bool pointOrientationAvailable = pointSelected
+        && objectDetailsUiState_.objectOrientationEnabledCheck_ != nullptr
+        && objectDetailsUiState_.objectOrientationSpin_ != nullptr
+        && objectDetailsUiState_.objectOrientationEnabledCheck_->isVisible()
+        && objectDetailsUiState_.objectOrientationEnabledCheck_->isEnabled();
+    if (pointOrientationAvailable) {
+        QMenu *pointGeometryMenu = menu->addMenu(tr("Geometry"));
+        addOrientationMenu(pointGeometryMenu);
+    }
+
+    const bool insertBeforeAvailable = lineVertexSelected
+        && objectDetailsUiState_.vertexInsertBeforeButton_ != nullptr
+        && objectDetailsUiState_.vertexInsertBeforeButton_->isEnabled();
+    const bool insertAfterAvailable = lineVertexSelected
+        && objectDetailsUiState_.vertexInsertAfterButton_ != nullptr
+        && objectDetailsUiState_.vertexInsertAfterButton_->isEnabled();
+    const bool splitAvailable = lineVertexSelected
+        && objectDetailsUiState_.vertexSplitButton_ != nullptr
+        && objectDetailsUiState_.vertexSplitButton_->isEnabled();
+    const bool deletePointAvailable = lineVertexSelected
+        && objectDetailsUiState_.vertexDeleteButton_ != nullptr
+        && objectDetailsUiState_.vertexDeleteButton_->isEnabled();
+    if (insertBeforeAvailable || insertAfterAvailable || splitAvailable || deletePointAvailable) {
+        QMenu *linePointActionsMenu = menu->addMenu(tr("Line Point Actions"));
+        if (insertBeforeAvailable) {
+            QAction *insertBeforeAction = linePointActionsMenu->addAction(objectDetailsUiState_.vertexInsertBeforeButton_->text());
+            connect(insertBeforeAction, &QAction::triggered, this, &MapEditorTab::insertVertexBeforeFromSelectionPanel);
+        }
+
+        if (insertAfterAvailable) {
+            QAction *insertAfterAction = linePointActionsMenu->addAction(objectDetailsUiState_.vertexInsertAfterButton_->text());
+            connect(insertAfterAction, &QAction::triggered, this, &MapEditorTab::insertVertexAfterFromSelectionPanel);
+        }
+
+        if (splitAvailable) {
+            QAction *splitAction = linePointActionsMenu->addAction(tr("Split Here"));
+            connect(splitAction, &QAction::triggered, this, &MapEditorTab::splitLineFromSelectionPanel);
+        }
+
+        if (deletePointAvailable) {
+            QAction *deleteVertexAction = linePointActionsMenu->addAction(objectDetailsUiState_.vertexDeleteButton_->text());
+            connect(deleteVertexAction, &QAction::triggered, this, &MapEditorTab::deleteVertexFromSelectionPanel);
+        }
+    }
+
+    const bool settingsAvailable = objectDetailsUiState_.objectConfigureButton_ != nullptr
+        && objectDetailsUiState_.objectConfigureButton_->isEnabled();
+    const bool deleteAvailable = objectDetailsUiState_.objectDeleteButton_ != nullptr
+        && objectDetailsUiState_.objectDeleteButton_->isEnabled();
+    if (settingsAvailable || deleteAvailable) {
+        QMenu *objectActionsMenu = menu->addMenu(tr("Object Actions"));
+        if (settingsAvailable) {
+            QAction *settingsAction = objectActionsMenu->addAction(tr("Edit Object Settings..."));
+            connect(settingsAction, &QAction::triggered, this, &MapEditorTab::handleConfigureObjectSettingsTriggered);
+        }
+        if (deleteAvailable) {
+            QAction *deleteAction = objectActionsMenu->addAction(objectDetailsUiState_.objectDeleteButton_ != nullptr
+                                                                     ? objectDetailsUiState_.objectDeleteButton_->text()
+                                                                     : tr("Delete Object"));
+            connect(deleteAction, &QAction::triggered, this, &MapEditorTab::deleteSelectedObjectFromSelection);
+        }
+    }
+
+    menu->popup(globalPosition);
 }
 
 void MapEditorTab::handleLineClosedToggled(bool checked)

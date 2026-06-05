@@ -2,6 +2,8 @@
 
 #include "MapEditorViewportInputContext.h"
 
+#include <QPoint>
+
 #include <optional>
 
 class QEvent;
@@ -15,6 +17,7 @@ public:
     explicit MapEditorViewportInputController(MapEditorViewportInputContext context);
 
     std::optional<bool> handleEvent(QObject *watched, QEvent *event);
+    void showContextMenuAtViewportPosition(const QPoint &viewportPosition, const QPoint &globalPosition);
 
 private:
     MapEditorInteractiveDrawMode drawMode() const;

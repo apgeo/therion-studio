@@ -33,7 +33,8 @@ bool isInteractiveMapSelectionItem(const QGraphicsItem *item)
     if (item == nullptr) {
         return false;
     }
-    if (!item->isVisible()) {
+    const bool gatedSelectionItem = item->data(kMapSceneSelectionGatedRole).toBool();
+    if (!item->isVisible() && !gatedSelectionItem) {
         return false;
     }
     if (!(item->flags() & QGraphicsItem::ItemIsSelectable)) {

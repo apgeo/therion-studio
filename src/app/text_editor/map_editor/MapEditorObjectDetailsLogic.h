@@ -5,6 +5,7 @@
 #include <QPointF>
 #include <QSet>
 #include <QString>
+#include <QStringList>
 
 #include <optional>
 
@@ -35,4 +36,14 @@ std::optional<qreal> linePointOrientationForSourceVertex(const QString &document
 std::optional<qreal> linePointLeftSizeForSourceVertex(const QString &documentText,
                                                       int lineNumber,
                                                       int sourceVertexIndex);
+QString linePointSegmentSubtypeFromStandaloneRows(const QStringList &rows);
+bool linePointAltitudeAutoFromStandaloneRows(const QStringList &rows);
+QStringList linePointRowsWithoutStructuredStandaloneOptions(const QStringList &rows,
+                                                            bool manageSegmentSubtype = true,
+                                                            bool manageAltitudeAuto = true);
+QStringList linePointRowsWithStructuredStandaloneOptions(const QStringList &rows,
+                                                         const QString &segmentSubtype,
+                                                         bool altitudeAuto,
+                                                         bool manageSegmentSubtype = true,
+                                                         bool manageAltitudeAuto = true);
 }

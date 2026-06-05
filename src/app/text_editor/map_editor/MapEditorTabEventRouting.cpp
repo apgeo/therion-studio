@@ -5,10 +5,12 @@
 #include <QComboBox>
 #include <QEvent>
 #include <QFrame>
+#include <QGraphicsSceneMouseEvent>
 #include <QGraphicsView>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QMainWindow>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QPlainTextEdit>
 #include <QTabWidget>
@@ -40,6 +42,63 @@ bool isTextEditingReceiver(QObject *receiver)
 
     return false;
 }
+
+bool isMapSecondaryClickEvent(const QEvent *event, QPoint *globalPosition)
+{
+    if (event == nullptr || globalPosition == nullptr) {
+        return false;
+    }
+
+    if (event->type() == QEvent::MouseButtonPress) {
+        const auto *mouseEvent = static_cast<const QMouseEvent *>(event);
+        const bool secondaryClick = mouseEvent->button() == Qt::RightButton
+            || (mouseEvent->button() == Qt::LeftButton
+                && mouseEvent->modifiers().testFlag(Qt::ControlModifier));
+        if (!secondaryClick) {
+            return false;
+        }
+        *globalPosition = mouseEvent->globalPosition().toPoint();
+        return true;
+    }
+
+    if (event->type() == QEvent::ContextMenu) {
+        const auto *contextMenuEvent = static_cast<const QContextMenuEvent *>(event);
+        *globalPosition = contextMenuEvent->globalPos();
+        return true;
+    }
+
+    if (event->type() == QEvent::GraphicsSceneMousePress) {
+        const auto *sceneMouseEvent = static_cast<const QGraphicsSceneMouseEvent *>(event);
+        const bool secondaryClick = sceneMouseEvent->button() == Qt::RightButton
+            || (sceneMouseEvent->button() == Qt::LeftButton
+                && sceneMouseEvent->modifiers().testFlag(Qt::ControlModifier));
+        if (!secondaryClick) {
+            return false;
+        }
+        *globalPosition = sceneMouseEvent->screenPos();
+        return true;
+    }
+
+    if (event->type() == QEvent::GraphicsSceneContextMenu) {
+        const auto *sceneContextMenuEvent = static_cast<const QGraphicsSceneContextMenuEvent *>(event);
+        *globalPosition = sceneContextMenuEvent->screenPos();
+        return true;
+    }
+
+    return false;
+}
+
+bool globalPositionInsideVisibleMenu(const QPoint &globalPosition)
+{
+    const QWidgetList widgets = QApplication::topLevelWidgets();
+    for (QWidget *widget : widgets) {
+        auto *menu = qobject_cast<QMenu *>(widget);
+        if (menu != nullptr && menu->isVisible() && menu->geometry().contains(globalPosition)) {
+            return true;
+        }
+    }
+    return false;
+}
 }
 
 bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
@@ -54,7 +113,6 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         default:
             break;
         }
-        return QWidget::eventFilter(watched, event);
     }
 
     if (event == nullptr) {
@@ -65,6 +123,23 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
         && event->type() == QEvent::FocusOut
         && objectDetailsUiState_.linePointFlagsDirty_) {
         applyLinePointFlagsEdits();
+    }
+
+    QPoint secondaryClickGlobalPosition;
+    if (mapView_ != nullptr
+        && mapView_->viewport() != nullptr
+        && (watched == qApp || isMapEditorEventReceiver(watched) || mapSelectionContextMenu_ != nullptr)
+        && isMapSecondaryClickEvent(event, &secondaryClickGlobalPosition)) {
+        if (mapSelectionContextMenu_ != nullptr && globalPositionInsideVisibleMenu(secondaryClickGlobalPosition)) {
+            return QWidget::eventFilter(watched, event);
+        }
+        const QPoint viewportPosition = mapView_->viewport()->mapFromGlobal(secondaryClickGlobalPosition);
+        if (mapView_->viewport()->rect().contains(viewportPosition)) {
+            MapEditorViewportInputController(viewportInputContext())
+                .showContextMenuAtViewportPosition(viewportPosition, secondaryClickGlobalPosition);
+            event->accept();
+            return true;
+        }
     }
 
     if (mapView_ != nullptr
@@ -163,6 +238,7 @@ bool MapEditorTab::isMapEditorEventReceiver(QObject *receiver) const
         if (object == this
             || object == mapPaneContainer_
             || object == mapView_
+            || object == mapScene_
             || object == objectDetailsPanel_
             || object == mapInspectorTabs_) {
             return true;

@@ -37,6 +37,8 @@ MapEditorViewportInputContext MapEditorTab::viewportInputContext()
         .autoFitEnabled = &autoFitEnabled_,
         .fitBackgroundRequested = &fitBackgroundRequested_,
         .mapPanActive = &mapPanActive_,
+        .mapPanMoved = &mapPanMoved_,
+        .mapPanStartPosition = &mapPanStartPosition_,
         .mapPanLastPosition = &mapPanLastPosition_,
         .primaryPointerInteractionActive = &primaryPointerInteractionActive_,
         .touchPanCandidate = &touchPanCandidate_,
@@ -123,6 +125,47 @@ MapEditorViewportInputContext MapEditorTab::viewportInputContext()
         },
         .fitMapToViewAfterViewportResize = [this](bool includeBackgroundImages) {
             fitMapToViewAfterViewportResize(includeBackgroundImages);
+        },
+        .prepareSelectionContextMenuState = [this](int lineNumber,
+                                                   int sourceVertexIndex,
+                                                   const QString &geometryKind,
+                                                   const QPointF &scenePosition) {
+            if (lineNumber <= 0) {
+                return;
+            }
+
+            objectSelectionState_.selectedObjectLineNumber_ = lineNumber;
+            objectSelectionState_.selectedObjectVertexIndex_ = sourceVertexIndex;
+            objectSelectionState_.selectedObjectCoordinate_.reset();
+
+            QString normalizedKind = geometryKind.trimmed().toLower();
+            if (normalizedKind.startsWith(QStringLiteral("line"))) {
+                normalizedKind = QStringLiteral("line");
+            } else if (normalizedKind.startsWith(QStringLiteral("area"))) {
+                normalizedKind = QStringLiteral("area");
+            }
+            if (normalizedKind.isEmpty()) {
+                const QVector<TherionParsedLine> parsedLines = parsedLinesForCurrentDocument();
+                for (const TherionParsedLine &parsedLine : parsedLines) {
+                    if (parsedLine.lineNumber == lineNumber) {
+                        normalizedKind = objectKindForDirective(parsedLine.directive);
+                        break;
+                    }
+                }
+            }
+            if (normalizedKind.isEmpty()) {
+                normalizedKind = QStringLiteral("object");
+            }
+
+            objectSelectionState_.selectedObjectKind_ = normalizedKind;
+            if (sourceVertexIndex >= 0) {
+                objectSelectionState_.selectedObjectCoordinate_ = sourcePointFromScenePosition(scenePosition);
+            }
+            refreshObjectDetailsPanel();
+            updateCommandSurfaceState();
+        },
+        .showSelectionContextMenu = [this](const QPoint &globalPosition) {
+            showMapSelectionContextMenu(globalPosition);
         },
         .insertLineVertexFromSelection = [this]() {
             return insertLineVertexFromSelection(false);

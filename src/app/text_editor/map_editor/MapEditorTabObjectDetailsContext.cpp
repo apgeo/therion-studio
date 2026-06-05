@@ -48,6 +48,15 @@ bool pendingLabelTextVisible(const QString &commandKind, const QString &type, co
         && (type.trimmed().compare(QStringLiteral("label"), Qt::CaseInsensitive) == 0
             || !text.trimmed().isEmpty());
 }
+
+bool pendingValueVisible(const InspectorSymbolCatalog &catalog,
+                         const QString &commandKind,
+                         const QString &type,
+                         const QString &value)
+{
+    return inspectorValueOptionSupportedForCommandType(catalog, commandKind, type)
+        || !value.trimmed().isEmpty();
+}
 }
 
 void MapEditorTab::beginPendingInsertObject(const QString &commandKind)
@@ -69,6 +78,7 @@ void MapEditorTab::beginPendingInsertObject(const QString &commandKind)
         fields.nameVisible = true;
     }
     fields.textVisible = pendingLabelTextVisible(normalizedCommand, fields.type, fields.text);
+    fields.valueVisible = pendingValueVisible(inspectorSymbolCatalog_, normalizedCommand, fields.type, fields.value);
     interactiveDrawState_.pendingInsertFields_ = fields;
     interactiveDrawState_.pendingTargetScrapIdentifier_.clear();
     if (normalizedCommand != QStringLiteral("scrap")) {
@@ -161,6 +171,11 @@ void MapEditorTab::setPendingInsertQuickFields(const InspectorObjectQuickFields 
         pendingLabelTextVisible(normalizedCommand,
                                 interactiveDrawState_.pendingInsertFields_.type,
                                 interactiveDrawState_.pendingInsertFields_.text);
+    interactiveDrawState_.pendingInsertFields_.valueVisible =
+        pendingValueVisible(inspectorSymbolCatalog_,
+                            normalizedCommand,
+                            interactiveDrawState_.pendingInsertFields_.type,
+                            interactiveDrawState_.pendingInsertFields_.value);
 }
 
 TherionDraftObjectOptions MapEditorTab::pendingDraftObjectOptions(const QString &commandKind) const
@@ -182,6 +197,8 @@ TherionDraftObjectOptions MapEditorTab::pendingDraftObjectOptions(const QString 
     }
     options.text = interactiveDrawState_.pendingInsertFields_.text;
     options.textEnabled = interactiveDrawState_.pendingInsertFields_.textVisible;
+    options.value = interactiveDrawState_.pendingInsertFields_.value;
+    options.valueEnabled = interactiveDrawState_.pendingInsertFields_.valueVisible;
     return options;
 }
 
@@ -247,6 +264,7 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .quickIdentifierLabel = objectDetailsUiState_.objectQuickIdentifierLabel_,
         .quickNameLabel = objectDetailsUiState_.objectQuickNameLabel_,
         .quickTextLabel = objectDetailsUiState_.objectQuickTextLabel_,
+        .quickValueLabel = objectDetailsUiState_.objectQuickValueLabel_,
         .quickProjectionLabel = objectDetailsUiState_.objectQuickProjectionLabel_,
         .quickTypeLabel = objectDetailsUiState_.objectQuickTypeLabel_,
         .quickSubtypeLabel = objectDetailsUiState_.objectQuickSubtypeLabel_,
@@ -259,6 +277,7 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .quickIdentifierEdit = objectDetailsUiState_.objectQuickIdentifierEdit_,
         .quickNameEdit = objectDetailsUiState_.objectQuickNameEdit_,
         .quickTextEdit = objectDetailsUiState_.objectQuickTextEdit_,
+        .quickValueEdit = objectDetailsUiState_.objectQuickValueEdit_,
         .stylePreview = objectDetailsUiState_.objectStylePreview_,
         .vertexActionsEditor = objectDetailsUiState_.vertexActionsEditor_,
         .vertexInsertBeforeButton = objectDetailsUiState_.vertexInsertBeforeButton_,
@@ -274,6 +293,9 @@ MapEditorObjectDetailsContext MapEditorTab::objectDetailsContext()
         .orientationSpin = objectDetailsUiState_.objectOrientationSpin_,
         .linePointLeftSizeEnabledCheck = objectDetailsUiState_.linePointLeftSizeEnabledCheck_,
         .linePointLeftSizeSpin = objectDetailsUiState_.linePointLeftSizeSpin_,
+        .linePointSegmentSubtypeLabel = objectDetailsUiState_.linePointSegmentSubtypeLabel_,
+        .linePointSegmentSubtypeCombo = objectDetailsUiState_.linePointSegmentSubtypeCombo_,
+        .linePointAltitudeAutoCheck = objectDetailsUiState_.linePointAltitudeAutoCheck_,
         .linePointFlagsEditor = objectDetailsUiState_.linePointFlagsEditor_,
         .linePointFlagsEdit = objectDetailsUiState_.linePointFlagsEdit_,
         .lineOptionsEditor = objectDetailsUiState_.lineOptionsEditor_,

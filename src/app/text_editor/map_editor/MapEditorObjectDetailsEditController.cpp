@@ -744,7 +744,9 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
         || context_.quickSubtypeCombo == nullptr
         || context_.quickIdentifierEdit == nullptr
         || context_.quickNameEdit == nullptr
-        || context_.quickTextEdit == nullptr) {
+        || context_.quickTextEdit == nullptr
+        || context_.quickValueEdit == nullptr
+        || context_.objectQuickCommandKind == nullptr) {
         return;
     }
 
@@ -756,7 +758,9 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
             pendingFields->identifier = context_.quickIdentifierEdit->text();
             pendingFields->name = context_.quickNameEdit->text();
             pendingFields->text = context_.quickTextEdit->text();
+            pendingFields->value = context_.quickValueEdit->text();
             pendingFields->textVisible = context_.quickTextEdit->isVisible();
+            pendingFields->valueVisible = context_.quickValueEdit->isVisible();
             context_.setPendingInsertQuickFields(pendingFields.value());
             context_.refreshObjectDetailsPanel();
             return;
@@ -800,6 +804,23 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
         *context_.toolbarStatusNote = errorMessage.isEmpty()
             ? tr("Failed to update label text.")
             : tr("Failed to update label text: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        context_.refreshObjectDetailsPanel();
+        return;
+    }
+
+    const bool valueSupported =
+        inspectorValueOptionSupportedForCommandType(inspectorSymbolCatalog(),
+                                                    *context_.objectQuickCommandKind,
+                                                    context_.quickTypeCombo->currentText());
+    if ((context_.quickValueEdit->isVisible() || valueSupported)
+        && !TherionDocumentEditor::rewriteMapObjectValueOption(&afterText,
+                                                               targetLineNumber,
+                                                               valueSupported ? context_.quickValueEdit->text() : QString(),
+                                                               &errorMessage)) {
+        *context_.toolbarStatusNote = errorMessage.isEmpty()
+            ? tr("Failed to update point value.")
+            : tr("Failed to update point value: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
         context_.refreshObjectDetailsPanel();
         return;
@@ -884,9 +905,9 @@ void MapEditorObjectDetailsEditController::updateObjectQuickSubtypeChoices()
     const QString currentSubtype = context_.quickSubtypeCombo->currentText();
     const InspectorSymbolCatalog &catalog = inspectorSymbolCatalog();
     setEditableComboValues(context_.quickSubtypeCombo,
-                           inspectorSubtypeValuesForCommandType(catalog,
-                                                                *context_.objectQuickCommandKind,
-                                                                context_.quickTypeCombo->currentText()),
+                           inspectorSubtypeValuesForCommandTypeWithEmptyChoice(catalog,
+                                                                               *context_.objectQuickCommandKind,
+                                                                               context_.quickTypeCombo->currentText()),
                            currentSubtype);
 }
 
@@ -941,17 +962,16 @@ void MapEditorObjectDetailsEditController::handleLinePointNextControlToggled(boo
     context_.refreshObjectDetailsPanel();
 }
 
-void MapEditorObjectDetailsEditController::applyLinePointFlagsEdits()
+bool MapEditorObjectDetailsEditController::applyLinePointStandaloneRowsEdits(const QStringList &updatedRows)
 {
     if (context_.textEditor == nullptr
-        || context_.linePointFlagsEdit == nullptr
         || context_.toolbarStatusNote == nullptr
         || context_.refreshToolbarSummary == nullptr) {
-        return;
+        return false;
     }
     const std::optional<std::pair<int, int>> lineAndVertex = selectedLineAndSourceVertex(context_);
     if (!lineAndVertex.has_value()) {
-        return;
+        return false;
     }
 
     const int lineNumber = lineAndVertex->first;
@@ -961,20 +981,19 @@ void MapEditorObjectDetailsEditController::applyLinePointFlagsEdits()
     if (!lineFeature.has_value() || lineFeature->kind != MapGeometryFeature::Kind::Line) {
         (*context_.toolbarStatusNote) = tr("Edit line-point options failed: line geometry could not be resolved.");
         context_.refreshToolbarSummary();
-        return;
+        return false;
     }
 
     const int vertexIndex = lineVertexIndexForSourceVertex(lineFeature.value(), sourceVertexIndex);
     if (vertexIndex < 0 || vertexIndex >= lineFeature->lineVertices.size()) {
         (*context_.toolbarStatusNote) = tr("Edit line-point options failed: selected line point could not be resolved.");
         context_.refreshToolbarSummary();
-        return;
+        return false;
     }
 
     QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
-    const QStringList updatedRows = trimmedLinePointStandaloneRows(context_.linePointFlagsEdit->toPlainText());
     if (editedVertices.at(vertexIndex).standaloneOptionRows == updatedRows) {
-        return;
+        return true;
     }
     editedVertices[vertexIndex].standaloneOptionRows = updatedRows;
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
@@ -986,14 +1005,14 @@ void MapEditorObjectDetailsEditController::applyLinePointFlagsEdits()
             ? tr("Edit line-point options failed.")
             : tr("Edit line-point options failed: %1").arg(errorMessage);
         context_.refreshToolbarSummary();
-        return;
+        return false;
     }
     if (afterText == beforeText) {
-        return;
+        return true;
     }
 
     if (!requireSourceTransaction(context_, tr("Cannot update line-point options without map source transaction support."))) {
-        return;
+        return false;
     }
     context_.applySourceTextChangeWithSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
 
@@ -1007,7 +1026,74 @@ void MapEditorObjectDetailsEditController::applyLinePointFlagsEdits()
             : sourceVertexIndex;
         context_.restoreLineAnchorSelectionLater(lineNumber, restoredVertex);
     }
-    context_.refreshObjectDetailsPanel();
+    return true;
+}
+
+void MapEditorObjectDetailsEditController::handleLinePointSegmentSubtypeChanged()
+{
+    if (*context_.updatingUi
+        || context_.linePointSegmentSubtypeCombo == nullptr
+        || context_.linePointFlagsEdit == nullptr) {
+        return;
+    }
+
+    const QStringList editorRows = trimmedLinePointStandaloneRows(context_.linePointFlagsEdit->toPlainText());
+    const bool altitudeManaged = context_.linePointAltitudeAutoCheck != nullptr
+        && context_.linePointAltitudeAutoCheck->isVisible();
+    const bool altitudeAuto = altitudeManaged && context_.linePointAltitudeAutoCheck->isChecked();
+    if (applyLinePointStandaloneRowsEdits(linePointRowsWithStructuredStandaloneOptions(editorRows,
+                                                                                       context_.linePointSegmentSubtypeCombo->currentText(),
+                                                                                       altitudeAuto,
+                                                                                       true,
+                                                                                       altitudeManaged))) {
+        context_.refreshObjectDetailsPanel();
+    }
+}
+
+void MapEditorObjectDetailsEditController::handleLinePointAltitudeAutoToggled(bool checked)
+{
+    if (*context_.updatingUi
+        || context_.linePointFlagsEdit == nullptr) {
+        return;
+    }
+
+    const QStringList editorRows = trimmedLinePointStandaloneRows(context_.linePointFlagsEdit->toPlainText());
+    const bool segmentManaged = context_.linePointSegmentSubtypeCombo != nullptr
+        && context_.linePointSegmentSubtypeCombo->isVisible();
+    const QString segmentSubtype = segmentManaged
+        ? context_.linePointSegmentSubtypeCombo->currentText()
+        : QString();
+    if (applyLinePointStandaloneRowsEdits(linePointRowsWithStructuredStandaloneOptions(editorRows,
+                                                                                       segmentSubtype,
+                                                                                       checked,
+                                                                                       segmentManaged,
+                                                                                       true))) {
+        context_.refreshObjectDetailsPanel();
+    }
+}
+
+void MapEditorObjectDetailsEditController::applyLinePointFlagsEdits()
+{
+    if (context_.linePointFlagsEdit == nullptr) {
+        return;
+    }
+
+    const QStringList editorRows = trimmedLinePointStandaloneRows(context_.linePointFlagsEdit->toPlainText());
+    const bool segmentManaged = context_.linePointSegmentSubtypeCombo != nullptr
+        && context_.linePointSegmentSubtypeCombo->isVisible();
+    const bool altitudeManaged = context_.linePointAltitudeAutoCheck != nullptr
+        && context_.linePointAltitudeAutoCheck->isVisible();
+    const QString segmentSubtype = segmentManaged
+        ? context_.linePointSegmentSubtypeCombo->currentText()
+        : QString();
+    const bool altitudeAuto = altitudeManaged && context_.linePointAltitudeAutoCheck->isChecked();
+    if (applyLinePointStandaloneRowsEdits(linePointRowsWithStructuredStandaloneOptions(editorRows,
+                                                                                       segmentSubtype,
+                                                                                       altitudeAuto,
+                                                                                       segmentManaged,
+                                                                                       altitudeManaged))) {
+        context_.refreshObjectDetailsPanel();
+    }
 }
 
 }

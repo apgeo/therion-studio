@@ -17,6 +17,8 @@
 #include <QPalette>
 #include <QSvgRenderer>
 
+#include <algorithm>
+
 namespace TherionStudio
 {
 namespace
@@ -189,6 +191,31 @@ bool inspectorObjectUsesTextField(const QString &commandKind, const QString &typ
 
     return type.trimmed().compare(QStringLiteral("label"), Qt::CaseInsensitive) == 0
         || !text.trimmed().isEmpty();
+}
+
+QSet<QString> pointValueOptionTypes()
+{
+    return {
+        QStringLiteral("altitude"),
+        QStringLiteral("date"),
+        QStringLiteral("dimensions"),
+        QStringLiteral("height"),
+        QStringLiteral("passage-height"),
+    };
+}
+
+bool commandHasOption(const QJsonObject &commandObject, const QString &optionKey)
+{
+    const QString normalizedOption = optionKey.trimmed().toLower();
+    const QJsonArray options = commandObject.value(QStringLiteral("options")).toArray();
+    for (const QJsonValue &optionValue : options) {
+        const QJsonObject optionObject = optionValue.toObject();
+        if (optionObject.value(QStringLiteral("option_key")).toString().trimmed().toLower() == normalizedOption) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 QString inspectorMapObjectIconName(const ProjectStructureEntry &entry)
@@ -585,6 +612,12 @@ void appendInspectorCatalogToken(QStringList &tokens, const QString &token)
     tokens.append(normalized);
 }
 
+QStringList sortedInspectorCatalogTokens(QStringList values)
+{
+    std::sort(values.begin(), values.end());
+    return values;
+}
+
 QStringList defaultInspectorProjectionValues()
 {
     return {
@@ -622,6 +655,10 @@ void appendInspectorCommandMetadata(InspectorSymbolCatalog *catalog,
         && commandName != QStringLiteral("line")
         && commandName != QStringLiteral("area")) {
         return;
+    }
+
+    if (commandName == QStringLiteral("point") && commandHasOption(commandObject, QStringLiteral("-value"))) {
+        catalog->valueOptionTypesByCommand[commandName] = pointValueOptionTypes();
     }
 
     const QJsonArray typeValues = commandObject.value(QStringLiteral("type_values")).toArray();
@@ -677,19 +714,38 @@ InspectorSymbolCatalog inspectorSymbolCatalogFromCommandCatalog(const QJsonObjec
 
 QStringList inspectorTypeValuesForCommand(const InspectorSymbolCatalog &catalog, const QString &commandKind)
 {
-    return catalog.typeValuesByCommand.value(commandKind.trimmed().toLower());
+    return sortedInspectorCatalogTokens(catalog.typeValuesByCommand.value(commandKind.trimmed().toLower()));
 }
 
 QStringList inspectorSubtypeValuesForCommandType(const InspectorSymbolCatalog &catalog,
                                                  const QString &commandKind,
                                                  const QString &type)
 {
-    return catalog.subtypeValuesByCommandAndType.value(commandKind.trimmed().toLower()).value(type.trimmed().toLower());
+    return sortedInspectorCatalogTokens(catalog.subtypeValuesByCommandAndType.value(commandKind.trimmed().toLower()).value(type.trimmed().toLower()));
+}
+
+QStringList inspectorSubtypeValuesForCommandTypeWithEmptyChoice(const InspectorSymbolCatalog &catalog,
+                                                                const QString &commandKind,
+                                                                const QString &type)
+{
+    QStringList values = inspectorSubtypeValuesForCommandType(catalog, commandKind, type);
+    if (!values.contains(QString())) {
+        values.prepend(QString());
+    }
+    return values;
 }
 
 QStringList inspectorProjectionValues(const InspectorSymbolCatalog &catalog)
 {
     return catalog.projectionValues;
+}
+
+bool inspectorValueOptionSupportedForCommandType(const InspectorSymbolCatalog &catalog,
+                                                 const QString &commandKind,
+                                                 const QString &type)
+{
+    const QSet<QString> supportedTypes = catalog.valueOptionTypesByCommand.value(commandKind.trimmed().toLower());
+    return supportedTypes.contains(type.trimmed().toLower());
 }
 
 void setEditableComboValues(QComboBox *combo, const QStringList &values, const QString &currentText)
@@ -735,11 +791,13 @@ std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLi
         fields.identifier = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-id"));
         fields.name = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-name"));
         fields.text = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-text"));
+        fields.value = inspectorBracketedOptionValue(parsedLine.tokens, QStringLiteral("-value"));
         if (fields.name.isEmpty() && station) {
             fields.name = inspectorStationNameToken(parsedLine);
         }
         fields.nameVisible = station || !fields.name.isEmpty();
         fields.textVisible = inspectorObjectUsesTextField(fields.commandKind, fields.type, fields.text);
+        fields.valueVisible = !fields.value.trimmed().isEmpty();
         return fields;
     }
 

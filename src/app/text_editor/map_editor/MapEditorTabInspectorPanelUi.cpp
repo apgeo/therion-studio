@@ -125,20 +125,23 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.objectQuickIdentifierEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickNameEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickTextEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
+    objectDetailsUiState_.objectQuickValueEdit_ = new QLineEdit(objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickIdentifierLabel_ = new QLabel(tr("ID"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickNameLabel_ = new QLabel(tr("Name"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickTextLabel_ = new QLabel(tr("Text (-text)"), objectDetailsUiState_.objectQuickFieldsEditor_);
+    objectDetailsUiState_.objectQuickValueLabel_ = new QLabel(tr("Value (-value)"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickProjectionLabel_ = new QLabel(tr("Projection"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickTypeLabel_ = new QLabel(tr("Type"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickSubtypeLabel_ = new QLabel(tr("Subtype"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectQuickTargetScrapLabel_ = new QLabel(tr("Insert into"), objectDetailsUiState_.objectQuickFieldsEditor_);
-    objectDetailsUiState_.objectStylePreviewLabel_ = new QLabel(tr("Style preview"), objectDetailsUiState_.objectQuickFieldsEditor_);
+    objectDetailsUiState_.objectStylePreviewLabel_ = new QLabel(tr("Preview"), objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectStylePreview_ = new MapEditorStylePreviewWidget(objectDetailsUiState_.objectQuickFieldsEditor_);
     objectDetailsUiState_.objectStylePreview_->setObjectName(QStringLiteral("mapObjectStylePreview"));
     objectDetailsUiState_.objectStylePreview_->clearStyleSelection();
     connect(objectDetailsUiState_.objectQuickIdentifierEdit_, &QLineEdit::editingFinished, this, &MapEditorTab::applyObjectQuickFieldEdits);
     connect(objectDetailsUiState_.objectQuickNameEdit_, &QLineEdit::editingFinished, this, &MapEditorTab::applyObjectQuickFieldEdits);
     connect(objectDetailsUiState_.objectQuickTextEdit_, &QLineEdit::editingFinished, this, &MapEditorTab::applyObjectQuickFieldEdits);
+    connect(objectDetailsUiState_.objectQuickValueEdit_, &QLineEdit::editingFinished, this, &MapEditorTab::applyObjectQuickFieldEdits);
     connect(objectDetailsUiState_.objectQuickTypeCombo_, qOverload<int>(&QComboBox::activated), this, [this]() {
         updateObjectQuickSubtypeChoices();
         applyObjectQuickFieldEdits();
@@ -166,10 +169,10 @@ void MapEditorTab::buildInspectorPanelUi()
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickProjectionLabel_, objectDetailsUiState_.objectQuickProjectionCombo_);
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickTypeLabel_, objectDetailsUiState_.objectQuickTypeCombo_);
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickSubtypeLabel_, objectDetailsUiState_.objectQuickSubtypeCombo_);
-    objectQuickForm->addRow(objectDetailsUiState_.objectStylePreviewLabel_);
-    objectQuickForm->addRow(objectDetailsUiState_.objectStylePreview_);
+    objectQuickForm->addRow(objectDetailsUiState_.objectStylePreviewLabel_, objectDetailsUiState_.objectStylePreview_);
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickNameLabel_, objectDetailsUiState_.objectQuickNameEdit_);
     objectQuickForm->addRow(objectDetailsUiState_.objectQuickTextLabel_, objectDetailsUiState_.objectQuickTextEdit_);
+    objectQuickForm->addRow(objectDetailsUiState_.objectQuickValueLabel_, objectDetailsUiState_.objectQuickValueEdit_);
     objectSelectionLayout->addWidget(objectDetailsUiState_.objectQuickFieldsEditor_);
     selectionLayout->addWidget(objectDetailsUiState_.objectSelectionSection_);
 
@@ -190,7 +193,7 @@ void MapEditorTab::buildInspectorPanelUi()
     selectionLayout->addWidget(objectDetailsUiState_.geometrySelectionSection_);
 
     QVBoxLayout *vertexSelectionLayout = nullptr;
-    objectDetailsUiState_.vertexSelectionSection_ = createSelectionSection(tr("Point Details"), &vertexSelectionLayout, &objectDetailsUiState_.vertexSelectionTitleLabel_);
+    objectDetailsUiState_.vertexSelectionSection_ = createSelectionSection(tr("Geometry"), &vertexSelectionLayout, &objectDetailsUiState_.vertexSelectionTitleLabel_);
 
     objectDetailsUiState_.objectOrientationEditor_ = new QWidget(objectDetailsUiState_.vertexSelectionSection_);
     auto *orientationLayout = new QVBoxLayout(objectDetailsUiState_.objectOrientationEditor_);
@@ -214,6 +217,15 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.linePointLeftSizeSpin_->setDecimals(1);
     objectDetailsUiState_.linePointLeftSizeSpin_->setRange(0.1, 100000.0);
     objectDetailsUiState_.linePointLeftSizeSpin_->setSingleStep(1.0);
+    auto *linePointSubtypeEditor = new QWidget(objectDetailsUiState_.objectOrientationEditor_);
+    auto *linePointSubtypeLayout = new QHBoxLayout(linePointSubtypeEditor);
+    linePointSubtypeLayout->setContentsMargins(0, 0, 0, 0);
+    linePointSubtypeLayout->setSpacing(8);
+    objectDetailsUiState_.linePointSegmentSubtypeLabel_ = new QLabel(tr("Subtype"), linePointSubtypeEditor);
+    objectDetailsUiState_.linePointSegmentSubtypeCombo_ = new QComboBox(linePointSubtypeEditor);
+    configureSelectionEditableCombo(objectDetailsUiState_.linePointSegmentSubtypeCombo_, QStringLiteral("linePointSegmentSubtypeCombo"));
+    objectDetailsUiState_.linePointSegmentSubtypeCombo_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    objectDetailsUiState_.linePointAltitudeAutoCheck_ = new QCheckBox(tr("Altitude (auto)"), objectDetailsUiState_.objectOrientationEditor_);
     objectDetailsUiState_.linePointFlagsEditor_ = new QWidget(objectDetailsUiState_.objectOrientationEditor_);
     auto *linePointFlagsLayout = new QVBoxLayout(objectDetailsUiState_.linePointFlagsEditor_);
     linePointFlagsLayout->setContentsMargins(0, 0, 0, 0);
@@ -221,10 +233,9 @@ void MapEditorTab::buildInspectorPanelUi()
     auto *linePointFlagsLabel = new QLabel(tr("Additional line-point options"), objectDetailsUiState_.linePointFlagsEditor_);
     objectDetailsUiState_.linePointFlagsEdit_ = new QPlainTextEdit(objectDetailsUiState_.linePointFlagsEditor_);
     objectDetailsUiState_.linePointFlagsEdit_->setObjectName(QStringLiteral("linePointFlagsEdit"));
-    objectDetailsUiState_.linePointFlagsEdit_->setPlaceholderText(tr("Examples: altitude .\nsubtype blocks"));
     objectDetailsUiState_.linePointFlagsEdit_->setTabChangesFocus(true);
     {
-        const int visibleLineCount = 5;
+        const int visibleLineCount = 3;
         const int textHeight = objectDetailsUiState_.linePointFlagsEdit_->fontMetrics().lineSpacing() * visibleLineCount;
         const int framePadding = 12;
         objectDetailsUiState_.linePointFlagsEdit_->setFixedHeight(textHeight + framePadding);
@@ -244,15 +255,24 @@ void MapEditorTab::buildInspectorPanelUi()
     connect(objectDetailsUiState_.linePointNextControlCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLinePointNextControlToggled);
     connect(objectDetailsUiState_.linePointLeftSizeEnabledCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLinePointLeftSizeEnabledToggled);
     connect(objectDetailsUiState_.linePointLeftSizeSpin_, &QDoubleSpinBox::valueChanged, this, &MapEditorTab::handleLinePointLeftSizeValueChanged);
+    connect(objectDetailsUiState_.linePointSegmentSubtypeCombo_, qOverload<int>(&QComboBox::activated), this, &MapEditorTab::handleLinePointSegmentSubtypeChanged);
+    if (objectDetailsUiState_.linePointSegmentSubtypeCombo_->lineEdit() != nullptr) {
+        connect(objectDetailsUiState_.linePointSegmentSubtypeCombo_->lineEdit(), &QLineEdit::editingFinished, this, &MapEditorTab::handleLinePointSegmentSubtypeChanged);
+    }
+    connect(objectDetailsUiState_.linePointAltitudeAutoCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLinePointAltitudeAutoToggled);
     linePointControlLayout->addWidget(objectDetailsUiState_.linePointPreviousControlCheck_);
     linePointControlLayout->addWidget(objectDetailsUiState_.linePointSmoothCheck_);
     linePointControlLayout->addWidget(objectDetailsUiState_.linePointNextControlCheck_);
     linePointControlLayout->addStretch(1);
+    linePointSubtypeLayout->addWidget(objectDetailsUiState_.linePointSegmentSubtypeLabel_);
+    linePointSubtypeLayout->addWidget(objectDetailsUiState_.linePointSegmentSubtypeCombo_, 1);
     orientationLayout->addWidget(linePointControlEditor);
     orientationLayout->addWidget(objectDetailsUiState_.objectOrientationEnabledCheck_);
     orientationLayout->addWidget(objectDetailsUiState_.objectOrientationSpin_);
     orientationLayout->addWidget(objectDetailsUiState_.linePointLeftSizeEnabledCheck_);
     orientationLayout->addWidget(objectDetailsUiState_.linePointLeftSizeSpin_);
+    orientationLayout->addWidget(linePointSubtypeEditor);
+    orientationLayout->addWidget(objectDetailsUiState_.linePointAltitudeAutoCheck_);
     orientationLayout->addWidget(objectDetailsUiState_.linePointFlagsEditor_);
     vertexSelectionLayout->addWidget(objectDetailsUiState_.objectOrientationEditor_);
 

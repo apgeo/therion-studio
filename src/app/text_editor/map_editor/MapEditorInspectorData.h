@@ -4,6 +4,7 @@
 #include <QJsonObject>
 #include <QPointF>
 #include <QRectF>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -27,8 +28,10 @@ struct InspectorObjectQuickFields
     QString identifier;
     QString name;
     QString text;
+    QString value;
     bool nameVisible = false;
     bool textVisible = false;
+    bool valueVisible = false;
     bool typeEditable = true;
 };
 
@@ -36,6 +39,7 @@ struct InspectorSymbolCatalog
 {
     QHash<QString, QStringList> typeValuesByCommand;
     QHash<QString, QHash<QString, QStringList>> subtypeValuesByCommandAndType;
+    QHash<QString, QSet<QString>> valueOptionTypesByCommand;
     QStringList projectionValues;
 };
 
@@ -72,7 +76,13 @@ QStringList inspectorTypeValuesForCommand(const InspectorSymbolCatalog &catalog,
 QStringList inspectorSubtypeValuesForCommandType(const InspectorSymbolCatalog &catalog,
                                                  const QString &commandKind,
                                                  const QString &type);
+QStringList inspectorSubtypeValuesForCommandTypeWithEmptyChoice(const InspectorSymbolCatalog &catalog,
+                                                                const QString &commandKind,
+                                                                const QString &type);
 QStringList inspectorProjectionValues(const InspectorSymbolCatalog &catalog);
+bool inspectorValueOptionSupportedForCommandType(const InspectorSymbolCatalog &catalog,
+                                                 const QString &commandKind,
+                                                 const QString &type);
 void setEditableComboValues(QComboBox *combo, const QStringList &values, const QString &currentText);
 std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLine(const TherionParsedLine &parsedLine);
 }

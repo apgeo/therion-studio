@@ -56,6 +56,7 @@ struct MapEditorObjectDetailsContext
     QLabel *quickIdentifierLabel = nullptr;
     QLabel *quickNameLabel = nullptr;
     QLabel *quickTextLabel = nullptr;
+    QLabel *quickValueLabel = nullptr;
     QLabel *quickProjectionLabel = nullptr;
     QLabel *quickTypeLabel = nullptr;
     QLabel *quickSubtypeLabel = nullptr;
@@ -68,6 +69,7 @@ struct MapEditorObjectDetailsContext
     QLineEdit *quickIdentifierEdit = nullptr;
     QLineEdit *quickNameEdit = nullptr;
     QLineEdit *quickTextEdit = nullptr;
+    QLineEdit *quickValueEdit = nullptr;
     MapEditorStylePreviewWidget *stylePreview = nullptr;
     QWidget *vertexActionsEditor = nullptr;
     QPushButton *vertexInsertBeforeButton = nullptr;
@@ -83,6 +85,9 @@ struct MapEditorObjectDetailsContext
     QDoubleSpinBox *orientationSpin = nullptr;
     QCheckBox *linePointLeftSizeEnabledCheck = nullptr;
     QDoubleSpinBox *linePointLeftSizeSpin = nullptr;
+    QLabel *linePointSegmentSubtypeLabel = nullptr;
+    QComboBox *linePointSegmentSubtypeCombo = nullptr;
+    QCheckBox *linePointAltitudeAutoCheck = nullptr;
     QWidget *linePointFlagsEditor = nullptr;
     QPlainTextEdit *linePointFlagsEdit = nullptr;
     QWidget *lineOptionsEditor = nullptr;

@@ -4,6 +4,7 @@
 #include "MapEditorMagnifierOverlay.h"
 #include "MapEditorSceneThemePolicy.h"
 #include "MapEditorStylePreviewWidget.h"
+#include "MapEditorViewportInputController.h"
 
 #include <QApplication>
 #include <QAbstractItemView>
@@ -236,6 +237,14 @@ void MapEditorTab::buildUi()
         mapView_->viewport()->setFocusPolicy(Qt::StrongFocus);
         mapView_->viewport()->installEventFilter(this);
         mapView_->viewport()->setMouseTracking(true);
+        mapView_->viewport()->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(mapView_->viewport(), &QWidget::customContextMenuRequested, this, [this](const QPoint &position) {
+            if (mapView_ == nullptr || mapView_->viewport() == nullptr) {
+                return;
+            }
+            MapEditorViewportInputController(viewportInputContext())
+                .showContextMenuAtViewportPosition(position, mapView_->viewport()->mapToGlobal(position));
+        });
         mapMagnifierOverlay_ = new MapEditorMagnifierOverlay(mapView_, mapView_);
         mapMagnifierOverlay_->updatePlacement();
         if (mapView_->horizontalScrollBar() != nullptr) {

@@ -2,6 +2,8 @@
 
 #include "MapEditorObjectDetailsContext.h"
 
+#include <QStringList>
+
 namespace TherionStudio
 {
 class MapEditorObjectDetailsEditController final
@@ -25,6 +27,8 @@ public:
     void handleLinePointPreviousControlToggled(bool checked);
     void handleLinePointSmoothToggled(bool checked);
     void handleLinePointNextControlToggled(bool checked);
+    void handleLinePointSegmentSubtypeChanged();
+    void handleLinePointAltitudeAutoToggled(bool checked);
     void applyLinePointFlagsEdits();
     void populateScrapScaleFromSourceBounds();
     void applyScrapScaleEdits();
@@ -36,6 +40,7 @@ private:
     QString tr(const char *text) const;
     const InspectorSymbolCatalog &inspectorSymbolCatalog() const;
     const MapEditorOrientationApplicabilityByCommand &orientationApplicabilityByCommand() const;
+    bool applyLinePointStandaloneRowsEdits(const QStringList &updatedRows);
 
     MapEditorObjectDetailsContext context_;
 };

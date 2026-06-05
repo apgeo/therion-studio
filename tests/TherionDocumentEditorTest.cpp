@@ -446,6 +446,29 @@ int runAppendDraftGeometryTest()
         return 1;
     }
 
+    contents = QStringLiteral("scrap custom\nendscrap\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    TherionDraftObjectOptions pointValueOptions;
+    pointValueOptions.type = QStringLiteral("height");
+    pointValueOptions.value = QStringLiteral("[40? ft]");
+    pointValueOptions.valueEnabled = true;
+    if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
+                                                           QStringLiteral("point"),
+                                                           {QPointF(56.0, 78.0)},
+                                                           &lineNumber,
+                                                           &errorMessage,
+                                                           pointValueOptions),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap custom\n"
+                                           "  point 56.0 78.0 height -value [40? ft]\n"
+                                           "endscrap\n"),
+                "appendDraftGeometry should apply caller-provided point value options.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("scrap first\n"
                               "endscrap\n"
                               "scrap second\n"
@@ -1694,6 +1717,24 @@ int runRewriteMapObjectQuickFieldsTest()
         return 1;
     }
 
+    contents = QStringLiteral("line wall -id line-1 -subtype invisible # keep\nendline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+                                                                   1,
+                                                                   QStringLiteral("wall"),
+                                                                   QString(),
+                                                                   QStringLiteral("line-1"),
+                                                                   QString(),
+                                                                   false,
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall -id line-1 # keep\nendline\n"),
+                "rewriteMapObjectQuickFields should remove cleared line subtype.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("point 10 20 station -name old-name\n");
     errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
@@ -1745,6 +1786,24 @@ int runRewriteMapObjectQuickFieldsTest()
     }
     if (!expect(contents == QStringLiteral("point 463.0 -495.75 station -id point-3 -subtype fixed\n"),
                 "rewriteMapObjectQuickFields should treat negative point coordinates as coordinates, not options.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("point 463.0 -495.75 station -id point-3 -subtype fixed\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+                                                                   1,
+                                                                   QStringLiteral("station"),
+                                                                   QString(),
+                                                                   QStringLiteral("point-3"),
+                                                                   QString(),
+                                                                   false,
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 463.0 -495.75 station -id point-3\n"),
+                "rewriteMapObjectQuickFields should remove cleared point subtype.")) {
         return 1;
     }
 
@@ -1837,6 +1896,62 @@ int runRewriteMapObjectQuickFieldsTest()
     }
     if (!expect(contents == QStringLiteral("line wall\nendline\n"),
                 "rewriteMapObjectTextOption should not mutate rejected non-label objects.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("point 10 20 altitude # keep\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectValueOption(&contents,
+                                                                   1,
+                                                                   QStringLiteral("[fix 1300]"),
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 10 20 altitude -value [fix 1300] # keep\n"),
+                "rewriteMapObjectValueOption should insert bracketed point values before comments.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("point 10 20 passage-height -value [+4 -2 m]\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectValueOption(&contents,
+                                                                   1,
+                                                                   QStringLiteral("3.5"),
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 10 20 passage-height -value 3.5\n"),
+                "rewriteMapObjectValueOption should replace the full bracketed value group.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("point 10 20 station -value stale\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectValueOption(&contents,
+                                                                   1,
+                                                                   QString(),
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 10 20 station\n"),
+                "rewriteMapObjectValueOption should allow clearing stale values after type changes.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("point 10 20 station\n");
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::rewriteMapObjectValueOption(&contents,
+                                                                    1,
+                                                                    QStringLiteral("42"),
+                                                                    &errorMessage),
+                "rewriteMapObjectValueOption should reject unsupported point value types.")) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 10 20 station\n"),
+                "rewriteMapObjectValueOption should not mutate rejected unsupported point types.")) {
         return 1;
     }
 

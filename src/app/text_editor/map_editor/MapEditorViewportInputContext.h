@@ -31,6 +31,8 @@ struct MapEditorViewportInputContext
     bool *autoFitEnabled = nullptr;
     bool *fitBackgroundRequested = nullptr;
     bool *mapPanActive = nullptr;
+    bool *mapPanMoved = nullptr;
+    QPoint *mapPanStartPosition = nullptr;
     QPoint *mapPanLastPosition = nullptr;
     bool *primaryPointerInteractionActive = nullptr;
     bool *touchPanCandidate = nullptr;
@@ -79,6 +81,8 @@ struct MapEditorViewportInputContext
     std::function<void(qreal, const QPointF &)> applyZoomAtViewportPosition;
     std::function<void(bool)> fitMapToView;
     std::function<void(bool)> fitMapToViewAfterViewportResize;
+    std::function<void(int, int, const QString &, const QPointF &)> prepareSelectionContextMenuState;
+    std::function<void(const QPoint &)> showSelectionContextMenu;
     std::function<bool()> insertLineVertexFromSelection;
     std::function<bool()> removeLineVertexFromSelection;
     std::function<bool()> deleteSelectedObjectFromSelection;

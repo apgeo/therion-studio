@@ -1,5 +1,6 @@
 #include "TherionDocumentEditor.h"
 
+#include "TherionCommandSyntax.h"
 #include "TherionDocumentParser.h"
 #include "TherionStringUtils.h"
 #include "TherionTokenRules.h"
@@ -324,7 +325,25 @@ QString draftObjectOptionsSuffix(const TherionDraftObjectOptions &options, bool 
     if (options.textEnabled && !text.isEmpty()) {
         suffix += QStringLiteral(" -text %1").arg(text);
     }
+
+    const QString trimmedValue = options.value.trimmed();
+    const QString value = trimmedValue.isEmpty()
+        ? QString()
+        : serializeTherionArgumentToken(trimmedValue);
+    if (options.valueEnabled && !value.isEmpty()) {
+        suffix += QStringLiteral(" -value %1").arg(value);
+    }
     return suffix;
+}
+
+bool pointTypeSupportsValueOption(const QString &type)
+{
+    const QString normalized = type.trimmed().toLower();
+    return normalized == QStringLiteral("altitude")
+        || normalized == QStringLiteral("date")
+        || normalized == QStringLiteral("dimensions")
+        || normalized == QStringLiteral("height")
+        || normalized == QStringLiteral("passage-height");
 }
 
 QString draftObjectHeader(const QString &directive,
@@ -514,6 +533,10 @@ bool removeOptionAtTokenIndex(QString *lineText,
     lineText->remove(removeStart, removeEnd - removeStart);
     return true;
 }
+
+QPair<int, int> optionRangeWithBracketedValue(const TherionParsedLine &parsedLine,
+                                              int optionIndex,
+                                              const QString &lineText);
 
 struct LinePointOptionReference
 {
@@ -821,6 +844,65 @@ bool upsertSingleValueOption(QString *lineText, const QString &optionName, const
     }
 
     const QString insertionText = QStringLiteral("%1 %2").arg(normalizedOption, serializedValue);
+    if (parsedLine.commentStart >= 0) {
+        int insertIndex = parsedLine.commentStart;
+        while (insertIndex > 0 && lineText->at(insertIndex - 1).isSpace()) {
+            --insertIndex;
+        }
+        lineText->insert(insertIndex, QStringLiteral(" ") + insertionText);
+    } else {
+        *lineText += QStringLiteral(" ") + insertionText;
+    }
+    return true;
+}
+
+bool upsertMapObjectValueOption(QString *lineText, const QString &value)
+{
+    if (lineText == nullptr) {
+        return false;
+    }
+
+    TherionParsedLine parsedLine = TherionDocumentParser::parseLine(*lineText);
+    const int existingOptionIndex = optionTokenIndex(parsedLine, QStringLiteral("-value"));
+    const QString trimmedValue = value.trimmed();
+    const QString serializedValue = trimmedValue.isEmpty()
+        ? QString()
+        : serializeTherionArgumentToken(trimmedValue);
+    if (serializedValue.isEmpty()) {
+        if (existingOptionIndex < 0) {
+            return true;
+        }
+        const QPair<int, int> range = optionRangeWithBracketedValue(parsedLine, existingOptionIndex, *lineText);
+        if (range.first < 0 || range.second < range.first || range.second > lineText->size()) {
+            return false;
+        }
+        lineText->remove(range.first, range.second - range.first);
+        return true;
+    }
+
+    if (existingOptionIndex >= 0) {
+        const QPair<int, int> range = optionRangeWithBracketedValue(parsedLine, existingOptionIndex, *lineText);
+        if (range.first < 0 || range.second < range.first || range.second > lineText->size()) {
+            return false;
+        }
+
+        int valueStart = parsedLine.tokenSpans.value(existingOptionIndex).start
+            + parsedLine.tokenSpans.value(existingOptionIndex).length;
+        while (valueStart < range.second && lineText->at(valueStart).isSpace()) {
+            ++valueStart;
+        }
+        if (valueStart > range.second) {
+            return false;
+        }
+        if (valueStart == range.second) {
+            lineText->insert(valueStart, QStringLiteral(" ") + serializedValue);
+            return true;
+        }
+        lineText->replace(valueStart, range.second - valueStart, serializedValue);
+        return true;
+    }
+
+    const QString insertionText = QStringLiteral("-value %1").arg(serializedValue);
     if (parsedLine.commentStart >= 0) {
         int insertIndex = parsedLine.commentStart;
         while (insertIndex > 0 && lineText->at(insertIndex - 1).isSpace()) {
@@ -2420,6 +2502,75 @@ bool TherionDocumentEditor::rewriteMapObjectTextOption(QString *contents,
     if (!upsertSingleValueOption(&lineText, QStringLiteral("-text"), text)) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected label text could not be rewritten.");
+        }
+        return false;
+    }
+
+    lines[lineIndex] = lineText;
+    *contents = lines.join(lineEnding);
+    return true;
+}
+
+bool TherionDocumentEditor::rewriteMapObjectValueOption(QString *contents,
+                                                        int lineNumber,
+                                                        const QString &value,
+                                                        QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
+        }
+        return false;
+    }
+
+    if (lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
+        }
+        return false;
+    }
+
+    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
+    if (lineNumber > lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
+        }
+        return false;
+    }
+
+    const int lineIndex = lineNumber - 1;
+    QString lineText = lines.at(lineIndex);
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    if (parsedLine.directive != QStringLiteral("point")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Value is available only for supported point commands.");
+        }
+        return false;
+    }
+
+    const int typeTokenIndex = pointTypeTokenIndex(parsedLine);
+    if (typeTokenIndex <= 0 || typeTokenIndex >= parsedLine.tokens.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected point has no writable type token.");
+        }
+        return false;
+    }
+
+    const QString normalizedType = parsedLine.tokens.at(typeTokenIndex)
+        .section(QLatin1Char(':'), 0, 0)
+        .trimmed()
+        .toLower();
+    if (!pointTypeSupportsValueOption(normalizedType) && !value.trimmed().isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Value is available only for supported point types.");
+        }
+        return false;
+    }
+
+    if (!upsertMapObjectValueOption(&lineText, value)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected point value could not be rewritten.");
         }
         return false;
     }

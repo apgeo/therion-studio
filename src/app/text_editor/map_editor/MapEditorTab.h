@@ -51,6 +51,7 @@ class QShortcut;
 class QTimer;
 class QModelIndex;
 class QImage;
+class QMenu;
 
 namespace TherionStudio
 {
@@ -290,6 +291,7 @@ private:
         QLabel *objectQuickIdentifierLabel_ = nullptr;
         QLabel *objectQuickNameLabel_ = nullptr;
         QLabel *objectQuickTextLabel_ = nullptr;
+        QLabel *objectQuickValueLabel_ = nullptr;
         QLabel *objectQuickProjectionLabel_ = nullptr;
         QLabel *objectQuickTypeLabel_ = nullptr;
         QLabel *objectQuickSubtypeLabel_ = nullptr;
@@ -302,6 +304,7 @@ private:
         QLineEdit *objectQuickIdentifierEdit_ = nullptr;
         QLineEdit *objectQuickNameEdit_ = nullptr;
         QLineEdit *objectQuickTextEdit_ = nullptr;
+        QLineEdit *objectQuickValueEdit_ = nullptr;
         MapEditorStylePreviewWidget *objectStylePreview_ = nullptr;
         QString objectQuickCommandKind_;
         QWidget *vertexActionsEditor_ = nullptr;
@@ -333,6 +336,9 @@ private:
         QDoubleSpinBox *objectOrientationSpin_ = nullptr;
         QCheckBox *linePointLeftSizeEnabledCheck_ = nullptr;
         QDoubleSpinBox *linePointLeftSizeSpin_ = nullptr;
+        QLabel *linePointSegmentSubtypeLabel_ = nullptr;
+        QComboBox *linePointSegmentSubtypeCombo_ = nullptr;
+        QCheckBox *linePointAltitudeAutoCheck_ = nullptr;
         QWidget *linePointFlagsEditor_ = nullptr;
         QPlainTextEdit *linePointFlagsEdit_ = nullptr;
         bool linePointFlagsDirty_ = false;
@@ -529,6 +535,8 @@ private:
     void handleLinePointPreviousControlToggled(bool checked);
     void handleLinePointSmoothToggled(bool checked);
     void handleLinePointNextControlToggled(bool checked);
+    void handleLinePointSegmentSubtypeChanged();
+    void handleLinePointAltitudeAutoToggled(bool checked);
     void applyLinePointFlagsEdits();
     void populateScrapScaleFromSourceBounds();
     void applyScrapScaleEdits();
@@ -537,6 +545,7 @@ private:
     void handleLinePointLeftSizeEnabledToggled(bool checked);
     void handleLineClosedToggled(bool checked);
     void handleLineReversedToggled(bool checked);
+    void showMapSelectionContextMenu(const QPoint &globalPosition);
 
     QWidget *workspaceModeRow_ = nullptr;
     QPushButton *visualModeButton_ = nullptr;
@@ -608,7 +617,10 @@ private:
     mutable int cachedParsedLinesRevision_ = -1;
     mutable QVector<TherionParsedLine> cachedParsedLines_;
     bool mapPanActive_ = false;
+    bool mapPanMoved_ = false;
+    QPoint mapPanStartPosition_;
     QPoint mapPanLastPosition_;
+    QPointer<QMenu> mapSelectionContextMenu_;
     bool primaryPointerInteractionActive_ = false;
     bool selectModeActive_ = true;
     bool touchPanCandidate_ = false;

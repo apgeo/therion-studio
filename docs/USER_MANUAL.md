@@ -172,7 +172,7 @@ The map canvas uses a stable light paper-style surface in both light and dark ap
 - `Freehand`: press, drag, and release to insert a simplified Bezier line.
 - `Insert Scrap`: creates a new scrap immediately, selects it in `Selection` and `Objects`, then lets you edit its ID/projection before adding points, lines, freehand lines, or areas.
 
-Starting `Point`, `Line`, `Freehand`, or `Area` activates `Inspector -> Selection` before the first point or vertex is placed. Set type, subtype, ID, point name, or label text there before committing the new object. If a scrap or an object inside a scrap was selected when you started the tool, the new object is inserted into that scrap; the pending metadata line shows the target scrap ID. Use `Insert into` to choose a different existing target scrap before committing.
+Starting `Point`, `Line`, `Freehand`, or `Area` activates `Inspector -> Selection` before the first point or vertex is placed. Set type, subtype, ID, point name, label text, or supported point value there before committing the new object. If a scrap or an object inside a scrap was selected when you started the tool, the new object is inserted into that scrap; the pending metadata line shows the target scrap ID. Use `Insert into` to choose a different existing target scrap before committing.
 
 While drafting a line or area:
 
@@ -187,6 +187,8 @@ While drafting a line or area:
 ### 6.4 Edit Geometry
 
 Select a map object or one of its vertices/control handles in the canvas. The `Selection` inspector then shows the relevant controls, including the source line and enclosing scrap ID.
+
+Right-click a selected map object or line vertex to open a context menu with common XTherion-style actions. The menu mirrors the available `Selection` inspector groups, such as type/subtype choices, editable object fields, `Geometry`, the complete available `Line Point` panel, `Line Point Actions`, and `Object Actions`; free text or numeric editors are opened and focused in the inspector. On macOS, the trackpad secondary click, such as a two-finger click, opens the same menu. If the menu is already open, another secondary click on a different object or vertex retargets the menu to that new selection and moves it to the latest click position.
 
 For lines and area borders:
 
@@ -205,15 +207,17 @@ If a line is used as an area border, some destructive line actions are blocked; 
 In `Inspector -> Selection`, you can edit properties for selected `Scrap`, `Point`, `Line`, or `Area` objects.
 
 - `Scrap` shows ID/projection and a separate `Scrap Scale` section for XTherion/Therion-compatible `-scale [...]` calibration values.
-- `Point`, `Line`, and `Area` expose common fields such as ID, type, subtype, and supported options.
+- `Point`, `Line`, and `Area` expose common fields such as ID, type, subtype, and supported options. Choose the empty subtype value, or `No subtype` in the context menu, to remove an existing `-subtype`.
 - `Edit Object Settings...` opens the full catalog-backed option editor for the selected `scrap`, `point`, `line`, or `area` command. Positional attributes such as point `x`/`y`, line `type`, and scrap `id` are shown as protected attribute rows, while `-id`, `-text`, `-orientation`, and other options remain editable option rows.
 - `point label` and `line label` expose `Text (-text)`. Point labels render near the point; line labels render along the label line path, so the line controls the text length and orientation.
+- supported point types such as `height`, `passage-height`, `altitude`, `dimensions`, and `date` expose `Value (-value)`. Bracketed Therion values such as `[fix 1300]` are preserved.
 - Point types that support `-orientation` show an orientation override and a draggable orientation handle. Station names stay screen-aligned for readability.
-- selected line vertices expose an `Additional line-point options` editor in `Selection` for per-vertex standalone options such as `altitude`, `subtype`, `direction`, or `adjust`, so these can be edited without switching to Raw mode.
+- selected line vertices expose dedicated `Line Point` controls for supported per-vertex options. `Subtype` is shown for line types with segment subtypes, and `Altitude (auto)` is shown for wall line points and writes `altitude .`.
+- selected line vertices also expose an `Additional line-point options` editor in `Selection` for remaining per-vertex standalone options such as `altitude`, `subtype`, `direction`, or `adjust`, so these can be edited without switching to Raw mode. Rows managed by visible dedicated controls are hidden from this editor.
 - `Additional line-point options` edits are applied automatically when the field loses focus (no separate Apply/Clear buttons).
 - line vertices with additional line-point options display a small marker on the vertex handle and include option preview text in the vertex tooltip.
 
-The style preview under `Subtype` shows how the selected or pending object will look. The preview uses a light map-like background even in dark mode.
+The `Preview` row shows how the selected or pending object will look. The preview uses a light map-like background even in dark mode.
 
 ### 6.6 Objects and Backgrounds
 

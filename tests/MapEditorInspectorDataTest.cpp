@@ -96,10 +96,15 @@ int runInjectedCatalogTest()
 {
     QJsonObject pointCommand;
     pointCommand.insert(QStringLiteral("name"), QStringLiteral("point"));
-    pointCommand.insert(QStringLiteral("type_values"), QJsonArray({QStringLiteral("custom-point")}));
+    pointCommand.insert(QStringLiteral("type_values"),
+                        QJsonArray({QStringLiteral("z-custom-point"), QStringLiteral("a-custom-point")}));
     QJsonObject pointSubtypes;
-    pointSubtypes.insert(QStringLiteral("custom-point"), QJsonArray({QStringLiteral("custom-subtype")}));
+    pointSubtypes.insert(QStringLiteral("a-custom-point"),
+                         QJsonArray({QStringLiteral("z-custom-subtype"), QStringLiteral("a-custom-subtype")}));
     pointCommand.insert(QStringLiteral("subtype_by_type"), pointSubtypes);
+    QJsonObject pointValueOption;
+    pointValueOption.insert(QStringLiteral("option_key"), QStringLiteral("-value"));
+    pointCommand.insert(QStringLiteral("options"), QJsonArray({pointValueOption}));
 
     QJsonObject scrapProjectionOption;
     scrapProjectionOption.insert(QStringLiteral("option_key"), QStringLiteral("-projection"));
@@ -112,19 +117,51 @@ int runInjectedCatalogTest()
     catalogObject.insert(QStringLiteral("commands"), QJsonArray({pointCommand, scrapCommand}));
 
     const InspectorSymbolCatalog catalog = inspectorSymbolCatalogFromCommandCatalog(catalogObject);
-    if (!expect(inspectorTypeValuesForCommand(catalog, QStringLiteral("point")).contains(QStringLiteral("custom-point")),
-                "Injected inspector catalog should provide point type values without resource loading.")) {
+    const QStringList pointTypeValues = inspectorTypeValuesForCommand(catalog, QStringLiteral("point"));
+    if (!expect(pointTypeValues == QStringList({QStringLiteral("a-custom-point"), QStringLiteral("z-custom-point")}),
+                "Injected inspector catalog should provide sorted point type values without resource loading.")) {
         return 1;
     }
-    if (!expect(inspectorSubtypeValuesForCommandType(catalog,
-                                                     QStringLiteral("point"),
-                                                     QStringLiteral("custom-point"))
-                    .contains(QStringLiteral("custom-subtype")),
-                "Injected inspector catalog should provide subtype values without resource loading.")) {
+    const QStringList subtypeValues =
+        inspectorSubtypeValuesForCommandType(catalog,
+                                             QStringLiteral("point"),
+                                             QStringLiteral("a-custom-point"));
+    if (!expect(subtypeValues == QStringList({QStringLiteral("a-custom-subtype"), QStringLiteral("z-custom-subtype")}),
+                "Injected inspector catalog should provide sorted subtype values without resource loading.")) {
+        return 1;
+    }
+    const QStringList subtypeValuesWithEmptyChoice =
+        inspectorSubtypeValuesForCommandTypeWithEmptyChoice(catalog,
+                                                            QStringLiteral("point"),
+                                                            QStringLiteral("a-custom-point"));
+    if (!expect(!subtypeValuesWithEmptyChoice.isEmpty() && subtypeValuesWithEmptyChoice.first().isEmpty(),
+                "Subtype combo values should expose an empty choice for clearing subtype.")) {
+        return 1;
+    }
+    if (!expect(subtypeValuesWithEmptyChoice.mid(1) == subtypeValues,
+                "Subtype combo values with an empty choice should preserve sorted catalog subtype values.")) {
         return 1;
     }
     if (!expect(inspectorProjectionValues(catalog).contains(QStringLiteral("custom-projection")),
                 "Injected inspector catalog should provide projection values without resource loading.")) {
+        return 1;
+    }
+    if (!expect(inspectorValueOptionSupportedForCommandType(catalog,
+                                                            QStringLiteral("point"),
+                                                            QStringLiteral("height")),
+                "Point height should expose the -value quick field when the catalog contains the point -value option.")) {
+        return 1;
+    }
+    if (!expect(!inspectorValueOptionSupportedForCommandType(catalog,
+                                                             QStringLiteral("point"),
+                                                             QStringLiteral("station")),
+                "Point station should not expose the -value quick field.")) {
+        return 1;
+    }
+    if (!expect(!inspectorValueOptionSupportedForCommandType(catalog,
+                                                             QStringLiteral("line"),
+                                                             QStringLiteral("height")),
+                "Line objects should not expose the point -value quick field.")) {
         return 1;
     }
 

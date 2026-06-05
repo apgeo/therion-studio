@@ -171,7 +171,7 @@ Mapové plátno používa stabilný svetlý „papierový“ povrch vo svetlom a
 - `Voľná kresba`: stlačte, ťahajte a pustite; vloží sa zjednodušená Bezier čiara.
 - `Vložiť scrap`: okamžite vytvorí nový scrap, vyberie ho vo `Výbere` aj v `Objektoch` a potom môžete upraviť jeho ID/projekciu pred vkladaním bodov, línií, voľnej kresby alebo plôch.
 
-Po spustení `Bod`, `Línia`, `Voľná kresba` alebo `Plocha` sa aktivuje `Inšpektor -> Výber` ešte pred prvým vložením. Nastavte tam typ, podtyp, ID, názov bodu alebo text popisku ešte pred potvrdením nového objektu. Ak bol pri spustení nástroja vybraný scrap alebo objekt vnútri scrapu, nový objekt sa vloží do tohto scrapu; metadata pripraveného vloženia ukazujú ID cieľového scrapu. Pomocou `Vložiť do` môžete pred potvrdením vybrať iný existujúci cieľový scrap.
+Po spustení `Bod`, `Línia`, `Voľná kresba` alebo `Plocha` sa aktivuje `Inšpektor -> Výber` ešte pred prvým vložením. Nastavte tam typ, podtyp, ID, názov bodu, text popisku alebo podporovanú hodnotu bodu ešte pred potvrdením nového objektu. Ak bol pri spustení nástroja vybraný scrap alebo objekt vnútri scrapu, nový objekt sa vloží do tohto scrapu; metadata pripraveného vloženia ukazujú ID cieľového scrapu. Pomocou `Vložiť do` môžete pred potvrdením vybrať iný existujúci cieľový scrap.
 
 Počas kreslenia čiary alebo plochy:
 
@@ -186,6 +186,8 @@ Počas kreslenia čiary alebo plochy:
 ### 6.4 Editácia geometrie
 
 Vyberte mapový objekt alebo jeho vrchol/kontrolný bod na mapovom plátne. Inšpektor `Výber` zobrazí zodpovedajúce ovládanie vrátane zdrojového riadka a ID obklopujúceho scrapu.
+
+Pravým kliknutím na vybraný mapový objekt alebo vrchol čiary otvoríte kontextové menu s bežnými akciami v štýle XTherionu. Menu zrkadlí dostupné skupiny inšpektora `Výber`, napríklad voľby typu/podtypu, editovateľné polia objektu, `Geometry`, celý dostupný panel `Line Point`, `Line Point Actions` a `Object Actions`; voľné textové alebo číselné editory sa otvoria a fokusujú v inšpektore. Na macOS otvorí rovnaké menu aj sekundárny klik na trackpade, napríklad kliknutie dvoma prstami. Ak je menu už otvorené, ďalší sekundárny klik na iný objekt alebo vrchol precieli menu na nový výber a presunie ho na poslednú pozíciu kliknutia.
 
 Pre čiary a hranice plôch:
 
@@ -203,12 +205,16 @@ Ak čiara slúži ako hranica plochy, niektoré deštruktívne akcie sú zabloko
 V `Inšpektor -> Výber` možno upravovať vlastnosti vybraných objektov `Scrap`, `Point`, `Line` a `Area`.
 
 - `Scrap` zobrazuje ID/projekciu a samostatnú sekciu `Scrap Scale` pre XTherion/Therion kompatibilné kalibračné hodnoty `-scale [...]`.
-- `Point`, `Line` a `Area` zobrazujú bežné polia ako ID, typ, podtyp a podporované voľby.
+- `Point`, `Line` a `Area` zobrazujú bežné polia ako ID, typ, podtyp a podporované voľby. Prázdna hodnota podtypu, prípadne `No subtype` v kontextovom menu, odstráni existujúci `-subtype`.
 - `Upraviť nastavenia objektu...` otvorí úplný catalog-backed editor volieb pre vybraný príkaz `scrap`, `point`, `line` alebo `area`. Pozičné atribúty ako `x`/`y` bodu, `type` čiary a `id` scrapu sa zobrazujú ako chránené riadky atribútov, zatiaľ čo `-id`, `-text`, `-orientation` a ďalšie voľby zostávajú editovateľné ako riadky volieb.
 - `point label` a `line label` majú pole `Text (-text)`. Point label sa vykresľuje pri bode; line label sa vykresľuje pozdĺž čiary, takže čiara určuje dĺžku a orientáciu textu.
+- podporované bodové typy, napríklad `height`, `passage-height`, `altitude`, `dimensions` a `date`, majú pole `Value (-value)`. Hranaté Therion hodnoty ako `[fix 1300]` sa zachovajú.
 - Bodové typy podporujúce `-orientation` zobrazujú prepísanie orientácie a ťahateľný orientačný kontrolný bod. Mená staníc zostávajú pre čitateľnosť vodorovné.
+- Vybrané vertexy čiary zobrazujú v `Line Point` podporované voľby pre daný bod čiary. `Subtype` sa zobrazí pri typoch čiar so segmentovými podtypmi a `Altitude (auto)` sa zobrazí pri bodoch `line wall` a zapisuje `altitude .`.
+- Vybrané vertexy čiary majú aj editor `Additional line-point options` pre zostávajúce samostatné voľby bodu čiary, napríklad `altitude`, `subtype`, `direction` alebo `adjust`, bez prepnutia do Raw režimu. Riadky spravované viditeľnými samostatnými ovládacími prvkami sú v tomto editore skryté.
+- Úpravy v `Additional line-point options` sa použijú automaticky pri opustení poľa, bez samostatných tlačidiel Apply/Clear.
 
-Náhľad štýlu pod `Podtyp` ukazuje vzhľad vybraného alebo pripravovaného objektu. Náhľad používa svetlý mapový podklad aj v tmavom režime.
+Riadok `Preview` ukazuje vzhľad vybraného alebo pripravovaného objektu. Náhľad používa svetlý mapový podklad aj v tmavom režime.
 
 ### 6.6 Objekty a Pozadia
 

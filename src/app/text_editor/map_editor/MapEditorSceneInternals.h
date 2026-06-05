@@ -835,7 +835,7 @@ private:
     {
         constexpr qreal pi = 3.14159265358979323846;
         const qreal radians = normalizeDegrees(orientationDegrees) * pi / 180.0;
-        const qreal displayLength = qBound<qreal>(12.0, qMax<qreal>(0.1, leftSize) * previewScale_, 28.0);
+        const qreal displayLength = qMax<qreal>(12.0, qMax<qreal>(0.1, leftSize) * previewScale_);
         return anchorPreview_ + QPointF(std::sin(radians) * displayLength,
                                         -std::cos(radians) * displayLength);
     }

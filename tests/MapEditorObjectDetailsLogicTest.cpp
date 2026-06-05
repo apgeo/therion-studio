@@ -3,6 +3,7 @@
 
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QStringList>
 
 #include <iostream>
 
@@ -100,6 +101,74 @@ int runObjectCommandCatalogShapeTest()
 
     return 0;
 }
+
+bool expectListEquals(const QStringList &actual, const QStringList &expected, const char *message)
+{
+    if (actual == expected) {
+        return true;
+    }
+    std::cerr << message << '\n';
+    std::cerr << "  expected:";
+    for (const QString &row : expected) {
+        std::cerr << " [" << row.toStdString() << "]";
+    }
+    std::cerr << "\n  actual:";
+    for (const QString &row : actual) {
+        std::cerr << " [" << row.toStdString() << "]";
+    }
+    std::cerr << '\n';
+    return false;
+}
+
+int runLinePointStructuredStandaloneRowsTest()
+{
+    const QStringList rows{
+        QStringLiteral("subtype blocks"),
+        QStringLiteral("altitude ."),
+        QStringLiteral("adjust horizontal"),
+        QStringLiteral("altitude [fix 1510 m]"),
+    };
+
+    if (!expect(linePointSegmentSubtypeFromStandaloneRows(rows) == QStringLiteral("blocks"),
+                "Line-point subtype should be read from standalone subtype rows.")) {
+        return 1;
+    }
+    if (!expect(linePointAltitudeAutoFromStandaloneRows(rows),
+                "Line-point altitude auto should be detected from altitude dot rows.")) {
+        return 1;
+    }
+    if (!expectListEquals(linePointRowsWithoutStructuredStandaloneOptions(rows, true, true),
+                          QStringList{QStringLiteral("adjust horizontal"),
+                                      QStringLiteral("altitude [fix 1510 m]")},
+                          "Managed line-point rows should remove only structured subtype and altitude dot rows.")) {
+        return 1;
+    }
+    if (!expectListEquals(linePointRowsWithoutStructuredStandaloneOptions(rows, false, false),
+                          rows,
+                          "Unsupported structured line-point rows should remain in the manual editor.")) {
+        return 1;
+    }
+    if (!expectListEquals(linePointRowsWithStructuredStandaloneOptions(QStringList{QStringLiteral("adjust horizontal")},
+                                                                       QStringLiteral("presumed"),
+                                                                       true),
+                          QStringList{QStringLiteral("adjust horizontal"),
+                                      QStringLiteral("subtype presumed"),
+                                      QStringLiteral("altitude .")},
+                          "Structured line-point rows should be appended to the manual rows.")) {
+        return 1;
+    }
+    if (!expectListEquals(linePointRowsWithStructuredStandaloneOptions(QStringList{QStringLiteral("subtype blocks"),
+                                                                                  QStringLiteral("altitude ."),
+                                                                                  QStringLiteral("mark start")},
+                                                                       QString(),
+                                                                       false),
+                          QStringList{QStringLiteral("mark start")},
+                          "Cleared structured line-point controls should remove their managed rows.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -107,5 +176,8 @@ int main()
     if (const int result = runInjectedOrientationApplicabilityTest(); result != 0) {
         return result;
     }
-    return runObjectCommandCatalogShapeTest();
+    if (const int result = runObjectCommandCatalogShapeTest(); result != 0) {
+        return result;
+    }
+    return runLinePointStructuredStandaloneRowsTest();
 }

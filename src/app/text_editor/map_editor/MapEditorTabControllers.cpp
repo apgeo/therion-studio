@@ -63,6 +63,11 @@ void MapEditorTab::fitMapToView(bool includeBackgroundImages)
     MapEditorSceneLifecycleController(sceneLifecycleContext()).fitMapToView(includeBackgroundImages);
 }
 
+void MapEditorTab::fitMapToViewAfterViewportResize(bool includeBackgroundImages)
+{
+    MapEditorSceneLifecycleController(sceneLifecycleContext()).fitMapToView(includeBackgroundImages, false);
+}
+
 void MapEditorTab::syncZoomFactorFromView()
 {
     MapEditorSceneLifecycleController(sceneLifecycleContext()).syncZoomFactorFromView();

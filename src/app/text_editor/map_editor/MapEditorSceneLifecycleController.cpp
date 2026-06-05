@@ -153,7 +153,7 @@ void MapEditorSceneLifecycleController::restoreBackgroundImageItems()
     context_.refreshBackgroundLayerControls();
 }
 
-void MapEditorSceneLifecycleController::fitMapToView(bool includeBackgroundImages)
+void MapEditorSceneLifecycleController::fitMapToView(bool includeBackgroundImages, bool updateCommandSurface)
 {
     QGraphicsScene *mapScene = scene();
     if (mapScene == nullptr || context_.view == nullptr) {
@@ -180,7 +180,9 @@ void MapEditorSceneLifecycleController::fitMapToView(bool includeBackgroundImage
         context_.reprojectMetadataBackgroundLayersForCurrentDocument();
     }
     syncZoomFactorFromView();
-    context_.updateCommandSurfaceState();
+    if (updateCommandSurface) {
+        context_.updateCommandSurfaceState();
+    }
 }
 
 void MapEditorSceneLifecycleController::syncZoomFactorFromView()

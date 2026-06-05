@@ -121,6 +121,9 @@ MapEditorViewportInputContext MapEditorTab::viewportInputContext()
         .fitMapToView = [this](bool includeBackgroundImages) {
             fitMapToView(includeBackgroundImages);
         },
+        .fitMapToViewAfterViewportResize = [this](bool includeBackgroundImages) {
+            fitMapToViewAfterViewportResize(includeBackgroundImages);
+        },
         .insertLineVertexFromSelection = [this]() {
             return insertLineVertexFromSelection(false);
         },

@@ -387,6 +387,7 @@ private:
     bool setInteractiveLineControlScenePoint(const MapEditorInteractiveLineControlHandleRef &handle,
                                              const QPointF &scenePoint);
     void fitMapToView(bool includeBackgroundImages = false);
+    void fitMapToViewAfterViewportResize(bool includeBackgroundImages = false);
     void syncZoomFactorFromView();
     void applyZoomAtViewportPosition(qreal factor, const QPointF &viewportPosition);
     void refreshToolbarSummary();

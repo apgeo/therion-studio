@@ -78,6 +78,7 @@ struct MapEditorViewportInputContext
     std::function<void()> syncZoomFactorFromView;
     std::function<void(qreal, const QPointF &)> applyZoomAtViewportPosition;
     std::function<void(bool)> fitMapToView;
+    std::function<void(bool)> fitMapToViewAfterViewportResize;
     std::function<bool()> insertLineVertexFromSelection;
     std::function<bool()> removeLineVertexFromSelection;
     std::function<bool()> deleteSelectedObjectFromSelection;

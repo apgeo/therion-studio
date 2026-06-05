@@ -911,7 +911,11 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
             break;
         case QEvent::Resize:
             if ((*context_.autoFitEnabled) && context_.view->isVisible()) {
-                context_.fitMapToView((*context_.fitBackgroundRequested));
+                if (context_.fitMapToViewAfterViewportResize) {
+                    context_.fitMapToViewAfterViewportResize((*context_.fitBackgroundRequested));
+                } else {
+                    context_.fitMapToView((*context_.fitBackgroundRequested));
+                }
             }
             break;
         case QEvent::KeyPress: {

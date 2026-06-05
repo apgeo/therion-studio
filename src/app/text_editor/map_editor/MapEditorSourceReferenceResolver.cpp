@@ -102,7 +102,7 @@ QStringList coordinateRowsForLineVertices(const QVector<MapGeometryFeature::TH2L
         appendLinePointOptionRows(&rows, current);
     }
 
-    if (closed && lineVertices.size() >= 3) {
+    if (closed && lineVertices.size() >= 2) {
         const MapGeometryFeature::TH2LineVertex &first = lineVertices.first();
         const MapGeometryFeature::TH2LineVertex &last = lineVertices.last();
         const bool cubicClose = last.outgoingControl.has_value() || first.incomingControl.has_value();

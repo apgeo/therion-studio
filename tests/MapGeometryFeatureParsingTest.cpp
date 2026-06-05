@@ -1,6 +1,10 @@
 #include "../src/app/text_editor/map_editor/MapEditorSceneSupport.h"
 #include "../src/core/TherionDocumentParser.h"
 
+#include <QApplication>
+#include <QGraphicsPathItem>
+#include <QGraphicsScene>
+
 #include <iostream>
 #include <cmath>
 
@@ -528,6 +532,163 @@ int runClosedLineClosingBezierParsingTest()
     if (!expect(std::abs(line->lineVertices.last().outgoingControl.value().x() - 12.0) < 1e-6
                 && std::abs(line->lineVertices.last().outgoingControl.value().y() - 2.0) < 1e-6,
                 "Expected last outgoing control to preserve closing-segment control point.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runTwoAnchorClosedBezierRenderingTest()
+{
+    const QString text =
+        QStringLiteral("encoding utf-8\n"
+                       "\n"
+                       "scrap scrap-1\n"
+                       "  line wall -close on\n"
+                       "    0.2 0.6\n"
+                       "    0.4 0.4 0.4 0.4 0.2 0.4\n"
+                       "  endline\n"
+                       "endscrap\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    const MapGeometryFeature *line = firstLineFeature(features);
+    if (!expect(line != nullptr, "Expected one parsed line feature for two-anchor closed Bezier rendering test.")) {
+        return 1;
+    }
+    if (!expect(line->closed && line->lineVertices.size() == 2,
+                "Expected the fixture to parse as a closed line with exactly two anchors.")) {
+        return 1;
+    }
+
+    QGraphicsScene scene;
+    QHash<int, QGraphicsItem *> mapItemsByLine;
+    renderMapWorkspaceScene(&scene,
+                            QStringLiteral("fixture.th2"),
+                            collectMapSceneEntries(parsedLines),
+                            features,
+                            std::nullopt,
+                            false,
+                            &mapItemsByLine,
+                            {},
+                            {},
+                            {},
+                            {},
+                            {},
+                            {});
+
+    auto *pathItem = dynamic_cast<QGraphicsPathItem *>(mapItemsByLine.value(line->lineNumber, nullptr));
+    if (!expect(pathItem != nullptr, "Expected rendered closed line item to be available by source line.")) {
+        return 1;
+    }
+
+    const QPainterPath path = pathItem->path();
+    if (!expect(path.elementCount() >= 5,
+                "Expected two-anchor closed Bezier rendering to include the closing segment back to the first anchor.")) {
+        return 1;
+    }
+
+    const QPainterPath::Element first = path.elementAt(0);
+    const QPainterPath::Element last = path.elementAt(path.elementCount() - 1);
+    if (!expect(std::abs(first.x - last.x) < 1e-6 && std::abs(first.y - last.y) < 1e-6,
+                "Expected the rendered two-anchor closed Bezier path to end at its first anchor.")) {
+        return 1;
+    }
+
+    int checkedLinePathItems = 0;
+    for (QGraphicsItem *item : scene.items()) {
+        if (item == nullptr || item->data(kMapSceneLineNumberRole).toInt() != line->lineNumber) {
+            continue;
+        }
+        auto *candidatePathItem = dynamic_cast<QGraphicsPathItem *>(item);
+        if (candidatePathItem == nullptr) {
+            continue;
+        }
+        const QPainterPath candidatePath = candidatePathItem->path();
+        if (candidatePath.elementCount() < 2 || candidatePath.boundingRect().isEmpty()) {
+            continue;
+        }
+        ++checkedLinePathItems;
+        if (!expect(candidatePath.toFillPolygon().isClosed(),
+                    "Expected every rendered path layer for a closed line to expose a closed polygon.")) {
+            return 1;
+        }
+    }
+    if (!expect(checkedLinePathItems >= 1,
+                "Expected at least one path layer for the two-anchor closed Bezier line.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runExplicitClosedBezierRowRenderingTest()
+{
+    const QString text =
+        QStringLiteral("scrap hipd_r2\n"
+                       "line wall -close on\n"
+                       "  301.5 1049.5\n"
+                       "  356.0 1057.5 374.0 1159.0 319.0 1182.0\n"
+                       "  251.04 1210.42 253.5 1060.5 301.5 1049.5\n"
+                       "  smooth off\n"
+                       "endline\n"
+                       "endscrap\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+    const MapGeometryFeature *line = firstLineFeature(features);
+    if (!expect(line != nullptr, "Expected one parsed line feature for explicit closed Bezier fixture.")) {
+        return 1;
+    }
+    if (!expect(line->closed, "Expected explicit closed Bezier fixture to parse as closed.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.size() == 2,
+                "Expected explicit closing Bezier row to avoid adding a duplicate first anchor.")) {
+        return 1;
+    }
+    if (!expect(line->lineSegments.size() == 2,
+                "Expected explicit closed Bezier fixture to keep forward and closing segments.")) {
+        return 1;
+    }
+    if (!expect(line->lineSegments.last().endVertexIndex == 0,
+                "Expected explicit closing Bezier segment to target the first anchor.")) {
+        return 1;
+    }
+    if (!expect(line->lineVertices.last().outgoingControl.has_value()
+                && line->lineVertices.first().incomingControl.has_value(),
+                "Expected explicit closing Bezier controls to be attached to last and first anchors.")) {
+        return 1;
+    }
+
+    QGraphicsScene scene;
+    QHash<int, QGraphicsItem *> mapItemsByLine;
+    renderMapWorkspaceScene(&scene,
+                            QStringLiteral("fixture.th2"),
+                            collectMapSceneEntries(parsedLines),
+                            features,
+                            std::nullopt,
+                            false,
+                            &mapItemsByLine,
+                            {},
+                            {},
+                            {},
+                            {},
+                            {},
+                            {});
+
+    auto *pathItem = dynamic_cast<QGraphicsPathItem *>(mapItemsByLine.value(line->lineNumber, nullptr));
+    if (!expect(pathItem != nullptr, "Expected rendered explicit closed Bezier line item to be available.")) {
+        return 1;
+    }
+
+    const QPainterPath path = pathItem->path();
+    if (!expect(path.elementCount() >= 7,
+                "Expected explicit closed Bezier path to contain two cubic segments plus closure.")) {
+        return 1;
+    }
+    if (!expect(path.toFillPolygon().isClosed(),
+                "Expected explicit closed Bezier path to expose a closed polygon.")) {
         return 1;
     }
 
@@ -1142,8 +1303,10 @@ int runAreaScrapClipMetadataParsingTest()
 }
 }
 
-int main()
+int main(int argc, char **argv)
 {
+    QApplication app(argc, argv);
+
     if (const int rc = runPointTypeAndLabelOptionParsingTest(); rc != 0) {
         return rc;
     }
@@ -1172,6 +1335,12 @@ int main()
         return rc;
     }
     if (const int rc = runClosedLineClosingBezierParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runTwoAnchorClosedBezierRenderingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runExplicitClosedBezierRowRenderingTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runDeCasteljauInsertionTest(); rc != 0) {

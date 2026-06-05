@@ -279,6 +279,59 @@ int runLatin2DirectiveRoundTripTest()
                                              QStringConverter::Flag::Default);
 }
 
+int runUndeclaredLatin2RoundTripTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary directory creation failed.")) {
+        return 1;
+    }
+
+    const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("undeclared-latin2.th2"));
+    const QString sourceText = QStringLiteral(
+        "scrap žluťoučký\n"
+        "endscrap\n");
+
+    QStringEncoder encoder = makeEncoder(QStringLiteral("iso-8859-2"));
+    if (!encoder.isValid()) {
+        printOptionalCodecSkip("iso-8859-2 codec is not available in this Qt runtime.");
+        return 0;
+    }
+
+    const QByteArray encodedBytes = encoder.encode(sourceText);
+    if (!expect(!encoder.hasError(), "Failed to encode undeclared latin2 fixture text.")) {
+        return 1;
+    }
+    if (!expect(writeRawFile(filePath, encodedBytes), "Failed to write undeclared latin2 fixture file.")) {
+        return 1;
+    }
+
+    QString contents;
+    QString encodingName;
+    QString errorMessage;
+    if (!expect(DocumentFile::readTextFile(filePath, &contents, &encodingName, nullptr, &errorMessage),
+                qPrintable(errorMessage))) {
+        return 1;
+    }
+    if (!expect(contents == sourceText, "Undeclared latin2 fixture decoded contents mismatch.")) {
+        return 1;
+    }
+    if (!expect(encodingName.contains(QStringLiteral("8859"), Qt::CaseInsensitive),
+                "Undeclared latin2 fixture did not resolve to an ISO-8859-family codec.")) {
+        return 1;
+    }
+
+    if (!expect(DocumentFile::writeTextFile(filePath, contents, encodingName, &errorMessage), qPrintable(errorMessage))) {
+        return 1;
+    }
+
+    const QByteArray writtenBytes = readRawFile(filePath);
+    if (!expect(writtenBytes == encodedBytes, "Undeclared latin2 save did not preserve original byte encoding.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runUtf8DirectiveAliasRoundTripTest()
 {
     return runDirectiveEncodingRoundTripTest(QStringLiteral("utf-8"),
@@ -661,6 +714,10 @@ int main()
 
     if (const int latin2Result = runLatin2DirectiveRoundTripTest(); latin2Result != 0) {
         return latin2Result;
+    }
+
+    if (const int undeclaredLatin2Result = runUndeclaredLatin2RoundTripTest(); undeclaredLatin2Result != 0) {
+        return undeclaredLatin2Result;
     }
 
     if (const int utf8AliasResult = runUtf8DirectiveAliasRoundTripTest(); utf8AliasResult != 0) {

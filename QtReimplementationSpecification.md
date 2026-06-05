@@ -809,6 +809,7 @@ Required capabilities:
 - preserve document formatting as much as practical when rewriting files
 - preserve comments, unknown but syntactically valid directives, and unedited option lines without semantic loss when rewriting supported documents
 - preserve the existing file encoding on save unless the user explicitly converts the file to UTF-8
+- resolve non-UTF-8 Therion documents to concrete writable text encodings when opening and saving, including common legacy Central European encodings such as ISO-8859-2 where needed
 - handle external file references used by the project
 - preserve TH2 background-reference metadata such as `xth_me_image_insert` entries when editing or rewriting documents
 - preserve scrap scale and related TH2 header metadata when rewriting scrap definitions
@@ -1020,6 +1021,7 @@ The criteria below are intended for implementation verification and QA.
 #### 8.1.3 TH2 Map Editor
 
 - The map editor renders the currently open TH2 file as a 2D editable workspace.
+- Closed TH2 line geometry shall render the closing segment between the final and first line vertices whenever at least two line vertices exist, including two-anchor closed Bezier curves.
 - A TH2 document exposes an embedded mode selector with `Raw` and `Visual` modes.
 - In the main window, the TH2 `Raw`/`Visual` mode selector is shown in the right-aligned controls of the full-width document command toolbar row above the tab strip.
 - In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same document command toolbar control area, after `Raw`, using screen-share/monitor-x icons for detach/return state.

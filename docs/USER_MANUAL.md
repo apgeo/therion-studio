@@ -152,6 +152,8 @@ Maps and scraps referenced inside `map ... endmap` are shown under that map when
 
 `Raw` mode remains available for direct source editing.
 
+Non-UTF-8 files are opened with a concrete source encoding when it can be resolved, including common Central European legacy encodings such as ISO-8859-2. When such a file is saved, Therion Studio keeps the resolved source encoding unless you explicitly convert the file to UTF-8 from the `File` inspector.
+
 ### 6.2 Main Map Tools
 
 | Tool group | Actions |
@@ -178,6 +180,7 @@ While drafting a line or area:
 - press-drag-release while placing a vertex to create a curved Bezier segment
 - drag visible Bezier control handles before committing to refine the draft curve
 - click the first line vertex again to finish a closed line (`-close on`)
+- closed lines render the final segment back to the first vertex, including two-point closed Bezier curves
 - press `Backspace` or `Delete` to remove the last draft vertex
 - press `Esc` to cancel insertion
 

@@ -92,6 +92,85 @@ bool decodeBytesWithEnum(QByteArrayView data,
                                encodingLabel);
 }
 
+bool isCentralEuropeanLetter(QChar character)
+{
+    switch (character.unicode()) {
+    case 0x0104: // A with ogonek
+    case 0x0105:
+    case 0x0106: // C with acute
+    case 0x0107:
+    case 0x010C: // C with caron
+    case 0x010D:
+    case 0x010E: // D with caron
+    case 0x010F:
+    case 0x0118: // E with ogonek
+    case 0x0119:
+    case 0x011A: // E with caron
+    case 0x011B:
+    case 0x0139: // L with acute
+    case 0x013A:
+    case 0x013D: // L with caron
+    case 0x013E:
+    case 0x0141: // L with stroke
+    case 0x0142:
+    case 0x0143: // N with acute
+    case 0x0144:
+    case 0x0147: // N with caron
+    case 0x0148:
+    case 0x0150: // O with double acute
+    case 0x0151:
+    case 0x0154: // R with acute
+    case 0x0155:
+    case 0x0158: // R with caron
+    case 0x0159:
+    case 0x015A: // S with acute
+    case 0x015B:
+    case 0x0160: // S with caron
+    case 0x0161:
+    case 0x0164: // T with caron
+    case 0x0165:
+    case 0x016E: // U with ring
+    case 0x016F:
+    case 0x0170: // U with double acute
+    case 0x0171:
+    case 0x0179: // Z with acute
+    case 0x017A:
+    case 0x017B: // Z with dot above
+    case 0x017C:
+    case 0x017D: // Z with caron
+    case 0x017E:
+        return true;
+    default:
+        return false;
+    }
+}
+
+int centralEuropeanTextScore(const QString &text)
+{
+    int score = 0;
+    for (const QChar character : text) {
+        if (isCentralEuropeanLetter(character)) {
+            score += 4;
+            continue;
+        }
+
+        const ushort code = character.unicode();
+        if (code == 0x00AB || code == 0x00BB || code == 0x00B5 || code == 0x00B8 || code == 0x00B9
+            || code == 0x00BC || code == 0x00BE) {
+            score -= 3;
+            continue;
+        }
+
+        if (character.category() == QChar::Other_Control
+            && character != QLatin1Char('\n')
+            && character != QLatin1Char('\r')
+            && character != QLatin1Char('\t')) {
+            score -= 5;
+        }
+    }
+    return score;
+}
+
 std::optional<QString> therionDeclaredEncoding(QByteArrayView data)
 {
     // The Therion `encoding` directive is ASCII-compatible; scan the leading chunk quickly.
@@ -138,6 +217,12 @@ QStringList encodingCandidatesFromDirectiveToken(const QString &token)
         appendUnique(QStringLiteral("iso-8859-1"));
     } else if (normalized == QStringLiteral("latin2")) {
         appendUnique(QStringLiteral("iso-8859-2"));
+    } else if (normalized == QStringLiteral("locale")) {
+        if (const char *systemName = QStringConverter::nameForEncoding(QStringConverter::System)) {
+            appendUnique(QString::fromLatin1(systemName));
+        }
+        appendUnique(QStringLiteral("iso-8859-2"));
+        appendUnique(QStringLiteral("windows-1250"));
     }
 
     if (normalized.startsWith(QStringLiteral("cp")) && normalized.size() > 2) {
@@ -208,6 +293,56 @@ bool DocumentFile::readTextFile(const QString &filePath,
         return true;
     };
 
+    auto tryDecodeCentralEuropeanFallback = [&]() {
+        struct Candidate
+        {
+            QString contents;
+            QString encodingName;
+            QString encodingLabel;
+            int score = 0;
+        };
+
+        std::optional<Candidate> bestCandidate;
+        const QStringList fallbackNames = {
+            QStringLiteral("iso-8859-2"),
+            QStringLiteral("windows-1250")
+        };
+        for (const QString &candidateName : fallbackNames) {
+            QString decoded;
+            QString resolvedName;
+            QString label;
+            if (!decodeBytesWithName(QByteArrayView(data), candidateName, &decoded, &resolvedName, &label)) {
+                continue;
+            }
+
+            Candidate candidate;
+            candidate.contents = decoded;
+            candidate.encodingName = resolvedName;
+            candidate.encodingLabel = label;
+            candidate.score = centralEuropeanTextScore(decoded);
+            if (candidate.score <= 0) {
+                continue;
+            }
+            if (!bestCandidate.has_value() || candidate.score > bestCandidate->score) {
+                bestCandidate = candidate;
+            }
+        }
+
+        if (!bestCandidate.has_value()) {
+            return false;
+        }
+        if (contents != nullptr) {
+            *contents = bestCandidate->contents;
+        }
+        if (encodingName != nullptr) {
+            *encodingName = bestCandidate->encodingName;
+        }
+        if (encodingLabel != nullptr) {
+            *encodingLabel = bestCandidate->encodingLabel;
+        }
+        return true;
+    };
+
     if (const auto declaredEncoding = therionDeclaredEncoding(QByteArrayView(data)); declaredEncoding.has_value()) {
         const QStringList declaredCandidates = encodingCandidatesFromDirectiveToken(*declaredEncoding);
         for (const QString &candidate : declaredCandidates) {
@@ -223,6 +358,10 @@ bool DocumentFile::readTextFile(const QString &filePath,
     }
 
     if (tryDecodeEnum(QStringConverter::Utf8)) {
+        return true;
+    }
+
+    if (tryDecodeCentralEuropeanFallback()) {
         return true;
     }
 

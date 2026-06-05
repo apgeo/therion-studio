@@ -162,7 +162,7 @@ std::optional<QPointF> defaultIncomingControlForLineVertex(const QVector<MapGeom
     if (target.outgoingControl.has_value()) {
         return mirroredSmoothControlPoint(target.anchor, target.outgoingControl.value(), std::nullopt);
     }
-    if (closed && vertices.size() >= 3) {
+    if (closed && vertices.size() >= 2) {
         const int previousIndex = ownerIndex > 0 ? ownerIndex - 1 : vertices.size() - 1;
         const QPointF previousAnchor = vertices.at(previousIndex).anchor;
         return normalizedLineControlPoint(target.anchor, target.anchor + ((previousAnchor - target.anchor) / 3.0));
@@ -190,7 +190,7 @@ std::optional<QPointF> defaultOutgoingControlForLineVertex(const QVector<MapGeom
     if (target.incomingControl.has_value()) {
         return mirroredSmoothControlPoint(target.anchor, target.incomingControl.value(), std::nullopt);
     }
-    if (closed && vertices.size() >= 3) {
+    if (closed && vertices.size() >= 2) {
         const int nextIndex = ownerIndex + 1 < vertices.size() ? ownerIndex + 1 : 0;
         const QPointF nextAnchor = vertices.at(nextIndex).anchor;
         return normalizedLineControlPoint(target.anchor, target.anchor + ((nextAnchor - target.anchor) / 3.0));

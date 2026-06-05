@@ -895,7 +895,7 @@ QPainterPath linePathForFeature(const MapGeometryFeature &feature, const QRectF 
         }
     }
 
-    if (feature.closed && feature.lineVertices.size() >= 3) {
+    if (feature.closed && feature.lineVertices.size() >= 2) {
         const MapGeometryFeature::TH2LineVertex &lastVertex = feature.lineVertices.last();
         const MapGeometryFeature::TH2LineVertex &firstVertex = feature.lineVertices.first();
         const QPointF cp1 = lastVertex.outgoingControl.value_or(lastVertex.anchor);
@@ -906,6 +906,7 @@ QPainterPath linePathForFeature(const MapGeometryFeature &feature, const QRectF 
         } else {
             path.lineTo(toPreview(firstVertex.anchor));
         }
+        path.closeSubpath();
     }
 
     return path;
@@ -1020,7 +1021,7 @@ QHash<int, QPainterPath> scrapClipPathsForFeatures(const QVector<MapGeometryFeat
             continue;
         }
 
-        if (feature.closed && feature.lineVertices.size() >= 3) {
+        if (feature.closed && feature.lineVertices.size() >= 2) {
             QPainterPath closed = candidate->path;
             closed.closeSubpath();
             closed.setFillRule(Qt::OddEvenFill);
@@ -1103,7 +1104,7 @@ QVector<MapEditorLineDecorationVertex> lineDecorationVerticesForFeature(const Ma
         appendVertex(currentVertex, currentAnchor, pathDistance);
     }
 
-    if (feature.closed && feature.lineVertices.size() >= 3) {
+    if (feature.closed && feature.lineVertices.size() >= 2) {
         const MapGeometryFeature::TH2LineVertex &lastVertex = feature.lineVertices.last();
         const MapGeometryFeature::TH2LineVertex &firstVertex = feature.lineVertices.first();
         const QPointF lastAnchor = toPreview(lastVertex.anchor);
@@ -2004,7 +2005,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     baseLineStroke.setAlpha(0);
                 }
 
-                if (feature.closed && feature.lineVertices.size() >= 3) {
+                if (feature.closed && feature.lineVertices.size() >= 2) {
                     if (const std::optional<QColor> closedFillColor = closedLineFillColor(lineStyle, canvasTheme)) {
                         QPainterPath closedFillPath = path;
                         closedFillPath.closeSubpath();
@@ -2267,7 +2268,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         controlItemsBySourceVertex->insert(currentVertex.incomingSourceVertexIndex, controlItem);
                     }
                 }
-                if (feature.closed && feature.lineVertices.size() >= 3) {
+                if (feature.closed && feature.lineVertices.size() >= 2) {
                     const MapGeometryFeature::TH2LineVertex &lastVertex = feature.lineVertices.last();
                     const MapGeometryFeature::TH2LineVertex &firstVertex = feature.lineVertices.first();
 
@@ -2423,7 +2424,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         }
                     }
 
-                    if (feature.closed && anchorItemsByOrder->size() >= 3) {
+                    if (feature.closed && anchorItemsByOrder->size() >= 2) {
                         const MapGeometryFeature::TH2LineVertex &lastVertex = feature.lineVertices.last();
                         const MapGeometryFeature::TH2LineVertex &firstVertex = feature.lineVertices.first();
                         const QPointF lastAnchor = anchorPreviewAt(anchorItemsByOrder->size() - 1);
@@ -2448,6 +2449,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                         } else {
                             interactivePath.lineTo(firstAnchor);
                         }
+                        interactivePath.closeSubpath();
                     }
 
                     lineItem->setPath(interactivePath);

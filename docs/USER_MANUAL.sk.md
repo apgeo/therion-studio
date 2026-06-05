@@ -151,6 +151,8 @@ Režim `Vizuálne` obsahuje:
 
 Režim `Zdroj` zostáva dostupný pre priamu editáciu zdroja.
 
+Súbory mimo UTF-8 sa otvárajú s konkrétnym zdrojovým kódovaním, keď ho možno rozpoznať, vrátane bežných stredoeurópskych legacy kódovaní ako ISO-8859-2. Pri uložení Therion Studio zachová rozpoznané zdrojové kódovanie, ak súbor výslovne neprevediete na UTF-8 v inšpektore `Súbor`.
+
 ### 6.2 Hlavné mapové nástroje
 
 | Skupina | Akcie |
@@ -177,6 +179,7 @@ Počas kreslenia čiary alebo plochy:
 - stlačením, ťahaním a pustením pri pokladaní vrcholu vytvoríte zakrivený Bezier segment,
 - viditeľné Bezier kontrolné body možno pred dokončením ťahaním doladiť,
 - kliknutím na prvý vrchol čiary ju dokončíte ako uzavretú (`-close on`),
+- uzavreté čiary vykresľujú posledný segment späť na prvý vrchol, vrátane dvojbodových uzavretých Bezier kriviek,
 - `Backspace` alebo `Delete` odstráni posledný draft vrchol,
 - `Esc` zruší vkladanie.
 

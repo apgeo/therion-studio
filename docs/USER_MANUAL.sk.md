@@ -126,7 +126,13 @@ Pre `.th2` súbory:
 - hľadanie a nahradenie z menu `Úpravy`,
 - záložku `Súbor` v inšpektore s panelom pomenovaným podľa aktuálneho súboru, plnou cestou, akciou na skopírovanie cesty, veľkosťou na disku, časom poslednej zmeny, aktuálnym kódovaním a prevodom do UTF-8 pre súbory mimo UTF-8.
 
-### 4.3 Dátové riadky v režime Bloky
+### 4.3 Projektové hľadanie
+
+Otvorte aktivitu `Hľadanie` v ľavom raili alebo stlačte `Command/Ctrl+Shift+F`. Zadajte doslovný text, podľa potreby zvoľte `Celé slovo` alebo `Rozlišovať veľkosť`, a stlačením `Enter` alebo `Hľadať` prehľadajte aktuálny projekt.
+
+Projektové hľadanie prehľadáva Therion textové zdroje (`.th`, `.th2` a konfiguračné súbory Therionu), zahŕňa neuložené zmeny v otvorených záložkách a vypisuje zhody zoskupené podľa súboru s riadkom a stĺpcom. Dvojklikom na súbor alebo riadok zhody otvoríte súbor v režime Zdroj (`Raw`) na zodpovedajúcom texte s pripraveným inline hľadaním pre ďalšiu/predchádzajúcu zhodu.
+
+### 4.4 Dátové riadky v režime Bloky
 
 V režime `Bloky` možno bloky `data ...` upravovať tabuľkou podľa aktívnej hlavičky dát. Prázdne riadky v tele dát sa pri otvorení tabuľky ignorujú, takže medzery v zdroji nevzniknú ako falošné merania.
 
@@ -284,6 +290,7 @@ Používajte `Command` na macOS a `Ctrl` na Windows/Linux, ak menu platformy nez
 | Späť | `Command/Ctrl+Z` |
 | Znovu | `Command/Ctrl+Shift+Z` alebo platformné východiskové |
 | Nájsť | `Command/Ctrl+F` |
+| Hľadať v projekte | `Command/Ctrl+Shift+F` |
 | Nájsť a nahradiť | platformná východisková skratka pre replace |
 | Prepnúť do editora Zdroj (`Raw`) | `Command/Ctrl+horný 1` |
 | Prepnúť do editora Bloky pre `.th` / config, alebo do editora Vizuálne pre `.th2` | `Command/Ctrl+horný 2` |

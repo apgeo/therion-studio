@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "MainWindowTherionConsoleController.h"
+#include "ProjectSearchScanner.h"
 #include "ProjectStructureScanner.h"
 #include "../core/CommandCatalogStore.h"
 #include "../core/ISessionStore.h"
@@ -20,6 +21,7 @@
 
 class QLabel;
 class QAction;
+class QCheckBox;
 class QComboBox;
 class QFileSystemModel;
 class QCloseEvent;
@@ -109,12 +111,14 @@ private:
     {
         FileBrowser = 0,
         StructureBrowser = 1,
-        Console = 2
+        Search = 2,
+        Console = 3
     };
 
     void buildUi();
     void buildMenus();
     void buildProjectBrowser();
+    void buildSearchSidebar();
     void buildStructureSidebar();
     void buildMapBackgroundPanel(QWidget *parent, QVBoxLayout *parentLayout);
     void buildConsole();
@@ -135,6 +139,9 @@ private:
     void handleStructureSidebarScanFinished(const TherionStudio::ProjectStructureScanner::Result &result);
     void applyStructureSidebarIndex(const TherionStudio::ProjectIndexSnapshot &projectIndex);
     void showStructureSidebarMessage(const QString &message);
+    void requestProjectSearch();
+    void handleProjectSearchFinished(const TherionStudio::ProjectSearchScanner::Result &result);
+    void openProjectSearchResult(const QModelIndex &index);
     bool activateStructureSidebarAction(const QString &action);
     void updateStructureSidebarSourceLocations(const TherionStudio::ProjectIndexSnapshot &projectIndex);
     void rebuildMapObjectsTree();
@@ -251,6 +258,7 @@ private:
     QTabWidget *editorTabs_ = nullptr;
     QTreeView *projectTree_ = nullptr;
     QTreeView *structureTree_ = nullptr;
+    QTreeView *searchResultsTree_ = nullptr;
     QTreeView *mapObjectsTree_ = nullptr;
     QFrame *mapBackgroundPanel_ = nullptr;
     QListWidget *mapBackgroundLayersList_ = nullptr;
@@ -274,6 +282,7 @@ private:
     QWidget *sidebarContentContainer_ = nullptr;
     QToolButton *sidebarFilesButton_ = nullptr;
     QToolButton *sidebarStructureButton_ = nullptr;
+    QToolButton *sidebarSearchButton_ = nullptr;
     QToolButton *sidebarConsoleButton_ = nullptr;
     QToolButton *sidebarCompileButton_ = nullptr;
     QStackedWidget *sidebarPages_ = nullptr;
@@ -295,6 +304,11 @@ private:
     QAction *fullScreenAction_ = nullptr;
     QPlainTextEdit *consoleView_ = nullptr;
     QLineEdit *therionWorkingDirectoryEdit_ = nullptr;
+    QLineEdit *projectSearchEdit_ = nullptr;
+    QPushButton *projectSearchButton_ = nullptr;
+    QCheckBox *projectSearchWholeWordCheck_ = nullptr;
+    QCheckBox *projectSearchMatchCaseCheck_ = nullptr;
+    QLabel *projectSearchStatusLabel_ = nullptr;
     QPushButton *therionBrowseWorkingDirectoryButton_ = nullptr;
     QLineEdit *therionArgumentsEdit_ = nullptr;
     QComboBox *therionRunTargetCombo_ = nullptr;
@@ -352,6 +366,7 @@ private:
     bool workspaceModeSwitcherSyncInProgress_ = false;
     QFileSystemModel *projectModel_ = nullptr;
     QStandardItemModel *structureModel_ = nullptr;
+    QStandardItemModel *searchResultsModel_ = nullptr;
     QStandardItemModel *mapObjectsModel_ = nullptr;
     QString projectRootPath_;
     QString projectStructureSummary_;
@@ -380,5 +395,6 @@ private:
     std::unique_ptr<TherionStudio::ISessionStore> ownedSessionStore_;
     TherionStudio::ISessionStore *sessionStore_ = nullptr;
     TherionStudio::CommandCatalogStore commandCatalogStore_;
+    TherionStudio::ProjectSearchScanner *projectSearchScanner_ = nullptr;
     TherionStudio::ProjectStructureScanner *structureSidebarScanner_ = nullptr;
 };

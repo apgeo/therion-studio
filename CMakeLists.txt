@@ -188,6 +188,8 @@ set(THERION_APP_SOURCES
     src/app/MainWindowTherionRunnerController.h
     src/app/MainWindowStructureNameOverridesService.cpp
     src/app/MainWindowStructureNameOverridesService.h
+    src/app/ProjectSearchScanner.cpp
+    src/app/ProjectSearchScanner.h
     src/app/ProjectStructureScanner.cpp
     src/app/ProjectStructureScanner.h
     src/app/TherionExecutableSelectionController.cpp
@@ -607,6 +609,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/redo-2.svg
     resources/icons/lucide/save.svg
     resources/icons/lucide/scan.svg
+    resources/icons/lucide/search.svg
     resources/icons/lucide/screen-share.svg
     resources/icons/lucide/monitor-x.svg
     resources/icons/lucide/spline.svg
@@ -967,6 +970,9 @@ therion_add_core_unit_test(SessionStoreTest
 therion_add_app_unit_test(ProjectStructureScannerTest
     tests/ProjectStructureScannerTest.cpp)
 
+therion_add_app_unit_test(ProjectSearchScannerTest
+    tests/ProjectSearchScannerTest.cpp)
+
 therion_add_app_unit_test(TherionRunnerConfigResolverTest
     tests/TherionRunnerConfigResolverTest.cpp)
 
@@ -1229,6 +1235,7 @@ set(THERION_UNIT_TEST_TARGETS
     TextEditorDocumentWorkflowControllerTest
     TextEditorTabInteractionControllerTest
     ProjectStructureScannerTest
+    ProjectSearchScannerTest
     SessionStoreTest
     MainWindowSessionDocumentControllerTest
     MainWindowSessionControllerTest

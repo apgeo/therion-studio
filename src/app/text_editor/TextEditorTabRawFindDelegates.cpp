@@ -11,6 +11,16 @@ void TextEditorTab::showFindBar(bool replaceMode)
     }
 }
 
+void TextEditorTab::showFindBarWithText(const QString &findText,
+                                        bool replaceMode,
+                                        bool wholeWord,
+                                        bool matchCase)
+{
+    if (rawEditorFindController_ != nullptr) {
+        rawEditorFindController_->showFindBarWithText(findText, replaceMode, wholeWord, matchCase);
+    }
+}
+
 void TextEditorTab::hideFindBar()
 {
     if (rawEditorFindController_ != nullptr) {

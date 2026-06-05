@@ -355,10 +355,12 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
     , editorTabs_(new QTabWidget(this))
     , projectModel_(new QFileSystemModel(this))
     , structureModel_(new QStandardItemModel(this))
+    , searchResultsModel_(new QStandardItemModel(this))
     , mapObjectsModel_(new QStandardItemModel(this))
     , documentFileWatcher_(new QFileSystemWatcher(this))
     , sessionStore_(&sessionStore)
     , commandCatalogStore_(std::move(commandCatalogStore))
+    , projectSearchScanner_(new TherionStudio::ProjectSearchScanner(this))
     , structureSidebarScanner_(new TherionStudio::ProjectStructureScanner(this))
 {
     setWindowTitle(tr("Therion Studio"));
@@ -366,6 +368,8 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
 
     projectModel_->setRootPath(QDir::rootPath());
 
+    connect(projectSearchScanner_, &TherionStudio::ProjectSearchScanner::searchFinished,
+            this, &MainWindow::handleProjectSearchFinished);
     connect(structureSidebarScanner_, &TherionStudio::ProjectStructureScanner::scanFinished,
             this, &MainWindow::handleStructureSidebarScanFinished);
     connect(documentFileWatcher_, &QFileSystemWatcher::fileChanged,
@@ -519,6 +523,20 @@ void MainWindow::buildMenus()
     QAction *findAction = editMenu->addAction(tr("&Find"));
     findAction->setShortcut(QKeySequence::Find);
     connect(findAction, &QAction::triggered, this, [this]() { showFindBar(false); });
+
+    QAction *projectSearchAction = editMenu->addAction(tr("Search in Project"));
+    projectSearchAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_F));
+    projectSearchAction->setShortcutContext(Qt::WindowShortcut);
+    connect(projectSearchAction, &QAction::triggered, this, [this]() {
+        setSidebarPane(SidebarPane::Search);
+        if (isSidebarEffectivelyCollapsed()) {
+            setSidebarCollapsed(false);
+        }
+        if (projectSearchEdit_ != nullptr) {
+            projectSearchEdit_->setFocus();
+            projectSearchEdit_->selectAll();
+        }
+    });
 
     QAction *replaceAction = editMenu->addAction(tr("Find and &Replace"));
     replaceAction->setShortcut(QKeySequence::Replace);

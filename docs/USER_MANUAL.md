@@ -127,7 +127,13 @@ For `.th2` files:
 - find and replace from the `Edit` menu
 - a `File` inspector tab with a panel titled by the current file name, full path, copy-path action, on-disk size, last-modified timestamp, current encoding, and UTF-8 conversion for non-UTF-8 files
 
-### 4.3 Blocks Data Rows
+### 4.3 Project Search
+
+Open the Search activity from the left rail or press `Command/Ctrl+Shift+F`. Enter literal text, choose `Whole word` or `Case sensitive` when needed, and press `Enter` or `Search` to scan the current project.
+
+Project search scans Therion text sources (`.th`, `.th2`, and Therion config files), includes unsaved edits from open tabs, and lists matches grouped by file with line and column locations. Double-click a file or match row to open the file in Raw mode at the matching text with the inline find bar ready for next/previous navigation.
+
+### 4.4 Blocks Data Rows
 
 In `Blocks` mode, `data ...` blocks can be edited through a table based on the active data header. Empty body lines are ignored when the table opens, so spacing in the source does not become fake measurement data.
 
@@ -287,6 +293,7 @@ Use `Command` on macOS and `Ctrl` on Windows/Linux unless the platform menu show
 | Undo | `Command/Ctrl+Z` |
 | Redo | `Command/Ctrl+Shift+Z` or platform default |
 | Find | `Command/Ctrl+F` |
+| Search in project | `Command/Ctrl+Shift+F` |
 | Find and replace | platform default replace shortcut |
 | Switch to Raw editor | `Command/Ctrl+top-row 1` |
 | Switch to Blocks editor for `.th` / config, or Visual editor for `.th2` | `Command/Ctrl+top-row 2` |

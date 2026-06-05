@@ -37,6 +37,10 @@ public:
     explicit RawEditorFindController(RawEditorFindContext context);
 
     void showFindBar(bool replaceMode);
+    void showFindBarWithText(const QString &findText,
+                             bool replaceMode,
+                             bool wholeWord = false,
+                             bool matchCase = false);
     void hideFindBar();
     bool findNext();
     bool findPrevious();

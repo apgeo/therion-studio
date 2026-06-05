@@ -291,6 +291,14 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Find and Replace commands shall reveal an inline search bar in the editor area rather than requiring a separate modal dialog.
 - The search bar shall support next, previous, replace current, replace all, whole-word matching, and case-sensitive matching.
 - The user shall be able to hide the search bar without closing the current document.
+- Global project search shall be available from a dedicated left activity-rail Search pane and from `Command/Ctrl+Shift+F`.
+- Global project search shall search the open project for literal text in Therion text sources, including `.th`, `.th2`, and Therion config files.
+- Global project search shall support whole-word and case-sensitive matching.
+- Global project search shall decode on-disk source files using the same encoding rules as the text editor so result snippets preserve declared non-UTF-8 text.
+- Global project search shall include unsaved in-memory edits from open editor tabs when producing results.
+- Global project search results shall be grouped by file and shall show at least the source line, column, and a short line preview for each match.
+- Activating a global search result shall open the file in raw text-editing mode, move the caret to the matching source location, and reveal the inline find bar with the same search term highlighted.
+- Global project search shall run asynchronously or otherwise avoid blocking the UI thread for normal project sizes.
 - The editor shall display 1-based source line numbers in a left gutter that stays synchronized with document scroll position.
 - For active document tabs, the application shall show a full-width document command toolbar directly above the tab strip.
 - The document command toolbar shall include, from the left, `Save`, a visual separator, `Undo` and `Redo`.
@@ -1010,6 +1018,7 @@ The criteria below are intended for implementation verification and QA.
 - Save affects only the active document; Save All affects every dirty document.
 - The editor supports syntax highlighting, completion, and code folding for Therion syntax.
 - Find and Replace show an inline search bar with next, previous, replace, replace all, whole-word, and match-case controls.
+- Global project search is available from the left Search activity pane and `Command/Ctrl+Shift+F`, lists file-grouped matches with source locations, and opens selected matches in raw mode.
 - The editor shows a contextual help/documentation panel for Therion commands and options when metadata is available.
 - In raw text-editing mode, the contextual help panel appears in a resizable right-side inspector column (not a bottom strip), and editor/help spacing remains visually consistent with Blocks mode.
 - For `.th` and Therion config documents, `Raw`/`Blocks` mode controls appear in the full-width document command toolbar row above the tab strip.
@@ -1260,7 +1269,7 @@ The MVP shall include the following capabilities at a minimum:
 
 The following items may be delivered after the MVP, provided they do not regress the MVP behaviors:
 
-- deeper project-wide search and replace beyond the active document
+- project-wide replace and advanced project-search options beyond literal text, whole-word, and case-sensitive search
 - richer map-object list presentation polish beyond the required fields
 - a user-facing style editor for map symbol customization beyond bundled and override-file workflows
 - a user-facing style editor for Therion syntax-highlighting customization beyond bundled and override-file workflows

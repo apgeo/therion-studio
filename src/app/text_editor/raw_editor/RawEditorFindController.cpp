@@ -40,6 +40,27 @@ void RawEditorFindController::showFindBar(bool replaceMode)
     updateSearchResults(trText("Ready"));
 }
 
+void RawEditorFindController::showFindBarWithText(const QString &findText,
+                                                  bool replaceMode,
+                                                  bool wholeWord,
+                                                  bool matchCase)
+{
+    showFindBar(replaceMode);
+    if (context_.findEdit == nullptr) {
+        return;
+    }
+
+    context_.findEdit->setText(findText);
+    if (context_.wholeWordCheck != nullptr) {
+        context_.wholeWordCheck->setChecked(wholeWord);
+    }
+    if (context_.caseSensitiveCheck != nullptr) {
+        context_.caseSensitiveCheck->setChecked(matchCase);
+    }
+    context_.findEdit->selectAll();
+    performFind(true, false);
+}
+
 void RawEditorFindController::hideFindBar()
 {
     if (context_.searchBar == nullptr || context_.editor == nullptr) {

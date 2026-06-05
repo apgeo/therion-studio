@@ -1170,6 +1170,10 @@ therion_add_map_editor_ui_test(MapEditorViewportInputControllerTest
     tests/MapEditorViewportInputControllerTest.cpp
     "MapEditorViewportInputControllerResources")
 
+therion_add_map_editor_ui_test(MapEditorCanvasEditSourceTransactionTest
+    tests/MapEditorCanvasEditSourceTransactionTest.cpp
+    "MapEditorCanvasEditSourceTransactionResources")
+
 set(THERION_UNIT_TEST_TARGETS
     CommandCatalogStoreTest
     CommandOptionParserTest
@@ -1224,6 +1228,7 @@ set(THERION_UI_TEST_TARGETS
     MapEditorSplitAreaBorderSmokeTest
     MapEditorSelectionPanelTypeOptionsTest
     MapEditorBackgroundLayerVisibilityTest
+    MapEditorCanvasEditSourceTransactionTest
     MapEditorViewportInputControllerTest)
 
 set(THERION_TEST_EXECUTABLE_TARGETS

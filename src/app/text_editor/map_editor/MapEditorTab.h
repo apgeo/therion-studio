@@ -236,6 +236,7 @@ private:
         int pendingClickLineNumber_ = 0;
         int pendingClickSourceVertexIndex_ = -1;
         QString pendingClickGeometryKind_;
+        int pendingNavigationLineNumber_ = 0;
     };
 
     struct InteractiveDrawState
@@ -344,6 +345,7 @@ private:
     void refreshMapScene();
     void refreshMapScenePreservingUndoStack();
     void flushPendingMapSceneRefreshAfterCommand();
+    void applyPendingNavigationSelection(bool consume);
     void scheduleSourceDrivenMapRefresh();
     void applySourceDrivenMapRefresh();
     MapEditorSceneRefreshContext sceneRefreshContext();

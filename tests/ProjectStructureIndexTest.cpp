@@ -1,4 +1,5 @@
 #include "../src/core/ProjectStructureIndex.h"
+#include "../src/core/TherionDocumentParser.h"
 
 #include <QDir>
 #include <QFile>
@@ -884,6 +885,23 @@ int runTh2ObjectIndexGroupingTest()
     }
     if (!expect(shiftedEntries.at(1).objectId == entries.at(1).objectId,
                 "The TH2 object ID should stay stable when source line numbers shift.")) {
+        return 1;
+    }
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(QStringLiteral(
+        "scrap s1\n"
+        "point 0 0 station -name a1\n"
+        "point 1 1 station -name a2\n"
+        "endscrap\n"));
+    const QVector<ProjectStructureEntry> parsedLineEntries = ProjectStructureIndex::scanTh2Objects(
+        QStringLiteral("/tmp/example.th2"),
+        parsedLines);
+    if (!expect(parsedLineEntries.size() == entries.size(),
+                "The parsed-line TH2 object scan should match the text-based scan entry count.")) {
+        return 1;
+    }
+    if (!expect(parsedLineEntries.at(1).objectId == entries.at(1).objectId,
+                "The parsed-line TH2 object scan should preserve stable object IDs.")) {
         return 1;
     }
 

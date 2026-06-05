@@ -97,7 +97,7 @@ void MapEditorInspectorObjectController::rebuildInspectorObjectsTree()
 
     const QString currentText = context_.textEditor->text();
     const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument();
-    const QVector<ProjectStructureEntry> entries = ProjectStructureIndex::scanTh2Objects(th2Path, currentText);
+    const QVector<ProjectStructureEntry> entries = ProjectStructureIndex::scanTh2Objects(th2Path, parsedLines);
     if (entries.isEmpty()) {
         auto *placeholderItem = new QStandardItem(tr("No TH2 scraps, points, lines, or areas were found in the current document"));
         placeholderItem->setEditable(false);

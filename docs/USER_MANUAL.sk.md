@@ -134,6 +134,8 @@ V režime `Bloky` možno bloky `data ...` upravovať tabuľkou podľa aktívnej 
 
 Panel `Štruktúra` je ľahký navigačný index otvoreného projektu. Zobrazuje hierarchiu `survey`, `centerline`, `map` a `scrap` a rozpoznáva obe Therion varianty: `centreline` aj `centerline`.
 
+Kliknutím riadok iba vyberiete v strome. Dvojklikom na zdrojový riadok, alebo jeho výberom a stlačením `Enter`, otvoríte zdrojový dokument a prejdete na zodpovedajúci riadok.
+
 Index používa vybranú `Cieľovú konfiguráciu`, ak ukazuje do otvoreného projektu. Bez explicitného configu skúsi koreňový `thconfig`; ak neexistuje a v koreni je práve jeden pomenovaný config (`*.thconfig` alebo `thconfig.*`), použije sa ten. Ak je možných configov viac, vyberte požadovanú `Cieľovú konfiguráciu` v paneli `Kompilátor`.
 
 Mapy a scrapy referencované vnútri `map ... endmap` sa zobrazia pod danou mapou, ak je referencia jednoznačná. Nerozriešené alebo nejednoznačné referencie sa zobrazia ako varovanie a otvoria príslušný zdrojový riadok. Autoritatívnu validáciu a exportnú logiku stále vykonáva Therion kompilátor.

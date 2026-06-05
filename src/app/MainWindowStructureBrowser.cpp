@@ -968,7 +968,7 @@ void MainWindow::rebuildMapObjectsTree()
     refreshMapBackgroundPanel();
 }
 
-void MainWindow::handleStructureSelectionChanged(const QModelIndex &current, const QModelIndex &, QTreeView *)
+void MainWindow::openStructureSourceIndex(const QModelIndex &current, QTreeView *)
 {
     if (!current.isValid()) {
         return;
@@ -1025,7 +1025,7 @@ void MainWindow::handleStructureItemActivated(const QModelIndex &index, QTreeVie
         return;
     }
 
-    handleStructureSelectionChanged(index, QModelIndex(), tree);
+    openStructureSourceIndex(index, tree);
 }
 
 void MainWindow::updateMapEditorActionState()

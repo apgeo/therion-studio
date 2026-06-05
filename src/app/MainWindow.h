@@ -148,7 +148,7 @@ private:
     void processWatchedDocumentFileChange(const QString &filePath);
     bool reloadDocumentWidgetFromDisk(QWidget *documentWidget, QString *errorMessage = nullptr);
     QByteArray documentFileFingerprint(const QString &filePath) const;
-    void handleStructureSelectionChanged(const QModelIndex &current, const QModelIndex &previous, QTreeView *sourceTree);
+    void openStructureSourceIndex(const QModelIndex &current, QTreeView *sourceTree);
     void handleStructureItemActivated(const QModelIndex &index, QTreeView *sourceTree);
     bool confirmCloseTab(int index);
     bool confirmCloseDirtyDocuments();

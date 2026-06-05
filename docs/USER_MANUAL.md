@@ -135,6 +135,8 @@ In `Blocks` mode, `data ...` blocks can be edited through a table based on the a
 
 The `Structure` pane is a lightweight navigation index for the opened project. It shows `survey`, `centerline`, `map`, and `scrap` hierarchy and recognizes both Therion spellings: `centreline` and `centerline`.
 
+Select a row to inspect it in the tree. Double-click a source row, or select it and press `Enter`, to open its source document and navigate to the matching line.
+
 The index uses the selected `Target Config` when it points inside the opened project. Without an explicit target config, Therion Studio tries the root `thconfig`; if that does not exist and exactly one named root config exists (`*.thconfig` or `thconfig.*`), that file is used. If several config files are possible, choose the intended `Target Config` in the `Compiler` pane.
 
 Maps and scraps referenced inside `map ... endmap` are shown under that map when the reference is unambiguous. Unresolved or ambiguous references appear as warning rows that navigate to the source line. The Therion compiler remains the authoritative validator for export behavior.

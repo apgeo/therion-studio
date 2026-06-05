@@ -60,7 +60,9 @@ void MapEditorTab::hideFindBar()
 
 void MapEditorTab::goToLine(int lineNumber)
 {
+    selectionSyncState_.pendingNavigationLineNumber_ = lineNumber > 0 ? lineNumber : 0;
     textEditor_->goToLine(lineNumber);
+    applyPendingNavigationSelection(false);
 }
 
 QString MapEditorTab::filePath() const
@@ -268,6 +270,10 @@ void MapEditorTab::refreshWorkspaceModeUi()
 
 void MapEditorTab::handleTextEditorCurrentLineChanged(int lineNumber)
 {
+    if (selectionSyncState_.pendingNavigationLineNumber_ > 0
+        && selectionSyncState_.pendingNavigationLineNumber_ != lineNumber) {
+        selectionSyncState_.pendingNavigationLineNumber_ = 0;
+    }
     if (!selectionSyncState_.textNavigationInProgress_) {
         syncMapSelectionFromTextCursor(lineNumber, textEditor_ != nullptr ? textEditor_->currentColumnNumber() : 1);
     }

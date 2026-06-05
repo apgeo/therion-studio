@@ -3,6 +3,7 @@
 #include "MapEditorMagnifierOverlay.h"
 #include "MapEditorSceneRefreshController.h"
 #include "MapEditorSceneThemePolicy.h"
+#include "../TextEditorTab.h"
 
 #include <QEvent>
 #include <QGraphicsView>
@@ -55,6 +56,7 @@ void MapEditorTab::buildMapScene()
 void MapEditorTab::refreshMapScene()
 {
     MapEditorSceneRefreshController(sceneRefreshContext()).refreshMapScene();
+    applyPendingNavigationSelection(false);
     if (mapMagnifierOverlay_ != nullptr) {
         mapMagnifierOverlay_->update();
     }
@@ -63,6 +65,7 @@ void MapEditorTab::refreshMapScene()
 void MapEditorTab::refreshMapScenePreservingUndoStack()
 {
     MapEditorSceneRefreshController(sceneRefreshContext()).refreshMapScenePreservingUndoStack();
+    applyPendingNavigationSelection(false);
     if (mapMagnifierOverlay_ != nullptr) {
         mapMagnifierOverlay_->update();
     }
@@ -74,6 +77,21 @@ void MapEditorTab::flushPendingMapSceneRefreshAfterCommand()
     MapEditorSceneRefreshController(sceneRefreshContext()).flushPendingMapSceneRefreshAfterCommand();
     if (hadPendingRefresh) {
         rebuildInspectorObjectsTree();
+        applyPendingNavigationSelection(false);
+    }
+}
+
+void MapEditorTab::applyPendingNavigationSelection(bool consume)
+{
+    const int lineNumber = selectionSyncState_.pendingNavigationLineNumber_;
+    if (lineNumber <= 0 || textEditor_ == nullptr) {
+        return;
+    }
+
+    syncMapSelectionFromTextCursor(lineNumber, textEditor_->currentColumnNumber());
+    syncInspectorObjectSelectionToLine(lineNumber);
+    if (consume) {
+        selectionSyncState_.pendingNavigationLineNumber_ = 0;
     }
 }
 
@@ -108,5 +126,6 @@ void MapEditorTab::applySourceDrivenMapRefresh()
 
     refreshMapScene();
     rebuildInspectorObjectsTree();
+    applyPendingNavigationSelection(true);
 }
 }

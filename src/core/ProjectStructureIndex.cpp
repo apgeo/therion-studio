@@ -1144,12 +1144,21 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanProject(const QString 
 
 QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QString &sourceFile, const QString &text)
 {
-    QVector<ProjectStructureEntry> entries;
     if (text.trimmed().isEmpty()) {
+        return {};
+    }
+
+    return scanTh2Objects(sourceFile, TherionDocumentParser::parseText(text));
+}
+
+QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QString &sourceFile,
+                                                                     const QVector<TherionParsedLine> &parsedLines)
+{
+    QVector<ProjectStructureEntry> entries;
+    if (parsedLines.isEmpty()) {
         return entries;
     }
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
     QString currentScrapName;
     int currentScrapLine = 0;
     QString currentScrapObjectId;

@@ -7,6 +7,8 @@
 
 namespace TherionStudio
 {
+struct TherionParsedLine;
+
 enum class ProjectStructureEntryKind
 {
     Unknown,
@@ -81,6 +83,8 @@ public:
                                                       const QHash<QString, QString> &inMemoryFileContentsByPath,
                                                       QString *errorMessage = nullptr);
     static QVector<ProjectStructureEntry> scanTh2Objects(const QString &sourceFile, const QString &text);
+    static QVector<ProjectStructureEntry> scanTh2Objects(const QString &sourceFile,
+                                                         const QVector<TherionParsedLine> &parsedLines);
     static QString structureEntryNodeKey(const ProjectStructureEntry &entry);
 };
 }

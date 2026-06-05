@@ -850,9 +850,6 @@ void MainWindow::buildStructureSidebar()
     structureTree_->setSelectionMode(QAbstractItemView::SingleSelection);
     structureTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     structureTree_->setAlternatingRowColors(true);
-    connect(structureTree_->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex &current, const QModelIndex &previous) {
-        handleStructureSelectionChanged(current, previous, structureTree_);
-    });
     connect(structureTree_, &QTreeView::activated, this, [this](const QModelIndex &index) {
         handleStructureItemActivated(index, structureTree_);
     });

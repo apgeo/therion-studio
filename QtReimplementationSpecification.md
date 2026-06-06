@@ -476,6 +476,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The structure sidebar shall present a navigable project hierarchy limited to surveys, maps, and scraps.
 - The structure sidebar shall not prepend synthetic top rows for project-root path or summary text inside the hierarchy tree.
 - Structure rows shall include category icons for survey, map, and scrap items using the bundled compass, map, and puzzle Lucide icons respectively.
+- Structure siblings under the same parent shall be displayed in category order survey, map, scrap, followed by diagnostics, and entries within the same category shall be sorted alphabetically by displayed name with source order used only as a stable tie-breaker.
 - Structure parsing shall treat Therion spelling aliases `centreline` / `centerline` and `endcentreline` / `endcenterline` equivalently.
 - Structure graph object-kind labels and summaries shall preserve canonical Therion source terms such as `survey`, `centerline`, `map`, `scrap`, `station`, `point`, `line`, and `area` instead of translating them.
 - Map and scrap items that are referenced by a map block shall be presented as children of that map node when the reference can be resolved uniquely.

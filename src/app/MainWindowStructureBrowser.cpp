@@ -506,6 +506,70 @@ void recordMapReferenceParents(QHash<QString, QString> *parentByChildKey,
     }
 }
 
+int structureCategorySortRank(const QString &category)
+{
+    if (category == QStringLiteral("Surveys")) {
+        return 0;
+    }
+    if (category == QStringLiteral("Maps")) {
+        return 1;
+    }
+    if (category == QStringLiteral("Scraps")) {
+        return 2;
+    }
+    if (category == QStringLiteral("Diagnostics")) {
+        return 3;
+    }
+
+    return 4;
+}
+
+void sortStructureSiblingRows(QStandardItem *parentItem)
+{
+    if (parentItem == nullptr || parentItem->rowCount() <= 0) {
+        return;
+    }
+
+    struct StructureSiblingRow
+    {
+        QList<QStandardItem *> items;
+        int originalRow = 0;
+    };
+
+    QVector<StructureSiblingRow> rows;
+    rows.reserve(parentItem->rowCount());
+    const int rowCount = parentItem->rowCount();
+    for (int row = 0; row < rowCount; ++row) {
+        rows.append(StructureSiblingRow{parentItem->takeRow(0), row});
+    }
+
+    std::stable_sort(rows.begin(), rows.end(), [](const StructureSiblingRow &left, const StructureSiblingRow &right) {
+        const QStandardItem *leftItem = left.items.value(0);
+        const QStandardItem *rightItem = right.items.value(0);
+        const int leftRank = structureCategorySortRank(leftItem != nullptr ? leftItem->data(CategoryRole).toString() : QString());
+        const int rightRank = structureCategorySortRank(rightItem != nullptr ? rightItem->data(CategoryRole).toString() : QString());
+        if (leftRank != rightRank) {
+            return leftRank < rightRank;
+        }
+
+        const QString leftName = leftItem != nullptr ? leftItem->data(NameRole).toString() : QString();
+        const QString rightName = rightItem != nullptr ? rightItem->data(NameRole).toString() : QString();
+        const int nameComparison = QString::localeAwareCompare(leftName.toLower(), rightName.toLower());
+        if (nameComparison != 0) {
+            return nameComparison < 0;
+        }
+
+        return left.originalRow < right.originalRow;
+    });
+
+    for (StructureSiblingRow &row : rows) {
+        parentItem->appendRow(row.items);
+    }
+    for (int row = 0; row < parentItem->rowCount(); ++row) {
+        sortStructureSiblingRows(parentItem->child(row));
+    }
+}
+
 void updateStructureSourceLocationRoles(QStandardItemModel *model,
                                         const QString &projectRootPath,
                                         const TherionStudio::ProjectIndexSnapshot &projectIndex)
@@ -856,6 +920,7 @@ void MainWindow::applyStructureSidebarIndex(const TherionStudio::ProjectIndexSna
 
             parentItem->appendRow(createDiagnosticItem(diagnostic, projectRootPath_));
         }
+        sortStructureSiblingRows(structureModel_->invisibleRootItem());
     }
 
     if (hasExpansionState) {

@@ -190,6 +190,17 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
 
     if (mapView_ != nullptr && watched == mapView_->viewport()) {
         switch (event->type()) {
+        case QEvent::Enter:
+        case QEvent::Show: {
+            const QPoint viewportPosition = mapView_->viewport()->mapFromGlobal(QCursor::pos());
+            if (mapView_->viewport()->rect().contains(viewportPosition)) {
+                scheduleMagnifierOverlayUpdateFromViewportPosition(viewportPosition);
+            }
+            if (event->type() == QEvent::Show) {
+                updateMagnifierOverlayGeometry();
+            }
+            break;
+        }
         case QEvent::MouseMove:
         case QEvent::MouseButtonPress:
         case QEvent::MouseButtonRelease:
@@ -199,7 +210,6 @@ bool MapEditorTab::eventFilter(QObject *watched, QEvent *event)
             hideMagnifierOverlay();
             break;
         case QEvent::Resize:
-        case QEvent::Show:
             updateMagnifierOverlayGeometry();
             break;
         default:

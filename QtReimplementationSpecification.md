@@ -158,7 +158,7 @@ Required capabilities:
   - lines
   - points
   - areas
-- support object selection, hover feedback, and visibility toggles
+- support object selection, hover feedback, and visibility toggles; selected map objects shall use a red interaction overlay, hover-before-selection feedback shall use an azure/cyan interaction overlay without changing the normal object style color, and the map canvas shall use a crosshair cursor in select mode so the visible cursor hotspot matches hit testing
 - support dragging and reordering objects where the document model allows it
 - support direct editing of map geometry
 - support undo and redo for all map mutations
@@ -1190,7 +1190,7 @@ The criteria below are intended for implementation verification and QA.
 - Dot-pattern area fills support deterministic grid and scatter placement modes.
 - Dot-pattern area fills support optional deterministic per-symbol size jitter.
 - Dot-pattern area fills support optional deterministic per-symbol angle jitter.
-- Selection, draft, and edit-preview visuals are applied consistently through the shared style system.
+- Selection, hover, draft, and edit-preview visuals are applied consistently through the shared style system; selection uses red overlays, hover uses azure/cyan overlays, and normal rendered object colors remain style-driven.
 - Line/area vertex visuals and selection-highlight overlays are visible for selected objects and are suppressed for non-selected objects in normal editing view.
 - Line control handles/connectors are visible only for the selected line vertex (or its selected control handle) and remain hidden for other vertices.
 - Packaged builds include the style resources required to render the map consistently on all supported platforms.

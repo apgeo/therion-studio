@@ -237,6 +237,7 @@ void MapEditorTab::buildUi()
         mapView_->viewport()->setFocusPolicy(Qt::StrongFocus);
         mapView_->viewport()->installEventFilter(this);
         mapView_->viewport()->setMouseTracking(true);
+        mapView_->viewport()->setCursor(Qt::CrossCursor);
         mapView_->viewport()->setContextMenuPolicy(Qt::CustomContextMenu);
         connect(mapView_->viewport(), &QWidget::customContextMenuRequested, this, [this](const QPoint &position) {
             if (mapView_ == nullptr || mapView_->viewport() == nullptr) {

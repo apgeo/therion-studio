@@ -27,6 +27,7 @@
 #include <cmath>
 #include <optional>
 
+#include "MapEditorSceneSupport.h"
 #include "MapEditorPointSymbolGeometry.h"
 
 namespace TherionStudio {
@@ -84,6 +85,16 @@ inline qreal mapZoomOutMarkerScale(const QGraphicsItem *item, const QPainter *pa
     }
 
     return qBound<qreal>(0.34, std::pow(qMax<qreal>(0.01, lod), 0.70), 1.0);
+}
+
+inline QColor mapEditorInteractionSelectionColor()
+{
+    return QColor(QStringLiteral("#ff0000"));
+}
+
+inline QColor mapEditorInteractionHoverColor()
+{
+    return QColor(QStringLiteral("#00e5ff"));
 }
 
 QRectF sceneCoordsPreviewBounds(const QRectF &sourceBounds, const QRectF &targetBounds);
@@ -191,9 +202,11 @@ protected:
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
     {
-        const bool selected = option != nullptr && (option->state & QStyle::State_Selected);
-        const bool emphasize = selected || hoverActive_ || dragActive_;
-        const qreal interactionScale = dragActive_ ? 1.5 : (selected ? 1.4 : (hoverActive_ ? 1.25 : 1.0));
+        const bool selected = (option != nullptr && (option->state & QStyle::State_Selected))
+            || data(kMapSceneInteractionSelectionRole).toBool();
+        const bool hovered = data(kMapSceneInteractionHoverRole).toBool();
+        const bool emphasize = selected || hovered || dragActive_;
+        const qreal interactionScale = dragActive_ ? 1.5 : (selected ? 1.4 : (hovered ? 1.25 : 1.0));
         const qreal lod = mapViewLevelOfDetail(this, painter, widget);
         const qreal zoomOutScale = mapZoomOutMarkerScale(this, painter, widget);
         const qreal scale = interactionScale * zoomOutScale;
@@ -210,13 +223,12 @@ protected:
             fill.setAlpha(emphasize ? 235 : 180);
         }
         const QColor baseOutline = pen().color().isValid() ? pen().color() : QColor(22, 22, 22, 210);
-        QColor outline = selected ? QColor(QStringLiteral("#3ba4ff")) : baseOutline;
+        QColor outline = selected ? mapEditorInteractionSelectionColor() : (hovered ? mapEditorInteractionHoverColor() : baseOutline);
 
         painter->setRenderHint(QPainter::Antialiasing, true);
         if (emphasize) {
-            QColor halo = selected
-                ? QColor(72, 166, 255, 110)
-                : (fill.lightnessF() > 0.6 ? QColor(24, 38, 56, 70) : QColor(255, 255, 255, 70));
+            QColor halo = selected ? mapEditorInteractionSelectionColor() : mapEditorInteractionHoverColor();
+            halo.setAlpha(selected ? 115 : 105);
             painter->setPen(Qt::NoPen);
             painter->setBrush(halo);
             const qreal haloRadius = 2.2 * zoomOutScale;
@@ -230,7 +242,7 @@ protected:
                                         const std::optional<QColor> &partStrokeColor = std::nullopt,
                                         const std::optional<QColor> &partFillColor = std::nullopt,
                                         const std::optional<qreal> &partStrokeWidth = std::nullopt) {
-            const QColor stroke = selected ? outline : partStrokeColor.value_or(outline);
+            const QColor stroke = (selected || hovered) ? outline : partStrokeColor.value_or(outline);
             const QColor fillBrush = partFillColor.value_or(fill);
             const qreal width = qMax<qreal>(0.55, partStrokeWidth.value_or(outlineWidth));
             QPen symbolPen(stroke, width);
@@ -494,9 +506,11 @@ protected:
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
     {
-        const bool selected = option != nullptr && (option->state & QStyle::State_Selected);
-        const bool emphasize = selected || hoverActive_ || dragActive_;
-        const qreal interactionScale = dragActive_ ? 1.45 : (selected ? 1.35 : (hoverActive_ ? 1.2 : 1.0));
+        const bool selected = (option != nullptr && (option->state & QStyle::State_Selected))
+            || data(kMapSceneInteractionSelectionRole).toBool();
+        const bool hovered = data(kMapSceneInteractionHoverRole).toBool();
+        const bool emphasize = selected || hovered || dragActive_;
+        const qreal interactionScale = dragActive_ ? 1.45 : (selected ? 1.35 : (hovered ? 1.2 : 1.0));
         const qreal zoomOutScale = mapZoomOutMarkerScale(this, painter, widget);
         const qreal scale = interactionScale * zoomOutScale;
         const QRectF baseRect = rect();
@@ -508,16 +522,15 @@ protected:
 
         QColor fill = brush().color().isValid() ? brush().color() : QColor(40, 40, 40, 160);
         fill.setAlpha(emphasize ? 240 : 175);
-        QColor outline = selected ? QColor(QStringLiteral("#3ba4ff")) : pen().color();
+        QColor outline = selected ? mapEditorInteractionSelectionColor() : (hovered ? mapEditorInteractionHoverColor() : pen().color());
         if (!outline.isValid()) {
             outline = QColor(24, 24, 24, 210);
         }
 
         painter->setRenderHint(QPainter::Antialiasing, true);
         if (emphasize) {
-            QColor halo = selected
-                ? QColor(72, 166, 255, 110)
-                : (fill.lightnessF() > 0.6 ? QColor(24, 38, 56, 70) : QColor(255, 255, 255, 70));
+            QColor halo = selected ? mapEditorInteractionSelectionColor() : mapEditorInteractionHoverColor();
+            halo.setAlpha(selected ? 115 : 105);
             painter->setPen(Qt::NoPen);
             painter->setBrush(halo);
             const qreal haloRadius = 2.0 * zoomOutScale;

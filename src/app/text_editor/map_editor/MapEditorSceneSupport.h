@@ -28,6 +28,9 @@ constexpr int kMapSceneLineNumberRole = Qt::UserRole + 121;
 constexpr int kMapSceneSelectionGatedRole = Qt::UserRole + 122;
 constexpr int kMapSceneSelectionSubtypeRole = Qt::UserRole + 123;
 constexpr int kMapSceneOwnerVertexRole = Qt::UserRole + 124;
+constexpr int kMapSceneInteractionHoverRole = Qt::UserRole + 125;
+constexpr int kMapScenePendingPrimarySelectionRole = Qt::UserRole + 126;
+constexpr int kMapSceneInteractionSelectionRole = Qt::UserRole + 127;
 
 enum MapSceneSelectionSubtype
 {

@@ -112,6 +112,20 @@ public:
     {
         setPen(basePen_);
         setBrush(brush);
+        setAcceptHoverEvents(true);
+    }
+
+    void setHoverInteractionOverlayEnabled(bool enabled)
+    {
+        hoverInteractionOverlayEnabled_ = enabled;
+        update();
+    }
+
+    void setHoverInteractionOverlayStroke(qreal minimumWidth, qreal extraWidth)
+    {
+        hoverOverlayMinimumWidth_ = qMax<qreal>(0.1, minimumWidth);
+        hoverOverlayExtraWidth_ = qMax<qreal>(0.0, extraWidth);
+        update();
     }
 
 protected:
@@ -136,11 +150,70 @@ protected:
         painter->setPen(drawPen);
         painter->setBrush(brush());
         painter->drawPath(path());
+        drawInteractionOverlay(painter, drawPen, option);
         painter->restore();
     }
 
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override
+    {
+        hoverActive_ = true;
+        QGraphicsPathItem::hoverEnterEvent(event);
+        update();
+    }
+
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override
+    {
+        hoverActive_ = false;
+        QGraphicsPathItem::hoverLeaveEvent(event);
+        update();
+    }
+
 private:
+    void drawInteractionOverlay(QPainter *painter,
+                                const QPen &drawPen,
+                                const QStyleOptionGraphicsItem *option) const
+    {
+        if (painter == nullptr) {
+            return;
+        }
+
+        const bool selected = (option != nullptr && (option->state & QStyle::State_Selected))
+            || data(kMapSceneInteractionSelectionRole).toBool();
+        const bool hovered = data(kMapSceneInteractionHoverRole).toBool();
+        if (!selected && (!hovered || !hoverInteractionOverlayEnabled_)) {
+            return;
+        }
+
+        const bool baseStrokeVisible = basePen_.style() != Qt::NoPen
+            && basePen_.color().alpha() > 0
+            && basePen_.widthF() > 0.0;
+        if (hovered && !selected && !baseStrokeVisible) {
+            return;
+        }
+
+        QColor overlayColor = selected ? mapEditorInteractionSelectionColor() : mapEditorInteractionHoverColor();
+        overlayColor.setAlpha(selected ? 235 : 220);
+        const qreal overlayWidth = selected
+            ? qMax<qreal>(selectionOverlayMinimumWidth_, drawPen.widthF() + selectionOverlayExtraWidth_)
+            : qMax<qreal>(hoverOverlayMinimumWidth_, drawPen.widthF() + hoverOverlayExtraWidth_);
+        QPen overlayPen(overlayColor,
+                        overlayWidth,
+                        Qt::SolidLine,
+                        Qt::RoundCap,
+                        Qt::RoundJoin);
+        overlayPen.setCosmetic(true);
+        painter->setPen(overlayPen);
+        painter->setBrush(Qt::NoBrush);
+        painter->drawPath(path());
+    }
+
     QPen basePen_;
+    bool hoverActive_ = false;
+    bool hoverInteractionOverlayEnabled_ = true;
+    qreal hoverOverlayMinimumWidth_ = 2.6;
+    qreal hoverOverlayExtraWidth_ = 1.2;
+    qreal selectionOverlayMinimumWidth_ = 2.6;
+    qreal selectionOverlayExtraWidth_ = 1.8;
 };
 
 class MapPathLabelItem final : public QGraphicsItem
@@ -2050,8 +2123,9 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     scene->addItem(lineDecorationItem);
                     lineDecorationItem->setZValue(2.55);
                     markGeometryItem(lineDecorationItem);
-                    makeMouseTransparent(lineDecorationItem);
+                    lineDecorationItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
                     lineDecorationItem->setData(kMapSceneLineNumberRole, feature.lineNumber);
+                    lineDecorationItem->setData(kMapSceneSelectionSubtypeRole, kMapSceneSelectionSubtypeLineDetail);
                 }
                 if (renderLineGuideSpine) {
                     QColor guideStroke = canvasTheme.mutedText;
@@ -2067,6 +2141,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                                                                                        Qt::RoundJoin));
                     scene->addItem(lineGuideItem);
                     lineGuideItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
+                    lineGuideItem->setHoverInteractionOverlayStroke(1.3, 0.15);
                     lineGuideItem->setZValue(2.58);
                     lineGuideItem->setToolTip(featureTooltip);
                     markGeometryItem(lineGuideItem);

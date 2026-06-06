@@ -3,10 +3,12 @@
 #include <QCoreApplication>
 
 #include "MapEditorInputPolicy.h"
+#include "MapEditorLineDecorationItem.h"
 #include "MapEditorSceneInternals.h"
 #include "MapEditorSceneSupport.h"
 
 #include <QContextMenuEvent>
+#include <QCursor>
 #include <QDateTime>
 #include <QElapsedTimer>
 #include <QEvent>
@@ -35,6 +37,8 @@ namespace TherionStudio
 {
 namespace
 {
+constexpr qreal kFilledPathInteriorHitDistancePixels = 6.0;
+
 bool wheelEventHasPreciseScrollingDeltas(const QWheelEvent *event)
 {
     if (event == nullptr) {
@@ -60,6 +64,21 @@ bool isSecondaryClickPress(const QMouseEvent *event)
         && event->modifiers().testFlag(Qt::ControlModifier);
 }
 
+void applyDefaultMapViewportCursor(const MapEditorViewportInputContext &context, QWidget *viewport)
+{
+    if (viewport == nullptr) {
+        return;
+    }
+
+    const MapEditorInteractiveDrawMode drawMode = context.drawMode ? context.drawMode() : MapEditorInteractiveDrawMode::None;
+    const bool selectMode = context.selectModeActive != nullptr && (*context.selectModeActive);
+    if (selectMode && drawMode == MapEditorInteractiveDrawMode::None) {
+        viewport->setCursor(Qt::CrossCursor);
+    } else {
+        viewport->unsetCursor();
+    }
+}
+
 bool isInteractiveMapSelectionItem(const QGraphicsItem *item)
 {
     if (item == nullptr) {
@@ -83,6 +102,22 @@ QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems,
                                    std::optional<QPointF> scenePosition,
                                    const QTransform &viewTransform);
 int mapSelectionHitPriority(const QGraphicsItem *item);
+qreal genericPathItemHitDistancePixels(const QGraphicsItem *item,
+                                       const QPointF &scenePosition,
+                                       const QTransform &viewTransform);
+
+void clearPendingPrimarySelectionItem(MapEditorViewportInputContext &context)
+{
+    if (context.scene == nullptr) {
+        return;
+    }
+
+    for (QGraphicsItem *item : context.scene->items()) {
+        if (item != nullptr && item->data(kMapScenePendingPrimarySelectionRole).toBool()) {
+            item->setData(kMapScenePendingPrimarySelectionRole, false);
+        }
+    }
+}
 
 void resetPendingClickSelection(MapEditorViewportInputContext &context, const QPointF &scenePosition)
 {
@@ -92,6 +127,7 @@ void resetPendingClickSelection(MapEditorViewportInputContext &context, const QP
     (*context.pendingClickLineNumber) = 0;
     (*context.pendingClickSourceVertexIndex) = -1;
     (*context.pendingClickGeometryKind).clear();
+    clearPendingPrimarySelectionItem(context);
 }
 
 void describePendingClickSelection(MapEditorViewportInputContext &context, QGraphicsItem *item)
@@ -101,6 +137,7 @@ void describePendingClickSelection(MapEditorViewportInputContext &context, QGrap
     }
 
     (*context.pendingClickLineNumber) = item->data(kMapSceneLineNumberRole).toInt();
+    item->setData(kMapScenePendingPrimarySelectionRole, true);
     const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
     if (auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item)) {
         (*context.pendingClickSourceVertexIndex) = vertexItem->vertexIndex();
@@ -128,32 +165,46 @@ void describePendingClickSelection(MapEditorViewportInputContext &context, QGrap
 
 QGraphicsItem *preferredMapHitItemForViewportPosition(MapEditorViewportInputContext &context,
                                                       const QPoint &viewportPosition,
-                                                      bool requireSelected)
+                                                      bool requireSelected,
+                                                      bool updatePendingClickSelection = true)
 {
     if (context.scene == nullptr || context.view == nullptr) {
         return nullptr;
     }
 
     const QPointF scenePosition = context.view->mapToScene(viewportPosition);
-    resetPendingClickSelection(context, scenePosition);
-    constexpr int hitRadiusPixels = 8;
-    const QRect viewportHitRect(viewportPosition.x() - hitRadiusPixels,
-                                viewportPosition.y() - hitRadiusPixels,
-                                hitRadiusPixels * 2,
-                                hitRadiusPixels * 2);
-    const QRectF sceneHitRect = context.view->mapToScene(viewportHitRect).boundingRect();
-    const QList<QGraphicsItem *> hitItems = context.scene->items(sceneHitRect,
-                                                                 Qt::IntersectsItemShape,
-                                                                 Qt::DescendingOrder,
-                                                                 context.view->transform());
-    QGraphicsItem *nearestVertexItem = nullptr;
+    if (updatePendingClickSelection) {
+        resetPendingClickSelection(context, scenePosition);
+    }
+    QList<QGraphicsItem *> hitItems = context.scene->items(scenePosition,
+                                                           Qt::IntersectsItemShape,
+                                                           Qt::DescendingOrder,
+                                                           context.view->transform());
+    QGraphicsItem *nearestDirectVertexItem = nullptr;
     qreal nearestDistance = std::numeric_limits<qreal>::max();
-    constexpr qreal vertexHitRadiusPixels = 12.0;
     const QList<QGraphicsItem *> allItems = context.scene->items();
     for (QGraphicsItem *candidate : allItems) {
         if (candidate == nullptr) {
             continue;
         }
+        if (!hitItems.contains(candidate)) {
+            const int subtype = candidate->data(kMapSceneSelectionSubtypeRole).toInt();
+            const bool pathSelectionCandidate = dynamic_cast<QGraphicsPathItem *>(candidate) != nullptr
+                && (subtype == kMapSceneSelectionSubtypeGeneric
+                    || subtype == kMapSceneSelectionSubtypeAreaFill
+                    || subtype == kMapSceneSelectionSubtypeLineDetail);
+            if (pathSelectionCandidate
+                && isInteractiveMapSelectionItem(candidate)
+                && (!requireSelected || candidate->isSelected())
+                && candidate->data(kMapSceneLineNumberRole).toInt() > 0) {
+                const qreal distancePixels =
+                    genericPathItemHitDistancePixels(candidate, scenePosition, context.view->transform());
+                if (std::isfinite(distancePixels) && distancePixels != std::numeric_limits<qreal>::max()) {
+                    hitItems.append(candidate);
+                }
+            }
+        }
+
         const int subtype = candidate->data(kMapSceneSelectionSubtypeRole).toInt();
         const bool vertexLikeItem = dynamic_cast<MapEditableGeometryVertexItem *>(candidate) != nullptr
             || subtype == kMapSceneSelectionSubtypeLineAnchor
@@ -181,27 +232,75 @@ QGraphicsItem *preferredMapHitItemForViewportPosition(MapEditorViewportInputCont
         const QRectF vertexRect = dynamic_cast<MapEditableGeometryVertexItem *>(candidate) != nullptr
             ? static_cast<MapEditableGeometryVertexItem *>(candidate)->rect()
             : candidate->boundingRect();
-        const QRectF localHitRect = vertexRect.adjusted(-vertexHitRadiusPixels,
-                                                        -vertexHitRadiusPixels,
-                                                        vertexHitRadiusPixels,
-                                                        vertexHitRadiusPixels);
-        if (!localHitRect.contains(itemPoint)) {
+        if (!vertexRect.adjusted(-2.0, -2.0, 2.0, 2.0).contains(itemPoint)) {
             continue;
         }
         const QPointF delta = itemPoint - vertexRect.center();
         const qreal distance = std::hypot(delta.x(), delta.y());
         if (distance < nearestDistance) {
             nearestDistance = distance;
-            nearestVertexItem = candidate;
+            nearestDirectVertexItem = candidate;
         }
     }
 
     QGraphicsItem *item = preferredMapHitItem(hitItems, requireSelected, scenePosition, context.view->transform());
     if (item == nullptr || mapSelectionHitPriority(item) > 0) {
-        item = nearestVertexItem != nullptr ? nearestVertexItem : item;
+        item = nearestDirectVertexItem != nullptr ? nearestDirectVertexItem : item;
     }
-    describePendingClickSelection(context, item);
+    if (updatePendingClickSelection) {
+        describePendingClickSelection(context, item);
+    }
     return item;
+}
+
+bool isSameMapObjectInteractionGroup(const QGraphicsItem *item, const QGraphicsItem *referenceItem)
+{
+    if (item == nullptr || referenceItem == nullptr) {
+        return false;
+    }
+
+    const int referenceLineNumber = referenceItem->data(kMapSceneLineNumberRole).toInt();
+    return referenceLineNumber > 0
+        && item->data(kMapSceneLineNumberRole).toInt() == referenceLineNumber
+        && isInteractiveMapSelectionItem(item);
+}
+
+void setMapInteractionHoverItem(MapEditorViewportInputContext &context, QGraphicsItem *hoverItem)
+{
+    if (context.scene == nullptr) {
+        return;
+    }
+
+    for (QGraphicsItem *item : context.scene->items()) {
+        if (item == nullptr) {
+            continue;
+        }
+        const bool shouldHover = isSameMapObjectInteractionGroup(item, hoverItem);
+        if (item->data(kMapSceneInteractionHoverRole).toBool() == shouldHover) {
+            continue;
+        }
+        item->setData(kMapSceneInteractionHoverRole, shouldHover);
+        item->update();
+    }
+}
+
+void refreshMapHoverFromCurrentCursor(MapEditorViewportInputContext &context, QWidget *viewport)
+{
+    if (viewport == nullptr || context.view == nullptr || context.scene == nullptr) {
+        return;
+    }
+
+    const QPoint viewportPosition = viewport->mapFromGlobal(QCursor::pos());
+    if (!viewport->rect().contains(viewportPosition)) {
+        setMapInteractionHoverItem(context, nullptr);
+        return;
+    }
+
+    QGraphicsItem *hoverItem = preferredMapHitItemForViewportPosition(context,
+                                                                      viewportPosition,
+                                                                      false,
+                                                                      false);
+    setMapInteractionHoverItem(context, hoverItem);
 }
 
 void selectMapHitItemForContextMenu(MapEditorViewportInputContext &context, const QPoint &viewportPosition)
@@ -294,40 +393,82 @@ qreal itemUnitToViewPixels(const QGraphicsItem *item, const QTransform &viewTran
     return qMax<qreal>(0.001, qMax(xScale, yScale));
 }
 
-bool genericPathItemContainsStrokedHit(const QGraphicsItem *item,
+qreal distanceToSegment(const QPointF &point, const QPointF &segmentStart, const QPointF &segmentEnd)
+{
+    const QPointF segment = segmentEnd - segmentStart;
+    const qreal lengthSquared = (segment.x() * segment.x()) + (segment.y() * segment.y());
+    if (lengthSquared <= 1e-9) {
+        return std::hypot(point.x() - segmentStart.x(), point.y() - segmentStart.y());
+    }
+
+    const QPointF pointDelta = point - segmentStart;
+    const qreal projection = ((pointDelta.x() * segment.x()) + (pointDelta.y() * segment.y())) / lengthSquared;
+    const QPointF closestPoint = segmentStart + (segment * qBound<qreal>(0.0, projection, 1.0));
+    return std::hypot(point.x() - closestPoint.x(), point.y() - closestPoint.y());
+}
+
+qreal genericPathItemHitDistancePixels(const QGraphicsItem *item,
                                        const QPointF &scenePosition,
                                        const QTransform &viewTransform)
 {
+    if (const auto *decorationItem = dynamic_cast<const MapEditorLineDecorationItem *>(item)) {
+        return decorationItem->hitDistancePixels(scenePosition, viewTransform);
+    }
+
     const auto *pathItem = dynamic_cast<const QGraphicsPathItem *>(item);
     if (pathItem == nullptr) {
-        return true;
+        return 0.0;
     }
 
     const QPainterPath path = pathItem->path();
     const QPointF localPosition = pathItem->mapFromScene(scenePosition);
+    if (pathItem->brush().style() != Qt::NoBrush && path.contains(localPosition)) {
+        return kFilledPathInteriorHitDistancePixels;
+    }
+
     const qreal viewScale = itemUnitToViewPixels(pathItem, viewTransform);
     const qreal strokeRadiusPixels = pathItem->pen().widthF() * 0.5;
     const qreal tolerance = (strokeRadiusPixels + 4.0) / viewScale;
     if (!path.boundingRect().adjusted(-tolerance, -tolerance, tolerance, tolerance).contains(localPosition)) {
-        return false;
+        return std::numeric_limits<qreal>::max();
     }
 
-    const qreal pathLength = path.length();
-    if (pathLength <= 0.0) {
-        return false;
+    const QList<QPolygonF> polygons = path.toSubpathPolygons();
+    if (polygons.isEmpty()) {
+        return std::numeric_limits<qreal>::max();
     }
 
-    const int sampleCount = qBound(24, static_cast<int>(std::ceil(pathLength / std::max<qreal>(tolerance * 0.5, 2.0))), 512);
-    for (int index = 0; index <= sampleCount; ++index) {
-        const qreal percent = static_cast<qreal>(index) / static_cast<qreal>(sampleCount);
-        const QPointF pathPoint = path.pointAtPercent(percent);
-        const qreal dx = pathPoint.x() - localPosition.x();
-        const qreal dy = pathPoint.y() - localPosition.y();
-        if (std::hypot(dx, dy) <= tolerance) {
-            return true;
+    qreal bestDistance = std::numeric_limits<qreal>::max();
+    for (const QPolygonF &polygon : polygons) {
+        for (int index = 0; index + 1 < polygon.size(); ++index) {
+            bestDistance = qMin(bestDistance,
+                                distanceToSegment(localPosition, polygon.at(index), polygon.at(index + 1)));
         }
     }
-    return false;
+    return bestDistance <= tolerance ? bestDistance * viewScale : std::numeric_limits<qreal>::max();
+}
+
+qreal vertexLikeItemHitDistancePixels(const QGraphicsItem *item,
+                                      const QPointF &scenePosition,
+                                      const QTransform &viewTransform)
+{
+    if (item == nullptr) {
+        return std::numeric_limits<qreal>::max();
+    }
+
+    const QRectF rect = dynamic_cast<const MapEditableGeometryVertexItem *>(item) != nullptr
+        ? static_cast<const MapEditableGeometryVertexItem *>(item)->rect()
+        : item->boundingRect();
+    const QPointF localPosition = item->mapFromScene(scenePosition);
+    const QPointF delta = localPosition - rect.center();
+    return std::hypot(delta.x(), delta.y()) * itemUnitToViewPixels(item, viewTransform);
+}
+
+bool isDistanceRankedPathSubtype(int subtype)
+{
+    return subtype == kMapSceneSelectionSubtypeGeneric
+        || subtype == kMapSceneSelectionSubtypeLineDetail
+        || subtype == kMapSceneSelectionSubtypeAreaFill;
 }
 
 qreal sceneRadiusForViewportPixels(const QGraphicsView *view, const QPoint &viewportPoint, int pixelRadius)
@@ -423,6 +564,8 @@ QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems,
 {
     QGraphicsItem *bestItem = nullptr;
     int bestPriority = std::numeric_limits<int>::max();
+    qreal bestDistancePixels = std::numeric_limits<qreal>::max();
+    bool bestUsesDistanceRanking = false;
     for (QGraphicsItem *item : hitItems) {
         if (!isInteractiveMapSelectionItem(item)) {
             continue;
@@ -436,15 +579,34 @@ QGraphicsItem *preferredMapHitItem(const QList<QGraphicsItem *> &hitItems,
         }
 
         const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
-        if (scenePosition.has_value()
-            && subtype == kMapSceneSelectionSubtypeGeneric
-            && !genericPathItemContainsStrokedHit(item, scenePosition.value(), viewTransform)) {
-            continue;
+        qreal distancePixels = 0.0;
+        const bool usesDistanceRanking = scenePosition.has_value() && isDistanceRankedPathSubtype(subtype);
+        if (scenePosition.has_value()) {
+            if (usesDistanceRanking) {
+                distancePixels = genericPathItemHitDistancePixels(item, scenePosition.value(), viewTransform);
+                if (!std::isfinite(distancePixels) || distancePixels == std::numeric_limits<qreal>::max()) {
+                    continue;
+                }
+            } else if (dynamic_cast<const MapEditableGeometryVertexItem *>(item) != nullptr
+                       || subtype == kMapSceneSelectionSubtypeLineAnchor
+                       || subtype == kMapSceneSelectionSubtypeLineControl
+                       || subtype == kMapSceneSelectionSubtypeAreaVertex) {
+                distancePixels = vertexLikeItemHitDistancePixels(item, scenePosition.value(), viewTransform);
+            }
         }
 
         const int priority = mapSelectionHitPriority(item);
-        if (priority < bestPriority) {
+        const bool betterDistanceRankedPath = usesDistanceRanking && bestUsesDistanceRanking
+            && (distancePixels < bestDistancePixels
+                || (qFuzzyCompare(distancePixels, bestDistancePixels) && priority < bestPriority));
+        const bool betterPriorityRankedItem = !betterDistanceRankedPath
+            && (!usesDistanceRanking || !bestUsesDistanceRanking)
+            && (priority < bestPriority
+                || (priority == bestPriority && distancePixels < bestDistancePixels));
+        if (betterDistanceRankedPath || betterPriorityRankedItem) {
             bestPriority = priority;
+            bestDistancePixels = distancePixels;
+            bestUsesDistanceRanking = usesDistanceRanking;
             bestItem = item;
             if (bestPriority == 0) {
                 break;
@@ -551,6 +713,12 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
         case QEvent::TabletRelease:
             (*context_.lastTabletInteractionUtc) = QDateTime::currentDateTimeUtc();
             break;
+        case QEvent::Enter:
+        case QEvent::Show:
+        case QEvent::FocusIn:
+            applyDefaultMapViewportCursor(context_, viewport);
+            refreshMapHoverFromCurrentCursor(context_, viewport);
+            break;
         case QEvent::ContextMenu: {
             auto *contextMenuEvent = static_cast<QContextMenuEvent *>(event);
             QPoint viewportPosition = contextMenuEvent->pos();
@@ -561,7 +729,7 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
             if (context_.mapPanMoved != nullptr) {
                 (*context_.mapPanMoved) = false;
             }
-            viewport->unsetCursor();
+            applyDefaultMapViewportCursor(context_, viewport);
             showContextMenuAtViewportPosition(viewportPosition, contextMenuEvent->globalPos());
             event->accept();
             return true;
@@ -573,7 +741,7 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                 if (context_.mapPanMoved != nullptr) {
                     (*context_.mapPanMoved) = false;
                 }
-                viewport->unsetCursor();
+                applyDefaultMapViewportCursor(context_, viewport);
                 showContextMenuAtViewportPosition(mouseEvent->pos(), viewport->mapToGlobal(mouseEvent->pos()));
                 event->accept();
                 return true;
@@ -653,8 +821,10 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                         if (dynamic_cast<QGraphicsPathItem *>(item) != nullptr) {
                             const int subtype = item->data(kMapSceneSelectionSubtypeRole).toInt();
                             if (subtype == kMapSceneSelectionSubtypeGeneric
+                                || subtype == kMapSceneSelectionSubtypeLineDetail
                                 || subtype == kMapSceneSelectionSubtypeAreaFill) {
                                 context_.scene->clearSelection();
+                                setMapInteractionHoverItem(context_, item);
                                 item->setSelected(true);
                                 event->accept();
                                 return true;
@@ -708,6 +878,7 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
 
             if (drawMode() == MapEditorInteractiveDrawMode::Line
                 || drawMode() == MapEditorInteractiveDrawMode::Area) {
+                setMapInteractionHoverItem(context_, nullptr);
                 const bool hasDraftVertices = !(*context_.interactiveDrawLineVertices).isEmpty();
                 const QPoint mousePosition = static_cast<QMouseEvent *>(event)->pos();
                 const QPointF scenePoint = context_.view->mapToScene(mousePosition);
@@ -719,10 +890,10 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                     if (context_.interactiveLineControlAt(scenePoint, controlHitRadius).has_value()) {
                         viewport->setCursor(Qt::OpenHandCursor);
                     } else {
-                        viewport->unsetCursor();
+                        applyDefaultMapViewportCursor(context_, viewport);
                     }
                 } else {
-                    viewport->unsetCursor();
+                    applyDefaultMapViewportCursor(context_, viewport);
                 }
                 (*context_.interactiveDrawHoverActive) = true;
                 (*context_.interactiveDrawHoverScenePoint) = hoverScenePoint;
@@ -735,6 +906,16 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                 context_.updateInteractiveDrawPreview();
                 event->accept();
                 return true;
+            }
+
+            if (!(*context_.mapPanActive)) {
+                auto *mouseEvent = static_cast<QMouseEvent *>(event);
+                QGraphicsItem *hoverItem = preferredMapHitItemForViewportPosition(context_,
+                                                                                  mouseEvent->pos(),
+                                                                                  false,
+                                                                                  false);
+                setMapInteractionHoverItem(context_, hoverItem);
+                applyDefaultMapViewportCursor(context_, viewport);
             }
 
             if (!(*context_.mapPanActive)) {
@@ -783,7 +964,7 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                 if (context_.interactiveLineControlAt(scenePoint, controlHitRadius).has_value()) {
                     viewport->setCursor(Qt::OpenHandCursor);
                 } else {
-                    viewport->unsetCursor();
+                    applyDefaultMapViewportCursor(context_, viewport);
                 }
                 (*context_.toolbarStatusNote) = drawMode() == MapEditorInteractiveDrawMode::Line
                     ? tr("Line mode: bezier control adjusted.")
@@ -886,7 +1067,7 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                 if (context_.mapPanMoved != nullptr) {
                     (*context_.mapPanMoved) = false;
                 }
-                viewport->unsetCursor();
+                applyDefaultMapViewportCursor(context_, viewport);
                 event->accept();
                 return true;
             }
@@ -1095,6 +1276,7 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                 (*context_.interactiveDrawHoverActive) = false;
                 context_.updateInteractiveDrawPreview();
             }
+            setMapInteractionHoverItem(context_, nullptr);
             break;
         case QEvent::Resize:
             if ((*context_.autoFitEnabled) && context_.view->isVisible()) {

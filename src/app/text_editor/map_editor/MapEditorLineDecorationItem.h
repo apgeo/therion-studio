@@ -35,6 +35,7 @@ public:
 
     void setDecorationPath(const QPainterPath &path);
     QRectF boundingRect() const override;
+    qreal hitDistancePixels(const QPointF &scenePosition, const QTransform &viewTransform) const;
 
 protected:
     void paint(QPainter *painter,
@@ -52,6 +53,7 @@ private:
     };
 
     void updatePaintBounds();
+    void drawDecorations(QPainter *painter, qreal zoomOutScale);
     void drawOffsetStroke(QPainter *painter,
                           const MapEditorLineDecorationStyle &decoration,
                           qreal offset,
@@ -98,5 +100,6 @@ private:
     int fallbackSeed_ = 0;
     qreal linePointLengthScale_ = 1.0;
     QRectF paintBounds_;
+    std::optional<QColor> interactionColorOverride_;
 };
 }

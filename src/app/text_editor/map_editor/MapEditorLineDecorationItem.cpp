@@ -1,10 +1,13 @@
 #include "MapEditorLineDecorationItem.h"
 
 #include "MapEditorPointSymbolGeometry.h"
+#include "MapEditorSceneInternals.h"
+#include "MapEditorSceneSupport.h"
 
 #include <QPainter>
 #include <QPen>
 #include <QPolygonF>
+#include <QStyle>
 #include <QStyleOptionGraphicsItem>
 #include <QTransform>
 
@@ -24,6 +27,37 @@ qreal zoomOutStrokeScale(qreal lod)
     }
 
     return qBound<qreal>(0.32, std::pow(qMax<qreal>(0.01, lod), 0.72), 1.0);
+}
+
+qreal itemUnitToViewPixels(const QGraphicsItem *item, const QTransform &viewTransform)
+{
+    if (item == nullptr) {
+        return 1.0;
+    }
+
+    const QPointF originScene = item->mapToScene(QPointF(0.0, 0.0));
+    const QPointF xScene = item->mapToScene(QPointF(1.0, 0.0));
+    const QPointF yScene = item->mapToScene(QPointF(0.0, 1.0));
+    const QPointF originView = viewTransform.map(originScene);
+    const QPointF xDelta = viewTransform.map(xScene) - originView;
+    const QPointF yDelta = viewTransform.map(yScene) - originView;
+    const qreal xScale = std::hypot(xDelta.x(), xDelta.y());
+    const qreal yScale = std::hypot(yDelta.x(), yDelta.y());
+    return qMax<qreal>(0.001, qMax(xScale, yScale));
+}
+
+qreal distanceToSegment(const QPointF &point, const QPointF &segmentStart, const QPointF &segmentEnd)
+{
+    const QPointF segment = segmentEnd - segmentStart;
+    const qreal lengthSquared = (segment.x() * segment.x()) + (segment.y() * segment.y());
+    if (lengthSquared <= 1e-9) {
+        return std::hypot(point.x() - segmentStart.x(), point.y() - segmentStart.y());
+    }
+
+    const QPointF pointDelta = point - segmentStart;
+    const qreal projection = ((pointDelta.x() * segment.x()) + (pointDelta.y() * segment.y())) / lengthSquared;
+    const QPointF closestPoint = segmentStart + (segment * qBound<qreal>(0.0, projection, 1.0));
+    return std::hypot(point.x() - closestPoint.x(), point.y() - closestPoint.y());
 }
 
 quint32 stableHashU32(quint32 value)
@@ -212,11 +246,13 @@ qreal lineDecorationPadding(const QVector<MapEditorLineDecorationStyle> &decorat
 
 QPen lineDecorationPen(const MapEditorLineDecorationStyle &decoration,
                        const QColor &fallbackColor,
-                       qreal zoomOutScale)
+                       qreal zoomOutScale,
+                       const std::optional<QColor> &interactionColorOverride)
 {
-    QColor color = decoration.strokeColor.value_or(fallbackColor);
+    QColor color = interactionColorOverride.value_or(decoration.strokeColor.value_or(fallbackColor));
+    const qreal interactionWidthExtra = interactionColorOverride.has_value() ? 1.8 : 0.0;
     QPen pen(color,
-             qMax<qreal>(0.15, decoration.strokeWidth * zoomOutScale),
+             qMax<qreal>(0.15, (decoration.strokeWidth * zoomOutScale) + interactionWidthExtra),
              decoration.strokeStyle,
              Qt::RoundCap,
              Qt::RoundJoin);
@@ -466,6 +502,72 @@ QRectF MapEditorLineDecorationItem::boundingRect() const
     return paintBounds_;
 }
 
+qreal MapEditorLineDecorationItem::hitDistancePixels(const QPointF &scenePosition,
+                                                     const QTransform &viewTransform) const
+{
+    if (decorations_.isEmpty() || path().isEmpty()) {
+        return std::numeric_limits<qreal>::max();
+    }
+
+    const QPointF localPosition = mapFromScene(scenePosition);
+    const qreal viewScale = itemUnitToViewPixels(this, viewTransform);
+    const qreal localTolerance = 5.0 / viewScale;
+    if (!paintBounds_.adjusted(-localTolerance, -localTolerance, localTolerance, localTolerance).contains(localPosition)) {
+        return std::numeric_limits<qreal>::max();
+    }
+
+    const qreal pathLength = path().length();
+    if (pathLength <= 0.001) {
+        return std::numeric_limits<qreal>::max();
+    }
+
+    qreal bestDistance = std::numeric_limits<qreal>::max();
+    for (const MapEditorLineDecorationStyle &decoration : decorations_) {
+        QVector<qreal> offsets;
+        switch (decoration.kind) {
+        case MapEditorLineDecorationKind::OffsetStroke:
+            offsets.append(decoration.offset);
+            break;
+        case MapEditorLineDecorationKind::Parallel:
+            offsets = decoration.offsets.isEmpty()
+                ? QVector<qreal>{decoration.offset}
+                : decoration.offsets;
+            break;
+        default:
+            continue;
+        }
+
+        const qreal sampleStep = qBound<qreal>(3.0, decoration.spacing / 3.0, 12.0);
+        const int sampleCount = qBound(2, static_cast<int>(std::ceil(pathLength / sampleStep)) + 1, 4096);
+        for (const qreal offset : offsets) {
+            QPointF previousPoint;
+            bool hasPreviousPoint = false;
+            for (int index = 0; index < sampleCount; ++index) {
+                const qreal distance = index == sampleCount - 1
+                    ? pathLength
+                    : (pathLength * static_cast<qreal>(index) / static_cast<qreal>(sampleCount - 1));
+                const std::optional<LineDecorationSample> sample = lineDecorationSampleAt(path(), distance, reversed_);
+                if (!sample.has_value()) {
+                    continue;
+                }
+                const QPointF point = sample->point + (sample->normal * offset);
+                if (hasPreviousPoint) {
+                    bestDistance = qMin(bestDistance, distanceToSegment(localPosition, previousPoint, point));
+                }
+                previousPoint = point;
+                hasPreviousPoint = true;
+            }
+        }
+    }
+
+    if (bestDistance == std::numeric_limits<qreal>::max()) {
+        return paintBounds_.contains(localPosition) ? 5.0 : std::numeric_limits<qreal>::max();
+    }
+
+    const qreal bestDistancePixels = bestDistance * viewScale;
+    return bestDistancePixels <= 5.0 ? bestDistancePixels : std::numeric_limits<qreal>::max();
+}
+
 void MapEditorLineDecorationItem::paint(QPainter *painter,
                                         const QStyleOptionGraphicsItem *option,
                                         QWidget *widget)
@@ -484,6 +586,28 @@ void MapEditorLineDecorationItem::paint(QPainter *painter,
         ? QStyleOptionGraphicsItem::levelOfDetailFromTransform(painter->worldTransform())
         : 1.0;
     const qreal zoomOutScale = zoomOutStrokeScale(lod);
+    drawDecorations(painter, zoomOutScale);
+
+    const bool selected = (option != nullptr && (option->state & QStyle::State_Selected))
+        || data(kMapSceneInteractionSelectionRole).toBool();
+    const bool hovered = data(kMapSceneInteractionHoverRole).toBool();
+    if (selected || hovered) {
+        interactionColorOverride_ = selected
+            ? mapEditorInteractionSelectionColor()
+            : mapEditorInteractionHoverColor();
+        interactionColorOverride_->setAlpha(selected ? 235 : 220);
+        drawDecorations(painter, zoomOutScale);
+        interactionColorOverride_.reset();
+    }
+    painter->restore();
+}
+
+void MapEditorLineDecorationItem::drawDecorations(QPainter *painter, qreal zoomOutScale)
+{
+    if (painter == nullptr) {
+        return;
+    }
+
     for (const MapEditorLineDecorationStyle &decoration : decorations_) {
         switch (decoration.kind) {
         case MapEditorLineDecorationKind::OffsetStroke:
@@ -518,7 +642,6 @@ void MapEditorLineDecorationItem::paint(QPainter *painter,
             break;
         }
     }
-    painter->restore();
 }
 
 void MapEditorLineDecorationItem::updatePaintBounds()
@@ -571,7 +694,7 @@ void MapEditorLineDecorationItem::drawOffsetStroke(QPainter *painter,
         return;
     }
 
-    painter->setPen(lineDecorationPen(decoration, fallbackColor_, zoomOutScale));
+    painter->setPen(lineDecorationPen(decoration, fallbackColor_, zoomOutScale, interactionColorOverride_));
     painter->setBrush(Qt::NoBrush);
     painter->drawPolyline(QPolygonF(points));
 }
@@ -591,7 +714,7 @@ void MapEditorLineDecorationItem::drawRepeated(QPainter *painter,
         return;
     }
 
-    painter->setPen(lineDecorationPen(decoration, fallbackColor_, zoomOutScale));
+    painter->setPen(lineDecorationPen(decoration, fallbackColor_, zoomOutScale, interactionColorOverride_));
     const int seed = decoration.seed.value_or(fallbackSeed_);
     for (int markerIndex = 0; markerIndex < markers.distances.size(); ++markerIndex) {
         const qreal distance = lineDecorationEffectiveDistance(markers.distances.at(markerIndex),
@@ -832,7 +955,7 @@ void MapEditorLineDecorationItem::drawSlopeTicks(QPainter *painter,
     const int seed = decoration.seed.value_or(fallbackSeed_);
     const QVector<LineDecorationVertexMetric> metrics = lineDecorationVertexMetrics(path(), lineVertices_);
 
-    painter->setPen(lineDecorationPen(decoration, fallbackColor_, zoomOutScale));
+    painter->setPen(lineDecorationPen(decoration, fallbackColor_, zoomOutScale, interactionColorOverride_));
     painter->setBrush(Qt::NoBrush);
     for (int markerIndex = 0; markerIndex < markers.distances.size(); ++markerIndex) {
         const qreal baseDistance = markers.distances.at(markerIndex);

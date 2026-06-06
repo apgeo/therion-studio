@@ -10,6 +10,7 @@ These instructions apply to the whole repository.
 - Treat the specification as implementation-grade requirements for a Qt reimplementation of Therion Studio.
 - Do not invent product behavior that conflicts with the specification. If a requested change requires behavior not covered by the specification, update the specification as part of the same change or clearly flag the gap.
 - If implementation, tests, and the specification diverge, prefer bringing them back into alignment explicitly rather than silently choosing one source of truth.
+- Treat [REVIEW_CODEX.md](REVIEW_CODEX.md) as the current architecture review record. It is not a product specification, but actionable findings from it should be reflected in `AGENTS.md`, `WORKLOG.md`, focused tests, or the specification before being treated as resolved.
 
 ## Specification Editing Rules
 
@@ -61,6 +62,15 @@ These instructions apply to the whole repository.
 - Cross-platform behavior shall be centralized behind platform or infrastructure services when practical. New `Q_OS_*` checks should be limited to `src/platform/**`, startup/bootstrap code, packaging code, or a clearly justified platform adapter.
 - Build/resource wiring should not duplicate source-of-truth lists unnecessarily. If resource catalogs are split into many files, prefer scoped CMake globs or generated lists with guardrails over manually duplicated file lists in multiple targets.
 - Keep command catalog and map-style catalog loading at composition, startup, or explicit test setup boundaries. Do not reintroduce UI-side static catalog access or long-lived resource overrides when parser/generator support is the correct fix.
+
+## Unified Source Architecture Direction
+
+- The intended architecture is one shared, lossless Therion source model for `.th`, `.th2`, and `thconfig` documents. Raw, Blocks, Map, Structure, syntax highlighting, completion/help, and compiler-facing workflows should become projections of that shared source snapshot rather than independent reparsers.
+- Do not add new editor-specific tokenizers, line splitters, numeric-token classifiers, option parsers, command serializers, or source-range heuristics when a core type can own the rule. Prefer extending focused core components such as `TherionStringUtils`, `TherionTokenRules`, `TherionCommandLineModel`, and future `TherionSourceText` / `TherionSourceDocument` types.
+- Until the lossless source model exists, preserve current behavior through small migrations: consolidate one rule at a time, add regression coverage first for parsing/round-trip-sensitive behavior, and avoid broad parser rewrites during release stabilization.
+- Parser and projection work should preserve every physical source line, comments, blank lines, indentation where practical, original newline style, token spans, block ranges, source file type, and encoding metadata.
+- Map, Structure, Background, Block, and syntax/help projections should consume shared parsed command/option data where available. Do not fix projection drift by copying parser logic into renderers, inspectors, scene items, or sidebar widgets.
+- Cache parsed source snapshots and derived projections by document revision or file identity where practical. Avoid full document reparsing or scene rebuilding for UI-only events, cursor movement, appearance changes, or unrelated inspector updates.
 
 ## Proposal Review Discipline
 
@@ -129,6 +139,9 @@ These instructions apply to the whole repository.
 - Treat parsing, serialization, indexing, and map/text synchronization changes as high-risk areas that require careful verification.
 - Any change that touches Therion parsing, serialization, rewrite behavior, or source-to-model synchronization should include explicit round-trip or behavioral verification and should call out remaining semantic-risk areas.
 - For TH2 map-editor operations that mutate document source text, implementations shall route writes through the shared atomic map-source helper (`applySourceTextChangeWithSnapshot`) or an equivalent single-transaction abstraction that performs source replacement and undo snapshot creation together. Do not introduce new map-editor flows that rewrite text via ad hoc `replaceTextForCommand` / `rewrite*` calls with separate snapshot handling.
+- New Raw, Blocks, Map, inspector, and sidebar workflows that mutate document source text should route through `TextEditorSourceTransactionController` or its successor shared source-change service. Any temporary exception shall be documented, narrowly scoped, and covered by focused undo/redo or round-trip tests.
+- Every user-visible source mutation should be one logical transaction with a clear undo label, revision/snapshot handling, dirty-state update, projection refresh policy, and selection/cursor restoration policy.
+- Do not reintroduce fallback source writes that silently skip undo snapshots, document revision checks, or post-change projection refresh.
 - Prefer structured metadata over runtime heuristics when behavior depends on documented rules. In particular, style catalogs, highlight palettes, and help metadata should be data-driven rather than hardcoded ad hoc.
 - For Therion completion/highlighting/help behavior, implement metadata correctness in parser/generator code first; do not solve these by editing generated catalog output or adding long-lived overrides.
 - Use `resources/therion_catalog/overrides/*.override.json` only as a short-term fallback when parser extraction is not yet feasible, and remove such overrides once parser support is added.
@@ -137,6 +150,7 @@ These instructions apply to the whole repository.
 
 - Preserve documented user workflows before pursuing architectural or visual cleanup.
 - Keep the UI responsive. Long-running work such as Therion execution, parsing, indexing, or asset loading must not block the UI thread.
+- Avoid fixed-delay retry loops for selection restoration, scene refresh, indexing, or background loading. Prefer explicit completion signals, generation IDs, cancellable requests, or debounced refresh controllers so work runs once when the relevant snapshot is ready.
 - Respect platform conventions for shortcuts, menus, dialogs, and file handling, but do not violate documented functional requirements.
 - Treat keyboard shortcuts as cross-platform requirements: any shortcut-driven workflow shall be usable on macOS, Windows, and Linux, including a non-`Insert` fallback for actions that rely on keys commonly missing on Mac keyboards.
 - Native platform behavior should win when it does not conflict with the specification.

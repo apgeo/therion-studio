@@ -114,7 +114,8 @@ int MapEditorTab::zoomPercent() const
 
 bool MapEditorTab::canUndo() const
 {
-    return (undoStack_ != nullptr && undoStack_->canUndo())
+    return hasUndoableInteractiveDrawStep()
+        || (undoStack_ != nullptr && undoStack_->canUndo())
         || (textEditor_ != nullptr && textEditor_->canUndo());
 }
 
@@ -296,6 +297,9 @@ void MapEditorTab::handleTextEditorCursorPositionChanged(int lineNumber, int col
 
 void MapEditorTab::handleUndoTriggered()
 {
+    if (undoInteractiveDrawStep()) {
+        return;
+    }
     if (undoStack_ != nullptr && undoStack_->canUndo()) {
         const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
         undoStack_->undo();

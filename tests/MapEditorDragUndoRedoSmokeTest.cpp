@@ -1794,6 +1794,28 @@ int runDragUndoRedoSmoke()
         return 1;
     }
 
+    const QString textBeforeDraftStepUndo = mapTab->text();
+    const int lineDirectivesBeforeDraftStepUndo = countDirectiveLines(textBeforeDraftStepUndo, QStringLiteral("line"));
+    const QPoint draftUndoFirstVertex(viewportCenter.x() - 34, viewportCenter.y() + 34);
+    const QPoint draftUndoSecondVertex(viewportCenter.x() + 34, viewportCenter.y() + 38);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, draftUndoFirstVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, draftUndoFirstVertex, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, draftUndoSecondVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, draftUndoSecondVertex, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textBeforeDraftStepUndo,
+                "Undo during an active line draft should remove the draft vertex without undoing the previous committed line.")) {
+        return 1;
+    }
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeDraftStepUndo,
+                "Undo during an active line draft should keep committed line directives intact.")) {
+        return 1;
+    }
+    mapTab->triggerAddLine();
+    pumpEvents();
+
     const int lineDirectivesBeforeModePersistenceCheck = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
     const QPoint fifthLineVertex(viewportCenter.x() - 14, viewportCenter.y() + 26);
     const QPoint sixthLineVertex(viewportCenter.x() + 28, viewportCenter.y() + 30);

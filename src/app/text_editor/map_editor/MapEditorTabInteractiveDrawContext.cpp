@@ -152,6 +152,34 @@ void MapEditorTab::updateInteractiveDrawPreview()
     MapEditorInteractiveDrawController(interactiveDrawContext()).updateInteractiveDrawPreview();
 }
 
+bool MapEditorTab::hasUndoableInteractiveDrawStep() const
+{
+    const bool lineLikeDraft = interactiveDrawState_.mode_ == InteractiveDrawMode::Line
+        || interactiveDrawState_.mode_ == InteractiveDrawMode::Area;
+    return lineLikeDraft && !interactiveDrawState_.lineVertices_.isEmpty();
+}
+
+bool MapEditorTab::undoInteractiveDrawStep()
+{
+    if (!hasUndoableInteractiveDrawStep()) {
+        return false;
+    }
+
+    interactiveDrawState_.lineVertices_.removeLast();
+    if (!interactiveDrawState_.lineVertices_.isEmpty()) {
+        MapEditorInteractiveLineDraftVertex &tail = interactiveDrawState_.lineVertices_.last();
+        tail.outgoingControlScene.reset();
+        tail.outgoingControlSource.reset();
+    }
+
+    updateInteractiveDrawPreview();
+    toolbarStatusNote_ = tr("Vertex removed from current draft (%1 remaining).")
+                             .arg(interactiveDrawState_.lineVertices_.size());
+    refreshToolbarSummary();
+    updateCommandSurfaceState();
+    return true;
+}
+
 bool MapEditorTab::cancelInteractiveDrawingToSelectMode()
 {
     if (interactiveDrawState_.lineExtensionActive_) {

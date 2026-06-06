@@ -375,6 +375,8 @@ private:
     bool commitInteractiveDrawSession(bool closeLineDraft = false);
     void clearInteractiveDrawSession(bool clearMode);
     void updateInteractiveDrawPreview();
+    bool hasUndoableInteractiveDrawStep() const;
+    bool undoInteractiveDrawStep();
     QVector<TherionParsedLine> parsedLinesForCurrentDocument() const;
     QRectF mapSourceBoundsForCurrentDocument() const;
     QPointF sourcePointFromScenePosition(const QPointF &scenePosition) const;

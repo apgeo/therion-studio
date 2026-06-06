@@ -381,21 +381,11 @@ void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
                  false,
                  tr("No subtype"));
 
-    QMenu *objectFieldsMenu = nullptr;
-    auto ensureObjectFieldsMenu = [&menu, &objectFieldsMenu, this]() -> QMenu * {
-        if (objectFieldsMenu == nullptr) {
-            objectFieldsMenu = menu->addMenu(
-                objectDetailsUiState_.objectSelectionTitleLabel_ != nullptr
-                    ? objectDetailsUiState_.objectSelectionTitleLabel_->text()
-                    : tr("Object"));
-        }
-        return objectFieldsMenu;
-    };
-    auto addObjectFocusAction = [addFocusAction, ensureObjectFieldsMenu](const QString &title, QWidget *editor) {
+    auto addObjectFocusAction = [addFocusAction, menu](const QString &title, QWidget *editor) {
         if (editor == nullptr || !editor->isVisible() || !editor->isEnabled()) {
             return;
         }
-        addFocusAction(ensureObjectFieldsMenu(), title, editor);
+        addFocusAction(menu, title, editor);
     };
     if (objectDetailsUiState_.objectQuickProjectionCombo_ != nullptr
         && objectDetailsUiState_.objectQuickProjectionCombo_->isVisible()

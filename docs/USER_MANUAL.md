@@ -261,6 +261,8 @@ Open the `Compiler` pane from the activity rail. The pane description identifies
 
 Set the Therion executable path in `File -> Settings...`. If no explicit path is set, Therion Studio tries `therion` and platform auto-detection.
 
+Before starting a compile, Therion Studio saves all modified open document tabs. If any open document cannot be saved, the compile is canceled and the runner is not started.
+
 Closing a project clears `Target Config` and `Working Directory Override` because those paths are project-specific. The Therion executable path is a global preference. Additional arguments are session-only.
 
 ### 7.2 Actions

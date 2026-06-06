@@ -254,6 +254,8 @@ Panel `Kompilátor` otvoríte v ľavej aktivitnej lište. Popis panelu ho označ
 
 Cestu k spustiteľnému súboru Therion nastavte v `Súbor -> Nastavenia...`. Ak nie je nastavená, aplikácia skúsi `therion` a platformnú autodetekciu.
 
+Pred spustením kompilácie Therion Studio uloží všetky zmenené otvorené záložky. Ak niektorý otvorený dokument nejde uložiť, kompilácia sa zruší a runner sa nespustí.
+
 Zatvorenie projektu vyčistí `Cieľovú konfiguráciu` a `Náhradný pracovný priečinok`, pretože sú projektové. Cesta k spustiteľnému súboru Therion je globálna preferencia. Dodatočné argumenty sú iba pre aktuálnu reláciu.
 
 ### 7.2 Akcie

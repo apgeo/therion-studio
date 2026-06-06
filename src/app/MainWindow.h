@@ -214,6 +214,7 @@ private:
     TherionStudio::MapEditorTab *detachedMapEditorTabForPath(const QString &canonicalPath) const;
     QList<TherionStudio::MapEditorTab *> detachedMapEditorTabs() const;
     bool confirmCloseDocumentWidget(QWidget *documentWidget);
+    bool saveAllOpenDocuments();
     void initializeDocumentStatusWidgets();
     void refreshDocumentStatusWidgets();
     void setCompilerStatusIdle();

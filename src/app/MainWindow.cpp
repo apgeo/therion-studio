@@ -1256,6 +1256,11 @@ void MainWindow::saveActiveDocument()
 
 void MainWindow::saveAllDocuments()
 {
+    saveAllOpenDocuments();
+}
+
+bool MainWindow::saveAllOpenDocuments()
+{
     QStringList documentPaths;
     for (int index = 0; index < editorTabs_->count(); ++index) {
         QWidget *tabWidget = editorTabs_->widget(index);
@@ -1316,7 +1321,7 @@ void MainWindow::saveAllDocuments()
     };
     TherionStudio::MainWindowDocumentController::SaveAllRequest request;
     request.documentPaths = documentPaths;
-    TherionStudio::MainWindowDocumentController::saveAll(request, actions);
+    return TherionStudio::MainWindowDocumentController::saveAll(request, actions);
 }
 
 void MainWindow::showFindBar(bool replaceMode)

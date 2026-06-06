@@ -451,6 +451,13 @@ void MainWindow::runTherion()
         return;
     }
 
+    if (!saveAllOpenDocuments()) {
+        const QString message = tr("Compile canceled because open documents could not be saved.");
+        statusBar()->showMessage(message, 3000);
+        setCompilerStatusResult(false, message);
+        return;
+    }
+
     const QString currentDocumentPath =
         currentDocumentWidget() != nullptr ? documentPathForWidget(currentDocumentWidget()) : QString();
     TherionStudio::MainWindowTherionRunnerController::RuntimeInput input;

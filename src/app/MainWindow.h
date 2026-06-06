@@ -256,6 +256,9 @@ private:
     QWidget *editorAreaColumn_ = nullptr;
     QVBoxLayout *editorAreaLayout_ = nullptr;
     QTabWidget *editorTabs_ = nullptr;
+    QLabel *projectFilesDescriptionLabel_ = nullptr;
+    QWidget *projectFilesEmptyState_ = nullptr;
+    QPushButton *projectFilesOpenProjectButton_ = nullptr;
     QTreeView *projectTree_ = nullptr;
     QTreeView *structureTree_ = nullptr;
     QTreeView *searchResultsTree_ = nullptr;

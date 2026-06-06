@@ -63,7 +63,7 @@ Pokud je mapa oddělená do samostatného okna, hlavní okno může současně z
 
 Dialog pro výběr složky projektu začíná v domovské složce uživatele, pokud ho otevřete přes `Otevřít projekt...`.
 
-Bez otevřeného projektu se zobrazí uvítací karta s tlačítkem `Otevřít projekt...`. Pokud je projekt otevřený, ale není aktivní žádná záložka, uvítací karta nabídne otevření souboru z postranního panelu.
+Bez otevřeného projektu se zobrazí uvítací karta s tlačítkem `Otevřít projekt...` a panel `Soubory` zobrazí prázdný stav se stejnou akcí pro otevření projektu místo procházení filesystemu počítače. Pokud je projekt otevřený, ale není aktivní žádná záložka, uvítací karta nabídne otevření souboru z postranního panelu.
 
 Uvítací karta a `Soubor -> Poslední projekty` zobrazují až pět naposledy otevřených projektů. Výběrem projektu z libovolného seznamu jej znovu otevřete.
 
@@ -138,7 +138,7 @@ V režimu `Bloky` lze bloky `data ...` upravovat tabulkou podle aktivní hlavič
 
 ## 5. Struktura a práce se soubory
 
-Panel `Struktura` je lehký navigační index otevřeného projektu. Zobrazuje hierarchii `survey`, `centerline`, `map` a `scrap` a rozpoznává obě Therion varianty: `centreline` i `centerline`.
+Panel `Struktura` je lehký navigační index otevřeného projektu. Popis v postranním panelu jej označuje jako strukturu `survey`, `map` a `scrap` aktuálního projektu. Zobrazuje hierarchii `survey`, `centerline`, `map` a `scrap` a rozpoznává obě Therion varianty: `centreline` i `centerline`.
 
 Kliknutím řádek pouze vyberete ve stromu. Dvojklikem na zdrojový řádek, nebo jeho výběrem a stiskem `Enter`, otevřete zdrojový dokument a přejdete na odpovídající řádek.
 
@@ -241,7 +241,7 @@ Therion Studio negeneruje samostatný metrický grid. Pro referenční mřížku
 
 ## 7. Spouštění Therionu
 
-Panel `Kompilátor` otevřete v levé aktivitní liště.
+Panel `Kompilátor` otevřete v levé aktivitní liště. Popis panelu jej označuje jako místo pro spuštění Therionu pro aktuální projekt nebo aktivní config.
 
 ### 7.1 Hlavní pole
 

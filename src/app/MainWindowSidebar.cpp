@@ -18,6 +18,7 @@
 #include <QFile>
 #include <QFileSystemModel>
 #include <QFileInfo>
+#include <QFont>
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHeaderView>
@@ -28,6 +29,7 @@
 #include <QMessageBox>
 #include <QMenu>
 #include <QPainter>
+#include <QPushButton>
 #include <QSignalBlocker>
 #include <QSplitter>
 #include <QStackedWidget>
@@ -292,9 +294,32 @@ void MainWindow::buildProjectBrowser()
     projectLayout->setContentsMargins(12, 12, 12, 12);
     projectLayout->setSpacing(8);
 
-    auto *projectDescription = new QLabel(tr("Browse the files in the current project."), projectPage);
-    projectDescription->setWordWrap(true);
-    projectLayout->addWidget(projectDescription);
+    projectFilesDescriptionLabel_ = new QLabel(tr("Browse the files in the current project."), projectPage);
+    projectFilesDescriptionLabel_->setWordWrap(true);
+    projectLayout->addWidget(projectFilesDescriptionLabel_);
+
+    projectFilesEmptyState_ = new QWidget(projectPage);
+    auto *emptyLayout = new QVBoxLayout(projectFilesEmptyState_);
+    emptyLayout->setContentsMargins(0, 24, 0, 0);
+    emptyLayout->setSpacing(8);
+
+    auto *emptyTitle = new QLabel(tr("No project open."), projectFilesEmptyState_);
+    QFont emptyTitleFont = emptyTitle->font();
+    emptyTitleFont.setBold(true);
+    emptyTitle->setFont(emptyTitleFont);
+    emptyTitle->setWordWrap(true);
+    emptyLayout->addWidget(emptyTitle);
+
+    auto *emptyMessage = new QLabel(tr("Open a project to browse its files."), projectFilesEmptyState_);
+    emptyMessage->setWordWrap(true);
+    emptyLayout->addWidget(emptyMessage);
+
+    projectFilesOpenProjectButton_ = new QPushButton(tr("Open Project..."), projectFilesEmptyState_);
+    projectFilesOpenProjectButton_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    connect(projectFilesOpenProjectButton_, &QPushButton::clicked, this, &MainWindow::openProject);
+    emptyLayout->addWidget(projectFilesOpenProjectButton_);
+    emptyLayout->addStretch(1);
+    projectLayout->addWidget(projectFilesEmptyState_, 1);
 
     projectTree_ = new QTreeView(projectPage);
     projectTree_->setMinimumWidth(0);
@@ -952,6 +977,10 @@ void MainWindow::buildStructureSidebar()
     auto *structureLayout = new QVBoxLayout(structurePage);
     structureLayout->setContentsMargins(12, 12, 12, 12);
     structureLayout->setSpacing(8);
+
+    auto *structureDescription = new QLabel(tr("Browse the survey, map, and scrap structure in the current project."), structurePage);
+    structureDescription->setWordWrap(true);
+    structureLayout->addWidget(structureDescription);
 
     structureTree_ = new QTreeView(structurePage);
     structureTree_->setMinimumWidth(0);

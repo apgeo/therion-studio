@@ -366,8 +366,6 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
     setWindowTitle(tr("Therion Studio"));
     setDockOptions(QMainWindow::AllowNestedDocks | QMainWindow::AnimatedDocks);
 
-    projectModel_->setRootPath(QDir::rootPath());
-
     connect(projectSearchScanner_, &TherionStudio::ProjectSearchScanner::searchFinished,
             this, &MainWindow::handleProjectSearchFinished);
     connect(structureSidebarScanner_, &TherionStudio::ProjectStructureScanner::scanFinished,
@@ -639,8 +637,7 @@ void MainWindow::restoreSessionState()
     };
     actions.applyProjectRootToBrowser = [this](const QString &projectPath) {
         projectRootPath_ = projectPath;
-        projectModel_->setRootPath(projectRootPath_);
-        projectTree_->setRootIndex(projectModel_->index(projectRootPath_));
+        refreshProjectBrowserView();
     };
     actions.appendConsoleLine = [this](const QString &line) {
         appendConsoleLine(line);
@@ -873,8 +870,8 @@ void MainWindow::openProjectPath(const QString &selectedProjectPath)
         projectRootPath_ = projectRootPath;
     };
     actions.applyProjectRootToBrowser = [this](const QString &projectRootPath) {
-        projectModel_->setRootPath(projectRootPath);
-        projectTree_->setRootIndex(projectModel_->index(projectRootPath));
+        Q_UNUSED(projectRootPath);
+        refreshProjectBrowserView();
     };
     actions.loadStructureNameOverrides = [this]() { loadStructureNameOverrides(); };
     actions.syncOpenDocumentsToProjectRoot = [this]() { syncOpenDocumentsToProjectRoot(); };
@@ -1152,9 +1149,7 @@ void MainWindow::closeAllTabs()
 
 void MainWindow::resetProjectBrowser()
 {
-    const QString defaultRootPath = QDir::rootPath();
-    projectModel_->setRootPath(defaultRootPath);
-    projectTree_->setRootIndex(projectModel_->index(defaultRootPath));
+    refreshProjectBrowserView();
 }
 
 void MainWindow::refreshProjectBrowserView(const QString &focusPath)
@@ -1163,7 +1158,23 @@ void MainWindow::refreshProjectBrowserView(const QString &focusPath)
         return;
     }
 
-    const QString rootPath = projectRootPath_.isEmpty() ? QDir::rootPath() : projectRootPath_;
+    const bool hasOpenProject = !projectRootPath_.trimmed().isEmpty() && QDir(projectRootPath_).exists();
+    if (projectFilesDescriptionLabel_ != nullptr) {
+        projectFilesDescriptionLabel_->setText(hasOpenProject
+                                                   ? tr("Browse the files in the current project.")
+                                                   : tr("Open a project to browse its files."));
+    }
+    if (projectFilesEmptyState_ != nullptr) {
+        projectFilesEmptyState_->setVisible(!hasOpenProject);
+    }
+    projectTree_->setVisible(hasOpenProject);
+
+    if (!hasOpenProject) {
+        projectTree_->setRootIndex(QModelIndex());
+        return;
+    }
+
+    const QString rootPath = projectRootPath_;
     projectModel_->setRootPath(rootPath);
     projectTree_->setRootIndex(projectModel_->index(rootPath));
 

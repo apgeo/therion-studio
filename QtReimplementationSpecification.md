@@ -474,6 +474,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 #### 3.8.6 Structure Sidebar Behavior
 
 - The structure sidebar shall present a navigable project hierarchy limited to surveys, maps, and scraps.
+- The structure sidebar shall show a short explanatory description above the hierarchy tree.
 - The structure sidebar shall not prepend synthetic top rows for project-root path or summary text inside the hierarchy tree.
 - Structure rows shall include category icons for survey, map, and scrap items using the bundled compass, map, and puzzle Lucide icons respectively.
 - Structure siblings under the same parent shall be displayed in category order survey, map, scrap, followed by diagnostics, and entries within the same category shall be sorted alphabetically by displayed name with source order used only as a stable tie-breaker.
@@ -513,6 +514,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - When `Project Config` is active and the override is empty, the effective working directory shall be the selected project config directory, falling back to the project root when no config is resolved.
 - The resolved config path shall be displayed immediately below `Target Config`, and the effective working directory shall be displayed immediately below `Working Directory Override`, as less-prominent helper text without additional labels.
 - The compiler sidebar surface shall remain usable at narrow widths by using stacked field labels, compact browse/reset controls, wrapped runner output, and action buttons that wrap into multiple rows instead of clipping horizontally.
+- The compiler sidebar shall show a short explanatory description above the runner controls.
 - The compiler sidebar shall provide a single run surface with an explicit run target selector for `Current Config` and `Project Config`.
 - The status bar compiler indicator shall update when Therion starts, finishes, or reports a runner error, and shall keep the last success/failure result visible while the user continues editing.
 - A `Compile Current Config` toolbar action using the play icon shall be shown for active Therion config documents after `Undo`/`Redo`, separated by a toolbar divider, and shall run Therion with `Current Config`.
@@ -541,6 +543,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - The application shall reopen the last project when available.
 - Opening a project shall move that project to the front of the recent-projects list, remove duplicate entries for the same normalized project path, and keep no more than five recent projects.
 - When no project is open, the welcome surface shall allow reopening a recent project by selecting it from the recent-projects list.
+- When no project is open, the `Files` sidebar shall show an empty project state with an `Open Project...` action and shall not expose the filesystem root or platform volume root as browsable project content.
 - The `File` menu shall provide a `Recent Projects` submenu that allows reopening recent projects through the same project-open workflow as `Open Project...`.
 - The project folder chooser opened by `Open Project...` shall start in the user's home folder when no more specific project-picking context is available, rather than the filesystem root or platform volume root.
 - When a project is open and the welcome surface is visible, it shall show the active project name and path.

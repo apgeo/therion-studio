@@ -63,7 +63,7 @@ When a map pane is detached into a separate window, the main window can show bot
 
 The project folder chooser starts in your home folder when opened from `Open Project...`.
 
-When no project is open, the welcome tab shows an `Open Project...` button. When a project is open but no document tab is active, the welcome tab offers opening a file from the sidebar.
+When no project is open, the welcome tab shows an `Open Project...` button, and the `Files` sidebar shows an empty state with the same project-opening action instead of browsing the computer filesystem. When a project is open but no document tab is active, the welcome tab offers opening a file from the sidebar.
 
 The welcome tab and `File -> Recent Projects` list up to five recently opened projects. Select a project from either list to reopen it.
 
@@ -139,7 +139,7 @@ In `Blocks` mode, `data ...` blocks can be edited through a table based on the a
 
 ## 5. Structure and File Operations
 
-The `Structure` pane is a lightweight navigation index for the opened project. It shows `survey`, `map`, and `scrap` hierarchy and recognizes both Therion centerline spellings: `centreline` and `centerline`.
+The `Structure` pane is a lightweight navigation index for the opened project. Its sidebar description identifies it as the survey, map, and scrap structure for the current project. It shows `survey`, `map`, and `scrap` hierarchy and recognizes both Therion centerline spellings: `centreline` and `centerline`.
 
 Select a row to inspect it in the tree. Double-click a source row, or select it and press `Enter`, to open its source document and navigate to the matching line.
 
@@ -248,7 +248,7 @@ Use `Separate Map` to move the visual map pane into its own window, for example 
 
 ## 7. Running Therion
 
-Open the `Compiler` pane from the activity rail.
+Open the `Compiler` pane from the activity rail. The pane description identifies it as the place to run Therion for the current project or active config.
 
 ### 7.1 Main Fields
 

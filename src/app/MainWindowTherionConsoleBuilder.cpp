@@ -57,6 +57,11 @@ MainWindowTherionConsoleBuilder::build(const BuildInput &input)
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(8);
 
+    auto *description = new QLabel(
+        QCoreApplication::translate("MainWindow", "Run Therion for the current project or active config."), widget);
+    description->setWordWrap(true);
+    layout->addWidget(description);
+
     auto *settingsLayout = new QVBoxLayout;
     settingsLayout->setContentsMargins(0, 0, 0, 0);
     settingsLayout->setSpacing(5);

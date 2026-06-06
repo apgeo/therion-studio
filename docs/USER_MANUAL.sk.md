@@ -63,7 +63,7 @@ Ak je mapa oddelená do samostatného okna, hlavné okno môže zároveň zobraz
 
 Dialóg na výber priečinka projektu začína v domovskom priečinku používateľa, ak ho otvoríte cez `Otvoriť projekt...`.
 
-Bez otvoreného projektu sa zobrazí uvítacia karta s tlačidlom `Otvoriť projekt...`. Ak je projekt otvorený, ale nie je aktívna žiadna záložka, uvítacia karta ponúkne otvorenie súboru z bočného panelu.
+Bez otvoreného projektu sa zobrazí uvítacia karta s tlačidlom `Otvoriť projekt...` a panel `Súbory` zobrazí prázdny stav s rovnakou akciou na otvorenie projektu namiesto prehliadania filesystemu počítača. Ak je projekt otvorený, ale nie je aktívna žiadna záložka, uvítacia karta ponúkne otvorenie súboru z bočného panelu.
 
 Uvítacia karta a `Súbor -> Posledné projekty` zobrazujú najviac päť naposledy otvorených projektov. Výberom projektu z ktoréhokoľvek zoznamu ho znovu otvoríte.
 
@@ -138,7 +138,7 @@ V režime `Bloky` možno bloky `data ...` upravovať tabuľkou podľa aktívnej 
 
 ## 5. Štruktúra a práca so súbormi
 
-Panel `Štruktúra` je ľahký navigačný index otvoreného projektu. Zobrazuje hierarchiu `survey`, `centerline`, `map` a `scrap` a rozpoznáva obe Therion varianty: `centreline` aj `centerline`.
+Panel `Štruktúra` je ľahký navigačný index otvoreného projektu. Popis v bočnom paneli ho označuje ako štruktúru `survey`, `map` a `scrap` aktuálneho projektu. Zobrazuje hierarchiu `survey`, `centerline`, `map` a `scrap` a rozpoznáva obe Therion varianty: `centreline` aj `centerline`.
 
 Kliknutím riadok iba vyberiete v strome. Dvojklikom na zdrojový riadok, alebo jeho výberom a stlačením `Enter`, otvoríte zdrojový dokument a prejdete na zodpovedajúci riadok.
 
@@ -241,7 +241,7 @@ Therion Studio negeneruje samostatný metrický grid. Pre referenčnú mriežku 
 
 ## 7. Spúšťanie Therionu
 
-Panel `Kompilátor` otvoríte v ľavej aktivitnej lište.
+Panel `Kompilátor` otvoríte v ľavej aktivitnej lište. Popis panelu ho označuje ako miesto na spustenie Therionu pre aktuálny projekt alebo aktívny config.
 
 ### 7.1 Hlavné polia
 

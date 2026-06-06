@@ -30,6 +30,7 @@
 #include <QTreeView>
 #include <QVBoxLayout>
 
+#include <initializer_list>
 #include <utility>
 
 namespace TherionStudio
@@ -48,6 +49,22 @@ void configureSelectionEditableCombo(QComboBox *combo, const QString &objectName
     if (QCompleter *completer = combo->completer(); completer != nullptr) {
         completer->setCompletionMode(QCompleter::UnfilteredPopupCompletion);
         completer->setCaseSensitivity(Qt::CaseInsensitive);
+    }
+}
+
+void disableAutoDefault(std::initializer_list<QPushButton *> buttons)
+{
+    for (QPushButton *button : buttons) {
+        if (button != nullptr) {
+            button->setAutoDefault(false);
+        }
+    }
+}
+
+void setPlainTextEditVisibleLineCount(QPlainTextEdit *edit, int visibleLineCount)
+{
+    if (edit != nullptr) {
+        edit->setFixedHeight(edit->fontMetrics().lineSpacing() * visibleLineCount + 12);
     }
 }
 }
@@ -234,12 +251,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.linePointFlagsEdit_ = new QPlainTextEdit(objectDetailsUiState_.linePointFlagsEditor_);
     objectDetailsUiState_.linePointFlagsEdit_->setObjectName(QStringLiteral("linePointFlagsEdit"));
     objectDetailsUiState_.linePointFlagsEdit_->setTabChangesFocus(true);
-    {
-        const int visibleLineCount = 3;
-        const int textHeight = objectDetailsUiState_.linePointFlagsEdit_->fontMetrics().lineSpacing() * visibleLineCount;
-        const int framePadding = 12;
-        objectDetailsUiState_.linePointFlagsEdit_->setFixedHeight(textHeight + framePadding);
-    }
+    setPlainTextEditVisibleLineCount(objectDetailsUiState_.linePointFlagsEdit_, 3);
     objectDetailsUiState_.linePointFlagsEdit_->installEventFilter(this);
     connect(objectDetailsUiState_.linePointFlagsEdit_, &QPlainTextEdit::textChanged, this, [this]() {
         if (!objectDetailsUiState_.updatingObjectDetailsUi_) {
@@ -286,10 +298,7 @@ void MapEditorTab::buildInspectorPanelUi()
     objectDetailsUiState_.vertexInsertAfterButton_ = new QPushButton(tr("Insert After"), objectDetailsUiState_.vertexActionsEditor_);
     objectDetailsUiState_.vertexDeleteButton_ = new QPushButton(tr("Delete Point"), objectDetailsUiState_.vertexActionsEditor_);
     objectDetailsUiState_.vertexSplitButton_ = new QPushButton(tr("Split Here"), objectDetailsUiState_.vertexActionsEditor_);
-    objectDetailsUiState_.vertexInsertBeforeButton_->setAutoDefault(false);
-    objectDetailsUiState_.vertexInsertAfterButton_->setAutoDefault(false);
-    objectDetailsUiState_.vertexDeleteButton_->setAutoDefault(false);
-    objectDetailsUiState_.vertexSplitButton_->setAutoDefault(false);
+    disableAutoDefault({objectDetailsUiState_.vertexInsertBeforeButton_, objectDetailsUiState_.vertexInsertAfterButton_, objectDetailsUiState_.vertexDeleteButton_, objectDetailsUiState_.vertexSplitButton_});
     connect(objectDetailsUiState_.vertexInsertBeforeButton_, &QPushButton::clicked, this, &MapEditorTab::insertVertexBeforeFromSelectionPanel);
     connect(objectDetailsUiState_.vertexInsertAfterButton_, &QPushButton::clicked, this, &MapEditorTab::insertVertexAfterFromSelectionPanel);
     connect(objectDetailsUiState_.vertexSplitButton_, &QPushButton::clicked, this, &MapEditorTab::splitLineFromSelectionPanel);
@@ -322,11 +331,9 @@ void MapEditorTab::buildInspectorPanelUi()
         auto *blockLayout = new QVBoxLayout(block);
         blockLayout->setContentsMargins(0, 0, 0, 0);
         blockLayout->setSpacing(3);
-
         auto *titleLabel = new QLabel(title, block);
         titleLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
         blockLayout->addWidget(titleLabel);
-
         auto *row = new QWidget(block);
         auto *rowLayout = new QHBoxLayout(row);
         rowLayout->setContentsMargins(0, 0, 0, 0);
@@ -365,10 +372,9 @@ void MapEditorTab::buildInspectorPanelUi()
     auto *scrapScaleButtons = new QHBoxLayout;
     scrapScaleButtons->setContentsMargins(0, 0, 0, 0);
     objectDetailsUiState_.scrapScaleUseBoundsButton_ = new QPushButton(tr("Use Bounds"), objectDetailsUiState_.scrapScaleEditor_);
-    objectDetailsUiState_.scrapScaleUseBoundsButton_->setAutoDefault(false);
     objectDetailsUiState_.scrapScaleUseBoundsButton_->setToolTip(tr("Use current source bounds as the XTherion default scrap scale."));
     objectDetailsUiState_.scrapScaleApplyButton_ = new QPushButton(tr("Apply Scale"), objectDetailsUiState_.scrapScaleEditor_);
-    objectDetailsUiState_.scrapScaleApplyButton_->setAutoDefault(false);
+    disableAutoDefault({objectDetailsUiState_.scrapScaleUseBoundsButton_, objectDetailsUiState_.scrapScaleApplyButton_});
     connect(objectDetailsUiState_.scrapScaleUseBoundsButton_, &QPushButton::clicked, this, &MapEditorTab::populateScrapScaleFromSourceBounds);
     connect(objectDetailsUiState_.scrapScaleApplyButton_, &QPushButton::clicked, this, &MapEditorTab::applyScrapScaleEdits);
     scrapScaleButtons->addWidget(objectDetailsUiState_.scrapScaleUseBoundsButton_);
@@ -379,11 +385,10 @@ void MapEditorTab::buildInspectorPanelUi()
     QVBoxLayout *advancedSelectionLayout = nullptr;
     objectDetailsUiState_.advancedSelectionSection_ = createSelectionSection(tr("Object Actions"), &advancedSelectionLayout);
     objectDetailsUiState_.objectConfigureButton_ = new QPushButton(tr("Edit Object Settings..."), objectDetailsUiState_.advancedSelectionSection_);
-    objectDetailsUiState_.objectConfigureButton_->setAutoDefault(false);
     connect(objectDetailsUiState_.objectConfigureButton_, &QPushButton::clicked, this, &MapEditorTab::handleConfigureObjectSettingsTriggered);
     advancedSelectionLayout->addWidget(objectDetailsUiState_.objectConfigureButton_);
     objectDetailsUiState_.objectDeleteButton_ = new QPushButton(tr("Delete Object"), objectDetailsUiState_.advancedSelectionSection_);
-    objectDetailsUiState_.objectDeleteButton_->setAutoDefault(false);
+    disableAutoDefault({objectDetailsUiState_.objectConfigureButton_, objectDetailsUiState_.objectDeleteButton_});
     connect(objectDetailsUiState_.objectDeleteButton_, &QPushButton::clicked, this, &MapEditorTab::deleteSelectedObjectFromSelection);
     advancedSelectionLayout->addWidget(objectDetailsUiState_.objectDeleteButton_);
     selectionLayout->addWidget(objectDetailsUiState_.advancedSelectionSection_);
@@ -416,106 +421,7 @@ void MapEditorTab::buildInspectorPanelUi()
         });
     }
 
-    auto *backgroundTab = inspectorPanel->addPlainTab(tr("Backgrounds"));
-    auto *backgroundLayout = qobject_cast<QVBoxLayout *>(backgroundTab->layout());
-
-    auto createBackgroundSection = [backgroundTab](const QString &title, QVBoxLayout **contentLayout) {
-        return InspectorPanel::createSection(backgroundTab, title, contentLayout);
-    };
-
-    auto *layersFrame = new QFrame(backgroundTab);
-    layersFrame->setFrameShape(QFrame::StyledPanel);
-    auto *layersLayout = new QVBoxLayout(layersFrame);
-    layersLayout->setContentsMargins(8, 8, 8, 8);
-    layersLayout->setSpacing(6);
-
-    auto *layersRow = new QHBoxLayout;
-    auto *layersLabel = new QLabel(tr("Layers"), layersFrame);
-    QFont sectionFont = layersLabel->font();
-    sectionFont.setBold(true);
-    layersLabel->setFont(sectionFont);
-    layersRow->addWidget(layersLabel);
-    layersRow->addStretch(1);
-    mapBackgroundAddButton_ = new QToolButton(layersFrame);
-    mapBackgroundAddButton_->setText(QStringLiteral("+"));
-    mapBackgroundAddButton_->setToolTip(tr("Add background images"));
-    layersRow->addWidget(mapBackgroundAddButton_);
-    layersLayout->addLayout(layersRow);
-
-    mapBackgroundLayersTree_ = new QTreeView(layersFrame);
-    mapBackgroundLayersTree_->setRootIsDecorated(false);
-    mapBackgroundLayersTree_->setAnimated(false);
-    mapBackgroundLayersTree_->setSelectionBehavior(QAbstractItemView::SelectRows);
-    mapBackgroundLayersTree_->setSelectionMode(QAbstractItemView::SingleSelection);
-    mapBackgroundLayersTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    mapBackgroundLayersTree_->setAlternatingRowColors(true);
-    mapBackgroundLayersTree_->setHeaderHidden(true);
-    mapBackgroundLayersTree_->setIconSize(QSize(16, 16));
-    mapBackgroundLayersTree_->setMinimumHeight(88);
-    mapBackgroundLayersModel_ = new QStandardItemModel(mapBackgroundLayersTree_);
-    mapBackgroundLayersTree_->setModel(mapBackgroundLayersModel_);
-    configureInspectorBackgroundLayerTreeColumns();
-    connect(mapBackgroundLayersTree_, &QTreeView::clicked, this, &MapEditorTab::handleInspectorBackgroundLayerClicked);
-    layersLayout->addWidget(mapBackgroundLayersTree_);
-
-    auto *layerActionsRow = new QHBoxLayout;
-    mapBackgroundMoveUpButton_ = new QPushButton(tr("Up"), layersFrame);
-    mapBackgroundMoveDownButton_ = new QPushButton(tr("Down"), layersFrame);
-    mapBackgroundMoveUpButton_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    mapBackgroundMoveDownButton_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    layerActionsRow->addWidget(mapBackgroundMoveUpButton_);
-    layerActionsRow->addWidget(mapBackgroundMoveDownButton_);
-    layersLayout->addLayout(layerActionsRow);
-    backgroundLayout->addWidget(layersFrame);
-
-    QVBoxLayout *positionLayout = nullptr;
-    auto *positionFrame = createBackgroundSection(tr("Position"), &positionLayout);
-
-    auto *xRow = new QHBoxLayout;
-    xRow->addWidget(new QLabel(tr("X"), positionFrame));
-    mapBackgroundPosXSpin_ = new QDoubleSpinBox(positionFrame);
-    mapBackgroundPosXSpin_->setRange(-50000.0, 50000.0);
-    mapBackgroundPosXSpin_->setDecimals(1);
-    xRow->addWidget(mapBackgroundPosXSpin_, 1);
-    positionLayout->addLayout(xRow);
-
-    auto *yRow = new QHBoxLayout;
-    yRow->addWidget(new QLabel(tr("Y"), positionFrame));
-    mapBackgroundPosYSpin_ = new QDoubleSpinBox(positionFrame);
-    mapBackgroundPosYSpin_->setRange(-50000.0, 50000.0);
-    mapBackgroundPosYSpin_->setDecimals(1);
-    yRow->addWidget(mapBackgroundPosYSpin_, 1);
-    positionLayout->addLayout(yRow);
-
-    backgroundLayout->addWidget(positionFrame);
-
-    QVBoxLayout *adjustmentsLayout = nullptr;
-    auto *adjustmentsFrame = createBackgroundSection(tr("Adjustments"), &adjustmentsLayout);
-
-    auto *opacityRow = new QHBoxLayout;
-    opacityRow->addWidget(new QLabel(tr("Opacity"), adjustmentsFrame));
-    opacityRow->addStretch(1);
-    mapBackgroundOpacityResetButton_ = new QPushButton(tr("Reset"), adjustmentsFrame);
-    opacityRow->addWidget(mapBackgroundOpacityResetButton_);
-    adjustmentsLayout->addLayout(opacityRow);
-
-    mapBackgroundOpacitySlider_ = new QSlider(Qt::Horizontal, adjustmentsFrame);
-    mapBackgroundOpacitySlider_->setRange(5, 100);
-    adjustmentsLayout->addWidget(mapBackgroundOpacitySlider_);
-
-    auto *gammaRow = new QHBoxLayout;
-    gammaRow->addWidget(new QLabel(tr("Gamma"), adjustmentsFrame));
-    gammaRow->addStretch(1);
-    mapBackgroundGammaResetButton_ = new QPushButton(tr("Reset"), adjustmentsFrame);
-    gammaRow->addWidget(mapBackgroundGammaResetButton_);
-    adjustmentsLayout->addLayout(gammaRow);
-
-    mapBackgroundGammaSlider_ = new QSlider(Qt::Horizontal, adjustmentsFrame);
-    mapBackgroundGammaSlider_->setRange(20, 250);
-    adjustmentsLayout->addWidget(mapBackgroundGammaSlider_);
-    backgroundLayout->addWidget(adjustmentsFrame);
-
-    backgroundLayout->addStretch(1);
+    buildInspectorBackgroundTab(inspectorPanel);
 
     DocumentFileInspectorContext fileContext;
     fileContext.filePath = [this]() {
@@ -536,50 +442,6 @@ void MapEditorTab::buildInspectorPanelUi()
 
     updateMapInspectorLeftEdgeGeometry();
 
-    connect(mapBackgroundAddButton_, &QToolButton::clicked, this, [this]() {
-        browseAndAddBackgroundImages();
-    });
-    connect(mapBackgroundMoveUpButton_, &QPushButton::clicked, this, [this]() {
-        moveSelectedBackgroundLayerUp();
-    });
-    connect(mapBackgroundMoveDownButton_, &QPushButton::clicked, this, [this]() {
-        moveSelectedBackgroundLayerDown();
-    });
-    if (mapBackgroundLayersTree_->selectionModel() != nullptr) {
-        connect(mapBackgroundLayersTree_->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex &current, const QModelIndex &) {
-            handleInspectorBackgroundLayerSelectionChanged(current);
-        });
-    }
-    connect(mapBackgroundPosXSpin_, &QDoubleSpinBox::valueChanged, this, [this](double x) {
-        if (updatingMapInspectorBackgroundUi_ || mapBackgroundPosYSpin_ == nullptr) {
-            return;
-        }
-        setSelectedBackgroundLayerPosition(QPointF(x, mapBackgroundPosYSpin_->value()));
-    });
-    connect(mapBackgroundPosYSpin_, &QDoubleSpinBox::valueChanged, this, [this](double y) {
-        if (updatingMapInspectorBackgroundUi_ || mapBackgroundPosXSpin_ == nullptr) {
-            return;
-        }
-        setSelectedBackgroundLayerPosition(QPointF(mapBackgroundPosXSpin_->value(), y));
-    });
-    connect(mapBackgroundOpacitySlider_, &QSlider::valueChanged, this, [this](int value) {
-        if (updatingMapInspectorBackgroundUi_) {
-            return;
-        }
-        setSelectedBackgroundLayerOpacity(static_cast<qreal>(value) / 100.0);
-    });
-    connect(mapBackgroundGammaSlider_, &QSlider::valueChanged, this, [this](int value) {
-        if (updatingMapInspectorBackgroundUi_) {
-            return;
-        }
-        setSelectedBackgroundLayerGamma(static_cast<qreal>(value) / 100.0);
-    });
-    connect(mapBackgroundOpacityResetButton_, &QPushButton::clicked, this, [this]() {
-        resetSelectedBackgroundLayerOpacity();
-    });
-    connect(mapBackgroundGammaResetButton_, &QPushButton::clicked, this, [this]() {
-        resetSelectedBackgroundLayerGamma();
-    });
 }
 
 } // namespace TherionStudio

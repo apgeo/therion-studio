@@ -480,6 +480,7 @@ set(THERION_MAP_EDITOR_SOURCES
     src/app/text_editor/map_editor/MapEditorTabSelectionContext.cpp
     src/app/text_editor/map_editor/MapEditorTabViewportInputContext.cpp
     src/app/text_editor/map_editor/MapEditorTabDetachedPaneDelegates.cpp
+    src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp

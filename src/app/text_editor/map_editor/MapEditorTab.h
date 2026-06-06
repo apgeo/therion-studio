@@ -63,6 +63,7 @@ namespace TherionStudio
 {
 class TextEditorTab;
 class DocumentFileInspector;
+class DocumentInspectorPanel;
 struct MapEditorCanvasEditContext;
 struct MapEditorInteractiveDrawContext;
 class MapEditorInspectorBackgroundController;
@@ -349,6 +350,7 @@ private:
     void initializeWorkspace();
     void buildUi();
     void buildInspectorPanelUi();
+    void buildInspectorBackgroundTab(DocumentInspectorPanel *inspectorPanel);
     void buildMapScene();
     MapEditorViewportInputContext viewportInputContext();
     void refreshMapScene();

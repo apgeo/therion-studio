@@ -24,6 +24,7 @@
 #include <QWidget>
 
 #include <memory>
+#include <limits>
 #include <optional>
 #include <utility>
 
@@ -44,6 +45,101 @@ int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int so
     }
 
     return -1;
+}
+
+qreal segmentProjectionT(const QPointF &point, const QPointF &segmentStart, const QPointF &segmentEnd)
+{
+    const QPointF segment = segmentEnd - segmentStart;
+    const qreal lengthSquared = (segment.x() * segment.x()) + (segment.y() * segment.y());
+    if (lengthSquared <= 1e-9) {
+        return 0.5;
+    }
+
+    const QPointF pointDelta = point - segmentStart;
+    return qBound<qreal>(0.0,
+                         ((pointDelta.x() * segment.x()) + (pointDelta.y() * segment.y())) / lengthSquared,
+                         1.0);
+}
+
+qreal pointDistanceSquared(const QPointF &a, const QPointF &b)
+{
+    const QPointF delta = a - b;
+    return (delta.x() * delta.x()) + (delta.y() * delta.y());
+}
+
+QPointF cubicBezierPoint(const QPointF &p0,
+                         const QPointF &p1,
+                         const QPointF &p2,
+                         const QPointF &p3,
+                         qreal t)
+{
+    const qreal clampedT = qBound<qreal>(0.0, t, 1.0);
+    const qreal inverseT = 1.0 - clampedT;
+    return (p0 * (inverseT * inverseT * inverseT))
+        + (p1 * (3.0 * inverseT * inverseT * clampedT))
+        + (p2 * (3.0 * inverseT * clampedT * clampedT))
+        + (p3 * (clampedT * clampedT * clampedT));
+}
+
+qreal distanceSquaredToLineSegment(const QPointF &point,
+                                   const QPointF &segmentStart,
+                                   const QPointF &segmentEnd,
+                                   qreal *projectionT = nullptr)
+{
+    const qreal t = segmentProjectionT(point, segmentStart, segmentEnd);
+    if (projectionT != nullptr) {
+        *projectionT = t;
+    }
+    return pointDistanceSquared(point, segmentStart + ((segmentEnd - segmentStart) * t));
+}
+
+qreal distanceSquaredToCubicSegment(const QPointF &point,
+                                    const MapGeometryFeature::TH2LineVertex &startVertex,
+                                    const MapGeometryFeature::TH2LineVertex &endVertex,
+                                    qreal *projectionT = nullptr)
+{
+    const QPointF p0 = startVertex.anchor;
+    const QPointF p1 = startVertex.outgoingControl.value_or(startVertex.anchor);
+    const QPointF p2 = endVertex.incomingControl.value_or(endVertex.anchor);
+    const QPointF p3 = endVertex.anchor;
+    const bool segmentIsCubic = startVertex.outgoingControl.has_value() || endVertex.incomingControl.has_value();
+    if (!segmentIsCubic) {
+        return distanceSquaredToLineSegment(point, p0, p3, projectionT);
+    }
+
+    constexpr int kSampleCount = 64;
+    qreal bestT = 0.5;
+    qreal bestDistanceSquared = std::numeric_limits<qreal>::max();
+    for (int sample = 0; sample <= kSampleCount; ++sample) {
+        const qreal t = static_cast<qreal>(sample) / static_cast<qreal>(kSampleCount);
+        const qreal distanceSquared = pointDistanceSquared(point, cubicBezierPoint(p0, p1, p2, p3, t));
+        if (distanceSquared < bestDistanceSquared) {
+            bestDistanceSquared = distanceSquared;
+            bestT = t;
+        }
+    }
+
+    qreal low = qMax<qreal>(0.0, bestT - (1.0 / static_cast<qreal>(kSampleCount)));
+    qreal high = qMin<qreal>(1.0, bestT + (1.0 / static_cast<qreal>(kSampleCount)));
+    for (int iteration = 0; iteration < 16; ++iteration) {
+        const qreal left = low + ((high - low) / 3.0);
+        const qreal right = high - ((high - low) / 3.0);
+        const qreal leftDistanceSquared = pointDistanceSquared(point, cubicBezierPoint(p0, p1, p2, p3, left));
+        const qreal rightDistanceSquared = pointDistanceSquared(point, cubicBezierPoint(p0, p1, p2, p3, right));
+        if (leftDistanceSquared < rightDistanceSquared) {
+            high = right;
+        } else {
+            low = left;
+        }
+    }
+
+    bestT = (low + high) / 2.0;
+    bestT = qBound<qreal>(0.001, bestT, 0.999);
+    bestDistanceSquared = pointDistanceSquared(point, cubicBezierPoint(p0, p1, p2, p3, bestT));
+    if (projectionT != nullptr) {
+        *projectionT = bestT;
+    }
+    return bestDistanceSquared;
 }
 
 int lineVertexOwnerIndexForSourceVertex(const MapGeometryFeature &lineFeature, int sourceVertexIndex)
@@ -813,6 +909,78 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineV
     QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
     int insertedIndex = -1;
     if (!insertLineVertexByDeCasteljau(&editedVertices, segmentStartIndex, 0.5, &insertedIndex)) {
+        (*context_.toolbarStatusNote) = tr("Insert vertex failed: segment split could not be computed.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
+    QString afterText = beforeText;
+    QString errorMessage;
+    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
+        (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+            ? tr("Insert vertex failed.")
+            : tr("Insert vertex failed: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    applySourceTextChangeWithSnapshot(tr("Insert Line Vertex"), beforeText, afterText, lineNumber);
+
+    (*context_.toolbarStatusNote) = tr("Inserted line vertex %1 on source line %2.").arg(insertedIndex + 1).arg(lineNumber);
+    context_.refreshToolbarSummary();
+    restoreLineVertexOwnerSelection(lineNumber, insertedIndex);
+    scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, insertedIndex);
+    return true;
+}
+
+bool MapEditorCanvasEditController::insertLineVertexAtSelectionCoordinate()
+{
+    if (context_.textEditor == nullptr
+        || context_.selectedObjectLineNumber == nullptr
+        || context_.selectedObjectKind == nullptr
+        || context_.selectedObjectCoordinate == nullptr
+        || (*context_.selectedObjectKind) != QStringLiteral("line")
+        || (*context_.selectedObjectLineNumber) <= 0
+        || !context_.selectedObjectCoordinate->has_value()) {
+        return false;
+    }
+
+    const int lineNumber = *context_.selectedObjectLineNumber;
+    const QPointF insertionPoint = context_.selectedObjectCoordinate->value();
+    const QString beforeText = context_.textEditor->text();
+    const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(beforeText, lineNumber);
+    if (!lineFeature.has_value() || lineFeature->lineVertices.size() < 2) {
+        (*context_.toolbarStatusNote) = tr("Insert vertex failed: line geometry could not be resolved.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    int segmentStartIndex = -1;
+    qreal splitT = 0.5;
+    qreal bestDistanceSquared = std::numeric_limits<qreal>::max();
+    for (int index = 0; index + 1 < lineFeature->lineVertices.size(); ++index) {
+        qreal candidateT = 0.5;
+        const qreal distanceSquared = distanceSquaredToCubicSegment(insertionPoint,
+                                                                    lineFeature->lineVertices.at(index),
+                                                                    lineFeature->lineVertices.at(index + 1),
+                                                                    &candidateT);
+        if (distanceSquared < bestDistanceSquared) {
+            bestDistanceSquared = distanceSquared;
+            segmentStartIndex = index;
+            splitT = candidateT;
+        }
+    }
+
+    if (segmentStartIndex < 0) {
+        (*context_.toolbarStatusNote) = tr("Insert vertex failed: no line segment could be resolved.");
+        context_.refreshToolbarSummary();
+        return true;
+    }
+
+    QVector<MapGeometryFeature::TH2LineVertex> editedVertices = lineFeature->lineVertices;
+    int insertedIndex = -1;
+    if (!insertLineVertexByDeCasteljau(&editedVertices, segmentStartIndex, splitT, &insertedIndex)) {
         (*context_.toolbarStatusNote) = tr("Insert vertex failed: segment split could not be computed.");
         context_.refreshToolbarSummary();
         return true;

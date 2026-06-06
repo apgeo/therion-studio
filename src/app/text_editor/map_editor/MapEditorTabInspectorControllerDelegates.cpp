@@ -5,6 +5,7 @@
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QGraphicsScene>
+#include <QGraphicsView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
@@ -13,6 +14,7 @@
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QTimer>
+#include <QWidget>
 
 #include "MapEditorInspectorBackgroundController.h"
 #include "MapEditorInspectorObjectController.h"
@@ -222,8 +224,21 @@ void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
         previousMenu->close();
     }
 
+    const int segmentContextLineNumber = objectSelectionState_.selectedObjectLineNumber_;
+    const bool segmentContextLineSelected = objectSelectionState_.selectedObjectKind_ == QStringLiteral("line")
+        && objectSelectionState_.selectedObjectVertexIndex_ < 0
+        && objectSelectionState_.selectedObjectCoordinate_.has_value();
+    const std::optional<QPointF> segmentContextCoordinate = objectSelectionState_.selectedObjectCoordinate_;
+
     if (mapScene_ != nullptr && !mapScene_->selectedItems().isEmpty()) {
         handleMapSceneSelectionChanged();
+    }
+    if (segmentContextLineSelected
+        && objectSelectionState_.selectedObjectLineNumber_ == segmentContextLineNumber
+        && objectSelectionState_.selectedObjectKind_ == QStringLiteral("line")
+        && objectSelectionState_.selectedObjectVertexIndex_ < 0
+        && !objectSelectionState_.selectedObjectCoordinate_.has_value()) {
+        objectSelectionState_.selectedObjectCoordinate_ = segmentContextCoordinate;
     }
 
     auto *menu = new QMenu(this);
@@ -401,6 +416,14 @@ void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
         && objectSelectionState_.selectedObjectVertexIndex_ >= 0;
     const bool lineSelected = objectSelectionState_.selectedObjectKind_ == QStringLiteral("line");
     const bool pointSelected = objectSelectionState_.selectedObjectKind_ == QStringLiteral("point");
+    if (lineSelected && !objectSelectionState_.selectedObjectCoordinate_.has_value()
+        && mapView_ != nullptr && mapView_->viewport() != nullptr) {
+        const QPoint viewportPosition = mapView_->viewport()->mapFromGlobal(globalPosition);
+        if (mapView_->viewport()->rect().contains(viewportPosition)) {
+            objectSelectionState_.selectedObjectCoordinate_ =
+                sourcePointFromScenePosition(mapView_->mapToScene(viewportPosition));
+        }
+    }
 
     const bool geometryAvailable = lineSelected
         && objectDetailsUiState_.lineClosedCheck_ != nullptr
@@ -603,14 +626,21 @@ void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
     const bool insertAfterAvailable = lineVertexSelected
         && objectDetailsUiState_.vertexInsertAfterButton_ != nullptr
         && objectDetailsUiState_.vertexInsertAfterButton_->isEnabled();
+    const bool insertHereAvailable = lineSelected
+        && objectSelectionState_.selectedObjectCoordinate_.has_value();
     const bool splitAvailable = lineVertexSelected
         && objectDetailsUiState_.vertexSplitButton_ != nullptr
         && objectDetailsUiState_.vertexSplitButton_->isEnabled();
     const bool deletePointAvailable = lineVertexSelected
         && objectDetailsUiState_.vertexDeleteButton_ != nullptr
         && objectDetailsUiState_.vertexDeleteButton_->isEnabled();
-    if (insertBeforeAvailable || insertAfterAvailable || splitAvailable || deletePointAvailable) {
+    if (insertBeforeAvailable || insertAfterAvailable || insertHereAvailable || splitAvailable || deletePointAvailable) {
         QMenu *linePointActionsMenu = menu->addMenu(tr("Line Point Actions"));
+        if (insertHereAvailable) {
+            QAction *insertHereAction = linePointActionsMenu->addAction(tr("Insert Point Here"));
+            connect(insertHereAction, &QAction::triggered, this, &MapEditorTab::insertLineVertexAtSelectionCoordinate);
+        }
+
         if (insertBeforeAvailable) {
             QAction *insertBeforeAction = linePointActionsMenu->addAction(objectDetailsUiState_.vertexInsertBeforeButton_->text());
             connect(insertBeforeAction, &QAction::triggered, this, &MapEditorTab::insertVertexBeforeFromSelectionPanel);

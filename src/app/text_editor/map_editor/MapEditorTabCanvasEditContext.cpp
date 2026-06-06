@@ -149,6 +149,11 @@ bool MapEditorTab::insertLineVertexFromSelection(bool before)
                                               : MapEditorLineVertexInsertPlacement::After);
 }
 
+bool MapEditorTab::insertLineVertexAtSelectionCoordinate()
+{
+    return MapEditorCanvasEditController(canvasEditContext()).insertLineVertexAtSelectionCoordinate();
+}
+
 bool MapEditorTab::splitLineAtSelection()
 {
     return MapEditorCanvasEditController(canvasEditContext()).splitLineAtSelection();

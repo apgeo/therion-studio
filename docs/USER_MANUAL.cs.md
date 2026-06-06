@@ -198,6 +198,7 @@ Pravým kliknutím na vybraný mapový objekt nebo vrchol čáry otevřete konte
 Pro čáry a hranice ploch:
 
 - vyberte vrchol pro editaci detailů line pointu,
+- pravým kliknutím na segment čáry a volbou `Insert Point Here` rozdělíte nejbližší segment v místě kliknutí,
 - `Vložit před` / `Vložit za` přidá vrchol poblíž vybraného vrcholu,
 - `Prodloužit před` / `Prodloužit za` na koncích čáry pokračuje v existující čáře,
 - `Delete` / `Backspace` odstraní vybraný středový vrchol,

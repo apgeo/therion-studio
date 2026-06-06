@@ -160,6 +160,8 @@ MapEditorViewportInputContext MapEditorTab::viewportInputContext()
             objectSelectionState_.selectedObjectKind_ = normalizedKind;
             if (sourceVertexIndex >= 0) {
                 objectSelectionState_.selectedObjectCoordinate_ = sourcePointFromScenePosition(scenePosition);
+            } else if (normalizedKind == QStringLiteral("line")) {
+                objectSelectionState_.selectedObjectCoordinate_ = sourcePointFromScenePosition(scenePosition);
             }
             refreshObjectDetailsPanel();
             updateCommandSurfaceState();

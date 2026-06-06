@@ -48,6 +48,7 @@ public:
                                            const QString &afterText,
                                            int insertedLineNumber);
     bool insertLineVertexFromSelection(MapEditorLineVertexInsertPlacement placement);
+    bool insertLineVertexAtSelectionCoordinate();
     bool splitLineAtSelection();
     bool removeLineVertexFromSelection();
     bool toggleLineVertexSmoothFromSelection();

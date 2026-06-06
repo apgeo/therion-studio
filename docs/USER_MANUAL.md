@@ -203,6 +203,7 @@ Right-click a selected map object or line vertex to open a context menu with com
 For lines and area borders:
 
 - select a vertex to edit its line-point details
+- right-click a line segment and use `Insert Point Here` to split the nearest segment at the click position
 - use `Insert Before` / `Insert After` to add vertices near the selected vertex
 - use `Extend Before` / `Extend After` at line endpoints to continue an existing line
 - use `Delete` / `Backspace` to remove the selected line vertex; if no line vertex is selected, `Delete` / `Backspace` deletes the selected object

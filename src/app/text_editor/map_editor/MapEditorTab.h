@@ -465,6 +465,7 @@ private:
                                            const QString &afterText,
                                            int insertedLineNumber);
     bool insertLineVertexFromSelection(bool before);
+    bool insertLineVertexAtSelectionCoordinate();
     bool splitLineAtSelection();
     bool removeLineVertexFromSelection();
     bool toggleLineVertexSmoothFromSelection();

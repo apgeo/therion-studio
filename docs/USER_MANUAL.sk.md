@@ -198,6 +198,7 @@ Pravým kliknutím na vybraný mapový objekt alebo vrchol čiary otvoríte kont
 Pre čiary a hranice plôch:
 
 - vyberte vrchol na editáciu detailov line pointu,
+- pravým kliknutím na segment čiary a voľbou `Insert Point Here` rozdelíte najbližší segment v mieste kliknutia,
 - `Vložiť pred` / `Vložiť za` pridá vrchol poblíž vybraného vrcholu,
 - `Predĺžiť pred` / `Predĺžiť za` na koncoch čiary pokračuje v existujúcej čiare,
 - `Delete` / `Backspace` odstráni vybraný stredový vrchol,

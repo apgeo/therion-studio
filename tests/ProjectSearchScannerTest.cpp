@@ -5,7 +5,6 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
-#include <QStringEncoder>
 #include <QTemporaryDir>
 #include <QTimer>
 
@@ -33,20 +32,14 @@ bool writeTextFile(const QString &filePath, const QString &contents)
     return file.write(bytes) == bytes.size();
 }
 
-bool writeEncodedTextFile(const QString &filePath, const QString &contents, const QString &encodingName)
+bool writeRawFile(const QString &filePath, const QByteArray &contents)
 {
-    QStringEncoder encoder(encodingName.toLatin1().constData());
-    if (!encoder.isValid()) {
-        return false;
-    }
-
     QFile file(filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         return false;
     }
 
-    const QByteArray bytes = encoder.encode(contents);
-    return file.write(bytes) == bytes.size();
+    return file.write(contents) == contents.size();
 }
 
 QString canonicalOrAbsolutePath(const QString &path)
@@ -231,12 +224,14 @@ int runDeclaredEncodingSearchTest()
     }
 
     const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("latin2.th"));
-    const QString contents = QStringLiteral(
-        "encoding iso8859-2\n"
-        "survey latin2\n"
-        "  team \"Stacho Mudrák\"\n"
-        "endsurvey latin2\n");
-    if (!expect(writeEncodedTextFile(filePath, contents, QStringLiteral("iso-8859-2")),
+    QByteArray contents;
+    contents += "encoding iso8859-2\n";
+    contents += "survey latin2\n";
+    contents += "  team \"Stacho Mudr";
+    contents += static_cast<char>(0xE1); // ISO-8859-2 / Latin-1 small a with acute.
+    contents += "k\"\n";
+    contents += "endsurvey latin2\n";
+    if (!expect(writeRawFile(filePath, contents),
                 "Temporary ISO-8859-2 file could not be written.")) {
         return 1;
     }

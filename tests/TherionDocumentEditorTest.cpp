@@ -1883,6 +1883,24 @@ int runRewriteMapObjectQuickFieldsTest()
         return 1;
     }
 
+    contents = QStringLiteral("scrap s1\r\nline wall -id old # keep\nendline\rendscrap");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+                                                                   2,
+                                                                   QStringLiteral("border"),
+                                                                   QStringLiteral("invisible"),
+                                                                   QStringLiteral("line-1"),
+                                                                   QString(),
+                                                                   false,
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap s1\r\nline border -id line-1 -subtype invisible # keep\nendline\rendscrap"),
+                "rewriteMapObjectQuickFields should preserve mixed physical line endings when replacing one command line.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("line label -id l1 # keep\n  0 0\n  10 0\nendline\n");
     errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteMapObjectTextOption(&contents,

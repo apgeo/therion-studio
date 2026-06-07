@@ -2305,18 +2305,17 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
-    if (lineNumber > lines.size()) {
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
 
-    const int lineIndex = lineNumber - 1;
-    QString lineText = lines.at(lineIndex);
-    TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(lineNumber - 1);
+    QString lineText = sourceLine.text;
+    TherionParsedLine parsedLine = sourceLine.parsed;
     if (parsedLine.directive.isEmpty()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a map object command.");
@@ -2346,8 +2345,7 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
             }
             return false;
         }
-        lines[lineIndex] = lineText;
-        *contents = lines.join(lineEnding);
+        contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
         return true;
     }
 
@@ -2428,8 +2426,7 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
         return false;
     }
 
-    lines[lineIndex] = lineText;
-    *contents = lines.join(lineEnding);
+    contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
     return true;
 }
 

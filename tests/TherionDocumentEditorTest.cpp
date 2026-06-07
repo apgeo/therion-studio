@@ -1675,6 +1675,59 @@ int runRewriteOrientationOptionsTest()
         return 1;
     }
 
+    contents = QStringLiteral("encoding utf-8\r\n"
+                              "line slope\n"
+                              "  10 20\r"
+                              "  30 40\n"
+                              "endline\r"
+                              "point station 1 2 station -name a1\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 2, 0, true, 40.0, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("encoding utf-8\r\n"
+                                           "line slope\n"
+                                           "  10 20\r"
+                                           "  l-size 40.0\r"
+                                           "  30 40\n"
+                                           "endline\r"
+                                           "point station 1 2 station -name a1\n"),
+                "rewriteLinePointLeftSize should preserve physical line endings outside inserted standalone option rows.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 2, 0, true, 12.5, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("encoding utf-8\r\n"
+                                           "line slope\n"
+                                           "  10 20\r"
+                                           "  l-size 12.5\r"
+                                           "  30 40\n"
+                                           "endline\r"
+                                           "point station 1 2 station -name a1\n"),
+                "rewriteLinePointLeftSize should preserve physical line endings outside rewritten standalone option rows.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 2, 0, false, 0.0, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("encoding utf-8\r\n"
+                                           "line slope\n"
+                                           "  10 20\r"
+                                           "  30 40\n"
+                                           "endline\r"
+                                           "point station 1 2 station -name a1\n"),
+                "rewriteLinePointLeftSize should preserve physical line endings outside removed standalone option rows.")) {
+        return 1;
+    }
+
     return 0;
 }
 

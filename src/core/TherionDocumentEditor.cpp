@@ -660,8 +660,12 @@ bool rewriteLinePointNumericOption(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    QStringList lines;
+    lines.reserve(sourceDocument.lines.size());
+    for (const TherionParsedSourceLine &sourceLine : sourceDocument.lines) {
+        lines.append(sourceLine.text);
+    }
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -717,11 +721,12 @@ bool rewriteLinePointNumericOption(QString *contents,
         }
         if (lineText.trimmed().isEmpty()
             && coordinateTokenPairsForLine(parsedLine, existing.lineIndex == blockStartLineIndex ? 1 : 0).isEmpty()) {
-            lines.removeAt(existing.lineIndex);
+            const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(existing.lineIndex);
+            contents->remove(sourceLine.startOffset, sourceLine.textLength + sourceLine.lineEndingLength);
         } else {
-            lines[existing.lineIndex] = lineText;
+            const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(existing.lineIndex);
+            contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
         }
-        *contents = lines.join(lineEnding);
         return true;
     }
 
@@ -761,8 +766,8 @@ bool rewriteLinePointNumericOption(QString *contents,
             lineText.insert(optionToken.start + optionToken.length,
                             QStringLiteral(" %1").arg(formattedValue));
         }
-        lines[existing.lineIndex] = lineText;
-        *contents = lines.join(lineEnding);
+        const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(existing.lineIndex);
+        contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
         return true;
     }
 
@@ -772,9 +777,19 @@ bool rewriteLinePointNumericOption(QString *contents,
     const QString indent = indentMatch.hasMatch() && !indentMatch.captured(0).isEmpty()
         ? indentMatch.captured(0)
         : QStringLiteral("  ");
-    lines.insert(target->optionBlockEndLineIndex,
-                 QStringLiteral("%1%2 %3").arg(indent, linePointOptionOutputToken(normalizedOption), formattedValue));
-    *contents = lines.join(lineEnding);
+    if (target->optionBlockEndLineIndex < 0 || target->optionBlockEndLineIndex >= sourceDocument.lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Line-point option insertion range could not be rewritten.");
+        }
+        return false;
+    }
+    QString insertionLineEnding = sourceDocument.lines.value(target->coordinateLineIndex).lineEnding;
+    if (insertionLineEnding.isEmpty()) {
+        insertionLineEnding = TherionSourceText::detectedLineEnding(*contents);
+    }
+    const QString insertedLine = QStringLiteral("%1%2 %3%4")
+                                     .arg(indent, linePointOptionOutputToken(normalizedOption), formattedValue, insertionLineEnding);
+    contents->insert(sourceDocument.lines.at(target->optionBlockEndLineIndex).startOffset, insertedLine);
     return true;
 }
 

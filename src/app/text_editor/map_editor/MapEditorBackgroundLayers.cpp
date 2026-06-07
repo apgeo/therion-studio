@@ -1433,6 +1433,12 @@ QPointF MapEditorTab::backgroundLayerPosition(int index) const
     return item->pos();
 }
 
+QRectF MapEditorTab::backgroundLayerSceneBounds(int index) const
+{
+    const QGraphicsPixmapItem *item = backgroundLayerItemAt(index);
+    return item != nullptr ? item->sceneBoundingRect() : QRectF();
+}
+
 int MapEditorTab::selectedBackgroundLayerIndex() const
 {
     return selectedBackgroundLayerIndex_;

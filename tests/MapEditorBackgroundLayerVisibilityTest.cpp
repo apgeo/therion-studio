@@ -530,7 +530,7 @@ int runXviCacheReloadsSameTimestampContentChangeTest()
     }
 
     QtFileSystem fileSystem;
-    QPointF firstPosition;
+    QRectF firstBounds;
     {
         FakeSessionStore sessionStore;
         QMainWindow hostWindow;
@@ -560,7 +560,10 @@ int runXviCacheReloadsSameTimestampContentChangeTest()
                     "Expected one metadata XVI layer before cache reload.")) {
             return 1;
         }
-        firstPosition = mapTab->backgroundLayerPosition(0);
+        firstBounds = mapTab->backgroundLayerSceneBounds(0);
+        if (!expect(firstBounds.isValid(), "Expected valid initial XVI background bounds.")) {
+            return 1;
+        }
     }
 
     const QByteArray secondXvi =
@@ -613,9 +616,14 @@ int runXviCacheReloadsSameTimestampContentChangeTest()
                 "Expected one metadata XVI layer after same-timestamp cache reload.")) {
         return 1;
     }
-    const QPointF secondPosition = mapTab->backgroundLayerPosition(0);
-    if (!expect(!nearlyEqual(secondPosition.x(), firstPosition.x())
-                    || !nearlyEqual(secondPosition.y(), firstPosition.y()),
+    const QRectF secondBounds = mapTab->backgroundLayerSceneBounds(0);
+    if (!expect(secondBounds.isValid(), "Expected valid reloaded XVI background bounds.")) {
+        return 1;
+    }
+    if (!expect(!nearlyEqual(secondBounds.left(), firstBounds.left())
+                    || !nearlyEqual(secondBounds.top(), firstBounds.top())
+                    || !nearlyEqual(secondBounds.width(), firstBounds.width())
+                    || !nearlyEqual(secondBounds.height(), firstBounds.height()),
                 "XVI cache should reload changed content even when the file timestamp is unchanged.")) {
         return 1;
     }

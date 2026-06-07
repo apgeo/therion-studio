@@ -166,6 +166,7 @@ public:
     bool backgroundLayerSupportsGamma(int index) const;
     bool backgroundLayerSupportsPositionEditing(int index) const;
     QPointF backgroundLayerPosition(int index) const;
+    QRectF backgroundLayerSceneBounds(int index) const;
     int selectedBackgroundLayerIndex() const;
     void setSelectedBackgroundLayerIndex(int index);
     void browseAndAddBackgroundImages();

@@ -1348,9 +1348,9 @@ int runRewriteLineCoordinateRowsTest()
         return 1;
     }
 
-    contents = QStringLiteral("line wall -id line-1 # keep\n"
-                              "  10 20 30 40\n"
-                              "  50 60\n"
+    contents = QStringLiteral("line wall -id line-1 # keep\r\n"
+                              "  10 20 30 40\r\n"
+                              "  50 60\r\n"
                               "endline\r\n");
     errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteLineCoordinateRows(&contents,
@@ -1366,6 +1366,31 @@ int runRewriteLineCoordinateRowsTest()
                                            "  77 88\r\n"
                                            "endline\r\n"),
                 "rewriteLineCoordinateRows should replace coordinate rows and preserve start/end lines with CRLF.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("encoding utf-8\r\n"
+                              "line wall\n"
+                              "  10 20\r"
+                              "  30 40\n"
+                              "endline\r\n"
+                              "point station 1 2 station -name a1\r");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineCoordinateRows(&contents,
+                                                                  2,
+                                                                  {QStringLiteral("11 22"),
+                                                                   QStringLiteral("33 44")},
+                                                                  &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("encoding utf-8\r\n"
+                                           "line wall\n"
+                                           "  11 22\n"
+                                           "  33 44\n"
+                                           "endline\r\n"
+                                           "point station 1 2 station -name a1\r"),
+                "rewriteLineCoordinateRows should preserve physical line endings outside the rewritten line block.")) {
         return 1;
     }
 

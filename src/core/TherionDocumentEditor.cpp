@@ -2591,8 +2591,12 @@ bool TherionDocumentEditor::rewriteLineCoordinateRows(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    QStringList lines;
+    lines.reserve(sourceDocument.lines.size());
+    for (const TherionParsedSourceLine &sourceLine : sourceDocument.lines) {
+        lines.append(sourceLine.text);
+    }
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -2656,16 +2660,23 @@ bool TherionDocumentEditor::rewriteLineCoordinateRows(QString *contents,
     }
     rewrittenBlock.append(lines.at(blockEndLineIndex));
 
-    const int replaceStart = blockStartLineIndex;
-    const int replaceCount = (blockEndLineIndex - blockStartLineIndex) + 1;
-    for (int index = 0; index < replaceCount; ++index) {
-        lines.removeAt(replaceStart);
-    }
-    for (int index = rewrittenBlock.size() - 1; index >= 0; --index) {
-        lines.insert(replaceStart, rewrittenBlock.at(index));
+    if (blockStartLineIndex >= sourceDocument.lines.size() || blockEndLineIndex >= sourceDocument.lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line block source range could not be rewritten.");
+        }
+        return false;
     }
 
-    *contents = lines.join(lineEnding);
+    QString replacementLineEnding = sourceDocument.lines.at(blockStartLineIndex).lineEnding;
+    if (replacementLineEnding.isEmpty()) {
+        replacementLineEnding = TherionSourceText::detectedLineEnding(*contents);
+    }
+    const QString replacementText = rewrittenBlock.join(replacementLineEnding);
+    const TherionParsedSourceLine &startSourceLine = sourceDocument.lines.at(blockStartLineIndex);
+    const TherionParsedSourceLine &endSourceLine = sourceDocument.lines.at(blockEndLineIndex);
+    const int replaceStartOffset = startSourceLine.startOffset;
+    const int replaceLength = (endSourceLine.startOffset + endSourceLine.textLength) - replaceStartOffset;
+    contents->replace(replaceStartOffset, replaceLength, replacementText);
     return true;
 }
 }

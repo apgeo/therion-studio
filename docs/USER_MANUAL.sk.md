@@ -187,7 +187,7 @@ Počas kreslenia čiary alebo plochy:
 - kliknutím pridáte rovný vrchol,
 - stlačením, ťahaním a pustením pri pokladaní vrcholu vytiahnete dvojicu Bezier kontrolných bodov tohto vrcholu rovnako ako v XTherione,
 - viditeľné Bezier kontrolné body možno pred dokončením ťahaním doladiť,
-- kliknutím na prvý vrchol čiary ju dokončíte ako uzavretú (`-close on`),
+- kliknutím na prvý vrchol čiary ju dokončíte ako uzavretú (`-close on`); kliknutím na prvý vrchol plochy dokončíte návrh plochy,
 - uzavreté čiary vykresľujú posledný segment späť na prvý vrchol, vrátane dvojbodových uzavretých Bezier kriviek,
 - `Backspace` alebo `Delete` odstráni posledný draft vrchol,
 - `Esc` zruší vkladanie.

@@ -2073,6 +2073,32 @@ int runDragUndoRedoSmoke()
         return 1;
     }
 
+    const QString textBeforeAreaClickClose = mapTab->text();
+    const int areaDirectivesBeforeClickClose = countDirectiveLines(textBeforeAreaClickClose, QStringLiteral("area"));
+    const int lineDirectivesBeforeAreaClickClose = countDirectiveLines(textBeforeAreaClickClose, QStringLiteral("line"));
+    mapTab->triggerAddArea();
+    pumpEvents();
+    const QPoint clickCloseAreaFirst(viewportCenter.x() - 48, viewportCenter.y() + 8);
+    const QPoint clickCloseAreaSecond(viewportCenter.x() - 10, viewportCenter.y() + 36);
+    const QPoint clickCloseAreaThird(viewportCenter.x() + 18, viewportCenter.y() + 2);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, clickCloseAreaFirst, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, clickCloseAreaFirst, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, clickCloseAreaSecond, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, clickCloseAreaSecond, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, clickCloseAreaThird, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, clickCloseAreaThird, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, clickCloseAreaFirst, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, clickCloseAreaFirst, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("area")) == areaDirectivesBeforeClickClose + 1,
+                "Clicking the first Area draft vertex again should commit the area.")) {
+        return 1;
+    }
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeAreaClickClose + 1,
+                "Clicking the first Area draft vertex again should create the closed border line referenced by the area.")) {
+        return 1;
+    }
+
     const QString textBeforeAreaEscCommit = mapTab->text();
     const int areaDirectivesBeforeEscCommit = countDirectiveLines(textBeforeAreaEscCommit, QStringLiteral("area"));
     const int lineDirectivesBeforeAreaEscCommit = countDirectiveLines(textBeforeAreaEscCommit, QStringLiteral("line"));

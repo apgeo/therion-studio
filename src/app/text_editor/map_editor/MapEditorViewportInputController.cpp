@@ -1012,15 +1012,16 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                     }
                 }
 
-                bool closeLineDraftByClick = false;
-                if (currentDrawMode == MapEditorInteractiveDrawMode::Line
+                bool completeClosedDraftByClick = false;
+                if ((currentDrawMode == MapEditorInteractiveDrawMode::Line
+                     || currentDrawMode == MapEditorInteractiveDrawMode::Area)
                     && !(*context_.interactiveDrawAnchorDragActive)
                     && context_.interactiveDrawLineVertices != nullptr
-                    && context_.interactiveDrawLineVertices->size() >= 2) {
+                    && context_.interactiveDrawLineVertices->size() >= (currentDrawMode == MapEditorInteractiveDrawMode::Line ? 2 : 3)) {
                     const QPointF closeHitProbe = context_.view->mapToScene(mouseEvent->pos() + QPoint(10, 0));
                     const qreal closeHitRadius = std::max<qreal>(5.0, QLineF(releaseScenePoint, closeHitProbe).length());
                     const QPointF firstAnchorScenePoint = context_.interactiveDrawLineVertices->first().anchorScene;
-                    closeLineDraftByClick = QLineF(releaseScenePoint, firstAnchorScenePoint).length() <= closeHitRadius;
+                    completeClosedDraftByClick = QLineF(releaseScenePoint, firstAnchorScenePoint).length() <= closeHitRadius;
                 }
 
                 (*context_.interactiveDrawAnchorPressActive) = false;
@@ -1030,8 +1031,8 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
                     (*context_.interactiveDrawHoverSnapActive) = false;
                 }
 
-                if (closeLineDraftByClick && context_.commitInteractiveDrawSession != nullptr) {
-                    context_.commitInteractiveDrawSession(true);
+                if (completeClosedDraftByClick && context_.commitInteractiveDrawSession != nullptr) {
+                    context_.commitInteractiveDrawSession(currentDrawMode == MapEditorInteractiveDrawMode::Line);
                     event->accept();
                     return true;
                 }

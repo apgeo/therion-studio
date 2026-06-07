@@ -187,7 +187,7 @@ Během kreslení čáry nebo plochy:
 - kliknutím přidáte rovný vrchol,
 - stisknutím, tažením a puštěním při pokládání vrcholu vytáhnete dvojici Bezier kontrolních bodů tohoto vrcholu stejně jako v XTherionu,
 - viditelné Bezier kontrolní body lze před dokončením tažením doladit,
-- kliknutím na první vrchol čáry ji dokončíte jako uzavřenou (`-close on`),
+- kliknutím na první vrchol čáry ji dokončíte jako uzavřenou (`-close on`); kliknutím na první vrchol plochy dokončíte návrh plochy,
 - uzavřené čáry vykreslují poslední segment zpět na první vrchol, včetně dvoubodových uzavřených Bezier křivek,
 - `Backspace` nebo `Delete` odstraní poslední draft vrchol,
 - `Esc` zruší vkládání.

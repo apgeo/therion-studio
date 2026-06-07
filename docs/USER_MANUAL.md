@@ -190,7 +190,7 @@ While drafting a line or area:
 - click to add a straight vertex
 - press-drag-release while placing a vertex to pull that vertex's Bezier handle pair, matching XTherion-style curve entry
 - drag visible Bezier control handles before committing to refine the draft curve
-- click the first line vertex again to finish a closed line (`-close on`)
+- click the first line vertex again to finish a closed line (`-close on`); click the first area vertex again to commit the area draft
 - closed lines render the final segment back to the first vertex, including two-point closed Bezier curves
 - press `Backspace` or `Delete` to remove the last draft vertex
 - press `Esc` to cancel insertion

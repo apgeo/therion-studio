@@ -405,6 +405,36 @@ int runAppendDraftGeometryTest()
         return 1;
     }
 
+    contents = QStringLiteral("encoding utf-8\r\n"
+                              "scrap s\n"
+                              "endscrap\r"
+                              "point station 1 2 station -name a1\n");
+    lineNumber = 0;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::appendDraftLineGeometry(&contents,
+                                                               {QStringLiteral("10 20"),
+                                                                QStringLiteral("30 40")},
+                                                               &lineNumber,
+                                                               &errorMessage,
+                                                               QStringLiteral("-close on")),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("encoding utf-8\r\n"
+                                           "scrap s\n"
+                                           "  line wall -close on\n"
+                                           "    10 20\n"
+                                           "    30 40\n"
+                                           "  endline\n"
+                                           "endscrap\r"
+                                           "point station 1 2 station -name a1\n"),
+                "appendDraftLineGeometry should preserve physical line endings outside the inserted draft block.")) {
+        return 1;
+    }
+    if (!expect(lineNumber == 3, "appendDraftLineGeometry should report the inserted line header line number for mixed line endings.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("scrap custom\nendscrap\n");
     lineNumber = 0;
     errorMessage.clear();

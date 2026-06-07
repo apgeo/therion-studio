@@ -147,6 +147,50 @@ QString replacementTokenForLine(const QString &newName, const QString &lineText,
     return quoteToken(trimmedName, quoteCharacter);
 }
 
+bool insertPhysicalSourceLines(QString *contents,
+                               int insertionLineIndex,
+                               const QStringList &insertedLines,
+                               QString *errorMessage)
+{
+    if (contents == nullptr) {
+        return false;
+    }
+    if (insertedLines.isEmpty()) {
+        return true;
+    }
+
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    if (insertionLineIndex < 0 || insertionLineIndex > sourceDocument.lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Insertion source range could not be resolved.");
+        }
+        return false;
+    }
+
+    QString lineEnding;
+    if (insertionLineIndex > 0 && insertionLineIndex - 1 < sourceDocument.lines.size()) {
+        lineEnding = sourceDocument.lines.at(insertionLineIndex - 1).lineEnding;
+    }
+    if (lineEnding.isEmpty() && insertionLineIndex < sourceDocument.lines.size()) {
+        lineEnding = sourceDocument.lines.at(insertionLineIndex).lineEnding;
+    }
+    if (lineEnding.isEmpty()) {
+        lineEnding = TherionSourceText::detectedLineEnding(*contents);
+    }
+
+    QString insertedText;
+    for (const QString &line : insertedLines) {
+        insertedText += line;
+        insertedText += lineEnding;
+    }
+
+    const int insertOffset = insertionLineIndex < sourceDocument.lines.size()
+        ? sourceDocument.lines.at(insertionLineIndex).startOffset
+        : contents->size();
+    contents->insert(insertOffset, insertedText);
+    return true;
+}
+
 QString serializedInlineToken(const QString &value)
 {
     const QString trimmed = value.trimmed();
@@ -1394,7 +1438,6 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
     }
 
     QString updated = *contents;
-    const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
     QStringList lines = splitLinesTrimmingCarriageReturns(updated);
     int insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
 
@@ -1465,16 +1508,10 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         geometryLines.append(QStringLiteral("  endarea"));
     }
 
-    int nextInsertionIndex = insertionIndex;
-    for (const QString &line : geometryLines) {
-        lines.insert(nextInsertionIndex, line);
-        ++nextInsertionIndex;
+    if (!insertPhysicalSourceLines(&updated, insertionIndex, geometryLines, errorMessage)) {
+        return false;
     }
-
-    *contents = lines.join(lineEnding);
-    if (!contents->endsWith(QLatin1Char('\n'))) {
-        *contents += lineEnding;
-    }
+    *contents = updated;
 
     if (insertedLineNumber != nullptr) {
         *insertedLineNumber = insertionIndex + 1 + insertionLineOffset;
@@ -1514,7 +1551,6 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
     }
 
     QString updated = *contents;
-    const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
     QStringList lines = splitLinesTrimmingCarriageReturns(updated);
     int insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
 
@@ -1548,16 +1584,10 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
     }
     geometryLines.append(QStringLiteral("  endline"));
 
-    int nextInsertionIndex = insertionIndex;
-    for (const QString &line : geometryLines) {
-        lines.insert(nextInsertionIndex, line);
-        ++nextInsertionIndex;
+    if (!insertPhysicalSourceLines(&updated, insertionIndex, geometryLines, errorMessage)) {
+        return false;
     }
-
-    *contents = lines.join(lineEnding);
-    if (!contents->endsWith(QLatin1Char('\n'))) {
-        *contents += lineEnding;
-    }
+    *contents = updated;
 
     if (insertedLineNumber != nullptr) {
         *insertedLineNumber = insertionIndex + 1;
@@ -1596,7 +1626,6 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
     }
 
     QString updated = *contents;
-    const QString lineEnding = updated.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
     QStringList lines = splitLinesTrimmingCarriageReturns(updated);
     int insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
 
@@ -1639,16 +1668,10 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
     geometryLines.append(QStringLiteral("    %1").arg(borderIdentifier));
     geometryLines.append(QStringLiteral("  endarea"));
 
-    int nextInsertionIndex = insertionIndex;
-    for (const QString &line : geometryLines) {
-        lines.insert(nextInsertionIndex, line);
-        ++nextInsertionIndex;
+    if (!insertPhysicalSourceLines(&updated, insertionIndex, geometryLines, errorMessage)) {
+        return false;
     }
-
-    *contents = lines.join(lineEnding);
-    if (!contents->endsWith(QLatin1Char('\n'))) {
-        *contents += lineEnding;
-    }
+    *contents = updated;
 
     if (insertedLineNumber != nullptr) {
         *insertedLineNumber = insertionIndex + 1 + normalizedRows.size() + 2;

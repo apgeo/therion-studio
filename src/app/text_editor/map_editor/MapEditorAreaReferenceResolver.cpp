@@ -1,5 +1,6 @@
 #include "MapEditorAreaReferenceResolver.h"
 
+#include "../../../core/TherionCommandLineModel.h"
 #include "../../../core/TherionDocumentParser.h"
 
 #include <QHash>
@@ -27,26 +28,10 @@ bool tokenLooksReferenceId(const QString &token)
     return !numeric;
 }
 
-QString optionValue(const QStringList &tokens, const QString &optionName)
-{
-    const QString normalizedOption = optionName.toLower();
-    for (int index = 0; index + 1 < tokens.size(); ++index) {
-        if (tokens.at(index).toLower() != normalizedOption) {
-            continue;
-        }
-
-        const QString value = tokens.at(index + 1);
-        if (!value.startsWith(QLatin1Char('-'))) {
-            return value;
-        }
-    }
-    return QString();
-}
-
 QString areaLabel(const TherionParsedLine &parsedLine)
 {
     QString label = parsedLine.tokens.value(1).trimmed();
-    const QString id = optionValue(parsedLine.tokens, QStringLiteral("-id")).trimmed();
+    const QString id = commandOptionValue(parsedLine.tokens, QStringLiteral("-id")).trimmed();
     if (!id.isEmpty()) {
         label = label.isEmpty() ? id : QStringLiteral("%1 (%2)").arg(label, id);
     }
@@ -73,7 +58,7 @@ QHash<QString, int> lineNumbersById(const QVector<TherionParsedLine> &parsedLine
             continue;
         }
 
-        const QString lineId = optionValue(parsedLine.tokens, QStringLiteral("-id")).trimmed().toLower();
+        const QString lineId = commandOptionValue(parsedLine.tokens, QStringLiteral("-id")).trimmed().toLower();
         if (!lineId.isEmpty()) {
             result.insert(lineId, parsedLine.lineNumber);
         }
@@ -154,7 +139,7 @@ QVector<MapEditorAreaReference> mapEditorAreaReferencesForBorderLine(const QStri
         if (parsedLine.lineNumber != borderLineNumber || parsedLine.directive != QStringLiteral("line")) {
             continue;
         }
-        targetLineId = optionValue(parsedLine.tokens, QStringLiteral("-id")).trimmed().toLower();
+        targetLineId = commandOptionValue(parsedLine.tokens, QStringLiteral("-id")).trimmed().toLower();
         break;
     }
     if (targetLineId.isEmpty()) {

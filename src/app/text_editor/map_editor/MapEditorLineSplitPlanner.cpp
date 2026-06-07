@@ -1,5 +1,6 @@
 #include "MapEditorLineSplitPlanner.h"
 
+#include "../../../core/TherionCommandLineModel.h"
 #include "../../../core/TherionDocumentParser.h"
 #include "../../../core/TherionStringUtils.h"
 
@@ -15,21 +16,6 @@ QString lineEndingForText(const QString &contents)
     return contents.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
 }
 
-QString optionValue(const QStringList &tokens, const QString &optionName)
-{
-    const QString normalizedOption = optionName.toLower();
-    for (int index = 0; index + 1 < tokens.size(); ++index) {
-        if (tokens.at(index).toLower() != normalizedOption) {
-            continue;
-        }
-        const QString value = tokens.at(index + 1);
-        if (!value.startsWith(QLatin1Char('-'))) {
-            return value;
-        }
-    }
-    return QString();
-}
-
 QSet<QString> lineIdentifiersInDocument(const QString &text)
 {
     QSet<QString> identifiers;
@@ -38,7 +24,7 @@ QSet<QString> lineIdentifiersInDocument(const QString &text)
         if (parsedLine.directive != QStringLiteral("line")) {
             continue;
         }
-        const QString identifier = optionValue(parsedLine.tokens, QStringLiteral("-id")).trimmed();
+        const QString identifier = commandOptionValue(parsedLine.tokens, QStringLiteral("-id")).trimmed();
         if (!identifier.isEmpty()) {
             identifiers.insert(identifier.toLower());
         }
@@ -268,7 +254,7 @@ MapEditorLineSplitPlan MapEditorLineSplitPlanner::planSplit(const QString &text,
         return plan;
     }
 
-    const QString originalId = optionValue(startLine.tokens, QStringLiteral("-id")).trimmed();
+    const QString originalId = commandOptionValue(startLine.tokens, QStringLiteral("-id")).trimmed();
     plan.originalLineId = originalId;
     QString splitLineId;
     QString secondStartLine = lines.at(blockStartLineIndex);

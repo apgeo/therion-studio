@@ -2,7 +2,9 @@
 
 #include "MapEditorSceneSupport.h"
 #include "../../../core/ProjectStructureIndex.h"
+#include "../../../core/TherionCommandLineModel.h"
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionTokenRules.h"
 
 #include <QComboBox>
 #include <QApplication>
@@ -59,22 +61,16 @@ bool inspectorTokenLooksNumeric(const QString &token)
     return ok;
 }
 
-QString inspectorOptionValue(const QStringList &tokens, const QString &option)
-{
-    for (int index = 0; index + 1 < tokens.size(); ++index) {
-        if (tokens.at(index) == option) {
-            return tokens.at(index + 1);
-        }
-    }
-
-    return QString();
-}
-
 QString inspectorBracketedOptionValue(const QStringList &tokens, const QString &option)
 {
-    for (int index = 0; index + 1 < tokens.size(); ++index) {
-        if (tokens.at(index) != option) {
+    for (int index = 0; index < tokens.size(); ++index) {
+        if (!commandOptionNameMatches(tokens.at(index), option)) {
             continue;
+        }
+
+        const int nextOptionIndex = nextCommandOptionIndex(tokens, index);
+        if (nextOptionIndex <= index + 1) {
+            return QString();
         }
 
         const QString firstValue = tokens.at(index + 1);
@@ -84,11 +80,8 @@ QString inspectorBracketedOptionValue(const QStringList &tokens, const QString &
 
         QStringList valueTokens;
         valueTokens.append(firstValue);
-        for (int valueIndex = index + 2; valueIndex < tokens.size(); ++valueIndex) {
+        for (int valueIndex = index + 2; valueIndex < nextOptionIndex; ++valueIndex) {
             const QString token = tokens.at(valueIndex);
-            if (token.startsWith(QLatin1Char('-')) && !inspectorTokenLooksNumeric(token)) {
-                break;
-            }
             valueTokens.append(token);
             if (token.contains(QLatin1Char(']'))) {
                 break;
@@ -112,8 +105,8 @@ QString inspectorPointTypeToken(const TherionParsedLine &parsedLine)
         if (inspectorTokenLooksNumeric(token)) {
             continue;
         }
-        if (token.startsWith(QLatin1Char('-'))) {
-            skipOptionValue = index + 1 < parsedLine.tokens.size();
+        if (TherionTokenRules::tokenStartsOption(token)) {
+            skipOptionValue = nextCommandOptionIndex(parsedLine.tokens, index) > index + 1;
             continue;
         }
 
@@ -174,7 +167,7 @@ QString inspectorInlineSubtypePart(const QString &typeToken)
 
 QString inspectorObjectSubtype(const TherionParsedLine &parsedLine, const QString &typeToken)
 {
-    const QString optionSubtype = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-subtype"));
+    const QString optionSubtype = commandOptionValue(parsedLine.tokens, QStringLiteral("-subtype"));
     if (!optionSubtype.isEmpty()) {
         return optionSubtype;
     }
@@ -252,8 +245,8 @@ QString inspectorMapObjectItemText(const ProjectStructureEntry &entry, const The
             ? QStringLiteral("station")
             : inspectorTypePart(pointTypeToken);
         const QString pointSubtype = inspectorObjectSubtype(*parsedLine, pointTypeToken);
-        const QString stationName = inspectorOptionValue(parsedLine->tokens, QStringLiteral("-name"));
-        QString identifier = stationName.isEmpty() ? inspectorOptionValue(parsedLine->tokens, QStringLiteral("-id")) : stationName;
+        const QString stationName = commandOptionValue(parsedLine->tokens, QStringLiteral("-name"));
+        QString identifier = stationName.isEmpty() ? commandOptionValue(parsedLine->tokens, QStringLiteral("-id")) : stationName;
         if (entry.category == QStringLiteral("Stations") && identifier.isEmpty()) {
             identifier = inspectorStationNameToken(*parsedLine);
         }
@@ -266,14 +259,14 @@ QString inspectorMapObjectItemText(const ProjectStructureEntry &entry, const The
         const QString lineTypeToken = parsedLine->tokens.value(1, entry.name);
         return inspectorObjectTextWithOptionalIdentifier(inspectorTypePart(lineTypeToken),
                                                          inspectorObjectSubtype(*parsedLine, lineTypeToken),
-                                                         inspectorOptionValue(parsedLine->tokens, QStringLiteral("-id")));
+                                                         commandOptionValue(parsedLine->tokens, QStringLiteral("-id")));
     }
 
     if (entry.category == QStringLiteral("Areas")) {
         const QString areaTypeToken = parsedLine->tokens.value(1, entry.name);
         return inspectorObjectTextWithOptionalIdentifier(inspectorTypePart(areaTypeToken),
                                                          inspectorObjectSubtype(*parsedLine, areaTypeToken),
-                                                         inspectorOptionValue(parsedLine->tokens, QStringLiteral("-id")));
+                                                         commandOptionValue(parsedLine->tokens, QStringLiteral("-id")));
     }
 
     return entry.name;
@@ -788,9 +781,9 @@ std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLi
         fields.type = inspectorTypePart(pointTypeToken);
         fields.subtype = inspectorObjectSubtype(parsedLine, pointTypeToken);
         const bool station = fields.type.compare(QStringLiteral("station"), Qt::CaseInsensitive) == 0;
-        fields.identifier = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-id"));
-        fields.name = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-name"));
-        fields.text = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-text"));
+        fields.identifier = commandOptionValue(parsedLine.tokens, QStringLiteral("-id"));
+        fields.name = commandOptionValue(parsedLine.tokens, QStringLiteral("-name"));
+        fields.text = commandOptionValue(parsedLine.tokens, QStringLiteral("-text"));
         fields.value = inspectorBracketedOptionValue(parsedLine.tokens, QStringLiteral("-value"));
         if (fields.name.isEmpty() && station) {
             fields.name = inspectorStationNameToken(parsedLine);
@@ -811,8 +804,8 @@ std::optional<InspectorObjectQuickFields> inspectorObjectQuickFieldsFromParsedLi
         fields.commandKind = parsedLine.directive;
         fields.type = inspectorTypePart(typeToken);
         fields.subtype = inspectorObjectSubtype(parsedLine, typeToken);
-        fields.identifier = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-id"));
-        fields.text = inspectorOptionValue(parsedLine.tokens, QStringLiteral("-text"));
+        fields.identifier = commandOptionValue(parsedLine.tokens, QStringLiteral("-id"));
+        fields.text = commandOptionValue(parsedLine.tokens, QStringLiteral("-text"));
         fields.textVisible = inspectorObjectUsesTextField(fields.commandKind, fields.type, fields.text);
         return fields;
     }

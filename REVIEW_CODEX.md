@@ -23,6 +23,7 @@ Completed follow-ups from this review:
 - ~~`TherionTokenRules` now centralizes numeric-token classification and option-boundary checks used by parser, source rewriting, structure indexing, syntax highlighting, command option parsing, and map projections/details.~~
 - ~~`TherionCommandLineModel` now moves the existing catalog-backed command option parsing model into `src/core/`, and Map/Block option UI call sites use it directly.~~
 - ~~`TherionCommandLineModel` now owns shared command argument and option-row serialization helpers used by option validation, Blocks option argument editing, and Map/Block command options dialog flows.~~
+- ~~`TherionCommandLineModel` now owns shared command option lookup helpers for normalized option names, option values, value maps, and toggle values; Map inspector, map rendering/projections, map delete/split/reference planners, PocketTopo background placement, and Structure indexing use these helpers instead of local option-value parsers.~~
 - ~~Raster background source images now use a bounded path/mtime/size cache so repeated gamma and placement operations do not decode the same raster file repeatedly.~~
 - ~~Raster background gamma correction and scaled image preparation now run through `QtConcurrent` with request-id checks before applying the pixmap back on the UI thread.~~
 - ~~Manual raster background adds now decode initial source images through `QtConcurrent`.~~
@@ -203,6 +204,7 @@ Current follow-up status:
 - Numeric-token classification and option-boundary checks have been consolidated into `src/core/TherionTokenRules.h`.
 - The first shared command-line model has been extracted into `src/core/TherionCommandLineModel.h`; the legacy app-level `CommandOptionParser` wrapper has been removed.
 - Command-line option parsing plus option-row/value serialization now lives behind focused command-line model APIs rather than broader generic utilities.
+- Command option lookup, normalized field-name matching, value maps, and toggle parsing now live behind `TherionCommandLineModel` and are used by the map inspector, map renderer/projection extraction, map delete/split/reference planners, PocketTopo background placement, and Structure indexing.
 
 Risk:
 

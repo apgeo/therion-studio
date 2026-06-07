@@ -1,5 +1,6 @@
 #include "MapEditorObjectDeletePlanner.h"
 
+#include "../../../core/TherionCommandLineModel.h"
 #include "../../../core/TherionDocumentParser.h"
 
 #include <QCoreApplication>
@@ -77,22 +78,6 @@ QString joinSourceLines(const QVector<SourceLine> &lines)
         result += line.lineEnding;
     }
     return result;
-}
-
-QString optionValue(const QStringList &tokens, const QString &optionName)
-{
-    const QString normalizedOption = optionName.toLower();
-    for (int index = 0; index + 1 < tokens.size(); ++index) {
-        if (tokens.at(index).toLower() != normalizedOption) {
-            continue;
-        }
-
-        const QString value = tokens.at(index + 1);
-        if (!value.startsWith(QLatin1Char('-'))) {
-            return value;
-        }
-    }
-    return QString();
 }
 
 QString closingDirectiveFor(const QString &directive)
@@ -258,7 +243,7 @@ MapEditorObjectDeletePlan planMapEditorObjectDelete(const QString &text, int lin
     for (int currentLine = 1; currentLine <= lines.size(); ++currentLine) {
         const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(currentLine - 1), currentLine);
         if (parsedLine.directive == QStringLiteral("line")) {
-            const QString lineId = optionValue(parsedLine.tokens, QStringLiteral("-id"));
+            const QString lineId = commandOptionValue(parsedLine.tokens, QStringLiteral("-id"));
             if (!lineId.isEmpty()) {
                 QString directive;
                 const SourceRange range = commandRangeAtLine(lines, currentLine, &directive);
@@ -277,7 +262,7 @@ MapEditorObjectDeletePlan planMapEditorObjectDelete(const QString &text, int lin
 
     if (targetDirective == QStringLiteral("line")) {
         const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineNumber - 1), lineNumber);
-        const QString lineId = optionValue(parsedLine.tokens, QStringLiteral("-id"));
+        const QString lineId = commandOptionValue(parsedLine.tokens, QStringLiteral("-id"));
         if (!lineId.isEmpty()) {
             for (const AreaReference &area : std::as_const(areas)) {
                 if (area.lineIds.contains(lineId)) {

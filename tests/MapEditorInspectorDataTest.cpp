@@ -92,6 +92,40 @@ int runAreaQuickTypeComboPopulationTest()
     return 0;
 }
 
+int runLineClipOptionDoesNotBecomeSubtypeTest()
+{
+    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(
+        QStringLiteral("line rock-border -close on -clip off"),
+        1);
+    const std::optional<InspectorObjectQuickFields> fields = inspectorObjectQuickFieldsFromParsedLine(parsedLine);
+    if (!expect(fields.has_value(), "Line quick fields should be extracted from parsed line.")) {
+        return 1;
+    }
+    if (!expect(fields->type == QStringLiteral("rock-border"),
+                "Line quick fields should preserve the line type before options.")) {
+        return 1;
+    }
+    if (!expect(fields->subtype.isEmpty(),
+                "Line -clip off option must not be interpreted as a line subtype.")) {
+        return 1;
+    }
+
+    const TherionParsedLine corruptedSubtypeLine = TherionDocumentParser::parseLine(
+        QStringLiteral("line rock-border -close on -clip off -subtype \"-clip off\""),
+        1);
+    const std::optional<InspectorObjectQuickFields> corruptedFields =
+        inspectorObjectQuickFieldsFromParsedLine(corruptedSubtypeLine);
+    if (!expect(corruptedFields.has_value(), "Corrupted line quick fields should still be extracted.")) {
+        return 1;
+    }
+    if (!expect(corruptedFields->subtype.isEmpty(),
+                "Option-like quoted subtype values should be ignored instead of shown as a subtype.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runInjectedCatalogTest()
 {
     QJsonObject pointCommand;
@@ -224,6 +258,9 @@ int main(int argc, char **argv)
         return result;
     }
     if (const int result = runInjectedCatalogTest(); result != 0) {
+        return result;
+    }
+    if (const int result = runLineClipOptionDoesNotBecomeSubtypeTest(); result != 0) {
         return result;
     }
     if (const int result = runScrapContextMetadataTest(); result != 0) {

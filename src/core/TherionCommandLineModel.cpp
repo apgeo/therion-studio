@@ -10,6 +10,22 @@ bool commandTokenStartsNewOption(const QString &token)
     return TherionTokenRules::tokenStartsOption(token);
 }
 
+QString normalizedCommandOptionName(const QString &optionName)
+{
+    QString normalized = optionName.trimmed().toLower();
+    while (normalized.startsWith(QLatin1Char('-'))) {
+        normalized.remove(0, 1);
+    }
+    return normalized;
+}
+
+bool commandOptionNameMatches(const QString &token, const QString &optionName)
+{
+    const QString normalizedToken = normalizedCommandOptionName(token);
+    const QString normalizedOption = normalizedCommandOptionName(optionName);
+    return !normalizedToken.isEmpty() && normalizedToken == normalizedOption;
+}
+
 int nextCommandOptionIndex(const QStringList &tokens, int optionIndex)
 {
     bool inBracketedValue = false;
@@ -33,6 +49,102 @@ int nextCommandOptionIndex(const QStringList &tokens, int optionIndex)
     }
 
     return tokens.size();
+}
+
+QStringList commandOptionValueTokens(const QStringList &tokens, const QString &optionName)
+{
+    if (optionName.trimmed().isEmpty()) {
+        return {};
+    }
+
+    for (int index = 0; index < tokens.size(); ++index) {
+        if (!commandOptionNameMatches(tokens.at(index), optionName)) {
+            continue;
+        }
+
+        const int nextOptionIndex = nextCommandOptionIndex(tokens, index);
+        return tokens.mid(index + 1, nextOptionIndex - index - 1);
+    }
+
+    return {};
+}
+
+QString commandOptionValue(const QStringList &tokens, const QString &optionName)
+{
+    const QStringList values = commandOptionValueTokens(tokens, optionName);
+    return values.isEmpty() ? QString() : values.constFirst().trimmed();
+}
+
+QHash<QString, QString> commandOptionValuesByName(const QStringList &tokens)
+{
+    QHash<QString, QString> values;
+    for (int index = 0; index < tokens.size(); ++index) {
+        const QString token = tokens.at(index).trimmed();
+        if (!commandTokenStartsNewOption(token)) {
+            continue;
+        }
+
+        const QString fieldName = normalizedCommandOptionName(token);
+        if (fieldName.isEmpty()) {
+            continue;
+        }
+
+        const int nextOptionIndex = nextCommandOptionIndex(tokens, index);
+        const QStringList rawOptionValues = tokens.mid(index + 1, nextOptionIndex - index - 1);
+        if (rawOptionValues.isEmpty()) {
+            continue;
+        }
+
+        values.insert(fieldName, rawOptionValues.join(QLatin1Char(' ')).trimmed());
+        index = nextOptionIndex - 1;
+    }
+    return values;
+}
+
+namespace
+{
+std::optional<bool> parseCommandToggleToken(const QString &token)
+{
+    const QString normalized = token.trimmed().toLower();
+    if (normalized == QStringLiteral("on")
+        || normalized == QStringLiteral("yes")
+        || normalized == QStringLiteral("true")
+        || normalized == QStringLiteral("1")) {
+        return true;
+    }
+    if (normalized == QStringLiteral("off")
+        || normalized == QStringLiteral("no")
+        || normalized == QStringLiteral("false")
+        || normalized == QStringLiteral("0")) {
+        return false;
+    }
+
+    return std::nullopt;
+}
+}
+
+std::optional<bool> commandOptionToggleValue(const QStringList &tokens, const QString &optionName)
+{
+    std::optional<bool> value;
+    if (optionName.trimmed().isEmpty()) {
+        return value;
+    }
+
+    for (int index = 0; index < tokens.size(); ++index) {
+        if (!commandOptionNameMatches(tokens.at(index), optionName)) {
+            continue;
+        }
+
+        const int nextOptionIndex = nextCommandOptionIndex(tokens, index);
+        if (nextOptionIndex <= index + 1) {
+            value = true;
+        } else {
+            value = parseCommandToggleToken(tokens.at(index + 1)).value_or(true);
+        }
+        index = nextOptionIndex - 1;
+    }
+
+    return value;
 }
 
 QString serializeCommandArgumentValues(const QStringList &values)

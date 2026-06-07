@@ -10,6 +10,7 @@
 #include "MapEditorSourceReferenceResolver.h"
 #include "../../../core/TherionDocumentEditor.h"
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionTokenRules.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -30,6 +31,12 @@ namespace TherionStudio
 namespace
 {
 constexpr int kApplyObjectOrientationOnNextEventLoopMs = 0;
+
+QString normalizedQuickSubtypeForWrite(const QString &subtype)
+{
+    const QString trimmedSubtype = subtype.trimmed();
+    return TherionTokenRules::tokenStartsOption(trimmedSubtype) ? QString() : trimmedSubtype;
+}
 
 int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int sourceVertexIndex)
 {
@@ -754,7 +761,7 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
         std::optional<InspectorObjectQuickFields> pendingFields = context_.pendingInsertQuickFields();
         if (pendingFields.has_value() && !pendingFields->commandKind.trimmed().isEmpty()) {
             pendingFields->type = context_.quickTypeCombo->currentText();
-            pendingFields->subtype = context_.quickSubtypeCombo->currentText();
+            pendingFields->subtype = normalizedQuickSubtypeForWrite(context_.quickSubtypeCombo->currentText());
             pendingFields->identifier = context_.quickIdentifierEdit->text();
             pendingFields->name = context_.quickNameEdit->text();
             pendingFields->text = context_.quickTextEdit->text();
@@ -781,7 +788,7 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
     if (!TherionDocumentEditor::rewriteMapObjectQuickFields(&afterText,
                                                             targetLineNumber,
                                                             context_.quickTypeCombo->currentText(),
-                                                            context_.quickSubtypeCombo->currentText(),
+                                                            normalizedQuickSubtypeForWrite(context_.quickSubtypeCombo->currentText()),
                                                             context_.quickIdentifierEdit->text(),
                                                             context_.quickNameEdit->text(),
                                                             context_.quickNameEdit->isVisible(),

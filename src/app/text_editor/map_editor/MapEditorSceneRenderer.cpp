@@ -18,6 +18,7 @@
 #include <QTransform>
 
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionCommandLineModel.h"
 #include "../../../core/TherionTokenRules.h"
 
 #include <cmath>
@@ -658,56 +659,6 @@ MapCanvasTheme mapCanvasThemeForScene(const QGraphicsScene *scene)
     return theme;
 }
 
-std::optional<bool> parseToggleToken(const QString &token)
-{
-    const QString normalized = token.trimmed().toLower();
-    if (normalized == QStringLiteral("on")
-        || normalized == QStringLiteral("yes")
-        || normalized == QStringLiteral("true")
-        || normalized == QStringLiteral("1")) {
-        return true;
-    }
-    if (normalized == QStringLiteral("off")
-        || normalized == QStringLiteral("no")
-        || normalized == QStringLiteral("false")
-        || normalized == QStringLiteral("0")) {
-        return false;
-    }
-
-    return std::nullopt;
-}
-
-std::optional<bool> lineOptionToggleValue(const TherionParsedLine &parsedLine, const QString &optionName)
-{
-    std::optional<bool> value;
-    if (parsedLine.tokens.size() < 2 || optionName.isEmpty()) {
-        return value;
-    }
-
-    const QString normalizedOption = optionName.toLower();
-    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
-        const QString token = parsedLine.tokens.at(index).trimmed().toLower();
-        if (token != normalizedOption) {
-            continue;
-        }
-
-        if (index + 1 >= parsedLine.tokens.size()) {
-            value = true;
-            continue;
-        }
-
-        const QString nextToken = parsedLine.tokens.at(index + 1).trimmed();
-        if (TherionTokenRules::tokenStartsOption(nextToken)) {
-            value = true;
-            continue;
-        }
-
-        value = parseToggleToken(nextToken).value_or(true);
-    }
-
-    return value;
-}
-
 QVector<QPointF> coordinatePointsFromLine(const TherionParsedLine &parsedLine, int startTokenIndex)
 {
     QVector<QPointF> points;
@@ -1278,27 +1229,12 @@ qreal labelTextRotationForPointOrientation(qreal orientationDegrees)
     return normalizedSceneOrientationDegrees(orientationDegrees - 90.0);
 }
 
-bool linePointOptionTokenMatches(const QString &token, const QStringList &names)
-{
-    const QString normalized = token.trimmed().toLower();
-    for (const QString &name : names) {
-        if (normalized == name) {
-            return true;
-        }
-    }
-    return false;
-}
-
 std::optional<qreal> linePointNumericOptionValue(const TherionParsedLine &parsedLine, const QStringList &names)
 {
     std::optional<qreal> value;
-    for (int index = 0; index + 1 < parsedLine.tokens.size(); ++index) {
-        if (!linePointOptionTokenMatches(parsedLine.tokens.at(index), names)) {
-            continue;
-        }
-
-        const QString valueToken = parsedLine.tokens.at(index + 1).trimmed();
-        if (TherionTokenRules::tokenStartsOption(valueToken)) {
+    for (const QString &name : names) {
+        const QString valueToken = commandOptionValue(parsedLine.tokens, name).trimmed();
+        if (valueToken.isEmpty()) {
             continue;
         }
 
@@ -1369,23 +1305,6 @@ ParsedLinePointOptionFlags applyLinePointOptionsFromLine(const TherionParsedLine
     return flags;
 }
 
-QString optionValue(const QStringList &tokens, const QString &option)
-{
-    const QString normalizedOption = option.toLower();
-    for (int index = 0; index + 1 < tokens.size(); ++index) {
-        if (tokens.at(index).toLower() != normalizedOption) {
-            continue;
-        }
-
-        const QString candidate = tokens.at(index + 1);
-        if (!candidate.startsWith(QLatin1Char('-'))) {
-            return candidate;
-        }
-    }
-
-    return QString();
-}
-
 MapGeometryAreaPlace areaPlaceFromToken(const QString &token)
 {
     const QString normalized = token.trimmed().toLower();
@@ -1398,38 +1317,9 @@ MapGeometryAreaPlace areaPlaceFromToken(const QString &token)
     return MapGeometryAreaPlace::Default;
 }
 
-QString normalizedOptionFieldName(const QString &field)
-{
-    QString normalized = field.trimmed().toLower();
-    while (normalized.startsWith(QLatin1Char('-'))) {
-        normalized.remove(0, 1);
-    }
-    return normalized;
-}
-
-QHash<QString, QString> optionValuesByFieldName(const QStringList &tokens)
-{
-    QHash<QString, QString> values;
-    for (int index = 0; index + 1 < tokens.size(); ++index) {
-        const QString token = tokens.at(index).trimmed();
-        if (!TherionTokenRules::tokenStartsOption(token)) {
-            continue;
-        }
-
-        const QString fieldName = normalizedOptionFieldName(token);
-        const QString candidate = tokens.at(index + 1);
-        if (fieldName.isEmpty() || TherionTokenRules::tokenStartsOption(candidate)) {
-            continue;
-        }
-
-        values.insert(fieldName, candidate);
-    }
-    return values;
-}
-
 QString optionValueForFieldName(const QHash<QString, QString> &values, const QString &fieldName)
 {
-    const QString normalizedFieldName = normalizedOptionFieldName(fieldName);
+    const QString normalizedFieldName = normalizedCommandOptionName(fieldName);
     return normalizedFieldName.isEmpty() ? QString() : values.value(normalizedFieldName).trimmed();
 }
 
@@ -1503,7 +1393,7 @@ QString pointTypeTokenFromLine(const TherionParsedLine &parsedLine)
 
 QString stationPointNameFromLine(const TherionParsedLine &parsedLine)
 {
-    const QString optionName = optionValue(parsedLine.tokens, QStringLiteral("-name")).trimmed();
+    const QString optionName = commandOptionValue(parsedLine.tokens, QStringLiteral("-name")).trimmed();
     if (!optionName.isEmpty()) {
         return optionName;
     }
@@ -1859,8 +1749,8 @@ QString mapEntrySubtitleForLine(const TherionParsedLine &parsedLine)
 
     QString subtitle = remainder.join(QStringLiteral(" "));
     if (parsedLine.tokens.first().toLower() == QStringLiteral("line")) {
-        const bool closed = lineOptionToggleValue(parsedLine, QStringLiteral("-close")).value_or(false);
-        const bool reversed = lineOptionToggleValue(parsedLine, QStringLiteral("-reverse")).value_or(false);
+        const bool closed = commandOptionToggleValue(parsedLine.tokens, QStringLiteral("-close")).value_or(false);
+        const bool reversed = commandOptionToggleValue(parsedLine.tokens, QStringLiteral("-reverse")).value_or(false);
         QStringList flags;
         if (closed) {
             flags.append(QObject::tr("closed"));
@@ -2036,7 +1926,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                 if (pointStyle.labelField.has_value()) {
                     const QString labelText = optionValueForFieldName(feature.optionValues, pointStyle.labelField.value());
                     if (!labelText.isEmpty()) {
-                        const bool labelTextField = normalizedOptionFieldName(pointStyle.labelField.value()) == QStringLiteral("text");
+                        const bool labelTextField = normalizedCommandOptionName(pointStyle.labelField.value()) == QStringLiteral("text");
                         QFont labelFont(QStringLiteral("Menlo"));
                         labelFont.setPointSizeF(pointStyle.labelFontSize.value_or(10.0));
                         if (feature.stationPoint) {
@@ -2896,9 +2786,9 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             feature.scrapLineNumber = currentScrapLineNumber();
             feature.category = mapEntryCategoryForLine(parsedLine);
             feature.label = pointType.isEmpty() ? mapEntryTitleForLine(parsedLine) : pointType;
-            feature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
+            feature.subtype = commandOptionValue(parsedLine.tokens, QStringLiteral("-subtype"));
             feature.subtitle = mapEntrySubtitleForLine(parsedLine);
-            feature.optionValues = optionValuesByFieldName(parsedLine.tokens);
+            feature.optionValues = commandOptionValuesByName(parsedLine.tokens);
             feature.accent = mapEntryAccentForCategory(feature.category);
             feature.sourceAnchor = pointTokens.first();
             feature.anchor = feature.sourceAnchor;
@@ -2929,9 +2819,9 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             feature.scrapLineNumber = currentScrapLineNumber();
             feature.category = mapEntryCategoryForLine(parsedLine);
             feature.label = mapEntryTitleForLine(parsedLine);
-            feature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
+            feature.subtype = commandOptionValue(parsedLine.tokens, QStringLiteral("-subtype"));
             feature.subtitle = mapEntrySubtitleForLine(parsedLine);
-            feature.optionValues = optionValuesByFieldName(parsedLine.tokens);
+            feature.optionValues = commandOptionValuesByName(parsedLine.tokens);
             feature.accent = mapEntryAccentForCategory(feature.category);
             feature.sourceAnchor = pointTokens.first();
             feature.anchor = feature.sourceAnchor;
@@ -2949,13 +2839,13 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.scrapLineNumber = currentScrapLineNumber();
             currentFeature.category = mapEntryCategoryForLine(parsedLine);
             currentFeature.label = mapEntryTitleForLine(parsedLine);
-            currentFeature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
+            currentFeature.subtype = commandOptionValue(parsedLine.tokens, QStringLiteral("-subtype"));
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
-            currentFeature.optionValues = optionValuesByFieldName(parsedLine.tokens);
+            currentFeature.optionValues = commandOptionValuesByName(parsedLine.tokens);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
-            currentFeature.closed = lineOptionToggleValue(parsedLine, QStringLiteral("-close")).value_or(false);
-            currentFeature.reversed = lineOptionToggleValue(parsedLine, QStringLiteral("-reverse")).value_or(false);
-            currentLineIdentifier = optionValue(parsedLine.tokens, QStringLiteral("-id"));
+            currentFeature.closed = commandOptionToggleValue(parsedLine.tokens, QStringLiteral("-close")).value_or(false);
+            currentFeature.reversed = commandOptionToggleValue(parsedLine.tokens, QStringLiteral("-reverse")).value_or(false);
+            currentLineIdentifier = commandOptionValue(parsedLine.tokens, QStringLiteral("-id"));
             appendLineDataPoints(&currentFeature, sourceCoordinatePointsFromLine(parsedLine, 1, &lineSourceVertexIndex));
             applyLinePointOptionsFromLine(parsedLine, &currentFeature);
             inLineBlock = true;
@@ -2969,17 +2859,17 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             currentFeature.scrapLineNumber = currentScrapLineNumber();
             currentFeature.category = mapEntryCategoryForLine(parsedLine);
             currentFeature.label = mapEntryTitleForLine(parsedLine);
-            currentFeature.subtype = optionValue(parsedLine.tokens, QStringLiteral("-subtype"));
+            currentFeature.subtype = commandOptionValue(parsedLine.tokens, QStringLiteral("-subtype"));
             currentFeature.subtitle = mapEntrySubtitleForLine(parsedLine);
             currentFeature.accent = mapEntryAccentForCategory(currentFeature.category);
-            if (const std::optional<bool> clip = lineOptionToggleValue(parsedLine, QStringLiteral("-clip"))) {
+            if (const std::optional<bool> clip = commandOptionToggleValue(parsedLine.tokens, QStringLiteral("-clip"))) {
                 currentFeature.clipToScrap = clip.value();
             } else {
-                currentFeature.clipToScrap = lineOptionToggleValue(parsedLine, QStringLiteral("clip")).value_or(true);
+                currentFeature.clipToScrap = commandOptionToggleValue(parsedLine.tokens, QStringLiteral("clip")).value_or(true);
             }
-            QString placeValue = optionValue(parsedLine.tokens, QStringLiteral("-place"));
+            QString placeValue = commandOptionValue(parsedLine.tokens, QStringLiteral("-place"));
             if (placeValue.isEmpty()) {
-                placeValue = optionValue(parsedLine.tokens, QStringLiteral("place"));
+                placeValue = commandOptionValue(parsedLine.tokens, QStringLiteral("place"));
             }
             currentFeature.areaPlace = areaPlaceFromToken(placeValue);
             currentFeature.vertices.append(pointsFromTokens(parsedLine.tokens.mid(1)));

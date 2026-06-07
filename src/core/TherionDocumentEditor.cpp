@@ -2413,7 +2413,9 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
         return false;
     }
 
-    if (!upsertSingleValueOption(&lineText, QStringLiteral("-subtype"), subtype)) {
+    const QString normalizedSubtype = subtype.trimmed();
+    const QString subtypeForWrite = TherionTokenRules::tokenStartsOption(normalizedSubtype) ? QString() : normalizedSubtype;
+    if (!upsertSingleValueOption(&lineText, QStringLiteral("-subtype"), subtypeForWrite)) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected object subtype could not be rewritten.");
         }

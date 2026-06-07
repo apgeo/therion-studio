@@ -5,6 +5,8 @@
 #include <QStringList>
 #include <QVector>
 
+#include <optional>
+
 namespace TherionStudio
 {
 struct CommandOptionEntry
@@ -28,6 +30,12 @@ ParsedCommandOptions parseCommandOptions(const QString &commandName,
 
 bool commandTokenStartsNewOption(const QString &token);
 int nextCommandOptionIndex(const QStringList &tokens, int optionIndex);
+QString normalizedCommandOptionName(const QString &optionName);
+bool commandOptionNameMatches(const QString &token, const QString &optionName);
+QStringList commandOptionValueTokens(const QStringList &tokens, const QString &optionName);
+QString commandOptionValue(const QStringList &tokens, const QString &optionName);
+QHash<QString, QString> commandOptionValuesByName(const QStringList &tokens);
+std::optional<bool> commandOptionToggleValue(const QStringList &tokens, const QString &optionName);
 QString serializeCommandArgumentValues(const QStringList &values);
 QStringList serializeCommandOptionTokens(const QString &optionToken, const QStringList &values);
 }

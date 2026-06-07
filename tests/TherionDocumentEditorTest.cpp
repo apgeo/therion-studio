@@ -1735,6 +1735,24 @@ int runRewriteMapObjectQuickFieldsTest()
         return 1;
     }
 
+    contents = QStringLiteral("line rock-border -close on -clip off\nendline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+                                                                   1,
+                                                                   QStringLiteral("rock-border"),
+                                                                   QStringLiteral("-clip off"),
+                                                                   QString(),
+                                                                   QString(),
+                                                                   false,
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line rock-border -close on -clip off\nendline\n"),
+                "rewriteMapObjectQuickFields should ignore option-like line subtype values.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("point 10 20 station -name old-name\n");
     errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,

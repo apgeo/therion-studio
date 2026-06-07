@@ -10,8 +10,13 @@
 #include <cstdlib>
 
 using TherionStudio::ParsedCommandOptions;
+using TherionStudio::commandOptionNameMatches;
+using TherionStudio::commandOptionToggleValue;
+using TherionStudio::commandOptionValue;
+using TherionStudio::commandOptionValuesByName;
 using TherionStudio::commandOptionValueKey;
 using TherionStudio::commandTokenStartsNewOption;
+using TherionStudio::normalizedCommandOptionName;
 using TherionStudio::parseCommandOptions;
 using TherionStudio::serializeCommandArgumentValues;
 using TherionStudio::serializeCommandOptionTokens;
@@ -177,6 +182,44 @@ void serializesCommandOptionTokens()
     require(serializeCommandOptionTokens(QStringLiteral(""), {QStringLiteral("ignored")}).isEmpty(),
             "empty option keys should not emit serialized option tokens");
 }
+
+void readsCommandOptionsWithSharedBoundaries()
+{
+    const QStringList lineTokens({QStringLiteral("line"),
+                                  QStringLiteral("rock-border"),
+                                  QStringLiteral("-close"),
+                                  QStringLiteral("on"),
+                                  QStringLiteral("-clip"),
+                                  QStringLiteral("off"),
+                                  QStringLiteral("-id"),
+                                  QStringLiteral("rb-1")});
+
+    require(normalizedCommandOptionName(QStringLiteral("-clip")) == QStringLiteral("clip"),
+            "normalized option names should strip leading dashes");
+    require(commandOptionNameMatches(QStringLiteral("-clip"), QStringLiteral("clip")),
+            "option name matching should ignore leading dashes");
+    require(commandOptionValue(lineTokens, QStringLiteral("-clip")) == QStringLiteral("off"),
+            "single-value lookup should read -clip off as a normal option value");
+    require(commandOptionToggleValue(lineTokens, QStringLiteral("-clip")).value_or(true) == false,
+            "toggle lookup should parse -clip off as false");
+    require(commandOptionToggleValue(lineTokens, QStringLiteral("close")).value_or(false) == true,
+            "toggle lookup should parse -close on as true and accept names without dashes");
+
+    const QHash<QString, QString> values = commandOptionValuesByName(lineTokens);
+    require(values.value(QStringLiteral("clip")) == QStringLiteral("off"),
+            "option value map should store normalized field names");
+    require(values.value(QStringLiteral("id")) == QStringLiteral("rb-1"),
+            "option value map should preserve ordinary option values");
+
+    const QStringList corruptedSubtypeTokens({QStringLiteral("line"),
+                                              QStringLiteral("rock-border"),
+                                              QStringLiteral("-clip"),
+                                              QStringLiteral("off"),
+                                              QStringLiteral("-subtype"),
+                                              QStringLiteral("-clip off")});
+    require(commandOptionValue(corruptedSubtypeTokens, QStringLiteral("-subtype")).isEmpty(),
+            "option-like quoted subtype values should be treated as a new option boundary");
+}
 }
 
 int main(int argc, char **argv)
@@ -190,5 +233,6 @@ int main(int argc, char **argv)
     doesNotTreatDashPrefixedTokenAsLeadingValue();
     serializesCommandArguments();
     serializesCommandOptionTokens();
+    readsCommandOptionsWithSharedBoundaries();
     return 0;
 }

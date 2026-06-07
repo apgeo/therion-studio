@@ -1,6 +1,7 @@
 #include "ProjectStructureIndex.h"
 
 #include "DocumentFile.h"
+#include "TherionCommandLineModel.h"
 #include "TherionFileTypes.h"
 #include "TherionDocumentParser.h"
 #include "TherionTokenRules.h"
@@ -81,7 +82,6 @@ bool pathIsInsideDirectory(const QString &path, const QString &directoryPath)
         && !QDir::isAbsolutePath(relativePath);
 }
 
-QString optionValue(const QStringList &tokens, const QString &option);
 QString sectionNameFromLine(const TherionParsedLine &parsedLine);
 ProjectStructureEntryKind objectKindFromLine(const TherionParsedLine &parsedLine);
 QString objectNameFromLine(const TherionParsedLine &parsedLine);
@@ -399,9 +399,9 @@ QString surveyNameFromLine(const TherionParsedLine &parsedLine)
 
 bool surveyCreatesNamespace(const TherionParsedLine &parsedLine)
 {
-    QString namespaceValue = optionValue(parsedLine.tokens, QStringLiteral("namespace"));
+    QString namespaceValue = commandOptionValue(parsedLine.tokens, QStringLiteral("namespace"));
     if (namespaceValue.isEmpty()) {
-        namespaceValue = optionValue(parsedLine.tokens, QStringLiteral("-namespace"));
+        namespaceValue = commandOptionValue(parsedLine.tokens, QStringLiteral("-namespace"));
     }
     return namespaceValue.compare(QStringLiteral("off"), Qt::CaseInsensitive) != 0;
 }
@@ -446,23 +446,6 @@ ProjectStructureEntryKind objectKindFromLine(const TherionParsedLine &parsedLine
     }
 
     return ProjectStructureEntryKind::Unknown;
-}
-
-QString optionValue(const QStringList &tokens, const QString &option)
-{
-    const QString normalizedOption = option.toLower();
-    for (int index = 0; index + 1 < tokens.size(); ++index) {
-        if (tokens.at(index).toLower() != normalizedOption) {
-            continue;
-        }
-
-        const QString candidate = tokens.at(index + 1);
-        if (!candidate.startsWith(QLatin1Char('-'))) {
-            return candidate;
-        }
-    }
-
-    return QString();
 }
 
 QString resolveInputPath(const QString &currentFilePath, const QString &inputPath)
@@ -734,7 +717,7 @@ QString objectNameFromLine(const TherionParsedLine &parsedLine)
     const QString directive = parsedLine.directive;
 
     if (directive == QStringLiteral("line") || directive == QStringLiteral("area")) {
-        const QString identifier = optionValue(parsedLine.tokens, QStringLiteral("-id"));
+        const QString identifier = commandOptionValue(parsedLine.tokens, QStringLiteral("-id"));
         if (!identifier.isEmpty()) {
             return identifier;
         }
@@ -743,12 +726,12 @@ QString objectNameFromLine(const TherionParsedLine &parsedLine)
     }
 
     if (directive == QStringLiteral("point")) {
-        const QString stationName = optionValue(parsedLine.tokens, QStringLiteral("-name"));
+        const QString stationName = commandOptionValue(parsedLine.tokens, QStringLiteral("-name"));
         if (!stationName.isEmpty()) {
             return stationName;
         }
 
-        const QString identifier = optionValue(parsedLine.tokens, QStringLiteral("-id"));
+        const QString identifier = commandOptionValue(parsedLine.tokens, QStringLiteral("-id"));
         if (!identifier.isEmpty()) {
             return identifier;
         }

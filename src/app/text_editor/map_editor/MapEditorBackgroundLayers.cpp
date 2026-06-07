@@ -45,6 +45,7 @@
 #include "../../../core/ISessionStore.h"
 #include "../../../core/PocketTopoImport.h"
 #include "../../../core/TherionBackgroundMetadata.h"
+#include "../../../core/TherionCommandLineModel.h"
 #include "../../../core/TherionDocumentParser.h"
 #include "../../../core/TherionTokenRules.h"
 #include "../../../core/TherionXviParser.h"
@@ -471,22 +472,6 @@ std::optional<PocketTopoGeneratedXvi> generatePocketTopoXvi(QWidget *parent,
     return PocketTopoGeneratedXvi{QFileInfo(xviPath).absoluteFilePath(), document};
 }
 
-QString optionValueToken(const QStringList &tokens, const QString &option)
-{
-    const QString normalizedOption = option.toLower();
-    for (int index = 0; index + 1 < tokens.size(); ++index) {
-        if (tokens.at(index).toLower() != normalizedOption) {
-            continue;
-        }
-
-        const QString candidate = tokens.at(index + 1);
-        if (!TherionTokenRules::tokenStartsOption(candidate)) {
-            return candidate;
-        }
-    }
-    return QString();
-}
-
 QString canonicalStationToken(QString token)
 {
     token = token.trimmed();
@@ -536,7 +521,7 @@ QString pointTypeTokenFromParsedLine(const TherionParsedLine &parsedLine)
 
 QString stationNameFromPointLine(const TherionParsedLine &parsedLine)
 {
-    const QString optionName = optionValueToken(parsedLine.tokens, QStringLiteral("-name")).trimmed();
+    const QString optionName = commandOptionValue(parsedLine.tokens, QStringLiteral("-name")).trimmed();
     if (!optionName.isEmpty()) {
         return optionName;
     }

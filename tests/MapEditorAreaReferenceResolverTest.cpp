@@ -74,6 +74,38 @@ int runMultipleAreaReferenceTest()
         ? 0
         : 1;
 }
+
+int runLosslessSourceProjectionLineNumberTest()
+{
+    const QString text = QStringLiteral(
+        "# header\r\n"
+        "\r\n"
+        "scrap s1 -projection plan\r\n"
+        "line border -id line-1 -close on\r\n"
+        "  0 0\r\n"
+        "endline\r\n"
+        "  # area comment\r\n"
+        "area water -id a1\r\n"
+        "  line-1\r\n"
+        "endarea\r\n"
+        "endscrap\r\n");
+
+    const QSet<int> borderLines = mapEditorBorderLineNumbersForArea(text, 8);
+    if (!expect(borderLines.size() == 1 && borderLines.contains(4),
+                "Area reference lookup should preserve physical line numbers through the lossless projection.")) {
+        return 1;
+    }
+
+    const QVector<MapEditorAreaReference> references = mapEditorAreaReferencesForBorderLine(text, 4);
+    if (!expect(references.size() == 1,
+                "Border line lookup should resolve through the lossless projection.")) {
+        return 1;
+    }
+    return expect(references.first().areaLineNumber == 8,
+                  "Border line lookup should report physical area line numbers after blank/comment lines.")
+        ? 0
+        : 1;
+}
 }
 
 int main()
@@ -82,6 +114,9 @@ int main()
         return rc;
     }
     if (const int rc = runMultipleAreaReferenceTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runLosslessSourceProjectionLineNumberTest(); rc != 0) {
         return rc;
     }
     return 0;

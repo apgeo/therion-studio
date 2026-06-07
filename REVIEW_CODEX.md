@@ -29,6 +29,7 @@ Completed follow-ups from this review:
 - ~~`TherionDocumentParser::parseSourceDocument()` now provides a first lossless source snapshot API that keeps blank/comment-only physical lines, line endings, line numbers, parsed spans, and a legacy token-line projection without changing `parseText()` consumers.~~
 - ~~Lossless parser source lines now expose absolute source ranges and token absolute range helpers, so future rewrites can address document text without recalculating offsets locally.~~
 - ~~`ProjectStructureIndex` now reads token lines through the lossless source snapshot compatibility projection instead of calling `parseText()` directly.~~
+- ~~`MapEditorAreaReferenceResolver` now reads token lines through the lossless source snapshot compatibility projection while preserving physical line numbers across blank/comment lines.~~
 - ~~Raster background source images now use a bounded path/mtime/size cache so repeated gamma and placement operations do not decode the same raster file repeatedly.~~
 - ~~Raster background gamma correction and scaled image preparation now run through `QtConcurrent` with request-id checks before applying the pixmap back on the UI thread.~~
 - ~~Manual raster background adds now decode initial source images through `QtConcurrent`.~~
@@ -212,6 +213,7 @@ Current follow-up status:
 - `TherionDocumentParser::parseSourceDocument()` now exposes a lossless physical-line snapshot plus `tokenLines()` compatibility projection while leaving `parseText()` behavior unchanged.
 - Lossless source lines now expose absolute line ranges and token range helpers for future source-rewrite migration.
 - `ProjectStructureIndex` is the first read-only projection using `parseSourceDocument().tokenLines()` for project/source scans.
+- `MapEditorAreaReferenceResolver` also uses the lossless token-line projection for area/border lookups.
 - The first shared command-line model has been extracted into `src/core/TherionCommandLineModel.h`; the legacy app-level `CommandOptionParser` wrapper has been removed.
 - Command-line option parsing plus option-row/value serialization now lives behind focused command-line model APIs rather than broader generic utilities.
 - Command option lookup, normalized field-name matching, value maps, and toggle parsing now live behind `TherionCommandLineModel` and are used by the map inspector, map renderer/projection extraction, map delete/split/reference planners, PocketTopo background placement, and Structure indexing.

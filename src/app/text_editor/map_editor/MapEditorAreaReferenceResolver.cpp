@@ -99,6 +99,11 @@ QVector<AreaReferenceBlock> areaReferenceBlocks(const QVector<TherionParsedLine>
     }
     return result;
 }
+
+QVector<TherionParsedLine> parsedTokenLinesForText(const QString &text)
+{
+    return TherionDocumentParser::parseSourceDocument(text).tokenLines();
+}
 }
 
 QSet<int> mapEditorBorderLineNumbersForArea(const QString &text, int areaLineNumber)
@@ -108,7 +113,7 @@ QSet<int> mapEditorBorderLineNumbersForArea(const QString &text, int areaLineNum
         return borderLineNumbers;
     }
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = parsedTokenLinesForText(text);
     const QHash<QString, int> lineNumbers = lineNumbersById(parsedLines);
     for (const AreaReferenceBlock &area : areaReferenceBlocks(parsedLines)) {
         if (area.lineNumber != areaLineNumber) {
@@ -133,7 +138,7 @@ QVector<MapEditorAreaReference> mapEditorAreaReferencesForBorderLine(const QStri
         return references;
     }
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = parsedTokenLinesForText(text);
     QString targetLineId;
     for (const TherionParsedLine &parsedLine : parsedLines) {
         if (parsedLine.lineNumber != borderLineNumber || parsedLine.directive != QStringLiteral("line")) {

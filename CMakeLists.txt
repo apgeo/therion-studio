@@ -897,6 +897,22 @@ qt_add_executable(MapGeometryFeatureParsingTest
 
 target_link_libraries(MapGeometryFeatureParsingTest PRIVATE therion_core Qt6::Widgets)
 
+qt_add_executable(MapEditorSourceReferenceResolverTest
+    tests/MapEditorSourceReferenceResolverTest.cpp
+    src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.cpp
+    src/app/text_editor/map_editor/MapEditorSourceReferenceResolver.h
+    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.cpp
+    src/app/text_editor/map_editor/MapEditorObjectStyleCatalog.h
+    src/app/text_editor/map_editor/MapEditorLineDecorationItem.cpp
+    src/app/text_editor/map_editor/MapEditorLineDecorationItem.h
+    src/app/text_editor/map_editor/MapEditorPointSymbolGeometry.h
+    src/app/text_editor/map_editor/MapEditorSceneItems.cpp
+    src/app/text_editor/map_editor/MapEditorSceneInternals.h
+    src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
+    src/app/text_editor/map_editor/MapEditorSceneSupport.h)
+
+target_link_libraries(MapEditorSourceReferenceResolverTest PRIVATE therion_core Qt6::Widgets)
+
 therion_add_core_unit_test(DocumentFileEncodingTest
     tests/DocumentFileEncodingTest.cpp)
 
@@ -1233,6 +1249,7 @@ set(THERION_UNIT_TEST_TARGETS
     PocketTopoImportTest
     TherionXviParserTest
     MapGeometryFeatureParsingTest
+    MapEditorSourceReferenceResolverTest
     DocumentFileEncodingTest
     MapEditorAreaReferenceResolverTest
     MapEditorInputPolicyTest

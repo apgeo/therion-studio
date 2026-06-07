@@ -8,6 +8,7 @@
 #include "MapEditorSourceReferenceResolver.h"
 #include "MapEditorStylePreviewWidget.h"
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceText.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -451,12 +452,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     context_.quickTargetScrapCombo->setVisible(false);
     context_.metadataLabel->setVisible(true);
     if (context_.textEditor != nullptr && effectiveLineNumber > 0) {
-        QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-        for (QString &line : lines) {
-            if (line.endsWith(QLatin1Char('\r'))) {
-                line.chop(1);
-            }
-        }
+        const QStringList lines = TherionSourceText::splitTextLines(context_.textEditor->text());
         if (effectiveLineNumber <= lines.size()) {
             const TherionParsedLine parsedLine =
                 TherionDocumentParser::parseLine(lines.at(effectiveLineNumber - 1), effectiveLineNumber);
@@ -598,12 +594,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         configureScaleSpin(context_.scrapScaleRealY2Spin, 4);
 
         InspectorScrapScale scale = defaultInspectorScrapScale(context_.mapSourceBoundsForCurrentDocument());
-        QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-        for (QString &line : lines) {
-            if (line.endsWith(QLatin1Char('\r'))) {
-                line.chop(1);
-            }
-        }
+        const QStringList lines = TherionSourceText::splitTextLines(context_.textEditor->text());
         if (effectiveLineNumber <= lines.size()) {
             const TherionParsedLine parsedLine =
                 TherionDocumentParser::parseLine(lines.at(effectiveLineNumber - 1), effectiveLineNumber);
@@ -640,12 +631,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     QString linePointType;
     if (context_.textEditor != nullptr && *context_.selectedObjectLineNumber > 0) {
         if (*context_.selectedObjectKind == QStringLiteral("point")) {
-            QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-            for (QString &line : lines) {
-                if (line.endsWith(QLatin1Char('\r'))) {
-                    line.chop(1);
-                }
-            }
+            const QStringList lines = TherionSourceText::splitTextLines(context_.textEditor->text());
             if (*context_.selectedObjectLineNumber <= lines.size()) {
                 const TherionParsedLine parsedLine =
                     TherionDocumentParser::parseLine(lines.at(*context_.selectedObjectLineNumber - 1), *context_.selectedObjectLineNumber);
@@ -665,12 +651,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                     linePointPreviousControl = lineVertex.incomingControl.has_value();
                     linePointNextControl = lineVertex.outgoingControl.has_value();
                     linePointSmooth = lineVertex.isSmooth && linePointPreviousControl && linePointNextControl;
-                    QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-                    for (QString &line : lines) {
-                        if (line.endsWith(QLatin1Char('\r'))) {
-                            line.chop(1);
-                        }
-                    }
+                    const QStringList lines = TherionSourceText::splitTextLines(context_.textEditor->text());
                     if (*context_.selectedObjectLineNumber > lines.size()) {
                         orientationApplicable = false;
                     } else {

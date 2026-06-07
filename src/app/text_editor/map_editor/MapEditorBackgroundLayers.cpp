@@ -47,6 +47,7 @@
 #include "../../../core/TherionBackgroundMetadata.h"
 #include "../../../core/TherionCommandLineModel.h"
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceText.h"
 #include "../../../core/TherionTokenRules.h"
 #include "../../../core/TherionXviParser.h"
 #include "MapEditorXviBackgroundItem.h"
@@ -621,7 +622,7 @@ const TherionXviStation *matchingXviStation(const XviDocument &xviDocument, cons
 XviBackgroundInsertionPlacement pocketTopoXviInsertionPlacement(const XviDocument &xviDocument,
                                                                 const QString &documentText)
 {
-    for (const QString &line : documentText.split(QLatin1Char('\n'))) {
+    for (const QString &line : TherionSourceText::splitTextLines(documentText)) {
         const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(line);
         if (pointTypeTokenFromParsedLine(parsedLine) != QStringLiteral("station")) {
             continue;
@@ -727,11 +728,6 @@ QRectF xviPlacedModelBounds(const XviDocument &xviDocument,
     return bounds.normalized().adjusted(-128.0, -128.0, 128.0, 128.0);
 }
 
-QString lineEndingForText(const QString &text)
-{
-    return text.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-}
-
 int insertionIndexAfterEncoding(const QStringList &lines)
 {
     for (int index = 0; index < lines.size(); ++index) {
@@ -773,15 +769,10 @@ QString upsertXtherionSimpleCommandLine(const QString &documentText,
                                         const QString &command,
                                         const QString &metadataLine)
 {
-    const QString lineEnding = lineEndingForText(documentText);
-    QStringList lines = documentText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    const QString lineEnding = TherionSourceText::detectedLineEnding(documentText);
+    QStringList lines = TherionSourceText::splitTextLines(documentText);
     if (!lines.isEmpty() && lines.last().isEmpty()) {
         lines.removeLast();
-    }
-    for (QString &line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
     }
 
     for (int index = 0; index < lines.size(); ++index) {
@@ -820,15 +811,10 @@ QString upsertXtherionImageMetadataLine(const QString &documentText,
                                         const QString &metadataLine,
                                         bool remove)
 {
-    const QString lineEnding = lineEndingForText(documentText);
-    QStringList lines = documentText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    const QString lineEnding = TherionSourceText::detectedLineEnding(documentText);
+    QStringList lines = TherionSourceText::splitTextLines(documentText);
     if (!lines.isEmpty() && lines.last().isEmpty()) {
         lines.removeLast();
-    }
-    for (QString &line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
     }
 
     const QVector<XtherionBackgroundReference> references = parseXtherionBackgroundReferences(documentText, documentPath);
@@ -952,15 +938,10 @@ QString updateExistingXtherionImageMetadataGamma(const QString &documentText,
         *updated = false;
     }
 
-    const QString lineEnding = lineEndingForText(documentText);
-    QStringList lines = documentText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    const QString lineEnding = TherionSourceText::detectedLineEnding(documentText);
+    QStringList lines = TherionSourceText::splitTextLines(documentText);
     if (!lines.isEmpty() && lines.last().isEmpty()) {
         lines.removeLast();
-    }
-    for (QString &line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
     }
 
     const QVector<XtherionBackgroundReference> references = parseXtherionBackgroundReferences(documentText, documentPath);

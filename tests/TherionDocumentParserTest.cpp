@@ -85,6 +85,30 @@ void parseTextKeepsOnlyTokenLinesWithPhysicalLineNumbers()
     require(parsed.at(0).rawText == QStringLiteral("survey cave"),
             "CRLF line endings should be stripped from parsed raw line text");
 }
+
+void parsesLinePointRowsAndReviseStations()
+{
+    const TherionParsedLine linePointRow = TherionDocumentParser::parseLine(
+        QStringLiteral("  altitude . # keep auto altitude"),
+        21);
+    require(linePointRow.directive == QStringLiteral("altitude"), "standalone line-point rows should expose their directive");
+    require(linePointRow.tokens == QStringList({QStringLiteral("altitude"), QStringLiteral(".")}),
+            "standalone line-point row tokens should preserve dot values before comments");
+    require(linePointRow.commentStart == 13 && linePointRow.commentText == QStringLiteral(" keep auto altitude"),
+            "standalone line-point row comments should retain source position and text");
+
+    const TherionParsedLine revise = TherionDocumentParser::parseLine(
+        QStringLiteral("revise dd.s@dur.dur_dom -stations [4@monum.dur_dom 5@monum.dur_dom 6@monum.dur_dom]"),
+        31);
+    require(revise.directive == QStringLiteral("revise"), "revise command should expose its directive");
+    require(revise.tokens == QStringList({QStringLiteral("revise"),
+                                          QStringLiteral("dd.s@dur.dur_dom"),
+                                          QStringLiteral("-stations"),
+                                          QStringLiteral("[4@monum.dur_dom"),
+                                          QStringLiteral("5@monum.dur_dom"),
+                                          QStringLiteral("6@monum.dur_dom]")}),
+            "parser should preserve revise station-list tokens for command option modeling");
+}
 }
 
 int main(int argc, char **argv)
@@ -93,5 +117,6 @@ int main(int argc, char **argv)
     parsesQuotedStringsAndComments();
     parsesCommentOnlyLinesWithoutDirectiveTokens();
     parseTextKeepsOnlyTokenLinesWithPhysicalLineNumbers();
+    parsesLinePointRowsAndReviseStations();
     return 0;
 }

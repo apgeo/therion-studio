@@ -2,6 +2,7 @@
 
 #include "../../../core/TherionCommandSyntax.h"
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceText.h"
 #include "../../../core/TherionTokenRules.h"
 
 #include <QHash>
@@ -442,12 +443,7 @@ std::optional<qreal> linePointNumericOptionForSourceVertex(const QString &docume
         return std::nullopt;
     }
 
-    QStringList lines = documentText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-    for (QString &line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-    }
+    const QStringList lines = TherionSourceText::splitTextLines(documentText);
     if (lineNumber > lines.size()) {
         return std::nullopt;
     }

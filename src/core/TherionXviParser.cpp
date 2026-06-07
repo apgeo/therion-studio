@@ -98,7 +98,7 @@ bool parseTherionXviDocumentText(const QString &content, TherionXviDocument *doc
     }
 
     *document = TherionXviDocument{};
-    const QStringList lines = content.split(QLatin1Char('\n'));
+    const QStringList lines = splitLinesNormalizingLineEndings(content);
     enum class Block
     {
         None,
@@ -108,11 +108,7 @@ bool parseTherionXviDocumentText(const QString &content, TherionXviDocument *doc
     };
     Block block = Block::None;
 
-    for (QString line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-
+    for (const QString &line : lines) {
         const QString trimmed = line.trimmed();
         if (trimmed.isEmpty()) {
             continue;

@@ -153,14 +153,9 @@ QVector<TherionBackgroundReference> parseTherionBackgroundReferences(const QStri
 {
     QVector<TherionBackgroundReference> references;
     const QString baseDirectory = QFileInfo(documentPath).absolutePath();
-    const QStringList lines = documentText.split(QLatin1Char('\n'));
+    const QStringList lines = splitLinesNormalizingLineEndings(documentText);
     for (int lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
-        QString line = lines.at(lineIndex);
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-
-        const QString trimmed = line.trimmed();
+        const QString trimmed = lines.at(lineIndex).trimmed();
         if (!trimmed.contains(QStringLiteral("##XTHERION##")) || !trimmed.contains(QStringLiteral("xth_me_image_insert"))) {
             continue;
         }
@@ -245,12 +240,8 @@ QVector<TherionBackgroundReference> parseTherionBackgroundReferences(const QStri
 
 TherionAreaAdjust parseTherionAreaAdjust(const QString &documentText)
 {
-    const QStringList lines = documentText.split(QLatin1Char('\n'));
-    for (QString line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-
+    const QStringList lines = splitLinesNormalizingLineEndings(documentText);
+    for (const QString &line : lines) {
         const QString trimmed = line.trimmed();
         if (!trimmed.contains(QStringLiteral("##XTHERION##")) || !trimmed.contains(QStringLiteral("xth_me_area_adjust"))) {
             continue;

@@ -10,6 +10,7 @@
 #include "MapEditorSourceReferenceResolver.h"
 #include "../../../core/TherionDocumentEditor.h"
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceText.h"
 #include "../../../core/TherionTokenRules.h"
 
 #include <QCheckBox>
@@ -264,12 +265,7 @@ void MapEditorObjectDetailsEditController::applyScrapScaleEdits()
         targetLineNumber = *context_.selectedObjectLineNumber;
     } else {
         const int cursorLineNumber = context_.textEditor->currentLineNumber();
-        QStringList lines = context_.textEditor->text().split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-        for (QString &line : lines) {
-            if (line.endsWith(QLatin1Char('\r'))) {
-                line.chop(1);
-            }
-        }
+        const QStringList lines = TherionSourceText::splitTextLines(context_.textEditor->text());
         if (cursorLineNumber > 0 && cursorLineNumber <= lines.size()) {
             const TherionParsedLine parsedLine =
                 TherionDocumentParser::parseLine(lines.at(cursorLineNumber - 1), cursorLineNumber);
@@ -336,12 +332,7 @@ void MapEditorObjectDetailsEditController::handleConfigureObjectSettingsTriggere
     }
 
     QString beforeText = context_.textEditor->text();
-    QStringList lines = beforeText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-    for (QString &line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-    }
+    const QStringList lines = TherionSourceText::splitTextLines(beforeText);
 
     int targetLineNumber = *context_.selectedObjectLineNumber;
     QString targetKind = context_.selectedObjectKind->trimmed().toLower();
@@ -402,8 +393,13 @@ void MapEditorObjectDetailsEditController::handleConfigureObjectSettingsTriggere
         return;
     }
 
-    lines[targetLineNumber - 1] = updatedLine;
-    const QString afterText = lines.join(QLatin1Char('\n'));
+    TherionSourceText sourceText = TherionSourceText::fromText(beforeText);
+    if (!sourceText.replaceLineRange(targetLineNumber - 1, 1, {updatedLine})) {
+        *context_.toolbarStatusNote = tr("Selected map object source line no longer exists.");
+        context_.refreshToolbarSummary();
+        return;
+    }
+    const QString afterText = sourceText.toText();
     if (!requireSourceTransaction(context_, tr("Cannot edit object settings without map source transaction support."))) {
         return;
     }
@@ -532,12 +528,7 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
     const bool leftSizeEnabled = context_.linePointLeftSizeEnabledCheck->isVisible()
         && context_.linePointLeftSizeEnabledCheck->isChecked();
     const qreal leftSize = qMax<qreal>(0.1, context_.linePointLeftSizeSpin->value());
-    QStringList documentLines = beforeText.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-    for (QString &line : documentLines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-    }
+    const QStringList documentLines = TherionSourceText::splitTextLines(beforeText);
     QString errorMessage;
     bool rewritten = false;
     if (selectedObjectKind == QStringLiteral("point")) {

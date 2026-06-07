@@ -211,6 +211,37 @@ int runAreaAdjustParsingTest()
     return 0;
 }
 
+int runMixedLineEndingParsingTest()
+{
+    const QString documentPath = documentPathForTest(QStringLiteral("mixed.th2"));
+    const QString text =
+        QStringLiteral("encoding utf-8\r"
+                       "##XTHERION## xth_me_area_adjust 10 20 30 40\r\n"
+                       "##XTHERION## xth_me_image_insert {1 1 2.5} {3 root.station} mixed.xvi 0 {}\n");
+
+    const TherionAreaAdjust area = parseTherionAreaAdjust(text);
+    if (!expect(area.valid
+                    && nearlyEqual(area.modelRect.left(), 10.0)
+                    && nearlyEqual(area.modelRect.top(), 20.0)
+                    && nearlyEqual(area.modelRect.right(), 30.0)
+                    && nearlyEqual(area.modelRect.bottom(), 40.0),
+                "Expected area-adjust metadata to parse across mixed line endings.")) {
+        return 1;
+    }
+
+    const QVector<TherionBackgroundReference> references = parseTherionBackgroundReferences(text, documentPath);
+    if (!expect(references.size() == 1, "Expected image metadata to parse across mixed line endings.")) {
+        return 1;
+    }
+    if (!expect(references.first().lineNumber == 3, "Expected mixed line-ending parser to preserve physical line numbers.")) {
+        return 1;
+    }
+    return expect(references.first().rootStationName == QStringLiteral("root.station"),
+                  "Expected root station token to parse from mixed line-ending image metadata.")
+        ? 0
+        : 1;
+}
+
 int runMalformedMetadataIgnoredTest()
 {
     const QString documentPath = documentPathForTest(QStringLiteral("map.th2"));
@@ -247,6 +278,9 @@ int main()
         return rc;
     }
     if (const int rc = runAreaAdjustParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runMixedLineEndingParsingTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runMalformedMetadataIgnoredTest(); rc != 0) {

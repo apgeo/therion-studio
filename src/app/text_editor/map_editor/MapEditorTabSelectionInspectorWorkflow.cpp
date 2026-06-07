@@ -4,6 +4,7 @@
 #include "../TextEditorTab.h"
 
 #include "../../../core/TherionBackgroundMetadata.h"
+#include "../../../core/TherionSourceText.h"
 
 #include <QGraphicsView>
 #include <QScopedValueRollback>
@@ -19,7 +20,7 @@ QString insertedScrapIdentifier(const QString &text, int lineNumber, const QStri
         return fallback;
     }
 
-    const QStringList lines = text.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    const QStringList lines = TherionSourceText::splitTextLines(text);
     if (lineNumber > lines.size()) {
         return fallback;
     }

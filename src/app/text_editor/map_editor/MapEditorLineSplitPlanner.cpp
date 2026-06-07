@@ -2,6 +2,7 @@
 
 #include "../../../core/TherionCommandLineModel.h"
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceText.h"
 #include "../../../core/TherionStringUtils.h"
 
 #include <QCoreApplication>
@@ -11,11 +12,6 @@ namespace TherionStudio
 {
 namespace
 {
-QString lineEndingForText(const QString &contents)
-{
-    return contents.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-}
-
 QSet<QString> lineIdentifiersInDocument(const QString &text)
 {
     QSet<QString> identifiers;
@@ -287,7 +283,7 @@ MapEditorLineSplitPlan MapEditorLineSplitPlanner::planSplit(const QString &text,
         plan.splitLineId = splitLineId;
     }
 
-    plan.updatedText = lines.join(lineEndingForText(text));
+    plan.updatedText = lines.join(TherionSourceText::detectedLineEnding(text));
     plan.resolved = true;
     plan.changed = plan.updatedText != text;
     return plan;

@@ -1,4 +1,5 @@
 #include "../src/core/TherionSourceText.h"
+#include "../src/core/TherionStringUtils.h"
 
 #include <QCoreApplication>
 #include <QString>
@@ -39,6 +40,12 @@ void matchesLegacySplitAndJoinBehavior()
     require(TherionSourceText::splitTextLines(QStringLiteral("a\r\nb\n"))
                 == QStringList({QStringLiteral("a"), QStringLiteral("b"), QString()}),
             "split helper should preserve trailing empty parts");
+    require(TherionStudio::splitLinesNormalizingLineEndings(QStringLiteral("a\rb\r\nc\n"))
+                == QStringList({QStringLiteral("a"),
+                                QStringLiteral("b"),
+                                QStringLiteral("c"),
+                                QString()}),
+            "normalizing split helper should handle CR, CRLF, and LF boundaries consistently");
 
     require(TherionSourceText::joinTextLines(QStringLiteral("a\r\n"), {QStringLiteral("x"),
                                                                         QStringLiteral("y"),

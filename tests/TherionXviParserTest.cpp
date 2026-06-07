@@ -75,6 +75,32 @@ int runParseTextTest()
     return 0;
 }
 
+int runMixedLineEndingParseTextTest()
+{
+    const QString xviText = QStringLiteral(
+        "set XVIgrid {-10 20 5 0 0 10 4 3}\r"
+        "set XVIstations {\r\n"
+        "  {1 2 station.alpha}\n"
+        "}\r"
+        "set XVIshots {\r\n"
+        "  {0 0 10 10}\n"
+        "}\n");
+
+    TherionXviDocument document;
+    if (!expect(parseTherionXviDocumentText(xviText, &document),
+                "Expected XVI text with mixed line endings to parse.")) {
+        return 1;
+    }
+    if (!expect(document.hasGridDefinition && document.stationEntries.size() == 1 && document.shots.size() == 1,
+                "Expected mixed line-ending XVI parse to preserve grid, station, and shot records.")) {
+        return 1;
+    }
+    return expect(document.stations.contains(QStringLiteral("station.alpha")),
+                  "Expected mixed line-ending XVI parse to preserve station names.")
+        ? 0
+        : 1;
+}
+
 int runParseFileTest()
 {
     QTemporaryFile temporaryFile;
@@ -265,6 +291,9 @@ int runSketchLineTokenPreservationTest()
 int main()
 {
     if (const int rc = runParseTextTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runMixedLineEndingParseTextTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runParseFileTest(); rc != 0) {

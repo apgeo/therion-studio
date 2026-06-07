@@ -20,9 +20,6 @@ inline QStringList splitLinesTrimmingCarriageReturns(const QString &contents)
 
 inline QStringList splitLinesNormalizingLineEndings(const QString &contents)
 {
-    QString normalized = contents;
-    normalized.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
-    normalized.replace(QLatin1Char('\r'), QLatin1Char('\n'));
-    return normalized.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    return TherionSourceText::splitTextLines(contents);
 }
 }

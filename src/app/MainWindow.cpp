@@ -71,6 +71,7 @@
 #include "MainWindowStructureNameOverridesService.h"
 #include "ApplicationStylePolicy.h"
 #include "LucideIconFactory.h"
+#include "../core/PocketTopoImport.h"
 #include "../core/SessionStore.h"
 #include "../core/TherionFileTypes.h"
 #include "../platform/ApplicationLanguageOverride.h"
@@ -401,6 +402,7 @@ void MainWindow::buildUi()
     connect(editorTabs_, &QTabWidget::currentChanged, this, [this](int) {
         rebuildMapObjectsTree();
         updateMapEditorActionState();
+        refreshFileImportActions();
         refreshTherionConfigDisplay();
         refreshMapBackgroundPanel();
         refreshDocumentStatusWidgets();
@@ -488,6 +490,10 @@ void MainWindow::buildMenus()
     recentProjectsMenu_ = fileMenu->addMenu(tr("Recent Projects"));
     fileMenu->addSeparator();
     recentFilesMenu_ = fileMenu->addMenu(tr("Recent Files"));
+
+    importMenu_ = fileMenu->addMenu(tr("Import"));
+    importPocketTopoAction_ = importMenu_->addAction(tr("Import PocketTopo Text..."));
+    connect(importPocketTopoAction_, &QAction::triggered, this, &MainWindow::importPocketTopoTextToActiveEditor);
 
     QAction *saveAction = fileMenu->addAction(tr("&Save"));
     saveAction->setShortcut(QKeySequence::Save);
@@ -625,6 +631,7 @@ void MainWindow::buildMenus()
     });
 
     updateProjectActionState();
+    refreshFileImportActions();
     refreshViewMenuActions();
 }
 
@@ -1018,6 +1025,84 @@ void MainWindow::recordRecentFilePath(const QString &filePath)
             sessionStore_->recentFilePathsForProject(projectRootPath_),
             filePath));
     refreshRecentFilesUi();
+}
+
+void MainWindow::importPocketTopoTextToActiveEditor()
+{
+    auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(currentDocumentWidget());
+    if (textTab == nullptr) {
+        return;
+    }
+
+    QString documentName = textTab->filePath().isEmpty() ? textTab->displayName() : textTab->filePath();
+    while (documentName.startsWith(QLatin1Char('*'))) {
+        documentName.remove(0, 1);
+    }
+    if (QFileInfo(documentName).suffix().compare(QStringLiteral("th"), Qt::CaseInsensitive) != 0) {
+        return;
+    }
+
+    const QString initialDirectory = textTab->filePath().isEmpty()
+        ? (projectRootPath_.isEmpty() ? QDir::homePath() : projectRootPath_)
+        : QFileInfo(textTab->filePath()).absolutePath();
+    const QString importPath = QFileDialog::getOpenFileName(this,
+                                                            tr("Import PocketTopo Text"),
+                                                            initialDirectory,
+                                                            tr("PocketTopo Therion Export (*.txt *.TXT);;All Files (*)"));
+    if (importPath.isEmpty()) {
+        return;
+    }
+
+    QFile file(importPath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::warning(this,
+                             tr("Import PocketTopo Text"),
+                             tr("Could not read %1.").arg(QDir::toNativeSeparators(importPath)));
+        return;
+    }
+
+    const QString importedText =
+        TherionStudio::convertPocketTopoTextToTherionCentreline(QString::fromUtf8(file.readAll()));
+    if (importedText.trimmed().isEmpty()) {
+        QMessageBox::warning(this,
+                             tr("Import PocketTopo Text"),
+                             tr("No PocketTopo centreline data was found in %1.")
+                                 .arg(QDir::toNativeSeparators(importPath)));
+        return;
+    }
+
+    QString insertionText = importedText;
+    if (!insertionText.endsWith(QLatin1Char('\n'))) {
+        insertionText.append(QLatin1Char('\n'));
+    }
+
+    textTab->insertTextAtCursor(insertionText);
+    statusBar()->showMessage(tr("Imported PocketTopo centreline data from %1.")
+                                 .arg(QFileInfo(importPath).fileName()),
+                             5000);
+}
+
+void MainWindow::refreshFileImportActions()
+{
+    auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(currentDocumentWidget());
+    QString documentName;
+    if (textTab != nullptr) {
+        documentName = textTab->filePath().isEmpty() ? textTab->displayName() : textTab->filePath();
+        while (documentName.startsWith(QLatin1Char('*'))) {
+            documentName.remove(0, 1);
+        }
+    }
+
+    const bool showPocketTopoImport =
+        QFileInfo(documentName).suffix().compare(QStringLiteral("th"), Qt::CaseInsensitive) == 0;
+    if (importPocketTopoAction_ != nullptr) {
+        importPocketTopoAction_->setVisible(showPocketTopoImport);
+        importPocketTopoAction_->setEnabled(showPocketTopoImport);
+    }
+    if (importMenu_ != nullptr) {
+        importMenu_->menuAction()->setVisible(showPocketTopoImport);
+        importMenu_->setEnabled(showPocketTopoImport);
+    }
 }
 
 void MainWindow::createNewTherionSourceDocument()
@@ -2051,6 +2136,7 @@ void MainWindow::updateTabTitle(QWidget *tabWidget)
     editorTabs_->setTabText(tabIndex, documentDisplayNameForWidget(tabWidget));
     editorTabs_->setTabToolTip(tabIndex, documentPathForWidget(tabWidget));
     if (currentDocumentWidget() == tabWidget) {
+        refreshFileImportActions();
         refreshDocumentStatusWidgets();
     }
 

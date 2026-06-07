@@ -7,6 +7,7 @@
 
 #include <QPalette>
 #include <QPlainTextEdit>
+#include <QTextCursor>
 #include <QTextDocument>
 
 namespace TherionStudio
@@ -53,6 +54,20 @@ int TextEditorTab::documentRevision() const
 QString TextEditorTab::text() const
 {
     return editor_->toPlainText();
+}
+
+void TextEditorTab::insertTextAtCursor(const QString &contents)
+{
+    if (editor_ == nullptr || contents.isEmpty()) {
+        return;
+    }
+
+    QTextCursor cursor = editor_->textCursor();
+    cursor.beginEditBlock();
+    cursor.insertText(contents);
+    cursor.endEditBlock();
+    editor_->setTextCursor(cursor);
+    editor_->setFocus();
 }
 
 QColor TextEditorTab::sourceSurfaceColor() const

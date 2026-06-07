@@ -1,26 +1,36 @@
 #include "MapEditorTab.h"
 
 #include <QColor>
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDateTime>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QDir>
+#include <QDoubleSpinBox>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsScene>
+#include <QFormLayout>
 #include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLineF>
+#include <QMessageBox>
 #include <QPainter>
 #include <QPixmap>
+#include <QRadioButton>
 #include <QRegularExpression>
 #include <QScopedValueRollback>
 #include <QSet>
+#include <QSpinBox>
+#include <QTimer>
 #include <QVariant>
+#include <QVBoxLayout>
 #include <QtConcurrent>
 #include <QtMath>
 
@@ -33,8 +43,10 @@
 #include "../TextEditorTab.h"
 #include "../../../core/MapBackgroundPlacement.h"
 #include "../../../core/ISessionStore.h"
+#include "../../../core/PocketTopoImport.h"
 #include "../../../core/TherionBackgroundMetadata.h"
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionTokenRules.h"
 #include "../../../core/TherionXviParser.h"
 #include "MapEditorXviBackgroundItem.h"
 
@@ -53,6 +65,8 @@ constexpr int kBackgroundLayerSourceImageRole = 102;
 constexpr int kBackgroundLayerXviExpectedTopLeftRole = 103;
 constexpr int kBackgroundLayerRasterGammaRequestRole = 104;
 constexpr int kBackgroundLayerRasterLoadRequestRole = 105;
+constexpr int kBackgroundLayerXviBasePositionRole = 106;
+constexpr int kBackgroundLayerXviRootStationRole = 107;
 constexpr qreal kDefaultXviLayerOpacity = 1.0;
 constexpr qreal kDefaultRasterLayerOpacity = 0.58;
 
@@ -66,6 +80,18 @@ struct XviSketchStrokeStyle
 {
     QColor color;
     Qt::PenStyle penStyle = Qt::SolidLine;
+};
+
+struct PocketTopoGeneratedXvi
+{
+    QString path;
+    XviDocument document;
+};
+
+struct XviBackgroundInsertionPlacement
+{
+    QPointF basePosition;
+    QString rootStationName;
 };
 
 XviSketchStrokeStyle xviSketchStrokeStyleForToken(const QString &token)
@@ -265,17 +291,35 @@ QString xtherionPathToken(const QString &absolutePath, const QString &documentPa
     return path;
 }
 
+QString xtherionMetadataToken(QString token)
+{
+    token = token.trimmed();
+    if (token.isEmpty()) {
+        return QStringLiteral("{}");
+    }
+
+    if (token.contains(QRegularExpression(QStringLiteral(R"(\s|[{}])")))) {
+        token.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
+        token.replace(QLatin1Char('{'), QStringLiteral("\\{"));
+        token.replace(QLatin1Char('}'), QStringLiteral("\\}"));
+        return QStringLiteral("{%1}").arg(token);
+    }
+    return token;
+}
+
 QString xtherionImageInsertLine(const QString &absolutePath,
                                 const QString &documentPath,
                                 const QPointF &basePosition,
                                 bool visible,
-                                qreal gamma)
+                                qreal gamma,
+                                const QString &rootStationName = QString())
 {
-    return QStringLiteral("##XTHERION## xth_me_image_insert {%1 %2 %3} {%4 {}} %5 0 {}")
+    return QStringLiteral("##XTHERION## xth_me_image_insert {%1 %2 %3} {%4 %5} %6 0 {}")
         .arg(formatXtherionNumber(basePosition.x()),
              visible ? QStringLiteral("1") : QStringLiteral("0"),
              formatXtherionNumber(qBound<qreal>(0.2, gamma, 2.5)),
              formatXtherionNumber(basePosition.y()),
+             xtherionMetadataToken(rootStationName),
              xtherionPathToken(absolutePath, documentPath));
 }
 
@@ -292,6 +336,410 @@ QString xtherionAreaAdjustLine(const QRectF &modelRect)
 QString xtherionAreaZoomLine()
 {
     return QStringLiteral("##XTHERION## xth_me_area_zoom_to 100");
+}
+
+QString uniquePocketTopoXviPath(const QString &pocketTopoPath, PocketTopoProjection projection)
+{
+    const QFileInfo sourceInfo(pocketTopoPath);
+    const QString basePath = sourceInfo.dir().absoluteFilePath(
+        QStringLiteral("%1_%2").arg(sourceInfo.completeBaseName(), pocketTopoProjectionSuffix(projection)));
+    QString candidatePath = QStringLiteral("%1.xvi").arg(basePath);
+    int suffix = 0;
+    while (QFileInfo::exists(candidatePath)) {
+        candidatePath = QStringLiteral("%1%2.xvi").arg(basePath).arg(suffix);
+        ++suffix;
+    }
+    return candidatePath;
+}
+
+bool requestPocketTopoXviOptions(QWidget *parent, PocketTopoXviImportOptions *options)
+{
+    if (options == nullptr) {
+        return false;
+    }
+
+    QDialog dialog(parent);
+    dialog.setWindowTitle(QCoreApplication::translate("TherionStudio::MapEditorTab", "XVI Properties"));
+
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *formLayout = new QFormLayout;
+    layout->addLayout(formLayout);
+
+    auto *scaleSpin = new QSpinBox(&dialog);
+    scaleSpin->setRange(1, 100000);
+    scaleSpin->setValue(options->scale);
+    scaleSpin->setPrefix(QStringLiteral("1 : "));
+    formLayout->addRow(QCoreApplication::translate("TherionStudio::MapEditorTab", "Scale"), scaleSpin);
+
+    auto *resolutionSpin = new QSpinBox(&dialog);
+    resolutionSpin->setRange(1, 2400);
+    resolutionSpin->setValue(options->resolutionDpi);
+    resolutionSpin->setSuffix(QStringLiteral(" dpi"));
+    formLayout->addRow(QCoreApplication::translate("TherionStudio::MapEditorTab", "Resolution"), resolutionSpin);
+
+    auto *gridSpin = new QDoubleSpinBox(&dialog);
+    gridSpin->setRange(0.01, 1000.0);
+    gridSpin->setDecimals(2);
+    gridSpin->setValue(options->gridSpacingMeters);
+    gridSpin->setSuffix(QStringLiteral(" m"));
+    formLayout->addRow(QCoreApplication::translate("TherionStudio::MapEditorTab", "Grid spacing"), gridSpin);
+
+    auto *planRadio = new QRadioButton(QCoreApplication::translate("TherionStudio::MapEditorTab", "Plan"), &dialog);
+    auto *elevationRadio = new QRadioButton(QCoreApplication::translate("TherionStudio::MapEditorTab", "Extended elevation"), &dialog);
+    planRadio->setChecked(options->projection == PocketTopoProjection::Plan);
+    elevationRadio->setChecked(options->projection == PocketTopoProjection::Elevation);
+    layout->addWidget(planRadio);
+    layout->addWidget(elevationRadio);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+
+    if (dialog.exec() != QDialog::Accepted) {
+        return false;
+    }
+
+    options->scale = scaleSpin->value();
+    options->resolutionDpi = resolutionSpin->value();
+    options->gridSpacingMeters = gridSpin->value();
+    options->projection = elevationRadio->isChecked() ? PocketTopoProjection::Elevation : PocketTopoProjection::Plan;
+    return true;
+}
+
+std::optional<PocketTopoGeneratedXvi> generatePocketTopoXvi(QWidget *parent,
+                                                           const QString &pocketTopoPath,
+                                                           PocketTopoXviImportOptions *options,
+                                                           QString *errorMessage)
+{
+    if (options == nullptr || pocketTopoPath.isEmpty()) {
+        return std::nullopt;
+    }
+    if (!requestPocketTopoXviOptions(parent, options)) {
+        return std::nullopt;
+    }
+
+    QFile inputFile(pocketTopoPath);
+    if (!inputFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::MapEditorTab",
+                                                        "Could not read %1.")
+                                .arg(QDir::toNativeSeparators(pocketTopoPath));
+        }
+        return std::nullopt;
+    }
+
+    bool hasProjectedData = false;
+    const QString xviText = convertPocketTopoTextToXvi(QString::fromUtf8(inputFile.readAll()),
+                                                       *options,
+                                                       &hasProjectedData);
+    if (!hasProjectedData || xviText.trimmed().isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::MapEditorTab",
+                                                        "No PocketTopo %1 data was found in %2.")
+                                .arg(options->projection == PocketTopoProjection::Elevation
+                                         ? QCoreApplication::translate("TherionStudio::MapEditorTab", "extended elevation")
+                                         : QCoreApplication::translate("TherionStudio::MapEditorTab", "plan"),
+                                     QDir::toNativeSeparators(pocketTopoPath));
+        }
+        return std::nullopt;
+    }
+
+    const QString xviPath = uniquePocketTopoXviPath(pocketTopoPath, options->projection);
+    QFile outputFile(xviPath);
+    if (!outputFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::MapEditorTab",
+                                                        "Could not write %1.")
+                                .arg(QDir::toNativeSeparators(xviPath));
+        }
+        return std::nullopt;
+    }
+    outputFile.write(xviText.toUtf8());
+    outputFile.close();
+
+    XviDocument document;
+    if (!parseTherionXviDocumentText(xviText, &document)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::MapEditorTab",
+                                                        "Generated XVI could not be parsed: %1.")
+                                .arg(QDir::toNativeSeparators(xviPath));
+        }
+        return std::nullopt;
+    }
+
+    return PocketTopoGeneratedXvi{QFileInfo(xviPath).absoluteFilePath(), document};
+}
+
+QString optionValueToken(const QStringList &tokens, const QString &option)
+{
+    const QString normalizedOption = option.toLower();
+    for (int index = 0; index + 1 < tokens.size(); ++index) {
+        if (tokens.at(index).toLower() != normalizedOption) {
+            continue;
+        }
+
+        const QString candidate = tokens.at(index + 1);
+        if (!TherionTokenRules::tokenStartsOption(candidate)) {
+            return candidate;
+        }
+    }
+    return QString();
+}
+
+QString canonicalStationToken(QString token)
+{
+    token = token.trimmed();
+    while (token.endsWith(QLatin1Char('.'))) {
+        token.chop(1);
+    }
+    return token;
+}
+
+QString unqualifiedStationToken(const QString &token)
+{
+    const QString canonical = canonicalStationToken(token);
+    const int namespaceSeparator = canonical.indexOf(QLatin1Char('@'));
+    if (namespaceSeparator <= 0) {
+        return canonical;
+    }
+    return canonical.left(namespaceSeparator);
+}
+
+QString pointTypeTokenFromParsedLine(const TherionParsedLine &parsedLine)
+{
+    if (parsedLine.directive != QStringLiteral("point")) {
+        return QString();
+    }
+
+    int numericCoordinateTokens = 0;
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        const QString token = parsedLine.tokens.at(index).trimmed();
+        if (token.isEmpty()) {
+            continue;
+        }
+        if (TherionTokenRules::tokenStartsOption(token)) {
+            break;
+        }
+        if (TherionTokenRules::isNumericToken(token)) {
+            ++numericCoordinateTokens;
+            continue;
+        }
+        if (numericCoordinateTokens < 2) {
+            continue;
+        }
+        return token.toLower();
+    }
+
+    return QString();
+}
+
+QString stationNameFromPointLine(const TherionParsedLine &parsedLine)
+{
+    const QString optionName = optionValueToken(parsedLine.tokens, QStringLiteral("-name")).trimmed();
+    if (!optionName.isEmpty()) {
+        return optionName;
+    }
+
+    if (pointTypeTokenFromParsedLine(parsedLine) != QStringLiteral("station")) {
+        return QString();
+    }
+
+    bool sawStationType = false;
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        const QString token = parsedLine.tokens.at(index).trimmed();
+        if (token.isEmpty()) {
+            continue;
+        }
+        if (TherionTokenRules::tokenStartsOption(token)) {
+            break;
+        }
+        if (!sawStationType) {
+            if (token.toLower() == QStringLiteral("station")) {
+                sawStationType = true;
+            }
+            continue;
+        }
+        if (!TherionTokenRules::isNumericToken(token)) {
+            return token;
+        }
+    }
+    return QString();
+}
+
+std::optional<QPointF> pointPositionFromParsedLine(const TherionParsedLine &parsedLine)
+{
+    if (parsedLine.directive != QStringLiteral("point")) {
+        return std::nullopt;
+    }
+
+    QVector<qreal> coordinates;
+    coordinates.reserve(2);
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        const QString token = parsedLine.tokens.at(index).trimmed();
+        if (token.isEmpty()) {
+            continue;
+        }
+        if (TherionTokenRules::tokenStartsOption(token)) {
+            break;
+        }
+        if (!TherionTokenRules::isNumericToken(token)) {
+            continue;
+        }
+        bool ok = false;
+        const qreal value = token.toDouble(&ok);
+        if (!ok) {
+            continue;
+        }
+        coordinates.append(value);
+        if (coordinates.size() == 2) {
+            return QPointF(coordinates.at(0), coordinates.at(1));
+        }
+    }
+    return std::nullopt;
+}
+
+const TherionXviStation *matchingXviStation(const XviDocument &xviDocument, const QString &stationName)
+{
+    const QString requested = stationName.trimmed();
+    if (requested.isEmpty()) {
+        return nullptr;
+    }
+
+    for (const TherionXviStation &station : xviDocument.stationEntries) {
+        if (station.name == requested) {
+            return &station;
+        }
+    }
+
+    const QString canonicalRequested = canonicalStationToken(requested);
+    for (const TherionXviStation &station : xviDocument.stationEntries) {
+        if (canonicalStationToken(station.name) == canonicalRequested) {
+            return &station;
+        }
+    }
+
+    const QString unqualifiedRequested = unqualifiedStationToken(requested);
+    const TherionXviStation *match = nullptr;
+    for (const TherionXviStation &station : xviDocument.stationEntries) {
+        if (unqualifiedStationToken(station.name) != unqualifiedRequested) {
+            continue;
+        }
+        if (match != nullptr) {
+            return nullptr;
+        }
+        match = &station;
+    }
+    return match;
+}
+
+XviBackgroundInsertionPlacement pocketTopoXviInsertionPlacement(const XviDocument &xviDocument,
+                                                                const QString &documentText)
+{
+    for (const QString &line : documentText.split(QLatin1Char('\n'))) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(line);
+        if (pointTypeTokenFromParsedLine(parsedLine) != QStringLiteral("station")) {
+            continue;
+        }
+
+        const QString stationName = stationNameFromPointLine(parsedLine);
+        const TherionXviStation *xviStation = matchingXviStation(xviDocument, stationName);
+        if (xviStation == nullptr) {
+            continue;
+        }
+
+        const std::optional<QPointF> position = pointPositionFromParsedLine(parsedLine);
+        if (!position.has_value()) {
+            continue;
+        }
+
+        return XviBackgroundInsertionPlacement{position.value(), xviStation->name};
+    }
+
+    if (!xviDocument.stationEntries.isEmpty()) {
+        const TherionXviStation &station = xviDocument.stationEntries.constFirst();
+        return XviBackgroundInsertionPlacement{QPointF(0.0, 0.0), station.name};
+    }
+
+    return XviBackgroundInsertionPlacement{QPointF(0.0, 0.0), QString()};
+}
+
+QString backgroundImageDialogInitialDirectory(const QString &documentPath, const QString &projectRootPath)
+{
+    if (!documentPath.trimmed().isEmpty()) {
+        const QString documentDirectory = QFileInfo(documentPath).absolutePath();
+        if (!documentDirectory.isEmpty() && QDir(documentDirectory).exists()) {
+            return documentDirectory;
+        }
+    }
+
+    if (!projectRootPath.trimmed().isEmpty()) {
+        const QString projectDirectory = QDir(projectRootPath).absolutePath();
+        if (!projectDirectory.isEmpty() && QDir(projectDirectory).exists()) {
+            return projectDirectory;
+        }
+    }
+
+    return QString();
+}
+
+QRectF xviPlacedModelBounds(const XviDocument &xviDocument,
+                            const XviBackgroundInsertionPlacement &placement)
+{
+    XviPlacementMetadata metadata;
+    metadata.basePosition = placement.basePosition;
+    metadata.hasBasePosition = true;
+    metadata.rootStationName = placement.rootStationName;
+
+    QVector<XviStationPlacementEntry> stationEntries;
+    stationEntries.reserve(xviDocument.stationEntries.size());
+    for (const TherionXviStation &station : xviDocument.stationEntries) {
+        stationEntries.append(XviStationPlacementEntry{station.name, station.position});
+    }
+
+    const XviPlacementResult placementResult = stationEntries.isEmpty()
+        ? resolveXviModelOffset(xviDocument.gridOrigin, xviDocument.stations, metadata)
+        : resolveXviModelOffset(xviDocument.gridOrigin, stationEntries, metadata);
+    const QPointF offset = placementResult.modelOffset;
+
+    QRectF bounds;
+    bool hasBounds = false;
+    auto includePoint = [&](const QPointF &point) {
+        const QRectF pointRect(point, QSizeF(1.0, 1.0));
+        if (!hasBounds) {
+            bounds = pointRect;
+            hasBounds = true;
+            return;
+        }
+        bounds = bounds.united(pointRect);
+    };
+
+    if (xviDocument.hasGridDefinition) {
+        const int spanX = qMax(0, xviDocument.gridCountX);
+        const int spanY = qMax(0, xviDocument.gridCountY);
+        const QPointF gridP00 = xviDocument.gridOrigin + offset;
+        includePoint(gridP00);
+        includePoint(gridP00 + (xviDocument.gridVectorX * spanX));
+        includePoint(gridP00 + (xviDocument.gridVectorY * spanY));
+        includePoint(gridP00 + (xviDocument.gridVectorX * spanX) + (xviDocument.gridVectorY * spanY));
+    }
+    for (const QLineF &shot : xviDocument.shots) {
+        includePoint(shot.p1() + offset);
+        includePoint(shot.p2() + offset);
+    }
+    for (const auto &line : xviDocument.sketchLines) {
+        for (const QPointF &point : line.points) {
+            includePoint(point + offset);
+        }
+    }
+    for (const TherionXviStation &station : xviDocument.stationEntries) {
+        includePoint(station.position + offset);
+    }
+
+    if (!hasBounds || !bounds.isValid()) {
+        return QRectF();
+    }
+    return bounds.normalized().adjusted(-128.0, -128.0, 128.0, 128.0);
 }
 
 QString lineEndingForText(const QString &text)
@@ -871,6 +1319,8 @@ MapEditorXviBackgroundItem *createXviBackgroundItem(const XviDocument &xvi,
                                       modelBounds,
                                       previewBounds));
     item->setData(kBackgroundLayerXviExpectedTopLeftRole, topLeft);
+    item->setData(kBackgroundLayerXviBasePositionRole, anchoredBasePosition);
+    item->setData(kBackgroundLayerXviRootStationRole, rootStationName);
     item->setPos(topLeft);
     return item;
 }
@@ -916,6 +1366,8 @@ bool updateXviBackgroundItemGeometry(MapEditorXviBackgroundItem *item,
     item->setPos(topLeft);
     item->setData(kBackgroundLayerXviGeometryKeyRole, cacheKey);
     item->setData(kBackgroundLayerXviExpectedTopLeftRole, topLeft);
+    item->setData(kBackgroundLayerXviBasePositionRole, anchoredBasePosition);
+    item->setData(kBackgroundLayerXviRootStationRole, rootStationName);
     return true;
 }
 
@@ -991,10 +1443,28 @@ bool MapEditorTab::backgroundLayerSupportsGamma(int index) const
     return !isMapEditorXviBackgroundPath(item->data(0).toString());
 }
 
+bool MapEditorTab::backgroundLayerSupportsPositionEditing(int index) const
+{
+    const QGraphicsPixmapItem *item = backgroundLayerItemAt(index);
+    if (item == nullptr) {
+        return false;
+    }
+    return !isMapEditorXviBackgroundPath(item->data(0).toString());
+}
+
 QPointF MapEditorTab::backgroundLayerPosition(int index) const
 {
     QGraphicsPixmapItem *item = backgroundLayerItemAt(index);
-    return item != nullptr ? item->pos() : QPointF();
+    if (item == nullptr) {
+        return QPointF();
+    }
+    if (isMapEditorXviBackgroundPath(item->data(0).toString())) {
+        const QVariant basePosition = item->data(kBackgroundLayerXviBasePositionRole);
+        if (basePosition.canConvert<QPointF>()) {
+            return basePosition.toPointF();
+        }
+    }
+    return item->pos();
 }
 
 int MapEditorTab::selectedBackgroundLayerIndex() const
@@ -1010,13 +1480,11 @@ void MapEditorTab::setSelectedBackgroundLayerIndex(int index)
 
 void MapEditorTab::browseAndAddBackgroundImages()
 {
-    const QString initialDirectory = filePath().isEmpty()
-        ? QString()
-        : QFileInfo(filePath()).absolutePath();
+    const QString initialDirectory = backgroundImageDialogInitialDirectory(filePath(), projectRootPath_);
     const QStringList imagePaths = QFileDialog::getOpenFileNames(this,
                                                                  tr("Add Background Layers"),
                                                                  initialDirectory,
-                                                                 tr("Background layers (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.gif *.webp *.xvi)"));
+                                                                 tr("Background layers (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.gif *.webp *.xvi *.txt *.TXT)"));
     if (imagePaths.isEmpty()) {
         return;
     }
@@ -1028,8 +1496,27 @@ void MapEditorTab::browseAndAddBackgroundImages()
 
     const int previousLayerCount = backgroundImageItems_.size();
     int pendingRasterLayerCount = 0;
+    bool addedPocketTopoXviLayer = false;
+    PocketTopoXviImportOptions pocketTopoOptions;
     for (const QString &imagePath : imagePaths) {
-        if (isMapEditorXviBackgroundPath(imagePath)) {
+        QString xviPath = imagePath;
+        std::optional<XviDocument> generatedXviDocument;
+        const bool pocketTopoImport = QFileInfo(imagePath).suffix().compare(QStringLiteral("txt"), Qt::CaseInsensitive) == 0;
+        if (pocketTopoImport) {
+            QString errorMessage;
+            const std::optional<PocketTopoGeneratedXvi> generatedXvi =
+                generatePocketTopoXvi(this, imagePath, &pocketTopoOptions, &errorMessage);
+            if (!generatedXvi.has_value()) {
+                if (!errorMessage.isEmpty()) {
+                    QMessageBox::warning(this, tr("Import PocketTopo Background"), errorMessage);
+                }
+                continue;
+            }
+            xviPath = generatedXvi->path;
+            generatedXviDocument = generatedXvi->document;
+        }
+
+        if (isMapEditorXviBackgroundPath(xviPath)) {
             const QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
             const QRectF previewBounds = mapPreviewBounds();
             const XtherionAreaAdjust areaAdjust = textEditor_ != nullptr
@@ -1039,16 +1526,61 @@ void MapEditorTab::browseAndAddBackgroundImages()
             const QRectF xviModelBounds = areaAdjust.valid && areaAdjust.modelRect.isValid()
                 ? areaAdjust.modelRect
                 : sourceBounds;
-            if (!parseXviDocumentFileCached(QFileInfo(imagePath).absoluteFilePath(), &xviDocument)
-                || !createAndAppendXviBackgroundItem(mapScene_,
-                                                     &backgroundImageItems_,
-                                                     QFileInfo(imagePath).absoluteFilePath(),
-                                                     xviDocument,
-                                                     QPointF(0.0, 0.0),
-                                                     QString(),
-                                                     xviModelBounds,
-                                                     previewBounds)) {
+            if (!generatedXviDocument.has_value()
+                && !parseXviDocumentFileCached(QFileInfo(xviPath).absoluteFilePath(), &xviDocument)) {
                 continue;
+            }
+            if (generatedXviDocument.has_value()) {
+                xviDocument = generatedXviDocument.value();
+            }
+            const QString absoluteXviPath = QFileInfo(xviPath).absoluteFilePath();
+            const XviBackgroundInsertionPlacement insertionPlacement =
+                pocketTopoImport && textEditor_ != nullptr
+                    ? pocketTopoXviInsertionPlacement(xviDocument, textEditor_->text())
+                    : XviBackgroundInsertionPlacement{QPointF(0.0, 0.0), QString()};
+            if (!createAndAppendXviBackgroundItem(mapScene_,
+                                                  &backgroundImageItems_,
+                                                  absoluteXviPath,
+                                                  xviDocument,
+                                                  insertionPlacement.basePosition,
+                                                  insertionPlacement.rootStationName,
+                                                  xviModelBounds,
+                                                  previewBounds)) {
+                continue;
+            }
+            if (pocketTopoImport && textEditor_ != nullptr) {
+                const QString beforeText = textEditor_->text();
+                const QString metadataLine = xtherionImageInsertLine(absoluteXviPath,
+                                                                     filePath(),
+                                                                     insertionPlacement.basePosition,
+                                                                     true,
+                                                                     1.0,
+                                                                     insertionPlacement.rootStationName);
+                QString afterMetadataText = beforeText;
+                const TherionAreaAdjust existingAreaAdjust = parseTherionAreaAdjust(beforeText);
+                if (!existingAreaAdjust.valid || !existingAreaAdjust.modelRect.isValid()) {
+                    const QRectF placedBounds = xviPlacedModelBounds(xviDocument, insertionPlacement);
+                    if (placedBounds.isValid()) {
+                        afterMetadataText = upsertXtherionSimpleCommandLine(afterMetadataText,
+                                                                            QStringLiteral("xth_me_area_adjust"),
+                                                                            xtherionAreaAdjustLine(placedBounds));
+                        afterMetadataText = upsertXtherionSimpleCommandLine(afterMetadataText,
+                                                                            QStringLiteral("xth_me_area_zoom_to"),
+                                                                            xtherionAreaZoomLine());
+                    }
+                }
+                const QString afterText = upsertXtherionImageMetadataLine(afterMetadataText,
+                                                                          filePath(),
+                                                                          absoluteXviPath,
+                                                                          metadataLine,
+                                                                          false);
+                if (afterText != beforeText) {
+                    const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
+                    applySourceTextChangeWithSnapshot(tr("Import PocketTopo Background"), beforeText, afterText, 0);
+                }
+            }
+            if (pocketTopoImport) {
+                addedPocketTopoXviLayer = true;
             }
             continue;
         }
@@ -1067,6 +1599,12 @@ void MapEditorTab::browseAndAddBackgroundImages()
     }
 
     updateCommandSurfaceState();
+    if (addedPocketTopoXviLayer) {
+        QTimer::singleShot(0, this, [this]() {
+            fitBackgroundRequested_ = true;
+            fitMapToView(true);
+        });
+    }
 }
 
 void MapEditorTab::removeSelectedBackgroundLayer()

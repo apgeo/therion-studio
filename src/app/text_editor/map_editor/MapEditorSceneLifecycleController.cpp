@@ -160,6 +160,10 @@ void MapEditorSceneLifecycleController::fitMapToView(bool includeBackgroundImage
         return;
     }
 
+    if (context_.reprojectMetadataBackgroundLayersForCurrentDocument) {
+        context_.reprojectMetadataBackgroundLayersForCurrentDocument();
+    }
+
     QRectF fitBounds = mapGeometryFitBounds();
     const QRectF backgroundBounds = context_.mapBackgroundFitBounds();
     if (backgroundBounds.isValid() && (includeBackgroundImages || !fitBounds.isValid())) {
@@ -176,9 +180,6 @@ void MapEditorSceneLifecycleController::fitMapToView(bool includeBackgroundImage
     context_.view->resetTransform();
     context_.view->fitInView(fitBounds.adjusted(-24, -24, 24, 24), Qt::KeepAspectRatio);
     *context_.autoFitEnabled = true;
-    if (context_.reprojectMetadataBackgroundLayersForCurrentDocument) {
-        context_.reprojectMetadataBackgroundLayersForCurrentDocument();
-    }
     syncZoomFactorFromView();
     if (updateCommandSurface) {
         context_.updateCommandSurfaceState();

@@ -39,6 +39,9 @@ MapEditorInspectorBackgroundContext MapEditorTab::inspectorBackgroundContext()
         .layerSupportsGamma = [this](int index) {
             return backgroundLayerSupportsGamma(index);
         },
+        .layerSupportsPositionEditing = [this](int index) {
+            return backgroundLayerSupportsPositionEditing(index);
+        },
         .layerPosition = [this](int index) {
             return backgroundLayerPosition(index);
         },

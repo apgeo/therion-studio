@@ -142,6 +142,8 @@ Structured block-canvas requirements:
 - data-block configuration should support mixed ordering of measurement and non-tabular directive rows (for example `extend ...`) in one structured row sequence without introducing one dedicated UI button per possible Therion command
 - data-block editor dialog should auto-expand horizontally up to available host/screen space so all configured table columns remain visible when practical
 - operations that require exact text caret semantics (for example line/column navigation and find/replace focus jumps) shall switch to raw mode automatically
+- The text editor shall provide an explicit PocketTopo Therion export (`.txt`) import action that inserts converted Therion `centreline` content into the active open `.th` text document at the current cursor position.
+- PocketTopo text import shall be exposed from `File -> Import -> Import PocketTopo Text...` only when the active document is a `.th` text document, shall be undoable as a single text insertion, and shall not silently create a new `.th` document, replace the active document, or open the `.txt` export as a project source file.
 
 ### 3.3 TH2 Map Editor
 
@@ -400,6 +402,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Background image position, opacity, gamma, and visibility shall be editable per session.
 - Background layers shall support insertion, selection, visibility toggles, opacity adjustment, gamma adjustment, and persisted positioning.
 - Adding a raster background image from the TH2 Visual map editor shall write XTherion-compatible `##XTHERION## xth_me_image_insert` metadata to the TH2 source, using document-relative paths where possible.
+- Adding a PocketTopo Therion export (`.txt`) from the TH2 Visual map editor's background workflow shall prompt for XVI scale, resolution, grid spacing, and plan or extended-elevation projection; convert the selected PocketTopo projection data into a generated `.xvi` file beside the export using `_p` or `_e` naming; add the generated `.xvi` as the background layer; and write XTherion-compatible `##XTHERION## xth_me_image_insert` metadata to the TH2 source.
 - Reading `xth_me_image_insert` metadata shall accept XTherion-compatible placement variants, including the common form where the y/base coordinate is an unbraced token after the first metadata group.
 - Adding or removing raster background images from the TH2 Visual map editor shall maintain XTherion-compatible `##XTHERION## xth_me_area_adjust` and `##XTHERION## xth_me_area_zoom_to` header metadata.
 - Editing a raster background layer's position, visibility, or gamma in the TH2 Visual map editor shall update the corresponding `xth_me_image_insert` metadata so reopening in XTherion or Therion Studio restores the same background reference.
@@ -570,6 +573,7 @@ Platform modifier mapping:
 | New Therion Source (.th) | File -> New; toolbar New Document menu | none | Open a new unsaved `.th` text document initialized with `encoding utf-8`; the first save shall prompt for a destination path |
 | New Therion Map (.th2) | File -> New; toolbar New Document menu | none | Open a new unsaved `.th2` map document initialized with `encoding utf-8`; the first save shall prompt for a destination path |
 | New Therion Config (.thconfig) | File -> New; toolbar New Document menu | none | Open a new unsaved `.thconfig` Therion config text document initialized with `encoding utf-8`; the first save shall prompt for a destination path |
+| Import PocketTopo Text… | File -> Import | none | Import a PocketTopo Therion export `.txt` into the active `.th` text document; hidden when the active document is not `.th` |
 | Settings / Preferences | File or native application menu | platform-standard Preferences placement where available | Open application settings for language override, Therion executable path, and default `.th` / Therion config editor mode |
 | About Therion Studio | Help or native application menu | none | Show installed version/build metadata, Qt/platform details, repository, license, maintainer, and third-party notice location |
 | Expand/Collapse Sidebar | View | none | Expand or collapse the left sidebar content without changing the active document |
@@ -1061,6 +1065,7 @@ The criteria below are intended for implementation verification and QA.
 - Freehand line drawing serializes simplified bezier line geometry.
 - Background layers support persisted position, visibility, gamma, opacity, and `.xvi` rendering where applicable.
 - Raster background image add/move/show-hide/gamma/remove operations write and maintain XTherion-compatible `xth_me_area_adjust`, `xth_me_area_zoom_to`, and `xth_me_image_insert` metadata in the TH2 source.
+- PocketTopo Therion export (`.txt`) background import generates a plan or extended-elevation `.xvi` file, adds it as a background layer, and persists the reference through XTherion-compatible `xth_me_image_insert` metadata.
 - The Backgrounds inspector exposes layer controls without editor-generated grid toggles or spacing fields; `.xvi` grid lines render only as part of `.xvi` background content.
 - Map-driven scrap insertion writes XTherion-compatible default `-scale` metadata, while existing Therion/XTherion `-scale` forms are preserved unless explicitly edited.
 - Selecting a scrap in `Selection` exposes manual scale calibration controls in a separate `Scrap Scale` section and writes XTherion-compatible 8-parameter `-scale [...]` metadata to the scrap command.

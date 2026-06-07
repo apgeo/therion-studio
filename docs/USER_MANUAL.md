@@ -127,6 +127,7 @@ For `.th2` files:
 - a `Selection` inspector tab in Blocks mode for editing the selected block header and supported inline options; the first panel is titled with the selected Therion command and shows its source line
 - when no block is selected, the Blocks `Selection` tab shows `No block selected.`; when the fixed root `encoding` card is selected, it shows the command and encoding value as read-only text
 - find and replace from the `Edit` menu
+- `File -> Import -> Import PocketTopo Text...` is shown only when an existing or unsaved `.th` text document is active, and imports a PocketTopo Therion export (`.txt`) at the cursor as Therion `centreline` blocks
 - a `File` inspector tab with a panel titled by the current file name, full path, copy-path action, on-disk size, last-modified timestamp, current encoding, and UTF-8 conversion for non-UTF-8 files
 
 ### 4.3 Project Search
@@ -238,10 +239,12 @@ In `Inspector -> Objects`, you can select objects, reorder objects by drag/drop,
 
 In `Inspector -> Backgrounds`, you can:
 
-- add, remove, and reorder raster or `.xvi` background layers
+- add, remove, and reorder raster, `.xvi`, or PocketTopo `.txt` background layers
 - show/hide individual layers
 - edit layer position and opacity
 - adjust `Gamma` for raster layers (`.xvi` uses fixed Gamma)
+
+When you add a PocketTopo Therion export (`.txt`) as a map background, Therion Studio asks for XVI scale, resolution, grid spacing, and plan or extended-elevation projection. It writes a generated `_p.xvi` or `_e.xvi` file next to the PocketTopo export, adds that `.xvi` as the background layer, and stores XTherion-compatible image metadata in the `.th2` source.
 
 Therion Studio does not generate a separate metric grid. Use background layers, especially `.xvi`, for reference grid content.
 

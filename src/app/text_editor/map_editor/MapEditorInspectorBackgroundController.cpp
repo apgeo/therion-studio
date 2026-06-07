@@ -169,10 +169,12 @@ void MapEditorInspectorBackgroundController::refreshInspectorBackgroundSelection
     const bool hasLayer = selectedIndex >= 0 && selectedIndex < layerCount;
     const bool supportsGamma = hasLayer
         && (!context_.layerSupportsGamma || context_.layerSupportsGamma(selectedIndex));
+    const bool supportsPositionEditing = hasLayer
+        && (!context_.layerSupportsPositionEditing || context_.layerSupportsPositionEditing(selectedIndex));
     context_.moveUpButton->setEnabled(hasLayer && selectedIndex > 0);
     context_.moveDownButton->setEnabled(hasLayer && selectedIndex >= 0 && selectedIndex < layerCount - 1);
-    context_.positionXSpin->setEnabled(hasLayer);
-    context_.positionYSpin->setEnabled(hasLayer);
+    context_.positionXSpin->setEnabled(supportsPositionEditing);
+    context_.positionYSpin->setEnabled(supportsPositionEditing);
     context_.opacitySlider->setEnabled(hasLayer);
     context_.gammaSlider->setEnabled(supportsGamma);
     context_.opacityResetButton->setEnabled(hasLayer);

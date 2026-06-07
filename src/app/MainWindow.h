@@ -131,6 +131,8 @@ private:
     void refreshRecentProjectsUi();
     void refreshRecentFilesUi();
     void recordRecentFilePath(const QString &filePath);
+    void importPocketTopoTextToActiveEditor();
+    void refreshFileImportActions();
     TherionStudio::TextEditorTab *createUntitledTextTab(const QString &suggestedFileName, const QString &contents);
     TherionStudio::MapEditorTab *createUntitledMapEditorTab(const QString &suggestedFileName, const QString &contents);
     bool saveDocumentWidget(QWidget *documentWidget, QString *errorMessage = nullptr);
@@ -309,6 +311,8 @@ private:
     QAction *newTherionConfigAction_ = nullptr;
     QMenu *recentProjectsMenu_ = nullptr;
     QMenu *recentFilesMenu_ = nullptr;
+    QMenu *importMenu_ = nullptr;
+    QAction *importPocketTopoAction_ = nullptr;
     QAction *undoAction_ = nullptr;
     QAction *redoAction_ = nullptr;
     QAction *sidebarCollapseAction_ = nullptr;

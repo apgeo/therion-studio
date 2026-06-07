@@ -164,6 +164,7 @@ public:
     qreal backgroundLayerOpacity(int index) const;
     qreal backgroundLayerGamma(int index) const;
     bool backgroundLayerSupportsGamma(int index) const;
+    bool backgroundLayerSupportsPositionEditing(int index) const;
     QPointF backgroundLayerPosition(int index) const;
     int selectedBackgroundLayerIndex() const;
     void setSelectedBackgroundLayerIndex(int index);

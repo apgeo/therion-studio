@@ -181,6 +181,7 @@ public:
     bool configureCommandAtLine(const QString &kind, int lineNumber, bool showCommandHelpOnly = false);
     bool deleteCommandAtLine(int lineNumber);
     void replaceTextForCommand(const QString &contents);
+    void insertTextAtCursor(const QString &contents);
 
     QString filePath() const;
     QString displayName() const;

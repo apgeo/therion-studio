@@ -78,6 +78,8 @@ set(THERION_CORE_SOURCES
     src/core/QtFileSystem.h
     src/core/MapBackgroundPlacement.cpp
     src/core/MapBackgroundPlacement.h
+    src/core/PocketTopoImport.cpp
+    src/core/PocketTopoImport.h
     src/core/TherionBackgroundMetadata.cpp
     src/core/TherionBackgroundMetadata.h
     src/core/TherionXviParser.cpp
@@ -871,6 +873,9 @@ therion_add_core_unit_test(MapBackgroundPlacementTest
 therion_add_core_unit_test(TherionBackgroundMetadataTest
     tests/TherionBackgroundMetadataTest.cpp)
 
+therion_add_core_unit_test(PocketTopoImportTest
+    tests/PocketTopoImportTest.cpp)
+
 therion_add_core_unit_test(TherionXviParserTest
     tests/TherionXviParserTest.cpp)
 
@@ -1220,6 +1225,7 @@ set(THERION_UNIT_TEST_TARGETS
     TherionProjectStructureIndexTest
     MapBackgroundPlacementTest
     TherionBackgroundMetadataTest
+    PocketTopoImportTest
     TherionXviParserTest
     MapGeometryFeatureParsingTest
     DocumentFileEncodingTest

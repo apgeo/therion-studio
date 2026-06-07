@@ -126,6 +126,7 @@ Pro `.th2` soubory:
 - záložka `Výběr` v inspektoru režimu Bloky pro editaci hlavičky vybraného bloku a podporovaných inline voleb; první panel je pojmenovaný podle vybraného příkazu Therionu a ukazuje zdrojový řádek,
 - když není vybraný žádný blok, záložka `Výběr` v režimu Bloky ukazuje `Není vybrán žádný blok.`; při výběru pevné kořenové karty `encoding` ukazuje příkaz a hodnotu kódování jako text pouze pro čtení,
 - hledání a nahrazení z menu `Úpravy`,
+- `Soubor -> Import -> Importovat PocketTopo text...` se zobrazí jen tehdy, když je aktivní existující nebo neuložený `.th` textový dokument, a importuje PocketTopo Therion export (`.txt`) na pozici kurzoru jako Therion bloky `centreline`,
 - záložka `Soubor` v inspektoru s panelem pojmenovaným podle aktuálního souboru, plnou cestou, akcí pro zkopírování cesty, velikostí na disku, časem poslední změny, aktuálním kódováním a převodem do UTF-8 pro soubory mimo UTF-8.
 
 ### 4.3 Projektové hledání
@@ -231,10 +232,12 @@ V `Inspektor -> Objekty` lze vybírat objekty, měnit jejich pořadí přetažen
 
 V `Inspektor -> Pozadí` lze:
 
-- přidat, odebrat a řadit rastrové nebo `.xvi` vrstvy pozadí,
+- přidat, odebrat a řadit rastrové, `.xvi` nebo PocketTopo `.txt` vrstvy pozadí,
 - zobrazit/skrýt jednotlivé vrstvy,
 - měnit polohu a krytí vrstvy,
 - upravit `Gamma` pro rastrové vrstvy (`.xvi` používá pevnou Gamma).
+
+Při přidání PocketTopo Therion exportu (`.txt`) jako mapového pozadí se Therion Studio zeptá na měřítko XVI, rozlišení, rozestup gridu a projekci plán nebo rozvinutý řez. Vedle PocketTopo exportu zapíše vygenerovaný soubor `_p.xvi` nebo `_e.xvi`, přidá toto `.xvi` jako vrstvu pozadí a uloží do `.th2` zdroje XTherion-kompatibilní metadata obrázku.
 
 Therion Studio negeneruje samostatný metrický grid. Pro referenční mřížku použijte vrstvy pozadí, hlavně `.xvi`.
 

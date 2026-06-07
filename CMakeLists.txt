@@ -85,6 +85,7 @@ set(THERION_CORE_SOURCES
     src/core/TherionXviParser.cpp
     src/core/TherionXviParser.h
     src/core/TherionFileTypes.h
+    src/core/TherionSourceText.h
     src/core/TherionStringUtils.h
     src/core/TherionTokenRules.h
     src/core/TherionDocumentEditor.cpp
@@ -858,6 +859,9 @@ therion_add_core_unit_test(TherionDocumentParserTest
 therion_add_core_unit_test(TherionTokenRulesTest
     tests/TherionTokenRulesTest.cpp)
 
+therion_add_core_unit_test(TherionSourceTextTest
+    tests/TherionSourceTextTest.cpp)
+
 therion_add_core_unit_test(CommandCatalogStoreTest
     tests/CommandCatalogStoreTest.cpp)
 
@@ -1221,6 +1225,7 @@ set(THERION_UNIT_TEST_TARGETS
     CommandOptionParserTest
     TherionDocumentEditorTest
     TherionDocumentParserTest
+    TherionSourceTextTest
     TherionTokenRulesTest
     TherionProjectStructureIndexTest
     MapBackgroundPlacementTest

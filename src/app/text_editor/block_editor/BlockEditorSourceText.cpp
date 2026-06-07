@@ -1,5 +1,7 @@
 #include "BlockEditorSourceText.h"
 
+#include "../../../core/TherionSourceText.h"
+
 #include <QtGlobal>
 
 namespace TherionStudio
@@ -44,25 +46,17 @@ QString stripTrailingContinuationMarker(const QString &line)
 
 QString blockEditorSourceLineEnding(const QString &contents)
 {
-    return contents.contains(QStringLiteral("\r\n"))
-        ? QStringLiteral("\r\n")
-        : QStringLiteral("\n");
+    return TherionSourceText::detectedLineEnding(contents);
 }
 
 QStringList blockEditorNormalizedSourceLines(const QString &contents)
 {
-    QStringList lines = contents.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-    for (QString &line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-    }
-    return lines;
+    return TherionSourceText::splitTextLines(contents);
 }
 
 QString blockEditorJoinSourceLines(const QString &originalContents, const QStringList &lines)
 {
-    return lines.join(blockEditorSourceLineEnding(originalContents));
+    return TherionSourceText::joinTextLines(originalContents, lines);
 }
 
 QVector<BlockEditorLogicalLine> blockEditorBuildLogicalLines(const QStringList &lines)

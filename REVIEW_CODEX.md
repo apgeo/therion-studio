@@ -24,6 +24,7 @@ Completed follow-ups from this review:
 - ~~`TherionCommandLineModel` now moves the existing catalog-backed command option parsing model into `src/core/`, and Map/Block option UI call sites use it directly.~~
 - ~~`TherionCommandLineModel` now owns shared command argument and option-row serialization helpers used by option validation, Blocks option argument editing, and Map/Block command options dialog flows.~~
 - ~~`TherionCommandLineModel` now owns shared command option lookup helpers for normalized option names, option values, value maps, and toggle values; Map inspector, map rendering/projections, map delete/split/reference planners, PocketTopo background placement, and Structure indexing use these helpers instead of local option-value parsers.~~
+- ~~`TherionSourceText` now owns physical source-line and newline preservation helpers, with the legacy normalized line-splitting helpers and Block editor split/join wrappers routed through it.~~
 - ~~Raster background source images now use a bounded path/mtime/size cache so repeated gamma and placement operations do not decode the same raster file repeatedly.~~
 - ~~Raster background gamma correction and scaled image preparation now run through `QtConcurrent` with request-id checks before applying the pixmap back on the UI thread.~~
 - ~~Manual raster background adds now decode initial source images through `QtConcurrent`.~~
@@ -41,6 +42,7 @@ Still open:
 - The shared source transaction controller is not yet the single source-write path for Raw, Blocks, Map, and all inspector workflows.
 - Command-line modeling and higher-level option parsing/serialization are still duplicated across command option parsing, Block editor details, Map object settings, and source rewriters.
 - The unified lossless parser/source document model remains post-release architecture work.
+- `TherionSourceText` is only the first line/newline preservation slice; parser snapshots, source ranges, and transaction integration still need migration.
 - Large map/background/rewriter files are still large and should be split only when a focused behavior change gives a natural extraction point.
 
 Recommended next step:
@@ -202,6 +204,7 @@ Current follow-up status:
 
 - The low-level whitespace tokenization and line-splitting duplicates above have been consolidated into `src/core/TherionStringUtils.h` in the current cleanup branch.
 - Numeric-token classification and option-boundary checks have been consolidated into `src/core/TherionTokenRules.h`.
+- Physical source-line splitting and newline preservation now live in `src/core/TherionSourceText.h`; `TherionStringUtils` and Block editor source split/join wrappers delegate to it.
 - The first shared command-line model has been extracted into `src/core/TherionCommandLineModel.h`; the legacy app-level `CommandOptionParser` wrapper has been removed.
 - Command-line option parsing plus option-row/value serialization now lives behind focused command-line model APIs rather than broader generic utilities.
 - Command option lookup, normalized field-name matching, value maps, and toggle parsing now live behind `TherionCommandLineModel` and are used by the map inspector, map renderer/projection extraction, map delete/split/reference planners, PocketTopo background placement, and Structure indexing.
@@ -214,7 +217,7 @@ Risk:
 Recommended direction:
 
 - ~~Centralize token classification in `TherionTokenRules`.~~
-- Centralize line splitting/newline preservation in `TherionSourceText`.
+- ~~Centralize line splitting/newline preservation in `TherionSourceText`.~~
 - ~~Extract low-level text helpers such as whitespace tokenization and normalized line splitting into a focused core utility such as `TherionStringUtils`, not broad generic `Utils`.~~
 - ~~Centralize command option parsing in a shared catalog-backed `TherionCommandLineModel`.~~
 - ~~Continue centralizing option serialization/editing helpers in the same command-line model.~~

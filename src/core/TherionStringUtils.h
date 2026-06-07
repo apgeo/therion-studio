@@ -1,5 +1,7 @@
 #pragma once
 
+#include "TherionSourceText.h"
+
 #include <QRegularExpression>
 #include <QString>
 #include <QStringList>
@@ -13,13 +15,7 @@ inline QStringList tokenizeWhitespace(const QString &text)
 
 inline QStringList splitLinesTrimmingCarriageReturns(const QString &contents)
 {
-    QStringList lines = contents.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-    for (QString &line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-    }
-    return lines;
+    return TherionSourceText::splitTextLines(contents);
 }
 
 inline QStringList splitLinesNormalizingLineEndings(const QString &contents)

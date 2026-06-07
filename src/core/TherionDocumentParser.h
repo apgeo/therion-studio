@@ -1,5 +1,7 @@
 #pragma once
 
+#include "TherionSourceText.h"
+
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -32,11 +34,32 @@ struct TherionParsedLine
     QString commentText;
 };
 
+struct TherionParsedSourceLine
+{
+    int lineNumber = 0;
+    QString text;
+    QString lineEnding;
+    TherionParsedLine parsed;
+
+    [[nodiscard]] bool hasTokens() const;
+    [[nodiscard]] bool isBlank() const;
+    [[nodiscard]] bool isCommentOnly() const;
+};
+
+struct TherionParsedSourceDocument
+{
+    QVector<TherionParsedSourceLine> lines;
+
+    [[nodiscard]] QString toText() const;
+    [[nodiscard]] QVector<TherionParsedLine> tokenLines() const;
+};
+
 class TherionDocumentParser final
 {
 public:
     [[nodiscard]] static TherionParsedLine parseLine(const QString &line, int lineNumber = 0);
     [[nodiscard]] static QVector<TherionParsedLine> parseText(const QString &text);
+    [[nodiscard]] static TherionParsedSourceDocument parseSourceDocument(const QString &text);
     [[nodiscard]] static QStringList tokenizeLine(const QString &line);
 };
 }

@@ -86,6 +86,51 @@ void parseTextKeepsOnlyTokenLinesWithPhysicalLineNumbers()
             "CRLF line endings should be stripped from parsed raw line text");
 }
 
+void parseSourceDocumentPreservesAllPhysicalLines()
+{
+    const QString text = QStringLiteral(
+        "# file header\r\n"
+        "\r"
+        "survey cave\r\n"
+        "  # local note\n"
+        "  centerline\n"
+        "    data normal from to tape compass clino\n"
+        "  endcenterline\r"
+        "endsurvey\r\n");
+
+    const TherionParsedSourceDocument document = TherionDocumentParser::parseSourceDocument(text);
+    require(document.toText() == text, "lossless source document should round-trip original text and line endings");
+    require(document.lines.size() == 9, "lossless source document should keep trailing empty physical line");
+
+    require(document.lines.at(0).lineNumber == 1
+                && document.lines.at(0).isCommentOnly()
+                && document.lines.at(0).lineEnding == QStringLiteral("\r\n"),
+            "lossless source document should preserve comment-only CRLF lines");
+    require(document.lines.at(1).lineNumber == 2
+                && document.lines.at(1).isBlank()
+                && document.lines.at(1).lineEnding == QStringLiteral("\r"),
+            "lossless source document should preserve blank CR lines");
+    require(document.lines.at(2).lineNumber == 3
+                && document.lines.at(2).hasTokens()
+                && document.lines.at(2).parsed.directive == QStringLiteral("survey"),
+            "lossless source document should preserve parsed token lines with physical line numbers");
+    require(document.lines.at(3).lineNumber == 4
+                && document.lines.at(3).isCommentOnly()
+                && document.lines.at(3).parsed.commentStart == 2,
+            "lossless source document should preserve indented comment-only source columns");
+    require(document.lines.last().lineNumber == 9
+                && document.lines.last().isBlank()
+                && document.lines.last().lineEnding.isEmpty(),
+            "lossless source document should keep final empty line after trailing newline");
+
+    const QVector<TherionParsedLine> tokenLines = document.tokenLines();
+    require(tokenLines.size() == 5, "tokenLines should expose the legacy token-only projection");
+    require(tokenLines.at(0).lineNumber == 3 && tokenLines.at(0).directive == QStringLiteral("survey"),
+            "tokenLines should keep physical line numbers for token lines");
+    require(tokenLines.last().lineNumber == 8 && tokenLines.last().directive == QStringLiteral("endsurvey"),
+            "tokenLines should include the final command before the trailing empty line");
+}
+
 void parsesLinePointRowsAndReviseStations()
 {
     const TherionParsedLine linePointRow = TherionDocumentParser::parseLine(
@@ -117,6 +162,7 @@ int main(int argc, char **argv)
     parsesQuotedStringsAndComments();
     parsesCommentOnlyLinesWithoutDirectiveTokens();
     parseTextKeepsOnlyTokenLinesWithPhysicalLineNumbers();
+    parseSourceDocumentPreservesAllPhysicalLines();
     parsesLinePointRowsAndReviseStations();
     return 0;
 }

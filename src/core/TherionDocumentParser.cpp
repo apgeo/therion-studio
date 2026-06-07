@@ -4,6 +4,43 @@
 
 namespace TherionStudio
 {
+bool TherionParsedSourceLine::hasTokens() const
+{
+    return !parsed.tokens.isEmpty();
+}
+
+bool TherionParsedSourceLine::isBlank() const
+{
+    return text.trimmed().isEmpty();
+}
+
+bool TherionParsedSourceLine::isCommentOnly() const
+{
+    return parsed.tokens.isEmpty() && parsed.commentStart >= 0;
+}
+
+QString TherionParsedSourceDocument::toText() const
+{
+    QString contents;
+    for (const TherionParsedSourceLine &line : lines) {
+        contents += line.text;
+        contents += line.lineEnding;
+    }
+    return contents;
+}
+
+QVector<TherionParsedLine> TherionParsedSourceDocument::tokenLines() const
+{
+    QVector<TherionParsedLine> parsedLines;
+    for (const TherionParsedSourceLine &line : lines) {
+        if (line.parsed.tokens.isEmpty()) {
+            continue;
+        }
+        parsedLines.append(line.parsed);
+    }
+    return parsedLines;
+}
+
 TherionParsedLine TherionDocumentParser::parseLine(const QString &line, int lineNumber)
 {
     TherionParsedLine parsedLine;
@@ -188,6 +225,27 @@ QVector<TherionParsedLine> TherionDocumentParser::parseText(const QString &text)
     }
 
     return parsedLines;
+}
+
+TherionParsedSourceDocument TherionDocumentParser::parseSourceDocument(const QString &text)
+{
+    TherionParsedSourceDocument document;
+    const TherionSourceText sourceText = TherionSourceText::fromText(text);
+    const QVector<TherionSourceLine> &physicalLines = sourceText.physicalLines();
+    document.lines.reserve(physicalLines.size());
+
+    for (int index = 0; index < physicalLines.size(); ++index) {
+        const TherionSourceLine &sourceLine = physicalLines.at(index);
+        const int lineNumber = index + 1;
+        document.lines.append(TherionParsedSourceLine{
+            lineNumber,
+            sourceLine.text,
+            sourceLine.lineEnding,
+            parseLine(sourceLine.text, lineNumber)
+        });
+    }
+
+    return document;
 }
 
 QStringList TherionDocumentParser::tokenizeLine(const QString &line)

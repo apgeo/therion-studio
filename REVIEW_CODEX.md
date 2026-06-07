@@ -29,7 +29,7 @@ Completed follow-ups from this review:
 - ~~`TherionDocumentParser::parseSourceDocument()` now provides a first lossless source snapshot API that keeps blank/comment-only physical lines, line endings, line numbers, parsed spans, and a legacy token-line projection without changing `parseText()` consumers.~~
 - ~~Lossless parser source lines now expose absolute source ranges and token absolute range helpers, so future rewrites can address document text without recalculating offsets locally.~~
 - ~~`TherionDocumentParser::parseTokenLines()` now provides the named compatibility projection for existing token-line consumers backed by the lossless source snapshot.~~
-- ~~`ProjectStructureIndex` and selected map read-only projections now read token lines through the named lossless source snapshot compatibility projection instead of calling `parseText()` directly.~~
+- ~~`ProjectStructureIndex`, `TherionDocumentEditor` scrap-name lookup, and selected map read-only projections now read token lines through the named lossless source snapshot compatibility projection instead of calling `parseText()` directly.~~
 - ~~`MapEditorAreaReferenceResolver` now reads token lines through the lossless source snapshot compatibility projection while preserving physical line numbers across blank/comment lines.~~
 - ~~`MapEditorSourceReferenceResolver` line-feature lookup now reads through the lossless source snapshot compatibility projection, with focused coverage for physical line numbers after blank/comment lines.~~
 - ~~Raster background source images now use a bounded path/mtime/size cache so repeated gamma and placement operations do not decode the same raster file repeatedly.~~
@@ -215,7 +215,7 @@ Current follow-up status:
 - `TherionDocumentParser::parseSourceDocument()` now exposes a lossless physical-line snapshot plus `tokenLines()` compatibility projection while leaving `parseText()` behavior unchanged.
 - Lossless source lines now expose absolute line ranges and token range helpers for future source-rewrite migration.
 - `TherionDocumentParser::parseTokenLines()` now provides the named compatibility projection for token-line consumers backed by the lossless source snapshot.
-- `ProjectStructureIndex` and selected map read-only projections now use the named lossless token-line projection instead of calling `parseText()` directly.
+- `ProjectStructureIndex`, `TherionDocumentEditor` scrap-name lookup, and selected map read-only projections now use the named lossless token-line projection instead of calling `parseText()` directly.
 - `MapEditorAreaReferenceResolver` and `MapEditorSourceReferenceResolver` use the lossless token-line projection for area/border and text-to-line-feature lookups.
 - The first shared command-line model has been extracted into `src/core/TherionCommandLineModel.h`; the legacy app-level `CommandOptionParser` wrapper has been removed.
 - Command-line option parsing plus option-row/value serialization now lives behind focused command-line model APIs rather than broader generic utilities.

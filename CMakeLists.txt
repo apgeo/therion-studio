@@ -1088,6 +1088,45 @@ qt_add_executable(BlockEditorApplyExecutorTest
 
 target_link_libraries(BlockEditorApplyExecutorTest PRIVATE Qt6::Widgets)
 
+qt_add_executable(BlockEditorDocumentOutlineBuilderTest
+    tests/BlockEditorDocumentOutlineBuilderTest.cpp
+    src/app/text_editor/block_editor/BlockEditorDirectiveRules.cpp
+    src/app/text_editor/block_editor/BlockEditorDirectiveRules.h
+    src/app/text_editor/block_editor/BlockEditorDocumentOutlineBuilder.cpp
+    src/app/text_editor/block_editor/BlockEditorDocumentOutlineBuilder.h
+    src/app/text_editor/block_editor/BlockEditorSourceText.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceText.h)
+
+target_link_libraries(BlockEditorDocumentOutlineBuilderTest PRIVATE therion_core Qt6::Core)
+
+qt_add_executable(BlockEditorCanvasRebuildControllerTest
+    tests/BlockEditorCanvasRebuildControllerTest.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.h
+    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasRebuildController.h
+    src/app/text_editor/block_editor/BlockEditorDirectiveRules.cpp
+    src/app/text_editor/block_editor/BlockEditorDirectiveRules.h
+    src/app/text_editor/block_editor/BlockEditorSourceController.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceController.h
+    src/app/text_editor/block_editor/BlockEditorSourceText.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceText.h)
+
+target_link_libraries(BlockEditorCanvasRebuildControllerTest PRIVATE therion_core Qt6::Widgets Qt6::Svg)
+
+qt_add_executable(BlockEditorToolboxControllerTest
+    tests/BlockEditorToolboxControllerTest.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.cpp
+    src/app/text_editor/block_editor/BlockEditorCanvasItem.h
+    src/app/text_editor/block_editor/BlockEditorDirectiveRules.cpp
+    src/app/text_editor/block_editor/BlockEditorDirectiveRules.h
+    src/app/text_editor/block_editor/BlockEditorSourceText.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceText.h
+    src/app/text_editor/block_editor/BlockEditorToolboxController.cpp
+    src/app/text_editor/block_editor/BlockEditorToolboxController.h)
+
+target_link_libraries(BlockEditorToolboxControllerTest PRIVATE therion_core Qt6::Widgets Qt6::Svg)
+
 set(THERION_EDITOR_UI_TEST_BASE_SOURCES
     ${THERION_TEXT_EDITOR_SHARED_SOURCES})
 
@@ -1279,6 +1318,9 @@ set(THERION_UNIT_TEST_TARGETS
     MainWindowDocumentTabOpenControllerTest
     MainWindowTherionRunnerControllerTest
     BlockEditorApplyExecutorTest
+    BlockEditorCanvasRebuildControllerTest
+    BlockEditorDocumentOutlineBuilderTest
+    BlockEditorToolboxControllerTest
     TherionExecutableSelectionControllerTest
     TherionRunnerConfigDisplayControllerTest
     TherionRunnerConfigResolverTest

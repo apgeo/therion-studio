@@ -182,6 +182,8 @@ public:
     bool deleteCommandAtLine(int lineNumber);
     void replaceTextForCommand(const QString &contents);
     void insertTextAtCursor(const QString &contents);
+    QString importInsertionScopeToken() const;
+    void insertTextAtImportInsertionPoint(const QString &contents);
 
     QString filePath() const;
     QString displayName() const;
@@ -250,6 +252,13 @@ private:
         Unsupported,
     };
 
+    struct ImportInsertionPoint
+    {
+        int insertAfterLine = 0;
+        QString scopeToken;
+        bool blockSelection = false;
+    };
+
     bool eventFilter(QObject *watched, QEvent *event) override;
     void refreshCurrentLineHighlight();
     void refreshTitle();
@@ -258,6 +267,8 @@ private:
     void applyDirtyStateFromCurrentState();
     void replaceTextForSystemNormalization(const QString &contents);
     TextEditorCommandMetadata &mutableCommandMetadata() { return commandMetadata_; }
+    ImportInsertionPoint resolveImportInsertionPoint() const;
+    void insertTextAfterLine(int lineNumber, const QString &contents);
     QString displayPath() const;
     void buildAll();
     void buildModeSelectorRow();

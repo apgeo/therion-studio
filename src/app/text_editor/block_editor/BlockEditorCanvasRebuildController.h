@@ -25,6 +25,7 @@ struct BlockEditorCanvasRebuildContext
     const TextEditorCommandMetadata *commandMetadata = nullptr;
     std::function<BlockEditorSourceContext()> sourceContext;
     std::function<bool()> isBlocksModeSupportedForCurrentFile;
+    std::function<QString(const QString &, const QStringList &, int)> resolveScopeForCommandAtLine;
     std::function<void(int)> handleBlockDeleteRequest;
     std::function<void(int, const QPointF &)> handleBlockMoveRequest;
     std::function<void(int, const QPointF &)> updateBlockMovePreview;

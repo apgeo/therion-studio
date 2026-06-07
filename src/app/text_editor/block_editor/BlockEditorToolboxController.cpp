@@ -89,6 +89,12 @@ bool isTh2MapObjectCommand(const QString &commandToken)
         || normalized == QStringLiteral("line")
         || normalized == QStringLiteral("area");
 }
+
+bool isDataBodyOnlyToolboxCommand(const QString &contextToken, const QString &commandToken)
+{
+    return normalizeDirective(contextToken) == QStringLiteral("centerline")
+        && normalizeDirective(commandToken) == QStringLiteral("extend");
+}
 }
 
 BlockEditorToolboxController::BlockEditorToolboxController(BlockEditorToolboxContext context)
@@ -270,6 +276,9 @@ void BlockEditorToolboxController::populateBlockToolbox()
                 || normalizedCommand == QStringLiteral("none")
                 || normalizedCommand == QStringLiteral("encoding")
                 || normalizedCommand.startsWith(QStringLiteral("end"))) {
+                continue;
+            }
+            if (isDataBodyOnlyToolboxCommand(contextToken, normalizedCommand)) {
                 continue;
             }
             const QString parentKind = contextToken == QStringLiteral("none") ? QString() : contextToken;

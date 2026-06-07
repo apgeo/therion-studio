@@ -58,10 +58,7 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
 
     outline.entries.reserve(parsedLines.size());
     QVector<OpenContainer> openStack;
-    const QString dataScope = context_.resolveScopeForCommandAtLine(QStringLiteral("data"),
-                                                                     outline.lines,
-                                                                     outline.lines.size() + 1);
-    const QString dataScopeClosing = completionClosingDirectiveForOpening(dataScope);
+    int activeDataEntryEndLine = 0;
 
     for (int parsedIndex = 0; parsedIndex < parsedLines.size(); ++parsedIndex) {
         const TherionParsedLine &parsedLine = parsedLines.at(parsedIndex);
@@ -69,6 +66,9 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
         const BlockEditorLogicalLine currentLogicalLine = parsedIndex < parsedLogicalLines.size()
             ? parsedLogicalLines.at(parsedIndex)
             : BlockEditorLogicalLine{currentLineNumber, currentLineNumber, parsedLine.rawText};
+        if (currentLineNumber <= activeDataEntryEndLine) {
+            continue;
+        }
         if (isFullLineComment(parsedLine)) {
             BlockEditorDocumentEntry entry;
             entry.kind = QStringLiteral("comment");
@@ -102,6 +102,9 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
         if (isBlockOpeningDirective(directive)) {
             int parentLine = openStack.isEmpty() ? 0 : openStack.last().lineNumber;
             if (directive == QStringLiteral("data")) {
+                const QString dataScope = context_.resolveScopeForCommandAtLine(QStringLiteral("data"),
+                                                                                 outline.lines,
+                                                                                 currentLogicalLine.startLine);
                 const int dataScopeParentLine = nearestOpenContainerLine(openStack, dataScope);
                 if (dataScopeParentLine > 0) {
                     parentLine = dataScopeParentLine;
@@ -125,6 +128,10 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
                 }
                 openStack.append(OpenContainer{directive, currentLineNumber});
             } else if (directive == QStringLiteral("data")) {
+                const QString dataScope = context_.resolveScopeForCommandAtLine(QStringLiteral("data"),
+                                                                                 outline.lines,
+                                                                                 currentLogicalLine.startLine);
+                const QString dataScopeClosing = completionClosingDirectiveForOpening(dataScope);
                 const int dataScopeParentLine = nearestOpenContainerLine(openStack, dataScope);
                 int dataScopeEndLine = outline.lines.size() + 1;
                 if (dataScopeParentLine > 0) {
@@ -156,6 +163,7 @@ BlockEditorDocumentOutline BlockEditorDocumentOutlineBuilder::buildFromContents(
                     dataBodyLastLine = currentLineNumber;
                 }
                 entry.endLine = qMax(dataBodyLastLine, currentLogicalLine.endLine);
+                activeDataEntryEndLine = entry.endLine;
             }
 
             outline.entryIndexByStartLine.insert(entry.startLine, outline.entries.size());

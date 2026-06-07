@@ -29,6 +29,9 @@ BlockEditorCanvasRebuildContext TextEditorTab::blockEditorCanvasRebuildContext()
     context.isBlocksModeSupportedForCurrentFile = [this]() {
         return isBlocksModeSupportedForCurrentFile();
     };
+    context.resolveScopeForCommandAtLine = [this](const QString &commandToken, const QStringList &lines, int lineNumber) {
+        return resolveScopeForCommandAtLine(commandToken, lines, lineNumber);
+    };
     context.handleBlockDeleteRequest = [this](int lineNumber) {
         handleBlockDeleteRequest(lineNumber);
     };

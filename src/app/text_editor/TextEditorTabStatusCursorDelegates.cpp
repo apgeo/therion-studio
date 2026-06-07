@@ -4,14 +4,32 @@
 #include "TextEditorCursorController.h"
 #include "DocumentFileInspector.h"
 #include "TextEditorStatusController.h"
+#include "block_editor/BlockEditorDirectiveRules.h"
+#include "block_editor/BlockEditorDocumentOutlineBuilder.h"
 
 #include <QPalette>
 #include <QPlainTextEdit>
+#include <QTextBlock>
 #include <QTextCursor>
 #include <QTextDocument>
 
 namespace TherionStudio
 {
+namespace
+{
+QString parentScopeForEntry(const BlockEditorDocumentOutline &outline, const BlockEditorDocumentEntry &entry)
+{
+    if (entry.parentLine <= 0) {
+        return QStringLiteral("none");
+    }
+    const auto parentIndex = outline.entryIndexByStartLine.constFind(entry.parentLine);
+    if (parentIndex == outline.entryIndexByStartLine.constEnd()) {
+        return QStringLiteral("none");
+    }
+    return BlockEditorDirectiveRules::normalizeDirective(outline.entries.at(*parentIndex).kind);
+}
+}
+
 void TextEditorTab::goToLine(int lineNumber)
 {
     if (cursorController_ != nullptr) {
@@ -68,6 +86,77 @@ void TextEditorTab::insertTextAtCursor(const QString &contents)
     cursor.endEditBlock();
     editor_->setTextCursor(cursor);
     editor_->setFocus();
+}
+
+TextEditorTab::ImportInsertionPoint TextEditorTab::resolveImportInsertionPoint() const
+{
+    ImportInsertionPoint point;
+    if (!blocksModeActive_ || blockDetailsSelectedLineNumber_ <= 0 || editor_ == nullptr) {
+        return point;
+    }
+
+    const BlockEditorDocumentOutline outline =
+        BlockEditorDocumentOutlineBuilder(blockEditorDocumentOutlineContext()).buildFromContents(editor_->toPlainText());
+    const auto entryIndex = outline.entryIndexByStartLine.constFind(blockDetailsSelectedLineNumber_);
+    if (entryIndex == outline.entryIndexByStartLine.constEnd()) {
+        return point;
+    }
+
+    const BlockEditorDocumentEntry entry = outline.entries.at(*entryIndex);
+    const QString kind = BlockEditorDirectiveRules::normalizeDirective(entry.kind);
+    point.blockSelection = true;
+    if (BlockEditorDirectiveRules::isContainerBlockDirective(kind)) {
+        point.insertAfterLine = entry.startLine;
+        point.scopeToken = kind;
+    } else {
+        point.insertAfterLine = entry.endLine;
+        point.scopeToken = parentScopeForEntry(outline, entry);
+    }
+    return point;
+}
+
+QString TextEditorTab::importInsertionScopeToken() const
+{
+    return resolveImportInsertionPoint().scopeToken;
+}
+
+void TextEditorTab::insertTextAfterLine(int lineNumber, const QString &contents)
+{
+    if (editor_ == nullptr || contents.isEmpty()) {
+        return;
+    }
+
+    QTextCursor cursor(editor_->document());
+    const int blockCount = editor_->document()->blockCount();
+    if (lineNumber > 0 && lineNumber < blockCount) {
+        const QTextBlock targetBlock = editor_->document()->findBlockByNumber(lineNumber);
+        cursor.setPosition(targetBlock.isValid() ? targetBlock.position() : editor_->document()->characterCount() - 1);
+    } else {
+        cursor.movePosition(QTextCursor::End);
+    }
+
+    QString insertionText = contents;
+    if (cursor.position() >= editor_->document()->characterCount() - 1
+        && !editor_->toPlainText().isEmpty()
+        && !editor_->toPlainText().endsWith(QLatin1Char('\n'))) {
+        insertionText.prepend(QLatin1Char('\n'));
+    }
+
+    cursor.beginEditBlock();
+    cursor.insertText(insertionText);
+    cursor.endEditBlock();
+    editor_->setTextCursor(cursor);
+    editor_->setFocus();
+}
+
+void TextEditorTab::insertTextAtImportInsertionPoint(const QString &contents)
+{
+    const ImportInsertionPoint point = resolveImportInsertionPoint();
+    if (!point.blockSelection || point.insertAfterLine <= 0) {
+        insertTextAtCursor(contents);
+        return;
+    }
+    insertTextAfterLine(point.insertAfterLine, contents);
 }
 
 QColor TextEditorTab::sourceSurfaceColor() const

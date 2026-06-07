@@ -48,6 +48,7 @@
 #include <QVariant>
 #include <QWidget>
 #include <QResizeEvent>
+#include <QRegularExpression>
 #include <QSignalBlocker>
 #include <functional>
 #include <utility>
@@ -105,6 +106,28 @@ QSize defaultMainWindowSize()
     }
 
     return preferredSize.expandedTo(minimumSize);
+}
+
+QString pocketTopoTextForInsertionScope(const QString &importedText, const QString &scopeToken)
+{
+    const QString normalizedScope = scopeToken.trimmed().toLower();
+    if (normalizedScope != QStringLiteral("centerline") && normalizedScope != QStringLiteral("centreline")) {
+        return importedText;
+    }
+
+    QStringList bodyLines;
+    const QStringList lines = importedText.split(QLatin1Char('\n'));
+    for (const QString &line : lines) {
+        const QString firstToken = line.trimmed().section(QRegularExpression(QStringLiteral("\\s+")), 0, 0).toLower();
+        if (firstToken == QStringLiteral("centerline")
+            || firstToken == QStringLiteral("centreline")
+            || firstToken == QStringLiteral("endcenterline")
+            || firstToken == QStringLiteral("endcentreline")) {
+            continue;
+        }
+        bodyLines.append(line);
+    }
+    return bodyLines.join(QLatin1Char('\n'));
 }
 
 void ensureUsableMainWindowSize(QMainWindow *window)
@@ -1071,12 +1094,13 @@ void MainWindow::importPocketTopoTextToActiveEditor()
         return;
     }
 
-    QString insertionText = importedText;
+    QString insertionText =
+        pocketTopoTextForInsertionScope(importedText, textTab->importInsertionScopeToken());
     if (!insertionText.endsWith(QLatin1Char('\n'))) {
         insertionText.append(QLatin1Char('\n'));
     }
 
-    textTab->insertTextAtCursor(insertionText);
+    textTab->insertTextAtImportInsertionPoint(insertionText);
     statusBar()->showMessage(tr("Imported PocketTopo centreline data from %1.")
                                  .arg(QFileInfo(importPath).fileName()),
                              5000);

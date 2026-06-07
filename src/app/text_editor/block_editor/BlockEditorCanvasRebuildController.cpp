@@ -100,7 +100,69 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
     QVector<BlockCanvasItem *> roots;
     QVector<BlockCanvasItem *> allItems;
 
+    auto isCommandDirectiveInScope = [this](const QString &commandToken, const QString &scope) {
+        QStringList candidates = context_.commandMetadata->contextCommandTokens.value(scope);
+        appendUniqueList(candidates, context_.commandMetadata->contextCommandTokens.value(QStringLiteral("all")));
+        if (scope == QStringLiteral("none")) {
+            appendUniqueList(candidates, context_.commandMetadata->contextCommandTokens.value(QStringLiteral("none")));
+        }
+        return candidates.contains(commandToken, Qt::CaseInsensitive);
+    };
+
+    auto nearestOpenContainerLine = [&stack](const QString &directive) {
+        for (int index = stack.size() - 1; index >= 0; --index) {
+            if (stack.at(index).directive == directive && stack.at(index).item != nullptr) {
+                return stack.at(index).item->lineNumber();
+            }
+        }
+        return 0;
+    };
+
+    auto dataEntryEndLine = [&](int dataLineNumber, int fallbackEndLine) {
+        if (context_.resolveScopeForCommandAtLine == nullptr) {
+            return fallbackEndLine;
+        }
+
+        const QString dataScope =
+            context_.resolveScopeForCommandAtLine(QStringLiteral("data"), lines, dataLineNumber);
+        const QString dataScopeClosing = completionClosingDirectiveForOpening(dataScope);
+        const int dataScopeParentLine = nearestOpenContainerLine(dataScope);
+
+        int dataScopeEndLine = lines.size() + 1;
+        if (dataScopeParentLine > 0 && !dataScopeClosing.isEmpty()) {
+            const int resolvedEndLine = findMatchingBlockEndLine(lines,
+                                                                 dataScopeParentLine,
+                                                                 dataScope,
+                                                                 dataScopeClosing);
+            if (resolvedEndLine > dataScopeParentLine) {
+                dataScopeEndLine = resolvedEndLine;
+            }
+        }
+
+        int bodyLastLine = dataScopeEndLine - 1;
+        for (int scanLine = dataLineNumber + 1; scanLine <= dataScopeEndLine - 1; ++scanLine) {
+            const TherionParsedLine scanParsedLine =
+                TherionDocumentParser::parseLine(lines.at(scanLine - 1), scanLine);
+            const QString scanDirective = normalizeDirective(scanParsedLine.directive);
+            if (scanDirective.isEmpty() || scanDirective == QStringLiteral("extend")) {
+                continue;
+            }
+            if (scanDirective == QStringLiteral("data")
+                || (!dataScopeClosing.isEmpty() && scanDirective == dataScopeClosing)
+                || (!dataScope.isEmpty() && isCommandDirectiveInScope(scanDirective, dataScope))) {
+                bodyLastLine = scanLine - 1;
+                break;
+            }
+        }
+        return qMax(fallbackEndLine, bodyLastLine);
+    };
+
+    int activeDataEntryEndLine = 0;
+
     for (const BlockEditorLogicalLine &logicalLine : logicalLines) {
+        if (logicalLine.startLine <= activeDataEntryEndLine) {
+            continue;
+        }
         const TherionParsedLine parsedLine =
             TherionDocumentParser::parseLine(logicalLine.text, logicalLine.startLine);
         if (isFullLineComment(parsedLine)) {
@@ -159,15 +221,6 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
         if (!stack.isEmpty()) {
             activeScope = normalizeDirective(stack.last().directive);
         }
-
-        auto isCommandDirectiveInScope = [this](const QString &commandToken, const QString &scope) {
-            QStringList candidates = context_.commandMetadata->contextCommandTokens.value(scope);
-            appendUniqueList(candidates, context_.commandMetadata->contextCommandTokens.value(QStringLiteral("all")));
-            if (scope == QStringLiteral("none")) {
-                appendUniqueList(candidates, context_.commandMetadata->contextCommandTokens.value(QStringLiteral("none")));
-            }
-            return candidates.contains(commandToken, Qt::CaseInsensitive);
-        };
 
         const bool commandDirective = !isBlockOpeningDirective(directive)
             && isCommandDirectiveInScope(directive, activeScope);
@@ -232,6 +285,8 @@ void BlockEditorCanvasRebuildController::rebuildBlocksCanvasFromText()
 
         if (!commandDirective && isContainerInstance) {
             stack.append(StackEntry{directive, item});
+        } else if (!commandDirective && directive == QStringLiteral("data")) {
+            activeDataEntryEndLine = dataEntryEndLine(logicalLine.startLine, logicalLine.endLine);
         }
     }
 

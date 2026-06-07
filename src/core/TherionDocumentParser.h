@@ -37,6 +37,10 @@ struct TherionParsedLine
 struct TherionParsedSourceLine
 {
     int lineNumber = 0;
+    int startOffset = 0;
+    int textLength = 0;
+    int lineEndingLength = 0;
+    int endOffset = 0;
     QString text;
     QString lineEnding;
     TherionParsedLine parsed;
@@ -44,6 +48,8 @@ struct TherionParsedSourceLine
     [[nodiscard]] bool hasTokens() const;
     [[nodiscard]] bool isBlank() const;
     [[nodiscard]] bool isCommentOnly() const;
+    [[nodiscard]] int absoluteTokenStart(const TherionParsedToken &token) const;
+    [[nodiscard]] int absoluteTokenEnd(const TherionParsedToken &token) const;
 };
 
 struct TherionParsedSourceDocument

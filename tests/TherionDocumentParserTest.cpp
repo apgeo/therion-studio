@@ -103,14 +103,23 @@ void parseSourceDocumentPreservesAllPhysicalLines()
     require(document.lines.size() == 9, "lossless source document should keep trailing empty physical line");
 
     require(document.lines.at(0).lineNumber == 1
+                && document.lines.at(0).startOffset == 0
+                && document.lines.at(0).textLength == 13
+                && document.lines.at(0).lineEndingLength == 2
+                && document.lines.at(0).endOffset == 15
                 && document.lines.at(0).isCommentOnly()
                 && document.lines.at(0).lineEnding == QStringLiteral("\r\n"),
             "lossless source document should preserve comment-only CRLF lines");
     require(document.lines.at(1).lineNumber == 2
+                && document.lines.at(1).startOffset == 15
+                && document.lines.at(1).textLength == 0
+                && document.lines.at(1).lineEndingLength == 1
+                && document.lines.at(1).endOffset == 16
                 && document.lines.at(1).isBlank()
                 && document.lines.at(1).lineEnding == QStringLiteral("\r"),
             "lossless source document should preserve blank CR lines");
     require(document.lines.at(2).lineNumber == 3
+                && document.lines.at(2).startOffset == 16
                 && document.lines.at(2).hasTokens()
                 && document.lines.at(2).parsed.directive == QStringLiteral("survey"),
             "lossless source document should preserve parsed token lines with physical line numbers");
@@ -119,9 +128,20 @@ void parseSourceDocumentPreservesAllPhysicalLines()
                 && document.lines.at(3).parsed.commentStart == 2,
             "lossless source document should preserve indented comment-only source columns");
     require(document.lines.last().lineNumber == 9
+                && document.lines.last().startOffset == text.size()
+                && document.lines.last().endOffset == text.size()
                 && document.lines.last().isBlank()
                 && document.lines.last().lineEnding.isEmpty(),
             "lossless source document should keep final empty line after trailing newline");
+
+    const TherionParsedSourceLine &dataLine = document.lines.at(5);
+    require(dataLine.text == QStringLiteral("    data normal from to tape compass clino"),
+            "test should inspect the data command line");
+    require(dataLine.parsed.tokenSpans.size() >= 2, "data line should expose token spans");
+    require(dataLine.absoluteTokenStart(dataLine.parsed.tokenSpans.at(0)) == dataLine.startOffset + 4,
+            "absolute token start should be based on physical line offset");
+    require(dataLine.absoluteTokenEnd(dataLine.parsed.tokenSpans.at(1)) == dataLine.startOffset + 15,
+            "absolute token end should include token length");
 
     const QVector<TherionParsedLine> tokenLines = document.tokenLines();
     require(tokenLines.size() == 5, "tokenLines should expose the legacy token-only projection");

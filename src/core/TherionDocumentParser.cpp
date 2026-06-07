@@ -19,6 +19,16 @@ bool TherionParsedSourceLine::isCommentOnly() const
     return parsed.tokens.isEmpty() && parsed.commentStart >= 0;
 }
 
+int TherionParsedSourceLine::absoluteTokenStart(const TherionParsedToken &token) const
+{
+    return startOffset + token.start;
+}
+
+int TherionParsedSourceLine::absoluteTokenEnd(const TherionParsedToken &token) const
+{
+    return absoluteTokenStart(token) + token.length;
+}
+
 QString TherionParsedSourceDocument::toText() const
 {
     QString contents;
@@ -234,15 +244,24 @@ TherionParsedSourceDocument TherionDocumentParser::parseSourceDocument(const QSt
     const QVector<TherionSourceLine> &physicalLines = sourceText.physicalLines();
     document.lines.reserve(physicalLines.size());
 
+    int offset = 0;
     for (int index = 0; index < physicalLines.size(); ++index) {
         const TherionSourceLine &sourceLine = physicalLines.at(index);
         const int lineNumber = index + 1;
+        const int textLength = sourceLine.text.size();
+        const int lineEndingLength = sourceLine.lineEnding.size();
+        const int endOffset = offset + textLength + lineEndingLength;
         document.lines.append(TherionParsedSourceLine{
             lineNumber,
+            offset,
+            textLength,
+            lineEndingLength,
+            endOffset,
             sourceLine.text,
             sourceLine.lineEnding,
             parseLine(sourceLine.text, lineNumber)
         });
+        offset = endOffset;
     }
 
     return document;

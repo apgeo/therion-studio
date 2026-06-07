@@ -27,6 +27,7 @@ Completed follow-ups from this review:
 - ~~`TherionSourceText` now owns physical source-line and newline preservation helpers, with the legacy normalized line-splitting helpers and Block editor split/join wrappers routed through it.~~
 - ~~Map editor background metadata, XVI parsing, line-split planning, inspector line lookup paths, and selected object settings single-line replacement now use `TherionSourceText` line helpers instead of local split/chop or line-ending helpers.~~
 - ~~`TherionDocumentParser::parseSourceDocument()` now provides a first lossless source snapshot API that keeps blank/comment-only physical lines, line endings, line numbers, parsed spans, and a legacy token-line projection without changing `parseText()` consumers.~~
+- ~~Lossless parser source lines now expose absolute source ranges and token absolute range helpers, so future rewrites can address document text without recalculating offsets locally.~~
 - ~~Raster background source images now use a bounded path/mtime/size cache so repeated gamma and placement operations do not decode the same raster file repeatedly.~~
 - ~~Raster background gamma correction and scaled image preparation now run through `QtConcurrent` with request-id checks before applying the pixmap back on the UI thread.~~
 - ~~Manual raster background adds now decode initial source images through `QtConcurrent`.~~
@@ -44,7 +45,7 @@ Still open:
 - The shared source transaction controller is not yet the single source-write path for Raw, Blocks, Map, and all inspector workflows.
 - Command-line modeling and higher-level option parsing/serialization are still duplicated across command option parsing, Block editor details, Map object settings, and source rewriters.
 - The unified lossless parser/source document model remains post-release architecture work.
-- `TherionSourceText` is now the shared line/newline helper for the migrated call sites, and the first parser snapshot API exists; source ranges, projection migration, and broader transaction integration still need migration.
+- `TherionSourceText` is now the shared line/newline helper for the migrated call sites, and the first parser snapshot API with line/token ranges exists; projection migration and broader transaction integration still need migration.
 - Large map/background/rewriter files are still large and should be split only when a focused behavior change gives a natural extraction point.
 
 Recommended next step:
@@ -208,6 +209,7 @@ Current follow-up status:
 - Numeric-token classification and option-boundary checks have been consolidated into `src/core/TherionTokenRules.h`.
 - Physical source-line splitting and newline preservation now live in `src/core/TherionSourceText.h`; `TherionStringUtils`, Block editor source split/join wrappers, map background/XVI line readers, map line split planning, and map inspector line lookup paths delegate to it.
 - `TherionDocumentParser::parseSourceDocument()` now exposes a lossless physical-line snapshot plus `tokenLines()` compatibility projection while leaving `parseText()` behavior unchanged.
+- Lossless source lines now expose absolute line ranges and token range helpers for future source-rewrite migration.
 - The first shared command-line model has been extracted into `src/core/TherionCommandLineModel.h`; the legacy app-level `CommandOptionParser` wrapper has been removed.
 - Command-line option parsing plus option-row/value serialization now lives behind focused command-line model APIs rather than broader generic utilities.
 - Command option lookup, normalized field-name matching, value maps, and toggle parsing now live behind `TherionCommandLineModel` and are used by the map inspector, map renderer/projection extraction, map delete/split/reference planners, PocketTopo background placement, and Structure indexing.

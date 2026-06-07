@@ -1750,8 +1750,12 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    QStringList lines;
+    lines.reserve(sourceDocument.lines.size());
+    for (const TherionParsedSourceLine &sourceLine : sourceDocument.lines) {
+        lines.append(sourceLine.text);
+    }
     if (lineNumber > lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -1850,8 +1854,15 @@ bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
     lineText.replace(reference.xToken.start,
                      reference.xToken.length,
                      formatCoordinateLikeExistingToken(oldXTokenText, point.x()));
-    lines[reference.lineIndex] = lineText;
-    *contents = lines.join(lineEnding);
+    if (reference.lineIndex >= sourceDocument.lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected %1 vertex source range could not be rewritten.").arg(normalizedKind);
+        }
+        return false;
+    }
+
+    const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(reference.lineIndex);
+    contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
     return true;
 }
 

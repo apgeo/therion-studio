@@ -1061,6 +1061,23 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
 
+    contents = QStringLiteral("line wall\r\n"
+                              "  10 20\n"
+                              "  30 40\r"
+                              "endline");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(70.0, 80.0), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall\r\n"
+                                           "  10 20\n"
+                                           "  70 80\r"
+                                           "endline"),
+                "rewriteLineAreaVertex should preserve mixed physical line endings when replacing one coordinate row.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("line wall 10 20 30 40 -id line-1\n"
                               "  50 60\n"
                               "endline\n");

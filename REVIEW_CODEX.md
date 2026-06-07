@@ -280,9 +280,9 @@ Do not rewrite everything at once. Use this order:
 
 1. Extract shared `TherionSourceText` for line splitting/newline preservation.
 2. ~~Replace duplicate numeric/token helpers with one shared `TherionTokenRules`.~~
-3. Make `TherionDocumentParser::parseText()` optionally return all physical lines, not only token lines.
-4. Move geometry extraction from `MapEditorSceneRenderer.cpp` into a standalone `TherionMapProjection` or `Th2GeometryProjection`.
-5. Move project structure parsing to consume the same source document/projection.
+3. ~~Add a named `TherionDocumentParser::parseTokenLines()` compatibility projection over the lossless source snapshot while preserving the legacy `parseText()` contract.~~
+4. Move geometry extraction from `MapEditorSceneRenderer.cpp` into a standalone `TherionMapProjection` or `Th2GeometryProjection` that consumes the source snapshot/projection model.
+5. Move project structure parsing from token-line compatibility onto the same source document/projection model.
 6. Move all editor writes to a shared transaction service.
 7. Delete or rename legacy wrappers once all call sites use the new service.
 

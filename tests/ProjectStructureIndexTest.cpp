@@ -888,11 +888,11 @@ int runTh2ObjectIndexGroupingTest()
         return 1;
     }
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseSourceDocument(QStringLiteral(
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(QStringLiteral(
         "scrap s1\n"
         "point 0 0 station -name a1\n"
         "point 1 1 station -name a2\n"
-        "endscrap\n")).tokenLines();
+        "endscrap\n"));
     const QVector<ProjectStructureEntry> parsedLineEntries = ProjectStructureIndex::scanTh2Objects(
         QStringLiteral("/tmp/example.th2"),
         parsedLines);

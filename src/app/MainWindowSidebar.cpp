@@ -10,6 +10,8 @@
 #include <QAbstractItemView>
 #include <QAction>
 #include <QApplication>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QCheckBox>
 #include <QColor>
 #include <QDesktopServices>
@@ -55,8 +57,6 @@ enum ProjectSearchResultRole
     SearchColumnNumberRole,
     SearchIsMatchRole,
 };
-
-bool isTherionProjectFilePath(const QString &filePath);
 
 QIcon therionBadgedFileIcon(const QIcon &baseIcon)
 {
@@ -120,7 +120,7 @@ protected:
             return;
         }
 
-        if (!isTherionProjectFilePath(filePath)) {
+        if (!QFileInfo(filePath).isFile() || !TherionStudio::isTherionProjectFilePath(filePath)) {
             return;
         }
 
@@ -173,23 +173,6 @@ protected:
 private:
     std::function<void()> callback_;
 };
-
-bool isTherionProjectFilePath(const QString &filePath)
-{
-    const QFileInfo info(filePath);
-    if (!info.isFile()) {
-        return false;
-    }
-
-    const QString fileName = info.fileName();
-    if (TherionStudio::isTherionConfigFileName(fileName)) {
-        return true;
-    }
-
-    const QString suffix = info.suffix().toLower();
-    return suffix == QStringLiteral("th")
-        || suffix == QStringLiteral("th2");
-}
 
 QString duplicateFilePath(const QString &sourcePath)
 {
@@ -278,6 +261,72 @@ int splitterTotalWidth(QSplitter *splitter)
         totalWidth = splitter->width();
     }
     return totalWidth;
+}
+
+QString defaultFileBaseName(const QString &defaultName, const QString &suffix)
+{
+    if (suffix.isEmpty()) {
+        return defaultName.trimmed();
+    }
+
+    const QString extension = QStringLiteral(".") + suffix;
+    if (defaultName.endsWith(extension, Qt::CaseInsensitive)) {
+        return defaultName.left(defaultName.size() - extension.size()).trimmed();
+    }
+
+    return defaultName.trimmed();
+}
+
+QString requestProjectFileBaseName(QWidget *parent,
+                                   const QString &title,
+                                   const QString &prompt,
+                                   const QString &defaultName,
+                                   const QString &suffix,
+                                   bool *accepted)
+{
+    if (accepted != nullptr) {
+        *accepted = false;
+    }
+
+    QDialog dialog(parent);
+    dialog.setWindowTitle(title);
+
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *label = new QLabel(prompt, &dialog);
+    layout->addWidget(label);
+
+    auto *row = new QWidget(&dialog);
+    auto *rowLayout = new QHBoxLayout(row);
+    rowLayout->setContentsMargins(0, 0, 0, 0);
+    rowLayout->setSpacing(4);
+
+    auto *nameEdit = new QLineEdit(row);
+    nameEdit->setText(defaultFileBaseName(defaultName, suffix));
+    nameEdit->selectAll();
+    rowLayout->addWidget(nameEdit, 1);
+
+    if (!suffix.isEmpty()) {
+        auto *suffixLabel = new QLabel(QStringLiteral(".") + suffix, row);
+        suffixLabel->setTextInteractionFlags(Qt::NoTextInteraction);
+        rowLayout->addWidget(suffixLabel, 0);
+    }
+
+    layout->addWidget(row);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    layout->addWidget(buttons);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    nameEdit->setFocus();
+    if (dialog.exec() != QDialog::Accepted) {
+        return QString();
+    }
+
+    if (accepted != nullptr) {
+        *accepted = true;
+    }
+    return nameEdit->text().trimmed();
 }
 }
 
@@ -487,12 +536,12 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
         menu.addAction(label, this, [this, creationDirectory, prompt, defaultName, suffix]() {
             bool ok = false;
-            QString enteredName = QInputDialog::getText(this,
-                                                        tr("Create File"),
-                                                        prompt,
-                                                        QLineEdit::Normal,
-                                                        defaultName,
-                                                        &ok).trimmed();
+            QString enteredName = requestProjectFileBaseName(this,
+                                                             tr("Create File"),
+                                                             prompt,
+                                                             defaultName,
+                                                             suffix,
+                                                             &ok);
             if (!ok) {
                 return;
             }
@@ -518,8 +567,8 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
                                      tr("Failed to create file: %1").arg(QDir::toNativeSeparators(filePath)));
                 return;
             }
-            if (isTherionProjectFilePath(filePath)) {
-                const QByteArray initialContents("encoding utf-8\n");
+            const QByteArray initialContents = TherionStudio::initialTherionProjectFileContents(filePath);
+            if (!initialContents.isEmpty()) {
                 if (file.write(initialContents) != initialContents.size()) {
                     file.close();
                     QMessageBox::warning(this,
@@ -548,7 +597,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
             });
         }
 
-        if (!isTherionProjectFilePath(itemPath)) {
+        if (!itemInfo.isFile() || !TherionStudio::isTherionProjectFilePath(itemPath)) {
             menu.addAction(tr("Open Externally"), this, [this, itemPath]() {
                 if (!QDesktopServices::openUrl(QUrl::fromLocalFile(itemPath))) {
                     QMessageBox::warning(this,
@@ -757,7 +806,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
         createFileAction(tr("New .th File"), tr("File name:"), tr("new-file.th"), QStringLiteral("th"));
         createFileAction(tr("New .th2 File"), tr("File name:"), tr("new-map.th2"), QStringLiteral("th2"));
-        createFileAction(tr("New thconfig"), tr("File name:"), tr("thconfig"), QString());
+        createFileAction(tr("New .thconfig File"), tr("File name:"), tr("new-config.thconfig"), QStringLiteral("thconfig"));
     }
 
     if (menu.isEmpty()) {

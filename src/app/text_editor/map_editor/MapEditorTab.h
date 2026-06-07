@@ -110,7 +110,9 @@ public:
     ~MapEditorTab() override;
 
     bool loadFile(const QString &filePath, QString *errorMessage = nullptr);
+    void initializeNewDocument(const QString &suggestedFileName, const QString &contents);
     bool save(QString *errorMessage = nullptr);
+    bool saveAs(const QString &filePath, QString *errorMessage = nullptr);
     void setProjectRootPath(const QString &projectRootPath);
     void showFindBar(bool replaceMode = false);
     void hideFindBar();

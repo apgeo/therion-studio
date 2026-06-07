@@ -19,7 +19,7 @@ bool MainWindow::confirmCloseTab(int index)
 
 bool MainWindow::confirmCloseDocumentWidget(QWidget *documentWidget)
 {
-    if (documentWidget == nullptr || documentPathForWidget(documentWidget).isEmpty() || !documentIsDirtyForWidget(documentWidget)) {
+    if (documentWidget == nullptr || documentWidget->property("therionStudioWelcomeTab").toBool() || !documentIsDirtyForWidget(documentWidget)) {
         return true;
     }
 
@@ -36,7 +36,7 @@ bool MainWindow::confirmCloseDocumentWidget(QWidget *documentWidget)
 
     if (prompt.clickedButton() == saveButton) {
         QString errorMessage;
-        if (!documentSaveForWidget(documentWidget, &errorMessage)) {
+        if (!saveDocumentWidget(documentWidget, &errorMessage)) {
             QMessageBox::warning(this, tr("Save"), errorMessage);
             return false;
         }
@@ -59,12 +59,12 @@ bool MainWindow::confirmCloseDirtyDocuments()
     QList<QWidget *> documents;
     for (int index = 0; index < editorTabs_->count(); ++index) {
         QWidget *tabWidget = editorTabs_->widget(index);
-        if (tabWidget != nullptr && !documentPathForWidget(tabWidget).isEmpty()) {
+        if (tabWidget != nullptr && !tabWidget->property("therionStudioWelcomeTab").toBool()) {
             documents.append(tabWidget);
         }
     }
     for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
-        if (detachedTab != nullptr && !documentPathForWidget(detachedTab).isEmpty()) {
+        if (detachedTab != nullptr) {
             documents.append(detachedTab);
         }
     }

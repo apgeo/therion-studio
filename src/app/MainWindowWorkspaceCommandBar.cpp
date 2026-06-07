@@ -10,6 +10,7 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QList>
+#include <QMenu>
 #include <QPalette>
 #include <QSignalBlocker>
 #include <QSize>
@@ -75,7 +76,25 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     hostLayout->setSpacing(4);
 
     workspaceOpenProjectButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Open Project"), QStringLiteral("folder-open"));
+    workspaceNewDocumentButton_ =
+        createWorkspaceIconButton(workspaceModeSwitcher_, tr("New Document"), QStringLiteral("file-plus"));
     workspaceCloseProjectButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Close Project"), QStringLiteral("folder-x"));
+    auto *newDocumentMenu = new QMenu(workspaceNewDocumentButton_);
+    if (newTherionSourceAction_ != nullptr) {
+        newDocumentMenu->addAction(newTherionSourceAction_);
+    }
+    if (newTherionMapAction_ != nullptr) {
+        newDocumentMenu->addAction(newTherionMapAction_);
+    }
+    if (newTherionConfigAction_ != nullptr) {
+        newDocumentMenu->addAction(newTherionConfigAction_);
+    }
+    connect(workspaceNewDocumentButton_, &QToolButton::clicked, workspaceNewDocumentButton_, [newDocumentMenu, button = workspaceNewDocumentButton_]() {
+        if (newDocumentMenu == nullptr || button == nullptr) {
+            return;
+        }
+        newDocumentMenu->popup(button->mapToGlobal(QPoint(0, button->height())));
+    });
     workspaceProjectSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
     workspaceSaveButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Save"), QStringLiteral("save"));
     workspaceUndoButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Undo"), QStringLiteral("undo-2"));
@@ -85,6 +104,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     hostLayout->addWidget(workspaceOpenProjectButton_);
     hostLayout->addWidget(workspaceCloseProjectButton_);
     hostLayout->addWidget(workspaceProjectSeparator_);
+    hostLayout->addWidget(workspaceNewDocumentButton_);
     hostLayout->addWidget(workspaceSaveButton_);
     hostLayout->addWidget(createWorkspaceToolbarSeparator(workspaceModeSwitcher_));
     hostLayout->addWidget(workspaceUndoButton_);
@@ -257,6 +277,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceMapModeSwitcher_ == nullptr
         || workspaceTextModeSwitcher_ == nullptr
         || workspaceOpenProjectButton_ == nullptr
+        || workspaceNewDocumentButton_ == nullptr
         || workspaceCloseProjectButton_ == nullptr
         || workspaceProjectSeparator_ == nullptr
         || workspaceVisualModeButton_ == nullptr
@@ -312,6 +333,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceMapModeSwitcher_->setVisible(showMapModes);
     workspaceTextModeSwitcher_->setVisible(showTextModes);
     workspaceOpenProjectButton_->setVisible(true);
+    workspaceNewDocumentButton_->setVisible(true);
     workspaceCloseProjectButton_->setVisible(true);
     workspaceProjectSeparator_->setVisible(true);
     workspaceHistorySeparator_->setVisible(showZoomTools);

@@ -1,6 +1,6 @@
 # Therion Studio User Manual
 
-Last updated: 2026-05-31
+Last updated: 2026-06-07
 
 This guide covers everyday workflows in Therion Studio. It intentionally focuses on using the application, not on the full Therion language reference. Therion source syntax, command names, options, and serialized document content stay in canonical Therion form.
 
@@ -45,6 +45,7 @@ The main window contains:
 Common window actions:
 
 - `File -> New Window` opens a new empty window. It does not copy the current project or open documents.
+- `File -> New -> Therion Source (.th)`, `Therion Map (.th2)`, or `Therion Config (.thconfig)` opens a new unsaved document. New `.th`, `.th2`, and `.thconfig` documents start with `encoding utf-8`. The toolbar `New Document` button opens the same choices. The first `Save` asks where to save it.
 - `File -> Settings...` opens application settings.
 - `View -> Expand Sidebar` / `Collapse Sidebar` shows or hides the left sidebar content.
 - `View -> Expand Context Help`, `Expand Block Inspector`, or `Expand Map Inspector` controls the active right-side panel, depending on the current editor.
@@ -78,13 +79,14 @@ When a project is open, the welcome tab shows the active project name and path. 
 
 ### 3.3 Create and Manage Files
 
-Right-click in the `Files` pane to create folders, create `.th`, `.th2`, and `thconfig` files, rename items, duplicate files, delete items, or open `.th2` files directly in the map editor.
+Use `File -> New` to create an unsaved `.th`, `.th2`, or `.thconfig` document and choose its path on first save. Right-click in the `Files` pane to create folders, create saved `.th`, `.th2`, and `.thconfig` files directly in the project, rename items, duplicate files, delete items, or open `.th2` files directly in the map editor.
 
 Rename and delete are blocked when the target file or folder is open in a document tab. Close the related tabs first, then retry the operation.
 
 ### 3.4 Save Changes
 
 - `File -> Save` saves the active tab.
+- If the active tab has not been saved yet, `File -> Save` opens `Save As`.
 - `File -> Save All` saves all modified tabs.
 - Closing a dirty tab asks whether to save, discard, or cancel.
 - If an open file changes on disk while its Therion Studio tab has no unsaved edits, Therion Studio reloads it automatically. If the tab has unsaved edits, Therion Studio asks whether to reload from disk or keep the in-memory version.

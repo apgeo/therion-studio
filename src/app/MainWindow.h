@@ -89,6 +89,9 @@ private slots:
     void handleTabCloseRequested(int index);
     void closeActiveTab();
     void closeAllTabs();
+    void createNewTherionSourceDocument();
+    void createNewTherionMapDocument();
+    void createNewTherionConfigDocument();
     void saveActiveDocument();
     void saveAllDocuments();
     void runTherion();
@@ -128,6 +131,10 @@ private:
     void refreshRecentProjectsUi();
     void refreshRecentFilesUi();
     void recordRecentFilePath(const QString &filePath);
+    TherionStudio::TextEditorTab *createUntitledTextTab(const QString &suggestedFileName, const QString &contents);
+    TherionStudio::MapEditorTab *createUntitledMapEditorTab(const QString &suggestedFileName, const QString &contents);
+    bool saveDocumentWidget(QWidget *documentWidget, QString *errorMessage = nullptr);
+    QString requestSavePathForDocument(QWidget *documentWidget) const;
     void restoreSessionState();
     void persistSessionState();
     void restoreOpenDocuments();
@@ -297,6 +304,9 @@ private:
     QToolButton *consoleCollapseButton_ = nullptr;
     QAction *openProjectAction_ = nullptr;
     QAction *closeProjectAction_ = nullptr;
+    QAction *newTherionSourceAction_ = nullptr;
+    QAction *newTherionMapAction_ = nullptr;
+    QAction *newTherionConfigAction_ = nullptr;
     QMenu *recentProjectsMenu_ = nullptr;
     QMenu *recentFilesMenu_ = nullptr;
     QAction *undoAction_ = nullptr;
@@ -342,6 +352,7 @@ private:
     QWidget *workspaceZoomGroup_ = nullptr;
     QWidget *workspaceMapToolsGroup_ = nullptr;
     QToolButton *workspaceOpenProjectButton_ = nullptr;
+    QToolButton *workspaceNewDocumentButton_ = nullptr;
     QToolButton *workspaceCloseProjectButton_ = nullptr;
     QToolButton *workspaceSaveButton_ = nullptr;
     QToolButton *workspaceUndoButton_ = nullptr;

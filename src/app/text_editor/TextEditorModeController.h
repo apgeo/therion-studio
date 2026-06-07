@@ -13,6 +13,7 @@ namespace TherionStudio
 struct TextEditorModeContext
 {
     const QString *filePath = nullptr;
+    const QString *untitledDisplayName = nullptr;
     const QString *fileEncodingName = nullptr;
     bool *blocksModeActive = nullptr;
     bool *enforcingEncodingRootDirective = nullptr;

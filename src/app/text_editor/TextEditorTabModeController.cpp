@@ -10,6 +10,7 @@ void TextEditorTab::buildModeController()
 {
     TextEditorModeContext modeContext;
     modeContext.filePath = &filePath_;
+    modeContext.untitledDisplayName = &untitledDisplayName_;
     modeContext.fileEncodingName = &fileEncodingName_;
     modeContext.blocksModeActive = &blocksModeActive_;
     modeContext.enforcingEncodingRootDirective = &enforcingEncodingRootDirective_;

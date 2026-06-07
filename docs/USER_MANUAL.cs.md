@@ -1,6 +1,6 @@
 # Uživatelská příručka Therion Studio
 
-Aktualizováno: 2026-05-31
+Aktualizováno: 2026-06-07
 
 Tato příručka popisuje běžnou práci v Therion Studio. Záměrně není úplnou referencí jazyka Therion. Syntaxe Therionu, názvy příkazů, volby a obsah ukládaný do souborů zůstávají v kanonické podobě Therionu.
 
@@ -45,6 +45,7 @@ Hlavní okno obsahuje:
 Běžné akce okna:
 
 - `Soubor -> Nové okno` otevře nové prázdné okno bez kopírování aktuálního projektu a otevřených dokumentů.
+- `Soubor -> Nový -> Therion zdroj (.th)`, `Therion mapa (.th2)` nebo `Therion config (.thconfig)` otevře nový neuložený dokument. Nové dokumenty `.th`, `.th2` a `.thconfig` začínají direktivou `encoding utf-8`. Tlačítko `Nový dokument` v toolbaru nabízí stejné volby. První `Uložit` se zeptá, kam ho uložit.
 - `Soubor -> Nastavení...` otevře nastavení aplikace.
 - `Zobrazení -> Rozbalit postranní panel` / `Sbalit postranní panel` zobrazí nebo skryje obsah levého panelu.
 - `Zobrazení -> Rozbalit kontextovou nápovědu`, `Rozbalit inspektor bloku` nebo `Rozbalit inspektor mapy` ovládá aktivní pravý panel podle aktuálního editoru.
@@ -78,13 +79,14 @@ Pokud je projekt otevřený, uvítací karta zobrazuje název a cestu aktivního
 
 ### 3.3 Vytváření a správa souborů
 
-Pravým kliknutím v panelu `Soubory` lze vytvářet složky, vytvářet `.th`, `.th2` a `thconfig` soubory, přejmenovávat položky, duplikovat soubory, mazat položky nebo otevřít `.th2` přímo v map editoru.
+Přes `Soubor -> Nový` vytvoříte neuložený `.th`, `.th2` nebo `.thconfig` dokument a cestu zvolíte při prvním uložení. Pravým kliknutím v panelu `Soubory` lze vytvářet složky, vytvářet uložené `.th`, `.th2` a `.thconfig` soubory přímo v projektu, přejmenovávat položky, duplikovat soubory, mazat položky nebo otevřít `.th2` přímo v map editoru.
 
 Přejmenování a mazání je blokované, pokud je cílový soubor nebo složka otevřená v záložce. Nejprve zavřete související záložky.
 
 ### 3.4 Uložení změn
 
 - `Soubor -> Uložit` uloží aktivní záložku.
+- Pokud aktivní záložka ještě nebyla uložena, `Soubor -> Uložit` otevře `Uložit jako`.
 - `Soubor -> Uložit vše` uloží všechny změněné záložky.
 - Zavření změněné záložky se zeptá na uložení, zahození změn nebo zrušení.
 

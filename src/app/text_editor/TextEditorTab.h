@@ -114,7 +114,9 @@ public:
     ~TextEditorTab() override;
 
     bool loadFile(const QString &filePath, QString *errorMessage = nullptr);
+    void initializeNewDocument(const QString &suggestedFileName, const QString &contents);
     bool save(QString *errorMessage = nullptr);
+    bool saveAs(const QString &filePath, QString *errorMessage = nullptr);
     void setProjectRootPath(const QString &projectRootPath);
     void showFindBar(bool replaceMode = false);
     void showFindBarWithText(const QString &findText,
@@ -435,6 +437,7 @@ private:
     QPlainTextEdit *editor_ = nullptr;
     TherionSyntaxHighlighter *highlighter_ = nullptr;
     QString filePath_;
+    QString untitledDisplayName_;
     QString projectRootPath_;
     int currentLineNumber_ = 0;
     int currentColumnNumber_ = 1;

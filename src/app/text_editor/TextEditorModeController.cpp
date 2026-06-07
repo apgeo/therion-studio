@@ -25,11 +25,14 @@ TextEditorModeController::TextEditorModeController(TextEditorModeContext context
 
 bool TextEditorModeController::isBlocksModeSupportedForCurrentFile() const
 {
-    if (context_.filePath == nullptr || context_.filePath->trimmed().isEmpty()) {
+    const QString documentName = context_.filePath != nullptr && !context_.filePath->trimmed().isEmpty()
+        ? *context_.filePath
+        : (context_.untitledDisplayName != nullptr ? *context_.untitledDisplayName : QString());
+    if (documentName.trimmed().isEmpty()) {
         return false;
     }
 
-    const QFileInfo fileInfo(*context_.filePath);
+    const QFileInfo fileInfo(documentName);
     const QString suffix = fileInfo.suffix().trimmed().toLower();
     const QString fileName = fileInfo.fileName();
     return suffix == QStringLiteral("th")

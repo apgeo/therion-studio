@@ -5,14 +5,53 @@
 #include "TextEditorTabInteractionController.h"
 
 #include <QLayout>
+#include <QPlainTextEdit>
 #include <QSplitter>
+#include <QTextCursor>
 
 namespace TherionStudio
 {
 bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)
 {
+    untitledDisplayName_.clear();
     return documentController_ != nullptr
         && documentController_->loadFile(filePath, errorMessage);
+}
+
+void TextEditorTab::initializeNewDocument(const QString &suggestedFileName, const QString &contents)
+{
+    filePath_.clear();
+    untitledDisplayName_ = suggestedFileName.trimmed().isEmpty() ? tr("Untitled.th") : suggestedFileName.trimmed();
+    fileEncodingName_ = QStringLiteral("UTF-8");
+    fileEncodingLabel_ = QStringLiteral("UTF-8");
+    cleanEncodingNameSnapshot_ = fileEncodingName_;
+    encodingStatusNote_.clear();
+    loading_ = true;
+    if (editor_ != nullptr) {
+        editor_->setPlainText(contents);
+        editor_->moveCursor(QTextCursor::End);
+        editor_->document()->setModified(true);
+    }
+    loading_ = false;
+    cleanTextSnapshot_ = contents;
+    currentLineNumber_ = 1;
+    currentColumnNumber_ = 1;
+    highlightedLineNumber_ = 1;
+    blockDetailsSelectedLineNumber_ = 0;
+    blockDetailsSelectedKind_.clear();
+    dirty_ = true;
+    refreshBlocksModeAvailability();
+    setBlocksModeActive(false);
+    rebuildBlocksCanvasFromText();
+    clearBlockDetailsPane();
+    populateBlockToolbox();
+    refreshEditorModeUi();
+    refreshCurrentLineHighlight();
+    refreshTitle();
+    refreshStatus();
+    updateContextHelp();
+    emit dirtyStateChanged(true);
+    emit documentTextChanged();
 }
 
 void TextEditorTab::setProjectRootPath(const QString &projectRootPath)
@@ -26,6 +65,33 @@ bool TextEditorTab::save(QString *errorMessage)
 {
     return documentController_ != nullptr
         && documentController_->save(errorMessage);
+}
+
+bool TextEditorTab::saveAs(const QString &filePath, QString *errorMessage)
+{
+    if (filePath.trimmed().isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = tr("No save path was selected.");
+        }
+        return false;
+    }
+
+    const QString previousPath = filePath_;
+    filePath_ = filePath;
+    const bool saved = save(errorMessage);
+    if (!saved) {
+        filePath_ = previousPath;
+        refreshTitle();
+        refreshStatus();
+        return false;
+    }
+
+    untitledDisplayName_.clear();
+    refreshBlocksModeAvailability();
+    refreshEditorModeUi();
+    refreshTitle();
+    refreshStatus();
+    return true;
 }
 
 void TextEditorTab::setModeSelectorVisible(bool visible)

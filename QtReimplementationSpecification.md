@@ -567,6 +567,9 @@ Platform modifier mapping:
 | Action | Menu location | Shortcut | Required behavior |
 |---|---|---|---|
 | New Window | File | Command+N | Open a new empty main window without restoring the current project or open documents |
+| New Therion Source (.th) | File -> New; toolbar New Document menu | none | Open a new unsaved `.th` text document initialized with `encoding utf-8`; the first save shall prompt for a destination path |
+| New Therion Map (.th2) | File -> New; toolbar New Document menu | none | Open a new unsaved `.th2` map document initialized with `encoding utf-8`; the first save shall prompt for a destination path |
+| New Therion Config (.thconfig) | File -> New; toolbar New Document menu | none | Open a new unsaved `.thconfig` Therion config text document initialized with `encoding utf-8`; the first save shall prompt for a destination path |
 | Settings / Preferences | File or native application menu | platform-standard Preferences placement where available | Open application settings for language override, Therion executable path, and default `.th` / Therion config editor mode |
 | About Therion Studio | Help or native application menu | none | Show installed version/build metadata, Qt/platform details, repository, license, maintainer, and third-party notice location |
 | Expand/Collapse Sidebar | View | none | Expand or collapse the left sidebar content without changing the active document |
@@ -580,8 +583,8 @@ Platform modifier mapping:
 | Open Project… | File | Command+O | Open a Therion project; disabled while a project is already open |
 | Recent Projects | File | none | Reopen one of the five most recently opened projects; disabled while a project is already open |
 | Recent Files | File | none | Reopen one of the active project's ten most recently opened files; disabled when no project is open |
-| Save | File | Command+S | Save the active document only |
-| Save All | File | Command+Option+S | Save all dirty open documents |
+| Save | File | Command+S | Save the active document only; unsaved documents shall use Save As path selection on first save |
+| Save All | File | Command+Option+S | Save all dirty open documents; unsaved documents shall use Save As path selection before saving |
 | Close | File | none in the current Swift app | Expose the action in the menu even if no explicit shortcut is assigned |
 | Close All Tabs | File | Command+Shift+W | Close every open editor tab |
 | Close Project | File | none in the current Swift app | Close the active project and its project-scoped documents after unsaved changes are resolved |

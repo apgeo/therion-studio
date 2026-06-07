@@ -14,6 +14,7 @@ void TextEditorTab::buildStatusController()
     statusContext.convertEncodingButton = convertEncodingButton_;
     statusContext.statusRow = statusRow_;
     statusContext.filePath = &filePath_;
+    statusContext.untitledDisplayName = &untitledDisplayName_;
     statusContext.projectRootPath = &projectRootPath_;
     statusContext.fileEncodingName = &fileEncodingName_;
     statusContext.fileEncodingLabel = &fileEncodingLabel_;

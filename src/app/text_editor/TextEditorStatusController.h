@@ -18,6 +18,7 @@ struct TextEditorStatusContext
     QPushButton *convertEncodingButton = nullptr;
     QWidget *statusRow = nullptr;
     QString *filePath = nullptr;
+    QString *untitledDisplayName = nullptr;
     QString *projectRootPath = nullptr;
     QString *fileEncodingName = nullptr;
     QString *fileEncodingLabel = nullptr;

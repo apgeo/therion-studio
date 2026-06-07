@@ -230,6 +230,7 @@ endfunction()
 set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindow.cpp
     src/app/MainWindow.h
+    src/app/MainWindowUntitledDocumentWorkflow.cpp
     src/app/MainWindowTherionConsoleBootstrapper.cpp
     src/app/MainWindowTherionConsoleBootstrapper.h
     src/app/MainWindowTherionConsoleBuilder.cpp
@@ -484,6 +485,7 @@ set(THERION_MAP_EDITOR_SOURCES
     src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp
+    src/app/text_editor/map_editor/MapEditorTabNewDocumentDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/map_editor/MapEditorXviBackgroundItem.cpp
     src/app/text_editor/map_editor/MapEditorXviBackgroundItem.h
@@ -593,6 +595,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/grip-vertical.svg
     resources/icons/lucide/eye.svg
     resources/icons/lucide/eye-off.svg
+    resources/icons/lucide/file-plus.svg
     resources/icons/lucide/folder-open.svg
     resources/icons/lucide/folder-tree.svg
     resources/icons/lucide/folder-x.svg

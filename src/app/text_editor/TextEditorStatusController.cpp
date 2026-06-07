@@ -21,7 +21,13 @@ TextEditorStatusController::TextEditorStatusController(TextEditorStatusContext c
 QString TextEditorStatusController::displayName() const
 {
     if (context_.filePath == nullptr || context_.filePath->isEmpty()) {
-        return trText("Untitled");
+        QString name = context_.untitledDisplayName != nullptr && !context_.untitledDisplayName->isEmpty()
+            ? *context_.untitledDisplayName
+            : trText("Untitled");
+        if (context_.dirty != nullptr && *context_.dirty) {
+            name.prepend(QStringLiteral("*"));
+        }
+        return name;
     }
 
     QString name = QFileInfo(*context_.filePath).fileName();
@@ -92,6 +98,9 @@ void TextEditorStatusController::refreshStatus()
 
 bool TextEditorStatusController::isCurrentStateDirty() const
 {
+    if (context_.filePath == nullptr || context_.filePath->isEmpty()) {
+        return true;
+    }
     if (context_.fileEncodingName == nullptr || context_.cleanEncodingNameSnapshot == nullptr) {
         return false;
     }
@@ -127,7 +136,9 @@ void TextEditorStatusController::applyDirtyStateFromCurrentState()
 QString TextEditorStatusController::displayPath() const
 {
     if (context_.filePath == nullptr || context_.filePath->isEmpty()) {
-        return trText("No file open");
+        return context_.untitledDisplayName != nullptr && !context_.untitledDisplayName->isEmpty()
+            ? trText("Unsaved document")
+            : trText("No file open");
     }
 
     if (context_.projectRootPath == nullptr || context_.projectRootPath->isEmpty()) {

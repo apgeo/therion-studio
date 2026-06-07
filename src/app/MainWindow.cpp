@@ -471,6 +471,14 @@ void MainWindow::buildMenus()
     newWindowAction->setShortcut(QKeySequence::New);
     connect(newWindowAction, &QAction::triggered, this, &MainWindow::createNewWindow);
 
+    QMenu *newMenu = fileMenu->addMenu(tr("New"));
+    newTherionSourceAction_ = newMenu->addAction(tr("Therion Source (.th)"));
+    connect(newTherionSourceAction_, &QAction::triggered, this, &MainWindow::createNewTherionSourceDocument);
+    newTherionMapAction_ = newMenu->addAction(tr("Therion Map (.th2)"));
+    connect(newTherionMapAction_, &QAction::triggered, this, &MainWindow::createNewTherionMapDocument);
+    newTherionConfigAction_ = newMenu->addAction(tr("Therion Config (.thconfig)"));
+    connect(newTherionConfigAction_, &QAction::triggered, this, &MainWindow::createNewTherionConfigDocument);
+
     openProjectAction_ = fileMenu->addAction(tr("&Open Project..."));
     openProjectAction_->setShortcut(QKeySequence::Open);
     connect(openProjectAction_, &QAction::triggered, this, &MainWindow::openProject);
@@ -1012,6 +1020,24 @@ void MainWindow::recordRecentFilePath(const QString &filePath)
     refreshRecentFilesUi();
 }
 
+void MainWindow::createNewTherionSourceDocument()
+{
+    const QString fileName = tr("untitled.th");
+    createUntitledTextTab(fileName, QString::fromUtf8(TherionStudio::initialTherionProjectFileContents(fileName)));
+}
+
+void MainWindow::createNewTherionMapDocument()
+{
+    const QString fileName = tr("untitled.th2");
+    createUntitledMapEditorTab(fileName, QString::fromUtf8(TherionStudio::initialTherionProjectFileContents(fileName)));
+}
+
+void MainWindow::createNewTherionConfigDocument()
+{
+    const QString fileName = tr("untitled.thconfig");
+    createUntitledTextTab(fileName, QString::fromUtf8(TherionStudio::initialTherionProjectFileContents(fileName)));
+}
+
 void MainWindow::handleProjectTreeActivated(const QModelIndex &index)
 {
     if (projectModel_ == nullptr || !index.isValid() || projectModel_->isDir(index)) {
@@ -1083,13 +1109,13 @@ void MainWindow::closeAllTabs()
         }
 
         const QString documentPath = documentPathForWidget(tabWidget);
-        if (documentPath.isEmpty()) {
+        if (documentPath.isEmpty() && tabWidget->property(kWelcomeTabPropertyName).toBool()) {
             continue;
         }
 
         TherionStudio::MainWindowDocumentController::CloseTabEntry entry;
         entry.tabIndex = index;
-        entry.documentPath = documentPath;
+        entry.documentPath = documentPath.isEmpty() ? documentDisplayNameForWidget(tabWidget) : documentPath;
         request.tabEntries.append(entry);
     }
 
@@ -1218,40 +1244,21 @@ void MainWindow::loadStructureNameOverrides()
 
 void MainWindow::saveActiveDocument()
 {
-    TherionStudio::MainWindowDocumentController::Actions actions;
-    actions.showComingSoon = [this](const QString &featureName) { showComingSoon(featureName); };
-    actions.saveDocument = [this](const QString &documentPath, QString *errorMessage) {
-        QWidget *tabWidget = documentWidgetForFilePath(documentPath);
-        if (tabWidget == nullptr) {
-            if (errorMessage != nullptr) {
-                *errorMessage = tr("Unable to resolve the active document.");
-            }
-            return false;
-        }
+    QWidget *documentWidget = currentDocumentWidget();
+    if (documentWidget == nullptr) {
+        showComingSoon(tr("Save"));
+        return;
+    }
 
-        return documentSaveForWidget(tabWidget, errorMessage);
-    };
-    actions.showWarningDialog = [this](const QString &title, const QString &message) {
-        QMessageBox::warning(this, title, message);
-    };
-    actions.updateTabTitle = [this](const QString &documentPath) {
-        if (QWidget *tabWidget = documentWidgetForFilePath(documentPath)) {
-            updateTabTitle(tabWidget);
+    QString errorMessage;
+    if (!saveDocumentWidget(documentWidget, &errorMessage)) {
+        if (!errorMessage.isEmpty()) {
+            QMessageBox::warning(this, tr("Save"), errorMessage);
         }
-    };
-    actions.documentDisplayName = [this](const QString &documentPath) {
-        if (QWidget *tabWidget = documentWidgetForFilePath(documentPath)) {
-            return documentDisplayNameForWidget(tabWidget);
-        }
-        return documentPath;
-    };
-    actions.showStatusBarMessage = [this](const QString &message, int timeoutMs) {
-        statusBar()->showMessage(message, timeoutMs);
-    };
-    TherionStudio::MainWindowDocumentController::SaveActiveRequest request;
-    request.hasActiveDocument = currentDocumentWidget() != nullptr;
-    request.activeDocumentPath = documentPathForWidget(currentDocumentWidget());
-    TherionStudio::MainWindowDocumentController::saveActive(request, actions);
+        return;
+    }
+
+    statusBar()->showMessage(tr("Saved %1").arg(documentDisplayNameForWidget(documentWidget)), 2000);
 }
 
 void MainWindow::saveAllDocuments()
@@ -1261,67 +1268,39 @@ void MainWindow::saveAllDocuments()
 
 bool MainWindow::saveAllOpenDocuments()
 {
-    QStringList documentPaths;
+    QList<QWidget *> documents;
     for (int index = 0; index < editorTabs_->count(); ++index) {
         QWidget *tabWidget = editorTabs_->widget(index);
-        if (tabWidget == nullptr) {
+        if (tabWidget == nullptr || tabWidget->property(kWelcomeTabPropertyName).toBool()) {
             continue;
         }
-
-        const QString path = documentPathForWidget(tabWidget);
-        if (path.isEmpty()) {
-            continue;
-        }
-
-        documentPaths.append(path);
+        documents.append(tabWidget);
     }
     for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
         if (detachedTab == nullptr) {
             continue;
         }
+        documents.append(detachedTab);
+    }
 
-        const QString path = documentPathForWidget(detachedTab);
-        if (path.isEmpty()) {
+    bool savedAny = false;
+    for (QWidget *documentWidget : documents) {
+        if (!documentIsDirtyForWidget(documentWidget)) {
             continue;
         }
 
-        documentPaths.append(path);
-    }
-
-    TherionStudio::MainWindowDocumentController::Actions actions;
-    actions.documentIsDirty = [this](const QString &documentPath) {
-        QWidget *tabWidget = documentWidgetForFilePath(documentPath);
-        return tabWidget != nullptr && documentIsDirtyForWidget(tabWidget);
-    };
-    actions.saveDocument = [this](const QString &documentPath, QString *errorMessage) {
-        QWidget *tabWidget = documentWidgetForFilePath(documentPath);
-        if (tabWidget == nullptr) {
-            if (errorMessage != nullptr) {
-                *errorMessage = tr("Unable to resolve open document %1").arg(documentPath);
+        QString errorMessage;
+        if (!saveDocumentWidget(documentWidget, &errorMessage)) {
+            if (!errorMessage.isEmpty()) {
+                QMessageBox::warning(this, tr("Save All"), errorMessage);
             }
             return false;
         }
+        savedAny = true;
+    }
 
-        return documentSaveForWidget(tabWidget, errorMessage);
-    };
-    actions.isAttachedDocument = [this](const QString &documentPath) {
-        QWidget *tabWidget = documentWidgetForFilePath(documentPath);
-        return tabWidget != nullptr && editorTabs_->indexOf(tabWidget) >= 0;
-    };
-    actions.updateTabTitle = [this](const QString &documentPath) {
-        if (QWidget *tabWidget = documentWidgetForFilePath(documentPath)) {
-            updateTabTitle(tabWidget);
-        }
-    };
-    actions.showWarningDialog = [this](const QString &title, const QString &message) {
-        QMessageBox::warning(this, title, message);
-    };
-    actions.showStatusBarMessage = [this](const QString &message, int timeoutMs) {
-        statusBar()->showMessage(message, timeoutMs);
-    };
-    TherionStudio::MainWindowDocumentController::SaveAllRequest request;
-    request.documentPaths = documentPaths;
-    return TherionStudio::MainWindowDocumentController::saveAll(request, actions);
+    statusBar()->showMessage(savedAny ? tr("Saved all modified documents.") : tr("No modified documents to save."), 3000);
+    return true;
 }
 
 void MainWindow::showFindBar(bool replaceMode)
@@ -1708,6 +1687,9 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
 
 QWidget *MainWindow::documentWidgetForFilePath(const QString &filePath) const
 {
+    if (filePath.trimmed().isEmpty()) {
+        return nullptr;
+    }
     const QString canonicalPath = canonicalDocumentPath(filePath);
 
     for (int index = 0; index < editorTabs_->count(); ++index) {
@@ -1986,7 +1968,7 @@ void MainWindow::reattachDetachedMapEditorTab(TherionStudio::MapEditorTab *tab, 
         detachedMapWindowsByPath_.remove(path);
     }
 
-    if (editorTabs_->count() == 1 && documentPathForWidget(editorTabs_->widget(0)).isEmpty()) {
+    if (editorTabs_->count() == 1 && editorTabs_->widget(0)->property(kWelcomeTabPropertyName).toBool()) {
         QWidget *welcomeWidget = editorTabs_->widget(0);
         editorTabs_->removeTab(0);
         if (welcomeWidget != nullptr) {
@@ -2048,7 +2030,7 @@ TherionStudio::TextEditorTab *MainWindow::currentTextTab() const
 QWidget *MainWindow::currentDocumentWidget() const
 {
     QWidget *widget = editorTabs_->currentWidget();
-    if (documentPathForWidget(widget).isEmpty()) {
+    if (widget == nullptr || widget->property(kWelcomeTabPropertyName).toBool()) {
         return nullptr;
     }
 

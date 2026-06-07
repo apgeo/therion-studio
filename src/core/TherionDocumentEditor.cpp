@@ -1661,23 +1661,17 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = contents->split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-    for (QString &line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-    }
-
-    if (lineNumber > lines.size()) {
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
 
-    QString lineText = lines.at(lineNumber - 1);
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(lineNumber - 1);
+    const QString &lineText = sourceLine.text;
+    const TherionParsedLine &parsedLine = sourceLine.parsed;
     if (parsedLine.directive != QStringLiteral("point") && parsedLine.directive != QStringLiteral("station")) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a writable point geometry.");
@@ -1697,7 +1691,12 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
 
     const TherionParsedToken secondToken = parsedLine.tokenSpans.at(tokenPair.second);
     const TherionParsedToken firstToken = parsedLine.tokenSpans.at(tokenPair.first);
-    if (firstToken.start < 0 || secondToken.start < 0) {
+    if (firstToken.start < 0
+        || firstToken.length < 0
+        || firstToken.start + firstToken.length > lineText.size()
+        || secondToken.start < 0
+        || secondToken.length < 0
+        || secondToken.start + secondToken.length > lineText.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected point coordinates could not be rewritten.");
         }
@@ -1706,14 +1705,12 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
 
     const QString oldYTokenText = lineText.mid(secondToken.start, secondToken.length);
     const QString oldXTokenText = lineText.mid(firstToken.start, firstToken.length);
-    lineText.replace(secondToken.start,
-                     secondToken.length,
-                     formatCoordinateLikeExistingToken(oldYTokenText, point.y()));
-    lineText.replace(firstToken.start,
-                     firstToken.length,
-                     formatCoordinateLikeExistingToken(oldXTokenText, point.x()));
-    lines[lineNumber - 1] = lineText;
-    *contents = lines.join(lineEnding);
+    contents->replace(sourceLine.absoluteTokenStart(secondToken),
+                      secondToken.length,
+                      formatCoordinateLikeExistingToken(oldYTokenText, point.y()));
+    contents->replace(sourceLine.absoluteTokenStart(firstToken),
+                      firstToken.length,
+                      formatCoordinateLikeExistingToken(oldXTokenText, point.x()));
     return true;
 }
 

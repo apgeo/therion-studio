@@ -802,6 +802,17 @@ int runRewritePointCoordinatesTest()
         return 1;
     }
 
+    contents = QStringLiteral("survey s\r\npoint station 10 20 station -name mixed\nendsurvey\r");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 2, QPointF(30.25, -40.5), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("survey s\r\npoint station 30.3 -40.5 station -name mixed\nendsurvey\r"),
+                "rewritePointCoordinates should preserve mixed physical line endings when replacing coordinate tokens.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("point station 397.50 -969.50 station -name a5\n");
     const QString originalPrecisionPointContents = contents;
     errorMessage.clear();

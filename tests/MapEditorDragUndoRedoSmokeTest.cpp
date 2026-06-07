@@ -81,6 +81,41 @@ bool runFreehandBezierRowLogicSmoke()
     const auto identitySceneToSource = [](const QPointF &point) {
         return point;
     };
+    QVector<MapEditorInteractiveLineDraftVertex> firstDraggedDraft;
+    captureInteractiveLineAnchor(&firstDraggedDraft,
+                                 QPointF(0.0, 0.0),
+                                 QPointF(0.0, 0.0),
+                                 QPointF(0.0, 5.0),
+                                 identitySceneToSource);
+    captureInteractiveLineAnchor(&firstDraggedDraft,
+                                 QPointF(10.0, 0.0),
+                                 QPointF(10.0, 0.0),
+                                 QPointF(10.0, 5.0),
+                                 identitySceneToSource);
+    if (!expect(firstDraggedDraft.size() == 2
+                    && firstDraggedDraft.first().incomingControlScene == QPointF(0.0, -5.0)
+                    && firstDraggedDraft.first().outgoingControlScene == QPointF(0.0, 5.0),
+                "Dragging the first XTherion-style draft point should keep mirrored controls on the first anchor.")) {
+        return false;
+    }
+    if (!expect(interactiveLineControlAt(firstDraggedDraft, QPointF(0.0, 5.0), 0.5).has_value()
+                    && interactiveLineControlAt(firstDraggedDraft, QPointF(0.0, -5.0), 0.5).has_value(),
+                "First draft anchor control handles should be hittable for immediate editing.")) {
+        return false;
+    }
+    const QStringList firstDraggedOpenRows = lineCoordinateRowsForInteractiveDraft(firstDraggedDraft);
+    if (!expect(firstDraggedOpenRows.size() == 2
+                    && firstDraggedOpenRows.at(1) == QStringLiteral("0.0 5.0 10.0 -5.0 10.0 0.0"),
+                "Open draft rows should serialize the first anchor's outgoing control on the first segment.")) {
+        return false;
+    }
+    const QStringList firstDraggedClosedRows = closedLineCoordinateRowsForInteractiveDraft(firstDraggedDraft);
+    if (!expect(firstDraggedClosedRows.size() == 3
+                    && firstDraggedClosedRows.at(2) == QStringLiteral("10.0 5.0 0.0 -5.0 0.0 0.0"),
+                "Closed draft rows should serialize a smooth Bezier closing segment using the first anchor's incoming control.")) {
+        return false;
+    }
+
     captureInteractiveLineAnchor(&xtherionDraft,
                                  QPointF(0.0, 0.0),
                                  QPointF(0.0, 0.0),

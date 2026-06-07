@@ -235,10 +235,10 @@ QStringList bezierLineCoordinateRowsForFreehandStroke(const QVector<QPointF> &so
     return lineCoordinateRowsForInteractiveDraft(bezierDraftVerticesFromAnchors(simplifiedAnchors));
 }
 
-QStringList areaCoordinateRowsForInteractiveDraft(const QVector<MapEditorInteractiveLineDraftVertex> &vertices)
+QStringList closedLineCoordinateRowsForInteractiveDraft(const QVector<MapEditorInteractiveLineDraftVertex> &vertices)
 {
     QStringList rows = lineCoordinateRowsForInteractiveDraft(vertices);
-    if (vertices.size() < 3) {
+    if (vertices.size() < 2) {
         return rows;
     }
 
@@ -276,6 +276,15 @@ QStringList areaCoordinateRowsForInteractiveDraft(const QVector<MapEditorInterac
     return rows;
 }
 
+QStringList areaCoordinateRowsForInteractiveDraft(const QVector<MapEditorInteractiveLineDraftVertex> &vertices)
+{
+    if (vertices.size() < 3) {
+        return lineCoordinateRowsForInteractiveDraft(vertices);
+    }
+
+    return closedLineCoordinateRowsForInteractiveDraft(vertices);
+}
+
 void captureInteractiveLineAnchor(QVector<MapEditorInteractiveLineDraftVertex> *vertices,
                                   const QPointF &anchorScenePoint,
                                   const QPointF &anchorSourcePoint,
@@ -291,7 +300,7 @@ void captureInteractiveLineAnchor(QVector<MapEditorInteractiveLineDraftVertex> *
     vertex.anchorSource = anchorSourcePoint;
     vertices->append(vertex);
 
-    if (dragScenePoint.has_value() && vertices->size() >= 2) {
+    if (dragScenePoint.has_value()) {
         MapEditorInteractiveLineDraftVertex &current = vertices->last();
         current.outgoingControlScene = dragScenePoint.value();
         current.outgoingControlSource = sceneToSource(dragScenePoint.value());

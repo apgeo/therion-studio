@@ -905,8 +905,10 @@ void MapEditorSelectionController::updateGeometrySelectionPresentation()
             if (subtype == kMapSceneSelectionSubtypeLineControl
                 || subtype == kMapSceneSelectionSubtypeLineControlConnector) {
                 const int ownerVertexIndex = item->data(kMapSceneOwnerVertexRole).toInt();
+                const QSet<int> selectedOwnerVertices = selectedLineControlOwnersByLine.value(lineNumber);
                 visible = ownerVertexIndex >= 0
-                    && selectedLineControlOwnersByLine.value(lineNumber).contains(ownerVertexIndex);
+                    && (selectedOwnerVertices.isEmpty()
+                        || selectedOwnerVertices.contains(ownerVertexIndex));
             }
         }
 

@@ -135,7 +135,9 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
     if (modeAtCommit == MapEditorInteractiveDrawMode::Line) {
         QString errorMessage;
         int insertedLineNumber = 0;
-        const QStringList coordinateRows = context_.lineCoordinateRowsForInteractiveDraft();
+        const QStringList coordinateRows = closeLineDraft
+            ? closedLineCoordinateRowsForInteractiveDraft((*context_.lineVertices))
+            : context_.lineCoordinateRowsForInteractiveDraft();
         const QString lineOptions = closeLineDraft ? QStringLiteral("-close on") : QString();
         const QString beforeText = context_.textEditor->text();
         const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);

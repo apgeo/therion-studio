@@ -51,9 +51,8 @@ bool isMapSecondaryClickEvent(const QEvent *event, QPoint *globalPosition)
 
     if (event->type() == QEvent::MouseButtonPress) {
         const auto *mouseEvent = static_cast<const QMouseEvent *>(event);
-        const bool secondaryClick = mouseEvent->button() == Qt::RightButton
-            || (mouseEvent->button() == Qt::LeftButton
-                && mouseEvent->modifiers().testFlag(Qt::ControlModifier));
+        const bool secondaryClick = mouseEvent->button() == Qt::LeftButton
+            && mouseEvent->modifiers().testFlag(Qt::ControlModifier);
         if (!secondaryClick) {
             return false;
         }
@@ -69,9 +68,8 @@ bool isMapSecondaryClickEvent(const QEvent *event, QPoint *globalPosition)
 
     if (event->type() == QEvent::GraphicsSceneMousePress) {
         const auto *sceneMouseEvent = static_cast<const QGraphicsSceneMouseEvent *>(event);
-        const bool secondaryClick = sceneMouseEvent->button() == Qt::RightButton
-            || (sceneMouseEvent->button() == Qt::LeftButton
-                && sceneMouseEvent->modifiers().testFlag(Qt::ControlModifier));
+        const bool secondaryClick = sceneMouseEvent->button() == Qt::LeftButton
+            && sceneMouseEvent->modifiers().testFlag(Qt::ControlModifier);
         if (!secondaryClick) {
             return false;
         }

@@ -170,7 +170,7 @@ Soubory mimo UTF-8 se otevírají s konkrétním zdrojovým kódováním, když 
 | Výběr a kreslení | `Vybrat`, `Dokončit návrh` |
 | Vkládání | `Vložit scrap`, `Bod`, `Linie`, `Volná kresba`, `Plocha` |
 
-Mapové plátno používá stabilní světlý „papírový“ povrch ve světlém i tmavém vzhledu aplikace. Lišty, záložky a inspektory následují systémový vzhled, ale rastry, `.xvi` reference a mapové symboly se pro tmavý režim netónují ani neinvertují.
+Mapové plátno používá stabilní světlý „papírový“ povrch ve světlém i tmavém vzhledu aplikace. Lišty, záložky a inspektory následují systémový vzhled, ale rastry, `.xvi` reference a mapové symboly se pro tmavý režim netónují ani neinvertují. Tažením pravým tlačítkem myši posunete mapové plátno ve stylu XTherionu.
 
 ### 6.3 Vkládání objektů
 
@@ -196,7 +196,7 @@ Během kreslení čáry nebo plochy:
 
 Vyberte mapový objekt nebo jeho vrchol/kontrolní bod na mapovém plátně. Inspektor `Výběr` zobrazí odpovídající ovládání včetně zdrojového řádku a ID obalujícího scrapu.
 
-Pravým kliknutím na vybraný mapový objekt nebo vrchol čáry otevřete kontextové menu s běžnými akcemi ve stylu XTherionu. Menu zrcadlí dostupné skupiny inspektoru `Výběr`, například volby typu/podtypu, editovatelná pole objektu, `Geometry`, celý dostupný panel `Line Point`, `Line Point Actions` a `Object Actions`; volné textové nebo číselné editory se otevřou a fokusují v inspektoru. Na macOS otevře stejné menu i sekundární klik na trackpadu, například kliknutí dvěma prsty. Pokud je menu už otevřené, další sekundární klik na jiný objekt nebo vrchol přecílí menu na nový výběr a přesune ho na poslední pozici kliknutí.
+Pravým kliknutím bez tažení na mapový objekt nebo vrchol čáry otevřete kontextové menu s běžnými akcemi ve stylu XTherionu. Pravý klik do prázdného plátna toto menu neotevře. Menu zrcadlí dostupné skupiny inspektoru `Výběr`, například volby typu/podtypu, editovatelná pole objektu, `Geometry`, celý dostupný panel `Line Point`, `Line Point Actions` a `Object Actions`; volné textové nebo číselné editory se otevřou a fokusují v inspektoru. Na macOS otevře stejné menu i sekundární klik na trackpadu, například kliknutí dvěma prsty. Pokud je menu už otevřené, další sekundární klik na jiný objekt nebo vrchol přecílí menu na nový výběr a přesune ho na poslední pozici kliknutí.
 
 Pro čáry a hranice ploch:
 

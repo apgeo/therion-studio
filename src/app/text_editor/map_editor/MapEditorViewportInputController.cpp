@@ -57,9 +57,6 @@ bool isSecondaryClickPress(const QMouseEvent *event)
     if (event == nullptr) {
         return false;
     }
-    if (event->button() == Qt::RightButton) {
-        return true;
-    }
     return event->button() == Qt::LeftButton
         && event->modifiers().testFlag(Qt::ControlModifier);
 }
@@ -303,11 +300,11 @@ void refreshMapHoverFromCurrentCursor(MapEditorViewportInputContext &context, QW
     setMapInteractionHoverItem(context, hoverItem);
 }
 
-void selectMapHitItemForContextMenu(MapEditorViewportInputContext &context, const QPoint &viewportPosition)
+bool selectMapHitItemForContextMenu(MapEditorViewportInputContext &context, const QPoint &viewportPosition)
 {
     QGraphicsItem *item = preferredMapHitItemForViewportPosition(context, viewportPosition, false);
     if (item == nullptr || context.scene == nullptr) {
-        return;
+        return false;
     }
 
     context.scene->clearSelection();
@@ -321,6 +318,7 @@ void selectMapHitItemForContextMenu(MapEditorViewportInputContext &context, cons
                                                  (*context.pendingClickGeometryKind),
                                                  item->scenePos());
     }
+    return true;
 }
 
 void showSelectionContextMenuAtViewportPosition(MapEditorViewportInputContext &context,
@@ -331,7 +329,9 @@ void showSelectionContextMenuAtViewportPosition(MapEditorViewportInputContext &c
         return;
     }
 
-    selectMapHitItemForContextMenu(context, viewportPosition);
+    if (!selectMapHitItemForContextMenu(context, viewportPosition)) {
+        return;
+    }
     context.showSelectionContextMenu(globalPosition);
 }
 
@@ -725,6 +725,11 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
             if (watched == context_.view) {
                 viewportPosition = viewport->mapFrom(context_.view, contextMenuEvent->pos());
             }
+            if (context_.mapPanMoved != nullptr && (*context_.mapPanMoved)) {
+                (*context_.mapPanMoved) = false;
+                event->accept();
+                return true;
+            }
             (*context_.mapPanActive) = false;
             if (context_.mapPanMoved != nullptr) {
                 (*context_.mapPanMoved) = false;
@@ -736,6 +741,23 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
         }
         case QEvent::MouseButtonPress: {
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (mouseEvent->button() == Qt::RightButton) {
+                context_.view->setFocus(Qt::MouseFocusReason);
+                viewport->setFocus(Qt::MouseFocusReason);
+                (*context_.mapPanActive) = true;
+                if (context_.mapPanMoved != nullptr) {
+                    (*context_.mapPanMoved) = false;
+                }
+                if (context_.mapPanStartPosition != nullptr) {
+                    (*context_.mapPanStartPosition) = mouseEvent->pos();
+                }
+                if (context_.mapPanLastPosition != nullptr) {
+                    (*context_.mapPanLastPosition) = mouseEvent->pos();
+                }
+                viewport->setCursor(Qt::OpenHandCursor);
+                event->accept();
+                return true;
+            }
             if (isSecondaryClickPress(mouseEvent)) {
                 (*context_.mapPanActive) = false;
                 if (context_.mapPanMoved != nullptr) {
@@ -1064,9 +1086,6 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
 
             if ((*context_.mapPanActive) && mouseEvent->button() == Qt::RightButton) {
                 (*context_.mapPanActive) = false;
-                if (context_.mapPanMoved != nullptr) {
-                    (*context_.mapPanMoved) = false;
-                }
                 applyDefaultMapViewportCursor(context_, viewport);
                 event->accept();
                 return true;

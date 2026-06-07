@@ -284,24 +284,51 @@ int runSecondaryClickOpensContextMenuTest()
                            Qt::RightButton,
                            Qt::NoModifier);
     if (!expect(controller.handleEvent(view.viewport(), &rightPress).value_or(false),
-                "Right mouse press should be handled as a map context-menu candidate.")) {
+                "Right mouse press should be handled as a map pan candidate.")) {
         return 1;
     }
 
-    if (!expect(contextMenuCalls == 1,
-                "Right mouse press should open the map selection context menu immediately.")) {
+    if (!expect(contextMenuCalls == 0,
+                "Right mouse press should not open the map selection context menu immediately.")) {
         return 1;
     }
-    if (!expect(hitItem->isSelected() && pendingClickLineNumber == 77,
-                "Right mouse press should select the map item under the cursor before opening the context menu.")) {
+    if (!expect(mapPanActive && !mapPanMoved,
+                "Right mouse press should start pan state without marking movement yet.")) {
         return 1;
     }
-    if (!expect(preparedSelectionCalls == 1 && preparedLineNumber == 77 && preparedVertexIndex == -1,
-                "Right mouse press should prepare selection metadata before opening the context menu.")) {
+
+    QMouseEvent rightRelease(QEvent::MouseButtonRelease,
+                             QPointF(clickPosition),
+                             QPointF(view.viewport()->mapToGlobal(clickPosition)),
+                             Qt::RightButton,
+                             Qt::NoButton,
+                             Qt::NoModifier);
+    if (!expect(controller.handleEvent(view.viewport(), &rightRelease).value_or(false),
+                "Right mouse release should finish a pan candidate.")) {
         return 1;
     }
     if (!expect(!mapPanActive && !mapPanMoved,
-                "Right click context-menu path should not leave pan state active.")) {
+                "Right click without movement should not leave pan state active.")) {
+        return 1;
+    }
+
+    QContextMenuEvent rightClickContextMenu(QContextMenuEvent::Mouse,
+                                            clickPosition,
+                                            view.viewport()->mapToGlobal(clickPosition));
+    if (!expect(controller.handleEvent(view.viewport(), &rightClickContextMenu).value_or(false),
+                "Right click context menu event should be handled after the pan candidate release.")) {
+        return 1;
+    }
+    if (!expect(contextMenuCalls == 1,
+                "Right click without movement should open the map selection context menu.")) {
+        return 1;
+    }
+    if (!expect(hitItem->isSelected() && pendingClickLineNumber == 77,
+                "Right click without movement should select the map item under the cursor before opening the context menu.")) {
+        return 1;
+    }
+    if (!expect(preparedSelectionCalls == 1 && preparedLineNumber == 77 && preparedVertexIndex == -1,
+                "Right click without movement should prepare selection metadata before opening the context menu.")) {
         return 1;
     }
 
@@ -320,6 +347,69 @@ int runSecondaryClickOpensContextMenuTest()
     }
     if (!expect(preparedSelectionCalls == 1 && preparedLineNumber == 77,
                 "Viewport custom context-menu request should prepare selection metadata.")) {
+        return 1;
+    }
+
+    contextMenuCalls = 0;
+    preparedSelectionCalls = 0;
+    scene.clearSelection();
+    pendingClickLineNumber = 0;
+    const QPoint emptyClickPosition(210, 150);
+    controller.showContextMenuAtViewportPosition(emptyClickPosition, view.viewport()->mapToGlobal(emptyClickPosition));
+    if (!expect(contextMenuCalls == 0 && preparedSelectionCalls == 0,
+                "Viewport context-menu request on empty canvas should not open the map selection context menu.")) {
+        return 1;
+    }
+
+    const QPoint panStartPosition(120, 120);
+    const QPoint panMovePosition(150, 145);
+    contextMenuCalls = 0;
+    preparedSelectionCalls = 0;
+    mapPanActive = false;
+    mapPanMoved = false;
+    QMouseEvent panPress(QEvent::MouseButtonPress,
+                         QPointF(panStartPosition),
+                         QPointF(view.viewport()->mapToGlobal(panStartPosition)),
+                         Qt::RightButton,
+                         Qt::RightButton,
+                         Qt::NoModifier);
+    if (!expect(controller.handleEvent(view.viewport(), &panPress).value_or(false),
+                "Right-button drag should start map pan state.")) {
+        return 1;
+    }
+    QMouseEvent panMove(QEvent::MouseMove,
+                        QPointF(panMovePosition),
+                        QPointF(view.viewport()->mapToGlobal(panMovePosition)),
+                        Qt::NoButton,
+                        Qt::RightButton,
+                        Qt::NoModifier);
+    if (!expect(controller.handleEvent(view.viewport(), &panMove).value_or(false),
+                "Right-button drag should pan the map viewport.")) {
+        return 1;
+    }
+    if (!expect(mapPanActive && mapPanMoved && !autoFitEnabled && commandSurfaceUpdates > 0 && zoomSyncs > 0,
+                "Right-button drag should mark pan movement, disable auto-fit, and update viewport state.")) {
+        return 1;
+    }
+    QMouseEvent panRelease(QEvent::MouseButtonRelease,
+                           QPointF(panMovePosition),
+                           QPointF(view.viewport()->mapToGlobal(panMovePosition)),
+                           Qt::RightButton,
+                           Qt::NoButton,
+                           Qt::NoModifier);
+    if (!expect(controller.handleEvent(view.viewport(), &panRelease).value_or(false),
+                "Right-button drag release should finish map pan state.")) {
+        return 1;
+    }
+    QContextMenuEvent suppressedPanContextMenu(QContextMenuEvent::Mouse,
+                                               panMovePosition,
+                                               view.viewport()->mapToGlobal(panMovePosition));
+    if (!expect(controller.handleEvent(view.viewport(), &suppressedPanContextMenu).value_or(false),
+                "Context menu event after right-button pan should be consumed.")) {
+        return 1;
+    }
+    if (!expect(contextMenuCalls == 0 && preparedSelectionCalls == 0 && !mapPanActive && !mapPanMoved,
+                "Right-button pan should not open a context menu and should reset pan movement after suppressing it.")) {
         return 1;
     }
 

@@ -1240,22 +1240,17 @@ bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = contents->split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-    for (QString &line : lines) {
-        if (line.endsWith(QLatin1Char('\r'))) {
-            line.chop(1);
-        }
-    }
-    if (lineNumber > lines.size()) {
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
 
-    QString lineText = lines.at(lineNumber - 1);
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(lineNumber - 1);
+    const QString &lineText = sourceLine.text;
+    const TherionParsedLine &parsedLine = sourceLine.parsed;
     if (parsedLine.tokens.isEmpty()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line does not contain a structure object.");
@@ -1280,9 +1275,7 @@ bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
     }
 
     const QString replacementToken = replacementTokenForLine(trimmedName, lineText, tokenSpan);
-    lineText.replace(tokenSpan.start, tokenSpan.length, replacementToken);
-    lines[lineNumber - 1] = lineText;
-    *contents = lines.join(lineEnding);
+    contents->replace(sourceLine.absoluteTokenStart(tokenSpan), tokenSpan.length, replacementToken);
     return true;
 }
 

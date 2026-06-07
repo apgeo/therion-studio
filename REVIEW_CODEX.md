@@ -217,6 +217,7 @@ Current follow-up status:
 - `TherionDocumentParser::parseTokenLines()` now provides the named compatibility projection for token-line consumers backed by the lossless source snapshot.
 - `ProjectStructureIndex`, `TherionDocumentEditor` scrap-name lookup, and selected map read-only projections now use the named lossless token-line projection instead of calling `parseText()` directly.
 - `MapEditorAreaReferenceResolver` and `MapEditorSourceReferenceResolver` use the lossless token-line projection for area/border and text-to-line-feature lookups.
+- `TherionDocumentEditor::rewriteStructureEntryName()` now uses absolute token ranges from the lossless source snapshot instead of split/join line reconstruction.
 - The first shared command-line model has been extracted into `src/core/TherionCommandLineModel.h`; the legacy app-level `CommandOptionParser` wrapper has been removed.
 - Command-line option parsing plus option-row/value serialization now lives behind focused command-line model APIs rather than broader generic utilities.
 - Command option lookup, normalized field-name matching, value maps, and toggle parsing now live behind `TherionCommandLineModel` and are used by the map inspector, map renderer/projection extraction, map delete/split/reference planners, PocketTopo background placement, and Structure indexing.

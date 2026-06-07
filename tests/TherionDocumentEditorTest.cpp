@@ -245,6 +245,17 @@ int runRewritePreservesOtherContentTest()
         return 1;
     }
 
+    contents = QStringLiteral("survey old-survey\r\nmap old-map\nscrap old-scrap\rendscrap");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 2, QStringLiteral("Maps"), QStringLiteral("new-map"), &errorMessage), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
+    if (!expect(contents == QStringLiteral("survey old-survey\r\nmap new-map\nscrap old-scrap\rendscrap"),
+                "The rewrite helper should preserve mixed physical line endings when replacing one token.")) {
+        return 1;
+    }
+
     return 0;
 }
 

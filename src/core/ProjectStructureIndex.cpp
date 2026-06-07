@@ -84,7 +84,7 @@ bool pathIsInsideDirectory(const QString &path, const QString &directoryPath)
 
 QVector<TherionParsedLine> parsedTokenLinesForText(const QString &text)
 {
-    return TherionDocumentParser::parseSourceDocument(text).tokenLines();
+    return TherionDocumentParser::parseTokenLines(text);
 }
 
 QString sectionNameFromLine(const TherionParsedLine &parsedLine);

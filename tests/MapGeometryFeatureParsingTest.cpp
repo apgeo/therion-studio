@@ -85,7 +85,7 @@ int runPointTypeAndLabelOptionParsingTest()
                        "  40 10\n"
                        "endline\n");
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
     const QVector<const MapGeometryFeature *> points = pointFeatures(features);
     if (!expect(points.size() == 2, "Expected two point features to parse.")) {
@@ -148,7 +148,7 @@ int runBezierSegmentParsingTest()
                        "  1205.5 788.0 1195.5 832.5 1173.5 879.0\n"
                        "endline\n");
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
     const MapGeometryFeature *line = firstLineFeature(features);
     if (!expect(line != nullptr, "Expected one parsed line feature.")) {
@@ -206,7 +206,7 @@ int runSmoothAndOptionMetadataIgnoredTest()
                        "  70 80\n"
                        "endline\n");
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
     const MapGeometryFeature *line = firstLineFeature(features);
     if (!expect(line != nullptr, "Expected one parsed line feature for metadata-ignore test.")) {
@@ -242,7 +242,7 @@ int runSlopeLinePointOptionsParsingTest()
                        "  orientation 90\n"
                        "endline\n");
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
     const MapGeometryFeature *line = firstLineFeature(features);
     if (!expect(line != nullptr, "Expected one parsed slope line feature.")) {
@@ -282,7 +282,7 @@ int runLineStandaloneRowsPreservedForRewriteRowsTest()
                        "  adjust horizontal\n"
                        "endline\n");
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
     const MapGeometryFeature *line = firstLineFeature(features);
     if (!expect(line != nullptr, "Expected one parsed line feature for standalone-row preservation test.")) {
@@ -318,7 +318,7 @@ int runLineStandaloneRowsCoverageTest()
                        "  10 0\n"
                        "endline\n");
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
     const MapGeometryFeature *line = firstLineFeature(features);
     if (!expect(line != nullptr, "Expected one parsed line feature for standalone-row coverage test.")) {
@@ -367,7 +367,7 @@ int runLineStandaloneKnownOptionsNormalizationTest()
                        "  10 0\n"
                        "endline\n");
 
-    QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(slopeText);
+    QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(slopeText);
     QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
     const MapGeometryFeature *slopeLine = firstLineFeature(features);
     if (!expect(slopeLine != nullptr, "Expected one parsed slope line feature for normalization test.")) {
@@ -400,7 +400,7 @@ int runLineStandaloneKnownOptionsNormalizationTest()
                        "  10 0\n"
                        "endline\n");
 
-    parsedLines = TherionDocumentParser::parseText(wallText);
+    parsedLines = TherionDocumentParser::parseTokenLines(wallText);
     features = collectGeometryFeatures(parsedLines);
     const MapGeometryFeature *wallLine = firstLineFeature(features);
     if (!expect(wallLine != nullptr, "Expected one parsed wall line feature in normalization test.")) {
@@ -426,7 +426,7 @@ int runAnchorEquivalentControlNormalizationTest()
                        "  0 0 10 0 10 0\n"
                        "endline\n");
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
     const MapGeometryFeature *line = firstLineFeature(features);
     if (!expect(line != nullptr, "Expected one parsed line feature for control normalization test.")) {
@@ -463,7 +463,7 @@ int runLineOptionToggleParsingTest()
                        "  50 50\n"
                        "endline\n");
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
 
     QVector<const MapGeometryFeature *> lines;
@@ -502,7 +502,7 @@ int runClosedLineClosingBezierParsingTest()
                        "  12 2 -2 2 0 0\n"
                        "endline\n");
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
     const MapGeometryFeature *line = firstLineFeature(features);
     if (!expect(line != nullptr, "Expected one parsed closed line feature for closing-bezier test.")) {
@@ -550,7 +550,7 @@ int runTwoAnchorClosedBezierRenderingTest()
                        "  endline\n"
                        "endscrap\n");
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
     const MapGeometryFeature *line = firstLineFeature(features);
     if (!expect(line != nullptr, "Expected one parsed line feature for two-anchor closed Bezier rendering test.")) {
@@ -634,7 +634,7 @@ int runExplicitClosedBezierRowRenderingTest()
                        "endline\n"
                        "endscrap\n");
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
     const MapGeometryFeature *line = firstLineFeature(features);
     if (!expect(line != nullptr, "Expected one parsed line feature for explicit closed Bezier fixture.")) {
@@ -1257,7 +1257,7 @@ int runAreaScrapClipMetadataParsingTest()
                        "endarea\n"
                        "endscrap\n");
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
 
     QVector<const MapGeometryFeature *> areas;

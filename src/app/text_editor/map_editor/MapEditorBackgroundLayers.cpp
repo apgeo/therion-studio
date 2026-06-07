@@ -2308,7 +2308,7 @@ QRectF MapEditorTab::xtherionAutoAreaAdjustRect() const
     }
 
     if (textEditor_ != nullptr) {
-        const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(textEditor_->text());
+        const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(textEditor_->text());
         includeRect(geometryBoundsForFeatures(collectGeometryFeatures(parsedLines)));
     }
 

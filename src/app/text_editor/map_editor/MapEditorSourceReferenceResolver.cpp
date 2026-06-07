@@ -11,7 +11,7 @@ namespace TherionStudio
 {
 std::optional<MapGeometryFeature> lineFeatureForLineNumber(const QString &documentText, int lineNumber)
 {
-    return lineFeatureForLineNumber(TherionDocumentParser::parseSourceDocument(documentText).tokenLines(), lineNumber);
+    return lineFeatureForLineNumber(TherionDocumentParser::parseTokenLines(documentText), lineNumber);
 }
 
 std::optional<MapGeometryFeature> lineFeatureForLineNumber(const QVector<TherionParsedLine> &parsedLines, int lineNumber)

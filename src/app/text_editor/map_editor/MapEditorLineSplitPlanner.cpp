@@ -15,7 +15,7 @@ namespace
 QSet<QString> lineIdentifiersInDocument(const QString &text)
 {
     QSet<QString> identifiers;
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     for (const TherionParsedLine &parsedLine : parsedLines) {
         if (parsedLine.directive != QStringLiteral("line")) {
             continue;

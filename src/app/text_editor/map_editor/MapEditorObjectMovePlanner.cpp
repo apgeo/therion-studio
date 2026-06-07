@@ -127,7 +127,7 @@ MapEditorObjectMovePlan MapEditorObjectMovePlanner::planMove(const QString &text
         return plan;
     }
 
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(text);
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
     const TherionParsedLine *sourceStart = parsedLineAt(parsedLines, sourceLineNumber);
     if (sourceStart == nullptr || !isMovableMapObjectDirective(sourceStart->directive)) {
         plan.errorMessage = QCoreApplication::translate("TherionStudio::MapEditorObjectMovePlanner",

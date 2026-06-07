@@ -102,7 +102,7 @@ QVector<AreaReferenceBlock> areaReferenceBlocks(const QVector<TherionParsedLine>
 
 QVector<TherionParsedLine> parsedTokenLinesForText(const QString &text)
 {
-    return TherionDocumentParser::parseSourceDocument(text).tokenLines();
+    return TherionDocumentParser::parseTokenLines(text);
 }
 }
 

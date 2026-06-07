@@ -28,7 +28,8 @@ Completed follow-ups from this review:
 - ~~Map editor background metadata, XVI parsing, line-split planning, inspector line lookup paths, and selected object settings single-line replacement now use `TherionSourceText` line helpers instead of local split/chop or line-ending helpers.~~
 - ~~`TherionDocumentParser::parseSourceDocument()` now provides a first lossless source snapshot API that keeps blank/comment-only physical lines, line endings, line numbers, parsed spans, and a legacy token-line projection without changing `parseText()` consumers.~~
 - ~~Lossless parser source lines now expose absolute source ranges and token absolute range helpers, so future rewrites can address document text without recalculating offsets locally.~~
-- ~~`ProjectStructureIndex` now reads token lines through the lossless source snapshot compatibility projection instead of calling `parseText()` directly.~~
+- ~~`TherionDocumentParser::parseTokenLines()` now provides the named compatibility projection for existing token-line consumers backed by the lossless source snapshot.~~
+- ~~`ProjectStructureIndex` and selected map read-only projections now read token lines through the named lossless source snapshot compatibility projection instead of calling `parseText()` directly.~~
 - ~~`MapEditorAreaReferenceResolver` now reads token lines through the lossless source snapshot compatibility projection while preserving physical line numbers across blank/comment lines.~~
 - ~~`MapEditorSourceReferenceResolver` line-feature lookup now reads through the lossless source snapshot compatibility projection, with focused coverage for physical line numbers after blank/comment lines.~~
 - ~~Raster background source images now use a bounded path/mtime/size cache so repeated gamma and placement operations do not decode the same raster file repeatedly.~~
@@ -213,9 +214,9 @@ Current follow-up status:
 - Physical source-line splitting and newline preservation now live in `src/core/TherionSourceText.h`; `TherionStringUtils`, Block editor source split/join wrappers, map background/XVI line readers, map line split planning, and map inspector line lookup paths delegate to it.
 - `TherionDocumentParser::parseSourceDocument()` now exposes a lossless physical-line snapshot plus `tokenLines()` compatibility projection while leaving `parseText()` behavior unchanged.
 - Lossless source lines now expose absolute line ranges and token range helpers for future source-rewrite migration.
-- `ProjectStructureIndex` is the first read-only projection using `parseSourceDocument().tokenLines()` for project/source scans.
-- `MapEditorAreaReferenceResolver` also uses the lossless token-line projection for area/border lookups.
-- `MapEditorSourceReferenceResolver` uses the lossless token-line projection for text-to-line-feature lookup.
+- `TherionDocumentParser::parseTokenLines()` now provides the named compatibility projection for token-line consumers backed by the lossless source snapshot.
+- `ProjectStructureIndex` and selected map read-only projections now use the named lossless token-line projection instead of calling `parseText()` directly.
+- `MapEditorAreaReferenceResolver` and `MapEditorSourceReferenceResolver` use the lossless token-line projection for area/border and text-to-line-feature lookups.
 - The first shared command-line model has been extracted into `src/core/TherionCommandLineModel.h`; the legacy app-level `CommandOptionParser` wrapper has been removed.
 - Command-line option parsing plus option-row/value serialization now lives behind focused command-line model APIs rather than broader generic utilities.
 - Command option lookup, normalized field-name matching, value maps, and toggle parsing now live behind `TherionCommandLineModel` and are used by the map inspector, map renderer/projection extraction, map delete/split/reference planners, PocketTopo background placement, and Structure indexing.

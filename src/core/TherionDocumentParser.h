@@ -65,6 +65,7 @@ class TherionDocumentParser final
 public:
     [[nodiscard]] static TherionParsedLine parseLine(const QString &line, int lineNumber = 0);
     [[nodiscard]] static QVector<TherionParsedLine> parseText(const QString &text);
+    [[nodiscard]] static QVector<TherionParsedLine> parseTokenLines(const QString &text);
     [[nodiscard]] static TherionParsedSourceDocument parseSourceDocument(const QString &text);
     [[nodiscard]] static QStringList tokenizeLine(const QString &line);
 };

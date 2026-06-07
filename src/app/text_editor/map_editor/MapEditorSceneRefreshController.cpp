@@ -107,7 +107,7 @@ void MapEditorSceneRefreshController::refreshMapScenePreservingUndoStack(bool pr
 
     const QVector<TherionParsedLine> parsedLines = context_.parsedLinesForCurrentDocument
         ? context_.parsedLinesForCurrentDocument()
-        : TherionDocumentParser::parseText(context_.documentText());
+        : TherionDocumentParser::parseTokenLines(context_.documentText());
     const QVector<MapSceneEntry> entries = collectMapSceneEntries(parsedLines);
     QVector<MapGeometryFeature> geometryFeatures = collectGeometryFeatures(parsedLines);
     QHash<int, TherionParsedLine> parsedLinesByLineNumber;

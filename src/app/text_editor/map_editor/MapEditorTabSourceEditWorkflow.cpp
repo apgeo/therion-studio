@@ -20,7 +20,7 @@ QVector<TherionParsedLine> MapEditorTab::parsedLinesForCurrentDocument() const
         return cachedParsedLines_;
     }
 
-    cachedParsedLines_ = TherionDocumentParser::parseText(textEditor_->text());
+    cachedParsedLines_ = TherionDocumentParser::parseTokenLines(textEditor_->text());
     cachedParsedLinesRevision_ = currentRevision;
     cachedParsedLinesValid_ = true;
     return cachedParsedLines_;

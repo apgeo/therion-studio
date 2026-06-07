@@ -237,6 +237,11 @@ QVector<TherionParsedLine> TherionDocumentParser::parseText(const QString &text)
     return parsedLines;
 }
 
+QVector<TherionParsedLine> TherionDocumentParser::parseTokenLines(const QString &text)
+{
+    return parseSourceDocument(text).tokenLines();
+}
+
 TherionParsedSourceDocument TherionDocumentParser::parseSourceDocument(const QString &text)
 {
     TherionParsedSourceDocument document;

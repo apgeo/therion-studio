@@ -204,7 +204,7 @@ int runInjectedCatalogTest()
 
 int runScrapContextMetadataTest()
 {
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseText(QStringLiteral(
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(QStringLiteral(
         "scrap first\n"
         "point 0 0 station -name a1\n"
         "endscrap\n"

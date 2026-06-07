@@ -82,6 +82,11 @@ bool pathIsInsideDirectory(const QString &path, const QString &directoryPath)
         && !QDir::isAbsolutePath(relativePath);
 }
 
+QVector<TherionParsedLine> parsedTokenLinesForText(const QString &text)
+{
+    return TherionDocumentParser::parseSourceDocument(text).tokenLines();
+}
+
 QString sectionNameFromLine(const TherionParsedLine &parsedLine);
 ProjectStructureEntryKind objectKindFromLine(const TherionParsedLine &parsedLine);
 QString objectNameFromLine(const TherionParsedLine &parsedLine);
@@ -504,7 +509,7 @@ const QVector<TherionParsedLine> &parsedLinesForFile(const QString &filePath,
         return cache->parsedLines[normalizedPath];
     }
 
-    cache->parsedLines.insert(normalizedPath, TherionDocumentParser::parseText(fileContents));
+    cache->parsedLines.insert(normalizedPath, parsedTokenLinesForText(fileContents));
     return cache->parsedLines[normalizedPath];
 }
 
@@ -1131,7 +1136,7 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QStri
         return {};
     }
 
-    return scanTh2Objects(sourceFile, TherionDocumentParser::parseText(text));
+    return scanTh2Objects(sourceFile, parsedTokenLinesForText(text));
 }
 
 QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QString &sourceFile,

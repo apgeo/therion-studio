@@ -16,7 +16,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1 - Structure sidebar hardening: maintain lightweight project indexing with Therion namespace/reference semantics, a short explanatory sidebar description, sibling display ordering by survey/map/scrap category plus alphabetical names, stable refresh signatures, expand/collapse preservation, root-config disambiguation, and navigable diagnostics.
 - P1 - Packaging and CI hardening: keep Windows installer, Windows install-smoke Qt runtime deployment, Ubuntu 26.04 `.deb`, and Debian 13 AppImage packaging smoke checks healthy; signing/notarization and APT publishing remain deferred.
 - P1 - Architecture maintenance: continue reducing `MainWindow`, `TextEditorTab`, and `MapEditorTab` shell responsibilities through focused controllers/services without behavior changes; keep workspace command bar wiring isolated from the `MainWindow.cpp` shell; keep session document restore/persist helpers deterministic and linear-time for large restored workspaces.
-- P1 - Unified source parser and transaction model: after public release stabilization, migrate toward one shared lossless source model for `.th`, `.th2`, and `thconfig` files; continue expanding `TherionSourceText` and `TherionDocumentParser::parseSourceDocument()` from physical-line/newline/range snapshots into shared parsed command/option projections, move Map/Structure/Block projections toward that data, expand `TextEditorSourceTransactionController` or its successor into the required write path for Raw/Blocks/Map/inspector source mutations, and retire legacy wrappers or stale names only after focused regression tests cover round-trip and undo/redo behavior.
+- P1 - Unified source parser and transaction model: after public release stabilization, migrate toward one shared lossless source model for `.th`, `.th2`, and `thconfig` files; continue expanding `TherionSourceText` and `TherionDocumentParser::parseSourceDocument()` from physical-line/newline/range snapshots into shared parsed command/option projections, move remaining Map/Structure/Block projections toward that data, expand `TextEditorSourceTransactionController` or its successor into the required write path for Raw/Blocks/Map/inspector source mutations, and retire legacy wrappers or stale names only after focused regression tests cover round-trip and undo/redo behavior.
 
 ## Next Up
 
@@ -24,7 +24,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P0: Verify daily scheduled Windows installer and Linux package workflows after the final release branch state lands.
 - P0: Pick the final CalVer tag, run the GitHub Linux/macOS/Windows build workflows with UI smoke enabled, run Linux package and Windows installer workflows, inspect artifacts, and publish the release only after those external checks are green.
 - P1: Review localized manual wording during UI smoke testing and adjust only user-facing workflow text.
-- P1: Continue the unified source-model phase by migrating selected Structure/Map/Block read projections from `parseText()` to `parseSourceDocument().tokenLines()` without breaking existing token-line consumers.
+- P1: Continue the unified source-model phase by migrating the next low-risk read-only projection from `parseText()` to `parseSourceDocument().tokenLines()` without breaking existing token-line consumers.
 
 ## Risks / Blockers
 

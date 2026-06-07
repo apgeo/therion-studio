@@ -1514,6 +1514,17 @@ int runRewriteOrientationOptionsTest()
         return 1;
     }
 
+    contents = QStringLiteral("scrap s\r\npoint 10 20 station -name a2 # keep\nendscrap\r");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewritePointOrientation(&contents, 2, true, 45.0, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap s\r\npoint 10 20 station -name a2 -orientation 45 # keep\nendscrap\r"),
+                "rewritePointOrientation should preserve mixed physical line endings when replacing one command line.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("line slope\n"
                               "  10 20 -orientation 45\n"
                               "  30 40\n"
@@ -1957,6 +1968,20 @@ int runRewriteMapObjectQuickFieldsTest()
         return 1;
     }
 
+    contents = QStringLiteral("scrap s\r\nline label # keep\nendline\nendscrap");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectTextOption(&contents,
+                                                                  2,
+                                                                  QStringLiteral("Mixed label"),
+                                                                  &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap s\r\nline label -text \"Mixed label\" # keep\nendline\nendscrap"),
+                "rewriteMapObjectTextOption should preserve mixed physical line endings when replacing one command line.")) {
+        return 1;
+    }
+
     contents = QStringLiteral("point 10 20 altitude # keep\n");
     errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteMapObjectValueOption(&contents,
@@ -2010,6 +2035,20 @@ int runRewriteMapObjectQuickFieldsTest()
     }
     if (!expect(contents == QStringLiteral("point 10 20 station\n"),
                 "rewriteMapObjectValueOption should not mutate rejected unsupported point types.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap s\r\npoint 10 20 altitude # keep\nendscrap\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectValueOption(&contents,
+                                                                   2,
+                                                                   QStringLiteral("[fix 1200]"),
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap s\r\npoint 10 20 altitude -value [fix 1200] # keep\nendscrap\n"),
+                "rewriteMapObjectValueOption should preserve mixed physical line endings when replacing one command line.")) {
         return 1;
     }
 

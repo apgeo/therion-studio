@@ -24,7 +24,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P0: Verify daily scheduled Windows installer and Linux package workflows after the final release branch state lands.
 - P0: Pick the final CalVer tag, run the GitHub Linux/macOS/Windows build workflows with UI smoke enabled, run Linux package and Windows installer workflows, inspect artifacts, and publish the release only after those external checks are green.
 - P1: Review localized manual wording during UI smoke testing and adjust only user-facing workflow text.
-- P1: Continue the unified source-model phase by migrating the next low-risk read-only projection to `TherionDocumentParser::parseTokenLines()` or by moving the first source-rewrite path onto source ranges with focused round-trip and undo/redo coverage.
+- P1: Continue the unified source-model phase by migrating the remaining multi-line/geometry source rewrites onto source ranges with focused round-trip and undo/redo coverage; the low-risk token-line consumers and several single-command rewrite helpers now use the lossless source snapshot.
 
 ## Risks / Blockers
 

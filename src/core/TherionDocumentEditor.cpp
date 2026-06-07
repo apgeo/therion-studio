@@ -1883,18 +1883,17 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
-    if (lineNumber > lines.size()) {
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
 
-    const int lineIndex = lineNumber - 1;
-    QString lineText = lines.at(lineIndex);
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(lineNumber - 1);
+    QString lineText = sourceLine.text;
+    const TherionParsedLine &parsedLine = sourceLine.parsed;
     if (parsedLine.directive != QStringLiteral("line")) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a writable line directive.");
@@ -1967,8 +1966,7 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
         lineText.insert(insertionIndex, insertionText);
     }
 
-    lines[lineIndex] = lineText;
-    *contents = lines.join(lineEnding);
+    contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
     return true;
 }
 
@@ -1991,18 +1989,17 @@ bool TherionDocumentEditor::rewritePointOrientation(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
-    if (lineNumber > lines.size()) {
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
 
-    const int lineIndex = lineNumber - 1;
-    QString lineText = lines.at(lineIndex);
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(lineNumber - 1);
+    QString lineText = sourceLine.text;
+    const TherionParsedLine &parsedLine = sourceLine.parsed;
     if (parsedLine.directive != QStringLiteral("point")
         && parsedLine.directive != QStringLiteral("station")) {
         if (errorMessage != nullptr) {
@@ -2037,8 +2034,7 @@ bool TherionDocumentEditor::rewritePointOrientation(QString *contents,
             }
             return false;
         }
-        lines[lineIndex] = lineText;
-        *contents = lines.join(lineEnding);
+        contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
         return true;
     }
 
@@ -2088,8 +2084,7 @@ bool TherionDocumentEditor::rewritePointOrientation(QString *contents,
         lineText.insert(insertionIndex, insertionText);
     }
 
-    lines[lineIndex] = lineText;
-    *contents = lines.join(lineEnding);
+    contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
     return true;
 }
 
@@ -2152,18 +2147,17 @@ bool TherionDocumentEditor::rewriteScrapScale(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
-    if (lineNumber > lines.size()) {
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
 
-    const int lineIndex = lineNumber - 1;
-    QString lineText = lines.at(lineIndex);
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(lineNumber - 1);
+    QString lineText = sourceLine.text;
+    const TherionParsedLine &parsedLine = sourceLine.parsed;
     if (parsedLine.directive != QStringLiteral("scrap")) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a scrap command.");
@@ -2198,8 +2192,7 @@ bool TherionDocumentEditor::rewriteScrapScale(QString *contents,
         }
     }
 
-    lines[lineIndex] = lineText;
-    *contents = lines.join(lineEnding);
+    contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
     return true;
 }
 
@@ -2222,18 +2215,17 @@ bool TherionDocumentEditor::rewriteScrapProjection(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
-    if (lineNumber > lines.size()) {
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
 
-    const int lineIndex = lineNumber - 1;
-    QString lineText = lines.at(lineIndex);
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(lineNumber - 1);
+    QString lineText = sourceLine.text;
+    const TherionParsedLine &parsedLine = sourceLine.parsed;
     if (parsedLine.directive != QStringLiteral("scrap")) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line is not a scrap command.");
@@ -2277,8 +2269,7 @@ bool TherionDocumentEditor::rewriteScrapProjection(QString *contents,
         }
     }
 
-    lines[lineIndex] = lineText;
-    *contents = lines.join(lineEnding);
+    contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
     return true;
 }
 
@@ -2449,18 +2440,17 @@ bool TherionDocumentEditor::rewriteMapObjectTextOption(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
-    if (lineNumber > lines.size()) {
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
 
-    const int lineIndex = lineNumber - 1;
-    QString lineText = lines.at(lineIndex);
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(lineNumber - 1);
+    QString lineText = sourceLine.text;
+    const TherionParsedLine &parsedLine = sourceLine.parsed;
     const QString directive = parsedLine.directive;
     if (directive != QStringLiteral("point") && directive != QStringLiteral("line")) {
         if (errorMessage != nullptr) {
@@ -2495,8 +2485,7 @@ bool TherionDocumentEditor::rewriteMapObjectTextOption(QString *contents,
         return false;
     }
 
-    lines[lineIndex] = lineText;
-    *contents = lines.join(lineEnding);
+    contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
     return true;
 }
 
@@ -2519,18 +2508,17 @@ bool TherionDocumentEditor::rewriteMapObjectValueOption(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    QStringList lines = splitLinesTrimmingCarriageReturns(*contents);
-    if (lineNumber > lines.size()) {
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
         }
         return false;
     }
 
-    const int lineIndex = lineNumber - 1;
-    QString lineText = lines.at(lineIndex);
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, lineNumber);
+    const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(lineNumber - 1);
+    QString lineText = sourceLine.text;
+    const TherionParsedLine &parsedLine = sourceLine.parsed;
     if (parsedLine.directive != QStringLiteral("point")) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Value is available only for supported point commands.");
@@ -2564,8 +2552,7 @@ bool TherionDocumentEditor::rewriteMapObjectValueOption(QString *contents,
         return false;
     }
 
-    lines[lineIndex] = lineText;
-    *contents = lines.join(lineEnding);
+    contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
     return true;
 }
 

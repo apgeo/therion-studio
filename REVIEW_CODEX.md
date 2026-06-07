@@ -220,6 +220,9 @@ Current follow-up status:
 - `TherionDocumentEditor::rewriteStructureEntryName()` now uses absolute token ranges from the lossless source snapshot instead of split/join line reconstruction.
 - `TherionDocumentEditor::rewritePointCoordinates()` now uses absolute coordinate token ranges from the lossless source snapshot instead of split/join line reconstruction.
 - `TherionDocumentEditor::rewriteMapObjectQuickFields()` now replaces only the affected physical source line from the lossless source snapshot instead of split/join line reconstruction.
+- `TherionDocumentEditor::rewriteMapObjectTextOption()` and `rewriteMapObjectValueOption()` now replace only the affected physical source line from the lossless source snapshot instead of split/join line reconstruction.
+- `TherionDocumentEditor::rewritePointOrientation()` now replaces only the affected physical source line from the lossless source snapshot instead of split/join line reconstruction.
+- `TherionDocumentEditor::rewriteLineOptionToggle()`, `rewriteScrapScale()`, and `rewriteScrapProjection()` now replace only the affected physical source line from the lossless source snapshot instead of split/join line reconstruction.
 - The first shared command-line model has been extracted into `src/core/TherionCommandLineModel.h`; the legacy app-level `CommandOptionParser` wrapper has been removed.
 - Command-line option parsing plus option-row/value serialization now lives behind focused command-line model APIs rather than broader generic utilities.
 - Command option lookup, normalized field-name matching, value maps, and toggle parsing now live behind `TherionCommandLineModel` and are used by the map inspector, map renderer/projection extraction, map delete/split/reference planners, PocketTopo background placement, and Structure indexing.

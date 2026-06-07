@@ -393,6 +393,73 @@ void MainWindow::buildProjectBrowser()
     resetProjectBrowser();
 }
 
+void MainWindow::refreshProjectBrowserView(const QString &focusPath, bool forceReload)
+{
+    if (projectModel_ == nullptr || projectTree_ == nullptr) {
+        return;
+    }
+
+    const bool hasOpenProject = !projectRootPath_.trimmed().isEmpty() && QDir(projectRootPath_).exists();
+    if (projectFilesDescriptionLabel_ != nullptr) {
+        projectFilesDescriptionLabel_->setText(hasOpenProject
+                                                   ? tr("Browse the files in the current project.")
+                                                   : tr("Open a project to browse its files."));
+    }
+    if (projectFilesEmptyState_ != nullptr) {
+        projectFilesEmptyState_->setVisible(!hasOpenProject);
+    }
+    projectTree_->setVisible(hasOpenProject);
+
+    if (!hasOpenProject) {
+        projectTree_->setRootIndex(QModelIndex());
+        return;
+    }
+
+    const QString rootPath = projectRootPath_;
+    if (forceReload) {
+        auto *previousModel = projectModel_;
+        QAbstractItemDelegate *previousNameDelegate = projectTree_->itemDelegateForColumn(0);
+        projectModel_ = new QFileSystemModel(this);
+        projectTree_->setModel(projectModel_);
+        projectTree_->hideColumn(1);
+        projectTree_->hideColumn(2);
+        projectTree_->hideColumn(3);
+        projectTree_->setItemDelegateForColumn(0, new ProjectTreeItemDelegate(projectModel_, projectTree_));
+        if (previousNameDelegate != nullptr && previousNameDelegate->parent() == projectTree_) {
+            previousNameDelegate->deleteLater();
+        }
+        previousModel->deleteLater();
+    }
+    projectModel_->setRootPath(rootPath);
+    projectTree_->setRootIndex(projectModel_->index(rootPath));
+
+    const QString normalizedFocusPath = focusPath.trimmed();
+    if (normalizedFocusPath.isEmpty()) {
+        return;
+    }
+
+    const QString absoluteFocusPath = QFileInfo(normalizedFocusPath).absoluteFilePath();
+    QTimer::singleShot(0, this, [this, absoluteFocusPath]() {
+        if (projectModel_ == nullptr || projectTree_ == nullptr) {
+            return;
+        }
+
+        QModelIndex targetIndex = projectModel_->index(absoluteFocusPath);
+        if (!targetIndex.isValid()) {
+            return;
+        }
+
+        QModelIndex parentIndex = targetIndex.parent();
+        while (parentIndex.isValid() && parentIndex != projectTree_->rootIndex()) {
+            projectTree_->expand(parentIndex);
+            parentIndex = parentIndex.parent();
+        }
+
+        projectTree_->scrollTo(targetIndex);
+        projectTree_->setCurrentIndex(targetIndex);
+    });
+}
+
 void MainWindow::buildSearchSidebar()
 {
     if (sidebarPages_ == nullptr || searchResultsModel_ == nullptr) {
@@ -526,15 +593,21 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
         return true;
     };
 
-    auto createFileAction = [this, creationDirectory, &menu](const QString &label,
-                                                              const QString &prompt,
-                                                              const QString &defaultName,
-                                                              const QString &suffix) {
+    auto refreshAfterProjectFileMutation = [this](const QString &focusPath) {
+        refreshProjectBrowserView(focusPath, true);
+        rebuildStructureSidebar();
+        rebuildMapObjectsTree();
+    };
+
+    auto createFileAction = [this, creationDirectory, &menu, &refreshAfterProjectFileMutation](const QString &label,
+                                                                                               const QString &prompt,
+                                                                                               const QString &defaultName,
+                                                                                               const QString &suffix) {
         if (creationDirectory.isEmpty()) {
             return;
         }
 
-        menu.addAction(label, this, [this, creationDirectory, prompt, defaultName, suffix]() {
+        menu.addAction(label, this, [this, creationDirectory, prompt, defaultName, suffix, &refreshAfterProjectFileMutation]() {
             bool ok = false;
             QString enteredName = requestProjectFileBaseName(this,
                                                              tr("Create File"),
@@ -580,7 +653,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
             }
             file.close();
 
-            refreshProjectBrowserView(filePath);
+            refreshAfterProjectFileMutation(filePath);
             statusBar()->showMessage(tr("Created %1").arg(QDir::toNativeSeparators(filePath)), 3000);
             appendConsoleLine(tr("Created %1").arg(filePath));
         });
@@ -609,7 +682,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
         }
 
         menu.addSeparator();
-        menu.addAction(tr("Duplicate"), this, [this, itemPath]() {
+        menu.addAction(tr("Duplicate"), this, [this, itemPath, &refreshAfterProjectFileMutation]() {
             const QString targetPath = duplicateFilePath(itemPath);
             if (targetPath.isEmpty()) {
                 QMessageBox::warning(this, tr("Duplicate"), tr("Could not resolve a duplicate file name."));
@@ -625,10 +698,10 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
             statusBar()->showMessage(tr("Duplicated %1").arg(QDir::toNativeSeparators(itemPath)), 3000);
             appendConsoleLine(tr("Duplicated %1 -> %2").arg(itemPath, targetPath));
-            refreshProjectBrowserView(targetPath);
+            refreshAfterProjectFileMutation(targetPath);
         });
 
-        menu.addAction(tr("Rename"), this, [this, itemPath, &warnOpenTabs]() {
+        menu.addAction(tr("Rename"), this, [this, itemPath, &warnOpenTabs, &refreshAfterProjectFileMutation]() {
             if (warnOpenTabs(itemPath)) {
                 return;
             }
@@ -665,12 +738,10 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
             statusBar()->showMessage(tr("Renamed to %1").arg(QDir::toNativeSeparators(renamedPath)), 3000);
             appendConsoleLine(tr("Renamed %1 -> %2").arg(itemPath, renamedPath));
-            refreshProjectBrowserView(renamedPath);
-            rebuildStructureSidebar();
-            rebuildMapObjectsTree();
+            refreshAfterProjectFileMutation(renamedPath);
         });
 
-        menu.addAction(tr("Delete"), this, [this, itemPath, &warnOpenTabs]() {
+        menu.addAction(tr("Delete"), this, [this, itemPath, &warnOpenTabs, &refreshAfterProjectFileMutation]() {
             if (warnOpenTabs(itemPath)) {
                 return;
             }
@@ -691,12 +762,10 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
             statusBar()->showMessage(tr("Deleted %1").arg(QDir::toNativeSeparators(itemPath)), 3000);
             appendConsoleLine(tr("Deleted %1").arg(itemPath));
-            refreshProjectBrowserView(QFileInfo(itemPath).absolutePath());
-            rebuildStructureSidebar();
-            rebuildMapObjectsTree();
+            refreshAfterProjectFileMutation(QFileInfo(itemPath).absolutePath());
         });
     } else if (hasItem && itemInfo.isDir()) {
-        menu.addAction(tr("Rename Folder"), this, [this, itemPath, &warnOpenTabs]() {
+        menu.addAction(tr("Rename Folder"), this, [this, itemPath, &warnOpenTabs, &refreshAfterProjectFileMutation]() {
             if (warnOpenTabs(itemPath)) {
                 return;
             }
@@ -733,12 +802,10 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
             statusBar()->showMessage(tr("Renamed folder to %1").arg(QDir::toNativeSeparators(renamedPath)), 3000);
             appendConsoleLine(tr("Renamed folder %1 -> %2").arg(itemPath, renamedPath));
-            refreshProjectBrowserView(renamedPath);
-            rebuildStructureSidebar();
-            rebuildMapObjectsTree();
+            refreshAfterProjectFileMutation(renamedPath);
         });
 
-        menu.addAction(tr("Delete Folder"), this, [this, itemPath, &warnOpenTabs]() {
+        menu.addAction(tr("Delete Folder"), this, [this, itemPath, &warnOpenTabs, &refreshAfterProjectFileMutation]() {
             if (warnOpenTabs(itemPath)) {
                 return;
             }
@@ -761,9 +828,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
             statusBar()->showMessage(tr("Deleted folder %1").arg(QDir::toNativeSeparators(itemPath)), 3000);
             appendConsoleLine(tr("Deleted folder %1").arg(itemPath));
-            refreshProjectBrowserView(QFileInfo(itemPath).absolutePath());
-            rebuildStructureSidebar();
-            rebuildMapObjectsTree();
+            refreshAfterProjectFileMutation(QFileInfo(itemPath).absolutePath());
         });
     }
 
@@ -772,7 +837,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
             menu.addSeparator();
         }
 
-        menu.addAction(tr("New Folder"), this, [this, creationDirectory]() {
+        menu.addAction(tr("New Folder"), this, [this, creationDirectory, &refreshAfterProjectFileMutation]() {
             bool ok = false;
             const QString folderName = QInputDialog::getText(this,
                                                              tr("Create Folder"),
@@ -801,7 +866,7 @@ void MainWindow::handleProjectTreeContextMenuRequested(const QPoint &position)
 
             statusBar()->showMessage(tr("Created folder %1").arg(QDir::toNativeSeparators(folderPath)), 3000);
             appendConsoleLine(tr("Created folder %1").arg(folderPath));
-            refreshProjectBrowserView(folderPath);
+            refreshAfterProjectFileMutation(folderPath);
         });
 
         createFileAction(tr("New .th File"), tr("File name:"), tr("new-file.th"), QStringLiteral("th"));

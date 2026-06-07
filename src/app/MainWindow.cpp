@@ -1263,59 +1263,6 @@ void MainWindow::resetProjectBrowser()
     refreshProjectBrowserView();
 }
 
-void MainWindow::refreshProjectBrowserView(const QString &focusPath)
-{
-    if (projectModel_ == nullptr || projectTree_ == nullptr) {
-        return;
-    }
-
-    const bool hasOpenProject = !projectRootPath_.trimmed().isEmpty() && QDir(projectRootPath_).exists();
-    if (projectFilesDescriptionLabel_ != nullptr) {
-        projectFilesDescriptionLabel_->setText(hasOpenProject
-                                                   ? tr("Browse the files in the current project.")
-                                                   : tr("Open a project to browse its files."));
-    }
-    if (projectFilesEmptyState_ != nullptr) {
-        projectFilesEmptyState_->setVisible(!hasOpenProject);
-    }
-    projectTree_->setVisible(hasOpenProject);
-
-    if (!hasOpenProject) {
-        projectTree_->setRootIndex(QModelIndex());
-        return;
-    }
-
-    const QString rootPath = projectRootPath_;
-    projectModel_->setRootPath(rootPath);
-    projectTree_->setRootIndex(projectModel_->index(rootPath));
-
-    const QString normalizedFocusPath = focusPath.trimmed();
-    if (normalizedFocusPath.isEmpty()) {
-        return;
-    }
-
-    const QString absoluteFocusPath = QFileInfo(normalizedFocusPath).absoluteFilePath();
-    QTimer::singleShot(0, this, [this, absoluteFocusPath]() {
-        if (projectModel_ == nullptr || projectTree_ == nullptr) {
-            return;
-        }
-
-        QModelIndex targetIndex = projectModel_->index(absoluteFocusPath);
-        if (!targetIndex.isValid()) {
-            return;
-        }
-
-        QModelIndex parentIndex = targetIndex.parent();
-        while (parentIndex.isValid() && parentIndex != projectTree_->rootIndex()) {
-            projectTree_->expand(parentIndex);
-            parentIndex = parentIndex.parent();
-        }
-
-        projectTree_->scrollTo(targetIndex);
-        projectTree_->setCurrentIndex(targetIndex);
-    });
-}
-
 QString MainWindow::structureOverrideKey(const QString &sourceFile, int lineNumber) const
 {
     return QStringLiteral("%1|%2|%3").arg(QDir(projectRootPath_).absolutePath(), sourceFile).arg(lineNumber);

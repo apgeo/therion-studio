@@ -142,7 +142,7 @@ private:
     void restoreOpenDocuments();
     void persistOpenDocuments();
     void resetProjectBrowser();
-    void refreshProjectBrowserView(const QString &focusPath = QString());
+    void refreshProjectBrowserView(const QString &focusPath = QString(), bool forceReload = false);
     void rebuildStructureSidebar();
     void requestStructureSidebarRebuild();
     void handleStructureSidebarScanFinished(const TherionStudio::ProjectStructureScanner::Result &result);

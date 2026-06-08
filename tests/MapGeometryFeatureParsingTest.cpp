@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <cmath>
+#include <limits>
 
 using namespace TherionStudio;
 
@@ -1240,20 +1241,25 @@ int runAreaScrapClipMetadataParsingTest()
                        "  10 0\n"
                        "endline\n"
                        "line wall -id w2\n"
-                       "  0 10\n"
+                       "  10 0\n"
                        "  10 10\n"
                        "endline\n"
+                       "line wall -id w3\n"
+                       "  10 10\n"
+                       "  0 10\n"
+                       "endline\n"
+                       "line wall -id w4\n"
+                       "  0 10\n"
+                       "  0 0\n"
+                       "endline\n"
                        "area sand\n"
-                       "  w1\n"
-                       "  w2\n"
+                       "  w1 w2 w3 w4\n"
                        "endarea\n"
                        "area clay -clip off -place top\n"
-                       "  w1\n"
-                       "  w2\n"
+                       "  w1 w2 w3 w4\n"
                        "endarea\n"
                        "area bedrock -place bottom\n"
-                       "  w1\n"
-                       "  w2\n"
+                       "  w1 w2 w3 w4\n"
                        "endarea\n"
                        "endscrap\n");
 
@@ -1270,7 +1276,7 @@ int runAreaScrapClipMetadataParsingTest()
         }
     }
 
-    if (!expect(lines.size() == 2, "Expected two wall line features for scrap clip metadata test.")) {
+    if (!expect(lines.size() == 4, "Expected four wall line features for scrap clip metadata test.")) {
         return 1;
     }
     if (!expect(areas.size() == 3, "Expected three area features for scrap clip metadata test.")) {
@@ -1296,6 +1302,242 @@ int runAreaScrapClipMetadataParsingTest()
     }
     if (!expect(!areas.first()->verticesEditable && areas.first()->vertices.size() >= 3,
                 "Expected referenced area border lines to resolve into non-editable area geometry.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runIntersectingReferencedAreaParsingTest()
+{
+    const QString text =
+        QStringLiteral("scrap s1\n"
+                       "line wall -id top\n"
+                       "  -5 0\n"
+                       "  15 0\n"
+                       "endline\n"
+                       "line wall -id right\n"
+                       "  10 -5\n"
+                       "  10 15\n"
+                       "endline\n"
+                       "line wall -id bottom\n"
+                       "  15 10\n"
+                       "  -5 10\n"
+                       "endline\n"
+                       "line wall -id left\n"
+                       "  0 15\n"
+                       "  0 -5\n"
+                       "endline\n"
+                       "area water\n"
+                       "  top right bottom left\n"
+                       "endarea\n"
+                       "endscrap\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+
+    const MapGeometryFeature *area = nullptr;
+    for (const MapGeometryFeature &feature : features) {
+        if (feature.kind == MapGeometryFeature::Kind::Area) {
+            area = &feature;
+            break;
+        }
+    }
+
+    if (!expect(area != nullptr, "Expected intersecting referenced lines to resolve an area feature.")) {
+        return 1;
+    }
+    if (!expect(!area->verticesEditable, "Expected intersecting referenced area geometry to be non-editable.")) {
+        return 1;
+    }
+    if (!expect(area->vertices.size() == 4,
+                "Expected intersecting referenced area to resolve to the four intersection corners.")) {
+        return 1;
+    }
+
+    qreal minX = std::numeric_limits<qreal>::max();
+    qreal minY = std::numeric_limits<qreal>::max();
+    qreal maxX = std::numeric_limits<qreal>::lowest();
+    qreal maxY = std::numeric_limits<qreal>::lowest();
+    for (const QPointF &vertex : area->vertices) {
+        minX = qMin(minX, vertex.x());
+        minY = qMin(minY, vertex.y());
+        maxX = qMax(maxX, vertex.x());
+        maxY = qMax(maxY, vertex.y());
+    }
+
+    const bool resolvedBounds = std::abs(minX) < 0.001
+        && std::abs(minY) < 0.001
+        && std::abs(maxX - 10.0) < 0.001
+        && std::abs(maxY - 10.0) < 0.001;
+    if (!resolvedBounds) {
+        std::cerr << "Resolved intersecting area bounds: "
+                  << minX << ',' << minY << " - "
+                  << maxX << ',' << maxY << '\n';
+        for (const QPointF &vertex : area->vertices) {
+            std::cerr << "  vertex " << vertex.x() << ',' << vertex.y() << '\n';
+        }
+    }
+    return expect(resolvedBounds,
+                  "Expected intersecting referenced area bounds to use line intersections, not open-line endpoints.")
+        ? 0
+        : 1;
+}
+
+int runCurvedIntersectingReferencedAreaParsingTest()
+{
+    const QString text =
+        QStringLiteral("encoding utf-8\n"
+                       "\n"
+                       "scrap scrap-1\n"
+                       "  line wall -id line-3\n"
+                       "    0.1 0.3\n"
+                       "    0.1 0.3 -0.1 0.6 0.2 0.6\n"
+                       "    0.4 0.6 0.5 0.6 0.6 0.7\n"
+                       "    0.6 0.7 0.6 0.9 0.7 0.9\n"
+                       "  endline\n"
+                       "  line wall -id line-1\n"
+                       "    -0.1 0.7\n"
+                       "    -0.1 0.7 -0.1 1.0 0.1 0.9\n"
+                       "    0.4 0.8 0.5 1.1 0.6 1.1\n"
+                       "    0.7 1.2 1.0 1.1 1.0 1.0\n"
+                       "  endline\n"
+                       "  line border -id line-4\n"
+                       "    -0.1 0.9\n"
+                       "    0.2 0.5\n"
+                       "  endline\n"
+                       "  line border -id line-2\n"
+                       "    0.5 1.2\n"
+                       "    0.7 0.7\n"
+                       "  endline\n"
+                       "\n"
+                       "  area water\n"
+                       "    line-1\n"
+                       "    line-2\n"
+                       "    line-3\n"
+                       "    line-4\n"
+                       "  endarea\n"
+                       "\n"
+                       "endscrap\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+
+    const MapGeometryFeature *area = nullptr;
+    for (const MapGeometryFeature &feature : features) {
+        if (feature.kind == MapGeometryFeature::Kind::Area) {
+            area = &feature;
+            break;
+        }
+    }
+
+    if (!expect(area != nullptr, "Expected curved intersecting referenced lines to resolve an area feature.")) {
+        return 1;
+    }
+    if (!expect(area->vertices.size() > 8,
+                "Expected curved intersecting referenced area to preserve sampled boundary points, not only four chords.")) {
+        return 1;
+    }
+
+    for (const QPointF &vertex : area->vertices) {
+        if (std::abs(vertex.x() - 0.2) < 0.0001 && std::abs(vertex.y() - 0.5) < 0.0001) {
+            return expect(false,
+                          "Curved referenced area should not include the dangling line-4 endpoint below the closed face.")
+                ? 0
+                : 1;
+        }
+    }
+
+    QGraphicsScene scene;
+    QHash<int, QGraphicsItem *> mapItemsByLine;
+    renderMapWorkspaceScene(&scene,
+                            QStringLiteral("fixture.th2"),
+                            collectMapSceneEntries(parsedLines),
+                            features,
+                            std::nullopt,
+                            false,
+                            &mapItemsByLine,
+                            {},
+                            {},
+                            {},
+                            {},
+                            {},
+                            {});
+
+    auto *fillItem = dynamic_cast<QGraphicsPathItem *>(mapItemsByLine.value(area->lineNumber, nullptr));
+    if (!expect(fillItem != nullptr, "Expected rendered curved referenced area fill item to be available.")) {
+        return 1;
+    }
+
+    const QRectF sourceBounds = geometryBoundsForFeatures(features);
+    const QRectF previewBounds = QRectF(0, 0, 1200, 900).adjusted(24.0, 24.0, -24.0, -24.0).adjusted(20.0, 20.0, -20.0, -20.0);
+    QPainterPath expectedAreaPath;
+    expectedAreaPath.moveTo(mapGeometryPointToPreview(area->vertices.first(), sourceBounds, previewBounds));
+    for (int index = 1; index < area->vertices.size(); ++index) {
+        expectedAreaPath.lineTo(mapGeometryPointToPreview(area->vertices.at(index), sourceBounds, previewBounds));
+    }
+    expectedAreaPath.closeSubpath();
+
+    const QRectF expectedBounds = expectedAreaPath.boundingRect();
+    const QRectF renderedBounds = fillItem->path().boundingRect();
+    const bool sameBounds = std::abs(expectedBounds.left() - renderedBounds.left()) < 0.5
+        && std::abs(expectedBounds.top() - renderedBounds.top()) < 0.5
+        && std::abs(expectedBounds.right() - renderedBounds.right()) < 0.5
+        && std::abs(expectedBounds.bottom() - renderedBounds.bottom()) < 0.5;
+    if (!expect(sameBounds,
+                "Expected open scrap wall fragments not to clip the curved referenced area fill path.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runForwardReferencedClosedBorderAreaParsingTest()
+{
+    const QString text =
+        QStringLiteral("encoding utf-8\n"
+                       "\n"
+                       "scrap scrap-1\n"
+                       "  area water\n"
+                       "    jaz.b.6\n"
+                       "  endarea\n"
+                       "\n"
+                       "  line border -id jaz.b.6 -close on\n"
+                       "    863.0 727.5\n"
+                       "    889.0 716.0\n"
+                       "    889.0 716.0 892.98 723.95 891.0 725.0\n"
+                       "    847.73 747.94 860.0 732.5 863.0 727.5\n"
+                       "    smooth off\n"
+                       "  endline\n"
+                       "endscrap\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+
+    const MapGeometryFeature *area = nullptr;
+    const MapGeometryFeature *border = nullptr;
+    for (const MapGeometryFeature &feature : features) {
+        if (feature.kind == MapGeometryFeature::Kind::Area) {
+            area = &feature;
+        } else if (feature.kind == MapGeometryFeature::Kind::Line) {
+            border = &feature;
+        }
+    }
+
+    if (!expect(border != nullptr && border->closed,
+                "Expected forward-reference fixture border line to parse as a closed line.")) {
+        return 1;
+    }
+    if (!expect(area != nullptr,
+                "Expected area before its referenced closed border line to resolve after the scrap is parsed.")) {
+        return 1;
+    }
+    if (!expect(!area->verticesEditable && area->closed,
+                "Expected forward-referenced area geometry to be closed and non-editable.")) {
+        return 1;
+    }
+    if (!expect(area->lineVertices.size() == border->lineVertices.size(),
+                "Expected area referencing one closed border line to reuse that border geometry.")) {
         return 1;
     }
 
@@ -1377,6 +1619,15 @@ int main(int argc, char **argv)
         return rc;
     }
     if (const int rc = runAreaScrapClipMetadataParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runIntersectingReferencedAreaParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runCurvedIntersectingReferencedAreaParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runForwardReferencedClosedBorderAreaParsingTest(); rc != 0) {
         return rc;
     }
 

@@ -396,6 +396,8 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Pen-plus-touch workflows shall not accidentally trigger zoom when the user performs a pan gesture.
 - Map drawing and editing affordances, including point handles, line/area vertex handles, control handles, preview strokes, and line strokes, shall remain visually usable across zoom levels by using screen-adaptive sizing where appropriate.
 - Area fill and fill-pattern rendering shall visually honor Therion's default `-clip on` behavior by clipping areas to the owning scrap wall boundary when that boundary can be resolved; areas with `-clip off` shall render without scrap-boundary clipping.
+- Area rendering shall resolve `area ... endarea` border references against `line -id ...` geometry in the same owning scrap. Referenced border lines may be individually open; when their intersections form a closed face, the canvas shall render that face as the area fill without modifying the source line geometry.
+- When referenced area border lines cannot be resolved into a closed polygon or closed intersection face, the map editor shall surface an explicit warning instead of silently rendering a misleading fill.
 - The TH2 Visual map editor shall provide a fixed viewport magnifier overlay for precise tracing and placement. The magnifier shall show a zoomed crop around the current cursor position, an exact center crosshair, and the corresponding map/source coordinate readout.
 - The map magnifier shall be rendered as a viewport overlay, not as scene geometry, so it remains pinned to the map viewport and does not pan or zoom with the document.
 - The map magnifier shall be enabled by default and shall be user-toggleable through the `View -> Show Map Magnifier` / `Hide Map Magnifier` menu action. This preference shall be stored as UI/session state and shall not modify the TH2 source document.
@@ -1044,6 +1046,7 @@ The criteria below are intended for implementation verification and QA.
 
 - The map editor renders the currently open TH2 file as a 2D editable workspace.
 - Closed TH2 line geometry shall render the closing segment between the final and first line vertices whenever at least two line vertices exist, including two-anchor closed Bezier curves.
+- Existing TH2 `area` objects whose referenced same-scrap border lines form a closed face through line intersections shall render as filled areas without requiring those border lines to be individually closed.
 - A TH2 document exposes an embedded mode selector with `Raw` and `Visual` modes.
 - In the main window, the TH2 `Raw`/`Visual` mode selector is shown in the right-aligned controls of the full-width document command toolbar row above the tab strip.
 - In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same document command toolbar control area, after `Raw`, using screen-share/monitor-x icons for detach/return state.

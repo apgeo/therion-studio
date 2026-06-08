@@ -4,6 +4,7 @@
 #include "MapEditorLineDecorationItem.h"
 #include "MapEditorObjectStyleCatalog.h"
 #include "MapEditorPointSymbolGeometry.h"
+#include "MapEditorReferencedAreaResolver.h"
 
 #include <QFont>
 #include <QFontMetricsF>
@@ -1016,8 +1017,8 @@ QPainterPath stitchedOpenWallClipPath(QVector<WallClipPathCandidate> candidates)
         currentEnd = reverseBest ? next.start : next.end;
     }
 
-    if (pointDistanceSquared(firstPoint, currentEnd) > 0.001) {
-        stitched.lineTo(firstPoint);
+    if (pointDistanceSquared(firstPoint, currentEnd) > 1.0) {
+        return QPainterPath();
     }
     stitched.closeSubpath();
     stitched.setFillRule(Qt::OddEvenFill);
@@ -1603,56 +1604,6 @@ void appendAreaReferenceIdentifiers(const TherionParsedLine &parsedLine,
         }
         identifiers->append(token);
     }
-}
-
-QVector<QPointF> areaVerticesFromReferencedLines(const QStringList &identifiers,
-                                                 const QHash<QString, MapGeometryFeature> &lineFeaturesByIdentifier,
-                                                 QVector<MapGeometryFeature::TH2LineVertex> *resolvedLineVertices = nullptr)
-{
-    QVector<QPointF> vertices;
-    if (resolvedLineVertices != nullptr) {
-        resolvedLineVertices->clear();
-    }
-
-    for (const QString &identifier : identifiers) {
-        const QString normalizedIdentifier = identifier.trimmed().toLower();
-        if (normalizedIdentifier.isEmpty()) {
-            continue;
-        }
-
-        const auto featureIt = lineFeaturesByIdentifier.constFind(normalizedIdentifier);
-        if (featureIt == lineFeaturesByIdentifier.constEnd()) {
-            continue;
-        }
-
-        const MapGeometryFeature &lineFeature = featureIt.value();
-        if (lineFeature.lineVertices.size() < 2) {
-            continue;
-        }
-
-        const int existingVertexCount = vertices.size();
-        for (int index = 0; index < lineFeature.lineVertices.size(); ++index) {
-            const QPointF anchor = lineFeature.lineVertices.at(index).anchor;
-            if (!vertices.isEmpty() && vertices.last() == anchor) {
-                continue;
-            }
-            vertices.append(anchor);
-            if (resolvedLineVertices != nullptr) {
-                resolvedLineVertices->append(lineFeature.lineVertices.at(index));
-            }
-        }
-
-        if (existingVertexCount > 0
-            && !vertices.isEmpty()
-            && vertices.first() == vertices.last()) {
-            vertices.removeLast();
-            if (resolvedLineVertices != nullptr && !resolvedLineVertices->isEmpty()) {
-                resolvedLineVertices->removeLast();
-            }
-        }
-    }
-
-    return vertices;
 }
 
 } // namespace
@@ -2691,6 +2642,12 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
 
 QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedLine> &parsedLines)
 {
+    struct PendingReferencedArea
+    {
+        MapGeometryFeature feature;
+        QStringList borderIdentifiers;
+    };
+
     QVector<MapGeometryFeature> features;
     MapGeometryFeature currentFeature;
     bool inLineBlock = false;
@@ -2699,9 +2656,40 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
     QString currentLineIdentifier;
     QStringList currentAreaBorderIdentifiers;
     QHash<QString, MapGeometryFeature> lineFeaturesByIdentifier;
+    QVector<PendingReferencedArea> pendingReferencedAreas;
     QVector<int> scrapLineStack;
     auto currentScrapLineNumber = [&]() {
         return scrapLineStack.isEmpty() ? 0 : scrapLineStack.last();
+    };
+
+    auto resolveReferencedArea = [&](MapGeometryFeature *feature, const QStringList &borderIdentifiers) {
+        if (feature == nullptr || borderIdentifiers.isEmpty()) {
+            return false;
+        }
+
+        const MapEditorReferencedAreaResolution resolution =
+            resolveMapEditorReferencedArea(borderIdentifiers, lineFeaturesByIdentifier);
+        if (resolution.vertices.size() < 3) {
+            return false;
+        }
+
+        feature->vertices = resolution.vertices;
+        feature->lineVertices = resolution.lineVertices;
+        feature->closed = true;
+        feature->verticesEditable = false;
+        return true;
+    };
+
+    auto resolvePendingReferencedAreas = [&]() {
+        QVector<PendingReferencedArea> unresolved;
+        for (PendingReferencedArea pendingArea : std::as_const(pendingReferencedAreas)) {
+            if (resolveReferencedArea(&pendingArea.feature, pendingArea.borderIdentifiers)) {
+                features.append(pendingArea.feature);
+            } else {
+                unresolved.append(pendingArea);
+            }
+        }
+        pendingReferencedAreas = unresolved;
     };
 
     auto flushCurrentFeature = [&]() {
@@ -2720,16 +2708,10 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
             if (currentFeature.vertices.size() >= 3) {
                 features.append(currentFeature);
             } else if (!currentAreaBorderIdentifiers.isEmpty()) {
-                QVector<MapGeometryFeature::TH2LineVertex> resolvedLineVertices;
-                const QVector<QPointF> resolvedVertices = areaVerticesFromReferencedLines(currentAreaBorderIdentifiers,
-                                                                                          lineFeaturesByIdentifier,
-                                                                                          &resolvedLineVertices);
-                if (resolvedVertices.size() >= 3) {
-                    currentFeature.vertices = resolvedVertices;
-                    currentFeature.lineVertices = resolvedLineVertices;
-                    currentFeature.closed = true;
-                    currentFeature.verticesEditable = false;
+                if (resolveReferencedArea(&currentFeature, currentAreaBorderIdentifiers)) {
                     features.append(currentFeature);
+                } else {
+                    pendingReferencedAreas.append(PendingReferencedArea{currentFeature, currentAreaBorderIdentifiers});
                 }
             }
         }
@@ -2747,14 +2729,22 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
 
         if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("scrap")) {
             flushCurrentFeature();
+            resolvePendingReferencedAreas();
+            lineFeaturesByIdentifier.clear();
+            pendingReferencedAreas.clear();
             scrapLineStack.append(parsedLine.lineNumber);
             continue;
         }
 
         if (!inLineBlock && !inAreaBlock && directive == QStringLiteral("endscrap")) {
             flushCurrentFeature();
+            resolvePendingReferencedAreas();
             if (!scrapLineStack.isEmpty()) {
                 scrapLineStack.removeLast();
+            }
+            if (scrapLineStack.isEmpty()) {
+                lineFeaturesByIdentifier.clear();
+                pendingReferencedAreas.clear();
             }
             continue;
         }
@@ -2915,6 +2905,9 @@ QVector<MapGeometryFeature> collectGeometryFeatures(const QVector<TherionParsedL
     if (inLineBlock || inAreaBlock) {
         flushCurrentFeature();
     }
+
+    flushCurrentFeature();
+    resolvePendingReferencedAreas();
 
     return features;
 }

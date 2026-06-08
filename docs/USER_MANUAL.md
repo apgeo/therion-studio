@@ -185,6 +185,8 @@ The map canvas uses a stable light paper-style surface in both light and dark ap
 
 Starting `Point`, `Line`, `Freehand`, or `Area` activates `Inspector -> Selection` before the first point or vertex is placed. Set type, subtype, ID, point name, label text, or supported point value there before committing the new object. If a scrap or an object inside a scrap was selected when you started the tool, the new object is inserted into that scrap; the pending metadata line shows the target scrap ID. Use `Insert into` to choose a different existing target scrap before committing.
 
+Existing Therion `area ... endarea` blocks that reference `line -id ...` borders render from lines in the same scrap. Border lines may be open; when their intersections form a closed face, Therion Studio fills that face without changing the referenced line source.
+
 While drafting a line or area:
 
 - click to add a straight vertex

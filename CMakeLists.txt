@@ -401,6 +401,8 @@ set(THERION_MAP_EDITOR_SOURCES
     src/app/text_editor/map_editor/MapEditorBackgroundLayers.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h
+    src/app/text_editor/map_editor/MapEditorReferencedAreaResolver.cpp
+    src/app/text_editor/map_editor/MapEditorReferencedAreaResolver.h
     src/app/text_editor/map_editor/MapEditorRasterBackgroundImage.cpp
     src/app/text_editor/map_editor/MapEditorRasterBackgroundImage.h
     src/app/text_editor/map_editor/MapEditorRasterBackgroundPlacement.cpp
@@ -892,6 +894,8 @@ qt_add_executable(MapGeometryFeatureParsingTest
     src/app/text_editor/map_editor/MapEditorPointSymbolGeometry.h
     src/app/text_editor/map_editor/MapEditorSceneItems.cpp
     src/app/text_editor/map_editor/MapEditorSceneInternals.h
+    src/app/text_editor/map_editor/MapEditorReferencedAreaResolver.cpp
+    src/app/text_editor/map_editor/MapEditorReferencedAreaResolver.h
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
     src/app/text_editor/map_editor/MapEditorSceneSupport.h)
 
@@ -908,6 +912,8 @@ qt_add_executable(MapEditorSourceReferenceResolverTest
     src/app/text_editor/map_editor/MapEditorPointSymbolGeometry.h
     src/app/text_editor/map_editor/MapEditorSceneItems.cpp
     src/app/text_editor/map_editor/MapEditorSceneInternals.h
+    src/app/text_editor/map_editor/MapEditorReferencedAreaResolver.cpp
+    src/app/text_editor/map_editor/MapEditorReferencedAreaResolver.h
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
     src/app/text_editor/map_editor/MapEditorSceneSupport.h)
 

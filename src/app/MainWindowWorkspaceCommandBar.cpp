@@ -140,11 +140,13 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceLineButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Line"), QStringLiteral("spline"));
     workspaceFreehandLineButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Freehand"), QStringLiteral("pencil-line"));
     workspaceAreaButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Area"), QStringLiteral("pentagon"));
+    workspaceSmartAreaButton_ = createWorkspaceIconButton(workspaceMapToolsGroup_, tr("Smart Area"), QStringLiteral("square-dashed-mouse-pointer"));
     workspaceSelectButton_->setCheckable(true);
     workspacePointButton_->setCheckable(true);
     workspaceLineButton_->setCheckable(true);
     workspaceFreehandLineButton_->setCheckable(true);
     workspaceAreaButton_->setCheckable(true);
+    workspaceSmartAreaButton_->setCheckable(true);
     mapToolsLayout->addWidget(workspaceSelectButton_);
     mapToolsLayout->addWidget(workspaceCompleteDraftButton_);
     mapToolsLayout->addWidget(createWorkspaceToolbarSeparator(workspaceMapToolsGroup_));
@@ -153,6 +155,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     mapToolsLayout->addWidget(workspaceLineButton_);
     mapToolsLayout->addWidget(workspaceFreehandLineButton_);
     mapToolsLayout->addWidget(workspaceAreaButton_);
+    mapToolsLayout->addWidget(workspaceSmartAreaButton_);
     hostLayout->addWidget(workspaceMapToolsGroup_);
     hostLayout->addStretch(1);
 
@@ -215,6 +218,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     connect(workspaceLineButton_, &QToolButton::clicked, this, &MainWindow::triggerLineForActiveDocument);
     connect(workspaceFreehandLineButton_, &QToolButton::clicked, this, &MainWindow::triggerFreehandLineForActiveDocument);
     connect(workspaceAreaButton_, &QToolButton::clicked, this, &MainWindow::triggerAreaForActiveDocument);
+    connect(workspaceSmartAreaButton_, &QToolButton::clicked, this, &MainWindow::triggerSmartAreaForActiveDocument);
     connect(workspaceVisualModeButton_, &QToolButton::clicked, this, [this]() {
         if (workspaceModeSwitcherSyncInProgress_) {
             return;
@@ -300,6 +304,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceLineButton_ == nullptr
         || workspaceFreehandLineButton_ == nullptr
         || workspaceAreaButton_ == nullptr
+        || workspaceSmartAreaButton_ == nullptr
         || workspaceHistorySeparator_ == nullptr
         || workspaceCompileSeparator_ == nullptr
         || workspaceZoomSeparator_ == nullptr
@@ -365,6 +370,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceLineButton_->setEnabled(showMapTools);
     workspaceFreehandLineButton_->setEnabled(showMapTools);
     workspaceAreaButton_->setEnabled(showMapTools);
+    workspaceSmartAreaButton_->setEnabled(showMapTools);
 
     workspaceModeSwitcherSyncInProgress_ = true;
     if (showMapModes) {
@@ -373,6 +379,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         const QSignalBlocker lineBlocker(workspaceLineButton_);
         const QSignalBlocker freehandBlocker(workspaceFreehandLineButton_);
         const QSignalBlocker areaBlocker(workspaceAreaButton_);
+        const QSignalBlocker smartAreaBlocker(workspaceSmartAreaButton_);
         const QSignalBlocker visualBlocker(workspaceVisualModeButton_);
         const QSignalBlocker rawBlocker(workspaceRawModeButton_);
         const QSignalBlocker mapWindowBlocker(workspaceMapPaneWindowButton_);
@@ -382,6 +389,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         workspaceLineButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Line);
         workspaceFreehandLineButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Freehand);
         workspaceAreaButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::Area);
+        workspaceSmartAreaButton_->setChecked(drawMode == TherionStudio::MapEditorTab::InteractiveDrawMode::SmartArea);
         workspaceVisualModeButton_->setChecked(mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Visual);
         workspaceRawModeButton_->setChecked(mapTab->workspaceMode() == TherionStudio::MapEditorTab::WorkspaceMode::Raw);
         workspaceVisualModeButton_->setEnabled(!mapPaneDetached);
@@ -582,5 +590,12 @@ void MainWindow::triggerAreaForActiveDocument()
 {
     if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
         mapTab->triggerAddArea();
+    }
+}
+
+void MainWindow::triggerSmartAreaForActiveDocument()
+{
+    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
+        mapTab->triggerSmartArea();
     }
 }

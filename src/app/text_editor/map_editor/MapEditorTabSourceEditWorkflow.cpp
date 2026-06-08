@@ -5,7 +5,11 @@
 
 #include "../../../core/TherionBackgroundMetadata.h"
 
+#include <QGraphicsPathItem>
+#include <QGraphicsScene>
+#include <QPainterPath>
 #include <QScopedValueRollback>
+#include <cmath>
 
 namespace TherionStudio
 {
@@ -85,6 +89,9 @@ bool MapEditorTab::hasCompletableInteractiveDrawSession() const
     if (interactiveDrawState_.lineExtensionActive_) {
         return interactiveDrawState_.mode_ == InteractiveDrawMode::Line && interactiveDrawState_.lineVertices_.size() >= 2;
     }
+    if (interactiveDrawState_.mode_ == InteractiveDrawMode::SmartArea) {
+        return interactiveDrawState_.smartAreaPreviewActive_;
+    }
     if (interactiveDrawState_.mode_ == InteractiveDrawMode::Line) {
         return interactiveDrawState_.lineVertices_.size() >= 2;
     }
@@ -163,6 +170,141 @@ bool MapEditorTab::commitInteractiveDrawVertices(const QString &geometryKind,
     toolbarStatusNote_ = insertedLineNumber > 0
         ? tr("Complete Draft wrote %1 geometry at source line %2.").arg(successLabel, QString::number(insertedLineNumber))
         : tr("Complete Draft wrote %1 geometry to source.").arg(successLabel);
+    return true;
+}
+
+bool MapEditorTab::previewSmartAreaAt(const QPointF &scenePosition)
+{
+    interactiveDrawState_.smartAreaPreviewActive_ = false;
+    interactiveDrawState_.smartAreaCandidates_.clear();
+    interactiveDrawState_.smartAreaCandidate_ = {};
+    interactiveDrawState_.smartAreaCandidateIndex_ = 0;
+
+    if (std::isnan(scenePosition.x()) || std::isnan(scenePosition.y())) {
+        if (interactiveDrawState_.previewPath_ != nullptr) {
+            interactiveDrawState_.previewPath_->setPath(QPainterPath());
+            interactiveDrawState_.previewPath_->setVisible(false);
+        }
+        return false;
+    }
+
+    const QPointF sourcePoint = sourcePointFromScenePosition(scenePosition);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLinesForCurrentDocument());
+    const QVector<MapEditorSmartAreaCandidate> candidates = mapEditorSmartAreaCandidatesAt(features, sourcePoint);
+    if (candidates.isEmpty()) {
+        if (interactiveDrawState_.previewPath_ != nullptr) {
+            interactiveDrawState_.previewPath_->setPath(QPainterPath());
+            interactiveDrawState_.previewPath_->setVisible(false);
+        }
+        return false;
+    }
+
+    interactiveDrawState_.smartAreaCandidates_ = candidates;
+    interactiveDrawState_.smartAreaCandidate_ = interactiveDrawState_.smartAreaCandidates_.first();
+    interactiveDrawState_.smartAreaPreviewActive_ = true;
+
+    updateSmartAreaPreviewPath();
+    return true;
+}
+
+void MapEditorTab::updateSmartAreaPreviewPath()
+{
+    if (!interactiveDrawState_.smartAreaPreviewActive_
+        || interactiveDrawState_.smartAreaCandidates_.isEmpty()
+        || interactiveDrawState_.smartAreaCandidateIndex_ < 0
+        || interactiveDrawState_.smartAreaCandidateIndex_ >= interactiveDrawState_.smartAreaCandidates_.size()) {
+        if (interactiveDrawState_.previewPath_ != nullptr) {
+            interactiveDrawState_.previewPath_->setPath(QPainterPath());
+            interactiveDrawState_.previewPath_->setVisible(false);
+        }
+        return;
+    }
+
+    interactiveDrawState_.smartAreaCandidate_ =
+        interactiveDrawState_.smartAreaCandidates_.at(interactiveDrawState_.smartAreaCandidateIndex_);
+
+    QPainterPath path;
+    const QVector<QPointF> &vertices = interactiveDrawState_.smartAreaCandidate_.vertices;
+    if (!vertices.isEmpty()) {
+        path.moveTo(scenePointFromSourcePosition(vertices.first()));
+        for (int index = 1; index < vertices.size(); ++index) {
+            path.lineTo(scenePointFromSourcePosition(vertices.at(index)));
+        }
+        path.closeSubpath();
+    }
+
+    if (interactiveDrawState_.previewPath_ == nullptr) {
+        interactiveDrawState_.previewPath_ = new QGraphicsPathItem();
+        interactiveDrawState_.previewPath_->setAcceptedMouseButtons(Qt::NoButton);
+        interactiveDrawState_.previewPath_->setZValue(28.0);
+        if (mapScene_ != nullptr) {
+            mapScene_->addItem(interactiveDrawState_.previewPath_);
+        }
+    } else if (mapScene_ != nullptr && interactiveDrawState_.previewPath_->scene() != mapScene_) {
+        mapScene_->addItem(interactiveDrawState_.previewPath_);
+    }
+    interactiveDrawState_.previewPath_->setPath(path);
+    interactiveDrawState_.previewPath_->setVisible(true);
+    updateInteractiveDrawPreview();
+}
+
+bool MapEditorTab::hasSmartAreaPreview() const
+{
+    return interactiveDrawState_.smartAreaPreviewActive_;
+}
+
+bool MapEditorTab::cycleSmartAreaCandidate(int delta)
+{
+    if (interactiveDrawState_.mode_ != InteractiveDrawMode::SmartArea
+        || !interactiveDrawState_.smartAreaPreviewActive_
+        || interactiveDrawState_.smartAreaCandidates_.size() <= 1) {
+        return false;
+    }
+
+    const int count = interactiveDrawState_.smartAreaCandidates_.size();
+    interactiveDrawState_.smartAreaCandidateIndex_ =
+        (interactiveDrawState_.smartAreaCandidateIndex_ + delta + count) % count;
+    updateSmartAreaPreviewPath();
+    toolbarStatusNote_ = tr("Smart Area candidate %1 of %2 selected. Press Enter or Complete Draft to insert.")
+        .arg(interactiveDrawState_.smartAreaCandidateIndex_ + 1)
+        .arg(count);
+    refreshToolbarSummary();
+    updateCommandSurfaceState();
+    return true;
+}
+
+bool MapEditorTab::commitSmartAreaPreview()
+{
+    if (textEditor_ == nullptr || !interactiveDrawState_.smartAreaPreviewActive_) {
+        return false;
+    }
+
+    QVector<TherionReferencedAreaBoundaryLine> boundaryLines;
+    boundaryLines.reserve(interactiveDrawState_.smartAreaCandidate_.boundaryLines.size());
+    for (const MapEditorSmartAreaBoundaryLine &line : std::as_const(interactiveDrawState_.smartAreaCandidate_.boundaryLines)) {
+        boundaryLines.append(TherionReferencedAreaBoundaryLine{line.lineNumber, line.identifier});
+    }
+
+    QString afterText = textEditor_->text();
+    QString errorMessage;
+    int insertedLineNumber = 0;
+    if (!TherionDocumentEditor::appendReferencedArea(&afterText,
+                                                     interactiveDrawState_.smartAreaCandidate_.scrapLineNumber,
+                                                     boundaryLines,
+                                                     &insertedLineNumber,
+                                                     &errorMessage,
+                                                     pendingDraftObjectOptions(QStringLiteral("area")))) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Smart Area insert failed.")
+            : tr("Smart Area insert failed: %1").arg(errorMessage);
+        return false;
+    }
+
+    const QString beforeText = textEditor_->text();
+    applySourceTextChangeWithSnapshot(tr("Insert Smart Area"), beforeText, afterText, insertedLineNumber);
+    toolbarStatusNote_ = insertedLineNumber > 0
+        ? tr("Smart Area inserted at source line %1.").arg(insertedLineNumber)
+        : tr("Smart Area inserted.");
     return true;
 }
 

@@ -20,6 +20,7 @@
 #include "MapEditorInspectorData.h"
 #include "MapEditorInteractiveDrawLogic.h"
 #include "MapEditorObjectDetailsLogic.h"
+#include "MapEditorSmartAreaPlanner.h"
 #include "../../../core/CommandCatalogStore.h"
 #include "../../../core/TherionDocumentEditor.h"
 #include "../../../core/TherionDocumentParser.h"
@@ -100,7 +101,8 @@ public:
         Point,
         Line,
         Freehand,
-        Area
+        Area,
+        SmartArea
     };
 
     explicit MapEditorTab(IFileSystem &fileSystem,
@@ -153,6 +155,7 @@ public:
     void triggerAddLine();
     void triggerAddFreehandLine();
     void triggerAddArea();
+    void triggerSmartArea();
     void setMagnifierEnabled(bool enabled);
     void setRightPanelCollapsed(bool collapsed);
     void setContextHelpPanelCollapsed(bool collapsed);
@@ -215,6 +218,7 @@ private slots:
     void handleAddLineTriggered();
     void handleAddFreehandLineTriggered();
     void handleAddAreaTriggered();
+    void handleSmartAreaTriggered();
     void handleSelectModeTriggered();
     void handleInsertScrapTriggered();
     void handleCompleteDraftTriggered();
@@ -273,6 +277,10 @@ private:
         QPointF hoverSnapScenePoint_;
         QGraphicsPathItem *previewPath_ = nullptr;
         QVector<QGraphicsItem *> previewMarkers_;
+        bool smartAreaPreviewActive_ = false;
+        QVector<MapEditorSmartAreaCandidate> smartAreaCandidates_;
+        MapEditorSmartAreaCandidate smartAreaCandidate_;
+        int smartAreaCandidateIndex_ = 0;
     };
 
     struct ObjectSelectionState
@@ -392,6 +400,11 @@ private:
     bool commitInteractiveDrawVertices(const QString &geometryKind,
                                        const QVector<QPointF> &vertices,
                                        const QString &successLabel);
+    bool previewSmartAreaAt(const QPointF &scenePosition);
+    bool hasSmartAreaPreview() const;
+    bool cycleSmartAreaCandidate(int delta);
+    bool commitSmartAreaPreview();
+    void updateSmartAreaPreviewPath();
     bool beginLineExtensionFromSelection(int lineNumber, int sourceVertexIndex, bool prepend);
     bool commitLineExtensionSession();
     QPointF scenePointFromSourcePosition(const QPointF &sourcePosition) const;
@@ -609,6 +622,8 @@ private:
     QSplitter *splitter_ = nullptr;
     QShortcut *cancelDrawShortcut_ = nullptr;
     QShortcut *commitDrawShortcut_ = nullptr;
+    QShortcut *previousSmartAreaCandidateShortcut_ = nullptr;
+    QShortcut *nextSmartAreaCandidateShortcut_ = nullptr;
     QHash<int, QGraphicsItem *> mapItemsByLine_;
     QVector<QGraphicsRectItem *> draftGeometryItems_;
     QVector<QGraphicsPixmapItem *> backgroundImageItems_;

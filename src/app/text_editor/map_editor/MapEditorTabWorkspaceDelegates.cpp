@@ -209,6 +209,11 @@ void MapEditorTab::triggerAddArea()
     handleAddAreaTriggered();
 }
 
+void MapEditorTab::triggerSmartArea()
+{
+    handleSmartAreaTriggered();
+}
+
 bool MapEditorTab::isInsertModeActive() const
 {
     return interactiveDrawState_.mode_ != InteractiveDrawMode::None;

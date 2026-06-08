@@ -25,7 +25,17 @@ void MapEditorTab::updateCommandSurfaceState()
     }
     if (commitDrawShortcut_ != nullptr) {
         commitDrawShortcut_->setEnabled(interactiveDrawState_.mode_ == InteractiveDrawMode::Line
-                                        || interactiveDrawState_.mode_ == InteractiveDrawMode::Area);
+                                        || interactiveDrawState_.mode_ == InteractiveDrawMode::Area
+                                        || interactiveDrawState_.mode_ == InteractiveDrawMode::SmartArea);
+    }
+    const bool canCycleSmartArea = interactiveDrawState_.mode_ == InteractiveDrawMode::SmartArea
+        && interactiveDrawState_.smartAreaPreviewActive_
+        && interactiveDrawState_.smartAreaCandidates_.size() > 1;
+    if (previousSmartAreaCandidateShortcut_ != nullptr) {
+        previousSmartAreaCandidateShortcut_->setEnabled(canCycleSmartArea);
+    }
+    if (nextSmartAreaCandidateShortcut_ != nullptr) {
+        nextSmartAreaCandidateShortcut_->setEnabled(canCycleSmartArea);
     }
     refreshBackgroundLayerControls();
     refreshToolbarSummary();

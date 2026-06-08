@@ -76,6 +76,17 @@ void MapEditorTab::handleAddAreaTriggered()
     refreshToolbarSummary();
 }
 
+void MapEditorTab::handleSmartAreaTriggered()
+{
+    interactiveDrawState_.lineExtensionActive_ = false;
+    setInteractiveDrawMode(InteractiveDrawMode::SmartArea);
+    beginPendingInsertObject(QStringLiteral("area"));
+    activateSelectionInspector();
+    refreshObjectDetailsPanel();
+    toolbarStatusNote_ = tr("Smart Area mode: click inside a closed boundary, then press Enter or Complete Draft.");
+    refreshToolbarSummary();
+}
+
 void MapEditorTab::handleSelectModeTriggered()
 {
     interactiveDrawState_.lineExtensionActive_ = false;

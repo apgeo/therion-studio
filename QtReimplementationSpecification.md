@@ -398,6 +398,11 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Area fill and fill-pattern rendering shall visually honor Therion's default `-clip on` behavior by clipping areas to the owning scrap wall boundary when that boundary can be resolved; areas with `-clip off` shall render without scrap-boundary clipping.
 - Area rendering shall resolve `area ... endarea` border references against `line -id ...` geometry in the same owning scrap. Referenced border lines may be individually open; when their intersections form a closed face, the canvas shall render that face as the area fill without modifying the source line geometry.
 - When referenced area border lines cannot be resolved into a closed polygon or closed intersection face, the map editor shall surface an explicit warning instead of silently rendering a misleading fill.
+- Smart Area insertion shall be exposed as a separate map command surface tool from manual Area drawing. It shall let the user click inside a same-scrap closed face formed by existing closed or intersecting line geometry, preview the candidate area fill and referenced boundary lines without mutating source, and require explicit confirmation before writing the new `area ... endarea` block.
+- Smart Area insertion shall not change existing line geometry. On confirmation it may add missing `-id` options to referenced boundary line commands when those identifiers are required to serialize the Therion area reference; the ID additions and new area block shall be one undoable source transaction.
+- After Smart Area confirmation, the map editor shall return to selection mode.
+- When multiple Smart Area candidates contain the click point, the editor shall choose the smallest containing candidate by default and provide a keyboard-accessible way, such as `[` / `]`, to cycle the other candidates before confirmation.
+- When Smart Area cannot identify a closed candidate, or when candidate boundary lines cannot be referenced safely, the editor shall show an actionable warning and shall not write source text.
 - The TH2 Visual map editor shall provide a fixed viewport magnifier overlay for precise tracing and placement. The magnifier shall show a zoomed crop around the current cursor position, an exact center crosshair, and the corresponding map/source coordinate readout.
 - The map magnifier shall be rendered as a viewport overlay, not as scene geometry, so it remains pinned to the map viewport and does not pan or zoom with the document.
 - The map magnifier shall be enabled by default and shall be user-toggleable through the `View -> Show Map Magnifier` / `Hide Map Magnifier` menu action. This preference shall be stored as UI/session state and shall not modify the TH2 source document.
@@ -1050,7 +1055,7 @@ The criteria below are intended for implementation verification and QA.
 - A TH2 document exposes an embedded mode selector with `Raw` and `Visual` modes.
 - In the main window, the TH2 `Raw`/`Visual` mode selector is shown in the right-aligned controls of the full-width document command toolbar row above the tab strip.
 - In the main window, TH2 map-pane detach/reattach (`Separate Map` / `Return Map`) is available in the same document command toolbar control area, after `Raw`, using screen-share/monitor-x icons for detach/return state.
-- In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, separator, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`) after `Undo`/`Redo`.
+- In the main window, when a TH2 tab is active, the document command toolbar includes left-side zoom and map-tool groups (`Zoom In`, `Zoom Out`, `Fit`, `Fit With Background`, `Select`, `Complete Draft`, separator, `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`, `Smart Area`) after `Undo`/`Redo`.
 - In detached dedicated map-editor windows (without shared tab strip), an equivalent in-window top command toolbar remains available.
 - In embedded `Visual` mode, the tab shows the graphical map editor plus a right-side map inspector (`Selection`, `Objects`, `Backgrounds` tabs).
 - In embedded `Raw` mode, the tab shows the source text editor plus contextual help inspector.
@@ -1067,6 +1072,7 @@ The criteria below are intended for implementation verification and QA.
 - Undo and redo work for map mutations.
 - The map command surface exposes drawing, fitting, zoom, undo/redo, and draft-completion actions in the top toolbar (main and detached map windows).
 - Freehand line drawing serializes simplified bezier line geometry.
+- The separate `Smart Area` map tool previews a clicked same-scrap closed face made from existing closed or intersecting lines, confirms with one source transaction, and may add only missing line IDs needed for the area reference without changing existing line geometry.
 - Background layers support persisted position, visibility, gamma, opacity, and `.xvi` rendering where applicable.
 - Raster background image add/move/show-hide/gamma/remove operations write and maintain XTherion-compatible `xth_me_area_adjust`, `xth_me_area_zoom_to`, and `xth_me_image_insert` metadata in the TH2 source.
 - PocketTopo Therion export (`.txt`) background import generates a plan or extended-elevation `.xvi` file, adds it as a background layer, and persists the reference through XTherion-compatible `xth_me_image_insert` metadata.

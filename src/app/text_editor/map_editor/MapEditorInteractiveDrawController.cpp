@@ -95,6 +95,19 @@ bool MapEditorInteractiveDrawController::handleInteractiveDrawClick(const QPoint
         return true;
     }
 
+    if (mode() == MapEditorInteractiveDrawMode::SmartArea) {
+        if (context_.previewSmartAreaAt != nullptr && context_.previewSmartAreaAt(scenePosition)) {
+            (*context_.toolbarStatusNote) = context_.hasSmartAreaPreview != nullptr && context_.hasSmartAreaPreview()
+                ? tr("Smart Area: preview ready. Press [ or ] for alternatives, Enter or Complete Draft to insert, Esc to cancel.")
+                : tr("Smart Area: no closed area was found at the click position.");
+        } else {
+            (*context_.toolbarStatusNote) = tr("Smart Area: no closed area was found at the click position.");
+        }
+        context_.refreshToolbarSummary();
+        context_.updateCommandSurfaceState();
+        return true;
+    }
+
     if (mode() == MapEditorInteractiveDrawMode::Area) {
         context_.captureInteractiveLineAnchor(scenePosition, std::nullopt);
         (*context_.hoverActive) = false;
@@ -111,6 +124,19 @@ bool MapEditorInteractiveDrawController::handleInteractiveDrawClick(const QPoint
 bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool closeLineDraft)
 {
     const MapEditorInteractiveDrawMode modeAtCommit = mode();
+    if (modeAtCommit == MapEditorInteractiveDrawMode::SmartArea) {
+        if (context_.commitSmartAreaPreview != nullptr && context_.commitSmartAreaPreview()) {
+            clearInteractiveDrawSession(true);
+            (*context_.toolbarStatusNote) = tr("Smart Area inserted. Selection mode is active.");
+        } else {
+            (*context_.toolbarStatusNote) = tr("Smart Area needs a preview before insertion.");
+        }
+        context_.refreshToolbarSummary();
+        context_.updateHelpPanel();
+        context_.updateCommandSurfaceState();
+        return true;
+    }
+
     if (modeAtCommit != MapEditorInteractiveDrawMode::Line
         && modeAtCommit != MapEditorInteractiveDrawMode::Area) {
         return false;
@@ -209,6 +235,10 @@ void MapEditorInteractiveDrawController::clearInteractiveDrawSession(bool clearM
     (*context_.anchorDragActive) = false;
     (*context_.controlDragActive) = false;
     (*context_.hoverActive) = false;
+    if (context_.previewSmartAreaAt != nullptr) {
+        context_.previewSmartAreaAt(QPointF(std::numeric_limits<qreal>::quiet_NaN(),
+                                            std::numeric_limits<qreal>::quiet_NaN()));
+    }
     if (context_.hoverSnapActive != nullptr) {
         (*context_.hoverSnapActive) = false;
     }
@@ -332,9 +362,34 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
 
     if (mode() != MapEditorInteractiveDrawMode::Line
         && mode() != MapEditorInteractiveDrawMode::Area
-        && mode() != MapEditorInteractiveDrawMode::Freehand) {
+        && mode() != MapEditorInteractiveDrawMode::Freehand
+        && mode() != MapEditorInteractiveDrawMode::SmartArea) {
         clearPreviewMarkers();
         hidePreviewPath();
+        return;
+    }
+
+    if (mode() == MapEditorInteractiveDrawMode::SmartArea) {
+        clearPreviewMarkers();
+        if (context_.hasSmartAreaPreview == nullptr || !context_.hasSmartAreaPreview()) {
+            hidePreviewPath();
+            return;
+        }
+        if ((*context_.previewPath) == nullptr) {
+            (*context_.previewPath) = new QGraphicsPathItem();
+            (*context_.previewPath)->setZValue(28.0);
+            (*context_.previewPath)->setAcceptedMouseButtons(Qt::NoButton);
+            context_.scene->addItem((*context_.previewPath));
+        } else if ((*context_.previewPath)->scene() != context_.scene) {
+            context_.scene->addItem((*context_.previewPath));
+        }
+        QPen previewPen(QColor(QStringLiteral("#0077cc")), 2.4, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin);
+        previewPen.setCosmetic(true);
+        QColor fillColor(QStringLiteral("#28a8ff"));
+        fillColor.setAlpha(90);
+        (*context_.previewPath)->setPen(previewPen);
+        (*context_.previewPath)->setBrush(QBrush(fillColor));
+        (*context_.previewPath)->setVisible(true);
         return;
     }
 
@@ -554,6 +609,14 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
     }
 
     const MapEditorInteractiveDrawMode modeAtCancel = mode();
+    if (modeAtCancel == MapEditorInteractiveDrawMode::SmartArea) {
+        clearInteractiveDrawSession(true);
+        (*context_.toolbarStatusNote) = tr("Selection mode: Smart Area canceled.");
+        context_.refreshToolbarSummary();
+        context_.updateCommandSurfaceState();
+        context_.updateHelpPanel();
+        return true;
+    }
     const bool isLineOrArea = modeAtCancel == MapEditorInteractiveDrawMode::Line
         || modeAtCancel == MapEditorInteractiveDrawMode::Area;
     bool committedLineOrAreaDraft = false;

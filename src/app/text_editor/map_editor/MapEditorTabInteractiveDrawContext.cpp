@@ -21,6 +21,8 @@ MapEditorInteractiveDrawMode toInteractiveDrawControllerMode(MapEditorTab::Inter
         return MapEditorInteractiveDrawMode::Freehand;
     case MapEditorTab::InteractiveDrawMode::Area:
         return MapEditorInteractiveDrawMode::Area;
+    case MapEditorTab::InteractiveDrawMode::SmartArea:
+        return MapEditorInteractiveDrawMode::SmartArea;
     }
     return MapEditorInteractiveDrawMode::None;
 }
@@ -38,6 +40,8 @@ MapEditorTab::InteractiveDrawMode toTabInteractiveDrawMode(MapEditorInteractiveD
         return MapEditorTab::InteractiveDrawMode::Freehand;
     case MapEditorInteractiveDrawMode::Area:
         return MapEditorTab::InteractiveDrawMode::Area;
+    case MapEditorInteractiveDrawMode::SmartArea:
+        return MapEditorTab::InteractiveDrawMode::SmartArea;
     }
     return MapEditorTab::InteractiveDrawMode::None;
 }
@@ -101,6 +105,15 @@ MapEditorInteractiveDrawContext MapEditorTab::interactiveDrawContext()
         .captureInteractiveLineAnchor = [this](const QPointF &anchorScenePoint,
                                                const std::optional<QPointF> &dragScenePoint) {
             captureInteractiveLineAnchor(anchorScenePoint, dragScenePoint);
+        },
+        .previewSmartAreaAt = [this](const QPointF &scenePosition) {
+            return previewSmartAreaAt(scenePosition);
+        },
+        .hasSmartAreaPreview = [this]() {
+            return hasSmartAreaPreview();
+        },
+        .commitSmartAreaPreview = [this]() {
+            return commitSmartAreaPreview();
         },
         .hasCompletableInteractiveDrawSession = [this]() {
             return hasCompletableInteractiveDrawSession();

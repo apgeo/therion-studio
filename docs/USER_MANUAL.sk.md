@@ -168,7 +168,7 @@ Súbory mimo UTF-8 sa otvárajú s konkrétnym zdrojovým kódovaním, keď ho m
 |---|---|
 | Zoom | `Priblížiť`, `Oddialiť`, `Prispôsobiť`, `Prispôsobiť vrátane pozadia` |
 | Výber a kreslenie | `Vybrať`, `Dokončiť návrh` |
-| Vkladanie | `Vložiť scrap`, `Bod`, `Línia`, `Voľná kresba`, `Plocha` |
+| Vkladanie | `Vložiť scrap`, `Bod`, `Línia`, `Voľná kresba`, `Plocha`, `Smart Area` |
 
 Mapové plátno používa stabilný svetlý „papierový“ povrch vo svetlom aj tmavom vzhľade aplikácie. Lišty, záložky a inšpektory nasledujú systémový vzhľad, ale rastry, `.xvi` referencie a mapové symboly sa pre tmavý režim netónujú ani neinvertujú. Ťahaním pravým tlačidlom myši posuniete mapové plátno v štýle XTherionu.
 
@@ -177,12 +177,15 @@ Mapové plátno používa stabilný svetlý „papierový“ povrch vo svetlom a
 - `Bod`: kliknite raz do mapy.
 - `Línia`: klikajte vrcholy a dokončite `Enter` alebo `Dokončiť návrh`.
 - `Plocha`: klikajte vrcholy a dokončite `Enter` alebo `Dokončiť návrh`.
+- `Smart Area`: kliknite dovnútra uzavretej plochy vytvorenej existujúcimi čiarami v tom istom scrape, skontrolujte náhľad, pomocou `[` / `]` prepnite alternatívy, ak zodpovedá viac plôch, a potvrďte `Enter` alebo `Dokončiť návrh`.
 - `Voľná kresba`: stlačte, ťahajte a pustite; vloží sa zjednodušená Bezier čiara.
 - `Vložiť scrap`: okamžite vytvorí nový scrap, vyberie ho vo `Výbere` aj v `Objektoch` a potom môžete upraviť jeho ID/projekciu pred vkladaním bodov, línií, voľnej kresby alebo plôch.
 
 Po spustení `Bod`, `Línia`, `Voľná kresba` alebo `Plocha` sa aktivuje `Inšpektor -> Výber` ešte pred prvým vložením. Nastavte tam typ, podtyp, ID, názov bodu, text popisku alebo podporovanú hodnotu bodu ešte pred potvrdením nového objektu. Ak bol pri spustení nástroja vybraný scrap alebo objekt vnútri scrapu, nový objekt sa vloží do tohto scrapu; metadata pripraveného vloženia ukazujú ID cieľového scrapu. Pomocou `Vložiť do` môžete pred potvrdením vybrať iný existujúci cieľový scrap.
 
 Existujúce Therion bloky `area ... endarea`, ktoré odkazujú na hranice `line -id ...`, sa vykresľujú z čiar v tom istom scrape. Hraničné čiary môžu byť otvorené; ak ich priesečníky tvoria uzavretú plochu, Therion Studio ju vyplní bez zmeny zdrojového textu referencovaných čiar.
+
+`Smart Area` vytvára práve túto referenčnú formu plochy namiesto kreslenia novej hraničnej geometrie. Pri potvrdení môže doplniť chýbajúce ID referencovaným hraničným čiaram, aby na ne nový blok `area ... endarea` mohol odkazovať, ale nemení ich geometriu. Po potvrdení sa mapa vráti do režimu výberu. `Esc` náhľad zruší.
 
 Počas kreslenia čiary alebo plochy:
 

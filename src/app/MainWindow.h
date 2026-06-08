@@ -260,6 +260,7 @@ private:
     void triggerLineForActiveDocument();
     void triggerFreehandLineForActiveDocument();
     void triggerAreaForActiveDocument();
+    void triggerSmartAreaForActiveDocument();
 
     QHBoxLayout *mainContentLayout_ = nullptr;
     QWidget *editorAreaHost_ = nullptr;
@@ -373,6 +374,7 @@ private:
     QToolButton *workspaceLineButton_ = nullptr;
     QToolButton *workspaceFreehandLineButton_ = nullptr;
     QToolButton *workspaceAreaButton_ = nullptr;
+    QToolButton *workspaceSmartAreaButton_ = nullptr;
     QFrame *workspaceProjectSeparator_ = nullptr;
     QFrame *workspaceHistorySeparator_ = nullptr;
     QFrame *workspaceCompileSeparator_ = nullptr;

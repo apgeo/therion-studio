@@ -1680,6 +1680,125 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
     return true;
 }
 
+bool TherionDocumentEditor::appendReferencedArea(QString *contents,
+                                                 int scrapLineNumber,
+                                                 const QVector<TherionReferencedAreaBoundaryLine> &boundaryLines,
+                                                 int *insertedLineNumber,
+                                                 QString *errorMessage,
+                                                 const TherionDraftObjectOptions &objectOptions)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
+        }
+        return false;
+    }
+    if (scrapLineNumber <= 0 || boundaryLines.isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Smart Area has no resolved boundary lines.");
+        }
+        return false;
+    }
+
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    QStringList lines;
+    lines.reserve(sourceDocument.lines.size());
+    for (const TherionParsedSourceLine &sourceLine : sourceDocument.lines) {
+        lines.append(sourceLine.text);
+    }
+    const int scrapStartIndex = scrapLineNumber - 1;
+    if (scrapStartIndex < 0 || scrapStartIndex >= lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Smart Area target scrap no longer exists.");
+        }
+        return false;
+    }
+
+    const TherionParsedLine scrapLine = TherionDocumentParser::parseLine(lines.at(scrapStartIndex), scrapLineNumber);
+    if (scrapLine.directive != QStringLiteral("scrap")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Smart Area target is not a scrap.");
+        }
+        return false;
+    }
+
+    const int insertionIndex = matchingEndscrapIndex(lines, scrapStartIndex);
+    if (insertionIndex < 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Smart Area target scrap is missing endscrap.");
+        }
+        return false;
+    }
+
+    QSet<QString> existingIdentifiers = identifiersInsideScrap(lines, scrapStartIndex, insertionIndex);
+    QSet<int> seenLineNumbers;
+    QStringList areaReferences;
+    for (const TherionReferencedAreaBoundaryLine &boundaryLine : boundaryLines) {
+        if (boundaryLine.lineNumber <= scrapLineNumber
+            || boundaryLine.lineNumber > insertionIndex
+            || seenLineNumbers.contains(boundaryLine.lineNumber)) {
+            continue;
+        }
+        seenLineNumbers.insert(boundaryLine.lineNumber);
+
+        QString lineText = lines.at(boundaryLine.lineNumber - 1);
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lineText, boundaryLine.lineNumber);
+        if (parsedLine.directive != QStringLiteral("line")) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Smart Area boundary no longer resolves to a line.");
+            }
+            return false;
+        }
+
+        QString identifier = boundaryLine.identifier.trimmed();
+        if (identifier.isEmpty()) {
+            identifier = generatedIdentifier(QStringLiteral("line"), existingIdentifiers);
+            existingIdentifiers.insert(identifier.toLower());
+            if (!upsertSingleValueOption(&lineText, QStringLiteral("-id"), identifier)) {
+                if (errorMessage != nullptr) {
+                    *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Smart Area could not add a missing boundary line id.");
+                }
+                return false;
+            }
+            lines[boundaryLine.lineNumber - 1] = lineText;
+        } else {
+            existingIdentifiers.insert(identifier.toLower());
+        }
+        areaReferences.append(identifier);
+    }
+
+    if (areaReferences.isEmpty()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Smart Area has no writable boundary references.");
+        }
+        return false;
+    }
+
+    QString updated;
+    for (int index = 0; index < sourceDocument.lines.size(); ++index) {
+        updated += lines.at(index);
+        updated += sourceDocument.lines.at(index).lineEnding;
+    }
+
+    QStringList areaLines;
+    areaLines.append(QStringLiteral("  %1")
+                         .arg(draftObjectHeader(QStringLiteral("area"), QStringLiteral("water"), objectOptions)));
+    for (const QString &identifier : std::as_const(areaReferences)) {
+        areaLines.append(QStringLiteral("    %1").arg(identifier));
+    }
+    areaLines.append(QStringLiteral("  endarea"));
+
+    if (!insertPhysicalSourceLines(&updated, insertionIndex, areaLines, errorMessage)) {
+        return false;
+    }
+    *contents = updated;
+
+    if (insertedLineNumber != nullptr) {
+        *insertedLineNumber = insertionIndex + 1;
+    }
+    return true;
+}
+
 bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
                                                     int lineNumber,
                                                     const QPointF &point,

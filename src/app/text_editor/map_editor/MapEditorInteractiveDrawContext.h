@@ -26,7 +26,8 @@ enum class MapEditorInteractiveDrawMode
     Point,
     Line,
     Freehand,
-    Area
+    Area,
+    SmartArea
 };
 
 struct MapEditorInteractiveDrawContext
@@ -64,6 +65,9 @@ struct MapEditorInteractiveDrawContext
     std::function<QStringList()> lineCoordinateRowsForInteractiveDraft;
     std::function<QStringList()> areaCoordinateRowsForInteractiveDraft;
     std::function<void(const QPointF &, const std::optional<QPointF> &)> captureInteractiveLineAnchor;
+    std::function<bool(const QPointF &)> previewSmartAreaAt;
+    std::function<bool()> hasSmartAreaPreview;
+    std::function<bool()> commitSmartAreaPreview;
     std::function<bool()> hasCompletableInteractiveDrawSession;
     std::function<void()> refreshToolbarSummary;
     std::function<void()> updateCommandSurfaceState;

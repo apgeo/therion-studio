@@ -45,6 +45,7 @@ private:
     QToolButton *lineButton_ = nullptr;
     QToolButton *freehandLineButton_ = nullptr;
     QToolButton *areaButton_ = nullptr;
+    QToolButton *smartAreaButton_ = nullptr;
     QToolButton *mapWindowButton_ = nullptr;
     QLabel *zoomLabel_ = nullptr;
     QLabel *modeLabel_ = nullptr;

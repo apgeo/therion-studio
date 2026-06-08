@@ -403,6 +403,8 @@ set(THERION_MAP_EDITOR_SOURCES
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.h
     src/app/text_editor/map_editor/MapEditorReferencedAreaResolver.cpp
     src/app/text_editor/map_editor/MapEditorReferencedAreaResolver.h
+    src/app/text_editor/map_editor/MapEditorSmartAreaPlanner.cpp
+    src/app/text_editor/map_editor/MapEditorSmartAreaPlanner.h
     src/app/text_editor/map_editor/MapEditorRasterBackgroundImage.cpp
     src/app/text_editor/map_editor/MapEditorRasterBackgroundImage.h
     src/app/text_editor/map_editor/MapEditorRasterBackgroundPlacement.cpp
@@ -622,11 +624,11 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/screen-share.svg
     resources/icons/lucide/monitor-x.svg
     resources/icons/lucide/spline.svg
+    resources/icons/lucide/square-dashed-mouse-pointer.svg
     resources/icons/lucide/square-plus.svg
     resources/icons/lucide/toy-brick.svg
     resources/icons/lucide/trash-2.svg
     resources/icons/lucide/undo-2.svg
-    resources/icons/lucide/wand-sparkles.svg
     resources/icons/lucide/play.svg
     resources/icons/lucide/zoom-in.svg
     resources/icons/lucide/zoom-out.svg)
@@ -896,6 +898,8 @@ qt_add_executable(MapGeometryFeatureParsingTest
     src/app/text_editor/map_editor/MapEditorSceneInternals.h
     src/app/text_editor/map_editor/MapEditorReferencedAreaResolver.cpp
     src/app/text_editor/map_editor/MapEditorReferencedAreaResolver.h
+    src/app/text_editor/map_editor/MapEditorSmartAreaPlanner.cpp
+    src/app/text_editor/map_editor/MapEditorSmartAreaPlanner.h
     src/app/text_editor/map_editor/MapEditorSceneRenderer.cpp
     src/app/text_editor/map_editor/MapEditorSceneSupport.h)
 

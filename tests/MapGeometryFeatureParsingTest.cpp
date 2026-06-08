@@ -1,4 +1,5 @@
 #include "../src/app/text_editor/map_editor/MapEditorSceneSupport.h"
+#include "../src/app/text_editor/map_editor/MapEditorSmartAreaPlanner.h"
 #include "../src/core/TherionDocumentParser.h"
 
 #include <QApplication>
@@ -1492,6 +1493,88 @@ int runCurvedIntersectingReferencedAreaParsingTest()
     return 0;
 }
 
+int runReferencedAreaPrefersFaceUsingMoreReferencedLinesTest()
+{
+    const QString text =
+        QStringLiteral("scrap k_sifonu_iii_02.s -projection plan\n"
+                       "line rock-border -close on -id line-1\n"
+                       "  527.5 807.0\n"
+                       "  528.5 801.0\n"
+                       "  538.5 801.0\n"
+                       "  527.5 807.0\n"
+                       "endline\n"
+                       "line wall -id line-3\n"
+                       "  477.5 808.0\n"
+                       "  477.5 808.0 507.54 814.27 543.5 804.0\n"
+                       "  smooth off\n"
+                       "  543.5 804.0 560.17 797.23 571.5 795.0\n"
+                       "  602.0 789.0 603.5 792.0 623.5 780.0\n"
+                       "  628.12 777.23 615.51 780.01 610.5 774.0\n"
+                       "  608.0 771.0 586.5 778.0 550.5 779.0\n"
+                       "  514.5 780.0 497.5 784.0 497.5 784.0\n"
+                       "  smooth off\n"
+                       "  497.5 784.0 471.5 774.0 456.5 766.0\n"
+                       "  450.13 762.6 432.96 775.15 396.5 756.0\n"
+                       "  376.6 745.55 339.0 769.5 339.5 776.0\n"
+                       "  smooth off\n"
+                       "endline\n"
+                       "line border -id line-2\n"
+                       "  544.6 807.0\n"
+                       "  543.5 806.0 536.1 803.8 536.4 799.6\n"
+                       "  536.6 796.7 537.1 793.5 537.2 789.5\n"
+                       "  537.3 784.9 547.4 779.2 549.7 776.6\n"
+                       "endline\n"
+                       "line border -id line-4\n"
+                       "  608.2 790.9\n"
+                       "  608.8 789.6 612.6 786.0 611.9 782.8\n"
+                       "  610.8 777.5 605.1 773.6 603.7 771.8\n"
+                       "endline\n"
+                       "area water\n"
+                       "  line-1\n"
+                       "  line-2\n"
+                       "  line-3\n"
+                       "  line-4\n"
+                       "endarea\n"
+                       "endscrap\n");
+
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(text);
+    const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+
+    const MapGeometryFeature *area = nullptr;
+    for (const MapGeometryFeature &feature : features) {
+        if (feature.kind == MapGeometryFeature::Kind::Area) {
+            area = &feature;
+            break;
+        }
+    }
+
+    if (!expect(area != nullptr, "Expected mixed closed/open referenced area to resolve an area feature.")) {
+        return 1;
+    }
+
+    qreal minX = std::numeric_limits<qreal>::max();
+    qreal minY = std::numeric_limits<qreal>::max();
+    qreal maxX = std::numeric_limits<qreal>::lowest();
+    qreal maxY = std::numeric_limits<qreal>::lowest();
+    for (const QPointF &vertex : area->vertices) {
+        minX = qMin(minX, vertex.x());
+        minY = qMin(minY, vertex.y());
+        maxX = qMax(maxX, vertex.x());
+        maxY = qMax(maxY, vertex.y());
+    }
+
+    const bool resolvedLargeFace = minX < 537.0 && maxX > 611.0 && minY < 774.0 && maxY > 804.0;
+    if (!resolvedLargeFace) {
+        std::cerr << "Resolved mixed referenced area bounds: "
+                  << minX << ',' << minY << " - "
+                  << maxX << ',' << maxY << '\n';
+    }
+    return expect(resolvedLargeFace,
+                  "Expected referenced area resolver to prefer the face using more referenced lines over the tiny closed rock-border face.")
+        ? 0
+        : 1;
+}
+
 int runForwardReferencedClosedBorderAreaParsingTest()
 {
     const QString text =
@@ -1538,6 +1621,66 @@ int runForwardReferencedClosedBorderAreaParsingTest()
     }
     if (!expect(area->lineVertices.size() == border->lineVertices.size(),
                 "Expected area referencing one closed border line to reuse that border geometry.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runSmartAreaCandidatePlannerTest()
+{
+    const QString text = QStringLiteral(
+        "scrap s1 -projection plan\n"
+        "line border\n"
+        "  0 1\n"
+        "  1 1\n"
+        "endline\n"
+        "line border\n"
+        "  1 1\n"
+        "  1 0\n"
+        "endline\n"
+        "line border\n"
+        "  1 0\n"
+        "  0 0\n"
+        "endline\n"
+        "line border\n"
+        "  0 0\n"
+        "  0 1\n"
+        "endline\n"
+        "endscrap\n");
+
+    const QVector<MapGeometryFeature> features =
+        collectGeometryFeatures(TherionDocumentParser::parseTokenLines(text));
+    const QVector<MapEditorSmartAreaCandidate> candidates =
+        mapEditorSmartAreaCandidatesAt(features, QPointF(0.5, 0.5));
+    if (!expect(!candidates.isEmpty(), "Expected Smart Area planner to find a closed face under the click.")) {
+        return 1;
+    }
+
+    const MapEditorSmartAreaCandidate &candidate = candidates.first();
+    if (!expect(candidate.scrapLineNumber == 1,
+                "Expected Smart Area candidate to preserve same-scrap ownership.")) {
+        return 1;
+    }
+    if (!expect(candidate.vertices.size() == 4,
+                "Expected Smart Area candidate to resolve the four face corners.")) {
+        return 1;
+    }
+    if (!expect(candidate.boundaryLines.size() == 4,
+                "Expected Smart Area candidate to reference the four boundary lines.")) {
+        return 1;
+    }
+    for (const MapEditorSmartAreaBoundaryLine &line : candidate.boundaryLines) {
+        if (!expect(line.lineNumber > 1 && line.identifier.isEmpty(),
+                    "Expected Smart Area candidate to preserve missing boundary line ids for later source insertion.")) {
+            return 1;
+        }
+    }
+
+    const QVector<MapEditorSmartAreaCandidate> outsideCandidates =
+        mapEditorSmartAreaCandidatesAt(features, QPointF(2.0, 2.0));
+    if (!expect(outsideCandidates.isEmpty(),
+                "Expected Smart Area planner not to find a candidate outside the closed face.")) {
         return 1;
     }
 
@@ -1627,7 +1770,13 @@ int main(int argc, char **argv)
     if (const int rc = runCurvedIntersectingReferencedAreaParsingTest(); rc != 0) {
         return rc;
     }
+    if (const int rc = runReferencedAreaPrefersFaceUsingMoreReferencedLinesTest(); rc != 0) {
+        return rc;
+    }
     if (const int rc = runForwardReferencedClosedBorderAreaParsingTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runSmartAreaCandidatePlannerTest(); rc != 0) {
         return rc;
     }
 

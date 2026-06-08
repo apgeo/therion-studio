@@ -21,6 +21,12 @@ struct TherionDraftObjectOptions
     bool valueEnabled = false;
 };
 
+struct TherionReferencedAreaBoundaryLine
+{
+    int lineNumber = 0;
+    QString identifier;
+};
+
 class TherionDocumentEditor final
 {
 public:
@@ -51,6 +57,12 @@ public:
                                                       int *insertedLineNumber = nullptr,
                                                       QString *errorMessage = nullptr,
                                                       const TherionDraftObjectOptions &objectOptions = {});
+    [[nodiscard]] static bool appendReferencedArea(QString *contents,
+                                                   int scrapLineNumber,
+                                                   const QVector<TherionReferencedAreaBoundaryLine> &boundaryLines,
+                                                   int *insertedLineNumber = nullptr,
+                                                   QString *errorMessage = nullptr,
+                                                   const TherionDraftObjectOptions &objectOptions = {});
     [[nodiscard]] static bool rewritePointCoordinates(QString *contents,
                                                       int lineNumber,
                                                       const QPointF &point,

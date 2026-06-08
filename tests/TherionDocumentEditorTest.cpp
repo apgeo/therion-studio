@@ -2240,6 +2240,67 @@ int runRewriteScrapProjectionTest()
 
     return 0;
 }
+
+int runAppendReferencedAreaTest()
+{
+    QString contents = QStringLiteral(
+        "encoding utf-8\n"
+        "\n"
+        "scrap s1 -projection plan\n"
+        "  line border\n"
+        "    0 0\n"
+        "    1 0\n"
+        "  endline\n"
+        "  line border -id existing-line\n"
+        "    1 0\n"
+        "    0 1\n"
+        "  endline\n"
+        "endscrap\n");
+
+    TherionDraftObjectOptions options;
+    options.type = QStringLiteral("water");
+    QString errorMessage;
+    int insertedLineNumber = 0;
+    const QVector<TherionReferencedAreaBoundaryLine> boundaryLines{
+        {4, QString()},
+        {8, QStringLiteral("existing-line")}
+    };
+    if (!expect(TherionDocumentEditor::appendReferencedArea(&contents,
+                                                            3,
+                                                            boundaryLines,
+                                                            &insertedLineNumber,
+                                                            &errorMessage,
+                                                            options),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(insertedLineNumber == 12,
+                "appendReferencedArea should report the inserted area line number.")) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral(
+                    "encoding utf-8\n"
+                    "\n"
+                    "scrap s1 -projection plan\n"
+                    "  line border -id line-1\n"
+                    "    0 0\n"
+                    "    1 0\n"
+                    "  endline\n"
+                    "  line border -id existing-line\n"
+                    "    1 0\n"
+                    "    0 1\n"
+                    "  endline\n"
+                    "  area water\n"
+                    "    line-1\n"
+                    "    existing-line\n"
+                    "  endarea\n"
+                    "endscrap\n"),
+                "appendReferencedArea should add missing boundary ids and insert a referenced area block.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -2287,6 +2348,11 @@ int main()
     const int rewriteScrapProjectionResult = runRewriteScrapProjectionTest();
     if (rewriteScrapProjectionResult != 0) {
         return rewriteScrapProjectionResult;
+    }
+
+    const int appendReferencedAreaResult = runAppendReferencedAreaTest();
+    if (appendReferencedAreaResult != 0) {
+        return appendReferencedAreaResult;
     }
 
     const int rewriteMapObjectQuickFieldsResult = runRewriteMapObjectQuickFieldsTest();

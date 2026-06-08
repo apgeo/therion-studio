@@ -278,6 +278,20 @@ void MapEditorTab::buildUi()
         commitInteractiveDrawSession();
     });
 
+    previousSmartAreaCandidateShortcut_ = new QShortcut(this);
+    previousSmartAreaCandidateShortcut_->setKey(QKeySequence(Qt::Key_BracketLeft));
+    previousSmartAreaCandidateShortcut_->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(previousSmartAreaCandidateShortcut_, &QShortcut::activated, this, [this]() {
+        cycleSmartAreaCandidate(-1);
+    });
+
+    nextSmartAreaCandidateShortcut_ = new QShortcut(this);
+    nextSmartAreaCandidateShortcut_->setKey(QKeySequence(Qt::Key_BracketRight));
+    nextSmartAreaCandidateShortcut_->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(nextSmartAreaCandidateShortcut_, &QShortcut::activated, this, [this]() {
+        cycleSmartAreaCandidate(1);
+    });
+
     buildInspectorPanelUi();
     mapDetailsSplitter_->addWidget(mapView_);
     mapDetailsSplitter_->addWidget(objectDetailsPanel_);

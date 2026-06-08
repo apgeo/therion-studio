@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <QLineF>
+#include <QSet>
 
 namespace TherionStudio
 {
@@ -413,24 +414,28 @@ QVector<QPointF> areaVerticesFromReferencedIntersections(const QVector<MapGeomet
     struct SourceSegment
     {
         ReferencedAreaSegment segment;
+        int lineIndex = -1;
         QVector<qreal> cuts;
     };
     struct UndirectedEdge
     {
         int from = -1;
         int to = -1;
+        int lineIndex = -1;
     };
     struct HalfEdge
     {
         int from = -1;
         int to = -1;
         int reverse = -1;
+        int lineIndex = -1;
         bool used = false;
     };
 
     QVector<SourceSegment> sourceSegments;
     QVector<QPointF> allPoints;
-    for (const MapGeometryFeature &feature : lineFeatures) {
+    for (int lineIndex = 0; lineIndex < lineFeatures.size(); ++lineIndex) {
+        const MapGeometryFeature &feature = lineFeatures.at(lineIndex);
         const QVector<QPointF> points = sampledSourceLinePoints(feature);
         allPoints += points;
         for (int index = 1; index < points.size(); ++index) {
@@ -438,6 +443,7 @@ QVector<QPointF> areaVerticesFromReferencedIntersections(const QVector<MapGeomet
                 continue;
             }
             sourceSegments.append(SourceSegment{ReferencedAreaSegment{points.at(index - 1), points.at(index)},
+                                                lineIndex,
                                                 QVector<qreal>{0.0, 1.0}});
         }
     }
@@ -500,7 +506,7 @@ QVector<QPointF> areaVerticesFromReferencedIntersections(const QVector<MapGeomet
             const int from = nodeIndexForPoint(&nodes, start, tolerance);
             const int to = nodeIndexForPoint(&nodes, end, tolerance);
             if (from >= 0 && to >= 0 && from != to) {
-                edges.append(UndirectedEdge{from, to});
+                edges.append(UndirectedEdge{from, to, sourceSegment.lineIndex});
             }
         }
     }
@@ -536,8 +542,8 @@ QVector<QPointF> areaVerticesFromReferencedIntersections(const QVector<MapGeomet
         }
         const int first = halfEdges.size();
         const int second = first + 1;
-        halfEdges.append(HalfEdge{edges.at(edgeIndex).from, edges.at(edgeIndex).to, second, false});
-        halfEdges.append(HalfEdge{edges.at(edgeIndex).to, edges.at(edgeIndex).from, first, false});
+        halfEdges.append(HalfEdge{edges.at(edgeIndex).from, edges.at(edgeIndex).to, second, edges.at(edgeIndex).lineIndex, false});
+        halfEdges.append(HalfEdge{edges.at(edgeIndex).to, edges.at(edgeIndex).from, first, edges.at(edgeIndex).lineIndex, false});
         outgoing[edges.at(edgeIndex).from].append(first);
         outgoing[edges.at(edgeIndex).to].append(second);
     }
@@ -555,12 +561,14 @@ QVector<QPointF> areaVerticesFromReferencedIntersections(const QVector<MapGeomet
 
     QVector<QPointF> selectedFace;
     qreal selectedArea = std::numeric_limits<qreal>::max();
+    int selectedReferencedLineCoverage = -1;
     for (int startEdge = 0; startEdge < halfEdges.size(); ++startEdge) {
         if (halfEdges.at(startEdge).used) {
             continue;
         }
 
         QVector<int> faceNodeIndexes;
+        QVector<int> faceLineIndexes;
         int currentEdge = startEdge;
         for (int guard = 0; guard < halfEdges.size() + 1; ++guard) {
             if (halfEdges.at(currentEdge).used) {
@@ -568,6 +576,7 @@ QVector<QPointF> areaVerticesFromReferencedIntersections(const QVector<MapGeomet
             }
             halfEdges[currentEdge].used = true;
             faceNodeIndexes.append(halfEdges.at(currentEdge).from);
+            faceLineIndexes.append(halfEdges.at(currentEdge).lineIndex);
             const int atNode = halfEdges.at(currentEdge).to;
             const int reverseEdge = halfEdges.at(currentEdge).reverse;
             const QVector<int> &nodeEdges = outgoing.at(atNode);
@@ -583,9 +592,20 @@ QVector<QPointF> areaVerticesFromReferencedIntersections(const QVector<MapGeomet
                 }
                 const qreal area = polygonSignedArea(facePoints);
                 const qreal absoluteArea = std::abs(area);
-                if (facePoints.size() >= 3 && area > tolerance && absoluteArea < selectedArea) {
+                QSet<int> coveredLineIndexes;
+                for (int lineIndex : std::as_const(faceLineIndexes)) {
+                    if (lineIndex >= 0) {
+                        coveredLineIndexes.insert(lineIndex);
+                    }
+                }
+                const int referencedLineCoverage = coveredLineIndexes.size();
+                if (facePoints.size() >= 3
+                    && area > tolerance
+                    && (referencedLineCoverage > selectedReferencedLineCoverage
+                        || (referencedLineCoverage == selectedReferencedLineCoverage && absoluteArea < selectedArea))) {
                     selectedFace = facePoints;
                     selectedArea = absoluteArea;
+                    selectedReferencedLineCoverage = referencedLineCoverage;
                 }
                 break;
             }

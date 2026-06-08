@@ -20,6 +20,8 @@ MapEditorInteractiveDrawMode toViewportInteractiveDrawMode(MapEditorTab::Interac
         return MapEditorInteractiveDrawMode::Freehand;
     case MapEditorTab::InteractiveDrawMode::Area:
         return MapEditorInteractiveDrawMode::Area;
+    case MapEditorTab::InteractiveDrawMode::SmartArea:
+        return MapEditorInteractiveDrawMode::SmartArea;
     }
     return MapEditorInteractiveDrawMode::None;
 }

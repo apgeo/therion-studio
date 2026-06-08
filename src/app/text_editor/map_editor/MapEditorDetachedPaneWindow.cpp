@@ -92,11 +92,13 @@ MapEditorDetachedPaneWindow::MapEditorDetachedPaneWindow(MapEditorTab *mapTab, Q
     lineButton_ = createDetachedIconButton(commandBar_, QObject::tr("Line"), QStringLiteral("spline"));
     freehandLineButton_ = createDetachedIconButton(commandBar_, QObject::tr("Freehand"), QStringLiteral("pencil-line"));
     areaButton_ = createDetachedIconButton(commandBar_, QObject::tr("Area"), QStringLiteral("pentagon"));
+    smartAreaButton_ = createDetachedIconButton(commandBar_, QObject::tr("Smart Area"), QStringLiteral("square-dashed-mouse-pointer"));
     selectButton_->setCheckable(true);
     pointButton_->setCheckable(true);
     lineButton_->setCheckable(true);
     freehandLineButton_->setCheckable(true);
     areaButton_->setCheckable(true);
+    smartAreaButton_->setCheckable(true);
     commandLayout->addWidget(selectButton_);
     commandLayout->addWidget(completeDraftButton_);
     commandLayout->addWidget(createDetachedToolbarSeparator(commandBar_));
@@ -105,6 +107,7 @@ MapEditorDetachedPaneWindow::MapEditorDetachedPaneWindow(MapEditorTab *mapTab, Q
     commandLayout->addWidget(lineButton_);
     commandLayout->addWidget(freehandLineButton_);
     commandLayout->addWidget(areaButton_);
+    commandLayout->addWidget(smartAreaButton_);
     commandLayout->addStretch(1);
 
     mapWindowButton_ = createDetachedIconButton(commandBar_, QObject::tr("Return Map"), QStringLiteral("monitor-x"));
@@ -132,6 +135,7 @@ MapEditorDetachedPaneWindow::MapEditorDetachedPaneWindow(MapEditorTab *mapTab, Q
         connect(lineButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddLine);
         connect(freehandLineButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddFreehandLine);
         connect(areaButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerAddArea);
+        connect(smartAreaButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::triggerSmartArea);
         connect(mapWindowButton_, &QToolButton::clicked, mapTab_, &MapEditorTab::toggleMapPaneWindow);
         connect(mapTab_, &MapEditorTab::mapPaneDetachStateChanged, this, [this](bool) {
             refreshCommandBarState();
@@ -217,6 +221,7 @@ void MapEditorDetachedPaneWindow::refreshCommandBarState()
     const QSignalBlocker lineBlocker(lineButton_);
     const QSignalBlocker freehandBlocker(freehandLineButton_);
     const QSignalBlocker areaBlocker(areaButton_);
+    const QSignalBlocker smartAreaBlocker(smartAreaButton_);
     undoButton_->setEnabled(mapTab_->canUndo());
     redoButton_->setEnabled(mapTab_->canRedo());
     fitBackgroundButton_->setEnabled(mapTab_->backgroundLayerCount() > 0);
@@ -230,6 +235,7 @@ void MapEditorDetachedPaneWindow::refreshCommandBarState()
     lineButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::Line);
     freehandLineButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::Freehand);
     areaButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::Area);
+    smartAreaButton_->setChecked(drawMode == MapEditorTab::InteractiveDrawMode::SmartArea);
     refreshCommandBarIconTheme();
 }
 

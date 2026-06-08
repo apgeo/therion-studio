@@ -183,6 +183,8 @@ Mapové plátno používa stabilný svetlý „papierový“ povrch vo svetlom a
 
 Po spustení `Bod`, `Línia`, `Voľná kresba` alebo `Plocha` sa aktivuje `Inšpektor -> Výber` ešte pred prvým vložením. Nastavte tam typ, podtyp, ID, názov bodu, text popisku alebo podporovanú hodnotu bodu ešte pred potvrdením nového objektu. Ak bol pri spustení nástroja vybraný scrap alebo objekt vnútri scrapu, nový objekt sa vloží do tohto scrapu; metadata pripraveného vloženia ukazujú ID cieľového scrapu. Pomocou `Vložiť do` môžete pred potvrdením vybrať iný existujúci cieľový scrap.
 
+Ak `.th2` nemá XTherion metadata `xth_me_area_adjust`, prvé potvrdené vloženie do mapy zapíše stabilné hlavičkové riadky `xth_me_area_adjust` a `xth_me_area_zoom_to`, aby sa ďalšie kreslenie neprepočítalo po objavení novej geometrie.
+
 Existujúce Therion bloky `area ... endarea`, ktoré odkazujú na hranice `line -id ...`, sa vykresľujú z čiar v tom istom scrape. Hraničné čiary môžu byť otvorené; ak ich priesečníky tvoria uzavretú plochu, Therion Studio ju vyplní bez zmeny zdrojového textu referencovaných čiar.
 
 `Smart Area` vytvára práve túto referenčnú formu plochy namiesto kreslenia novej hraničnej geometrie. Pri potvrdení môže doplniť chýbajúce ID referencovaným hraničným čiaram, aby na ne nový blok `area ... endarea` mohol odkazovať, ale nemení ich geometriu. Po potvrdení sa mapa vráti do režimu výberu. `Esc` náhľad zruší.

@@ -81,7 +81,10 @@ bool MapEditorInteractiveDrawController::handleInteractiveDrawClick(const QPoint
                                                       vertices,
                                                       &insertedLineNumber,
                                                       &errorMessage,
-                                                      objectOptions)) {
+                                                      objectOptions,
+                                                      context_.initialAreaAdjustRectForDraftInsertion
+                                                          ? context_.initialAreaAdjustRectForDraftInsertion()
+                                                          : std::optional<QRectF>{})) {
             (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                 ? tr("Point insert failed.")
                 : tr("Point insert failed: %1").arg(errorMessage);
@@ -174,7 +177,10 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
                                                           &insertedLineNumber,
                                                           &errorMessage,
                                                           lineOptions,
-                                                          objectOptions)) {
+                                                          objectOptions,
+                                                          context_.initialAreaAdjustRectForDraftInsertion
+                                                              ? context_.initialAreaAdjustRectForDraftInsertion()
+                                                              : std::optional<QRectF>{})) {
             (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                 ? tr("Complete Draft failed.")
                 : tr("Complete Draft failed: %1").arg(errorMessage);
@@ -196,7 +202,10 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
         if (!context_.textEditor->insertDraftAreaGeometry(context_.areaCoordinateRowsForInteractiveDraft(),
                                                   &insertedLineNumber,
                                                   &errorMessage,
-                                                  objectOptions)) {
+                                                  objectOptions,
+                                                  context_.initialAreaAdjustRectForDraftInsertion
+                                                      ? context_.initialAreaAdjustRectForDraftInsertion()
+                                                      : std::optional<QRectF>{})) {
             (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                 ? tr("Complete Draft failed.")
                 : tr("Complete Draft failed: %1").arg(errorMessage);
@@ -633,7 +642,10 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
                                                       &insertedLineNumber,
                                                       &errorMessage,
                                                       QString(),
-                                                      objectOptions)) {
+                                                      objectOptions,
+                                                      context_.initialAreaAdjustRectForDraftInsertion
+                                                          ? context_.initialAreaAdjustRectForDraftInsertion()
+                                                          : std::optional<QRectF>{})) {
                 (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                     ? tr("Complete Draft failed.")
                     : tr("Complete Draft failed: %1").arg(errorMessage);
@@ -654,7 +666,10 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
             if (!context_.textEditor->insertDraftAreaGeometry(context_.areaCoordinateRowsForInteractiveDraft(),
                                                       &insertedLineNumber,
                                                       &errorMessage,
-                                                      objectOptions)) {
+                                                      objectOptions,
+                                                      context_.initialAreaAdjustRectForDraftInsertion
+                                                          ? context_.initialAreaAdjustRectForDraftInsertion()
+                                                          : std::optional<QRectF>{})) {
                 (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                     ? tr("Complete Draft failed.")
                     : tr("Complete Draft failed: %1").arg(errorMessage);

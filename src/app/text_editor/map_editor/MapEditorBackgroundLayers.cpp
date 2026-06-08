@@ -325,21 +325,6 @@ QString xtherionImageInsertLine(const QString &absolutePath,
              xtherionPathToken(absolutePath, documentPath));
 }
 
-QString xtherionAreaAdjustLine(const QRectF &modelRect)
-{
-    const QRectF rect = modelRect.normalized();
-    return QStringLiteral("##XTHERION## xth_me_area_adjust %1 %2 %3 %4")
-        .arg(formatXtherionNumber(rect.left()),
-             formatXtherionNumber(rect.top()),
-             formatXtherionNumber(rect.right()),
-             formatXtherionNumber(rect.bottom()));
-}
-
-QString xtherionAreaZoomLine()
-{
-    return QStringLiteral("##XTHERION## xth_me_area_zoom_to 100");
-}
-
 QString uniquePocketTopoXviPath(const QString &pocketTopoPath, PocketTopoProjection projection)
 {
     const QFileInfo sourceInfo(pocketTopoPath);
@@ -1535,10 +1520,10 @@ void MapEditorTab::browseAndAddBackgroundImages()
                     if (placedBounds.isValid()) {
                         afterMetadataText = upsertXtherionSimpleCommandLine(afterMetadataText,
                                                                             QStringLiteral("xth_me_area_adjust"),
-                                                                            xtherionAreaAdjustLine(placedBounds));
+                                                                            therionAreaAdjustMetadataLine(placedBounds));
                         afterMetadataText = upsertXtherionSimpleCommandLine(afterMetadataText,
                                                                             QStringLiteral("xth_me_area_zoom_to"),
-                                                                            xtherionAreaZoomLine());
+                                                                            therionAreaZoomToMetadataLine());
                     }
                 }
                 const QString afterText = upsertXtherionImageMetadataLine(afterMetadataText,
@@ -2315,7 +2300,10 @@ QRectF MapEditorTab::xtherionAutoAreaAdjustRect() const
 
     if (textEditor_ != nullptr) {
         const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(textEditor_->text());
-        includeRect(geometryBoundsForFeatures(collectGeometryFeatures(parsedLines)));
+        const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
+        if (!features.isEmpty()) {
+            includeRect(geometryBoundsForFeatures(features));
+        }
     }
 
     if (!hasLimits) {
@@ -2388,10 +2376,10 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
     if (!hasExistingPlacementMetadata) {
         afterMetadataText = upsertXtherionSimpleCommandLine(afterMetadataText,
                                                             QStringLiteral("xth_me_area_adjust"),
-                                                            xtherionAreaAdjustLine(xtherionAutoAreaAdjustRect()));
+                                                            therionAreaAdjustMetadataLine(xtherionAutoAreaAdjustRect()));
         afterMetadataText = upsertXtherionSimpleCommandLine(afterMetadataText,
                                                             QStringLiteral("xth_me_area_zoom_to"),
-                                                            xtherionAreaZoomLine());
+                                                            therionAreaZoomToMetadataLine());
     }
     const QString afterText = upsertXtherionImageMetadataLine(afterMetadataText,
                                                              filePath(),
@@ -2448,10 +2436,10 @@ void MapEditorTab::removeBackgroundLayerXtherionMetadata(const QString &layerPat
                                                                     true);
     const QString afterAreaText = upsertXtherionSimpleCommandLine(afterRemoveText,
                                                                   QStringLiteral("xth_me_area_adjust"),
-                                                                  xtherionAreaAdjustLine(xtherionAutoAreaAdjustRect()));
+                                                                  therionAreaAdjustMetadataLine(xtherionAutoAreaAdjustRect()));
     const QString afterText = upsertXtherionSimpleCommandLine(afterAreaText,
                                                               QStringLiteral("xth_me_area_zoom_to"),
-                                                              xtherionAreaZoomLine());
+                                                              therionAreaZoomToMetadataLine());
     if (afterText == beforeText) {
         return;
     }

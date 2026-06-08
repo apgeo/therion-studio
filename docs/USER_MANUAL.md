@@ -186,6 +186,8 @@ The map canvas uses a stable light paper-style surface in both light and dark ap
 
 Starting `Point`, `Line`, `Freehand`, or `Area` activates `Inspector -> Selection` before the first point or vertex is placed. Set type, subtype, ID, point name, label text, or supported point value there before committing the new object. If a scrap or an object inside a scrap was selected when you started the tool, the new object is inserted into that scrap; the pending metadata line shows the target scrap ID. Use `Insert into` to choose a different existing target scrap before committing.
 
+When a `.th2` has no XTherion `xth_me_area_adjust` metadata, the first committed map insertion writes stable `xth_me_area_adjust` and `xth_me_area_zoom_to` header lines so later drawing does not remap after the new geometry appears.
+
 Existing Therion `area ... endarea` blocks that reference `line -id ...` borders render from lines in the same scrap. Border lines may be open; when their intersections form a closed face, Therion Studio fills that face without changing the referenced line source.
 
 `Smart Area` creates that referenced-area form instead of drawing new border geometry. Confirmation may add missing IDs to the referenced boundary lines so the new `area ... endarea` block can refer to them, but it does not change their geometry. After confirmation the map returns to Select mode. Press `Esc` to cancel the preview.

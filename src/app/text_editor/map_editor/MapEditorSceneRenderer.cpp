@@ -2093,7 +2093,7 @@ void renderMapWorkspaceScene(QGraphicsScene *scene,
                     }
                 }
 
-                const qreal controlRadius = 4.0;
+                const qreal controlRadius = 3.0;
                 for (int segmentIndex = 1; segmentIndex < feature.lineVertices.size(); ++segmentIndex) {
                     const MapGeometryFeature::TH2LineVertex &previousVertex = feature.lineVertices.at(segmentIndex - 1);
                     const MapGeometryFeature::TH2LineVertex &currentVertex = feature.lineVertices.at(segmentIndex);

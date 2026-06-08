@@ -31,4 +31,7 @@ struct TherionAreaAdjust
 QVector<TherionBackgroundReference> parseTherionBackgroundReferences(const QString &documentText,
                                                                      const QString &documentPath);
 TherionAreaAdjust parseTherionAreaAdjust(const QString &documentText);
+QString therionAreaAdjustMetadataLine(const QRectF &modelRect);
+QString therionAreaZoomToMetadataLine();
+QString upsertTherionAreaAdjustMetadata(const QString &documentText, const QRectF &modelRect);
 }

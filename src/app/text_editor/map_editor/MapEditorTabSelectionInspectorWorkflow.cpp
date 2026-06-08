@@ -197,7 +197,8 @@ void MapEditorTab::handleCompleteDraftTriggered()
                                           vertices,
                                           &insertedLineNumber,
                                           &errorMessage,
-                                          pendingDraftObjectOptions(geometryKind))) {
+                                          pendingDraftObjectOptions(geometryKind),
+                                          initialAreaAdjustRectForDraftInsertion())) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Complete Draft failed.")
             : tr("Complete Draft failed: %1").arg(errorMessage);

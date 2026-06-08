@@ -3,9 +3,12 @@
 #include <functional>
 
 #include <QPointF>
+#include <QRectF>
 #include <QString>
 #include <QStringList>
 #include <QVector>
+
+#include <optional>
 
 #include "../../core/TherionDocumentEditor.h"
 
@@ -41,16 +44,19 @@ public:
                              const QVector<QPointF> &vertices,
                              int *insertedLineNumber = nullptr,
                              QString *errorMessage = nullptr,
-                             const TherionDraftObjectOptions &objectOptions = {});
+                             const TherionDraftObjectOptions &objectOptions = {},
+                             const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
     bool insertDraftLineGeometry(const QStringList &coordinateRows,
                                  int *insertedLineNumber = nullptr,
                                  QString *errorMessage = nullptr,
                                  const QString &lineOptions = QString(),
-                                 const TherionDraftObjectOptions &objectOptions = {});
+                                 const TherionDraftObjectOptions &objectOptions = {},
+                                 const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
     bool insertDraftAreaGeometry(const QStringList &coordinateRows,
                                  int *insertedLineNumber = nullptr,
                                  QString *errorMessage = nullptr,
-                                 const TherionDraftObjectOptions &objectOptions = {});
+                                 const TherionDraftObjectOptions &objectOptions = {},
+                                 const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
     bool rewritePointCoordinates(int lineNumber,
                                  const QPointF &point,
                                  QString *errorMessage = nullptr);

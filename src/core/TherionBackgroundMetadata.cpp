@@ -1,9 +1,11 @@
 #include "TherionBackgroundMetadata.h"
 
+#include "TherionSourceText.h"
 #include "TherionStringUtils.h"
 
 #include <QDir>
 #include <QFileInfo>
+#include <cmath>
 
 namespace TherionStudio
 {
@@ -146,6 +148,74 @@ QString normalizeStationToken(const QString &token)
     }
     return normalized.trimmed();
 }
+
+QString formatTherionMetadataNumber(qreal value)
+{
+    if (std::fabs(value) < 1e-9) {
+        return QStringLiteral("0");
+    }
+
+    const qreal nearestInteger = std::round(value);
+    if (std::fabs(value - nearestInteger) < 1e-9) {
+        return QString::number(static_cast<qlonglong>(nearestInteger));
+    }
+
+    return QString::number(value, 'g', 15);
+}
+
+int insertionIndexAfterEncoding(const QStringList &lines)
+{
+    for (int index = 0; index < lines.size(); ++index) {
+        QString line = lines.at(index);
+        if (line.endsWith(QLatin1Char('\r'))) {
+            line.chop(1);
+        }
+        if (line.trimmed().startsWith(QStringLiteral("encoding "))) {
+            return index + 1;
+        }
+    }
+    return 0;
+}
+
+QString upsertXtherionSimpleCommandLine(const QString &documentText,
+                                        const QString &command,
+                                        const QString &metadataLine)
+{
+    const QString lineEnding = TherionSourceText::detectedLineEnding(documentText);
+    QStringList lines = TherionSourceText::splitTextLines(documentText);
+    if (!lines.isEmpty() && lines.last().isEmpty()) {
+        lines.removeLast();
+    }
+
+    for (int index = 0; index < lines.size(); ++index) {
+        if (lines.at(index).contains(QStringLiteral("##XTHERION##")) && lines.at(index).contains(command)) {
+            lines[index] = metadataLine;
+            QString updated = lines.join(lineEnding);
+            if (documentText.endsWith(QLatin1Char('\n')) || !updated.isEmpty()) {
+                updated += lineEnding;
+            }
+            return updated;
+        }
+    }
+
+    int insertionIndex = insertionIndexAfterEncoding(lines);
+    if (command == QStringLiteral("xth_me_area_zoom_to")) {
+        for (int index = 0; index < lines.size(); ++index) {
+            if (lines.at(index).contains(QStringLiteral("##XTHERION##"))
+                && lines.at(index).contains(QStringLiteral("xth_me_area_adjust"))) {
+                insertionIndex = index + 1;
+                break;
+            }
+        }
+    }
+
+    lines.insert(insertionIndex, metadataLine);
+    QString updated = lines.join(lineEnding);
+    if (documentText.endsWith(QLatin1Char('\n')) || !updated.isEmpty()) {
+        updated += lineEnding;
+    }
+    return updated;
+}
 }
 
 QVector<TherionBackgroundReference> parseTherionBackgroundReferences(const QString &documentText,
@@ -278,5 +348,31 @@ TherionAreaAdjust parseTherionAreaAdjust(const QString &documentText)
     }
 
     return TherionAreaAdjust{};
+}
+
+QString therionAreaAdjustMetadataLine(const QRectF &modelRect)
+{
+    const QRectF rect = modelRect.normalized();
+    return QStringLiteral("##XTHERION## xth_me_area_adjust %1 %2 %3 %4")
+        .arg(formatTherionMetadataNumber(rect.left()),
+             formatTherionMetadataNumber(rect.top()),
+             formatTherionMetadataNumber(rect.right()),
+             formatTherionMetadataNumber(rect.bottom()));
+}
+
+QString therionAreaZoomToMetadataLine()
+{
+    return QStringLiteral("##XTHERION## xth_me_area_zoom_to 100");
+}
+
+QString upsertTherionAreaAdjustMetadata(const QString &documentText, const QRectF &modelRect)
+{
+    QString updated = upsertXtherionSimpleCommandLine(documentText,
+                                                      QStringLiteral("xth_me_area_adjust"),
+                                                      therionAreaAdjustMetadataLine(modelRect));
+    updated = upsertXtherionSimpleCommandLine(updated,
+                                              QStringLiteral("xth_me_area_zoom_to"),
+                                              therionAreaZoomToMetadataLine());
+    return updated;
 }
 }

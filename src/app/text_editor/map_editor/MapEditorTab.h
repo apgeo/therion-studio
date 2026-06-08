@@ -395,6 +395,8 @@ private:
     bool undoInteractiveDrawStep();
     QVector<TherionParsedLine> parsedLinesForCurrentDocument() const;
     QRectF mapSourceBoundsForCurrentDocument() const;
+    std::optional<QRectF> initialAreaAdjustRectForDraftInsertion() const;
+    QRectF sourceBoundsForInteractiveDraft() const;
     QPointF sourcePointFromScenePosition(const QPointF &scenePosition) const;
     bool hasCompletableInteractiveDrawSession() const;
     bool commitInteractiveDrawVertices(const QString &geometryKind,

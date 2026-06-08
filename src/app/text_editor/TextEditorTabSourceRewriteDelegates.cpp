@@ -23,40 +23,46 @@ bool TextEditorTab::insertDraftGeometry(const QString &kind,
                                         const QVector<QPointF> &vertices,
                                         int *insertedLineNumber,
                                         QString *errorMessage,
-                                        const TherionDraftObjectOptions &objectOptions)
+                                        const TherionDraftObjectOptions &objectOptions,
+                                        const std::optional<QRectF> &initialAreaAdjustRect)
 {
     return sourceRewriteController_ != nullptr
         && sourceRewriteController_->insertDraftGeometry(kind,
                                                          vertices,
                                                          insertedLineNumber,
                                                          errorMessage,
-                                                         objectOptions);
+                                                         objectOptions,
+                                                         initialAreaAdjustRect);
 }
 
 bool TextEditorTab::insertDraftLineGeometry(const QStringList &coordinateRows,
                                             int *insertedLineNumber,
                                             QString *errorMessage,
                                             const QString &lineOptions,
-                                            const TherionDraftObjectOptions &objectOptions)
+                                            const TherionDraftObjectOptions &objectOptions,
+                                            const std::optional<QRectF> &initialAreaAdjustRect)
 {
     return sourceRewriteController_ != nullptr
         && sourceRewriteController_->insertDraftLineGeometry(coordinateRows,
                                                              insertedLineNumber,
                                                              errorMessage,
                                                              lineOptions,
-                                                             objectOptions);
+                                                             objectOptions,
+                                                             initialAreaAdjustRect);
 }
 
 bool TextEditorTab::insertDraftAreaGeometry(const QStringList &coordinateRows,
                                             int *insertedLineNumber,
                                             QString *errorMessage,
-                                            const TherionDraftObjectOptions &objectOptions)
+                                            const TherionDraftObjectOptions &objectOptions,
+                                            const std::optional<QRectF> &initialAreaAdjustRect)
 {
     return sourceRewriteController_ != nullptr
         && sourceRewriteController_->insertDraftAreaGeometry(coordinateRows,
                                                              insertedLineNumber,
                                                              errorMessage,
-                                                             objectOptions);
+                                                             objectOptions,
+                                                             initialAreaAdjustRect);
 }
 
 bool TextEditorTab::rewritePointCoordinates(int lineNumber,

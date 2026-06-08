@@ -9,9 +9,11 @@
 #include <QWidget>
 #include <QHash>
 #include <QPointF>
+#include <QRectF>
 #include <QVector>
 #include <QColor>
 #include <memory>
+#include <optional>
 
 class QLabel;
 class QCheckBox;
@@ -139,16 +141,19 @@ public:
                              const QVector<QPointF> &vertices,
                              int *insertedLineNumber = nullptr,
                              QString *errorMessage = nullptr,
-                             const TherionDraftObjectOptions &objectOptions = {});
+                             const TherionDraftObjectOptions &objectOptions = {},
+                             const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
     bool insertDraftLineGeometry(const QStringList &coordinateRows,
                                  int *insertedLineNumber = nullptr,
                                  QString *errorMessage = nullptr,
                                  const QString &lineOptions = QString(),
-                                 const TherionDraftObjectOptions &objectOptions = {});
+                                 const TherionDraftObjectOptions &objectOptions = {},
+                                 const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
     bool insertDraftAreaGeometry(const QStringList &coordinateRows,
                                  int *insertedLineNumber = nullptr,
                                  QString *errorMessage = nullptr,
-                                 const TherionDraftObjectOptions &objectOptions = {});
+                                 const TherionDraftObjectOptions &objectOptions = {},
+                                 const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
     bool rewritePointCoordinates(int lineNumber,
                                  const QPointF &point,
                                  QString *errorMessage = nullptr);

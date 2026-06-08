@@ -4,6 +4,7 @@
 #include "../../../core/TherionDocumentEditor.h"
 
 #include <QPointF>
+#include <QRectF>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -62,6 +63,7 @@ struct MapEditorInteractiveDrawContext
     std::function<QPointF(const QPointF &)> sourcePointFromScenePosition;
     std::function<void(const QString &, const QString &, const QString &, int)> recordSourceTextSnapshot;
     std::function<TherionDraftObjectOptions(const QString &)> draftObjectOptions;
+    std::function<std::optional<QRectF>()> initialAreaAdjustRectForDraftInsertion;
     std::function<QStringList()> lineCoordinateRowsForInteractiveDraft;
     std::function<QStringList()> areaCoordinateRowsForInteractiveDraft;
     std::function<void(const QPointF &, const std::optional<QPointF> &)> captureInteractiveLineAnchor;

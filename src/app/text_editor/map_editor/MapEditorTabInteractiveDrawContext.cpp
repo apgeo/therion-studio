@@ -96,6 +96,9 @@ MapEditorInteractiveDrawContext MapEditorTab::interactiveDrawContext()
         .draftObjectOptions = [this](const QString &commandKind) {
             return pendingDraftObjectOptions(commandKind);
         },
+        .initialAreaAdjustRectForDraftInsertion = [this]() {
+            return initialAreaAdjustRectForDraftInsertion();
+        },
         .lineCoordinateRowsForInteractiveDraft = [this]() {
             return lineCoordinateRowsForInteractiveDraft();
         },

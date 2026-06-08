@@ -261,6 +261,38 @@ int runMalformedMetadataIgnoredTest()
 
     return 0;
 }
+
+int runAreaAdjustMetadataUpsertTest()
+{
+    const QString text =
+        QStringLiteral("encoding utf-8\r\n"
+                       "scrap scrap-1\r\n"
+                       "endscrap\r\n");
+
+    const QString updated = upsertTherionAreaAdjustMetadata(text, QRectF(QPointF(0.0, 0.0), QPointF(256.0, 256.0)));
+    const QString expected =
+        QStringLiteral("encoding utf-8\r\n"
+                       "##XTHERION## xth_me_area_adjust 0 0 256 256\r\n"
+                       "##XTHERION## xth_me_area_zoom_to 100\r\n"
+                       "scrap scrap-1\r\n"
+                       "endscrap\r\n");
+    if (!expect(updated == expected, "Expected area-adjust metadata upsert to preserve CRLF and insert after encoding.")) {
+        return 1;
+    }
+
+    const QString replaced = upsertTherionAreaAdjustMetadata(updated, QRectF(QPointF(-10.5, -20.0), QPointF(30.0, 40.0)));
+    if (!expect(replaced.contains(QStringLiteral("##XTHERION## xth_me_area_adjust -10.5 -20 30 40\r\n")),
+                "Expected area-adjust metadata upsert to replace an existing area-adjust line.")) {
+        return 1;
+    }
+    const int firstZoomIndex = replaced.indexOf(QStringLiteral("xth_me_area_zoom_to"));
+    if (!expect(firstZoomIndex >= 0 && firstZoomIndex == replaced.lastIndexOf(QStringLiteral("xth_me_area_zoom_to")),
+                "Expected area-adjust metadata upsert to keep one zoom line.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main()
@@ -284,6 +316,9 @@ int main()
         return rc;
     }
     if (const int rc = runMalformedMetadataIgnoredTest(); rc != 0) {
+        return rc;
+    }
+    if (const int rc = runAreaAdjustMetadataUpsertTest(); rc != 0) {
         return rc;
     }
 

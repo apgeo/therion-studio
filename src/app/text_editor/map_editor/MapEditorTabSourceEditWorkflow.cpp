@@ -54,15 +54,40 @@ QRectF MapEditorTab::mapSourceBoundsForCurrentDocument() const
     if (areaAdjust.valid && areaAdjust.modelRect.isValid()) {
         resolvedBounds = areaAdjust.modelRect;
     } else {
-        const QVector<TherionParsedLine> parsedLines = parsedLinesForCurrentDocument();
-        const QVector<MapGeometryFeature> features = collectGeometryFeatures(parsedLines);
-        resolvedBounds = geometryBoundsForFeatures(features);
+        resolvedBounds = xtherionAutoAreaAdjustRect();
     }
 
     cachedMapSourceBoundsValid_ = true;
     cachedMapSourceBoundsRevision_ = currentRevision;
     cachedMapSourceBounds_ = resolvedBounds;
     return cachedMapSourceBounds_;
+}
+
+std::optional<QRectF> MapEditorTab::initialAreaAdjustRectForDraftInsertion() const
+{
+    if (textEditor_ == nullptr) {
+        return std::nullopt;
+    }
+
+    const TherionAreaAdjust areaAdjust = parseTherionAreaAdjust(textEditor_->text());
+    if (areaAdjust.valid && areaAdjust.modelRect.isValid()) {
+        return std::nullopt;
+    }
+
+    const QRectF autoRect = xtherionAutoAreaAdjustRect();
+    if (!autoRect.isValid() || autoRect.width() <= 0.0 || autoRect.height() <= 0.0) {
+        return std::nullopt;
+    }
+    return autoRect;
+}
+
+QRectF MapEditorTab::sourceBoundsForInteractiveDraft() const
+{
+    if (const std::optional<QRectF> initialAreaAdjust = initialAreaAdjustRectForDraftInsertion();
+        initialAreaAdjust.has_value()) {
+        return *initialAreaAdjust;
+    }
+    return mapSourceBoundsForCurrentDocument();
 }
 
 QPointF MapEditorTab::sourcePointFromScenePosition(const QPointF &scenePosition) const
@@ -76,7 +101,7 @@ QPointF MapEditorTab::sourcePointFromScenePosition(const QPointF &scenePosition)
         return scenePosition;
     }
 
-    const QRectF sourceBounds = mapSourceBoundsForCurrentDocument();
+    const QRectF sourceBounds = sourceBoundsForInteractiveDraft();
     if (!sourceBounds.isValid() || sourceBounds.width() < 0.001 || sourceBounds.height() < 0.001) {
         return scenePosition;
     }
@@ -153,12 +178,14 @@ bool MapEditorTab::commitInteractiveDrawVertices(const QString &geometryKind,
                                                &insertedLineNumber,
                                                &errorMessage,
                                                QString(),
-                                               pendingDraftObjectOptions(QStringLiteral("line")))
+                                               pendingDraftObjectOptions(QStringLiteral("line")),
+                                               initialAreaAdjustRectForDraftInsertion())
         : textEditor_->insertDraftGeometry(geometryKind,
                                            vertices,
                                            &insertedLineNumber,
                                            &errorMessage,
-                                           pendingDraftObjectOptions(geometryKind));
+                                           pendingDraftObjectOptions(geometryKind),
+                                           initialAreaAdjustRectForDraftInsertion());
     if (!inserted) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Complete Draft failed.")

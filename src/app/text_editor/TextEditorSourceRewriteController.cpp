@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "../../core/TherionDocumentEditor.h"
+#include "../../core/TherionBackgroundMetadata.h"
 
 namespace TherionStudio
 {
@@ -61,13 +62,19 @@ bool TextEditorSourceRewriteController::insertDraftGeometry(const QString &kind,
                                                             const QVector<QPointF> &vertices,
                                                             int *insertedLineNumber,
                                                             QString *errorMessage,
-                                                            const TherionDraftObjectOptions &objectOptions)
+                                                            const TherionDraftObjectOptions &objectOptions,
+                                                            const std::optional<QRectF> &initialAreaAdjustRect)
 {
     if (context_.editor == nullptr) {
         return false;
     }
 
     QString contents = context_.editor->toPlainText();
+    if (initialAreaAdjustRect.has_value()
+        && initialAreaAdjustRect->isValid()
+        && !parseTherionAreaAdjust(contents).valid) {
+        contents = upsertTherionAreaAdjustMetadata(contents, *initialAreaAdjustRect);
+    }
     int resolvedLineNumber = 0;
     if (!TherionDocumentEditor::appendDraftGeometry(&contents,
                                                     kind,
@@ -89,13 +96,19 @@ bool TextEditorSourceRewriteController::insertDraftLineGeometry(const QStringLis
                                                                 int *insertedLineNumber,
                                                                 QString *errorMessage,
                                                                 const QString &lineOptions,
-                                                                const TherionDraftObjectOptions &objectOptions)
+                                                                const TherionDraftObjectOptions &objectOptions,
+                                                                const std::optional<QRectF> &initialAreaAdjustRect)
 {
     if (context_.editor == nullptr) {
         return false;
     }
 
     QString contents = context_.editor->toPlainText();
+    if (initialAreaAdjustRect.has_value()
+        && initialAreaAdjustRect->isValid()
+        && !parseTherionAreaAdjust(contents).valid) {
+        contents = upsertTherionAreaAdjustMetadata(contents, *initialAreaAdjustRect);
+    }
     int resolvedLineNumber = 0;
     if (!TherionDocumentEditor::appendDraftLineGeometry(&contents,
                                                         coordinateRows,
@@ -116,13 +129,19 @@ bool TextEditorSourceRewriteController::insertDraftLineGeometry(const QStringLis
 bool TextEditorSourceRewriteController::insertDraftAreaGeometry(const QStringList &coordinateRows,
                                                                 int *insertedLineNumber,
                                                                 QString *errorMessage,
-                                                                const TherionDraftObjectOptions &objectOptions)
+                                                                const TherionDraftObjectOptions &objectOptions,
+                                                                const std::optional<QRectF> &initialAreaAdjustRect)
 {
     if (context_.editor == nullptr) {
         return false;
     }
 
     QString contents = context_.editor->toPlainText();
+    if (initialAreaAdjustRect.has_value()
+        && initialAreaAdjustRect->isValid()
+        && !parseTherionAreaAdjust(contents).valid) {
+        contents = upsertTherionAreaAdjustMetadata(contents, *initialAreaAdjustRect);
+    }
     int resolvedLineNumber = 0;
     if (!TherionDocumentEditor::appendDraftAreaGeometry(&contents,
                                                         coordinateRows,

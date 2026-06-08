@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include "ApplicationStylePolicy.h"
+#include "MainWindowDocumentOpenController.h"
 #include "MainWindowDocumentHelpers.h"
 #include "LucideIconFactory.h"
 #include "text_editor/TextEditorTab.h"
@@ -1349,6 +1350,25 @@ void MainWindow::openProjectSearchResult(const QModelIndex &index)
     const int columnNumber = matchIndex.data(SearchColumnNumberRole).toInt();
     const QString query = projectSearchEdit_ != nullptr ? projectSearchEdit_->text().trimmed() : QString();
     if (filePath.isEmpty() || lineNumber <= 0) {
+        return;
+    }
+
+    const auto openPlan = TherionStudio::MainWindowDocumentOpenController::planOpenProjectSearchResult(filePath);
+    if (openPlan.action == TherionStudio::MainWindowDocumentOpenController::OpenProjectSearchResultAction::OpenMapDocument) {
+        auto *mapTab = openMapEditorTab(filePath);
+        if (mapTab == nullptr) {
+            return;
+        }
+
+        mapTab->setWorkspaceMode(TherionStudio::MapEditorTab::WorkspaceMode::Raw);
+        mapTab->goToLine(lineNumber);
+        if (!query.isEmpty()) {
+            const bool wholeWord = projectSearchWholeWordCheck_ != nullptr
+                && projectSearchWholeWordCheck_->isChecked();
+            const bool matchCase = projectSearchMatchCaseCheck_ != nullptr
+                && projectSearchMatchCaseCheck_->isChecked();
+            mapTab->showFindBarWithText(query, false, wholeWord, matchCase);
+        }
         return;
     }
 

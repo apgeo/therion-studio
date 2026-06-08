@@ -56,6 +56,18 @@ public:
         int reuseTabIndex = -1;
     };
 
+    enum class OpenProjectSearchResultAction
+    {
+        OpenTextDocument,
+        OpenMapDocument
+    };
+
+    struct OpenProjectSearchResultPlan
+    {
+        OpenProjectSearchResultAction action = OpenProjectSearchResultAction::OpenTextDocument;
+        QString canonicalPath;
+    };
+
     static QString canonicalDocumentPath(const QString &filePath);
     static bool isMapDocumentPath(const QString &filePath);
 
@@ -69,5 +81,7 @@ public:
     static OpenMapTabPlan planOpenMapTab(const QString &filePath,
                                          const QStringList &detachedMapDocumentPaths,
                                          const QList<IndexedDocumentPath> &attachedMapTabs);
+
+    static OpenProjectSearchResultPlan planOpenProjectSearchResult(const QString &filePath);
 };
 }

@@ -163,6 +163,39 @@ int runPlanOpenMapTabTest()
 
     return 0;
 }
+
+int runPlanOpenProjectSearchResultTest()
+{
+    const auto mapPlan = MainWindowDocumentOpenController::planOpenProjectSearchResult(
+        QStringLiteral("/tmp/project/maps/scrap.th2"));
+    if (!expect(mapPlan.action
+                    == MainWindowDocumentOpenController::OpenProjectSearchResultAction::OpenMapDocument,
+                "Project-search .th2 result should open as a map document.")) {
+        return 1;
+    }
+    if (!expect(mapPlan.canonicalPath.endsWith(QStringLiteral("scrap.th2")),
+                "Project-search map plan should preserve the target document path.")) {
+        return 1;
+    }
+
+    const auto sourcePlan = MainWindowDocumentOpenController::planOpenProjectSearchResult(
+        QStringLiteral("/tmp/project/survey.th"));
+    if (!expect(sourcePlan.action
+                    == MainWindowDocumentOpenController::OpenProjectSearchResultAction::OpenTextDocument,
+                "Project-search .th result should open as a text document.")) {
+        return 1;
+    }
+
+    const auto configPlan = MainWindowDocumentOpenController::planOpenProjectSearchResult(
+        QStringLiteral("/tmp/project/thconfig"));
+    if (!expect(configPlan.action
+                    == MainWindowDocumentOpenController::OpenProjectSearchResultAction::OpenTextDocument,
+                "Project-search thconfig result should open as a text document.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
@@ -176,6 +209,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runPlanOpenMapTabTest() != 0) {
+        return 1;
+    }
+    if (runPlanOpenProjectSearchResultTest() != 0) {
         return 1;
     }
 

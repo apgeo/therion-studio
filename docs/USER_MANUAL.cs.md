@@ -133,7 +133,7 @@ Pro `.th2` soubory:
 
 Otevřete aktivitu `Hledání` v levém railu nebo stiskněte `Command/Ctrl+Shift+F`. Zadejte doslovný text, podle potřeby zvolte `Celé slovo` nebo `Rozlišovat velikost`, a stisknutím `Enter` nebo `Hledat` prohledejte aktuální projekt.
 
-Projektové hledání prohledává Therion textové zdroje (`.th`, `.th2` a konfigurační soubory Therionu), zahrnuje neuložené změny v otevřených záložkách a vypisuje shody seskupené podle souboru s řádkem a sloupcem. Dvojklikem na soubor nebo řádek shody otevřete soubor v režimu Zdroj (`Raw`) na odpovídajícím textu s připraveným inline hledáním pro další/předchozí shodu.
+Projektové hledání prohledává Therion textové zdroje (`.th`, `.th2` a konfigurační soubory Therionu), zahrnuje neuložené změny v otevřených záložkách a vypisuje shody seskupené podle souboru s řádkem a sloupcem. Dvojklikem na soubor nebo řádek shody otevřete soubor na odpovídajícím textu s připraveným inline hledáním pro další/předchozí shodu. Shody v `.th2` se otevírají jako dokumenty mapového editoru s aktivním workspace Zdroj (`Raw`), takže se potom můžete vrátit zpět do vizuálního mapového editoru.
 
 ### 4.4 Datové řádky v režimu Bloky
 

@@ -86,4 +86,15 @@ MainWindowDocumentOpenController::planOpenMapTab(const QString &filePath,
     plan.action = OpenMapTabAction::OpenNewTab;
     return plan;
 }
+
+MainWindowDocumentOpenController::OpenProjectSearchResultPlan
+MainWindowDocumentOpenController::planOpenProjectSearchResult(const QString &filePath)
+{
+    OpenProjectSearchResultPlan plan;
+    plan.canonicalPath = canonicalDocumentPath(filePath);
+    plan.action = isMapDocumentPath(filePath)
+        ? OpenProjectSearchResultAction::OpenMapDocument
+        : OpenProjectSearchResultAction::OpenTextDocument;
+    return plan;
+}
 }

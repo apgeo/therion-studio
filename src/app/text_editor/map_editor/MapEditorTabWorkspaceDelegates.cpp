@@ -53,6 +53,14 @@ void MapEditorTab::showFindBar(bool replaceMode)
     textEditor_->showFindBar(replaceMode);
 }
 
+void MapEditorTab::showFindBarWithText(const QString &findText,
+                                       bool replaceMode,
+                                       bool wholeWord,
+                                       bool matchCase)
+{
+    textEditor_->showFindBarWithText(findText, replaceMode, wholeWord, matchCase);
+}
+
 void MapEditorTab::hideFindBar()
 {
     textEditor_->hideFindBar();

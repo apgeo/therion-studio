@@ -115,6 +115,10 @@ public:
     bool saveAs(const QString &filePath, QString *errorMessage = nullptr);
     void setProjectRootPath(const QString &projectRootPath);
     void showFindBar(bool replaceMode = false);
+    void showFindBarWithText(const QString &findText,
+                             bool replaceMode = false,
+                             bool wholeWord = false,
+                             bool matchCase = false);
     void hideFindBar();
     void goToLine(int lineNumber);
     QString filePath() const;

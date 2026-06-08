@@ -299,7 +299,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Global project search shall decode on-disk source files using the same encoding rules as the text editor so result snippets preserve declared non-UTF-8 text.
 - Global project search shall include unsaved in-memory edits from open editor tabs when producing results.
 - Global project search results shall be grouped by file and shall show at least the source line, column, and a short line preview for each match.
-- Activating a global search result shall open the file in raw text-editing mode, move the caret to the matching source location, and reveal the inline find bar with the same search term highlighted.
+- Activating a global search result shall open `.th` and Therion config files in raw text-editing mode, and shall open `.th2` files as map-editor documents with the raw source workspace active, move the caret to the matching source location, and reveal the inline find bar with the same search term highlighted.
 - Global project search shall run asynchronously or otherwise avoid blocking the UI thread for normal project sizes.
 - The editor shall display 1-based source line numbers in a left gutter that stays synchronized with document scroll position.
 - For active document tabs, the application shall show a full-width document command toolbar directly above the tab strip.

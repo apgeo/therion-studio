@@ -134,7 +134,7 @@ For `.th2` files:
 
 Open the Search activity from the left rail or press `Command/Ctrl+Shift+F`. Enter literal text, choose `Whole word` or `Case sensitive` when needed, and press `Enter` or `Search` to scan the current project.
 
-Project search scans Therion text sources (`.th`, `.th2`, and Therion config files), includes unsaved edits from open tabs, and lists matches grouped by file with line and column locations. Double-click a file or match row to open the file in Raw mode at the matching text with the inline find bar ready for next/previous navigation.
+Project search scans Therion text sources (`.th`, `.th2`, and Therion config files), includes unsaved edits from open tabs, and lists matches grouped by file with line and column locations. Double-click a file or match row to open the file at the matching text with the inline find bar ready for next/previous navigation. `.th2` matches open as map-editor documents with the Raw workspace active, so you can switch back to the visual map editor afterward.
 
 ### 4.4 Blocks Data Rows
 

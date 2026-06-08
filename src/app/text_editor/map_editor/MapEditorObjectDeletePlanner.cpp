@@ -4,7 +4,6 @@
 #include "../../../core/TherionDocumentParser.h"
 
 #include <QCoreApplication>
-#include <QHash>
 #include <QSet>
 #include <QStringList>
 
@@ -238,20 +237,10 @@ MapEditorObjectDeletePlan planMapEditorObjectDelete(const QString &text, int lin
         return plan;
     }
 
-    QHash<QString, SourceRange> lineRangesById;
     QVector<AreaReference> areas;
     for (int currentLine = 1; currentLine <= lines.size(); ++currentLine) {
         const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(currentLine - 1), currentLine);
-        if (parsedLine.directive == QStringLiteral("line")) {
-            const QString lineId = commandOptionValue(parsedLine.tokens, QStringLiteral("-id"));
-            if (!lineId.isEmpty()) {
-                QString directive;
-                const SourceRange range = commandRangeAtLine(lines, currentLine, &directive);
-                if (range.startLine > 0) {
-                    lineRangesById.insert(lineId, range);
-                }
-            }
-        } else if (parsedLine.directive == QStringLiteral("area")) {
+        if (parsedLine.directive == QStringLiteral("area")) {
             QString directive;
             const SourceRange range = commandRangeAtLine(lines, currentLine, &directive);
             if (range.startLine > 0) {
@@ -276,30 +265,7 @@ MapEditorObjectDeletePlan planMapEditorObjectDelete(const QString &text, int lin
         }
     }
 
-    QVector<SourceRange> rangesToRemove{targetRange};
-    if (targetDirective == QStringLiteral("area")) {
-        QSet<QString> targetAreaReferences;
-        for (const AreaReference &area : std::as_const(areas)) {
-            if (area.startLine == targetRange.startLine) {
-                targetAreaReferences = area.lineIds;
-                break;
-            }
-        }
-
-        for (const QString &lineId : std::as_const(targetAreaReferences)) {
-            int referenceCount = 0;
-            for (const AreaReference &area : std::as_const(areas)) {
-                if (area.lineIds.contains(lineId)) {
-                    ++referenceCount;
-                }
-            }
-            if (referenceCount == 1 && lineRangesById.contains(lineId)) {
-                rangesToRemove.append(lineRangesById.value(lineId));
-            }
-        }
-    }
-
-    const QVector<SourceRange> ranges = mergedRanges(rangesToRemove);
+    const QVector<SourceRange> ranges = mergedRanges({targetRange});
     plan.updatedText = removeRangesFromSourceLines(sourceLines, ranges, &plan.removedLineNumbers);
     plan.changed = plan.updatedText != text;
     plan.resolved = true;

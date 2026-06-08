@@ -214,7 +214,7 @@ For lines and area borders:
 - use `<<` and `>>` to enable or remove incoming/outgoing Bezier handles
 - drag Bezier handles directly on the canvas to reshape the curve
 
-If a line is used as an area border, some destructive line actions are blocked; select or edit the owning area instead.
+If a line is used as an area border, some destructive line actions are blocked; select or edit the owning area instead. Deleting an area removes only the `area ... endarea` block and keeps referenced border lines in the source.
 
 ### 6.5 Edit Object Properties
 

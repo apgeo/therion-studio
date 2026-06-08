@@ -371,7 +371,7 @@ The rules below define the expected day-to-day interaction model. If a later req
 - Delete actions from the object tree shall ask for confirmation, shall remove the corresponding source command span through the same safe source-edit path used by structured block deletion, and shall participate in document undo/redo.
 - A `line` block referenced by an `area` block shall not be deletable as a standalone map object because that would leave the area with a dangling border reference.
 - When a referenced border `line` is selected, the selected-object details shall explain which area(s) use it, shall provide a direct select/jump affordance to the referencing area, and shall disable standalone object deletion with an explanatory tooltip/status message.
-- Deleting an `area` block shall also delete privately referenced border `line` blocks that are no longer referenced by any remaining area; border lines still referenced by another area shall be preserved.
+- Deleting an `area` block shall remove only the selected `area ... endarea` source span; referenced border `line` blocks shall be preserved even when no remaining area references them.
 - Dragging the handle on a map object row shall start a move or reorder operation.
 - Dropping onto another object shall insert the dragged object before or after the target depending on the drop placement.
 - Dropping onto a scrap target shall move the object into that scrap when the object type supports it.

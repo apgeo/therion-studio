@@ -208,7 +208,7 @@ Pre čiary a hranice plôch:
 - `<<` a `>>` zapínajú alebo odstraňujú prichádzajúci/odchádzajúci Bezier kontrolný bod,
 - Bezier kontrolný bod možno priamo ťahať na mapovom plátne.
 
-Ak čiara slúži ako hranica plochy, niektoré deštruktívne akcie sú zablokované; vyberte alebo upravte vlastnú plochu.
+Ak čiara slúži ako hranica plochy, niektoré deštruktívne akcie sú zablokované; vyberte alebo upravte vlastnú plochu. Zmazanie plochy odstráni iba blok `area ... endarea` a ponechá referencované hraničné čiary v zdroji.
 
 ### 6.5 Editácia vlastností objektov
 

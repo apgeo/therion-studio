@@ -40,7 +40,7 @@ int runReferencedLineDeleteRejectedTest()
         : 1;
 }
 
-int runAreaDeleteRemovesPrivateBorderLineTest()
+int runAreaDeleteKeepsReferencedBorderLineTest()
 {
     const QString text = QStringLiteral(
         "encoding utf-8\n"
@@ -56,23 +56,27 @@ int runAreaDeleteRemovesPrivateBorderLineTest()
     const QString expected = QStringLiteral(
         "encoding utf-8\n"
         "scrap s1 -projection plan\n"
+        "line border -id line-1 -close on\n"
+        "  0 0\n"
+        "  1 0\n"
+        "endline\n"
         "endscrap\n");
 
     const MapEditorObjectDeletePlan plan = planMapEditorObjectDelete(text, 7);
     if (!expect(plan.resolved && plan.changed,
-                "Deleting an area with a private border line should resolve and change the source.")) {
+                "Deleting an area with a referenced border line should resolve and change the source.")) {
         return 1;
     }
     if (!expect(plan.updatedText == expected,
-                "Deleting an area should remove its area block and private referenced border line block.")) {
+                "Deleting an area should preserve referenced border line blocks.")) {
         return 1;
     }
-    if (!expect(plan.focusLineAfterDelete == 3,
-                "Deleting an area should focus the first removed line when its private border line was above it.")) {
+    if (!expect(plan.focusLineAfterDelete == 7,
+                "Deleting an area should focus the removed area start line.")) {
         return 1;
     }
-    return expect(plan.removedLineNumbers.size() == 7,
-                  "Area delete should report all removed source lines for hidden-row cleanup.")
+    return expect(plan.removedLineNumbers.size() == 3,
+                  "Area delete should report only the removed area block source lines for hidden-row cleanup.")
         ? 0
         : 1;
 }
@@ -177,7 +181,7 @@ int main()
     if (const int rc = runReferencedLineDeleteRejectedTest(); rc != 0) {
         return rc;
     }
-    if (const int rc = runAreaDeleteRemovesPrivateBorderLineTest(); rc != 0) {
+    if (const int rc = runAreaDeleteKeepsReferencedBorderLineTest(); rc != 0) {
         return rc;
     }
     if (const int rc = runAreaDeleteKeepsSharedBorderLineTest(); rc != 0) {

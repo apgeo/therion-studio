@@ -189,8 +189,9 @@ Během kreslení čáry nebo plochy:
 - viditelné Bezier kontrolní body lze před dokončením tažením doladit,
 - kliknutím na první vrchol čáry ji dokončíte jako uzavřenou (`-close on`); kliknutím na první vrchol plochy dokončíte návrh plochy,
 - uzavřené čáry vykreslují poslední segment zpět na první vrchol, včetně dvoubodových uzavřených Bezier křivek,
+- dvojklik při kreslení čáry přidá kliknutý vrchol, dokončí čáru a vrátí mapu do režimu výběru,
 - `Backspace` nebo `Delete` odstraní poslední draft vrchol,
-- `Esc` zruší vkládání.
+- `Esc` dokončí dostatečně úplný návrh čáry nebo plochy a vrátí mapu do režimu výběru; neúplné návrhy zruší.
 
 ### 6.4 Editace geometrie
 

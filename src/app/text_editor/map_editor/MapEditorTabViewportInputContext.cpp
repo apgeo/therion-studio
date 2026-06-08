@@ -111,6 +111,9 @@ MapEditorViewportInputContext MapEditorTab::viewportInputContext()
         .commitInteractiveDrawSession = [this](bool closeLineDraft) {
             return commitInteractiveDrawSession(closeLineDraft);
         },
+        .cancelInteractiveDrawingToSelectMode = [this]() {
+            return cancelInteractiveDrawingToSelectMode();
+        },
         .updateHelpPanel = [this]() {
             updateHelpPanel();
         },

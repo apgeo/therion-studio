@@ -192,8 +192,9 @@ While drafting a line or area:
 - drag visible Bezier control handles before committing to refine the draft curve
 - click the first line vertex again to finish a closed line (`-close on`); click the first area vertex again to commit the area draft
 - closed lines render the final segment back to the first vertex, including two-point closed Bezier curves
+- double-click while drafting a line to add the clicked vertex, commit the line, and return to Select mode
 - press `Backspace` or `Delete` to remove the last draft vertex
-- press `Esc` to cancel insertion
+- press `Esc` to commit a sufficiently complete line or area draft and return to Select mode; incomplete drafts are canceled
 
 ### 6.4 Edit Geometry
 

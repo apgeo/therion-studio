@@ -972,6 +972,37 @@ std::optional<bool> MapEditorViewportInputController::handleEvent(QObject *watch
             event->accept();
             return true;
         }
+        case QEvent::MouseButtonDblClick: {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (drawMode() == MapEditorInteractiveDrawMode::Line
+                && mouseEvent->button() == Qt::LeftButton
+                && context_.cancelInteractiveDrawingToSelectMode != nullptr) {
+                const QPointF scenePoint = context_.view->mapToScene(mouseEvent->pos());
+                const QPointF anchorScenePoint = snapLineAnchorIfAvailable(context_, mouseEvent->pos(), scenePoint);
+                bool anchorAlreadyCaptured = false;
+                if (context_.interactiveDrawLineVertices != nullptr
+                    && !context_.interactiveDrawLineVertices->isEmpty()) {
+                    const QPointF probe = context_.view->mapToScene(mouseEvent->pos() + QPoint(10, 0));
+                    const qreal hitRadius = std::max<qreal>(5.0, QLineF(scenePoint, probe).length());
+                    anchorAlreadyCaptured =
+                        QLineF(context_.interactiveDrawLineVertices->last().anchorScene, anchorScenePoint).length() <= hitRadius;
+                }
+                if (!anchorAlreadyCaptured && context_.captureInteractiveLineAnchor) {
+                    context_.captureInteractiveLineAnchor(anchorScenePoint, std::nullopt);
+                }
+                (*context_.interactiveDrawAnchorPressActive) = false;
+                (*context_.interactiveDrawAnchorDragActive) = false;
+                (*context_.interactiveDrawControlDragActive) = false;
+                (*context_.interactiveDrawHoverActive) = false;
+                if (context_.interactiveDrawHoverSnapActive != nullptr) {
+                    (*context_.interactiveDrawHoverSnapActive) = false;
+                }
+                context_.cancelInteractiveDrawingToSelectMode();
+                event->accept();
+                return true;
+            }
+            break;
+        }
         case QEvent::MouseButtonRelease: {
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
             if ((drawMode() == MapEditorInteractiveDrawMode::Line

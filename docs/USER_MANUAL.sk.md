@@ -189,8 +189,9 @@ Počas kreslenia čiary alebo plochy:
 - viditeľné Bezier kontrolné body možno pred dokončením ťahaním doladiť,
 - kliknutím na prvý vrchol čiary ju dokončíte ako uzavretú (`-close on`); kliknutím na prvý vrchol plochy dokončíte návrh plochy,
 - uzavreté čiary vykresľujú posledný segment späť na prvý vrchol, vrátane dvojbodových uzavretých Bezier kriviek,
+- dvojklik počas kreslenia čiary pridá kliknutý vrchol, dokončí čiaru a vráti mapu do režimu výberu,
 - `Backspace` alebo `Delete` odstráni posledný draft vrchol,
-- `Esc` zruší vkladanie.
+- `Esc` dokončí dostatočne úplný návrh čiary alebo plochy a vráti mapu do režimu výberu; neúplné návrhy zruší.
 
 ### 6.4 Editácia geometrie
 

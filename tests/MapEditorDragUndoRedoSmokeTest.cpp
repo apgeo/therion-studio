@@ -1866,6 +1866,29 @@ int runDragUndoRedoSmoke()
         return 1;
     }
 
+    mapTab->triggerAddLine();
+    pumpEvents();
+    const int lineDirectivesBeforeDoubleClickCommit = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
+    const QPoint doubleClickFirstVertex(viewportCenter.x() - 52, viewportCenter.y() + 4);
+    const QPoint doubleClickSecondVertex(viewportCenter.x() + 6, viewportCenter.y() + 8);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, doubleClickFirstVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, doubleClickFirstVertex, Qt::LeftButton, Qt::NoButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonDblClick, doubleClickSecondVertex, Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, doubleClickSecondVertex, Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    if (!expect(countDirectiveLines(mapTab->text(), QStringLiteral("line")) == lineDirectivesBeforeDoubleClickCommit + 1,
+                "Line mode double-click should insert the double-clicked vertex and commit the line draft.")) {
+        return 1;
+    }
+    const QString textAfterDoubleClickCommit = mapTab->text();
+    sendMouse(mapView->viewport(), QEvent::MouseButtonPress, QPoint(viewportCenter.x() + 42, viewportCenter.y() + 12), Qt::LeftButton, Qt::LeftButton);
+    sendMouse(mapView->viewport(), QEvent::MouseButtonRelease, QPoint(viewportCenter.x() + 42, viewportCenter.y() + 12), Qt::LeftButton, Qt::NoButton);
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterDoubleClickCommit,
+                "Line mode double-click commit should leave insert mode so the next click does not start another line.")) {
+        return 1;
+    }
+
     const int lineDirectivesBeforeBezierInsert = countDirectiveLines(mapTab->text(), QStringLiteral("line"));
     mapTab->triggerAddLine();
     pumpEvents();

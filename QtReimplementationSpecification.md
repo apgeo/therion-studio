@@ -40,6 +40,7 @@ The application is primarily used to:
 
 - Therion project artifacts shall remain plain-text source documents (`.th`, `.th2`, `thconfig`, `*.thconfig`, and `thconfig.*`) as the canonical source of truth.
 - All editor surfaces shall serialize user-visible changes back into plain-text Therion source without introducing a separate binary/project-only model.
+- Shared source projections shall include a lossless logical-command layer over physical source lines so continuation lines, block body rows, command rows, and source ranges are interpreted consistently by validation, syntax assistance, structured Blocks, Map projections, and project indexing.
 - The TH2 visual map workspace shall be treated as a specialized editing surface for geometry-intensive `.th2` workflows that are difficult to author directly in raw text.
 - The structured Blocks workspace should prioritize approachability and guided editing for newer users by reducing syntax burden while preserving explicit source round-trip behavior.
 - Raw text editing shall remain available for expert/direct editing and for operations that require exact line/token-level control.

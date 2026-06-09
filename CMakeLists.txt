@@ -92,6 +92,8 @@ set(THERION_CORE_SOURCES
     src/core/TherionDocumentEditor.h
     src/core/TherionSourceDocument.cpp
     src/core/TherionSourceDocument.h
+    src/core/TherionSourceLogicalDocument.cpp
+    src/core/TherionSourceLogicalDocument.h
     src/core/TherionSourceValidator.cpp
     src/core/TherionSourceValidator.h
     src/core/ProjectStructureIndex.cpp
@@ -877,6 +879,9 @@ therion_add_core_unit_test(TherionSourceValidatorTest
 therion_add_core_unit_test(TherionSourceDocumentTest
     tests/TherionSourceDocumentTest.cpp)
 
+therion_add_core_unit_test(TherionSourceLogicalDocumentTest
+    tests/TherionSourceLogicalDocumentTest.cpp)
+
 therion_add_core_unit_test(TherionDocumentParserTest
     tests/TherionDocumentParserTest.cpp)
 
@@ -1325,6 +1330,7 @@ set(THERION_UNIT_TEST_TARGETS
     TherionDocumentEditorTest
     TherionSourceValidatorTest
     TherionSourceDocumentTest
+    TherionSourceLogicalDocumentTest
     TherionDocumentParserTest
     TherionSourceTextTest
     TherionTokenRulesTest

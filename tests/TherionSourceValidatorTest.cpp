@@ -256,6 +256,15 @@ void doesNotTreatZeroFixedArityAsValidationError()
             "Fixed arity zero from catalog metadata is not reliable enough to reject existing option values.");
 }
 
+void keepsDashPrefixedPointTextAsTextValue()
+{
+    const QString contents = QStringLiteral("point 4505.0 -1446.0 label -text \"-21 m\"\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, basicCatalog());
+
+    require(!containsDiagnostic(result, QStringLiteral("unknown-option")),
+            "Dash-prefixed quoted point text values should not be reported as unknown options.");
+}
+
 void acceptsOptionAliasesExtractedFromCatalogSignature()
 {
     const QStringList aliases = TherionStudio::extractOptionKeysFromSignatureAliases(QStringLiteral("output/o <file>"));
@@ -384,6 +393,7 @@ int main(int argc, char **argv)
     acceptsBracketedOptionValueAsSingleLogicalValue();
     acceptsLineContinuationAfterOptionValue();
     doesNotTreatZeroFixedArityAsValidationError();
+    keepsDashPrefixedPointTextAsTextValue();
     acceptsOptionAliasesExtractedFromCatalogSignature();
     reportsUnknownArgumentValue();
     reportsUnknownOptionValue();

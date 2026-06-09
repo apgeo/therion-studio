@@ -52,6 +52,7 @@ TherionSourceValidationCatalog testCatalog()
     catalog.commandRequiredPositionalCount.insert(QStringLiteral("line"), 1);
     catalog.commandRequiredPositionalCount.insert(QStringLiteral("point"), 3);
     catalog.commandOptionNames.insert(QStringLiteral("line"), {QStringLiteral("-close"), QStringLiteral("-clip")});
+    catalog.commandOptionNames.insert(QStringLiteral("point"), {QStringLiteral("-text")});
     catalog.commandOptionValueArityTokens.insert(commandOptionValueKey(QStringLiteral("line"), QStringLiteral("-close")),
                                                  QStringLiteral("EXACTLY_ONE"));
     catalog.commandOptionValueArityTokens.insert(commandOptionValueKey(QStringLiteral("line"), QStringLiteral("-clip")),
@@ -163,6 +164,41 @@ int runFilesystemValidationTest()
     return 0;
 }
 
+int runDashPrefixedTextValidationTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary project directory creation failed.")) {
+        return 1;
+    }
+
+    const QString mapFile = QDir(tempDir.path()).filePath(QStringLiteral("labels.th2"));
+    if (!expect(writeTextFile(mapFile,
+                              QStringLiteral("scrap test\n"
+                                             "point 4505.0 -1446.0 label -text \"-21 m\"\n"
+                                             "endscrap\n")),
+                "Temporary .th2 label file could not be written.")) {
+        return 1;
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+    scanner.requestScan(tempDir.path(), testCatalog(), {});
+
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    if (!expect(waitResult.received, "Dash-prefixed text validation did not emit validationFinished before timeout.")) {
+        return 1;
+    }
+    if (!expect(waitResult.result.errorMessage.isEmpty(), "Dash-prefixed text validation should not report an error.")) {
+        return 1;
+    }
+    if (!expect(!containsFinding(waitResult.result, mapFile, QStringLiteral("unknown-option")),
+                "Project validation should keep dash-prefixed point text values as text, not unknown options.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runInMemoryValidationTest()
 {
     QTemporaryDir tempDir;
@@ -214,6 +250,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runInMemoryValidationTest() != 0) {
+        return 1;
+    }
+    if (runDashPrefixedTextValidationTest() != 0) {
         return 1;
     }
     return 0;

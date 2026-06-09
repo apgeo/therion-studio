@@ -140,6 +140,34 @@ void detectsSingleTokenOptionsWithEmbeddedValues()
             "plain option tokens should not be reported as embedded option/value pairs");
     require(!commandTokenEmbedsOptionValue(QStringLiteral("left wall")),
             "ordinary spaced values should not be reported as embedded option/value pairs");
+    require(!commandTokenStartsNewOption(QStringLiteral("-21 m")),
+            "dash-prefixed free-text values should not start a new option when the embedded name is not option-like");
+}
+
+void keepsDashPrefixedQuotedTextValuesAsOptionValues()
+{
+    QHash<QString, int> arity;
+    arity.insert(commandOptionValueKey(QStringLiteral("point"), QStringLiteral("-text")), 1);
+
+    const ParsedCommandOptions parsed = parseCommandOptions(QStringLiteral("point"),
+                                                            {QStringLiteral("point"),
+                                                             QStringLiteral("4505.0"),
+                                                             QStringLiteral("-1446.0"),
+                                                             QStringLiteral("label"),
+                                                             QStringLiteral("-text"),
+                                                             QStringLiteral("-21 m")},
+                                                            arity,
+                                                            false);
+
+    require(parsed.extraPositionalTokens == QStringList({QStringLiteral("4505.0"),
+                                                        QStringLiteral("-1446.0"),
+                                                        QStringLiteral("label")}),
+            "point positional values should allow negative coordinates before text options");
+    require(parsed.optionEntries.size() == 1,
+            "dash-prefixed text value should stay with the preceding option");
+    require(parsed.optionEntries.first().key == QStringLiteral("-text")
+                && parsed.optionEntries.first().value == QStringLiteral("-21 m"),
+            "dash-prefixed text value should be preserved as the -text option value");
 }
 
 void deduplicatesLegacySingleTokenOptionRows()
@@ -300,6 +328,7 @@ int main(int argc, char **argv)
     keepsBracketedValuesTogether();
     serializesFixedArityOptionValues();
     detectsSingleTokenOptionsWithEmbeddedValues();
+    keepsDashPrefixedQuotedTextValuesAsOptionValues();
     deduplicatesLegacySingleTokenOptionRows();
     keepsLeadingValueSeparateWhenAllowed();
     doesNotTreatDashPrefixedTokenAsLeadingValue();

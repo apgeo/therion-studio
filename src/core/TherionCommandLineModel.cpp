@@ -7,7 +7,16 @@ namespace TherionStudio
 {
 bool commandTokenStartsNewOption(const QString &token)
 {
-    return TherionTokenRules::tokenStartsOption(token);
+    if (!TherionTokenRules::tokenStartsOption(token)) {
+        return false;
+    }
+
+    const QString embeddedName = commandEmbeddedOptionName(token);
+    if (embeddedName != token.trimmed()) {
+        return looksLikeOptionToken(embeddedName);
+    }
+
+    return true;
 }
 
 bool commandTokenActsAsOptionBoundary(const QStringList &tokens, int tokenIndex)

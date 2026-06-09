@@ -465,6 +465,31 @@ int runAppendDraftGeometryTest()
     contents = QStringLiteral("scrap custom\nendscrap\n");
     lineNumber = 0;
     errorMessage.clear();
+    lineObjectOptions.subtype = QStringLiteral("-clip off");
+    lineObjectOptions.identifier.clear();
+    if (!expect(TherionDocumentEditor::appendDraftLineGeometry(&contents,
+                                                               {QStringLiteral("10 20"),
+                                                                QStringLiteral("30 40")},
+                                                               &lineNumber,
+                                                               &errorMessage,
+                                                               QStringLiteral("-clip off"),
+                                                               lineObjectOptions),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("scrap custom\n"
+                                           "  line wall -clip off\n"
+                                           "    10 20\n"
+                                           "    30 40\n"
+                                           "  endline\n"
+                                           "endscrap\n"),
+                "appendDraftLineGeometry should not serialize option-like subtype text as -subtype.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("scrap custom\nendscrap\n");
+    lineNumber = 0;
+    errorMessage.clear();
     TherionDraftObjectOptions pointObjectOptions;
     pointObjectOptions.type = QStringLiteral("label");
     pointObjectOptions.subtype = QStringLiteral("remark");
@@ -1908,6 +1933,42 @@ int runRewriteMapObjectQuickFieldsTest()
     }
     if (!expect(contents == QStringLiteral("line rock-border -close on -clip off\nendline\n"),
                 "rewriteMapObjectQuickFields should ignore option-like line subtype values.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line rock-border -close on -clip off \"-clip off\" \"-clip off\"\nendline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+                                                                   1,
+                                                                   QStringLiteral("rock-border"),
+                                                                   QStringLiteral("-clip off"),
+                                                                   QString(),
+                                                                   QString(),
+                                                                   false,
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line rock-border -close on -clip off\nendline\n"),
+                "rewriteMapObjectQuickFields should remove malformed quoted -clip off tokens while preserving the valid -clip off option.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line rock-border -close on -clip off -subtype \"-clip off\"\nendline\n");
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+                                                                   1,
+                                                                   QStringLiteral("rock-border"),
+                                                                   QString(),
+                                                                   QString(),
+                                                                   QString(),
+                                                                   false,
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line rock-border -close on -clip off\nendline\n"),
+                "rewriteMapObjectQuickFields should remove malformed option-like subtype leftovers.")) {
         return 1;
     }
 

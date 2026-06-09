@@ -10,6 +10,36 @@ bool commandTokenStartsNewOption(const QString &token)
     return TherionTokenRules::tokenStartsOption(token);
 }
 
+QString commandEmbeddedOptionName(const QString &token)
+{
+    const QString trimmed = token.trimmed();
+    for (int index = 0; index < trimmed.size(); ++index) {
+        if (trimmed.at(index).isSpace()) {
+            return trimmed.left(index);
+        }
+    }
+
+    return trimmed;
+}
+
+QString commandEmbeddedOptionValue(const QString &token)
+{
+    const QString trimmed = token.trimmed();
+    for (int index = 0; index < trimmed.size(); ++index) {
+        if (trimmed.at(index).isSpace()) {
+            return trimmed.mid(index + 1).trimmed();
+        }
+    }
+
+    return QString();
+}
+
+bool commandTokenEmbedsOptionValue(const QString &token)
+{
+    return commandTokenStartsNewOption(token)
+        && !commandEmbeddedOptionValue(token).isEmpty();
+}
+
 QString normalizedCommandOptionName(const QString &optionName)
 {
     QString normalized = optionName.trimmed().toLower();
@@ -103,6 +133,36 @@ QHash<QString, QString> commandOptionValuesByName(const QStringList &tokens)
 
 namespace
 {
+CommandOptionEntry commandOptionEntry(const QString &commandName,
+                                      const QString &token,
+                                      const QStringList &rawOptionValues,
+                                      const QHash<QString, int> &commandOptionFixedArityByKey)
+{
+    QString optionKey = token.trimmed();
+    QString optionDisplayValue;
+    const QString embeddedValue = commandEmbeddedOptionValue(optionKey);
+    if (!embeddedValue.isEmpty()) {
+        optionDisplayValue = embeddedValue;
+        optionKey = commandEmbeddedOptionName(optionKey);
+    } else {
+        optionDisplayValue = rawOptionValues.join(QLatin1Char(' '));
+        const int fixedArity = commandOptionFixedArityByKey.value(
+            commandOptionValueKey(commandName, optionKey.toLower().trimmed()), -1);
+        if (fixedArity > 1 && !rawOptionValues.isEmpty()) {
+            optionDisplayValue = serializeCommandArgumentValues(rawOptionValues);
+        }
+    }
+
+    return CommandOptionEntry{optionKey, optionDisplayValue};
+}
+
+QString commandOptionEntryDeduplicationKey(const CommandOptionEntry &entry)
+{
+    return normalizedCommandOptionName(entry.key)
+        + QLatin1Char('\n')
+        + entry.value.trimmed();
+}
+
 std::optional<bool> parseCommandToggleToken(const QString &token)
 {
     const QString normalized = token.trimmed().toLower();
@@ -179,6 +239,7 @@ ParsedCommandOptions parseCommandOptions(
     bool leadingValueAllowed)
 {
     ParsedCommandOptions parsed;
+    QStringList seenOptionEntries;
     if (leadingValueAllowed
         && tokens.size() > 1
         && !tokens.at(1).trimmed().startsWith(QLatin1Char('-'))) {
@@ -191,13 +252,15 @@ ParsedCommandOptions parseCommandOptions(
         if (commandTokenStartsNewOption(token)) {
             const int nextOptionIndex = nextCommandOptionIndex(tokens, index);
             const QStringList rawOptionValues = tokens.mid(index + 1, nextOptionIndex - index - 1);
-            QString optionDisplayValue = rawOptionValues.join(QLatin1Char(' '));
-            const int fixedArity = commandOptionFixedArityByKey.value(
-                commandOptionValueKey(commandName, token.toLower().trimmed()), -1);
-            if (fixedArity > 1 && !rawOptionValues.isEmpty()) {
-                optionDisplayValue = serializeCommandArgumentValues(rawOptionValues);
+            const CommandOptionEntry entry = commandOptionEntry(commandName,
+                                                               token,
+                                                               rawOptionValues,
+                                                               commandOptionFixedArityByKey);
+            const QString deduplicationKey = commandOptionEntryDeduplicationKey(entry);
+            if (!seenOptionEntries.contains(deduplicationKey)) {
+                parsed.optionEntries.append(entry);
+                seenOptionEntries.append(deduplicationKey);
             }
-            parsed.optionEntries.append(CommandOptionEntry{token, optionDisplayValue});
             index = nextOptionIndex;
             continue;
         }

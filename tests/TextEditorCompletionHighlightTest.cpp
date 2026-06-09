@@ -388,6 +388,28 @@ int main(int argc, char *argv[])
     }
 
     {
+        editor->setPlainText(QStringLiteral("line rock-border -close on -clip off \"-clip off\" \"-clip off\"\n"));
+        pumpEvents();
+
+        const QTextBlock firstLine = editor->document()->findBlockByLineNumber(0);
+        if (!expect(tokenHasWaveUnderline(firstLine, QStringLiteral("\"-clip off\"")),
+                    "Quoted option/value tokens such as \"-clip off\" should be marked with invalid highlighting.")) {
+            return 1;
+        }
+    }
+
+    {
+        editor->setPlainText(QStringLiteral("line label -text \"-clip off\"\n"));
+        pumpEvents();
+
+        const QTextBlock firstLine = editor->document()->findBlockByLineNumber(0);
+        if (!expect(!tokenHasWaveUnderline(firstLine, QStringLiteral("\"-clip off\"")),
+                    "Quoted text values that start with '-' should remain valid option values.")) {
+            return 1;
+        }
+    }
+
+    {
         editor->setPlainText(QStringLiteral("line wall -close maybe\n"));
         pumpEvents();
 

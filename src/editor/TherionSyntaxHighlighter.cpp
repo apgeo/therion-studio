@@ -1,5 +1,6 @@
 #include "TherionSyntaxHighlighter.h"
 
+#include "../core/TherionCommandLineModel.h"
 #include "../core/TherionDocumentParser.h"
 #include "../core/TherionTokenRules.h"
 
@@ -312,6 +313,7 @@ void TherionSyntaxHighlighter::highlightBlock(const QString &text)
 
         const QString normalizedToken = tokenSpan.text.trimmed().toLower();
         const bool optionLikeToken = looksLikeOptionToken(normalizedToken);
+        const bool embeddedOptionValueToken = commandTokenEmbedsOptionValue(normalizedToken);
         bool identifierToken = false;
         if (knownCommand && tokenIndex > 0 && !optionLikeToken && idPositionalIndexes.contains(tokenIndex)) {
             identifierToken = true;
@@ -321,7 +323,18 @@ void TherionSyntaxHighlighter::highlightBlock(const QString &text)
         }
         bool formatted = false;
 
-        if (tokenIndex == 0 && keywordTokens_.contains(normalizedToken)) {
+        if (knownCommand
+            && tokenIndex > 0
+            && embeddedOptionValueToken
+            && (activeOptionToken.isEmpty() || activeOptionToken == QStringLiteral("-subtype"))) {
+            setFormat(tokenSpan.start, tokenSpan.length, invalidTokenFormat_);
+            formatted = true;
+            activeOptionToken.clear();
+            activeOptionArity.clear();
+            activeAllowedValues.clear();
+            activeValidateValues = false;
+            activeOptionExpectsId = false;
+        } else if (tokenIndex == 0 && keywordTokens_.contains(normalizedToken)) {
             setFormat(tokenSpan.start, tokenSpan.length, keywordFormat_);
             formatted = true;
         } else if (knownCommand && tokenIndex > 0 && optionLikeToken) {

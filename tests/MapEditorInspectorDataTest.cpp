@@ -123,6 +123,19 @@ int runLineClipOptionDoesNotBecomeSubtypeTest()
         return 1;
     }
 
+    const TherionParsedLine legacyExtraTokensLine = TherionDocumentParser::parseLine(
+        QStringLiteral("line rock-border -close on -clip off \"-clip off\" \"-clip off\""),
+        1);
+    const std::optional<InspectorObjectQuickFields> legacyFields =
+        inspectorObjectQuickFieldsFromParsedLine(legacyExtraTokensLine);
+    if (!expect(legacyFields.has_value(), "Legacy line quick fields should still be extracted.")) {
+        return 1;
+    }
+    if (!expect(legacyFields->subtype.isEmpty(),
+                "Legacy quoted option-like tokens should not be shown as a subtype.")) {
+        return 1;
+    }
+
     return 0;
 }
 

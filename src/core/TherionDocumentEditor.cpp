@@ -350,7 +350,10 @@ QString draftObjectTypeToken(const TherionDraftObjectOptions &options, const QSt
 QString draftObjectOptionsSuffix(const TherionDraftObjectOptions &options, bool includeName)
 {
     QString suffix;
-    const QString subtype = serializedInlineToken(options.subtype);
+    const QString normalizedSubtype = options.subtype.trimmed();
+    const QString subtype = TherionTokenRules::tokenStartsOption(normalizedSubtype)
+        ? QString()
+        : serializedInlineToken(normalizedSubtype);
     if (!subtype.isEmpty()) {
         suffix += QStringLiteral(" -subtype %1").arg(subtype);
     }
@@ -576,6 +579,89 @@ bool removeOptionAtTokenIndex(QString *lineText,
 
     lineText->remove(removeStart, removeEnd - removeStart);
     return true;
+}
+
+bool removeTokenAtTokenIndex(QString *lineText,
+                             const TherionParsedLine &parsedLine,
+                             int tokenIndex)
+{
+    if (lineText == nullptr
+        || tokenIndex < 0
+        || tokenIndex >= parsedLine.tokenSpans.size()) {
+        return false;
+    }
+
+    const TherionParsedToken token = parsedLine.tokenSpans.at(tokenIndex);
+    int removeStart = token.start;
+    int removeEnd = token.start + token.length;
+    if (removeStart < 0 || removeEnd < removeStart || removeEnd > lineText->size()) {
+        return false;
+    }
+
+    if (removeStart > 0 && lineText->at(removeStart - 1).isSpace()) {
+        --removeStart;
+    } else if (removeEnd < lineText->size() && lineText->at(removeEnd).isSpace()) {
+        ++removeEnd;
+    }
+
+    lineText->remove(removeStart, removeEnd - removeStart);
+    return true;
+}
+
+bool isSingleTokenOptionWithValue(const QString &token)
+{
+    const QString trimmed = token.trimmed();
+    if (!TherionTokenRules::tokenStartsOption(trimmed)) {
+        return false;
+    }
+
+    for (const QChar character : trimmed) {
+        if (character.isSpace()) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool isPlainOptionToken(const QString &token)
+{
+    const QString trimmed = token.trimmed();
+    return TherionTokenRules::tokenStartsOption(trimmed)
+        && !isSingleTokenOptionWithValue(trimmed);
+}
+
+bool removeMalformedMapObjectOptionTokens(QString *lineText)
+{
+    if (lineText == nullptr) {
+        return false;
+    }
+
+    for (;;) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(*lineText);
+        int removeTokenIndex = -1;
+        for (int index = 2; index < parsedLine.tokens.size(); ++index) {
+            if (!isSingleTokenOptionWithValue(parsedLine.tokens.at(index))) {
+                continue;
+            }
+
+            const QString previousToken = parsedLine.tokens.value(index - 1);
+            if (isPlainOptionToken(previousToken)) {
+                continue;
+            }
+
+            removeTokenIndex = index;
+            break;
+        }
+
+        if (removeTokenIndex < 0) {
+            return true;
+        }
+
+        if (!removeTokenAtTokenIndex(lineText, parsedLine, removeTokenIndex)) {
+            return false;
+        }
+    }
 }
 
 QPair<int, int> optionRangeWithBracketedValue(const TherionParsedLine &parsedLine,
@@ -2565,6 +2651,14 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
     if (!upsertSingleValueOption(&lineText, QStringLiteral("-subtype"), subtypeForWrite)) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected object subtype could not be rewritten.");
+        }
+        return false;
+    }
+
+    if ((directive == QStringLiteral("line") || directive == QStringLiteral("area"))
+        && !removeMalformedMapObjectOptionTokens(&lineText)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Malformed option-like object tokens could not be removed.");
         }
         return false;
     }

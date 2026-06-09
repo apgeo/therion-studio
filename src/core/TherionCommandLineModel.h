@@ -29,6 +29,9 @@ ParsedCommandOptions parseCommandOptions(const QString &commandName,
                                          bool leadingValueAllowed);
 
 bool commandTokenStartsNewOption(const QString &token);
+bool commandTokenEmbedsOptionValue(const QString &token);
+QString commandEmbeddedOptionName(const QString &token);
+QString commandEmbeddedOptionValue(const QString &token);
 int nextCommandOptionIndex(const QStringList &tokens, int optionIndex);
 QString normalizedCommandOptionName(const QString &optionName);
 bool commandOptionNameMatches(const QString &token, const QString &optionName);

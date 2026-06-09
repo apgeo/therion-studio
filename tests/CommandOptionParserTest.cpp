@@ -15,6 +15,9 @@ using TherionStudio::commandOptionToggleValue;
 using TherionStudio::commandOptionValue;
 using TherionStudio::commandOptionValuesByName;
 using TherionStudio::commandOptionValueKey;
+using TherionStudio::commandEmbeddedOptionName;
+using TherionStudio::commandEmbeddedOptionValue;
+using TherionStudio::commandTokenEmbedsOptionValue;
 using TherionStudio::commandTokenStartsNewOption;
 using TherionStudio::normalizedCommandOptionName;
 using TherionStudio::parseCommandOptions;
@@ -125,6 +128,48 @@ void serializesFixedArityOptionValues()
             "fixed-arity values should be serialized with Therion quoting rules");
 }
 
+void detectsSingleTokenOptionsWithEmbeddedValues()
+{
+    require(commandTokenEmbedsOptionValue(QStringLiteral("-clip off")),
+            "single token option/value pairs should be detectable");
+    require(commandEmbeddedOptionName(QStringLiteral("-clip off")) == QStringLiteral("-clip"),
+            "embedded option name should stop before whitespace");
+    require(commandEmbeddedOptionValue(QStringLiteral("-clip off")) == QStringLiteral("off"),
+            "embedded option value should contain the remainder after whitespace");
+    require(!commandTokenEmbedsOptionValue(QStringLiteral("-clip")),
+            "plain option tokens should not be reported as embedded option/value pairs");
+    require(!commandTokenEmbedsOptionValue(QStringLiteral("left wall")),
+            "ordinary spaced values should not be reported as embedded option/value pairs");
+}
+
+void deduplicatesLegacySingleTokenOptionRows()
+{
+    QHash<QString, int> arity;
+
+    const ParsedCommandOptions parsed = parseCommandOptions(QStringLiteral("line"),
+                                                            {QStringLiteral("line"),
+                                                             QStringLiteral("rock-border"),
+                                                             QStringLiteral("-close"),
+                                                             QStringLiteral("on"),
+                                                             QStringLiteral("-clip"),
+                                                             QStringLiteral("off"),
+                                                             QStringLiteral("-clip off"),
+                                                             QStringLiteral("-clip off")},
+                                                            arity,
+                                                            false);
+
+    require(parsed.extraPositionalTokens == QStringList({QStringLiteral("rock-border")}),
+            "line type should stay as a positional argument when legacy option tokens are present");
+    require(parsed.optionEntries.size() == 2,
+            "duplicate legacy single-token options should collapse into existing option rows");
+    require(parsed.optionEntries.at(0).key == QStringLiteral("-close")
+                && parsed.optionEntries.at(0).value == QStringLiteral("on"),
+            "close option should be preserved");
+    require(parsed.optionEntries.at(1).key == QStringLiteral("-clip")
+                && parsed.optionEntries.at(1).value == QStringLiteral("off"),
+            "legacy quoted -clip off tokens should normalize to one -clip option row");
+}
+
 void keepsLeadingValueSeparateWhenAllowed()
 {
     QHash<QString, int> arity;
@@ -229,6 +274,8 @@ int main(int argc, char **argv)
     keepsNegativeNumbersAsValues();
     keepsBracketedValuesTogether();
     serializesFixedArityOptionValues();
+    detectsSingleTokenOptionsWithEmbeddedValues();
+    deduplicatesLegacySingleTokenOptionRows();
     keepsLeadingValueSeparateWhenAllowed();
     doesNotTreatDashPrefixedTokenAsLeadingValue();
     serializesCommandArguments();

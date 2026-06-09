@@ -1008,6 +1008,10 @@ target_link_libraries(MapEditorLineExtensionPlannerTest PRIVATE Qt6::Widgets Qt6
 therion_add_core_unit_test(SessionStoreTest
     tests/SessionStoreTest.cpp)
 
+therion_add_app_unit_test(TextEditorOptionValidationTest
+    tests/TextEditorOptionValidationTest.cpp
+    src/app/text_editor/TextEditorOptionValidation.cpp)
+
 therion_add_app_unit_test(ProjectStructureScannerTest
     tests/ProjectStructureScannerTest.cpp)
 
@@ -1322,6 +1326,7 @@ set(THERION_UNIT_TEST_TARGETS
     TextEditorDocumentIoServiceTest
     TextEditorDocumentPreconditionsServiceTest
     TextEditorDocumentPersistenceStateServiceTest
+    TextEditorOptionValidationTest
     TextEditorDocumentWorkflowControllerTest
     TextEditorTabInteractionControllerTest
     MainWindowHelpDocumentTest

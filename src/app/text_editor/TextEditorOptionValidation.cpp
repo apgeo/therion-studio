@@ -14,6 +14,13 @@ QString rowSuffix(int rowNumber)
     }
     return QObject::tr(" in row %1").arg(rowNumber);
 }
+
+QString optionDeduplicationKey(const QString &key, const QStringList &values)
+{
+    return TherionStudio::normalizedCommandOptionName(key)
+        + QLatin1Char('\n')
+        + values.join(QLatin1Char('\n'));
+}
 }
 
 namespace TherionStudio
@@ -29,6 +36,7 @@ TextEditorOptionValidationResult validateAndSerializeCommandOptions(
 {
     TextEditorOptionValidationResult result;
     result.ok = false;
+    QStringList seenOptionRows;
 
     for (int rowIndex = 0; rowIndex < rows.size(); ++rowIndex) {
         const TextEditorOptionRow &row = rows.at(rowIndex);
@@ -114,7 +122,13 @@ TextEditorOptionValidationResult validateAndSerializeCommandOptions(
             }
         }
 
+        const QString deduplicationKey = optionDeduplicationKey(key, providedValues);
+        if (seenOptionRows.contains(deduplicationKey)) {
+            continue;
+        }
+
         result.serializedOptions.append(serializeCommandOptionTokens(key, providedValues));
+        seenOptionRows.append(deduplicationKey);
     }
 
     result.ok = true;

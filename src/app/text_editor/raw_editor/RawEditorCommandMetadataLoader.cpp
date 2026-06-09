@@ -92,6 +92,7 @@ QStringList optionArgumentLabelsFromSignature(const QString &signature)
     }
     return labels;
 }
+
 }
 
 namespace TherionStudio
@@ -219,7 +220,8 @@ void RawEditorCommandMetadataLoader::applyCommandOptionCatalogMetadata(const QSt
         const QString valueArity = canonicalOptionArityToken(optionObject.value(QStringLiteral("value_arity")).toString());
         const QString optionLine = description.isEmpty() ? signature : QStringLiteral("%1 = %2").arg(signature, description);
         appendUnique(entry->options, optionLine);
-        const QStringList normalizedOptionKeys = extractOptionKeys(optionKey);
+        QStringList normalizedOptionKeys = extractOptionKeys(optionKey);
+        appendUniqueList(normalizedOptionKeys, extractOptionKeysFromSignatureAliases(signature));
         const QStringList optionArgumentLabels = optionArgumentLabelsFromSignature(signature);
         const bool signatureHasEllipsis = signature.contains(QStringLiteral("..."));
         int fixedArity = -1;

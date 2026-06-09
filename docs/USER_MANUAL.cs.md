@@ -144,6 +144,7 @@ Pro `.th2` soubory:
 - doplňování příkazů, voleb, hodnot a cest při psaní,
 - `Ctrl+Space` pro ruční otevření doplňování,
 - kontextová nápověda pro aktuální příkaz nebo volbu; režimy Zdroj i Bloky zobrazují stejnou úplnou nápovědu příkazů a panel nápovědy je pojmenovaný podle aktuálního příkazu, validačního kontextu nebo vybraného cíle nápovědy,
+- `Validate Document` v hlavním toolbaru projde aktuální zdroj, otevře levý panel `Validation` a vypíše problémy jako chybně zapsané option tokeny, neznámé příkazy nebo volby, chybějící argumenty a neuzavřené bloky; `Validate Project` ve stejném panelu projde všechny `.th`, `.th2` a `thconfig` soubory v otevřeném projektu; projektová validace u `thconfig` souborů nehlásí nejistá varování `unknown command`, dokud nebude k dispozici samostatný thconfig katalog; aktivací nálezu přejdete na dotčený řádek raw zdroje a u nálezů s explicitním bezpečným přepisem můžete použít `Apply Fix` nebo `Apply All Safe Fixes`,
 - záložka `Výběr` v inspektoru režimu Bloky pro editaci hlavičky vybraného bloku a podporovaných inline voleb; první panel je pojmenovaný podle vybraného příkazu Therionu a ukazuje zdrojový řádek,
 - když není vybraný žádný blok, záložka `Výběr` v režimu Bloky ukazuje `Není vybrán žádný blok.`; při výběru pevné kořenové karty `encoding` ukazuje příkaz a hodnotu kódování jako text pouze pro čtení,
 - hledání a nahrazení z menu `Úpravy`,

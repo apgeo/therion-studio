@@ -2,6 +2,8 @@
 
 #include <QApplication>
 #include <QEvent>
+#include <QHelpEvent>
+#include <QPlainTextEdit>
 #include <QWidget>
 
 #include "TextEditorContextHelpController.h"
@@ -30,6 +32,17 @@ bool TextEditorTab::eventFilter(QObject *watched, QEvent *event)
 
     if (rawEditorCompletionController_ == nullptr) {
         return QWidget::eventFilter(watched, event);
+    }
+
+    if (event != nullptr
+        && event->type() == QEvent::ToolTip
+        && editor_ != nullptr
+        && watched == editor_->viewport()
+        && contextHelpController_ != nullptr) {
+        auto *helpEvent = static_cast<QHelpEvent *>(event);
+        if (contextHelpController_->showValidationTooltipForPosition(helpEvent->pos(), helpEvent->globalPos())) {
+            return true;
+        }
     }
 
     switch (rawEditorCompletionController_->handleEventFilter(watched, event)) {

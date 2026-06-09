@@ -90,6 +90,8 @@ set(THERION_CORE_SOURCES
     src/core/TherionTokenRules.h
     src/core/TherionDocumentEditor.cpp
     src/core/TherionDocumentEditor.h
+    src/core/TherionSourceValidator.cpp
+    src/core/TherionSourceValidator.h
     src/core/ProjectStructureIndex.cpp
     src/core/ProjectStructureIndex.h
     src/core/TherionDocumentParser.cpp
@@ -193,6 +195,8 @@ set(THERION_APP_SOURCES
     src/app/MainWindowStructureNameOverridesService.h
     src/app/ProjectSearchScanner.cpp
     src/app/ProjectSearchScanner.h
+    src/app/ProjectValidationScanner.cpp
+    src/app/ProjectValidationScanner.h
     src/app/ProjectStructureScanner.cpp
     src/app/ProjectStructureScanner.h
     src/app/TherionExecutableSelectionController.cpp
@@ -254,6 +258,7 @@ set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindowStatusUi.cpp
     src/app/MainWindowStructureBrowser.cpp
     src/app/MainWindowStructureRoles.h
+    src/app/MainWindowValidationSidebar.cpp
     src/app/MainWindowViewMenu.cpp
     src/app/MainWindowWorkspaceCommandBar.cpp
     src/app/MainWindowWelcomeWidget.cpp
@@ -279,6 +284,8 @@ set(THERION_TEXT_EDITOR_SHARED_SOURCES
     src/app/text_editor/TextEditorOptionValidation.cpp
     src/app/text_editor/TextEditorCommandMetadata.h
     src/app/text_editor/TextEditorOptionValidation.h
+    src/app/text_editor/TextEditorValidationCatalog.cpp
+    src/app/text_editor/TextEditorValidationCatalog.h
     src/app/text_editor/CommandOptionsDialog.cpp
     src/app/text_editor/CommandOptionsDialog.h
     src/app/text_editor/CommandOptionTableDelegate.cpp
@@ -494,6 +501,7 @@ set(THERION_MAP_EDITOR_SOURCES
     src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp
+    src/app/text_editor/map_editor/MapEditorTabDocumentValidation.cpp
     src/app/text_editor/map_editor/MapEditorTabNewDocumentDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
     src/app/text_editor/map_editor/MapEditorXviBackgroundItem.cpp
@@ -510,6 +518,7 @@ set(THERION_TEXT_EDITOR_TAB_SOURCES
     src/app/text_editor/TextEditorTabStatusCursorDelegates.cpp
     src/app/text_editor/TextEditorTabCompletionFacade.cpp
     src/app/text_editor/TextEditorTabAppearanceController.cpp
+    src/app/text_editor/TextEditorTabValidation.cpp
     src/app/text_editor/TextEditorTabBlockEditorDetailsHelpController.cpp
     src/app/text_editor/TextEditorTabBlockEditorLineBuildService.cpp
     src/app/text_editor/TextEditorTabBlockEditorOptionArgsController.cpp
@@ -610,6 +619,7 @@ set(THERION_STUDIO_RESOURCE_FILES
     resources/icons/lucide/folder-x.svg
     resources/icons/lucide/hand.svg
     resources/icons/lucide/image.svg
+    resources/icons/lucide/spell-check.svg
     resources/icons/lucide/map-pin.svg
     resources/icons/lucide/locate-fixed.svg
     resources/icons/lucide/map.svg
@@ -859,6 +869,9 @@ endif()
 therion_add_core_unit_test(TherionDocumentEditorTest
     tests/TherionDocumentEditorTest.cpp)
 
+therion_add_core_unit_test(TherionSourceValidatorTest
+    tests/TherionSourceValidatorTest.cpp)
+
 therion_add_core_unit_test(TherionDocumentParserTest
     tests/TherionDocumentParserTest.cpp)
 
@@ -1017,6 +1030,9 @@ therion_add_app_unit_test(ProjectStructureScannerTest
 
 therion_add_app_unit_test(ProjectSearchScannerTest
     tests/ProjectSearchScannerTest.cpp)
+
+therion_add_app_unit_test(ProjectValidationScannerTest
+    tests/ProjectValidationScannerTest.cpp)
 
 therion_add_app_unit_test(TherionRunnerConfigResolverTest
     tests/TherionRunnerConfigResolverTest.cpp)
@@ -1302,6 +1318,7 @@ set(THERION_UNIT_TEST_TARGETS
     CommandCatalogStoreTest
     CommandOptionParserTest
     TherionDocumentEditorTest
+    TherionSourceValidatorTest
     TherionDocumentParserTest
     TherionSourceTextTest
     TherionTokenRulesTest
@@ -1332,6 +1349,7 @@ set(THERION_UNIT_TEST_TARGETS
     MainWindowHelpDocumentTest
     ProjectStructureScannerTest
     ProjectSearchScannerTest
+    ProjectValidationScannerTest
     SessionStoreTest
     MainWindowSessionDocumentControllerTest
     MainWindowSessionControllerTest

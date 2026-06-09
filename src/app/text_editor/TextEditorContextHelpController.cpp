@@ -14,11 +14,13 @@
 #include <algorithm>
 #include <utility>
 #include <QJsonObject>
+#include <QPoint>
 #include <QRect>
 #include <QPlainTextEdit>
 #include <QSplitter>
 #include <QTextBrowser>
 #include <QTextBlock>
+#include <QTextCursor>
 #include <QToolTip>
 #include <QVBoxLayout>
 
@@ -121,6 +123,7 @@ void TextEditorContextHelpController::buildHelpPanel()
 
     helpInspector_ = new ContextHelpInspector(contextTab, tr("Context Help"));
     setHelpBrowser(helpInspector_->browser());
+    helpBrowser()->setObjectName(QStringLiteral("rawContextHelpBrowser"));
     helpBrowser()->setHtml(
         tr("<p>Select a Therion command or item to see contextual help.</p>"));
 
@@ -240,7 +243,6 @@ void TextEditorContextHelpController::updateValidationTooltipForCursor()
         return;
     }
 
-    editor()->setToolTip(tooltipText);
     if (tooltipKey == (*context_.lastValidationTooltipKey)) {
         return;
     }
@@ -251,6 +253,25 @@ void TextEditorContextHelpController::updateValidationTooltipForCursor()
                        editor(),
                        QRect(),
                        2200);
+}
+
+bool TextEditorContextHelpController::showValidationTooltipForPosition(const QPoint &viewportPosition,
+                                                                       const QPoint &globalPosition)
+{
+    if (editor() == nullptr) {
+        return false;
+    }
+
+    QString tooltipText;
+    const QTextCursor hoverCursor = editor()->cursorForPosition(viewportPosition);
+    const QString validationHtml = validationHelpHtmlForTextCursor(hoverCursor, &tooltipText);
+    if (validationHtml.isEmpty() || tooltipText.trimmed().isEmpty()) {
+        QToolTip::hideText();
+        return false;
+    }
+
+    QToolTip::showText(globalPosition, tooltipText, editor()->viewport(), QRect(), 3200);
+    return true;
 }
 
 QStringList TextEditorContextHelpController::helpCandidateTokens() const
@@ -324,11 +345,20 @@ QString TextEditorContextHelpController::currentHelpTokenForCursor() const
 
 QString TextEditorContextHelpController::validationHelpHtmlForCursor(QString *tooltipText, QString *tooltipKey) const
 {
+    if (editor() == nullptr) {
+        return QString();
+    }
+    return validationHelpHtmlForTextCursor(editor()->textCursor(), tooltipText, tooltipKey);
+}
+
+QString TextEditorContextHelpController::validationHelpHtmlForTextCursor(const QTextCursor &cursor,
+                                                                         QString *tooltipText,
+                                                                         QString *tooltipKey) const
+{
     if (editor() == nullptr || context_.metadata == nullptr || !context_.normalizedDirectiveToken) {
         return QString();
     }
 
-    const QTextCursor cursor = editor()->textCursor();
     const QTextBlock block = cursor.block();
     if (!block.isValid()) {
         return QString();

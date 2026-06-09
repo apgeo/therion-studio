@@ -24,6 +24,7 @@
 #include "../../../core/CommandCatalogStore.h"
 #include "../../../core/TherionDocumentEditor.h"
 #include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceValidator.h"
 
 class QLabel;
 class QFrame;
@@ -142,6 +143,8 @@ public:
     bool canRedo() const;
     InteractiveDrawMode interactiveDrawMode() const;
     bool canCompleteDraftAction() const;
+    TherionSourceValidationResult validateDocument() const;
+    bool applyValidationFixes(const QVector<TherionSourceDiagnosticFix> &fixes);
     void triggerUndo();
     void triggerRedo();
     void triggerZoomIn();

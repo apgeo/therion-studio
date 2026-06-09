@@ -380,11 +380,13 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
     , projectModel_(new QFileSystemModel(this))
     , structureModel_(new QStandardItemModel(this))
     , searchResultsModel_(new QStandardItemModel(this))
+    , validationResultsModel_(new QStandardItemModel(this))
     , mapObjectsModel_(new QStandardItemModel(this))
     , documentFileWatcher_(new QFileSystemWatcher(this))
     , sessionStore_(&sessionStore)
     , commandCatalogStore_(std::move(commandCatalogStore))
     , projectSearchScanner_(new TherionStudio::ProjectSearchScanner(this))
+    , projectValidationScanner_(new TherionStudio::ProjectValidationScanner(this))
     , structureSidebarScanner_(new TherionStudio::ProjectStructureScanner(this))
 {
     setWindowTitle(tr("Therion Studio"));
@@ -392,6 +394,8 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
 
     connect(projectSearchScanner_, &TherionStudio::ProjectSearchScanner::searchFinished,
             this, &MainWindow::handleProjectSearchFinished);
+    connect(projectValidationScanner_, &TherionStudio::ProjectValidationScanner::validationFinished,
+            this, &MainWindow::handleProjectValidationFinished);
     connect(structureSidebarScanner_, &TherionStudio::ProjectStructureScanner::scanFinished,
             this, &MainWindow::handleStructureSidebarScanFinished);
     connect(documentFileWatcher_, &QFileSystemWatcher::fileChanged,

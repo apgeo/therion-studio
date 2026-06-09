@@ -13,11 +13,13 @@
 
 #include "MainWindowTherionConsoleController.h"
 #include "ProjectSearchScanner.h"
+#include "ProjectValidationScanner.h"
 #include "ProjectStructureScanner.h"
 #include "../core/CommandCatalogStore.h"
 #include "../core/ISessionStore.h"
 #include "../core/ProjectStructureIndex.h"
 #include "../core/QtFileSystem.h"
+#include "../core/TherionSourceValidator.h"
 
 class QLabel;
 class QAction;
@@ -115,13 +117,15 @@ private:
         FileBrowser = 0,
         StructureBrowser = 1,
         Search = 2,
-        Console = 3
+        Validation = 3,
+        Console = 4
     };
 
     void buildUi();
     void buildMenus();
     void buildProjectBrowser();
     void buildSearchSidebar();
+    void buildValidationSidebar();
     void buildStructureSidebar();
     void buildMapBackgroundPanel(QWidget *parent, QVBoxLayout *parentLayout);
     void buildConsole();
@@ -150,7 +154,15 @@ private:
     void showStructureSidebarMessage(const QString &message);
     void requestProjectSearch();
     void handleProjectSearchFinished(const TherionStudio::ProjectSearchScanner::Result &result);
+    void requestProjectValidation();
+    void handleProjectValidationFinished(const TherionStudio::ProjectValidationScanner::Result &result);
     void openProjectSearchResult(const QModelIndex &index);
+    void handleValidationSelectionChanged(const QModelIndex &current, const QModelIndex &previous);
+    void openValidationResult(const QModelIndex &index);
+    void applySelectedValidationFix();
+    void applyAllValidationFixes();
+    bool applyValidationFixesToValidatedDocument(const QString &filePath,
+                                                 const QVector<TherionStudio::TherionSourceDiagnosticFix> &fixes);
     bool activateStructureSidebarAction(const QString &action);
     void updateStructureSidebarSourceLocations(const TherionStudio::ProjectIndexSnapshot &projectIndex);
     void rebuildMapObjectsTree();
@@ -246,6 +258,7 @@ private:
     void setCurrentDetachedMapContextHelpCollapsed(bool collapsed);
     void triggerUndoForActiveDocument();
     void triggerRedoForActiveDocument();
+    void triggerValidateDocumentForActiveDocument();
     void triggerRawModeForActiveDocument();
     void triggerSecondaryEditorModeForActiveDocument();
     void triggerCompileCurrentConfigForActiveDocument();
@@ -273,6 +286,7 @@ private:
     QTreeView *projectTree_ = nullptr;
     QTreeView *structureTree_ = nullptr;
     QTreeView *searchResultsTree_ = nullptr;
+    QTreeView *validationResultsTree_ = nullptr;
     QTreeView *mapObjectsTree_ = nullptr;
     QFrame *mapBackgroundPanel_ = nullptr;
     QListWidget *mapBackgroundLayersList_ = nullptr;
@@ -297,6 +311,7 @@ private:
     QToolButton *sidebarFilesButton_ = nullptr;
     QToolButton *sidebarStructureButton_ = nullptr;
     QToolButton *sidebarSearchButton_ = nullptr;
+    QToolButton *sidebarValidationButton_ = nullptr;
     QToolButton *sidebarConsoleButton_ = nullptr;
     QToolButton *sidebarCompileButton_ = nullptr;
     QStackedWidget *sidebarPages_ = nullptr;
@@ -328,6 +343,14 @@ private:
     QCheckBox *projectSearchWholeWordCheck_ = nullptr;
     QCheckBox *projectSearchMatchCaseCheck_ = nullptr;
     QLabel *projectSearchStatusLabel_ = nullptr;
+    QLabel *validationStatusLabel_ = nullptr;
+    QLabel *validationDetailTitleLabel_ = nullptr;
+    QLabel *validationDetailMessageLabel_ = nullptr;
+    QPlainTextEdit *validationCurrentSourceEdit_ = nullptr;
+    QPlainTextEdit *validationSuggestedSourceEdit_ = nullptr;
+    QPushButton *validationScanProjectButton_ = nullptr;
+    QPushButton *validationApplyFixButton_ = nullptr;
+    QPushButton *validationApplyAllFixesButton_ = nullptr;
     QPushButton *therionBrowseWorkingDirectoryButton_ = nullptr;
     QLineEdit *therionArgumentsEdit_ = nullptr;
     QComboBox *therionRunTargetCombo_ = nullptr;
@@ -359,6 +382,7 @@ private:
     QToolButton *workspaceOpenProjectButton_ = nullptr;
     QToolButton *workspaceNewDocumentButton_ = nullptr;
     QToolButton *workspaceCloseProjectButton_ = nullptr;
+    QToolButton *workspaceValidateDocumentButton_ = nullptr;
     QToolButton *workspaceSaveButton_ = nullptr;
     QToolButton *workspaceUndoButton_ = nullptr;
     QToolButton *workspaceRedoButton_ = nullptr;
@@ -376,6 +400,8 @@ private:
     QToolButton *workspaceAreaButton_ = nullptr;
     QToolButton *workspaceSmartAreaButton_ = nullptr;
     QFrame *workspaceProjectSeparator_ = nullptr;
+    QFrame *workspaceValidationSeparator_ = nullptr;
+    QFrame *workspaceEditSeparator_ = nullptr;
     QFrame *workspaceHistorySeparator_ = nullptr;
     QFrame *workspaceCompileSeparator_ = nullptr;
     QFrame *workspaceZoomSeparator_ = nullptr;
@@ -388,7 +414,12 @@ private:
     QFileSystemModel *projectModel_ = nullptr;
     QStandardItemModel *structureModel_ = nullptr;
     QStandardItemModel *searchResultsModel_ = nullptr;
+    QStandardItemModel *validationResultsModel_ = nullptr;
     QStandardItemModel *mapObjectsModel_ = nullptr;
+    QVector<TherionStudio::TherionSourceDiagnostic> validationDiagnostics_;
+    QVector<QString> validationDiagnosticFilePaths_;
+    QString validationDocumentPath_;
+    bool validationProjectMode_ = false;
     QString projectRootPath_;
     QString projectStructureSummary_;
     QString lastAppliedStructureSidebarSignature_;
@@ -417,5 +448,6 @@ private:
     TherionStudio::ISessionStore *sessionStore_ = nullptr;
     TherionStudio::CommandCatalogStore commandCatalogStore_;
     TherionStudio::ProjectSearchScanner *projectSearchScanner_ = nullptr;
+    TherionStudio::ProjectValidationScanner *projectValidationScanner_ = nullptr;
     TherionStudio::ProjectStructureScanner *structureSidebarScanner_ = nullptr;
 };

@@ -96,7 +96,12 @@ void MainWindow::initializeWorkspaceModeSwitcher()
         newDocumentMenu->popup(button->mapToGlobal(QPoint(0, button->height())));
     });
     workspaceProjectSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
+    workspaceValidateDocumentButton_ =
+        createWorkspaceIconButton(workspaceModeSwitcher_, tr("Validate Document"), QStringLiteral("spell-check"));
+    workspaceValidateDocumentButton_->setObjectName(QStringLiteral("workspaceValidateDocumentButton"));
     workspaceSaveButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Save"), QStringLiteral("save"));
+    workspaceValidationSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
+    workspaceEditSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
     workspaceUndoButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Undo"), QStringLiteral("undo-2"));
     workspaceRedoButton_ = createWorkspaceIconButton(workspaceModeSwitcher_, tr("Redo"), QStringLiteral("redo-2"));
     workspaceCompileCurrentConfigButton_ =
@@ -106,7 +111,9 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     hostLayout->addWidget(workspaceProjectSeparator_);
     hostLayout->addWidget(workspaceNewDocumentButton_);
     hostLayout->addWidget(workspaceSaveButton_);
-    hostLayout->addWidget(createWorkspaceToolbarSeparator(workspaceModeSwitcher_));
+    hostLayout->addWidget(workspaceValidationSeparator_);
+    hostLayout->addWidget(workspaceValidateDocumentButton_);
+    hostLayout->addWidget(workspaceEditSeparator_);
     hostLayout->addWidget(workspaceUndoButton_);
     hostLayout->addWidget(workspaceRedoButton_);
     workspaceCompileSeparator_ = createWorkspaceToolbarSeparator(workspaceModeSwitcher_);
@@ -204,6 +211,7 @@ void MainWindow::initializeWorkspaceModeSwitcher()
         }
     });
     connect(workspaceSaveButton_, &QToolButton::clicked, this, &MainWindow::saveActiveDocument);
+    connect(workspaceValidateDocumentButton_, &QToolButton::clicked, this, &MainWindow::triggerValidateDocumentForActiveDocument);
     connect(workspaceUndoButton_, &QToolButton::clicked, this, &MainWindow::triggerUndoForActiveDocument);
     connect(workspaceRedoButton_, &QToolButton::clicked, this, &MainWindow::triggerRedoForActiveDocument);
     connect(workspaceCompileCurrentConfigButton_, &QToolButton::clicked, this, &MainWindow::triggerCompileCurrentConfigForActiveDocument);
@@ -265,6 +273,8 @@ void MainWindow::initializeWorkspaceModeSwitcher()
     workspaceTextModeSwitcher_->setVisible(false);
     workspaceZoomGroup_->setVisible(false);
     workspaceMapToolsGroup_->setVisible(false);
+    workspaceValidationSeparator_->setVisible(false);
+    workspaceEditSeparator_->setVisible(false);
     workspaceHistorySeparator_->setVisible(false);
     workspaceCompileSeparator_->setVisible(false);
     workspaceCompileCurrentConfigButton_->setVisible(false);
@@ -284,9 +294,12 @@ void MainWindow::refreshWorkspaceModeSwitcher()
         || workspaceNewDocumentButton_ == nullptr
         || workspaceCloseProjectButton_ == nullptr
         || workspaceProjectSeparator_ == nullptr
+        || workspaceValidationSeparator_ == nullptr
+        || workspaceEditSeparator_ == nullptr
         || workspaceVisualModeButton_ == nullptr
         || workspaceRawModeButton_ == nullptr
         || workspaceMapPaneWindowButton_ == nullptr
+        || workspaceValidateDocumentButton_ == nullptr
         || workspaceSaveButton_ == nullptr
         || workspaceUndoButton_ == nullptr
         || workspaceRedoButton_ == nullptr
@@ -319,6 +332,7 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(tabWidget);
     const bool showMapModes = mapTab != nullptr;
     const bool showTextModes = textTab != nullptr;
+    const bool showDocumentValidation = textTab != nullptr || mapTab != nullptr;
     const bool showCompileCurrentConfig = showTextModes && !currentDocumentTherionConfigPath().isEmpty();
     const bool mapPaneDetached = mapTab != nullptr && mapTab->isMapPaneDetached();
     const bool showZoomTools = showMapModes && !mapPaneDetached;
@@ -341,10 +355,14 @@ void MainWindow::refreshWorkspaceModeSwitcher()
     workspaceNewDocumentButton_->setVisible(true);
     workspaceCloseProjectButton_->setVisible(true);
     workspaceProjectSeparator_->setVisible(true);
+    workspaceValidationSeparator_->setVisible(showDocumentValidation);
+    workspaceEditSeparator_->setVisible(tabWidget != nullptr || showDocumentValidation);
     workspaceHistorySeparator_->setVisible(showZoomTools);
     workspaceZoomGroup_->setVisible(showZoomTools);
     workspaceZoomSeparator_->setVisible(showZoomTools);
     workspaceMapToolsGroup_->setVisible(showMapTools);
+    workspaceValidateDocumentButton_->setVisible(showDocumentValidation);
+    workspaceValidateDocumentButton_->setEnabled(showDocumentValidation);
     workspaceSaveButton_->setEnabled(tabWidget != nullptr);
     const bool canUndo = documentCanUndoForWidget(tabWidget);
     const bool canRedo = documentCanRedoForWidget(tabWidget);

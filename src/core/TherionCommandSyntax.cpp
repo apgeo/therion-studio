@@ -69,6 +69,31 @@ QStringList extractOptionKeys(const QString &optionKeyField)
     return keys;
 }
 
+QStringList extractOptionKeysFromSignatureAliases(const QString &signature)
+{
+    QStringList keys;
+    const QStringList signatureTokens = signature.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+    const QString aliasPart = signatureTokens.isEmpty() ? QString() : signatureTokens.constFirst().trimmed();
+    if (!aliasPart.contains(QLatin1Char('/'))) {
+        return keys;
+    }
+
+    const QStringList aliases = aliasPart.split(QLatin1Char('/'), Qt::SkipEmptyParts);
+    for (QString alias : aliases) {
+        alias = alias.trimmed();
+        if (alias.isEmpty() || alias.contains(QLatin1Char('<')) || alias.contains(QLatin1Char('>'))) {
+            continue;
+        }
+        if (!alias.startsWith(QLatin1Char('-'))) {
+            alias.prepend(QLatin1Char('-'));
+        }
+        if (looksLikeOptionToken(alias)) {
+            appendUniqueCaseInsensitive(keys, alias.toLower());
+        }
+    }
+    return keys;
+}
+
 bool looksLikeOptionToken(const QString &token)
 {
     static const QRegularExpression keyPattern(QStringLiteral("^-[A-Za-z][A-Za-z0-9-]*$"));

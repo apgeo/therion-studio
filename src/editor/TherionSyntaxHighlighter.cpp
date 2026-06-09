@@ -19,6 +19,8 @@
 
 namespace TherionStudio
 {
+QStringList extractOptionKeysFromSignatureAliases(const QString &signature);
+
 namespace
 {
 QTextCharFormat makeFormat(const QColor &foreground, bool bold = false, bool italic = false)
@@ -54,6 +56,15 @@ QSet<QString> extractOptionKeys(const QString &optionKeyField)
             continue;
         }
         keys.insert(segment);
+    }
+    return keys;
+}
+
+QSet<QString> extractOptionKeys(const QString &optionKeyField, const QString &signature)
+{
+    QSet<QString> keys = extractOptionKeys(optionKeyField);
+    for (const QString &aliasKey : extractOptionKeysFromSignatureAliases(signature)) {
+        keys.insert(aliasKey.trimmed().toLower());
     }
     return keys;
 }
@@ -452,7 +463,8 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
         for (const QJsonValue &optionValue : optionsArray) {
             const QJsonObject optionObject = optionValue.toObject();
             const QString optionKeyField = optionObject.value(QStringLiteral("option_key")).toString().trimmed();
-            const QSet<QString> optionKeys = extractOptionKeys(optionKeyField);
+            const QString signature = optionObject.value(QStringLiteral("signature")).toString().trimmed();
+            const QSet<QString> optionKeys = extractOptionKeys(optionKeyField, signature);
             if (optionKeys.isEmpty()) {
                 continue;
             }

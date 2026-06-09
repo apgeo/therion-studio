@@ -8,8 +8,10 @@
 #include <QString>
 #include <QStringList>
 
+class QPoint;
 class QPlainTextEdit;
 class QSplitter;
+class QTextCursor;
 class QTextBrowser;
 class QWidget;
 
@@ -53,6 +55,7 @@ public:
     void setHelpCollapsed(bool collapsed);
     void updateContextHelp();
     void updateValidationTooltipForCursor();
+    bool showValidationTooltipForPosition(const QPoint &viewportPosition, const QPoint &globalPosition);
 
     QStringList helpCandidateTokens() const;
     QString currentHelpTokenForCursor() const;
@@ -65,6 +68,9 @@ private:
     QSplitter *editorHelpSplitter() const;
     QWidget *helpPanel() const;
     QTextBrowser *helpBrowser() const;
+    QString validationHelpHtmlForTextCursor(const QTextCursor &cursor,
+                                            QString *tooltipText = nullptr,
+                                            QString *tooltipKey = nullptr) const;
     void setHelpPanel(QWidget *helpPanel);
     void setHelpBrowser(QTextBrowser *helpBrowser);
     void setHelpTitle(const QString &title);

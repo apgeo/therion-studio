@@ -249,7 +249,7 @@ int main(int argc, char *argv[])
     if (!expect(completer != nullptr, "Failed to find completion widget.")) {
         return 1;
     }
-    auto *helpBrowser = tab.findChild<QTextBrowser *>();
+    auto *helpBrowser = tab.findChild<QTextBrowser *>(QStringLiteral("rawContextHelpBrowser"));
     if (!expect(helpBrowser != nullptr, "Failed to find contextual help widget.")) {
         return 1;
     }
@@ -430,7 +430,8 @@ int main(int argc, char *argv[])
 
         const QString helpText = helpBrowser->toPlainText();
         const QString tooltipText = editor->toolTip();
-        if (!expect(helpText.contains(QStringLiteral("Validation"), Qt::CaseInsensitive)
+        if (!expect((helpText.contains(QStringLiteral("not allowed"), Qt::CaseInsensitive)
+                         && helpText.contains(QStringLiteral("Allowed Values"), Qt::CaseInsensitive))
                         || tooltipText.contains(QStringLiteral("Allowed:"), Qt::CaseInsensitive),
                     "Validation guidance should surface in either contextual help or inline tooltip for invalid token.")) {
             return 1;
@@ -445,11 +446,15 @@ int main(int argc, char *argv[])
                     "Allowed enum values should surface in either contextual help or inline tooltip for invalid option value.")) {
             return 1;
         }
-        if (!expect(tooltipText.contains(QStringLiteral("Allowed:"), Qt::CaseInsensitive)
-                    && tooltipText.contains(QStringLiteral("on"), Qt::CaseInsensitive)
-                    && tooltipText.contains(QStringLiteral("off"), Qt::CaseInsensitive)
-                    && tooltipText.contains(QStringLiteral("auto"), Qt::CaseInsensitive),
-                    "Inline validation tooltip should include allowed values for the invalid token.")) {
+    }
+
+    {
+        editor->setPlainText(QStringLiteral("export map -o map.pdf -layout moj\n"));
+        pumpEvents();
+
+        const QTextBlock firstLine = editor->document()->findBlockByLineNumber(0);
+        if (!expect(!tokenHasWaveUnderline(firstLine, QStringLiteral("-o")),
+                    "Known option aliases such as export -o should not be marked with invalid highlighting.")) {
             return 1;
         }
     }

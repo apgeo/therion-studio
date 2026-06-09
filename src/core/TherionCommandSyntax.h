@@ -12,6 +12,7 @@ QString commandOptionHelpKey(const QString &commandName, const QString &optionTo
 QString commandArgumentValueKey(const QString &commandName, int argumentIndex);
 
 QStringList extractOptionKeys(const QString &optionKeyField);
+QStringList extractOptionKeysFromSignatureAliases(const QString &signature);
 bool looksLikeOptionToken(const QString &token);
 
 QString normalizeSymbolTypeToken(const QString &token);

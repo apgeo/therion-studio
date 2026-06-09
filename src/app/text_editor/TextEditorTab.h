@@ -3,6 +3,7 @@
 #include "TextEditorCommandMetadata.h"
 #include "../../core/CommandCatalogStore.h"
 #include "../../core/TherionDocumentEditor.h"
+#include "../../core/TherionSourceValidator.h"
 
 #include <QString>
 #include <QStringList>
@@ -204,6 +205,8 @@ public:
     QString fileEncodingLabel() const;
     const TextEditorCommandMetadata &commandMetadata() const { return commandMetadata_; }
     void triggerConvertToUtf8();
+    TherionSourceValidationResult validateDocument() const;
+    bool applyValidationFixes(const QVector<TherionSourceDiagnosticFix> &fixes);
     bool canUndo() const;
     bool canRedo() const;
     void triggerUndo();

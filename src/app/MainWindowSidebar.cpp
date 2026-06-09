@@ -932,6 +932,7 @@ void MainWindow::buildStructureSidebar()
     const QString filesIconName = QStringLiteral("folder-tree");
     const QString structureIconName = QStringLiteral("network");
     const QString searchIconName = QStringLiteral("search");
+    const QString validationIconName = QStringLiteral("spell-check");
     const QString consoleIconName = QStringLiteral("cog");
     const QSize activityIconSize(20, 20);
     const QSize activityButtonSize(34, 34);
@@ -995,6 +996,13 @@ void MainWindow::buildStructureSidebar()
     });
     activityLayout->addWidget(sidebarSearchButton_);
 
+    sidebarValidationButton_ = new QToolButton(activityBar);
+    configureActivityButton(sidebarValidationButton_, validationIconName, tr("Validation"));
+    connect(sidebarValidationButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
+        handleActivityButtonClick(SidebarPane::Validation);
+    });
+    activityLayout->addWidget(sidebarValidationButton_);
+
     sidebarConsoleButton_ = new QToolButton(activityBar);
     configureActivityButton(sidebarConsoleButton_, consoleIconName, tr("Compiler"));
     connect(sidebarConsoleButton_, &QToolButton::clicked, this, [handleActivityButtonClick]() {
@@ -1020,11 +1028,13 @@ void MainWindow::buildStructureSidebar()
                                          filesButton = sidebarFilesButton_,
                                          structureButton = sidebarStructureButton_,
                                          searchButton = sidebarSearchButton_,
+                                         validationButton = sidebarValidationButton_,
                                          compilerButton = sidebarConsoleButton_,
                                          compileButton = sidebarCompileButton_,
                                          filesIconName,
                                          structureIconName,
                                          searchIconName,
+                                         validationIconName,
                                          consoleIconName,
                                          activityIconSize]() {
         if (activityBar == nullptr) {
@@ -1046,6 +1056,9 @@ void MainWindow::buildStructureSidebar()
         }
         if (searchButton != nullptr) {
             searchButton->setIcon(TherionStudio::themedLucideIcon(searchIconName, palette, extent, devicePixelRatio));
+        }
+        if (validationButton != nullptr) {
+            validationButton->setIcon(TherionStudio::themedLucideIcon(validationIconName, palette, extent, devicePixelRatio));
         }
         if (compilerButton != nullptr) {
             compilerButton->setIcon(TherionStudio::themedLucideIcon(consoleIconName, palette, extent, devicePixelRatio));
@@ -1114,6 +1127,7 @@ void MainWindow::buildStructureSidebar()
     sidebarPages_->addWidget(structurePage);
 
     buildSearchSidebar();
+    buildValidationSidebar();
 
     consoleSidebarPage_ = new QWidget(sidebarPages_);
     consoleSidebarPageLayout_ = new QVBoxLayout(consoleSidebarPage_);
@@ -1162,6 +1176,9 @@ void MainWindow::setSidebarPane(SidebarPane pane)
     }
     if (sidebarSearchButton_ != nullptr) {
         sidebarSearchButton_->setChecked(pane == SidebarPane::Search);
+    }
+    if (sidebarValidationButton_ != nullptr) {
+        sidebarValidationButton_->setChecked(pane == SidebarPane::Validation);
     }
     if (sidebarConsoleButton_ != nullptr) {
         sidebarConsoleButton_->setChecked(pane == SidebarPane::Console);

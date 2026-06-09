@@ -1,6 +1,7 @@
 #include "MainWindowHelpDialog.h"
 
 #include "MainWindowHelpDocument.h"
+#include "../platform/ApplicationLanguageOverride.h"
 
 #include <QCoreApplication>
 #include <QDesktopServices>
@@ -17,6 +18,7 @@
 #include <QPalette>
 #include <QPushButton>
 #include <QShortcut>
+#include <QSettings>
 #include <QSplitter>
 #include <QSysInfo>
 #include <QTextBrowser>
@@ -39,6 +41,8 @@ namespace TherionStudio
 {
 namespace
 {
+constexpr auto kApplicationLanguageKey = "settings/applicationLanguage";
+
 QString buildString(const char *value)
 {
     return QString::fromUtf8(value);
@@ -85,6 +89,22 @@ void appendUnique(QStringList &values, const QString &value)
 QStringList userManualLocaleTags()
 {
     QStringList tags;
+    QString applicationLanguage = TherionStudio::Platform::applicationLanguageOverride();
+    if (applicationLanguage == QStringLiteral("system")) {
+        applicationLanguage = QSettings()
+            .value(QString::fromLatin1(kApplicationLanguageKey), QStringLiteral("system"))
+            .toString();
+    }
+    applicationLanguage = TherionStudio::Platform::normalizeApplicationLanguageSetting(applicationLanguage);
+    if (applicationLanguage == QStringLiteral("en")) {
+        appendUnique(tags, QStringLiteral("en"));
+        return tags;
+    }
+    if (applicationLanguage == QStringLiteral("cs") || applicationLanguage == QStringLiteral("sk")) {
+        appendUnique(tags, applicationLanguage);
+        return tags;
+    }
+
     const QLocale locale;
     for (const QString &uiLanguage : locale.uiLanguages()) {
         const QString normalized = uiLanguage.trimmed();

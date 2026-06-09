@@ -380,7 +380,7 @@ Používejte `Command` na macOS a `Ctrl` na Windows/Linux, pokud menu platformy 
 
 ## 10. Nápověda a O aplikaci
 
-- `Nápověda -> Uživatelská příručka` otevře lokalizovaný manuál v aplikaci. Prohlížeč manuálu podporuje odkazy z obsahu v tomto dokumentu.
+- `Nápověda -> Uživatelská příručka` otevře lokalizovaný manuál v aplikaci. Prohlížeč manuálu nechává vlevo viditelný obsah, podporuje odkazy z obsahu v tomto dokumentu a obsahuje hledání v manuálu s navigací na předchozí/další shodu. `Command/Ctrl+F` fokusuje hledání v manuálu.
 - `Nápověda -> O aplikaci Therion Studio` zobrazí verzi, build label, verzi Qt, platformu, GitHub repozitář, licenci, maintainera a third-party notices. Na macOS je O aplikaci také v nativním aplikačním menu.
 
 ## 11. Řešení problémů

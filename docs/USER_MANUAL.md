@@ -387,7 +387,7 @@ Use `Command` on macOS and `Ctrl` on Windows/Linux unless the platform menu show
 
 ## 10. Help And About
 
-- `Help -> User Manual` opens the localized manual in the application. The manual viewer supports the table-of-contents links in this document.
+- `Help -> User Manual` opens the localized manual in the application. The manual viewer keeps a table of contents visible on the left, supports the table-of-contents links in this document, and includes in-manual search with previous/next navigation. `Command/Ctrl+F` focuses manual search.
 - `Help -> About Therion Studio` shows version, build label, Qt version, platform, GitHub repository, license, maintainer, and third-party notices. On macOS, About is also available from the native application menu.
 
 ## 11. Troubleshooting

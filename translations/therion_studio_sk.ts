@@ -1400,6 +1400,31 @@ Súbor používateľskej príručky nebol nájdený.
 Očakávané súbory sú `docs/USER_MANUAL.&lt;language&gt;.md` alebo `docs/USER_MANUAL.md`.
 </translation>
     </message>
+    <message>
+        <location filename="../src/app/MainWindowHelpDialog.cpp" line="304"/>
+        <source>Wrapped</source>
+        <translation>Pokračované od začiatku/konca</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindowHelpDialog.cpp" line="309"/>
+        <source>No matches</source>
+        <translation>Žiadne zhody</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindowHelpDialog.cpp" line="418"/>
+        <source>Search manual</source>
+        <translation>Hľadať v manuáli</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindowHelpDialog.cpp" line="419"/>
+        <source>Previous</source>
+        <translation>Predchádzajúca</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindowHelpDialog.cpp" line="420"/>
+        <source>Next</source>
+        <translation>Ďalšia</translation>
+    </message>
 </context>
 <context>
     <name>QObject</name>

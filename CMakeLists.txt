@@ -242,6 +242,8 @@ set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindowTherionConsoleWiring.h
     src/app/MainWindowDocumentHelpers.cpp
     src/app/MainWindowDocumentHelpers.h
+    src/app/MainWindowHelpDocument.cpp
+    src/app/MainWindowHelpDocument.h
     src/app/MainWindowHelpDialog.cpp
     src/app/MainWindowHelpDialog.h
     src/app/MainWindowMapBackground.cpp
@@ -1233,6 +1235,13 @@ qt_add_executable(TextEditorTabInteractionControllerTest
 
 target_link_libraries(TextEditorTabInteractionControllerTest PRIVATE therion_core Qt6::Core Qt6::Widgets)
 
+qt_add_executable(MainWindowHelpDocumentTest
+    tests/MainWindowHelpDocumentTest.cpp
+    src/app/MainWindowHelpDocument.cpp
+    src/app/MainWindowHelpDocument.h)
+
+target_link_libraries(MainWindowHelpDocumentTest PRIVATE Qt6::Core Qt6::Gui)
+
 set(THERION_MAP_EDITOR_UI_TEST_SOURCES
     ${THERION_MAP_EDITOR_SOURCES})
 
@@ -1315,6 +1324,7 @@ set(THERION_UNIT_TEST_TARGETS
     TextEditorDocumentPersistenceStateServiceTest
     TextEditorDocumentWorkflowControllerTest
     TextEditorTabInteractionControllerTest
+    MainWindowHelpDocumentTest
     ProjectStructureScannerTest
     ProjectSearchScannerTest
     SessionStoreTest

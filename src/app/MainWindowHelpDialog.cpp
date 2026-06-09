@@ -1,5 +1,7 @@
 #include "MainWindowHelpDialog.h"
 
+#include "MainWindowHelpDocument.h"
+
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QDialog>
@@ -7,14 +9,20 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QHash>
+#include <QHBoxLayout>
+#include <QKeySequence>
 #include <QLabel>
+#include <QLineEdit>
 #include <QLocale>
 #include <QPalette>
-#include <QRegularExpression>
+#include <QPushButton>
+#include <QShortcut>
+#include <QSplitter>
 #include <QSysInfo>
 #include <QTextBrowser>
+#include <QTextCursor>
 #include <QTextDocument>
+#include <QTreeWidget>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <QtGlobal>
@@ -175,107 +183,6 @@ QString loadUtf8TextFile(const QString &filePath)
     return QString::fromUtf8(file.readAll());
 }
 
-QString plainHeadingText(QString headingText)
-{
-    headingText = headingText.trimmed();
-    headingText.replace(QRegularExpression(QStringLiteral("`([^`]*)`")), QStringLiteral("\\1"));
-    headingText.replace(QRegularExpression(QStringLiteral("\\[([^\\]]+)\\]\\([^\\)]*\\)")),
-                        QStringLiteral("\\1"));
-    headingText.remove(QRegularExpression(QStringLiteral("<[^>]*>")));
-    headingText.remove(QRegularExpression(QStringLiteral("[*_~]")));
-    return headingText.simplified();
-}
-
-QString anchorSlugForHeading(const QString &headingText)
-{
-    const QString normalized = plainHeadingText(headingText).toLower();
-    QString slug;
-    bool pendingDash = false;
-    for (const QChar character : normalized) {
-        if (character.isLetterOrNumber()) {
-            if (pendingDash && !slug.isEmpty()) {
-                slug.append(QLatin1Char('-'));
-            }
-            slug.append(character);
-            pendingDash = false;
-        } else if (character.isSpace()
-                   || character == QLatin1Char('-')
-                   || character == QLatin1Char('_')
-                   || character == QLatin1Char('/')) {
-            pendingDash = true;
-        }
-    }
-
-    return !slug.isEmpty() ? slug : QStringLiteral("section");
-}
-
-QStringList markdownHeadingAnchorSlugs(const QString &markdown)
-{
-    static const QRegularExpression headingExpression(QStringLiteral("^(#{1,6})\\s+(.+?)\\s*#*\\s*$"));
-
-    const QStringList lines = markdown.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
-    QStringList anchors;
-    QHash<QString, int> anchorCounts;
-    bool inCodeFence = false;
-    QString fenceMarker;
-
-    anchors.reserve(lines.size());
-    for (const QString &line : lines) {
-        const QString trimmed = line.trimmed();
-        if (trimmed.startsWith(QStringLiteral("```")) || trimmed.startsWith(QStringLiteral("~~~"))) {
-            const QString marker = trimmed.left(3);
-            if (!inCodeFence) {
-                inCodeFence = true;
-                fenceMarker = marker;
-            } else if (marker == fenceMarker) {
-                inCodeFence = false;
-                fenceMarker.clear();
-            }
-            continue;
-        }
-
-        if (!inCodeFence) {
-            const QRegularExpressionMatch match = headingExpression.match(line);
-            if (match.hasMatch()) {
-                const QString baseSlug = anchorSlugForHeading(match.captured(2));
-                const int occurrence = anchorCounts.value(baseSlug) + 1;
-                anchorCounts.insert(baseSlug, occurrence);
-                const QString slug = occurrence == 1
-                                         ? baseSlug
-                                         : QStringLiteral("%1-%2").arg(baseSlug).arg(occurrence);
-                anchors.append(slug);
-            }
-        }
-    }
-
-    return anchors;
-}
-
-QString markdownToHtmlWithHeadingAnchors(const QString &markdown)
-{
-    static const QRegularExpression headingTagExpression(QStringLiteral("<h[1-6]\\b[^>]*>"),
-                                                         QRegularExpression::CaseInsensitiveOption);
-
-    QTextDocument document;
-    document.setMarkdown(markdown, QTextDocument::MarkdownDialectGitHub);
-    QString html = document.toHtml();
-
-    const QStringList anchors = markdownHeadingAnchorSlugs(markdown);
-    QRegularExpressionMatchIterator matches = headingTagExpression.globalMatch(html);
-    int insertedLength = 0;
-    int anchorIndex = 0;
-    while (matches.hasNext() && anchorIndex < anchors.size()) {
-        const QRegularExpressionMatch match = matches.next();
-        const QString anchorHtml = QStringLiteral("<a name=\"%1\" id=\"%1\"></a>")
-                                       .arg(anchors.at(anchorIndex).toHtmlEscaped());
-        html.insert(match.capturedEnd() + insertedLength, anchorHtml);
-        insertedLength += anchorHtml.size();
-        ++anchorIndex;
-    }
-
-    return html;
-}
-
 QString markdownStyleSheet(const QPalette &palette)
 {
     const QString textColor = palette.color(QPalette::Text).name(QColor::HexRgb);
@@ -310,6 +217,126 @@ void openHelpLink(QTextBrowser *browser, const QUrl &url)
     }
 
     QDesktopServices::openUrl(url);
+}
+
+bool shouldShowSectionInToc(const MainWindowHelpSection &section)
+{
+    return section.level > 1
+           && section.anchor != QStringLiteral("contents")
+           && section.anchor != QStringLiteral("obsah");
+}
+
+void populateTableOfContents(QTreeWidget *toc, const QVector<MainWindowHelpSection> &sections)
+{
+    toc->clear();
+
+    QVector<QTreeWidgetItem *> parents(7, nullptr);
+    for (const MainWindowHelpSection &section : sections) {
+        if (!shouldShowSectionInToc(section)) {
+            continue;
+        }
+
+        auto *item = new QTreeWidgetItem(QStringList(section.title));
+        item->setData(0, Qt::UserRole, section.anchor);
+
+        QTreeWidgetItem *parentItem = nullptr;
+        const int sectionLevel = qBound(2, section.level, 6);
+        for (int parentLevel = sectionLevel - 1; parentLevel >= 2; --parentLevel) {
+            if (parents.at(parentLevel) != nullptr) {
+                parentItem = parents.at(parentLevel);
+                break;
+            }
+        }
+
+        if (parentItem != nullptr) {
+            parentItem->addChild(item);
+        } else {
+            toc->addTopLevelItem(item);
+        }
+
+        parents[sectionLevel] = item;
+        for (int lowerLevel = sectionLevel + 1; lowerLevel < parents.size(); ++lowerLevel) {
+            parents[lowerLevel] = nullptr;
+        }
+    }
+
+    toc->expandToDepth(1);
+}
+
+void configureManualSearch(QDialog *dialog,
+                           QLineEdit *searchField,
+                           QPushButton *previousButton,
+                           QPushButton *nextButton,
+                           QLabel *searchStatus,
+                           QTextBrowser *browser)
+{
+    const auto updateSearchControls = [searchField, previousButton, nextButton, searchStatus]() {
+        const bool hasSearchText = !searchField->text().trimmed().isEmpty();
+        previousButton->setEnabled(hasSearchText);
+        nextButton->setEnabled(hasSearchText);
+        if (!hasSearchText) {
+            searchStatus->clear();
+        }
+    };
+
+    const auto findText = [browser, searchField, searchStatus](bool backward) {
+        const QString searchText = searchField->text().trimmed();
+        if (searchText.isEmpty()) {
+            searchStatus->clear();
+            return;
+        }
+
+        QTextDocument::FindFlags flags;
+        if (backward) {
+            flags |= QTextDocument::FindBackward;
+        }
+
+        if (browser->find(searchText, flags)) {
+            searchStatus->clear();
+            return;
+        }
+
+        const QTextCursor originalCursor = browser->textCursor();
+        QTextCursor wrapCursor(browser->document());
+        wrapCursor.movePosition(backward ? QTextCursor::End : QTextCursor::Start);
+        browser->setTextCursor(wrapCursor);
+        if (browser->find(searchText, flags)) {
+            searchStatus->setText(QCoreApplication::translate("MainWindowHelpDialog", "Wrapped"));
+            return;
+        }
+
+        browser->setTextCursor(originalCursor);
+        searchStatus->setText(QCoreApplication::translate("MainWindowHelpDialog", "No matches"));
+    };
+
+    QObject::connect(searchField, &QLineEdit::textChanged, dialog, updateSearchControls);
+    QObject::connect(searchField, &QLineEdit::returnPressed, dialog, [findText]() {
+        findText(false);
+    });
+    QObject::connect(previousButton, &QPushButton::clicked, dialog, [findText]() {
+        findText(true);
+    });
+    QObject::connect(nextButton, &QPushButton::clicked, dialog, [findText]() {
+        findText(false);
+    });
+
+    auto *findShortcut = new QShortcut(QKeySequence::Find, dialog);
+    QObject::connect(findShortcut, &QShortcut::activated, dialog, [searchField]() {
+        searchField->setFocus(Qt::ShortcutFocusReason);
+        searchField->selectAll();
+    });
+
+    auto *findNextShortcut = new QShortcut(QKeySequence::FindNext, dialog);
+    QObject::connect(findNextShortcut, &QShortcut::activated, dialog, [findText]() {
+        findText(false);
+    });
+
+    auto *findPreviousShortcut = new QShortcut(QKeySequence::FindPrevious, dialog);
+    QObject::connect(findPreviousShortcut, &QShortcut::activated, dialog, [findText]() {
+        findText(true);
+    });
+
+    updateSearchControls();
 }
 
 void showMarkdownDialog(QWidget *parent,
@@ -354,6 +381,94 @@ void showMarkdownDialog(QWidget *parent,
     dialog->raise();
     dialog->activateWindow();
 }
+
+void showUserManualMarkdownDialog(QWidget *parent,
+                                  const QString &title,
+                                  const QString &markdown)
+{
+    auto *dialog = new QDialog(parent);
+    dialog->setAttribute(Qt::WA_DeleteOnClose, true);
+    dialog->setWindowTitle(title);
+    dialog->resize(1080, 740);
+
+    auto *layout = new QVBoxLayout(dialog);
+    layout->setContentsMargins(12, 12, 12, 12);
+    layout->setSpacing(8);
+
+    auto *splitter = new QSplitter(Qt::Horizontal, dialog);
+
+    auto *toc = new QTreeWidget(splitter);
+    toc->setObjectName(QStringLiteral("userManualTableOfContents"));
+    toc->setHeaderHidden(true);
+    toc->setMinimumWidth(220);
+    toc->setUniformRowHeights(true);
+    populateTableOfContents(toc, parseMarkdownHelpSections(markdown));
+
+    auto *contentPane = new QWidget(splitter);
+    auto *contentLayout = new QVBoxLayout(contentPane);
+    contentLayout->setContentsMargins(0, 0, 0, 0);
+    contentLayout->setSpacing(8);
+
+    auto *searchRow = new QHBoxLayout();
+    searchRow->setContentsMargins(0, 0, 0, 0);
+    searchRow->setSpacing(6);
+
+    auto *searchField = new QLineEdit(contentPane);
+    searchField->setObjectName(QStringLiteral("userManualSearchField"));
+    searchField->setPlaceholderText(QCoreApplication::translate("MainWindowHelpDialog", "Search manual"));
+    auto *previousButton = new QPushButton(QCoreApplication::translate("MainWindowHelpDialog", "Previous"), contentPane);
+    auto *nextButton = new QPushButton(QCoreApplication::translate("MainWindowHelpDialog", "Next"), contentPane);
+    auto *searchStatus = new QLabel(contentPane);
+    searchStatus->setMinimumWidth(90);
+
+    searchRow->addWidget(searchField, 1);
+    searchRow->addWidget(previousButton);
+    searchRow->addWidget(nextButton);
+    searchRow->addWidget(searchStatus);
+    contentLayout->addLayout(searchRow);
+
+    auto *browser = new QTextBrowser(contentPane);
+    browser->setObjectName(QStringLiteral("userManualBrowser"));
+    browser->setOpenExternalLinks(false);
+    browser->setOpenLinks(false);
+    browser->setReadOnly(true);
+    browser->document()->setDocumentMargin(18.0);
+    browser->document()->setDefaultStyleSheet(markdownStyleSheet(browser->palette()));
+    browser->setHtml(markdownToHtmlWithHeadingAnchors(markdown));
+    QObject::connect(browser, &QTextBrowser::anchorClicked, browser, [browser](const QUrl &url) {
+        openHelpLink(browser, url);
+    });
+    contentLayout->addWidget(browser, 1);
+
+    QObject::connect(toc, &QTreeWidget::itemActivated, browser, [browser](QTreeWidgetItem *item, int) {
+        if (item != nullptr) {
+            browser->scrollToAnchor(item->data(0, Qt::UserRole).toString());
+        }
+    });
+    QObject::connect(toc, &QTreeWidget::itemClicked, browser, [browser](QTreeWidgetItem *item, int) {
+        if (item != nullptr) {
+            browser->scrollToAnchor(item->data(0, Qt::UserRole).toString());
+        }
+    });
+
+    configureManualSearch(dialog, searchField, previousButton, nextButton, searchStatus, browser);
+
+    splitter->addWidget(toc);
+    splitter->addWidget(contentPane);
+    splitter->setStretchFactor(0, 0);
+    splitter->setStretchFactor(1, 1);
+    splitter->setSizes({260, 820});
+    layout->addWidget(splitter, 1);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::close);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, dialog, &QDialog::close);
+    layout->addWidget(buttons);
+
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
+}
 }
 
 void showAboutDialog(QWidget *parent)
@@ -386,8 +501,8 @@ void showUserManualDialog(QWidget *parent)
         return;
     }
 
-    showMarkdownDialog(parent,
-                       QCoreApplication::translate("MainWindow", "User Manual"),
-                       manualText);
+    showUserManualMarkdownDialog(parent,
+                                 QCoreApplication::translate("MainWindow", "User Manual"),
+                                 manualText);
 }
 } // namespace TherionStudio

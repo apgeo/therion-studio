@@ -13,6 +13,13 @@ struct CommandOptionEntry
 {
     QString key;
     QString value;
+    int optionTokenIndex = -1;
+    int firstValueTokenIndex = -1;
+    int lastValueTokenIndex = -1;
+    int nextTokenIndex = -1;
+    QStringList rawValueTokens;
+    bool embeddedValue = false;
+    int logicalValueCount = 0;
 };
 
 struct ParsedCommandOptions
@@ -26,13 +33,17 @@ struct ParsedCommandOptions
 ParsedCommandOptions parseCommandOptions(const QString &commandName,
                                          const QStringList &tokens,
                                          const QHash<QString, int> &commandOptionFixedArityByKey,
-                                         bool leadingValueAllowed);
+                                         bool leadingValueAllowed,
+                                         bool collapseDuplicateEntries = true);
 
 bool commandTokenStartsNewOption(const QString &token);
+bool commandTokenActsAsOptionBoundary(const QStringList &tokens, int tokenIndex);
 bool commandTokenEmbedsOptionValue(const QString &token);
 QString commandEmbeddedOptionName(const QString &token);
 QString commandEmbeddedOptionValue(const QString &token);
 int nextCommandOptionIndex(const QStringList &tokens, int optionIndex);
+QStringList commandLogicalOptionValueTokens(const QStringList &tokens, int optionIndex);
+int commandLogicalOptionValueCount(const QStringList &tokens, int optionIndex);
 QString normalizedCommandOptionName(const QString &optionName);
 bool commandOptionNameMatches(const QString &token, const QString &optionName);
 QStringList commandOptionValueTokens(const QStringList &tokens, const QString &optionName);

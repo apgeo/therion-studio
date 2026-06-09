@@ -168,6 +168,31 @@ void deduplicatesLegacySingleTokenOptionRows()
     require(parsed.optionEntries.at(1).key == QStringLiteral("-clip")
                 && parsed.optionEntries.at(1).value == QStringLiteral("off"),
             "legacy quoted -clip off tokens should normalize to one -clip option row");
+
+    const ParsedCommandOptions rawParsed = parseCommandOptions(QStringLiteral("line"),
+                                                               {QStringLiteral("line"),
+                                                                QStringLiteral("rock-border"),
+                                                                QStringLiteral("-close"),
+                                                                QStringLiteral("on"),
+                                                                QStringLiteral("-clip"),
+                                                                QStringLiteral("off"),
+                                                                QStringLiteral("-clip off"),
+                                                                QStringLiteral("-clip off")},
+                                                               arity,
+                                                               false,
+                                                               false);
+    require(rawParsed.optionEntries.size() == 4,
+            "raw option parsing should preserve duplicate legacy single-token option rows for validators");
+    require(rawParsed.optionEntries.at(2).key == QStringLiteral("-clip")
+                && rawParsed.optionEntries.at(2).value == QStringLiteral("off")
+                && rawParsed.optionEntries.at(2).embeddedValue
+                && rawParsed.optionEntries.at(2).optionTokenIndex == 6,
+            "raw parsing should expose the first duplicate legacy token source range");
+    require(rawParsed.optionEntries.at(3).key == QStringLiteral("-clip")
+                && rawParsed.optionEntries.at(3).value == QStringLiteral("off")
+                && rawParsed.optionEntries.at(3).embeddedValue
+                && rawParsed.optionEntries.at(3).optionTokenIndex == 7,
+            "raw parsing should expose the second duplicate legacy token source range");
 }
 
 void keepsLeadingValueSeparateWhenAllowed()

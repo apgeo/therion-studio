@@ -11,32 +11,6 @@ namespace TherionStudio
 {
 namespace
 {
-bool isPlainOptionToken(const QString &token)
-{
-    return commandTokenStartsNewOption(token)
-        && !commandTokenEmbedsOptionValue(token);
-}
-
-bool tokenActsAsOptionBoundary(const TherionParsedLine &parsedLine, int tokenIndex)
-{
-    if (tokenIndex < 0 || tokenIndex >= parsedLine.tokens.size()) {
-        return false;
-    }
-
-    const QString token = parsedLine.tokens.at(tokenIndex);
-    if (!commandTokenStartsNewOption(token)) {
-        return false;
-    }
-
-    if (commandTokenEmbedsOptionValue(token)
-        && tokenIndex > 0
-        && isPlainOptionToken(parsedLine.tokens.at(tokenIndex - 1))) {
-        return false;
-    }
-
-    return true;
-}
-
 QPair<int, int> sourceLineRemovalRangeForTokenRange(const QString &lineText,
                                                     const TherionParsedLine &parsedLine,
                                                     int firstTokenIndex,
@@ -90,74 +64,6 @@ QString lineWithRemovedTokenRange(const QString &lineText,
     return updated;
 }
 
-int optionValueEndTokenIndex(const TherionParsedLine &parsedLine, int optionTokenIndex)
-{
-    if (optionTokenIndex < 0 || optionTokenIndex >= parsedLine.tokens.size()) {
-        return optionTokenIndex;
-    }
-
-    if (commandTokenEmbedsOptionValue(parsedLine.tokens.at(optionTokenIndex))) {
-        return optionTokenIndex;
-    }
-
-    int valueEndTokenIndex = optionTokenIndex;
-    for (int scan = optionTokenIndex + 1; scan < parsedLine.tokens.size(); ++scan) {
-        if (tokenActsAsOptionBoundary(parsedLine, scan)) {
-            break;
-        }
-        valueEndTokenIndex = scan;
-    }
-
-    return valueEndTokenIndex;
-}
-
-QStringList optionValueTokens(const TherionParsedLine &parsedLine, int optionTokenIndex)
-{
-    if (optionTokenIndex < 0 || optionTokenIndex >= parsedLine.tokens.size()) {
-        return {};
-    }
-
-    const QString optionToken = parsedLine.tokens.at(optionTokenIndex);
-    if (commandTokenEmbedsOptionValue(optionToken)) {
-        return {commandEmbeddedOptionValue(optionToken)};
-    }
-
-    const int valueEndTokenIndex = optionValueEndTokenIndex(parsedLine, optionTokenIndex);
-    if (valueEndTokenIndex <= optionTokenIndex) {
-        return {};
-    }
-
-    return parsedLine.tokens.mid(optionTokenIndex + 1, valueEndTokenIndex - optionTokenIndex);
-}
-
-int logicalOptionValueCount(const QStringList &tokens)
-{
-    int count = 0;
-    for (int index = 0; index < tokens.size(); ++index) {
-        const QString token = tokens.at(index).trimmed();
-        if (token == QStringLiteral("\\")) {
-            continue;
-        }
-        if (token.startsWith(QLatin1Char('['))) {
-            ++count;
-            while (index + 1 < tokens.size()
-                   && !tokens.at(index).contains(QLatin1Char(']'))) {
-                ++index;
-            }
-            continue;
-        }
-        ++count;
-    }
-    return count;
-}
-
-QString optionNameToken(const QString &token)
-{
-    return commandTokenEmbedsOptionValue(token)
-        ? commandEmbeddedOptionName(token)
-        : token.trimmed();
-}
-
 bool looksLikeCommandDirective(const QString &token)
 {
     const QString trimmed = token.trimmed();
@@ -191,29 +97,44 @@ QString cleanupInvalidSubtypeValues(const QString &lineText, bool *changed)
     QString updated = lineText;
     for (;;) {
         const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(updated);
+        const ParsedCommandOptions commandOptions = parseCommandOptions(parsedLine.directive,
+                                                                        parsedLine.tokens,
+                                                                        {},
+                                                                        false,
+                                                                        false);
         int removeStartTokenIndex = -1;
         int removeEndTokenIndex = -1;
-        for (int index = 1; index < parsedLine.tokens.size(); ++index) {
-            if (!tokenActsAsOptionBoundary(parsedLine, index)) {
-                continue;
-            }
-
-            const QString optionToken = optionNameToken(parsedLine.tokens.at(index)).toLower();
+        for (int entryIndex = 0; entryIndex < commandOptions.optionEntries.size(); ++entryIndex) {
+            const CommandOptionEntry &entry = commandOptions.optionEntries.at(entryIndex);
+            const QString optionToken = entry.key.trimmed().toLower();
             if (optionToken != QStringLiteral("-subtype")) {
                 continue;
             }
 
-            const int valueEndTokenIndex = optionValueEndTokenIndex(parsedLine, index);
-            for (int valueIndex = index + 1; valueIndex <= valueEndTokenIndex; ++valueIndex) {
-                if (valueIndex >= parsedLine.tokens.size()) {
-                    break;
+            if (entry.firstValueTokenIndex >= 0 && entry.lastValueTokenIndex >= entry.firstValueTokenIndex) {
+                for (int valueIndex = entry.firstValueTokenIndex; valueIndex <= entry.lastValueTokenIndex; ++valueIndex) {
+                    if (valueIndex >= parsedLine.tokens.size()) {
+                        break;
+                    }
+                    if (commandTokenEmbedsOptionValue(parsedLine.tokens.at(valueIndex))) {
+                        removeStartTokenIndex = entry.optionTokenIndex;
+                        removeEndTokenIndex = entry.lastValueTokenIndex;
+                        break;
+                    }
                 }
-                if (commandTokenEmbedsOptionValue(parsedLine.tokens.at(valueIndex))) {
-                    removeStartTokenIndex = index;
-                    removeEndTokenIndex = valueEndTokenIndex;
+            }
+
+            if (removeStartTokenIndex < 0
+                && entry.rawValueTokens.isEmpty()
+                && entryIndex + 1 < commandOptions.optionEntries.size()) {
+                const CommandOptionEntry &nextEntry = commandOptions.optionEntries.at(entryIndex + 1);
+                if (nextEntry.embeddedValue) {
+                    removeStartTokenIndex = entry.optionTokenIndex;
+                    removeEndTokenIndex = nextEntry.optionTokenIndex;
                     break;
                 }
             }
+
             if (removeStartTokenIndex >= 0) {
                 break;
             }
@@ -247,26 +168,26 @@ QString cleanupDuplicateOptions(const QString &lineText, bool *changed)
     QString updated = lineText;
     for (;;) {
         const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(updated);
+        const ParsedCommandOptions commandOptions = parseCommandOptions(parsedLine.directive,
+                                                                        parsedLine.tokens,
+                                                                        {},
+                                                                        false,
+                                                                        false);
         QStringList seenOptions;
         int removeStartTokenIndex = -1;
         int removeEndTokenIndex = -1;
 
-        for (int index = 1; index < parsedLine.tokens.size(); ++index) {
-            if (!tokenActsAsOptionBoundary(parsedLine, index)) {
-                continue;
-            }
-
-            const QString optionToken = optionNameToken(parsedLine.tokens.at(index));
-            const QStringList values = optionValueTokens(parsedLine, index);
+        for (const CommandOptionEntry &entry : commandOptions.optionEntries) {
+            const QString optionToken = entry.key;
+            const QStringList values = entry.rawValueTokens;
             const QString deduplicationKey = optionDeduplicationKey(optionToken, values);
             if (seenOptions.contains(deduplicationKey)) {
-                removeStartTokenIndex = index;
-                removeEndTokenIndex = optionValueEndTokenIndex(parsedLine, index);
+                removeStartTokenIndex = entry.optionTokenIndex;
+                removeEndTokenIndex = entry.embeddedValue ? entry.optionTokenIndex : entry.lastValueTokenIndex;
                 break;
             }
 
             seenOptions.append(deduplicationKey);
-            index = optionValueEndTokenIndex(parsedLine, index);
         }
 
         if (removeStartTokenIndex < 0) {
@@ -341,20 +262,13 @@ TherionSourceDiagnostic diagnosticForLine(const TherionParsedSourceLine &sourceL
     return diagnostic;
 }
 
-int firstOptionTokenIndex(const TherionParsedLine &parsedLine)
+int positionalTokenCount(const ParsedCommandOptions &parsedOptions)
 {
-    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
-        if (tokenActsAsOptionBoundary(parsedLine, index)) {
-            return index;
-        }
+    int count = parsedOptions.extraPositionalTokens.size();
+    if (!parsedOptions.leadingValue.isEmpty()) {
+        ++count;
     }
-    return parsedLine.tokens.size();
-}
-
-int positionalTokenCount(const TherionParsedLine &parsedLine)
-{
-    const int optionStart = firstOptionTokenIndex(parsedLine);
-    return qMax(0, optionStart - 1);
+    return count;
 }
 
 void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
@@ -381,7 +295,11 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
     }
 
     const int requiredPositionalCount = qMax(0, catalog.commandRequiredPositionalCount.value(commandName, 0));
-    const int providedPositionalCount = positionalTokenCount(sourceLine.parsed);
+    const ParsedCommandOptions parsedOptions = parseCommandOptions(commandName,
+                                                                   sourceLine.parsed.tokens,
+                                                                   catalog.commandOptionFixedArityByKey,
+                                                                   false);
+    const int providedPositionalCount = positionalTokenCount(parsedOptions);
     if (requiredPositionalCount > 0 && providedPositionalCount < requiredPositionalCount) {
         result->diagnostics.append(diagnosticForLine(sourceLine,
                                                      QStringLiteral("missing-argument"),
@@ -407,12 +325,8 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
     }
 
     const QSet<QString> knownOptions = catalog.commandOptionNames.value(commandName);
-    for (int index = 1; index < sourceLine.parsed.tokens.size(); ++index) {
-        if (!tokenActsAsOptionBoundary(sourceLine.parsed, index)) {
-            continue;
-        }
-
-        const QString optionToken = optionNameToken(sourceLine.parsed.tokens.at(index));
+    for (const CommandOptionEntry &optionEntry : parsedOptions.optionEntries) {
+        const QString optionToken = optionEntry.key;
         const QString normalizedOption = QStringLiteral("-") + normalizedCommandOptionName(optionToken);
         if (!knownOptions.isEmpty() && !knownOptions.contains(normalizedOption)) {
             result->diagnostics.append(diagnosticForLine(sourceLine,
@@ -424,10 +338,7 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
 
         const QString arity = catalog.commandOptionValueArityTokens.value(commandOptionValueKey(commandName, normalizedOption));
         const int fixedArity = catalog.commandOptionFixedArityByKey.value(commandOptionValueKey(commandName, normalizedOption), -1);
-        const int nextOptionIndex = optionValueEndTokenIndex(sourceLine.parsed, index) + 1;
-        const int providedValueCount = commandTokenEmbedsOptionValue(sourceLine.parsed.tokens.at(index))
-            ? 1
-            : logicalOptionValueCount(optionValueTokens(sourceLine.parsed, index));
+        const int providedValueCount = optionEntry.logicalValueCount;
         if ((optionArityRequiresValue(arity) || fixedArity > 0) && providedValueCount == 0) {
             result->diagnostics.append(diagnosticForLine(sourceLine,
                                                          QStringLiteral("missing-option-value"),
@@ -446,8 +357,6 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
                                                              .arg(providedValueCount),
                                                          TherionSourceDiagnosticSeverity::Error));
         }
-
-        index = qMax(index, nextOptionIndex - 1);
     }
 }
 

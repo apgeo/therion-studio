@@ -10,6 +10,15 @@ bool commandTokenStartsNewOption(const QString &token)
     return TherionTokenRules::tokenStartsOption(token);
 }
 
+bool commandTokenActsAsOptionBoundary(const QStringList &tokens, int tokenIndex)
+{
+    if (tokenIndex < 0 || tokenIndex >= tokens.size()) {
+        return false;
+    }
+
+    return commandTokenStartsNewOption(tokens.at(tokenIndex));
+}
+
 QString commandEmbeddedOptionName(const QString &token)
 {
     const QString trimmed = token.trimmed();
@@ -73,12 +82,51 @@ int nextCommandOptionIndex(const QStringList &tokens, int optionIndex)
             continue;
         }
 
-        if (commandTokenStartsNewOption(token)) {
+        if (commandTokenActsAsOptionBoundary(tokens, scan)) {
             return scan;
         }
     }
 
     return tokens.size();
+}
+
+QStringList commandLogicalOptionValueTokens(const QStringList &tokens, int optionIndex)
+{
+    if (optionIndex < 0 || optionIndex >= tokens.size()) {
+        return {};
+    }
+
+    const QString optionToken = tokens.at(optionIndex);
+    if (commandTokenEmbedsOptionValue(optionToken)) {
+        return {commandEmbeddedOptionValue(optionToken)};
+    }
+
+    const int nextOptionIndex = nextCommandOptionIndex(tokens, optionIndex);
+    return nextOptionIndex <= optionIndex + 1
+        ? QStringList{}
+        : tokens.mid(optionIndex + 1, nextOptionIndex - optionIndex - 1);
+}
+
+int commandLogicalOptionValueCount(const QStringList &tokens, int optionIndex)
+{
+    const QStringList valueTokens = commandLogicalOptionValueTokens(tokens, optionIndex);
+    int count = 0;
+    for (int index = 0; index < valueTokens.size(); ++index) {
+        const QString token = valueTokens.at(index).trimmed();
+        if (token == QStringLiteral("\\")) {
+            continue;
+        }
+        if (token.startsWith(QLatin1Char('['))) {
+            ++count;
+            while (index + 1 < valueTokens.size()
+                   && !valueTokens.at(index).contains(QLatin1Char(']'))) {
+                ++index;
+            }
+            continue;
+        }
+        ++count;
+    }
+    return count;
 }
 
 QStringList commandOptionValueTokens(const QStringList &tokens, const QString &optionName)
@@ -88,12 +136,14 @@ QStringList commandOptionValueTokens(const QStringList &tokens, const QString &o
     }
 
     for (int index = 0; index < tokens.size(); ++index) {
-        if (!commandOptionNameMatches(tokens.at(index), optionName)) {
+        if (!commandTokenActsAsOptionBoundary(tokens, index)) {
+            continue;
+        }
+        if (!commandOptionNameMatches(commandEmbeddedOptionName(tokens.at(index)), optionName)) {
             continue;
         }
 
-        const int nextOptionIndex = nextCommandOptionIndex(tokens, index);
-        return tokens.mid(index + 1, nextOptionIndex - index - 1);
+        return commandLogicalOptionValueTokens(tokens, index);
     }
 
     return {};
@@ -110,17 +160,17 @@ QHash<QString, QString> commandOptionValuesByName(const QStringList &tokens)
     QHash<QString, QString> values;
     for (int index = 0; index < tokens.size(); ++index) {
         const QString token = tokens.at(index).trimmed();
-        if (!commandTokenStartsNewOption(token)) {
+        if (!commandTokenActsAsOptionBoundary(tokens, index)) {
             continue;
         }
 
-        const QString fieldName = normalizedCommandOptionName(token);
+        const QString fieldName = normalizedCommandOptionName(commandEmbeddedOptionName(token));
         if (fieldName.isEmpty()) {
             continue;
         }
 
         const int nextOptionIndex = nextCommandOptionIndex(tokens, index);
-        const QStringList rawOptionValues = tokens.mid(index + 1, nextOptionIndex - index - 1);
+        const QStringList rawOptionValues = commandLogicalOptionValueTokens(tokens, index);
         if (rawOptionValues.isEmpty()) {
             continue;
         }
@@ -134,13 +184,17 @@ QHash<QString, QString> commandOptionValuesByName(const QStringList &tokens)
 namespace
 {
 CommandOptionEntry commandOptionEntry(const QString &commandName,
+                                      const QStringList &tokens,
+                                      int optionTokenIndex,
                                       const QString &token,
                                       const QStringList &rawOptionValues,
+                                      int nextTokenIndex,
                                       const QHash<QString, int> &commandOptionFixedArityByKey)
 {
     QString optionKey = token.trimmed();
     QString optionDisplayValue;
     const QString embeddedValue = commandEmbeddedOptionValue(optionKey);
+    const bool embedded = !embeddedValue.isEmpty();
     if (!embeddedValue.isEmpty()) {
         optionDisplayValue = embeddedValue;
         optionKey = commandEmbeddedOptionName(optionKey);
@@ -153,7 +207,19 @@ CommandOptionEntry commandOptionEntry(const QString &commandName,
         }
     }
 
-    return CommandOptionEntry{optionKey, optionDisplayValue};
+    const int firstValueIndex = embedded || rawOptionValues.isEmpty() ? -1 : optionTokenIndex + 1;
+    const int lastValueIndex = embedded || rawOptionValues.isEmpty() ? -1 : nextTokenIndex - 1;
+    CommandOptionEntry entry;
+    entry.key = optionKey;
+    entry.value = optionDisplayValue;
+    entry.optionTokenIndex = optionTokenIndex;
+    entry.firstValueTokenIndex = firstValueIndex;
+    entry.lastValueTokenIndex = lastValueIndex;
+    entry.nextTokenIndex = nextTokenIndex;
+    entry.rawValueTokens = rawOptionValues;
+    entry.embeddedValue = embedded;
+    entry.logicalValueCount = commandLogicalOptionValueCount(tokens, optionTokenIndex);
+    return entry;
 }
 
 QString commandOptionEntryDeduplicationKey(const CommandOptionEntry &entry)
@@ -191,15 +257,16 @@ std::optional<bool> commandOptionToggleValue(const QStringList &tokens, const QS
     }
 
     for (int index = 0; index < tokens.size(); ++index) {
-        if (!commandOptionNameMatches(tokens.at(index), optionName)) {
+        if (!commandOptionNameMatches(commandEmbeddedOptionName(tokens.at(index)), optionName)) {
             continue;
         }
 
         const int nextOptionIndex = nextCommandOptionIndex(tokens, index);
-        if (nextOptionIndex <= index + 1) {
+        const QStringList values = commandLogicalOptionValueTokens(tokens, index);
+        if (values.isEmpty()) {
             value = true;
         } else {
-            value = parseCommandToggleToken(tokens.at(index + 1)).value_or(true);
+            value = parseCommandToggleToken(values.constFirst()).value_or(true);
         }
         index = nextOptionIndex - 1;
     }
@@ -236,7 +303,8 @@ ParsedCommandOptions parseCommandOptions(
     const QString &commandName,
     const QStringList &tokens,
     const QHash<QString, int> &commandOptionFixedArityByKey,
-    bool leadingValueAllowed)
+    bool leadingValueAllowed,
+    bool collapseDuplicateEntries)
 {
     ParsedCommandOptions parsed;
     QStringList seenOptionEntries;
@@ -249,15 +317,18 @@ ParsedCommandOptions parseCommandOptions(
 
     for (int index = parsed.optionsStartIndex; index < tokens.size();) {
         const QString token = tokens.at(index).trimmed();
-        if (commandTokenStartsNewOption(token)) {
+        if (commandTokenActsAsOptionBoundary(tokens, index)) {
             const int nextOptionIndex = nextCommandOptionIndex(tokens, index);
-            const QStringList rawOptionValues = tokens.mid(index + 1, nextOptionIndex - index - 1);
+            const QStringList rawOptionValues = commandLogicalOptionValueTokens(tokens, index);
             const CommandOptionEntry entry = commandOptionEntry(commandName,
+                                                               tokens,
+                                                               index,
                                                                token,
                                                                rawOptionValues,
+                                                               nextOptionIndex,
                                                                commandOptionFixedArityByKey);
             const QString deduplicationKey = commandOptionEntryDeduplicationKey(entry);
-            if (!seenOptionEntries.contains(deduplicationKey)) {
+            if (!collapseDuplicateEntries || !seenOptionEntries.contains(deduplicationKey)) {
                 parsed.optionEntries.append(entry);
                 seenOptionEntries.append(deduplicationKey);
             }

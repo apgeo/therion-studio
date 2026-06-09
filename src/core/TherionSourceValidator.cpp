@@ -3,6 +3,7 @@
 #include "TherionCommandLineModel.h"
 #include "TherionCommandSyntax.h"
 #include "TherionDocumentParser.h"
+#include "TherionSourceDocument.h"
 
 #include <algorithm>
 
@@ -155,18 +156,6 @@ QString optionNameToken(const QString &token)
     return commandTokenEmbedsOptionValue(token)
         ? commandEmbeddedOptionName(token)
         : token.trimmed();
-}
-
-QString normalizedDirectiveToken(const QString &token)
-{
-    QString normalized = token.trimmed().toLower();
-    if (normalized == QStringLiteral("centreline")) {
-        return QStringLiteral("centerline");
-    }
-    if (normalized == QStringLiteral("endcentreline")) {
-        return QStringLiteral("endcenterline");
-    }
-    return normalized;
 }
 
 bool looksLikeCommandDirective(const QString &token)
@@ -352,68 +341,6 @@ TherionSourceDiagnostic diagnosticForLine(const TherionParsedSourceLine &sourceL
     return diagnostic;
 }
 
-struct BlockPair
-{
-    QString openDirective;
-    QString closeDirective;
-};
-
-QVector<BlockPair> knownBlockPairs()
-{
-    return {
-        {QStringLiteral("scrap"), QStringLiteral("endscrap")},
-        {QStringLiteral("line"), QStringLiteral("endline")},
-        {QStringLiteral("area"), QStringLiteral("endarea")},
-        {QStringLiteral("map"), QStringLiteral("endmap")},
-        {QStringLiteral("survey"), QStringLiteral("endsurvey")},
-        {QStringLiteral("centerline"), QStringLiteral("endcenterline")},
-        {QStringLiteral("centreline"), QStringLiteral("endcentreline")},
-        {QStringLiteral("layout"), QStringLiteral("endlayout")},
-        {QStringLiteral("code"), QStringLiteral("endcode")},
-        {QStringLiteral("group"), QStringLiteral("endgroup")},
-    };
-}
-
-QHash<QString, QString> openToCloseDirectiveMap()
-{
-    QHash<QString, QString> values;
-    for (const BlockPair &pair : knownBlockPairs()) {
-        values.insert(normalizedDirectiveToken(pair.openDirective), normalizedDirectiveToken(pair.closeDirective));
-    }
-    return values;
-}
-
-QHash<QString, QString> closeToOpenDirectiveMap()
-{
-    QHash<QString, QString> values;
-    for (const BlockPair &pair : knownBlockPairs()) {
-        values.insert(normalizedDirectiveToken(pair.closeDirective), normalizedDirectiveToken(pair.openDirective));
-    }
-    return values;
-}
-
-bool commandLineShouldSkipCommandCatalogValidation(const QVector<QString> &blockStack)
-{
-    if (blockStack.isEmpty()) {
-        return false;
-    }
-
-    const QString currentBlock = blockStack.constLast();
-    return currentBlock == QStringLiteral("line")
-        || currentBlock == QStringLiteral("area")
-        || currentBlock == QStringLiteral("map")
-        || currentBlock == QStringLiteral("centerline")
-        || currentBlock == QStringLiteral("centreline")
-        || currentBlock == QStringLiteral("code");
-}
-
-bool isKnownBlockDirective(const QString &directive)
-{
-    const QString normalized = normalizedDirectiveToken(directive);
-    return openToCloseDirectiveMap().contains(normalized)
-        || closeToOpenDirectiveMap().contains(normalized);
-}
-
 int firstOptionTokenIndex(const TherionParsedLine &parsedLine)
 {
     for (int index = 1; index < parsedLine.tokens.size(); ++index) {
@@ -439,11 +366,11 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
         return;
     }
 
-    const QString commandName = normalizedDirectiveToken(sourceLine.parsed.directive);
+    const QString commandName = normalizedTherionDirectiveToken(sourceLine.parsed.directive);
     const bool commandKnown = catalog.commandNames.contains(commandName);
     if (!commandKnown) {
         if (!skipUnknownCommand
-            && !isKnownBlockDirective(commandName)
+            && !therionDirectiveIsKnownBlockDirective(commandName)
             && looksLikeCommandDirective(sourceLine.parsed.directive)) {
             result->diagnostics.append(diagnosticForLine(sourceLine,
                                                          QStringLiteral("unknown-command"),
@@ -525,46 +452,25 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
 }
 
 void appendBlockDiagnostics(TherionSourceValidationResult *result,
-                            const TherionParsedSourceDocument &sourceDocument)
+                            const TherionSourceDocument &sourceDocument)
 {
     if (result == nullptr) {
         return;
     }
 
-    struct OpenBlock
-    {
-        QString directive;
-        int lineNumber = 0;
-        QString lineText;
-    };
-
-    const QHash<QString, QString> openToClose = openToCloseDirectiveMap();
-    const QHash<QString, QString> closeToOpen = closeToOpenDirectiveMap();
-    QVector<OpenBlock> stack;
-    for (const TherionParsedSourceLine &sourceLine : sourceDocument.lines) {
-        if (sourceLine.parsed.tokens.isEmpty()) {
+    const QHash<QString, QString> openToClose = therionOpenToCloseDirectiveMap();
+    for (const TherionSourceDocumentLine &line : sourceDocument.lines()) {
+        if (!line.hasUnmatchedClose()) {
             continue;
         }
-        const QString directive = normalizedDirectiveToken(sourceLine.parsed.directive);
-        if (openToClose.contains(directive)) {
-            stack.append({directive, sourceLine.lineNumber, sourceLine.text});
-            continue;
-        }
-        if (!closeToOpen.contains(directive)) {
-            continue;
-        }
-        if (!stack.isEmpty() && stack.constLast().directive == closeToOpen.value(directive)) {
-            stack.removeLast();
-            continue;
-        }
-        result->diagnostics.append(diagnosticForLine(sourceLine,
+        result->diagnostics.append(diagnosticForLine(line.sourceLine,
                                                      QStringLiteral("unmatched-block-close"),
                                                      QStringLiteral("Unmatched block close"),
-                                                     QStringLiteral("Closing directive `%1` does not match the currently open block.").arg(sourceLine.parsed.directive),
+                                                     QStringLiteral("Closing directive `%1` does not match the currently open block.").arg(line.sourceLine.parsed.directive),
                                                      TherionSourceDiagnosticSeverity::Error));
     }
 
-    for (const OpenBlock &openBlock : stack) {
+    for (const TherionSourceBlockFrame &openBlock : sourceDocument.openBlocksAtEnd()) {
         TherionSourceDiagnostic diagnostic;
         diagnostic.code = QStringLiteral("unclosed-block");
         diagnostic.severity = TherionSourceDiagnosticSeverity::Error;
@@ -588,13 +494,9 @@ TherionSourceValidationResult TherionSourceValidator::validate(const QString &co
                                                                const TherionSourceValidationCatalog &catalog)
 {
     TherionSourceValidationResult result;
-    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(contents);
-    QVector<QString> blockStack;
-    const QHash<QString, QString> openToClose = openToCloseDirectiveMap();
-    const QHash<QString, QString> closeToOpen = closeToOpenDirectiveMap();
-    for (const TherionParsedSourceLine &sourceLine : sourceDocument.lines) {
-        const QString directive = normalizedDirectiveToken(sourceLine.parsed.directive);
-        const bool skipCommandCatalogValidation = commandLineShouldSkipCommandCatalogValidation(blockStack);
+    const TherionSourceDocument sourceDocument = TherionSourceDocument::fromText(contents);
+    for (const TherionSourceDocumentLine &documentLine : sourceDocument.lines()) {
+        const TherionParsedSourceLine &sourceLine = documentLine.sourceLine;
 
         bool changed = false;
         const QString suggestedText = cleanupLine(sourceLine.text, &changed);
@@ -602,16 +504,11 @@ TherionSourceValidationResult TherionSourceValidator::validate(const QString &co
             result.diagnostics.append(diagnosticForLineCleanup(sourceLine, suggestedText));
         }
 
-        if (!catalog.commandNames.isEmpty()) {
+        if (!catalog.commandNames.isEmpty() && documentLine.shouldValidateCommandCatalog()) {
             appendCommandCatalogDiagnostics(&result,
                                             sourceLine,
                                             catalog,
-                                            skipCommandCatalogValidation);
-        }
-        if (openToClose.contains(directive)) {
-            blockStack.append(directive);
-        } else if (closeToOpen.contains(directive) && !blockStack.isEmpty()) {
-            blockStack.removeLast();
+                                            false);
         }
     }
 

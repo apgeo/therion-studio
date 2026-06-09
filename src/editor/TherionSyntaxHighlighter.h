@@ -29,6 +29,7 @@ private:
     void applyStyle(const QString &styleName, const QJsonObject &styleObject);
     void loadCommandCatalogKeywords();
     void applyValidatorInvalidTokenFormats(const QString &text);
+    const TherionSourceValidationResult &cachedValidationResult();
 
     QTextCharFormat baseTextFormat_;
     QTextCharFormat keywordFormat_;
@@ -49,6 +50,8 @@ private:
     QHash<QString, QSet<QString>> commandOptionIdValueTokens_;
     QSet<QString> closingDirectiveIdTokens_;
     TherionSourceValidationCatalog validationCatalog_;
+    TherionSourceValidationResult cachedValidationResult_;
+    int cachedValidationRevision_ = -1;
     CommandCatalogStore catalogStore_;
 };
 }

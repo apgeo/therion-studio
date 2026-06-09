@@ -380,13 +380,28 @@ const TherionSourceDiagnostic *TextEditorContextHelpController::validationDiagno
     }
 
     const int lineNumber = cursor.blockNumber() + 1;
+    const int columnNumber = cursor.positionInBlock() + 1;
     const TherionSourceValidationResult &validation = cachedValidationResult();
+    const TherionSourceDiagnostic *lineFallback = nullptr;
     for (const TherionSourceDiagnostic &diagnostic : validation.diagnostics) {
-        if (diagnostic.lineNumber == lineNumber) {
+        if (diagnostic.lineNumber != lineNumber) {
+            continue;
+        }
+
+        if (diagnostic.columnLength <= 0) {
+            if (lineFallback == nullptr) {
+                lineFallback = &diagnostic;
+            }
+            continue;
+        }
+
+        const int startColumn = qMax(1, diagnostic.columnNumber);
+        const int endColumn = startColumn + diagnostic.columnLength;
+        if (columnNumber >= startColumn && columnNumber <= endColumn) {
             return &diagnostic;
         }
     }
-    return nullptr;
+    return lineFallback;
 }
 
 const TherionSourceValidationResult &TextEditorContextHelpController::cachedValidationResult() const

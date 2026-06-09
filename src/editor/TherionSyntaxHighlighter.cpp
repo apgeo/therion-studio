@@ -15,6 +15,7 @@
 #include <QPalette>
 #include <QRegularExpression>
 #include <QTextCharFormat>
+#include <QTextDocument>
 
 #include <utility>
 
@@ -165,6 +166,8 @@ void TherionSyntaxHighlighter::loadPalette()
     commandOptionIdValueTokens_.clear();
     closingDirectiveIdTokens_.clear();
     validationCatalog_ = {};
+    cachedValidationResult_ = {};
+    cachedValidationRevision_ = -1;
 
     const bool darkPalette = applicationUsesDarkSyntaxPalette();
     baseTextFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#D4D4D4")) : QColor(QStringLiteral("#24292f")));
@@ -539,9 +542,17 @@ void TherionSyntaxHighlighter::applyValidatorInvalidTokenFormats(const QString &
         return;
     }
 
-    const TherionSourceValidationResult validation =
-        TherionSourceValidator::validate(text, validationCatalog_);
+    const QTextBlock block = currentBlock();
+    if (!block.isValid()) {
+        return;
+    }
+
+    const int lineNumber = block.blockNumber() + 1;
+    const TherionSourceValidationResult &validation = cachedValidationResult();
     for (const TherionSourceDiagnostic &diagnostic : validation.diagnostics) {
+        if (diagnostic.lineNumber != lineNumber) {
+            continue;
+        }
         if (diagnostic.columnLength <= 0) {
             continue;
         }
@@ -568,5 +579,21 @@ void TherionSyntaxHighlighter::applyValidatorInvalidTokenFormats(const QString &
 
         setFormat(start, length, invalidTokenFormat_);
     }
+}
+
+const TherionSourceValidationResult &TherionSyntaxHighlighter::cachedValidationResult()
+{
+    if (document() == nullptr) {
+        static const TherionSourceValidationResult emptyResult;
+        return emptyResult;
+    }
+
+    const int revision = document()->revision();
+    if (revision != cachedValidationRevision_) {
+        cachedValidationResult_ =
+            TherionSourceValidator::validate(document()->toPlainText(), validationCatalog_);
+        cachedValidationRevision_ = revision;
+    }
+    return cachedValidationResult_;
 }
 }

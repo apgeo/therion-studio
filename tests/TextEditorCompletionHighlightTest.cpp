@@ -388,6 +388,19 @@ int main(int argc, char *argv[])
     }
 
     {
+        editor->setPlainText(QStringLiteral("survey demo -title \"x\" \\\n"
+                                            "  -bogus value\n"
+                                            "endsurvey\n"));
+        pumpEvents();
+
+        const QTextBlock continuationLine = editor->document()->findBlockByLineNumber(1);
+        if (!expect(tokenHasWaveUnderline(continuationLine, QStringLiteral("-bogus")),
+                    "Unknown options on continuation rows should be marked with invalid highlighting on the physical continuation line.")) {
+            return 1;
+        }
+    }
+
+    {
         editor->setPlainText(QStringLiteral("line rock-border -close on -clip off \"-clip off\" \"-clip off\"\n"));
         pumpEvents();
 
@@ -443,6 +456,29 @@ int main(int argc, char *argv[])
             && tooltipText.contains(QStringLiteral("auto"), Qt::CaseInsensitive);
         if (!expect(allowedValuesInHelp || allowedValuesInTooltip,
                     "Known enum values from the validator should surface in either contextual help or inline tooltip for invalid option value.")) {
+            return 1;
+        }
+    }
+
+    {
+        editor->setPlainText(QStringLiteral("line wall -bogus x -close maybe\n"));
+        pumpEvents();
+
+        const QTextBlock firstLine = editor->document()->findBlockByLineNumber(0);
+        const int maybePos = firstLine.text().indexOf(QStringLiteral("maybe"));
+        if (!expect(maybePos >= 0, "Failed to locate invalid enum token on mixed-problem line.")) {
+            return 1;
+        }
+        QTextCursor cursor(firstLine);
+        cursor.setPosition(firstLine.position() + maybePos + 1);
+        editor->setTextCursor(cursor);
+        pumpEvents();
+
+        const QString helpText = helpBrowser->toPlainText();
+        const QString tooltipText = editor->toolTip();
+        if (!expect(helpText.contains(QStringLiteral("Unknown option value"), Qt::CaseInsensitive)
+                        || tooltipText.contains(QStringLiteral("Unknown option value"), Qt::CaseInsensitive),
+                    "Validation help should select the diagnostic for the token under the cursor when a line has multiple findings.")) {
             return 1;
         }
     }

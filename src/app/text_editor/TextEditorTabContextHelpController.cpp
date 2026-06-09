@@ -49,6 +49,9 @@ void TextEditorTab::buildContextHelpController()
     contextHelpContext.populateBlockToolboxScopeCombo = [this]() {
         populateBlockToolboxScopeCombo();
     };
+    contextHelpContext.validateDocument = [this]() {
+        return validateDocument();
+    };
     contextHelpContext.createInspectorPanel = [](QWidget *parent) {
         return new DocumentInspectorPanel(parent);
     };

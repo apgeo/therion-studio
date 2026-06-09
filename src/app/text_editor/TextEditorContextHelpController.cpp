@@ -8,10 +8,8 @@
 #include "TextEditorCommandMetadata.h"
 #include "block_editor/BlockEditorDirectiveRules.h"
 
-#include "../../core/TherionCommandSyntax.h"
 #include "../../core/TherionDocumentParser.h"
 
-#include <algorithm>
 #include <utility>
 #include <QJsonObject>
 #include <QPoint>
@@ -38,12 +36,6 @@ void appendUniqueCaseInsensitive(QStringList &target, const QString &value)
     target.append(trimmed);
 }
 
-void appendUniqueListCaseInsensitive(QStringList &target, const QStringList &values)
-{
-    for (const QString &value : values) {
-        appendUniqueCaseInsensitive(target, value);
-    }
-}
 }
 
 namespace TherionStudio
@@ -148,11 +140,15 @@ void TextEditorContextHelpController::loadHelpMetadata()
     if (context_.populateBlockToolboxScopeCombo) {
         context_.populateBlockToolboxScopeCombo();
     }
+    cachedValidationRevision_ = -1;
+    cachedValidationResult_ = {};
 }
 
 void TextEditorContextHelpController::loadHelpMetadataFromCommandCatalog()
 {
     resetCatalogBlockDirectiveMetadataToDefaults();
+    cachedValidationRevision_ = -1;
+    cachedValidationResult_ = {};
 
     const QJsonObject catalogObject = catalogStore_.catalogObject();
     if (catalogObject.isEmpty()) {
@@ -355,156 +351,94 @@ QString TextEditorContextHelpController::validationHelpHtmlForTextCursor(const Q
                                                                          QString *tooltipText,
                                                                          QString *tooltipKey) const
 {
-    if (editor() == nullptr || context_.metadata == nullptr || !context_.normalizedDirectiveToken) {
+    const TherionSourceDiagnostic *diagnostic = validationDiagnosticForTextCursor(cursor);
+    if (diagnostic == nullptr) {
         return QString();
-    }
-
-    const QTextBlock block = cursor.block();
-    if (!block.isValid()) {
-        return QString();
-    }
-
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(block.text(), block.blockNumber() + 1);
-    if (parsedLine.tokens.isEmpty()) {
-        return QString();
-    }
-
-    const QString command = context_.normalizedDirectiveToken(parsedLine.directive.toLower());
-    if (command.isEmpty() || !(*context_.metadata).commandOptionTokens.contains(command)) {
-        return QString();
-    }
-
-    const int column = cursor.position() - block.position();
-    int tokenIndexAtCursor = -1;
-    int tokenCounter = 0;
-    for (const TherionParsedToken &tokenSpan : parsedLine.tokenSpans) {
-        if (tokenSpan.type == TherionTokenType::Comment) {
-            continue;
-        }
-
-        const int tokenEnd = tokenSpan.start + tokenSpan.length;
-        if (column >= tokenSpan.start && column <= tokenEnd) {
-            tokenIndexAtCursor = tokenCounter;
-            break;
-        }
-        ++tokenCounter;
-    }
-
-    if (tokenIndexAtCursor <= 0 || tokenIndexAtCursor >= parsedLine.tokens.size()) {
-        return QString();
-    }
-
-    const QString cursorToken = parsedLine.tokens.at(tokenIndexAtCursor).trimmed();
-    const QString normalizedCursorToken = cursorToken.toLower();
-    QStringList allowedValues;
-    QString detailMessage;
-    QString issueKey;
-
-    if (looksLikeOptionToken(cursorToken)) {
-        const QStringList knownOptions = (*context_.metadata).commandOptionTokens.value(command);
-        if (knownOptions.contains(normalizedCursorToken, Qt::CaseInsensitive)) {
-            return QString();
-        }
-
-        allowedValues = knownOptions;
-        std::sort(allowedValues.begin(),
-                  allowedValues.end(),
-                  [](const QString &a, const QString &b) {
-                      return QString::compare(a, b, Qt::CaseInsensitive) < 0;
-                  });
-        detailMessage = tr("Unknown option for command '%1'.").arg(command.toHtmlEscaped());
-        issueKey = QStringLiteral("option|%1|%2").arg(command, normalizedCursorToken);
-    } else {
-        int optionIndex = -1;
-        for (int index = tokenIndexAtCursor - 1; index >= 1; --index) {
-            const QString token = parsedLine.tokens.at(index).trimmed();
-            if (token.startsWith(QLatin1Char('-'))) {
-                optionIndex = index;
-                break;
-            }
-        }
-        if (optionIndex < 1) {
-            return QString();
-        }
-
-        const QString optionToken = parsedLine.tokens.at(optionIndex).trimmed().toLower();
-        const QString arity = (*context_.metadata).commandOptionValueArityTokens
-            .value(commandOptionValueKey(command, optionToken))
-            .trimmed()
-            .toUpper();
-        const int valueOrdinal = tokenIndexAtCursor - optionIndex;
-        if (canonicalOptionArityToken(arity) == QStringLiteral("EXACTLY_ONE") && valueOrdinal != 1) {
-            return QString();
-        }
-
-        if (optionToken == QStringLiteral("-subtype")) {
-            const QString symbolTypeToken = symbolTypeForSubtypeLookup(command, parsedLine);
-            const QHash<QString, QStringList> subtypeByType = (*context_.metadata).commandSubtypeByTypeTokens.value(command);
-            allowedValues = subtypeByType.value(symbolTypeToken);
-            if (allowedValues.contains(QStringLiteral("*"), Qt::CaseInsensitive)) {
-                return QString();
-            }
-            if (allowedValues.contains(normalizedCursorToken, Qt::CaseInsensitive)) {
-                return QString();
-            }
-
-            if (!symbolTypeToken.isEmpty() && !allowedValues.isEmpty()) {
-                detailMessage = tr("Subtype '%1' is not allowed for type '%2'.")
-                    .arg(cursorToken.toHtmlEscaped(), symbolTypeToken.toHtmlEscaped());
-                issueKey = QStringLiteral("subtype|%1|%2|%3")
-                    .arg(command, symbolTypeToken, normalizedCursorToken);
-            }
-        } else {
-            allowedValues = (*context_.metadata).commandOptionValueTokens.value(commandOptionValueKey(command, optionToken));
-            if (allowedValues.isEmpty()
-                || allowedValues.contains(normalizedCursorToken, Qt::CaseInsensitive)) {
-                return QString();
-            }
-            detailMessage = tr("Value '%1' is not allowed for option '%2'.")
-                .arg(cursorToken.toHtmlEscaped(), optionToken.toHtmlEscaped());
-            issueKey = QStringLiteral("value|%1|%2|%3")
-                .arg(command, optionToken, normalizedCursorToken);
-        }
-    }
-
-    if (allowedValues.isEmpty()) {
-        return QString();
-    }
-
-    QStringList normalizedAllowed;
-    appendUniqueListCaseInsensitive(normalizedAllowed, allowedValues);
-    std::sort(normalizedAllowed.begin(),
-              normalizedAllowed.end(),
-              [](const QString &a, const QString &b) {
-                  return QString::compare(a, b, Qt::CaseInsensitive) < 0;
-              });
-
-    if (detailMessage.isEmpty()) {
-        detailMessage = tr("Token '%1' is not allowed in current context.")
-            .arg(cursorToken.toHtmlEscaped());
-    }
-    if (issueKey.isEmpty()) {
-        issueKey = QStringLiteral("generic|%1|%2").arg(command, normalizedCursorToken);
     }
 
     if (tooltipText != nullptr) {
-        QString plainDetail = detailMessage;
-        plainDetail.remove(QStringLiteral("<strong>"));
-        plainDetail.remove(QStringLiteral("</strong>"));
-        plainDetail.remove(QStringLiteral("<code>"));
-        plainDetail.remove(QStringLiteral("</code>"));
-        plainDetail.remove(QStringLiteral("&apos;"));
-        plainDetail.replace(QStringLiteral("&#39;"), QStringLiteral("'"));
-        plainDetail.replace(QStringLiteral("&lt;"), QStringLiteral("<"));
-        plainDetail.replace(QStringLiteral("&gt;"), QStringLiteral(">"));
-        plainDetail.replace(QStringLiteral("&amp;"), QStringLiteral("&"));
-        *tooltipText = tr("%1 Allowed: %2")
-            .arg(plainDetail, normalizedAllowed.join(QStringLiteral(", ")));
+        *tooltipText = validationDiagnosticTooltip(*diagnostic);
     }
     if (tooltipKey != nullptr) {
-        *tooltipKey = issueKey;
+        *tooltipKey = QStringLiteral("%1|%2|%3|%4|%5")
+            .arg(QString::number(editor() != nullptr && editor()->document() != nullptr
+                                     ? editor()->document()->revision()
+                                     : -1),
+                 QString::number(diagnostic->lineNumber),
+                 QString::number(diagnostic->columnNumber),
+                 diagnostic->code,
+                 diagnostic->title);
     }
 
-    return ContextHelpController::renderValidationHtml(cursorToken, detailMessage, normalizedAllowed, false);
+    return validationDiagnosticHtml(*diagnostic);
+}
+
+const TherionSourceDiagnostic *TextEditorContextHelpController::validationDiagnosticForTextCursor(const QTextCursor &cursor) const
+{
+    if (!cursor.block().isValid()) {
+        return nullptr;
+    }
+
+    const int lineNumber = cursor.blockNumber() + 1;
+    const TherionSourceValidationResult &validation = cachedValidationResult();
+    for (const TherionSourceDiagnostic &diagnostic : validation.diagnostics) {
+        if (diagnostic.lineNumber == lineNumber) {
+            return &diagnostic;
+        }
+    }
+    return nullptr;
+}
+
+const TherionSourceValidationResult &TextEditorContextHelpController::cachedValidationResult() const
+{
+    if (editor() == nullptr || editor()->document() == nullptr || !context_.validateDocument) {
+        static const TherionSourceValidationResult emptyResult;
+        return emptyResult;
+    }
+
+    const int revision = editor()->document()->revision();
+    if (revision != cachedValidationRevision_) {
+        cachedValidationResult_ = context_.validateDocument();
+        cachedValidationRevision_ = revision;
+    }
+    return cachedValidationResult_;
+}
+
+QString TextEditorContextHelpController::validationDiagnosticHtml(const TherionSourceDiagnostic &diagnostic) const
+{
+    const QString severity = diagnostic.severity == TherionSourceDiagnosticSeverity::Error
+        ? tr("Error")
+        : tr("Warning");
+    QString html;
+    html += QStringLiteral("<p><strong>%1:</strong> %2</p>")
+                .arg(severity.toHtmlEscaped(), diagnostic.title.toHtmlEscaped());
+    if (!diagnostic.message.isEmpty()) {
+        html += QStringLiteral("<p>%1</p>").arg(diagnostic.message.toHtmlEscaped());
+    }
+    if (!diagnostic.currentText.isEmpty()) {
+        html += QStringLiteral("<h4>%1</h4><pre>%2</pre>")
+                    .arg(tr("Current Source").toHtmlEscaped(), diagnostic.currentText.toHtmlEscaped());
+    }
+    if (!diagnostic.hasFix) {
+        return html;
+    }
+
+    html += QStringLiteral("<h4>%1</h4><pre>%2</pre>")
+                .arg(tr("Suggested Source").toHtmlEscaped(), diagnostic.suggestedText.toHtmlEscaped());
+    return html;
+}
+
+QString TextEditorContextHelpController::validationDiagnosticTooltip(const TherionSourceDiagnostic &diagnostic) const
+{
+    const QString severity = diagnostic.severity == TherionSourceDiagnosticSeverity::Error
+        ? tr("Error")
+        : tr("Warning");
+    QString tooltip = tr("Line %1: %2: %3")
+                          .arg(diagnostic.lineNumber)
+                          .arg(severity, diagnostic.title);
+    if (!diagnostic.message.isEmpty()) {
+        tooltip += QStringLiteral("\n") + diagnostic.message;
+    }
+    return tooltip;
 }
 }

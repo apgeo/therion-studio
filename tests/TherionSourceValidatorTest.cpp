@@ -112,6 +112,8 @@ TherionSourceValidationCatalog basicCatalog()
                                                  QStringLiteral("EXACTLY_ONE"));
     catalog.commandOptionValueArityTokens.insert(TherionStudio::commandOptionValueKey(QStringLiteral("line"), QStringLiteral("-clip")),
                                                  QStringLiteral("EXACTLY_ONE"));
+    catalog.commandOptionAllowedValuesByKey.insert(TherionStudio::commandOptionValueKey(QStringLiteral("line"), QStringLiteral("-close")),
+                                                   {QStringLiteral("on"), QStringLiteral("off"), QStringLiteral("auto")});
     catalog.commandOptionValueArityTokens.insert(TherionStudio::commandOptionValueKey(QStringLiteral("scrap"), QStringLiteral("-projection")),
                                                  QStringLiteral("EXACTLY_ONE"));
     catalog.commandOptionValueArityTokens.insert(TherionStudio::commandOptionValueKey(QStringLiteral("scrap"), QStringLiteral("-scale")),
@@ -246,6 +248,18 @@ void reportsUnknownArgumentValue()
             "Unknown first argument value should produce a diagnostic when allowed values are known.");
 }
 
+void reportsUnknownOptionValue()
+{
+    const QString contents = QStringLiteral("line wall -close maybe\n"
+                                            "endline\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, basicCatalog());
+
+    require(containsDiagnostic(result, QStringLiteral("unknown-option-value")),
+            "Unknown option values should produce a diagnostic when allowed values are known.");
+    require(severityForDiagnostic(result, QStringLiteral("unknown-option-value")) == TherionSourceDiagnosticSeverity::Warning,
+            "Unknown option values should remain warnings because catalog values may be incomplete.");
+}
+
 void reportsBlockPairProblems()
 {
     const TherionSourceValidationResult unclosed =
@@ -332,6 +346,7 @@ int main(int argc, char **argv)
     doesNotTreatZeroFixedArityAsValidationError();
     acceptsOptionAliasesExtractedFromCatalogSignature();
     reportsUnknownArgumentValue();
+    reportsUnknownOptionValue();
     reportsBlockPairProblems();
     keepsInputAsStandaloneCommandAndMapReferencesAsMapContent();
     keepsCenterlineDataRowsOutOfCommandCatalogValidation();

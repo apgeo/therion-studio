@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../core/CommandCatalogStore.h"
+#include "../../core/TherionSourceValidator.h"
 
 #include <functional>
 
@@ -39,6 +40,7 @@ struct TextEditorContextHelpContext
     std::function<void()> rebuildCompletionModel;
     std::function<void(const QJsonObject &)> applyCatalogCommandsMetadata;
     std::function<void()> populateBlockToolboxScopeCombo;
+    std::function<TherionSourceValidationResult()> validateDocument;
     std::function<InspectorPanel *(QWidget *)> createInspectorPanel;
     std::function<void(InspectorPanel *)> configureInspectorPanel;
 };
@@ -71,6 +73,10 @@ private:
     QString validationHelpHtmlForTextCursor(const QTextCursor &cursor,
                                             QString *tooltipText = nullptr,
                                             QString *tooltipKey = nullptr) const;
+    const TherionSourceDiagnostic *validationDiagnosticForTextCursor(const QTextCursor &cursor) const;
+    const TherionSourceValidationResult &cachedValidationResult() const;
+    QString validationDiagnosticHtml(const TherionSourceDiagnostic &diagnostic) const;
+    QString validationDiagnosticTooltip(const TherionSourceDiagnostic &diagnostic) const;
     void setHelpPanel(QWidget *helpPanel);
     void setHelpBrowser(QTextBrowser *helpBrowser);
     void setHelpTitle(const QString &title);
@@ -78,5 +84,7 @@ private:
     TextEditorContextHelpContext context_;
     CommandCatalogStore catalogStore_;
     ContextHelpInspector *helpInspector_ = nullptr;
+    mutable int cachedValidationRevision_ = -1;
+    mutable TherionSourceValidationResult cachedValidationResult_;
 };
 }

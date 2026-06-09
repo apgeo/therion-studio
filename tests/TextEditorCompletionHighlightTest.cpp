@@ -430,10 +430,9 @@ int main(int argc, char *argv[])
 
         const QString helpText = helpBrowser->toPlainText();
         const QString tooltipText = editor->toolTip();
-        if (!expect((helpText.contains(QStringLiteral("not allowed"), Qt::CaseInsensitive)
-                         && helpText.contains(QStringLiteral("Allowed Values"), Qt::CaseInsensitive))
-                        || tooltipText.contains(QStringLiteral("Allowed:"), Qt::CaseInsensitive),
-                    "Validation guidance should surface in either contextual help or inline tooltip for invalid token.")) {
+        if (!expect(helpText.contains(QStringLiteral("Unknown option value"), Qt::CaseInsensitive)
+                        || tooltipText.contains(QStringLiteral("Unknown option value"), Qt::CaseInsensitive),
+                    "Validation guidance should surface the validator finding in either contextual help or inline tooltip.")) {
             return 1;
         }
         const bool allowedValuesInHelp = helpText.contains(QStringLiteral("on"), Qt::CaseInsensitive)
@@ -443,7 +442,7 @@ int main(int argc, char *argv[])
             && tooltipText.contains(QStringLiteral("off"), Qt::CaseInsensitive)
             && tooltipText.contains(QStringLiteral("auto"), Qt::CaseInsensitive);
         if (!expect(allowedValuesInHelp || allowedValuesInTooltip,
-                    "Allowed enum values should surface in either contextual help or inline tooltip for invalid option value.")) {
+                    "Known enum values from the validator should surface in either contextual help or inline tooltip for invalid option value.")) {
             return 1;
         }
     }

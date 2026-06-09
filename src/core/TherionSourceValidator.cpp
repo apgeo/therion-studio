@@ -357,6 +357,22 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
                                                              .arg(providedValueCount),
                                                          TherionSourceDiagnosticSeverity::Error));
         }
+
+        const QStringList allowedOptionValues = catalog.commandOptionAllowedValuesByKey.value(
+            commandOptionValueKey(commandName, normalizedOption));
+        if (!allowedOptionValues.isEmpty()
+            && optionEntry.logicalValueCount == 1
+            && optionEntry.rawValueTokens.size() == 1) {
+            const QString valueToken = optionEntry.rawValueTokens.constFirst().trimmed();
+            if (!valueToken.isEmpty()
+                && !allowedOptionValues.contains(valueToken, Qt::CaseInsensitive)) {
+                result->diagnostics.append(diagnosticForLine(sourceLine,
+                                                             QStringLiteral("unknown-option-value"),
+                                                             QStringLiteral("Unknown option value"),
+                                                             QStringLiteral("Option `%1` on command `%2` does not list `%3` as a known value. Known values: %4.")
+                                                                 .arg(normalizedOption, commandName, valueToken, allowedOptionValues.join(QStringLiteral(", ")))));
+            }
+        }
     }
 }
 

@@ -31,6 +31,7 @@ TherionSourceValidationCatalog validationCatalogFromCommandMetadata(const TextEd
     catalog.commandRequiredPositionalCount = metadata.commandRequiredPositionalCount;
     catalog.commandArgumentAllowedValuesByKey = metadata.commandArgumentValueTokens;
     catalog.commandTypeValues = metadata.commandTypeValueTokens;
+    catalog.commandOptionAllowedValuesByKey = metadata.commandOptionValueTokens;
     catalog.commandOptionValueArityTokens = metadata.commandOptionValueArityTokens;
     catalog.commandOptionFixedArityByKey = metadata.commandOptionFixedArityByKey;
     return catalog;

@@ -7,6 +7,26 @@
 
 namespace TherionStudio
 {
+struct TherionSourceLogicalTextPart
+{
+    int logicalStart = 0;
+    int logicalLength = 0;
+    int lineNumber = 0;
+    int columnNumber = 1;
+    int startOffset = 0;
+    QString lineText;
+};
+
+struct TherionSourcePhysicalRange
+{
+    int lineNumber = 0;
+    int columnNumber = 0;
+    int columnLength = 0;
+    int startOffset = 0;
+    int length = 0;
+    QString lineText;
+};
+
 struct TherionSourceLogicalCommand
 {
     int startLineNumber = 0;
@@ -23,9 +43,13 @@ struct TherionSourceLogicalCommand
     QString closeMatchesOpenDirective;
     QVector<TherionSourceBlockFrame> blockStackBefore;
     QVector<int> physicalLineNumbers;
+    QVector<TherionSourceLogicalTextPart> textParts;
 
     [[nodiscard]] bool shouldValidateCommandCatalog() const;
     [[nodiscard]] bool hasUnmatchedClose() const;
+    [[nodiscard]] bool physicalRangeForLogicalRange(int logicalStart,
+                                                    int logicalLength,
+                                                    TherionSourcePhysicalRange *range) const;
 };
 
 class TherionSourceLogicalDocument final

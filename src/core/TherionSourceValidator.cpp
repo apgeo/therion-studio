@@ -435,6 +435,21 @@ TherionSourceDiagnostic diagnosticForToken(const TherionSourceLogicalCommand &co
                                                           title,
                                                           message,
                                                           severity);
+    const std::optional<TherionParsedToken> token = tokenSpanForCommandTokenIndex(command.parsed,
+                                                                                  tokenIndex);
+    if (token.has_value()) {
+        TherionSourcePhysicalRange physicalRange;
+        if (command.physicalRangeForLogicalRange(token->start,
+                                                 token->length,
+                                                 &physicalRange)) {
+            diagnostic.lineNumber = physicalRange.lineNumber;
+            diagnostic.columnNumber = physicalRange.columnNumber;
+            diagnostic.columnLength = physicalRange.columnLength;
+            diagnostic.currentText = physicalRange.lineText;
+            return diagnostic;
+        }
+    }
+
     setRangeFromTokenIndex(command.parsed,
                            tokenIndex,
                            &diagnostic.columnNumber,

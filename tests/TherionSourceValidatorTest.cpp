@@ -270,6 +270,28 @@ void validatesContinuedCommandAsOneCatalogCommand()
             "Continuation rows should share logical option value counting with the opening command.");
 }
 
+void mapsContinuedCommandDiagnosticsToPhysicalLine()
+{
+    const QString contents =
+        QStringLiteral("survey 1318 -title \"1318 Vetrna propast\" \\")
+        + QLatin1Char('\n')
+        + QStringLiteral("  -bogus value\n"
+                         "endsurvey\n");
+
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, basicCatalog());
+    const TherionSourceDiagnostic *unknownOption =
+        diagnosticForCode(result, QStringLiteral("unknown-option"));
+
+    require(unknownOption != nullptr,
+            "Unknown options on continuation rows should still produce diagnostics.");
+    require(unknownOption->lineNumber == 2,
+            "Continuation-row diagnostics should point at the physical continuation line.");
+    require(unknownOption->columnNumber == 3,
+            "Continuation-row diagnostics should point at the physical source column.");
+    require(diagnosticSourceRange(*unknownOption) == QStringLiteral("-bogus"),
+            "Continuation-row diagnostics should carry the physical source line for token previews.");
+}
+
 void doesNotTreatZeroFixedArityAsValidationError()
 {
     const QString contents = QStringLiteral("point 389.5 355.5 label -text \"Sifon I\"\n");
@@ -416,6 +438,7 @@ int main(int argc, char **argv)
     acceptsBracketedOptionValueAsSingleLogicalValue();
     acceptsLineContinuationAfterOptionValue();
     validatesContinuedCommandAsOneCatalogCommand();
+    mapsContinuedCommandDiagnosticsToPhysicalLine();
     doesNotTreatZeroFixedArityAsValidationError();
     keepsDashPrefixedPointTextAsTextValue();
     acceptsOptionAliasesExtractedFromCatalogSignature();

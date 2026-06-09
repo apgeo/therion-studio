@@ -56,6 +56,32 @@ void groupsContinuationLinesIntoOneLogicalCommand()
             "logical close should preserve source document block matching state");
 }
 
+void mapsLogicalTokenRangesBackToPhysicalLines()
+{
+    const TherionSourceLogicalDocument document = TherionSourceLogicalDocument::fromText(QStringLiteral(
+        "survey cave -title \"Cave\" \\\n"
+        "  -person-rename \"Old Name\" \"New Name\"\n"
+        "endsurvey\n"));
+
+    const TherionSourceLogicalCommand &survey = commandAt(document, 0);
+    const int optionStart = survey.text.indexOf(QStringLiteral("-person-rename"));
+    TherionSourcePhysicalRange range;
+    require(optionStart >= 0,
+            "continued command should contain the continuation option token");
+    require(survey.physicalRangeForLogicalRange(optionStart,
+                                                QStringLiteral("-person-rename").size(),
+                                                &range),
+            "logical continuation option token should map to a physical source range");
+    require(range.lineNumber == 2,
+            "continuation option token should map to the continuation physical line");
+    require(range.columnNumber == 3,
+            "continuation option token should preserve its physical source column");
+    require(range.columnLength == QStringLiteral("-person-rename").size(),
+            "continuation option token should preserve its physical source length");
+    require(range.lineText == QStringLiteral("  -person-rename \"Old Name\" \"New Name\""),
+            "physical range should carry the actual source line text for UI previews");
+}
+
 void keepsBlockContentRowsAsNonCommandLogicalEntries()
 {
     const TherionSourceLogicalDocument document = TherionSourceLogicalDocument::fromText(QStringLiteral(
@@ -110,6 +136,7 @@ void normalizesCentrelineAliasOnLogicalCommands()
 int main()
 {
     groupsContinuationLinesIntoOneLogicalCommand();
+    mapsLogicalTokenRangesBackToPhysicalLines();
     keepsBlockContentRowsAsNonCommandLogicalEntries();
     normalizesCentrelineAliasOnLogicalCommands();
     return 0;

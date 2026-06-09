@@ -29,6 +29,16 @@ bool endsWithContinuationMarker(const QString &line)
     return trailingBackslashCount % 2 == 1;
 }
 
+int firstNonSpaceIndex(const QString &line)
+{
+    for (int index = 0; index < line.size(); ++index) {
+        if (!line.at(index).isSpace()) {
+            return index;
+        }
+    }
+    return line.size();
+}
+
 QString stripTrailingContinuationMarker(const QString &line)
 {
     QString trimmed = rightTrimmed(line);
@@ -38,23 +48,29 @@ QString stripTrailingContinuationMarker(const QString &line)
     return trimmed;
 }
 
-QString appendLogicalCommandPart(QString logicalText, const QString &sourceLineText, bool previousLineContinued)
+struct LogicalCommandPart
+{
+    QString text;
+    int sourceColumnNumber = 1;
+    int sourceStartOffsetDelta = 0;
+};
+
+LogicalCommandPart logicalCommandPartForLine(const QString &sourceLineText, bool previousLineContinued)
 {
     const bool lineContinues = endsWithContinuationMarker(sourceLineText);
     const QString currentPart = lineContinues
         ? stripTrailingContinuationMarker(sourceLineText)
         : sourceLineText;
-    const QString normalizedPart = previousLineContinued
-        ? currentPart.trimmed()
-        : currentPart;
-
-    if (!normalizedPart.isEmpty()) {
-        if (!logicalText.isEmpty()) {
-            logicalText.append(QLatin1Char(' '));
-        }
-        logicalText.append(normalizedPart);
+    if (!previousLineContinued) {
+        return {currentPart, 1, 0};
     }
-    return logicalText;
+
+    const int firstContentIndex = firstNonSpaceIndex(currentPart);
+    const QString normalizedPart = currentPart.mid(firstContentIndex).trimmed();
+    if (normalizedPart.isEmpty()) {
+        return {};
+    }
+    return {normalizedPart, firstContentIndex + 1, firstContentIndex};
 }
 }
 
@@ -70,6 +86,40 @@ bool TherionSourceLogicalCommand::hasUnmatchedClose() const
     }
     return blockStackBefore.isEmpty()
         || blockStackBefore.constLast().directive != closeMatchesOpenDirective;
+}
+
+bool TherionSourceLogicalCommand::physicalRangeForLogicalRange(int logicalStart,
+                                                               int logicalLength,
+                                                               TherionSourcePhysicalRange *range) const
+{
+    if (range != nullptr) {
+        *range = {};
+    }
+    if (logicalStart < 0 || logicalLength <= 0) {
+        return false;
+    }
+
+    for (const TherionSourceLogicalTextPart &part : textParts) {
+        const int partStart = part.logicalStart;
+        const int partEnd = part.logicalStart + part.logicalLength;
+        if (logicalStart < partStart || logicalStart >= partEnd) {
+            continue;
+        }
+
+        const int delta = logicalStart - partStart;
+        const int mappedLength = qMin(logicalLength, partEnd - logicalStart);
+        if (range != nullptr) {
+            range->lineNumber = part.lineNumber;
+            range->columnNumber = part.columnNumber + delta;
+            range->columnLength = mappedLength;
+            range->startOffset = part.startOffset + delta;
+            range->length = mappedLength;
+            range->lineText = part.lineText;
+        }
+        return true;
+    }
+
+    return false;
 }
 
 TherionSourceLogicalDocument TherionSourceLogicalDocument::fromText(const QString &contents)
@@ -102,9 +152,24 @@ TherionSourceLogicalDocument TherionSourceLogicalDocument::fromSourceDocument(co
         int currentIndex = lineIndex;
         while (currentIndex < lines.size()) {
             const TherionSourceDocumentLine &currentLine = lines.at(currentIndex);
-            command.text = appendLogicalCommandPart(command.text,
-                                                    currentLine.sourceLine.text,
-                                                    previousLineContinued);
+            const LogicalCommandPart part = logicalCommandPartForLine(currentLine.sourceLine.text,
+                                                                      previousLineContinued);
+            if (!part.text.isEmpty()) {
+                if (!command.text.isEmpty()) {
+                    command.text.append(QLatin1Char(' '));
+                }
+
+                TherionSourceLogicalTextPart textPart;
+                textPart.logicalStart = command.text.size();
+                textPart.logicalLength = part.text.size();
+                textPart.lineNumber = currentLine.sourceLine.lineNumber;
+                textPart.columnNumber = part.sourceColumnNumber;
+                textPart.startOffset = currentLine.sourceLine.startOffset + part.sourceStartOffsetDelta;
+                textPart.lineText = currentLine.sourceLine.text;
+                command.textParts.append(textPart);
+
+                command.text.append(part.text);
+            }
             command.endLineNumber = currentLine.sourceLine.lineNumber;
             command.endOffset = currentLine.sourceLine.endOffset;
             command.physicalLineNumbers.append(currentLine.sourceLine.lineNumber);

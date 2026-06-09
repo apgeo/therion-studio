@@ -6,27 +6,60 @@
 #include "TherionSourceDocument.h"
 
 #include <algorithm>
+#include <optional>
 
 namespace TherionStudio
 {
 namespace
 {
+struct LineCleanupResult
+{
+    QString text;
+    bool changed = false;
+    int columnNumber = 1;
+    int columnLength = 0;
+};
+
+std::optional<TherionParsedToken> tokenSpanForCommandTokenIndex(const TherionParsedLine &parsedLine,
+                                                                int tokenIndex)
+{
+    if (tokenIndex < 0) {
+        return std::nullopt;
+    }
+
+    int currentTokenIndex = 0;
+    for (const TherionParsedToken &tokenSpan : parsedLine.tokenSpans) {
+        if (tokenSpan.type == TherionTokenType::Comment) {
+            continue;
+        }
+        if (currentTokenIndex == tokenIndex) {
+            return tokenSpan;
+        }
+        ++currentTokenIndex;
+    }
+    return std::nullopt;
+}
+
 QPair<int, int> sourceLineRemovalRangeForTokenRange(const QString &lineText,
                                                     const TherionParsedLine &parsedLine,
                                                     int firstTokenIndex,
                                                     int lastTokenIndex)
 {
     if (firstTokenIndex < 0
-        || lastTokenIndex < firstTokenIndex
-        || firstTokenIndex >= parsedLine.tokenSpans.size()
-        || lastTokenIndex >= parsedLine.tokenSpans.size()) {
+        || lastTokenIndex < firstTokenIndex) {
         return qMakePair(-1, -1);
     }
 
-    const TherionParsedToken firstToken = parsedLine.tokenSpans.at(firstTokenIndex);
-    const TherionParsedToken lastToken = parsedLine.tokenSpans.at(lastTokenIndex);
-    int removeStart = firstToken.start;
-    int removeEnd = lastToken.start + lastToken.length;
+    const std::optional<TherionParsedToken> firstToken = tokenSpanForCommandTokenIndex(parsedLine,
+                                                                                       firstTokenIndex);
+    const std::optional<TherionParsedToken> lastToken = tokenSpanForCommandTokenIndex(parsedLine,
+                                                                                     lastTokenIndex);
+    if (!firstToken.has_value() || !lastToken.has_value()) {
+        return qMakePair(-1, -1);
+    }
+
+    int removeStart = firstToken->start;
+    int removeEnd = lastToken->start + lastToken->length;
     if (removeStart < 0 || removeEnd < removeStart || removeEnd > lineText.size()) {
         return qMakePair(-1, -1);
     }
@@ -64,6 +97,82 @@ QString lineWithRemovedTokenRange(const QString &lineText,
     return updated;
 }
 
+bool setRangeFromTokenRange(const QString &lineText,
+                            const TherionParsedLine &parsedLine,
+                            int firstTokenIndex,
+                            int lastTokenIndex,
+                            int *columnNumber,
+                            int *columnLength)
+{
+    if (columnNumber != nullptr) {
+        *columnNumber = 1;
+    }
+    if (columnLength != nullptr) {
+        *columnLength = 0;
+    }
+
+    if (firstTokenIndex < 0
+        || lastTokenIndex < firstTokenIndex) {
+        return false;
+    }
+
+    const std::optional<TherionParsedToken> firstToken = tokenSpanForCommandTokenIndex(parsedLine,
+                                                                                       firstTokenIndex);
+    const std::optional<TherionParsedToken> lastToken = tokenSpanForCommandTokenIndex(parsedLine,
+                                                                                     lastTokenIndex);
+    if (!firstToken.has_value() || !lastToken.has_value()) {
+        return false;
+    }
+
+    const int rangeStart = firstToken->start;
+    const int rangeEnd = lastToken->start + lastToken->length;
+    if (rangeStart < 0 || rangeEnd <= rangeStart || rangeEnd > lineText.size()) {
+        return false;
+    }
+
+    if (columnNumber != nullptr) {
+        *columnNumber = rangeStart + 1;
+    }
+    if (columnLength != nullptr) {
+        *columnLength = rangeEnd - rangeStart;
+    }
+    return true;
+}
+
+bool setRangeFromTokenIndex(const TherionParsedLine &parsedLine,
+                            int tokenIndex,
+                            int *columnNumber,
+                            int *columnLength)
+{
+    if (columnNumber != nullptr) {
+        *columnNumber = 1;
+    }
+    if (columnLength != nullptr) {
+        *columnLength = 0;
+    }
+
+    if (tokenIndex < 0) {
+        return false;
+    }
+
+    const std::optional<TherionParsedToken> token = tokenSpanForCommandTokenIndex(parsedLine, tokenIndex);
+    if (!token.has_value()) {
+        return false;
+    }
+
+    if (token->start < 0 || token->length <= 0) {
+        return false;
+    }
+
+    if (columnNumber != nullptr) {
+        *columnNumber = token->start + 1;
+    }
+    if (columnLength != nullptr) {
+        *columnLength = token->length;
+    }
+    return true;
+}
+
 bool looksLikeCommandDirective(const QString &token)
 {
     const QString trimmed = token.trimmed();
@@ -88,7 +197,10 @@ QString optionDeduplicationKey(const QString &optionToken, const QStringList &va
         + values.join(QLatin1Char('\n'));
 }
 
-QString cleanupInvalidSubtypeValues(const QString &lineText, bool *changed)
+QString cleanupInvalidSubtypeValues(const QString &lineText,
+                                    bool *changed,
+                                    int *firstChangedColumnNumber,
+                                    int *firstChangedColumnLength)
 {
     if (changed != nullptr) {
         *changed = false;
@@ -145,6 +257,15 @@ QString cleanupInvalidSubtypeValues(const QString &lineText, bool *changed)
         }
 
         bool removed = false;
+        if (firstChangedColumnLength != nullptr
+            && *firstChangedColumnLength <= 0) {
+            setRangeFromTokenRange(updated,
+                                   parsedLine,
+                                   removeStartTokenIndex,
+                                   removeEndTokenIndex,
+                                   firstChangedColumnNumber,
+                                   firstChangedColumnLength);
+        }
         updated = lineWithRemovedTokenRange(updated,
                                             parsedLine,
                                             removeStartTokenIndex,
@@ -159,7 +280,10 @@ QString cleanupInvalidSubtypeValues(const QString &lineText, bool *changed)
     }
 }
 
-QString cleanupDuplicateOptions(const QString &lineText, bool *changed)
+QString cleanupDuplicateOptions(const QString &lineText,
+                                bool *changed,
+                                int *firstChangedColumnNumber,
+                                int *firstChangedColumnLength)
 {
     if (changed != nullptr) {
         *changed = false;
@@ -195,6 +319,15 @@ QString cleanupDuplicateOptions(const QString &lineText, bool *changed)
         }
 
         bool removed = false;
+        if (firstChangedColumnLength != nullptr
+            && *firstChangedColumnLength <= 0) {
+            setRangeFromTokenRange(updated,
+                                   parsedLine,
+                                   removeStartTokenIndex,
+                                   removeEndTokenIndex,
+                                   firstChangedColumnNumber,
+                                   firstChangedColumnLength);
+        }
         updated = lineWithRemovedTokenRange(updated,
                                             parsedLine,
                                             removeStartTokenIndex,
@@ -209,36 +342,44 @@ QString cleanupDuplicateOptions(const QString &lineText, bool *changed)
     }
 }
 
-QString cleanupLine(const QString &lineText, bool *changed)
+LineCleanupResult cleanupLine(const QString &lineText)
 {
+    LineCleanupResult result;
+    result.text = lineText;
+
     bool subtypeChanged = false;
-    QString updated = cleanupInvalidSubtypeValues(lineText, &subtypeChanged);
+    result.text = cleanupInvalidSubtypeValues(result.text,
+                                              &subtypeChanged,
+                                              &result.columnNumber,
+                                              &result.columnLength);
 
     bool duplicateChanged = false;
-    updated = cleanupDuplicateOptions(updated, &duplicateChanged);
+    result.text = cleanupDuplicateOptions(result.text,
+                                          &duplicateChanged,
+                                          &result.columnNumber,
+                                          &result.columnLength);
 
-    if (changed != nullptr) {
-        *changed = subtypeChanged || duplicateChanged;
-    }
-    return updated;
+    result.changed = subtypeChanged || duplicateChanged;
+    return result;
 }
 
 TherionSourceDiagnostic diagnosticForLineCleanup(const TherionParsedSourceLine &sourceLine,
-                                                 const QString &suggestedText)
+                                                 const LineCleanupResult &cleanup)
 {
     TherionSourceDiagnostic diagnostic;
     diagnostic.code = QStringLiteral("malformed-option-token");
     diagnostic.severity = TherionSourceDiagnosticSeverity::Error;
     diagnostic.lineNumber = sourceLine.lineNumber;
-    diagnostic.columnNumber = 1;
+    diagnostic.columnNumber = cleanup.columnNumber;
+    diagnostic.columnLength = cleanup.columnLength;
     diagnostic.title = QStringLiteral("Malformed or duplicate option token");
     diagnostic.message = QStringLiteral("This command contains an option-like token or duplicate option/value pair that Therion may reject.");
     diagnostic.currentText = sourceLine.text;
-    diagnostic.suggestedText = suggestedText;
+    diagnostic.suggestedText = cleanup.text;
     diagnostic.hasFix = true;
     diagnostic.fix.startOffset = sourceLine.startOffset;
     diagnostic.fix.length = sourceLine.textLength;
-    diagnostic.fix.replacementText = suggestedText;
+    diagnostic.fix.replacementText = cleanup.text;
     diagnostic.fix.description = QStringLiteral("Rewrite line %1").arg(sourceLine.lineNumber);
     return diagnostic;
 }
@@ -259,6 +400,25 @@ TherionSourceDiagnostic diagnosticForLine(const TherionParsedSourceLine &sourceL
     diagnostic.currentText = sourceLine.text;
     diagnostic.suggestedText = QString();
     diagnostic.hasFix = false;
+    return diagnostic;
+}
+
+TherionSourceDiagnostic diagnosticForToken(const TherionParsedSourceLine &sourceLine,
+                                           int tokenIndex,
+                                           const QString &code,
+                                           const QString &title,
+                                           const QString &message,
+                                           TherionSourceDiagnosticSeverity severity = TherionSourceDiagnosticSeverity::Warning)
+{
+    TherionSourceDiagnostic diagnostic = diagnosticForLine(sourceLine,
+                                                          code,
+                                                          title,
+                                                          message,
+                                                          severity);
+    setRangeFromTokenIndex(sourceLine.parsed,
+                           tokenIndex,
+                           &diagnostic.columnNumber,
+                           &diagnostic.columnLength);
     return diagnostic;
 }
 
@@ -286,10 +446,11 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
         if (!skipUnknownCommand
             && !therionDirectiveIsKnownBlockDirective(commandName)
             && looksLikeCommandDirective(sourceLine.parsed.directive)) {
-            result->diagnostics.append(diagnosticForLine(sourceLine,
-                                                         QStringLiteral("unknown-command"),
-                                                         QStringLiteral("Unknown command"),
-                                                         QStringLiteral("Command `%1` is not present in the Therion command catalog.").arg(sourceLine.parsed.directive)));
+            result->diagnostics.append(diagnosticForToken(sourceLine,
+                                                          0,
+                                                          QStringLiteral("unknown-command"),
+                                                          QStringLiteral("Unknown command"),
+                                                          QStringLiteral("Command `%1` is not present in the Therion command catalog.").arg(sourceLine.parsed.directive)));
         }
         return;
     }
@@ -316,11 +477,12 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
     if (!allowedFirstValues.isEmpty() && providedPositionalCount > 0 && sourceLine.parsed.tokens.size() > 1) {
         const QString value = sourceLine.parsed.tokens.at(1).trimmed();
         if (!value.isEmpty() && !allowedFirstValues.contains(value, Qt::CaseInsensitive)) {
-            result->diagnostics.append(diagnosticForLine(sourceLine,
-                                                         QStringLiteral("unknown-argument-value"),
-                                                         QStringLiteral("Unknown argument value"),
-                                                         QStringLiteral("Command `%1` does not list `%2` as a known value. Known values: %3.")
-                                                             .arg(commandName, value, allowedFirstValues.join(QStringLiteral(", ")))));
+            result->diagnostics.append(diagnosticForToken(sourceLine,
+                                                          1,
+                                                          QStringLiteral("unknown-argument-value"),
+                                                          QStringLiteral("Unknown argument value"),
+                                                          QStringLiteral("Command `%1` does not list `%2` as a known value. Known values: %3.")
+                                                              .arg(commandName, value, allowedFirstValues.join(QStringLiteral(", ")))));
         }
     }
 
@@ -329,33 +491,36 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
         const QString optionToken = optionEntry.key;
         const QString normalizedOption = QStringLiteral("-") + normalizedCommandOptionName(optionToken);
         if (!knownOptions.isEmpty() && !knownOptions.contains(normalizedOption)) {
-            result->diagnostics.append(diagnosticForLine(sourceLine,
-                                                         QStringLiteral("unknown-option"),
-                                                         QStringLiteral("Unknown option"),
-                                                         QStringLiteral("Command `%1` does not list option `%2` in the Therion command catalog.")
-                                                             .arg(commandName, optionToken)));
+            result->diagnostics.append(diagnosticForToken(sourceLine,
+                                                          optionEntry.optionTokenIndex,
+                                                          QStringLiteral("unknown-option"),
+                                                          QStringLiteral("Unknown option"),
+                                                          QStringLiteral("Command `%1` does not list option `%2` in the Therion command catalog.")
+                                                              .arg(commandName, optionToken)));
         }
 
         const QString arity = catalog.commandOptionValueArityTokens.value(commandOptionValueKey(commandName, normalizedOption));
         const int fixedArity = catalog.commandOptionFixedArityByKey.value(commandOptionValueKey(commandName, normalizedOption), -1);
         const int providedValueCount = optionEntry.logicalValueCount;
         if ((optionArityRequiresValue(arity) || fixedArity > 0) && providedValueCount == 0) {
-            result->diagnostics.append(diagnosticForLine(sourceLine,
-                                                         QStringLiteral("missing-option-value"),
-                                                         QStringLiteral("Missing option value"),
-                                                         QStringLiteral("Option `%1` on command `%2` expects a value.")
-                                                             .arg(optionToken, commandName),
-                                                         TherionSourceDiagnosticSeverity::Error));
+            result->diagnostics.append(diagnosticForToken(sourceLine,
+                                                          optionEntry.optionTokenIndex,
+                                                          QStringLiteral("missing-option-value"),
+                                                          QStringLiteral("Missing option value"),
+                                                          QStringLiteral("Option `%1` on command `%2` expects a value.")
+                                                              .arg(optionToken, commandName),
+                                                          TherionSourceDiagnosticSeverity::Error));
         } else if (fixedArity > 0 && providedValueCount > 0 && providedValueCount != fixedArity) {
-            result->diagnostics.append(diagnosticForLine(sourceLine,
-                                                         QStringLiteral("wrong-option-value-count"),
-                                                         QStringLiteral("Unexpected option value count"),
-                                                         QStringLiteral("Option `%1` on command `%2` expects exactly %3 value(s), but %4 provided.")
-                                                             .arg(optionToken)
-                                                             .arg(commandName)
-                                                             .arg(fixedArity)
-                                                             .arg(providedValueCount),
-                                                         TherionSourceDiagnosticSeverity::Error));
+            result->diagnostics.append(diagnosticForToken(sourceLine,
+                                                          optionEntry.optionTokenIndex,
+                                                          QStringLiteral("wrong-option-value-count"),
+                                                          QStringLiteral("Unexpected option value count"),
+                                                          QStringLiteral("Option `%1` on command `%2` expects exactly %3 value(s), but %4 provided.")
+                                                              .arg(optionToken)
+                                                              .arg(commandName)
+                                                              .arg(fixedArity)
+                                                              .arg(providedValueCount),
+                                                          TherionSourceDiagnosticSeverity::Error));
         }
 
         const QStringList allowedOptionValues = catalog.commandOptionAllowedValuesByKey.value(
@@ -366,11 +531,15 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
             const QString valueToken = optionEntry.rawValueTokens.constFirst().trimmed();
             if (!valueToken.isEmpty()
                 && !allowedOptionValues.contains(valueToken, Qt::CaseInsensitive)) {
-                result->diagnostics.append(diagnosticForLine(sourceLine,
-                                                             QStringLiteral("unknown-option-value"),
-                                                             QStringLiteral("Unknown option value"),
-                                                             QStringLiteral("Option `%1` on command `%2` does not list `%3` as a known value. Known values: %4.")
-                                                                 .arg(normalizedOption, commandName, valueToken, allowedOptionValues.join(QStringLiteral(", ")))));
+                const int diagnosticTokenIndex = optionEntry.embeddedValue
+                    ? optionEntry.optionTokenIndex
+                    : optionEntry.firstValueTokenIndex;
+                result->diagnostics.append(diagnosticForToken(sourceLine,
+                                                              diagnosticTokenIndex,
+                                                              QStringLiteral("unknown-option-value"),
+                                                              QStringLiteral("Unknown option value"),
+                                                              QStringLiteral("Option `%1` on command `%2` does not list `%3` as a known value. Known values: %4.")
+                                                                  .arg(normalizedOption, commandName, valueToken, allowedOptionValues.join(QStringLiteral(", ")))));
             }
         }
     }
@@ -423,10 +592,9 @@ TherionSourceValidationResult TherionSourceValidator::validate(const QString &co
     for (const TherionSourceDocumentLine &documentLine : sourceDocument.lines()) {
         const TherionParsedSourceLine &sourceLine = documentLine.sourceLine;
 
-        bool changed = false;
-        const QString suggestedText = cleanupLine(sourceLine.text, &changed);
-        if (changed && suggestedText != sourceLine.text) {
-            result.diagnostics.append(diagnosticForLineCleanup(sourceLine, suggestedText));
+        const LineCleanupResult cleanup = cleanupLine(sourceLine.text);
+        if (cleanup.changed && cleanup.text != sourceLine.text) {
+            result.diagnostics.append(diagnosticForLineCleanup(sourceLine, cleanup));
         }
 
         if (!catalog.commandNames.isEmpty() && documentLine.shouldValidateCommandCatalog()) {

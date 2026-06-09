@@ -10,6 +10,7 @@ using TherionStudio::TherionSourceValidationResult;
 using TherionStudio::TherionSourceValidationCatalog;
 using TherionStudio::TherionSourceValidator;
 using TherionStudio::TherionSourceDiagnosticSeverity;
+using TherionStudio::TherionSourceDiagnostic;
 
 namespace
 {
@@ -19,6 +20,14 @@ void require(bool condition, const char *message)
         std::fprintf(stderr, "TherionSourceValidatorTest failed: %s\n", message);
         std::exit(1);
     }
+}
+
+QString diagnosticSourceRange(const TherionSourceDiagnostic &diagnostic)
+{
+    if (diagnostic.columnNumber <= 0 || diagnostic.columnLength <= 0) {
+        return QString();
+    }
+    return diagnostic.currentText.mid(diagnostic.columnNumber - 1, diagnostic.columnLength);
 }
 
 void reportsAndFixesMalformedClipTokens()
@@ -35,6 +44,8 @@ void reportsAndFixesMalformedClipTokens()
             "Malformed quoted -clip off tokens should be reported as an error.");
     require(result.diagnostics.first().suggestedText == QStringLiteral("line rock-border -close on -clip off"),
             "Malformed quoted -clip off tokens should be removed from the suggested line.");
+    require(diagnosticSourceRange(result.diagnostics.first()).startsWith(QStringLiteral("\"-clip off\"")),
+            "Malformed quoted -clip off diagnostics should point at the first malformed token.");
 
     const QString fixed = TherionSourceValidator::applyFixes(contents, {result.diagnostics.first().fix});
     require(fixed == QStringLiteral("line rock-border -close on -clip off\nendline\n"),
@@ -50,6 +61,8 @@ void reportsAndFixesDuplicateOptionRows()
             "Duplicate option/value pairs should produce one line-level diagnostic.");
     require(result.diagnostics.first().suggestedText == QStringLiteral("line rock-border -close on -clip off"),
             "Duplicate option/value pairs should be removed from the suggested line.");
+    require(diagnosticSourceRange(result.diagnostics.first()) == QStringLiteral("-clip off"),
+            "Duplicate option diagnostics should point at the duplicate option/value token range.");
 }
 
 void reportsAndFixesOptionLikeSubtype()
@@ -137,6 +150,17 @@ bool containsDiagnostic(const TherionSourceValidationResult &result, const QStri
     return false;
 }
 
+const TherionSourceDiagnostic *diagnosticForCode(const TherionSourceValidationResult &result,
+                                                 const QString &code)
+{
+    for (const auto &diagnostic : result.diagnostics) {
+        if (diagnostic.code == code) {
+            return &diagnostic;
+        }
+    }
+    return nullptr;
+}
+
 TherionSourceDiagnosticSeverity severityForDiagnostic(const TherionSourceValidationResult &result, const QString &code)
 {
     for (const auto &diagnostic : result.diagnostics) {
@@ -172,10 +196,18 @@ void reportsUnknownOptionAndMissingOptionValue()
 
     require(containsDiagnostic(result, QStringLiteral("unknown-option")),
             "Unknown option should produce a diagnostic.");
+    const TherionSourceDiagnostic *unknownOption =
+        diagnosticForCode(result, QStringLiteral("unknown-option"));
+    require(unknownOption != nullptr && diagnosticSourceRange(*unknownOption) == QStringLiteral("-bogus"),
+            "Unknown option diagnostics should point at the unknown option token.");
     require(severityForDiagnostic(result, QStringLiteral("unknown-option")) == TherionSourceDiagnosticSeverity::Warning,
             "Unknown option should remain a warning because the catalog may be incomplete.");
     require(containsDiagnostic(result, QStringLiteral("missing-option-value")),
             "Known option without a required value should produce a diagnostic.");
+    const TherionSourceDiagnostic *missingOptionValue =
+        diagnosticForCode(result, QStringLiteral("missing-option-value"));
+    require(missingOptionValue != nullptr && diagnosticSourceRange(*missingOptionValue) == QStringLiteral("-clip"),
+            "Missing option value diagnostics should point at the option token.");
     require(severityForDiagnostic(result, QStringLiteral("missing-option-value")) == TherionSourceDiagnosticSeverity::Error,
             "Known option without a required value should be reported as an error.");
 }
@@ -246,6 +278,10 @@ void reportsUnknownArgumentValue()
 
     require(containsDiagnostic(result, QStringLiteral("unknown-argument-value")),
             "Unknown first argument value should produce a diagnostic when allowed values are known.");
+    const TherionSourceDiagnostic *unknownArgumentValue =
+        diagnosticForCode(result, QStringLiteral("unknown-argument-value"));
+    require(unknownArgumentValue != nullptr && diagnosticSourceRange(*unknownArgumentValue) == QStringLiteral("mystery"),
+            "Unknown argument value diagnostics should point at the argument token.");
 }
 
 void reportsUnknownOptionValue()
@@ -256,6 +292,10 @@ void reportsUnknownOptionValue()
 
     require(containsDiagnostic(result, QStringLiteral("unknown-option-value")),
             "Unknown option values should produce a diagnostic when allowed values are known.");
+    const TherionSourceDiagnostic *unknownOptionValue =
+        diagnosticForCode(result, QStringLiteral("unknown-option-value"));
+    require(unknownOptionValue != nullptr && diagnosticSourceRange(*unknownOptionValue) == QStringLiteral("maybe"),
+            "Unknown option value diagnostics should point at the invalid option value token.");
     require(severityForDiagnostic(result, QStringLiteral("unknown-option-value")) == TherionSourceDiagnosticSeverity::Warning,
             "Unknown option values should remain warnings because catalog values may be incomplete.");
 }

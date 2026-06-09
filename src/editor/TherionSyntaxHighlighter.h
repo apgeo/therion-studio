@@ -7,6 +7,7 @@
 #include <QJsonObject>
 
 #include "../core/CommandCatalogStore.h"
+#include "../core/TherionSourceValidator.h"
 
 class QTextDocument;
 
@@ -27,6 +28,7 @@ private:
     void loadPalette();
     void applyStyle(const QString &styleName, const QJsonObject &styleObject);
     void loadCommandCatalogKeywords();
+    void applyValidatorInvalidTokenFormats(const QString &text);
 
     QTextCharFormat baseTextFormat_;
     QTextCharFormat keywordFormat_;
@@ -46,6 +48,7 @@ private:
     QHash<QString, QSet<int>> commandPositionalIdTokenIndexes_;
     QHash<QString, QSet<QString>> commandOptionIdValueTokens_;
     QSet<QString> closingDirectiveIdTokens_;
+    TherionSourceValidationCatalog validationCatalog_;
     CommandCatalogStore catalogStore_;
 };
 }

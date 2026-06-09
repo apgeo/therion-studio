@@ -28,6 +28,7 @@ struct TherionSourceDiagnostic
     TherionSourceDiagnosticSeverity severity = TherionSourceDiagnosticSeverity::Warning;
     int lineNumber = 0;
     int columnNumber = 0;
+    int columnLength = 0;
     QString title;
     QString message;
     QString currentText;

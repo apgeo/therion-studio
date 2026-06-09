@@ -1,6 +1,7 @@
 #include "TherionSyntaxHighlighter.h"
 
 #include "../core/TherionCommandLineModel.h"
+#include "../core/TherionCommandSyntax.h"
 #include "../core/TherionDocumentParser.h"
 #include "../core/TherionTokenRules.h"
 
@@ -19,8 +20,6 @@
 
 namespace TherionStudio
 {
-QStringList extractOptionKeysFromSignatureAliases(const QString &signature);
-
 namespace
 {
 QTextCharFormat makeFormat(const QColor &foreground, bool bold = false, bool italic = false)
@@ -69,64 +68,6 @@ QSet<QString> extractOptionKeys(const QString &optionKeyField, const QString &si
     return keys;
 }
 
-bool looksLikeOptionToken(const QString &token)
-{
-    static const QRegularExpression optionPattern(QStringLiteral("^-[A-Za-z][A-Za-z0-9-]*$"));
-    return optionPattern.match(token.trimmed()).hasMatch();
-}
-
-QString normalizeSymbolTypeToken(const QString &token)
-{
-    QString normalized = token.trimmed().toLower();
-    if (normalized.isEmpty() || normalized.startsWith(QLatin1Char('-'))) {
-        return QString();
-    }
-
-    const int separatorIndex = normalized.indexOf(QLatin1Char(':'));
-    if (separatorIndex > 0) {
-        normalized = normalized.left(separatorIndex).trimmed();
-    }
-    return normalized;
-}
-
-QString symbolTypeForSubtypeLookup(const QString &commandName, const TherionParsedLine &parsedLine)
-{
-    const QString normalizedCommand = commandName.trimmed().toLower();
-    if (normalizedCommand == QStringLiteral("line")
-        || normalizedCommand == QStringLiteral("area")) {
-        for (int tokenIndex = 1; tokenIndex < parsedLine.tokens.size(); ++tokenIndex) {
-            const QString token = parsedLine.tokens.at(tokenIndex).trimmed();
-            if (token.startsWith(QLatin1Char('-'))) {
-                break;
-            }
-            const QString normalizedType = normalizeSymbolTypeToken(token);
-            if (!normalizedType.isEmpty()) {
-                return normalizedType;
-            }
-        }
-        return QString();
-    }
-
-    if (normalizedCommand == QStringLiteral("point")) {
-        int positionalToken = 0;
-        for (int tokenIndex = 1; tokenIndex < parsedLine.tokens.size(); ++tokenIndex) {
-            const QString token = parsedLine.tokens.at(tokenIndex).trimmed();
-            if (token.isEmpty()) {
-                continue;
-            }
-            if (token.startsWith(QLatin1Char('-'))) {
-                break;
-            }
-            ++positionalToken;
-            if (positionalToken == 3) {
-                return normalizeSymbolTypeToken(token);
-            }
-        }
-    }
-
-    return QString();
-}
-
 QSet<QString> lowerSetFromArray(const QJsonArray &values)
 {
     QSet<QString> lowered;
@@ -137,6 +78,17 @@ QSet<QString> lowerSetFromArray(const QJsonArray &values)
         }
     }
     return lowered;
+}
+
+QStringList sortedStringListFromSet(const QSet<QString> &values)
+{
+    QStringList sorted;
+    sorted.reserve(values.size());
+    for (const QString &value : values) {
+        sorted.append(value);
+    }
+    sorted.sort(Qt::CaseInsensitive);
+    return sorted;
 }
 
 QSet<QString> extractClosingDirectiveTokens(const QJsonArray &syntaxArray)
@@ -212,6 +164,7 @@ void TherionSyntaxHighlighter::loadPalette()
     commandPositionalIdTokenIndexes_.clear();
     commandOptionIdValueTokens_.clear();
     closingDirectiveIdTokens_.clear();
+    validationCatalog_ = {};
 
     const bool darkPalette = applicationUsesDarkSyntaxPalette();
     baseTextFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#D4D4D4")) : QColor(QStringLiteral("#24292f")));
@@ -428,6 +381,8 @@ void TherionSyntaxHighlighter::highlightBlock(const QString &text)
 
         ++tokenIndex;
     }
+
+    applyValidatorInvalidTokenFormats(text);
 }
 
 void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
@@ -445,8 +400,11 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
         if (!commandName.isEmpty()) {
             commandTokens_.insert(commandName);
             keywordTokens_.insert(commandName);
+            validationCatalog_.commandNames.insert(commandName);
             if (!commandAllowedValues.isEmpty()) {
                 commandAllowedValues_.insert(commandName, commandAllowedValues);
+                validationCatalog_.commandArgumentAllowedValuesByKey.insert(commandArgumentValueKey(commandName, 0),
+                                                                            sortedStringListFromSet(commandAllowedValues));
             }
         }
 
@@ -519,6 +477,15 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
             commandSubtypeByTypeTokens_.insert(commandName, subtypeByTypeValues);
             commandPositionalIdTokenIndexes_.insert(commandName, positionalIdIndexes);
             commandOptionIdValueTokens_.insert(commandName, optionIdTokens);
+            validationCatalog_.commandOptionNames.insert(commandName, optionTokens);
+            for (auto arityIt = optionArities.cbegin(); arityIt != optionArities.cend(); ++arityIt) {
+                validationCatalog_.commandOptionValueArityTokens.insert(commandOptionValueKey(commandName, arityIt.key()),
+                                                                        arityIt.value());
+            }
+            for (auto enumIt = optionEnumValues.cbegin(); enumIt != optionEnumValues.cend(); ++enumIt) {
+                validationCatalog_.commandOptionAllowedValuesByKey.insert(commandOptionValueKey(commandName, enumIt.key()),
+                                                                          sortedStringListFromSet(enumIt.value()));
+            }
         }
 
         const QJsonArray aliasesArray = commandObject.value(QStringLiteral("aliases")).toArray();
@@ -527,6 +494,7 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
             if (!alias.isEmpty()) {
                 commandTokens_.insert(alias);
                 keywordTokens_.insert(alias);
+                validationCatalog_.commandNames.insert(alias);
                 for (const QString &closingToken : closingDirectiveTokens) {
                     keywordTokens_.insert(closingToken);
                     if (!commandName.isEmpty()) {
@@ -542,6 +510,8 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
                 }
                 if (!commandAllowedValues.isEmpty()) {
                     commandAllowedValues_.insert(alias, commandAllowedValues);
+                    validationCatalog_.commandArgumentAllowedValuesByKey.insert(commandArgumentValueKey(alias, 0),
+                                                                                sortedStringListFromSet(commandAllowedValues));
                 }
                 commandOptionTokens_.insert(alias, optionTokens);
                 commandOptionValueArity_.insert(alias, optionArities);
@@ -549,8 +519,54 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
                 commandSubtypeByTypeTokens_.insert(alias, subtypeByTypeValues);
                 commandPositionalIdTokenIndexes_.insert(alias, positionalIdIndexes);
                 commandOptionIdValueTokens_.insert(alias, optionIdTokens);
+                validationCatalog_.commandOptionNames.insert(alias, optionTokens);
+                for (auto arityIt = optionArities.cbegin(); arityIt != optionArities.cend(); ++arityIt) {
+                    validationCatalog_.commandOptionValueArityTokens.insert(commandOptionValueKey(alias, arityIt.key()),
+                                                                            arityIt.value());
+                }
+                for (auto enumIt = optionEnumValues.cbegin(); enumIt != optionEnumValues.cend(); ++enumIt) {
+                    validationCatalog_.commandOptionAllowedValuesByKey.insert(commandOptionValueKey(alias, enumIt.key()),
+                                                                              sortedStringListFromSet(enumIt.value()));
+                }
             }
         }
+    }
+}
+
+void TherionSyntaxHighlighter::applyValidatorInvalidTokenFormats(const QString &text)
+{
+    if (text.trimmed().isEmpty()) {
+        return;
+    }
+
+    const TherionSourceValidationResult validation =
+        TherionSourceValidator::validate(text, validationCatalog_);
+    for (const TherionSourceDiagnostic &diagnostic : validation.diagnostics) {
+        if (diagnostic.columnLength <= 0) {
+            continue;
+        }
+
+        const QString code = diagnostic.code;
+        if (code != QStringLiteral("malformed-option-token")
+            && code != QStringLiteral("unknown-option")
+            && code != QStringLiteral("missing-option-value")
+            && code != QStringLiteral("wrong-option-value-count")
+            && code != QStringLiteral("unknown-option-value")
+            && code != QStringLiteral("unknown-argument-value")) {
+            continue;
+        }
+
+        const int start = qMax(0, diagnostic.columnNumber - 1);
+        if (start >= text.size()) {
+            continue;
+        }
+
+        const int length = qMin(diagnostic.columnLength, text.size() - start);
+        if (length <= 0) {
+            continue;
+        }
+
+        setFormat(start, length, invalidTokenFormat_);
     }
 }
 }

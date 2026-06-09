@@ -1,6 +1,6 @@
 # Používateľská príručka Therion Studio
 
-Aktualizované: 2026-06-07
+Aktualizované: 2026-06-09
 
 Táto príručka opisuje bežnú prácu v Therion Studio. Zámerne nie je úplnou referenciou jazyka Therion. Syntax Therionu, názvy príkazov, voľby a obsah ukladaný do súborov zostávajú v kanonickej podobe Therionu.
 
@@ -12,7 +12,7 @@ Aplikácia používa jazyk operačného systému, ak je dostupný vstavaný prek
 - [2. Hlavné okno](#2-hlavné-okno)
 - [3. Začíname](#3-začíname)
 - [4. Textový editor](#4-textový-editor)
-- [5. Štruktúra a práca so súbormi](#5-štruktúra-a-práca-so-súbormi)
+- [5. Navigácia v projekte a práca so súbormi](#5-navigácia-v-projekte-a-práca-so-súbormi)
 - [6. Vizuálna editácia máp (`.th2`)](#6-vizuálna-editácia-máp-th2)
 - [7. Spúšťanie Therionu](#7-spúšťanie-therionu)
 - [8. Nastavenia](#8-nastavenia)
@@ -31,6 +31,17 @@ Therion Studio je desktopový editor pre projekty Therionu. Poskytuje:
 - integrovanú konzolu na spúšťanie Therionu.
 
 Therion Studio neobsahuje externý Therion kompilátor. Therion nainštalujte samostatne a podľa potreby nastavte cestu k executable v Nastaveniach.
+
+### 1.1 Terminológia
+
+- `Projekt`: priečinok, ktorý Therion Studio práve prehliada; obvykle obsahuje Therion zdrojové súbory, configy, pozadia a podpriečinky.
+- `Config`: Therion súbor na spracovanie, napríklad `thconfig`, `thconfig.*` alebo `*.thconfig`.
+- `Survey`: štruktúra merania Therionu zo zdrojových `.th` súborov.
+- `Mapa`: Therion objekt `map ... endmap`, ktorý referencuje scrapy.
+- `Scrap`: jeden kreslený fragment mapy v `.th2` súbore.
+- `Bod`, `Línia`, `Plocha`: mapové objekty uložené v scrape.
+- `Pozadie`: rastrový obrázok, `.xvi` alebo PocketTopo textový export používaný ako kresliaca referencia.
+- `.xvi`: vektorový referenčný formát Therionu, často generovaný z PocketTopo dát.
 
 ## 2. Hlavné okno
 
@@ -56,10 +67,20 @@ Ak je mapa oddelená do samostatného okna, hlavné okno môže zároveň zobraz
 
 ## 3. Začíname
 
-### 3.1 Otvorenie projektu
+### 3.1 Rýchly štart
+
+1. Otvorte priečinok projektu cez `Súbor -> Otvoriť projekt...`; vyberte priečinok, ktorý obsahuje Therion súbory.
+2. V paneli `Kompilátor` zvoľte `Cieľovú konfiguráciu` (`thconfig`, `thconfig.*` alebo `*.thconfig`), ktorá sa má použiť pre projektové spustenie. Ak začínate od nuly, vytvorte config súbor a aspoň jeden `.th` zdroj cez `Súbor -> Nový`.
+3. Otvorte `.th` zdrojové súbory, ktoré definujú survey, centerline dáta, mapy a referencie na súbory. Režim `Zdroj` použite na priamu editáciu Therion zdroja, režim `Bloky` na podporované štruktúrované úpravy.
+4. Otvorte existujúcu `.th2` mapu z panelu `Súbory`, alebo vytvorte novú cez `Súbor -> Nový -> Therion mapa (.th2)`. Na mapovú editáciu používajte `Vizuálne`, na priame úpravy `.th2` zdroja `Zdroj`.
+5. V map editore vložte scrap pred pridávaním bodov, línií alebo plôch, ak `.th2` súbor ešte žiadny scrap nemá. Kreslite mapové objekty alebo použite `Smart Area` na vytvorenie referencovanej Therion plochy z existujúcich hraníc.
+6. Overte, že config/source súbory referencujú survey a mapové súbory potrebné na kompiláciu bežnou syntaxou Therionu.
+7. Dokumenty uložte a potom spustite Therion v paneli `Kompilátor`, aby ste projekt skontrolovali alebo exportovali.
+
+### 3.2 Otvorenie projektu
 
 1. Zvoľte `Súbor -> Otvoriť projekt...`.
-2. Vyberte priečinok projektu.
+2. Vyberte priečinok, ktorý obsahuje Therion zdrojové súbory, configy, pozadia a podpriečinky projektu.
 3. Otvorte dokumenty z panelu `Súbory`.
 
 Dialóg na výber priečinka projektu začína v domovskom priečinku používateľa, ak ho otvoríte cez `Otvoriť projekt...`.
@@ -70,20 +91,20 @@ Uvítacia karta a `Súbor -> Posledné projekty` zobrazujú najviac päť naposl
 
 Ak je projekt otvorený, uvítacia karta zobrazuje názov a cestu aktívneho projektu. Zobrazuje tiež najviac desať posledných súborov z tohto projektu; výberom súbor znovu otvoríte. Rovnaký projektový zoznam je dostupný cez `Súbor -> Posledné súbory`.
 
-### 3.2 Otvorenie dokumentov
+### 3.3 Otvorenie dokumentov
 
 - Dvojklikom otvoríte súbor v paneli `Súbory`.
 - `.th2` súbory sa otvárajú v map editore.
 - `.th`, `thconfig`, `*.thconfig`, `thconfig.*`, `.log`, `.txt` a bežné textové súbory sa otvárajú v textovom editore.
 - Nepodporované súbory, napríklad obrázky alebo PDF, zobrazia hlásenie `Nepodporovaný súbor` a akciu `Otvoriť v externej aplikácii`.
 
-### 3.3 Vytváranie a správa súborov
+### 3.4 Vytváranie a správa súborov
 
 Cez `Súbor -> Nový` vytvoríte neuložený `.th`, `.th2` alebo `.thconfig` dokument a cestu zvolíte pri prvom uložení. Pravým kliknutím v paneli `Súbory` možno vytvárať priečinky, vytvárať uložené `.th`, `.th2` a `.thconfig` súbory priamo v projekte, premenovať položky, duplikovať súbory, mazať položky alebo otvoriť `.th2` priamo v map editore.
 
 Premenovanie a mazanie je blokované, ak je cieľový súbor alebo priečinok otvorený v záložke. Najprv zatvorte súvisiace záložky.
 
-### 3.4 Uloženie zmien
+### 3.5 Uloženie zmien
 
 - `Súbor -> Uložiť` uloží aktívnu záložku.
 - Ak aktívna záložka ešte nebola uložená, `Súbor -> Uložiť` otvorí `Uložiť ako`.
@@ -129,17 +150,19 @@ Pre `.th2` súbory:
 - `Súbor -> Import -> Importovať PocketTopo text...` sa zobrazí iba vtedy, keď je aktívny existujúci alebo neuložený `.th` textový dokument, a importuje PocketTopo Therion export (`.txt`) na pozíciu kurzora ako Therion bloky `centreline`,
 - záložku `Súbor` v inšpektore s panelom pomenovaným podľa aktuálneho súboru, plnou cestou, akciou na skopírovanie cesty, veľkosťou na disku, časom poslednej zmeny, aktuálnym kódovaním a prevodom do UTF-8 pre súbory mimo UTF-8.
 
-### 4.3 Projektové hľadanie
+### 4.3 Dátové riadky v režime Bloky
+
+V režime `Bloky` možno bloky `data ...` upravovať tabuľkou podľa aktívnej hlavičky dát. Prázdne riadky v tele dát sa pri otvorení tabuľky ignorujú, takže medzery v zdroji nevzniknú ako falošné merania.
+
+## 5. Navigácia v projekte a práca so súbormi
+
+### 5.1 Projektové hľadanie
 
 Otvorte aktivitu `Hľadanie` v ľavom raili alebo stlačte `Command/Ctrl+Shift+F`. Zadajte doslovný text, podľa potreby zvoľte `Celé slovo` alebo `Rozlišovať veľkosť`, a stlačením `Enter` alebo `Hľadať` prehľadajte aktuálny projekt.
 
 Projektové hľadanie prehľadáva Therion textové zdroje (`.th`, `.th2` a konfiguračné súbory Therionu), zahŕňa neuložené zmeny v otvorených záložkách a vypisuje zhody zoskupené podľa súboru s riadkom a stĺpcom. Dvojklikom na súbor alebo riadok zhody otvoríte súbor na zodpovedajúcom texte s pripraveným inline hľadaním pre ďalšiu/predchádzajúcu zhodu. Zhody v `.th2` sa otvárajú ako dokumenty mapového editora s aktívnym workspace Zdroj (`Raw`), takže sa potom môžete vrátiť späť do vizuálneho mapového editora.
 
-### 4.4 Dátové riadky v režime Bloky
-
-V režime `Bloky` možno bloky `data ...` upravovať tabuľkou podľa aktívnej hlavičky dát. Prázdne riadky v tele dát sa pri otvorení tabuľky ignorujú, takže medzery v zdroji nevzniknú ako falošné merania.
-
-## 5. Štruktúra a práca so súbormi
+### 5.2 Panel Štruktúra
 
 Panel `Štruktúra` je ľahký navigačný index otvoreného projektu. Popis v bočnom paneli ho označuje ako štruktúru `survey`, `map` a `scrap` aktuálneho projektu. Zobrazuje hierarchiu `survey`, `centerline`, `map` a `scrap` a rozpoznáva obe Therion varianty: `centreline` aj `centerline`.
 
@@ -160,19 +183,37 @@ Režim `Vizuálne` obsahuje:
 
 Režim `Zdroj` zostáva dostupný pre priamu editáciu zdroja.
 
+`Vizuálne` a `Zdroj` sú dva pohľady na ten istý `.th2` zdroj. Vizuálne úpravy zapisujú Therion príkazy späť do súboru. Zdroj zostáva dostupný pre priame editácie a pokročilé konštrukcie Therionu. Prepnutie režimu nevytvára druhý dokument.
+
 Súbory mimo UTF-8 sa otvárajú s konkrétnym zdrojovým kódovaním, keď ho možno rozpoznať, vrátane bežných stredoeurópskych legacy kódovaní ako ISO-8859-2. Pri uložení Therion Studio zachová rozpoznané zdrojové kódovanie, ak súbor výslovne neprevediete na UTF-8 v inšpektore `Súbor`.
 
-### 6.2 Hlavné mapové nástroje
+### 6.2 Navigácia
+
+Navigačné ovládanie použite pred kreslením alebo editáciou mapových objektov.
+
+| Akcia | Ovládanie |
+|---|---|
+| Posun mapy | Ťahajte pravým tlačidlom myši. Zariadenia s presným posúvaním, napríklad touchpady a Apple Magic Mouse, posúvajú mapu dvojprstovým alebo povrchovým posúvaním. |
+| Priblíženie / oddialenie | Použite tlačidlá `Priblížiť` / `Oddialiť` v lište, bežné neprecízne koliesko myši, alebo pri posúvaní držte `Command/Ctrl`. |
+| Prispôsobiť geometriu mapy | `Prispôsobiť` zobrazí nakreslené mapové objekty vo viewporte. |
+| Prispôsobiť geometriu mapy aj pozadie | `Prispôsobiť vrátane pozadia` zahrnie do prispôsobenia aj rastrové a `.xvi` vrstvy pozadia. |
+| Posun posuvníkmi | Použite vodorovný a zvislý posuvník, ak sú viditeľné. |
+
+Ťahanie pravým tlačidlom posúva mapu v štýle XTherionu. Pravý klik bez ťahania na mapový objekt alebo vrchol čiary namiesto toho otvorí kontextové menu daného objektu.
+
+Therion Studio berie zariadenia s presným posúvaním ako východiskové ovládanie posunu, takže touchpady a zariadenia ako Apple Magic Mouse vedia posúvať mapu vodorovne aj zvislo. Bežné koliesko myši vo východiskovom správaní zoomuje.
+
+### 6.3 Hlavné mapové nástroje
 
 | Skupina | Akcie |
 |---|---|
-| Zoom | `Priblížiť`, `Oddialiť`, `Prispôsobiť`, `Prispôsobiť vrátane pozadia` |
+| Navigácia | `Priblížiť`, `Oddialiť`, `Prispôsobiť`, `Prispôsobiť vrátane pozadia` |
 | Výber a kreslenie | `Vybrať`, `Dokončiť návrh` |
 | Vkladanie | `Vložiť scrap`, `Bod`, `Línia`, `Voľná kresba`, `Plocha`, `Smart Area` |
 
-Mapové plátno používa stabilný svetlý „papierový“ povrch vo svetlom aj tmavom vzhľade aplikácie. Lišty, záložky a inšpektory nasledujú systémový vzhľad, ale rastry, `.xvi` referencie a mapové symboly sa pre tmavý režim netónujú ani neinvertujú. Ťahaním pravým tlačidlom myši posuniete mapové plátno v štýle XTherionu.
+Mapové plátno používa stabilný svetlý „papierový“ povrch vo svetlom aj tmavom vzhľade aplikácie. Lišty, záložky a inšpektory nasledujú systémový vzhľad, ale rastry, `.xvi` referencie a mapové symboly sa pre tmavý režim netónujú ani neinvertujú.
 
-### 6.3 Vkladanie objektov
+### 6.4 Vkladanie objektov
 
 - `Bod`: kliknite raz do mapy.
 - `Línia`: klikajte vrcholy a dokončite `Enter` alebo `Dokončiť návrh`.
@@ -200,9 +241,27 @@ Počas kreslenia čiary alebo plochy:
 - `Backspace` alebo `Delete` odstráni posledný draft vrchol,
 - `Esc` dokončí dostatočne úplný návrh čiary alebo plochy a vráti mapu do režimu výberu; neúplné návrhy zruší.
 
-### 6.4 Editácia geometrie
+### 6.5 Bežné mapové postupy
+
+- Vytvorenie novej mapy: vložte scrap, nastavte jeho ID/projekciu vo `Výbere` a potom zvoľte nástroj pre bod, líniu, voľnú kresbu, plochu alebo Smart Area.
+- Kreslenie steny: zvoľte `Línia`, podľa potreby nastavte typ `wall` pred prvým vrcholom, klikajte vrcholy, ťahaním pri pokladaní vrcholu vytvorte Bezier kontrolné body a dokončite `Enter`.
+- Vytvorenie referencovanej plochy: zvoľte `Smart Area`, kliknite dovnútra požadovanej uzavretej plochy, pomocou `[` / `]` vyberte kandidáta, ak ich existuje viac, a potvrďte `Enter`.
+- Úprava tvaru línie: prepnite na `Vybrať`, kliknite na líniu, potom kliknite na vrchol alebo Bezier kontrolný bod a ťahajte ho alebo upravte ovládanie `Line Point`.
+- Pridanie kresliacej referencie: otvorte `Pozadia`, pridajte raster, `.xvi` alebo PocketTopo `.txt` a nastavte viditeľnosť, polohu, krytie alebo Gamma.
+
+### 6.6 Zmeny zapisované do zdroja
+
+- Nástroj Bod zapisuje príkazy `point ...` do cieľového scrapu.
+- Nástroje Línia a Voľná kresba zapisujú bloky `line ... endline`. Voľná kresba sa zjednoduší do Bezier súradnicových riadkov.
+- Ručná Plocha zapisuje vygenerovanú uzavretú `line border -id ... -close on` a blok `area ... endarea`, ktorý túto hraničnú líniu referencuje.
+- Smart Area zapisuje blok `area ... endarea`, ktorý referencuje existujúce hraničné línie. Môže doplniť chýbajúce hodnoty `-id` potrebné pre tieto referencie, ale nemení geometriu existujúcich línií.
+- Vloženie pozadia zapisuje XTherion-kompatibilné metadáta obrázka, napríklad `##XTHERION## xth_me_image_insert`. Prvé mapové vloženie v súbore bez XTherion metadát pohľadu môže zapísať aj `xth_me_area_adjust` a `xth_me_area_zoom_to`.
+
+### 6.7 Editácia geometrie
 
 Vyberte mapový objekt alebo jeho vrchol/kontrolný bod na mapovom plátne. Inšpektor `Výber` zobrazí zodpovedajúce ovládanie vrátane zdrojového riadka a ID obklopujúceho scrapu.
+
+Výber je zdieľaný medzi mapovým plátnom, panelom `Objekty` a inšpektorom `Výber`. Objekt pod kurzorom sa zvýrazní azúrovo a vybraný objekt červeno. Výber plochy zároveň zvýrazní referencované hraničné línie. Výber vrcholu alebo Bezier kontrolného bodu línie prepne inšpektor na zodpovedajúce ovládanie line pointu.
 
 Pravým kliknutím bez ťahania na mapový objekt alebo vrchol čiary otvoríte kontextové menu s bežnými akciami v štýle XTherionu. Pravý klik do prázdneho plátna toto menu neotvorí. Menu zrkadlí dostupné skupiny inšpektora `Výber`, napríklad voľby typu/podtypu, editovateľné polia objektu, `Geometry`, celý dostupný panel `Line Point`, `Line Point Actions` a `Object Actions`; voľné textové alebo číselné editory sa otvoria a fokusujú v inšpektore. Na macOS otvorí rovnaké menu aj sekundárny klik na trackpade, napríklad kliknutie dvoma prstami. Ak je menu už otvorené, ďalší sekundárny klik na iný objekt alebo vrchol precieli menu na nový výber a presunie ho na poslednú pozíciu kliknutia.
 
@@ -218,7 +277,7 @@ Pre čiary a hranice plôch:
 
 Ak čiara slúži ako hranica plochy, niektoré deštruktívne akcie sú zablokované; vyberte alebo upravte vlastnú plochu. Zmazanie plochy odstráni iba blok `area ... endarea` a ponechá referencované hraničné čiary v zdroji.
 
-### 6.5 Editácia vlastností objektov
+### 6.8 Editácia vlastností objektov
 
 V `Inšpektor -> Výber` možno upravovať vlastnosti vybraných objektov `Scrap`, `Point`, `Line` a `Area`.
 
@@ -234,7 +293,7 @@ V `Inšpektor -> Výber` možno upravovať vlastnosti vybraných objektov `Scrap
 
 Riadok `Preview` ukazuje vzhľad vybraného alebo pripravovaného objektu. Náhľad používa svetlý mapový podklad aj v tmavom režime.
 
-### 6.6 Objekty a Pozadia
+### 6.9 Objekty a Pozadia
 
 V `Inšpektor -> Objekty` možno vyberať objekty, meniť ich poradie pretiahnutím, prepínať viditeľnosť v aktuálnom pohľade a mazať objekty s potvrdením.
 
@@ -249,7 +308,7 @@ Pri pridaní PocketTopo Therion exportu (`.txt`) ako mapového pozadia sa Therio
 
 Therion Studio negeneruje samostatný metrický grid. Pre referenčnú mriežku použite vrstvy pozadia, hlavne `.xvi`.
 
-### 6.7 Oddelené mapové okno
+### 6.10 Oddelené mapové okno
 
 `Oddeliť mapu` presunie vizuálnu mapu do samostatného okna, napríklad na druhý monitor. `Vrátiť mapu` alebo zatvorenie samostatného okna mapu vráti späť.
 
@@ -311,6 +370,10 @@ Používajte `Command` na macOS a `Ctrl` na Windows/Linux, ak menu platformy nez
 | Prepnúť do editora Zdroj (`Raw`) | `Command/Ctrl+horný 1` |
 | Prepnúť do editora Bloky pre `.th` / config, alebo do editora Vizuálne pre `.th2` | `Command/Ctrl+horný 2` |
 | Ručné otvorenie dopĺňania (textový editor) | `Ctrl+Space` |
+| Posun mapy | Ťahanie pravým tlačidlom myši; zariadenie s presným posúvaním, napríklad touchpad alebo Apple Magic Mouse |
+| Zoom mapy | Tlačidlá `Priblížiť` / `Oddialiť`; bežné koliesko myši; `Command/Ctrl+posúvanie` |
+| Prispôsobiť geometriu mapy | Tlačidlo `Prispôsobiť` |
+| Prispôsobiť geometriu mapy aj pozadie | Tlačidlo `Prispôsobiť vrátane pozadia` |
 | Dokončiť aktuálny mapový návrh | `Enter` |
 | Zrušiť vkladanie/kreslenie v mape | `Esc` |
 | Zmazať vybraný mapový objekt alebo vybraný line point; pri kreslení zmazať posledný bod návrhu | `Delete` / `Backspace` |
@@ -350,3 +413,43 @@ Riešenie:
 - vyberte vrstvu v `Pozadia`,
 - overte viditeľnosť, polohu, krytie a Gamma,
 - pri `.xvi` overte, že `.xvi` a súvisiace `.th2` patria do rovnakého súradnicového kontextu.
+
+### 11.5 Mapu možno zoomovať, ale nedá sa posúvať
+
+Riešenie:
+
+- ťahajte pravým tlačidlom myši alebo použite posúvanie na touchpade / presnom polohovacom zariadení,
+- ak presné zariadenie práve zoomuje, podržte pri posúvaní `Command/Ctrl`,
+- použite vodorovný a zvislý posuvník, ak sú viditeľné.
+
+### 11.6 Plocha nie je vidieť
+
+Riešenie:
+
+- overte, že blok `area ... endarea` je v tom istom `scrap` ako referencované hranice `line -id ...`,
+- skontrolujte, že každé referencované ID existuje a je v danom scrape jedinečné,
+- pri otvorených hraničných líniách overte, že ich priesečníky tvoria uzavretú plochu,
+- skontrolujte viditeľnosť vrstiev a objektov v `Objekty`.
+
+### 11.7 Smart Area nenájde kandidáta
+
+Riešenie:
+
+- kliknite dovnútra plochy ohraničenej líniami v tom istom scrape,
+- priblížte mapu a kliknite ďalej od priesečníkov alebo nejednoznačných hrán,
+- overte, že zamýšľané hraničné línie sa pretínajú alebo nadväzujú dostatočne blízko na vytvorenie uzavretej plochy,
+- ak sa zobrazí viac kandidátov, pred potvrdením použite `[` / `]`.
+
+### 11.8 Líniu nejde zmazať
+
+Riešenie:
+
+- ak je línia referencovaná plochou, najprv zmažte alebo upravte plochu,
+- zmazanie plochy odstráni iba blok `area ... endarea` a ponechá referencované hraničné línie.
+
+### 11.9 Projektové hľadanie otvorilo `.th2` výsledok v Zdroj
+
+Riešenie:
+
+- je to očakávané správanie pre textové výsledky hľadania, aby bol vidieť zodpovedajúci zdrojový riadok,
+- prepínačom režimu editora alebo `Command/Ctrl+horný 2` sa vráťte do vizuálneho mapového editora.

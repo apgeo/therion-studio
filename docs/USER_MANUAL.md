@@ -1,6 +1,6 @@
 # Therion Studio User Manual
 
-Last updated: 2026-06-07
+Last updated: 2026-06-09
 
 This guide covers everyday workflows in Therion Studio. It intentionally focuses on using the application, not on the full Therion language reference. Therion source syntax, command names, options, and serialized document content stay in canonical Therion form.
 
@@ -12,7 +12,7 @@ The application follows the operating system language when a bundled translation
 - [2. Main Window](#2-main-window)
 - [3. Getting Started](#3-getting-started)
 - [4. Text Editing](#4-text-editing)
-- [5. Structure and File Operations](#5-structure-and-file-operations)
+- [5. Project Navigation and File Operations](#5-project-navigation-and-file-operations)
 - [6. Visual Map Editing (`.th2`)](#6-visual-map-editing-th2)
 - [7. Running Therion](#7-running-therion)
 - [8. Settings](#8-settings)
@@ -31,6 +31,17 @@ Therion Studio is a desktop editor for Therion cave-mapping projects. It provide
 - an integrated Therion run console
 
 Therion Studio does not include the external Therion compiler. Install Therion separately and configure the executable path in Settings if auto-detection is not enough.
+
+### 1.1 Terminology
+
+- `Project`: a folder Therion Studio is currently browsing, usually containing Therion source files, config files, backgrounds, and subfolders.
+- `Config`: a Therion processing file such as `thconfig`, `thconfig.*`, or `*.thconfig`.
+- `Survey`: Therion survey structure from `.th` source files.
+- `Map`: a Therion `map ... endmap` object that references scraps.
+- `Scrap`: one drawn map fragment inside a `.th2` file.
+- `Point`, `Line`, `Area`: map objects stored inside a scrap.
+- `Background`: a raster image, `.xvi`, or PocketTopo text export used as a drawing reference.
+- `.xvi`: Therion's vector background/reference format, often generated from PocketTopo data.
 
 ## 2. Main Window
 
@@ -56,10 +67,20 @@ When a map pane is detached into a separate window, the main window can show bot
 
 ## 3. Getting Started
 
-### 3.1 Open a Project
+### 3.1 Quick Start
+
+1. Open a project folder with `File -> Open Project...`; choose the folder that contains your Therion files.
+2. In `Compiler`, choose the `Target Config` (`thconfig`, `thconfig.*`, or `*.thconfig`) that should be used for project-level runs. If you are starting from scratch, create a config file and at least one `.th` source file from `File -> New`.
+3. Open the `.th` source files that define surveys, centerline data, maps, and file references. Use `Raw` for direct Therion source editing or `Blocks` for supported structured edits.
+4. Open an existing `.th2` map file from `Files`, or create one with `File -> New -> Therion Map (.th2)`. Use `Visual` for map editing and `Raw` for direct `.th2` source edits.
+5. In the map editor, insert a scrap before adding points, lines, or areas when the `.th2` file has no scrap yet. Draw map objects or use `Smart Area` to create a referenced Therion area from existing borders.
+6. Make sure the config/source files reference the survey and map files needed for compilation, using normal Therion source syntax.
+7. Save the documents, then run Therion from `Compiler` to check or export the project.
+
+### 3.2 Open a Project
 
 1. Select `File -> Open Project...`.
-2. Choose the project folder.
+2. Choose the folder that contains the project's Therion files, config files, backgrounds, and subfolders.
 3. Open documents from the `Files` pane.
 
 The project folder chooser starts in your home folder when opened from `Open Project...`.
@@ -70,20 +91,20 @@ The welcome tab and `File -> Recent Projects` list up to five recently opened pr
 
 When a project is open, the welcome tab shows the active project name and path. It also lists up to ten recent files from that project; select a recent file to reopen it. The same project-scoped list is available from `File -> Recent Files`.
 
-### 3.2 Open Documents
+### 3.3 Open Documents
 
 - Double-click a file in `Files`.
 - `.th2` files open in the map editor.
 - `.th`, `thconfig`, `*.thconfig`, `thconfig.*`, `.log`, `.txt`, and ordinary text files open in the text editor.
 - Unsupported files, such as images or PDF, show an `Unsupported file` message with `Open in External App`.
 
-### 3.3 Create and Manage Files
+### 3.4 Create and Manage Files
 
 Use `File -> New` to create an unsaved `.th`, `.th2`, or `.thconfig` document and choose its path on first save. Right-click in the `Files` pane to create folders, create saved `.th`, `.th2`, and `.thconfig` files directly in the project, rename items, duplicate files, delete items, or open `.th2` files directly in the map editor.
 
 Rename and delete are blocked when the target file or folder is open in a document tab. Close the related tabs first, then retry the operation.
 
-### 3.4 Save Changes
+### 3.5 Save Changes
 
 - `File -> Save` saves the active tab.
 - If the active tab has not been saved yet, `File -> Save` opens `Save As`.
@@ -130,17 +151,19 @@ For `.th2` files:
 - `File -> Import -> Import PocketTopo Text...` is shown only when an existing or unsaved `.th` text document is active, and imports a PocketTopo Therion export (`.txt`) at the cursor as Therion `centreline` blocks
 - a `File` inspector tab with a panel titled by the current file name, full path, copy-path action, on-disk size, last-modified timestamp, current encoding, and UTF-8 conversion for non-UTF-8 files
 
-### 4.3 Project Search
+### 4.3 Blocks Data Rows
+
+In `Blocks` mode, `data ...` blocks can be edited through a table based on the active data header. Empty body lines are ignored when the table opens, so spacing in the source does not become fake measurement data.
+
+## 5. Project Navigation and File Operations
+
+### 5.1 Project Search
 
 Open the Search activity from the left rail or press `Command/Ctrl+Shift+F`. Enter literal text, choose `Whole word` or `Case sensitive` when needed, and press `Enter` or `Search` to scan the current project.
 
 Project search scans Therion text sources (`.th`, `.th2`, and Therion config files), includes unsaved edits from open tabs, and lists matches grouped by file with line and column locations. Double-click a file or match row to open the file at the matching text with the inline find bar ready for next/previous navigation. `.th2` matches open as map-editor documents with the Raw workspace active, so you can switch back to the visual map editor afterward.
 
-### 4.4 Blocks Data Rows
-
-In `Blocks` mode, `data ...` blocks can be edited through a table based on the active data header. Empty body lines are ignored when the table opens, so spacing in the source does not become fake measurement data.
-
-## 5. Structure and File Operations
+### 5.2 Structure Pane
 
 The `Structure` pane is a lightweight navigation index for the opened project. Its sidebar description identifies it as the survey, map, and scrap structure for the current project. It shows `survey`, `map`, and `scrap` hierarchy and recognizes both Therion centerline spellings: `centreline` and `centerline`.
 
@@ -163,19 +186,37 @@ Maps and scraps referenced inside `map ... endmap` are shown under that map when
 
 `Raw` mode remains available for direct source editing.
 
+`Visual` and `Raw` are two views of the same `.th2` source. Visual edits write Therion commands back to the file. Raw remains available for direct editing and advanced Therion constructs. Switching views does not create a second document.
+
 Non-UTF-8 files are opened with a concrete source encoding when it can be resolved, including common Central European legacy encodings such as ISO-8859-2. When such a file is saved, Therion Studio keeps the resolved source encoding unless you explicitly convert the file to UTF-8 from the `File` inspector.
 
-### 6.2 Main Map Tools
+### 6.2 Navigation
+
+Use navigation controls before drawing or editing map objects.
+
+| Action | Control |
+|---|---|
+| Pan | Drag with the right mouse button. Precision scrolling devices such as trackpads and Apple Magic Mouse pan with two-finger or surface scrolling. |
+| Zoom in / out | Use the toolbar `Zoom In` / `Zoom Out` buttons, use a non-precision mouse wheel, or hold `Command/Ctrl` while scrolling. |
+| Fit map geometry | Use `Fit` to fit the drawn map objects into the viewport. |
+| Fit map geometry and backgrounds | Use `Fit With Background` to include raster and `.xvi` background layers in the fitted viewport. |
+| Pan with scrollbars | Use the horizontal and vertical scrollbars when they are visible. |
+
+Right-button dragging pans the map in XTherion style. A right-click without dragging on a map object or line vertex opens that object's context menu instead.
+
+Therion Studio treats precision scrolling devices as pan controls by default, so trackpads and devices such as Apple Magic Mouse can pan horizontally and vertically. A conventional mouse wheel zooms by default.
+
+### 6.3 Main Map Tools
 
 | Tool group | Actions |
 |---|---|
-| Zoom | `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background` |
+| Navigation | `Zoom In`, `Zoom Out`, `Fit`, `Fit With Background` |
 | Selection and drafting | `Select`, `Complete Draft` |
 | Insertion | `Insert Scrap`, `Point`, `Line`, `Freehand`, `Area`, `Smart Area` |
 
-The map canvas uses a stable light paper-style surface in both light and dark application modes. Toolbars, tabs, and inspectors follow the system appearance, but raster backgrounds, `.xvi` references, and map symbols are not inverted or tinted for dark mode. Drag with the right mouse button to pan the map canvas in XTherion style.
+The map canvas uses a stable light paper-style surface in both light and dark application modes. Toolbars, tabs, and inspectors follow the system appearance, but raster backgrounds, `.xvi` references, and map symbols are not inverted or tinted for dark mode.
 
-### 6.3 Insert Objects
+### 6.4 Insert Objects
 
 - `Point`: click once in the map.
 - `Line`: click vertices, then press `Enter` or `Complete Draft`.
@@ -203,11 +244,29 @@ While drafting a line or area:
 - press `Backspace` or `Delete` to remove the last draft vertex
 - press `Esc` to commit a sufficiently complete line or area draft and return to Select mode; incomplete drafts are canceled
 
-### 6.4 Edit Geometry
+### 6.5 Common Map Workflows
+
+- Create a new map: insert a scrap, set its ID/projection in `Selection`, then choose point, line, freehand, area, or Smart Area tools.
+- Draw a wall: choose `Line`, set type `wall` before the first vertex if needed, click vertices, drag while placing a vertex to create Bezier handles, then press `Enter`.
+- Create a referenced area: choose `Smart Area`, click inside the intended closed face, use `[` / `]` if several candidates are available, then press `Enter`.
+- Edit a line shape: switch to `Select`, click the line, then click a vertex or Bezier handle and drag or edit the `Line Point` controls.
+- Add drawing reference data: open `Backgrounds`, add a raster image, `.xvi`, or PocketTopo `.txt`, then adjust visibility, position, opacity, or Gamma.
+
+### 6.6 Source Changes From Map Actions
+
+- Point tools write `point ...` commands inside the target scrap.
+- Line and freehand tools write `line ... endline` blocks. Freehand strokes are simplified into Bezier coordinate rows.
+- Manual Area writes a generated closed `line border -id ... -close on` and an `area ... endarea` block that references that border line.
+- Smart Area writes an `area ... endarea` block that references existing boundary lines. It may add missing `-id` values required for those references, but it does not change existing line geometry.
+- Background insertion writes XTherion-compatible image metadata such as `##XTHERION## xth_me_image_insert`. The first map insertion in a file without XTherion view metadata may also write `xth_me_area_adjust` and `xth_me_area_zoom_to`.
+
+### 6.7 Edit Geometry
 
 Select a map object or one of its vertices/control handles in the canvas. The `Selection` inspector then shows the relevant controls, including the source line and enclosing scrap ID.
 
 Map objects keep their normal rendered colors while editing. In select mode, the map canvas uses a crosshair cursor; the object under the cursor hotspot is highlighted in cyan before selection, and the selected object is highlighted in red.
+
+Selection is shared between the map canvas, the `Objects` pane, and the `Selection` inspector. Selecting an area also highlights its referenced border lines. Selecting a line vertex or Bezier handle switches the inspector to the corresponding line-point controls.
 
 Right-click a map object or line vertex without dragging to open a context menu with common XTherion-style actions. Empty canvas right-clicks do not open this menu. The menu mirrors the available `Selection` inspector groups, such as type/subtype choices, editable object fields, `Geometry`, the complete available `Line Point` panel, `Line Point Actions`, and `Object Actions`; free text or numeric editors are opened and focused in the inspector. On macOS, the trackpad secondary click, such as a two-finger click, opens the same menu. If the menu is already open, another secondary click on a different object or vertex retargets the menu to that new selection and moves it to the latest click position.
 
@@ -224,7 +283,7 @@ For lines and area borders:
 
 If a line is used as an area border, some destructive line actions are blocked; select or edit the owning area instead. Deleting an area removes only the `area ... endarea` block and keeps referenced border lines in the source.
 
-### 6.5 Edit Object Properties
+### 6.8 Edit Object Properties
 
 In `Inspector -> Selection`, you can edit properties for selected `Scrap`, `Point`, `Line`, or `Area` objects.
 
@@ -241,7 +300,7 @@ In `Inspector -> Selection`, you can edit properties for selected `Scrap`, `Poin
 
 The `Preview` row shows how the selected or pending object will look. The preview uses a light map-like background even in dark mode.
 
-### 6.6 Objects and Backgrounds
+### 6.9 Objects and Backgrounds
 
 In `Inspector -> Objects`, you can select objects, reorder objects by drag/drop, toggle visibility in the current view, and delete objects with confirmation.
 
@@ -256,7 +315,7 @@ When you add a PocketTopo Therion export (`.txt`) as a map background, Therion S
 
 Therion Studio does not generate a separate metric grid. Use background layers, especially `.xvi`, for reference grid content.
 
-### 6.7 Detached Map Window
+### 6.10 Detached Map Window
 
 Use `Separate Map` to move the visual map pane into its own window, for example on a second monitor. Use `Return Map` or close the detached map window to reattach it.
 
@@ -318,6 +377,10 @@ Use `Command` on macOS and `Ctrl` on Windows/Linux unless the platform menu show
 | Switch to Raw editor | `Command/Ctrl+top-row 1` |
 | Switch to Blocks editor for `.th` / config, or Visual editor for `.th2` | `Command/Ctrl+top-row 2` |
 | Manual completion popup (text editor) | `Ctrl+Space` |
+| Pan map | Right mouse button drag; precision scrolling device such as trackpad or Apple Magic Mouse |
+| Zoom map | Toolbar `Zoom In` / `Zoom Out`; non-precision mouse wheel; `Command/Ctrl+scroll` |
+| Fit map geometry | Toolbar `Fit` |
+| Fit map geometry and backgrounds | Toolbar `Fit With Background` |
 | Complete the current map draft | `Enter` |
 | Cancel map insertion/drawing | `Esc` |
 | Delete the selected map object or selected line point; while drawing, delete the last draft point | `Delete` / `Backspace` |
@@ -357,3 +420,43 @@ Fix:
 - select the layer in `Backgrounds`
 - check layer visibility, position, opacity, and Gamma
 - for `.xvi`, verify the `.xvi` file and referenced `.th2` are from the same coordinate context
+
+### 11.5 I can zoom but cannot pan the map
+
+Fix:
+
+- drag with the right mouse button, or use trackpad / precision-device scrolling
+- hold `Command/Ctrl` while scrolling if your precision device is currently zooming
+- use the horizontal and vertical scrollbars when visible
+
+### 11.6 Area is not visible
+
+Fix:
+
+- verify the `area ... endarea` block is inside the same `scrap` as the referenced `line -id ...` borders
+- check that every referenced ID exists and is unique in that scrap
+- for open border lines, check that their intersections form a closed face
+- check layer/object visibility in `Objects`
+
+### 11.7 Smart Area cannot find a candidate
+
+Fix:
+
+- click inside a face bounded by lines in the same scrap
+- zoom in and click away from line intersections or ambiguous edges
+- ensure the intended boundary lines intersect or connect closely enough to form a closed face
+- if more than one candidate is shown, use `[` / `]` to choose the intended one before confirming
+
+### 11.8 A line cannot be deleted
+
+Fix:
+
+- if the line is referenced by an area, delete or edit the area first
+- deleting an area removes only the `area ... endarea` block and keeps referenced border lines
+
+### 11.9 Project search opened a `.th2` match in Raw
+
+Fix:
+
+- this is expected for text search results so the matching source line is visible
+- use the editor mode switch or `Command/Ctrl+top-row 2` to return to the visual map editor

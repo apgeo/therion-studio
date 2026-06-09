@@ -247,6 +247,29 @@ void acceptsLineContinuationAfterOptionValue()
             "Line continuation markers should not count as option values.");
 }
 
+void validatesContinuedCommandAsOneCatalogCommand()
+{
+    const QString contents =
+        QStringLiteral("survey 1318 -title \"1318 Vetrna propast\" \\")
+        + QLatin1Char('\n')
+        + QStringLiteral("  -person-rename \"Lenka Souckova\" \"Lenka Blazkova\"\n"
+                         "endsurvey\n");
+    TherionSourceValidationCatalog catalog = basicCatalog();
+    catalog.commandOptionNames[QStringLiteral("survey")].insert(QStringLiteral("-person-rename"));
+    catalog.commandOptionFixedArityByKey.insert(
+        TherionStudio::commandOptionValueKey(QStringLiteral("survey"), QStringLiteral("-person-rename")),
+        2);
+
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, catalog);
+
+    require(!containsDiagnostic(result, QStringLiteral("unknown-command")),
+            "Continuation rows should be validated as part of the logical command, not as standalone commands.");
+    require(!containsDiagnostic(result, QStringLiteral("unknown-option")),
+            "Known options on continuation rows should be associated with the opening command.");
+    require(!containsDiagnostic(result, QStringLiteral("wrong-option-value-count")),
+            "Continuation rows should share logical option value counting with the opening command.");
+}
+
 void doesNotTreatZeroFixedArityAsValidationError()
 {
     const QString contents = QStringLiteral("point 389.5 355.5 label -text \"Sifon I\"\n");
@@ -392,6 +415,7 @@ int main(int argc, char **argv)
     reportsMissingRequiredArgument();
     acceptsBracketedOptionValueAsSingleLogicalValue();
     acceptsLineContinuationAfterOptionValue();
+    validatesContinuedCommandAsOneCatalogCommand();
     doesNotTreatZeroFixedArityAsValidationError();
     keepsDashPrefixedPointTextAsTextValue();
     acceptsOptionAliasesExtractedFromCatalogSignature();

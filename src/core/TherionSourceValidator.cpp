@@ -4,6 +4,7 @@
 #include "TherionCommandSyntax.h"
 #include "TherionDocumentParser.h"
 #include "TherionSourceDocument.h"
+#include "TherionSourceLogicalDocument.h"
 
 #include <algorithm>
 #include <optional>
@@ -363,24 +364,24 @@ LineCleanupResult cleanupLine(const QString &lineText)
     return result;
 }
 
-TherionSourceDiagnostic diagnosticForLineCleanup(const TherionParsedSourceLine &sourceLine,
+TherionSourceDiagnostic diagnosticForLineCleanup(const TherionSourceLogicalCommand &command,
                                                  const LineCleanupResult &cleanup)
 {
     TherionSourceDiagnostic diagnostic;
     diagnostic.code = QStringLiteral("malformed-option-token");
     diagnostic.severity = TherionSourceDiagnosticSeverity::Error;
-    diagnostic.lineNumber = sourceLine.lineNumber;
+    diagnostic.lineNumber = command.startLineNumber;
     diagnostic.columnNumber = cleanup.columnNumber;
     diagnostic.columnLength = cleanup.columnLength;
     diagnostic.title = QStringLiteral("Malformed or duplicate option token");
     diagnostic.message = QStringLiteral("This command contains an option-like token or duplicate option/value pair that Therion may reject.");
-    diagnostic.currentText = sourceLine.text;
+    diagnostic.currentText = command.text;
     diagnostic.suggestedText = cleanup.text;
     diagnostic.hasFix = true;
-    diagnostic.fix.startOffset = sourceLine.startOffset;
-    diagnostic.fix.length = sourceLine.textLength;
+    diagnostic.fix.startOffset = command.startOffset;
+    diagnostic.fix.length = command.text.size();
     diagnostic.fix.replacementText = cleanup.text;
-    diagnostic.fix.description = QStringLiteral("Rewrite line %1").arg(sourceLine.lineNumber);
+    diagnostic.fix.description = QStringLiteral("Rewrite line %1").arg(command.startLineNumber);
     return diagnostic;
 }
 
@@ -403,19 +404,38 @@ TherionSourceDiagnostic diagnosticForLine(const TherionParsedSourceLine &sourceL
     return diagnostic;
 }
 
-TherionSourceDiagnostic diagnosticForToken(const TherionParsedSourceLine &sourceLine,
+TherionSourceDiagnostic diagnosticForLine(const TherionSourceLogicalCommand &command,
+                                          const QString &code,
+                                          const QString &title,
+                                          const QString &message,
+                                          TherionSourceDiagnosticSeverity severity = TherionSourceDiagnosticSeverity::Warning)
+{
+    TherionSourceDiagnostic diagnostic;
+    diagnostic.code = code;
+    diagnostic.severity = severity;
+    diagnostic.lineNumber = command.startLineNumber;
+    diagnostic.columnNumber = 1;
+    diagnostic.title = title;
+    diagnostic.message = message;
+    diagnostic.currentText = command.text;
+    diagnostic.suggestedText = QString();
+    diagnostic.hasFix = false;
+    return diagnostic;
+}
+
+TherionSourceDiagnostic diagnosticForToken(const TherionSourceLogicalCommand &command,
                                            int tokenIndex,
                                            const QString &code,
                                            const QString &title,
                                            const QString &message,
                                            TherionSourceDiagnosticSeverity severity = TherionSourceDiagnosticSeverity::Warning)
 {
-    TherionSourceDiagnostic diagnostic = diagnosticForLine(sourceLine,
+    TherionSourceDiagnostic diagnostic = diagnosticForLine(command,
                                                           code,
                                                           title,
                                                           message,
                                                           severity);
-    setRangeFromTokenIndex(sourceLine.parsed,
+    setRangeFromTokenIndex(command.parsed,
                            tokenIndex,
                            &diagnostic.columnNumber,
                            &diagnostic.columnLength);
@@ -432,37 +452,37 @@ int positionalTokenCount(const ParsedCommandOptions &parsedOptions)
 }
 
 void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
-                                     const TherionParsedSourceLine &sourceLine,
+                                     const TherionSourceLogicalCommand &command,
                                      const TherionSourceValidationCatalog &catalog,
                                      bool skipUnknownCommand)
 {
-    if (result == nullptr || sourceLine.parsed.tokens.isEmpty()) {
+    if (result == nullptr || command.parsed.tokens.isEmpty()) {
         return;
     }
 
-    const QString commandName = normalizedTherionDirectiveToken(sourceLine.parsed.directive);
+    const QString commandName = normalizedTherionDirectiveToken(command.parsed.directive);
     const bool commandKnown = catalog.commandNames.contains(commandName);
     if (!commandKnown) {
         if (!skipUnknownCommand
             && !therionDirectiveIsKnownBlockDirective(commandName)
-            && looksLikeCommandDirective(sourceLine.parsed.directive)) {
-            result->diagnostics.append(diagnosticForToken(sourceLine,
+            && looksLikeCommandDirective(command.parsed.directive)) {
+            result->diagnostics.append(diagnosticForToken(command,
                                                           0,
                                                           QStringLiteral("unknown-command"),
                                                           QStringLiteral("Unknown command"),
-                                                          QStringLiteral("Command `%1` is not present in the Therion command catalog.").arg(sourceLine.parsed.directive)));
+                                                          QStringLiteral("Command `%1` is not present in the Therion command catalog.").arg(command.parsed.directive)));
         }
         return;
     }
 
     const int requiredPositionalCount = qMax(0, catalog.commandRequiredPositionalCount.value(commandName, 0));
     const ParsedCommandOptions parsedOptions = parseCommandOptions(commandName,
-                                                                   sourceLine.parsed.tokens,
+                                                                   command.parsed.tokens,
                                                                    catalog.commandOptionFixedArityByKey,
                                                                    false);
     const int providedPositionalCount = positionalTokenCount(parsedOptions);
     if (requiredPositionalCount > 0 && providedPositionalCount < requiredPositionalCount) {
-        result->diagnostics.append(diagnosticForLine(sourceLine,
+        result->diagnostics.append(diagnosticForLine(command,
                                                      QStringLiteral("missing-argument"),
                                                      QStringLiteral("Missing argument"),
                                                      QStringLiteral("Command `%1` expects at least %2 positional argument(s), but %3 provided.")
@@ -474,10 +494,10 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
 
     const QStringList allowedFirstValues =
         catalog.commandArgumentAllowedValuesByKey.value(commandArgumentValueKey(commandName, 0));
-    if (!allowedFirstValues.isEmpty() && providedPositionalCount > 0 && sourceLine.parsed.tokens.size() > 1) {
-        const QString value = sourceLine.parsed.tokens.at(1).trimmed();
+    if (!allowedFirstValues.isEmpty() && providedPositionalCount > 0 && command.parsed.tokens.size() > 1) {
+        const QString value = command.parsed.tokens.at(1).trimmed();
         if (!value.isEmpty() && !allowedFirstValues.contains(value, Qt::CaseInsensitive)) {
-            result->diagnostics.append(diagnosticForToken(sourceLine,
+            result->diagnostics.append(diagnosticForToken(command,
                                                           1,
                                                           QStringLiteral("unknown-argument-value"),
                                                           QStringLiteral("Unknown argument value"),
@@ -491,7 +511,7 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
         const QString optionToken = optionEntry.key;
         const QString normalizedOption = QStringLiteral("-") + normalizedCommandOptionName(optionToken);
         if (!knownOptions.isEmpty() && !knownOptions.contains(normalizedOption)) {
-            result->diagnostics.append(diagnosticForToken(sourceLine,
+            result->diagnostics.append(diagnosticForToken(command,
                                                           optionEntry.optionTokenIndex,
                                                           QStringLiteral("unknown-option"),
                                                           QStringLiteral("Unknown option"),
@@ -503,7 +523,7 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
         const int fixedArity = catalog.commandOptionFixedArityByKey.value(commandOptionValueKey(commandName, normalizedOption), -1);
         const int providedValueCount = optionEntry.logicalValueCount;
         if ((optionArityRequiresValue(arity) || fixedArity > 0) && providedValueCount == 0) {
-            result->diagnostics.append(diagnosticForToken(sourceLine,
+            result->diagnostics.append(diagnosticForToken(command,
                                                           optionEntry.optionTokenIndex,
                                                           QStringLiteral("missing-option-value"),
                                                           QStringLiteral("Missing option value"),
@@ -511,7 +531,7 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
                                                               .arg(optionToken, commandName),
                                                           TherionSourceDiagnosticSeverity::Error));
         } else if (fixedArity > 0 && providedValueCount > 0 && providedValueCount != fixedArity) {
-            result->diagnostics.append(diagnosticForToken(sourceLine,
+            result->diagnostics.append(diagnosticForToken(command,
                                                           optionEntry.optionTokenIndex,
                                                           QStringLiteral("wrong-option-value-count"),
                                                           QStringLiteral("Unexpected option value count"),
@@ -534,7 +554,7 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
                 const int diagnosticTokenIndex = optionEntry.embeddedValue
                     ? optionEntry.optionTokenIndex
                     : optionEntry.firstValueTokenIndex;
-                result->diagnostics.append(diagnosticForToken(sourceLine,
+                result->diagnostics.append(diagnosticForToken(command,
                                                               diagnosticTokenIndex,
                                                               QStringLiteral("unknown-option-value"),
                                                               QStringLiteral("Unknown option value"),
@@ -589,17 +609,19 @@ TherionSourceValidationResult TherionSourceValidator::validate(const QString &co
 {
     TherionSourceValidationResult result;
     const TherionSourceDocument sourceDocument = TherionSourceDocument::fromText(contents);
-    for (const TherionSourceDocumentLine &documentLine : sourceDocument.lines()) {
-        const TherionParsedSourceLine &sourceLine = documentLine.sourceLine;
-
-        const LineCleanupResult cleanup = cleanupLine(sourceLine.text);
-        if (cleanup.changed && cleanup.text != sourceLine.text) {
-            result.diagnostics.append(diagnosticForLineCleanup(sourceLine, cleanup));
+    const TherionSourceLogicalDocument logicalDocument =
+        TherionSourceLogicalDocument::fromSourceDocument(sourceDocument);
+    for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
+        if (command.startLineNumber == command.endLineNumber) {
+            const LineCleanupResult cleanup = cleanupLine(command.text);
+            if (cleanup.changed && cleanup.text != command.text) {
+                result.diagnostics.append(diagnosticForLineCleanup(command, cleanup));
+            }
         }
 
-        if (!catalog.commandNames.isEmpty() && documentLine.shouldValidateCommandCatalog()) {
+        if (!catalog.commandNames.isEmpty() && command.shouldValidateCommandCatalog()) {
             appendCommandCatalogDiagnostics(&result,
-                                            sourceLine,
+                                            command,
                                             catalog,
                                             false);
         }

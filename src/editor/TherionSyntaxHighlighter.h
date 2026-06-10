@@ -44,8 +44,6 @@ private:
     QHash<QString, QSet<QString>> commandOptionTokens_;
     QHash<QString, QSet<QString>> commandAllowedValues_;
     QHash<QString, QHash<QString, QString>> commandOptionValueArity_;
-    QHash<QString, QHash<QString, QSet<QString>>> commandOptionEnumValues_;
-    QHash<QString, QHash<QString, QSet<QString>>> commandSubtypeByTypeTokens_;
     QHash<QString, QSet<int>> commandPositionalIdTokenIndexes_;
     QHash<QString, QSet<QString>> commandOptionIdValueTokens_;
     QSet<QString> closingDirectiveIdTokens_;

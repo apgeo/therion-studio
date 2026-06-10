@@ -160,8 +160,6 @@ void TherionSyntaxHighlighter::loadPalette()
     commandOptionTokens_.clear();
     commandAllowedValues_.clear();
     commandOptionValueArity_.clear();
-    commandOptionEnumValues_.clear();
-    commandSubtypeByTypeTokens_.clear();
     commandPositionalIdTokenIndexes_.clear();
     commandOptionIdValueTokens_.clear();
     closingDirectiveIdTokens_.clear();
@@ -257,17 +255,12 @@ void TherionSyntaxHighlighter::highlightBlock(const QString &text)
     const QSet<QString> commandAllowedValues = commandAllowedValues_.value(directive);
     const QSet<QString> commandOptions = commandOptionTokens_.value(directive);
     const QHash<QString, QString> optionValueArity = commandOptionValueArity_.value(directive);
-    const QHash<QString, QSet<QString>> optionEnumValues = commandOptionEnumValues_.value(directive);
-    const QHash<QString, QSet<QString>> subtypeByTypeValues = commandSubtypeByTypeTokens_.value(directive);
     const QSet<int> idPositionalIndexes = commandPositionalIdTokenIndexes_.value(directive);
     const QSet<QString> idOptionTokens = commandOptionIdValueTokens_.value(directive);
     const bool closingDirectiveAllowsId = closingDirectiveIdTokens_.contains(directive);
-    const QString symbolTypeToken = symbolTypeForSubtypeLookup(directive, parsedLine);
 
     QString activeOptionToken;
     QString activeOptionArity;
-    QSet<QString> activeAllowedValues;
-    bool activeValidateValues = false;
     bool activeOptionExpectsId = false;
 
     int tokenIndex = 0;
@@ -280,7 +273,6 @@ void TherionSyntaxHighlighter::highlightBlock(const QString &text)
 
         const QString normalizedToken = tokenSpan.text.trimmed().toLower();
         const bool optionLikeToken = looksLikeOptionToken(normalizedToken);
-        const bool embeddedOptionValueToken = commandTokenEmbedsOptionValue(normalizedToken);
         bool identifierToken = false;
         if (knownCommand && tokenIndex > 0 && !optionLikeToken && idPositionalIndexes.contains(tokenIndex)) {
             identifierToken = true;
@@ -290,18 +282,7 @@ void TherionSyntaxHighlighter::highlightBlock(const QString &text)
         }
         bool formatted = false;
 
-        if (knownCommand
-            && tokenIndex > 0
-            && embeddedOptionValueToken
-            && (activeOptionToken.isEmpty() || activeOptionToken == QStringLiteral("-subtype"))) {
-            setFormat(tokenSpan.start, tokenSpan.length, invalidTokenFormat_);
-            formatted = true;
-            activeOptionToken.clear();
-            activeOptionArity.clear();
-            activeAllowedValues.clear();
-            activeValidateValues = false;
-            activeOptionExpectsId = false;
-        } else if (tokenIndex == 0 && keywordTokens_.contains(normalizedToken)) {
+        if (tokenIndex == 0 && keywordTokens_.contains(normalizedToken)) {
             setFormat(tokenSpan.start, tokenSpan.length, keywordFormat_);
             formatted = true;
         } else if (knownCommand && tokenIndex > 0 && optionLikeToken) {
@@ -311,59 +292,29 @@ void TherionSyntaxHighlighter::highlightBlock(const QString &text)
 
                 activeOptionToken = normalizedToken;
                 activeOptionArity = optionValueArity.value(normalizedToken).trimmed().toUpper();
-                activeAllowedValues = optionEnumValues.value(normalizedToken);
-                activeValidateValues = !activeAllowedValues.isEmpty();
                 activeOptionExpectsId = idOptionTokens.contains(normalizedToken);
-
-                if (activeOptionToken == QStringLiteral("-subtype") && !symbolTypeToken.isEmpty()) {
-                    const QSet<QString> subtypeValues = subtypeByTypeValues.value(symbolTypeToken);
-                    if (subtypeValues.contains(QStringLiteral("*"))) {
-                        activeAllowedValues.clear();
-                        activeValidateValues = false;
-                    } else if (!subtypeValues.isEmpty()) {
-                        activeAllowedValues = subtypeValues;
-                        activeValidateValues = true;
-                    }
-                }
 
                 if (activeOptionArity == QStringLiteral("0")) {
                     activeOptionToken.clear();
                     activeOptionArity.clear();
-                    activeAllowedValues.clear();
-                    activeValidateValues = false;
                     activeOptionExpectsId = false;
                 }
             } else {
-                setFormat(tokenSpan.start, tokenSpan.length, invalidTokenFormat_);
-                formatted = true;
                 activeOptionToken.clear();
                 activeOptionArity.clear();
-                activeAllowedValues.clear();
-                activeValidateValues = false;
                 activeOptionExpectsId = false;
             }
         } else {
-            bool invalidValue = false;
             if (knownCommand && !activeOptionToken.isEmpty()) {
-                if (activeValidateValues && !activeAllowedValues.contains(normalizedToken)) {
-                    invalidValue = true;
-                }
-                if (!invalidValue && activeOptionExpectsId) {
+                if (activeOptionExpectsId) {
                     identifierToken = true;
                 }
 
                 if (activeOptionArity != QStringLiteral("N")) {
                     activeOptionToken.clear();
                     activeOptionArity.clear();
-                    activeAllowedValues.clear();
-                    activeValidateValues = false;
                     activeOptionExpectsId = false;
                 }
-            }
-
-            if (invalidValue) {
-                setFormat(tokenSpan.start, tokenSpan.length, invalidTokenFormat_);
-                formatted = true;
             }
         }
 
@@ -463,21 +414,19 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
             ++positionalIndex;
         }
 
-        QHash<QString, QSet<QString>> subtypeByTypeValues;
         const QJsonObject subtypeByTypeObject = commandObject.value(QStringLiteral("subtype_by_type")).toObject();
         for (auto subtypeIterator = subtypeByTypeObject.begin(); subtypeIterator != subtypeByTypeObject.end(); ++subtypeIterator) {
             const QString typeToken = subtypeIterator.key().trimmed().toLower();
             if (typeToken.isEmpty()) {
                 continue;
             }
-            subtypeByTypeValues.insert(typeToken, lowerSetFromArray(subtypeIterator.value().toArray()));
+            validationCatalog_.commandSubtypeValuesByTypeKey.insert(commandSubtypeValueKey(commandName, typeToken),
+                                                                    sortedStringListFromSet(lowerSetFromArray(subtypeIterator.value().toArray())));
         }
 
         if (!commandName.isEmpty()) {
             commandOptionTokens_.insert(commandName, optionTokens);
             commandOptionValueArity_.insert(commandName, optionArities);
-            commandOptionEnumValues_.insert(commandName, optionEnumValues);
-            commandSubtypeByTypeTokens_.insert(commandName, subtypeByTypeValues);
             commandPositionalIdTokenIndexes_.insert(commandName, positionalIdIndexes);
             commandOptionIdValueTokens_.insert(commandName, optionIdTokens);
             validationCatalog_.commandOptionNames.insert(commandName, optionTokens);
@@ -518,11 +467,17 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
                 }
                 commandOptionTokens_.insert(alias, optionTokens);
                 commandOptionValueArity_.insert(alias, optionArities);
-                commandOptionEnumValues_.insert(alias, optionEnumValues);
-                commandSubtypeByTypeTokens_.insert(alias, subtypeByTypeValues);
                 commandPositionalIdTokenIndexes_.insert(alias, positionalIdIndexes);
                 commandOptionIdValueTokens_.insert(alias, optionIdTokens);
                 validationCatalog_.commandOptionNames.insert(alias, optionTokens);
+                for (auto subtypeIterator = subtypeByTypeObject.begin(); subtypeIterator != subtypeByTypeObject.end(); ++subtypeIterator) {
+                    const QString typeToken = subtypeIterator.key().trimmed().toLower();
+                    if (typeToken.isEmpty()) {
+                        continue;
+                    }
+                    validationCatalog_.commandSubtypeValuesByTypeKey.insert(commandSubtypeValueKey(alias, typeToken),
+                                                                            sortedStringListFromSet(lowerSetFromArray(subtypeIterator.value().toArray())));
+                }
                 for (auto arityIt = optionArities.cbegin(); arityIt != optionArities.cend(); ++arityIt) {
                     validationCatalog_.commandOptionValueArityTokens.insert(commandOptionValueKey(alias, arityIt.key()),
                                                                             arityIt.value());

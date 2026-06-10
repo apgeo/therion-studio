@@ -4,6 +4,8 @@
 #include "block_editor/BlockEditorDirectiveRules.h"
 #include "raw_editor/RawEditorCommandMetadataLoader.h"
 
+#include "../../core/TherionCommandSyntax.h"
+
 #include <QJsonObject>
 
 namespace TherionStudio
@@ -32,6 +34,17 @@ TherionSourceValidationCatalog validationCatalogFromCommandMetadata(const TextEd
     catalog.commandArgumentAllowedValuesByKey = metadata.commandArgumentValueTokens;
     catalog.commandTypeValues = metadata.commandTypeValueTokens;
     catalog.commandOptionAllowedValuesByKey = metadata.commandOptionValueTokens;
+    for (auto commandIterator = metadata.commandSubtypeByTypeTokens.cbegin();
+         commandIterator != metadata.commandSubtypeByTypeTokens.cend();
+         ++commandIterator) {
+        const QString commandName = commandIterator.key().trimmed().toLower();
+        for (auto typeIterator = commandIterator.value().cbegin();
+             typeIterator != commandIterator.value().cend();
+             ++typeIterator) {
+            catalog.commandSubtypeValuesByTypeKey.insert(commandSubtypeValueKey(commandName, typeIterator.key()),
+                                                         typeIterator.value());
+        }
+    }
     catalog.commandOptionValueArityTokens = metadata.commandOptionValueArityTokens;
     catalog.commandOptionFixedArityByKey = metadata.commandOptionFixedArityByKey;
     return catalog;

@@ -115,7 +115,8 @@ TherionSourceValidationCatalog basicCatalog()
     catalog.commandOptionNames.insert(QStringLiteral("export"), {QStringLiteral("-output"), QStringLiteral("-o"), QStringLiteral("-layout")});
     catalog.commandOptionNames.insert(QStringLiteral("revise"), {QStringLiteral("-stations")});
     catalog.commandOptionNames.insert(QStringLiteral("point"), {QStringLiteral("-text")});
-    catalog.commandOptionNames.insert(QStringLiteral("line"), {QStringLiteral("-close"), QStringLiteral("-clip")});
+    catalog.commandOptionNames.insert(QStringLiteral("line"),
+                                      {QStringLiteral("-close"), QStringLiteral("-clip"), QStringLiteral("-subtype")});
     catalog.commandOptionNames.insert(QStringLiteral("scrap"), {QStringLiteral("-projection"), QStringLiteral("-scale")});
     catalog.commandTypeValues.insert(QStringLiteral("line"), {QStringLiteral("wall"), QStringLiteral("border")});
     catalog.commandTypeValues.insert(QStringLiteral("area"), {QStringLiteral("water"), QStringLiteral("sand")});
@@ -127,6 +128,12 @@ TherionSourceValidationCatalog basicCatalog()
                                                  QStringLiteral("EXACTLY_ONE"));
     catalog.commandOptionAllowedValuesByKey.insert(TherionStudio::commandOptionValueKey(QStringLiteral("line"), QStringLiteral("-close")),
                                                    {QStringLiteral("on"), QStringLiteral("off"), QStringLiteral("auto")});
+    catalog.commandOptionValueArityTokens.insert(TherionStudio::commandOptionValueKey(QStringLiteral("line"), QStringLiteral("-subtype")),
+                                                 QStringLiteral("EXACTLY_ONE"));
+    catalog.commandSubtypeValuesByTypeKey.insert(TherionStudio::commandSubtypeValueKey(QStringLiteral("line"), QStringLiteral("wall")),
+                                                 {QStringLiteral("bedrock"), QStringLiteral("blocks")});
+    catalog.commandSubtypeValuesByTypeKey.insert(TherionStudio::commandSubtypeValueKey(QStringLiteral("line"), QStringLiteral("border")),
+                                                 {QStringLiteral("visible"), QStringLiteral("invisible")});
     catalog.commandOptionValueArityTokens.insert(TherionStudio::commandOptionValueKey(QStringLiteral("scrap"), QStringLiteral("-projection")),
                                                  QStringLiteral("EXACTLY_ONE"));
     catalog.commandOptionValueArityTokens.insert(TherionStudio::commandOptionValueKey(QStringLiteral("scrap"), QStringLiteral("-scale")),
@@ -354,6 +361,20 @@ void reportsUnknownOptionValue()
             "Unknown option values should remain warnings because catalog values may be incomplete.");
 }
 
+void reportsUnknownSubtypeValueForCurrentSymbolType()
+{
+    const QString contents = QStringLiteral("line wall -subtype visible\n"
+                                            "endline\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, basicCatalog());
+
+    require(containsDiagnostic(result, QStringLiteral("unknown-option-value")),
+            "Subtype values incompatible with the current symbol type should produce a validator diagnostic.");
+    const TherionSourceDiagnostic *unknownOptionValue =
+        diagnosticForCode(result, QStringLiteral("unknown-option-value"));
+    require(unknownOptionValue != nullptr && diagnosticSourceRange(*unknownOptionValue) == QStringLiteral("visible"),
+            "Subtype compatibility diagnostics should point at the subtype value token.");
+}
+
 void reportsBlockPairProblems()
 {
     const TherionSourceValidationResult unclosed =
@@ -444,6 +465,7 @@ int main(int argc, char **argv)
     acceptsOptionAliasesExtractedFromCatalogSignature();
     reportsUnknownArgumentValue();
     reportsUnknownOptionValue();
+    reportsUnknownSubtypeValueForCurrentSymbolType();
     reportsBlockPairProblems();
     keepsInputAsStandaloneCommandAndMapReferencesAsMapContent();
     keepsCenterlineDataRowsOutOfCommandCatalogValidation();

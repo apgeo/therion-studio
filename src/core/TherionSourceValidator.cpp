@@ -558,8 +558,19 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
                                                           TherionSourceDiagnosticSeverity::Error));
         }
 
-        const QStringList allowedOptionValues = catalog.commandOptionAllowedValuesByKey.value(
-            commandOptionValueKey(commandName, normalizedOption));
+        QStringList allowedOptionValues;
+        if (normalizedOption == QStringLiteral("-subtype")) {
+            const QString symbolTypeToken = symbolTypeForSubtypeLookup(commandName, command.parsed);
+            const QStringList subtypeValues = catalog.commandSubtypeValuesByTypeKey.value(
+                commandSubtypeValueKey(commandName, symbolTypeToken));
+            if (!subtypeValues.contains(QStringLiteral("*"))) {
+                appendConcreteSubtypeValues(allowedOptionValues, subtypeValues);
+            }
+        }
+        if (allowedOptionValues.isEmpty()) {
+            allowedOptionValues = catalog.commandOptionAllowedValuesByKey.value(
+                commandOptionValueKey(commandName, normalizedOption));
+        }
         if (!allowedOptionValues.isEmpty()
             && optionEntry.logicalValueCount == 1
             && optionEntry.rawValueTokens.size() == 1) {

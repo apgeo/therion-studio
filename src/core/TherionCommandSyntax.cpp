@@ -117,6 +117,13 @@ QString normalizeSymbolTypeToken(const QString &token)
     return normalized;
 }
 
+QString commandSubtypeValueKey(const QString &commandName, const QString &typeToken)
+{
+    return commandName.trimmed().toLower() + metadataKeySeparator() + QStringLiteral("subtype")
+        + metadataKeySeparator()
+        + normalizeSymbolTypeToken(typeToken);
+}
+
 QString symbolTypeForSubtypeLookup(const QString &commandName, const TherionParsedLine &parsedLine)
 {
     const QString normalizedCommand = commandName.trimmed().toLower();

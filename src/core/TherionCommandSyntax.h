@@ -10,6 +10,7 @@ struct TherionParsedLine;
 QString commandOptionValueKey(const QString &commandName, const QString &optionToken);
 QString commandOptionHelpKey(const QString &commandName, const QString &optionToken);
 QString commandArgumentValueKey(const QString &commandName, int argumentIndex);
+QString commandSubtypeValueKey(const QString &commandName, const QString &typeToken);
 
 QStringList extractOptionKeys(const QString &optionKeyField);
 QStringList extractOptionKeysFromSignatureAliases(const QString &signature);

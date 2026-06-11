@@ -104,6 +104,13 @@ bool requireSourceTransaction(const MapEditorObjectDetailsContext &context, cons
     return false;
 }
 
+bool applySourceTextEdits(QString *contents,
+                          const QVector<TherionSourceTextEdit> &edits,
+                          QString *errorMessage)
+{
+    return TherionDocumentEditor::applySourceTextEdits(contents, edits, errorMessage);
+}
+
 qreal defaultLinePointOrientationDegrees(const MapGeometryFeature &feature, int vertexIndex)
 {
     if (vertexIndex < 0 || vertexIndex >= feature.lineVertices.size()) {
@@ -421,11 +428,14 @@ void MapEditorObjectDetailsEditController::handleLineClosedToggled(bool checked)
     const QString beforeText = context_.textEditor->text();
     QString afterText = beforeText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteLineOptionToggle(&afterText,
-                                                        targetLineNumber,
-                                                        QStringLiteral("close"),
-                                                        checked,
-                                                        &errorMessage)) {
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::lineOptionToggleRewriteEdits(afterText,
+                                                             targetLineNumber,
+                                                             QStringLiteral("close"),
+                                                             checked,
+                                                             &sourceEdits,
+                                                             &errorMessage)
+        || !applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
             ? tr("Failed to update line closed state.")
             : tr("Failed to update line closed state: %1").arg(errorMessage);
@@ -460,11 +470,14 @@ void MapEditorObjectDetailsEditController::handleLineReversedToggled(bool checke
     const QString beforeText = context_.textEditor->text();
     QString afterText = beforeText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteLineOptionToggle(&afterText,
-                                                        targetLineNumber,
-                                                        QStringLiteral("reverse"),
-                                                        checked,
-                                                        &errorMessage)) {
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::lineOptionToggleRewriteEdits(afterText,
+                                                             targetLineNumber,
+                                                             QStringLiteral("reverse"),
+                                                             checked,
+                                                             &sourceEdits,
+                                                             &errorMessage)
+        || !applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
             ? tr("Failed to update line reverse state.")
             : tr("Failed to update line reverse state: %1").arg(errorMessage);
@@ -776,14 +789,17 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
     const QString beforeText = context_.textEditor->text();
     QString afterText = beforeText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteMapObjectQuickFields(&afterText,
-                                                            targetLineNumber,
-                                                            context_.quickTypeCombo->currentText(),
-                                                            normalizedQuickSubtypeForWrite(context_.quickSubtypeCombo->currentText()),
-                                                            context_.quickIdentifierEdit->text(),
-                                                            context_.quickNameEdit->text(),
-                                                            context_.quickNameEdit->isVisible(),
-                                                            &errorMessage)) {
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::mapObjectQuickFieldsRewriteEdits(afterText,
+                                                                 targetLineNumber,
+                                                                 context_.quickTypeCombo->currentText(),
+                                                                 normalizedQuickSubtypeForWrite(context_.quickSubtypeCombo->currentText()),
+                                                                 context_.quickIdentifierEdit->text(),
+                                                                 context_.quickNameEdit->text(),
+                                                                 context_.quickNameEdit->isVisible(),
+                                                                 &sourceEdits,
+                                                                 &errorMessage)
+        || !applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
             ? tr("Failed to update object fields.")
             : tr("Failed to update object fields: %1").arg(errorMessage);
@@ -795,10 +811,12 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
     const bool currentTypeIsLabel =
         context_.quickTypeCombo->currentText().trimmed().compare(QStringLiteral("label"), Qt::CaseInsensitive) == 0;
     if (context_.quickTextEdit->isVisible()
-        && !TherionDocumentEditor::rewriteMapObjectTextOption(&afterText,
-                                                              targetLineNumber,
-                                                              currentTypeIsLabel ? context_.quickTextEdit->text() : QString(),
-                                                              &errorMessage)) {
+        && (!TherionDocumentEditor::mapObjectTextOptionRewriteEdits(afterText,
+                                                                    targetLineNumber,
+                                                                    currentTypeIsLabel ? context_.quickTextEdit->text() : QString(),
+                                                                    &sourceEdits,
+                                                                    &errorMessage)
+            || !applySourceTextEdits(&afterText, sourceEdits, &errorMessage))) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
             ? tr("Failed to update label text.")
             : tr("Failed to update label text: %1").arg(errorMessage);
@@ -812,10 +830,12 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
                                                     *context_.objectQuickCommandKind,
                                                     context_.quickTypeCombo->currentText());
     if ((context_.quickValueEdit->isVisible() || valueSupported)
-        && !TherionDocumentEditor::rewriteMapObjectValueOption(&afterText,
-                                                               targetLineNumber,
-                                                               valueSupported ? context_.quickValueEdit->text() : QString(),
-                                                               &errorMessage)) {
+        && (!TherionDocumentEditor::mapObjectValueOptionRewriteEdits(afterText,
+                                                                     targetLineNumber,
+                                                                     valueSupported ? context_.quickValueEdit->text() : QString(),
+                                                                     &sourceEdits,
+                                                                     &errorMessage)
+            || !applySourceTextEdits(&afterText, sourceEdits, &errorMessage))) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
             ? tr("Failed to update point value.")
             : tr("Failed to update point value: %1").arg(errorMessage);

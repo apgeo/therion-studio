@@ -97,6 +97,11 @@ private:
                                      bool rebuildBlocksCanvas,
                                      bool applyDirtyState,
                                      bool recordUndoStep);
+    void applyTextEditsPreservingCursor(QVector<TherionSourceTextEdit> edits,
+                                        bool emitDocumentTextChanged,
+                                        bool rebuildBlocksCanvas,
+                                        bool applyDirtyState,
+                                        bool recordUndoStep);
     void replaceTextSelectingLine(const QString &contents, int lineNumber, bool recordUndoStep);
 
     TextEditorSourceRewriteContext context_;

@@ -804,6 +804,23 @@ int runRewritePointCoordinatesTest()
 
     contents = QStringLiteral("point station 10 20 station -name a1 # keep\n");
     errorMessage.clear();
+    QVector<TherionSourceTextEdit> edits;
+    if (!expect(TherionDocumentEditor::pointCoordinateRewriteEdits(contents, 1, QPointF(345.6, 789.1), &edits, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(edits.size() == 2
+                    && edits.at(0).startOffset == 14
+                    && edits.at(0).length == 2
+                    && edits.at(0).replacementText == QStringLiteral("345.6")
+                    && edits.at(1).startOffset == 17
+                    && edits.at(1).length == 2
+                    && edits.at(1).replacementText == QStringLiteral("789.1"),
+                "pointCoordinateRewriteEdits should expose exact coordinate token source edits.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(345.6, 789.1), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
@@ -1254,6 +1271,25 @@ int runRewriteLineOptionToggleTest()
 
     contents = QStringLiteral("line wall # keep\n");
     errorMessage.clear();
+    QVector<TherionSourceTextEdit> closeEdits;
+    if (!expect(TherionDocumentEditor::lineOptionToggleRewriteEdits(contents,
+                                                                    1,
+                                                                    QStringLiteral("-close"),
+                                                                    true,
+                                                                    &closeEdits,
+                                                                    &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(closeEdits.size() == 1
+                    && closeEdits.at(0).startOffset == 0
+                    && closeEdits.at(0).length == 16
+                    && closeEdits.at(0).replacementText == QStringLiteral("line wall -close on # keep"),
+                "lineOptionToggleRewriteEdits should expose the command-line source range for inserted toggles.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents, 1, QStringLiteral("-close"), true, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
@@ -1275,6 +1311,25 @@ int runRewriteLineOptionToggleTest()
     }
 
     contents = QStringLiteral("line wall -close off -reverse on\r\n");
+    errorMessage.clear();
+    QVector<TherionSourceTextEdit> reverseEdits;
+    if (!expect(TherionDocumentEditor::lineOptionToggleRewriteEdits(contents,
+                                                                    1,
+                                                                    QStringLiteral("-reverse"),
+                                                                    false,
+                                                                    &reverseEdits,
+                                                                    &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(reverseEdits.size() == 1
+                    && reverseEdits.at(0).startOffset == 0
+                    && reverseEdits.at(0).length == 32
+                    && reverseEdits.at(0).replacementText == QStringLiteral("line wall -close off -reverse off"),
+                "lineOptionToggleRewriteEdits should expose the command-line source range for existing toggle values.")) {
+        return 1;
+    }
+
     errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents, 1, QStringLiteral("-reverse"), false, &errorMessage),
                 errorMessage.toUtf8().constData())) {
@@ -1884,6 +1939,28 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("line wall -id old -close on # keep\nendline\n");
     errorMessage.clear();
+    QVector<TherionSourceTextEdit> quickFieldEdits;
+    if (!expect(TherionDocumentEditor::mapObjectQuickFieldsRewriteEdits(contents,
+                                                                        1,
+                                                                        QStringLiteral("border"),
+                                                                        QStringLiteral("invisible"),
+                                                                        QStringLiteral("line-1"),
+                                                                        QString(),
+                                                                        false,
+                                                                        &quickFieldEdits,
+                                                                        &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(quickFieldEdits.size() == 1
+                    && quickFieldEdits.at(0).startOffset == 0
+                    && quickFieldEdits.at(0).length == 34
+                    && quickFieldEdits.at(0).replacementText == QStringLiteral("line border -id line-1 -close on -subtype invisible # keep"),
+                "mapObjectQuickFieldsRewriteEdits should expose the command-line source range for quick field edits.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QStringLiteral("border"),
@@ -2100,6 +2177,24 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("line label -id l1 # keep\n  0 0\n  10 0\nendline\n");
     errorMessage.clear();
+    QVector<TherionSourceTextEdit> textEdits;
+    if (!expect(TherionDocumentEditor::mapObjectTextOptionRewriteEdits(contents,
+                                                                       1,
+                                                                       QStringLiteral("Main passage"),
+                                                                       &textEdits,
+                                                                       &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(textEdits.size() == 1
+                    && textEdits.at(0).startOffset == 0
+                    && textEdits.at(0).length == 24
+                    && textEdits.at(0).replacementText == QStringLiteral("line label -id l1 -text \"Main passage\" # keep"),
+                "mapObjectTextOptionRewriteEdits should expose the command-line source range for label text edits.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteMapObjectTextOption(&contents,
                                                                   1,
                                                                   QStringLiteral("Main passage"),
@@ -2183,6 +2278,24 @@ int runRewriteMapObjectQuickFieldsTest()
     }
 
     contents = QStringLiteral("point 10 20 passage-height -value [+4 -2 m]\n");
+    errorMessage.clear();
+    QVector<TherionSourceTextEdit> valueEdits;
+    if (!expect(TherionDocumentEditor::mapObjectValueOptionRewriteEdits(contents,
+                                                                        1,
+                                                                        QStringLiteral("3.5"),
+                                                                        &valueEdits,
+                                                                        &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(valueEdits.size() == 1
+                    && valueEdits.at(0).startOffset == 0
+                    && valueEdits.at(0).length == 43
+                    && valueEdits.at(0).replacementText == QStringLiteral("point 10 20 passage-height -value 3.5"),
+                "mapObjectValueOptionRewriteEdits should expose the command-line source range for bracketed values.")) {
+        return 1;
+    }
+
     errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteMapObjectValueOption(&contents,
                                                                    1,

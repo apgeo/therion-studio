@@ -9,6 +9,7 @@
 #include <QFileInfo>
 #include <QPair>
 #include <QSet>
+#include <algorithm>
 #include <cmath>
 #include <optional>
 #include <utility>
@@ -1357,6 +1358,44 @@ int draftInsertionEndscrapLineIndex(const QStringList &lines,
 
 }
 
+bool TherionDocumentEditor::applySourceTextEdits(QString *contents,
+                                                 QVector<TherionSourceTextEdit> edits,
+                                                 QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
+        }
+        return false;
+    }
+    if (edits.isEmpty()) {
+        return true;
+    }
+
+    std::sort(edits.begin(), edits.end(), [](const TherionSourceTextEdit &left, const TherionSourceTextEdit &right) {
+        return left.startOffset > right.startOffset;
+    });
+
+    int nextStartOffset = contents->size() + 1;
+    for (const TherionSourceTextEdit &edit : edits) {
+        if (edit.startOffset < 0
+            || edit.length < 0
+            || edit.startOffset + edit.length > contents->size()
+            || edit.startOffset + edit.length > nextStartOffset) {
+            if (errorMessage != nullptr) {
+                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Source edit range is invalid.");
+            }
+            return false;
+        }
+        nextStartOffset = edit.startOffset;
+    }
+
+    for (const TherionSourceTextEdit &edit : edits) {
+        contents->replace(edit.startOffset, edit.length, edit.replacementText);
+    }
+    return true;
+}
+
 bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
                                                       int lineNumber,
                                                       const QString &category,
@@ -1897,6 +1936,29 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
         return false;
     }
 
+    QVector<TherionSourceTextEdit> edits;
+    if (!pointCoordinateRewriteEdits(*contents, lineNumber, point, &edits, errorMessage)) {
+        return false;
+    }
+
+    return applySourceTextEdits(contents, edits, errorMessage);
+}
+
+bool TherionDocumentEditor::pointCoordinateRewriteEdits(const QString &contents,
+                                                        int lineNumber,
+                                                        const QPointF &point,
+                                                        QVector<TherionSourceTextEdit> *edits,
+                                                        QString *errorMessage)
+{
+    if (edits == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No edit target is available.");
+        }
+        return false;
+    }
+
+    edits->clear();
+
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
@@ -1904,7 +1966,7 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
         return false;
     }
 
-    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(contents);
     if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -1948,12 +2010,16 @@ bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
 
     const QString oldYTokenText = lineText.mid(secondToken.start, secondToken.length);
     const QString oldXTokenText = lineText.mid(firstToken.start, firstToken.length);
-    contents->replace(sourceLine.absoluteTokenStart(secondToken),
-                      secondToken.length,
-                      formatCoordinateLikeExistingToken(oldYTokenText, point.y()));
-    contents->replace(sourceLine.absoluteTokenStart(firstToken),
-                      firstToken.length,
-                      formatCoordinateLikeExistingToken(oldXTokenText, point.x()));
+    edits->append(TherionSourceTextEdit{
+        sourceLine.absoluteTokenStart(firstToken),
+        firstToken.length,
+        formatCoordinateLikeExistingToken(oldXTokenText, point.x()),
+    });
+    edits->append(TherionSourceTextEdit{
+        sourceLine.absoluteTokenStart(secondToken),
+        secondToken.length,
+        formatCoordinateLikeExistingToken(oldYTokenText, point.y()),
+    });
     return true;
 }
 
@@ -2122,6 +2188,29 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
         return false;
     }
 
+    QVector<TherionSourceTextEdit> edits;
+    if (!lineOptionToggleRewriteEdits(*contents, lineNumber, optionName, enabled, &edits, errorMessage)) {
+        return false;
+    }
+    return applySourceTextEdits(contents, edits, errorMessage);
+}
+
+bool TherionDocumentEditor::lineOptionToggleRewriteEdits(const QString &contents,
+                                                         int lineNumber,
+                                                         const QString &optionName,
+                                                         bool enabled,
+                                                         QVector<TherionSourceTextEdit> *edits,
+                                                         QString *errorMessage)
+{
+    if (edits == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No edit target is available.");
+        }
+        return false;
+    }
+
+    edits->clear();
+
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
@@ -2137,7 +2226,7 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
         return false;
     }
 
-    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(contents);
     if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -2220,7 +2309,13 @@ bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
         lineText.insert(insertionIndex, insertionText);
     }
 
-    contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
+    if (lineText != sourceLine.text) {
+        edits->append(TherionSourceTextEdit{
+            sourceLine.startOffset,
+            sourceLine.textLength,
+            lineText,
+        });
+    }
     return true;
 }
 
@@ -2543,6 +2638,41 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
         return false;
     }
 
+    QVector<TherionSourceTextEdit> edits;
+    if (!mapObjectQuickFieldsRewriteEdits(*contents,
+                                          lineNumber,
+                                          type,
+                                          subtype,
+                                          identifier,
+                                          name,
+                                          nameEnabled,
+                                          &edits,
+                                          errorMessage)) {
+        return false;
+    }
+
+    return applySourceTextEdits(contents, edits, errorMessage);
+}
+
+bool TherionDocumentEditor::mapObjectQuickFieldsRewriteEdits(const QString &contents,
+                                                             int lineNumber,
+                                                             const QString &type,
+                                                             const QString &subtype,
+                                                             const QString &identifier,
+                                                             const QString &name,
+                                                             bool nameEnabled,
+                                                             QVector<TherionSourceTextEdit> *edits,
+                                                             QString *errorMessage)
+{
+    if (edits == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No edit target is available.");
+        }
+        return false;
+    }
+
+    edits->clear();
+
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
@@ -2550,7 +2680,7 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
         return false;
     }
 
-    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(contents);
     if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -2590,7 +2720,13 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
             }
             return false;
         }
-        contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
+        if (lineText != sourceLine.text) {
+            edits->append(TherionSourceTextEdit{
+                sourceLine.startOffset,
+                sourceLine.textLength,
+                lineText,
+            });
+        }
         return true;
     }
 
@@ -2679,7 +2815,13 @@ bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
         return false;
     }
 
-    contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
+    if (lineText != sourceLine.text) {
+        edits->append(TherionSourceTextEdit{
+            sourceLine.startOffset,
+            sourceLine.textLength,
+            lineText,
+        });
+    }
     return true;
 }
 
@@ -2695,6 +2837,29 @@ bool TherionDocumentEditor::rewriteMapObjectTextOption(QString *contents,
         return false;
     }
 
+    QVector<TherionSourceTextEdit> edits;
+    if (!mapObjectTextOptionRewriteEdits(*contents, lineNumber, text, &edits, errorMessage)) {
+        return false;
+    }
+
+    return applySourceTextEdits(contents, edits, errorMessage);
+}
+
+bool TherionDocumentEditor::mapObjectTextOptionRewriteEdits(const QString &contents,
+                                                            int lineNumber,
+                                                            const QString &text,
+                                                            QVector<TherionSourceTextEdit> *edits,
+                                                            QString *errorMessage)
+{
+    if (edits == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No edit target is available.");
+        }
+        return false;
+    }
+
+    edits->clear();
+
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
@@ -2702,7 +2867,7 @@ bool TherionDocumentEditor::rewriteMapObjectTextOption(QString *contents,
         return false;
     }
 
-    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(contents);
     if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -2747,7 +2912,13 @@ bool TherionDocumentEditor::rewriteMapObjectTextOption(QString *contents,
         return false;
     }
 
-    contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
+    if (lineText != sourceLine.text) {
+        edits->append(TherionSourceTextEdit{
+            sourceLine.startOffset,
+            sourceLine.textLength,
+            lineText,
+        });
+    }
     return true;
 }
 
@@ -2763,6 +2934,29 @@ bool TherionDocumentEditor::rewriteMapObjectValueOption(QString *contents,
         return false;
     }
 
+    QVector<TherionSourceTextEdit> edits;
+    if (!mapObjectValueOptionRewriteEdits(*contents, lineNumber, value, &edits, errorMessage)) {
+        return false;
+    }
+
+    return applySourceTextEdits(contents, edits, errorMessage);
+}
+
+bool TherionDocumentEditor::mapObjectValueOptionRewriteEdits(const QString &contents,
+                                                             int lineNumber,
+                                                             const QString &value,
+                                                             QVector<TherionSourceTextEdit> *edits,
+                                                             QString *errorMessage)
+{
+    if (edits == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No edit target is available.");
+        }
+        return false;
+    }
+
+    edits->clear();
+
     if (lineNumber <= 0) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
@@ -2770,7 +2964,7 @@ bool TherionDocumentEditor::rewriteMapObjectValueOption(QString *contents,
         return false;
     }
 
-    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(contents);
     if (lineNumber > sourceDocument.lines.size()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
@@ -2814,7 +3008,13 @@ bool TherionDocumentEditor::rewriteMapObjectValueOption(QString *contents,
         return false;
     }
 
-    contents->replace(sourceLine.startOffset, sourceLine.textLength, lineText);
+    if (lineText != sourceLine.text) {
+        edits->append(TherionSourceTextEdit{
+            sourceLine.startOffset,
+            sourceLine.textLength,
+            lineText,
+        });
+    }
     return true;
 }
 

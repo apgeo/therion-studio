@@ -6,6 +6,7 @@
 #include <QTextDocument>
 #include <QtGlobal>
 
+#include <algorithm>
 #include <utility>
 
 #include "../../core/TherionDocumentEditor.h"
@@ -166,12 +167,13 @@ bool TextEditorSourceRewriteController::rewritePointCoordinates(int lineNumber,
         return false;
     }
 
-    QString contents = context_.editor->toPlainText();
-    if (!TherionDocumentEditor::rewritePointCoordinates(&contents, lineNumber, point, errorMessage)) {
+    const QString contents = context_.editor->toPlainText();
+    QVector<TherionSourceTextEdit> edits;
+    if (!TherionDocumentEditor::pointCoordinateRewriteEdits(contents, lineNumber, point, &edits, errorMessage)) {
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true, false);
+    applyTextEditsPreservingCursor(edits, true, false, true, false);
     return true;
 }
 
@@ -372,6 +374,92 @@ void TextEditorSourceRewriteController::replaceTextPreservingCursor(const QStrin
         *context_.loading = true;
     }
     replaceEditorText(contents, recordUndoStep);
+
+    const int targetLine = qBound(0, previousLine, qMax(0, context_.editor->document()->blockCount() - 1));
+    const QTextBlock targetBlock = context_.editor->document()->findBlockByLineNumber(targetLine);
+    if (targetBlock.isValid()) {
+        QTextCursor restoredCursor(targetBlock);
+        restoredCursor.movePosition(QTextCursor::StartOfBlock);
+        restoredCursor.movePosition(QTextCursor::Right,
+                                    QTextCursor::MoveAnchor,
+                                    qMax(0, qMin(previousColumn, targetBlock.length() > 0 ? targetBlock.length() - 1 : 0)));
+        context_.editor->setTextCursor(restoredCursor);
+    }
+
+    if (context_.loading != nullptr) {
+        *context_.loading = false;
+    }
+    if (context_.currentLineNumber != nullptr) {
+        *context_.currentLineNumber = context_.editor->textCursor().blockNumber() + 1;
+    }
+    if (applyDirtyState && context_.applyDirtyStateFromCurrentState) {
+        context_.applyDirtyStateFromCurrentState();
+    }
+    if (rebuildBlocksCanvas && context_.rebuildBlocksCanvasFromText) {
+        context_.rebuildBlocksCanvasFromText();
+    }
+    if (emitDocumentTextChanged && context_.documentTextChanged) {
+        context_.documentTextChanged();
+    }
+    if (context_.updateContextHelp) {
+        context_.updateContextHelp();
+    }
+}
+
+void TextEditorSourceRewriteController::applyTextEditsPreservingCursor(QVector<TherionSourceTextEdit> edits,
+                                                                       bool emitDocumentTextChanged,
+                                                                       bool rebuildBlocksCanvas,
+                                                                       bool applyDirtyState,
+                                                                       bool recordUndoStep)
+{
+    if (context_.editor == nullptr || edits.isEmpty()) {
+        return;
+    }
+
+    QTextDocument *document = context_.editor->document();
+    if (document == nullptr) {
+        return;
+    }
+
+    const int documentLength = context_.editor->toPlainText().size();
+    for (const TherionSourceTextEdit &edit : edits) {
+        if (edit.startOffset < 0 || edit.length < 0 || edit.startOffset + edit.length > documentLength) {
+            return;
+        }
+    }
+
+    const QTextCursor previousCursor = context_.editor->textCursor();
+    const int previousLine = previousCursor.blockNumber();
+    const int previousColumn = previousCursor.positionInBlock();
+
+    if (context_.loading != nullptr) {
+        *context_.loading = true;
+    }
+
+    std::sort(edits.begin(), edits.end(), [](const TherionSourceTextEdit &left, const TherionSourceTextEdit &right) {
+        return left.startOffset > right.startOffset;
+    });
+
+    const bool undoWasEnabled = document->isUndoRedoEnabled();
+    if (!recordUndoStep && undoWasEnabled) {
+        document->setUndoRedoEnabled(false);
+    }
+
+    QTextCursor editCursor(document);
+    if (recordUndoStep) {
+        editCursor.beginEditBlock();
+    }
+    for (const TherionSourceTextEdit &edit : edits) {
+        editCursor.setPosition(edit.startOffset);
+        editCursor.setPosition(edit.startOffset + edit.length, QTextCursor::KeepAnchor);
+        editCursor.insertText(edit.replacementText);
+    }
+    if (recordUndoStep) {
+        editCursor.endEditBlock();
+    }
+    if (!recordUndoStep && undoWasEnabled) {
+        document->setUndoRedoEnabled(true);
+    }
 
     const int targetLine = qBound(0, previousLine, qMax(0, context_.editor->document()->blockCount() - 1));
     const QTextBlock targetBlock = context_.editor->document()->findBlockByLineNumber(targetLine);

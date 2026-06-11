@@ -61,13 +61,23 @@ TextEditorSourceTransactionRequest request(const QString &label,
                                            const QString &beforeText,
                                            const QString &afterText,
                                            int expectedSourceRevision = 0,
-                                           const QString &staleStatusMessage = QString())
+                                           const QString &staleStatusMessage = QString(),
+                                           TextEditorSourceProjectionInvalidationPolicy projectionPolicy =
+                                               TextEditorSourceProjectionInvalidationPolicy::FlushPendingRefresh,
+                                           TextEditorSourceSelectionRestorePolicy selectionPolicy =
+                                               TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection,
+                                           std::function<void()> projectionHook = {},
+                                           std::function<void()> selectionHook = {})
 {
     return {
         .label = label,
         .beforeText = beforeText,
         .afterText = afterText,
         .expectedSourceRevision = expectedSourceRevision,
+        .projectionInvalidationPolicy = projectionPolicy,
+        .selectionRestorePolicy = selectionPolicy,
+        .projectionInvalidationHook = std::move(projectionHook),
+        .selectionRestoreHook = std::move(selectionHook),
         .undoStatusMessage = QStringLiteral("undo status"),
         .redoStatusMessage = QStringLiteral("redo status"),
         .staleStatusMessage = staleStatusMessage,
@@ -78,13 +88,23 @@ TextEditorSourceTransactionRequest sourceEditRequest(const QString &label,
                                                      const QString &beforeText,
                                                      QVector<TherionSourceTextEdit> sourceEdits,
                                                      int expectedSourceRevision = 0,
-                                                     const QString &staleStatusMessage = QString())
+                                                     const QString &staleStatusMessage = QString(),
+                                                     TextEditorSourceProjectionInvalidationPolicy projectionPolicy =
+                                                         TextEditorSourceProjectionInvalidationPolicy::FlushPendingRefresh,
+                                                     TextEditorSourceSelectionRestorePolicy selectionPolicy =
+                                                         TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection,
+                                                     std::function<void()> projectionHook = {},
+                                                     std::function<void()> selectionHook = {})
 {
     return {
         .label = label,
         .beforeText = beforeText,
         .sourceEdits = std::move(sourceEdits),
         .expectedSourceRevision = expectedSourceRevision,
+        .projectionInvalidationPolicy = projectionPolicy,
+        .selectionRestorePolicy = selectionPolicy,
+        .projectionInvalidationHook = std::move(projectionHook),
+        .selectionRestoreHook = std::move(selectionHook),
         .undoStatusMessage = QStringLiteral("undo status"),
         .redoStatusMessage = QStringLiteral("redo status"),
         .staleStatusMessage = staleStatusMessage,
@@ -452,6 +472,123 @@ int runRecordSnapshotWithStaleAfterTextRejectedTest()
 
     return 0;
 }
+
+int runCustomPolicyHooksTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString filePath = createTestFile(tempDir, "encoding utf-8\n");
+    if (!expect(!filePath.isEmpty(), "Failed to create source transaction custom-policy test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load source transaction custom-policy test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    bool commandApplyInProgress = false;
+    int refreshCount = 0;
+    int projectionHookCount = 0;
+    int selectionHookCount = 0;
+
+    TextEditorSourceTransactionController controller({
+        .textEditor = &tab,
+        .undoStack = &undoStack,
+        .commandApplyInProgress = &commandApplyInProgress,
+        .flushPendingRefresh = [&refreshCount]() { ++refreshCount; },
+        .statusCallback = [](const QString &) {},
+    });
+
+    const QString beforeText = tab.text();
+    const QString afterText = beforeText + QStringLiteral("survey custom\nendsurvey\n");
+    controller.applyChangeWithSnapshot(request(QStringLiteral("Custom Policy"),
+                                              beforeText,
+                                              afterText,
+                                              0,
+                                              QString(),
+                                              TextEditorSourceProjectionInvalidationPolicy::CustomHook,
+                                              TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                              [&projectionHookCount]() { ++projectionHookCount; },
+                                              [&selectionHookCount]() { ++selectionHookCount; }));
+    pumpEvents();
+
+    if (!expect(tab.text() == afterText, "Custom policy applyChangeWithSnapshot should still apply afterText.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 1, "Custom policy applyChangeWithSnapshot should still push an undo snapshot.")) {
+        return 1;
+    }
+    if (!expect(refreshCount == 0, "Custom projection policy should skip context flush callback.")) {
+        return 1;
+    }
+    if (!expect(projectionHookCount == 1, "Custom projection policy should execute projection hook once.")) {
+        return 1;
+    }
+    if (!expect(selectionHookCount == 1, "Custom selection policy should execute selection hook once.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runProjectionNonePolicySkipsRefreshTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString filePath = createTestFile(tempDir, "encoding utf-8\n");
+    if (!expect(!filePath.isEmpty(), "Failed to create source transaction no-projection test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load source transaction no-projection test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    bool commandApplyInProgress = false;
+    int refreshCount = 0;
+
+    TextEditorSourceTransactionController controller({
+        .textEditor = &tab,
+        .undoStack = &undoStack,
+        .commandApplyInProgress = &commandApplyInProgress,
+        .flushPendingRefresh = [&refreshCount]() { ++refreshCount; },
+        .statusCallback = [](const QString &) {},
+    });
+
+    const QString beforeText = tab.text();
+    const QString afterText = beforeText + QStringLiteral("survey none\nendsurvey\n");
+    controller.applyChangeWithSnapshot(request(QStringLiteral("No Projection Flush"),
+                                              beforeText,
+                                              afterText,
+                                              0,
+                                              QString(),
+                                              TextEditorSourceProjectionInvalidationPolicy::None));
+    pumpEvents();
+
+    if (!expect(tab.text() == afterText, "Projection-none applyChangeWithSnapshot should still apply afterText.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 1, "Projection-none applyChangeWithSnapshot should still push an undo snapshot.")) {
+        return 1;
+    }
+    if (!expect(refreshCount == 0, "Projection-none policy should suppress context flush callback.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char *argv[])
@@ -474,6 +611,12 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (runRecordSnapshotWithStaleAfterTextRejectedTest() != 0) {
+        return 1;
+    }
+    if (runCustomPolicyHooksTest() != 0) {
+        return 1;
+    }
+    if (runProjectionNonePolicySkipsRefreshTest() != 0) {
         return 1;
     }
 

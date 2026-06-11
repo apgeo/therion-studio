@@ -144,9 +144,34 @@ void pushSnapshotCommand(const TextEditorSourceTransactionContext &context,
     } else {
         pushCommand();
     }
+}
 
-    if (context.flushPendingRefresh != nullptr) {
-        context.flushPendingRefresh();
+void applyRequestPolicies(const TextEditorSourceTransactionContext &context,
+                          const TextEditorSourceTransactionRequest &request)
+{
+    switch (request.projectionInvalidationPolicy) {
+    case TextEditorSourceProjectionInvalidationPolicy::FlushPendingRefresh:
+        if (context.flushPendingRefresh != nullptr) {
+            context.flushPendingRefresh();
+        }
+        break;
+    case TextEditorSourceProjectionInvalidationPolicy::CustomHook:
+        if (request.projectionInvalidationHook) {
+            request.projectionInvalidationHook();
+        }
+        break;
+    case TextEditorSourceProjectionInvalidationPolicy::None:
+        break;
+    }
+
+    switch (request.selectionRestorePolicy) {
+    case TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection:
+        break;
+    case TextEditorSourceSelectionRestorePolicy::CustomHook:
+        if (request.selectionRestoreHook) {
+            request.selectionRestoreHook();
+        }
+        break;
     }
 }
 }
@@ -178,6 +203,7 @@ void TextEditorSourceTransactionController::recordSnapshot(const TextEditorSourc
     }
 
     pushSnapshotCommand(context_, request, afterText.value());
+    applyRequestPolicies(context_, request);
 }
 
 void TextEditorSourceTransactionController::applyChangeWithSnapshot(const TextEditorSourceTransactionRequest &request)
@@ -198,10 +224,12 @@ void TextEditorSourceTransactionController::applyChangeWithSnapshot(const TextEd
         const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
         applyTextEditorSourceSnapshot(context_.textEditor, afterText.value());
         pushSnapshotCommand(context_, request, afterText.value());
+        applyRequestPolicies(context_, request);
         return;
     }
 
     applyTextEditorSourceSnapshot(context_.textEditor, afterText.value());
     pushSnapshotCommand(context_, request, afterText.value());
+    applyRequestPolicies(context_, request);
 }
 }

@@ -13,6 +13,19 @@ namespace TherionStudio
 {
 class TextEditorTab;
 
+enum class TextEditorSourceProjectionInvalidationPolicy
+{
+    FlushPendingRefresh,
+    CustomHook,
+    None,
+};
+
+enum class TextEditorSourceSelectionRestorePolicy
+{
+    PreserveCurrentSelection,
+    CustomHook,
+};
+
 struct TextEditorSourceTransactionContext
 {
     TextEditorTab *textEditor = nullptr;
@@ -29,6 +42,12 @@ struct TextEditorSourceTransactionRequest
     QString afterText;
     QVector<TherionSourceTextEdit> sourceEdits;
     int expectedSourceRevision = 0;
+    TextEditorSourceProjectionInvalidationPolicy projectionInvalidationPolicy =
+        TextEditorSourceProjectionInvalidationPolicy::FlushPendingRefresh;
+    TextEditorSourceSelectionRestorePolicy selectionRestorePolicy =
+        TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection;
+    std::function<void()> projectionInvalidationHook;
+    std::function<void()> selectionRestoreHook;
     QString undoStatusMessage;
     QString redoStatusMessage;
     QString staleStatusMessage;

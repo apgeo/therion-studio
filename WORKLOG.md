@@ -43,7 +43,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Next Up
 
-- P1: Finish remaining Phase 1 transaction contract policy (projection invalidation hooks and explicit cursor/selection restore policy), then continue aligning remaining map canvas/source command flows on transaction requests.
+- P1: Continue Phase 2/3 unified-transaction migration by aligning remaining map canvas/source command flows on explicit transaction requests and reducing direct `TextEditorTab` rewrite delegate usage.
 - P1: Keep `WORKLOG.md` trimmed after each completed slice so active work does not become completed-history notes.
 
 ## Risks / Blockers

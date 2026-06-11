@@ -219,6 +219,8 @@ TextEditorSourceTransactionRequest sourceTransactionRequest(const MapEditorCanva
         .beforeText = beforeText,
         .afterText = afterText,
         .expectedSourceRevision = expectedRevision,
+        .projectionInvalidationPolicy = TextEditorSourceProjectionInvalidationPolicy::FlushPendingRefresh,
+        .selectionRestorePolicy = TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection,
         .undoStatusMessage = sourceSnapshotUndoMessage(insertedLineNumber),
         .redoStatusMessage = sourceSnapshotRedoMessage(insertedLineNumber),
         .staleStatusMessage = QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",

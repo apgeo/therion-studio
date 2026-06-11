@@ -1337,6 +1337,10 @@ therion_add_map_editor_ui_test(MapEditorObjectDetailsQuickFieldsTransactionTest
     tests/MapEditorObjectDetailsQuickFieldsTransactionTest.cpp
     "MapEditorObjectDetailsQuickFieldsTransactionResources")
 
+therion_add_map_editor_ui_test(MapEditorInteractiveDrawTransactionTest
+    tests/MapEditorInteractiveDrawTransactionTest.cpp
+    "MapEditorInteractiveDrawTransactionResources")
+
 set(THERION_UNIT_TEST_TARGETS
     CommandCatalogStoreTest
     CommandOptionParserTest
@@ -1407,6 +1411,7 @@ set(THERION_UI_TEST_TARGETS
     MapEditorBackgroundLayerVisibilityTest
     MapEditorCanvasEditSourceTransactionTest
     MapEditorObjectDetailsQuickFieldsTransactionTest
+    MapEditorInteractiveDrawTransactionTest
     MapEditorViewportInputControllerTest)
 
 set(THERION_TEST_EXECUTABLE_TARGETS

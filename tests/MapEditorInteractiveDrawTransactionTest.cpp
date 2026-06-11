@@ -1,0 +1,220 @@
+#include "../src/app/text_editor/map_editor/MapEditorInteractiveDrawController.h"
+#include "../src/app/text_editor/TextEditorTab.h"
+#include "../src/core/CommandCatalogStore.h"
+#include "../src/core/QtFileSystem.h"
+
+#include <QApplication>
+#include <QCoreApplication>
+#include <QEventLoop>
+#include <QFile>
+#include <QTemporaryDir>
+
+#include <iostream>
+
+using namespace TherionStudio;
+
+namespace
+{
+bool expect(bool condition, const char *message)
+{
+    if (!condition) {
+        std::cerr << message << '\n';
+    }
+    return condition;
+}
+
+void pumpEvents()
+{
+    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+}
+
+QString createTestFile(QTemporaryDir &tempDir, const QByteArray &contents)
+{
+    const QString filePath = tempDir.path() + QStringLiteral("/interactive-draw-transaction.th2");
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        return {};
+    }
+    file.write(contents);
+    file.close();
+    return filePath;
+}
+
+bool loadTestTab(TextEditorTab *tab, const QString &filePath)
+{
+    QString errorMessage;
+    if (!tab->loadFile(filePath, &errorMessage)) {
+        std::cerr << errorMessage.toStdString() << '\n';
+        return false;
+    }
+    tab->resize(640, 480);
+    tab->show();
+    pumpEvents();
+    return true;
+}
+
+int runPointInsertStaleTransactionStatusTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString filePath = createTestFile(tempDir,
+                                            "scrap s1 -projection plan\n"
+                                            "endscrap\n");
+    if (!expect(!filePath.isEmpty(), "Failed to create interactive-draw transaction test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load interactive-draw transaction test tab.")) {
+        return 1;
+    }
+
+    QString toolbarStatus;
+    bool selectModeActive = true;
+    bool commandApplyInProgress = false;
+    bool panActive = false;
+    QVector<QPointF> sourceVertices;
+    QVector<QPointF> sceneVertices;
+    QVector<MapEditorInteractiveLineDraftVertex> lineVertices;
+    bool strokeActive = false;
+    bool anchorPressActive = false;
+    QPointF anchorPressScenePoint;
+    bool anchorDragActive = false;
+    QPointF anchorDragScenePoint;
+    bool controlDragActive = false;
+    bool hoverActive = false;
+    QPointF hoverScenePoint;
+    bool hoverSnapActive = false;
+    QPointF hoverSnapScenePoint;
+    QGraphicsPathItem *previewPath = nullptr;
+    QVector<QGraphicsItem *> previewMarkers;
+
+    MapEditorInteractiveDrawMode mode = MapEditorInteractiveDrawMode::None;
+    int refreshCount = 0;
+    int commandSurfaceUpdateCount = 0;
+    int transactionCallCount = 0;
+    const QString staleStatus = QStringLiteral("Source transaction skipped: document changed.");
+
+    MapEditorInteractiveDrawContext context;
+    context.textEditor = &tab;
+    context.toolbarStatusNote = &toolbarStatus;
+    context.selectModeActive = &selectModeActive;
+    context.commandApplyInProgress = &commandApplyInProgress;
+    context.panActive = &panActive;
+    context.sourceVertices = &sourceVertices;
+    context.sceneVertices = &sceneVertices;
+    context.lineVertices = &lineVertices;
+    context.strokeActive = &strokeActive;
+    context.anchorPressActive = &anchorPressActive;
+    context.anchorPressScenePoint = &anchorPressScenePoint;
+    context.anchorDragActive = &anchorDragActive;
+    context.anchorDragScenePoint = &anchorDragScenePoint;
+    context.controlDragActive = &controlDragActive;
+    context.hoverActive = &hoverActive;
+    context.hoverScenePoint = &hoverScenePoint;
+    context.hoverSnapActive = &hoverSnapActive;
+    context.hoverSnapScenePoint = &hoverSnapScenePoint;
+    context.previewPath = &previewPath;
+    context.previewMarkers = &previewMarkers;
+
+    context.drawMode = [&mode]() {
+        return mode;
+    };
+    context.setDrawMode = [&mode](MapEditorInteractiveDrawMode newMode) {
+        mode = newMode;
+    };
+    context.translate = [](const char *text) {
+        return QString::fromUtf8(text);
+    };
+    context.emitModeStatusChanged = []() {};
+    context.sourcePointFromScenePosition = [](const QPointF &point) {
+        return point;
+    };
+    context.applySourceTextChangeWithSnapshot = [&](const QString &label,
+                                                    const QString &beforeText,
+                                                    const QString &afterText,
+                                                    int insertedLineNumber,
+                                                    std::function<void()> selectionRestoreHook) {
+        Q_UNUSED(label);
+        Q_UNUSED(beforeText);
+        Q_UNUSED(afterText);
+        Q_UNUSED(insertedLineNumber);
+        Q_UNUSED(selectionRestoreHook);
+        ++transactionCallCount;
+        toolbarStatus = staleStatus;
+    };
+    context.draftObjectOptions = [](const QString &) {
+        return TherionDraftObjectOptions{};
+    };
+    context.initialAreaAdjustRectForDraftInsertion = []() -> std::optional<QRectF> {
+        return std::nullopt;
+    };
+    context.lineCoordinateRowsForInteractiveDraft = []() {
+        return QStringList{};
+    };
+    context.areaCoordinateRowsForInteractiveDraft = []() {
+        return QStringList{};
+    };
+    context.captureInteractiveLineAnchor = [](const QPointF &, const std::optional<QPointF> &) {};
+    context.previewSmartAreaAt = [](const QPointF &) {
+        return false;
+    };
+    context.hasSmartAreaPreview = []() {
+        return false;
+    };
+    context.commitSmartAreaPreview = []() {
+        return false;
+    };
+    context.hasCompletableInteractiveDrawSession = []() {
+        return false;
+    };
+    context.refreshToolbarSummary = [&refreshCount]() {
+        ++refreshCount;
+    };
+    context.updateCommandSurfaceState = [&commandSurfaceUpdateCount]() {
+        ++commandSurfaceUpdateCount;
+    };
+    context.updateHelpPanel = []() {};
+
+    MapEditorInteractiveDrawController controller(context);
+    controller.setInteractiveDrawMode(MapEditorInteractiveDrawMode::Point);
+
+    const QString beforeText = tab.text();
+    const bool handled = controller.handleInteractiveDrawClick(QPointF(10.0, 20.0));
+    pumpEvents();
+
+    if (!expect(handled, "Interactive point insert should report handled click.")) {
+        return 1;
+    }
+    if (!expect(transactionCallCount == 1, "Interactive point insert should invoke source transaction callback once.")) {
+        return 1;
+    }
+    if (!expect(tab.text() == beforeText, "Stale transaction path should not change source text.")) {
+        return 1;
+    }
+    if (!expect(toolbarStatus == staleStatus, "Interactive point insert should preserve stale transaction status feedback.")) {
+        return 1;
+    }
+    if (!expect(refreshCount > 0, "Interactive point insert should refresh toolbar summary after stale transaction callback.")) {
+        return 1;
+    }
+
+    return 0;
+}
+}
+
+int main(int argc, char **argv)
+{
+    QApplication app(argc, argv);
+
+    if (runPointInsertStaleTransactionStatusTest() != 0) {
+        return 1;
+    }
+
+    return 0;
+}

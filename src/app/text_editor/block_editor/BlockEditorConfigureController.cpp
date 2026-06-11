@@ -5,6 +5,7 @@
 #include "BlockEditorDataBlockDialog.h"
 #include "BlockEditorSourceController.h"
 #include "BlockEditorSourceText.h"
+#include "../../../core/TherionDocumentEditor.h"
 
 #include <QMessageBox>
 
@@ -53,19 +54,22 @@ void BlockEditorConfigureController::configureBlock(const QString &kind, int lin
     }
 
     const QString nextContents = source.text();
-    QStringList nextLines = blockEditorNormalizedSourceLines(nextContents);
+    const QStringList nextLines = blockEditorNormalizedSourceLines(nextContents);
     if (lineNumber <= 0 || lineNumber > nextLines.size()) {
         return;
     }
 
-    if (!blockEditorReplaceSourceLineRange(&nextLines,
-                                           lineNumber + 1,
-                                           dataResult->dataBodyLastLine,
-                                           dataResult->rowLines)) {
+    TherionSourceTextEdit sourceEdit;
+    if (!blockEditorSourceLineRangeReplacementEdit(nextContents,
+                                                   lineNumber + 1,
+                                                   dataResult->dataBodyLastLine,
+                                                   dataResult->rowLines,
+                                                   &sourceEdit)) {
         return;
     }
-
-    source.replaceWithLines(nextContents, nextLines);
+    if (!source.applyTextEdit(sourceEdit)) {
+        return;
+    }
 
     if (dataResult->schemaMismatchDetected) {
         QMessageBox::information(context_.dialogParent,

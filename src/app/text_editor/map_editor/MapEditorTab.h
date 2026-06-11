@@ -14,6 +14,7 @@
 #include <QVector>
 #include <QPointer>
 #include <QPersistentModelIndex>
+#include <functional>
 #include <memory>
 #include <optional>
 
@@ -489,7 +490,8 @@ private:
     void applySourceTextChangeWithSnapshot(const QString &label,
                                            const QString &beforeText,
                                            const QString &afterText,
-                                           int insertedLineNumber);
+                                           int insertedLineNumber,
+                                           std::function<void()> selectionRestoreHook = {});
     bool insertLineVertexFromSelection(bool before);
     bool insertLineVertexAtSelectionCoordinate();
     bool splitLineAtSelection();

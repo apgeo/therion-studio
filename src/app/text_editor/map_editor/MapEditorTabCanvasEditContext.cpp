@@ -136,10 +136,21 @@ void MapEditorTab::recordSourceTextSnapshot(const QString &label,
 void MapEditorTab::applySourceTextChangeWithSnapshot(const QString &label,
                                                      const QString &beforeText,
                                                      const QString &afterText,
-                                                     int insertedLineNumber)
+                                                     int insertedLineNumber,
+                                                     std::function<void()> selectionRestoreHook)
 {
-    MapEditorCanvasEditController(canvasEditContext())
-        .applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
+    MapEditorCanvasEditController controller(canvasEditContext());
+    if (selectionRestoreHook) {
+        controller.applySourceTextChangeWithSnapshot(label,
+                                                     beforeText,
+                                                     afterText,
+                                                     insertedLineNumber,
+                                                     TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                                     std::move(selectionRestoreHook));
+        return;
+    }
+
+    controller.applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
 }
 
 bool MapEditorTab::insertLineVertexFromSelection(bool before)

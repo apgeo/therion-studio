@@ -651,40 +651,64 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
         return;
     }
 
+    std::function<void()> selectionRestoreHook;
+    if (selectedObjectKind == QStringLiteral("line") && context_.restoreLineAnchorSelectionLater) {
+        selectionRestoreHook = [context = context_, selectedLineNumber, selectedSourceVertexIndex]() {
+            context.restoreLineAnchorSelectionLater(selectedLineNumber, selectedSourceVertexIndex);
+            if (context.callbackContext != nullptr) {
+                QTimer::singleShot(0,
+                                   context.callbackContext,
+                                   [restoreLineAnchorSelectionLater = context.restoreLineAnchorSelectionLater,
+                                    selectedLineNumber,
+                                    selectedSourceVertexIndex]() {
+                    restoreLineAnchorSelectionLater(selectedLineNumber, selectedSourceVertexIndex);
+                });
+            }
+        };
+    } else if (context_.restorePointSelectionLater) {
+        selectionRestoreHook = [context = context_, selectedLineNumber]() {
+            context.restorePointSelectionLater(selectedLineNumber);
+            if (context.callbackContext != nullptr) {
+                QTimer::singleShot(0,
+                                   context.callbackContext,
+                                   [restorePointSelectionLater = context.restorePointSelectionLater,
+                                    selectedLineNumber]() {
+                    restorePointSelectionLater(selectedLineNumber);
+                });
+            }
+        };
+    }
+
+    bool selectionRestoreHandledByTransaction = false;
     if (afterText != beforeText) {
         if (!requireSourceTransaction(context_, tr("Cannot update object orientation without map source transaction support."))) {
             return;
         }
-        context_.applySourceTextChangeWithSnapshot(tr("Edit Object Orientation"),
-                                                   beforeText,
-                                                   afterText,
-                                                   selectedLineNumber);
+        if (context_.applySourceTextChangeWithSnapshotWithSelectionRestoreHook && selectionRestoreHook) {
+            context_.applySourceTextChangeWithSnapshotWithSelectionRestoreHook(tr("Edit Object Orientation"),
+                                                                               beforeText,
+                                                                               afterText,
+                                                                               selectedLineNumber,
+                                                                               std::move(selectionRestoreHook));
+            selectionRestoreHandledByTransaction = true;
+        } else {
+            context_.applySourceTextChangeWithSnapshot(tr("Edit Object Orientation"),
+                                                       beforeText,
+                                                       afterText,
+                                                       selectedLineNumber);
+        }
     }
 
     if (selectedObjectKind == QStringLiteral("line")) {
         *context_.toolbarStatusNote = tr("Updated line point options.");
-        if (context_.restoreLineAnchorSelectionLater) {
-            context_.restoreLineAnchorSelectionLater(selectedLineNumber, selectedSourceVertexIndex);
-            QTimer::singleShot(0,
-                               context_.callbackContext,
-                               [restoreLineAnchorSelectionLater = context_.restoreLineAnchorSelectionLater,
-                                selectedLineNumber,
-                                selectedSourceVertexIndex]() {
-                restoreLineAnchorSelectionLater(selectedLineNumber, selectedSourceVertexIndex);
-            });
-        }
     } else {
         *context_.toolbarStatusNote = enabled
             ? tr("Updated orientation to %1 degrees.").arg(QString::number(orientation, 'f', 3))
             : tr("Cleared orientation override.");
-        if (context_.restorePointSelectionLater) {
-            context_.restorePointSelectionLater(selectedLineNumber);
-            QTimer::singleShot(0,
-                               context_.callbackContext,
-                               [restorePointSelectionLater = context_.restorePointSelectionLater, selectedLineNumber]() {
-                restorePointSelectionLater(selectedLineNumber);
-            });
-        }
+    }
+
+    if (!selectionRestoreHandledByTransaction && selectionRestoreHook) {
+        selectionRestoreHook();
     }
     context_.refreshToolbarSummary();
     context_.refreshObjectDetailsPanel();
@@ -1069,17 +1093,41 @@ bool MapEditorObjectDetailsEditController::applyLinePointStandaloneRowsEdits(con
     if (!requireSourceTransaction(context_, tr("Cannot update line-point options without map source transaction support."))) {
         return false;
     }
-    context_.applySourceTextChangeWithSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
+    const int restoredVertex = editedVertices.at(vertexIndex).anchorSourceVertexIndex >= 0
+        ? editedVertices.at(vertexIndex).anchorSourceVertexIndex
+        : sourceVertexIndex;
+    const std::function<void()> selectionRestoreHook = context_.restoreLineAnchorSelectionLater
+        ? std::function<void()>([context = context_, lineNumber, restoredVertex]() {
+              context.restoreLineAnchorSelectionLater(lineNumber, restoredVertex);
+              if (context.callbackContext != nullptr) {
+                  QTimer::singleShot(0,
+                                     context.callbackContext,
+                                     [restoreLineAnchorSelectionLater = context.restoreLineAnchorSelectionLater,
+                                      lineNumber,
+                                      restoredVertex]() {
+                      restoreLineAnchorSelectionLater(lineNumber, restoredVertex);
+                  });
+              }
+          })
+        : std::function<void()>();
+    bool selectionRestoreHandledByTransaction = false;
+    if (context_.applySourceTextChangeWithSnapshotWithSelectionRestoreHook && selectionRestoreHook) {
+        context_.applySourceTextChangeWithSnapshotWithSelectionRestoreHook(tr("Edit Line Point Options"),
+                                                                           beforeText,
+                                                                           afterText,
+                                                                           lineNumber,
+                                                                           selectionRestoreHook);
+        selectionRestoreHandledByTransaction = true;
+    } else {
+        context_.applySourceTextChangeWithSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
+    }
 
     (*context_.toolbarStatusNote) = updatedRows.isEmpty()
         ? tr("Cleared additional line-point options for line %1, point %2.").arg(lineNumber).arg(vertexIndex + 1)
         : tr("Updated additional line-point options for line %1, point %2.").arg(lineNumber).arg(vertexIndex + 1);
     context_.refreshToolbarSummary();
-    if (context_.restoreLineAnchorSelectionLater != nullptr) {
-        const int restoredVertex = editedVertices.at(vertexIndex).anchorSourceVertexIndex >= 0
-            ? editedVertices.at(vertexIndex).anchorSourceVertexIndex
-            : sourceVertexIndex;
-        context_.restoreLineAnchorSelectionLater(lineNumber, restoredVertex);
+    if (!selectionRestoreHandledByTransaction && selectionRestoreHook) {
+        selectionRestoreHook();
     }
     return true;
 }

@@ -30,7 +30,6 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Next Up
 
-- P1: Review and remove legacy append/insert wrapper APIs after planner call sites and tests are settled.
 - P1: Keep `WORKLOG.md` trimmed after each completed slice so active work does not become completed-history notes.
 
 ## Risks / Blockers

@@ -47,23 +47,12 @@ public:
                                                              const QString &newName,
                                                              QVector<TherionSourceTextEdit> *edits,
                                                              QString *errorMessage = nullptr);
-    [[nodiscard]] static bool appendScrapBlock(QString *contents,
-                                               const QString &preferredName = QString(),
-                                               int *insertedLineNumber = nullptr,
-                                               QString *errorMessage = nullptr,
-                                               const QString &options = QString());
     [[nodiscard]] static bool appendScrapBlockEdits(const QString &contents,
                                                     const QString &preferredName,
                                                     QVector<TherionSourceTextEdit> *edits,
                                                     int *insertedLineNumber = nullptr,
                                                     QString *errorMessage = nullptr,
                                                     const QString &options = QString());
-    [[nodiscard]] static bool appendDraftGeometry(QString *contents,
-                                                  const QString &kind,
-                                                  const QVector<QPointF> &vertices,
-                                                  int *insertedLineNumber = nullptr,
-                                                  QString *errorMessage = nullptr,
-                                                  const TherionDraftObjectOptions &objectOptions = {});
     [[nodiscard]] static bool appendDraftGeometryEdits(const QString &contents,
                                                        const QString &kind,
                                                        const QVector<QPointF> &vertices,
@@ -71,12 +60,6 @@ public:
                                                        int *insertedLineNumber = nullptr,
                                                        QString *errorMessage = nullptr,
                                                        const TherionDraftObjectOptions &objectOptions = {});
-    [[nodiscard]] static bool appendDraftLineGeometry(QString *contents,
-                                                      const QStringList &coordinateRows,
-                                                      int *insertedLineNumber = nullptr,
-                                                      QString *errorMessage = nullptr,
-                                                      const QString &lineOptions = QString(),
-                                                      const TherionDraftObjectOptions &objectOptions = {});
     [[nodiscard]] static bool appendDraftLineGeometryEdits(const QString &contents,
                                                            const QStringList &coordinateRows,
                                                            QVector<TherionSourceTextEdit> *edits,
@@ -84,23 +67,12 @@ public:
                                                            QString *errorMessage = nullptr,
                                                            const QString &lineOptions = QString(),
                                                            const TherionDraftObjectOptions &objectOptions = {});
-    [[nodiscard]] static bool appendDraftAreaGeometry(QString *contents,
-                                                      const QStringList &coordinateRows,
-                                                      int *insertedLineNumber = nullptr,
-                                                      QString *errorMessage = nullptr,
-                                                      const TherionDraftObjectOptions &objectOptions = {});
     [[nodiscard]] static bool appendDraftAreaGeometryEdits(const QString &contents,
                                                            const QStringList &coordinateRows,
                                                            QVector<TherionSourceTextEdit> *edits,
                                                            int *insertedLineNumber = nullptr,
                                                            QString *errorMessage = nullptr,
                                                            const TherionDraftObjectOptions &objectOptions = {});
-    [[nodiscard]] static bool appendReferencedArea(QString *contents,
-                                                   int scrapLineNumber,
-                                                   const QVector<TherionReferencedAreaBoundaryLine> &boundaryLines,
-                                                   int *insertedLineNumber = nullptr,
-                                                   QString *errorMessage = nullptr,
-                                                   const TherionDraftObjectOptions &objectOptions = {});
     [[nodiscard]] static bool appendReferencedAreaEdits(const QString &contents,
                                                         int scrapLineNumber,
                                                         const QVector<TherionReferencedAreaBoundaryLine> &boundaryLines,

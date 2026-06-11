@@ -151,6 +151,64 @@ bool rewriteLineCoordinateRows(QString *contents, int lineNumber, const QStringL
     }, errorMessage);
 }
 
+bool appendScrapBlock(QString *contents,
+                      const QString &preferredName,
+                      int *insertedLineNumber,
+                      QString *errorMessage,
+                      const QString &options = QString())
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::appendScrapBlockEdits(source, preferredName, edits, insertedLineNumber, plannerError, options);
+    }, errorMessage);
+}
+
+bool appendDraftGeometry(QString *contents,
+                         const QString &kind,
+                         const QVector<QPointF> &vertices,
+                         int *insertedLineNumber,
+                         QString *errorMessage,
+                         const TherionDraftObjectOptions &objectOptions = {})
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::appendDraftGeometryEdits(source, kind, vertices, edits, insertedLineNumber, plannerError, objectOptions);
+    }, errorMessage);
+}
+
+bool appendDraftLineGeometry(QString *contents,
+                             const QStringList &coordinateRows,
+                             int *insertedLineNumber,
+                             QString *errorMessage,
+                             const QString &lineOptions = QString(),
+                             const TherionDraftObjectOptions &objectOptions = {})
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::appendDraftLineGeometryEdits(source, coordinateRows, edits, insertedLineNumber, plannerError, lineOptions, objectOptions);
+    }, errorMessage);
+}
+
+bool appendDraftAreaGeometry(QString *contents,
+                             const QStringList &coordinateRows,
+                             int *insertedLineNumber,
+                             QString *errorMessage,
+                             const TherionDraftObjectOptions &objectOptions = {})
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::appendDraftAreaGeometryEdits(source, coordinateRows, edits, insertedLineNumber, plannerError, objectOptions);
+    }, errorMessage);
+}
+
+bool appendReferencedArea(QString *contents,
+                          int scrapLineNumber,
+                          const QVector<TherionReferencedAreaBoundaryLine> &boundaryLines,
+                          int *insertedLineNumber,
+                          QString *errorMessage,
+                          const TherionDraftObjectOptions &objectOptions = {})
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::appendReferencedAreaEdits(source, scrapLineNumber, boundaryLines, edits, insertedLineNumber, plannerError, objectOptions);
+    }, errorMessage);
+}
+
 int runRewritePreservesOtherContentTest()
 {
     QString contents = QStringLiteral("survey original\r\n# keep this comment\r\nmap old-map\r\n");
@@ -444,7 +502,7 @@ int runAppendScrapBlockTest()
     QString errorMessage;
 
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::appendScrapBlock(nullptr, QStringLiteral("new-scrap"), nullptr, &errorMessage), "appendScrapBlock should reject null contents.")) {
+    if (!expect(!appendScrapBlock(nullptr, QStringLiteral("new-scrap"), nullptr, &errorMessage), "appendScrapBlock should reject null contents.")) {
         return 1;
     }
     if (!expect(!errorMessage.isEmpty(), "appendScrapBlock should provide an error for null contents.")) {
@@ -478,7 +536,7 @@ int runAppendScrapBlockTest()
     QString contents;
     int lineNumber = 0;
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::appendScrapBlock(&contents, QString(), &lineNumber, &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(appendScrapBlock(&contents, QString(), &lineNumber, &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
     if (!expect(contents == QStringLiteral("scrap scrap-1\nendscrap\n"), "appendScrapBlock should create the default block in an empty document.")) {
@@ -491,7 +549,7 @@ int runAppendScrapBlockTest()
     contents = QStringLiteral("survey demo\r\nscrap new-scrap\r\nendscrap\r\n");
     lineNumber = 0;
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::appendScrapBlock(&contents, QStringLiteral("new-scrap"), &lineNumber, &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(appendScrapBlock(&contents, QStringLiteral("new-scrap"), &lineNumber, &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
     if (!expect(contents == QStringLiteral("survey demo\r\nscrap new-scrap\r\nendscrap\r\n\r\nscrap scrap-1\r\nendscrap\r\n"),
@@ -505,7 +563,7 @@ int runAppendScrapBlockTest()
     contents = QStringLiteral("survey cave\n");
     lineNumber = 0;
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::appendScrapBlock(&contents, QStringLiteral("  My New Scrap 2026  "), &lineNumber, &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(appendScrapBlock(&contents, QStringLiteral("  My New Scrap 2026  "), &lineNumber, &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
     if (!expect(contents == QStringLiteral("survey cave\n\nscrap my-new-scrap-2026\nendscrap\n"),
@@ -528,7 +586,7 @@ int runAppendScrapBlockTest()
     contents.clear();
     lineNumber = 0;
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::appendScrapBlock(&contents,
+    if (!expect(appendScrapBlock(&contents,
                                                         QStringLiteral("scaled"),
                                                         &lineNumber,
                                                         &errorMessage,
@@ -549,7 +607,7 @@ int runAppendDraftGeometryTest()
     QString errorMessage;
 
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::appendDraftGeometry(nullptr, QStringLiteral("point"), {QPointF(10.0, 20.0)}, nullptr, &errorMessage),
+    if (!expect(!appendDraftGeometry(nullptr, QStringLiteral("point"), {QPointF(10.0, 20.0)}, nullptr, &errorMessage),
                 "appendDraftGeometry should reject null contents.")) {
         return 1;
     }
@@ -588,7 +646,7 @@ int runAppendDraftGeometryTest()
         return 1;
     }
 
-    if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents, QStringLiteral("point"), {QPointF(123.4, 567.8)}, &lineNumber, &errorMessage),
+    if (!expect(appendDraftGeometry(&contents, QStringLiteral("point"), {QPointF(123.4, 567.8)}, &lineNumber, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -642,7 +700,7 @@ int runAppendDraftGeometryTest()
         return 1;
     }
 
-    if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
+    if (!expect(appendDraftGeometry(&contents,
                                                            QStringLiteral("line"),
                                                            {QPointF(10.0, 20.0), QPointF(30.0, 40.0), QPointF(50.0, 60.0), QPointF(70.0, 80.0)},
                                                            &lineNumber,
@@ -695,7 +753,7 @@ int runAppendDraftGeometryTest()
         return 1;
     }
 
-    if (!expect(TherionDocumentEditor::appendDraftLineGeometry(&contents,
+    if (!expect(appendDraftLineGeometry(&contents,
                                                                {QStringLiteral("1 2"),
                                                                 QStringLiteral("3 4"),
                                                                 QStringLiteral("5 6")},
@@ -729,7 +787,7 @@ int runAppendDraftGeometryTest()
                               "point station 1 2 station -name a1\n");
     lineNumber = 0;
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::appendDraftLineGeometry(&contents,
+    if (!expect(appendDraftLineGeometry(&contents,
                                                                {QStringLiteral("10 20"),
                                                                 QStringLiteral("30 40")},
                                                                &lineNumber,
@@ -760,7 +818,7 @@ int runAppendDraftGeometryTest()
     lineObjectOptions.type = QStringLiteral("wall");
     lineObjectOptions.subtype = QStringLiteral("blocks");
     lineObjectOptions.identifier = QStringLiteral("custom-line");
-    if (!expect(TherionDocumentEditor::appendDraftLineGeometry(&contents,
+    if (!expect(appendDraftLineGeometry(&contents,
                                                                {QStringLiteral("10 20"),
                                                                 QStringLiteral("30 40")},
                                                                &lineNumber,
@@ -785,7 +843,7 @@ int runAppendDraftGeometryTest()
     errorMessage.clear();
     lineObjectOptions.subtype = QStringLiteral("-clip off");
     lineObjectOptions.identifier.clear();
-    if (!expect(TherionDocumentEditor::appendDraftLineGeometry(&contents,
+    if (!expect(appendDraftLineGeometry(&contents,
                                                                {QStringLiteral("10 20"),
                                                                 QStringLiteral("30 40")},
                                                                &lineNumber,
@@ -814,7 +872,7 @@ int runAppendDraftGeometryTest()
     pointObjectOptions.identifier = QStringLiteral("p-1");
     pointObjectOptions.text = QStringLiteral("Entrance label");
     pointObjectOptions.textEnabled = true;
-    if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
+    if (!expect(appendDraftGeometry(&contents,
                                                            QStringLiteral("point"),
                                                            {QPointF(12.0, 34.0)},
                                                            &lineNumber,
@@ -837,7 +895,7 @@ int runAppendDraftGeometryTest()
     pointValueOptions.type = QStringLiteral("height");
     pointValueOptions.value = QStringLiteral("[40? ft]");
     pointValueOptions.valueEnabled = true;
-    if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
+    if (!expect(appendDraftGeometry(&contents,
                                                            QStringLiteral("point"),
                                                            {QPointF(56.0, 78.0)},
                                                            &lineNumber,
@@ -861,7 +919,7 @@ int runAppendDraftGeometryTest()
     errorMessage.clear();
     TherionDraftObjectOptions targetedPointOptions;
     targetedPointOptions.targetScrapIdentifier = QStringLiteral("first");
-    if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
+    if (!expect(appendDraftGeometry(&contents,
                                                            QStringLiteral("point"),
                                                            {QPointF(9.0, 10.0)},
                                                            &lineNumber,
@@ -890,7 +948,7 @@ int runAppendDraftGeometryTest()
     errorMessage.clear();
     TherionDraftObjectOptions missingTargetOptions;
     missingTargetOptions.targetScrapIdentifier = QStringLiteral("missing");
-    if (!expect(!TherionDocumentEditor::appendDraftGeometry(&contents,
+    if (!expect(!appendDraftGeometry(&contents,
                                                             QStringLiteral("point"),
                                                             {QPointF(9.0, 10.0)},
                                                             &lineNumber,
@@ -911,7 +969,7 @@ int runAppendDraftGeometryTest()
     errorMessage.clear();
     TherionDraftObjectOptions targetedLineOptions;
     targetedLineOptions.targetScrapIdentifier = QStringLiteral("second");
-    if (!expect(TherionDocumentEditor::appendDraftLineGeometry(&contents,
+    if (!expect(appendDraftLineGeometry(&contents,
                                                                {QStringLiteral("1 2"), QStringLiteral("3 4")},
                                                                &lineNumber,
                                                                &errorMessage,
@@ -937,7 +995,7 @@ int runAppendDraftGeometryTest()
 
     contents = QStringLiteral("scrap a\nendscrap\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::appendDraftGeometry(&contents, QStringLiteral("area"), {QPointF(1.0, 2.0), QPointF(3.0, 4.0)}, nullptr, &errorMessage),
+    if (!expect(!appendDraftGeometry(&contents, QStringLiteral("area"), {QPointF(1.0, 2.0), QPointF(3.0, 4.0)}, nullptr, &errorMessage),
                 "appendDraftGeometry should reject area geometry with too few vertices.")) {
         return 1;
     }
@@ -948,7 +1006,7 @@ int runAppendDraftGeometryTest()
     contents = QStringLiteral("scrap a\nendscrap\n");
     lineNumber = 0;
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
+    if (!expect(appendDraftGeometry(&contents,
                                                            QStringLiteral("area"),
                                                            {QPointF(1.0, 2.0), QPointF(3.0, 4.0), QPointF(5.0, 6.0), QPointF(7.0, 8.0)},
                                                            &lineNumber,
@@ -976,7 +1034,7 @@ int runAppendDraftGeometryTest()
 
     contents = QStringLiteral("scrap a\nendscrap\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::appendDraftAreaGeometry(&contents,
+    if (!expect(!appendDraftAreaGeometry(&contents,
                                                                 {QStringLiteral("1 2"), QStringLiteral("3 4")},
                                                                 nullptr,
                                                                 &errorMessage),
@@ -1030,7 +1088,7 @@ int runAppendDraftGeometryTest()
         return 1;
     }
 
-    if (!expect(TherionDocumentEditor::appendDraftAreaGeometry(&contents,
+    if (!expect(appendDraftAreaGeometry(&contents,
                                                                {QStringLiteral("1 2"),
                                                                 QStringLiteral("3 4 5 6"),
                                                                 QStringLiteral("7 8")},
@@ -1072,7 +1130,7 @@ int runAppendDraftGeometryTest()
     errorMessage.clear();
     TherionDraftObjectOptions targetedAreaOptions;
     targetedAreaOptions.targetScrapIdentifier = QStringLiteral("second");
-    if (!expect(TherionDocumentEditor::appendDraftAreaGeometry(&contents,
+    if (!expect(appendDraftAreaGeometry(&contents,
                                                                {QStringLiteral("1 2"),
                                                                 QStringLiteral("3 4"),
                                                                 QStringLiteral("5 6")},
@@ -1110,7 +1168,7 @@ int runAppendDraftGeometryTest()
     areaObjectOptions.type = QStringLiteral("pebbles");
     areaObjectOptions.subtype = QStringLiteral("dry");
     areaObjectOptions.identifier = QStringLiteral("area-1");
-    if (!expect(TherionDocumentEditor::appendDraftAreaGeometry(&contents,
+    if (!expect(appendDraftAreaGeometry(&contents,
                                                                {QStringLiteral("1 2"),
                                                                 QStringLiteral("3 4"),
                                                                 QStringLiteral("5 6")},
@@ -3065,7 +3123,7 @@ int runAppendReferencedAreaTest()
         return 1;
     }
 
-    if (!expect(TherionDocumentEditor::appendReferencedArea(&contents,
+    if (!expect(appendReferencedArea(&contents,
                                                             3,
                                                             boundaryLines,
                                                             &insertedLineNumber,

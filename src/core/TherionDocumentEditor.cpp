@@ -1542,26 +1542,6 @@ bool TherionDocumentEditor::structureEntryNameRewriteEdits(const QString &conten
     return true;
 }
 
-bool TherionDocumentEditor::appendScrapBlock(QString *contents,
-                                             const QString &preferredName,
-                                             int *insertedLineNumber,
-                                             QString *errorMessage,
-                                             const QString &options)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!appendScrapBlockEdits(*contents, preferredName, &edits, insertedLineNumber, errorMessage, options)) {
-        return false;
-    }
-    return applySourceTextEdits(contents, edits, errorMessage);
-}
-
 bool TherionDocumentEditor::appendScrapBlockEdits(const QString &contents,
                                                   const QString &preferredName,
                                                   QVector<TherionSourceTextEdit> *edits,
@@ -1635,27 +1615,6 @@ bool TherionDocumentEditor::appendScrapBlockEdits(const QString &contents,
     }
 
     return true;
-}
-
-bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
-                                                const QString &kind,
-                                                const QVector<QPointF> &vertices,
-                                                int *insertedLineNumber,
-                                                QString *errorMessage,
-                                                const TherionDraftObjectOptions &objectOptions)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!appendDraftGeometryEdits(*contents, kind, vertices, &edits, insertedLineNumber, errorMessage, objectOptions)) {
-        return false;
-    }
-    return applySourceTextEdits(contents, edits, errorMessage);
 }
 
 bool TherionDocumentEditor::appendDraftGeometryEdits(const QString &contents,
@@ -1791,27 +1750,6 @@ bool TherionDocumentEditor::appendDraftGeometryEdits(const QString &contents,
     return true;
 }
 
-bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
-                                                    const QStringList &coordinateRows,
-                                                    int *insertedLineNumber,
-                                                    QString *errorMessage,
-                                                    const QString &lineOptions,
-                                                    const TherionDraftObjectOptions &objectOptions)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!appendDraftLineGeometryEdits(*contents, coordinateRows, &edits, insertedLineNumber, errorMessage, lineOptions, objectOptions)) {
-        return false;
-    }
-    return applySourceTextEdits(contents, edits, errorMessage);
-}
-
 bool TherionDocumentEditor::appendDraftLineGeometryEdits(const QString &contents,
                                                          const QStringList &coordinateRows,
                                                          QVector<TherionSourceTextEdit> *edits,
@@ -1902,26 +1840,6 @@ bool TherionDocumentEditor::appendDraftLineGeometryEdits(const QString &contents
     }
 
     return true;
-}
-
-bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
-                                                    const QStringList &coordinateRows,
-                                                    int *insertedLineNumber,
-                                                    QString *errorMessage,
-                                                    const TherionDraftObjectOptions &objectOptions)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!appendDraftAreaGeometryEdits(*contents, coordinateRows, &edits, insertedLineNumber, errorMessage, objectOptions)) {
-        return false;
-    }
-    return applySourceTextEdits(contents, edits, errorMessage);
 }
 
 bool TherionDocumentEditor::appendDraftAreaGeometryEdits(const QString &contents,
@@ -2022,27 +1940,6 @@ bool TherionDocumentEditor::appendDraftAreaGeometryEdits(const QString &contents
     }
 
     return true;
-}
-
-bool TherionDocumentEditor::appendReferencedArea(QString *contents,
-                                                 int scrapLineNumber,
-                                                 const QVector<TherionReferencedAreaBoundaryLine> &boundaryLines,
-                                                 int *insertedLineNumber,
-                                                 QString *errorMessage,
-                                                 const TherionDraftObjectOptions &objectOptions)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!appendReferencedAreaEdits(*contents, scrapLineNumber, boundaryLines, &edits, insertedLineNumber, errorMessage, objectOptions)) {
-        return false;
-    }
-    return applySourceTextEdits(contents, edits, errorMessage);
 }
 
 bool TherionDocumentEditor::appendReferencedAreaEdits(const QString &contents,

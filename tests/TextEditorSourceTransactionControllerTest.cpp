@@ -12,6 +12,7 @@
 #include <QUndoStack>
 
 #include <iostream>
+#include <utility>
 
 using namespace TherionStudio;
 
@@ -62,6 +63,19 @@ TextEditorSourceTransactionRequest request(const QString &label, const QString &
         .label = label,
         .beforeText = beforeText,
         .afterText = afterText,
+        .undoStatusMessage = QStringLiteral("undo status"),
+        .redoStatusMessage = QStringLiteral("redo status"),
+    };
+}
+
+TextEditorSourceTransactionRequest sourceEditRequest(const QString &label,
+                                                     const QString &beforeText,
+                                                     QVector<TherionSourceTextEdit> sourceEdits)
+{
+    return {
+        .label = label,
+        .beforeText = beforeText,
+        .sourceEdits = std::move(sourceEdits),
         .undoStatusMessage = QStringLiteral("undo status"),
         .redoStatusMessage = QStringLiteral("redo status"),
     };
@@ -200,6 +214,80 @@ int runRecordSnapshotForAlreadyAppliedChangeTest()
     return 0;
 }
 
+int runApplySourceEditsCreatesUndoSnapshotTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString filePath = createTestFile(tempDir, "encoding utf-8\nsurvey old\nendsurvey\n");
+    if (!expect(!filePath.isEmpty(), "Failed to create source edit transaction test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load source edit transaction test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    bool commandApplyInProgress = false;
+    int refreshCount = 0;
+    QStringList statuses;
+
+    TextEditorSourceTransactionController controller({
+        .textEditor = &tab,
+        .undoStack = &undoStack,
+        .commandApplyInProgress = &commandApplyInProgress,
+        .flushPendingRefresh = [&refreshCount]() { ++refreshCount; },
+        .statusCallback = [&statuses](const QString &statusMessage) { statuses.append(statusMessage); },
+    });
+
+    const QString beforeText = tab.text();
+    const int editStart = beforeText.indexOf(QStringLiteral("old"));
+    if (!expect(editStart >= 0, "Source edit transaction test should find the target token.")) {
+        return 1;
+    }
+    const QString afterText = QStringLiteral("encoding utf-8\nsurvey new\nendsurvey\n");
+    controller.applyChangeWithSnapshot(sourceEditRequest(QStringLiteral("Rename Survey"),
+                                                         beforeText,
+                                                         {TherionSourceTextEdit{editStart, 3, QStringLiteral("new")}}));
+    pumpEvents();
+
+    if (!expect(tab.text() == afterText, "Source edit transaction should apply source edits immediately.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 1, "Source edit transaction should push one undo snapshot.")) {
+        return 1;
+    }
+    if (!expect(refreshCount == 1, "Source edit transaction should flush pending refresh once.")) {
+        return 1;
+    }
+    if (!expect(!commandApplyInProgress, "Source edit transaction should restore commandApplyInProgress.")) {
+        return 1;
+    }
+
+    undoStack.undo();
+    pumpEvents();
+    if (!expect(tab.text() == beforeText, "Source edit transaction undo should restore beforeText.")) {
+        return 1;
+    }
+
+    undoStack.redo();
+    pumpEvents();
+    if (!expect(tab.text() == afterText, "Source edit transaction redo should restore the computed afterText.")) {
+        return 1;
+    }
+    if (!expect(statuses == QStringList({QStringLiteral("undo status"), QStringLiteral("redo status")}),
+                "Source edit transaction should emit undo and redo status messages.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runNoOpChangeDoesNotPushSnapshotTest()
 {
     QUndoStack undoStack;
@@ -236,6 +324,9 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (runRecordSnapshotForAlreadyAppliedChangeTest() != 0) {
+        return 1;
+    }
+    if (runApplySourceEditsCreatesUndoSnapshotTest() != 0) {
         return 1;
     }
     if (runNoOpChangeDoesNotPushSnapshotTest() != 0) {

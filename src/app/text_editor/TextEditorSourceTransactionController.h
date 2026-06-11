@@ -1,6 +1,9 @@
 #pragma once
 
+#include "../../core/TherionDocumentEditor.h"
+
 #include <QString>
+#include <QVector>
 
 #include <functional>
 
@@ -24,6 +27,7 @@ struct TextEditorSourceTransactionRequest
     QString label;
     QString beforeText;
     QString afterText;
+    QVector<TherionSourceTextEdit> sourceEdits;
     QString undoStatusMessage;
     QString redoStatusMessage;
 };

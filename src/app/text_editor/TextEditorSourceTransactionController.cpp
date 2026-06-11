@@ -7,12 +7,26 @@
 #include <QUndoCommand>
 #include <QUndoStack>
 
+#include <optional>
 #include <utility>
 
 namespace TherionStudio
 {
 namespace
 {
+std::optional<QString> resolvedAfterText(const TextEditorSourceTransactionRequest &request)
+{
+    if (request.sourceEdits.isEmpty()) {
+        return request.afterText;
+    }
+
+    QString afterText = request.beforeText;
+    if (!TherionDocumentEditor::applySourceTextEdits(&afterText, request.sourceEdits)) {
+        return std::nullopt;
+    }
+    return afterText;
+}
+
 class TextEditorSourceSnapshotCommand final : public QUndoCommand
 {
 public:
@@ -81,15 +95,19 @@ TextEditorSourceTransactionController::TextEditorSourceTransactionController(Tex
 
 void TextEditorSourceTransactionController::recordSnapshot(const TextEditorSourceTransactionRequest &request)
 {
-    if (context_.textEditor == nullptr || context_.undoStack == nullptr || request.beforeText == request.afterText) {
+    const std::optional<QString> afterText = resolvedAfterText(request);
+    if (!afterText.has_value()
+        || context_.textEditor == nullptr
+        || context_.undoStack == nullptr
+        || request.beforeText == afterText.value()) {
         return;
     }
 
-    const auto pushCommand = [this, &request]() {
+    const auto pushCommand = [this, &request, afterText = afterText.value()]() {
         context_.undoStack->push(new TextEditorSourceSnapshotCommand(context_.textEditor,
                                                                      request.label,
                                                                      request.beforeText,
-                                                                     request.afterText,
+                                                                     afterText,
                                                                      request.undoStatusMessage,
                                                                      request.redoStatusMessage,
                                                                      context_.statusCallback));
@@ -109,18 +127,21 @@ void TextEditorSourceTransactionController::recordSnapshot(const TextEditorSourc
 
 void TextEditorSourceTransactionController::applyChangeWithSnapshot(const TextEditorSourceTransactionRequest &request)
 {
-    if (context_.textEditor == nullptr || request.beforeText == request.afterText) {
+    const std::optional<QString> afterText = resolvedAfterText(request);
+    if (!afterText.has_value()
+        || context_.textEditor == nullptr
+        || request.beforeText == afterText.value()) {
         return;
     }
 
     if (context_.commandApplyInProgress != nullptr) {
         const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-        context_.textEditor->replaceTextForCommand(request.afterText);
+        context_.textEditor->replaceTextForCommand(afterText.value());
         recordSnapshot(request);
         return;
     }
 
-    context_.textEditor->replaceTextForCommand(request.afterText);
+    context_.textEditor->replaceTextForCommand(afterText.value());
     recordSnapshot(request);
 }
 }

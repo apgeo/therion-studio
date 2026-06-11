@@ -312,22 +312,25 @@ bool MapEditorTab::commitSmartAreaPreview()
         boundaryLines.append(TherionReferencedAreaBoundaryLine{line.lineNumber, line.identifier});
     }
 
-    QString afterText = textEditor_->text();
+    const QString beforeText = textEditor_->text();
+    QString afterText = beforeText;
     QString errorMessage;
     int insertedLineNumber = 0;
-    if (!TherionDocumentEditor::appendReferencedArea(&afterText,
-                                                     interactiveDrawState_.smartAreaCandidate_.scrapLineNumber,
-                                                     boundaryLines,
-                                                     &insertedLineNumber,
-                                                     &errorMessage,
-                                                     pendingDraftObjectOptions(QStringLiteral("area")))) {
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::appendReferencedAreaEdits(beforeText,
+                                                         interactiveDrawState_.smartAreaCandidate_.scrapLineNumber,
+                                                         boundaryLines,
+                                                         &sourceEdits,
+                                                         &insertedLineNumber,
+                                                         &errorMessage,
+                                                         pendingDraftObjectOptions(QStringLiteral("area")))
+        || !TherionDocumentEditor::applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Smart Area insert failed.")
             : tr("Smart Area insert failed: %1").arg(errorMessage);
         return false;
     }
 
-    const QString beforeText = textEditor_->text();
     applySourceTextChangeWithSnapshot(tr("Insert Smart Area"), beforeText, afterText, insertedLineNumber);
     toolbarStatusNote_ = insertedLineNumber > 0
         ? tr("Smart Area inserted at source line %1.").arg(insertedLineNumber)

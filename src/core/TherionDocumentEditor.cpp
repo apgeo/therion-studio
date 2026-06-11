@@ -1505,8 +1505,30 @@ bool TherionDocumentEditor::appendScrapBlock(QString *contents,
         return false;
     }
 
-    const QString lineEnding = contents->contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
-    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(*contents);
+    QVector<TherionSourceTextEdit> edits;
+    if (!appendScrapBlockEdits(*contents, preferredName, &edits, insertedLineNumber, errorMessage, options)) {
+        return false;
+    }
+    return applySourceTextEdits(contents, edits, errorMessage);
+}
+
+bool TherionDocumentEditor::appendScrapBlockEdits(const QString &contents,
+                                                  const QString &preferredName,
+                                                  QVector<TherionSourceTextEdit> *edits,
+                                                  int *insertedLineNumber,
+                                                  QString *errorMessage,
+                                                  const QString &options)
+{
+    if (edits == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No source edit output is available.");
+        }
+        return false;
+    }
+    edits->clear();
+
+    const QString lineEnding = contents.contains(QStringLiteral("\r\n")) ? QStringLiteral("\r\n") : QStringLiteral("\n");
+    const QVector<TherionParsedLine> parsedLines = TherionDocumentParser::parseTokenLines(contents);
 
     QSet<QString> existingNames;
     for (const TherionParsedLine &parsedLine : parsedLines) {
@@ -1530,26 +1552,34 @@ bool TherionDocumentEditor::appendScrapBlock(QString *contents,
         resolvedName = generatedIdentifier(QStringLiteral("scrap"), existingNames);
     }
 
-    QString updated = *contents;
-    if (!updated.isEmpty() && !updated.endsWith(QLatin1Char('\n'))) {
-        updated += lineEnding;
+    QString appendedText;
+    QString lineCountText = contents;
+    if (!lineCountText.isEmpty() && !lineCountText.endsWith(QLatin1Char('\n'))) {
+        appendedText += lineEnding;
+        lineCountText += lineEnding;
     }
-    if (!updated.isEmpty()) {
-        updated += lineEnding;
+    if (!lineCountText.isEmpty()) {
+        appendedText += lineEnding;
+        lineCountText += lineEnding;
     }
 
-    const int scrapLineNumber = lineCountForText(updated) + 1;
-    updated += QStringLiteral("scrap %1").arg(resolvedName);
+    const int scrapLineNumber = lineCountForText(lineCountText) + 1;
+    appendedText += QStringLiteral("scrap %1").arg(resolvedName);
     const QString normalizedOptions = options.trimmed();
     if (!normalizedOptions.isEmpty()) {
-        updated += QLatin1Char(' ');
-        updated += normalizedOptions;
+        appendedText += QLatin1Char(' ');
+        appendedText += normalizedOptions;
     }
-    updated += lineEnding;
-    updated += QStringLiteral("endscrap");
-    updated += lineEnding;
+    appendedText += lineEnding;
+    appendedText += QStringLiteral("endscrap");
+    appendedText += lineEnding;
 
-    *contents = updated;
+    edits->append(TherionSourceTextEdit{
+        static_cast<int>(contents.size()),
+        0,
+        appendedText,
+    });
+
     if (insertedLineNumber != nullptr) {
         *insertedLineNumber = scrapLineNumber;
     }
@@ -1847,6 +1877,29 @@ bool TherionDocumentEditor::appendReferencedArea(QString *contents,
         }
         return false;
     }
+
+    QVector<TherionSourceTextEdit> edits;
+    if (!appendReferencedAreaEdits(*contents, scrapLineNumber, boundaryLines, &edits, insertedLineNumber, errorMessage, objectOptions)) {
+        return false;
+    }
+    return applySourceTextEdits(contents, edits, errorMessage);
+}
+
+bool TherionDocumentEditor::appendReferencedAreaEdits(const QString &contents,
+                                                      int scrapLineNumber,
+                                                      const QVector<TherionReferencedAreaBoundaryLine> &boundaryLines,
+                                                      QVector<TherionSourceTextEdit> *edits,
+                                                      int *insertedLineNumber,
+                                                      QString *errorMessage,
+                                                      const TherionDraftObjectOptions &objectOptions)
+{
+    if (edits == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No source edit output is available.");
+        }
+        return false;
+    }
+    edits->clear();
     if (scrapLineNumber <= 0 || boundaryLines.isEmpty()) {
         if (errorMessage != nullptr) {
             *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Smart Area has no resolved boundary lines.");
@@ -1854,7 +1907,7 @@ bool TherionDocumentEditor::appendReferencedArea(QString *contents,
         return false;
     }
 
-    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(*contents);
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(contents);
     QStringList lines;
     lines.reserve(sourceDocument.lines.size());
     for (const TherionParsedSourceLine &sourceLine : sourceDocument.lines) {
@@ -1915,6 +1968,12 @@ bool TherionDocumentEditor::appendReferencedArea(QString *contents,
                 return false;
             }
             lines[boundaryLine.lineNumber - 1] = lineText;
+            const TherionParsedSourceLine &boundarySourceLine = sourceDocument.lines.at(boundaryLine.lineNumber - 1);
+            edits->append(TherionSourceTextEdit{
+                boundarySourceLine.startOffset,
+                boundarySourceLine.textLength,
+                lineText,
+            });
         } else {
             existingIdentifiers.insert(identifier.toLower());
         }
@@ -1928,12 +1987,6 @@ bool TherionDocumentEditor::appendReferencedArea(QString *contents,
         return false;
     }
 
-    QString updated;
-    for (int index = 0; index < sourceDocument.lines.size(); ++index) {
-        updated += lines.at(index);
-        updated += sourceDocument.lines.at(index).lineEnding;
-    }
-
     QStringList areaLines;
     areaLines.append(QStringLiteral("  %1")
                          .arg(draftObjectHeader(QStringLiteral("area"), QStringLiteral("water"), objectOptions)));
@@ -1942,10 +1995,31 @@ bool TherionDocumentEditor::appendReferencedArea(QString *contents,
     }
     areaLines.append(QStringLiteral("  endarea"));
 
-    if (!insertPhysicalSourceLines(&updated, insertionIndex, areaLines, errorMessage)) {
-        return false;
+    QString lineEnding;
+    if (insertionIndex > 0 && insertionIndex - 1 < sourceDocument.lines.size()) {
+        lineEnding = sourceDocument.lines.at(insertionIndex - 1).lineEnding;
     }
-    *contents = updated;
+    if (lineEnding.isEmpty() && insertionIndex < sourceDocument.lines.size()) {
+        lineEnding = sourceDocument.lines.at(insertionIndex).lineEnding;
+    }
+    if (lineEnding.isEmpty()) {
+        lineEnding = TherionSourceText::detectedLineEnding(contents);
+    }
+
+    QString insertedText;
+    for (const QString &line : std::as_const(areaLines)) {
+        insertedText += line;
+        insertedText += lineEnding;
+    }
+
+    const int insertOffset = insertionIndex < sourceDocument.lines.size()
+        ? sourceDocument.lines.at(insertionIndex).startOffset
+        : contents.size();
+    edits->append(TherionSourceTextEdit{
+        insertOffset,
+        0,
+        insertedText,
+    });
 
     if (insertedLineNumber != nullptr) {
         *insertedLineNumber = insertionIndex + 1;

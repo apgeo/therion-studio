@@ -52,6 +52,12 @@ public:
                                                int *insertedLineNumber = nullptr,
                                                QString *errorMessage = nullptr,
                                                const QString &options = QString());
+    [[nodiscard]] static bool appendScrapBlockEdits(const QString &contents,
+                                                    const QString &preferredName,
+                                                    QVector<TherionSourceTextEdit> *edits,
+                                                    int *insertedLineNumber = nullptr,
+                                                    QString *errorMessage = nullptr,
+                                                    const QString &options = QString());
     [[nodiscard]] static bool appendDraftGeometry(QString *contents,
                                                   const QString &kind,
                                                   const QVector<QPointF> &vertices,
@@ -75,6 +81,13 @@ public:
                                                    int *insertedLineNumber = nullptr,
                                                    QString *errorMessage = nullptr,
                                                    const TherionDraftObjectOptions &objectOptions = {});
+    [[nodiscard]] static bool appendReferencedAreaEdits(const QString &contents,
+                                                        int scrapLineNumber,
+                                                        const QVector<TherionReferencedAreaBoundaryLine> &boundaryLines,
+                                                        QVector<TherionSourceTextEdit> *edits,
+                                                        int *insertedLineNumber = nullptr,
+                                                        QString *errorMessage = nullptr,
+                                                        const TherionDraftObjectOptions &objectOptions = {});
     [[nodiscard]] static bool pointCoordinateRewriteEdits(const QString &contents,
                                                           int lineNumber,
                                                           const QPointF &point,

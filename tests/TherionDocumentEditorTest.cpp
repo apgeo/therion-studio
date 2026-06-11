@@ -451,6 +451,30 @@ int runAppendScrapBlockTest()
         return 1;
     }
 
+    QString plannerSource = QStringLiteral("survey cave\n");
+    QVector<TherionSourceTextEdit> sourceEdits;
+    int plannerLineNumber = 0;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::appendScrapBlockEdits(plannerSource,
+                                                             QStringLiteral("  My New Scrap 2026  "),
+                                                             &sourceEdits,
+                                                             &plannerLineNumber,
+                                                             &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(plannerLineNumber == 3,
+                "appendScrapBlockEdits should report the inserted scrap start line.")) {
+        return 1;
+    }
+    if (!expect(sourceEdits.size() == 1
+                    && sourceEdits.at(0).startOffset == plannerSource.size()
+                    && sourceEdits.at(0).length == 0
+                    && sourceEdits.at(0).replacementText == QStringLiteral("\nscrap my-new-scrap-2026\nendscrap\n"),
+                "appendScrapBlockEdits should expose the append source edit.")) {
+        return 1;
+    }
+
     QString contents;
     int lineNumber = 0;
     errorMessage.clear();
@@ -489,6 +513,15 @@ int runAppendScrapBlockTest()
         return 1;
     }
     if (!expect(lineNumber == 3, "appendScrapBlock should report insertion line after a separated block append.")) {
+        return 1;
+    }
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::applySourceTextEdits(&plannerSource, sourceEdits, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(plannerSource == contents,
+                "appendScrapBlockEdits should apply to the same output as appendScrapBlock.")) {
         return 1;
     }
 
@@ -2848,6 +2881,45 @@ int runAppendReferencedAreaTest()
         {4, QString()},
         {8, QStringLiteral("existing-line")}
     };
+
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!expect(TherionDocumentEditor::appendReferencedAreaEdits(contents,
+                                                                 3,
+                                                                 boundaryLines,
+                                                                 &sourceEdits,
+                                                                 &insertedLineNumber,
+                                                                 &errorMessage,
+                                                                 options),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(insertedLineNumber == 12,
+                "appendReferencedAreaEdits should report the inserted area line number.")) {
+        return 1;
+    }
+    const int lineHeaderOffset = contents.indexOf(QStringLiteral("  line border\n"));
+    const int insertionOffset = contents.indexOf(QStringLiteral("endscrap\n"));
+    if (!expect(sourceEdits.size() == 2
+                    && sourceEdits.at(0).startOffset == lineHeaderOffset
+                    && sourceEdits.at(0).length == QStringLiteral("  line border").size()
+                    && sourceEdits.at(0).replacementText == QStringLiteral("  line border -id line-1")
+                    && sourceEdits.at(1).startOffset == insertionOffset
+                    && sourceEdits.at(1).length == 0
+                    && sourceEdits.at(1).replacementText == QStringLiteral("  area water\n"
+                                                                            "    line-1\n"
+                                                                            "    existing-line\n"
+                                                                            "  endarea\n"),
+                "appendReferencedAreaEdits should emit boundary-id and area-insertion source edits.")) {
+        return 1;
+    }
+
+    QString plannerAppliedContents = contents;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::applySourceTextEdits(&plannerAppliedContents, sourceEdits, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
     if (!expect(TherionDocumentEditor::appendReferencedArea(&contents,
                                                             3,
                                                             boundaryLines,
@@ -2879,6 +2951,10 @@ int runAppendReferencedAreaTest()
                     "  endarea\n"
                     "endscrap\n"),
                 "appendReferencedArea should add missing boundary ids and insert a referenced area block.")) {
+        return 1;
+    }
+    if (!expect(plannerAppliedContents == contents,
+                "appendReferencedAreaEdits should apply to the same output as appendReferencedArea.")) {
         return 1;
     }
 

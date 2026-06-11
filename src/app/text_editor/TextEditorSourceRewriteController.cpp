@@ -47,9 +47,17 @@ bool TextEditorSourceRewriteController::insertScrapBlock(const QString &preferre
         return false;
     }
 
-    QString contents = context_.editor->toPlainText();
+    const QString beforeText = context_.editor->toPlainText();
+    QString contents = beforeText;
     int resolvedLineNumber = 0;
-    if (!TherionDocumentEditor::appendScrapBlock(&contents, preferredName, &resolvedLineNumber, errorMessage, options)) {
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::appendScrapBlockEdits(beforeText,
+                                                     preferredName,
+                                                     &sourceEdits,
+                                                     &resolvedLineNumber,
+                                                     errorMessage,
+                                                     options)
+        || !TherionDocumentEditor::applySourceTextEdits(&contents, sourceEdits, errorMessage)) {
         return false;
     }
 

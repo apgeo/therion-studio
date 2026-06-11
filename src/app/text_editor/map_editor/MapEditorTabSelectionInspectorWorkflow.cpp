@@ -158,17 +158,23 @@ void MapEditorTab::handleInsertScrapTriggered()
 
     const QString createdScrapIdentifier = insertedScrapIdentifier(afterText, insertedLineNumber, scrapIdentifier);
     clearPendingInsertObject();
-    applySourceTextChangeWithSnapshot(tr("Insert Scrap"), beforeText, afterText, insertedLineNumber);
+    applySourceTextChangeWithSnapshot(
+        tr("Insert Scrap"),
+        beforeText,
+        afterText,
+        insertedLineNumber,
+        insertedLineNumber > 0
+            ? std::function<void()>([this, insertedLineNumber]() {
+                  rebuildInspectorObjectsTree();
+                  goToLine(insertedLineNumber);
+                  syncInspectorObjectSelectionToLine(insertedLineNumber, true);
+                  activateSelectionInspector();
+              })
+            : std::function<void()>());
 
     toolbarStatusNote_ = insertedLineNumber > 0
         ? tr("Created scrap \"%1\" at source line %2.").arg(createdScrapIdentifier, QString::number(insertedLineNumber))
         : tr("Created scrap \"%1\".").arg(createdScrapIdentifier);
-    if (insertedLineNumber > 0) {
-        rebuildInspectorObjectsTree();
-        goToLine(insertedLineNumber);
-        syncInspectorObjectSelectionToLine(insertedLineNumber, true);
-        activateSelectionInspector();
-    }
     refreshObjectDetailsPanel();
     refreshToolbarSummary();
 }

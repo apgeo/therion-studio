@@ -145,20 +145,27 @@ bool MapEditorTab::commitLineExtensionSession()
         refreshedFeature.has_value() && restoredVertexIndex >= 0 && restoredVertexIndex < refreshedFeature->lineVertices.size()
         ? refreshedFeature->lineVertices.at(restoredVertexIndex).anchorSourceVertexIndex
         : -1;
-    interactiveDrawState_.lineExtensionActive_ = false;
-    interactiveDrawState_.lineExtensionLineNumber_ = 0;
-    interactiveDrawState_.lineExtensionPrepend_ = false;
-    clearInteractiveDrawSession(true);
-    if (restoredSourceVertexIndex >= 0) {
-        restoreLineAnchorSelection(extendedLineNumber, restoredSourceVertexIndex);
-        QTimer::singleShot(0, this, [this, extendedLineNumber, restoredSourceVertexIndex]() {
-            restoreLineAnchorSelection(extendedLineNumber, restoredSourceVertexIndex);
-        });
-    }
-    toolbarStatusNote_ = tr("Extended line on source line %1.").arg(extendedLineNumber);
-    refreshToolbarSummary();
-    updateHelpPanel();
-    updateCommandSurfaceState();
+    applySourceTextChangeWithSnapshot(
+        tr("Extend Line"),
+        beforeText,
+        afterText,
+        extendedLineNumber,
+        std::function<void()>([this, extendedLineNumber, restoredSourceVertexIndex]() {
+            interactiveDrawState_.lineExtensionActive_ = false;
+            interactiveDrawState_.lineExtensionLineNumber_ = 0;
+            interactiveDrawState_.lineExtensionPrepend_ = false;
+            clearInteractiveDrawSession(true);
+            if (restoredSourceVertexIndex >= 0) {
+                restoreLineAnchorSelection(extendedLineNumber, restoredSourceVertexIndex);
+                QTimer::singleShot(0, this, [this, extendedLineNumber, restoredSourceVertexIndex]() {
+                    restoreLineAnchorSelection(extendedLineNumber, restoredSourceVertexIndex);
+                });
+            }
+            toolbarStatusNote_ = tr("Extended line on source line %1.").arg(extendedLineNumber);
+            refreshToolbarSummary();
+            updateHelpPanel();
+            updateCommandSurfaceState();
+        }));
     return true;
 }
 

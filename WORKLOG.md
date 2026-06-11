@@ -34,7 +34,6 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Target state: source-range edits are the preferred representation for parser/planner-owned mutations; full after-text snapshots remain allowed only for snapshot replay, external bulk replacement, or temporary legacy paths with focused coverage.
 - Target state: Raw typing and ordinary text editing keep the embedded editor undo behavior, while remaining Raw commands, Map/visual operations, inspector changes, background source updates, and project/sidebar source mutations use shared transaction services.
 - Target state: map visual undo commands and text-source undo commands shall not compete silently; each user-visible map/text operation owns one explicit undo entry, with source replacement and any visual state restoration applied as one semantic transaction.
-- Phase 1 - Remaining contract policy: add revision/source identity checks, explicit stale-edit failure behavior, projection invalidation hooks, and consistent cursor/selection restoration decisions to transaction requests.
 - Phase 2 - Delegate reduction: reduce remaining public `TextEditorTab` source rewrite delegates toward narrow transaction or planner-facing methods, so controllers do not call broad text-replacement wrappers except through approved snapshot replay helpers.
 - Phase 3 - Map command alignment: move remaining map canvas/source commands toward transaction requests while preserving command merging, before/after snapshot replay, draft-item restoration, scene refresh, and selection restore behavior.
 - Phase 4 - Remaining adopters: route inspector, background, Raw command, and project/sidebar source mutations through transaction requests or focused adapters, with each migration backed by undo/redo and range-preservation tests.
@@ -43,7 +42,9 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Next Up
 
-- P1: Continue Phase 2/3 unified-transaction migration by aligning remaining map canvas/source command flows on explicit transaction requests and reducing direct `TextEditorTab` rewrite delegate usage.
+- P1: Continue Phase 2 delegate reduction by removing remaining direct `TextEditorTab` source rewrite delegate usage from controller-level map flows.
+- P1: Continue Phase 3 map command alignment by migrating remaining map canvas/source operations to explicit transaction requests with one-operation undo semantics.
+- P1: Add focused regression coverage for each migrated map/source operation (undo/redo, stale-state rejection, projection refresh, and selection restore behavior).
 - P1: Keep `WORKLOG.md` trimmed after each completed slice so active work does not become completed-history notes.
 
 ## Risks / Blockers

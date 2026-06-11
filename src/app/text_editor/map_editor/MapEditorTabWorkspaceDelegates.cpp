@@ -23,6 +23,7 @@ bool MapEditorTab::loadFile(const QString &filePath, QString *errorMessage)
         return false;
     }
 
+    resetUndoOwnerState();
     refreshMapScene();
     loadBackgroundLayersFromSession();
     loadBackgroundLayersFromDocumentMetadata();
@@ -31,6 +32,7 @@ bool MapEditorTab::loadFile(const QString &filePath, QString *errorMessage)
     refreshInspectorBackgroundPanel();
     refreshTitle();
     refreshStatus();
+    resetUndoOwnerState();
     return true;
 }
 

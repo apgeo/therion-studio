@@ -1678,6 +1678,42 @@ int runDragUndoRedoSmoke()
         return 1;
     }
 
+    const QString mixedTimelineMarker = QStringLiteral("# mixed-timeline-marker");
+    textEditor->goToLineColumn(18, 9);
+    pumpEvents();
+    sourceEditor->setFocus(Qt::OtherFocusReason);
+    sourceEditor->insertPlainText(QStringLiteral("\n") + mixedTimelineMarker);
+    pumpEvents();
+
+    const QString textAfterTextTimelineEdit = mapTab->text();
+    if (!expect(textAfterTextTimelineEdit.contains(mixedTimelineMarker)
+                    && textAfterTextTimelineEdit != textAfterMixedMapEdit,
+                "Mixed timeline arbitration test should add a text edit after the map edit.")) {
+        return 1;
+    }
+    if (!expect(mapTab->nextUndoOwner() == MapEditorUndoOwner::TextEdit,
+                "Mixed map/text state should report text edit as next undo owner after a newer text edit.")) {
+        return 1;
+    }
+
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterMixedMapEdit,
+                "Timeline undo should revert the newer text-side edit while keeping the older map edit.")) {
+        return 1;
+    }
+    if (!expect(mapTab->nextRedoOwner() == MapEditorUndoOwner::TextEdit,
+                "Mixed map/text state should report text edit as next redo owner after text undo.")) {
+        return 1;
+    }
+
+    mapTab->triggerRedo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterTextTimelineEdit,
+                "Timeline redo should restore the newer text-side edit.")) {
+        return 1;
+    }
+
     QString mixedResetError;
     if (!expect(mapTab->loadFile(filePath, &mixedResetError),
                 "Mixed map/text arbitration cleanup should reload baseline TH2 source.")) {

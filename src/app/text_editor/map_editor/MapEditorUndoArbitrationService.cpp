@@ -8,12 +8,44 @@ bool canExecute(const std::function<bool()> &callback)
 {
     return callback && callback();
 }
+
+bool ownerAvailableForUndo(MapEditorUndoOwner owner, const MapEditorUndoAvailability &availability)
+{
+    switch (owner) {
+    case MapEditorUndoOwner::InteractiveDraw:
+        return availability.hasInteractiveDrawUndo;
+    case MapEditorUndoOwner::MapCommand:
+        return availability.hasMapUndo;
+    case MapEditorUndoOwner::TextEdit:
+        return availability.hasTextUndo;
+    case MapEditorUndoOwner::None:
+        return false;
+    }
+    return false;
+}
+
+bool ownerAvailableForRedo(MapEditorUndoOwner owner, const MapEditorUndoAvailability &availability)
+{
+    switch (owner) {
+    case MapEditorUndoOwner::MapCommand:
+        return availability.hasMapRedo;
+    case MapEditorUndoOwner::TextEdit:
+        return availability.hasTextRedo;
+    case MapEditorUndoOwner::InteractiveDraw:
+    case MapEditorUndoOwner::None:
+        return false;
+    }
+    return false;
+}
 }
 
 MapEditorUndoOwner MapEditorUndoArbitrationService::nextUndoOwner(const MapEditorUndoAvailability &availability)
 {
     if (availability.hasInteractiveDrawUndo) {
         return MapEditorUndoOwner::InteractiveDraw;
+    }
+    if (ownerAvailableForUndo(availability.preferredUndoOwner, availability)) {
+        return availability.preferredUndoOwner;
     }
     if (availability.hasMapUndo) {
         return MapEditorUndoOwner::MapCommand;
@@ -26,6 +58,9 @@ MapEditorUndoOwner MapEditorUndoArbitrationService::nextUndoOwner(const MapEdito
 
 MapEditorUndoOwner MapEditorUndoArbitrationService::nextRedoOwner(const MapEditorUndoAvailability &availability)
 {
+    if (ownerAvailableForRedo(availability.preferredRedoOwner, availability)) {
+        return availability.preferredRedoOwner;
+    }
     if (availability.hasMapRedo) {
         return MapEditorUndoOwner::MapCommand;
     }
@@ -51,20 +86,27 @@ bool MapEditorUndoArbitrationService::triggerUndo(const MapEditorUndoExecutionCo
         return true;
     }
 
-    if (canExecute(context.canMapUndo)) {
+    const MapEditorUndoAvailability availability{
+        .hasMapUndo = canExecute(context.canMapUndo),
+        .hasTextUndo = canExecute(context.canTextUndo),
+        .preferredUndoOwner = context.preferredUndoOwner};
+
+    switch (nextUndoOwner(availability)) {
+    case MapEditorUndoOwner::MapCommand:
         if (!context.undoMapCommand) {
             return false;
         }
         context.undoMapCommand();
         return true;
-    }
-
-    if (canExecute(context.canTextUndo)) {
+    case MapEditorUndoOwner::TextEdit:
         if (!context.undoTextEdit) {
             return false;
         }
         context.undoTextEdit();
         return true;
+    case MapEditorUndoOwner::InteractiveDraw:
+    case MapEditorUndoOwner::None:
+        return false;
     }
 
     return false;
@@ -72,20 +114,27 @@ bool MapEditorUndoArbitrationService::triggerUndo(const MapEditorUndoExecutionCo
 
 bool MapEditorUndoArbitrationService::triggerRedo(const MapEditorUndoExecutionContext &context)
 {
-    if (canExecute(context.canMapRedo)) {
+    const MapEditorUndoAvailability availability{
+        .hasMapRedo = canExecute(context.canMapRedo),
+        .hasTextRedo = canExecute(context.canTextRedo),
+        .preferredRedoOwner = context.preferredRedoOwner};
+
+    switch (nextRedoOwner(availability)) {
+    case MapEditorUndoOwner::MapCommand:
         if (!context.redoMapCommand) {
             return false;
         }
         context.redoMapCommand();
         return true;
-    }
-
-    if (canExecute(context.canTextRedo)) {
+    case MapEditorUndoOwner::TextEdit:
         if (!context.redoTextEdit) {
             return false;
         }
         context.redoTextEdit();
         return true;
+    case MapEditorUndoOwner::InteractiveDraw:
+    case MapEditorUndoOwner::None:
+        return false;
     }
 
     return false;

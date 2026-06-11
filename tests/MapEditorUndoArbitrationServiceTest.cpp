@@ -99,6 +99,50 @@ int runOwnerResolutionTest()
     return 0;
 }
 
+int runPreferredOwnerResolutionTest()
+{
+    MapEditorUndoAvailability availability{
+        .hasInteractiveDrawUndo = true,
+        .hasMapUndo = true,
+        .hasTextUndo = true,
+        .preferredUndoOwner = MapEditorUndoOwner::TextEdit};
+    if (!expect(MapEditorUndoArbitrationService::nextUndoOwner(availability) == MapEditorUndoOwner::InteractiveDraw,
+                "Undo owner should keep interactive draw ahead of preferred map/text owners.")) {
+        return 1;
+    }
+
+    availability.hasInteractiveDrawUndo = false;
+    if (!expect(MapEditorUndoArbitrationService::nextUndoOwner(availability) == MapEditorUndoOwner::TextEdit,
+                "Undo owner should honor available preferred text owner over map fallback.")) {
+        return 1;
+    }
+
+    availability.preferredUndoOwner = MapEditorUndoOwner::TextEdit;
+    availability.hasTextUndo = false;
+    if (!expect(MapEditorUndoArbitrationService::nextUndoOwner(availability) == MapEditorUndoOwner::MapCommand,
+                "Undo owner should fall back when preferred text owner is unavailable.")) {
+        return 1;
+    }
+
+    availability = {
+        .hasMapRedo = true,
+        .hasTextRedo = true,
+        .preferredRedoOwner = MapEditorUndoOwner::TextEdit};
+    if (!expect(MapEditorUndoArbitrationService::nextRedoOwner(availability) == MapEditorUndoOwner::TextEdit,
+                "Redo owner should honor available preferred text owner over map fallback.")) {
+        return 1;
+    }
+
+    availability.preferredRedoOwner = MapEditorUndoOwner::TextEdit;
+    availability.hasTextRedo = false;
+    if (!expect(MapEditorUndoArbitrationService::nextRedoOwner(availability) == MapEditorUndoOwner::MapCommand,
+                "Redo owner should fall back when preferred text redo owner is unavailable.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runUndoPriorityTest()
 {
     int interactiveCalls = 0;
@@ -106,6 +150,7 @@ int runUndoPriorityTest()
     int textCalls = 0;
 
     const MapEditorUndoExecutionContext context{
+        .preferredUndoOwner = MapEditorUndoOwner::TextEdit,
         .undoInteractiveDrawStep = [&interactiveCalls]() {
             ++interactiveCalls;
             return true;
@@ -234,6 +279,58 @@ int runRedoOrderTest()
 
     return 0;
 }
+
+int runPreferredExecutionOwnerTest()
+{
+    int mapCalls = 0;
+    int textCalls = 0;
+
+    const MapEditorUndoExecutionContext undoContext{
+        .preferredUndoOwner = MapEditorUndoOwner::TextEdit,
+        .undoInteractiveDrawStep = {},
+        .canMapUndo = []() { return true; },
+        .undoMapCommand = [&mapCalls]() { ++mapCalls; },
+        .canTextUndo = []() { return true; },
+        .undoTextEdit = [&textCalls]() { ++textCalls; },
+        .canMapRedo = {},
+        .redoMapCommand = {},
+        .canTextRedo = {},
+        .redoTextEdit = {}};
+
+    if (!expect(MapEditorUndoArbitrationService::triggerUndo(undoContext),
+                "Undo arbitration should execute preferred text undo when available.")) {
+        return 1;
+    }
+    if (!expect(mapCalls == 0 && textCalls == 1,
+                "Undo arbitration should not execute map undo before preferred text undo.")) {
+        return 1;
+    }
+
+    mapCalls = 0;
+    textCalls = 0;
+    const MapEditorUndoExecutionContext redoContext{
+        .preferredRedoOwner = MapEditorUndoOwner::TextEdit,
+        .undoInteractiveDrawStep = {},
+        .canMapUndo = {},
+        .undoMapCommand = {},
+        .canTextUndo = {},
+        .undoTextEdit = {},
+        .canMapRedo = []() { return true; },
+        .redoMapCommand = [&mapCalls]() { ++mapCalls; },
+        .canTextRedo = []() { return true; },
+        .redoTextEdit = [&textCalls]() { ++textCalls; }};
+
+    if (!expect(MapEditorUndoArbitrationService::triggerRedo(redoContext),
+                "Undo arbitration should execute preferred text redo when available.")) {
+        return 1;
+    }
+    if (!expect(mapCalls == 0 && textCalls == 1,
+                "Undo arbitration should not execute map redo before preferred text redo.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
@@ -246,6 +343,9 @@ int main(int argc, char **argv)
     if (runOwnerResolutionTest() != 0) {
         return 1;
     }
+    if (runPreferredOwnerResolutionTest() != 0) {
+        return 1;
+    }
     if (runUndoPriorityTest() != 0) {
         return 1;
     }
@@ -253,6 +353,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runRedoOrderTest() != 0) {
+        return 1;
+    }
+    if (runPreferredExecutionOwnerTest() != 0) {
         return 1;
     }
 

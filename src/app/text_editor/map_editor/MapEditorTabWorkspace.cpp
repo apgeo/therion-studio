@@ -92,6 +92,7 @@ MapEditorTab::MapEditorTab(IFileSystem &fileSystem,
 void MapEditorTab::initializeWorkspace()
 {
     undoStack_ = new QUndoStack(this);
+    lastMapUndoStackIndex_ = undoStack_->index();
     workspaceMode_ = WorkspaceMode::Visual;
     touchFriendlyControlsEnabled_ = false;
     magnifierEnabled_ = sessionStore_->therionMapMagnifierEnabled();
@@ -188,11 +189,13 @@ void MapEditorTab::buildUi()
     connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::scheduleSourceDrivenMapRefresh);
     connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::documentTextChanged);
     connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::updateCommandSurfaceState);
+    connect(textEditor_, &TextEditorTab::documentTextChanged, this, &MapEditorTab::handleDocumentTextChangedForUndoOwner);
     connect(this, &MapEditorTab::backgroundLayersChanged, this, &MapEditorTab::refreshInspectorBackgroundPanel);
 
     connect(undoStack_, &QUndoStack::canUndoChanged, this, &MapEditorTab::updateCommandSurfaceState);
     connect(undoStack_, &QUndoStack::canRedoChanged, this, &MapEditorTab::updateCommandSurfaceState);
     connect(undoStack_, &QUndoStack::indexChanged, this, &MapEditorTab::updateCommandSurfaceState);
+    connect(undoStack_, &QUndoStack::indexChanged, this, &MapEditorTab::handleMapUndoStackIndexChanged);
 
     mapPaneContainer_ = new QWidget(splitter_);
     mapPaneContainer_->setMinimumWidth(420);

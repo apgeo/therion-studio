@@ -236,6 +236,9 @@ private slots:
     void handleFitTriggered();
     void handleFitWithBackgroundTriggered();
     void updateCommandSurfaceState();
+    void handleDocumentTextChangedForUndoOwner();
+    void handleMapUndoStackIndexChanged(int index);
+    void resetUndoOwnerState();
 
 private:
     struct DetachedPaneState
@@ -676,6 +679,9 @@ private:
     bool touchFriendlyControlsEnabled_ = false;
     int selectedBackgroundLayerIndex_ = -1;
     bool mapCommandApplyInProgress_ = false;
+    int lastMapUndoStackIndex_ = 0;
+    MapEditorUndoOwner preferredUndoOwner_ = MapEditorUndoOwner::None;
+    MapEditorUndoOwner preferredRedoOwner_ = MapEditorUndoOwner::None;
     bool suppressSourceDrivenMapRefresh_ = false;
     bool mapSceneRefreshPending_ = false;
     QTimer *sourceDrivenMapRefreshTimer_ = nullptr;

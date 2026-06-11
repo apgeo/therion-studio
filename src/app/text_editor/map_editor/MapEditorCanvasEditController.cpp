@@ -589,31 +589,53 @@ void MapEditorCanvasEditController::recordPointGeometryMove(int lineNumber, cons
         return;
     }
 
-    auto statusCallback = [statusNote = context_.toolbarStatusNote,
-                           refreshToolbarSummary = context_.refreshToolbarSummary](const QString &statusMessage) {
-        *statusNote = statusMessage;
-        refreshToolbarSummary();
-    };
-
-    if (context_.undoStack != nullptr) {
-        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-        context_.undoStack->push(createMapPointGeometryMoveCommand(context_.textEditor,
-                                                       lineNumber,
-                                                       oldPoint,
-                                                       newPoint,
-                                                       statusCallback));
-        context_.flushPendingSceneRefreshAfterCommand();
+    const QString beforeText = context_.textEditor->text();
+    QString afterText = beforeText;
+    QVector<TherionSourceTextEdit> sourceEdits;
+    QString errorMessage;
+    if (!TherionDocumentEditor::pointCoordinateRewriteEdits(afterText,
+                                                            lineNumber,
+                                                            newPoint,
+                                                            &sourceEdits,
+                                                            &errorMessage)
+        || !TherionDocumentEditor::applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
+        (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+            ? tr("Point move failed.")
+            : tr("Point move failed: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
         return;
     }
 
-    const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-    std::unique_ptr<QUndoCommand> directCommand(createMapPointGeometryMoveCommand(context_.textEditor,
-                                                                             lineNumber,
-                                                                             oldPoint,
-                                                                             newPoint,
-                                                                             statusCallback));
-    directCommand->redo();
-    context_.flushPendingSceneRefreshAfterCommand();
+    if (afterText == beforeText) {
+        return;
+    }
+
+    auto selectionRestoreHook = [this, lineNumber]() {
+        restorePointSelection(lineNumber);
+        if (context_.callbackContext != nullptr) {
+            QTimer::singleShot(0,
+                               context_.callbackContext,
+                               [restorePointSelectionLater = context_.restorePointSelectionLater, lineNumber]() {
+                if (restorePointSelectionLater) {
+                    restorePointSelectionLater(lineNumber);
+                }
+            });
+            return;
+        }
+        if (context_.restorePointSelectionLater) {
+            context_.restorePointSelectionLater(lineNumber);
+        }
+    };
+    sourceTransactionController(context_).applyChangeWithSnapshot(
+        sourceTransactionRequest(context_,
+                                 tr("Move Point"),
+                                 beforeText,
+                                 afterText,
+                                 lineNumber,
+                                 TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                 std::move(selectionRestoreHook)));
+    (*context_.toolbarStatusNote) = tr("Updated point geometry at source line %1.").arg(lineNumber);
+    context_.refreshToolbarSummary();
 }
 
 void MapEditorCanvasEditController::recordLineAreaVertexMove(int lineNumber,
@@ -653,49 +675,74 @@ void MapEditorCanvasEditController::recordLineAreaVertexMove(int lineNumber,
         }
     }
 
-    auto statusCallback = [statusNote = context_.toolbarStatusNote,
-                           refreshToolbarSummary = context_.refreshToolbarSummary](const QString &statusMessage) {
-        *statusNote = statusMessage;
-        refreshToolbarSummary();
-    };
-
-    if (context_.undoStack != nullptr) {
-        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-        context_.undoStack->push(createMapLineAreaVertexMoveCommand(context_.textEditor,
+    const QString beforeText = context_.textEditor->text();
+    QString afterText = beforeText;
+    QVector<TherionSourceTextEdit> sourceEdits;
+    QString errorMessage;
+    if (!TherionDocumentEditor::lineAreaVertexRewriteEdits(afterText,
                                                            lineNumber,
                                                            rewriteKind,
                                                            vertexIndex,
-                                                           oldPoint,
                                                            newPoint,
-                                                           secondaryMoves,
-                                                           statusCallback));
-        context_.flushPendingSceneRefreshAfterCommand();
-        if (lineOwnerIndexToRestore >= 0) {
-            restoreLineVertexOwnerSelection(lineNumber, lineOwnerIndexToRestore);
+                                                           &sourceEdits,
+                                                           &errorMessage)
+        || !TherionDocumentEditor::applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
+        (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+            ? tr("%1 vertex move failed.").arg(rewriteKind)
+            : tr("%1 vertex move failed: %2").arg(rewriteKind, errorMessage);
+        context_.refreshToolbarSummary();
+        return;
+    }
+
+    for (const MapLineAreaVertexSecondaryMove &move : secondaryMoves) {
+        if (move.vertexIndex < 0) {
+            continue;
+        }
+        sourceEdits.clear();
+        if (!TherionDocumentEditor::lineAreaVertexRewriteEdits(afterText,
+                                                               lineNumber,
+                                                               rewriteKind,
+                                                               move.vertexIndex,
+                                                               move.newPoint,
+                                                               &sourceEdits,
+                                                               &errorMessage)
+            || !TherionDocumentEditor::applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
+            (*context_.toolbarStatusNote) = errorMessage.isEmpty()
+                ? tr("%1 coupled vertex move failed.").arg(rewriteKind)
+                : tr("%1 coupled vertex move failed: %2").arg(rewriteKind, errorMessage);
+            context_.refreshToolbarSummary();
+            return;
+        }
+    }
+
+    if (afterText == beforeText) {
+        return;
+    }
+
+    auto selectionRestoreHook = [this, lineNumber, lineOwnerIndexToRestore]() {
+        if (lineOwnerIndexToRestore < 0) {
+            return;
+        }
+        restoreLineVertexOwnerSelection(lineNumber, lineOwnerIndexToRestore);
+        if (context_.callbackContext != nullptr) {
             QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, lineOwnerIndexToRestore]() {
                 restoreLineVertexOwnerSelectionForContext(context, lineNumber, lineOwnerIndexToRestore);
             });
         }
-        return;
-    }
-
-    const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-    std::unique_ptr<QUndoCommand> directCommand(createMapLineAreaVertexMoveCommand(context_.textEditor,
-                                                                             lineNumber,
-                                                                             rewriteKind,
-                                                                             vertexIndex,
-                                                                             oldPoint,
-                                                                             newPoint,
-                                                                             secondaryMoves,
-                                                                             statusCallback));
-    directCommand->redo();
-    context_.flushPendingSceneRefreshAfterCommand();
-    if (lineOwnerIndexToRestore >= 0) {
-        restoreLineVertexOwnerSelection(lineNumber, lineOwnerIndexToRestore);
-        QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, lineOwnerIndexToRestore]() {
-            restoreLineVertexOwnerSelectionForContext(context, lineNumber, lineOwnerIndexToRestore);
-        });
-    }
+    };
+    sourceTransactionController(context_).applyChangeWithSnapshot(
+        sourceTransactionRequest(context_,
+                                 tr("Move %1 Vertex").arg(rewriteKind),
+                                 beforeText,
+                                 afterText,
+                                 lineNumber,
+                                 TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                 std::move(selectionRestoreHook)));
+    (*context_.toolbarStatusNote) = tr("Updated %1 vertex %2 at source line %3.")
+        .arg(rewriteKind)
+        .arg(vertexIndex + 1)
+        .arg(lineNumber);
+    context_.refreshToolbarSummary();
 }
 
 void MapEditorCanvasEditController::recordPointOrientationHandleChange(int lineNumber, qreal orientationDegrees)

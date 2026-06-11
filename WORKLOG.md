@@ -14,7 +14,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1 - Project templates: keep the bundled default project template compile-ready, including declared export directories, remembered project-parent defaults, and aligned welcome/project-menu/open-tab workflow.
 - P1 - Architecture maintenance: keep reducing `MainWindow`, `TextEditorTab`, and `MapEditorTab` shell responsibilities without behavior changes.
 - P1 - Structure constraints hygiene: keep ratcheted translation-unit limits green by extracting oversized delegates, running `python3 scripts/check_structure_constraints.py` before commits/PRs, and keeping CMake source lists aligned with `src/`.
-- P1 - Unified source parser and transaction model: migrate Raw, Blocks, Map, inspector, validation, highlighting, help, and completion onto shared source snapshots and source-range transactions.
+- P1 - Unified source parser and transaction model: migrate Raw, Blocks, Map, inspector, validation, highlighting, help, completion, and undo ownership onto shared source snapshots and source-range transactions.
 
 ## Unified Source DOM Implementation Plan
 
@@ -32,14 +32,14 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Next Up
 
-- P1: Start the Phase 9 ownership-unification slice: define one shared undo-ownership timeline for map and text mutations instead of split stack ownership.
-- P1: Keep current map-first priority behavior during migration, but move ownership decisions from implicit fallback order to explicit transaction ownership metadata.
-- P1: Expand focused map/text undo regression coverage to include owner-transition sequences across mixed edits and command-surface owner-state expectations.
+- P1: Continue Phase 9 ownership unification by replacing `MapEditorTab`'s preferred-owner state with durable transaction ownership metadata attached to each source mutation; point/line geometry source moves now use the shared source transaction controller.
+- P1: Move remaining map source snapshot commands, especially draft-completion source writes with draft-item lifecycle, toward one document-level undo timeline instead of coordinating separate `QUndoStack` and embedded text-editor undo state.
+- P1: Expand focused map/text undo regression coverage to include save/dirty-state transitions, detached map panes, and inspector-applied source transactions.
 
 ## Risks / Blockers
 
 - Parser/serializer round-trip coverage is still incomplete for full Therion corpus-level confidence during Unified Source DOM phase migrations.
-- Map/text undo arbitration policy now uses an explicit next-step owner model (also exposed via `MapEditorTab` owner state APIs) and focused mixed map/text regression tests, but undo ownership is still split between map `QUndoStack` and embedded text-editor undo, which remains a risk for Phase 9 completion.
+- Map/text undo arbitration policy now uses an explicit preferred-owner timeline for mixed map/text edits, preserves interactive-draft undo priority, and has focused mixed-order regression coverage, but ownership is still coordinated between map `QUndoStack` and embedded text-editor undo rather than stored on one durable document transaction timeline.
 - Stylus/Sidecar behavior still requires hardware-specific manual validation because CI coverage for platform input routing edge cases is limited.
 
 ## Backlog

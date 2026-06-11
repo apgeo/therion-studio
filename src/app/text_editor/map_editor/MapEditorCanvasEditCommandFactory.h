@@ -31,19 +31,6 @@ struct MapLineAreaVertexMoveSet
     QVector<MapLineAreaVertexSecondaryMove> secondaryMoves;
 };
 
-QUndoCommand *createMapPointGeometryMoveCommand(TextEditorTab *textEditor,
-                                                int lineNumber,
-                                                const QPointF &oldPoint,
-                                                const QPointF &newPoint,
-                                                MapCanvasEditStatusCallback statusCallback);
-QUndoCommand *createMapLineAreaVertexMoveCommand(TextEditorTab *textEditor,
-                                                 int lineNumber,
-                                                 const QString &kind,
-                                                 int vertexIndex,
-                                                 const QPointF &oldPoint,
-                                                 const QPointF &newPoint,
-                                                 const QVector<MapLineAreaVertexSecondaryMove> &secondaryMoves,
-                                                 MapCanvasEditStatusCallback statusCallback);
 QUndoCommand *createMapDraftCompletionCommand(TextEditorTab *textEditor,
                                               QGraphicsScene *scene,
                                               QVector<QGraphicsRectItem *> *draftItems,

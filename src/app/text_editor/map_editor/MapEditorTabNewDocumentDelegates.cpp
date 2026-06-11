@@ -9,12 +9,14 @@ void MapEditorTab::initializeNewDocument(const QString &suggestedFileName, const
     clearDraftGeometryItems();
     clearBackgroundImageItems();
     textEditor_->initializeNewDocument(suggestedFileName, contents);
+    resetUndoOwnerState();
     refreshMapScene();
     fitMapToView();
     rebuildInspectorObjectsTree();
     refreshInspectorBackgroundPanel();
     refreshTitle();
     refreshStatus();
+    resetUndoOwnerState();
 }
 
 bool MapEditorTab::saveAs(const QString &filePath, QString *errorMessage)

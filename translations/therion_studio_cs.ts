@@ -2821,6 +2821,56 @@ Přesto bod smazat?</translation>
         <translation>Přesun geometrie selhal: nepodporovaný typ geometrie &apos;%1&apos;.</translation>
     </message>
     <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp" line="603"/>
+        <source>Point move failed.</source>
+        <translation>Přesun bodu selhal.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp" line="604"/>
+        <source>Point move failed: %1</source>
+        <translation>Přesun bodu selhal: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp" line="631"/>
+        <source>Move Point</source>
+        <translation>Přesunout bod</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp" line="637"/>
+        <source>Updated point geometry at source line %1.</source>
+        <translation>Geometrie bodu na zdrojovém řádku %1 byla aktualizována.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp" line="691"/>
+        <source>%1 vertex move failed.</source>
+        <translation>Přesun vrcholu objektu %1 selhal.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp" line="692"/>
+        <source>%1 vertex move failed: %2</source>
+        <translation>Přesun vrcholu objektu %1 selhal: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp" line="711"/>
+        <source>%1 coupled vertex move failed.</source>
+        <translation>Přesun svázaného vrcholu objektu %1 selhal.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp" line="712"/>
+        <source>%1 coupled vertex move failed: %2</source>
+        <translation>Přesun svázaného vrcholu objektu %1 selhal: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp" line="735"/>
+        <source>Move %1 Vertex</source>
+        <translation>Přesunout vrchol objektu %1</translation>
+    </message>
+    <message>
+        <location filename="../src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp" line="741"/>
+        <source>Updated %1 vertex %2 at source line %3.</source>
+        <translation>Vrchol %2 objektu %1 na zdrojovém řádku %3 byl aktualizován.</translation>
+    </message>
+    <message>
         <location filename="../src/app/text_editor/map_editor/MapEditorCanvasEditController.cpp" line="535"/>
         <source>Point orientation update failed.</source>
         <translation>Aktualizace orientace bodu selhala.</translation>

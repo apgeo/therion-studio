@@ -19,10 +19,14 @@ struct MapEditorUndoAvailability
     bool hasTextUndo = false;
     bool hasMapRedo = false;
     bool hasTextRedo = false;
+    MapEditorUndoOwner preferredUndoOwner = MapEditorUndoOwner::None;
+    MapEditorUndoOwner preferredRedoOwner = MapEditorUndoOwner::None;
 };
 
 struct MapEditorUndoExecutionContext
 {
+    MapEditorUndoOwner preferredUndoOwner = MapEditorUndoOwner::None;
+    MapEditorUndoOwner preferredRedoOwner = MapEditorUndoOwner::None;
     std::function<bool()> undoInteractiveDrawStep;
     std::function<bool()> canMapUndo;
     std::function<void()> undoMapCommand;

@@ -9,6 +9,8 @@ class QPlainTextEdit;
 
 namespace TherionStudio
 {
+struct TherionSourceTextEdit;
+
 struct BlockEditorSourceContext
 {
     QPlainTextEdit *editor = nullptr;
@@ -28,6 +30,7 @@ public:
     bool insertLinesBefore(int lineNumber, const QStringList &newLines, QString *errorMessage = nullptr) const;
     bool removeLineRange(int startLine, int endLine) const;
     bool replaceLine(int lineNumber, const QString &line) const;
+    bool applyTextEdit(const TherionSourceTextEdit &edit) const;
     void replaceWithLines(const QString &originalContents, const QStringList &lines) const;
     void replaceText(const QString &contents) const;
 

@@ -1,4 +1,6 @@
 #include "../src/app/text_editor/block_editor/BlockEditorApplyExecutor.h"
+#include "../src/app/text_editor/block_editor/BlockEditorSourceText.h"
+#include "../src/core/TherionDocumentEditor.h"
 
 #include <QApplication>
 #include <QPlainTextEdit>
@@ -26,6 +28,44 @@ void replaceTextWithUndo(QPlainTextEdit *editor, const QString &contents)
     rewriteCursor.select(QTextCursor::Document);
     rewriteCursor.insertText(contents);
     rewriteCursor.endEditBlock();
+}
+
+int runSourceLineRangeReplacementEditTest()
+{
+    const QString contents = QStringLiteral(
+        "survey cave\r\n"
+        "scrap s1 -projection plan\n"
+        "endscrap\r"
+        "endsurvey\n");
+    TherionSourceTextEdit edit;
+    if (!expect(blockEditorSourceLineRangeReplacementEdit(contents,
+                                                          2,
+                                                          2,
+                                                          QStringList{QStringLiteral("scrap s1 -projection none")},
+                                                          &edit),
+                "Block source range planner should build a replacement edit.")) {
+        return 1;
+    }
+
+    const int expectedOffset = contents.indexOf(QStringLiteral("plan"));
+    if (!expect(edit.startOffset == expectedOffset
+                    && edit.length == QStringLiteral("plan").size()
+                    && edit.replacementText == QStringLiteral("none"),
+                "Block source range planner should expose the minimal changed source range.")) {
+        return 1;
+    }
+
+    QString updatedContents = contents;
+    updatedContents.replace(edit.startOffset, edit.length, edit.replacementText);
+    if (!expect(updatedContents == QStringLiteral("survey cave\r\n"
+                                                  "scrap s1 -projection none\n"
+                                                  "endscrap\r"
+                                                  "endsurvey\n"),
+                "Block source range planner should preserve surrounding physical line endings.")) {
+        return 1;
+    }
+
+    return 0;
 }
 
 int runAutoCommitCreatesUndoableTextChangeTest()
@@ -122,6 +162,10 @@ int runAutoCommitCreatesUndoableTextChangeTest()
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
+
+    if (runSourceLineRangeReplacementEditTest() != 0) {
+        return 1;
+    }
 
     if (runAutoCommitCreatesUndoableTextChangeTest() != 0) {
         return 1;

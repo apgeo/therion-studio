@@ -1,5 +1,6 @@
 #include "BlockEditorSourceText.h"
 
+#include "../../../core/TherionDocumentEditor.h"
 #include "../../../core/TherionSourceText.h"
 
 #include <QtGlobal>
@@ -153,6 +154,79 @@ bool blockEditorReplaceSourceLineRange(QStringList *lines,
     for (int offset = 0; offset < replacementLines.size(); ++offset) {
         lines->insert(removeStartIndex + offset, replacementLines.at(offset));
     }
+    return true;
+}
+
+bool blockEditorSourceLineRangeReplacementEdit(const QString &contents,
+                                               int startLine,
+                                               int endLine,
+                                               const QStringList &replacementLines,
+                                               TherionSourceTextEdit *edit)
+{
+    if (edit == nullptr || startLine <= 0 || endLine < startLine - 1) {
+        return false;
+    }
+
+    const TherionSourceText sourceText = TherionSourceText::fromText(contents);
+    const QVector<TherionSourceLine> &sourceLines = sourceText.physicalLines();
+    const int removeStartIndex = startLine - 1;
+    const int removeCount = endLine >= startLine ? endLine - startLine + 1 : 0;
+    if (removeStartIndex < 0 || removeStartIndex > sourceLines.size() || removeStartIndex + removeCount > sourceLines.size()) {
+        return false;
+    }
+
+    QString replacementLineEnding;
+    if (removeCount > 0 && removeStartIndex < sourceLines.size()) {
+        replacementLineEnding = sourceLines.at(removeStartIndex).lineEnding;
+    }
+    if (replacementLineEnding.isEmpty() && removeStartIndex > 0) {
+        replacementLineEnding = sourceLines.at(removeStartIndex - 1).lineEnding;
+    }
+    if (replacementLineEnding.isEmpty() && removeStartIndex < sourceLines.size()) {
+        replacementLineEnding = sourceLines.at(removeStartIndex).lineEnding;
+    }
+    if (replacementLineEnding.isEmpty()) {
+        replacementLineEnding = sourceText.preferredLineEnding();
+    }
+
+    QString updatedContents;
+    for (int index = 0; index < removeStartIndex; ++index) {
+        updatedContents += sourceLines.at(index).text;
+        updatedContents += sourceLines.at(index).lineEnding;
+    }
+
+    const bool followedByExistingLine = removeStartIndex + removeCount < sourceLines.size();
+    for (int index = 0; index < replacementLines.size(); ++index) {
+        const bool lastReplacementLine = index == replacementLines.size() - 1;
+        updatedContents += replacementLines.at(index);
+        if (!lastReplacementLine || followedByExistingLine) {
+            updatedContents += replacementLineEnding;
+        }
+    }
+
+    for (int index = removeStartIndex + removeCount; index < sourceLines.size(); ++index) {
+        updatedContents += sourceLines.at(index).text;
+        updatedContents += sourceLines.at(index).lineEnding;
+    }
+
+    int commonPrefix = 0;
+    const int prefixLimit = qMin(contents.size(), updatedContents.size());
+    while (commonPrefix < prefixLimit && contents.at(commonPrefix) == updatedContents.at(commonPrefix)) {
+        ++commonPrefix;
+    }
+
+    int commonSuffix = 0;
+    while (commonSuffix < contents.size() - commonPrefix
+           && commonSuffix < updatedContents.size() - commonPrefix
+           && contents.at(contents.size() - 1 - commonSuffix) == updatedContents.at(updatedContents.size() - 1 - commonSuffix)) {
+        ++commonSuffix;
+    }
+
+    *edit = TherionSourceTextEdit{
+        commonPrefix,
+        static_cast<int>(contents.size() - commonPrefix - commonSuffix),
+        updatedContents.mid(commonPrefix, updatedContents.size() - commonPrefix - commonSuffix),
+    };
     return true;
 }
 }

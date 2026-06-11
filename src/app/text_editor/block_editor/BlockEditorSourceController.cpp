@@ -1,5 +1,6 @@
 #include "BlockEditorSourceController.h"
 
+#include "../../../core/TherionDocumentEditor.h"
 #include <QCoreApplication>
 
 #include "BlockEditorSourceText.h"
@@ -130,6 +131,27 @@ bool BlockEditorSourceController::replaceLine(int lineNumber, const QString &lin
     editCursor.movePosition(QTextCursor::StartOfBlock);
     editCursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
     editCursor.insertText(line);
+    editCursor.endEditBlock();
+    context_.editor->setTextCursor(editCursor);
+    return true;
+}
+
+bool BlockEditorSourceController::applyTextEdit(const TherionSourceTextEdit &edit) const
+{
+    if (!canEdit() || context_.editor->document() == nullptr) {
+        return false;
+    }
+
+    const int documentLength = context_.editor->toPlainText().size();
+    if (edit.startOffset < 0 || edit.length < 0 || edit.startOffset + edit.length > documentLength) {
+        return false;
+    }
+
+    QTextCursor editCursor(context_.editor->document());
+    editCursor.beginEditBlock();
+    editCursor.setPosition(edit.startOffset);
+    editCursor.setPosition(edit.startOffset + edit.length, QTextCursor::KeepAnchor);
+    editCursor.insertText(edit.replacementText);
     editCursor.endEditBlock();
     context_.editor->setTextCursor(editCursor);
     return true;

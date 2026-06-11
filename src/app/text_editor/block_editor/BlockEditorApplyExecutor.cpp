@@ -1,6 +1,7 @@
 #include "BlockEditorApplyExecutor.h"
 
 #include "BlockEditorSourceText.h"
+#include "../../../core/TherionDocumentEditor.h"
 
 #include <QLabel>
 
@@ -51,14 +52,18 @@ void BlockEditorApplyExecutor::applyChanges()
         return;
     }
 
-    if (!blockEditorReplaceSourceLineRange(&lines,
-                                           logicalLine.startLine,
-                                           logicalLine.endLine,
-                                           QStringList{updatedLine})) {
+    TherionSourceTextEdit sourceEdit;
+    if (!blockEditorSourceLineRangeReplacementEdit(source.text(),
+                                                   logicalLine.startLine,
+                                                   logicalLine.endLine,
+                                                   QStringList{updatedLine},
+                                                   &sourceEdit)) {
         return;
     }
 
-    source.replaceText(blockEditorJoinSourceLines(source.text(), lines));
+    if (!source.applyTextEdit(sourceEdit)) {
+        return;
+    }
 
     context_.selectBlockInCanvasAndDetails(*context_.selectedLineNumber);
     context_.refreshApplyState();

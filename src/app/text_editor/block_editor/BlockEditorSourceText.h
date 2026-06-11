@@ -6,6 +6,8 @@
 
 namespace TherionStudio
 {
+struct TherionSourceTextEdit;
+
 struct BlockEditorLogicalLine
 {
     int startLine = 0;
@@ -24,4 +26,9 @@ bool blockEditorReplaceSourceLineRange(QStringList *lines,
                                        int startLine,
                                        int endLine,
                                        const QStringList &replacementLines);
+bool blockEditorSourceLineRangeReplacementEdit(const QString &contents,
+                                               int startLine,
+                                               int endLine,
+                                               const QStringList &replacementLines,
+                                               TherionSourceTextEdit *edit);
 }

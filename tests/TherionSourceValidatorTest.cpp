@@ -1,5 +1,6 @@
 #include "../src/core/TherionSourceValidator.h"
 #include "../src/core/TherionCommandSyntax.h"
+#include "../src/core/TherionDocumentEditor.h"
 
 #include <QCoreApplication>
 
@@ -11,6 +12,7 @@ using TherionStudio::TherionSourceValidationCatalog;
 using TherionStudio::TherionSourceValidator;
 using TherionStudio::TherionSourceDiagnosticSeverity;
 using TherionStudio::TherionSourceDiagnostic;
+using TherionStudio::TherionSourceTextEdit;
 
 namespace
 {
@@ -50,6 +52,33 @@ void reportsAndFixesMalformedClipTokens()
     const QString fixed = TherionSourceValidator::applyFixes(contents, {result.diagnostics.first().fix});
     require(fixed == QStringLiteral("line rock-border -close on -clip off\nendline\n"),
             "Applying malformed quoted -clip off fix should preserve line endings and remove duplicate tokens.");
+}
+
+void plansValidationFixesAsSourceEdits()
+{
+    const QString contents = QStringLiteral("line rock-border -close on -clip off \"-clip off\"\n"
+                                            "endline\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents);
+    require(result.diagnostics.size() == 1,
+            "Malformed quoted -clip off tokens should produce a source-edit-plannable diagnostic.");
+
+    const QVector<TherionSourceTextEdit> edits = TherionSourceValidator::validationFixEdits(contents,
+                                                                                            {result.diagnostics.first().fix});
+    require(edits.size() == 1,
+            "Validation fix planner should expose one valid source edit.");
+
+    QString updated = contents;
+    require(TherionStudio::TherionDocumentEditor::applySourceTextEdits(&updated, edits),
+            "Validation source edits should apply through the shared source edit helper.");
+    require(updated == TherionSourceValidator::applyFixes(contents, {result.diagnostics.first().fix}),
+            "Validation source edits should preserve existing applyFixes behavior.");
+
+    TherionStudio::TherionSourceDiagnosticFix invalidFix;
+    invalidFix.startOffset = contents.size() + 1;
+    invalidFix.length = 1;
+    invalidFix.replacementText = QStringLiteral("ignored");
+    require(TherionSourceValidator::validationFixEdits(contents, {invalidFix}).isEmpty(),
+            "Validation fix planner should ignore invalid source ranges.");
 }
 
 void reportsAndFixesDuplicateOptionRows()
@@ -450,6 +479,7 @@ int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     reportsAndFixesMalformedClipTokens();
+        plansValidationFixesAsSourceEdits();
     reportsAndFixesDuplicateOptionRows();
     reportsAndFixesOptionLikeSubtype();
     keepsQuotedTextValuesStartingWithDash();

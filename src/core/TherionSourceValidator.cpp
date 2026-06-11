@@ -2,6 +2,7 @@
 
 #include "TherionCommandLineModel.h"
 #include "TherionCommandSyntax.h"
+#include "TherionDocumentEditor.h"
 #include "TherionDocumentParser.h"
 #include "TherionSourceDocument.h"
 #include "TherionSourceLogicalDocument.h"
@@ -659,8 +660,9 @@ TherionSourceValidationResult TherionSourceValidator::validate(const QString &co
     return result;
 }
 
-QString TherionSourceValidator::applyFixes(const QString &contents,
-                                           const QVector<TherionSourceDiagnosticFix> &fixes)
+QVector<TherionSourceTextEdit> TherionSourceValidator::validationFixEdits(
+    const QString &contents,
+    const QVector<TherionSourceDiagnosticFix> &fixes)
 {
     QVector<TherionSourceDiagnosticFix> sortedFixes = fixes;
     std::sort(sortedFixes.begin(),
@@ -669,14 +671,27 @@ QString TherionSourceValidator::applyFixes(const QString &contents,
                   return left.startOffset > right.startOffset;
               });
 
-    QString updated = contents;
+    QVector<TherionSourceTextEdit> edits;
+    edits.reserve(sortedFixes.size());
     for (const TherionSourceDiagnosticFix &fix : std::as_const(sortedFixes)) {
         if (fix.startOffset < 0
             || fix.length < 0
-            || fix.startOffset + fix.length > updated.size()) {
+            || fix.startOffset + fix.length > contents.size()) {
             continue;
         }
-        updated.replace(fix.startOffset, fix.length, fix.replacementText);
+        edits.append(TherionSourceTextEdit{fix.startOffset, fix.length, fix.replacementText});
+    }
+    return edits;
+}
+
+QString TherionSourceValidator::applyFixes(const QString &contents,
+                                           const QVector<TherionSourceDiagnosticFix> &fixes)
+{
+    const QVector<TherionSourceTextEdit> edits = validationFixEdits(contents, fixes);
+
+    QString updated = contents;
+    for (const TherionSourceTextEdit &edit : edits) {
+        updated.replace(edit.startOffset, edit.length, edit.replacementText);
     }
     return updated;
 }

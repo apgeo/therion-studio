@@ -86,6 +86,7 @@ public:
     bool rewriteLineCoordinateRows(int lineNumber,
                                    const QStringList &coordinateRows,
                                    QString *errorMessage = nullptr);
+    void applySourceTextEditsForCommandWithUndo(QVector<TherionSourceTextEdit> edits);
     void replaceTextForCommand(const QString &contents);
     void replaceTextForCommandWithUndo(const QString &contents);
     void replaceTextForSystemNormalization(const QString &contents);

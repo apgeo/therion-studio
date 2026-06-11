@@ -2,6 +2,7 @@
 
 #include "TextEditorSourceRewriteController.h"
 #include "TextEditorValidationCatalog.h"
+#include "../../core/TherionDocumentEditor.h"
 #include "../../core/TherionFileTypes.h"
 #include "../../core/TherionSourceValidator.h"
 
@@ -41,12 +42,20 @@ bool TextEditorTab::applyValidationFixes(const QVector<TherionSourceDiagnosticFi
     }
 
     const QString beforeText = editor_->toPlainText();
-    const QString afterText = TherionSourceValidator::applyFixes(beforeText, fixes);
+    const QVector<TherionSourceTextEdit> edits = TherionSourceValidator::validationFixEdits(beforeText, fixes);
+    if (edits.isEmpty()) {
+        return false;
+    }
+
+    QString afterText = beforeText;
+    if (!TherionDocumentEditor::applySourceTextEdits(&afterText, edits)) {
+        return false;
+    }
     if (afterText == beforeText) {
         return false;
     }
 
-    sourceRewriteController_->replaceTextForCommandWithUndo(afterText);
+    sourceRewriteController_->applySourceTextEditsForCommandWithUndo(edits);
     return true;
 }
 }

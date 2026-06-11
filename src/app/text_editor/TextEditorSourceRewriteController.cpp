@@ -331,6 +331,11 @@ bool TextEditorSourceRewriteController::rewriteLineCoordinateRows(int lineNumber
     return true;
 }
 
+void TextEditorSourceRewriteController::applySourceTextEditsForCommandWithUndo(QVector<TherionSourceTextEdit> edits)
+{
+    applyTextEditsPreservingCursor(std::move(edits), true, true, true, true);
+}
+
 void TextEditorSourceRewriteController::replaceTextForCommand(const QString &contents)
 {
     if (context_.editor == nullptr) {

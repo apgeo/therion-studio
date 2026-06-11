@@ -28,9 +28,22 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Phase 10 - Legacy removal gates: remove editor-local parsers and serializers only after consumers migrate and regression coverage exists.
 - Verification gates: each phase needs parser/projection, round-trip, source-range, undo/redo, and affected editor regression tests.
 
+## Unified Transaction Model Plan
+
+- Target state: programmatic source mutations enter through a single transaction request contract carrying an undo label, before-text identity, source-range edits or an explicit after-text snapshot, dirty-state policy, projection invalidation policy, selection/cursor restoration policy, and user-visible status messages.
+- Target state: source-range edits are the preferred representation for parser/planner-owned mutations; full after-text snapshots remain allowed only for snapshot replay, external bulk replacement, or temporary legacy paths with focused coverage.
+- Target state: Raw typing and ordinary text editing keep the embedded editor undo behavior, while remaining Raw commands, Map/visual operations, inspector changes, background source updates, and project/sidebar source mutations use shared transaction services.
+- Target state: map visual undo commands and text-source undo commands shall not compete silently; each user-visible map/text operation owns one explicit undo entry, with source replacement and any visual state restoration applied as one semantic transaction.
+- Phase 1 - Remaining contract policy: add revision/source identity checks, explicit stale-edit failure behavior, projection invalidation hooks, and consistent cursor/selection restoration decisions to transaction requests.
+- Phase 2 - Delegate reduction: reduce remaining public `TextEditorTab` source rewrite delegates toward narrow transaction or planner-facing methods, so controllers do not call broad text-replacement wrappers except through approved snapshot replay helpers.
+- Phase 3 - Map command alignment: move remaining map canvas/source commands toward transaction requests while preserving command merging, before/after snapshot replay, draft-item restoration, scene refresh, and selection restore behavior.
+- Phase 4 - Remaining adopters: route inspector, background, Raw command, and project/sidebar source mutations through transaction requests or focused adapters, with each migration backed by undo/redo and range-preservation tests.
+- Phase 5 - Legacy removal gates: rename or remove broad full-text rewrite APIs after all call sites are either source-edit transactions or clearly documented snapshot replay paths.
+- Verification gates: each remaining transaction migration needs focused undo/redo coverage, stale/invalid edit behavior, dirty-state refresh checks, and affected Raw/Map/manual workflow verification when UI state changes.
+
 ## Next Up
 
-- P1: Continue the unified transaction model by reducing remaining public `TextEditorTab` source rewrite delegates toward source-edit transaction requests, while keeping focused undo/redo and range-preservation tests in place.
+- P1: Continue the unified transaction model by reducing remaining draft/option/line-row `TextEditorTab` source rewrite delegates toward source-edit transaction requests, while keeping focused undo/redo and range-preservation tests in place.
 - P1: Keep `WORKLOG.md` trimmed after each completed slice so active work does not become completed-history notes.
 
 ## Risks / Blockers

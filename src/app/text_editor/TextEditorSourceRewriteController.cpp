@@ -180,44 +180,6 @@ bool TextEditorSourceRewriteController::insertDraftAreaGeometry(const QStringLis
     return true;
 }
 
-bool TextEditorSourceRewriteController::rewritePointCoordinates(int lineNumber,
-                                                                const QPointF &point,
-                                                                QString *errorMessage)
-{
-    if (context_.editor == nullptr) {
-        return false;
-    }
-
-    const QString contents = context_.editor->toPlainText();
-    QVector<TherionSourceTextEdit> edits;
-    if (!TherionDocumentEditor::pointCoordinateRewriteEdits(contents, lineNumber, point, &edits, errorMessage)) {
-        return false;
-    }
-
-    applyTextEditsPreservingCursor(edits, true, false, true, false);
-    return true;
-}
-
-bool TextEditorSourceRewriteController::rewriteLineAreaVertex(int lineNumber,
-                                                              const QString &kind,
-                                                              int vertexIndex,
-                                                              const QPointF &point,
-                                                              QString *errorMessage)
-{
-    if (context_.editor == nullptr) {
-        return false;
-    }
-
-    const QString contents = context_.editor->toPlainText();
-    QVector<TherionSourceTextEdit> edits;
-    if (!TherionDocumentEditor::lineAreaVertexRewriteEdits(contents, lineNumber, kind, vertexIndex, point, &edits, errorMessage)) {
-        return false;
-    }
-
-    applyTextEditsPreservingCursor(edits, true, false, true, false);
-    return true;
-}
-
 bool TextEditorSourceRewriteController::rewriteLineOptionToggle(int lineNumber,
                                                                 const QString &optionName,
                                                                 bool enabled,

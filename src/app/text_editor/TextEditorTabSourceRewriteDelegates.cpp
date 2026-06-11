@@ -65,24 +65,6 @@ bool TextEditorTab::insertDraftAreaGeometry(const QStringList &coordinateRows,
                                                              initialAreaAdjustRect);
 }
 
-bool TextEditorTab::rewritePointCoordinates(int lineNumber,
-                                            const QPointF &point,
-                                            QString *errorMessage)
-{
-    return sourceRewriteController_ != nullptr
-        && sourceRewriteController_->rewritePointCoordinates(lineNumber, point, errorMessage);
-}
-
-bool TextEditorTab::rewriteLineAreaVertex(int lineNumber,
-                                          const QString &kind,
-                                          int vertexIndex,
-                                          const QPointF &point,
-                                          QString *errorMessage)
-{
-    return sourceRewriteController_ != nullptr
-        && sourceRewriteController_->rewriteLineAreaVertex(lineNumber, kind, vertexIndex, point, errorMessage);
-}
-
 bool TextEditorTab::rewriteLineOptionToggle(int lineNumber,
                                             const QString &optionName,
                                             bool enabled,

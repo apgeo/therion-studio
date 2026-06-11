@@ -90,14 +90,13 @@ MapEditorInteractiveDrawContext MapEditorTab::interactiveDrawContext()
         .applySourceTextChangeWithSnapshot = [this](const QString &label,
                                                     const QString &beforeText,
                                                     const QString &afterText,
-                                                    int insertedLineNumber) {
-            applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
-        },
-        .recordSourceTextSnapshot = [this](const QString &label,
-                                           const QString &beforeText,
-                                           const QString &afterText,
-                                           int insertedLineNumber) {
-            recordSourceTextSnapshot(label, beforeText, afterText, insertedLineNumber);
+                                                    int insertedLineNumber,
+                                                    std::function<void()> selectionRestoreHook) {
+            applySourceTextChangeWithSnapshot(label,
+                                              beforeText,
+                                              afterText,
+                                              insertedLineNumber,
+                                              std::move(selectionRestoreHook));
         },
         .draftObjectOptions = [this](const QString &commandKind) {
             return pendingDraftObjectOptions(commandKind);

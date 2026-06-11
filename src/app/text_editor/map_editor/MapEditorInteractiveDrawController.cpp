@@ -172,7 +172,17 @@ SourceApplyResult applyInsertWithSnapshot(const MapEditorInteractiveDrawContext 
         return SourceApplyResult::Unavailable;
     }
 
-    context.applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
+    bool applied = false;
+    context.applySourceTextChangeWithSnapshot(label,
+                                              beforeText,
+                                              afterText,
+                                              insertedLineNumber,
+                                              [&applied]() {
+                                                  applied = true;
+                                              });
+    if (applied) {
+        return SourceApplyResult::Applied;
+    }
     if (context.textEditor != nullptr && context.textEditor->text() == afterText) {
         return SourceApplyResult::Applied;
     }

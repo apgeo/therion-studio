@@ -1454,6 +1454,7 @@ void MapEditorTab::browseAndAddBackgroundImages()
     const int previousLayerCount = backgroundImageItems_.size();
     int pendingRasterLayerCount = 0;
     bool addedPocketTopoXviLayer = false;
+    bool pocketTopoMetadataSkipped = false;
     PocketTopoXviImportOptions pocketTopoOptions;
     for (const QString &imagePath : imagePaths) {
         QString xviPath = imagePath;
@@ -1532,8 +1533,18 @@ void MapEditorTab::browseAndAddBackgroundImages()
                                                                           metadataLine,
                                                                           false);
                 if (afterText != beforeText) {
+                    bool metadataApplied = false;
                     const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
-                    applySourceTextChangeWithSnapshot(tr("Import PocketTopo Background"), beforeText, afterText, 0);
+                    applySourceTextChangeWithSnapshot(tr("Import PocketTopo Background"),
+                                                      beforeText,
+                                                      afterText,
+                                                      0,
+                                                      [&metadataApplied]() {
+                                                          metadataApplied = true;
+                                                      });
+                    if (!metadataApplied) {
+                        pocketTopoMetadataSkipped = true;
+                    }
                 }
             }
             if (pocketTopoImport) {
@@ -1547,7 +1558,10 @@ void MapEditorTab::browseAndAddBackgroundImages()
 
     const int addedLayerCount = backgroundImageItems_.size() - previousLayerCount;
     if (addedLayerCount > 0) {
-        toolbarStatusNote_ = tr("Added %1 background layer(s).").arg(addedLayerCount);
+        toolbarStatusNote_ = pocketTopoMetadataSkipped
+            ? tr("Added %1 background layer(s), but PocketTopo metadata sync was skipped because the document changed.")
+                  .arg(addedLayerCount)
+            : tr("Added %1 background layer(s).").arg(addedLayerCount);
         saveBackgroundLayersToSession();
     } else if (pendingRasterLayerCount > 0) {
         toolbarStatusNote_ = tr("Adding %1 background layer(s)...").arg(pendingRasterLayerCount);

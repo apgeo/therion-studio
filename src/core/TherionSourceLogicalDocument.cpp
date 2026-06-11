@@ -1,5 +1,7 @@
 #include "TherionSourceLogicalDocument.h"
 
+#include "TherionCommandLineModel.h"
+
 namespace TherionStudio
 {
 namespace
@@ -72,6 +74,104 @@ LogicalCommandPart logicalCommandPartForLine(const QString &sourceLineText, bool
     }
     return {normalizedPart, firstContentIndex + 1, firstContentIndex};
 }
+
+TherionSourceLogicalArgumentGroupRange argumentGroupRange(const QVector<TherionSourceLogicalArgumentRange> &arguments)
+{
+    TherionSourceLogicalArgumentGroupRange group;
+    if (arguments.isEmpty()) {
+        return group;
+    }
+
+    QStringList values;
+    values.reserve(arguments.size());
+    for (const TherionSourceLogicalArgumentRange &argument : arguments) {
+        values.append(argument.text);
+    }
+    group.firstTokenIndex = arguments.constFirst().tokenIndex;
+    group.lastTokenIndex = arguments.constLast().tokenIndex;
+    group.text = values.join(QLatin1Char(' '));
+    group.argumentRanges = arguments;
+    return group;
+}
+
+TherionSourcePhysicalRange tokenPhysicalRange(const TherionSourceLogicalCommand &command, int tokenIndex)
+{
+    TherionSourcePhysicalRange range;
+    if (!command.physicalRangeForTokenIndex(tokenIndex, &range)) {
+        return {};
+    }
+    return range;
+}
+
+TherionSourceLogicalArgumentRange argumentRangeForToken(const TherionSourceLogicalCommand &command, int tokenIndex)
+{
+    return TherionSourceLogicalArgumentRange{
+        tokenIndex,
+        tokenIndex >= 0 && tokenIndex < command.parsed.tokens.size()
+            ? command.parsed.tokens.at(tokenIndex)
+            : QString(),
+        tokenPhysicalRange(command, tokenIndex)};
+}
+
+void populateArgumentAndOptionRanges(TherionSourceLogicalCommand *command)
+{
+    if (command == nullptr || command->parsed.tokens.size() <= 1) {
+        return;
+    }
+
+    int tokenIndex = 1;
+    while (tokenIndex < command->parsed.tokens.size()) {
+        const QString token = command->parsed.tokens.at(tokenIndex);
+        if (!commandTokenStartsNewOption(token)) {
+            command->positionalArgumentRanges.append(argumentRangeForToken(*command, tokenIndex));
+            ++tokenIndex;
+            continue;
+        }
+
+        TherionSourceLogicalOptionEntryRange entry;
+        entry.key = commandEmbeddedOptionName(token);
+        entry.optionTokenIndex = tokenIndex;
+        entry.nextTokenIndex = tokenIndex + 1;
+        entry.optionRange = tokenPhysicalRange(*command, tokenIndex);
+        entry.embeddedValue = commandTokenEmbedsOptionValue(token);
+        if (entry.embeddedValue) {
+            entry.rawValueTokens = {commandEmbeddedOptionValue(token)};
+            entry.logicalValueCount = commandLogicalOptionValueCount(command->parsed.tokens, tokenIndex);
+            entry.valueRanges.append(TherionSourceLogicalArgumentRange{
+                tokenIndex,
+                commandEmbeddedOptionValue(token),
+                entry.optionRange});
+            entry.valueGroupRange = argumentGroupRange(entry.valueRanges);
+            command->optionEntryRanges.append(entry);
+            ++tokenIndex;
+            continue;
+        }
+
+        const int nextOptionIndex = nextCommandOptionIndex(command->parsed.tokens, tokenIndex);
+        entry.nextTokenIndex = nextOptionIndex;
+        entry.rawValueTokens = commandLogicalOptionValueTokens(command->parsed.tokens, tokenIndex);
+        entry.logicalValueCount = commandLogicalOptionValueCount(command->parsed.tokens, tokenIndex);
+        if (!entry.rawValueTokens.isEmpty()) {
+            entry.firstValueTokenIndex = tokenIndex + 1;
+            entry.lastValueTokenIndex = nextOptionIndex - 1;
+        }
+        for (int valueIndex = tokenIndex + 1;
+             valueIndex < nextOptionIndex && valueIndex < command->parsed.tokens.size();
+             ++valueIndex) {
+            entry.valueRanges.append(argumentRangeForToken(*command, valueIndex));
+        }
+        entry.valueGroupRange = argumentGroupRange(entry.valueRanges);
+        command->optionEntryRanges.append(entry);
+        tokenIndex = qMax(nextOptionIndex, tokenIndex + 1);
+    }
+
+    command->positionalArgumentGroupRange = argumentGroupRange(command->positionalArgumentRanges);
+}
+}
+
+bool TherionSourceLogicalArgumentGroupRange::isValid() const
+{
+    return firstTokenIndex >= 0 && lastTokenIndex >= firstTokenIndex;
 }
 
 bool TherionSourceLogicalCommand::shouldValidateCommandCatalog() const
@@ -122,14 +222,39 @@ bool TherionSourceLogicalCommand::physicalRangeForLogicalRange(int logicalStart,
     return false;
 }
 
-TherionSourceLogicalDocument TherionSourceLogicalDocument::fromText(const QString &contents)
+bool TherionSourceLogicalCommand::physicalRangeForTokenIndex(int tokenIndex, TherionSourcePhysicalRange *range) const
 {
-    return fromSourceDocument(TherionSourceDocument::fromText(contents));
+    if (range != nullptr) {
+        *range = {};
+    }
+    if (tokenIndex < 0) {
+        return false;
+    }
+
+    for (const TherionSourceLogicalTokenRange &tokenRange : tokenRanges) {
+        if (tokenRange.tokenIndex != tokenIndex) {
+            continue;
+        }
+        if (range != nullptr) {
+            *range = tokenRange.physicalRange;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+TherionSourceLogicalDocument TherionSourceLogicalDocument::fromText(
+    const QString &contents,
+    const TherionSourceDocumentMetadata &metadata)
+{
+    return fromSourceDocument(TherionSourceDocument::fromText(contents, metadata));
 }
 
 TherionSourceLogicalDocument TherionSourceLogicalDocument::fromSourceDocument(const TherionSourceDocument &sourceDocument)
 {
     TherionSourceLogicalDocument logicalDocument;
+    logicalDocument.metadata_ = sourceDocument.metadata();
     const QVector<TherionSourceDocumentLine> &lines = sourceDocument.lines();
     logicalDocument.commands_.reserve(lines.size());
 
@@ -187,6 +312,24 @@ TherionSourceLogicalDocument TherionSourceLogicalDocument::fromSourceDocument(co
         if (command.parsed.tokens.isEmpty()) {
             command.normalizedDirective.clear();
         }
+
+        command.tokenRanges.reserve(command.parsed.tokenSpans.size());
+        for (int tokenIndex = 0; tokenIndex < command.parsed.tokenSpans.size(); ++tokenIndex) {
+            const TherionParsedToken &tokenSpan = command.parsed.tokenSpans.at(tokenIndex);
+            TherionSourcePhysicalRange physicalRange;
+            if (!command.physicalRangeForLogicalRange(tokenSpan.start, tokenSpan.length, &physicalRange)) {
+                continue;
+            }
+
+            command.tokenRanges.append(TherionSourceLogicalTokenRange{
+                tokenIndex,
+                tokenSpan.text,
+                tokenSpan.type,
+                tokenSpan.start,
+                tokenSpan.length,
+                physicalRange});
+        }
+        populateArgumentAndOptionRanges(&command);
         logicalDocument.commands_.append(command);
         lineIndex = currentIndex;
     }
@@ -194,8 +337,52 @@ TherionSourceLogicalDocument TherionSourceLogicalDocument::fromSourceDocument(co
     return logicalDocument;
 }
 
+const TherionSourceDocumentMetadata &TherionSourceLogicalDocument::metadata() const
+{
+    return metadata_;
+}
+
 const QVector<TherionSourceLogicalCommand> &TherionSourceLogicalDocument::commands() const
 {
     return commands_;
+}
+
+const TherionSourceLogicalCommand *TherionSourceLogicalDocument::commandAtPhysicalLine(int lineNumber) const
+{
+    if (lineNumber <= 0) {
+        return nullptr;
+    }
+
+    for (const TherionSourceLogicalCommand &command : commands_) {
+        if (command.startLineNumber <= lineNumber && command.endLineNumber >= lineNumber) {
+            return &command;
+        }
+    }
+    return nullptr;
+}
+
+const TherionSourceLogicalTokenRange *TherionSourceLogicalDocument::tokenAtPhysicalPosition(int lineNumber,
+                                                                                           int columnNumber) const
+{
+    const TherionSourceLogicalCommand *command = commandAtPhysicalLine(lineNumber);
+    if (command == nullptr || columnNumber <= 0) {
+        return nullptr;
+    }
+
+    for (const TherionSourceLogicalTokenRange &tokenRange : command->tokenRanges) {
+        if (tokenRange.type == TherionTokenType::Comment) {
+            continue;
+        }
+        const TherionSourcePhysicalRange &range = tokenRange.physicalRange;
+        if (range.lineNumber != lineNumber) {
+            continue;
+        }
+        const int startColumn = range.columnNumber;
+        const int endColumn = startColumn + range.columnLength;
+        if (columnNumber >= startColumn && columnNumber <= endColumn) {
+            return &tokenRange;
+        }
+    }
+    return nullptr;
 }
 }

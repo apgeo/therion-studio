@@ -62,6 +62,102 @@ void recordsBlockCloseAndUnclosedState()
             "second open block should be scrap");
 }
 
+void recordsNestedBlockRanges()
+{
+    const QString text = QStringLiteral(
+        "survey demo\n"
+        "  scrap s1\n"
+        "    line wall\n"
+        "      0 0\n"
+        "    endline\n"
+        "  endscrap\n"
+        "endsurvey\n");
+    const TherionSourceDocument document = TherionSourceDocument::fromText(text);
+    const QVector<TherionSourceBlockRange> &ranges = document.blockRanges();
+
+    require(ranges.size() == 3, "source document should record every opened block range");
+
+    const TherionSourceBlockRange &survey = ranges.at(0);
+    require(survey.directive == QStringLiteral("survey"), "first block range should be the survey");
+    require(survey.openLineNumber == 1 && survey.closeLineNumber == 7,
+            "survey block range should span its matching close line");
+    require(survey.startOffset == 0 && survey.endOffset == text.size(),
+            "survey block range should preserve absolute source offsets");
+    require(survey.openLineText == QStringLiteral("survey demo")
+                && survey.closeLineText == QStringLiteral("endsurvey"),
+            "survey block range should preserve opener and closer source text");
+    require(survey.parentStack.isEmpty(), "top-level survey should not have a parent stack");
+    require(survey.isClosed(), "balanced survey range should report closed state");
+
+    const TherionSourceBlockRange &scrap = ranges.at(1);
+    require(scrap.directive == QStringLiteral("scrap"), "second block range should be the scrap");
+    require(scrap.openLineNumber == 2 && scrap.closeLineNumber == 6,
+            "scrap block range should span its matching close line");
+    require(scrap.parentStack.size() == 1
+                && scrap.parentStack.constFirst().directive == QStringLiteral("survey"),
+            "scrap block range should record its survey parent");
+
+    const TherionSourceBlockRange &line = ranges.at(2);
+    require(line.directive == QStringLiteral("line"), "third block range should be the line");
+    require(line.openLineNumber == 3 && line.closeLineNumber == 5,
+            "line block range should span its matching close line");
+    require(line.parentStack.size() == 2
+                && line.parentStack.at(0).directive == QStringLiteral("survey")
+                && line.parentStack.at(1).directive == QStringLiteral("scrap"),
+            "line block range should record nested survey and scrap parents");
+}
+
+void keepsUnclosedBlockRangesOpen()
+{
+    const QString text = QStringLiteral(
+        "survey demo\n"
+        "scrap s1\n");
+    const TherionSourceDocument document = TherionSourceDocument::fromText(text);
+    const QVector<TherionSourceBlockRange> &ranges = document.blockRanges();
+
+    require(ranges.size() == 2, "unclosed document should still record opened block ranges");
+    require(ranges.at(0).directive == QStringLiteral("survey")
+                && ranges.at(0).openLineNumber == 1
+                && !ranges.at(0).isClosed(),
+            "unclosed survey range should remain open");
+    require(ranges.at(1).directive == QStringLiteral("scrap")
+                && ranges.at(1).openLineNumber == 2
+                && !ranges.at(1).isClosed(),
+            "unclosed scrap range should remain open");
+    require(ranges.at(1).parentStack.size() == 1
+                && ranges.at(1).parentStack.constFirst().directive == QStringLiteral("survey"),
+            "unclosed nested range should still record its parent stack");
+}
+
+void preservesSourceSnapshotMetadata()
+{
+    const TherionSourceDocument defaultDocument = TherionSourceDocument::fromText(QStringLiteral("survey demo\n"));
+    require(defaultDocument.sourceType() == TherionSourceDocumentType::Unknown,
+            "default source snapshot type should be unknown");
+    require(defaultDocument.encodingName().isEmpty(),
+            "default source snapshot encoding should be empty until file IO provides it");
+    require(defaultDocument.revisionId() == 0,
+            "default source snapshot revision should be zero");
+
+    TherionSourceDocumentMetadata metadata;
+    metadata.sourceType = TherionSourceDocumentType::TherionMap;
+    metadata.encodingName = QStringLiteral("windows-1250");
+    metadata.revisionId = 42;
+
+    const TherionSourceDocument document = TherionSourceDocument::fromText(QStringLiteral("scrap s1\nendscrap\n"),
+                                                                          metadata);
+    require(document.metadata().sourceType == TherionSourceDocumentType::TherionMap,
+            "source snapshot should preserve explicit document type metadata");
+    require(document.metadata().encodingName == QStringLiteral("windows-1250"),
+            "source snapshot should preserve explicit encoding metadata");
+    require(document.metadata().revisionId == 42,
+            "source snapshot should preserve explicit revision metadata");
+    require(document.sourceType() == TherionSourceDocumentType::TherionMap
+                && document.encodingName() == QStringLiteral("windows-1250")
+                && document.revisionId() == 42,
+            "source snapshot metadata accessors should mirror the stored metadata");
+}
+
 void normalizesCentrelineAliases()
 {
     require(normalizedTherionDirectiveToken(QStringLiteral("centreline")) == QStringLiteral("centerline"),
@@ -84,6 +180,9 @@ int main()
 {
     classifiesCommandAndBlockContentLines();
     recordsBlockCloseAndUnclosedState();
+    recordsNestedBlockRanges();
+    keepsUnclosedBlockRangesOpen();
+    preservesSourceSnapshotMetadata();
     normalizesCentrelineAliases();
     return 0;
 }

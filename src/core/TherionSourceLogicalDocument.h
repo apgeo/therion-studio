@@ -3,6 +3,7 @@
 #include "TherionSourceDocument.h"
 
 #include <QString>
+#include <QStringList>
 #include <QVector>
 
 namespace TherionStudio
@@ -27,6 +28,48 @@ struct TherionSourcePhysicalRange
     QString lineText;
 };
 
+struct TherionSourceLogicalTokenRange
+{
+    int tokenIndex = -1;
+    QString text;
+    TherionTokenType type = TherionTokenType::Other;
+    int logicalStart = 0;
+    int logicalLength = 0;
+    TherionSourcePhysicalRange physicalRange;
+};
+
+struct TherionSourceLogicalArgumentRange
+{
+    int tokenIndex = -1;
+    QString text;
+    TherionSourcePhysicalRange physicalRange;
+};
+
+struct TherionSourceLogicalArgumentGroupRange
+{
+    int firstTokenIndex = -1;
+    int lastTokenIndex = -1;
+    QString text;
+    QVector<TherionSourceLogicalArgumentRange> argumentRanges;
+
+    [[nodiscard]] bool isValid() const;
+};
+
+struct TherionSourceLogicalOptionEntryRange
+{
+    QString key;
+    int optionTokenIndex = -1;
+    int firstValueTokenIndex = -1;
+    int lastValueTokenIndex = -1;
+    int nextTokenIndex = -1;
+    TherionSourcePhysicalRange optionRange;
+    QStringList rawValueTokens;
+    int logicalValueCount = 0;
+    QVector<TherionSourceLogicalArgumentRange> valueRanges;
+    TherionSourceLogicalArgumentGroupRange valueGroupRange;
+    bool embeddedValue = false;
+};
+
 struct TherionSourceLogicalCommand
 {
     int startLineNumber = 0;
@@ -44,23 +87,35 @@ struct TherionSourceLogicalCommand
     QVector<TherionSourceBlockFrame> blockStackBefore;
     QVector<int> physicalLineNumbers;
     QVector<TherionSourceLogicalTextPart> textParts;
+    QVector<TherionSourceLogicalTokenRange> tokenRanges;
+    QVector<TherionSourceLogicalArgumentRange> positionalArgumentRanges;
+    TherionSourceLogicalArgumentGroupRange positionalArgumentGroupRange;
+    QVector<TherionSourceLogicalOptionEntryRange> optionEntryRanges;
 
     [[nodiscard]] bool shouldValidateCommandCatalog() const;
     [[nodiscard]] bool hasUnmatchedClose() const;
     [[nodiscard]] bool physicalRangeForLogicalRange(int logicalStart,
                                                     int logicalLength,
                                                     TherionSourcePhysicalRange *range) const;
+    [[nodiscard]] bool physicalRangeForTokenIndex(int tokenIndex, TherionSourcePhysicalRange *range) const;
 };
 
 class TherionSourceLogicalDocument final
 {
 public:
-    [[nodiscard]] static TherionSourceLogicalDocument fromText(const QString &contents);
+    [[nodiscard]] static TherionSourceLogicalDocument fromText(
+        const QString &contents,
+        const TherionSourceDocumentMetadata &metadata = {});
     [[nodiscard]] static TherionSourceLogicalDocument fromSourceDocument(const TherionSourceDocument &sourceDocument);
 
+    [[nodiscard]] const TherionSourceDocumentMetadata &metadata() const;
     [[nodiscard]] const QVector<TherionSourceLogicalCommand> &commands() const;
+    [[nodiscard]] const TherionSourceLogicalCommand *commandAtPhysicalLine(int lineNumber) const;
+    [[nodiscard]] const TherionSourceLogicalTokenRange *tokenAtPhysicalPosition(int lineNumber,
+                                                                               int columnNumber) const;
 
 private:
+    TherionSourceDocumentMetadata metadata_;
     QVector<TherionSourceLogicalCommand> commands_;
 };
 }

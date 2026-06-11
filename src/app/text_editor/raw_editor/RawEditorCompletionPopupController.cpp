@@ -2,6 +2,7 @@
 
 #include "RawEditorCompletionContextAnalyzer.h"
 #include "RawEditorCompletionSuggestionBuilder.h"
+#include "RawEditorCompletionTokenContext.h"
 #include "../TextEditorCommandMetadata.h"
 
 #include <QAbstractItemView>
@@ -16,7 +17,7 @@
 #include <QToolTip>
 
 #include "../../../core/TherionCommandSyntax.h"
-#include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceLogicalDocument.h"
 
 #include <utility>
 
@@ -106,27 +107,18 @@ void RawEditorCompletionPopupController::triggerCompletionPopup()
             const QTextCursor cursor = context_.editor->textCursor();
             const QTextBlock block = cursor.block();
             if (block.isValid()) {
-                const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(block.text(), block.blockNumber() + 1);
-                const int column = cursor.positionInBlock();
-
-                int tokenIndexAtCursor = parsedLine.tokens.size();
-                int tokenCounter = 0;
-                for (const TherionParsedToken &tokenSpan : parsedLine.tokenSpans) {
-                    if (tokenSpan.type == TherionTokenType::Comment) {
-                        continue;
-                    }
-                    const int tokenEnd = tokenSpan.start + tokenSpan.length;
-                    if (column >= tokenSpan.start && column <= tokenEnd) {
-                        tokenIndexAtCursor = tokenCounter;
-                        break;
-                    }
-                    if (column > tokenEnd) {
-                        tokenIndexAtCursor = tokenCounter + 1;
-                    }
-                    ++tokenCounter;
+                const int lineNumber = block.blockNumber() + 1;
+                const int columnNumber = cursor.positionInBlock() + 1;
+                const TherionSourceLogicalDocument logicalDocument =
+                    TherionSourceLogicalDocument::fromText(context_.editor->toPlainText());
+                const TherionSourceLogicalCommand *logicalCommand = logicalDocument.commandAtPhysicalLine(lineNumber);
+                if (logicalCommand == nullptr) {
+                    return;
                 }
-
-                const int positionalCountBeforeCursor = positionalTokenCountBeforeCursor(parsedLine, tokenIndexAtCursor);
+                const RawEditorCompletionTokenContext tokenContext =
+                    rawEditorCompletionTokenContextAtPosition(logicalDocument, lineNumber, columnNumber);
+                const int positionalCountBeforeCursor = positionalTokenCountBeforeCursor(logicalCommand->parsed,
+                                                                                         tokenContext.tokenIndexAtCursor);
                 if (positionalCountBeforeCursor < requiredPositionalCount) {
                     const int nextArgumentIndex = positionalCountBeforeCursor + 1;
                     QToolTip::showText(context_.editor->mapToGlobal(context_.editor->cursorRect().bottomLeft()),

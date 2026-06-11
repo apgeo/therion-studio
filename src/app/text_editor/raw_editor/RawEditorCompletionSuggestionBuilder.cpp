@@ -1,6 +1,7 @@
 #include "RawEditorCompletionSuggestionBuilder.h"
 
 #include "RawEditorCompletionContextAnalyzer.h"
+#include "RawEditorCompletionTokenContext.h"
 #include "../TextEditorCommandMetadata.h"
 
 #include <QDir>
@@ -12,7 +13,7 @@
 #include <QTextCursor>
 
 #include "../../../core/TherionCommandSyntax.h"
-#include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceLogicalDocument.h"
 
 #include <algorithm>
 #include <utility>
@@ -55,6 +56,26 @@ QString normalizeInputSuggestionPath(QString path)
         path = path.trimmed();
     }
     return path;
+}
+
+TherionStudio::RawEditorCompletionTokenContext cursorTokenContextForEditor(const QPlainTextEdit *editor)
+{
+    TherionStudio::RawEditorCompletionTokenContext context;
+    if (editor == nullptr) {
+        return context;
+    }
+
+    const QTextCursor cursor = editor->textCursor();
+    const QTextBlock block = cursor.block();
+    if (!block.isValid()) {
+        return context;
+    }
+
+    const int lineNumber = block.blockNumber() + 1;
+    const int columnNumber = cursor.positionInBlock() + 1;
+    const TherionStudio::TherionSourceLogicalDocument logicalDocument =
+        TherionStudio::TherionSourceLogicalDocument::fromText(editor->toPlainText());
+    return TherionStudio::rawEditorCompletionTokenContextAtPosition(logicalDocument, lineNumber, columnNumber);
 }
 }
 
@@ -179,27 +200,11 @@ QStringList RawEditorCompletionSuggestionBuilder::buildCompletionSuggestionsForC
         return QStringList();
     }
 
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(block.text(), block.blockNumber() + 1);
+    const RawEditorCompletionTokenContext cursorTokenContext = cursorTokenContextForEditor(context_.editor);
+    const TherionParsedLine parsedLine = cursorTokenContext.parsedLine;
     const int column = cursor.positionInBlock();
-
-    int tokenIndexAtCursor = parsedLine.tokens.size();
-    bool cursorInsideToken = false;
-    int tokenCounter = 0;
-    for (const TherionParsedToken &tokenSpan : parsedLine.tokenSpans) {
-        if (tokenSpan.type == TherionTokenType::Comment) {
-            continue;
-        }
-        const int tokenEnd = tokenSpan.start + tokenSpan.length;
-        if (column >= tokenSpan.start && column <= tokenEnd) {
-            tokenIndexAtCursor = tokenCounter;
-            cursorInsideToken = true;
-            break;
-        }
-        if (column > tokenEnd) {
-            tokenIndexAtCursor = tokenCounter + 1;
-        }
-        ++tokenCounter;
-    }
+    const int tokenIndexAtCursor = cursorTokenContext.tokenIndexAtCursor;
+    const bool cursorInsideToken = cursorTokenContext.cursorInsideToken;
 
     const QString currentToken = cursorInsideToken && tokenIndexAtCursor < parsedLine.tokens.size()
         ? parsedLine.tokens.at(tokenIndexAtCursor)

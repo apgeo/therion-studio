@@ -8,7 +8,7 @@
 #include "TextEditorCommandMetadata.h"
 #include "block_editor/BlockEditorDirectiveRules.h"
 
-#include "../../core/TherionDocumentParser.h"
+#include "../../core/TherionSourceLogicalDocument.h"
 
 #include <utility>
 #include <QJsonObject>
@@ -288,11 +288,13 @@ QStringList TextEditorContextHelpController::helpCandidateTokens() const
         return candidates;
     }
 
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(block.text(), block.blockNumber() + 1);
-    if (!parsedLine.directive.isEmpty() && parsedLine.directive != directToken.toLower()) {
-        appendUniqueCaseInsensitive(candidates, parsedLine.directive);
+    const TherionSourceLogicalDocument logicalDocument =
+        TherionSourceLogicalDocument::fromText(editor()->toPlainText());
+    const TherionSourceLogicalCommand *command = logicalDocument.commandAtPhysicalLine(block.blockNumber() + 1);
+    if (command != nullptr && !command->parsed.directive.isEmpty() && command->parsed.directive != directToken.toLower()) {
+        appendUniqueCaseInsensitive(candidates, command->parsed.directive);
         if (context_.normalizedDirectiveToken && context_.openingDirectiveForClosingToken) {
-            const QString normalizedDirective = context_.normalizedDirectiveToken(parsedLine.directive);
+            const QString normalizedDirective = context_.normalizedDirectiveToken(command->parsed.directive);
             const QString openingDirective = context_.openingDirectiveForClosingToken(normalizedDirective);
             if (!openingDirective.isEmpty()) {
                 appendUniqueCaseInsensitive(candidates, openingDirective);
@@ -322,18 +324,12 @@ QString TextEditorContextHelpController::currentHelpTokenForCursor() const
     }
 
     const QTextBlock block = cursor.block();
-    const int column = cursor.position() - block.position();
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(block.text(), block.blockNumber() + 1);
-
-    for (const TherionParsedToken &tokenSpan : parsedLine.tokenSpans) {
-        if (tokenSpan.type == TherionTokenType::Comment) {
-            continue;
-        }
-
-        const int tokenEnd = tokenSpan.start + tokenSpan.length;
-        if (column >= tokenSpan.start && column <= tokenEnd) {
-            return tokenSpan.text.toLower();
-        }
+    const TherionSourceLogicalDocument logicalDocument =
+        TherionSourceLogicalDocument::fromText(editor()->toPlainText());
+    const TherionSourceLogicalTokenRange *tokenRange =
+        logicalDocument.tokenAtPhysicalPosition(block.blockNumber() + 1, cursor.positionInBlock() + 1);
+    if (tokenRange != nullptr) {
+        return tokenRange->text.toLower();
     }
 
     return QString();

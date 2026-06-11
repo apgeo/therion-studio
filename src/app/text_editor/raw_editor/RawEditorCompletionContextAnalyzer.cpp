@@ -8,7 +8,7 @@
 #include <QTextBlock>
 #include <QTextCursor>
 
-#include "../../../core/TherionDocumentParser.h"
+#include "../../../core/TherionSourceLogicalDocument.h"
 
 #include <utility>
 
@@ -53,6 +53,61 @@ QString normalizedCompletionContextToken(const QString &token)
         return normalized;
     }
     return QString();
+}
+
+TherionStudio::TherionSourceLogicalDocument logicalDocumentForEditor(const QPlainTextEdit *editor)
+{
+    return editor == nullptr
+        ? TherionStudio::TherionSourceLogicalDocument::fromText(QString())
+        : TherionStudio::TherionSourceLogicalDocument::fromText(editor->toPlainText());
+}
+
+void removeMatchingOpenDirective(QStringList *scopeStack, const QString &openingDirective)
+{
+    if (scopeStack == nullptr || openingDirective.isEmpty()) {
+        return;
+    }
+
+    for (int stackIndex = scopeStack->size() - 1; stackIndex >= 0; --stackIndex) {
+        if (scopeStack->at(stackIndex) == openingDirective) {
+            scopeStack->removeAt(stackIndex);
+            break;
+        }
+    }
+}
+
+QStringList scopeStackBeforeLine(const QVector<TherionStudio::TherionSourceLogicalCommand> &commands,
+                                 int oneBasedLineNumber,
+                                 const std::function<QString(const QString &)> &normalizedDirectiveToken,
+                                 const std::function<QString(const QString &)> &openingDirectiveForClosingToken,
+                                 const std::function<bool(const QString &, const TherionStudio::TherionParsedLine &)> &isContainerDirectiveInstance)
+{
+    QStringList scopeStack;
+    if (!normalizedDirectiveToken || !openingDirectiveForClosingToken || !isContainerDirectiveInstance) {
+        return scopeStack;
+    }
+
+    for (const TherionStudio::TherionSourceLogicalCommand &command : commands) {
+        if (command.startLineNumber >= oneBasedLineNumber) {
+            break;
+        }
+        if (command.parsed.directive.isEmpty()) {
+            continue;
+        }
+
+        const QString directive = normalizedDirectiveToken(command.parsed.directive);
+        const QString openingFromClosing = openingDirectiveForClosingToken(directive);
+        if (!openingFromClosing.isEmpty()) {
+            removeMatchingOpenDirective(&scopeStack, openingFromClosing);
+            continue;
+        }
+
+        if (isContainerDirectiveInstance(directive, command.parsed)) {
+            scopeStack.append(directive);
+        }
+    }
+
+    return scopeStack;
 }
 }
 
@@ -112,32 +167,12 @@ QStringList RawEditorCompletionContextAnalyzer::activeCompletionScopeStack() con
         return scopeStack;
     }
 
-    const QStringList lines = context_.editor->toPlainText().split(QLatin1Char('\n'));
-    const int lastLine = qMin(currentBlockNumber, lines.size());
-    for (int lineIndex = 0; lineIndex < lastLine; ++lineIndex) {
-        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineIndex), lineIndex + 1);
-        if (parsedLine.directive.isEmpty()) {
-            continue;
-        }
-
-        const QString directive = context_.normalizedDirectiveToken(parsedLine.directive);
-        const QString openingFromClosing = context_.openingDirectiveForClosingToken(directive);
-        if (!openingFromClosing.isEmpty()) {
-            for (int stackIndex = scopeStack.size() - 1; stackIndex >= 0; --stackIndex) {
-                if (scopeStack.at(stackIndex) == openingFromClosing) {
-                    scopeStack.removeAt(stackIndex);
-                    break;
-                }
-            }
-            continue;
-        }
-
-        if (context_.isContainerDirectiveInstance(directive, parsedLine)) {
-            scopeStack.append(directive);
-        }
-    }
-
-    return scopeStack;
+    const TherionSourceLogicalDocument logicalDocument = logicalDocumentForEditor(context_.editor);
+    return scopeStackBeforeLine(logicalDocument.commands(),
+                                currentBlockNumber + 1,
+                                context_.normalizedDirectiveToken,
+                                context_.openingDirectiveForClosingToken,
+                                context_.isContainerDirectiveInstance);
 }
 
 QString RawEditorCompletionContextAnalyzer::currentCompletionCommand() const
@@ -152,12 +187,13 @@ QString RawEditorCompletionContextAnalyzer::currentCompletionCommand() const
         return QString();
     }
 
-    const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(block.text(), block.blockNumber() + 1);
-    if (parsedLine.tokens.isEmpty()) {
+    const TherionSourceLogicalDocument logicalDocument = logicalDocumentForEditor(context_.editor);
+    const TherionSourceLogicalCommand *command = logicalDocument.commandAtPhysicalLine(block.blockNumber() + 1);
+    if (command == nullptr || command->parsed.tokens.isEmpty()) {
         return QString();
     }
 
-    const QString directive = context_.normalizedDirectiveToken(parsedLine.directive.toLower());
+    const QString directive = context_.normalizedDirectiveToken(command->parsed.directive.toLower());
     if (metadata().commandCompletionTokens.contains(directive, Qt::CaseInsensitive)
         || metadata().commandOptionTokens.contains(directive)
         || metadata().commandValueTokens.contains(directive)) {
@@ -289,30 +325,12 @@ QString RawEditorCompletionContextAnalyzer::resolveScopeForCommandAtLine(const Q
         return preferredScope;
     }
 
-    const int lastLine = qBound(0, lineNumber - 1, lines.size());
-    QStringList scopeStack;
-    for (int lineIndex = 0; lineIndex < lastLine; ++lineIndex) {
-        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(lines.at(lineIndex), lineIndex + 1);
-        const QString directive = context_.normalizedDirectiveToken(parsedLine.directive);
-        if (directive.isEmpty()) {
-            continue;
-        }
-
-        const QString openingFromClosing = context_.openingDirectiveForClosingToken(directive);
-        if (!openingFromClosing.isEmpty()) {
-            for (int stackIndex = scopeStack.size() - 1; stackIndex >= 0; --stackIndex) {
-                if (scopeStack.at(stackIndex) == openingFromClosing) {
-                    scopeStack.removeAt(stackIndex);
-                    break;
-                }
-            }
-            continue;
-        }
-
-        if (context_.isContainerDirectiveInstance(directive, parsedLine)) {
-            scopeStack.append(directive);
-        }
-    }
+    const TherionSourceLogicalDocument logicalDocument = TherionSourceLogicalDocument::fromText(lines.join(QLatin1Char('\n')));
+    const QStringList scopeStack = scopeStackBeforeLine(logicalDocument.commands(),
+                                                        lineNumber,
+                                                        context_.normalizedDirectiveToken,
+                                                        context_.openingDirectiveForClosingToken,
+                                                        context_.isContainerDirectiveInstance);
 
     for (int stackIndex = scopeStack.size() - 1; stackIndex >= 0; --stackIndex) {
         const QString scopeDirective = scopeStack.at(stackIndex);

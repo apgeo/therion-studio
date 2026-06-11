@@ -436,19 +436,13 @@ TherionSourceDiagnostic diagnosticForToken(const TherionSourceLogicalCommand &co
                                                           title,
                                                           message,
                                                           severity);
-    const std::optional<TherionParsedToken> token = tokenSpanForCommandTokenIndex(command.parsed,
-                                                                                  tokenIndex);
-    if (token.has_value()) {
-        TherionSourcePhysicalRange physicalRange;
-        if (command.physicalRangeForLogicalRange(token->start,
-                                                 token->length,
-                                                 &physicalRange)) {
-            diagnostic.lineNumber = physicalRange.lineNumber;
-            diagnostic.columnNumber = physicalRange.columnNumber;
-            diagnostic.columnLength = physicalRange.columnLength;
-            diagnostic.currentText = physicalRange.lineText;
-            return diagnostic;
-        }
+    TherionSourcePhysicalRange physicalRange;
+    if (command.physicalRangeForTokenIndex(tokenIndex, &physicalRange)) {
+        diagnostic.lineNumber = physicalRange.lineNumber;
+        diagnostic.columnNumber = physicalRange.columnNumber;
+        diagnostic.columnLength = physicalRange.columnLength;
+        diagnostic.currentText = physicalRange.lineText;
+        return diagnostic;
     }
 
     setRangeFromTokenIndex(command.parsed,
@@ -456,15 +450,6 @@ TherionSourceDiagnostic diagnosticForToken(const TherionSourceLogicalCommand &co
                            &diagnostic.columnNumber,
                            &diagnostic.columnLength);
     return diagnostic;
-}
-
-int positionalTokenCount(const ParsedCommandOptions &parsedOptions)
-{
-    int count = parsedOptions.extraPositionalTokens.size();
-    if (!parsedOptions.leadingValue.isEmpty()) {
-        ++count;
-    }
-    return count;
 }
 
 void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
@@ -492,11 +477,7 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
     }
 
     const int requiredPositionalCount = qMax(0, catalog.commandRequiredPositionalCount.value(commandName, 0));
-    const ParsedCommandOptions parsedOptions = parseCommandOptions(commandName,
-                                                                   command.parsed.tokens,
-                                                                   catalog.commandOptionFixedArityByKey,
-                                                                   false);
-    const int providedPositionalCount = positionalTokenCount(parsedOptions);
+    const int providedPositionalCount = command.positionalArgumentRanges.size();
     if (requiredPositionalCount > 0 && providedPositionalCount < requiredPositionalCount) {
         result->diagnostics.append(diagnosticForLine(command,
                                                      QStringLiteral("missing-argument"),
@@ -523,7 +504,7 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
     }
 
     const QSet<QString> knownOptions = catalog.commandOptionNames.value(commandName);
-    for (const CommandOptionEntry &optionEntry : parsedOptions.optionEntries) {
+    for (const TherionSourceLogicalOptionEntryRange &optionEntry : command.optionEntryRanges) {
         const QString optionToken = optionEntry.key;
         const QString normalizedOption = QStringLiteral("-") + normalizedCommandOptionName(optionToken);
         if (!knownOptions.isEmpty() && !knownOptions.contains(normalizedOption)) {

@@ -409,6 +409,8 @@ set(THERION_TEXT_EDITOR_SHARED_SOURCES
     src/app/text_editor/raw_editor/RawEditorCompletionSuggestionBuilder.h
     src/app/text_editor/raw_editor/RawEditorCompletionPopupController.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionPopupController.h
+    src/app/text_editor/raw_editor/RawEditorCompletionTokenContext.cpp
+    src/app/text_editor/raw_editor/RawEditorCompletionTokenContext.h
     src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.cpp
     src/app/text_editor/raw_editor/RawEditorCompletionInsertionController.h
     src/app/text_editor/raw_editor/RawEditorTextEdit.cpp

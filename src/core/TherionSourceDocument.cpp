@@ -10,6 +10,11 @@ struct BlockPair
     QString closeDirective;
 };
 
+struct ActiveBlockFrame
+{
+    int rangeIndex = -1;
+};
+
 QVector<BlockPair> knownBlockPairs()
 {
     return {
@@ -25,6 +30,11 @@ QVector<BlockPair> knownBlockPairs()
         {QStringLiteral("group"), QStringLiteral("endgroup")},
     };
 }
+}
+
+bool TherionSourceBlockRange::isClosed() const
+{
+    return closeLineNumber > 0;
 }
 
 bool TherionSourceDocumentLine::shouldValidateCommandCatalog() const
@@ -90,15 +100,19 @@ bool therionBlockTreatsChildrenAsContent(const QString &directive)
         || normalized == QStringLiteral("code");
 }
 
-TherionSourceDocument TherionSourceDocument::fromText(const QString &contents)
+TherionSourceDocument TherionSourceDocument::fromText(
+    const QString &contents,
+    const TherionSourceDocumentMetadata &metadata)
 {
     TherionSourceDocument document;
+    document.metadata_ = metadata;
     document.parsedDocument_ = TherionDocumentParser::parseSourceDocument(contents);
     document.lines_.reserve(document.parsedDocument_.lines.size());
 
     const QHash<QString, QString> openToClose = therionOpenToCloseDirectiveMap();
     const QHash<QString, QString> closeToOpen = therionCloseToOpenDirectiveMap();
     QVector<TherionSourceBlockFrame> stack;
+    QVector<ActiveBlockFrame> activeStack;
 
     for (const TherionParsedSourceLine &sourceLine : document.parsedDocument_.lines) {
         TherionSourceDocumentLine semanticLine;
@@ -125,11 +139,32 @@ TherionSourceDocument TherionSourceDocument::fromText(const QString &contents)
             : TherionSourceLineRole::Command;
 
         if (semanticLine.opensBlock) {
-            stack.append(TherionSourceBlockFrame{semanticLine.normalizedDirective,
-                                                 sourceLine.lineNumber,
-                                                 sourceLine.text});
+            TherionSourceBlockRange range;
+            range.directive = semanticLine.normalizedDirective;
+            range.openLineNumber = sourceLine.lineNumber;
+            range.startOffset = sourceLine.startOffset;
+            range.endOffset = sourceLine.endOffset;
+            range.openLineText = sourceLine.text;
+            range.parentStack = stack;
+            document.blockRanges_.append(range);
+
+            const TherionSourceBlockFrame frame{semanticLine.normalizedDirective,
+                                                sourceLine.lineNumber,
+                                                sourceLine.text};
+            stack.append(frame);
+            activeStack.append(ActiveBlockFrame{static_cast<int>(document.blockRanges_.size() - 1)});
         } else if (semanticLine.closesBlock
                    && !semanticLine.hasUnmatchedClose()) {
+            if (!activeStack.isEmpty()) {
+                const int rangeIndex = activeStack.constLast().rangeIndex;
+                if (rangeIndex >= 0 && rangeIndex < document.blockRanges_.size()) {
+                    TherionSourceBlockRange &range = document.blockRanges_[rangeIndex];
+                    range.closeLineNumber = sourceLine.lineNumber;
+                    range.endOffset = sourceLine.endOffset;
+                    range.closeLineText = sourceLine.text;
+                }
+                activeStack.removeLast();
+            }
             stack.removeLast();
         }
 
@@ -140,6 +175,26 @@ TherionSourceDocument TherionSourceDocument::fromText(const QString &contents)
     return document;
 }
 
+const TherionSourceDocumentMetadata &TherionSourceDocument::metadata() const
+{
+    return metadata_;
+}
+
+TherionSourceDocumentType TherionSourceDocument::sourceType() const
+{
+    return metadata_.sourceType;
+}
+
+QString TherionSourceDocument::encodingName() const
+{
+    return metadata_.encodingName;
+}
+
+int TherionSourceDocument::revisionId() const
+{
+    return metadata_.revisionId;
+}
+
 const TherionParsedSourceDocument &TherionSourceDocument::parsedDocument() const
 {
     return parsedDocument_;
@@ -148,6 +203,11 @@ const TherionParsedSourceDocument &TherionSourceDocument::parsedDocument() const
 const QVector<TherionSourceDocumentLine> &TherionSourceDocument::lines() const
 {
     return lines_;
+}
+
+const QVector<TherionSourceBlockRange> &TherionSourceDocument::blockRanges() const
+{
+    return blockRanges_;
 }
 
 const QVector<TherionSourceBlockFrame> &TherionSourceDocument::openBlocksAtEnd() const

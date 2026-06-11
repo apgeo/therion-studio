@@ -28,29 +28,17 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Phase 10 - Legacy removal gates: remove editor-local parsers and serializers only after consumers migrate and regression coverage exists.
 - Verification gates: each phase needs parser/projection, round-trip, source-range, undo/redo, and affected editor regression tests.
 
-## Unified Transaction Model Plan
-
-- Target state: programmatic source mutations enter through a single transaction request contract carrying an undo label, before-text identity, source-range edits or an explicit after-text snapshot, dirty-state policy, projection invalidation policy, selection/cursor restoration policy, and user-visible status messages.
-- Target state: source-range edits are the preferred representation for parser/planner-owned mutations; full after-text snapshots remain allowed only for snapshot replay, external bulk replacement, or temporary legacy paths with focused coverage.
-- Target state: Raw typing and ordinary text editing keep the embedded editor undo behavior, while remaining Raw commands, Map/visual operations, inspector changes, background source updates, and project/sidebar source mutations use shared transaction services.
-- Target state: map visual undo commands and text-source undo commands shall not compete silently; each user-visible map/text operation owns one explicit undo entry, with source replacement and any visual state restoration applied as one semantic transaction.
-- Phase 2 - Delegate reduction: reduce remaining public `TextEditorTab` source rewrite delegates toward narrow transaction or planner-facing methods, so controllers do not call broad text-replacement wrappers except through approved snapshot replay helpers.
-- Phase 3 - Map command alignment: move remaining map canvas/source commands toward transaction requests while preserving command merging, before/after snapshot replay, draft-item restoration, scene refresh, and selection restore behavior.
-- Phase 4 - Remaining adopters: current known inspector, background, Raw command, and project/sidebar source mutation flows are routed through transaction requests or focused adapters, with focused undo/redo coverage in place for migrated paths.
-- Phase 5 - Legacy removal gates: broad full-text rewrite APIs are reduced to explicit snapshot replay paths or source-edit transaction entrypoints for current known call sites.
-- Verification gates: each remaining transaction migration needs focused undo/redo coverage, stale/invalid edit behavior, dirty-state refresh checks, and affected Raw/Map/manual workflow verification when UI state changes.
-
 ## Next Up
 
-- P1: Keep Unified Transaction Model regression coverage green while continuing broader Unified Source DOM phase migrations.
-- P1: Add focused regression coverage for each migrated map/source operation (undo/redo, stale-state rejection, projection refresh, and selection restore behavior).
-- P1: Keep `WORKLOG.md` trimmed after each completed slice so active work does not become completed-history notes.
+- P1: Start the Phase 9 ownership-unification slice: define one shared undo-ownership timeline for map and text mutations instead of split stack ownership.
+- P1: Keep current map-first priority behavior during migration, but move ownership decisions from implicit fallback order to explicit transaction ownership metadata.
+- P1: Expand focused map/text undo regression coverage to include owner-transition sequences across mixed edits and command-surface owner-state expectations.
 
 ## Risks / Blockers
 
-- Parser/serializer round-trip coverage is still incomplete for full Therion corpus-level confidence.
-- Map/text undo arbitration still depends on choosing between map `QUndoStack` and embedded text-editor undo.
-- Stylus/Sidecar behavior depends on platform input routing; edge cases remain hardware-dependent.
+- Parser/serializer round-trip coverage is still incomplete for full Therion corpus-level confidence during Unified Source DOM phase migrations.
+- Map/text undo arbitration policy now uses an explicit next-step owner model (also exposed via `MapEditorTab` owner state APIs) and focused mixed map/text regression tests, but undo ownership is still split between map `QUndoStack` and embedded text-editor undo, which remains a risk for Phase 9 completion.
+- Stylus/Sidecar behavior still requires hardware-specific manual validation because CI coverage for platform input routing edge cases is limited.
 
 ## Backlog
 

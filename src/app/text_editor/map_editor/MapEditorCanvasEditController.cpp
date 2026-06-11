@@ -211,7 +211,10 @@ TextEditorSourceTransactionRequest sourceTransactionRequest(const MapEditorCanva
                                                             const QString &label,
                                                             const QString &beforeText,
                                                             const QString &afterText,
-                                                            int insertedLineNumber)
+                                                            int insertedLineNumber,
+                                                            TextEditorSourceSelectionRestorePolicy selectionRestorePolicy =
+                                                                TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection,
+                                                            std::function<void()> selectionRestoreHook = {})
 {
     const int expectedRevision = context.textEditor != nullptr ? context.textEditor->documentRevision() : 0;
     return {
@@ -220,7 +223,8 @@ TextEditorSourceTransactionRequest sourceTransactionRequest(const MapEditorCanva
         .afterText = afterText,
         .expectedSourceRevision = expectedRevision,
         .projectionInvalidationPolicy = TextEditorSourceProjectionInvalidationPolicy::FlushPendingRefresh,
-        .selectionRestorePolicy = TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection,
+        .selectionRestorePolicy = selectionRestorePolicy,
+        .selectionRestoreHook = std::move(selectionRestoreHook),
         .undoStatusMessage = sourceSnapshotUndoMessage(insertedLineNumber),
         .redoStatusMessage = sourceSnapshotRedoMessage(insertedLineNumber),
         .staleStatusMessage = QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
@@ -724,11 +728,26 @@ void MapEditorCanvasEditController::recordPointOrientationHandleChange(int lineN
         return;
     }
 
-    applySourceTextChangeWithSnapshot(tr("Edit Point Orientation"), beforeText, afterText, lineNumber);
-    restorePointSelection(lineNumber);
-    QTimer::singleShot(0, context_.callbackContext, [restorePointSelectionLater = context_.restorePointSelectionLater, lineNumber]() {
-        restorePointSelectionLater(lineNumber);
-    });
+    auto selectionRestoreHook = [this, lineNumber]() {
+        restorePointSelection(lineNumber);
+        if (context_.callbackContext != nullptr) {
+            QTimer::singleShot(0,
+                               context_.callbackContext,
+                               [restorePointSelectionLater = context_.restorePointSelectionLater, lineNumber]() {
+                restorePointSelectionLater(lineNumber);
+            });
+            return;
+        }
+        context_.restorePointSelectionLater(lineNumber);
+    };
+    sourceTransactionController(context_).applyChangeWithSnapshot(
+        sourceTransactionRequest(context_,
+                                 tr("Edit Point Orientation"),
+                                 beforeText,
+                                 afterText,
+                                 lineNumber,
+                                 TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                 std::move(selectionRestoreHook)));
     (*context_.toolbarStatusNote) = tr("Updated point orientation to %1 degrees.")
         .arg(QString::number(normalizeOrientationDegreesForMapDetails(orientationDegrees), 'f', 1));
     context_.refreshToolbarSummary();
@@ -784,15 +803,28 @@ void MapEditorCanvasEditController::recordLinePointLeftHandleChange(int lineNumb
         return;
     }
 
-    applySourceTextChangeWithSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
-    restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
-    QTimer::singleShot(0,
-                       context_.callbackContext,
-                       [restoreLineAnchorSelectionLater = context_.restoreLineAnchorSelectionLater,
-                        lineNumber,
-                        sourceVertexIndex]() {
-        restoreLineAnchorSelectionLater(lineNumber, sourceVertexIndex);
-    });
+    auto selectionRestoreHook = [this, lineNumber, sourceVertexIndex]() {
+        restoreLineAnchorSelection(lineNumber, sourceVertexIndex);
+        if (context_.callbackContext != nullptr) {
+            QTimer::singleShot(0,
+                               context_.callbackContext,
+                               [restoreLineAnchorSelectionLater = context_.restoreLineAnchorSelectionLater,
+                                lineNumber,
+                                sourceVertexIndex]() {
+                restoreLineAnchorSelectionLater(lineNumber, sourceVertexIndex);
+            });
+            return;
+        }
+        context_.restoreLineAnchorSelectionLater(lineNumber, sourceVertexIndex);
+    };
+    sourceTransactionController(context_).applyChangeWithSnapshot(
+        sourceTransactionRequest(context_,
+                                 tr("Edit Line Point Options"),
+                                 beforeText,
+                                 afterText,
+                                 lineNumber,
+                                 TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                 std::move(selectionRestoreHook)));
     (*context_.toolbarStatusNote) = tr("Updated line point orientation %1 deg and l-size %2.")
         .arg(QString::number(orientationDegrees, 'f', 1),
              QString::number(leftSize, 'f', 1));

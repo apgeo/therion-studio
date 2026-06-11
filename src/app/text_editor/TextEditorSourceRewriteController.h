@@ -57,27 +57,6 @@ public:
                                  QString *errorMessage = nullptr,
                                  const TherionDraftObjectOptions &objectOptions = {},
                                  const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
-    bool rewriteLineOptionToggle(int lineNumber,
-                                 const QString &optionName,
-                                 bool enabled,
-                                 QString *errorMessage = nullptr);
-    bool rewritePointOrientation(int lineNumber,
-                                 bool enabled,
-                                 qreal orientationDegrees,
-                                 QString *errorMessage = nullptr);
-    bool rewriteLinePointOrientation(int lineNumber,
-                                     int sourceVertexIndex,
-                                     bool enabled,
-                                     qreal orientationDegrees,
-                                     QString *errorMessage = nullptr);
-    bool rewriteLinePointLeftSize(int lineNumber,
-                                  int sourceVertexIndex,
-                                  bool enabled,
-                                  qreal sizeValue,
-                                  QString *errorMessage = nullptr);
-    bool rewriteLineCoordinateRows(int lineNumber,
-                                   const QStringList &coordinateRows,
-                                   QString *errorMessage = nullptr);
     void applySourceTextEditsForCommandWithUndo(QVector<TherionSourceTextEdit> edits);
     void replaceTextForCommand(const QString &contents);
     void replaceTextForCommandWithUndo(const QString &contents);

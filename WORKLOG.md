@@ -43,7 +43,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Next Up
 
-- P1: Continue the unified transaction model by reducing remaining draft/option/line-row `TextEditorTab` source rewrite delegates toward source-edit transaction requests, while keeping focused undo/redo and range-preservation tests in place.
+- P1: Continue the unified transaction model by reducing remaining draft/scrap `TextEditorTab` source insertion delegates toward source-edit transaction requests, while keeping focused undo/redo and range-preservation tests in place.
 - P1: Keep `WORKLOG.md` trimmed after each completed slice so active work does not become completed-history notes.
 
 ## Risks / Blockers

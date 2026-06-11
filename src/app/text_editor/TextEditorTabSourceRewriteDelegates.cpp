@@ -65,60 +65,6 @@ bool TextEditorTab::insertDraftAreaGeometry(const QStringList &coordinateRows,
                                                              initialAreaAdjustRect);
 }
 
-bool TextEditorTab::rewriteLineOptionToggle(int lineNumber,
-                                            const QString &optionName,
-                                            bool enabled,
-                                            QString *errorMessage)
-{
-    return sourceRewriteController_ != nullptr
-        && sourceRewriteController_->rewriteLineOptionToggle(lineNumber, optionName, enabled, errorMessage);
-}
-
-bool TextEditorTab::rewritePointOrientation(int lineNumber,
-                                            bool enabled,
-                                            qreal orientationDegrees,
-                                            QString *errorMessage)
-{
-    return sourceRewriteController_ != nullptr
-        && sourceRewriteController_->rewritePointOrientation(lineNumber, enabled, orientationDegrees, errorMessage);
-}
-
-bool TextEditorTab::rewriteLinePointOrientation(int lineNumber,
-                                                int sourceVertexIndex,
-                                                bool enabled,
-                                                qreal orientationDegrees,
-                                                QString *errorMessage)
-{
-    return sourceRewriteController_ != nullptr
-        && sourceRewriteController_->rewriteLinePointOrientation(lineNumber,
-                                                                 sourceVertexIndex,
-                                                                 enabled,
-                                                                 orientationDegrees,
-                                                                 errorMessage);
-}
-
-bool TextEditorTab::rewriteLinePointLeftSize(int lineNumber,
-                                             int sourceVertexIndex,
-                                             bool enabled,
-                                             qreal sizeValue,
-                                             QString *errorMessage)
-{
-    return sourceRewriteController_ != nullptr
-        && sourceRewriteController_->rewriteLinePointLeftSize(lineNumber,
-                                                              sourceVertexIndex,
-                                                              enabled,
-                                                              sizeValue,
-                                                              errorMessage);
-}
-
-bool TextEditorTab::rewriteLineCoordinateRows(int lineNumber,
-                                              const QStringList &coordinateRows,
-                                              QString *errorMessage)
-{
-    return sourceRewriteController_ != nullptr
-        && sourceRewriteController_->rewriteLineCoordinateRows(lineNumber, coordinateRows, errorMessage);
-}
-
 bool TextEditorTab::configureCommandAtLine(const QString &kind, int lineNumber, bool showCommandHelpOnly)
 {
     if (lineNumber <= 0 || editor_ == nullptr) {

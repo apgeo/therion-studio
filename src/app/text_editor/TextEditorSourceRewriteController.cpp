@@ -13,6 +13,16 @@
 
 namespace TherionStudio
 {
+namespace
+{
+QString staleSourceTransactionMessage(const TextEditorSourceTransactionRequest &request)
+{
+    return request.staleStatusMessage.isEmpty()
+        ? QStringLiteral("Source transaction skipped: document changed.")
+        : request.staleStatusMessage;
+}
+}
+
 TextEditorSourceRewriteController::TextEditorSourceRewriteController(TextEditorSourceRewriteContext context)
     : context_(std::move(context))
 {
@@ -34,6 +44,68 @@ bool TextEditorSourceRewriteController::rewriteStructureEntryName(int lineNumber
     }
 
     applyTextEditsPreservingCursor(edits, false, false, true, false);
+    return true;
+}
+
+bool TextEditorSourceRewriteController::applyTransactionRequestWithEditorUndo(const TextEditorSourceTransactionRequest &request,
+                                                                               QString *statusMessage)
+{
+    if (context_.editor == nullptr) {
+        return false;
+    }
+
+    const QString currentText = context_.editor->toPlainText();
+    if (request.expectedSourceRevision > 0) {
+        QTextDocument *document = context_.editor->document();
+        if (document == nullptr || document->revision() != request.expectedSourceRevision) {
+            if (statusMessage != nullptr) {
+                *statusMessage = staleSourceTransactionMessage(request);
+            }
+            return false;
+        }
+    }
+    if (currentText != request.beforeText) {
+        if (statusMessage != nullptr) {
+            *statusMessage = staleSourceTransactionMessage(request);
+        }
+        return false;
+    }
+
+    QString afterText = request.afterText;
+    if (!request.sourceEdits.isEmpty()) {
+        afterText = request.beforeText;
+        if (!TherionDocumentEditor::applySourceTextEdits(&afterText, request.sourceEdits)) {
+            return false;
+        }
+    }
+    if (afterText == request.beforeText) {
+        return false;
+    }
+
+    const bool rebuildBlocksCanvas = request.projectionInvalidationPolicy
+        != TextEditorSourceProjectionInvalidationPolicy::None;
+    if (!request.sourceEdits.isEmpty()) {
+        applyTextEditsPreservingCursor(request.sourceEdits,
+                                       true,
+                                       rebuildBlocksCanvas,
+                                       true,
+                                       true);
+    } else {
+        replaceTextPreservingCursor(afterText,
+                                    true,
+                                    rebuildBlocksCanvas,
+                                    true,
+                                    true);
+    }
+
+    if (request.projectionInvalidationPolicy == TextEditorSourceProjectionInvalidationPolicy::CustomHook
+        && request.projectionInvalidationHook) {
+        request.projectionInvalidationHook();
+    }
+    if (request.selectionRestorePolicy == TextEditorSourceSelectionRestorePolicy::CustomHook
+        && request.selectionRestoreHook) {
+        request.selectionRestoreHook();
+    }
     return true;
 }
 

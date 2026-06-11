@@ -42,6 +42,7 @@ bool TextEditorTab::applyValidationFixes(const QVector<TherionSourceDiagnosticFi
     }
 
     const QString beforeText = editor_->toPlainText();
+    const int expectedRevision = documentRevision();
     const QVector<TherionSourceTextEdit> edits = TherionSourceValidator::validationFixEdits(beforeText, fixes);
     if (edits.isEmpty()) {
         return false;
@@ -55,7 +56,12 @@ bool TextEditorTab::applyValidationFixes(const QVector<TherionSourceDiagnosticFi
         return false;
     }
 
-    sourceRewriteController_->applySourceTextEditsForCommandWithUndo(edits);
-    return true;
+    TextEditorSourceTransactionRequest request;
+    request.label = tr("Apply Validation Fixes");
+    request.beforeText = beforeText;
+    request.sourceEdits = edits;
+    request.expectedSourceRevision = expectedRevision;
+    request.staleStatusMessage = tr("Validation fixes skipped: document changed.");
+    return sourceRewriteController_->applyTransactionRequestWithEditorUndo(request);
 }
 }

@@ -11,6 +11,7 @@
 #include <optional>
 
 #include "../../core/TherionDocumentEditor.h"
+#include "TextEditorSourceTransactionController.h"
 
 class QPlainTextEdit;
 
@@ -36,6 +37,8 @@ public:
                                    const QString &category,
                                    const QString &newName,
                                    QString *errorMessage = nullptr);
+    bool applyTransactionRequestWithEditorUndo(const TextEditorSourceTransactionRequest &request,
+                                               QString *statusMessage = nullptr);
     void applySourceTextEditsForCommandWithUndo(QVector<TherionSourceTextEdit> edits);
     void replaceTextForCommand(const QString &contents);
     void replaceTextForCommandWithUndo(const QString &contents);

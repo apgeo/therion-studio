@@ -31,6 +31,17 @@ QString insertedScrapIdentifier(const QString &text, int lineNumber, const QStri
     }
     return fallback;
 }
+
+QString plannerSourceWithAreaAdjust(const QString &beforeText, const std::optional<QRectF> &initialAreaAdjustRect)
+{
+    QString plannerSource = beforeText;
+    if (initialAreaAdjustRect.has_value()
+        && initialAreaAdjustRect->isValid()
+        && !parseTherionAreaAdjust(plannerSource).valid) {
+        plannerSource = upsertTherionAreaAdjustMetadata(plannerSource, *initialAreaAdjustRect);
+    }
+    return plannerSource;
+}
 }
 
 void MapEditorTab::handleAddPointTriggered()
@@ -121,22 +132,33 @@ void MapEditorTab::handleInsertScrapTriggered()
     int insertedLineNumber = 0;
     const QString beforeText = textEditor_->text();
     const QString scrapIdentifier;
-    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
     const QString scrapScaleOption = xtherionDefaultScrapScaleOption(mapSourceBoundsForCurrentDocument());
-    if (!textEditor_->insertScrapBlock(scrapIdentifier,
-                                       &insertedLineNumber,
-                                       &errorMessage,
-                                       pendingScrapOptions(scrapScaleOption))) {
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::appendScrapBlockEdits(beforeText,
+                                                      scrapIdentifier,
+                                                      &sourceEdits,
+                                                      &insertedLineNumber,
+                                                      &errorMessage,
+                                                      pendingScrapOptions(scrapScaleOption))) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Insert Scrap failed.")
             : tr("Insert Scrap failed: %1").arg(errorMessage);
         refreshToolbarSummary();
         return;
     }
-    const QString afterText = textEditor_->text();
+
+    QString afterText = beforeText;
+    if (!TherionDocumentEditor::applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Insert Scrap failed.")
+            : tr("Insert Scrap failed: %1").arg(errorMessage);
+        refreshToolbarSummary();
+        return;
+    }
+
     const QString createdScrapIdentifier = insertedScrapIdentifier(afterText, insertedLineNumber, scrapIdentifier);
     clearPendingInsertObject();
-    recordSourceTextSnapshot(tr("Insert Scrap"), beforeText, afterText, insertedLineNumber);
+    applySourceTextChangeWithSnapshot(tr("Insert Scrap"), beforeText, afterText, insertedLineNumber);
 
     toolbarStatusNote_ = insertedLineNumber > 0
         ? tr("Created scrap \"%1\" at source line %2.").arg(createdScrapIdentifier, QString::number(insertedLineNumber))
@@ -192,21 +214,33 @@ void MapEditorTab::handleCompleteDraftTriggered()
     QString errorMessage;
     int insertedLineNumber = 0;
     const QString beforeText = textEditor_->text();
-    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
-    if (!textEditor_->insertDraftGeometry(geometryKind,
-                                          vertices,
-                                          &insertedLineNumber,
-                                          &errorMessage,
-                                          pendingDraftObjectOptions(geometryKind),
-                                          initialAreaAdjustRectForDraftInsertion())) {
+    const QString plannerSource = plannerSourceWithAreaAdjust(beforeText, initialAreaAdjustRectForDraftInsertion());
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::appendDraftGeometryEdits(plannerSource,
+                                                         geometryKind,
+                                                         vertices,
+                                                         &sourceEdits,
+                                                         &insertedLineNumber,
+                                                         &errorMessage,
+                                                         pendingDraftObjectOptions(geometryKind))) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Complete Draft failed.")
             : tr("Complete Draft failed: %1").arg(errorMessage);
         refreshToolbarSummary();
         return;
     }
+
+    QString afterText = plannerSource;
+    if (!TherionDocumentEditor::applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Complete Draft failed.")
+            : tr("Complete Draft failed: %1").arg(errorMessage);
+        refreshToolbarSummary();
+        return;
+    }
+
     const QString geometryLabel = draftGeometryLabel(draftItem->kind());
-    recordDraftCompletion(draftRectItem, tr("Complete Draft"), beforeText, textEditor_->text(), insertedLineNumber);
+    recordDraftCompletion(draftRectItem, tr("Complete Draft"), beforeText, afterText, insertedLineNumber);
     toolbarStatusNote_ = insertedLineNumber > 0
         ? tr("Complete Draft wrote %1 geometry at source line %2.").arg(geometryLabel, QString::number(insertedLineNumber))
         : tr("Complete Draft wrote %1 geometry to source.").arg(geometryLabel);

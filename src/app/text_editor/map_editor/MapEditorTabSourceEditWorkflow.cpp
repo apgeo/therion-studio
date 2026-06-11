@@ -8,11 +8,24 @@
 #include <QGraphicsPathItem>
 #include <QGraphicsScene>
 #include <QPainterPath>
-#include <QScopedValueRollback>
 #include <cmath>
 
 namespace TherionStudio
 {
+namespace
+{
+QString plannerSourceWithAreaAdjust(const QString &beforeText, const std::optional<QRectF> &initialAreaAdjustRect)
+{
+    QString plannerSource = beforeText;
+    if (initialAreaAdjustRect.has_value()
+        && initialAreaAdjustRect->isValid()
+        && !parseTherionAreaAdjust(plannerSource).valid) {
+        plannerSource = upsertTherionAreaAdjustMetadata(plannerSource, *initialAreaAdjustRect);
+    }
+    return plannerSource;
+}
+}
+
 QVector<TherionParsedLine> MapEditorTab::parsedLinesForCurrentDocument() const
 {
     if (textEditor_ == nullptr) {
@@ -172,28 +185,40 @@ bool MapEditorTab::commitInteractiveDrawVertices(const QString &geometryKind,
     QString errorMessage;
     int insertedLineNumber = 0;
     const QString beforeText = textEditor_->text();
-    const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
-    const bool inserted = geometryKind.trimmed().compare(QStringLiteral("line"), Qt::CaseInsensitive) == 0
-        ? textEditor_->insertDraftLineGeometry(bezierLineCoordinateRowsForFreehandStroke(vertices),
-                                               &insertedLineNumber,
-                                               &errorMessage,
-                                               QString(),
-                                               pendingDraftObjectOptions(QStringLiteral("line")),
-                                               initialAreaAdjustRectForDraftInsertion())
-        : textEditor_->insertDraftGeometry(geometryKind,
-                                           vertices,
-                                           &insertedLineNumber,
-                                           &errorMessage,
-                                           pendingDraftObjectOptions(geometryKind),
-                                           initialAreaAdjustRectForDraftInsertion());
-    if (!inserted) {
+    const bool lineGeometry = geometryKind.trimmed().compare(QStringLiteral("line"), Qt::CaseInsensitive) == 0;
+    const QString plannerSource = plannerSourceWithAreaAdjust(beforeText, initialAreaAdjustRectForDraftInsertion());
+    QVector<TherionSourceTextEdit> sourceEdits;
+    const bool planned = lineGeometry
+        ? TherionDocumentEditor::appendDraftLineGeometryEdits(plannerSource,
+                                                              bezierLineCoordinateRowsForFreehandStroke(vertices),
+                                                              &sourceEdits,
+                                                              &insertedLineNumber,
+                                                              &errorMessage,
+                                                              QString(),
+                                                              pendingDraftObjectOptions(QStringLiteral("line")))
+        : TherionDocumentEditor::appendDraftGeometryEdits(plannerSource,
+                                                          geometryKind,
+                                                          vertices,
+                                                          &sourceEdits,
+                                                          &insertedLineNumber,
+                                                          &errorMessage,
+                                                          pendingDraftObjectOptions(geometryKind));
+    if (!planned) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Complete Draft failed.")
             : tr("Complete Draft failed: %1").arg(errorMessage);
         return false;
     }
-    recordSourceTextSnapshot(tr("Complete Draft"), beforeText, textEditor_->text(), insertedLineNumber);
 
+    QString afterText = plannerSource;
+    if (!TherionDocumentEditor::applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
+        toolbarStatusNote_ = errorMessage.isEmpty()
+            ? tr("Complete Draft failed.")
+            : tr("Complete Draft failed: %1").arg(errorMessage);
+        return false;
+    }
+
+    applySourceTextChangeWithSnapshot(tr("Complete Draft"), beforeText, afterText, insertedLineNumber);
     toolbarStatusNote_ = insertedLineNumber > 0
         ? tr("Complete Draft wrote %1 geometry at source line %2.").arg(successLabel, QString::number(insertedLineNumber))
         : tr("Complete Draft wrote %1 geometry to source.").arg(successLabel);

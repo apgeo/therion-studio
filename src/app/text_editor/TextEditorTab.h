@@ -134,27 +134,6 @@ public:
     bool replaceCurrent();
     int replaceAll();
     bool rewriteStructureEntryName(int lineNumber, const QString &category, const QString &newName, QString *errorMessage = nullptr);
-    bool insertScrapBlock(const QString &preferredName = QString(),
-                          int *insertedLineNumber = nullptr,
-                          QString *errorMessage = nullptr,
-                          const QString &options = QString());
-    bool insertDraftGeometry(const QString &kind,
-                             const QVector<QPointF> &vertices,
-                             int *insertedLineNumber = nullptr,
-                             QString *errorMessage = nullptr,
-                             const TherionDraftObjectOptions &objectOptions = {},
-                             const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
-    bool insertDraftLineGeometry(const QStringList &coordinateRows,
-                                 int *insertedLineNumber = nullptr,
-                                 QString *errorMessage = nullptr,
-                                 const QString &lineOptions = QString(),
-                                 const TherionDraftObjectOptions &objectOptions = {},
-                                 const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
-    bool insertDraftAreaGeometry(const QStringList &coordinateRows,
-                                 int *insertedLineNumber = nullptr,
-                                 QString *errorMessage = nullptr,
-                                 const TherionDraftObjectOptions &objectOptions = {},
-                                 const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
     bool configureCommandAtLine(const QString &kind, int lineNumber, bool showCommandHelpOnly = false);
     bool deleteCommandAtLine(int lineNumber);
     void replaceTextForCommand(const QString &contents);

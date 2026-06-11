@@ -36,27 +36,6 @@ public:
                                    const QString &category,
                                    const QString &newName,
                                    QString *errorMessage = nullptr);
-    bool insertScrapBlock(const QString &preferredName = QString(),
-                          int *insertedLineNumber = nullptr,
-                          QString *errorMessage = nullptr,
-                          const QString &options = QString());
-    bool insertDraftGeometry(const QString &kind,
-                             const QVector<QPointF> &vertices,
-                             int *insertedLineNumber = nullptr,
-                             QString *errorMessage = nullptr,
-                             const TherionDraftObjectOptions &objectOptions = {},
-                             const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
-    bool insertDraftLineGeometry(const QStringList &coordinateRows,
-                                 int *insertedLineNumber = nullptr,
-                                 QString *errorMessage = nullptr,
-                                 const QString &lineOptions = QString(),
-                                 const TherionDraftObjectOptions &objectOptions = {},
-                                 const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
-    bool insertDraftAreaGeometry(const QStringList &coordinateRows,
-                                 int *insertedLineNumber = nullptr,
-                                 QString *errorMessage = nullptr,
-                                 const TherionDraftObjectOptions &objectOptions = {},
-                                 const std::optional<QRectF> &initialAreaAdjustRect = std::nullopt);
     void applySourceTextEditsForCommandWithUndo(QVector<TherionSourceTextEdit> edits);
     void replaceTextForCommand(const QString &contents);
     void replaceTextForCommandWithUndo(const QString &contents);

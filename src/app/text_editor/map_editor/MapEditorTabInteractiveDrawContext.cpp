@@ -87,6 +87,12 @@ MapEditorInteractiveDrawContext MapEditorTab::interactiveDrawContext()
         .sourcePointFromScenePosition = [this](const QPointF &scenePosition) {
             return sourcePointFromScenePosition(scenePosition);
         },
+        .applySourceTextChangeWithSnapshot = [this](const QString &label,
+                                                    const QString &beforeText,
+                                                    const QString &afterText,
+                                                    int insertedLineNumber) {
+            applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
+        },
         .recordSourceTextSnapshot = [this](const QString &label,
                                            const QString &beforeText,
                                            const QString &afterText,

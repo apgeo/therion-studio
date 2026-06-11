@@ -4,6 +4,7 @@
 
 #include "../TextEditorTab.h"
 #include "MapEditorSceneSupport.h"
+#include "../../../core/TherionBackgroundMetadata.h"
 
 #include <QBrush>
 #include <QColor>
@@ -22,6 +23,153 @@
 
 namespace TherionStudio
 {
+namespace
+{
+std::optional<QRectF> draftInitialAreaAdjustRect(const MapEditorInteractiveDrawContext &context)
+{
+    return context.initialAreaAdjustRectForDraftInsertion
+        ? context.initialAreaAdjustRectForDraftInsertion()
+        : std::optional<QRectF>{};
+}
+
+TherionDraftObjectOptions draftObjectOptionsFor(const MapEditorInteractiveDrawContext &context, const QString &commandKind)
+{
+    return context.draftObjectOptions
+        ? context.draftObjectOptions(commandKind)
+        : TherionDraftObjectOptions{};
+}
+
+QString plannerSourceWithAreaAdjust(const QString &beforeText, const std::optional<QRectF> &initialAreaAdjustRect)
+{
+    QString plannerSource = beforeText;
+    if (initialAreaAdjustRect.has_value()
+        && initialAreaAdjustRect->isValid()
+        && !parseTherionAreaAdjust(plannerSource).valid) {
+        plannerSource = upsertTherionAreaAdjustMetadata(plannerSource, *initialAreaAdjustRect);
+    }
+    return plannerSource;
+}
+
+bool planPointInsert(const QString &beforeText,
+                     const QPointF &sourcePoint,
+                     const TherionDraftObjectOptions &objectOptions,
+                     const std::optional<QRectF> &initialAreaAdjustRect,
+                     QString *afterText,
+                     int *insertedLineNumber,
+                     QString *errorMessage)
+{
+    const QString plannerSource = plannerSourceWithAreaAdjust(beforeText, initialAreaAdjustRect);
+    QVector<TherionSourceTextEdit> sourceEdits;
+    int resolvedLineNumber = 0;
+    if (!TherionDocumentEditor::appendDraftGeometryEdits(plannerSource,
+                                                          QStringLiteral("point"),
+                                                          {sourcePoint},
+                                                          &sourceEdits,
+                                                          &resolvedLineNumber,
+                                                          errorMessage,
+                                                          objectOptions)) {
+        return false;
+    }
+
+    QString resolvedAfterText = plannerSource;
+    if (!TherionDocumentEditor::applySourceTextEdits(&resolvedAfterText, sourceEdits, errorMessage)) {
+        return false;
+    }
+
+    if (afterText != nullptr) {
+        *afterText = resolvedAfterText;
+    }
+    if (insertedLineNumber != nullptr) {
+        *insertedLineNumber = resolvedLineNumber;
+    }
+    return true;
+}
+
+bool planLineInsert(const QString &beforeText,
+                    const QStringList &coordinateRows,
+                    const QString &lineOptions,
+                    const TherionDraftObjectOptions &objectOptions,
+                    const std::optional<QRectF> &initialAreaAdjustRect,
+                    QString *afterText,
+                    int *insertedLineNumber,
+                    QString *errorMessage)
+{
+    const QString plannerSource = plannerSourceWithAreaAdjust(beforeText, initialAreaAdjustRect);
+    QVector<TherionSourceTextEdit> sourceEdits;
+    int resolvedLineNumber = 0;
+    if (!TherionDocumentEditor::appendDraftLineGeometryEdits(plannerSource,
+                                                              coordinateRows,
+                                                              &sourceEdits,
+                                                              &resolvedLineNumber,
+                                                              errorMessage,
+                                                              lineOptions,
+                                                              objectOptions)) {
+        return false;
+    }
+
+    QString resolvedAfterText = plannerSource;
+    if (!TherionDocumentEditor::applySourceTextEdits(&resolvedAfterText, sourceEdits, errorMessage)) {
+        return false;
+    }
+
+    if (afterText != nullptr) {
+        *afterText = resolvedAfterText;
+    }
+    if (insertedLineNumber != nullptr) {
+        *insertedLineNumber = resolvedLineNumber;
+    }
+    return true;
+}
+
+bool planAreaInsert(const QString &beforeText,
+                    const QStringList &coordinateRows,
+                    const TherionDraftObjectOptions &objectOptions,
+                    const std::optional<QRectF> &initialAreaAdjustRect,
+                    QString *afterText,
+                    int *insertedLineNumber,
+                    QString *errorMessage)
+{
+    const QString plannerSource = plannerSourceWithAreaAdjust(beforeText, initialAreaAdjustRect);
+    QVector<TherionSourceTextEdit> sourceEdits;
+    int resolvedLineNumber = 0;
+    if (!TherionDocumentEditor::appendDraftAreaGeometryEdits(plannerSource,
+                                                              coordinateRows,
+                                                              &sourceEdits,
+                                                              &resolvedLineNumber,
+                                                              errorMessage,
+                                                              objectOptions)) {
+        return false;
+    }
+
+    QString resolvedAfterText = plannerSource;
+    if (!TherionDocumentEditor::applySourceTextEdits(&resolvedAfterText, sourceEdits, errorMessage)) {
+        return false;
+    }
+
+    if (afterText != nullptr) {
+        *afterText = resolvedAfterText;
+    }
+    if (insertedLineNumber != nullptr) {
+        *insertedLineNumber = resolvedLineNumber;
+    }
+    return true;
+}
+
+bool applyInsertWithSnapshot(const MapEditorInteractiveDrawContext &context,
+                             const QString &label,
+                             const QString &beforeText,
+                             const QString &afterText,
+                             int insertedLineNumber)
+{
+    if (!context.applySourceTextChangeWithSnapshot) {
+        return false;
+    }
+
+    context.applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
+    return true;
+}
+}
+
 QString MapEditorInteractiveDrawController::tr(const char *text) const
 {
     return QCoreApplication::translate("TherionStudio::MapEditorInteractiveDrawController", text);
@@ -71,28 +219,26 @@ bool MapEditorInteractiveDrawController::handleInteractiveDrawClick(const QPoint
     if (mode() == MapEditorInteractiveDrawMode::Point) {
         QString errorMessage;
         int insertedLineNumber = 0;
-        const QVector<QPointF> vertices{context_.sourcePointFromScenePosition(scenePosition)};
         const QString beforeText = context_.textEditor->text();
-        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-        const TherionDraftObjectOptions objectOptions = context_.draftObjectOptions
-            ? context_.draftObjectOptions(QStringLiteral("point"))
-            : TherionDraftObjectOptions{};
-        if (!context_.textEditor->insertDraftGeometry(QStringLiteral("point"),
-                                                      vertices,
-                                                      &insertedLineNumber,
-                                                      &errorMessage,
-                                                      objectOptions,
-                                                      context_.initialAreaAdjustRectForDraftInsertion
-                                                          ? context_.initialAreaAdjustRectForDraftInsertion()
-                                                          : std::optional<QRectF>{})) {
+        QString afterText;
+        if (!planPointInsert(beforeText,
+                             context_.sourcePointFromScenePosition(scenePosition),
+                             draftObjectOptionsFor(context_, QStringLiteral("point")),
+                             draftInitialAreaAdjustRect(context_),
+                             &afterText,
+                             &insertedLineNumber,
+                             &errorMessage)) {
             (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                 ? tr("Point insert failed.")
                 : tr("Point insert failed: %1").arg(errorMessage);
         } else {
-            context_.recordSourceTextSnapshot(tr("Insert Point"), beforeText, context_.textEditor->text(), insertedLineNumber);
-            (*context_.toolbarStatusNote) = insertedLineNumber > 0
-                ? tr("Inserted point at source line %1.").arg(insertedLineNumber)
-                : tr("Inserted point.");
+            if (!applyInsertWithSnapshot(context_, tr("Insert Point"), beforeText, afterText, insertedLineNumber)) {
+                (*context_.toolbarStatusNote) = tr("Point insert failed: source transaction callback is unavailable.");
+            } else {
+                (*context_.toolbarStatusNote) = insertedLineNumber > 0
+                    ? tr("Inserted point at source line %1.").arg(insertedLineNumber)
+                    : tr("Inserted point.");
+            }
         }
         context_.refreshToolbarSummary();
         return true;
@@ -169,25 +315,26 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
             : context_.lineCoordinateRowsForInteractiveDraft();
         const QString lineOptions = closeLineDraft ? QStringLiteral("-close on") : QString();
         const QString beforeText = context_.textEditor->text();
-        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-        const TherionDraftObjectOptions objectOptions = context_.draftObjectOptions
-            ? context_.draftObjectOptions(QStringLiteral("line"))
-            : TherionDraftObjectOptions{};
-        if (!context_.textEditor->insertDraftLineGeometry(coordinateRows,
-                                                          &insertedLineNumber,
-                                                          &errorMessage,
-                                                          lineOptions,
-                                                          objectOptions,
-                                                          context_.initialAreaAdjustRectForDraftInsertion
-                                                              ? context_.initialAreaAdjustRectForDraftInsertion()
-                                                              : std::optional<QRectF>{})) {
+        QString afterText;
+        if (!planLineInsert(beforeText,
+                            coordinateRows,
+                            lineOptions,
+                            draftObjectOptionsFor(context_, QStringLiteral("line")),
+                            draftInitialAreaAdjustRect(context_),
+                            &afterText,
+                            &insertedLineNumber,
+                            &errorMessage)) {
             (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                 ? tr("Complete Draft failed.")
                 : tr("Complete Draft failed: %1").arg(errorMessage);
             context_.refreshToolbarSummary();
             return true;
         }
-        context_.recordSourceTextSnapshot(tr("Insert Line"), beforeText, context_.textEditor->text(), insertedLineNumber);
+        if (!applyInsertWithSnapshot(context_, tr("Insert Line"), beforeText, afterText, insertedLineNumber)) {
+            (*context_.toolbarStatusNote) = tr("Complete Draft failed: source transaction callback is unavailable.");
+            context_.refreshToolbarSummary();
+            return true;
+        }
         (*context_.toolbarStatusNote) = insertedLineNumber > 0
             ? tr("Complete Draft wrote line geometry at source line %1.").arg(insertedLineNumber)
             : tr("Complete Draft wrote line geometry to source.");
@@ -195,24 +342,25 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
         QString errorMessage;
         int insertedLineNumber = 0;
         const QString beforeText = context_.textEditor->text();
-        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-        const TherionDraftObjectOptions objectOptions = context_.draftObjectOptions
-            ? context_.draftObjectOptions(QStringLiteral("area"))
-            : TherionDraftObjectOptions{};
-        if (!context_.textEditor->insertDraftAreaGeometry(context_.areaCoordinateRowsForInteractiveDraft(),
-                                                  &insertedLineNumber,
-                                                  &errorMessage,
-                                                  objectOptions,
-                                                  context_.initialAreaAdjustRectForDraftInsertion
-                                                      ? context_.initialAreaAdjustRectForDraftInsertion()
-                                                      : std::optional<QRectF>{})) {
+        QString afterText;
+        if (!planAreaInsert(beforeText,
+                            context_.areaCoordinateRowsForInteractiveDraft(),
+                            draftObjectOptionsFor(context_, QStringLiteral("area")),
+                            draftInitialAreaAdjustRect(context_),
+                            &afterText,
+                            &insertedLineNumber,
+                            &errorMessage)) {
             (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                 ? tr("Complete Draft failed.")
                 : tr("Complete Draft failed: %1").arg(errorMessage);
             context_.refreshToolbarSummary();
             return true;
         }
-        context_.recordSourceTextSnapshot(tr("Insert Area"), beforeText, context_.textEditor->text(), insertedLineNumber);
+        if (!applyInsertWithSnapshot(context_, tr("Insert Area"), beforeText, afterText, insertedLineNumber)) {
+            (*context_.toolbarStatusNote) = tr("Complete Draft failed: source transaction callback is unavailable.");
+            context_.refreshToolbarSummary();
+            return true;
+        }
         (*context_.toolbarStatusNote) = insertedLineNumber > 0
             ? tr("Complete Draft wrote area geometry at source line %1.").arg(insertedLineNumber)
             : tr("Complete Draft wrote area geometry to source.");
@@ -634,18 +782,15 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
             QString errorMessage;
             int insertedLineNumber = 0;
             const QString beforeText = context_.textEditor->text();
-            const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-            const TherionDraftObjectOptions objectOptions = context_.draftObjectOptions
-                ? context_.draftObjectOptions(QStringLiteral("line"))
-                : TherionDraftObjectOptions{};
-            if (!context_.textEditor->insertDraftLineGeometry(context_.lineCoordinateRowsForInteractiveDraft(),
-                                                      &insertedLineNumber,
-                                                      &errorMessage,
-                                                      QString(),
-                                                      objectOptions,
-                                                      context_.initialAreaAdjustRectForDraftInsertion
-                                                          ? context_.initialAreaAdjustRectForDraftInsertion()
-                                                          : std::optional<QRectF>{})) {
+            QString afterText;
+            if (!planLineInsert(beforeText,
+                                context_.lineCoordinateRowsForInteractiveDraft(),
+                                QString(),
+                                draftObjectOptionsFor(context_, QStringLiteral("line")),
+                                draftInitialAreaAdjustRect(context_),
+                                &afterText,
+                                &insertedLineNumber,
+                                &errorMessage)) {
                 (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                     ? tr("Complete Draft failed.")
                     : tr("Complete Draft failed: %1").arg(errorMessage);
@@ -654,22 +799,25 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
                 context_.updateHelpPanel();
                 return false;
             }
-            context_.recordSourceTextSnapshot(tr("Insert Line"), beforeText, context_.textEditor->text(), insertedLineNumber);
+            if (!applyInsertWithSnapshot(context_, tr("Insert Line"), beforeText, afterText, insertedLineNumber)) {
+                (*context_.toolbarStatusNote) = tr("Complete Draft failed: source transaction callback is unavailable.");
+                context_.refreshToolbarSummary();
+                context_.updateCommandSurfaceState();
+                context_.updateHelpPanel();
+                return false;
+            }
         } else {
             QString errorMessage;
             int insertedLineNumber = 0;
             const QString beforeText = context_.textEditor->text();
-            const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-            const TherionDraftObjectOptions objectOptions = context_.draftObjectOptions
-                ? context_.draftObjectOptions(QStringLiteral("area"))
-                : TherionDraftObjectOptions{};
-            if (!context_.textEditor->insertDraftAreaGeometry(context_.areaCoordinateRowsForInteractiveDraft(),
-                                                      &insertedLineNumber,
-                                                      &errorMessage,
-                                                      objectOptions,
-                                                      context_.initialAreaAdjustRectForDraftInsertion
-                                                          ? context_.initialAreaAdjustRectForDraftInsertion()
-                                                          : std::optional<QRectF>{})) {
+            QString afterText;
+            if (!planAreaInsert(beforeText,
+                                context_.areaCoordinateRowsForInteractiveDraft(),
+                                draftObjectOptionsFor(context_, QStringLiteral("area")),
+                                draftInitialAreaAdjustRect(context_),
+                                &afterText,
+                                &insertedLineNumber,
+                                &errorMessage)) {
                 (*context_.toolbarStatusNote) = errorMessage.isEmpty()
                     ? tr("Complete Draft failed.")
                     : tr("Complete Draft failed: %1").arg(errorMessage);
@@ -678,7 +826,13 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
                 context_.updateHelpPanel();
                 return false;
             }
-            context_.recordSourceTextSnapshot(tr("Insert Area"), beforeText, context_.textEditor->text(), insertedLineNumber);
+            if (!applyInsertWithSnapshot(context_, tr("Insert Area"), beforeText, afterText, insertedLineNumber)) {
+                (*context_.toolbarStatusNote) = tr("Complete Draft failed: source transaction callback is unavailable.");
+                context_.refreshToolbarSummary();
+                context_.updateCommandSurfaceState();
+                context_.updateHelpPanel();
+                return false;
+            }
         }
         committedLineOrAreaDraft = true;
     }

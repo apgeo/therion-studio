@@ -2404,8 +2404,22 @@ void MapEditorTab::syncBackgroundLayerXtherionMetadata(QGraphicsPixmapItem *item
         return;
     }
 
+    bool metadataApplied = false;
     const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
-    applySourceTextChangeWithSnapshot(label, beforeText, afterText, 0);
+    applySourceTextChangeWithSnapshot(label,
+                                      beforeText,
+                                      afterText,
+                                      0,
+                                      [this, &metadataApplied]() {
+                                          metadataApplied = true;
+                                          if (!toolbarStatusNote_.isEmpty()) {
+                                              refreshToolbarSummary();
+                                          }
+                                      });
+    if (!metadataApplied) {
+        toolbarStatusNote_ = tr("Background metadata sync skipped: document changed.");
+        refreshToolbarSummary();
+    }
 }
 
 bool MapEditorTab::syncBackgroundLayerXtherionGammaMetadata(QGraphicsPixmapItem *item, const QString &label)
@@ -2430,9 +2444,23 @@ bool MapEditorTab::syncBackgroundLayerXtherionGammaMetadata(QGraphicsPixmapItem 
         return false;
     }
 
+    bool metadataApplied = false;
     const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
-    applySourceTextChangeWithSnapshot(label, beforeText, afterText, 0);
-    return true;
+    applySourceTextChangeWithSnapshot(label,
+                                      beforeText,
+                                      afterText,
+                                      0,
+                                      [this, &metadataApplied]() {
+                                          metadataApplied = true;
+                                          if (!toolbarStatusNote_.isEmpty()) {
+                                              refreshToolbarSummary();
+                                          }
+                                      });
+    if (!metadataApplied) {
+        toolbarStatusNote_ = tr("Background gamma metadata sync skipped: document changed.");
+        refreshToolbarSummary();
+    }
+    return metadataApplied;
 }
 
 void MapEditorTab::removeBackgroundLayerXtherionMetadata(const QString &layerPath, const QString &label)
@@ -2458,8 +2486,22 @@ void MapEditorTab::removeBackgroundLayerXtherionMetadata(const QString &layerPat
         return;
     }
 
+    bool metadataApplied = false;
     const QScopedValueRollback<bool> refreshGuard(suppressSourceDrivenMapRefresh_, true);
-    applySourceTextChangeWithSnapshot(label, beforeText, afterText, 0);
+    applySourceTextChangeWithSnapshot(label,
+                                      beforeText,
+                                      afterText,
+                                      0,
+                                      [this, &metadataApplied]() {
+                                          metadataApplied = true;
+                                          if (!toolbarStatusNote_.isEmpty()) {
+                                              refreshToolbarSummary();
+                                          }
+                                      });
+    if (!metadataApplied) {
+        toolbarStatusNote_ = tr("Background metadata removal skipped: document changed.");
+        refreshToolbarSummary();
+    }
 }
 
 void MapEditorTab::invalidateBackgroundLayerRasterJobs(QGraphicsPixmapItem *item)

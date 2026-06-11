@@ -16,10 +16,10 @@
 #include <QGraphicsRectItem>
 #include <QGraphicsScene>
 #include <QMessageBox>
+#include <QPointer>
 #include <QScopedValueRollback>
 #include <QTimer>
 #include <QObject>
-#include <QUndoCommand>
 #include <QUndoStack>
 #include <QWidget>
 
@@ -207,6 +207,26 @@ QString sourceSnapshotRedoMessage(int lineNumber)
                                       "Restored inserted map object.");
 }
 
+QString completedDraftRevertedMessage(int lineNumber)
+{
+    return lineNumber > 0
+        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Reverted completed draft at source line %1.")
+              .arg(lineNumber)
+        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Reverted completed draft.");
+}
+
+QString completedDraftRestoredMessage(int lineNumber)
+{
+    return lineNumber > 0
+        ? QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Restored completed draft at source line %1.")
+              .arg(lineNumber)
+        : QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                      "Restored completed draft.");
+}
+
 TextEditorSourceTransactionRequest sourceTransactionRequest(const MapEditorCanvasEditContext &context,
                                                             const QString &label,
                                                             const QString &beforeText,
@@ -248,6 +268,67 @@ TextEditorSourceTransactionController sourceTransactionController(const MapEdito
         .statusCallback = std::move(statusCallback),
     });
 }
+
+class MapDraftCompletionLifecycle final
+{
+public:
+    MapDraftCompletionLifecycle(QGraphicsScene *scene,
+                                QVector<QGraphicsRectItem *> *draftItems,
+                                MapDraftGeometryItem *draftItem)
+        : scene_(scene)
+        , draftItems_(draftItems)
+        , draftItem_(draftItem)
+    {
+    }
+
+    ~MapDraftCompletionLifecycle()
+    {
+        if (draftItem_ != nullptr && !isDraftAttached()) {
+            delete draftItem_;
+            draftItem_ = nullptr;
+        }
+    }
+
+    void detachDraftItem()
+    {
+        if (draftItem_ == nullptr) {
+            return;
+        }
+        if (scene_ != nullptr) {
+            scene_->removeItem(draftItem_);
+        }
+        if (draftItems_ != nullptr) {
+            draftItems_->removeAll(draftItem_);
+        }
+    }
+
+    void restoreDraftItem()
+    {
+        if (draftItem_ == nullptr) {
+            return;
+        }
+        if (scene_ != nullptr && !scene_->items().contains(draftItem_)) {
+            scene_->addItem(draftItem_);
+            draftItem_->setZValue(20.0);
+            draftItem_->setSelected(true);
+        }
+        if (draftItems_ != nullptr && !draftItems_->contains(draftItem_)) {
+            draftItems_->append(draftItem_);
+        }
+    }
+
+private:
+    bool isDraftAttached() const
+    {
+        const bool inScene = scene_ != nullptr && draftItem_ != nullptr && scene_->items().contains(draftItem_);
+        const bool inList = draftItems_ != nullptr && draftItem_ != nullptr && draftItems_->contains(draftItem_);
+        return inScene || inList;
+    }
+
+    QPointer<QGraphicsScene> scene_;
+    QVector<QGraphicsRectItem *> *draftItems_ = nullptr;
+    MapDraftGeometryItem *draftItem_ = nullptr;
+};
 
 std::optional<QPointF> normalizedLineControlPoint(const QPointF &anchor, const QPointF &control)
 {
@@ -1722,28 +1803,26 @@ void MapEditorCanvasEditController::recordDraftCompletion(QGraphicsRectItem *ite
         return;
     }
 
-    auto statusCallback = [statusNote = context_.toolbarStatusNote,
-                           refreshToolbarSummary = context_.refreshToolbarSummary](const QString &statusMessage) {
-        *statusNote = statusMessage;
-        refreshToolbarSummary();
-    };
-
     if (context_.undoStack == nullptr) {
         removeDraftGeometryItem(draftItem);
         return;
     }
 
-    const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-    context_.undoStack->push(createMapDraftCompletionCommand(context_.textEditor,
-                                                            context_.scene,
-                                                            context_.draftGeometryItems,
-                                                            draftItem,
-                                                            label,
-                                                            beforeText,
-                                                            afterText,
-                                                            insertedLineNumber,
-                                                            statusCallback));
-    context_.flushPendingSceneRefreshAfterCommand();
+    auto lifecycle = std::make_shared<MapDraftCompletionLifecycle>(context_.scene,
+                                                                   context_.draftGeometryItems,
+                                                                   draftItem);
+    TextEditorSourceTransactionRequest request = sourceTransactionRequest(context_,
+                                                                          label,
+                                                                          beforeText,
+                                                                          afterText,
+                                                                          insertedLineNumber);
+    request.initialRedoHook = [lifecycle]() { lifecycle->detachDraftItem(); };
+    request.undoHook = [lifecycle]() { lifecycle->restoreDraftItem(); };
+    request.redoHook = [lifecycle]() { lifecycle->detachDraftItem(); };
+    request.undoStatusMessage = completedDraftRevertedMessage(insertedLineNumber);
+    request.redoStatusMessage = completedDraftRestoredMessage(insertedLineNumber);
+
+    sourceTransactionController(context_).recordSnapshot(request);
 }
 
 }

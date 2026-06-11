@@ -32,8 +32,8 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Next Up
 
-- P1: Continue Phase 9 ownership unification by replacing `MapEditorTab`'s preferred-owner state with durable transaction ownership metadata attached to each source mutation; point/line geometry source moves now use the shared source transaction controller.
-- P1: Move remaining map source snapshot commands, especially draft-completion source writes with draft-item lifecycle, toward one document-level undo timeline instead of coordinating separate `QUndoStack` and embedded text-editor undo state.
+- P1: Continue Phase 9 ownership unification by replacing `MapEditorTab`'s preferred-owner state with durable transaction ownership metadata attached to each source mutation; point/line geometry moves and draft-completion source snapshots now use the shared source transaction controller.
+- P1: Audit remaining map source mutation flows for ad hoc undo ownership, especially inspector-applied edits and background/metadata source updates, before moving to one document-level undo timeline.
 - P1: Expand focused map/text undo regression coverage to include save/dirty-state transitions, detached map panes, and inspector-applied source transactions.
 
 ## Risks / Blockers

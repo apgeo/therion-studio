@@ -244,6 +244,73 @@ int runRecordSnapshotForAlreadyAppliedChangeTest()
     return 0;
 }
 
+int runSnapshotLifecycleHooksTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString filePath = createTestFile(tempDir, "encoding utf-8\n");
+    if (!expect(!filePath.isEmpty(), "Failed to create lifecycle hook source transaction test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load lifecycle hook source transaction test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    bool commandApplyInProgress = false;
+    int refreshCount = 0;
+    QStringList hookCalls;
+
+    TextEditorSourceTransactionController controller({
+        .textEditor = &tab,
+        .undoStack = &undoStack,
+        .commandApplyInProgress = &commandApplyInProgress,
+        .flushPendingRefresh = [&refreshCount]() { ++refreshCount; },
+    });
+
+    const QString beforeText = tab.text();
+    const QString afterText = beforeText + QStringLiteral("# inserted by command\n");
+    TextEditorSourceTransactionRequest hookRequest =
+        request(QStringLiteral("Lifecycle Hooks"), beforeText, afterText);
+    hookRequest.initialRedoHook = [&hookCalls]() { hookCalls.append(QStringLiteral("initial")); };
+    hookRequest.undoHook = [&hookCalls]() { hookCalls.append(QStringLiteral("undo")); };
+    hookRequest.redoHook = [&hookCalls]() { hookCalls.append(QStringLiteral("redo")); };
+
+    controller.applyChangeWithSnapshot(hookRequest);
+    pumpEvents();
+
+    if (!expect(hookCalls == QStringList({QStringLiteral("initial")}),
+                "Initial source transaction push should invoke only the initial redo hook.")) {
+        return 1;
+    }
+
+    undoStack.undo();
+    pumpEvents();
+    if (!expect(hookCalls == QStringList({QStringLiteral("initial"), QStringLiteral("undo")}),
+                "Source transaction undo should invoke the undo lifecycle hook.")) {
+        return 1;
+    }
+
+    undoStack.redo();
+    pumpEvents();
+    if (!expect(hookCalls == QStringList({QStringLiteral("initial"), QStringLiteral("undo"), QStringLiteral("redo")}),
+                "Source transaction redo should invoke the redo lifecycle hook.")) {
+        return 1;
+    }
+
+    if (!expect(refreshCount == 1, "Lifecycle hooks should not change projection refresh policy.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runApplySourceEditsCreatesUndoSnapshotTest()
 {
     QTemporaryDir tempDir;
@@ -599,6 +666,9 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (runRecordSnapshotForAlreadyAppliedChangeTest() != 0) {
+        return 1;
+    }
+    if (runSnapshotLifecycleHooksTest() != 0) {
         return 1;
     }
     if (runApplySourceEditsCreatesUndoSnapshotTest() != 0) {

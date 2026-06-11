@@ -323,36 +323,6 @@ private:
     bool newVisible_ = true;
 };
 
-class MapDraftCompleteCommand final : public QUndoCommand
-{
-public:
-    MapDraftCompleteCommand(MapDraftGeometryItem *item, bool oldComplete, bool newComplete)
-        : item_(item)
-        , oldComplete_(oldComplete)
-        , newComplete_(newComplete)
-    {
-    }
-
-    void undo() override
-    {
-        if (item_ != nullptr) {
-            item_->setDraftComplete(oldComplete_);
-        }
-    }
-
-    void redo() override
-    {
-        if (item_ != nullptr) {
-            item_->setDraftComplete(newComplete_);
-        }
-    }
-
-private:
-    MapDraftGeometryItem *item_ = nullptr;
-    bool oldComplete_ = false;
-    bool newComplete_ = false;
-};
-
 class MapDraftAddCommand final : public QUndoCommand
 {
 public:
@@ -1245,11 +1215,6 @@ QUndoCommand *createMapDraftMoveCommand(MapDraftGeometryItem *item, const QPoint
 QUndoCommand *createMapDraftVisibilityCommand(MapDraftGeometryItem *item, bool oldVisible, bool newVisible)
 {
     return new MapDraftVisibilityCommand(item, oldVisible, newVisible);
-}
-
-QUndoCommand *createMapDraftCompleteCommand(MapDraftGeometryItem *item, bool oldComplete, bool newComplete)
-{
-    return new MapDraftCompleteCommand(item, oldComplete, newComplete);
 }
 
 QUndoCommand *createMapDraftAddCommand(QGraphicsScene *scene,

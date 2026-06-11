@@ -272,7 +272,6 @@ QUndoCommand *createMapCardMoveCommand(MapCardItem *item, const QPointF &oldPosi
 QUndoCommand *createMapCardVisibilityCommand(MapCardItem *item, bool oldVisible, bool newVisible);
 QUndoCommand *createMapDraftMoveCommand(MapDraftGeometryItem *item, const QPointF &oldPosition, const QPointF &newPosition);
 QUndoCommand *createMapDraftVisibilityCommand(MapDraftGeometryItem *item, bool oldVisible, bool newVisible);
-QUndoCommand *createMapDraftCompleteCommand(MapDraftGeometryItem *item, bool oldComplete, bool newComplete);
 QUndoCommand *createMapDraftAddCommand(QGraphicsScene *scene,
                                        QVector<QGraphicsRectItem *> *items,
                                        MapDraftGeometryItem *item,

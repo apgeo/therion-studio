@@ -69,12 +69,18 @@ public:
                                     QString afterText,
                                     QString undoStatusMessage,
                                     QString redoStatusMessage,
+                                    std::function<void()> initialRedoHook,
+                                    std::function<void()> undoHook,
+                                    std::function<void()> redoHook,
                                     std::function<void(const QString &)> statusCallback)
         : textEditor_(textEditor)
         , beforeText_(std::move(beforeText))
         , afterText_(std::move(afterText))
         , undoStatusMessage_(std::move(undoStatusMessage))
         , redoStatusMessage_(std::move(redoStatusMessage))
+        , initialRedoHook_(std::move(initialRedoHook))
+        , undoHook_(std::move(undoHook))
+        , redoHook_(std::move(redoHook))
         , statusCallback_(std::move(statusCallback))
     {
         setText(std::move(label));
@@ -88,6 +94,9 @@ public:
         }
 
         applyTextEditorSourceSnapshot(textEditor_, beforeText_);
+        if (undoHook_) {
+            undoHook_();
+        }
         if (statusCallback_ != nullptr && !undoStatusMessage_.isEmpty()) {
             statusCallback_(undoStatusMessage_);
         }
@@ -97,6 +106,9 @@ public:
     {
         if (firstRedo_) {
             firstRedo_ = false;
+            if (initialRedoHook_) {
+                initialRedoHook_();
+            }
             return;
         }
         if (textEditor_ == nullptr) {
@@ -105,6 +117,9 @@ public:
         }
 
         applyTextEditorSourceSnapshot(textEditor_, afterText_);
+        if (redoHook_) {
+            redoHook_();
+        }
         if (statusCallback_ != nullptr && !redoStatusMessage_.isEmpty()) {
             statusCallback_(redoStatusMessage_);
         }
@@ -116,6 +131,9 @@ private:
     QString afterText_;
     QString undoStatusMessage_;
     QString redoStatusMessage_;
+    std::function<void()> initialRedoHook_;
+    std::function<void()> undoHook_;
+    std::function<void()> redoHook_;
     std::function<void(const QString &)> statusCallback_;
     bool firstRedo_ = true;
 };
@@ -135,6 +153,9 @@ void pushSnapshotCommand(const TextEditorSourceTransactionContext &context,
                                                                     afterText,
                                                                     request.undoStatusMessage,
                                                                     request.redoStatusMessage,
+                                                                    request.initialRedoHook,
+                                                                    request.undoHook,
+                                                                    request.redoHook,
                                                                     context.statusCallback));
     };
 

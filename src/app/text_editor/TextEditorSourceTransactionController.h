@@ -48,6 +48,9 @@ struct TextEditorSourceTransactionRequest
         TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection;
     std::function<void()> projectionInvalidationHook;
     std::function<void()> selectionRestoreHook;
+    std::function<void()> initialRedoHook;
+    std::function<void()> undoHook;
+    std::function<void()> redoHook;
     QString undoStatusMessage;
     QString redoStatusMessage;
     QString staleStatusMessage;

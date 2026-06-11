@@ -32,6 +32,8 @@ struct TextEditorSourceTransactionRequest
     QString redoStatusMessage;
 };
 
+void applyTextEditorSourceSnapshot(TextEditorTab *textEditor, const QString &contents);
+
 class TextEditorSourceTransactionController final
 {
 public:

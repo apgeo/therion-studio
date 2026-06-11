@@ -168,13 +168,7 @@ MAP_EDITOR_SOURCE_MUTATION_LOW_LEVEL_PATTERNS = (
 # - the shared text-editor source transaction controller outside map_editor,
 #   which creates one source replacement + undo snapshot transaction, and
 # - QUndoCommand implementations that store before/after snapshots internally.
-MAP_EDITOR_SOURCE_MUTATION_ALLOWED_PATTERNS_BY_FILE = {
-    "src/app/text_editor/map_editor/MapEditorCanvasEditCommandFactory.cpp": {
-        "->replaceTextForCommand(",
-        "->rewritePointCoordinates(",
-        "->rewriteLineAreaVertex(",
-    },
-}
+MAP_EDITOR_SOURCE_MUTATION_ALLOWED_PATTERNS_BY_FILE = {}
 
 CMAKE_SOURCE_PATH_PATTERN = re.compile(r"src/[A-Za-z0-9_./+-]+\.(?:cpp|h)")
 CMAKE_SOURCE_SUFFIXES = {".cpp", ".h"}

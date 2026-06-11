@@ -54,7 +54,7 @@ public:
             return;
         }
 
-        textEditor_->replaceTextForCommand(beforeText_);
+        applyTextEditorSourceSnapshot(textEditor_, beforeText_);
         if (statusCallback_ != nullptr && !undoStatusMessage_.isEmpty()) {
             statusCallback_(undoStatusMessage_);
         }
@@ -71,7 +71,7 @@ public:
             return;
         }
 
-        textEditor_->replaceTextForCommand(afterText_);
+        applyTextEditorSourceSnapshot(textEditor_, afterText_);
         if (statusCallback_ != nullptr && !redoStatusMessage_.isEmpty()) {
             statusCallback_(redoStatusMessage_);
         }
@@ -91,6 +91,15 @@ private:
 TextEditorSourceTransactionController::TextEditorSourceTransactionController(TextEditorSourceTransactionContext context)
     : context_(std::move(context))
 {
+}
+
+void applyTextEditorSourceSnapshot(TextEditorTab *textEditor, const QString &contents)
+{
+    if (textEditor == nullptr) {
+        return;
+    }
+
+    textEditor->replaceTextForCommand(contents);
 }
 
 void TextEditorSourceTransactionController::recordSnapshot(const TextEditorSourceTransactionRequest &request)
@@ -136,12 +145,12 @@ void TextEditorSourceTransactionController::applyChangeWithSnapshot(const TextEd
 
     if (context_.commandApplyInProgress != nullptr) {
         const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-        context_.textEditor->replaceTextForCommand(afterText.value());
+        applyTextEditorSourceSnapshot(context_.textEditor, afterText.value());
         recordSnapshot(request);
         return;
     }
 
-    context_.textEditor->replaceTextForCommand(afterText.value());
+    applyTextEditorSourceSnapshot(context_.textEditor, afterText.value());
     recordSnapshot(request);
 }
 }

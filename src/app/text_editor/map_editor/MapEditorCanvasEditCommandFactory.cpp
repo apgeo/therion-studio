@@ -1,6 +1,8 @@
 #include "MapEditorCanvasEditCommandFactory.h"
 
+#include "../TextEditorSourceTransactionController.h"
 #include "../TextEditorTab.h"
+#include "../../../core/TherionDocumentEditor.h"
 
 #include <QCoreApplication>
 #include <QGraphicsScene>
@@ -140,7 +142,7 @@ public:
             return;
         }
 
-        textEditor_->replaceTextForCommand(beforeTextSnapshot_);
+        applyTextEditorSourceSnapshot(textEditor_, beforeTextSnapshot_);
         if (statusCallback_ != nullptr) {
             statusCallback_(pointGeometryRevertedMessage(lineNumber_));
         }
@@ -154,7 +156,7 @@ public:
         }
 
         if (afterTextSnapshot_.has_value()) {
-            textEditor_->replaceTextForCommand(afterTextSnapshot_.value());
+            applyTextEditorSourceSnapshot(textEditor_, afterTextSnapshot_.value());
             if (statusCallback_ != nullptr) {
                 statusCallback_(pointGeometryUpdatedMessage(lineNumber_));
             }
@@ -177,13 +179,21 @@ private:
         }
 
         QString errorMessage;
-        if (!textEditor_->rewritePointCoordinates(lineNumber_, point, &errorMessage)) {
+        QString updatedText = textEditor_->text();
+        QVector<TherionSourceTextEdit> edits;
+        if (!TherionDocumentEditor::pointCoordinateRewriteEdits(updatedText,
+                                                                lineNumber_,
+                                                                point,
+                                                                &edits,
+                                                                &errorMessage)
+            || !TherionDocumentEditor::applySourceTextEdits(&updatedText, edits, &errorMessage)) {
             if (statusCallback_ != nullptr) {
                 statusCallback_(pointMoveFailedMessage(errorMessage));
             }
             return false;
         }
 
+        applyTextEditorSourceSnapshot(textEditor_, updatedText);
         if (statusCallback_ != nullptr) {
             statusCallback_(successMessage);
         }
@@ -255,7 +265,7 @@ public:
             return;
         }
 
-        textEditor_->replaceTextForCommand(beforeTextSnapshot_);
+        applyTextEditorSourceSnapshot(textEditor_, beforeTextSnapshot_);
         if (statusCallback_ != nullptr) {
             statusCallback_(vertexRevertedMessage(kind_, vertexIndex_, lineNumber_));
         }
@@ -269,7 +279,7 @@ public:
         }
 
         if (afterTextSnapshot_.has_value()) {
-            textEditor_->replaceTextForCommand(afterTextSnapshot_.value());
+            applyTextEditorSourceSnapshot(textEditor_, afterTextSnapshot_.value());
             if (statusCallback_ != nullptr) {
                 statusCallback_(vertexUpdatedMessage(kind_, vertexIndex_, lineNumber_));
             }
@@ -296,7 +306,16 @@ private:
         }
 
         QString errorMessage;
-        if (!textEditor_->rewriteLineAreaVertex(lineNumber_, kind_, vertexIndex_, point, &errorMessage)) {
+        QString updatedText = textEditor_->text();
+        QVector<TherionSourceTextEdit> edits;
+        if (!TherionDocumentEditor::lineAreaVertexRewriteEdits(updatedText,
+                                                               lineNumber_,
+                                                               kind_,
+                                                               vertexIndex_,
+                                                               point,
+                                                               &edits,
+                                                               &errorMessage)
+            || !TherionDocumentEditor::applySourceTextEdits(&updatedText, edits, &errorMessage)) {
             if (statusCallback_ != nullptr) {
                 statusCallback_(vertexMoveFailedMessage(kind_, errorMessage));
             }
@@ -308,7 +327,15 @@ private:
                 continue;
             }
 
-            if (!textEditor_->rewriteLineAreaVertex(lineNumber_, kind_, move.vertexIndex, move.newPoint, &errorMessage)) {
+            edits.clear();
+            if (!TherionDocumentEditor::lineAreaVertexRewriteEdits(updatedText,
+                                                                   lineNumber_,
+                                                                   kind_,
+                                                                   move.vertexIndex,
+                                                                   move.newPoint,
+                                                                   &edits,
+                                                                   &errorMessage)
+                || !TherionDocumentEditor::applySourceTextEdits(&updatedText, edits, &errorMessage)) {
                 if (statusCallback_ != nullptr) {
                     statusCallback_(coupledVertexMoveFailedMessage(kind_, errorMessage));
                 }
@@ -316,6 +343,7 @@ private:
             }
         }
 
+        applyTextEditorSourceSnapshot(textEditor_, updatedText);
         if (statusCallback_ != nullptr) {
             statusCallback_(successMessage);
         }
@@ -373,7 +401,7 @@ public:
             return;
         }
 
-        textEditor_->replaceTextForCommand(beforeText_);
+        applyTextEditorSourceSnapshot(textEditor_, beforeText_);
         restoreDraftItem();
         if (statusCallback_ != nullptr) {
             statusCallback_(completedDraftRevertedMessage(insertedLineNumber_));
@@ -392,7 +420,7 @@ public:
             return;
         }
 
-        textEditor_->replaceTextForCommand(afterText_);
+        applyTextEditorSourceSnapshot(textEditor_, afterText_);
         detachDraftItem();
         if (statusCallback_ != nullptr) {
             statusCallback_(completedDraftRestoredMessage(insertedLineNumber_));

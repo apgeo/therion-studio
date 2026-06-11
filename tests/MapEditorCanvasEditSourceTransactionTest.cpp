@@ -1,4 +1,5 @@
 #include "../src/app/text_editor/map_editor/MapEditorCanvasEditController.h"
+#include "../src/app/text_editor/map_editor/MapEditorSceneSupport.h"
 #include "../src/app/text_editor/TextEditorTab.h"
 #include "../src/core/CommandCatalogStore.h"
 #include "../src/core/QtFileSystem.h"
@@ -7,6 +8,8 @@
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QFile>
+#include <QGraphicsRectItem>
+#include <QGraphicsScene>
 #include <QStringList>
 #include <QTemporaryDir>
 #include <QUndoStack>
@@ -61,11 +64,15 @@ MapEditorCanvasEditController makeController(TextEditorTab *tab,
                                              QString *toolbarStatus,
                                              bool *commandApplyInProgress,
                                              int *refreshCount,
-                                             int *flushCount)
+                                             int *flushCount,
+                                             QGraphicsScene *scene = nullptr,
+                                             QVector<QGraphicsRectItem *> *draftItems = nullptr)
 {
     MapEditorCanvasEditContext context;
     context.textEditor = tab;
+    context.scene = scene;
     context.undoStack = undoStack;
+    context.draftGeometryItems = draftItems;
     context.toolbarStatusNote = toolbarStatus;
     context.commandApplyInProgress = commandApplyInProgress;
     context.refreshToolbarSummary = [refreshCount]() {
@@ -203,6 +210,199 @@ int runRecordSourceTextSnapshotForAlreadyAppliedChangeTest()
 
     return 0;
 }
+
+int runPointGeometryMoveUsesSourceEditSnapshotTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString filePath = createTestFile(tempDir, "point 1.0 2.0 station\n");
+    if (!expect(!filePath.isEmpty(), "Failed to create map point move test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load map point move test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    QString toolbarStatus;
+    bool commandApplyInProgress = false;
+    int refreshCount = 0;
+    int flushCount = 0;
+    MapEditorCanvasEditController controller =
+        makeController(&tab, &undoStack, &toolbarStatus, &commandApplyInProgress, &refreshCount, &flushCount);
+
+    const QString beforeText = tab.text();
+    const QString afterText = QStringLiteral("point 3.0 4.0 station\n");
+    controller.recordPointGeometryMove(1, QPointF(1.0, 2.0), QPointF(3.0, 4.0));
+    pumpEvents();
+
+    if (!expect(tab.text() == afterText, "Point geometry move should apply source-edit planned coordinates.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 1, "Point geometry move should push one undo command.")) {
+        return 1;
+    }
+    if (!expect(flushCount == 1, "Point geometry move should flush pending scene refresh once.")) {
+        return 1;
+    }
+
+    undoStack.undo();
+    pumpEvents();
+    if (!expect(tab.text() == beforeText, "Point geometry move undo should restore the original source text.")) {
+        return 1;
+    }
+
+    undoStack.redo();
+    pumpEvents();
+    if (!expect(tab.text() == afterText, "Point geometry move redo should restore the moved source text.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runLineVertexMoveUsesSourceEditSnapshotTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString filePath = createTestFile(tempDir, "line wall\n  0.0 0.0\n  1.0 1.0\nendline\n");
+    if (!expect(!filePath.isEmpty(), "Failed to create map line vertex move test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load map line vertex move test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    QString toolbarStatus;
+    bool commandApplyInProgress = false;
+    int refreshCount = 0;
+    int flushCount = 0;
+    MapEditorCanvasEditController controller =
+        makeController(&tab, &undoStack, &toolbarStatus, &commandApplyInProgress, &refreshCount, &flushCount);
+
+    const QString beforeText = tab.text();
+    const QString afterText = QStringLiteral("line wall\n  0.0 0.0\n  2.0 3.0\nendline\n");
+    controller.recordLineAreaVertexMove(1,
+                                        QStringLiteral("line"),
+                                        1,
+                                        QPointF(1.0, 1.0),
+                                        QPointF(2.0, 3.0));
+    pumpEvents();
+
+    if (!expect(tab.text() == afterText, "Line vertex move should apply source-edit planned coordinates.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 1, "Line vertex move should push one undo command.")) {
+        return 1;
+    }
+    if (!expect(flushCount == 1, "Line vertex move should flush pending scene refresh once.")) {
+        return 1;
+    }
+
+    undoStack.undo();
+    pumpEvents();
+    if (!expect(tab.text() == beforeText, "Line vertex move undo should restore the original source text.")) {
+        return 1;
+    }
+
+    undoStack.redo();
+    pumpEvents();
+    if (!expect(tab.text() == afterText, "Line vertex move redo should restore the moved source text.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runDraftCompletionUsesCentralSnapshotReplayTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString filePath = createTestFile(tempDir, "scrap s1\nendscrap\n");
+    if (!expect(!filePath.isEmpty(), "Failed to create map draft completion test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load map draft completion test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    QGraphicsScene scene;
+    QVector<QGraphicsRectItem *> draftItems;
+    QString toolbarStatus;
+    bool commandApplyInProgress = false;
+    int refreshCount = 0;
+    int flushCount = 0;
+    MapEditorCanvasEditController controller =
+        makeController(&tab, &undoStack, &toolbarStatus, &commandApplyInProgress, &refreshCount, &flushCount, &scene, &draftItems);
+
+    auto *draftItem = new MapDraftGeometryItem(1, DraftGeometryKind::Point);
+    scene.addItem(draftItem);
+    draftItems.append(draftItem);
+
+    const QString beforeText = tab.text();
+    const QString afterText = beforeText + QStringLiteral("point 1.0 2.0 station\n");
+    tab.replaceTextForCommand(afterText);
+    pumpEvents();
+
+    controller.recordDraftCompletion(draftItem, QStringLiteral("Complete Draft"), beforeText, afterText, 3);
+    pumpEvents();
+
+    if (!expect(tab.text() == afterText, "Draft completion record should keep the already-applied source text.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 1, "Draft completion should push one undo command.")) {
+        return 1;
+    }
+    if (!expect(flushCount == 1, "Draft completion should flush pending scene refresh once.")) {
+        return 1;
+    }
+    if (!expect(!scene.items().contains(draftItem) && !draftItems.contains(draftItem),
+                "Draft completion should detach the completed draft item on initial redo.")) {
+        return 1;
+    }
+
+    undoStack.undo();
+    pumpEvents();
+    if (!expect(tab.text() == beforeText, "Draft completion undo should restore the original source text.")) {
+        return 1;
+    }
+    if (!expect(scene.items().contains(draftItem) && draftItems.contains(draftItem),
+                "Draft completion undo should restore the draft item.")) {
+        return 1;
+    }
+
+    undoStack.redo();
+    pumpEvents();
+    if (!expect(tab.text() == afterText, "Draft completion redo should restore the completed source text.")) {
+        return 1;
+    }
+    if (!expect(!scene.items().contains(draftItem) && !draftItems.contains(draftItem),
+                "Draft completion redo should detach the draft item again.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
@@ -213,6 +413,15 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runRecordSourceTextSnapshotForAlreadyAppliedChangeTest() != 0) {
+        return 1;
+    }
+    if (runPointGeometryMoveUsesSourceEditSnapshotTest() != 0) {
+        return 1;
+    }
+    if (runLineVertexMoveUsesSourceEditSnapshotTest() != 0) {
+        return 1;
+    }
+    if (runDraftCompletionUsesCentralSnapshotReplayTest() != 0) {
         return 1;
     }
 

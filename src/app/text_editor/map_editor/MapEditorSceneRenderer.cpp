@@ -1248,6 +1248,20 @@ std::optional<qreal> linePointNumericOptionValue(const TherionParsedLine &parsed
     return value;
 }
 
+std::optional<qreal> standaloneDirectiveNumericValue(const TherionParsedLine &parsedLine)
+{
+    if (parsedLine.tokens.size() < 2) {
+        return std::nullopt;
+    }
+
+    bool ok = false;
+    const qreal parsedValue = parsedLine.tokens.at(1).trimmed().toDouble(&ok);
+    if (!ok) {
+        return std::nullopt;
+    }
+    return parsedValue;
+}
+
 struct ParsedLinePointOptionFlags
 {
     bool parsedOrientation = false;
@@ -1280,27 +1294,33 @@ ParsedLinePointOptionFlags applyLinePointOptionsFromLine(const TherionParsedLine
     }
 
     MapGeometryFeature::TH2LineVertex &vertex = feature->lineVertices.last();
-    if (const std::optional<qreal> orientation =
-            linePointNumericOptionValue(parsedLine,
-                                        QStringList{QStringLiteral("-orientation"),
-                                                    QStringLiteral("orientation"),
-                                                    QStringLiteral("-orient"),
-                                                    QStringLiteral("orient")})) {
+    std::optional<qreal> orientation =
+        linePointNumericOptionValue(parsedLine,
+                                    QStringList{QStringLiteral("-orientation"),
+                                                QStringLiteral("orientation"),
+                                                QStringLiteral("-orient"),
+                                                QStringLiteral("orient")});
+    if (!orientation.has_value() && isOrientationStandaloneDirective(parsedLine.directive)) {
+        orientation = standaloneDirectiveNumericValue(parsedLine);
+    }
+    if (orientation.has_value()) {
         flags.parsedOrientation = true;
         vertex.orientationDegrees = normalizedSceneOrientationDegrees(orientation.value());
     }
 
     if (feature->label.trimmed().toLower() == QStringLiteral("slope")) {
-        if (const std::optional<qreal> leftSize =
-                linePointNumericOptionValue(parsedLine,
-                                            QStringList{QStringLiteral("-size"),
-                                                        QStringLiteral("size"),
-                                                        QStringLiteral("-l-size"),
-                                                        QStringLiteral("l-size")})) {
-            if (leftSize.value() > 0.0) {
-                flags.parsedLeftSize = true;
-                vertex.leftSize = leftSize.value();
-            }
+        std::optional<qreal> leftSize =
+            linePointNumericOptionValue(parsedLine,
+                                        QStringList{QStringLiteral("-size"),
+                                                    QStringLiteral("size"),
+                                                    QStringLiteral("-l-size"),
+                                                    QStringLiteral("l-size")});
+        if (!leftSize.has_value() && isLeftSizeStandaloneDirective(parsedLine.directive)) {
+            leftSize = standaloneDirectiveNumericValue(parsedLine);
+        }
+        if (leftSize.has_value() && leftSize.value() > 0.0) {
+            flags.parsedLeftSize = true;
+            vertex.leftSize = leftSize.value();
         }
     }
     return flags;

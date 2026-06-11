@@ -7,7 +7,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1 - Localization hygiene: keep Czech/Slovak UI catalogs, canonical Therion syntax, and Qt/platform language selection current.
 - P1 - Validation and catalog metadata: keep validation conservative while moving command/option interpretation into catalog-backed logical-command metadata.
 - P1 - Blocks editor: preserve document-domain filtering, data-block ownership, no-open source mutations, and single-transaction block-detail edits.
-- P1 - Map editor parity: continue XTherion-aligned selection, context menus, panning, Bezier input, Smart Area, and TH2 source sync.
+- P1 - Map editor parity: continue XTherion-aligned selection, context menus, panning, Bezier input, Smart Area, TH2 source sync, and robust standalone slope line-point metadata parsing (`l-size`/`orientation`).
 - P1 - Inspector consistency: keep Raw, Blocks, and Map inspectors on the shared panel foundation with aligned tabs, help, file metadata, and option editing.
 - P1 - Map canvas readability and performance: keep background rendering, `.xvi` behavior, appearance repaint paths, handles, labels, and bounds stable.
 - P1 - Project sidebars: keep Structure indexing and File sidebar mutations reliable, navigable, and refreshed through shared post-operation paths.

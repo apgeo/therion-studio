@@ -197,6 +197,8 @@ set(THERION_APP_SOURCES
     src/app/MainWindowTherionRunnerController.h
     src/app/MainWindowStructureNameOverridesService.cpp
     src/app/MainWindowStructureNameOverridesService.h
+    src/app/MainWindowValidationFixApplyService.cpp
+    src/app/MainWindowValidationFixApplyService.h
     src/app/ProjectSearchScanner.cpp
     src/app/ProjectSearchScanner.h
     src/app/ProjectValidationScanner.cpp
@@ -1119,6 +1121,9 @@ therion_add_app_unit_test(MainWindowSessionWindowRestoreServiceTest
 therion_add_app_unit_test(MainWindowStructureNameOverridesServiceTest
     tests/MainWindowStructureNameOverridesServiceTest.cpp)
 
+therion_add_app_unit_test(MainWindowValidationFixApplyServiceTest
+    tests/MainWindowValidationFixApplyServiceTest.cpp)
+
 qt_add_executable(BlockEditorApplyExecutorTest
     tests/BlockEditorApplyExecutorTest.cpp
     src/app/text_editor/block_editor/BlockEditorApplyExecutor.cpp
@@ -1406,7 +1411,8 @@ set(THERION_UNIT_TEST_TARGETS
     TherionRunnerConfigDisplayControllerTest
     TherionRunnerConfigResolverTest
     TherionRunnerPresenterTest
-    TherionRunnerServiceTest)
+    TherionRunnerServiceTest
+    MainWindowValidationFixApplyServiceTest)
 
 set(THERION_UI_TEST_TARGETS
     TextEditorCaretInteractionTest

@@ -42,7 +42,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Next Up
 
-- P1: Continue Phase 4 remaining-adopter routing after the latest snapshot-replay API rename, focusing on project/sidebar source mutations still outside the shared transaction request path.
+- P1: Continue Phase 4 remaining-adopter routing after introducing the validation-sidebar fix-apply adapter, focusing on remaining project/sidebar source mutations still outside focused adapters or shared transaction request paths.
 - P1: Add focused regression coverage for each migrated map/source operation (undo/redo, stale-state rejection, projection refresh, and selection restore behavior).
 - P1: Keep `WORKLOG.md` trimmed after each completed slice so active work does not become completed-history notes.
 

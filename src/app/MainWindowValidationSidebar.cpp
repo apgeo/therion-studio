@@ -1,6 +1,6 @@
 #include "MainWindow.h"
 
-#include "MainWindowDocumentOpenController.h"
+#include "MainWindowValidationFixApplyService.h"
 #include "text_editor/TextEditorValidationCatalog.h"
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
@@ -605,27 +605,28 @@ void MainWindow::applyAllValidationFixes()
 bool MainWindow::applyValidationFixesToValidatedDocument(const QString &filePath,
                                                         const QVector<TherionStudio::TherionSourceDiagnosticFix> &fixes)
 {
-    if (fixes.isEmpty()) {
-        return false;
-    }
-
-    const QString targetPath = filePath.isEmpty() ? validationDocumentPath_ : filePath;
-    if (!targetPath.isEmpty()) {
-        const auto openPlan = TherionStudio::MainWindowDocumentOpenController::planOpenProjectSearchResult(targetPath);
-        if (openPlan.action == TherionStudio::MainWindowDocumentOpenController::OpenProjectSearchResultAction::OpenMapDocument) {
-            auto *mapTab = openMapEditorTab(targetPath);
-            return mapTab != nullptr && mapTab->applyValidationFixes(fixes);
-        }
-
+    TherionStudio::MainWindowValidationFixApplyContext context;
+    context.applyFixesToMapPath = [this](const QString &targetPath,
+                                         const QVector<TherionStudio::TherionSourceDiagnosticFix> &targetFixes) {
+        auto *mapTab = openMapEditorTab(targetPath);
+        return mapTab != nullptr && mapTab->applyValidationFixes(targetFixes);
+    };
+    context.applyFixesToTextPath = [this](const QString &targetPath,
+                                          const QVector<TherionStudio::TherionSourceDiagnosticFix> &targetFixes) {
         auto *textTab = openTextTab(targetPath);
-        return textTab != nullptr && textTab->applyValidationFixes(fixes);
-    }
+        return textTab != nullptr && textTab->applyValidationFixes(targetFixes);
+    };
+    context.applyFixesToCurrentMap = [this](const QVector<TherionStudio::TherionSourceDiagnosticFix> &targetFixes) {
+        auto *mapTab = currentMapEditorTab();
+        return mapTab != nullptr && mapTab->applyValidationFixes(targetFixes);
+    };
+    context.applyFixesToCurrentText = [this](const QVector<TherionStudio::TherionSourceDiagnosticFix> &targetFixes) {
+        auto *textTab = currentTextTab();
+        return textTab != nullptr && textTab->applyValidationFixes(targetFixes);
+    };
 
-    if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
-        return mapTab->applyValidationFixes(fixes);
-    }
-    if (auto *textTab = currentTextTab(); textTab != nullptr) {
-        return textTab->applyValidationFixes(fixes);
-    }
-    return false;
+    return TherionStudio::MainWindowValidationFixApplyService::applyValidationFixes(filePath,
+                                                                                     validationDocumentPath_,
+                                                                                     fixes,
+                                                                                     context);
 }

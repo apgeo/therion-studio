@@ -8,6 +8,7 @@
 #include <QStringConverter>
 #include <QTemporaryDir>
 
+#include <functional>
 #include <iostream>
 
 using namespace TherionStudio;
@@ -20,6 +21,42 @@ bool expect(bool condition, const char *message)
         std::cerr << message << '\n';
     }
     return condition;
+}
+
+bool applyPlannerEdits(QString *contents,
+                       const std::function<bool(const QString &, QVector<TherionSourceTextEdit> *, QString *)> &planner,
+                       QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+
+    QVector<TherionSourceTextEdit> edits;
+    if (!planner(*contents, &edits, errorMessage)) {
+        return false;
+    }
+    return TherionDocumentEditor::applySourceTextEdits(contents, edits, errorMessage);
+}
+
+bool rewriteStructureEntryName(QString *contents,
+                               int lineNumber,
+                               const QString &category,
+                               const QString &newName,
+                               QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::structureEntryNameRewriteEdits(source, lineNumber, category, newName, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewriteLineOptionToggle(QString *contents, int lineNumber, const QString &optionName, bool enabled, QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::lineOptionToggleRewriteEdits(source, lineNumber, optionName, enabled, edits, plannerError);
+    }, errorMessage);
 }
 
 bool writeRawFile(const QString &filePath, const QByteArray &bytes)
@@ -554,7 +591,7 @@ int runInspectorFallbackEncodingPreservationTest()
         return 1;
     }
 
-    if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents,
+    if (!expect(rewriteLineOptionToggle(&contents,
                                                                 2,
                                                                 QStringLiteral("-close"),
                                                                 true,
@@ -563,7 +600,7 @@ int runInspectorFallbackEncodingPreservationTest()
         return 1;
     }
 
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents,
+    if (!expect(rewriteStructureEntryName(&contents,
                                                                   3,
                                                                   QStringLiteral("Maps"),
                                                                   QStringLiteral("žlutá-mapa"),
@@ -640,7 +677,7 @@ int runInspectorFallbackEncodingPreservationWindows1252Test()
         return 1;
     }
 
-    if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents,
+    if (!expect(rewriteLineOptionToggle(&contents,
                                                                 2,
                                                                 QStringLiteral("-close"),
                                                                 true,
@@ -649,7 +686,7 @@ int runInspectorFallbackEncodingPreservationWindows1252Test()
         return 1;
     }
 
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents,
+    if (!expect(rewriteStructureEntryName(&contents,
                                                                   3,
                                                                   QStringLiteral("Maps"),
                                                                   QStringLiteral("café-plan"),

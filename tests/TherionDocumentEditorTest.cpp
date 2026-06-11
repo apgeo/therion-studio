@@ -16,6 +16,141 @@ bool expect(bool condition, const char *message)
     return condition;
 }
 
+bool applyPlannerEdits(QString *contents,
+                       const std::function<bool(const QString &, QVector<TherionSourceTextEdit> *, QString *)> &planner,
+                       QString *errorMessage)
+{
+    if (contents == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QStringLiteral("No document contents are available.");
+        }
+        return false;
+    }
+
+    QVector<TherionSourceTextEdit> edits;
+    if (!planner(*contents, &edits, errorMessage)) {
+        return false;
+    }
+    return TherionDocumentEditor::applySourceTextEdits(contents, edits, errorMessage);
+}
+
+bool rewriteStructureEntryName(QString *contents,
+                               int lineNumber,
+                               const QString &category,
+                               const QString &newName,
+                               QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::structureEntryNameRewriteEdits(source, lineNumber, category, newName, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewritePointCoordinates(QString *contents, int lineNumber, const QPointF &point, QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::pointCoordinateRewriteEdits(source, lineNumber, point, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewriteLineAreaVertex(QString *contents,
+                           int lineNumber,
+                           const QString &kind,
+                           int vertexIndex,
+                           const QPointF &point,
+                           QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::lineAreaVertexRewriteEdits(source, lineNumber, kind, vertexIndex, point, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewriteLineOptionToggle(QString *contents, int lineNumber, const QString &optionName, bool enabled, QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::lineOptionToggleRewriteEdits(source, lineNumber, optionName, enabled, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewritePointOrientation(QString *contents, int lineNumber, bool enabled, qreal orientationDegrees, QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::pointOrientationRewriteEdits(source, lineNumber, enabled, orientationDegrees, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewriteLinePointOrientation(QString *contents,
+                                 int lineNumber,
+                                 int sourceVertexIndex,
+                                 bool enabled,
+                                 qreal orientationDegrees,
+                                 QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::linePointOrientationRewriteEdits(source, lineNumber, sourceVertexIndex, enabled, orientationDegrees, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewriteLinePointLeftSize(QString *contents,
+                              int lineNumber,
+                              int sourceVertexIndex,
+                              bool enabled,
+                              qreal sizeValue,
+                              QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::linePointLeftSizeRewriteEdits(source, lineNumber, sourceVertexIndex, enabled, sizeValue, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewriteScrapScale(QString *contents, int lineNumber, const QString &scaleExpression, QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::scrapScaleRewriteEdits(source, lineNumber, scaleExpression, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewriteScrapProjection(QString *contents, int lineNumber, const QString &projectionExpression, QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::scrapProjectionRewriteEdits(source, lineNumber, projectionExpression, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewriteMapObjectQuickFields(QString *contents,
+                                 int lineNumber,
+                                 const QString &type,
+                                 const QString &subtype,
+                                 const QString &identifier,
+                                 const QString &name,
+                                 bool nameEnabled,
+                                 QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::mapObjectQuickFieldsRewriteEdits(source, lineNumber, type, subtype, identifier, name, nameEnabled, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewriteMapObjectTextOption(QString *contents, int lineNumber, const QString &text, QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::mapObjectTextOptionRewriteEdits(source, lineNumber, text, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewriteMapObjectValueOption(QString *contents, int lineNumber, const QString &value, QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::mapObjectValueOptionRewriteEdits(source, lineNumber, value, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewriteLineCoordinateRows(QString *contents, int lineNumber, const QStringList &coordinateRows, QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::lineCoordinateRowsRewriteEdits(source, lineNumber, coordinateRows, edits, plannerError);
+    }, errorMessage);
+}
+
 int runRewritePreservesOtherContentTest()
 {
     QString contents = QStringLiteral("survey original\r\n# keep this comment\r\nmap old-map\r\n");
@@ -24,7 +159,7 @@ int runRewritePreservesOtherContentTest()
     const auto expectRewriteFailure = [&](QString documentContents, int lineNumber, const QString &category, const QString &name) {
         const QString before = documentContents;
         errorMessage.clear();
-        if (TherionDocumentEditor::rewriteStructureEntryName(&documentContents, lineNumber, category, name, &errorMessage)) {
+        if (rewriteStructureEntryName(&documentContents, lineNumber, category, name, &errorMessage)) {
             return false;
         }
 
@@ -36,7 +171,7 @@ int runRewritePreservesOtherContentTest()
     };
 
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteStructureEntryName(nullptr, 1, QStringLiteral("Maps"), QStringLiteral("should-not-apply"), &errorMessage), "The rewrite helper should reject null document contents.")) {
+    if (!expect(!rewriteStructureEntryName(nullptr, 1, QStringLiteral("Maps"), QStringLiteral("should-not-apply"), &errorMessage), "The rewrite helper should reject null document contents.")) {
         return 1;
     }
 
@@ -89,7 +224,7 @@ int runRewritePreservesOtherContentTest()
         return 1;
     }
 
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 1, QStringLiteral("Surveys"), QStringLiteral("new-survey"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 1, QStringLiteral("Surveys"), QStringLiteral("new-survey"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -98,7 +233,7 @@ int runRewritePreservesOtherContentTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 3, QStringLiteral("Maps"), QStringLiteral("map name with spaces"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 3, QStringLiteral("Maps"), QStringLiteral("map name with spaces"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -108,7 +243,7 @@ int runRewritePreservesOtherContentTest()
 
     contents = QStringLiteral("station 'old station' # keep this comment\npoint station station-01\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 1, QStringLiteral("Stations"), QStringLiteral("new station\"name"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 1, QStringLiteral("Stations"), QStringLiteral("new station\"name"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -117,7 +252,7 @@ int runRewritePreservesOtherContentTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 2, QStringLiteral("Stations"), QStringLiteral("new-station-02"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 2, QStringLiteral("Stations"), QStringLiteral("new-station-02"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -136,42 +271,42 @@ int runRewritePreservesOtherContentTest()
         "point station point-station-old\n");
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 1, QStringLiteral("Surveys"), QStringLiteral("survey-new"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 1, QStringLiteral("Surveys"), QStringLiteral("survey-new"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 2, QStringLiteral("Maps"), QStringLiteral("map-new"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 2, QStringLiteral("Maps"), QStringLiteral("map-new"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 3, QStringLiteral("Scraps"), QStringLiteral("scrap-new"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 3, QStringLiteral("Scraps"), QStringLiteral("scrap-new"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 4, QStringLiteral("Lines"), QStringLiteral("line-new"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 4, QStringLiteral("Lines"), QStringLiteral("line-new"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 5, QStringLiteral("Areas"), QStringLiteral("area-new"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 5, QStringLiteral("Areas"), QStringLiteral("area-new"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 6, QStringLiteral("Points"), QStringLiteral("point-new"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 6, QStringLiteral("Points"), QStringLiteral("point-new"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 7, QStringLiteral("Stations"), QStringLiteral("station-new"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 7, QStringLiteral("Stations"), QStringLiteral("station-new"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 8, QStringLiteral("Stations"), QStringLiteral("point-station-new"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 8, QStringLiteral("Stations"), QStringLiteral("point-station-new"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -222,7 +357,7 @@ int runRewritePreservesOtherContentTest()
 
     contents = QStringLiteral("map map-old\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 1, QStringLiteral("Maps"), QStringLiteral("path\\with#hash"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 1, QStringLiteral("Maps"), QStringLiteral("path\\with#hash"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -232,7 +367,7 @@ int runRewritePreservesOtherContentTest()
 
     contents = QStringLiteral("\tmap\t\"old map\"\t# tabbed comment\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 1, QStringLiteral("Maps"), QStringLiteral("new map"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 1, QStringLiteral("Maps"), QStringLiteral("new map"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -242,7 +377,7 @@ int runRewritePreservesOtherContentTest()
 
     contents = QStringLiteral("map map-old extra tokens # trailing comment\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 1, QStringLiteral("Maps"), QStringLiteral("map-new"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 1, QStringLiteral("Maps"), QStringLiteral("map-new"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -252,7 +387,7 @@ int runRewritePreservesOtherContentTest()
 
     contents = QStringLiteral("map \"unterminated map\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 1, QStringLiteral("Maps"), QStringLiteral("fixed map"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 1, QStringLiteral("Maps"), QStringLiteral("fixed map"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -262,7 +397,7 @@ int runRewritePreservesOtherContentTest()
 
     contents = QStringLiteral("\tpoint\tstation\t'old station'\t# station note\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 1, QStringLiteral("Stations"), QStringLiteral("new station"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 1, QStringLiteral("Stations"), QStringLiteral("new station"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -272,7 +407,7 @@ int runRewritePreservesOtherContentTest()
 
     contents = QStringLiteral("\tmap\t\"old map\"\t# double quote note\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 1, QStringLiteral("Maps"), QStringLiteral("new map \"quote\""), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 1, QStringLiteral("Maps"), QStringLiteral("new map \"quote\""), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -282,7 +417,7 @@ int runRewritePreservesOtherContentTest()
 
     contents = QStringLiteral("station 'old station' # single quote note\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 1, QStringLiteral("Stations"), QStringLiteral("new station's name"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 1, QStringLiteral("Stations"), QStringLiteral("new station's name"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -292,7 +427,7 @@ int runRewritePreservesOtherContentTest()
 
     contents = QStringLiteral("survey old-survey\r\nmap old-map\nscrap old-scrap\rendscrap");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 2, QStringLiteral("Maps"), QStringLiteral("new-map"), &errorMessage), errorMessage.toUtf8().constData())) {
+    if (!expect(rewriteStructureEntryName(&contents, 2, QStringLiteral("Maps"), QStringLiteral("new-map"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
 
@@ -829,7 +964,7 @@ int runRewritePointCoordinatesTest()
     QString errorMessage;
 
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewritePointCoordinates(nullptr, 1, QPointF(1.0, 2.0), &errorMessage),
+    if (!expect(!rewritePointCoordinates(nullptr, 1, QPointF(1.0, 2.0), &errorMessage),
                 "rewritePointCoordinates should reject null contents.")) {
         return 1;
     }
@@ -839,7 +974,7 @@ int runRewritePointCoordinatesTest()
 
     QString contents = QStringLiteral("line wall\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(100.1, 200.2), &errorMessage),
+    if (!expect(!rewritePointCoordinates(&contents, 1, QPointF(100.1, 200.2), &errorMessage),
                 "rewritePointCoordinates should reject non-point directives.")) {
         return 1;
     }
@@ -866,7 +1001,7 @@ int runRewritePointCoordinatesTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(345.6, 789.1), &errorMessage),
+    if (!expect(rewritePointCoordinates(&contents, 1, QPointF(345.6, 789.1), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -877,7 +1012,7 @@ int runRewritePointCoordinatesTest()
 
     contents = QStringLiteral("station st-a 1 2\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(-10.0, 55.5), &errorMessage),
+    if (!expect(rewritePointCoordinates(&contents, 1, QPointF(-10.0, 55.5), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -888,7 +1023,7 @@ int runRewritePointCoordinatesTest()
 
     contents = QStringLiteral("point station \"10\" \"20\" 30 40 station -name a2\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(1.5, -2.5), &errorMessage),
+    if (!expect(rewritePointCoordinates(&contents, 1, QPointF(1.5, -2.5), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -899,7 +1034,7 @@ int runRewritePointCoordinatesTest()
 
     contents = QStringLiteral("point station 1e2 -2.5E-1 station -name a3\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(12.3, -45.6), &errorMessage),
+    if (!expect(rewritePointCoordinates(&contents, 1, QPointF(12.3, -45.6), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -910,7 +1045,7 @@ int runRewritePointCoordinatesTest()
 
     contents = QStringLiteral("point station 10 20 station -name a4 % keep\r\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(-7.0, 8.5), &errorMessage),
+    if (!expect(rewritePointCoordinates(&contents, 1, QPointF(-7.0, 8.5), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -921,7 +1056,7 @@ int runRewritePointCoordinatesTest()
 
     contents = QStringLiteral("survey s\r\npoint station 10 20 station -name mixed\nendsurvey\r");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 2, QPointF(30.25, -40.5), &errorMessage),
+    if (!expect(rewritePointCoordinates(&contents, 2, QPointF(30.25, -40.5), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -933,12 +1068,12 @@ int runRewritePointCoordinatesTest()
     contents = QStringLiteral("point station 397.50 -969.50 station -name a5\n");
     const QString originalPrecisionPointContents = contents;
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(402.25, -965.75), &errorMessage),
+    if (!expect(rewritePointCoordinates(&contents, 1, QPointF(402.25, -965.75), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 1, QPointF(397.5, -969.5), &errorMessage),
+    if (!expect(rewritePointCoordinates(&contents, 1, QPointF(397.5, -969.5), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -955,7 +1090,7 @@ int runRewriteLineAreaVertexTest()
     QString errorMessage;
 
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(nullptr, 1, QStringLiteral("line"), 0, QPointF(1.0, 2.0), &errorMessage),
+    if (!expect(!rewriteLineAreaVertex(nullptr, 1, QStringLiteral("line"), 0, QPointF(1.0, 2.0), &errorMessage),
                 "rewriteLineAreaVertex should reject null contents.")) {
         return 1;
     }
@@ -1020,7 +1155,7 @@ int runRewriteLineAreaVertexTest()
 
     QString contents = QStringLiteral("point station 1 2 station -name a1\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(100.0, 200.0), &errorMessage),
+    if (!expect(!rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(100.0, 200.0), &errorMessage),
                 "rewriteLineAreaVertex should reject non-line and non-area directives.")) {
         return 1;
     }
@@ -1032,7 +1167,7 @@ int runRewriteLineAreaVertexTest()
                               "  10 20 30 40 # keep\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(-5.5, 77.7), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(-5.5, 77.7), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1047,7 +1182,7 @@ int runRewriteLineAreaVertexTest()
                               "  1e2 -2E1 3.5e+1 4.0\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(55.0, -66.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(55.0, -66.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1062,7 +1197,7 @@ int runRewriteLineAreaVertexTest()
                               "  10 20 30 40 -subtype 100 200\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(70.0, 80.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(70.0, 80.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1076,7 +1211,7 @@ int runRewriteLineAreaVertexTest()
     contents = QStringLiteral("line wall -id line-1 10 20 -subtype 100 200\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(-3.0, 9.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(-3.0, 9.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1089,7 +1224,7 @@ int runRewriteLineAreaVertexTest()
     contents = QStringLiteral("line wall -id line-1 -subtype temp 100 200 10 20\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(1.0, 2.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(1.0, 2.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1104,7 +1239,7 @@ int runRewriteLineAreaVertexTest()
                               "  -subtype temporary 100 200\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(1.0, 2.0), &errorMessage),
+    if (!expect(!rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(1.0, 2.0), &errorMessage),
                 "rewriteLineAreaVertex should ignore option-led continuation lines even when they contain numeric payload tokens.")) {
         return 1;
     }
@@ -1114,7 +1249,7 @@ int runRewriteLineAreaVertexTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(77.0, -88.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(77.0, -88.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1131,7 +1266,7 @@ int runRewriteLineAreaVertexTest()
                               "  smooth off 50 60\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(99.0, 88.0), &errorMessage),
+    if (!expect(!rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(99.0, 88.0), &errorMessage),
                 "rewriteLineAreaVertex should ignore non-coordinate continuation lines even when they contain numeric payload tokens.")) {
         return 1;
     }
@@ -1141,7 +1276,7 @@ int runRewriteLineAreaVertexTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(77.0, 66.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(77.0, 66.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1160,7 +1295,7 @@ int runRewriteLineAreaVertexTest()
                               "  5 6 # anchor\n"
                               "endarea\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("area"), 2, QPointF(77.0, 88.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("area"), 2, QPointF(77.0, 88.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1179,7 +1314,7 @@ int runRewriteLineAreaVertexTest()
                               "  5 6 # keep area note\n"
                               "endarea\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("area"), 2, QPointF(42.0, -9.5), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("area"), 2, QPointF(42.0, -9.5), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1193,7 +1328,7 @@ int runRewriteLineAreaVertexTest()
 
     contents = QStringLiteral("line wall\n  10 20\nendline\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(1.0, 2.0), &errorMessage),
+    if (!expect(!rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(1.0, 2.0), &errorMessage),
                 "rewriteLineAreaVertex should reject out-of-range vertex indices.")) {
         return 1;
     }
@@ -1205,7 +1340,7 @@ int runRewriteLineAreaVertexTest()
                               "  \"10\" \"20\" 30 40\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(8.0, 9.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(8.0, 9.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1221,7 +1356,7 @@ int runRewriteLineAreaVertexTest()
                               "  30 40\r\n"
                               "endline\r\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(7.0, 8.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(7.0, 8.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1238,7 +1373,7 @@ int runRewriteLineAreaVertexTest()
                               "  30 40\r"
                               "endline");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(70.0, 80.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(70.0, 80.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1254,7 +1389,7 @@ int runRewriteLineAreaVertexTest()
                               "  50 60\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(-11.0, 12.5), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(-11.0, 12.5), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1269,7 +1404,7 @@ int runRewriteLineAreaVertexTest()
                               "  1 2 3\n"
                               "endarea\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("area"), 1, QPointF(9.0, 9.0), &errorMessage),
+    if (!expect(!rewriteLineAreaVertex(&contents, 1, QStringLiteral("area"), 1, QPointF(9.0, 9.0), &errorMessage),
                 "rewriteLineAreaVertex should reject incomplete odd coordinate tuples.")) {
         return 1;
     }
@@ -1280,7 +1415,7 @@ int runRewriteLineAreaVertexTest()
     contents = QStringLiteral("line wall\n"
                               "  1 2\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(5.0, 6.0), &errorMessage),
+    if (!expect(!rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(5.0, 6.0), &errorMessage),
                 "rewriteLineAreaVertex should reject line blocks missing endline.")) {
         return 1;
     }
@@ -1293,7 +1428,7 @@ int runRewriteLineAreaVertexTest()
                               "  50 60\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(-15.0, 16.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 2, QPointF(-15.0, 16.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1311,7 +1446,7 @@ int runRewriteLineAreaVertexTest()
                               "  50 60 % keep last vertex\r\n"
                               "endline\r\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(99.0, -42.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 1, QPointF(99.0, -42.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1329,12 +1464,12 @@ int runRewriteLineAreaVertexTest()
                               "endline\n");
     const QString originalPrecisionLineContents = contents;
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(400.25, -960.75), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(400.25, -960.75), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(397.5, -969.5), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(397.5, -969.5), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1351,7 +1486,7 @@ int runRewriteLineOptionToggleTest()
     QString errorMessage;
 
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineOptionToggle(nullptr, 1, QStringLiteral("-close"), true, &errorMessage),
+    if (!expect(!rewriteLineOptionToggle(nullptr, 1, QStringLiteral("-close"), true, &errorMessage),
                 "rewriteLineOptionToggle should reject null contents.")) {
         return 1;
     }
@@ -1361,7 +1496,7 @@ int runRewriteLineOptionToggleTest()
 
     QString contents = QStringLiteral("point station 1 2 station -name a1\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineOptionToggle(&contents, 1, QStringLiteral("-close"), true, &errorMessage),
+    if (!expect(!rewriteLineOptionToggle(&contents, 1, QStringLiteral("-close"), true, &errorMessage),
                 "rewriteLineOptionToggle should reject non-line directives.")) {
         return 1;
     }
@@ -1390,7 +1525,7 @@ int runRewriteLineOptionToggleTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents, 1, QStringLiteral("-close"), true, &errorMessage),
+    if (!expect(rewriteLineOptionToggle(&contents, 1, QStringLiteral("-close"), true, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1401,7 +1536,7 @@ int runRewriteLineOptionToggleTest()
 
     contents = QStringLiteral("line wall -close\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents, 1, QStringLiteral("-close"), false, &errorMessage),
+    if (!expect(rewriteLineOptionToggle(&contents, 1, QStringLiteral("-close"), false, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1431,7 +1566,7 @@ int runRewriteLineOptionToggleTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents, 1, QStringLiteral("-reverse"), false, &errorMessage),
+    if (!expect(rewriteLineOptionToggle(&contents, 1, QStringLiteral("-reverse"), false, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1442,7 +1577,7 @@ int runRewriteLineOptionToggleTest()
 
     contents = QStringLiteral("line wall -close on -reverse off\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineOptionToggle(&contents, 1, QStringLiteral("reverse"), true, &errorMessage),
+    if (!expect(rewriteLineOptionToggle(&contents, 1, QStringLiteral("reverse"), true, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1520,7 +1655,7 @@ int runRewriteLineCoordinateRowsTest()
     }
 
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineCoordinateRows(nullptr, 1, {QStringLiteral("1 2")}, &errorMessage),
+    if (!expect(!rewriteLineCoordinateRows(nullptr, 1, {QStringLiteral("1 2")}, &errorMessage),
                 "rewriteLineCoordinateRows should reject null contents.")) {
         return 1;
     }
@@ -1530,21 +1665,21 @@ int runRewriteLineCoordinateRowsTest()
 
     QString contents = QStringLiteral("point station 1 2 station -name a1\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineCoordinateRows(&contents, 1, {QStringLiteral("1 2")}, &errorMessage),
+    if (!expect(!rewriteLineCoordinateRows(&contents, 1, {QStringLiteral("1 2")}, &errorMessage),
                 "rewriteLineCoordinateRows should reject non-line directives.")) {
         return 1;
     }
 
     contents = QStringLiteral("line wall 1 2 3 4\nendline\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteLineCoordinateRows(&contents, 1, {QStringLiteral("5 6")}, &errorMessage),
+    if (!expect(!rewriteLineCoordinateRows(&contents, 1, {QStringLiteral("5 6")}, &errorMessage),
                 "rewriteLineCoordinateRows should reject start-line inline coordinate rewrites.")) {
         return 1;
     }
 
     contents = QStringLiteral("line wall\n  1 2\n  smooth off\n  3 4\nendline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineCoordinateRows(&contents,
+    if (!expect(rewriteLineCoordinateRows(&contents,
                                                                   1,
                                                                   {QStringLiteral("5 6"),
                                                                    QStringLiteral("smooth off"),
@@ -1570,7 +1705,7 @@ int runRewriteLineCoordinateRowsTest()
                               "  100 100\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineCoordinateRows(&contents,
+    if (!expect(rewriteLineCoordinateRows(&contents,
                                                                   1,
                                                                   {QStringLiteral("0.0 0.0"),
                                                                    QStringLiteral("l-size 40.0"),
@@ -1599,7 +1734,7 @@ int runRewriteLineCoordinateRowsTest()
                               "  3 4\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineCoordinateRows(&contents,
+    if (!expect(rewriteLineCoordinateRows(&contents,
                                                                   1,
                                                                   {QStringLiteral("10 20"),
                                                                    QStringLiteral("altitude ."),
@@ -1624,7 +1759,7 @@ int runRewriteLineCoordinateRowsTest()
                               "  50 60\r\n"
                               "endline\r\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineCoordinateRows(&contents,
+    if (!expect(rewriteLineCoordinateRows(&contents,
                                                                   1,
                                                                   {QStringLiteral("11 22 33 44 55 66"),
                                                                    QStringLiteral("77 88")},
@@ -1647,7 +1782,7 @@ int runRewriteLineCoordinateRowsTest()
                               "endline\r\n"
                               "point station 1 2 station -name a1\r");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineCoordinateRows(&contents,
+    if (!expect(rewriteLineCoordinateRows(&contents,
                                                                   2,
                                                                   {QStringLiteral("11 22"),
                                                                    QStringLiteral("33 44")},
@@ -1691,19 +1826,19 @@ int runCorpusStyleRewriteFixtureTest()
         "endscrap\r\n");
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewritePointCoordinates(&contents, 4, QPointF(400.0, -970.0), &errorMessage),
+    if (!expect(rewritePointCoordinates(&contents, 4, QPointF(400.0, -970.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 6, QStringLiteral("line"), 4, QPointF(421.0, -573.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 6, QStringLiteral("line"), 4, QPointF(421.0, -573.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLineAreaVertex(&contents, 12, QStringLiteral("area"), 5, QPointF(398.0, -912.0), &errorMessage),
+    if (!expect(rewriteLineAreaVertex(&contents, 12, QStringLiteral("area"), 5, QPointF(398.0, -912.0), &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1766,7 +1901,7 @@ int runCorpusStyleRewriteFixtureTest()
                     QStringLiteral("rewriteLineAreaVertex should fail when corpus-like line blocks are missing endline."),
                     malformedLineBlock,
                     [](QString *candidate, QString *candidateError) {
-                        return TherionDocumentEditor::rewriteLineAreaVertex(candidate,
+                        return rewriteLineAreaVertex(candidate,
                                                                             3,
                                                                             QStringLiteral("line"),
                                                                             1,
@@ -1788,7 +1923,7 @@ int runCorpusStyleRewriteFixtureTest()
                     QStringLiteral("rewriteLineAreaVertex should fail when area coordinate tuples are incomplete."),
                     malformedAreaTuple,
                     [](QString *candidate, QString *candidateError) {
-                        return TherionDocumentEditor::rewriteLineAreaVertex(candidate,
+                        return rewriteLineAreaVertex(candidate,
                                                                             3,
                                                                             QStringLiteral("area"),
                                                                             1,
@@ -1827,7 +1962,7 @@ int runRewriteOrientationOptionsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewritePointOrientation(&contents, 1, true, 370.0, &errorMessage),
+    if (!expect(rewritePointOrientation(&contents, 1, true, 370.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1837,7 +1972,7 @@ int runRewriteOrientationOptionsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewritePointOrientation(&contents, 1, false, 0.0, &errorMessage),
+    if (!expect(rewritePointOrientation(&contents, 1, false, 0.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1848,7 +1983,7 @@ int runRewriteOrientationOptionsTest()
 
     contents = QStringLiteral("scrap s\r\npoint 10 20 station -name a2 # keep\nendscrap\r");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewritePointOrientation(&contents, 2, true, 45.0, &errorMessage),
+    if (!expect(rewritePointOrientation(&contents, 2, true, 45.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1882,7 +2017,7 @@ int runRewriteOrientationOptionsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLinePointOrientation(&contents, 1, 0, true, -15.0, &errorMessage),
+    if (!expect(rewriteLinePointOrientation(&contents, 1, 0, true, -15.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1895,7 +2030,7 @@ int runRewriteOrientationOptionsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLinePointOrientation(&contents, 1, 1, true, 90.0, &errorMessage),
+    if (!expect(rewriteLinePointOrientation(&contents, 1, 1, true, 90.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1909,7 +2044,7 @@ int runRewriteOrientationOptionsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLinePointOrientation(&contents, 1, 1, false, 0.0, &errorMessage),
+    if (!expect(rewriteLinePointOrientation(&contents, 1, 1, false, 0.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1927,7 +2062,7 @@ int runRewriteOrientationOptionsTest()
                               "  30 40\n"
                               "endline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLinePointOrientation(&contents, 1, 0, true, 180.0, &errorMessage),
+    if (!expect(rewriteLinePointOrientation(&contents, 1, 0, true, 180.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1965,7 +2100,7 @@ int runRewriteOrientationOptionsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 1, 0, true, 40.0, &errorMessage),
+    if (!expect(rewriteLinePointLeftSize(&contents, 1, 0, true, 40.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1979,7 +2114,7 @@ int runRewriteOrientationOptionsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 1, 0, true, 12.5, &errorMessage),
+    if (!expect(rewriteLinePointLeftSize(&contents, 1, 0, true, 12.5, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -1993,7 +2128,7 @@ int runRewriteOrientationOptionsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 1, 0, false, 0.0, &errorMessage),
+    if (!expect(rewriteLinePointLeftSize(&contents, 1, 0, false, 0.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -2012,7 +2147,7 @@ int runRewriteOrientationOptionsTest()
                               "endline\r"
                               "point station 1 2 station -name a1\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 2, 0, true, 40.0, &errorMessage),
+    if (!expect(rewriteLinePointLeftSize(&contents, 2, 0, true, 40.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -2028,7 +2163,7 @@ int runRewriteOrientationOptionsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 2, 0, true, 12.5, &errorMessage),
+    if (!expect(rewriteLinePointLeftSize(&contents, 2, 0, true, 12.5, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -2044,7 +2179,7 @@ int runRewriteOrientationOptionsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 2, 0, false, 0.0, &errorMessage),
+    if (!expect(rewriteLinePointLeftSize(&contents, 2, 0, false, 0.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -2085,7 +2220,7 @@ int runRewriteScrapScaleTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteScrapScale(&contents,
+    if (!expect(rewriteScrapScale(&contents,
                                                          1,
                                                          QStringLiteral("[0 0 100 0 0 0 10 0 m]"),
                                                          &errorMessage),
@@ -2099,7 +2234,7 @@ int runRewriteScrapScaleTest()
 
     contents = QStringLiteral("scrap s1 -scale [-128 -1152 851 -1152 0.0 0.0 24.8666 0.0 m] -projection plan\r\nendscrap\r\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteScrapScale(&contents,
+    if (!expect(rewriteScrapScale(&contents,
                                                          1,
                                                          QStringLiteral("[1 2 3 4 5 6 7 8 m]"),
                                                          &errorMessage),
@@ -2113,7 +2248,7 @@ int runRewriteScrapScaleTest()
 
     contents = QStringLiteral("scrap s1 -projection plan -scale 100 10 m -author 2026.01.01 Test\nendscrap\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteScrapScale(&contents,
+    if (!expect(rewriteScrapScale(&contents,
                                                          1,
                                                          QStringLiteral("[0 0 100 0 0 0 10 0 m]"),
                                                          &errorMessage),
@@ -2127,7 +2262,7 @@ int runRewriteScrapScaleTest()
 
     contents = QStringLiteral("scrap s1 -projection plan # keep comment\nendscrap\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteScrapScale(&contents,
+    if (!expect(rewriteScrapScale(&contents,
                                                          1,
                                                          QStringLiteral("[0 0 1 0 0 0 1 0 m]"),
                                                          &errorMessage),
@@ -2141,7 +2276,7 @@ int runRewriteScrapScaleTest()
 
     contents = QStringLiteral("line wall\nendline\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteScrapScale(&contents,
+    if (!expect(!rewriteScrapScale(&contents,
                                                           1,
                                                           QStringLiteral("[0 0 1 0 0 0 1 0 m]"),
                                                           &errorMessage),
@@ -2159,7 +2294,7 @@ int runRewriteMapObjectQuickFieldsTest()
 {
     QString errorMessage;
     QString contents = QStringLiteral("scrap old -projection plan # keep\nendscrap\n");
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QString(),
                                                                    QString(),
@@ -2199,7 +2334,7 @@ int runRewriteMapObjectQuickFieldsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QStringLiteral("border"),
                                                                    QStringLiteral("invisible"),
@@ -2217,7 +2352,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("line wall -id line-1 -subtype invisible # keep\nendline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QStringLiteral("wall"),
                                                                    QString(),
@@ -2235,7 +2370,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("line rock-border -close on -clip off\nendline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QStringLiteral("rock-border"),
                                                                    QStringLiteral("-clip off"),
@@ -2253,7 +2388,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("line rock-border -close on -clip off \"-clip off\" \"-clip off\"\nendline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QStringLiteral("rock-border"),
                                                                    QStringLiteral("-clip off"),
@@ -2271,7 +2406,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("line rock-border -close on -clip off -subtype \"-clip off\"\nendline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QStringLiteral("rock-border"),
                                                                    QString(),
@@ -2289,7 +2424,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("point 10 20 station -name old-name\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QStringLiteral("station"),
                                                                    QString(),
@@ -2307,7 +2442,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("point 10 20 -id old\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QStringLiteral("station"),
                                                                    QString(),
@@ -2325,7 +2460,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("point 463.0 -495.75 station-name -id old\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QStringLiteral("station"),
                                                                    QStringLiteral("fixed"),
@@ -2343,7 +2478,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("point 463.0 -495.75 station -id point-3 -subtype fixed\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QStringLiteral("station"),
                                                                    QString(),
@@ -2361,7 +2496,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("area water -id a1 -subtype temporary\nendarea\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QStringLiteral("sand"),
                                                                    QStringLiteral("blocks"),
@@ -2379,7 +2514,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("area water -id a1 -subtype temporary\nendarea\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    1,
                                                                    QStringLiteral("sand"),
                                                                    QString(),
@@ -2397,7 +2532,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("scrap s1\r\nline wall -id old # keep\nendline\rendscrap");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectQuickFields(&contents,
+    if (!expect(rewriteMapObjectQuickFields(&contents,
                                                                    2,
                                                                    QStringLiteral("border"),
                                                                    QStringLiteral("invisible"),
@@ -2433,7 +2568,7 @@ int runRewriteMapObjectQuickFieldsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectTextOption(&contents,
+    if (!expect(rewriteMapObjectTextOption(&contents,
                                                                   1,
                                                                   QStringLiteral("Main passage"),
                                                                   &errorMessage),
@@ -2447,7 +2582,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("point 10 20 label -text old\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectTextOption(&contents,
+    if (!expect(rewriteMapObjectTextOption(&contents,
                                                                   1,
                                                                   QStringLiteral("New label"),
                                                                   &errorMessage),
@@ -2461,7 +2596,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("line wall -text stale\nendline\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectTextOption(&contents,
+    if (!expect(rewriteMapObjectTextOption(&contents,
                                                                   1,
                                                                   QString(),
                                                                   &errorMessage),
@@ -2475,7 +2610,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("line wall\nendline\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteMapObjectTextOption(&contents,
+    if (!expect(!rewriteMapObjectTextOption(&contents,
                                                                    1,
                                                                    QStringLiteral("Invalid"),
                                                                    &errorMessage),
@@ -2489,7 +2624,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("scrap s\r\nline label # keep\nendline\nendscrap");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectTextOption(&contents,
+    if (!expect(rewriteMapObjectTextOption(&contents,
                                                                   2,
                                                                   QStringLiteral("Mixed label"),
                                                                   &errorMessage),
@@ -2503,7 +2638,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("point 10 20 altitude # keep\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectValueOption(&contents,
+    if (!expect(rewriteMapObjectValueOption(&contents,
                                                                    1,
                                                                    QStringLiteral("[fix 1300]"),
                                                                    &errorMessage),
@@ -2535,7 +2670,7 @@ int runRewriteMapObjectQuickFieldsTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectValueOption(&contents,
+    if (!expect(rewriteMapObjectValueOption(&contents,
                                                                    1,
                                                                    QStringLiteral("3.5"),
                                                                    &errorMessage),
@@ -2549,7 +2684,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("point 10 20 station -value stale\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectValueOption(&contents,
+    if (!expect(rewriteMapObjectValueOption(&contents,
                                                                    1,
                                                                    QString(),
                                                                    &errorMessage),
@@ -2563,7 +2698,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("point 10 20 station\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteMapObjectValueOption(&contents,
+    if (!expect(!rewriteMapObjectValueOption(&contents,
                                                                     1,
                                                                     QStringLiteral("42"),
                                                                     &errorMessage),
@@ -2577,7 +2712,7 @@ int runRewriteMapObjectQuickFieldsTest()
 
     contents = QStringLiteral("scrap s\r\npoint 10 20 altitude # keep\nendscrap\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteMapObjectValueOption(&contents,
+    if (!expect(rewriteMapObjectValueOption(&contents,
                                                                    2,
                                                                    QStringLiteral("[fix 1200]"),
                                                                    &errorMessage),
@@ -2614,7 +2749,7 @@ int runRewriteScrapProjectionTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteScrapProjection(&contents,
+    if (!expect(rewriteScrapProjection(&contents,
                                                               1,
                                                               QStringLiteral("plan"),
                                                               &errorMessage),
@@ -2628,7 +2763,7 @@ int runRewriteScrapProjectionTest()
 
     contents = QStringLiteral("scrap s1 -projection [elevation 10 deg] -scale [0 0 1 0 0 0 1 0 m]\r\nendscrap\r\n");
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteScrapProjection(&contents,
+    if (!expect(rewriteScrapProjection(&contents,
                                                               1,
                                                               QStringLiteral("extended"),
                                                               &errorMessage),
@@ -2660,7 +2795,7 @@ int runRewriteScrapProjectionTest()
     }
 
     errorMessage.clear();
-    if (!expect(TherionDocumentEditor::rewriteScrapProjection(&contents,
+    if (!expect(rewriteScrapProjection(&contents,
                                                               1,
                                                               QString(),
                                                               &errorMessage),
@@ -2674,7 +2809,7 @@ int runRewriteScrapProjectionTest()
 
     contents = QStringLiteral("line wall\nendline\n");
     errorMessage.clear();
-    if (!expect(!TherionDocumentEditor::rewriteScrapProjection(&contents,
+    if (!expect(!rewriteScrapProjection(&contents,
                                                                1,
                                                                QStringLiteral("plan"),
                                                                &errorMessage),

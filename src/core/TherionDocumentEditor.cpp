@@ -1420,27 +1420,6 @@ bool TherionDocumentEditor::applySourceTextEdits(QString *contents,
     return true;
 }
 
-bool TherionDocumentEditor::rewriteStructureEntryName(QString *contents,
-                                                      int lineNumber,
-                                                      const QString &category,
-                                                      const QString &newName,
-                                                      QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!structureEntryNameRewriteEdits(*contents, lineNumber, category, newName, &edits, errorMessage)) {
-        return false;
-    }
-
-    return applySourceTextEdits(contents, edits, errorMessage);
-}
-
 bool TherionDocumentEditor::structureEntryNameRewriteEdits(const QString &contents,
                                                            int lineNumber,
                                                            const QString &category,
@@ -1974,26 +1953,6 @@ bool TherionDocumentEditor::appendReferencedArea(QString *contents,
     return true;
 }
 
-bool TherionDocumentEditor::rewritePointCoordinates(QString *contents,
-                                                    int lineNumber,
-                                                    const QPointF &point,
-                                                    QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!pointCoordinateRewriteEdits(*contents, lineNumber, point, &edits, errorMessage)) {
-        return false;
-    }
-
-    return applySourceTextEdits(contents, edits, errorMessage);
-}
-
 bool TherionDocumentEditor::pointCoordinateRewriteEdits(const QString &contents,
                                                         int lineNumber,
                                                         const QPointF &point,
@@ -2071,28 +2030,6 @@ bool TherionDocumentEditor::pointCoordinateRewriteEdits(const QString &contents,
         formatCoordinateLikeExistingToken(oldYTokenText, point.y()),
     });
     return true;
-}
-
-bool TherionDocumentEditor::rewriteLineAreaVertex(QString *contents,
-                                                  int lineNumber,
-                                                  const QString &kind,
-                                                  int vertexIndex,
-                                                  const QPointF &point,
-                                                  QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!lineAreaVertexRewriteEdits(*contents, lineNumber, kind, vertexIndex, point, &edits, errorMessage)) {
-        return false;
-    }
-
-    return applySourceTextEdits(contents, edits, errorMessage);
 }
 
 bool TherionDocumentEditor::lineAreaVertexRewriteEdits(const QString &contents,
@@ -2252,26 +2189,6 @@ bool TherionDocumentEditor::lineAreaVertexRewriteEdits(const QString &contents,
     return true;
 }
 
-bool TherionDocumentEditor::rewriteLineOptionToggle(QString *contents,
-                                                    int lineNumber,
-                                                    const QString &optionName,
-                                                    bool enabled,
-                                                    QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!lineOptionToggleRewriteEdits(*contents, lineNumber, optionName, enabled, &edits, errorMessage)) {
-        return false;
-    }
-    return applySourceTextEdits(contents, edits, errorMessage);
-}
-
 bool TherionDocumentEditor::lineOptionToggleRewriteEdits(const QString &contents,
                                                          int lineNumber,
                                                          const QString &optionName,
@@ -2394,26 +2311,6 @@ bool TherionDocumentEditor::lineOptionToggleRewriteEdits(const QString &contents
         });
     }
     return true;
-}
-
-bool TherionDocumentEditor::rewritePointOrientation(QString *contents,
-                                                    int lineNumber,
-                                                    bool enabled,
-                                                    qreal orientationDegrees,
-                                                    QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!pointOrientationRewriteEdits(*contents, lineNumber, enabled, orientationDegrees, &edits, errorMessage)) {
-        return false;
-    }
-    return applySourceTextEdits(contents, edits, errorMessage);
 }
 
 bool TherionDocumentEditor::pointOrientationRewriteEdits(const QString &contents,
@@ -2550,33 +2447,6 @@ bool TherionDocumentEditor::pointOrientationRewriteEdits(const QString &contents
     return true;
 }
 
-bool TherionDocumentEditor::rewriteLinePointOrientation(QString *contents,
-                                                        int lineNumber,
-                                                        int sourceVertexIndex,
-                                                        bool enabled,
-                                                        qreal orientationDegrees,
-                                                        QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!linePointOrientationRewriteEdits(*contents,
-                                          lineNumber,
-                                          sourceVertexIndex,
-                                          enabled,
-                                          orientationDegrees,
-                                          &edits,
-                                          errorMessage)) {
-        return false;
-    }
-    return applySourceTextEdits(contents, edits, errorMessage);
-}
-
 bool TherionDocumentEditor::linePointOrientationRewriteEdits(const QString &contents,
                                                              int lineNumber,
                                                              int sourceVertexIndex,
@@ -2595,33 +2465,6 @@ bool TherionDocumentEditor::linePointOrientationRewriteEdits(const QString &cont
                                              errorMessage);
 }
 
-bool TherionDocumentEditor::rewriteLinePointLeftSize(QString *contents,
-                                                     int lineNumber,
-                                                     int sourceVertexIndex,
-                                                     bool enabled,
-                                                     qreal sizeValue,
-                                                     QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!linePointLeftSizeRewriteEdits(*contents,
-                                       lineNumber,
-                                       sourceVertexIndex,
-                                       enabled,
-                                       sizeValue,
-                                       &edits,
-                                       errorMessage)) {
-        return false;
-    }
-    return applySourceTextEdits(contents, edits, errorMessage);
-}
-
 bool TherionDocumentEditor::linePointLeftSizeRewriteEdits(const QString &contents,
                                                           int lineNumber,
                                                           int sourceVertexIndex,
@@ -2638,25 +2481,6 @@ bool TherionDocumentEditor::linePointLeftSizeRewriteEdits(const QString &content
                                              sizeValue,
                                              edits,
                                              errorMessage);
-}
-
-bool TherionDocumentEditor::rewriteScrapScale(QString *contents,
-                                              int lineNumber,
-                                              const QString &scaleExpression,
-                                              QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!scrapScaleRewriteEdits(*contents, lineNumber, scaleExpression, &edits, errorMessage)) {
-        return false;
-    }
-    return applySourceTextEdits(contents, edits, errorMessage);
 }
 
 bool TherionDocumentEditor::scrapScaleRewriteEdits(const QString &contents,
@@ -2744,25 +2568,6 @@ bool TherionDocumentEditor::scrapScaleRewriteEdits(const QString &contents,
     return true;
 }
 
-bool TherionDocumentEditor::rewriteScrapProjection(QString *contents,
-                                                   int lineNumber,
-                                                   const QString &projectionExpression,
-                                                   QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!scrapProjectionRewriteEdits(*contents, lineNumber, projectionExpression, &edits, errorMessage)) {
-        return false;
-    }
-    return applySourceTextEdits(contents, edits, errorMessage);
-}
-
 bool TherionDocumentEditor::scrapProjectionRewriteEdits(const QString &contents,
                                                         int lineNumber,
                                                         const QString &projectionExpression,
@@ -2847,38 +2652,6 @@ bool TherionDocumentEditor::scrapProjectionRewriteEdits(const QString &contents,
         });
     }
     return true;
-}
-
-bool TherionDocumentEditor::rewriteMapObjectQuickFields(QString *contents,
-                                                        int lineNumber,
-                                                        const QString &type,
-                                                        const QString &subtype,
-                                                        const QString &identifier,
-                                                        const QString &name,
-                                                        bool nameEnabled,
-                                                        QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!mapObjectQuickFieldsRewriteEdits(*contents,
-                                          lineNumber,
-                                          type,
-                                          subtype,
-                                          identifier,
-                                          name,
-                                          nameEnabled,
-                                          &edits,
-                                          errorMessage)) {
-        return false;
-    }
-
-    return applySourceTextEdits(contents, edits, errorMessage);
 }
 
 bool TherionDocumentEditor::mapObjectQuickFieldsRewriteEdits(const QString &contents,
@@ -3052,26 +2825,6 @@ bool TherionDocumentEditor::mapObjectQuickFieldsRewriteEdits(const QString &cont
     return true;
 }
 
-bool TherionDocumentEditor::rewriteMapObjectTextOption(QString *contents,
-                                                       int lineNumber,
-                                                       const QString &text,
-                                                       QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!mapObjectTextOptionRewriteEdits(*contents, lineNumber, text, &edits, errorMessage)) {
-        return false;
-    }
-
-    return applySourceTextEdits(contents, edits, errorMessage);
-}
-
 bool TherionDocumentEditor::mapObjectTextOptionRewriteEdits(const QString &contents,
                                                             int lineNumber,
                                                             const QString &text,
@@ -3149,26 +2902,6 @@ bool TherionDocumentEditor::mapObjectTextOptionRewriteEdits(const QString &conte
     return true;
 }
 
-bool TherionDocumentEditor::rewriteMapObjectValueOption(QString *contents,
-                                                        int lineNumber,
-                                                        const QString &value,
-                                                        QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!mapObjectValueOptionRewriteEdits(*contents, lineNumber, value, &edits, errorMessage)) {
-        return false;
-    }
-
-    return applySourceTextEdits(contents, edits, errorMessage);
-}
-
 bool TherionDocumentEditor::mapObjectValueOptionRewriteEdits(const QString &contents,
                                                              int lineNumber,
                                                              const QString &value,
@@ -3243,26 +2976,6 @@ bool TherionDocumentEditor::mapObjectValueOptionRewriteEdits(const QString &cont
         });
     }
     return true;
-}
-
-bool TherionDocumentEditor::rewriteLineCoordinateRows(QString *contents,
-                                                      int lineNumber,
-                                                      const QStringList &coordinateRows,
-                                                      QString *errorMessage)
-{
-    if (contents == nullptr) {
-        if (errorMessage != nullptr) {
-            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No document contents are available.");
-        }
-        return false;
-    }
-
-    QVector<TherionSourceTextEdit> edits;
-    if (!lineCoordinateRowsRewriteEdits(*contents, lineNumber, coordinateRows, &edits, errorMessage)) {
-        return false;
-    }
-
-    return applySourceTextEdits(contents, edits, errorMessage);
 }
 
 bool TherionDocumentEditor::lineCoordinateRowsRewriteEdits(const QString &contents,

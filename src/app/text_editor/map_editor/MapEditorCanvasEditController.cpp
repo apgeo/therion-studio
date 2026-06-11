@@ -907,10 +907,18 @@ void MapEditorCanvasEditController::recordSourceTextSnapshot(const QString &labe
 void MapEditorCanvasEditController::applySourceTextChangeWithSnapshot(const QString &label,
                                                                       const QString &beforeText,
                                                                       const QString &afterText,
-                                                                      int insertedLineNumber)
+                                                                      int insertedLineNumber,
+                                                                      TextEditorSourceSelectionRestorePolicy selectionRestorePolicy,
+                                                                      std::function<void()> selectionRestoreHook)
 {
     sourceTransactionController(context_).applyChangeWithSnapshot(
-        sourceTransactionRequest(context_, label, beforeText, afterText, insertedLineNumber));
+        sourceTransactionRequest(context_,
+                                 label,
+                                 beforeText,
+                                 afterText,
+                                 insertedLineNumber,
+                                 selectionRestorePolicy,
+                                 std::move(selectionRestoreHook)));
 }
 
 bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineVertexInsertPlacement placement)
@@ -997,12 +1005,21 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineV
         return true;
     }
 
-    applySourceTextChangeWithSnapshot(tr("Insert Line Vertex"), beforeText, afterText, lineNumber);
+    auto selectionRestoreHook = [this, lineNumber, insertedIndex]() {
+        restoreLineVertexOwnerSelection(lineNumber, insertedIndex);
+        scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, insertedIndex);
+    };
+    sourceTransactionController(context_).applyChangeWithSnapshot(
+        sourceTransactionRequest(context_,
+                                 tr("Insert Line Vertex"),
+                                 beforeText,
+                                 afterText,
+                                 lineNumber,
+                                 TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                 std::move(selectionRestoreHook)));
 
     (*context_.toolbarStatusNote) = tr("Inserted line vertex %1 on source line %2.").arg(insertedIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
-    restoreLineVertexOwnerSelection(lineNumber, insertedIndex);
-    scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, insertedIndex);
     return true;
 }
 
@@ -1069,12 +1086,21 @@ bool MapEditorCanvasEditController::insertLineVertexAtSelectionCoordinate()
         return true;
     }
 
-    applySourceTextChangeWithSnapshot(tr("Insert Line Vertex"), beforeText, afterText, lineNumber);
+    auto selectionRestoreHook = [this, lineNumber, insertedIndex]() {
+        restoreLineVertexOwnerSelection(lineNumber, insertedIndex);
+        scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, insertedIndex);
+    };
+    sourceTransactionController(context_).applyChangeWithSnapshot(
+        sourceTransactionRequest(context_,
+                                 tr("Insert Line Vertex"),
+                                 beforeText,
+                                 afterText,
+                                 lineNumber,
+                                 TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                 std::move(selectionRestoreHook)));
 
     (*context_.toolbarStatusNote) = tr("Inserted line vertex %1 on source line %2.").arg(insertedIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
-    restoreLineVertexOwnerSelection(lineNumber, insertedIndex);
-    scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, insertedIndex);
     return true;
 }
 
@@ -1152,18 +1178,27 @@ bool MapEditorCanvasEditController::splitLineAtSelection()
     }
 
     const QString afterText = splitPlan.updatedText;
-    applySourceTextChangeWithSnapshot(tr("Split Line"), beforeText, afterText, lineNumber);
+    auto selectionRestoreHook = [this, lineNumber, anchorIndex]() {
+        restoreLineVertexOwnerSelection(lineNumber, anchorIndex);
+        if (context_.callbackContext != nullptr && context_.restoreLineAnchorSelectionLater) {
+            QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, anchorIndex]() {
+                restoreLineVertexOwnerSelectionForContext(context, lineNumber, anchorIndex);
+            });
+        }
+    };
+    sourceTransactionController(context_).applyChangeWithSnapshot(
+        sourceTransactionRequest(context_,
+                                 tr("Split Line"),
+                                 beforeText,
+                                 afterText,
+                                 lineNumber,
+                                 TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                 std::move(selectionRestoreHook)));
 
     (*context_.toolbarStatusNote) = splitPlan.areaReferencesUpdated
         ? tr("Split line at vertex %1 on source line %2 and updated area references.").arg(anchorIndex + 1).arg(lineNumber)
         : tr("Split line at vertex %1 on source line %2.").arg(anchorIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
-    restoreLineVertexOwnerSelection(lineNumber, anchorIndex);
-    if (context_.callbackContext != nullptr && context_.restoreLineAnchorSelectionLater) {
-        QTimer::singleShot(0, context_.callbackContext, [context = context_, lineNumber, anchorIndex]() {
-            restoreLineVertexOwnerSelectionForContext(context, lineNumber, anchorIndex);
-        });
-    }
     return true;
 }
 
@@ -1250,11 +1285,20 @@ bool MapEditorCanvasEditController::removeLineVertexFromSelection()
         return true;
     }
 
-    applySourceTextChangeWithSnapshot(tr("Delete Line Vertex"), beforeText, afterText, lineNumber);
+    auto selectionRestoreHook = [this, lineNumber, restoredOwnerIndex]() {
+        restoreLineVertexOwnerSelection(lineNumber, restoredOwnerIndex);
+        scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, restoredOwnerIndex);
+    };
+    sourceTransactionController(context_).applyChangeWithSnapshot(
+        sourceTransactionRequest(context_,
+                                 tr("Delete Line Vertex"),
+                                 beforeText,
+                                 afterText,
+                                 lineNumber,
+                                 TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                 std::move(selectionRestoreHook)));
     (*context_.toolbarStatusNote) = tr("Removed line vertex %1 on source line %2.").arg(ownerIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
-    restoreLineVertexOwnerSelection(lineNumber, restoredOwnerIndex);
-    scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, restoredOwnerIndex);
     return true;
 }
 
@@ -1303,14 +1347,23 @@ bool MapEditorCanvasEditController::toggleLineVertexSmoothFromSelection()
         context_.refreshToolbarSummary();
         return true;
     }
-    applySourceTextChangeWithSnapshot(tr("Toggle Line Vertex Smooth"), beforeText, afterText, lineNumber);
+    auto selectionRestoreHook = [this, lineNumber, ownerIndex]() {
+        restoreLineVertexOwnerSelection(lineNumber, ownerIndex);
+        scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, ownerIndex);
+    };
+    sourceTransactionController(context_).applyChangeWithSnapshot(
+        sourceTransactionRequest(context_,
+                                 tr("Toggle Line Vertex Smooth"),
+                                 beforeText,
+                                 afterText,
+                                 lineNumber,
+                                 TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                 std::move(selectionRestoreHook)));
 
     (*context_.toolbarStatusNote) = target.isSmooth
         ? tr("Line vertex %1 on source line %2 set to smooth.").arg(ownerIndex + 1).arg(lineNumber)
         : tr("Line vertex %1 on source line %2 set to corner (smooth off).").arg(ownerIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
-    restoreLineVertexOwnerSelection(lineNumber, ownerIndex);
-    scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, ownerIndex);
     return true;
 }
 
@@ -1364,14 +1417,23 @@ bool MapEditorCanvasEditController::setLineVertexSmoothForSelection(bool smooth)
         context_.refreshToolbarSummary();
         return true;
     }
-    applySourceTextChangeWithSnapshot(tr("Set Line Vertex Smooth"), beforeText, afterText, lineNumber);
+    auto selectionRestoreHook = [this, lineNumber, ownerIndex]() {
+        restoreLineVertexOwnerSelection(lineNumber, ownerIndex);
+        scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, ownerIndex);
+    };
+    sourceTransactionController(context_).applyChangeWithSnapshot(
+        sourceTransactionRequest(context_,
+                                 tr("Set Line Vertex Smooth"),
+                                 beforeText,
+                                 afterText,
+                                 lineNumber,
+                                 TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                 std::move(selectionRestoreHook)));
 
     (*context_.toolbarStatusNote) = target.isSmooth
         ? tr("Line vertex %1 on source line %2 set to smooth.").arg(ownerIndex + 1).arg(lineNumber)
         : tr("Line vertex %1 on source line %2 set to corner (smooth off).").arg(ownerIndex + 1).arg(lineNumber);
     context_.refreshToolbarSummary();
-    restoreLineVertexOwnerSelection(lineNumber, ownerIndex);
-    scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, ownerIndex);
     return true;
 }
 
@@ -1438,15 +1500,24 @@ bool MapEditorCanvasEditController::setLineVertexControlHandleForSelection(bool 
         context_.refreshToolbarSummary();
         return true;
     }
-    applySourceTextChangeWithSnapshot(tr("Set Line Vertex Control Handle"), beforeText, afterText, lineNumber);
+    auto selectionRestoreHook = [this, lineNumber, ownerIndex]() {
+        restoreLineVertexOwnerSelection(lineNumber, ownerIndex);
+        scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, ownerIndex);
+    };
+    sourceTransactionController(context_).applyChangeWithSnapshot(
+        sourceTransactionRequest(context_,
+                                 tr("Set Line Vertex Control Handle"),
+                                 beforeText,
+                                 afterText,
+                                 lineNumber,
+                                 TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                 std::move(selectionRestoreHook)));
 
     const QString handleLabel = incoming ? tr("previous") : tr("next");
     (*context_.toolbarStatusNote) = enabled
         ? tr("Line vertex %1 on source line %2 now uses %3 control handle.").arg(ownerIndex + 1).arg(lineNumber).arg(handleLabel)
         : tr("Line vertex %1 on source line %2 no longer uses %3 control handle.").arg(ownerIndex + 1).arg(lineNumber).arg(handleLabel);
     context_.refreshToolbarSummary();
-    restoreLineVertexOwnerSelection(lineNumber, ownerIndex);
-    scheduleLineVertexOwnerSelectionRecovery(context_, lineNumber, ownerIndex);
     return true;
 }
 

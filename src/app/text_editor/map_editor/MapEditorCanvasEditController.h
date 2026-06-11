@@ -2,11 +2,14 @@
 
 #include "MapEditorCanvasEditContext.h"
 #include "MapEditorSceneSupport.h"
+#include "../TextEditorSourceTransactionController.h"
 
 #include <QPointF>
 #include <QRectF>
 #include <QtGlobal>
 #include <QVector>
+
+#include <functional>
 
 class QGraphicsRectItem;
 
@@ -46,7 +49,10 @@ public:
     void applySourceTextChangeWithSnapshot(const QString &label,
                                            const QString &beforeText,
                                            const QString &afterText,
-                                           int insertedLineNumber);
+                                           int insertedLineNumber,
+                                           TextEditorSourceSelectionRestorePolicy selectionRestorePolicy =
+                                               TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection,
+                                           std::function<void()> selectionRestoreHook = {});
     bool insertLineVertexFromSelection(MapEditorLineVertexInsertPlacement placement);
     bool insertLineVertexAtSelectionCoordinate();
     bool splitLineAtSelection();

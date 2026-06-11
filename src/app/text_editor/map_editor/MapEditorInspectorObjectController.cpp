@@ -46,11 +46,13 @@ bool isScrapCategory(const QString &category)
 
 bool requireSourceTransaction(const MapEditorInspectorObjectContext &context, const QString &message)
 {
-    if (context.applySourceTextChangeWithSnapshot) {
+    if (context.applySourceTextChangeWithSnapshot
+        || context.applySourceTextChangeWithSnapshotWithSelectionRestoreHook) {
         return true;
     }
 
-    Q_ASSERT(context.applySourceTextChangeWithSnapshot);
+    Q_ASSERT(context.applySourceTextChangeWithSnapshot
+             || context.applySourceTextChangeWithSnapshotWithSelectionRestoreHook);
     if (context.toolbarStatusNote != nullptr) {
         *context.toolbarStatusNote = message;
     }
@@ -426,14 +428,27 @@ void MapEditorInspectorObjectController::handleInspectorObjectClicked(const QMod
         if (!requireSourceTransaction(context_, tr("Cannot delete map object without map source transaction support."))) {
             return;
         }
-        context_.applySourceTextChangeWithSnapshot(tr("Delete Map Object"),
-                                                   beforeText,
-                                                   deletePlan.updatedText,
-                                                   deletePlan.focusLineAfterDelete);
-        for (int removedLineNumber : deletePlan.removedLineNumbers) {
-            context_.hiddenObjectLines->remove(removedLineNumber);
+        const auto postDeleteHook = [this, deletePlan]() {
+            for (int removedLineNumber : deletePlan.removedLineNumbers) {
+                context_.hiddenObjectLines->remove(removedLineNumber);
+            }
+            *context_.lastClickedLineNumber = 0;
+        };
+
+        if (context_.applySourceTextChangeWithSnapshotWithSelectionRestoreHook) {
+            context_.applySourceTextChangeWithSnapshotWithSelectionRestoreHook(tr("Delete Map Object"),
+                                                                               beforeText,
+                                                                               deletePlan.updatedText,
+                                                                               deletePlan.focusLineAfterDelete,
+                                                                               postDeleteHook);
+        } else {
+            context_.applySourceTextChangeWithSnapshot(tr("Delete Map Object"),
+                                                       beforeText,
+                                                       deletePlan.updatedText,
+                                                       deletePlan.focusLineAfterDelete);
+            postDeleteHook();
         }
-        *context_.lastClickedLineNumber = 0;
+
         if (context_.toolbarStatusNote != nullptr) {
             *context_.toolbarStatusNote = tr("Deleted selected object from source.");
         }
@@ -528,16 +543,28 @@ bool MapEditorInspectorObjectController::moveInspectorObject(const QModelIndex &
     if (!requireSourceTransaction(context_, tr("Cannot move map object without map source transaction support."))) {
         return false;
     }
-    context_.applySourceTextChangeWithSnapshot(tr("Move Map Object"),
-                                               beforeText,
-                                               movePlan.movedText,
-                                               movePlan.insertBeforeLineAfterRemoval);
+    const auto postMoveHook = [this, movePlan]() {
+        context_.hiddenObjectLines->clear();
+        context_.textEditor->goToLine(movePlan.insertBeforeLineAfterRemoval);
+        context_.syncMapSelectionFromTextCursor(movePlan.insertBeforeLineAfterRemoval,
+                                                context_.textEditor->currentColumnNumber());
+        rebuildInspectorObjectsTree();
+        syncInspectorObjectSelectionToLine(movePlan.insertBeforeLineAfterRemoval, true);
+    };
 
-    context_.hiddenObjectLines->clear();
-    context_.textEditor->goToLine(movePlan.insertBeforeLineAfterRemoval);
-    context_.syncMapSelectionFromTextCursor(movePlan.insertBeforeLineAfterRemoval, context_.textEditor->currentColumnNumber());
-    rebuildInspectorObjectsTree();
-    syncInspectorObjectSelectionToLine(movePlan.insertBeforeLineAfterRemoval, true);
+    if (context_.applySourceTextChangeWithSnapshotWithSelectionRestoreHook) {
+        context_.applySourceTextChangeWithSnapshotWithSelectionRestoreHook(tr("Move Map Object"),
+                                                                           beforeText,
+                                                                           movePlan.movedText,
+                                                                           movePlan.insertBeforeLineAfterRemoval,
+                                                                           postMoveHook);
+    } else {
+        context_.applySourceTextChangeWithSnapshot(tr("Move Map Object"),
+                                                   beforeText,
+                                                   movePlan.movedText,
+                                                   movePlan.insertBeforeLineAfterRemoval);
+        postMoveHook();
+    }
 
     if (context_.toolbarStatusNote != nullptr) {
         *context_.toolbarStatusNote = tr("Moved map object to line %1.").arg(movePlan.insertBeforeLineAfterRemoval);

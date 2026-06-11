@@ -28,12 +28,13 @@ bool TextEditorSourceRewriteController::rewriteStructureEntryName(int lineNumber
         return false;
     }
 
-    QString contents = context_.editor->toPlainText();
-    if (!TherionDocumentEditor::rewriteStructureEntryName(&contents, lineNumber, category, newName, errorMessage)) {
+    const QString contents = context_.editor->toPlainText();
+    QVector<TherionSourceTextEdit> edits;
+    if (!TherionDocumentEditor::structureEntryNameRewriteEdits(contents, lineNumber, category, newName, &edits, errorMessage)) {
         return false;
     }
 
-    replaceTextPreservingCursor(contents, false, false, true, false);
+    applyTextEditsPreservingCursor(edits, false, false, true, false);
     return true;
 }
 
@@ -187,12 +188,13 @@ bool TextEditorSourceRewriteController::rewriteLineAreaVertex(int lineNumber,
         return false;
     }
 
-    QString contents = context_.editor->toPlainText();
-    if (!TherionDocumentEditor::rewriteLineAreaVertex(&contents, lineNumber, kind, vertexIndex, point, errorMessage)) {
+    const QString contents = context_.editor->toPlainText();
+    QVector<TherionSourceTextEdit> edits;
+    if (!TherionDocumentEditor::lineAreaVertexRewriteEdits(contents, lineNumber, kind, vertexIndex, point, &edits, errorMessage)) {
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true, false);
+    applyTextEditsPreservingCursor(edits, true, false, true, false);
     return true;
 }
 
@@ -205,12 +207,13 @@ bool TextEditorSourceRewriteController::rewriteLineOptionToggle(int lineNumber,
         return false;
     }
 
-    QString contents = context_.editor->toPlainText();
-    if (!TherionDocumentEditor::rewriteLineOptionToggle(&contents, lineNumber, optionName, enabled, errorMessage)) {
+    const QString contents = context_.editor->toPlainText();
+    QVector<TherionSourceTextEdit> edits;
+    if (!TherionDocumentEditor::lineOptionToggleRewriteEdits(contents, lineNumber, optionName, enabled, &edits, errorMessage)) {
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true, false);
+    applyTextEditsPreservingCursor(edits, true, false, true, false);
     return true;
 }
 
@@ -223,16 +226,18 @@ bool TextEditorSourceRewriteController::rewritePointOrientation(int lineNumber,
         return false;
     }
 
-    QString contents = context_.editor->toPlainText();
-    if (!TherionDocumentEditor::rewritePointOrientation(&contents,
-                                                        lineNumber,
-                                                        enabled,
-                                                        orientationDegrees,
-                                                        errorMessage)) {
+    const QString contents = context_.editor->toPlainText();
+    QVector<TherionSourceTextEdit> edits;
+    if (!TherionDocumentEditor::pointOrientationRewriteEdits(contents,
+                                                             lineNumber,
+                                                             enabled,
+                                                             orientationDegrees,
+                                                             &edits,
+                                                             errorMessage)) {
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true, false);
+    applyTextEditsPreservingCursor(edits, true, false, true, false);
     return true;
 }
 
@@ -246,17 +251,19 @@ bool TextEditorSourceRewriteController::rewriteLinePointOrientation(int lineNumb
         return false;
     }
 
-    QString contents = context_.editor->toPlainText();
-    if (!TherionDocumentEditor::rewriteLinePointOrientation(&contents,
-                                                            lineNumber,
-                                                            sourceVertexIndex,
-                                                            enabled,
-                                                            orientationDegrees,
-                                                            errorMessage)) {
+    const QString contents = context_.editor->toPlainText();
+    QVector<TherionSourceTextEdit> edits;
+    if (!TherionDocumentEditor::linePointOrientationRewriteEdits(contents,
+                                                                 lineNumber,
+                                                                 sourceVertexIndex,
+                                                                 enabled,
+                                                                 orientationDegrees,
+                                                                 &edits,
+                                                                 errorMessage)) {
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true, false);
+    applyTextEditsPreservingCursor(edits, true, false, true, false);
     return true;
 }
 
@@ -270,17 +277,19 @@ bool TextEditorSourceRewriteController::rewriteLinePointLeftSize(int lineNumber,
         return false;
     }
 
-    QString contents = context_.editor->toPlainText();
-    if (!TherionDocumentEditor::rewriteLinePointLeftSize(&contents,
-                                                         lineNumber,
-                                                         sourceVertexIndex,
-                                                         enabled,
-                                                         sizeValue,
-                                                         errorMessage)) {
+    const QString contents = context_.editor->toPlainText();
+    QVector<TherionSourceTextEdit> edits;
+    if (!TherionDocumentEditor::linePointLeftSizeRewriteEdits(contents,
+                                                              lineNumber,
+                                                              sourceVertexIndex,
+                                                              enabled,
+                                                              sizeValue,
+                                                              &edits,
+                                                              errorMessage)) {
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true, false);
+    applyTextEditsPreservingCursor(edits, true, false, true, false);
     return true;
 }
 
@@ -292,12 +301,13 @@ bool TextEditorSourceRewriteController::rewriteLineCoordinateRows(int lineNumber
         return false;
     }
 
-    QString contents = context_.editor->toPlainText();
-    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&contents, lineNumber, coordinateRows, errorMessage)) {
+    const QString contents = context_.editor->toPlainText();
+    QVector<TherionSourceTextEdit> edits;
+    if (!TherionDocumentEditor::lineCoordinateRowsRewriteEdits(contents, lineNumber, coordinateRows, &edits, errorMessage)) {
         return false;
     }
 
-    replaceTextPreservingCursor(contents, true, false, true, false);
+    applyTextEditsPreservingCursor(edits, true, false, true, false);
     return true;
 }
 

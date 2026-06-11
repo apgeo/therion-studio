@@ -6,8 +6,10 @@
 #include "../src/core/TherionDocumentParser.h"
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QDoubleSpinBox>
 #include <QEventLoop>
 #include <QFile>
 #include <QLineEdit>
@@ -134,6 +136,7 @@ struct QuickFieldsFixture
 {
     bool updatingUi = false;
     int selectedObjectLineNumber = 1;
+    int selectedObjectVertexIndex = 0;
     QString selectedObjectKind = QStringLiteral("point");
     QString objectQuickCommandKind = QStringLiteral("point");
     QString toolbarStatus;
@@ -144,12 +147,18 @@ struct QuickFieldsFixture
     QString snapshotAfterText;
     int snapshotLineNumber = 0;
     InspectorSymbolCatalog inspectorCatalog;
+    MapEditorOrientationApplicabilityByCommand orientationApplicability;
     QComboBox typeCombo;
     QComboBox subtypeCombo;
+    QComboBox projectionCombo;
     QLineEdit identifierEdit;
     QLineEdit nameEdit;
     QLineEdit textEdit;
     QLineEdit valueEdit;
+    QCheckBox orientationEnabledCheck;
+    QDoubleSpinBox orientationSpin;
+    QCheckBox linePointLeftSizeEnabledCheck;
+    QDoubleSpinBox linePointLeftSizeSpin;
 };
 
 MapEditorObjectDetailsContext makeDetailsContext(QuickFieldsFixture *fixture,
@@ -159,17 +168,24 @@ MapEditorObjectDetailsContext makeDetailsContext(QuickFieldsFixture *fixture,
     MapEditorObjectDetailsContext context;
     context.textEditor = tab;
     context.inspectorSymbolCatalog = &fixture->inspectorCatalog;
+    context.orientationApplicabilityByCommand = &fixture->orientationApplicability;
     context.updatingUi = &fixture->updatingUi;
     context.selectedObjectLineNumber = &fixture->selectedObjectLineNumber;
+    context.selectedObjectVertexIndex = &fixture->selectedObjectVertexIndex;
     context.selectedObjectKind = &fixture->selectedObjectKind;
     context.objectQuickCommandKind = &fixture->objectQuickCommandKind;
     context.toolbarStatusNote = &fixture->toolbarStatus;
     context.quickTypeCombo = &fixture->typeCombo;
     context.quickSubtypeCombo = &fixture->subtypeCombo;
+    context.quickProjectionCombo = &fixture->projectionCombo;
     context.quickIdentifierEdit = &fixture->identifierEdit;
     context.quickNameEdit = &fixture->nameEdit;
     context.quickTextEdit = &fixture->textEdit;
     context.quickValueEdit = &fixture->valueEdit;
+    context.orientationEnabledCheck = &fixture->orientationEnabledCheck;
+    context.orientationSpin = &fixture->orientationSpin;
+    context.linePointLeftSizeEnabledCheck = &fixture->linePointLeftSizeEnabledCheck;
+    context.linePointLeftSizeSpin = &fixture->linePointLeftSizeSpin;
     context.refreshToolbarSummary = [fixture]() {
         ++fixture->refreshCount;
     };
@@ -449,6 +465,236 @@ int runLineClosedToggleTransactionTest()
 
     return 0;
 }
+
+int runPointOrientationTransactionTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString beforeText = QStringLiteral("point 10 20 station -name a1 # keep\n");
+    const QString filePath = createTestFile(tempDir, beforeText.toUtf8());
+    if (!expect(!filePath.isEmpty(), "Failed to create point orientation test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load point orientation test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    QString canvasToolbarStatus;
+    bool commandApplyInProgress = false;
+    int canvasRefreshCount = 0;
+    int flushCount = 0;
+    MapEditorCanvasEditController canvasController = makeCanvasController(&tab,
+                                                                          &undoStack,
+                                                                          &canvasToolbarStatus,
+                                                                          &commandApplyInProgress,
+                                                                          &canvasRefreshCount,
+                                                                          &flushCount);
+
+    QuickFieldsFixture fixture;
+    fixture.selectedObjectKind = QStringLiteral("point");
+    fixture.orientationApplicability.insert(QStringLiteral("point"), MapEditorOrientationApplicability{});
+    fixture.orientationEnabledCheck.setChecked(true);
+    fixture.orientationSpin.setRange(-720.0, 720.0);
+    fixture.orientationSpin.setValue(370.0);
+    fixture.linePointLeftSizeEnabledCheck.hide();
+
+    MapEditorObjectDetailsEditController controller =
+        MapEditorObjectDetailsEditController(makeDetailsContext(&fixture, &tab, &canvasController));
+    controller.applyObjectOrientationEdits();
+    pumpEvents();
+
+    const QString expectedAfterText = QStringLiteral("point 10 20 station -name a1 -orientation 10 # keep\n");
+    if (!expect(fixture.snapshotCount == 1, "Point orientation edit should use one source snapshot transaction.")) {
+        return 1;
+    }
+    if (!expect(fixture.snapshotLabel == QStringLiteral("Edit Object Orientation"),
+                "Point orientation snapshot should use the object-orientation undo label.")) {
+        return 1;
+    }
+    if (!expect(fixture.snapshotBeforeText == beforeText && fixture.snapshotAfterText == expectedAfterText,
+                "Point orientation snapshot should capture the full before/after source text.")) {
+        return 1;
+    }
+    if (!expect(tab.text() == expectedAfterText, "Point orientation transaction should apply source text edits.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 1, "Point orientation transaction should push one undo command.")) {
+        return 1;
+    }
+
+    undoStack.undo();
+    pumpEvents();
+    if (!expect(tab.text() == beforeText, "Undo should restore the point orientation source text.")) {
+        return 1;
+    }
+
+    undoStack.redo();
+    pumpEvents();
+    if (!expect(tab.text() == expectedAfterText, "Redo should restore the point orientation source text.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runLineAnchorOrientationTransactionTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString beforeText = QStringLiteral("line slope\n  10 20 -orientation 45\n  30 40\nendline\n");
+    const QString filePath = createTestFile(tempDir, beforeText.toUtf8());
+    if (!expect(!filePath.isEmpty(), "Failed to create line anchor orientation test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load line anchor orientation test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    QString canvasToolbarStatus;
+    bool commandApplyInProgress = false;
+    int canvasRefreshCount = 0;
+    int flushCount = 0;
+    MapEditorCanvasEditController canvasController = makeCanvasController(&tab,
+                                                                          &undoStack,
+                                                                          &canvasToolbarStatus,
+                                                                          &commandApplyInProgress,
+                                                                          &canvasRefreshCount,
+                                                                          &flushCount);
+
+    QuickFieldsFixture fixture;
+    fixture.selectedObjectKind = QStringLiteral("line");
+    fixture.selectedObjectVertexIndex = 0;
+    fixture.orientationApplicability.insert(QStringLiteral("line"), MapEditorOrientationApplicability{});
+    fixture.orientationEnabledCheck.setChecked(true);
+    fixture.orientationSpin.setRange(-720.0, 720.0);
+    fixture.orientationSpin.setValue(90.0);
+    fixture.linePointLeftSizeEnabledCheck.hide();
+
+    MapEditorObjectDetailsEditController controller =
+        MapEditorObjectDetailsEditController(makeDetailsContext(&fixture, &tab, &canvasController));
+    controller.applyObjectOrientationEdits();
+    pumpEvents();
+
+    const QString expectedAfterText = QStringLiteral("line slope\n  10 20 -orientation 90\n  30 40\nendline\n");
+    if (!expect(fixture.snapshotCount == 1, "Line anchor orientation edit should use one source snapshot transaction.")) {
+        return 1;
+    }
+    if (!expect(fixture.snapshotLabel == QStringLiteral("Edit Object Orientation"),
+                "Line anchor orientation snapshot should use the object-orientation undo label.")) {
+        return 1;
+    }
+    if (!expect(fixture.snapshotBeforeText == beforeText && fixture.snapshotAfterText == expectedAfterText,
+                "Line anchor orientation snapshot should capture the full before/after source text.")) {
+        return 1;
+    }
+    if (!expect(tab.text() == expectedAfterText, "Line anchor orientation transaction should apply source text edits.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 1, "Line anchor orientation transaction should push one undo command.")) {
+        return 1;
+    }
+
+    undoStack.undo();
+    pumpEvents();
+    if (!expect(tab.text() == beforeText, "Undo should restore the line anchor orientation source text.")) {
+        return 1;
+    }
+
+    undoStack.redo();
+    pumpEvents();
+    if (!expect(tab.text() == expectedAfterText, "Redo should restore the line anchor orientation source text.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runScrapProjectionTransactionTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString beforeText = QStringLiteral("scrap s1 # keep\nendscrap\n");
+    const QString filePath = createTestFile(tempDir, beforeText.toUtf8());
+    if (!expect(!filePath.isEmpty(), "Failed to create scrap projection test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load scrap projection test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    QString canvasToolbarStatus;
+    bool commandApplyInProgress = false;
+    int canvasRefreshCount = 0;
+    int flushCount = 0;
+    MapEditorCanvasEditController canvasController = makeCanvasController(&tab,
+                                                                          &undoStack,
+                                                                          &canvasToolbarStatus,
+                                                                          &commandApplyInProgress,
+                                                                          &canvasRefreshCount,
+                                                                          &flushCount);
+
+    QuickFieldsFixture fixture;
+    setComboText(&fixture.projectionCombo, QStringLiteral("plan"));
+
+    MapEditorObjectDetailsEditController controller =
+        MapEditorObjectDetailsEditController(makeDetailsContext(&fixture, &tab, &canvasController));
+    controller.applyScrapProjectionEdit();
+    pumpEvents();
+
+    const QString expectedAfterText = QStringLiteral("scrap s1 -projection plan # keep\nendscrap\n");
+    if (!expect(fixture.snapshotCount == 1, "Scrap projection edit should use one source snapshot transaction.")) {
+        return 1;
+    }
+    if (!expect(fixture.snapshotLabel == QStringLiteral("Edit Scrap Projection"),
+                "Scrap projection snapshot should use the scrap-projection undo label.")) {
+        return 1;
+    }
+    if (!expect(fixture.snapshotBeforeText == beforeText && fixture.snapshotAfterText == expectedAfterText,
+                "Scrap projection snapshot should capture the full before/after source text.")) {
+        return 1;
+    }
+    if (!expect(tab.text() == expectedAfterText, "Scrap projection transaction should apply source text edits.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 1, "Scrap projection transaction should push one undo command.")) {
+        return 1;
+    }
+
+    undoStack.undo();
+    pumpEvents();
+    if (!expect(tab.text() == beforeText, "Undo should restore the scrap projection source text.")) {
+        return 1;
+    }
+
+    undoStack.redo();
+    pumpEvents();
+    if (!expect(tab.text() == expectedAfterText, "Redo should restore the scrap projection source text.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char **argv)
@@ -461,5 +707,14 @@ int main(int argc, char **argv)
     if (const int result = runPointQuickFieldsValueTransactionTest(); result != 0) {
         return result;
     }
-    return runLineClosedToggleTransactionTest();
+    if (const int result = runLineClosedToggleTransactionTest(); result != 0) {
+        return result;
+    }
+    if (const int result = runPointOrientationTransactionTest(); result != 0) {
+        return result;
+    }
+    if (const int result = runLineAnchorOrientationTransactionTest(); result != 0) {
+        return result;
+    }
+    return runScrapProjectionTransactionTest();
 }

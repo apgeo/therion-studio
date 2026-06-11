@@ -46,6 +46,12 @@ public:
                                                         const QString &category,
                                                         const QString &newName,
                                                         QString *errorMessage = nullptr);
+    [[nodiscard]] static bool structureEntryNameRewriteEdits(const QString &contents,
+                                                             int lineNumber,
+                                                             const QString &category,
+                                                             const QString &newName,
+                                                             QVector<TherionSourceTextEdit> *edits,
+                                                             QString *errorMessage = nullptr);
     [[nodiscard]] static bool appendScrapBlock(QString *contents,
                                                const QString &preferredName = QString(),
                                                int *insertedLineNumber = nullptr,
@@ -89,6 +95,13 @@ public:
                                                     int vertexIndex,
                                                     const QPointF &point,
                                                     QString *errorMessage = nullptr);
+    [[nodiscard]] static bool lineAreaVertexRewriteEdits(const QString &contents,
+                                                         int lineNumber,
+                                                         const QString &kind,
+                                                         int vertexIndex,
+                                                         const QPointF &point,
+                                                         QVector<TherionSourceTextEdit> *edits,
+                                                         QString *errorMessage = nullptr);
     [[nodiscard]] static bool rewriteLineOptionToggle(QString *contents,
                                                       int lineNumber,
                                                       const QString &optionName,
@@ -105,26 +118,56 @@ public:
                                                       bool enabled,
                                                       qreal orientationDegrees,
                                                       QString *errorMessage = nullptr);
+    [[nodiscard]] static bool pointOrientationRewriteEdits(const QString &contents,
+                                                           int lineNumber,
+                                                           bool enabled,
+                                                           qreal orientationDegrees,
+                                                           QVector<TherionSourceTextEdit> *edits,
+                                                           QString *errorMessage = nullptr);
     [[nodiscard]] static bool rewriteLinePointOrientation(QString *contents,
                                                           int lineNumber,
                                                           int sourceVertexIndex,
                                                           bool enabled,
                                                           qreal orientationDegrees,
                                                           QString *errorMessage = nullptr);
+    [[nodiscard]] static bool linePointOrientationRewriteEdits(const QString &contents,
+                                                               int lineNumber,
+                                                               int sourceVertexIndex,
+                                                               bool enabled,
+                                                               qreal orientationDegrees,
+                                                               QVector<TherionSourceTextEdit> *edits,
+                                                               QString *errorMessage = nullptr);
     [[nodiscard]] static bool rewriteLinePointLeftSize(QString *contents,
                                                        int lineNumber,
                                                        int sourceVertexIndex,
                                                        bool enabled,
                                                        qreal sizeValue,
                                                        QString *errorMessage = nullptr);
+    [[nodiscard]] static bool linePointLeftSizeRewriteEdits(const QString &contents,
+                                                            int lineNumber,
+                                                            int sourceVertexIndex,
+                                                            bool enabled,
+                                                            qreal sizeValue,
+                                                            QVector<TherionSourceTextEdit> *edits,
+                                                            QString *errorMessage = nullptr);
     [[nodiscard]] static bool rewriteScrapScale(QString *contents,
                                                 int lineNumber,
                                                 const QString &scaleExpression,
                                                 QString *errorMessage = nullptr);
+    [[nodiscard]] static bool scrapScaleRewriteEdits(const QString &contents,
+                                                     int lineNumber,
+                                                     const QString &scaleExpression,
+                                                     QVector<TherionSourceTextEdit> *edits,
+                                                     QString *errorMessage = nullptr);
     [[nodiscard]] static bool rewriteScrapProjection(QString *contents,
                                                      int lineNumber,
                                                      const QString &projectionExpression,
                                                      QString *errorMessage = nullptr);
+    [[nodiscard]] static bool scrapProjectionRewriteEdits(const QString &contents,
+                                                          int lineNumber,
+                                                          const QString &projectionExpression,
+                                                          QVector<TherionSourceTextEdit> *edits,
+                                                          QString *errorMessage = nullptr);
     [[nodiscard]] static bool rewriteMapObjectQuickFields(QString *contents,
                                                           int lineNumber,
                                                           const QString &type,
@@ -164,5 +207,10 @@ public:
                                                         int lineNumber,
                                                         const QStringList &coordinateRows,
                                                         QString *errorMessage = nullptr);
+    [[nodiscard]] static bool lineCoordinateRowsRewriteEdits(const QString &contents,
+                                                             int lineNumber,
+                                                             const QStringList &coordinateRows,
+                                                             QVector<TherionSourceTextEdit> *edits,
+                                                             QString *errorMessage = nullptr);
 };
 }

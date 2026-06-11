@@ -26,6 +26,30 @@ int lineVertexIndexForSourceVertex(const MapGeometryFeature &lineFeature, int so
     return -1;
 }
 
+bool applyLineCoordinateRowsRewriteEdits(const QString &beforeText,
+                                         int lineNumber,
+                                         const QStringList &coordinateRows,
+                                         QString *afterText,
+                                         QString *errorMessage)
+{
+    if (afterText == nullptr) {
+        return false;
+    }
+
+    QVector<TherionSourceTextEdit> edits;
+    if (!TherionDocumentEditor::lineCoordinateRowsRewriteEdits(beforeText, lineNumber, coordinateRows, &edits, errorMessage)) {
+        return false;
+    }
+
+    QString updatedText = beforeText;
+    if (!TherionDocumentEditor::applySourceTextEdits(&updatedText, edits, errorMessage)) {
+        return false;
+    }
+
+    *afterText = updatedText;
+    return true;
+}
+
 }
 
 bool MapEditorTab::beginLineExtensionFromSelection(int lineNumber, int sourceVertexIndex, bool prepend)
@@ -99,12 +123,13 @@ bool MapEditorTab::commitLineExtensionSession()
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(extensionPlan.editedVertices,
                                                                      lineFeature->closed);
-    QString afterText = beforeText;
+    QString afterText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText,
-                                                          interactiveDrawState_.lineExtensionLineNumber_,
-                                                          coordinateRows,
-                                                          &errorMessage)) {
+    if (!applyLineCoordinateRowsRewriteEdits(beforeText,
+                                             interactiveDrawState_.lineExtensionLineNumber_,
+                                             coordinateRows,
+                                             &afterText,
+                                             &errorMessage)) {
         toolbarStatusNote_ = errorMessage.isEmpty()
             ? tr("Extend line failed.")
             : tr("Extend line failed: %1").arg(errorMessage);

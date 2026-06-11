@@ -44,6 +44,51 @@ int runRewritePreservesOtherContentTest()
         return 1;
     }
 
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::structureEntryNameRewriteEdits(QStringLiteral("map old-map\n"),
+                                                                       1,
+                                                                       QStringLiteral("Maps"),
+                                                                       QStringLiteral("new-map"),
+                                                                       nullptr,
+                                                                       &errorMessage),
+                "structureEntryNameRewriteEdits should reject missing edit output.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "structureEntryNameRewriteEdits should report missing edit output.")) {
+        return 1;
+    }
+
+    const QString renamePlannerContents = QStringLiteral("survey old-survey\nmap old-map # keep\n");
+    QVector<TherionSourceTextEdit> renameEdits;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::structureEntryNameRewriteEdits(renamePlannerContents,
+                                                                       2,
+                                                                       QStringLiteral("Maps"),
+                                                                       QStringLiteral("new map"),
+                                                                       &renameEdits,
+                                                                       &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    const int renameStartOffset = renamePlannerContents.indexOf(QStringLiteral("old-map"));
+    if (!expect(renameEdits.size() == 1
+                    && renameEdits.at(0).startOffset == renameStartOffset
+                    && renameEdits.at(0).length == QStringLiteral("old-map").size()
+                    && renameEdits.at(0).replacementText == QStringLiteral("\"new map\""),
+                "structureEntryNameRewriteEdits should emit one exact token-range edit.")) {
+        return 1;
+    }
+    QString renamePlannerAppliedContents = renamePlannerContents;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::applySourceTextEdits(&renamePlannerAppliedContents, renameEdits, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(renamePlannerAppliedContents == QStringLiteral("survey old-survey\nmap \"new map\" # keep\n"),
+                "structureEntryNameRewriteEdits output should apply to the expected source text.")) {
+        return 1;
+    }
+
     if (!expect(TherionDocumentEditor::rewriteStructureEntryName(&contents, 1, QStringLiteral("Surveys"), QStringLiteral("new-survey"), &errorMessage), errorMessage.toUtf8().constData())) {
         return 1;
     }
@@ -918,6 +963,61 @@ int runRewriteLineAreaVertexTest()
         return 1;
     }
 
+    errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::lineAreaVertexRewriteEdits(QStringLiteral("line wall\n  1 2\nendline\n"),
+                                                                   1,
+                                                                   QStringLiteral("line"),
+                                                                   0,
+                                                                   QPointF(3.0, 4.0),
+                                                                   nullptr,
+                                                                   &errorMessage),
+                "lineAreaVertexRewriteEdits should reject missing edit output.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "lineAreaVertexRewriteEdits should report missing edit output.")) {
+        return 1;
+    }
+
+    const QString vertexPlannerContents = QStringLiteral("scrap s1\n"
+                                                         "line wall\r\n"
+                                                         "  10 20 30 40 # keep\r\n"
+                                                         "endline\r\n"
+                                                         "endscrap\n");
+    QVector<TherionSourceTextEdit> vertexEdits;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::lineAreaVertexRewriteEdits(vertexPlannerContents,
+                                                                  2,
+                                                                  QStringLiteral("line"),
+                                                                  1,
+                                                                  QPointF(-5.5, 77.7),
+                                                                  &vertexEdits,
+                                                                  &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    const int vertexStartOffset = vertexPlannerContents.indexOf(QStringLiteral("  10 20 30 40 # keep"));
+    if (!expect(vertexEdits.size() == 1
+                    && vertexEdits.at(0).startOffset == vertexStartOffset
+                    && vertexEdits.at(0).length == QStringLiteral("  10 20 30 40 # keep").size()
+                    && vertexEdits.at(0).replacementText == QStringLiteral("  10 20 -5.5 77.7 # keep"),
+                "lineAreaVertexRewriteEdits should emit one exact coordinate-row edit.")) {
+        return 1;
+    }
+    QString vertexPlannerAppliedContents = vertexPlannerContents;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::applySourceTextEdits(&vertexPlannerAppliedContents, vertexEdits, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(vertexPlannerAppliedContents == QStringLiteral("scrap s1\n"
+                                                               "line wall\r\n"
+                                                               "  10 20 -5.5 77.7 # keep\r\n"
+                                                               "endline\r\n"
+                                                               "endscrap\n"),
+                "lineAreaVertexRewriteEdits output should apply to the expected source text.")) {
+        return 1;
+    }
+
     QString contents = QStringLiteral("point station 1 2 station -name a1\n");
     errorMessage.clear();
     if (!expect(!TherionDocumentEditor::rewriteLineAreaVertex(&contents, 1, QStringLiteral("line"), 0, QPointF(100.0, 200.0), &errorMessage),
@@ -1359,6 +1459,67 @@ int runRewriteLineCoordinateRowsTest()
     QString errorMessage;
 
     errorMessage.clear();
+    if (!expect(!TherionDocumentEditor::lineCoordinateRowsRewriteEdits(QStringLiteral("line wall\n  1 2\nendline\n"),
+                                                                         1,
+                                                                         {QStringLiteral("3 4")},
+                                                                         nullptr,
+                                                                         &errorMessage),
+                "lineCoordinateRowsRewriteEdits should reject missing edit output.")) {
+        return 1;
+    }
+    if (!expect(!errorMessage.isEmpty(), "lineCoordinateRowsRewriteEdits should report missing edit output.")) {
+        return 1;
+    }
+
+    const QString plannerContents = QStringLiteral("encoding utf-8\n"
+                                                   "line wall -id line-1 # keep\r\n"
+                                                   "  10 20 30 40\r\n"
+                                                   "  50 60\r\n"
+                                                   "endline\r\n"
+                                                   "point station 1 2 station -name a1\n");
+    QVector<TherionSourceTextEdit> edits;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::lineCoordinateRowsRewriteEdits(plannerContents,
+                                                                       2,
+                                                                       {QStringLiteral("11 22 33 44 55 66"),
+                                                                        QStringLiteral("77 88")},
+                                                                       &edits,
+                                                                       &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    const QString expectedReplacementText = QStringLiteral("line wall -id line-1 # keep\r\n"
+                                                           "  11 22 33 44 55 66\r\n"
+                                                           "  77 88\r\n"
+                                                           "endline");
+    const int expectedStartOffset = plannerContents.indexOf(QStringLiteral("line wall"));
+    const int expectedReplaceLength = plannerContents.indexOf(QStringLiteral("\r\npoint")) - expectedStartOffset;
+    if (!expect(edits.size() == 1, "lineCoordinateRowsRewriteEdits should emit one line-block source edit.")) {
+        return 1;
+    }
+    if (!expect(edits.at(0).startOffset == expectedStartOffset
+                    && edits.at(0).length == expectedReplaceLength
+                    && edits.at(0).replacementText == expectedReplacementText,
+                "lineCoordinateRowsRewriteEdits should replace exactly the selected line block text range.")) {
+        return 1;
+    }
+    QString plannerAppliedContents = plannerContents;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::applySourceTextEdits(&plannerAppliedContents, edits, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(plannerAppliedContents == QStringLiteral("encoding utf-8\n"
+                                                         "line wall -id line-1 # keep\r\n"
+                                                         "  11 22 33 44 55 66\r\n"
+                                                         "  77 88\r\n"
+                                                         "endline\r\n"
+                                                         "point station 1 2 station -name a1\n"),
+                "lineCoordinateRowsRewriteEdits output should apply to the same source text as the wrapper.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
     if (!expect(!TherionDocumentEditor::rewriteLineCoordinateRows(nullptr, 1, {QStringLiteral("1 2")}, &errorMessage),
                 "rewriteLineCoordinateRows should reject null contents.")) {
         return 1;
@@ -1647,6 +1808,25 @@ int runRewriteOrientationOptionsTest()
 
     QString contents = QStringLiteral("point 10 20 station -name a1\n");
     errorMessage.clear();
+    QVector<TherionSourceTextEdit> pointOrientationEdits;
+    if (!expect(TherionDocumentEditor::pointOrientationRewriteEdits(contents,
+                                                                   1,
+                                                                   true,
+                                                                   370.0,
+                                                                   &pointOrientationEdits,
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(pointOrientationEdits.size() == 1
+                    && pointOrientationEdits.at(0).startOffset == 0
+                    && pointOrientationEdits.at(0).length == 28
+                    && pointOrientationEdits.at(0).replacementText == QStringLiteral("point 10 20 station -name a1 -orientation 10"),
+                "pointOrientationRewriteEdits should expose the command-line source range for point orientation edits.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewritePointOrientation(&contents, 1, true, 370.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
@@ -1681,6 +1861,26 @@ int runRewriteOrientationOptionsTest()
                               "  10 20 -orientation 45\n"
                               "  30 40\n"
                               "endline\n");
+    errorMessage.clear();
+    QVector<TherionSourceTextEdit> linePointOrientationEdits;
+    if (!expect(TherionDocumentEditor::linePointOrientationRewriteEdits(contents,
+                                                                        1,
+                                                                        0,
+                                                                        true,
+                                                                        -15.0,
+                                                                        &linePointOrientationEdits,
+                                                                        &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(linePointOrientationEdits.size() == 1
+                    && linePointOrientationEdits.at(0).startOffset == 11
+                    && linePointOrientationEdits.at(0).length == 23
+                    && linePointOrientationEdits.at(0).replacementText == QStringLiteral("  10 20 -orientation 345"),
+                "linePointOrientationRewriteEdits should expose the source row range for selected vertex orientation edits.")) {
+        return 1;
+    }
+
     errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteLinePointOrientation(&contents, 1, 0, true, -15.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
@@ -1744,6 +1944,26 @@ int runRewriteOrientationOptionsTest()
                               "  10 20\n"
                               "  30 40\n"
                               "endline\n");
+    errorMessage.clear();
+    QVector<TherionSourceTextEdit> linePointLeftSizeEdits;
+    if (!expect(TherionDocumentEditor::linePointLeftSizeRewriteEdits(contents,
+                                                                     1,
+                                                                     0,
+                                                                     true,
+                                                                     40.0,
+                                                                     &linePointLeftSizeEdits,
+                                                                     &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(linePointLeftSizeEdits.size() == 1
+                    && linePointLeftSizeEdits.at(0).startOffset == 19
+                    && linePointLeftSizeEdits.at(0).length == 0
+                    && linePointLeftSizeEdits.at(0).replacementText == QStringLiteral("  l-size 40.0\n"),
+                "linePointLeftSizeRewriteEdits should expose the insertion point for standalone line-point option rows.")) {
+        return 1;
+    }
+
     errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteLinePointLeftSize(&contents, 1, 0, true, 40.0, &errorMessage),
                 errorMessage.toUtf8().constData())) {
@@ -1845,6 +2065,24 @@ int runRewriteScrapScaleTest()
 {
     QString errorMessage;
     QString contents = QStringLiteral("scrap s1 -projection plan\nendscrap\n");
+
+    errorMessage.clear();
+    QVector<TherionSourceTextEdit> scaleEdits;
+    if (!expect(TherionDocumentEditor::scrapScaleRewriteEdits(contents,
+                                                              1,
+                                                              QStringLiteral("[0 0 100 0 0 0 10 0 m]"),
+                                                              &scaleEdits,
+                                                              &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(scaleEdits.size() == 1
+                    && scaleEdits.at(0).startOffset == 0
+                    && scaleEdits.at(0).length == 25
+                    && scaleEdits.at(0).replacementText == QStringLiteral("scrap s1 -projection plan -scale [0 0 100 0 0 0 10 0 m]"),
+                "scrapScaleRewriteEdits should expose the command-line source range for scrap scale edits.")) {
+        return 1;
+    }
 
     errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteScrapScale(&contents,
@@ -2358,6 +2596,24 @@ int runRewriteScrapProjectionTest()
 {
     QString errorMessage;
     QString contents = QStringLiteral("scrap s1 # keep\nendscrap\n");
+    QVector<TherionSourceTextEdit> projectionEdits;
+    if (!expect(TherionDocumentEditor::scrapProjectionRewriteEdits(contents,
+                                                                   1,
+                                                                   QStringLiteral("plan"),
+                                                                   &projectionEdits,
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(projectionEdits.size() == 1
+                    && projectionEdits.at(0).startOffset == 0
+                    && projectionEdits.at(0).length == 15
+                    && projectionEdits.at(0).replacementText == QStringLiteral("scrap s1 -projection plan # keep"),
+                "scrapProjectionRewriteEdits should expose the command-line source range for inserted projection edits.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteScrapProjection(&contents,
                                                               1,
                                                               QStringLiteral("plan"),
@@ -2385,6 +2641,24 @@ int runRewriteScrapProjectionTest()
     }
 
     contents = QStringLiteral("scrap s1 -projection plan -author 2026.01.01 Test # keep\nendscrap\n");
+    errorMessage.clear();
+    QVector<TherionSourceTextEdit> clearProjectionEdits;
+    if (!expect(TherionDocumentEditor::scrapProjectionRewriteEdits(contents,
+                                                                   1,
+                                                                   QString(),
+                                                                   &clearProjectionEdits,
+                                                                   &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(clearProjectionEdits.size() == 1
+                    && clearProjectionEdits.at(0).startOffset == 0
+                    && clearProjectionEdits.at(0).length == 56
+                    && clearProjectionEdits.at(0).replacementText == QStringLiteral("scrap s1 -author 2026.01.01 Test # keep"),
+                "scrapProjectionRewriteEdits should expose the command-line source range for cleared projection edits.")) {
+        return 1;
+    }
+
     errorMessage.clear();
     if (!expect(TherionDocumentEditor::rewriteScrapProjection(&contents,
                                                               1,

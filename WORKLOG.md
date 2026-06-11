@@ -30,7 +30,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Next Up
 
-- P1: Migrate map inspector orientation and line-point option edits toward source-range planner coverage while preserving shared snapshot transactions.
+- P1: Migrate remaining append/insert source mutations such as scrap insertion, draft geometry insertion, and referenced area insertion toward source-range planner coverage.
 - P1: Keep `WORKLOG.md` trimmed after each completed slice so active work does not become completed-history notes.
 
 ## Risks / Blockers

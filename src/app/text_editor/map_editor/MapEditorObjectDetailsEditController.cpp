@@ -111,6 +111,30 @@ bool applySourceTextEdits(QString *contents,
     return TherionDocumentEditor::applySourceTextEdits(contents, edits, errorMessage);
 }
 
+bool applyLineCoordinateRowsRewriteEdits(const QString &beforeText,
+                                         int lineNumber,
+                                         const QStringList &coordinateRows,
+                                         QString *afterText,
+                                         QString *errorMessage)
+{
+    if (afterText == nullptr) {
+        return false;
+    }
+
+    QVector<TherionSourceTextEdit> edits;
+    if (!TherionDocumentEditor::lineCoordinateRowsRewriteEdits(beforeText, lineNumber, coordinateRows, &edits, errorMessage)) {
+        return false;
+    }
+
+    QString updatedText = beforeText;
+    if (!applySourceTextEdits(&updatedText, edits, errorMessage)) {
+        return false;
+    }
+
+    *afterText = updatedText;
+    return true;
+}
+
 qreal defaultLinePointOrientationDegrees(const MapGeometryFeature &feature, int vertexIndex)
 {
     if (vertexIndex < 0 || vertexIndex >= feature.lineVertices.size()) {
@@ -308,10 +332,13 @@ void MapEditorObjectDetailsEditController::applyScrapScaleEdits()
     const QString beforeText = context_.textEditor->text();
     QString afterText = beforeText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteScrapScale(&afterText,
-                                                  targetLineNumber,
-                                                  scrapScaleExpression(scale),
-                                                  &errorMessage)) {
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::scrapScaleRewriteEdits(afterText,
+                                                       targetLineNumber,
+                                                       scrapScaleExpression(scale),
+                                                       &sourceEdits,
+                                                       &errorMessage)
+        || !applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
             ? tr("Failed to update scrap scale.")
             : tr("Failed to update scrap scale: %1").arg(errorMessage);
@@ -543,6 +570,7 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
     const qreal leftSize = qMax<qreal>(0.1, context_.linePointLeftSizeSpin->value());
     const QStringList documentLines = TherionSourceText::splitTextLines(beforeText);
     QString errorMessage;
+    QVector<TherionSourceTextEdit> sourceEdits;
     bool rewritten = false;
     if (selectedObjectKind == QStringLiteral("point")) {
         if (selectedLineNumber > documentLines.size()) {
@@ -556,11 +584,13 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
             context_.refreshObjectDetailsPanel();
             return;
         }
-        rewritten = TherionDocumentEditor::rewritePointOrientation(&afterText,
-                                                                   selectedLineNumber,
-                                                                   enabled,
-                                                                   orientation,
-                                                                   &errorMessage);
+        rewritten = TherionDocumentEditor::pointOrientationRewriteEdits(afterText,
+                                                                        selectedLineNumber,
+                                                                        enabled,
+                                                                        orientation,
+                                                                        &sourceEdits,
+                                                                        &errorMessage)
+            && applySourceTextEdits(&afterText, sourceEdits, &errorMessage);
     } else {
         if (selectedSourceVertexIndex < 0) {
             return;
@@ -591,20 +621,24 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
 
         rewritten = true;
         if (orientationSupported) {
-            rewritten = TherionDocumentEditor::rewriteLinePointOrientation(&afterText,
-                                                                           selectedLineNumber,
-                                                                           selectedSourceVertexIndex,
-                                                                           enabled,
-                                                                           orientation,
-                                                                           &errorMessage);
+            rewritten = TherionDocumentEditor::linePointOrientationRewriteEdits(afterText,
+                                                                                selectedLineNumber,
+                                                                                selectedSourceVertexIndex,
+                                                                                enabled,
+                                                                                orientation,
+                                                                                &sourceEdits,
+                                                                                &errorMessage)
+                && applySourceTextEdits(&afterText, sourceEdits, &errorMessage);
         }
         if (rewritten && leftSizeSupported) {
-            rewritten = TherionDocumentEditor::rewriteLinePointLeftSize(&afterText,
-                                                                        selectedLineNumber,
-                                                                        selectedSourceVertexIndex,
-                                                                        leftSizeEnabled,
-                                                                        leftSize,
-                                                                        &errorMessage);
+            rewritten = TherionDocumentEditor::linePointLeftSizeRewriteEdits(afterText,
+                                                                             selectedLineNumber,
+                                                                             selectedSourceVertexIndex,
+                                                                             leftSizeEnabled,
+                                                                             leftSize,
+                                                                             &sourceEdits,
+                                                                             &errorMessage)
+                && applySourceTextEdits(&afterText, sourceEdits, &errorMessage);
         }
     }
 
@@ -887,10 +921,13 @@ void MapEditorObjectDetailsEditController::applyScrapProjectionEdit()
     const QString beforeText = context_.textEditor->text();
     QString afterText = beforeText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteScrapProjection(&afterText,
-                                                       targetLineNumber,
-                                                       context_.quickProjectionCombo->currentText(),
-                                                       &errorMessage)) {
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::scrapProjectionRewriteEdits(afterText,
+                                                            targetLineNumber,
+                                                            context_.quickProjectionCombo->currentText(),
+                                                            &sourceEdits,
+                                                            &errorMessage)
+        || !applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
         *context_.toolbarStatusNote = errorMessage.isEmpty()
             ? tr("Failed to update scrap projection.")
             : tr("Failed to update scrap projection: %1").arg(errorMessage);
@@ -1016,9 +1053,9 @@ bool MapEditorObjectDetailsEditController::applyLinePointStandaloneRowsEdits(con
     editedVertices[vertexIndex].standaloneOptionRows = updatedRows;
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
 
-    QString afterText = beforeText;
+    QString afterText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
+    if (!applyLineCoordinateRowsRewriteEdits(beforeText, lineNumber, coordinateRows, &afterText, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Edit line-point options failed.")
             : tr("Edit line-point options failed: %1").arg(errorMessage);

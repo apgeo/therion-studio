@@ -495,6 +495,30 @@ MapEditableGeometryVertexItem *resolveSelectedLineVertexItemForContext(const Map
     return nullptr;
 }
 
+bool applyLineCoordinateRowsRewriteEdits(const QString &beforeText,
+                                         int lineNumber,
+                                         const QStringList &coordinateRows,
+                                         QString *afterText,
+                                         QString *errorMessage)
+{
+    if (afterText == nullptr) {
+        return false;
+    }
+
+    QVector<TherionSourceTextEdit> edits;
+    if (!TherionDocumentEditor::lineCoordinateRowsRewriteEdits(beforeText, lineNumber, coordinateRows, &edits, errorMessage)) {
+        return false;
+    }
+
+    QString updatedText = beforeText;
+    if (!TherionDocumentEditor::applySourceTextEdits(&updatedText, edits, errorMessage)) {
+        return false;
+    }
+
+    *afterText = updatedText;
+    return true;
+}
+
 }
 
 QString MapEditorCanvasEditController::tr(const char *text) const
@@ -673,12 +697,15 @@ void MapEditorCanvasEditController::recordPointOrientationHandleChange(int lineN
 
     const QString beforeText = context_.textEditor->text();
     QString afterText = beforeText;
+    QVector<TherionSourceTextEdit> sourceEdits;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewritePointOrientation(&afterText,
-                                                        lineNumber,
-                                                        true,
-                                                        orientationDegrees,
-                                                        &errorMessage)) {
+    if (!TherionDocumentEditor::pointOrientationRewriteEdits(afterText,
+                                                             lineNumber,
+                                                             true,
+                                                             orientationDegrees,
+                                                             &sourceEdits,
+                                                             &errorMessage)
+        || !TherionDocumentEditor::applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Point orientation update failed.")
             : tr("Point orientation update failed: %1").arg(errorMessage);
@@ -713,13 +740,16 @@ void MapEditorCanvasEditController::recordLinePointLeftHandleChange(int lineNumb
 
     const QString beforeText = context_.textEditor->text();
     QString afterText = beforeText;
+    QVector<TherionSourceTextEdit> sourceEdits;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteLinePointOrientation(&afterText,
-                                                            lineNumber,
-                                                            sourceVertexIndex,
-                                                            true,
-                                                            orientationDegrees,
-                                                            &errorMessage)) {
+    if (!TherionDocumentEditor::linePointOrientationRewriteEdits(afterText,
+                                                                 lineNumber,
+                                                                 sourceVertexIndex,
+                                                                 true,
+                                                                 orientationDegrees,
+                                                                 &sourceEdits,
+                                                                 &errorMessage)
+        || !TherionDocumentEditor::applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Line point orientation update failed.")
             : tr("Line point orientation update failed: %1").arg(errorMessage);
@@ -727,12 +757,15 @@ void MapEditorCanvasEditController::recordLinePointLeftHandleChange(int lineNumb
         return;
     }
 
-    if (!TherionDocumentEditor::rewriteLinePointLeftSize(&afterText,
-                                                         lineNumber,
-                                                         sourceVertexIndex,
-                                                         true,
-                                                         leftSize,
-                                                         &errorMessage)) {
+    sourceEdits.clear();
+    if (!TherionDocumentEditor::linePointLeftSizeRewriteEdits(afterText,
+                                                              lineNumber,
+                                                              sourceVertexIndex,
+                                                              true,
+                                                              leftSize,
+                                                              &sourceEdits,
+                                                              &errorMessage)
+        || !TherionDocumentEditor::applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Line point l-size update failed.")
             : tr("Line point l-size update failed: %1").arg(errorMessage);
@@ -915,9 +948,9 @@ bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineV
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
-    QString afterText = beforeText;
+    QString afterText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
+    if (!applyLineCoordinateRowsRewriteEdits(beforeText, lineNumber, coordinateRows, &afterText, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Insert vertex failed.")
             : tr("Insert vertex failed: %1").arg(errorMessage);
@@ -987,9 +1020,9 @@ bool MapEditorCanvasEditController::insertLineVertexAtSelectionCoordinate()
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
-    QString afterText = beforeText;
+    QString afterText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
+    if (!applyLineCoordinateRowsRewriteEdits(beforeText, lineNumber, coordinateRows, &afterText, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Insert vertex failed.")
             : tr("Insert vertex failed: %1").arg(errorMessage);
@@ -1168,9 +1201,9 @@ bool MapEditorCanvasEditController::removeLineVertexFromSelection()
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
     const QString beforeText = context_.textEditor->text();
-    QString afterText = beforeText;
+    QString afterText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
+    if (!applyLineCoordinateRowsRewriteEdits(beforeText, lineNumber, coordinateRows, &afterText, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Delete vertex failed.")
             : tr("Delete vertex failed: %1").arg(errorMessage);
@@ -1222,9 +1255,9 @@ bool MapEditorCanvasEditController::toggleLineVertexSmoothFromSelection()
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
-    QString afterText = beforeText;
+    QString afterText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
+    if (!applyLineCoordinateRowsRewriteEdits(beforeText, lineNumber, coordinateRows, &afterText, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Toggle smooth failed.")
             : tr("Toggle smooth failed: %1").arg(errorMessage);
@@ -1283,9 +1316,9 @@ bool MapEditorCanvasEditController::setLineVertexSmoothForSelection(bool smooth)
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
-    QString afterText = beforeText;
+    QString afterText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
+    if (!applyLineCoordinateRowsRewriteEdits(beforeText, lineNumber, coordinateRows, &afterText, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Set smooth failed.")
             : tr("Set smooth failed: %1").arg(errorMessage);
@@ -1357,9 +1390,9 @@ bool MapEditorCanvasEditController::setLineVertexControlHandleForSelection(bool 
     }
 
     const QStringList coordinateRows = coordinateRowsForLineVertices(editedVertices, lineFeature->closed);
-    QString afterText = beforeText;
+    QString afterText;
     QString errorMessage;
-    if (!TherionDocumentEditor::rewriteLineCoordinateRows(&afterText, lineNumber, coordinateRows, &errorMessage)) {
+    if (!applyLineCoordinateRowsRewriteEdits(beforeText, lineNumber, coordinateRows, &afterText, &errorMessage)) {
         (*context_.toolbarStatusNote) = errorMessage.isEmpty()
             ? tr("Set control handle failed.")
             : tr("Set control handle failed: %1").arg(errorMessage);

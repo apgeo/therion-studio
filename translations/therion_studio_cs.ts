@@ -341,8 +341,8 @@
     </message>
     <message>
         <location filename="../src/app/MainWindow.cpp" line="1261"/>
-        <source>Open a project to begin working with Therion documents, maps, and structure views.</source>
-        <translation>Otevřete projekt a začněte pracovat s dokumenty Therionu, mapami a strukturou.</translation>
+        <source>Open or create a project to begin working with Therion documents, maps, and structure views.</source>
+        <translation>Otevřete nebo vytvořte projekt a začněte pracovat s dokumenty Therionu, mapami a strukturou.</translation>
     </message>
     <message>
         <location filename="../src/app/MainWindow.cpp" line="1262"/>

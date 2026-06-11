@@ -801,7 +801,7 @@ void MainWindow::addWelcomeTab()
     if (projectRootPath_.isEmpty()) {
         welcomeWidget = TherionStudio::createMainWindowProjectWelcomeWidget(
             tr("Therion Studio"),
-            tr("Open a project to begin working with Therion documents, maps, and structure views."),
+            tr("Open or create a project to begin working with Therion documents, maps, and structure views."),
             tr("Open Existing Project..."),
             [this]() {
                 openProject();

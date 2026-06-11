@@ -76,6 +76,7 @@ void MainWindow::refreshDocumentStatusWidgets()
     if (statusMapZoomLabel_ == nullptr
         || statusMapModeLabel_ == nullptr
         || statusDocumentEncodingLabel_ == nullptr) {
+        updateDocumentMenuActionState();
         return;
     }
 
@@ -125,6 +126,41 @@ void MainWindow::refreshDocumentStatusWidgets()
         statusMapModeLabel_->setStyleSheet(
             TherionStudio::statusBadgeStyleSheet(TherionStudio::mapModeStatusAccentColor(mapModeInsertActive)));
         statusMapModeLabel_->setVisible(true);
+    }
+
+    updateDocumentMenuActionState();
+}
+
+void MainWindow::updateDocumentMenuActionState()
+{
+    const bool hasCurrentAttachedDocument =
+        qobject_cast<TherionStudio::TextEditorTab *>(currentDocumentWidget()) != nullptr
+        || qobject_cast<TherionStudio::MapEditorTab *>(currentDocumentWidget()) != nullptr;
+
+    bool hasAnyAttachedDocument = false;
+    for (int index = 0; index < editorTabs_->count(); ++index) {
+        QWidget *tabWidget = editorTabs_->widget(index);
+        if (qobject_cast<TherionStudio::TextEditorTab *>(tabWidget) != nullptr
+            || qobject_cast<TherionStudio::MapEditorTab *>(tabWidget) != nullptr) {
+            hasAnyAttachedDocument = true;
+            break;
+        }
+    }
+
+    const bool hasAnyDetachedDocument = !detachedMapEditorTabs().isEmpty();
+    const bool hasAnyDocument = hasAnyAttachedDocument || hasAnyDetachedDocument;
+
+    if (saveAction_ != nullptr) {
+        saveAction_->setEnabled(hasCurrentAttachedDocument);
+    }
+    if (saveAllAction_ != nullptr) {
+        saveAllAction_->setEnabled(hasAnyDocument);
+    }
+    if (closeTabAction_ != nullptr) {
+        closeTabAction_->setEnabled(hasCurrentAttachedDocument);
+    }
+    if (closeAllTabsAction_ != nullptr) {
+        closeAllTabsAction_->setEnabled(hasAnyDocument);
     }
 }
 

@@ -10,6 +10,7 @@ namespace TherionStudio
 namespace
 {
 const auto kLastProjectPathKey = QStringLiteral("session/lastProjectPath");
+const auto kLastProjectParentDirectoryKey = QStringLiteral("session/lastProjectParentDirectory");
 const auto kRecentProjectPathsKey = QStringLiteral("session/recentProjectPaths");
 const auto kMainWindowGeometryKey = QStringLiteral("session/mainWindowGeometry");
 const auto kMainWindowStateKey = QStringLiteral("session/mainWindowState");
@@ -76,6 +77,16 @@ QString SessionSettingsStore::lastProjectPath() const
 void SessionSettingsStore::setLastProjectPath(const QString &projectPath)
 {
     settings_->setValue(kLastProjectPathKey, projectPath);
+}
+
+QString SessionSettingsStore::lastProjectParentDirectory() const
+{
+    return settings_->value(kLastProjectParentDirectoryKey).toString();
+}
+
+void SessionSettingsStore::setLastProjectParentDirectory(const QString &directoryPath)
+{
+    settings_->setValue(kLastProjectParentDirectoryKey, directoryPath);
 }
 
 QStringList SessionSettingsStore::recentProjectPaths() const
@@ -260,6 +271,16 @@ QString InMemorySessionStore::lastProjectPath() const
 void InMemorySessionStore::setLastProjectPath(const QString &projectPath)
 {
     lastProjectPath_ = projectPath;
+}
+
+QString InMemorySessionStore::lastProjectParentDirectory() const
+{
+    return lastProjectParentDirectory_;
+}
+
+void InMemorySessionStore::setLastProjectParentDirectory(const QString &directoryPath)
+{
+    lastProjectParentDirectory_ = directoryPath;
 }
 
 QStringList InMemorySessionStore::recentProjectPaths() const

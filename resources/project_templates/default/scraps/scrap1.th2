@@ -1,0 +1,16 @@
+encoding utf-8
+
+scrap scrap1 -projection plan
+  point 0 0 station -name 1
+  point 100 0 station -name 2
+  line wall -id line1
+    -10 16
+    12 28 36 30 58 18
+    72 12 90 10 110 14
+  endline
+  line wall -id line2
+    -10 -16
+    12 -4 36 2 58 -10
+    72 -18 90 -22 110 -16
+  endline
+endscrap

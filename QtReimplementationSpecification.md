@@ -54,11 +54,23 @@ The application shall provide a project browser for navigating a Therion project
 Required capabilities:
 
 - open a project folder
+- create a new empty project folder from `File -> New Project -> Empty Project...`
+- create a new project from a bundled template when no project exists or from `File -> New Project -> Project from Template...`
 - display project files and subfolders
 - recognize common Therion-related file types such as `.th`, `.th2`, `thconfig`, `*.thconfig`, and `thconfig.*`
 - open files in editor tabs
 - support file selection, multi-tab workflows, and recent project reopening
 - preserve folder expansion state where practical
+
+Project-template requirements:
+
+- The MVP shall include a bundled default project template stored as application resources under `project_templates/default`.
+- The default template shall materialize a plain-text project containing `thconfig`, `index.th`, `surveys/survey1.th`, `scraps/scrap1.th2`, and an `output` directory for generated exports.
+- `index.th` shall define a top-level `survey cave`, include `surveys/survey1.th` and `scraps/scrap1.th2`, and define a plan map containing the generated scrap.
+- `thconfig` shall use `index.th` as source, select the top-level survey/map target, and define PDF and LOX exports.
+- Creating a project from the default template shall use a project-creation dialog with explicit `Project Name` and `Location` inputs, shall preview the resulting project folder path, should default the location to the last successfully used project parent directory or the platform documents directory when no prior project-creation location is available, shall require the target project folder to be absent or empty, shall materialize only template-declared files and directories, shall open the generated project, shall select the generated `thconfig` as the project runner target config, and shall open the primary source/map files declared by the template.
+- Creating an empty project shall use the same project-creation dialog with explicit `Project Name` and `Location` inputs, shall preview the resulting project folder path, should default the location to the last successfully used project parent directory or the platform documents directory when no prior project-creation location is available, shall require the target project folder to be absent or empty, shall create that folder, and shall open it as the active project without creating template files.
+- The welcome tab shown when no project is open shall expose `New Empty Project`, `New Project from Template...`, and `Open Existing Project...` actions.
 
 ### 3.2 Text Editor
 
@@ -582,9 +594,9 @@ Platform modifier mapping:
 | Action | Menu location | Shortcut | Required behavior |
 |---|---|---|---|
 | New Window | File | Command+N | Open a new empty main window without restoring the current project or open documents |
-| New Therion Source (.th) | File -> New; toolbar New Document menu | none | Open a new unsaved `.th` text document initialized with `encoding utf-8`; the first save shall prompt for a destination path |
-| New Therion Map (.th2) | File -> New; toolbar New Document menu | none | Open a new unsaved `.th2` map document initialized with `encoding utf-8`; the first save shall prompt for a destination path |
-| New Therion Config (.thconfig) | File -> New; toolbar New Document menu | none | Open a new unsaved `.thconfig` Therion config text document initialized with `encoding utf-8`; the first save shall prompt for a destination path |
+| New Therion Source (.th) | File -> New File; toolbar New Document menu | none | Open a new unsaved `.th` text document initialized with `encoding utf-8`; the first save shall prompt for a destination path |
+| New Therion Map (.th2) | File -> New File; toolbar New Document menu | none | Open a new unsaved `.th2` map document initialized with `encoding utf-8`; the first save shall prompt for a destination path |
+| New Therion Config (.thconfig) | File -> New File; toolbar New Document menu | none | Open a new unsaved `.thconfig` Therion config text document initialized with `encoding utf-8`; the first save shall prompt for a destination path |
 | Import PocketTopo Text… | File -> Import | none | Import a PocketTopo Therion export `.txt` into the active `.th` text document; hidden when the active document is not `.th` |
 | Settings / Preferences | File or native application menu | platform-standard Preferences placement where available | Open application settings for language override, Therion executable path, and default `.th` / Therion config editor mode |
 | About Therion Studio | Help or native application menu | none | Show installed version/build metadata, Qt/platform details, repository, license, maintainer, and third-party notice location |
@@ -595,13 +607,13 @@ Platform modifier mapping:
 | Expand/Collapse Map Inspector and Context Help | View | none | When a TH2 Visual map pane is detached, expose both controls because the detached visual map and raw source context help are visible at the same time |
 | Show/Hide Map Magnifier | View | none | Enable or disable the visual map magnifier overlay as UI/session state only |
 | Enter/Exit Full Screen | View | platform full-screen shortcut | Toggle the main window full-screen state |
-| Create Project… | File | Command+Shift+N | Start the project-creation flow; disabled while a project is already open |
+| New Project | File | none | Expose `Project from Template...` and `Empty Project...` creation choices; disabled while a project is already open |
 | Open Project… | File | Command+O | Open a Therion project; disabled while a project is already open |
 | Recent Projects | File | none | Reopen one of the five most recently opened projects; disabled while a project is already open |
 | Recent Files | File | none | Reopen one of the active project's ten most recently opened files; disabled when no project is open |
 | Save | File | Command+S | Save the active document only; unsaved documents shall use Save As path selection on first save |
 | Save All | File | Command+Option+S | Save all dirty open documents; unsaved documents shall use Save As path selection before saving |
-| Close | File | none in the current Swift app | Expose the action in the menu even if no explicit shortcut is assigned |
+| Close Tab | File | none in the current Swift app | Close the active editor tab after unsaved changes are resolved |
 | Close All Tabs | File | Command+Shift+W | Close every open editor tab |
 | Close Project | File | none in the current Swift app | Close the active project and its project-scoped documents after unsaved changes are resolved |
 | Switch to Raw editor | document workspace | Command+top-row 1 | Switch the active `.th`, Therion config, or `.th2` document to Raw/source editing when supported; localized keyboard layouts shall not require Shift to type the digit character |

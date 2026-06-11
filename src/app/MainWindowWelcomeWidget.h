@@ -13,6 +13,10 @@ QWidget *createMainWindowProjectWelcomeWidget(const QString &title,
                                               const QString &body,
                                               const QString &buttonText,
                                               std::function<void()> onButtonClick,
+                                              const QString &emptyProjectButtonText,
+                                              std::function<void()> onEmptyProjectButtonClick,
+                                              const QString &templateButtonText,
+                                              std::function<void()> onTemplateButtonClick,
                                               const QStringList &recentProjectPaths,
                                               std::function<void(const QString &)> onRecentProjectClick);
 

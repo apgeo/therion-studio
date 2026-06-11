@@ -94,6 +94,8 @@ private slots:
     void createNewTherionSourceDocument();
     void createNewTherionMapDocument();
     void createNewTherionConfigDocument();
+    void createProjectFromDefaultTemplate();
+    void createEmptyProject();
     void saveActiveDocument();
     void saveAllDocuments();
     void runTherion();
@@ -238,6 +240,7 @@ private:
     bool saveAllOpenDocuments();
     void initializeDocumentStatusWidgets();
     void refreshDocumentStatusWidgets();
+    void updateDocumentMenuActionState();
     void setCompilerStatusIdle();
     void setCompilerStatusRunning(const QString &configPath);
     void setCompilerStatusResult(bool success, const QString &details);
@@ -322,9 +325,17 @@ private:
     QToolButton *consoleCollapseButton_ = nullptr;
     QAction *openProjectAction_ = nullptr;
     QAction *closeProjectAction_ = nullptr;
+    QMenu *newProjectMenu_ = nullptr;
+    QMenu *newFileMenu_ = nullptr;
+    QAction *projectFromTemplateAction_ = nullptr;
+    QAction *emptyProjectAction_ = nullptr;
     QAction *newTherionSourceAction_ = nullptr;
     QAction *newTherionMapAction_ = nullptr;
     QAction *newTherionConfigAction_ = nullptr;
+    QAction *saveAction_ = nullptr;
+    QAction *saveAllAction_ = nullptr;
+    QAction *closeTabAction_ = nullptr;
+    QAction *closeAllTabsAction_ = nullptr;
     QMenu *recentProjectsMenu_ = nullptr;
     QMenu *recentFilesMenu_ = nullptr;
     QMenu *importMenu_ = nullptr;

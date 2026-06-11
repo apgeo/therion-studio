@@ -1,0 +1,10 @@
+encoding utf-8
+
+survey cave
+  input surveys/survey1.th
+  input scraps/scrap1.th2
+
+  map cave -projection plan
+    scrap1
+  endmap
+endsurvey

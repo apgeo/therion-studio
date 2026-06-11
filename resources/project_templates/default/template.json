@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "default",
+  "name": "Default Therion Project",
+  "description": "A compile-ready Therion project with one survey source, one map scrap, PDF export, and LOX export.",
+  "targetConfig": "thconfig",
+  "openFiles": [
+    "index.th",
+    "surveys/survey1.th",
+    "scraps/scrap1.th2",
+    "thconfig"
+  ],
+  "directories": [
+    "surveys",
+    "scraps",
+    "output"
+  ],
+  "files": [
+    "thconfig",
+    "index.th",
+    "surveys/survey1.th",
+    "scraps/scrap1.th2"
+  ]
+}

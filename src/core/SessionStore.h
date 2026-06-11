@@ -28,6 +28,9 @@ public:
     QString lastProjectPath() const override;
     void setLastProjectPath(const QString &projectPath) override;
 
+    QString lastProjectParentDirectory() const override;
+    void setLastProjectParentDirectory(const QString &directoryPath) override;
+
     QStringList recentProjectPaths() const override;
     void setRecentProjectPaths(const QStringList &projectPaths) override;
 
@@ -86,6 +89,9 @@ public:
     QString lastProjectPath() const override;
     void setLastProjectPath(const QString &projectPath) override;
 
+    QString lastProjectParentDirectory() const override;
+    void setLastProjectParentDirectory(const QString &directoryPath) override;
+
     QStringList recentProjectPaths() const override;
     void setRecentProjectPaths(const QStringList &projectPaths) override;
 
@@ -136,6 +142,7 @@ public:
 
 private:
     QString lastProjectPath_;
+    QString lastProjectParentDirectory_;
     QStringList recentProjectPaths_;
     QByteArray mainWindowGeometry_;
     QByteArray mainWindowState_;

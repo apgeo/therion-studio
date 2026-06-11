@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QMainWindow>
+#include <QMenu>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QTabWidget>
@@ -114,6 +115,27 @@ void MainWindow::updateProjectActionState()
     const bool hasOpenProject = !projectRootPath_.trimmed().isEmpty() && QDir(projectRootPath_).exists();
     if (openProjectAction_ != nullptr) {
         openProjectAction_->setEnabled(!hasOpenProject);
+    }
+    if (newProjectMenu_ != nullptr) {
+        newProjectMenu_->menuAction()->setEnabled(!hasOpenProject);
+    }
+    if (newFileMenu_ != nullptr) {
+        newFileMenu_->menuAction()->setEnabled(hasOpenProject);
+    }
+    if (projectFromTemplateAction_ != nullptr) {
+        projectFromTemplateAction_->setEnabled(!hasOpenProject);
+    }
+    if (emptyProjectAction_ != nullptr) {
+        emptyProjectAction_->setEnabled(!hasOpenProject);
+    }
+    if (newTherionSourceAction_ != nullptr) {
+        newTherionSourceAction_->setEnabled(hasOpenProject);
+    }
+    if (newTherionMapAction_ != nullptr) {
+        newTherionMapAction_->setEnabled(hasOpenProject);
+    }
+    if (newTherionConfigAction_ != nullptr) {
+        newTherionConfigAction_->setEnabled(hasOpenProject);
     }
     if (closeProjectAction_ != nullptr) {
         closeProjectAction_->setEnabled(hasOpenProject);

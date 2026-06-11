@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFont>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QSizePolicy>
@@ -43,6 +44,10 @@ QWidget *createMainWindowProjectWelcomeWidget(const QString &title,
                                               const QString &body,
                                               const QString &buttonText,
                                               std::function<void()> onButtonClick,
+                                              const QString &emptyProjectButtonText,
+                                              std::function<void()> onEmptyProjectButtonClick,
+                                              const QString &templateButtonText,
+                                              std::function<void()> onTemplateButtonClick,
                                               const QStringList &recentProjectPaths,
                                               std::function<void(const QString &)> onRecentProjectClick)
 {
@@ -64,14 +69,39 @@ QWidget *createMainWindowProjectWelcomeWidget(const QString &title,
     layout->addWidget(titleLabel);
     layout->addWidget(bodyLabel);
 
-    auto *button = new QPushButton(buttonText);
+    auto *buttonRow = new QWidget(widget);
+    auto *buttonLayout = new QHBoxLayout(buttonRow);
+    buttonLayout->setContentsMargins(0, 0, 0, 0);
+    buttonLayout->setSpacing(8);
+
+    auto *emptyProjectButton = new QPushButton(emptyProjectButtonText, buttonRow);
+    emptyProjectButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    QObject::connect(emptyProjectButton, &QPushButton::clicked, widget, [onEmptyProjectButtonClick]() {
+        if (onEmptyProjectButtonClick) {
+            onEmptyProjectButtonClick();
+        }
+    });
+    buttonLayout->addWidget(emptyProjectButton);
+
+    auto *templateButton = new QPushButton(templateButtonText, buttonRow);
+    templateButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    QObject::connect(templateButton, &QPushButton::clicked, widget, [onTemplateButtonClick]() {
+        if (onTemplateButtonClick) {
+            onTemplateButtonClick();
+        }
+    });
+    buttonLayout->addWidget(templateButton);
+
+    auto *button = new QPushButton(buttonText, buttonRow);
     button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     QObject::connect(button, &QPushButton::clicked, widget, [onButtonClick]() {
         if (onButtonClick) {
             onButtonClick();
         }
     });
-    layout->addWidget(button);
+    buttonLayout->addWidget(button);
+    buttonLayout->addStretch(1);
+    layout->addWidget(buttonRow);
 
     const QStringList normalizedRecentProjectPaths =
         MainWindowRecentProjectsService::normalizedRecentProjectPaths(recentProjectPaths);

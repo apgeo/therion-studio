@@ -11,6 +11,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1 - Inspector consistency: keep Raw, Blocks, and Map inspectors on the shared panel foundation with aligned tabs, help, file metadata, and option editing.
 - P1 - Map canvas readability and performance: keep background rendering, `.xvi` behavior, appearance repaint paths, handles, labels, and bounds stable.
 - P1 - Project sidebars: keep Structure indexing and File sidebar mutations reliable, navigable, and refreshed through shared post-operation paths.
+- P1 - Project templates: keep the bundled default project template compile-ready, including declared export directories, remembered project-parent defaults, and aligned welcome/project-menu/open-tab workflow.
 - P1 - Architecture maintenance: keep reducing `MainWindow`, `TextEditorTab`, and `MapEditorTab` shell responsibilities without behavior changes.
 - P1 - Structure constraints hygiene: keep ratcheted translation-unit limits green by extracting oversized delegates, running `python3 scripts/check_structure_constraints.py` before commits/PRs, and keeping CMake source lists aligned with `src/`.
 - P1 - Unified source parser and transaction model: migrate Raw, Blocks, Map, inspector, validation, highlighting, help, and completion onto shared source snapshots and source-range transactions.
@@ -43,7 +44,6 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Backlog
 
-- Quick-start template/example project with `thconfig`, `.th`, `.th2`, and compile-ready references.
 - Replace fixed-delay map selection-restore retry timers with explicit scene-refresh completion/generation callbacks.
 - Optional Structure graph view for relationships such as `preview`, `revise`, `join`, `equate`, diagnostics, and station-network edges.
 - Compiler-confirmed project-index comparison once lightweight indexing is no longer sufficient.

@@ -495,47 +495,62 @@ void MainWindow::buildUi()
 void MainWindow::buildMenus()
 {
     QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
+
     QAction *newWindowAction = fileMenu->addAction(tr("New &Window"));
     newWindowAction->setMenuRole(QAction::NoRole);
     newWindowAction->setShortcut(QKeySequence::New);
     connect(newWindowAction, &QAction::triggered, this, &MainWindow::createNewWindow);
 
-    QMenu *newMenu = fileMenu->addMenu(tr("New"));
-    newTherionSourceAction_ = newMenu->addAction(tr("Therion Source (.th)"));
+    newProjectMenu_ = fileMenu->addMenu(tr("New Project"));
+    projectFromTemplateAction_ = newProjectMenu_->addAction(tr("Project from Template..."));
+    connect(projectFromTemplateAction_, &QAction::triggered, this, &MainWindow::createProjectFromDefaultTemplate);
+    emptyProjectAction_ = newProjectMenu_->addAction(tr("Empty Project..."));
+    connect(emptyProjectAction_, &QAction::triggered, this, &MainWindow::createEmptyProject);
+
+    newFileMenu_ = fileMenu->addMenu(tr("New File"));
+    newTherionSourceAction_ = newFileMenu_->addAction(tr("Therion Source (.th)"));
     connect(newTherionSourceAction_, &QAction::triggered, this, &MainWindow::createNewTherionSourceDocument);
-    newTherionMapAction_ = newMenu->addAction(tr("Therion Map (.th2)"));
+    newTherionMapAction_ = newFileMenu_->addAction(tr("Therion Map (.th2)"));
     connect(newTherionMapAction_, &QAction::triggered, this, &MainWindow::createNewTherionMapDocument);
-    newTherionConfigAction_ = newMenu->addAction(tr("Therion Config (.thconfig)"));
+    newTherionConfigAction_ = newFileMenu_->addAction(tr("Therion Config (.thconfig)"));
     connect(newTherionConfigAction_, &QAction::triggered, this, &MainWindow::createNewTherionConfigDocument);
+
+    fileMenu->addSeparator();
 
     openProjectAction_ = fileMenu->addAction(tr("&Open Project..."));
     openProjectAction_->setShortcut(QKeySequence::Open);
     connect(openProjectAction_, &QAction::triggered, this, &MainWindow::openProject);
 
-    closeProjectAction_ = fileMenu->addAction(tr("&Close Project"));
-    connect(closeProjectAction_, &QAction::triggered, this, &MainWindow::closeProject);
     recentProjectsMenu_ = fileMenu->addMenu(tr("Recent Projects"));
-    fileMenu->addSeparator();
     recentFilesMenu_ = fileMenu->addMenu(tr("Recent Files"));
+
+    fileMenu->addSeparator();
 
     importMenu_ = fileMenu->addMenu(tr("Import"));
     importPocketTopoAction_ = importMenu_->addAction(tr("Import PocketTopo Text..."));
     connect(importPocketTopoAction_, &QAction::triggered, this, &MainWindow::importPocketTopoTextToActiveEditor);
 
-    QAction *saveAction = fileMenu->addAction(tr("&Save"));
-    saveAction->setShortcut(QKeySequence::Save);
-    connect(saveAction, &QAction::triggered, this, &MainWindow::saveActiveDocument);
+    fileMenu->addSeparator();
 
-    QAction *saveAllAction = fileMenu->addAction(tr("Save &All"));
-    saveAllAction->setShortcut(QKeySequence::SaveAs);
-    connect(saveAllAction, &QAction::triggered, this, &MainWindow::saveAllDocuments);
+    saveAction_ = fileMenu->addAction(tr("&Save"));
+    saveAction_->setShortcut(QKeySequence::Save);
+    connect(saveAction_, &QAction::triggered, this, &MainWindow::saveActiveDocument);
 
-    QAction *closeTabAction = fileMenu->addAction(tr("&Close"));
-    connect(closeTabAction, &QAction::triggered, this, &MainWindow::closeActiveTab);
+    saveAllAction_ = fileMenu->addAction(tr("Save &All"));
+    saveAllAction_->setShortcut(QKeySequence::SaveAs);
+    connect(saveAllAction_, &QAction::triggered, this, &MainWindow::saveAllDocuments);
 
-    QAction *closeAllTabsAction = fileMenu->addAction(tr("Close All Tabs"));
-    closeAllTabsAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_W));
-    connect(closeAllTabsAction, &QAction::triggered, this, &MainWindow::closeAllTabs);
+    fileMenu->addSeparator();
+
+    closeProjectAction_ = fileMenu->addAction(tr("&Close Project"));
+    connect(closeProjectAction_, &QAction::triggered, this, &MainWindow::closeProject);
+
+    closeTabAction_ = fileMenu->addAction(tr("Close Tab"));
+    connect(closeTabAction_, &QAction::triggered, this, &MainWindow::closeActiveTab);
+
+    closeAllTabsAction_ = fileMenu->addAction(tr("Close All Tabs"));
+    closeAllTabsAction_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_W));
+    connect(closeAllTabsAction_, &QAction::triggered, this, &MainWindow::closeAllTabs);
 
     fileMenu->addSeparator();
     QAction *settingsAction = fileMenu->addAction(tr("Settings..."));
@@ -787,9 +802,17 @@ void MainWindow::addWelcomeTab()
         welcomeWidget = TherionStudio::createMainWindowProjectWelcomeWidget(
             tr("Therion Studio"),
             tr("Open a project to begin working with Therion documents, maps, and structure views."),
-            tr("Open Project..."),
+            tr("Open Existing Project..."),
             [this]() {
                 openProject();
+            },
+            tr("New Empty Project"),
+            [this]() {
+                createEmptyProject();
+            },
+            tr("New Project from Template..."),
+            [this]() {
+                createProjectFromDefaultTemplate();
             },
             sessionStore_ != nullptr ? sessionStore_->recentProjectPaths() : QStringList(),
             [this](const QString &projectPath) {
@@ -836,6 +859,7 @@ void MainWindow::createNewWindow()
         sessionStore->setTherionExecutablePath(sessionStore_->therionExecutablePath());
         sessionStore->setTherionRunTargetMode(sessionStore_->therionRunTargetMode());
         sessionStore->setTherionMapMagnifierEnabled(sessionStore_->therionMapMagnifierEnabled());
+        sessionStore->setLastProjectParentDirectory(sessionStore_->lastProjectParentDirectory());
         sessionStore->setRecentProjectPaths(sessionStore_->recentProjectPaths());
     }
 
@@ -1127,11 +1151,9 @@ void MainWindow::refreshFileImportActions()
     const bool showPocketTopoImport =
         QFileInfo(documentName).suffix().compare(QStringLiteral("th"), Qt::CaseInsensitive) == 0;
     if (importPocketTopoAction_ != nullptr) {
-        importPocketTopoAction_->setVisible(showPocketTopoImport);
         importPocketTopoAction_->setEnabled(showPocketTopoImport);
     }
     if (importMenu_ != nullptr) {
-        importMenu_->menuAction()->setVisible(showPocketTopoImport);
         importMenu_->setEnabled(showPocketTopoImport);
     }
 }

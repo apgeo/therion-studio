@@ -1,0 +1,10 @@
+source index.th
+
+select cave
+
+export map -projection plan -layout local -o output/cave.pdf
+export model -o output/cave.lox
+
+layout local
+  scale 1 500
+endlayout

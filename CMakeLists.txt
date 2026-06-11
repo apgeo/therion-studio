@@ -179,6 +179,8 @@ set(THERION_APP_SOURCES
     src/app/MainWindowRecentProjectsService.h
     src/app/MainWindowSessionProjectService.cpp
     src/app/MainWindowSessionProjectService.h
+    src/app/ProjectTemplateService.cpp
+    src/app/ProjectTemplateService.h
     src/app/MainWindowSessionRestoreOrchestrationService.cpp
     src/app/MainWindowSessionRestoreOrchestrationService.h
     src/app/MainWindowSessionRestoreUiFlowService.cpp
@@ -257,6 +259,7 @@ set(THERION_MAIN_WINDOW_SOURCES
     src/app/MainWindowHelpDialog.cpp
     src/app/MainWindowHelpDialog.h
     src/app/MainWindowMapBackground.cpp
+    src/app/MainWindowProjectTemplate.cpp
     src/app/MainWindowProjectLifecycle.cpp
     src/app/MainWindowSettingsDialog.cpp
     src/app/MainWindowSettingsDialog.h
@@ -612,6 +615,11 @@ set(THERION_STUDIO_RESOURCE_FILES
     ${THERION_MAP_OBJECT_STYLE_FILES}
     resources/therion_command_catalog.json
     resources/therion_syntax_palette.json
+    resources/project_templates/default/template.json
+    resources/project_templates/default/thconfig
+    resources/project_templates/default/index.th
+    resources/project_templates/default/surveys/survey1.th
+    resources/project_templates/default/scraps/scrap1.th2
     resources/icons/lucide/LICENSE
     resources/icons/lucide/check.svg
     resources/icons/lucide/code.svg
@@ -1107,6 +1115,9 @@ therion_add_app_unit_test(MainWindowProjectUiFlowServiceTest
 therion_add_app_unit_test(MainWindowProjectWorkspaceServiceTest
     tests/MainWindowProjectWorkspaceServiceTest.cpp)
 
+therion_add_app_unit_test(ProjectTemplateServiceTest
+    tests/ProjectTemplateServiceTest.cpp)
+
 therion_add_app_unit_test(MainWindowRecentProjectsServiceTest
     tests/MainWindowRecentProjectsServiceTest.cpp)
 
@@ -1411,6 +1422,7 @@ set(THERION_UNIT_TEST_TARGETS
     MainWindowSessionDocumentControllerTest
     MainWindowSessionControllerTest
     MainWindowProjectControllerTest
+    ProjectTemplateServiceTest
     MainWindowRecentFilesServiceTest
     MainWindowRecentProjectsServiceTest
     MainWindowDocumentControllerTest

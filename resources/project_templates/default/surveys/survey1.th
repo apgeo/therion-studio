@@ -1,0 +1,12 @@
+encoding utf-8
+
+survey survey1
+  centerline
+    explo-date 2025.12.31
+    explo-team "Explorer1"
+    date 2026.01.01
+    team "Surveyor1"
+    data normal from to tape compass clino
+    1 2 10.00 90.0 0.0
+  endcenterline
+endsurvey

@@ -31,6 +31,7 @@ int runInstanceBackedRoundTripTest()
     {
         SessionSettingsStore store(settingsPath);
         store.setLastProjectPath(QStringLiteral("/tmp/project"));
+        store.setLastProjectParentDirectory(QStringLiteral("/tmp"));
         store.setRecentProjectPaths({QStringLiteral("/tmp/project"), QStringLiteral("/tmp/other")});
         store.setMainWindowGeometry(QByteArray("geometry-bytes"));
         store.setMainWindowState(QByteArray("state-bytes"));
@@ -54,6 +55,10 @@ int runInstanceBackedRoundTripTest()
     const SessionSettingsStore store(settingsPath);
     if (!expect(store.lastProjectPath() == QStringLiteral("/tmp/project"),
                 "Last project path should round-trip through the injected settings file.")) {
+        return 1;
+    }
+    if (!expect(store.lastProjectParentDirectory() == QStringLiteral("/tmp"),
+                "Last project parent directory should round-trip through the injected settings file.")) {
         return 1;
     }
     if (!expect(store.recentProjectPaths()
@@ -190,6 +195,10 @@ int runDefaultsTest()
     if (!expect(store.lastProjectPath().isEmpty(), "Default last project path should be empty.")) {
         return 1;
     }
+    if (!expect(store.lastProjectParentDirectory().isEmpty(),
+                "Default last project parent directory should be empty.")) {
+        return 1;
+    }
     if (!expect(store.openDocumentPaths().isEmpty(), "Default open document path list should be empty.")) {
         return 1;
     }
@@ -230,6 +239,10 @@ int runInMemoryStoreTest()
     if (!expect(store.lastProjectPath().isEmpty(), "In-memory store should start without a project path.")) {
         return 1;
     }
+    if (!expect(store.lastProjectParentDirectory().isEmpty(),
+                "In-memory store should start without a project parent directory.")) {
+        return 1;
+    }
     if (!expect(store.openDocumentPaths().isEmpty(), "In-memory store should start without open documents.")) {
         return 1;
     }
@@ -250,6 +263,7 @@ int runInMemoryStoreTest()
     }
 
     store.setLastProjectPath(QStringLiteral("/tmp/project"));
+    store.setLastProjectParentDirectory(QStringLiteral("/tmp"));
     store.setRecentProjectPaths({QStringLiteral("/tmp/project"), QStringLiteral("/tmp/other")});
     store.setOpenDocumentPaths({QStringLiteral("/tmp/project/a.th")});
     store.setRecentFilePathsForProject(QStringLiteral("/tmp/project"),
@@ -261,6 +275,10 @@ int runInMemoryStoreTest()
 
     if (!expect(store.lastProjectPath() == QStringLiteral("/tmp/project"),
                 "In-memory store should retain project path in the current process.")) {
+        return 1;
+    }
+    if (!expect(store.lastProjectParentDirectory() == QStringLiteral("/tmp"),
+                "In-memory store should retain project parent directory in the current process.")) {
         return 1;
     }
     if (!expect(store.recentProjectPaths()

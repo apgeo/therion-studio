@@ -14,6 +14,9 @@ public:
     virtual QString lastProjectPath() const = 0;
     virtual void setLastProjectPath(const QString &projectPath) = 0;
 
+    virtual QString lastProjectParentDirectory() const = 0;
+    virtual void setLastProjectParentDirectory(const QString &directoryPath) = 0;
+
     virtual QStringList recentProjectPaths() const = 0;
     virtual void setRecentProjectPaths(const QStringList &projectPaths) = 0;
 

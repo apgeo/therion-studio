@@ -1,6 +1,6 @@
 # Therion Studio User Manual
 
-Last updated: 2026-06-09
+Last updated: 2026-06-11
 
 This guide covers everyday workflows in Therion Studio. It intentionally focuses on using the application, not on the full Therion language reference. Therion source syntax, command names, options, and serialized document content stay in canonical Therion form.
 
@@ -56,7 +56,7 @@ The main window contains:
 Common window actions:
 
 - `File -> New Window` opens a new empty window. It does not copy the current project or open documents.
-- `File -> New -> Therion Source (.th)`, `Therion Map (.th2)`, or `Therion Config (.thconfig)` opens a new unsaved document. New `.th`, `.th2`, and `.thconfig` documents start with `encoding utf-8`. The toolbar `New Document` button opens the same choices. The first `Save` asks where to save it.
+- `File -> New File -> Therion Source (.th)`, `Therion Map (.th2)`, or `Therion Config (.thconfig)` opens a new unsaved document in the active project. New `.th`, `.th2`, and `.thconfig` documents start with `encoding utf-8`. The toolbar `New Document` button opens the same choices. The first `Save` asks where to save it.
 - `File -> Settings...` opens application settings.
 - `View -> Expand Sidebar` / `Collapse Sidebar` shows or hides the left sidebar content.
 - `View -> Expand Context Help`, `Expand Block Inspector`, or `Expand Map Inspector` controls the active right-side panel, depending on the current editor.
@@ -69,13 +69,14 @@ When a map pane is detached into a separate window, the main window can show bot
 
 ### 3.1 Quick Start
 
-1. Open a project folder with `File -> Open Project...`; choose the folder that contains your Therion files.
-2. In `Compiler`, choose the `Target Config` (`thconfig`, `thconfig.*`, or `*.thconfig`) that should be used for project-level runs. If you are starting from scratch, create a config file and at least one `.th` source file from `File -> New`.
-3. Open the `.th` source files that define surveys, centerline data, maps, and file references. Use `Raw` for direct Therion source editing or `Blocks` for supported structured edits.
-4. Open an existing `.th2` map file from `Files`, or create one with `File -> New -> Therion Map (.th2)`. Use `Visual` for map editing and `Raw` for direct `.th2` source edits.
-5. In the map editor, insert a scrap before adding points, lines, or areas when the `.th2` file has no scrap yet. Draw map objects or use `Smart Area` to create a referenced Therion area from existing borders.
-6. Make sure the config/source files reference the survey and map files needed for compilation, using normal Therion source syntax.
-7. Save the documents, then run Therion from `Compiler` to check or export the project.
+1. Start a new project with `File -> New Project -> Project from Template...` or `File -> New Project -> Empty Project...`, or open an existing project folder with `File -> Open Project...`.
+2. Template projects are created from the bundled default template with `thconfig`, `index.th`, `surveys/survey1.th`, `scraps/scrap1.th2`, and an `output` directory for generated exports; Therion Studio opens the new project, selects its `thconfig` as the project `Target Config`, and opens `thconfig`, `index.th`, `surveys/survey1.th`, and `scraps/scrap1.th2` in tabs.
+3. In `Compiler`, choose the `Target Config` (`thconfig`, `thconfig.*`, or `*.thconfig`) that should be used for project-level runs. If you are starting from scratch without a template, create a config file and at least one `.th` source file from `File -> New File`.
+4. Open the `.th` source files that define surveys, centerline data, maps, and file references. Use `Raw` for direct Therion source editing or `Blocks` for supported structured edits.
+5. Open an existing `.th2` map file from `Files`, or create one with `File -> New File -> Therion Map (.th2)`. Use `Visual` for map editing and `Raw` for direct `.th2` source edits.
+6. In the map editor, insert a scrap before adding points, lines, or areas when the `.th2` file has no scrap yet. Draw map objects or use `Smart Area` to create a referenced Therion area from existing borders.
+7. Make sure the config/source files reference the survey and map files needed for compilation, using normal Therion source syntax.
+8. Save the documents, then run Therion from `Compiler` to check or export the project.
 
 ### 3.2 Open a Project
 
@@ -85,7 +86,11 @@ When a map pane is detached into a separate window, the main window can show bot
 
 The project folder chooser starts in your home folder when opened from `Open Project...`.
 
-When no project is open, the welcome tab shows an `Open Project...` button, and the `Files` sidebar shows an empty state with the same project-opening action instead of browsing the computer filesystem. When a project is open but no document tab is active, the welcome tab offers opening a file from the sidebar.
+When no project is open, the welcome tab shows `New Empty Project`, `New Project from Template...`, and `Open Existing Project...` buttons, and the `Files` sidebar shows an empty state with the same project-opening action instead of browsing the computer filesystem. When a project is open but no document tab is active, the welcome tab offers opening a file from the sidebar.
+
+`File -> New Project -> Project from Template...` opens a dialog with `Project Name` and `Location`, shows the resulting project folder path, and creates a project from the bundled default template. The dialog starts in the last successfully used project parent folder; if none is available, it starts in your `Documents` folder. The target project folder must not already contain files. The default template creates `thconfig`, `index.th`, `surveys/survey1.th`, `scraps/scrap1.th2`, and `output`; `index.th` defines the top-level `survey cave`, includes the survey and scrap files, and defines a map that references the scrap. The generated `thconfig` sources `index.th`, selects `cave`, and exports PDF and LOX outputs into `output`. After creation, Therion Studio opens `thconfig`, `index.th`, `surveys/survey1.th`, and `scraps/scrap1.th2`.
+
+`File -> New Project -> Empty Project...` opens a dialog with `Project Name` and `Location`, shows the resulting project folder path, and starts in the last successfully used project parent folder or your `Documents` folder when no prior location is available. It creates the project folder and opens it as a new empty project. The target project folder must not already contain files. Use `File -> New File` or the `Files` pane context menu to add project files afterward.
 
 The welcome tab and `File -> Recent Projects` list up to five recently opened projects. Select a project from either list to reopen it.
 
@@ -100,7 +105,7 @@ When a project is open, the welcome tab shows the active project name and path. 
 
 ### 3.4 Create and Manage Files
 
-Use `File -> New` to create an unsaved `.th`, `.th2`, or `.thconfig` document and choose its path on first save. Right-click in the `Files` pane to create folders, create saved `.th`, `.th2`, and `.thconfig` files directly in the project, rename items, duplicate files, delete items, or open `.th2` files directly in the map editor.
+Use `File -> New File` to create an unsaved `.th`, `.th2`, or `.thconfig` document in the active project and choose its path on first save. Right-click in the `Files` pane to create folders, create saved `.th`, `.th2`, and `.thconfig` files directly in the project, rename items, duplicate files, delete items, or open `.th2` files directly in the map editor.
 
 Rename and delete are blocked when the target file or folder is open in a document tab. Close the related tabs first, then retry the operation.
 

@@ -87,11 +87,13 @@ QStringList trimmedLinePointStandaloneRows(const QString &rawRowsText)
 
 bool requireSourceTransaction(const MapEditorObjectDetailsContext &context, const QString &message)
 {
-    if (context.applySourceTextChangeWithSnapshot) {
+    if (context.applySourceTextChangeWithSnapshot
+        || context.applySourceTextChangeWithSnapshotWithSelectionRestoreHook) {
         return true;
     }
 
-    Q_ASSERT(context.applySourceTextChangeWithSnapshot);
+    Q_ASSERT(context.applySourceTextChangeWithSnapshot
+             || context.applySourceTextChangeWithSnapshotWithSelectionRestoreHook);
     if (context.toolbarStatusNote != nullptr) {
         *context.toolbarStatusNote = message;
     }
@@ -102,6 +104,28 @@ bool requireSourceTransaction(const MapEditorObjectDetailsContext &context, cons
         context.refreshObjectDetailsPanel();
     }
     return false;
+}
+
+void applySourceTransactionWithOptionalHook(const MapEditorObjectDetailsContext &context,
+                                            const QString &label,
+                                            const QString &beforeText,
+                                            const QString &afterText,
+                                            int targetLineNumber,
+                                            std::function<void()> postApplyHook = {})
+{
+    if (context.applySourceTextChangeWithSnapshotWithSelectionRestoreHook && postApplyHook) {
+        context.applySourceTextChangeWithSnapshotWithSelectionRestoreHook(label,
+                                                                          beforeText,
+                                                                          afterText,
+                                                                          targetLineNumber,
+                                                                          std::move(postApplyHook));
+        return;
+    }
+
+    context.applySourceTextChangeWithSnapshot(label, beforeText, afterText, targetLineNumber);
+    if (postApplyHook) {
+        postApplyHook();
+    }
 }
 
 bool applySourceTextEdits(QString *contents,
@@ -353,10 +377,19 @@ void MapEditorObjectDetailsEditController::applyScrapScaleEdits()
     if (!requireSourceTransaction(context_, tr("Cannot update scrap scale without map source transaction support."))) {
         return;
     }
-    context_.applySourceTextChangeWithSnapshot(tr("Set Scrap Scale"), beforeText, afterText, targetLineNumber);
-    *context_.toolbarStatusNote = tr("Updated scrap scale.");
-    context_.refreshToolbarSummary();
-    context_.refreshObjectDetailsPanel();
+    const MapEditorObjectDetailsContext context = context_;
+    applySourceTransactionWithOptionalHook(context_,
+                                           tr("Set Scrap Scale"),
+                                           beforeText,
+                                           afterText,
+                                           targetLineNumber,
+                                           [context]() {
+                                               *context.toolbarStatusNote =
+                                                   QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsEditController",
+                                                                               "Updated scrap scale.");
+                                               context.refreshToolbarSummary();
+                                               context.refreshObjectDetailsPanel();
+                                           });
 }
 
 void MapEditorObjectDetailsEditController::handleConfigureObjectSettingsTriggered()
@@ -437,9 +470,15 @@ void MapEditorObjectDetailsEditController::handleConfigureObjectSettingsTriggere
     if (!requireSourceTransaction(context_, tr("Cannot edit object settings without map source transaction support."))) {
         return;
     }
-
-    context_.applySourceTextChangeWithSnapshot(tr("Edit Object Settings"), beforeText, afterText, targetLineNumber);
-    context_.refreshObjectDetailsPanel();
+    const MapEditorObjectDetailsContext context = context_;
+    applySourceTransactionWithOptionalHook(context_,
+                                           tr("Edit Object Settings"),
+                                           beforeText,
+                                           afterText,
+                                           targetLineNumber,
+                                           [context]() {
+                                               context.refreshObjectDetailsPanel();
+                                           });
 }
 
 void MapEditorObjectDetailsEditController::handleLineClosedToggled(bool checked)
@@ -478,10 +517,15 @@ void MapEditorObjectDetailsEditController::handleLineClosedToggled(bool checked)
     if (!requireSourceTransaction(context_, tr("Cannot update line closed state without map source transaction support."))) {
         return;
     }
-    context_.applySourceTextChangeWithSnapshot(tr("Edit Line Closed"),
-                                               beforeText,
-                                               afterText,
-                                               targetLineNumber);
+    const MapEditorObjectDetailsContext context = context_;
+    applySourceTransactionWithOptionalHook(context_,
+                                           tr("Edit Line Closed"),
+                                           beforeText,
+                                           afterText,
+                                           targetLineNumber,
+                                           [context]() {
+                                               context.refreshObjectDetailsPanel();
+                                           });
 }
 
 void MapEditorObjectDetailsEditController::handleLineReversedToggled(bool checked)
@@ -520,10 +564,15 @@ void MapEditorObjectDetailsEditController::handleLineReversedToggled(bool checke
     if (!requireSourceTransaction(context_, tr("Cannot update line reversed state without map source transaction support."))) {
         return;
     }
-    context_.applySourceTextChangeWithSnapshot(tr("Edit Line Reversed"),
-                                               beforeText,
-                                               afterText,
-                                               targetLineNumber);
+    const MapEditorObjectDetailsContext context = context_;
+    applySourceTransactionWithOptionalHook(context_,
+                                           tr("Edit Line Reversed"),
+                                           beforeText,
+                                           afterText,
+                                           targetLineNumber,
+                                           [context]() {
+                                               context.refreshObjectDetailsPanel();
+                                           });
 }
 
 void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
@@ -792,17 +841,23 @@ void MapEditorObjectDetailsEditController::deleteSelectedObjectFromSelection()
     if (!requireSourceTransaction(context_, tr("Cannot delete map object without map source transaction support."))) {
         return;
     }
-    context_.applySourceTextChangeWithSnapshot(tr("Delete Map Object"),
-                                               beforeText,
-                                               deletePlan.updatedText,
-                                               deletePlan.focusLineAfterDelete);
-    for (int removedLineNumber : deletePlan.removedLineNumbers) {
-        context_.hiddenInspectorObjectLines->remove(removedLineNumber);
-    }
-    *context_.lastInspectorClickedObjectLineNumber = 0;
-    context_.clearInspectorObjectSelection();
-    *context_.toolbarStatusNote = tr("Deleted selected object from source.");
-    context_.refreshToolbarSummary();
+    const MapEditorObjectDetailsContext context = context_;
+    applySourceTransactionWithOptionalHook(context_,
+                                           tr("Delete Map Object"),
+                                           beforeText,
+                                           deletePlan.updatedText,
+                                           deletePlan.focusLineAfterDelete,
+                                           [context, deletePlan]() {
+                                               for (int removedLineNumber : deletePlan.removedLineNumbers) {
+                                                   context.hiddenInspectorObjectLines->remove(removedLineNumber);
+                                               }
+                                               *context.lastInspectorClickedObjectLineNumber = 0;
+                                               context.clearInspectorObjectSelection();
+                                               *context.toolbarStatusNote =
+                                                   QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsEditController",
+                                                                               "Deleted selected object from source.");
+                                               context.refreshToolbarSummary();
+                                           });
 }
 
 void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
@@ -909,10 +964,19 @@ void MapEditorObjectDetailsEditController::applyObjectQuickFieldEdits()
     if (!requireSourceTransaction(context_, tr("Cannot update object fields without map source transaction support."))) {
         return;
     }
-    context_.applySourceTextChangeWithSnapshot(tr("Edit Object Fields"), beforeText, afterText, targetLineNumber);
-    *context_.toolbarStatusNote = tr("Updated object fields.");
-    context_.refreshToolbarSummary();
-    context_.refreshObjectDetailsPanel();
+    const MapEditorObjectDetailsContext context = context_;
+    applySourceTransactionWithOptionalHook(context_,
+                                           tr("Edit Object Fields"),
+                                           beforeText,
+                                           afterText,
+                                           targetLineNumber,
+                                           [context]() {
+                                               *context.toolbarStatusNote =
+                                                   QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsEditController",
+                                                                               "Updated object fields.");
+                                               context.refreshToolbarSummary();
+                                               context.refreshObjectDetailsPanel();
+                                           });
 }
 
 void MapEditorObjectDetailsEditController::applyScrapProjectionEdit()
@@ -967,10 +1031,19 @@ void MapEditorObjectDetailsEditController::applyScrapProjectionEdit()
     if (!requireSourceTransaction(context_, tr("Cannot update scrap projection without map source transaction support."))) {
         return;
     }
-    context_.applySourceTextChangeWithSnapshot(tr("Edit Scrap Projection"), beforeText, afterText, targetLineNumber);
-    *context_.toolbarStatusNote = tr("Updated scrap projection.");
-    context_.refreshToolbarSummary();
-    context_.refreshObjectDetailsPanel();
+    const MapEditorObjectDetailsContext context = context_;
+    applySourceTransactionWithOptionalHook(context_,
+                                           tr("Edit Scrap Projection"),
+                                           beforeText,
+                                           afterText,
+                                           targetLineNumber,
+                                           [context]() {
+                                               *context.toolbarStatusNote =
+                                                   QCoreApplication::translate("TherionStudio::MapEditorObjectDetailsEditController",
+                                                                               "Updated scrap projection.");
+                                               context.refreshToolbarSummary();
+                                               context.refreshObjectDetailsPanel();
+                                           });
 }
 
 void MapEditorObjectDetailsEditController::updateObjectQuickSubtypeChoices()

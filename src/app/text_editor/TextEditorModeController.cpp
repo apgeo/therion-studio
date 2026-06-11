@@ -126,9 +126,9 @@ bool TextEditorModeController::ensureEncodingRootDirectiveForBlocks()
     }
 
     *context_.enforcingEncodingRootDirective = true;
-    context_.replaceTextForSystemNormalization(normalizedContents);
+    const bool applied = context_.replaceTextForSystemNormalization(normalizedContents);
     *context_.enforcingEncodingRootDirective = false;
-    return true;
+    return applied;
 }
 
 void TextEditorModeController::refreshEditorModeUi()

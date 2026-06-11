@@ -133,9 +133,6 @@ public:
     bool findPrevious();
     bool replaceCurrent();
     int replaceAll();
-    bool rewriteStructureEntryName(int lineNumber, const QString &category, const QString &newName, QString *errorMessage = nullptr);
-    bool configureCommandAtLine(const QString &kind, int lineNumber, bool showCommandHelpOnly = false);
-    bool deleteCommandAtLine(int lineNumber);
     void replaceTextForCommand(const QString &contents);
     void insertTextAtCursor(const QString &contents);
     QString importInsertionScopeToken() const;
@@ -223,7 +220,7 @@ private:
     void refreshStatus();
     bool isCurrentStateDirty() const;
     void applyDirtyStateFromCurrentState();
-    void replaceTextForSystemNormalization(const QString &contents);
+    bool replaceTextForSystemNormalization(const QString &contents);
     TextEditorCommandMetadata &mutableCommandMetadata() { return commandMetadata_; }
     ImportInsertionPoint resolveImportInsertionPoint() const;
     void insertTextAfterLine(int lineNumber, const QString &contents);

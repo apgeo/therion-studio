@@ -28,25 +28,6 @@ TextEditorSourceRewriteController::TextEditorSourceRewriteController(TextEditorS
 {
 }
 
-bool TextEditorSourceRewriteController::rewriteStructureEntryName(int lineNumber,
-                                                                  const QString &category,
-                                                                  const QString &newName,
-                                                                  QString *errorMessage)
-{
-    if (context_.editor == nullptr) {
-        return false;
-    }
-
-    const QString contents = context_.editor->toPlainText();
-    QVector<TherionSourceTextEdit> edits;
-    if (!TherionDocumentEditor::structureEntryNameRewriteEdits(contents, lineNumber, category, newName, &edits, errorMessage)) {
-        return false;
-    }
-
-    applyTextEditsPreservingCursor(edits, false, false, true, false);
-    return true;
-}
-
 bool TextEditorSourceRewriteController::applyTransactionRequestWithEditorUndo(const TextEditorSourceTransactionRequest &request,
                                                                                QString *statusMessage)
 {
@@ -109,11 +90,6 @@ bool TextEditorSourceRewriteController::applyTransactionRequestWithEditorUndo(co
     return true;
 }
 
-void TextEditorSourceRewriteController::applySourceTextEditsForCommandWithUndo(QVector<TherionSourceTextEdit> edits)
-{
-    applyTextEditsPreservingCursor(std::move(edits), true, true, true, true);
-}
-
 void TextEditorSourceRewriteController::replaceTextForCommand(const QString &contents)
 {
     if (context_.editor == nullptr) {
@@ -123,22 +99,21 @@ void TextEditorSourceRewriteController::replaceTextForCommand(const QString &con
     replaceTextPreservingCursor(contents, true, true, true, false);
 }
 
-void TextEditorSourceRewriteController::replaceTextForCommandWithUndo(const QString &contents)
+bool TextEditorSourceRewriteController::replaceTextForSystemNormalization(const QString &contents)
 {
     if (context_.editor == nullptr) {
-        return;
+        return false;
     }
 
-    replaceTextPreservingCursor(contents, true, true, true, true);
-}
-
-void TextEditorSourceRewriteController::replaceTextForSystemNormalization(const QString &contents)
-{
-    if (context_.editor == nullptr) {
-        return;
-    }
-
-    replaceTextPreservingCursor(contents, false, true, false, false);
+    TextEditorSourceTransactionRequest request;
+    request.beforeText = context_.editor->toPlainText();
+    request.afterText = contents;
+    QTextDocument *document = context_.editor->document();
+    request.expectedSourceRevision = document != nullptr ? document->revision() : 0;
+    request.projectionInvalidationPolicy = TextEditorSourceProjectionInvalidationPolicy::FlushPendingRefresh;
+    request.selectionRestorePolicy = TextEditorSourceSelectionRestorePolicy::PreserveCurrentSelection;
+    request.staleStatusMessage = QStringLiteral("System normalization skipped: document changed.");
+    return applyTransactionRequestWithEditorUndo(request);
 }
 
 void TextEditorSourceRewriteController::replaceEditorText(const QString &contents, bool recordUndoStep)

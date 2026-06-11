@@ -24,7 +24,7 @@ struct TextEditorModeContext
     QWidget *rawEditorPanel = nullptr;
     QWidget *blocksPanel = nullptr;
     std::function<void()> hideFindBar;
-    std::function<void(const QString &)> replaceTextForSystemNormalization;
+    std::function<bool(const QString &)> replaceTextForSystemNormalization;
     std::function<void()> rebuildBlocksCanvasFromText;
     std::function<void()> populateBlockToolbox;
     std::function<void()> editorModeChanged;

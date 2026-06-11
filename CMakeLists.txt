@@ -1226,6 +1226,10 @@ therion_add_text_editor_ui_test(TextEditorValidationFixesTransactionTest
     tests/TextEditorValidationFixesTransactionTest.cpp
     "TextEditorValidationFixesTransactionResources")
 
+therion_add_text_editor_ui_test(TextEditorSystemNormalizationTransactionTest
+    tests/TextEditorSystemNormalizationTransactionTest.cpp
+    "TextEditorSystemNormalizationTransactionResources")
+
 qt_add_executable(TextEditorDocumentControllerTest
     tests/TextEditorDocumentControllerTest.cpp
     src/app/text_editor/TextEditorDocumentController.cpp
@@ -1409,6 +1413,7 @@ set(THERION_UI_TEST_TARGETS
     TextEditorCompletionHighlightTest
     TextEditorSourceTransactionControllerTest
     TextEditorValidationFixesTransactionTest
+    TextEditorSystemNormalizationTransactionTest
     MapEditorDetachedPaneTest
     MapEditorDragUndoRedoSmokeTest
     MapEditorSplitAreaBorderSmokeTest

@@ -1,0 +1,183 @@
+#include "../src/app/text_editor/TextEditorSourceRewriteController.h"
+
+#include <QApplication>
+#include <QCoreApplication>
+#include <QEventLoop>
+#include <QPlainTextEdit>
+#include <QTextDocument>
+
+#include <iostream>
+
+using namespace TherionStudio;
+
+namespace
+{
+bool expect(bool condition, const char *message)
+{
+    if (!condition) {
+        std::cerr << message << '\n';
+    }
+    return condition;
+}
+
+void pumpEvents()
+{
+    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+    QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+}
+
+int runSystemNormalizationApplyUndoRedoTest()
+{
+    const QString beforeText = QStringLiteral("survey demo\nendsurvey\n");
+    const QString afterText = QStringLiteral("encoding utf-8\nsurvey demo\nendsurvey\n");
+
+    bool loading = false;
+    int currentLineNumber = 1;
+    int dirtyStateCalls = 0;
+    int rebuildCalls = 0;
+    int textChangedCalls = 0;
+    int contextHelpCalls = 0;
+
+    QPlainTextEdit editor;
+    editor.setPlainText(beforeText);
+
+    TextEditorSourceRewriteContext context;
+    context.editor = &editor;
+    context.loading = &loading;
+    context.currentLineNumber = &currentLineNumber;
+    context.applyDirtyStateFromCurrentState = [&dirtyStateCalls]() {
+        ++dirtyStateCalls;
+    };
+    context.rebuildBlocksCanvasFromText = [&rebuildCalls]() {
+        ++rebuildCalls;
+    };
+    context.documentTextChanged = [&textChangedCalls]() {
+        ++textChangedCalls;
+    };
+    context.updateContextHelp = [&contextHelpCalls]() {
+        ++contextHelpCalls;
+    };
+
+    TextEditorSourceRewriteController controller(std::move(context));
+
+    const bool applied = controller.replaceTextForSystemNormalization(afterText);
+    pumpEvents();
+    if (!expect(applied,
+                "System normalization transaction should apply when encoding directive is missing.")) {
+        return 1;
+    }
+
+    if (!expect(editor.toPlainText() == afterText,
+                "System normalization transaction should insert a root encoding directive.")) {
+        return 1;
+    }
+
+    if (!expect(editor.document() != nullptr && editor.document()->isUndoAvailable(),
+                "System normalization transaction should produce an undoable change.")) {
+        return 1;
+    }
+
+    if (!expect(dirtyStateCalls == 1,
+                "System normalization transaction should refresh dirty state exactly once.")) {
+        return 1;
+    }
+
+    if (!expect(rebuildCalls == 1,
+                "System normalization transaction should trigger one projection refresh.")) {
+        return 1;
+    }
+
+    if (!expect(textChangedCalls == 1,
+                "System normalization transaction should emit one document-text-changed callback.")) {
+        return 1;
+    }
+
+    if (!expect(contextHelpCalls == 1,
+                "System normalization transaction should refresh context help once.")) {
+        return 1;
+    }
+
+    editor.undo();
+    pumpEvents();
+    if (!expect(editor.toPlainText() == beforeText,
+                "System normalization undo should restore the original source text.")) {
+        return 1;
+    }
+
+    editor.redo();
+    pumpEvents();
+    if (!expect(editor.toPlainText() == afterText,
+                "System normalization redo should reapply the normalized source text.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runSystemNormalizationNoOpTest()
+{
+    const QString textWithEncoding = QStringLiteral("encoding utf-8\nsurvey demo\nendsurvey\n");
+
+    bool loading = false;
+    int currentLineNumber = 1;
+    int dirtyStateCalls = 0;
+    int rebuildCalls = 0;
+    int textChangedCalls = 0;
+    int contextHelpCalls = 0;
+
+    QPlainTextEdit editor;
+    editor.setPlainText(textWithEncoding);
+
+    TextEditorSourceRewriteContext context;
+    context.editor = &editor;
+    context.loading = &loading;
+    context.currentLineNumber = &currentLineNumber;
+    context.applyDirtyStateFromCurrentState = [&dirtyStateCalls]() {
+        ++dirtyStateCalls;
+    };
+    context.rebuildBlocksCanvasFromText = [&rebuildCalls]() {
+        ++rebuildCalls;
+    };
+    context.documentTextChanged = [&textChangedCalls]() {
+        ++textChangedCalls;
+    };
+    context.updateContextHelp = [&contextHelpCalls]() {
+        ++contextHelpCalls;
+    };
+
+    TextEditorSourceRewriteController controller(std::move(context));
+
+    const bool applied = controller.replaceTextForSystemNormalization(textWithEncoding);
+    pumpEvents();
+    if (!expect(!applied,
+                "System normalization should report not-applied when source is already normalized.")) {
+        return 1;
+    }
+
+    if (!expect(editor.toPlainText() == textWithEncoding,
+                "System normalization no-op should preserve source text exactly.")) {
+        return 1;
+    }
+
+    if (!expect(dirtyStateCalls == 0 && rebuildCalls == 0 && textChangedCalls == 0 && contextHelpCalls == 0,
+                "System normalization no-op should not trigger update callbacks.")) {
+        return 1;
+    }
+
+    return 0;
+}
+}
+
+int main(int argc, char **argv)
+{
+    QApplication app(argc, argv);
+
+    if (runSystemNormalizationApplyUndoRedoTest() != 0) {
+        return 1;
+    }
+    if (runSystemNormalizationNoOpTest() != 0) {
+        return 1;
+    }
+
+    return 0;
+}

@@ -33,16 +33,10 @@ class TextEditorSourceRewriteController final
 public:
     explicit TextEditorSourceRewriteController(TextEditorSourceRewriteContext context);
 
-    bool rewriteStructureEntryName(int lineNumber,
-                                   const QString &category,
-                                   const QString &newName,
-                                   QString *errorMessage = nullptr);
     bool applyTransactionRequestWithEditorUndo(const TextEditorSourceTransactionRequest &request,
                                                QString *statusMessage = nullptr);
-    void applySourceTextEditsForCommandWithUndo(QVector<TherionSourceTextEdit> edits);
     void replaceTextForCommand(const QString &contents);
-    void replaceTextForCommandWithUndo(const QString &contents);
-    void replaceTextForSystemNormalization(const QString &contents);
+    bool replaceTextForSystemNormalization(const QString &contents);
 
 private:
     void replaceEditorText(const QString &contents, bool recordUndoStep);

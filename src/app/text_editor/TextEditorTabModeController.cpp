@@ -24,7 +24,7 @@ void TextEditorTab::buildModeController()
         hideFindBar();
     };
     modeContext.replaceTextForSystemNormalization = [this](const QString &contents) {
-        replaceTextForSystemNormalization(contents);
+        return replaceTextForSystemNormalization(contents);
     };
     modeContext.rebuildBlocksCanvasFromText = [this]() {
         rebuildBlocksCanvasFromText();

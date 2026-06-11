@@ -506,6 +506,7 @@ set(THERION_MAP_EDITOR_SOURCES
     src/app/text_editor/map_editor/MapEditorTabInspectorBackgroundUi.cpp
     src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
+    src/app/text_editor/map_editor/MapEditorTabCommandSurfaceDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp
     src/app/text_editor/map_editor/MapEditorUndoArbitrationService.cpp
     src/app/text_editor/map_editor/MapEditorUndoArbitrationService.h

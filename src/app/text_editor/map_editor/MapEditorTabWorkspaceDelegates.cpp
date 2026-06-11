@@ -1,13 +1,10 @@
 #include "MapEditorTab.h"
-#include "MapEditorUndoArbitrationService.h"
 
 #include <QFileInfo>
 #include <QFrame>
 #include <QLayout>
 #include <QPushButton>
-#include <QScopedValueRollback>
 #include <QSplitter>
-#include <QUndoStack>
 
 #include "../TextEditorTab.h"
 
@@ -121,124 +118,6 @@ int MapEditorTab::zoomPercent() const
     return qRound(zoomFactor_ * 100.0);
 }
 
-MapEditorUndoOwner MapEditorTab::nextUndoOwner() const
-{
-    const MapEditorUndoAvailability availability{
-        .hasInteractiveDrawUndo = hasUndoableInteractiveDrawStep(),
-        .hasMapUndo = undoStack_ != nullptr && undoStack_->canUndo(),
-        .hasTextUndo = textEditor_ != nullptr && textEditor_->canUndo(),
-        .hasMapRedo = undoStack_ != nullptr && undoStack_->canRedo(),
-        .hasTextRedo = textEditor_ != nullptr && textEditor_->canRedo()};
-    return MapEditorUndoArbitrationService::nextUndoOwner(availability);
-}
-
-MapEditorUndoOwner MapEditorTab::nextRedoOwner() const
-{
-    const MapEditorUndoAvailability availability{
-        .hasInteractiveDrawUndo = hasUndoableInteractiveDrawStep(),
-        .hasMapUndo = undoStack_ != nullptr && undoStack_->canUndo(),
-        .hasTextUndo = textEditor_ != nullptr && textEditor_->canUndo(),
-        .hasMapRedo = undoStack_ != nullptr && undoStack_->canRedo(),
-        .hasTextRedo = textEditor_ != nullptr && textEditor_->canRedo()};
-    return MapEditorUndoArbitrationService::nextRedoOwner(availability);
-}
-
-bool MapEditorTab::canUndo() const
-{
-    return nextUndoOwner() != MapEditorUndoOwner::None;
-}
-
-bool MapEditorTab::canRedo() const
-{
-    return nextRedoOwner() != MapEditorUndoOwner::None;
-}
-
-MapEditorTab::InteractiveDrawMode MapEditorTab::interactiveDrawMode() const
-{
-    return interactiveDrawState_.mode_;
-}
-
-bool MapEditorTab::canCompleteDraftAction() const
-{
-    const bool mapReady = mapScene_ != nullptr;
-    return mapReady && (selectedDraftGeometryItem() != nullptr || hasCompletableInteractiveDrawSession());
-}
-
-void MapEditorTab::triggerUndo()
-{
-    handleUndoTriggered();
-}
-
-void MapEditorTab::triggerRedo()
-{
-    handleRedoTriggered();
-}
-
-void MapEditorTab::triggerZoomIn()
-{
-    handleZoomInTriggered();
-}
-
-void MapEditorTab::triggerZoomOut()
-{
-    handleZoomOutTriggered();
-}
-
-void MapEditorTab::triggerFit()
-{
-    handleFitTriggered();
-}
-
-void MapEditorTab::triggerFitWithBackground()
-{
-    handleFitWithBackgroundTriggered();
-}
-
-void MapEditorTab::triggerSelectMode()
-{
-    handleSelectModeTriggered();
-}
-
-void MapEditorTab::triggerInsertScrap()
-{
-    handleInsertScrapTriggered();
-}
-
-void MapEditorTab::triggerCompleteDraft()
-{
-    handleCompleteDraftTriggered();
-}
-
-void MapEditorTab::triggerAddPoint()
-{
-    handleAddPointTriggered();
-}
-
-void MapEditorTab::triggerAddLine()
-{
-    handleAddLineTriggered();
-}
-
-void MapEditorTab::triggerAddFreehandLine()
-{
-    handleAddFreehandLineTriggered();
-}
-
-void MapEditorTab::triggerAddArea()
-{
-    handleAddAreaTriggered();
-}
-
-void MapEditorTab::triggerSmartArea()
-{
-    handleSmartAreaTriggered();
-}
-
-bool MapEditorTab::isInsertModeActive() const
-{
-    return interactiveDrawState_.mode_ != InteractiveDrawMode::None;
-}
-
 bool MapEditorTab::isMapPaneDetached() const
 {
     return detachedPaneState_.detached_;
@@ -326,58 +205,6 @@ void MapEditorTab::handleTextEditorCursorPositionChanged(int lineNumber, int col
     }
 
     syncMapSelectionFromTextCursor(lineNumber, columnNumber);
-}
-
-void MapEditorTab::handleUndoTriggered()
-{
-    const MapEditorUndoExecutionContext context{
-        .undoInteractiveDrawStep = [this]() { return undoInteractiveDrawStep(); },
-        .canMapUndo = [this]() { return undoStack_ != nullptr && undoStack_->canUndo(); },
-        .undoMapCommand = [this]() {
-            if (undoStack_ == nullptr) {
-                return;
-            }
-            const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
-            undoStack_->undo();
-            flushPendingMapSceneRefreshAfterCommand();
-        },
-        .canTextUndo = [this]() { return textEditor_ != nullptr && textEditor_->canUndo(); },
-        .undoTextEdit = [this]() {
-            if (textEditor_ != nullptr) {
-                textEditor_->triggerUndo();
-            }
-        },
-        .canMapRedo = {},
-        .redoMapCommand = {},
-        .canTextRedo = {},
-        .redoTextEdit = {}};
-    MapEditorUndoArbitrationService::triggerUndo(context);
-}
-
-void MapEditorTab::handleRedoTriggered()
-{
-    const MapEditorUndoExecutionContext context{
-        .undoInteractiveDrawStep = {},
-        .canMapUndo = {},
-        .undoMapCommand = {},
-        .canTextUndo = {},
-        .undoTextEdit = {},
-        .canMapRedo = [this]() { return undoStack_ != nullptr && undoStack_->canRedo(); },
-        .redoMapCommand = [this]() {
-            if (undoStack_ == nullptr) {
-                return;
-            }
-            const QScopedValueRollback<bool> commandGuard(mapCommandApplyInProgress_, true);
-            undoStack_->redo();
-            flushPendingMapSceneRefreshAfterCommand();
-        },
-        .canTextRedo = [this]() { return textEditor_ != nullptr && textEditor_->canRedo(); },
-        .redoTextEdit = [this]() {
-            if (textEditor_ != nullptr) {
-                textEditor_->triggerRedo();
-            }
-        }};
-    MapEditorUndoArbitrationService::triggerRedo(context);
 }
 
 void MapEditorTab::handleZoomInTriggered()

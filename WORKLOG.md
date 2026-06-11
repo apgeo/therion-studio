@@ -12,6 +12,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1 - Map canvas readability and performance: keep background rendering, `.xvi` behavior, appearance repaint paths, handles, labels, and bounds stable.
 - P1 - Project sidebars: keep Structure indexing and File sidebar mutations reliable, navigable, and refreshed through shared post-operation paths.
 - P1 - Architecture maintenance: keep reducing `MainWindow`, `TextEditorTab`, and `MapEditorTab` shell responsibilities without behavior changes.
+- P1 - Structure constraints hygiene: keep ratcheted translation-unit limits green by extracting oversized delegates, running `python3 scripts/check_structure_constraints.py` before commits/PRs, and keeping CMake source lists aligned with `src/`.
 - P1 - Unified source parser and transaction model: migrate Raw, Blocks, Map, inspector, validation, highlighting, help, and completion onto shared source snapshots and source-range transactions.
 
 ## Unified Source DOM Implementation Plan

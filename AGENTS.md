@@ -159,6 +159,7 @@ These instructions apply to the whole repository.
 ## Verification Expectations
 
 - Prefer focused automated tests for parser, serializer, project loading, indexing, command routing, session restore, and document-editing logic.
+- Before proposing a commit or opening a PR, run `python3 scripts/check_structure_constraints.py` locally and fix any violations in the same change.
 - If a change affects externally visible behavior, verify it against the acceptance criteria in the specification.
 - If automated verification is not possible, document a concrete manual verification pass with specific user workflows or scenarios.
 - Do not claim behavior is implemented if the specification, tests, or verification steps do not support that claim.

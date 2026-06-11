@@ -560,6 +560,34 @@ int runAppendDraftGeometryTest()
     QString contents = QStringLiteral("scrap main\nendscrap\n");
     int lineNumber = 0;
     errorMessage.clear();
+    QVector<TherionSourceTextEdit> draftPointEdits;
+    if (!expect(TherionDocumentEditor::appendDraftGeometryEdits(contents,
+                                                                QStringLiteral("point"),
+                                                                {QPointF(123.4, 567.8)},
+                                                                &draftPointEdits,
+                                                                &lineNumber,
+                                                                &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(lineNumber == 2,
+                "appendDraftGeometryEdits should report the inserted point line number.")) {
+        return 1;
+    }
+    if (!expect(draftPointEdits.size() == 1
+                    && draftPointEdits.at(0).startOffset == contents.indexOf(QStringLiteral("endscrap\n"))
+                    && draftPointEdits.at(0).length == 0
+                    && draftPointEdits.at(0).replacementText == QStringLiteral("  point 123.4 567.8 station -name draft-point\n"),
+                "appendDraftGeometryEdits should expose the point insertion source edit.")) {
+        return 1;
+    }
+    QString plannerAppliedContents = contents;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::applySourceTextEdits(&plannerAppliedContents, draftPointEdits, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
     if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents, QStringLiteral("point"), {QPointF(123.4, 567.8)}, &lineNumber, &errorMessage),
                 errorMessage.toUtf8().constData())) {
         return 1;
@@ -571,10 +599,49 @@ int runAppendDraftGeometryTest()
     if (!expect(lineNumber == 2, "appendDraftGeometry should report the inserted point line number.")) {
         return 1;
     }
+    if (!expect(plannerAppliedContents == contents,
+                "appendDraftGeometryEdits should apply to the same output as appendDraftGeometry for point inserts.")) {
+        return 1;
+    }
 
     contents = QStringLiteral("survey demo\r\n");
     lineNumber = 0;
     errorMessage.clear();
+    QVector<TherionSourceTextEdit> fallbackLineEdits;
+    if (!expect(TherionDocumentEditor::appendDraftGeometryEdits(contents,
+                                                                QStringLiteral("line"),
+                                                                {QPointF(10.0, 20.0), QPointF(30.0, 40.0), QPointF(50.0, 60.0), QPointF(70.0, 80.0)},
+                                                                &fallbackLineEdits,
+                                                                &lineNumber,
+                                                                &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(lineNumber == 4,
+                "appendDraftGeometryEdits should report line number for fallback line geometry.")) {
+        return 1;
+    }
+    if (!expect(fallbackLineEdits.size() == 1
+                    && fallbackLineEdits.at(0).startOffset == contents.size()
+                    && fallbackLineEdits.at(0).length == 0
+                    && fallbackLineEdits.at(0).replacementText == QStringLiteral("\r\nscrap scrap-1\r\n"
+                                                                                  "  line wall\r\n"
+                                                                                  "    10.0 20.0\r\n"
+                                                                                  "    30.0 40.0\r\n"
+                                                                                  "    50.0 60.0\r\n"
+                                                                                  "    70.0 80.0\r\n"
+                                                                                  "  endline\r\n"
+                                                                                  "endscrap\r\n"),
+                "appendDraftGeometryEdits should combine fallback scrap creation and line insertion into one append edit.")) {
+        return 1;
+    }
+    plannerAppliedContents = contents;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::applySourceTextEdits(&plannerAppliedContents, fallbackLineEdits, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
     if (!expect(TherionDocumentEditor::appendDraftGeometry(&contents,
                                                            QStringLiteral("line"),
                                                            {QPointF(10.0, 20.0), QPointF(30.0, 40.0), QPointF(50.0, 60.0), QPointF(70.0, 80.0)},
@@ -590,10 +657,44 @@ int runAppendDraftGeometryTest()
     if (!expect(lineNumber == 4, "appendDraftGeometry should report line number for inserted line geometry.")) {
         return 1;
     }
+    if (!expect(plannerAppliedContents == contents,
+                "appendDraftGeometryEdits should apply to the same output as appendDraftGeometry for fallback line inserts.")) {
+        return 1;
+    }
 
     contents = QStringLiteral("scrap s\nendscrap\n");
     lineNumber = 0;
     errorMessage.clear();
+    QVector<TherionSourceTextEdit> draftLineEdits;
+    if (!expect(TherionDocumentEditor::appendDraftLineGeometryEdits(contents,
+                                                                    {QStringLiteral("1 2"),
+                                                                     QStringLiteral("3 4"),
+                                                                     QStringLiteral("5 6")},
+                                                                    &draftLineEdits,
+                                                                    &lineNumber,
+                                                                    &errorMessage,
+                                                                    QStringLiteral("-close on")),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(draftLineEdits.size() == 1
+                    && draftLineEdits.at(0).startOffset == contents.indexOf(QStringLiteral("endscrap\n"))
+                    && draftLineEdits.at(0).length == 0
+                    && draftLineEdits.at(0).replacementText == QStringLiteral("  line wall -close on\n"
+                                                                               "    1 2\n"
+                                                                               "    3 4\n"
+                                                                               "    5 6\n"
+                                                                               "  endline\n"),
+                "appendDraftLineGeometryEdits should expose the line insertion source edit.")) {
+        return 1;
+    }
+    plannerAppliedContents = contents;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::applySourceTextEdits(&plannerAppliedContents, draftLineEdits, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
     if (!expect(TherionDocumentEditor::appendDraftLineGeometry(&contents,
                                                                {QStringLiteral("1 2"),
                                                                 QStringLiteral("3 4"),
@@ -615,6 +716,10 @@ int runAppendDraftGeometryTest()
         return 1;
     }
     if (!expect(lineNumber == 2, "appendDraftLineGeometry should report the inserted line header line number.")) {
+        return 1;
+    }
+    if (!expect(plannerAppliedContents == contents,
+                "appendDraftLineGeometryEdits should apply to the same output as appendDraftLineGeometry.")) {
         return 1;
     }
 
@@ -889,6 +994,42 @@ int runAppendDraftGeometryTest()
                               "endscrap\n");
     lineNumber = 0;
     errorMessage.clear();
+    QVector<TherionSourceTextEdit> draftAreaEdits;
+    if (!expect(TherionDocumentEditor::appendDraftAreaGeometryEdits(contents,
+                                                                    {QStringLiteral("1 2"),
+                                                                     QStringLiteral("3 4 5 6"),
+                                                                     QStringLiteral("7 8")},
+                                                                    &draftAreaEdits,
+                                                                    &lineNumber,
+                                                                    &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(lineNumber == 9,
+                "appendDraftAreaGeometryEdits should report the inserted area line number.")) {
+        return 1;
+    }
+    if (!expect(draftAreaEdits.size() == 1
+                    && draftAreaEdits.at(0).startOffset == contents.indexOf(QStringLiteral("endscrap\n"))
+                    && draftAreaEdits.at(0).length == 0
+                    && draftAreaEdits.at(0).replacementText == QStringLiteral("  line border -id line-2 -close on\n"
+                                                                               "    1 2\n"
+                                                                               "    3 4 5 6\n"
+                                                                               "    7 8\n"
+                                                                               "  endline\n"
+                                                                               "  area water\n"
+                                                                               "    line-2\n"
+                                                                               "  endarea\n"),
+                "appendDraftAreaGeometryEdits should expose the area insertion source edit.")) {
+        return 1;
+    }
+    plannerAppliedContents = contents;
+    errorMessage.clear();
+    if (!expect(TherionDocumentEditor::applySourceTextEdits(&plannerAppliedContents, draftAreaEdits, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
     if (!expect(TherionDocumentEditor::appendDraftAreaGeometry(&contents,
                                                                {QStringLiteral("1 2"),
                                                                 QStringLiteral("3 4 5 6"),
@@ -914,6 +1055,10 @@ int runAppendDraftGeometryTest()
         return 1;
     }
     if (!expect(lineNumber == 9, "appendDraftAreaGeometry should report the inserted area line number.")) {
+        return 1;
+    }
+    if (!expect(plannerAppliedContents == contents,
+                "appendDraftAreaGeometryEdits should apply to the same output as appendDraftAreaGeometry.")) {
         return 1;
     }
 

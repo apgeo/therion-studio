@@ -85,13 +85,17 @@ bool TextEditorSourceRewriteController::insertDraftGeometry(const QString &kind,
         && !parseTherionAreaAdjust(contents).valid) {
         contents = upsertTherionAreaAdjustMetadata(contents, *initialAreaAdjustRect);
     }
+    const QString plannerSource = contents;
     int resolvedLineNumber = 0;
-    if (!TherionDocumentEditor::appendDraftGeometry(&contents,
-                                                    kind,
-                                                    vertices,
-                                                    &resolvedLineNumber,
-                                                    errorMessage,
-                                                    objectOptions)) {
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::appendDraftGeometryEdits(plannerSource,
+                                                         kind,
+                                                         vertices,
+                                                         &sourceEdits,
+                                                         &resolvedLineNumber,
+                                                         errorMessage,
+                                                         objectOptions)
+        || !TherionDocumentEditor::applySourceTextEdits(&contents, sourceEdits, errorMessage)) {
         return false;
     }
 
@@ -119,13 +123,17 @@ bool TextEditorSourceRewriteController::insertDraftLineGeometry(const QStringLis
         && !parseTherionAreaAdjust(contents).valid) {
         contents = upsertTherionAreaAdjustMetadata(contents, *initialAreaAdjustRect);
     }
+    const QString plannerSource = contents;
     int resolvedLineNumber = 0;
-    if (!TherionDocumentEditor::appendDraftLineGeometry(&contents,
-                                                        coordinateRows,
-                                                        &resolvedLineNumber,
-                                                        errorMessage,
-                                                        lineOptions,
-                                                        objectOptions)) {
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::appendDraftLineGeometryEdits(plannerSource,
+                                                             coordinateRows,
+                                                             &sourceEdits,
+                                                             &resolvedLineNumber,
+                                                             errorMessage,
+                                                             lineOptions,
+                                                             objectOptions)
+        || !TherionDocumentEditor::applySourceTextEdits(&contents, sourceEdits, errorMessage)) {
         return false;
     }
 
@@ -152,12 +160,16 @@ bool TextEditorSourceRewriteController::insertDraftAreaGeometry(const QStringLis
         && !parseTherionAreaAdjust(contents).valid) {
         contents = upsertTherionAreaAdjustMetadata(contents, *initialAreaAdjustRect);
     }
+    const QString plannerSource = contents;
     int resolvedLineNumber = 0;
-    if (!TherionDocumentEditor::appendDraftAreaGeometry(&contents,
-                                                        coordinateRows,
-                                                        &resolvedLineNumber,
-                                                        errorMessage,
-                                                        objectOptions)) {
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::appendDraftAreaGeometryEdits(plannerSource,
+                                                             coordinateRows,
+                                                             &sourceEdits,
+                                                             &resolvedLineNumber,
+                                                             errorMessage,
+                                                             objectOptions)
+        || !TherionDocumentEditor::applySourceTextEdits(&contents, sourceEdits, errorMessage)) {
         return false;
     }
 

@@ -192,6 +192,56 @@ bool insertPhysicalSourceLines(QString *contents,
     return true;
 }
 
+bool physicalSourceLineInsertionEdit(const QString &contents,
+                                     int insertionLineIndex,
+                                     const QStringList &insertedLines,
+                                     TherionSourceTextEdit *edit,
+                                     QString *errorMessage)
+{
+    if (edit == nullptr) {
+        return false;
+    }
+    if (insertedLines.isEmpty()) {
+        *edit = TherionSourceTextEdit{};
+        return true;
+    }
+
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(contents);
+    if (insertionLineIndex < 0 || insertionLineIndex > sourceDocument.lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Insertion source range could not be resolved.");
+        }
+        return false;
+    }
+
+    QString lineEnding;
+    if (insertionLineIndex > 0 && insertionLineIndex - 1 < sourceDocument.lines.size()) {
+        lineEnding = sourceDocument.lines.at(insertionLineIndex - 1).lineEnding;
+    }
+    if (lineEnding.isEmpty() && insertionLineIndex < sourceDocument.lines.size()) {
+        lineEnding = sourceDocument.lines.at(insertionLineIndex).lineEnding;
+    }
+    if (lineEnding.isEmpty()) {
+        lineEnding = TherionSourceText::detectedLineEnding(contents);
+    }
+
+    QString insertedText;
+    for (const QString &line : insertedLines) {
+        insertedText += line;
+        insertedText += lineEnding;
+    }
+
+    const int insertOffset = insertionLineIndex < sourceDocument.lines.size()
+        ? sourceDocument.lines.at(insertionLineIndex).startOffset
+        : static_cast<int>(contents.size());
+    *edit = TherionSourceTextEdit{
+        insertOffset,
+        0,
+        insertedText,
+    };
+    return true;
+}
+
 QString serializedInlineToken(const QString &value)
 {
     const QString trimmed = value.trimmed();
@@ -1601,6 +1651,29 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         return false;
     }
 
+    QVector<TherionSourceTextEdit> edits;
+    if (!appendDraftGeometryEdits(*contents, kind, vertices, &edits, insertedLineNumber, errorMessage, objectOptions)) {
+        return false;
+    }
+    return applySourceTextEdits(contents, edits, errorMessage);
+}
+
+bool TherionDocumentEditor::appendDraftGeometryEdits(const QString &contents,
+                                                     const QString &kind,
+                                                     const QVector<QPointF> &vertices,
+                                                     QVector<TherionSourceTextEdit> *edits,
+                                                     int *insertedLineNumber,
+                                                     QString *errorMessage,
+                                                     const TherionDraftObjectOptions &objectOptions)
+{
+    if (edits == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No source edit output is available.");
+        }
+        return false;
+    }
+    edits->clear();
+
     const QString normalizedKind = kind.trimmed().toLower();
     if (normalizedKind != QStringLiteral("point")
         && normalizedKind != QStringLiteral("line")
@@ -1621,23 +1694,25 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         return false;
     }
 
-    QString updated = *contents;
+    QString updated = contents;
+    const bool needsFallbackScrap = draftInsertionEndscrapLineIndex(splitLinesTrimmingCarriageReturns(updated), objectOptions, nullptr) < 0
+        && objectOptions.targetScrapIdentifier.trimmed().isEmpty();
+    if (needsFallbackScrap) {
+        QVector<TherionSourceTextEdit> fallbackEdits;
+        if (!appendScrapBlockEdits(updated, QStringLiteral("map-draft"), &fallbackEdits, nullptr, errorMessage)
+            || !applySourceTextEdits(&updated, fallbackEdits, errorMessage)) {
+            return false;
+        }
+    }
+
     QStringList lines = splitLinesTrimmingCarriageReturns(updated);
     int insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
 
-    if (insertionIndex < 0 && objectOptions.targetScrapIdentifier.trimmed().isEmpty()) {
-        if (!appendScrapBlock(&updated, QStringLiteral("map-draft"), nullptr, errorMessage)) {
-            return false;
+    if (insertionIndex < 0 && needsFallbackScrap) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve a scrap insertion target.");
         }
-
-        lines = splitLinesTrimmingCarriageReturns(updated);
-        insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
-        if (insertionIndex < 0) {
-            if (errorMessage != nullptr) {
-                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve a scrap insertion target.");
-            }
-            return false;
-        }
+        return false;
     } else if (insertionIndex < 0) {
         return false;
     }
@@ -1692,10 +1767,22 @@ bool TherionDocumentEditor::appendDraftGeometry(QString *contents,
         geometryLines.append(QStringLiteral("  endarea"));
     }
 
-    if (!insertPhysicalSourceLines(&updated, insertionIndex, geometryLines, errorMessage)) {
-        return false;
+    if (needsFallbackScrap) {
+        if (!insertPhysicalSourceLines(&updated, insertionIndex, geometryLines, errorMessage)) {
+            return false;
+        }
+        edits->append(TherionSourceTextEdit{
+            static_cast<int>(contents.size()),
+            0,
+            updated.mid(contents.size()),
+        });
+    } else {
+        TherionSourceTextEdit edit;
+        if (!physicalSourceLineInsertionEdit(updated, insertionIndex, geometryLines, &edit, errorMessage)) {
+            return false;
+        }
+        edits->append(edit);
     }
-    *contents = updated;
 
     if (insertedLineNumber != nullptr) {
         *insertedLineNumber = insertionIndex + 1 + insertionLineOffset;
@@ -1718,6 +1805,29 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
         return false;
     }
 
+    QVector<TherionSourceTextEdit> edits;
+    if (!appendDraftLineGeometryEdits(*contents, coordinateRows, &edits, insertedLineNumber, errorMessage, lineOptions, objectOptions)) {
+        return false;
+    }
+    return applySourceTextEdits(contents, edits, errorMessage);
+}
+
+bool TherionDocumentEditor::appendDraftLineGeometryEdits(const QString &contents,
+                                                         const QStringList &coordinateRows,
+                                                         QVector<TherionSourceTextEdit> *edits,
+                                                         int *insertedLineNumber,
+                                                         QString *errorMessage,
+                                                         const QString &lineOptions,
+                                                         const TherionDraftObjectOptions &objectOptions)
+{
+    if (edits == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No source edit output is available.");
+        }
+        return false;
+    }
+    edits->clear();
+
     QStringList normalizedRows;
     normalizedRows.reserve(coordinateRows.size());
     for (const QString &row : coordinateRows) {
@@ -1734,23 +1844,25 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
         return false;
     }
 
-    QString updated = *contents;
+    QString updated = contents;
+    const bool needsFallbackScrap = draftInsertionEndscrapLineIndex(splitLinesTrimmingCarriageReturns(updated), objectOptions, nullptr) < 0
+        && objectOptions.targetScrapIdentifier.trimmed().isEmpty();
+    if (needsFallbackScrap) {
+        QVector<TherionSourceTextEdit> fallbackEdits;
+        if (!appendScrapBlockEdits(updated, QStringLiteral("map-draft"), &fallbackEdits, nullptr, errorMessage)
+            || !applySourceTextEdits(&updated, fallbackEdits, errorMessage)) {
+            return false;
+        }
+    }
+
     QStringList lines = splitLinesTrimmingCarriageReturns(updated);
     int insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
 
-    if (insertionIndex < 0 && objectOptions.targetScrapIdentifier.trimmed().isEmpty()) {
-        if (!appendScrapBlock(&updated, QStringLiteral("map-draft"), nullptr, errorMessage)) {
-            return false;
+    if (insertionIndex < 0 && needsFallbackScrap) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve a scrap insertion target.");
         }
-
-        lines = splitLinesTrimmingCarriageReturns(updated);
-        insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
-        if (insertionIndex < 0) {
-            if (errorMessage != nullptr) {
-                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve a scrap insertion target.");
-            }
-            return false;
-        }
+        return false;
     } else if (insertionIndex < 0) {
         return false;
     }
@@ -1768,10 +1880,22 @@ bool TherionDocumentEditor::appendDraftLineGeometry(QString *contents,
     }
     geometryLines.append(QStringLiteral("  endline"));
 
-    if (!insertPhysicalSourceLines(&updated, insertionIndex, geometryLines, errorMessage)) {
-        return false;
+    if (needsFallbackScrap) {
+        if (!insertPhysicalSourceLines(&updated, insertionIndex, geometryLines, errorMessage)) {
+            return false;
+        }
+        edits->append(TherionSourceTextEdit{
+            static_cast<int>(contents.size()),
+            0,
+            updated.mid(contents.size()),
+        });
+    } else {
+        TherionSourceTextEdit edit;
+        if (!physicalSourceLineInsertionEdit(updated, insertionIndex, geometryLines, &edit, errorMessage)) {
+            return false;
+        }
+        edits->append(edit);
     }
-    *contents = updated;
 
     if (insertedLineNumber != nullptr) {
         *insertedLineNumber = insertionIndex + 1;
@@ -1793,6 +1917,28 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
         return false;
     }
 
+    QVector<TherionSourceTextEdit> edits;
+    if (!appendDraftAreaGeometryEdits(*contents, coordinateRows, &edits, insertedLineNumber, errorMessage, objectOptions)) {
+        return false;
+    }
+    return applySourceTextEdits(contents, edits, errorMessage);
+}
+
+bool TherionDocumentEditor::appendDraftAreaGeometryEdits(const QString &contents,
+                                                         const QStringList &coordinateRows,
+                                                         QVector<TherionSourceTextEdit> *edits,
+                                                         int *insertedLineNumber,
+                                                         QString *errorMessage,
+                                                         const TherionDraftObjectOptions &objectOptions)
+{
+    if (edits == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No source edit output is available.");
+        }
+        return false;
+    }
+    edits->clear();
+
     QStringList normalizedRows;
     normalizedRows.reserve(coordinateRows.size());
     for (const QString &row : coordinateRows) {
@@ -1809,23 +1955,25 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
         return false;
     }
 
-    QString updated = *contents;
+    QString updated = contents;
+    const bool needsFallbackScrap = draftInsertionEndscrapLineIndex(splitLinesTrimmingCarriageReturns(updated), objectOptions, nullptr) < 0
+        && objectOptions.targetScrapIdentifier.trimmed().isEmpty();
+    if (needsFallbackScrap) {
+        QVector<TherionSourceTextEdit> fallbackEdits;
+        if (!appendScrapBlockEdits(updated, QStringLiteral("map-draft"), &fallbackEdits, nullptr, errorMessage)
+            || !applySourceTextEdits(&updated, fallbackEdits, errorMessage)) {
+            return false;
+        }
+    }
+
     QStringList lines = splitLinesTrimmingCarriageReturns(updated);
     int insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
 
-    if (insertionIndex < 0 && objectOptions.targetScrapIdentifier.trimmed().isEmpty()) {
-        if (!appendScrapBlock(&updated, QStringLiteral("map-draft"), nullptr, errorMessage)) {
-            return false;
+    if (insertionIndex < 0 && needsFallbackScrap) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve a scrap insertion target.");
         }
-
-        lines = splitLinesTrimmingCarriageReturns(updated);
-        insertionIndex = draftInsertionEndscrapLineIndex(lines, objectOptions, errorMessage);
-        if (insertionIndex < 0) {
-            if (errorMessage != nullptr) {
-                *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Unable to resolve a scrap insertion target.");
-            }
-            return false;
-        }
+        return false;
     } else if (insertionIndex < 0) {
         return false;
     }
@@ -1852,10 +2000,22 @@ bool TherionDocumentEditor::appendDraftAreaGeometry(QString *contents,
     geometryLines.append(QStringLiteral("    %1").arg(borderIdentifier));
     geometryLines.append(QStringLiteral("  endarea"));
 
-    if (!insertPhysicalSourceLines(&updated, insertionIndex, geometryLines, errorMessage)) {
-        return false;
+    if (needsFallbackScrap) {
+        if (!insertPhysicalSourceLines(&updated, insertionIndex, geometryLines, errorMessage)) {
+            return false;
+        }
+        edits->append(TherionSourceTextEdit{
+            static_cast<int>(contents.size()),
+            0,
+            updated.mid(contents.size()),
+        });
+    } else {
+        TherionSourceTextEdit edit;
+        if (!physicalSourceLineInsertionEdit(updated, insertionIndex, geometryLines, &edit, errorMessage)) {
+            return false;
+        }
+        edits->append(edit);
     }
-    *contents = updated;
 
     if (insertedLineNumber != nullptr) {
         *insertedLineNumber = insertionIndex + 1 + normalizedRows.size() + 2;

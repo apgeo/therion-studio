@@ -187,7 +187,7 @@ void applyTextEditorSourceSnapshot(TextEditorTab *textEditor, const QString &con
         return;
     }
 
-    textEditor->replaceTextForCommand(contents);
+    textEditor->applySourceSnapshotForTransaction(contents);
 }
 
 void TextEditorSourceTransactionController::recordSnapshot(const TextEditorSourceTransactionRequest &request)

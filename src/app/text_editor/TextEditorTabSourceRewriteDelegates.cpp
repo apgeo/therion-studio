@@ -4,10 +4,10 @@
 
 namespace TherionStudio
 {
-void TextEditorTab::replaceTextForCommand(const QString &contents)
+void TextEditorTab::applySourceSnapshotForTransaction(const QString &contents)
 {
     if (sourceRewriteController_ != nullptr) {
-        sourceRewriteController_->replaceTextForCommand(contents);
+        sourceRewriteController_->applySourceSnapshotForTransaction(contents);
     }
 }
 

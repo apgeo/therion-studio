@@ -35,7 +35,7 @@ public:
 
     bool applyTransactionRequestWithEditorUndo(const TextEditorSourceTransactionRequest &request,
                                                QString *statusMessage = nullptr);
-    void replaceTextForCommand(const QString &contents);
+    void applySourceSnapshotForTransaction(const QString &contents);
     bool replaceTextForSystemNormalization(const QString &contents);
 
 private:

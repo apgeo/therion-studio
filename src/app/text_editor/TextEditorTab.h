@@ -133,7 +133,7 @@ public:
     bool findPrevious();
     bool replaceCurrent();
     int replaceAll();
-    void replaceTextForCommand(const QString &contents);
+    void applySourceSnapshotForTransaction(const QString &contents);
     void insertTextAtCursor(const QString &contents);
     QString importInsertionScopeToken() const;
     void insertTextAtImportInsertionPoint(const QString &contents);

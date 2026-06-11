@@ -214,7 +214,7 @@ int runRecordSnapshotForAlreadyAppliedChangeTest()
 
     const QString beforeText = tab.text();
     const QString afterText = beforeText + QStringLiteral("# inserted by command\n");
-    tab.replaceTextForCommand(afterText);
+    tab.applySourceSnapshotForTransaction(afterText);
     pumpEvents();
 
     controller.recordSnapshot(request(QStringLiteral("Already Applied"), beforeText, afterText));
@@ -381,7 +381,7 @@ int runApplyChangeWithStaleBeforeTextRejectedTest()
     const QString afterText = beforeText + QStringLiteral("survey stale\nendsurvey\n");
 
     const QString driftText = beforeText + QStringLiteral("# concurrent edit\n");
-    tab.replaceTextForCommand(driftText);
+    tab.applySourceSnapshotForTransaction(driftText);
     pumpEvents();
 
     controller.applyChangeWithSnapshot(request(QStringLiteral("Stale Apply"),
@@ -441,12 +441,12 @@ int runRecordSnapshotWithStaleAfterTextRejectedTest()
 
     const QString beforeText = tab.text();
     const QString afterText = beforeText + QStringLiteral("# applied change\n");
-    tab.replaceTextForCommand(afterText);
+    tab.applySourceSnapshotForTransaction(afterText);
     pumpEvents();
     const int appliedRevision = tab.documentRevision();
 
     const QString driftText = afterText + QStringLiteral("# concurrent edit\n");
-    tab.replaceTextForCommand(driftText);
+    tab.applySourceSnapshotForTransaction(driftText);
     pumpEvents();
 
     controller.recordSnapshot(request(QStringLiteral("Stale Record"),

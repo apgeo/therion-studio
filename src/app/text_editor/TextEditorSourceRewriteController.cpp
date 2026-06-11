@@ -90,7 +90,7 @@ bool TextEditorSourceRewriteController::applyTransactionRequestWithEditorUndo(co
     return true;
 }
 
-void TextEditorSourceRewriteController::replaceTextForCommand(const QString &contents)
+void TextEditorSourceRewriteController::applySourceSnapshotForTransaction(const QString &contents)
 {
     if (context_.editor == nullptr) {
         return;

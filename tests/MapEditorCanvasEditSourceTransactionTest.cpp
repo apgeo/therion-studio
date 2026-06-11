@@ -185,7 +185,7 @@ int runRecordSourceTextSnapshotForAlreadyAppliedChangeTest()
 
     const QString beforeText = tab.text();
     const QString afterText = beforeText + QStringLiteral("line wall\n  0 0\n  1 1\nendline\n");
-    tab.replaceTextForCommand(afterText);
+    tab.applySourceSnapshotForTransaction(afterText);
     pumpEvents();
 
     controller.recordSourceTextSnapshot(QStringLiteral("Insert Map Line"), beforeText, afterText, 3);
@@ -361,7 +361,7 @@ int runDraftCompletionUsesCentralSnapshotReplayTest()
 
     const QString beforeText = tab.text();
     const QString afterText = beforeText + QStringLiteral("point 1.0 2.0 station\n");
-    tab.replaceTextForCommand(afterText);
+    tab.applySourceSnapshotForTransaction(afterText);
     pumpEvents();
 
     controller.recordDraftCompletion(draftItem, QStringLiteral("Complete Draft"), beforeText, afterText, 3);

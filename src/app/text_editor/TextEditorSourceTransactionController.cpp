@@ -2,6 +2,7 @@
 
 #include "TextEditorTab.h"
 
+#include <QCoreApplication>
 #include <QPointer>
 #include <QScopedValueRollback>
 #include <QUndoCommand>
@@ -25,6 +26,38 @@ std::optional<QString> resolvedAfterText(const TextEditorSourceTransactionReques
         return std::nullopt;
     }
     return afterText;
+}
+
+QString staleSourceTransactionMessage()
+{
+    return QCoreApplication::translate("TherionStudio::TextEditorSourceTransactionController",
+                                       "Source transaction skipped: document changed.");
+}
+
+bool sourceRevisionMatches(const TextEditorSourceTransactionContext &context,
+                          const TextEditorSourceTransactionRequest &request)
+{
+    if (context.textEditor == nullptr || request.expectedSourceRevision <= 0) {
+        return true;
+    }
+    return context.textEditor->documentRevision() == request.expectedSourceRevision;
+}
+
+bool currentTextMatches(const TextEditorSourceTransactionContext &context, const QString &expectedText)
+{
+    return context.textEditor != nullptr && context.textEditor->text() == expectedText;
+}
+
+void reportStaleRequest(const TextEditorSourceTransactionContext &context,
+                        const TextEditorSourceTransactionRequest &request)
+{
+    if (context.statusCallback == nullptr) {
+        return;
+    }
+
+    context.statusCallback(request.staleStatusMessage.isEmpty()
+                               ? staleSourceTransactionMessage()
+                               : request.staleStatusMessage);
 }
 
 class TextEditorSourceSnapshotCommand final : public QUndoCommand
@@ -86,6 +119,36 @@ private:
     std::function<void(const QString &)> statusCallback_;
     bool firstRedo_ = true;
 };
+
+void pushSnapshotCommand(const TextEditorSourceTransactionContext &context,
+                         const TextEditorSourceTransactionRequest &request,
+                         const QString &afterText)
+{
+    if (context.textEditor == nullptr || context.undoStack == nullptr || request.beforeText == afterText) {
+        return;
+    }
+
+    const auto pushCommand = [&context, &request, &afterText]() {
+        context.undoStack->push(new TextEditorSourceSnapshotCommand(context.textEditor,
+                                                                    request.label,
+                                                                    request.beforeText,
+                                                                    afterText,
+                                                                    request.undoStatusMessage,
+                                                                    request.redoStatusMessage,
+                                                                    context.statusCallback));
+    };
+
+    if (context.commandApplyInProgress != nullptr) {
+        const QScopedValueRollback<bool> commandGuard((*context.commandApplyInProgress), true);
+        pushCommand();
+    } else {
+        pushCommand();
+    }
+
+    if (context.flushPendingRefresh != nullptr) {
+        context.flushPendingRefresh();
+    }
+}
 }
 
 TextEditorSourceTransactionController::TextEditorSourceTransactionController(TextEditorSourceTransactionContext context)
@@ -105,33 +168,16 @@ void applyTextEditorSourceSnapshot(TextEditorTab *textEditor, const QString &con
 void TextEditorSourceTransactionController::recordSnapshot(const TextEditorSourceTransactionRequest &request)
 {
     const std::optional<QString> afterText = resolvedAfterText(request);
-    if (!afterText.has_value()
-        || context_.textEditor == nullptr
-        || context_.undoStack == nullptr
-        || request.beforeText == afterText.value()) {
+    if (!afterText.has_value() || context_.textEditor == nullptr || request.beforeText == afterText.value()) {
         return;
     }
 
-    const auto pushCommand = [this, &request, afterText = afterText.value()]() {
-        context_.undoStack->push(new TextEditorSourceSnapshotCommand(context_.textEditor,
-                                                                     request.label,
-                                                                     request.beforeText,
-                                                                     afterText,
-                                                                     request.undoStatusMessage,
-                                                                     request.redoStatusMessage,
-                                                                     context_.statusCallback));
-    };
-
-    if (context_.commandApplyInProgress != nullptr) {
-        const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
-        pushCommand();
-    } else {
-        pushCommand();
+    if (!sourceRevisionMatches(context_, request) || !currentTextMatches(context_, afterText.value())) {
+        reportStaleRequest(context_, request);
+        return;
     }
 
-    if (context_.flushPendingRefresh != nullptr) {
-        context_.flushPendingRefresh();
-    }
+    pushSnapshotCommand(context_, request, afterText.value());
 }
 
 void TextEditorSourceTransactionController::applyChangeWithSnapshot(const TextEditorSourceTransactionRequest &request)
@@ -143,14 +189,19 @@ void TextEditorSourceTransactionController::applyChangeWithSnapshot(const TextEd
         return;
     }
 
+    if (!sourceRevisionMatches(context_, request) || !currentTextMatches(context_, request.beforeText)) {
+        reportStaleRequest(context_, request);
+        return;
+    }
+
     if (context_.commandApplyInProgress != nullptr) {
         const QScopedValueRollback<bool> commandGuard((*context_.commandApplyInProgress), true);
         applyTextEditorSourceSnapshot(context_.textEditor, afterText.value());
-        recordSnapshot(request);
+        pushSnapshotCommand(context_, request, afterText.value());
         return;
     }
 
     applyTextEditorSourceSnapshot(context_.textEditor, afterText.value());
-    recordSnapshot(request);
+    pushSnapshotCommand(context_, request, afterText.value());
 }
 }

@@ -28,8 +28,10 @@ struct TextEditorSourceTransactionRequest
     QString beforeText;
     QString afterText;
     QVector<TherionSourceTextEdit> sourceEdits;
+    int expectedSourceRevision = 0;
     QString undoStatusMessage;
     QString redoStatusMessage;
+    QString staleStatusMessage;
 };
 
 void applyTextEditorSourceSnapshot(TextEditorTab *textEditor, const QString &contents);

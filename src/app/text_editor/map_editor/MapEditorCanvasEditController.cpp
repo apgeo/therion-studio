@@ -207,17 +207,22 @@ QString sourceSnapshotRedoMessage(int lineNumber)
                                       "Restored inserted map object.");
 }
 
-TextEditorSourceTransactionRequest sourceTransactionRequest(const QString &label,
+TextEditorSourceTransactionRequest sourceTransactionRequest(const MapEditorCanvasEditContext &context,
+                                                            const QString &label,
                                                             const QString &beforeText,
                                                             const QString &afterText,
                                                             int insertedLineNumber)
 {
+    const int expectedRevision = context.textEditor != nullptr ? context.textEditor->documentRevision() : 0;
     return {
         .label = label,
         .beforeText = beforeText,
         .afterText = afterText,
+        .expectedSourceRevision = expectedRevision,
         .undoStatusMessage = sourceSnapshotUndoMessage(insertedLineNumber),
         .redoStatusMessage = sourceSnapshotRedoMessage(insertedLineNumber),
+        .staleStatusMessage = QCoreApplication::translate("TherionStudio::MapEditorCanvasEditCommandFactory",
+                                                          "Map source change skipped: document changed."),
     };
 }
 
@@ -862,7 +867,7 @@ void MapEditorCanvasEditController::recordSourceTextSnapshot(const QString &labe
                                             int insertedLineNumber)
 {
     sourceTransactionController(context_).recordSnapshot(
-        sourceTransactionRequest(label, beforeText, afterText, insertedLineNumber));
+        sourceTransactionRequest(context_, label, beforeText, afterText, insertedLineNumber));
 }
 
 void MapEditorCanvasEditController::applySourceTextChangeWithSnapshot(const QString &label,
@@ -871,7 +876,7 @@ void MapEditorCanvasEditController::applySourceTextChangeWithSnapshot(const QStr
                                                                       int insertedLineNumber)
 {
     sourceTransactionController(context_).applyChangeWithSnapshot(
-        sourceTransactionRequest(label, beforeText, afterText, insertedLineNumber));
+        sourceTransactionRequest(context_, label, beforeText, afterText, insertedLineNumber));
 }
 
 bool MapEditorCanvasEditController::insertLineVertexFromSelection(MapEditorLineVertexInsertPlacement placement)

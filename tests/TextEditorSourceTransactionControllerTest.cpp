@@ -57,27 +57,37 @@ bool loadTestTab(TextEditorTab *tab, const QString &filePath)
     return true;
 }
 
-TextEditorSourceTransactionRequest request(const QString &label, const QString &beforeText, const QString &afterText)
+TextEditorSourceTransactionRequest request(const QString &label,
+                                           const QString &beforeText,
+                                           const QString &afterText,
+                                           int expectedSourceRevision = 0,
+                                           const QString &staleStatusMessage = QString())
 {
     return {
         .label = label,
         .beforeText = beforeText,
         .afterText = afterText,
+        .expectedSourceRevision = expectedSourceRevision,
         .undoStatusMessage = QStringLiteral("undo status"),
         .redoStatusMessage = QStringLiteral("redo status"),
+        .staleStatusMessage = staleStatusMessage,
     };
 }
 
 TextEditorSourceTransactionRequest sourceEditRequest(const QString &label,
                                                      const QString &beforeText,
-                                                     QVector<TherionSourceTextEdit> sourceEdits)
+                                                     QVector<TherionSourceTextEdit> sourceEdits,
+                                                     int expectedSourceRevision = 0,
+                                                     const QString &staleStatusMessage = QString())
 {
     return {
         .label = label,
         .beforeText = beforeText,
         .sourceEdits = std::move(sourceEdits),
+        .expectedSourceRevision = expectedSourceRevision,
         .undoStatusMessage = QStringLiteral("undo status"),
         .redoStatusMessage = QStringLiteral("redo status"),
+        .staleStatusMessage = staleStatusMessage,
     };
 }
 
@@ -314,6 +324,134 @@ int runNoOpChangeDoesNotPushSnapshotTest()
 
     return 0;
 }
+
+int runApplyChangeWithStaleBeforeTextRejectedTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString filePath = createTestFile(tempDir, "encoding utf-8\n");
+    if (!expect(!filePath.isEmpty(), "Failed to create source transaction stale-before test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load source transaction stale-before test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    bool commandApplyInProgress = false;
+    int refreshCount = 0;
+    QStringList statuses;
+
+    TextEditorSourceTransactionController controller({
+        .textEditor = &tab,
+        .undoStack = &undoStack,
+        .commandApplyInProgress = &commandApplyInProgress,
+        .flushPendingRefresh = [&refreshCount]() { ++refreshCount; },
+        .statusCallback = [&statuses](const QString &statusMessage) { statuses.append(statusMessage); },
+    });
+
+    const QString beforeText = tab.text();
+    const int beforeRevision = tab.documentRevision();
+    const QString afterText = beforeText + QStringLiteral("survey stale\nendsurvey\n");
+
+    const QString driftText = beforeText + QStringLiteral("# concurrent edit\n");
+    tab.replaceTextForCommand(driftText);
+    pumpEvents();
+
+    controller.applyChangeWithSnapshot(request(QStringLiteral("Stale Apply"),
+                                              beforeText,
+                                              afterText,
+                                              beforeRevision,
+                                              QStringLiteral("stale status")));
+    pumpEvents();
+
+    if (!expect(tab.text() == driftText, "Stale applyChangeWithSnapshot should not overwrite concurrent source changes.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 0, "Stale applyChangeWithSnapshot should not push undo snapshots.")) {
+        return 1;
+    }
+    if (!expect(refreshCount == 0, "Stale applyChangeWithSnapshot should not flush refresh callbacks.")) {
+        return 1;
+    }
+    if (!expect(statuses == QStringList({QStringLiteral("stale status")}),
+                "Stale applyChangeWithSnapshot should emit stale status.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runRecordSnapshotWithStaleAfterTextRejectedTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString filePath = createTestFile(tempDir, "encoding utf-8\n");
+    if (!expect(!filePath.isEmpty(), "Failed to create source transaction stale-record test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load source transaction stale-record test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    bool commandApplyInProgress = false;
+    int refreshCount = 0;
+    QStringList statuses;
+
+    TextEditorSourceTransactionController controller({
+        .textEditor = &tab,
+        .undoStack = &undoStack,
+        .commandApplyInProgress = &commandApplyInProgress,
+        .flushPendingRefresh = [&refreshCount]() { ++refreshCount; },
+        .statusCallback = [&statuses](const QString &statusMessage) { statuses.append(statusMessage); },
+    });
+
+    const QString beforeText = tab.text();
+    const QString afterText = beforeText + QStringLiteral("# applied change\n");
+    tab.replaceTextForCommand(afterText);
+    pumpEvents();
+    const int appliedRevision = tab.documentRevision();
+
+    const QString driftText = afterText + QStringLiteral("# concurrent edit\n");
+    tab.replaceTextForCommand(driftText);
+    pumpEvents();
+
+    controller.recordSnapshot(request(QStringLiteral("Stale Record"),
+                                     beforeText,
+                                     afterText,
+                                     appliedRevision,
+                                     QStringLiteral("stale status")));
+    pumpEvents();
+
+    if (!expect(tab.text() == driftText, "Stale recordSnapshot should preserve concurrent source changes.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 0, "Stale recordSnapshot should not push undo snapshots.")) {
+        return 1;
+    }
+    if (!expect(refreshCount == 0, "Stale recordSnapshot should not flush refresh callbacks.")) {
+        return 1;
+    }
+    if (!expect(statuses == QStringList({QStringLiteral("stale status")}),
+                "Stale recordSnapshot should emit stale status.")) {
+        return 1;
+    }
+
+    return 0;
+}
 }
 
 int main(int argc, char *argv[])
@@ -330,6 +468,12 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (runNoOpChangeDoesNotPushSnapshotTest() != 0) {
+        return 1;
+    }
+    if (runApplyChangeWithStaleBeforeTextRejectedTest() != 0) {
+        return 1;
+    }
+    if (runRecordSnapshotWithStaleAfterTextRejectedTest() != 0) {
         return 1;
     }
 

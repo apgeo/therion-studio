@@ -7,6 +7,8 @@
 #include "BlockEditorMovePlanner.h"
 #include "BlockEditorMoveSourceRewriter.h"
 #include "BlockEditorSourceController.h"
+#include "BlockEditorSourceText.h"
+#include "../../../core/TherionDocumentEditor.h"
 
 #include <QGraphicsScene>
 #include <QMessageBox>
@@ -109,6 +111,14 @@ void BlockEditorMoveController::moveBlock(int lineNumber, const QPointF &scenePo
         return;
     }
 
-    source.replaceWithLines(contents, rewriteResult.lines);
+    TherionSourceTextEdit sourceEdit;
+    if (!blockEditorSourceReplacementEdit(contents,
+                                          blockEditorJoinSourceLines(contents, rewriteResult.lines),
+                                          &sourceEdit)) {
+        return;
+    }
+    if (!source.applyTextEdit(sourceEdit)) {
+        return;
+    }
 }
 }

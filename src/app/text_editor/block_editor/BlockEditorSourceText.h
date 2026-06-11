@@ -31,4 +31,7 @@ bool blockEditorSourceLineRangeReplacementEdit(const QString &contents,
                                                int endLine,
                                                const QStringList &replacementLines,
                                                TherionSourceTextEdit *edit);
+bool blockEditorSourceReplacementEdit(const QString &contents,
+                                      const QString &updatedContents,
+                                      TherionSourceTextEdit *edit);
 }

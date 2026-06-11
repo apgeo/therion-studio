@@ -30,7 +30,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Next Up
 
-- P1: Migrate Blocks editor source writes from split/join full-document replacement and ad hoc cursor edits toward source-range transactions.
+- P1: Continue Blocks editor source-write migration for configure rows and remaining source-controller insert/remove/replace paths.
 - P1: Keep `WORKLOG.md` trimmed after each completed slice so active work does not become completed-history notes.
 
 ## Risks / Blockers

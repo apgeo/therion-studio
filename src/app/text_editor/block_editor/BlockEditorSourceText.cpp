@@ -209,6 +209,17 @@ bool blockEditorSourceLineRangeReplacementEdit(const QString &contents,
         updatedContents += sourceLines.at(index).lineEnding;
     }
 
+    return blockEditorSourceReplacementEdit(contents, updatedContents, edit);
+}
+
+bool blockEditorSourceReplacementEdit(const QString &contents,
+                                      const QString &updatedContents,
+                                      TherionSourceTextEdit *edit)
+{
+    if (edit == nullptr) {
+        return false;
+    }
+
     int commonPrefix = 0;
     const int prefixLimit = qMin(contents.size(), updatedContents.size());
     while (commonPrefix < prefixLimit && contents.at(commonPrefix) == updatedContents.at(commonPrefix)) {

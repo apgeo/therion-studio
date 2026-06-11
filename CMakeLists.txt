@@ -1141,6 +1141,15 @@ qt_add_executable(BlockEditorDocumentOutlineBuilderTest
 
 target_link_libraries(BlockEditorDocumentOutlineBuilderTest PRIVATE therion_core Qt6::Core)
 
+qt_add_executable(BlockEditorMoveSourceRewriterTest
+    tests/BlockEditorMoveSourceRewriterTest.cpp
+    src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.cpp
+    src/app/text_editor/block_editor/BlockEditorMoveSourceRewriter.h
+    src/app/text_editor/block_editor/BlockEditorSourceText.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceText.h)
+
+target_link_libraries(BlockEditorMoveSourceRewriterTest PRIVATE therion_core Qt6::Core)
+
 qt_add_executable(BlockEditorCanvasRebuildControllerTest
     tests/BlockEditorCanvasRebuildControllerTest.cpp
     src/app/text_editor/block_editor/BlockEditorCanvasItem.cpp
@@ -1379,6 +1388,7 @@ set(THERION_UNIT_TEST_TARGETS
     BlockEditorApplyExecutorTest
     BlockEditorCanvasRebuildControllerTest
     BlockEditorDocumentOutlineBuilderTest
+    BlockEditorMoveSourceRewriterTest
     BlockEditorToolboxControllerTest
     TherionExecutableSelectionControllerTest
     TherionRunnerConfigDisplayControllerTest

@@ -193,12 +193,23 @@ MapEditorObjectDetailsContext makeDetailsContext(QuickFieldsFixture *fixture,
     context.applySourceTextChangeWithSnapshot = [fixture, canvasController](const QString &label,
                                                                             const QString &beforeText,
                                                                             const QString &afterText,
-                                                                            int insertedLineNumber) {
+                                                                            int insertedLineNumber,
+                                                                            std::function<void()> selectionRestoreHook) {
         ++fixture->snapshotCount;
         fixture->snapshotLabel = label;
         fixture->snapshotBeforeText = beforeText;
         fixture->snapshotAfterText = afterText;
         fixture->snapshotLineNumber = insertedLineNumber;
+        if (selectionRestoreHook) {
+            canvasController->applySourceTextChangeWithSnapshot(label,
+                                                                beforeText,
+                                                                afterText,
+                                                                insertedLineNumber,
+                                                                TextEditorSourceSelectionRestorePolicy::CustomHook,
+                                                                std::move(selectionRestoreHook));
+            return;
+        }
+
         canvasController->applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
     };
     return context;

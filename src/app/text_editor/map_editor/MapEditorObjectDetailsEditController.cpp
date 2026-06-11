@@ -87,13 +87,11 @@ QStringList trimmedLinePointStandaloneRows(const QString &rawRowsText)
 
 bool requireSourceTransaction(const MapEditorObjectDetailsContext &context, const QString &message)
 {
-    if (context.applySourceTextChangeWithSnapshot
-        || context.applySourceTextChangeWithSnapshotWithSelectionRestoreHook) {
+    if (context.applySourceTextChangeWithSnapshot) {
         return true;
     }
 
-    Q_ASSERT(context.applySourceTextChangeWithSnapshot
-             || context.applySourceTextChangeWithSnapshotWithSelectionRestoreHook);
+    Q_ASSERT(context.applySourceTextChangeWithSnapshot);
     if (context.toolbarStatusNote != nullptr) {
         *context.toolbarStatusNote = message;
     }
@@ -113,19 +111,11 @@ void applySourceTransactionWithOptionalHook(const MapEditorObjectDetailsContext 
                                             int targetLineNumber,
                                             std::function<void()> postApplyHook = {})
 {
-    if (context.applySourceTextChangeWithSnapshotWithSelectionRestoreHook && postApplyHook) {
-        context.applySourceTextChangeWithSnapshotWithSelectionRestoreHook(label,
-                                                                          beforeText,
-                                                                          afterText,
-                                                                          targetLineNumber,
-                                                                          std::move(postApplyHook));
-        return;
-    }
-
-    context.applySourceTextChangeWithSnapshot(label, beforeText, afterText, targetLineNumber);
-    if (postApplyHook) {
-        postApplyHook();
-    }
+    context.applySourceTextChangeWithSnapshot(label,
+                                              beforeText,
+                                              afterText,
+                                              targetLineNumber,
+                                              std::move(postApplyHook));
 }
 
 bool applySourceTextEdits(QString *contents,
@@ -728,24 +718,18 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
         };
     }
 
-    bool selectionRestoreHandledByTransaction = false;
     if (afterText != beforeText) {
         if (!requireSourceTransaction(context_, tr("Cannot update object orientation without map source transaction support."))) {
             return;
         }
-        if (context_.applySourceTextChangeWithSnapshotWithSelectionRestoreHook && selectionRestoreHook) {
-            context_.applySourceTextChangeWithSnapshotWithSelectionRestoreHook(tr("Edit Object Orientation"),
-                                                                               beforeText,
-                                                                               afterText,
-                                                                               selectedLineNumber,
-                                                                               std::move(selectionRestoreHook));
-            selectionRestoreHandledByTransaction = true;
-        } else {
-            context_.applySourceTextChangeWithSnapshot(tr("Edit Object Orientation"),
-                                                       beforeText,
-                                                       afterText,
-                                                       selectedLineNumber);
-        }
+        applySourceTransactionWithOptionalHook(context_,
+                                               tr("Edit Object Orientation"),
+                                               beforeText,
+                                               afterText,
+                                               selectedLineNumber,
+                                               std::move(selectionRestoreHook));
+    } else if (selectionRestoreHook) {
+        selectionRestoreHook();
     }
 
     if (selectedObjectKind == QStringLiteral("line")) {
@@ -756,9 +740,6 @@ void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
             : tr("Cleared orientation override.");
     }
 
-    if (!selectionRestoreHandledByTransaction && selectionRestoreHook) {
-        selectionRestoreHook();
-    }
     context_.refreshToolbarSummary();
     context_.refreshObjectDetailsPanel();
 }
@@ -1183,25 +1164,17 @@ bool MapEditorObjectDetailsEditController::applyLinePointStandaloneRowsEdits(con
               }
           })
         : std::function<void()>();
-    bool selectionRestoreHandledByTransaction = false;
-    if (context_.applySourceTextChangeWithSnapshotWithSelectionRestoreHook && selectionRestoreHook) {
-        context_.applySourceTextChangeWithSnapshotWithSelectionRestoreHook(tr("Edit Line Point Options"),
-                                                                           beforeText,
-                                                                           afterText,
-                                                                           lineNumber,
-                                                                           selectionRestoreHook);
-        selectionRestoreHandledByTransaction = true;
-    } else {
-        context_.applySourceTextChangeWithSnapshot(tr("Edit Line Point Options"), beforeText, afterText, lineNumber);
-    }
+    applySourceTransactionWithOptionalHook(context_,
+                                           tr("Edit Line Point Options"),
+                                           beforeText,
+                                           afterText,
+                                           lineNumber,
+                                           selectionRestoreHook);
 
     (*context_.toolbarStatusNote) = updatedRows.isEmpty()
         ? tr("Cleared additional line-point options for line %1, point %2.").arg(lineNumber).arg(vertexIndex + 1)
         : tr("Updated additional line-point options for line %1, point %2.").arg(lineNumber).arg(vertexIndex + 1);
     context_.refreshToolbarSummary();
-    if (!selectionRestoreHandledByTransaction && selectionRestoreHook) {
-        selectionRestoreHook();
-    }
     return true;
 }
 

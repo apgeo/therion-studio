@@ -364,11 +364,19 @@ bool MapEditorTab::commitSmartAreaPreview()
         return false;
     }
 
-    applySourceTextChangeWithSnapshot(tr("Insert Smart Area"), beforeText, afterText, insertedLineNumber);
-    toolbarStatusNote_ = insertedLineNumber > 0
-        ? tr("Smart Area inserted at source line %1.").arg(insertedLineNumber)
-        : tr("Smart Area inserted.");
-    return true;
+    bool applied = false;
+    applySourceTextChangeWithSnapshot(
+        tr("Insert Smart Area"),
+        beforeText,
+        afterText,
+        insertedLineNumber,
+        [this, insertedLineNumber, &applied]() {
+            applied = true;
+            toolbarStatusNote_ = insertedLineNumber > 0
+                ? tr("Smart Area inserted at source line %1.").arg(insertedLineNumber)
+                : tr("Smart Area inserted.");
+        });
+    return applied;
 }
 
 QPointF MapEditorTab::scenePointFromSourcePosition(const QPointF &sourcePosition) const

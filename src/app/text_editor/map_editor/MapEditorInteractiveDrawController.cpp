@@ -155,18 +155,28 @@ bool planAreaInsert(const QString &beforeText,
     return true;
 }
 
-bool applyInsertWithSnapshot(const MapEditorInteractiveDrawContext &context,
-                             const QString &label,
-                             const QString &beforeText,
-                             const QString &afterText,
-                             int insertedLineNumber)
+enum class SourceApplyResult
+{
+    Applied,
+    NotApplied,
+    Unavailable,
+};
+
+SourceApplyResult applyInsertWithSnapshot(const MapEditorInteractiveDrawContext &context,
+                                          const QString &label,
+                                          const QString &beforeText,
+                                          const QString &afterText,
+                                          int insertedLineNumber)
 {
     if (!context.applySourceTextChangeWithSnapshot) {
-        return false;
+        return SourceApplyResult::Unavailable;
     }
 
     context.applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
-    return true;
+    if (context.textEditor != nullptr && context.textEditor->text() == afterText) {
+        return SourceApplyResult::Applied;
+    }
+    return SourceApplyResult::NotApplied;
 }
 }
 
@@ -232,9 +242,11 @@ bool MapEditorInteractiveDrawController::handleInteractiveDrawClick(const QPoint
                 ? tr("Point insert failed.")
                 : tr("Point insert failed: %1").arg(errorMessage);
         } else {
-            if (!applyInsertWithSnapshot(context_, tr("Insert Point"), beforeText, afterText, insertedLineNumber)) {
+            const SourceApplyResult applyResult =
+                applyInsertWithSnapshot(context_, tr("Insert Point"), beforeText, afterText, insertedLineNumber);
+            if (applyResult == SourceApplyResult::Unavailable) {
                 (*context_.toolbarStatusNote) = tr("Point insert failed: source transaction callback is unavailable.");
-            } else {
+            } else if (applyResult == SourceApplyResult::Applied) {
                 (*context_.toolbarStatusNote) = insertedLineNumber > 0
                     ? tr("Inserted point at source line %1.").arg(insertedLineNumber)
                     : tr("Inserted point.");
@@ -277,6 +289,8 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
         if (context_.commitSmartAreaPreview != nullptr && context_.commitSmartAreaPreview()) {
             clearInteractiveDrawSession(true);
             (*context_.toolbarStatusNote) = tr("Smart Area inserted. Selection mode is active.");
+        } else if (context_.hasSmartAreaPreview != nullptr && context_.hasSmartAreaPreview()) {
+            // Keep existing toolbar status (for example stale-edit feedback) when preview exists but apply did not succeed.
         } else {
             (*context_.toolbarStatusNote) = tr("Smart Area needs a preview before insertion.");
         }
@@ -330,14 +344,18 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
             context_.refreshToolbarSummary();
             return true;
         }
-        if (!applyInsertWithSnapshot(context_, tr("Insert Line"), beforeText, afterText, insertedLineNumber)) {
+        const SourceApplyResult applyResult =
+            applyInsertWithSnapshot(context_, tr("Insert Line"), beforeText, afterText, insertedLineNumber);
+        if (applyResult == SourceApplyResult::Unavailable) {
             (*context_.toolbarStatusNote) = tr("Complete Draft failed: source transaction callback is unavailable.");
             context_.refreshToolbarSummary();
             return true;
         }
-        (*context_.toolbarStatusNote) = insertedLineNumber > 0
-            ? tr("Complete Draft wrote line geometry at source line %1.").arg(insertedLineNumber)
-            : tr("Complete Draft wrote line geometry to source.");
+        if (applyResult == SourceApplyResult::NotApplied) {
+            context_.refreshToolbarSummary();
+            context_.updateCommandSurfaceState();
+            return true;
+        }
     } else {
         QString errorMessage;
         int insertedLineNumber = 0;
@@ -356,14 +374,18 @@ bool MapEditorInteractiveDrawController::commitInteractiveDrawSession(bool close
             context_.refreshToolbarSummary();
             return true;
         }
-        if (!applyInsertWithSnapshot(context_, tr("Insert Area"), beforeText, afterText, insertedLineNumber)) {
+        const SourceApplyResult applyResult =
+            applyInsertWithSnapshot(context_, tr("Insert Area"), beforeText, afterText, insertedLineNumber);
+        if (applyResult == SourceApplyResult::Unavailable) {
             (*context_.toolbarStatusNote) = tr("Complete Draft failed: source transaction callback is unavailable.");
             context_.refreshToolbarSummary();
             return true;
         }
-        (*context_.toolbarStatusNote) = insertedLineNumber > 0
-            ? tr("Complete Draft wrote area geometry at source line %1.").arg(insertedLineNumber)
-            : tr("Complete Draft wrote area geometry to source.");
+        if (applyResult == SourceApplyResult::NotApplied) {
+            context_.refreshToolbarSummary();
+            context_.updateCommandSurfaceState();
+            return true;
+        }
     }
 
     clearInteractiveDrawSession(false);
@@ -799,8 +821,16 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
                 context_.updateHelpPanel();
                 return false;
             }
-            if (!applyInsertWithSnapshot(context_, tr("Insert Line"), beforeText, afterText, insertedLineNumber)) {
+            const SourceApplyResult applyResult =
+                applyInsertWithSnapshot(context_, tr("Insert Line"), beforeText, afterText, insertedLineNumber);
+            if (applyResult == SourceApplyResult::Unavailable) {
                 (*context_.toolbarStatusNote) = tr("Complete Draft failed: source transaction callback is unavailable.");
+                context_.refreshToolbarSummary();
+                context_.updateCommandSurfaceState();
+                context_.updateHelpPanel();
+                return false;
+            }
+            if (applyResult == SourceApplyResult::NotApplied) {
                 context_.refreshToolbarSummary();
                 context_.updateCommandSurfaceState();
                 context_.updateHelpPanel();
@@ -826,8 +856,16 @@ bool MapEditorInteractiveDrawController::cancelInteractiveDrawingToSelectMode()
                 context_.updateHelpPanel();
                 return false;
             }
-            if (!applyInsertWithSnapshot(context_, tr("Insert Area"), beforeText, afterText, insertedLineNumber)) {
+            const SourceApplyResult applyResult =
+                applyInsertWithSnapshot(context_, tr("Insert Area"), beforeText, afterText, insertedLineNumber);
+            if (applyResult == SourceApplyResult::Unavailable) {
                 (*context_.toolbarStatusNote) = tr("Complete Draft failed: source transaction callback is unavailable.");
+                context_.refreshToolbarSummary();
+                context_.updateCommandSurfaceState();
+                context_.updateHelpPanel();
+                return false;
+            }
+            if (applyResult == SourceApplyResult::NotApplied) {
                 context_.refreshToolbarSummary();
                 context_.updateCommandSurfaceState();
                 context_.updateHelpPanel();

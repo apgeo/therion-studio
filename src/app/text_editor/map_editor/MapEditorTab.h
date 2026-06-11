@@ -22,6 +22,7 @@
 #include "MapEditorInteractiveDrawLogic.h"
 #include "MapEditorObjectDetailsLogic.h"
 #include "MapEditorSmartAreaPlanner.h"
+#include "MapEditorUndoArbitrationService.h"
 #include "../../../core/CommandCatalogStore.h"
 #include "../../../core/TherionDocumentEditor.h"
 #include "../../../core/TherionDocumentParser.h"
@@ -134,6 +135,8 @@ public:
     QString statusEncodingText() const;
     QString statusModeText() const;
     int zoomPercent() const;
+    MapEditorUndoOwner nextUndoOwner() const;
+    MapEditorUndoOwner nextRedoOwner() const;
     bool isMagnifierEnabled() const;
     bool hasRightPanel() const;
     bool isRightPanelCollapsed() const;

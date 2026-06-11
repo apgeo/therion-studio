@@ -507,6 +507,8 @@ set(THERION_MAP_EDITOR_SOURCES
     src/app/text_editor/map_editor/MapEditorTabInspectorPanelUi.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspace.cpp
     src/app/text_editor/map_editor/MapEditorTabWorkspaceDelegates.cpp
+    src/app/text_editor/map_editor/MapEditorUndoArbitrationService.cpp
+    src/app/text_editor/map_editor/MapEditorUndoArbitrationService.h
     src/app/text_editor/map_editor/MapEditorTabDocumentValidation.cpp
     src/app/text_editor/map_editor/MapEditorTabNewDocumentDelegates.cpp
     src/app/text_editor/map_editor/MapEditorTab.h
@@ -960,6 +962,13 @@ qt_add_executable(MapEditorInputPolicyTest
 
 target_link_libraries(MapEditorInputPolicyTest PRIVATE Qt6::Widgets)
 
+qt_add_executable(MapEditorUndoArbitrationServiceTest
+    tests/MapEditorUndoArbitrationServiceTest.cpp
+    src/app/text_editor/map_editor/MapEditorUndoArbitrationService.cpp
+    src/app/text_editor/map_editor/MapEditorUndoArbitrationService.h)
+
+target_link_libraries(MapEditorUndoArbitrationServiceTest PRIVATE Qt6::Core)
+
 qt_add_executable(MapEditorAreaReferenceResolverTest
     tests/MapEditorAreaReferenceResolverTest.cpp
     src/app/text_editor/map_editor/MapEditorAreaReferenceResolver.cpp
@@ -1378,6 +1387,7 @@ set(THERION_UNIT_TEST_TARGETS
     DocumentFileEncodingTest
     MapEditorAreaReferenceResolverTest
     MapEditorInputPolicyTest
+    MapEditorUndoArbitrationServiceTest
     MapEditorInspectorDataTest
     MapEditorObjectStyleCatalogTest
     MapEditorObjectDeletePlannerTest

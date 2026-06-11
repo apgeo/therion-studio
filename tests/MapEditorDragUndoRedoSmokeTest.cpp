@@ -18,6 +18,7 @@
 #include <QMainWindow>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QPlainTextEdit>
 #include <QRegularExpression>
 #include <QSet>
 #include <QTabWidget>
@@ -1503,6 +1504,10 @@ int runDragUndoRedoSmoke()
     if (!expect(textEditor != nullptr, "Text editor was not found in MapEditorTab.")) {
         return 1;
     }
+    auto *sourceEditor = textEditor->findChild<QPlainTextEdit *>();
+    if (!expect(sourceEditor != nullptr, "Underlying source editor was not found in TextEditorTab.")) {
+        return 1;
+    }
 
     const QRectF visibleSceneRect = mapView->mapToScene(mapView->viewport()->rect()).boundingRect();
     mapTab->goToLine(4);
@@ -1606,6 +1611,84 @@ int runDragUndoRedoSmoke()
     }
     if (!expect(selectedVertexFromText->lineNumber() == 4 && selectedVertexFromText->vertexIndex() == 1,
                 "Text-to-map vertex sync should select line vertex index 1 for source row line 6.")) {
+        return 1;
+    }
+
+    const QString mixedUndoMarker = QStringLiteral("# mixed-undo-marker");
+    const QString baselineBeforeMixedUndo = mapTab->text();
+    textEditor->goToLineColumn(18, 9);
+    pumpEvents();
+    sourceEditor->setFocus(Qt::OtherFocusReason);
+    sourceEditor->insertPlainText(QStringLiteral("\n") + mixedUndoMarker);
+    if (!expect(mapTab->text() != baselineBeforeMixedUndo,
+                "Failed to apply text-side undo entry before mixed map/text arbitration test.")) {
+        return 1;
+    }
+    pumpEvents();
+
+    const QString textAfterTextUndoEntry = mapTab->text();
+    if (!expect(textAfterTextUndoEntry.contains(mixedUndoMarker),
+                "Mixed undo arbitration test should include marker text after text-side edit.")) {
+        return 1;
+    }
+
+    mapTab->goToLine(4);
+    pumpEvents();
+
+    auto *mixedUndoAnchorItem = findCenteredLineAnchor(mapView->scene(), visibleSceneRect);
+    if (!expect(mixedUndoAnchorItem != nullptr,
+                "No visible editable line anchor was found for mixed map/text undo arbitration test.")) {
+        return 1;
+    }
+    mixedUndoAnchorItem->setSelected(true);
+    pumpEvents();
+    mapTab->triggerSelectMode();
+    pumpEvents();
+
+    if (!expect(dragItemBySceneDelta(mapView, mixedUndoAnchorItem, QPointF(28.0, 16.0)),
+                "Failed to apply map-side undo entry for mixed map/text arbitration test.")) {
+        return 1;
+    }
+
+    const QString textAfterMixedMapEdit = mapTab->text();
+    if (!expect(textAfterMixedMapEdit.contains(mixedUndoMarker) && textAfterMixedMapEdit != textAfterTextUndoEntry,
+                "Mixed map/text arbitration test should produce a map edit layered on top of marker text.")) {
+        return 1;
+    }
+    if (!expect(mapTab->nextUndoOwner() == MapEditorUndoOwner::MapCommand,
+                "Mixed map/text state should report map command as next undo owner when both map and text undo are available.")) {
+        return 1;
+    }
+
+    mapTab->triggerUndo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterTextUndoEntry,
+                "First mixed undo should revert the map-side edit while keeping text-side marker edit.")) {
+        return 1;
+    }
+    if (!expect(mapTab->nextRedoOwner() == MapEditorUndoOwner::MapCommand,
+                "Mixed map/text state should report map command as next redo owner immediately after map undo.")) {
+        return 1;
+    }
+
+    mapTab->triggerRedo();
+    pumpEvents();
+    if (!expect(mapTab->text() == textAfterMixedMapEdit,
+                "Mixed redo should restore the full combined map+text edit state.")) {
+        return 1;
+    }
+
+    QString mixedResetError;
+    if (!expect(mapTab->loadFile(filePath, &mixedResetError),
+                "Mixed map/text arbitration cleanup should reload baseline TH2 source.")) {
+        if (!mixedResetError.isEmpty()) {
+            std::cerr << mixedResetError.toStdString() << '\n';
+        }
+        return 1;
+    }
+    pumpEvents();
+    if (!expect(mapTab->text() == baselineBeforeMixedUndo,
+                "Mixed map/text arbitration cleanup should restore baseline before continuing smoke test.")) {
         return 1;
     }
 

@@ -36,13 +36,13 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - Target state: map visual undo commands and text-source undo commands shall not compete silently; each user-visible map/text operation owns one explicit undo entry, with source replacement and any visual state restoration applied as one semantic transaction.
 - Phase 2 - Delegate reduction: reduce remaining public `TextEditorTab` source rewrite delegates toward narrow transaction or planner-facing methods, so controllers do not call broad text-replacement wrappers except through approved snapshot replay helpers.
 - Phase 3 - Map command alignment: move remaining map canvas/source commands toward transaction requests while preserving command merging, before/after snapshot replay, draft-item restoration, scene refresh, and selection restore behavior.
-- Phase 4 - Remaining adopters: route inspector, background, Raw command, and project/sidebar source mutations through transaction requests or focused adapters, with each migration backed by undo/redo and range-preservation tests.
-- Phase 5 - Legacy removal gates: rename or remove broad full-text rewrite APIs after all call sites are either source-edit transactions or clearly documented snapshot replay paths.
+- Phase 4 - Remaining adopters: current known inspector, background, Raw command, and project/sidebar source mutation flows are routed through transaction requests or focused adapters, with focused undo/redo coverage in place for migrated paths.
+- Phase 5 - Legacy removal gates: broad full-text rewrite APIs are reduced to explicit snapshot replay paths or source-edit transaction entrypoints for current known call sites.
 - Verification gates: each remaining transaction migration needs focused undo/redo coverage, stale/invalid edit behavior, dirty-state refresh checks, and affected Raw/Map/manual workflow verification when UI state changes.
 
 ## Next Up
 
-- P1: Continue Phase 4 remaining-adopter routing after introducing the validation-sidebar fix-apply adapter, focusing on remaining project/sidebar source mutations still outside focused adapters or shared transaction request paths.
+- P1: Keep Unified Transaction Model regression coverage green while continuing broader Unified Source DOM phase migrations.
 - P1: Add focused regression coverage for each migrated map/source operation (undo/redo, stale-state rejection, projection refresh, and selection restore behavior).
 - P1: Keep `WORKLOG.md` trimmed after each completed slice so active work does not become completed-history notes.
 

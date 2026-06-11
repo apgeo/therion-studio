@@ -2,6 +2,7 @@
 
 #include "TextEditorAppearanceController.h"
 #include "TextEditorCursorController.h"
+#include "TextEditorSourceRewriteController.h"
 #include "DocumentFileInspector.h"
 #include "TextEditorStatusController.h"
 #include "block_editor/BlockEditorDirectiveRules.h"
@@ -12,6 +13,7 @@
 #include <QTextBlock>
 #include <QTextCursor>
 #include <QTextDocument>
+#include <QtGlobal>
 
 namespace TherionStudio
 {
@@ -74,18 +76,36 @@ QString TextEditorTab::text() const
     return editor_->toPlainText();
 }
 
-void TextEditorTab::insertTextAtCursor(const QString &contents)
+bool TextEditorTab::insertTextAtCursor(const QString &contents)
 {
-    if (editor_ == nullptr || contents.isEmpty()) {
-        return;
+    if (editor_ == nullptr || sourceRewriteController_ == nullptr || contents.isEmpty()) {
+        return false;
     }
 
     QTextCursor cursor = editor_->textCursor();
-    cursor.beginEditBlock();
-    cursor.insertText(contents);
-    cursor.endEditBlock();
-    editor_->setTextCursor(cursor);
-    editor_->setFocus();
+    const int selectionStart = cursor.selectionStart();
+    const int selectionLength = cursor.selectionEnd() - cursor.selectionStart();
+    const int targetCursorPosition = selectionStart + contents.size();
+
+    TextEditorSourceTransactionRequest request;
+    request.label = tr("Insert Text");
+    request.beforeText = editor_->toPlainText();
+    request.expectedSourceRevision = documentRevision();
+    request.staleStatusMessage = tr("Text insertion skipped: document changed.");
+    request.selectionRestorePolicy = TextEditorSourceSelectionRestorePolicy::CustomHook;
+    request.selectionRestoreHook = [this, targetCursorPosition]() {
+        if (editor_ == nullptr || editor_->document() == nullptr) {
+            return;
+        }
+
+        QTextCursor targetCursor(editor_->document());
+        const int maxPosition = qMax(0, editor_->document()->characterCount() - 1);
+        targetCursor.setPosition(qBound(0, targetCursorPosition, maxPosition));
+        editor_->setTextCursor(targetCursor);
+        editor_->setFocus();
+    };
+    request.sourceEdits = {{selectionStart, selectionLength, contents}};
+    return sourceRewriteController_->applyTransactionRequestWithEditorUndo(request);
 }
 
 TextEditorTab::ImportInsertionPoint TextEditorTab::resolveImportInsertionPoint() const
@@ -120,43 +140,60 @@ QString TextEditorTab::importInsertionScopeToken() const
     return resolveImportInsertionPoint().scopeToken;
 }
 
-void TextEditorTab::insertTextAfterLine(int lineNumber, const QString &contents)
+bool TextEditorTab::insertTextAfterLine(int lineNumber, const QString &contents)
 {
-    if (editor_ == nullptr || contents.isEmpty()) {
-        return;
+    if (editor_ == nullptr || sourceRewriteController_ == nullptr || contents.isEmpty()) {
+        return false;
     }
 
+    const QString beforeText = editor_->toPlainText();
     QTextCursor cursor(editor_->document());
     const int blockCount = editor_->document()->blockCount();
     if (lineNumber > 0 && lineNumber < blockCount) {
         const QTextBlock targetBlock = editor_->document()->findBlockByNumber(lineNumber);
-        cursor.setPosition(targetBlock.isValid() ? targetBlock.position() : editor_->document()->characterCount() - 1);
+        cursor.setPosition(targetBlock.isValid() ? targetBlock.position() : beforeText.size());
     } else {
         cursor.movePosition(QTextCursor::End);
     }
 
     QString insertionText = contents;
-    if (cursor.position() >= editor_->document()->characterCount() - 1
-        && !editor_->toPlainText().isEmpty()
-        && !editor_->toPlainText().endsWith(QLatin1Char('\n'))) {
+    if (cursor.position() >= beforeText.size()
+        && !beforeText.isEmpty()
+        && !beforeText.endsWith(QLatin1Char('\n'))) {
         insertionText.prepend(QLatin1Char('\n'));
     }
 
-    cursor.beginEditBlock();
-    cursor.insertText(insertionText);
-    cursor.endEditBlock();
-    editor_->setTextCursor(cursor);
-    editor_->setFocus();
+    const int insertionOffset = cursor.position();
+    const int targetCursorPosition = insertionOffset + insertionText.size();
+
+    TextEditorSourceTransactionRequest request;
+    request.label = tr("Insert Text");
+    request.beforeText = beforeText;
+    request.expectedSourceRevision = documentRevision();
+    request.staleStatusMessage = tr("Text insertion skipped: document changed.");
+    request.selectionRestorePolicy = TextEditorSourceSelectionRestorePolicy::CustomHook;
+    request.selectionRestoreHook = [this, targetCursorPosition]() {
+        if (editor_ == nullptr || editor_->document() == nullptr) {
+            return;
+        }
+
+        QTextCursor targetCursor(editor_->document());
+        const int maxPosition = qMax(0, editor_->document()->characterCount() - 1);
+        targetCursor.setPosition(qBound(0, targetCursorPosition, maxPosition));
+        editor_->setTextCursor(targetCursor);
+        editor_->setFocus();
+    };
+    request.sourceEdits = {{insertionOffset, 0, insertionText}};
+    return sourceRewriteController_->applyTransactionRequestWithEditorUndo(request);
 }
 
-void TextEditorTab::insertTextAtImportInsertionPoint(const QString &contents)
+bool TextEditorTab::insertTextAtImportInsertionPoint(const QString &contents)
 {
     const ImportInsertionPoint point = resolveImportInsertionPoint();
     if (!point.blockSelection || point.insertAfterLine <= 0) {
-        insertTextAtCursor(contents);
-        return;
+        return insertTextAtCursor(contents);
     }
-    insertTextAfterLine(point.insertAfterLine, contents);
+    return insertTextAfterLine(point.insertAfterLine, contents);
 }
 
 QColor TextEditorTab::sourceSurfaceColor() const

@@ -134,9 +134,9 @@ public:
     bool replaceCurrent();
     int replaceAll();
     void applySourceSnapshotForTransaction(const QString &contents);
-    void insertTextAtCursor(const QString &contents);
+    bool insertTextAtCursor(const QString &contents);
     QString importInsertionScopeToken() const;
-    void insertTextAtImportInsertionPoint(const QString &contents);
+    bool insertTextAtImportInsertionPoint(const QString &contents);
 
     QString filePath() const;
     QString displayName() const;
@@ -223,7 +223,7 @@ private:
     bool replaceTextForSystemNormalization(const QString &contents);
     TextEditorCommandMetadata &mutableCommandMetadata() { return commandMetadata_; }
     ImportInsertionPoint resolveImportInsertionPoint() const;
-    void insertTextAfterLine(int lineNumber, const QString &contents);
+    bool insertTextAfterLine(int lineNumber, const QString &contents);
     QString displayPath() const;
     void buildAll();
     void buildModeSelectorRow();

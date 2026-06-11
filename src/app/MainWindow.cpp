@@ -1104,7 +1104,10 @@ void MainWindow::importPocketTopoTextToActiveEditor()
         insertionText.append(QLatin1Char('\n'));
     }
 
-    textTab->insertTextAtImportInsertionPoint(insertionText);
+    if (!textTab->insertTextAtImportInsertionPoint(insertionText)) {
+        statusBar()->showMessage(tr("PocketTopo import skipped: document changed."), 5000);
+        return;
+    }
     statusBar()->showMessage(tr("Imported PocketTopo centreline data from %1.")
                                  .arg(QFileInfo(importPath).fileName()),
                              5000);

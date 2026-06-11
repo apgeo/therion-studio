@@ -56,14 +56,8 @@ MapEditorInspectorObjectContext MapEditorTab::inspectorObjectContext()
         .applySourceTextChangeWithSnapshot = [this](const QString &label,
                                                     const QString &beforeText,
                                                     const QString &afterText,
-                                                    int insertedLineNumber) {
-            applySourceTextChangeWithSnapshot(label, beforeText, afterText, insertedLineNumber);
-        },
-        .applySourceTextChangeWithSnapshotWithSelectionRestoreHook = [this](const QString &label,
-                                                                            const QString &beforeText,
-                                                                            const QString &afterText,
-                                                                            int insertedLineNumber,
-                                                                            std::function<void()> selectionRestoreHook) {
+                                                    int insertedLineNumber,
+                                                    std::function<void()> selectionRestoreHook) {
             applySourceTextChangeWithSnapshot(label,
                                               beforeText,
                                               afterText,

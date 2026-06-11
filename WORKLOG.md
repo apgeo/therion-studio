@@ -42,7 +42,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Next Up
 
-- P1: Continue Phase 2 delegate reduction by removing remaining direct `TextEditorTab` source rewrite delegate usage from controller-level map flows.
+- P1: Continue Phase 2 delegate reduction by removing remaining direct `TextEditorTab` source rewrite delegate usage from controller-level map flows, primarily in object-details and interactive-draw contexts after inspector-object callback unification.
 - P1: Add focused regression coverage for each migrated map/source operation (undo/redo, stale-state rejection, projection refresh, and selection restore behavior).
 - P1: Keep `WORKLOG.md` trimmed after each completed slice so active work does not become completed-history notes.
 

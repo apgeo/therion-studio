@@ -6,7 +6,6 @@
 #include "BlockEditorSourceText.h"
 
 #include <QPlainTextEdit>
-#include <QTextBlock>
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QtGlobal>
@@ -49,7 +48,7 @@ bool BlockEditorSourceController::insertLinesBefore(int lineNumber,
                                                     const QStringList &newLines,
                                                     QString *errorMessage) const
 {
-    if (!canEdit() || !context_.replaceText || lineNumber <= 0 || newLines.isEmpty()) {
+    if (!canEdit() || lineNumber <= 0 || newLines.isEmpty()) {
         if (errorMessage != nullptr) {
             *errorMessage = tr("Invalid insertion request.");
         }
@@ -79,61 +78,46 @@ bool BlockEditorSourceController::insertLinesBefore(int lineNumber,
         lines.insert(insertIndex + offset, trimmedLines.at(offset));
     }
 
-    replaceText(blockEditorJoinSourceLines(contents, lines));
+    TherionSourceTextEdit sourceEdit;
+    if (!blockEditorSourceReplacementEdit(contents, blockEditorJoinSourceLines(contents, lines), &sourceEdit)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = tr("Unable to prepare insertion edit.");
+        }
+        return false;
+    }
+    if (!applyTextEdit(sourceEdit)) {
+        if (errorMessage != nullptr) {
+            *errorMessage = tr("Unable to insert lines.");
+        }
+        return false;
+    }
     return true;
 }
 
 bool BlockEditorSourceController::removeLineRange(int startLine, int endLine) const
 {
-    if (!canEdit() || context_.editor->document() == nullptr || startLine <= 0 || endLine < startLine) {
+    if (!canEdit() || startLine <= 0 || endLine < startLine) {
         return false;
     }
 
-    QTextDocument *document = context_.editor->document();
-    const QTextBlock startBlock = document->findBlockByLineNumber(startLine - 1);
-    const QTextBlock endBlock = document->findBlockByLineNumber(endLine - 1);
-    if (!startBlock.isValid() || !endBlock.isValid()) {
+    TherionSourceTextEdit sourceEdit;
+    if (!blockEditorSourceLineRangeReplacementEdit(text(), startLine, endLine, QStringList(), &sourceEdit)) {
         return false;
     }
-
-    const QTextBlock afterEndBlock = endBlock.next();
-    const int selectionStart = startBlock.position();
-    const int selectionEnd = afterEndBlock.isValid()
-        ? afterEndBlock.position()
-        : endBlock.position() + qMax(0, endBlock.length() - 1);
-    if (selectionEnd < selectionStart) {
-        return false;
-    }
-
-    QTextCursor cursor(document);
-    cursor.beginEditBlock();
-    cursor.setPosition(selectionStart);
-    cursor.setPosition(selectionEnd, QTextCursor::KeepAnchor);
-    cursor.removeSelectedText();
-    cursor.endEditBlock();
-    context_.editor->setTextCursor(cursor);
-    return true;
+    return applyTextEdit(sourceEdit);
 }
 
 bool BlockEditorSourceController::replaceLine(int lineNumber, const QString &line) const
 {
-    if (!canEdit() || context_.editor->document() == nullptr) {
+    if (!canEdit() || lineNumber <= 0) {
         return false;
     }
 
-    const QTextBlock targetBlock = context_.editor->document()->findBlockByLineNumber(lineNumber - 1);
-    if (!targetBlock.isValid()) {
+    TherionSourceTextEdit sourceEdit;
+    if (!blockEditorSourceLineRangeReplacementEdit(text(), lineNumber, lineNumber, QStringList{line}, &sourceEdit)) {
         return false;
     }
-
-    QTextCursor editCursor(targetBlock);
-    editCursor.beginEditBlock();
-    editCursor.movePosition(QTextCursor::StartOfBlock);
-    editCursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
-    editCursor.insertText(line);
-    editCursor.endEditBlock();
-    context_.editor->setTextCursor(editCursor);
-    return true;
+    return applyTextEdit(sourceEdit);
 }
 
 bool BlockEditorSourceController::applyTextEdit(const TherionSourceTextEdit &edit) const
@@ -157,15 +141,4 @@ bool BlockEditorSourceController::applyTextEdit(const TherionSourceTextEdit &edi
     return true;
 }
 
-void BlockEditorSourceController::replaceWithLines(const QString &originalContents, const QStringList &lines) const
-{
-    replaceText(blockEditorJoinSourceLines(originalContents, lines));
-}
-
-void BlockEditorSourceController::replaceText(const QString &contents) const
-{
-    if (context_.replaceText) {
-        context_.replaceText(contents);
-    }
-}
 }

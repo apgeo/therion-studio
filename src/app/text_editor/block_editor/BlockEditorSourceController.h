@@ -15,7 +15,6 @@ struct BlockEditorSourceContext
 {
     QPlainTextEdit *editor = nullptr;
     bool editable = false;
-    std::function<void(const QString &)> replaceText;
     std::function<QString(const char *)> translate;
 };
 
@@ -31,8 +30,6 @@ public:
     bool removeLineRange(int startLine, int endLine) const;
     bool replaceLine(int lineNumber, const QString &line) const;
     bool applyTextEdit(const TherionSourceTextEdit &edit) const;
-    void replaceWithLines(const QString &originalContents, const QStringList &lines) const;
-    void replaceText(const QString &contents) const;
 
 private:
     QString tr(const char *text) const;

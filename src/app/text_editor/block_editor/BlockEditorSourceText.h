@@ -22,10 +22,6 @@ QVector<BlockEditorLogicalLine> blockEditorBuildLogicalLines(const QStringList &
 bool blockEditorResolveLogicalLineAtLine(const QStringList &lines,
                                          int lineNumber,
                                          BlockEditorLogicalLine *logicalLine);
-bool blockEditorReplaceSourceLineRange(QStringList *lines,
-                                       int startLine,
-                                       int endLine,
-                                       const QStringList &replacementLines);
 bool blockEditorSourceLineRangeReplacementEdit(const QString &contents,
                                                int startLine,
                                                int endLine,

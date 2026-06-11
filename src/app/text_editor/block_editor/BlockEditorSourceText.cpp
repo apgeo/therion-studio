@@ -128,35 +128,6 @@ bool blockEditorResolveLogicalLineAtLine(const QStringList &lines,
     return false;
 }
 
-bool blockEditorReplaceSourceLineRange(QStringList *lines,
-                                       int startLine,
-                                       int endLine,
-                                       const QStringList &replacementLines)
-{
-    if (lines == nullptr || startLine <= 0 || endLine < startLine - 1) {
-        return false;
-    }
-
-    const int removeStartIndex = startLine - 1;
-    const int removeEndIndex = endLine - 1;
-    if (removeStartIndex < 0 || removeStartIndex > lines->size()) {
-        return false;
-    }
-    if (removeEndIndex >= lines->size()) {
-        return false;
-    }
-
-    if (endLine >= startLine) {
-        for (int index = removeEndIndex; index >= removeStartIndex; --index) {
-            lines->removeAt(index);
-        }
-    }
-    for (int offset = 0; offset < replacementLines.size(); ++offset) {
-        lines->insert(removeStartIndex + offset, replacementLines.at(offset));
-    }
-    return true;
-}
-
 bool blockEditorSourceLineRangeReplacementEdit(const QString &contents,
                                                int startLine,
                                                int endLine,

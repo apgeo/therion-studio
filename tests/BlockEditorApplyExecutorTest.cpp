@@ -1,11 +1,11 @@
 #include "../src/app/text_editor/block_editor/BlockEditorApplyExecutor.h"
+#include "../src/app/text_editor/block_editor/BlockEditorSourceController.h"
 #include "../src/app/text_editor/block_editor/BlockEditorSourceText.h"
 #include "../src/core/TherionDocumentEditor.h"
 
 #include <QApplication>
 #include <QPlainTextEdit>
 #include <QStringList>
-#include <QTextCursor>
 
 #include <iostream>
 
@@ -19,15 +19,6 @@ bool expect(bool condition, const char *message)
         std::cerr << message << '\n';
     }
     return condition;
-}
-
-void replaceTextWithUndo(QPlainTextEdit *editor, const QString &contents)
-{
-    QTextCursor rewriteCursor(editor->document());
-    rewriteCursor.beginEditBlock();
-    rewriteCursor.select(QTextCursor::Document);
-    rewriteCursor.insertText(contents);
-    rewriteCursor.endEditBlock();
 }
 
 int runSourceLineRangeReplacementEditTest()
@@ -68,6 +59,71 @@ int runSourceLineRangeReplacementEditTest()
     return 0;
 }
 
+int runSourceControllerLineEditTest()
+{
+    QPlainTextEdit editor;
+    editor.setPlainText(QStringLiteral("survey cave\n"
+                                       "scrap existing\n"
+                                       "endsurvey\n"));
+    editor.document()->clearUndoRedoStacks();
+
+    BlockEditorSourceContext sourceContext;
+    sourceContext.editor = &editor;
+    sourceContext.editable = true;
+    const BlockEditorSourceController source(sourceContext);
+
+    QString errorMessage;
+    if (!expect(source.insertLinesBefore(2, QStringList{QStringLiteral("scrap inserted")}, &errorMessage),
+                "Block source controller should insert lines through a source edit.")) {
+        return 1;
+    }
+    if (!expect(editor.toPlainText() == QStringLiteral("survey cave\n"
+                                                       "scrap inserted\n"
+                                                       "scrap existing\n"
+                                                       "endsurvey\n"),
+                "Block source controller insertion should update the source text.")) {
+        return 1;
+    }
+
+    if (!expect(source.replaceLine(2, QStringLiteral("scrap changed")),
+                "Block source controller should replace a line through a source edit.")) {
+        return 1;
+    }
+    if (!expect(editor.toPlainText() == QStringLiteral("survey cave\n"
+                                                       "scrap changed\n"
+                                                       "scrap existing\n"
+                                                       "endsurvey\n"),
+                "Block source controller replacement should update the selected line.")) {
+        return 1;
+    }
+
+    if (!expect(source.removeLineRange(2, 2),
+                "Block source controller should remove lines through a source edit.")) {
+        return 1;
+    }
+    if (!expect(editor.toPlainText() == QStringLiteral("survey cave\n"
+                                                       "scrap existing\n"
+                                                       "endsurvey\n"),
+                "Block source controller removal should delete the selected line range.")) {
+        return 1;
+    }
+    if (!expect(editor.document()->isUndoAvailable(),
+                "Block source controller line edits should remain undoable.")) {
+        return 1;
+    }
+
+    editor.undo();
+    if (!expect(editor.toPlainText() == QStringLiteral("survey cave\n"
+                                                       "scrap changed\n"
+                                                       "scrap existing\n"
+                                                       "endsurvey\n"),
+                "Undo after source controller removal should restore the removed line.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runAutoCommitCreatesUndoableTextChangeTest()
 {
     QPlainTextEdit editor;
@@ -98,9 +154,6 @@ int runAutoCommitCreatesUndoableTextChangeTest()
         BlockEditorSourceContext sourceContext;
         sourceContext.editor = &editor;
         sourceContext.editable = true;
-        sourceContext.replaceText = [&editor](const QString &contents) {
-            replaceTextWithUndo(&editor, contents);
-        };
         return sourceContext;
     };
     context.buildUpdatedLine = [](QString *updatedLine, QString *validationError) {
@@ -164,6 +217,10 @@ int main(int argc, char **argv)
     QApplication app(argc, argv);
 
     if (runSourceLineRangeReplacementEditTest() != 0) {
+        return 1;
+    }
+
+    if (runSourceControllerLineEditTest() != 0) {
         return 1;
     }
 

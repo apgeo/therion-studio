@@ -218,11 +218,19 @@ bool MapEditorTab::commitInteractiveDrawVertices(const QString &geometryKind,
         return false;
     }
 
-    applySourceTextChangeWithSnapshot(tr("Complete Draft"), beforeText, afterText, insertedLineNumber);
-    toolbarStatusNote_ = insertedLineNumber > 0
-        ? tr("Complete Draft wrote %1 geometry at source line %2.").arg(successLabel, QString::number(insertedLineNumber))
-        : tr("Complete Draft wrote %1 geometry to source.").arg(successLabel);
-    return true;
+    bool applied = false;
+    applySourceTextChangeWithSnapshot(
+        tr("Complete Draft"),
+        beforeText,
+        afterText,
+        insertedLineNumber,
+        [this, successLabel, insertedLineNumber, &applied]() {
+            applied = true;
+            toolbarStatusNote_ = insertedLineNumber > 0
+                ? tr("Complete Draft wrote %1 geometry at source line %2.").arg(successLabel, QString::number(insertedLineNumber))
+                : tr("Complete Draft wrote %1 geometry to source.").arg(successLabel);
+        });
+    return applied;
 }
 
 bool MapEditorTab::previewSmartAreaAt(const QPointF &scenePosition)

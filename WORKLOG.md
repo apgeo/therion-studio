@@ -43,7 +43,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 ## Next Up
 
 - P1: Continue Phase 2 delegate reduction by removing remaining direct `TextEditorTab` source rewrite delegate usage from controller-level map flows.
-- P1: Continue Phase 3 map command alignment by migrating remaining non-vertex map source workflows (interactive draft completion, smart-area/background metadata flows, and any remaining inspector follow-ups) to explicit transaction requests with one-operation undo semantics and policy-driven restore hooks.
+- P1: Continue Phase 3 map command alignment by migrating remaining non-vertex map source workflows (smart-area/background metadata flows and remaining interactive insert callbacks) to explicit transaction requests with one-operation undo semantics and policy-driven restore hooks.
 - P1: Add focused regression coverage for each migrated map/source operation (undo/redo, stale-state rejection, projection refresh, and selection restore behavior).
 - P1: Keep `WORKLOG.md` trimmed after each completed slice so active work does not become completed-history notes.
 

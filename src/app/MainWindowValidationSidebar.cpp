@@ -129,6 +129,13 @@ QString validationRelativeDisplayPath(const QString &projectRootPath, const QStr
     return QFileInfo(filePath).fileName();
 }
 
+QString normalizedValidationPath(const QString &path)
+{
+    const QFileInfo info(path);
+    const QString canonicalPath = info.canonicalFilePath();
+    return canonicalPath.isEmpty() ? info.absoluteFilePath() : canonicalPath;
+}
+
 void configureValidationSourcePreview(QPlainTextEdit *edit)
 {
     if (edit == nullptr) {
@@ -426,7 +433,7 @@ void MainWindow::handleProjectValidationStarted(TherionStudio::ProjectValidation
                                                 quint64 generation,
                                                 const QString &projectRootPath)
 {
-    if (projectRootPath != projectRootPath_) {
+    if (normalizedValidationPath(projectRootPath) != normalizedValidationPath(projectRootPath_)) {
         return;
     }
 
@@ -470,7 +477,7 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
     if (validationScanProjectButton_ != nullptr) {
         validationScanProjectButton_->setEnabled(true);
     }
-    if (result.projectRootPath != projectRootPath_) {
+    if (normalizedValidationPath(result.projectRootPath) != normalizedValidationPath(projectRootPath_)) {
         return;
     }
     if (validationResultsModel_ == nullptr) {

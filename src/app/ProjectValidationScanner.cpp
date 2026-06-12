@@ -248,6 +248,16 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
         return result;
     }
 
+    QHash<QString, QString> normalizedInMemoryProjectContentsByPath;
+    for (auto it = inMemoryProjectContentsByPath.constBegin();
+         it != inMemoryProjectContentsByPath.constEnd();
+         ++it) {
+        const QString normalizedPath = canonicalOrAbsoluteFilePath(it.key());
+        if (!normalizedPath.isEmpty()) {
+            normalizedInMemoryProjectContentsByPath.insert(normalizedPath, *it);
+        }
+    }
+
     QSet<QString> searchedPaths;
     QVector<QString> filePaths;
     collectValidatableFiles(result.projectRootPath, &filePaths);
@@ -255,10 +265,10 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
     for (const QString &candidatePath : filePaths) {
         knownProjectFilePaths.insert(canonicalOrAbsoluteFilePath(candidatePath));
     }
-    for (auto it = inMemoryProjectContentsByPath.constBegin();
-         it != inMemoryProjectContentsByPath.constEnd();
+    for (auto it = normalizedInMemoryProjectContentsByPath.constBegin();
+         it != normalizedInMemoryProjectContentsByPath.constEnd();
          ++it) {
-        knownProjectFilePaths.insert(canonicalOrAbsoluteFilePath(it.key()));
+        knownProjectFilePaths.insert(it.key());
     }
 
     for (const QString &candidatePath : filePaths) {
@@ -266,8 +276,8 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
         searchedPaths.insert(filePath);
         ++result.searchedFileCount;
 
-        const auto memoryIt = inMemoryProjectContentsByPath.constFind(filePath);
-        const QString text = memoryIt != inMemoryProjectContentsByPath.constEnd()
+        const auto memoryIt = normalizedInMemoryProjectContentsByPath.constFind(filePath);
+        const QString text = memoryIt != normalizedInMemoryProjectContentsByPath.constEnd()
             ? *memoryIt
             : readValidatableFileText(filePath);
         appendFindingsForText(&result, filePath, text, validationCatalog, knownProjectFilePaths);
@@ -276,10 +286,10 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
         }
     }
 
-    for (auto it = inMemoryProjectContentsByPath.constBegin();
-         it != inMemoryProjectContentsByPath.constEnd();
+    for (auto it = normalizedInMemoryProjectContentsByPath.constBegin();
+         it != normalizedInMemoryProjectContentsByPath.constEnd();
          ++it) {
-        const QString filePath = canonicalOrAbsoluteFilePath(it.key());
+        const QString filePath = it.key();
         if (searchedPaths.contains(filePath) || !hasValidatableTherionTextFileName(filePath)) {
             continue;
         }
@@ -291,7 +301,7 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
         }
     }
 
-    appendProjectIndexFindings(&result, result.projectRootPath, inMemoryProjectContentsByPath);
+    appendProjectIndexFindings(&result, result.projectRootPath, normalizedInMemoryProjectContentsByPath);
 
     return result;
 }

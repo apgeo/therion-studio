@@ -337,9 +337,12 @@ int runMissingSourceReferenceValidationTest()
     const QString configFile = QDir(tempDir.path()).filePath(QStringLiteral("thconfig"));
     const QString inMemoryOnlyFile = QDir(tempDir.path()).filePath(QStringLiteral("generated.th"));
     if (!expect(writeTextFile(sourceFile,
-                              QStringLiteral("input existing\n"
-                                             "input missing\n"
-                                             "input generated\n")),
+                              QStringLiteral("survey cave\n"
+                                             "  input existing\n"
+                                             "  input missing\n"
+                                             "  input missing_explicit.th222\n"
+                                             "  input generated\n"
+                                             "endsurvey\n")),
                 "Temporary source reference fixture could not be written.")) {
         return 1;
     }
@@ -382,7 +385,7 @@ int runMissingSourceReferenceValidationTest()
     }
     const int sourceMissingReferenceCount =
         findingCount(waitResult.result, sourceFile, QStringLiteral("missing-source-reference"));
-    if (!expect(sourceMissingReferenceCount == 1,
+    if (!expect(sourceMissingReferenceCount == 2,
                 "Project validation should report only unresolved input/source references in .th files.")) {
         std::cerr << "Actual missing-source-reference count for .th file: "
                   << sourceMissingReferenceCount << '\n';
@@ -396,6 +399,50 @@ int runMissingSourceReferenceValidationTest()
     }
     if (!expect(findingCount(waitResult.result, configFile, QStringLiteral("missing-source-reference")) == 1,
                 "Project validation should report unresolved source references in thconfig files.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runUnsavedMissingSourceReferenceValidationTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary project directory creation failed.")) {
+        return 1;
+    }
+
+    const QString sourceFile = QDir(tempDir.path()).filePath(QStringLiteral("index.th"));
+    const QString existingInputFile = QDir(tempDir.path()).filePath(QStringLiteral("existing.th"));
+    if (!expect(writeTextFile(sourceFile,
+                              QStringLiteral("input existing\n")),
+                "Temporary valid source reference fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(existingInputFile,
+                              QStringLiteral("survey existing\n"
+                                             "endsurvey\n")),
+                "Temporary existing source target fixture could not be written.")) {
+        return 1;
+    }
+
+    QHash<QString, QString> inMemoryContents;
+    inMemoryContents.insert(QFileInfo(sourceFile).absoluteFilePath(),
+                            QStringLiteral("input missing_from_unsaved_editor\n"));
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+    scanner.requestScan(tempDir.path(), contextualDocumentTypeCatalog(), inMemoryContents);
+
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    if (!expect(waitResult.received, "Unsaved missing source reference validation did not emit validationFinished before timeout.")) {
+        return 1;
+    }
+    if (!expect(waitResult.result.errorMessage.isEmpty(), "Unsaved missing source reference validation should not report an error.")) {
+        return 1;
+    }
+    if (!expect(findingCount(waitResult.result, sourceFile, QStringLiteral("missing-source-reference")) == 1,
+                "Project validation should use unsaved editor text when checking input/source references.")) {
         return 1;
     }
 
@@ -661,6 +708,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runMissingSourceReferenceValidationTest() != 0) {
+        return 1;
+    }
+    if (runUnsavedMissingSourceReferenceValidationTest() != 0) {
         return 1;
     }
     if (runProjectIndexDiagnosticProjectionTest() != 0) {

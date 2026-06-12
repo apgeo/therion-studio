@@ -1,4 +1,5 @@
 #include "../src/core/TherionSourceLogicalDocument.h"
+#include "../src/core/TherionCommandSyntax.h"
 
 #include <cstdlib>
 #include <cstdio>
@@ -137,6 +138,10 @@ void exposesPositionalAndOptionEntryRanges()
                 && survey.positionalArgumentGroupRange.lastTokenIndex == 1
                 && survey.positionalArgumentGroupRange.text == QStringLiteral("cave"),
             "positional argument group should cover the leading cave name token");
+    require(survey.metadata.commandName == QStringLiteral("survey"),
+            "logical command metadata should expose the normalized command name");
+    require(survey.metadata.positionalArgumentCount == 1,
+            "logical command metadata should expose the positional argument count");
 
     require(survey.optionEntryRanges.size() == 2,
             "continued survey command should expose both option entries");
@@ -163,6 +168,10 @@ void exposesPositionalAndOptionEntryRanges()
                 && title.valueGroupRange.firstTokenIndex == title.valueRanges.constFirst().tokenIndex
                 && title.valueGroupRange.lastTokenIndex == title.valueRanges.constFirst().tokenIndex,
             "single-value option group should cover the title value token");
+    require(survey.metadata.normalizedOptionNames.contains(QStringLiteral("-title")),
+            "logical command metadata should expose normalized option names");
+    require(survey.metadata.optionEntryIndexesByNormalizedName.value(QStringLiteral("-title")) == QVector<int>({0}),
+            "logical command metadata should map normalized options to option entry indexes");
 
     const TherionSourceLogicalOptionEntryRange &rename = survey.optionEntryRanges.at(1);
     require(rename.key == QStringLiteral("-person-rename"),
@@ -190,6 +199,10 @@ void exposesPositionalAndOptionEntryRanges()
                 && rename.valueGroupRange.text == QStringLiteral("Old Name New Name")
                 && rename.valueGroupRange.argumentRanges.size() == 2,
             "multi-value option group should cover both person-rename value tokens");
+    require(survey.metadata.normalizedOptionNames.contains(QStringLiteral("-person-rename")),
+            "logical command metadata should include continuation-line option names");
+    require(survey.metadata.optionEntryIndexesByNormalizedName.value(QStringLiteral("-person-rename")) == QVector<int>({1}),
+            "logical command metadata should map continuation-line options to option entry indexes");
 }
 
 void findsLogicalCommandsAndTokensByPhysicalCursorPosition()
@@ -220,6 +233,81 @@ void findsLogicalCommandsAndTokensByPhysicalCursorPosition()
 
     require(document.tokenAtPhysicalPosition(3, 20) == nullptr,
             "cursor position outside any token should not resolve to a token range");
+}
+
+void attachesCatalogMetadataToLogicalCommands()
+{
+    TherionSourceValidationCatalog catalog;
+    catalog.commandNames = {QStringLiteral("survey"), QStringLiteral("line")};
+    catalog.commandContexts.insert(QStringLiteral("survey"), {QStringLiteral("none"), QStringLiteral("survey")});
+    catalog.commandContexts.insert(QStringLiteral("line"), {QStringLiteral("scrap")});
+    catalog.commandRequiredPositionalCount.insert(QStringLiteral("survey"), 1);
+    catalog.commandOptionNames.insert(QStringLiteral("survey"),
+                                      {QStringLiteral("-title"), QStringLiteral("-person-rename")});
+    catalog.commandOptionNames.insert(QStringLiteral("line"),
+                                      {QStringLiteral("-close"), QStringLiteral("-subtype")});
+    catalog.commandArgumentAllowedValuesByKey.insert(commandArgumentValueKey(QStringLiteral("line"), 0),
+                                                     {QStringLiteral("wall"), QStringLiteral("border")});
+    catalog.commandOptionValueArityTokens.insert(commandOptionValueKey(QStringLiteral("line"),
+                                                                       QStringLiteral("-close")),
+                                                 QStringLiteral("EXACTLY_ONE"));
+    catalog.commandOptionAllowedValuesByKey.insert(commandOptionValueKey(QStringLiteral("line"),
+                                                                         QStringLiteral("-close")),
+                                                   {QStringLiteral("on"), QStringLiteral("off")});
+    catalog.commandSubtypeValuesByTypeKey.insert(commandSubtypeValueKey(QStringLiteral("line"),
+                                                                        QStringLiteral("wall")),
+                                                 {QStringLiteral("bedrock"), QStringLiteral("blocks")});
+
+    const TherionSourceLogicalDocument document = TherionSourceLogicalDocument::fromText(
+        QStringLiteral(
+            "survey cave -title \"Cave\" \\\n"
+            "  -person-rename \"Old Name\" \"New Name\"\n"
+            "endsurvey\n"
+            "scrap s1\n"
+            "line wall -close maybe -subtype bedrock\n"
+            "endline\n"
+            "endscrap\n"),
+        catalog);
+
+    const TherionSourceLogicalCommand &survey = commandAt(document, 0);
+    require(survey.metadata.catalogCommandKnown,
+            "catalog-enriched logical command metadata should mark known commands");
+    require(survey.metadata.catalogRequiredPositionalCount == 1,
+            "catalog-enriched logical command metadata should expose required positional arity");
+    require(survey.metadata.catalogContexts == QStringList({QStringLiteral("none"), QStringLiteral("survey")}),
+            "catalog-enriched logical command metadata should expose catalog contexts");
+    require(survey.metadata.catalogCurrentContext == QStringLiteral("none"),
+            "catalog-enriched logical command metadata should expose the current source context");
+    require(survey.metadata.catalogContextAllowed,
+            "catalog-enriched logical command metadata should mark top-level survey context as allowed");
+    require(survey.metadata.catalogOptionNames.contains(QStringLiteral("-title"))
+                && survey.metadata.catalogOptionNames.contains(QStringLiteral("-person-rename")),
+            "catalog-enriched logical command metadata should expose known option names");
+
+    const TherionSourceLogicalCommand &close = commandAt(document, 1);
+    require(!close.metadata.catalogCommandKnown,
+            "catalog-enriched logical command metadata should leave unknown commands marked unknown");
+
+    const TherionSourceLogicalCommand &line = commandAt(document, 3);
+    require(line.metadata.catalogCommandKnown,
+            "catalog-enriched logical command metadata should mark line commands known");
+    require(line.metadata.catalogContexts == QStringList({QStringLiteral("scrap")}),
+            "catalog-enriched logical command metadata should expose command-specific catalog contexts");
+    require(line.metadata.catalogCurrentContext == QStringLiteral("scrap"),
+            "catalog-enriched logical command metadata should expose nested scrap context");
+    require(line.metadata.catalogContextAllowed,
+            "catalog-enriched logical command metadata should mark line-in-scrap context as allowed");
+    require(line.metadata.catalogArgumentAllowedValuesByIndex.value(0)
+                == QStringList({QStringLiteral("wall"), QStringLiteral("border")}),
+            "catalog-enriched logical command metadata should expose positional argument allowed values");
+    require(line.metadata.catalogOptionValueArityTokens.value(QStringLiteral("-close")) == QStringLiteral("EXACTLY_ONE"),
+            "catalog-enriched logical command metadata should expose option value arity");
+    require(line.metadata.catalogOptionAllowedValuesByName.value(QStringLiteral("-close"))
+                == QStringList({QStringLiteral("on"), QStringLiteral("off")}),
+            "catalog-enriched logical command metadata should expose option allowed values");
+    require(line.metadata.catalogOptionAllowedValuesByName.value(QStringLiteral("-subtype"))
+                == QStringList({QStringLiteral("bedrock"), QStringLiteral("blocks")}),
+            "catalog-enriched logical command metadata should expose type-specific subtype values");
 }
 
 void keepsBlockContentRowsAsNonCommandLogicalEntries()
@@ -299,6 +387,7 @@ int main()
     exposesPhysicalRangesForParsedTokens();
     exposesPositionalAndOptionEntryRanges();
     findsLogicalCommandsAndTokensByPhysicalCursorPosition();
+    attachesCatalogMetadataToLogicalCommands();
     keepsBlockContentRowsAsNonCommandLogicalEntries();
     normalizesCentrelineAliasOnLogicalCommands();
     carriesSourceSnapshotMetadata();

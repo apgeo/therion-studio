@@ -1,7 +1,10 @@
 #pragma once
 
 #include "TherionSourceDocument.h"
+#include "TherionSourceValidationCatalog.h"
 
+#include <QHash>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -70,6 +73,24 @@ struct TherionSourceLogicalOptionEntryRange
     bool embeddedValue = false;
 };
 
+struct TherionSourceLogicalCommandMetadata
+{
+    QString commandName;
+    int positionalArgumentCount = 0;
+    QSet<QString> normalizedOptionNames;
+    QHash<QString, QVector<int>> optionEntryIndexesByNormalizedName;
+    bool catalogCommandKnown = false;
+    QStringList catalogContexts;
+    QString catalogCurrentContext;
+    bool catalogContextAllowed = false;
+    int catalogRequiredPositionalCount = 0;
+    QHash<int, QStringList> catalogArgumentAllowedValuesByIndex;
+    QSet<QString> catalogOptionNames;
+    QHash<QString, QString> catalogOptionValueArityTokens;
+    QHash<QString, int> catalogOptionFixedArityByName;
+    QHash<QString, QStringList> catalogOptionAllowedValuesByName;
+};
+
 struct TherionSourceLogicalCommand
 {
     int startLineNumber = 0;
@@ -91,6 +112,7 @@ struct TherionSourceLogicalCommand
     QVector<TherionSourceLogicalArgumentRange> positionalArgumentRanges;
     TherionSourceLogicalArgumentGroupRange positionalArgumentGroupRange;
     QVector<TherionSourceLogicalOptionEntryRange> optionEntryRanges;
+    TherionSourceLogicalCommandMetadata metadata;
 
     [[nodiscard]] bool shouldValidateCommandCatalog() const;
     [[nodiscard]] bool hasUnmatchedClose() const;
@@ -106,7 +128,14 @@ public:
     [[nodiscard]] static TherionSourceLogicalDocument fromText(
         const QString &contents,
         const TherionSourceDocumentMetadata &metadata = {});
+    [[nodiscard]] static TherionSourceLogicalDocument fromText(
+        const QString &contents,
+        const TherionSourceValidationCatalog &catalog,
+        const TherionSourceDocumentMetadata &metadata = {});
     [[nodiscard]] static TherionSourceLogicalDocument fromSourceDocument(const TherionSourceDocument &sourceDocument);
+    [[nodiscard]] static TherionSourceLogicalDocument fromSourceDocument(
+        const TherionSourceDocument &sourceDocument,
+        const TherionSourceValidationCatalog &catalog);
 
     [[nodiscard]] const TherionSourceDocumentMetadata &metadata() const;
     [[nodiscard]] const QVector<TherionSourceLogicalCommand> &commands() const;
@@ -115,6 +144,10 @@ public:
                                                                                int columnNumber) const;
 
 private:
+    [[nodiscard]] static TherionSourceLogicalDocument fromSourceDocument(
+        const TherionSourceDocument &sourceDocument,
+        const TherionSourceValidationCatalog *catalog);
+
     TherionSourceDocumentMetadata metadata_;
     QVector<TherionSourceLogicalCommand> commands_;
 };

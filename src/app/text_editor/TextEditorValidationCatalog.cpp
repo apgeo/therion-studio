@@ -30,6 +30,7 @@ TherionSourceValidationCatalog validationCatalogFromCommandMetadata(const TextEd
         catalog.commandOptionNames.insert(commandName, optionNames);
     }
 
+    catalog.commandContexts = metadata.blockCommandContextsByKind;
     catalog.commandRequiredPositionalCount = metadata.commandRequiredPositionalCount;
     catalog.commandArgumentAllowedValuesByKey = metadata.commandArgumentValueTokens;
     catalog.commandTypeValues = metadata.commandTypeValueTokens;

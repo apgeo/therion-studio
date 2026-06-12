@@ -150,6 +150,70 @@ int runProjectStructureHierarchyTest()
     return 0;
 }
 
+int runProjectStructureContinuedInputTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "The temporary project directory could not be created.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    if (!expect(projectDir.mkpath(QStringLiteral("maps")), "The temporary maps directory could not be created.")) {
+        return 1;
+    }
+
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("root.th")),
+                              QStringLiteral(
+                                  "survey cave\n"
+                                  "  input \\\n"
+                                  "    maps/map.th2\n"
+                                  "endsurvey cave\n")),
+                "The continued-input root Therion file could not be written.")) {
+        return 1;
+    }
+
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("maps/map.th2")),
+                              QStringLiteral(
+                                  "scrap s1\n"
+                                  "point 10 20 station -name a1\n"
+                                  "endscrap\n")),
+                "The continued-input TH2 map file could not be written.")) {
+        return 1;
+    }
+
+    QString errorMessage;
+    const QVector<ProjectStructureEntry> entries = ProjectStructureIndex::scanProject(projectDir.path(), &errorMessage);
+    if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
+    bool foundScrap = false;
+    bool foundStation = false;
+    for (const ProjectStructureEntry &entry : entries) {
+        if (entry.kind == ProjectStructureEntryKind::Scrap
+            && entry.name == QStringLiteral("s1")
+            && normalizedPathForComparison(entry.sourceFile) == normalizedPathForComparison(projectDir.filePath(QStringLiteral("maps/map.th2")))) {
+            foundScrap = true;
+        }
+        if (entry.kind == ProjectStructureEntryKind::Station
+            && entry.name == QStringLiteral("a1")
+            && normalizedPathForComparison(entry.sourceFile) == normalizedPathForComparison(projectDir.filePath(QStringLiteral("maps/map.th2")))) {
+            foundStation = true;
+        }
+    }
+
+    if (!expect(foundScrap,
+                "The project structure index should follow input targets split across continuation lines.")) {
+        return 1;
+    }
+    if (!expect(foundStation,
+                "The project structure index should scan objects from a continued-input target.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runProjectIndexMapScrapReferenceTest()
 {
     QTemporaryDir tempDir;
@@ -912,6 +976,9 @@ int runTh2ObjectIndexGroupingTest()
 int main()
 {
     if (runProjectStructureHierarchyTest() != 0) {
+        return 1;
+    }
+    if (runProjectStructureContinuedInputTest() != 0) {
         return 1;
     }
     if (runProjectIndexMapScrapReferenceTest() != 0) {

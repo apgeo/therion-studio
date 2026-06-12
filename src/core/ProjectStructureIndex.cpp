@@ -3,7 +3,7 @@
 #include "DocumentFile.h"
 #include "TherionCommandLineModel.h"
 #include "TherionFileTypes.h"
-#include "TherionDocumentParser.h"
+#include "TherionSourceLogicalDocument.h"
 #include "TherionTokenRules.h"
 
 #include <QCoreApplication>
@@ -30,7 +30,7 @@ struct ProjectBlock
 
 struct ParsedFileCache
 {
-    QHash<QString, QVector<TherionParsedLine>> parsedLines;
+    QHash<QString, TherionSourceLogicalDocument> logicalDocuments;
 };
 
 struct ProjectObjectIdentityGenerator
@@ -82,9 +82,9 @@ bool pathIsInsideDirectory(const QString &path, const QString &directoryPath)
         && !QDir::isAbsolutePath(relativePath);
 }
 
-QVector<TherionParsedLine> parsedTokenLinesForText(const QString &text)
+TherionSourceLogicalDocument logicalDocumentForText(const QString &text)
 {
-    return TherionDocumentParser::parseTokenLines(text);
+    return TherionSourceLogicalDocument::fromText(text);
 }
 
 QString sectionNameFromLine(const TherionParsedLine &parsedLine);
@@ -491,13 +491,13 @@ QString resolveInputPath(const QString &currentFilePath, const QString &inputPat
     return QString();
 }
 
-const QVector<TherionParsedLine> &parsedLinesForFile(const QString &filePath,
-                                                     ParsedFileCache *cache,
-                                                     const QHash<QString, QString> &inMemoryFileContentsByPath)
+const TherionSourceLogicalDocument &logicalDocumentForFile(const QString &filePath,
+                                                          ParsedFileCache *cache,
+                                                          const QHash<QString, QString> &inMemoryFileContentsByPath)
 {
     const QString normalizedPath = normalizedFilePathKey(filePath);
-    auto iterator = cache->parsedLines.find(normalizedPath);
-    if (iterator != cache->parsedLines.end()) {
+    auto iterator = cache->logicalDocuments.find(normalizedPath);
+    if (iterator != cache->logicalDocuments.end()) {
         return iterator.value();
     }
 
@@ -505,12 +505,12 @@ const QVector<TherionParsedLine> &parsedLinesForFile(const QString &filePath,
     if (inMemoryFileContentsByPath.contains(normalizedPath)) {
         fileContents = inMemoryFileContentsByPath.value(normalizedPath);
     } else if (!DocumentFile::readUtf8TextFile(normalizedPath, &fileContents, nullptr)) {
-        cache->parsedLines.insert(normalizedPath, {});
-        return cache->parsedLines[normalizedPath];
+        cache->logicalDocuments.insert(normalizedPath, logicalDocumentForText(QString()));
+        return cache->logicalDocuments[normalizedPath];
     }
 
-    cache->parsedLines.insert(normalizedPath, parsedTokenLinesForText(fileContents));
-    return cache->parsedLines[normalizedPath];
+    cache->logicalDocuments.insert(normalizedPath, logicalDocumentForText(fileContents));
+    return cache->logicalDocuments[normalizedPath];
 }
 
 bool isOpeningDirective(const QString &directive)
@@ -606,10 +606,12 @@ void appendProjectStructureFromFile(const QString &filePath,
     }
 
     activeFiles->insert(normalizedPath);
-    const QVector<TherionParsedLine> &parsedLines = parsedLinesForFile(normalizedPath, cache, inMemoryFileContentsByPath);
+    const TherionSourceLogicalDocument &logicalDocument =
+        logicalDocumentForFile(normalizedPath, cache, inMemoryFileContentsByPath);
 
-    for (const TherionParsedLine &parsedLine : parsedLines) {
-        const QString directive = normalizedStructureDirective(parsedLine.directive);
+    for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
+        const TherionParsedLine &parsedLine = command.parsed;
+        const QString directive = normalizedStructureDirective(command.metadata.commandName);
 
         if (directive == QStringLiteral("input") || directive == QStringLiteral("source")) {
             const QString inputTarget = parsedLine.tokens.value(1);
@@ -643,7 +645,7 @@ void appendProjectStructureFromFile(const QString &filePath,
                                                                     openingKind,
                                                                     openingName,
                                                                     normalizedPath,
-                                                                    parsedLine.lineNumber,
+                                                                    command.startLineNumber,
                                                                     *blockStack,
                                                                     identityGenerator,
                                                                     createsNamespace);
@@ -660,7 +662,7 @@ void appendProjectStructureFromFile(const QString &filePath,
                              objectKind,
                              objectNameFromLine(parsedLine),
                              normalizedPath,
-                             parsedLine.lineNumber,
+                             command.startLineNumber,
                              *blockStack,
                              identityGenerator);
     }
@@ -674,10 +676,12 @@ QVector<QString> rootProjectFiles(const QVector<QString> &filePaths,
 {
     QSet<QString> includedFiles;
     for (const QString &filePath : filePaths) {
-        const QVector<TherionParsedLine> &parsedLines = parsedLinesForFile(filePath, cache, inMemoryFileContentsByPath);
-        for (const TherionParsedLine &parsedLine : parsedLines) {
-            if (parsedLine.directive != QStringLiteral("input")
-                && parsedLine.directive != QStringLiteral("source")) {
+        const TherionSourceLogicalDocument &logicalDocument =
+            logicalDocumentForFile(filePath, cache, inMemoryFileContentsByPath);
+        for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
+            const TherionParsedLine &parsedLine = command.parsed;
+            if (command.metadata.commandName != QStringLiteral("input")
+                && command.metadata.commandName != QStringLiteral("source")) {
                 continue;
             }
 
@@ -877,16 +881,18 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
     }
 
     for (auto fileIt = mapsBySourceFile.constBegin(); fileIt != mapsBySourceFile.constEnd(); ++fileIt) {
-        const QVector<TherionParsedLine> &parsedLines = parsedLinesForFile(fileIt.key(), cache, inMemoryFileContentsByPath);
-        if (parsedLines.isEmpty()) {
+        const TherionSourceLogicalDocument &logicalDocument =
+            logicalDocumentForFile(fileIt.key(), cache, inMemoryFileContentsByPath);
+        const QVector<TherionSourceLogicalCommand> &commands = logicalDocument.commands();
+        if (commands.isEmpty()) {
             continue;
         }
 
         for (const ProjectStructureEntry &mapEntry : fileIt.value()) {
             int mapLineIndex = -1;
-            for (int index = 0; index < parsedLines.size(); ++index) {
-                if (parsedLines.at(index).lineNumber == mapEntry.lineNumber
-                    && parsedLines.at(index).directive == QStringLiteral("map")) {
+            for (int index = 0; index < commands.size(); ++index) {
+                if (commands.at(index).startLineNumber == mapEntry.lineNumber
+                    && commands.at(index).metadata.commandName == QStringLiteral("map")) {
                     mapLineIndex = index;
                     break;
                 }
@@ -928,9 +934,10 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
             };
 
             int mapDepth = 0;
-            for (int index = mapLineIndex; index < parsedLines.size(); ++index) {
-                const TherionParsedLine &parsedLine = parsedLines.at(index);
-                const QString directive = parsedLine.directive;
+            for (int index = mapLineIndex; index < commands.size(); ++index) {
+                const TherionSourceLogicalCommand &command = commands.at(index);
+                const TherionParsedLine &parsedLine = command.parsed;
+                const QString directive = command.metadata.commandName;
 
                 if (directive == QStringLiteral("map")) {
                     ++mapDepth;
@@ -1017,6 +1024,91 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
     }
 
     return result;
+}
+
+QVector<ProjectStructureEntry> scanTh2ObjectsFromLogicalCommands(
+    const QString &sourceFile,
+    const QVector<TherionSourceLogicalCommand> &commands)
+{
+    QVector<ProjectStructureEntry> entries;
+    if (commands.isEmpty()) {
+        return entries;
+    }
+
+    QString currentScrapName;
+    int currentScrapLine = 0;
+    QString currentScrapObjectId;
+    ProjectObjectIdentityGenerator identityGenerator;
+
+    auto ensureScrap = [&](const QString &scrapName, int lineNumber) {
+        if (!currentScrapObjectId.isEmpty()) {
+            return currentScrapObjectId;
+        }
+
+        ProjectStructureEntry entry;
+        entry.kind = ProjectStructureEntryKind::Scrap;
+        entry.category = projectCategoryFromKind(entry.kind);
+        entry.objectId = identityGenerator.nextObjectId(entry.category, scrapName, sourceFile, QString());
+        entry.name = scrapName;
+        entry.sourceFile = sourceFile;
+        entry.lineNumber = lineNumber;
+        entry.depth = 0;
+        entries.append(entry);
+        currentScrapObjectId = entry.objectId;
+        return currentScrapObjectId;
+    };
+
+    for (const TherionSourceLogicalCommand &command : commands) {
+        const TherionParsedLine &parsedLine = command.parsed;
+        if (command.metadata.commandName == QStringLiteral("scrap")) {
+            currentScrapName = parsedLine.tokens.value(1, QStringLiteral("Unnamed Scrap"));
+            currentScrapLine = command.startLineNumber;
+            currentScrapObjectId.clear();
+            ensureScrap(currentScrapName, currentScrapLine);
+            continue;
+        }
+
+        if (command.metadata.commandName == QStringLiteral("endscrap")) {
+            currentScrapName.clear();
+            currentScrapLine = 0;
+            currentScrapObjectId.clear();
+            continue;
+        }
+
+        const ProjectStructureEntryKind kind = objectKindFromLine(parsedLine);
+        if (kind == ProjectStructureEntryKind::Unknown) {
+            continue;
+        }
+
+        if (currentScrapName.isEmpty()) {
+            currentScrapName = QObject::tr("Unassigned Objects");
+            currentScrapLine = 0;
+            currentScrapObjectId.clear();
+            ensureScrap(currentScrapName, currentScrapLine);
+        }
+        const QString parentObjectId = ensureScrap(currentScrapName, currentScrapLine);
+
+        ProjectStructureEntry entry;
+        entry.kind = kind;
+        entry.parentObjectId = parentObjectId;
+        entry.category = projectCategoryFromKind(kind);
+        entry.name = objectNameFromLine(parsedLine);
+        entry.sourceFile = sourceFile;
+        entry.lineNumber = command.startLineNumber;
+        entry.depth = 1;
+
+        if (entry.name.isEmpty()) {
+            entry.name = objectDisplayText(entry, parsedLine);
+        }
+        entry.objectId = identityGenerator.nextObjectId(entry.category,
+                                                        entry.name,
+                                                        entry.sourceFile,
+                                                        entry.parentObjectId);
+
+        entries.append(entry);
+    }
+
+    return entries;
 }
 }
 
@@ -1136,90 +1228,26 @@ QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QStri
         return {};
     }
 
-    return scanTh2Objects(sourceFile, parsedTokenLinesForText(text));
+    return scanTh2ObjectsFromLogicalCommands(sourceFile, logicalDocumentForText(text).commands());
 }
 
 QVector<ProjectStructureEntry> ProjectStructureIndex::scanTh2Objects(const QString &sourceFile,
                                                                      const QVector<TherionParsedLine> &parsedLines)
 {
-    QVector<ProjectStructureEntry> entries;
     if (parsedLines.isEmpty()) {
-        return entries;
+        return {};
     }
 
-    QString currentScrapName;
-    int currentScrapLine = 0;
-    QString currentScrapObjectId;
-    ProjectObjectIdentityGenerator identityGenerator;
-
-    auto ensureScrap = [&](const QString &scrapName, int lineNumber) {
-        if (!currentScrapObjectId.isEmpty()) {
-            return currentScrapObjectId;
-        }
-
-        ProjectStructureEntry entry;
-        entry.kind = ProjectStructureEntryKind::Scrap;
-        entry.category = projectCategoryFromKind(entry.kind);
-        entry.objectId = identityGenerator.nextObjectId(entry.category, scrapName, sourceFile, QString());
-        entry.name = scrapName;
-        entry.sourceFile = sourceFile;
-        entry.lineNumber = lineNumber;
-        entry.depth = 0;
-        entries.append(entry);
-        currentScrapObjectId = entry.objectId;
-        return currentScrapObjectId;
-    };
-
+    QVector<TherionSourceLogicalCommand> commands;
+    commands.reserve(parsedLines.size());
     for (const TherionParsedLine &parsedLine : parsedLines) {
-        if (parsedLine.directive == QStringLiteral("scrap")) {
-            currentScrapName = parsedLine.tokens.value(1, QStringLiteral("Unnamed Scrap"));
-            currentScrapLine = parsedLine.lineNumber;
-            currentScrapObjectId.clear();
-            ensureScrap(currentScrapName, currentScrapLine);
-            continue;
-        }
-
-        if (parsedLine.directive == QStringLiteral("endscrap")) {
-            currentScrapName.clear();
-            currentScrapLine = 0;
-            currentScrapObjectId.clear();
-            continue;
-        }
-
-        const ProjectStructureEntryKind kind = objectKindFromLine(parsedLine);
-        if (kind == ProjectStructureEntryKind::Unknown) {
-            continue;
-        }
-
-        if (currentScrapName.isEmpty()) {
-            currentScrapName = QObject::tr("Unassigned Objects");
-            currentScrapLine = 0;
-            currentScrapObjectId.clear();
-            ensureScrap(currentScrapName, currentScrapLine);
-        }
-        const QString parentObjectId = ensureScrap(currentScrapName, currentScrapLine);
-
-        ProjectStructureEntry entry;
-        entry.kind = kind;
-        entry.parentObjectId = parentObjectId;
-        entry.category = projectCategoryFromKind(kind);
-        entry.name = objectNameFromLine(parsedLine);
-        entry.sourceFile = sourceFile;
-        entry.lineNumber = parsedLine.lineNumber;
-        entry.depth = 1;
-
-        if (entry.name.isEmpty()) {
-            entry.name = objectDisplayText(entry, parsedLine);
-        }
-        entry.objectId = identityGenerator.nextObjectId(entry.category,
-                                                        entry.name,
-                                                        entry.sourceFile,
-                                                        entry.parentObjectId);
-
-        entries.append(entry);
+        TherionSourceLogicalCommand command;
+        command.startLineNumber = parsedLine.lineNumber;
+        command.parsed = parsedLine;
+        command.metadata.commandName = parsedLine.directive;
+        commands.append(command);
     }
-
-    return entries;
+    return scanTh2ObjectsFromLogicalCommands(sourceFile, commands);
 }
 
 QString ProjectStructureIndex::structureEntryNodeKey(const ProjectStructureEntry &entry)

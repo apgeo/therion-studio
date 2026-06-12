@@ -1,10 +1,9 @@
 #pragma once
 
+#include "TherionSourceValidationCatalog.h"
+
 #include <QString>
-#include <QHash>
-#include <QSet>
 #include <QVector>
-#include <QStringList>
 
 namespace TherionStudio
 {
@@ -42,19 +41,6 @@ struct TherionSourceDiagnostic
 struct TherionSourceValidationResult
 {
     QVector<TherionSourceDiagnostic> diagnostics;
-};
-
-struct TherionSourceValidationCatalog
-{
-    QSet<QString> commandNames;
-    QHash<QString, QSet<QString>> commandOptionNames;
-    QHash<QString, int> commandRequiredPositionalCount;
-    QHash<QString, QStringList> commandArgumentAllowedValuesByKey;
-    QHash<QString, QStringList> commandTypeValues;
-    QHash<QString, QStringList> commandOptionAllowedValuesByKey;
-    QHash<QString, QStringList> commandSubtypeValuesByTypeKey;
-    QHash<QString, QString> commandOptionValueArityTokens;
-    QHash<QString, int> commandOptionFixedArityByKey;
 };
 
 class TherionSourceValidator final

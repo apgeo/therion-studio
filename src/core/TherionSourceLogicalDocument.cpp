@@ -1,6 +1,9 @@
 #include "TherionSourceLogicalDocument.h"
 
 #include "TherionCommandLineModel.h"
+#include "TherionCommandSyntax.h"
+
+#include <utility>
 
 namespace TherionStudio
 {
@@ -167,6 +170,88 @@ void populateArgumentAndOptionRanges(TherionSourceLogicalCommand *command)
 
     command->positionalArgumentGroupRange = argumentGroupRange(command->positionalArgumentRanges);
 }
+
+void populateCommandMetadata(TherionSourceLogicalCommand *command,
+                             const TherionSourceValidationCatalog *catalog)
+{
+    if (command == nullptr) {
+        return;
+    }
+
+    command->metadata.commandName = command->normalizedDirective;
+    command->metadata.positionalArgumentCount = command->positionalArgumentRanges.size();
+    command->metadata.catalogCurrentContext = command->blockStackBefore.isEmpty()
+        ? QStringLiteral("none")
+        : command->blockStackBefore.constLast().directive;
+    command->metadata.normalizedOptionNames.clear();
+    command->metadata.optionEntryIndexesByNormalizedName.clear();
+
+    for (int entryIndex = 0; entryIndex < command->optionEntryRanges.size(); ++entryIndex) {
+        const TherionSourceLogicalOptionEntryRange &entry = command->optionEntryRanges.at(entryIndex);
+        const QString normalizedOptionName =
+            QStringLiteral("-") + normalizedCommandOptionName(entry.key);
+        if (normalizedOptionName == QStringLiteral("-")) {
+            continue;
+        }
+
+        command->metadata.normalizedOptionNames.insert(normalizedOptionName);
+        command->metadata.optionEntryIndexesByNormalizedName[normalizedOptionName].append(entryIndex);
+    }
+
+    if (catalog == nullptr || catalog->commandNames.isEmpty()) {
+        return;
+    }
+
+    command->metadata.catalogCommandKnown = catalog->commandNames.contains(command->metadata.commandName);
+    command->metadata.catalogContexts =
+        catalog->commandContexts.value(command->metadata.commandName);
+    command->metadata.catalogContextAllowed =
+        command->metadata.catalogContexts.contains(QStringLiteral("all"), Qt::CaseInsensitive)
+        || command->metadata.catalogContexts.contains(command->metadata.catalogCurrentContext,
+                                                      Qt::CaseInsensitive);
+    command->metadata.catalogRequiredPositionalCount =
+        qMax(0, catalog->commandRequiredPositionalCount.value(command->metadata.commandName, 0));
+    command->metadata.catalogArgumentAllowedValuesByIndex.clear();
+    for (int argumentIndex = 0;
+         argumentIndex < command->metadata.positionalArgumentCount;
+         ++argumentIndex) {
+        const QStringList allowedValues = catalog->commandArgumentAllowedValuesByKey.value(
+            commandArgumentValueKey(command->metadata.commandName, argumentIndex));
+        if (!allowedValues.isEmpty()) {
+            command->metadata.catalogArgumentAllowedValuesByIndex.insert(argumentIndex,
+                                                                         allowedValues);
+        }
+    }
+    command->metadata.catalogOptionNames =
+        catalog->commandOptionNames.value(command->metadata.commandName);
+
+    for (const QString &normalizedOptionName : std::as_const(command->metadata.normalizedOptionNames)) {
+        const QString optionKey = commandOptionValueKey(command->metadata.commandName,
+                                                        normalizedOptionName);
+        command->metadata.catalogOptionValueArityTokens.insert(
+            normalizedOptionName,
+            catalog->commandOptionValueArityTokens.value(optionKey));
+        command->metadata.catalogOptionFixedArityByName.insert(
+            normalizedOptionName,
+            catalog->commandOptionFixedArityByKey.value(optionKey, -1));
+
+        QStringList allowedValues;
+        if (normalizedOptionName == QStringLiteral("-subtype")) {
+            const QString symbolTypeToken = symbolTypeForSubtypeLookup(command->metadata.commandName,
+                                                                       command->parsed);
+            const QStringList subtypeValues = catalog->commandSubtypeValuesByTypeKey.value(
+                commandSubtypeValueKey(command->metadata.commandName, symbolTypeToken));
+            if (!subtypeValues.contains(QStringLiteral("*"))) {
+                appendConcreteSubtypeValues(allowedValues, subtypeValues);
+            }
+        }
+        if (allowedValues.isEmpty()) {
+            allowedValues = catalog->commandOptionAllowedValuesByKey.value(optionKey);
+        }
+        command->metadata.catalogOptionAllowedValuesByName.insert(normalizedOptionName,
+                                                                  allowedValues);
+    }
+}
 }
 
 bool TherionSourceLogicalArgumentGroupRange::isValid() const
@@ -251,7 +336,29 @@ TherionSourceLogicalDocument TherionSourceLogicalDocument::fromText(
     return fromSourceDocument(TherionSourceDocument::fromText(contents, metadata));
 }
 
+TherionSourceLogicalDocument TherionSourceLogicalDocument::fromText(
+    const QString &contents,
+    const TherionSourceValidationCatalog &catalog,
+    const TherionSourceDocumentMetadata &metadata)
+{
+    return fromSourceDocument(TherionSourceDocument::fromText(contents, metadata), catalog);
+}
+
 TherionSourceLogicalDocument TherionSourceLogicalDocument::fromSourceDocument(const TherionSourceDocument &sourceDocument)
+{
+    return fromSourceDocument(sourceDocument, nullptr);
+}
+
+TherionSourceLogicalDocument TherionSourceLogicalDocument::fromSourceDocument(
+    const TherionSourceDocument &sourceDocument,
+    const TherionSourceValidationCatalog &catalog)
+{
+    return fromSourceDocument(sourceDocument, &catalog);
+}
+
+TherionSourceLogicalDocument TherionSourceLogicalDocument::fromSourceDocument(
+    const TherionSourceDocument &sourceDocument,
+    const TherionSourceValidationCatalog *catalog)
 {
     TherionSourceLogicalDocument logicalDocument;
     logicalDocument.metadata_ = sourceDocument.metadata();
@@ -330,6 +437,7 @@ TherionSourceLogicalDocument TherionSourceLogicalDocument::fromSourceDocument(co
                 physicalRange});
         }
         populateArgumentAndOptionRanges(&command);
+        populateCommandMetadata(&command, catalog);
         logicalDocument.commands_.append(command);
         lineIndex = currentIndex;
     }

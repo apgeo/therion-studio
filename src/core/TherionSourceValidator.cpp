@@ -453,19 +453,16 @@ TherionSourceDiagnostic diagnosticForToken(const TherionSourceLogicalCommand &co
 }
 
 void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
-                                     const TherionSourceLogicalCommand &command,
-                                     const TherionSourceValidationCatalog &catalog,
-                                     bool skipUnknownCommand)
+                                     const TherionSourceLogicalCommand &command)
 {
     if (result == nullptr || command.parsed.tokens.isEmpty()) {
         return;
     }
 
-    const QString commandName = normalizedTherionDirectiveToken(command.parsed.directive);
-    const bool commandKnown = catalog.commandNames.contains(commandName);
+    const QString commandName = command.metadata.commandName;
+    const bool commandKnown = command.metadata.catalogCommandKnown;
     if (!commandKnown) {
-        if (!skipUnknownCommand
-            && !therionDirectiveIsKnownBlockDirective(commandName)
+        if (!therionDirectiveIsKnownBlockDirective(commandName)
             && looksLikeCommandDirective(command.parsed.directive)) {
             result->diagnostics.append(diagnosticForToken(command,
                                                           0,
@@ -476,8 +473,8 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
         return;
     }
 
-    const int requiredPositionalCount = qMax(0, catalog.commandRequiredPositionalCount.value(commandName, 0));
-    const int providedPositionalCount = command.positionalArgumentRanges.size();
+    const int requiredPositionalCount = command.metadata.catalogRequiredPositionalCount;
+    const int providedPositionalCount = command.metadata.positionalArgumentCount;
     if (requiredPositionalCount > 0 && providedPositionalCount < requiredPositionalCount) {
         result->diagnostics.append(diagnosticForLine(command,
                                                      QStringLiteral("missing-argument"),
@@ -490,7 +487,7 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
     }
 
     const QStringList allowedFirstValues =
-        catalog.commandArgumentAllowedValuesByKey.value(commandArgumentValueKey(commandName, 0));
+        command.metadata.catalogArgumentAllowedValuesByIndex.value(0);
     if (!allowedFirstValues.isEmpty() && providedPositionalCount > 0 && command.parsed.tokens.size() > 1) {
         const QString value = command.parsed.tokens.at(1).trimmed();
         if (!value.isEmpty() && !allowedFirstValues.contains(value, Qt::CaseInsensitive)) {
@@ -503,7 +500,7 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
         }
     }
 
-    const QSet<QString> knownOptions = catalog.commandOptionNames.value(commandName);
+    const QSet<QString> knownOptions = command.metadata.catalogOptionNames;
     for (const TherionSourceLogicalOptionEntryRange &optionEntry : command.optionEntryRanges) {
         const QString optionToken = optionEntry.key;
         const QString normalizedOption = QStringLiteral("-") + normalizedCommandOptionName(optionToken);
@@ -516,8 +513,8 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
                                                               .arg(commandName, optionToken)));
         }
 
-        const QString arity = catalog.commandOptionValueArityTokens.value(commandOptionValueKey(commandName, normalizedOption));
-        const int fixedArity = catalog.commandOptionFixedArityByKey.value(commandOptionValueKey(commandName, normalizedOption), -1);
+        const QString arity = command.metadata.catalogOptionValueArityTokens.value(normalizedOption);
+        const int fixedArity = command.metadata.catalogOptionFixedArityByName.value(normalizedOption, -1);
         const int providedValueCount = optionEntry.logicalValueCount;
         if ((optionArityRequiresValue(arity) || fixedArity > 0) && providedValueCount == 0) {
             result->diagnostics.append(diagnosticForToken(command,
@@ -540,19 +537,8 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
                                                           TherionSourceDiagnosticSeverity::Error));
         }
 
-        QStringList allowedOptionValues;
-        if (normalizedOption == QStringLiteral("-subtype")) {
-            const QString symbolTypeToken = symbolTypeForSubtypeLookup(commandName, command.parsed);
-            const QStringList subtypeValues = catalog.commandSubtypeValuesByTypeKey.value(
-                commandSubtypeValueKey(commandName, symbolTypeToken));
-            if (!subtypeValues.contains(QStringLiteral("*"))) {
-                appendConcreteSubtypeValues(allowedOptionValues, subtypeValues);
-            }
-        }
-        if (allowedOptionValues.isEmpty()) {
-            allowedOptionValues = catalog.commandOptionAllowedValuesByKey.value(
-                commandOptionValueKey(commandName, normalizedOption));
-        }
+        const QStringList allowedOptionValues =
+            command.metadata.catalogOptionAllowedValuesByName.value(normalizedOption);
         if (!allowedOptionValues.isEmpty()
             && optionEntry.logicalValueCount == 1
             && optionEntry.rawValueTokens.size() == 1) {
@@ -618,7 +604,9 @@ TherionSourceValidationResult TherionSourceValidator::validate(const QString &co
     TherionSourceValidationResult result;
     const TherionSourceDocument sourceDocument = TherionSourceDocument::fromText(contents);
     const TherionSourceLogicalDocument logicalDocument =
-        TherionSourceLogicalDocument::fromSourceDocument(sourceDocument);
+        catalog.commandNames.isEmpty()
+            ? TherionSourceLogicalDocument::fromSourceDocument(sourceDocument)
+            : TherionSourceLogicalDocument::fromSourceDocument(sourceDocument, catalog);
     for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
         if (command.startLineNumber == command.endLineNumber) {
             const LineCleanupResult cleanup = cleanupLine(command.text);
@@ -628,10 +616,7 @@ TherionSourceValidationResult TherionSourceValidator::validate(const QString &co
         }
 
         if (!catalog.commandNames.isEmpty() && command.shouldValidateCommandCatalog()) {
-            appendCommandCatalogDiagnostics(&result,
-                                            command,
-                                            catalog,
-                                            false);
+            appendCommandCatalogDiagnostics(&result, command);
         }
     }
 

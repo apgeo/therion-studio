@@ -55,6 +55,7 @@ public:
     void loadHelpMetadata();
     void loadHelpMetadataFromCommandCatalog();
     void setHelpCollapsed(bool collapsed);
+    void invalidateValidationCache();
     void updateContextHelp();
     void updateValidationTooltipForCursor();
     bool showValidationTooltipForPosition(const QPoint &viewportPosition, const QPoint &globalPosition);

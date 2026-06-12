@@ -244,6 +244,12 @@ void TextEditorContextHelpController::updateValidationTooltipForCursor()
                        2200);
 }
 
+void TextEditorContextHelpController::invalidateValidationCache()
+{
+    cachedValidationRevision_ = -1;
+    cachedValidationResult_ = {};
+}
+
 bool TextEditorContextHelpController::showValidationTooltipForPosition(const QPoint &viewportPosition,
                                                                        const QPoint &globalPosition)
 {

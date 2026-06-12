@@ -12,6 +12,13 @@ TherionSourceValidationResult MapEditorTab::validateDocument() const
     return {};
 }
 
+void MapEditorTab::setProjectValidationDiagnostics(const QVector<TherionSourceDiagnostic> &diagnostics)
+{
+    if (textEditor_ != nullptr) {
+        textEditor_->setProjectValidationDiagnostics(diagnostics);
+    }
+}
+
 bool MapEditorTab::applyValidationFixes(const QVector<TherionSourceDiagnosticFix> &fixes)
 {
     if (textEditor_ == nullptr) {

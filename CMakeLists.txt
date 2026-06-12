@@ -1071,7 +1071,11 @@ therion_add_app_unit_test(ProjectSearchScannerTest
     tests/ProjectSearchScannerTest.cpp)
 
 therion_add_app_unit_test(ProjectValidationScannerTest
-    tests/ProjectValidationScannerTest.cpp)
+    tests/ProjectValidationScannerTest.cpp
+    src/app/text_editor/TextEditorValidationCatalog.cpp
+    src/app/text_editor/raw_editor/RawEditorCommandMetadataLoader.cpp
+    src/app/text_editor/block_editor/BlockEditorDirectiveRules.cpp
+    src/app/text_editor/block_editor/BlockEditorSourceText.cpp)
 
 therion_add_app_unit_test(ProjectValidationControllerTest
     tests/ProjectValidationControllerTest.cpp)

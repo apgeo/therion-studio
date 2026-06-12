@@ -1,4 +1,7 @@
 #include "../src/app/ProjectValidationScanner.h"
+#include "../src/app/text_editor/TextEditorValidationCatalog.h"
+#include "../src/core/CommandCatalogStore.h"
+#include "../src/core/DocumentFile.h"
 #include "../src/core/TherionCommandSyntax.h"
 #include "../src/core/TherionSourceReferenceResolver.h"
 
@@ -114,6 +117,13 @@ TherionSourceValidationCatalog contextualDocumentTypeCatalog()
     return catalog;
 }
 
+TherionSourceValidationCatalog appValidationCatalog()
+{
+    const QString catalogPath =
+        QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(QStringLiteral("../resources/therion_command_catalog.json"));
+    return validationCatalogFromCommandCatalog(CommandCatalogStore::fromFile(catalogPath).catalogObject());
+}
+
 struct ValidationWaitResult
 {
     bool received = false;
@@ -186,6 +196,20 @@ bool findingHasSeverity(const ProjectValidationScanner::Result &result,
         }
     }
     return false;
+}
+
+const TherionSourceDiagnostic *findingDiagnostic(const ProjectValidationScanner::Result &result,
+                                                const QString &filePath,
+                                                const QString &code)
+{
+    const QString normalizedPath = canonicalOrAbsolutePath(filePath);
+    for (const ProjectValidationScanner::Finding &finding : result.findings) {
+        if (canonicalOrAbsolutePath(finding.filePath) == normalizedPath
+            && finding.diagnostic.code == code) {
+            return &finding.diagnostic;
+        }
+    }
+    return nullptr;
 }
 
 int runFilesystemValidationTest()
@@ -529,6 +553,17 @@ int runProjectIndexDiagnosticProjectionTest()
                 "Project validation should expose unresolved map references from the project index.")) {
         return 1;
     }
+    const TherionSourceDiagnostic *unknownMapDiagnostic =
+        findingDiagnostic(waitResult.result, rootFile, QStringLiteral("unknown-map-reference"));
+    if (!expect(unknownMapDiagnostic != nullptr,
+                "Unknown map reference diagnostic should be available for range checks.")) {
+        return 1;
+    }
+    if (!expect(unknownMapDiagnostic->columnNumber == 5
+                    && unknownMapDiagnostic->columnLength == QStringLiteral("missing-map.m").size(),
+                "Unknown map reference diagnostic should cover the full referenced token.")) {
+        return 1;
+    }
     if (!expect(findingHasSeverity(waitResult.result,
                                    rootFile,
                                    QStringLiteral("mixed-map-and-scrap-references"),
@@ -752,7 +787,7 @@ int runDocumentTypeContextProjectionTest()
     return 0;
 }
 
-int runSupersededScanSuppressesStaleResultTest()
+int runSupersededScanStillDeliversLatestResultTest()
 {
     QTemporaryDir tempDir;
     if (!expect(tempDir.isValid(), "Temporary project directory creation failed.")) {
@@ -771,6 +806,13 @@ int runSupersededScanSuppressesStaleResultTest()
     scanner.setDebounceIntervalMs(0);
 
     bool requestedSupersedingScan = false;
+    bool receivedFirstResult = false;
+    bool receivedLatestResult = false;
+    ProjectValidationScanner::Result latestResult;
+    QEventLoop loop;
+    QTimer timeout;
+    timeout.setSingleShot(true);
+    timeout.setInterval(5000);
     QObject::connect(&scanner,
                      &ProjectValidationScanner::validationStarted,
                      &scanner,
@@ -787,21 +829,231 @@ int runSupersededScanSuppressesStaleResultTest()
                                                                 "endscrap\n"));
                          scanner.requestScan(tempDir.path(), testCatalog(), inMemoryContents);
                      });
+    QObject::connect(&scanner,
+                     &ProjectValidationScanner::validationFinished,
+                     &loop,
+                     [&](const ProjectValidationScanner::Result &result) {
+                         if (result.generation == 1) {
+                             receivedFirstResult = true;
+                         } else if (result.generation == 2) {
+                             receivedLatestResult = true;
+                             latestResult = result;
+                             loop.quit();
+                         }
+                     });
+    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
 
     scanner.requestScan(tempDir.path(), testCatalog(), {});
-    const ValidationWaitResult waitResult = waitForValidation(scanner);
-    if (!expect(waitResult.received, "Superseded validation did not emit the latest result before timeout.")) {
+    timeout.start();
+    loop.exec();
+
+    if (!expect(receivedFirstResult, "Superseded validation should still emit the completed older result.")) {
         return 1;
     }
     if (!expect(requestedSupersedingScan, "Superseded validation test did not queue a newer scan.")) {
         return 1;
     }
-    if (!expect(waitResult.result.generation == 2,
-                "ProjectValidationScanner should suppress stale results when a newer scan is queued.")) {
+    if (!expect(receivedLatestResult,
+                "ProjectValidationScanner should emit the latest result after a superseded scan.")) {
+        return 1;
+    }
+    if (!expect(containsFinding(latestResult, filePath, QStringLiteral("malformed-option-token")),
+                "Latest project validation result should use the superseding in-memory document text.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runRepeatedRequestsDoNotStarveDebounceTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary project directory creation failed.")) {
+        return 1;
+    }
+
+    const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("live.th2"));
+    if (!expect(writeTextFile(filePath,
+                              QStringLiteral("scrap live\n"
+                                             "line wall -clip off \"-clip off\"\n"
+                                             "endline\n"
+                                             "endscrap\n")),
+                "Temporary repeated-request file could not be written.")) {
+        return 1;
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(120);
+
+    QTimer requestTimer;
+    requestTimer.setInterval(10);
+    QObject::connect(&requestTimer, &QTimer::timeout, &scanner, [&scanner, &tempDir]() {
+        scanner.requestScan(tempDir.path(), testCatalog(), {});
+    });
+
+    requestTimer.start();
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    requestTimer.stop();
+    if (!expect(waitResult.received, "Repeated validation requests should not starve the debounce timer.")) {
         return 1;
     }
     if (!expect(containsFinding(waitResult.result, filePath, QStringLiteral("malformed-option-token")),
-                "Latest project validation result should use the superseding in-memory document text.")) {
+                "Repeated validation requests should still validate the latest pending request.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runSupersededRunningScanStartsNextImmediatelyTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary project directory creation failed.")) {
+        return 1;
+    }
+
+    const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("live.th2"));
+    if (!expect(writeTextFile(filePath,
+                              QStringLiteral("scrap stale\n"
+                                             "endscrap\n")),
+                "Temporary immediate-superseded-scan file could not be written.")) {
+        return 1;
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+
+    bool requestedSupersedingScan = false;
+    bool startedLatestScan = false;
+    bool finishedLatestScan = false;
+    QEventLoop loop;
+    QTimer timeout;
+    timeout.setSingleShot(true);
+    timeout.setInterval(1000);
+
+    QObject::connect(&scanner,
+                     &ProjectValidationScanner::validationStarted,
+                     &loop,
+                     [&](quint64 generation, const QString &) {
+                         if (generation == 1 && !requestedSupersedingScan) {
+                             requestedSupersedingScan = true;
+                             scanner.setDebounceIntervalMs(10000);
+                             QHash<QString, QString> inMemoryContents;
+                             inMemoryContents.insert(canonicalOrAbsolutePath(filePath),
+                                                     QStringLiteral("scrap live\n"
+                                                                    "line wall -clip off \"-clip off\"\n"
+                                                                    "endline\n"
+                                                                    "endscrap\n"));
+                             scanner.requestScan(tempDir.path(), testCatalog(), inMemoryContents);
+                             return;
+                         }
+                         if (generation == 2) {
+                             startedLatestScan = true;
+                         }
+                     });
+    QObject::connect(&scanner,
+                     &ProjectValidationScanner::validationFinished,
+                     &loop,
+                     [&](const ProjectValidationScanner::Result &result) {
+                         if (result.generation == 2) {
+                             finishedLatestScan = containsFinding(result, filePath, QStringLiteral("malformed-option-token"));
+                             loop.quit();
+                         }
+                     });
+    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+
+    scanner.requestScan(tempDir.path(), testCatalog(), {});
+    timeout.start();
+    loop.exec();
+
+    if (!expect(requestedSupersedingScan, "Immediate superseded validation test did not queue a newer scan.")) {
+        return 1;
+    }
+    if (!expect(startedLatestScan,
+                "ProjectValidationScanner should start a superseding scan immediately after the running scan finishes.")) {
+        return 1;
+    }
+    if (!expect(finishedLatestScan,
+                "ProjectValidationScanner should emit the latest superseding validation result before waiting for debounce.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runBabiceSampleValidationCompletesTest()
+{
+    const QString sampleProjectPath =
+        QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(QStringLiteral("../sample_data/babice"));
+    if (!QDir(sampleProjectPath).exists()) {
+        return 0;
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+    scanner.requestScan(sampleProjectPath, contextualDocumentTypeCatalog(), {});
+
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    if (!expect(waitResult.received, "Babice sample project validation did not emit validationFinished before timeout.")) {
+        return 1;
+    }
+    if (!expect(waitResult.result.errorMessage.isEmpty(), "Babice sample project validation should not report a scanner error.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runBabiceSampleValidationWithOpenDocumentsTest()
+{
+    const QString sampleProjectPath =
+        QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(QStringLiteral("../sample_data/babice"));
+    if (!QDir(sampleProjectPath).exists()) {
+        return 0;
+    }
+
+    QHash<QString, QString> inMemoryContents;
+    for (const QString &relativePath : {
+             QStringLiteral("babice.th"),
+             QStringLiteral("untitled.th2"),
+             QStringLiteral("untitled2.th2"),
+         }) {
+        const QString filePath = QDir(sampleProjectPath).filePath(relativePath);
+        QString text;
+        if (!expect(DocumentFile::readTextFile(filePath, &text, nullptr, nullptr, nullptr),
+                    "Babice open-document fixture could not be read.")) {
+            return 1;
+        }
+        inMemoryContents.insert(canonicalOrAbsolutePath(filePath), text);
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+    scanner.requestScan(sampleProjectPath, appValidationCatalog(), inMemoryContents);
+
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    if (!expect(waitResult.received, "Babice open-document project validation did not emit validationFinished before timeout.")) {
+        return 1;
+    }
+    if (!expect(waitResult.result.errorMessage.isEmpty(), "Babice open-document project validation should not report a scanner error.")) {
+        return 1;
+    }
+    if (!expect(containsFinding(waitResult.result,
+                                QDir(sampleProjectPath).filePath(QStringLiteral("untitled2.th2")),
+                                QStringLiteral("malformed-option-token")),
+                "Babice open-document project validation should report duplicate -clip options.")) {
+        return 1;
+    }
+    if (!expect(containsFinding(waitResult.result,
+                                QDir(sampleProjectPath).filePath(QStringLiteral("babice.th")),
+                                QStringLiteral("missing-source-reference")),
+                "Babice open-document project validation should report the missing input file.")) {
+        return 1;
+    }
+    if (!expect(containsFinding(waitResult.result,
+                                QDir(sampleProjectPath).filePath(QStringLiteral("babice.th")),
+                                QStringLiteral("unknown-map-reference")),
+                "Babice open-document project validation should report the unknown map reference.")) {
         return 1;
     }
 
@@ -841,7 +1093,19 @@ int main(int argc, char **argv)
     if (runDocumentTypeContextProjectionTest() != 0) {
         return 1;
     }
-    if (runSupersededScanSuppressesStaleResultTest() != 0) {
+    if (runSupersededScanStillDeliversLatestResultTest() != 0) {
+        return 1;
+    }
+    if (runRepeatedRequestsDoNotStarveDebounceTest() != 0) {
+        return 1;
+    }
+    if (runSupersededRunningScanStartsNextImmediatelyTest() != 0) {
+        return 1;
+    }
+    if (runBabiceSampleValidationCompletesTest() != 0) {
+        return 1;
+    }
+    if (runBabiceSampleValidationWithOpenDocumentsTest() != 0) {
         return 1;
     }
     return 0;

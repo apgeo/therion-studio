@@ -24,6 +24,7 @@
 #include <QStandardItem>
 #include <QStandardItemModel>
 #include <QStackedWidget>
+#include <QTabWidget>
 #include <QTreeView>
 #include <QVBoxLayout>
 
@@ -426,10 +427,10 @@ void MainWindow::requestProjectValidation(TherionStudio::ProjectValidationContro
     request.validationCatalog = TherionStudio::validationCatalogFromCommandCatalog(commandCatalogStore_.catalogObject());
     request.inMemoryProjectContentsByPath = inMemoryProjectContentsByPath;
     pendingProjectValidationRevealPanel_ = revealPanel;
-    if (validationStatusLabel_ != nullptr) {
+    if (revealPanel && validationStatusLabel_ != nullptr) {
         validationStatusLabel_->setText(tr("Validating project..."));
     }
-    if (validationScanProjectButton_ != nullptr) {
+    if (revealPanel && validationScanProjectButton_ != nullptr) {
         validationScanProjectButton_->setEnabled(false);
     }
     if (revealPanel) {
@@ -449,8 +450,7 @@ void MainWindow::handleProjectValidationStarted(TherionStudio::ProjectValidation
     const bool revealPanel = pendingProjectValidationRevealPanel_;
     validationRevealByGeneration_.insert(generation, revealPanel);
     const bool replaceVisibleResults = revealPanel
-        || trigger == TherionStudio::ProjectValidationController::Trigger::ManualRefresh
-        || trigger == TherionStudio::ProjectValidationController::Trigger::ProjectOpened;
+        || trigger == TherionStudio::ProjectValidationController::Trigger::ManualRefresh;
     if (replaceVisibleResults) {
         validationDiagnostics_.clear();
         validationDiagnosticFilePaths_.clear();
@@ -463,17 +463,56 @@ void MainWindow::handleProjectValidationStarted(TherionStudio::ProjectValidation
         }
         handleValidationSelectionChanged({}, {});
     }
-    if (validationStatusLabel_ != nullptr) {
+    if (replaceVisibleResults && validationStatusLabel_ != nullptr) {
         validationStatusLabel_->setText(tr("Validating project..."));
     }
-    if (validationScanProjectButton_ != nullptr) {
+    if (replaceVisibleResults && validationScanProjectButton_ != nullptr) {
         validationScanProjectButton_->setEnabled(false);
     }
-    if (validationApplyAllFixesButton_ != nullptr) {
+    if (replaceVisibleResults && validationApplyAllFixesButton_ != nullptr) {
         validationApplyAllFixesButton_->setEnabled(false);
     }
     if (revealPanel) {
         showSidebarPane(SidebarPane::Validation);
+    }
+}
+
+void MainWindow::updateOpenEditorProjectValidationDiagnostics()
+{
+    QHash<QString, QVector<TherionStudio::TherionSourceDiagnostic>> diagnosticsByPath;
+    for (int index = 0; index < validationDiagnostics_.size(); ++index) {
+        if (index >= validationDiagnosticFilePaths_.size()) {
+            continue;
+        }
+
+        const QString normalizedPath = normalizedValidationPath(validationDiagnosticFilePaths_.at(index));
+        if (!normalizedPath.isEmpty()) {
+            diagnosticsByPath[normalizedPath].append(validationDiagnostics_.at(index));
+        }
+    }
+
+    auto applyToDocumentWidget = [&diagnosticsByPath](QWidget *widget) {
+        if (widget == nullptr) {
+            return;
+        }
+
+        if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(widget)) {
+            textTab->setProjectValidationDiagnostics(diagnosticsByPath.value(normalizedValidationPath(textTab->filePath())));
+            return;
+        }
+
+        if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(widget)) {
+            mapTab->setProjectValidationDiagnostics(diagnosticsByPath.value(normalizedValidationPath(mapTab->filePath())));
+        }
+    };
+
+    if (editorTabs_ != nullptr) {
+        for (int index = 0; index < editorTabs_->count(); ++index) {
+            applyToDocumentWidget(editorTabs_->widget(index));
+        }
+    }
+    for (TherionStudio::MapEditorTab *detachedTab : detachedMapEditorTabs()) {
+        applyToDocumentWidget(detachedTab);
     }
 }
 
@@ -493,6 +532,22 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
         return;
     }
 
+    QString selectedFilePath;
+    int selectedLineNumber = 0;
+    int selectedColumnNumber = 0;
+    QString selectedDiagnosticCode;
+    if (validationResultsTree_ != nullptr) {
+        const QModelIndex currentFinding =
+            validationFindingIndex(validationResultsModel_, validationResultsTree_->currentIndex());
+        const int selectedDiagnosticIndex = validationDiagnosticIndex(validationResultsModel_, currentFinding);
+        if (selectedDiagnosticIndex >= 0 && selectedDiagnosticIndex < validationDiagnostics_.size()) {
+            selectedFilePath = normalizedValidationPath(currentFinding.data(ValidationFilePathRole).toString());
+            selectedLineNumber = qMax(1, currentFinding.data(ValidationLineNumberRole).toInt());
+            selectedColumnNumber = qMax(1, currentFinding.data(ValidationColumnNumberRole).toInt());
+            selectedDiagnosticCode = validationDiagnostics_.at(selectedDiagnosticIndex).code;
+        }
+    }
+
     validationResultsModel_->clear();
     validationResultsModel_->setHorizontalHeaderLabels({tr("Problems")});
     validationDiagnostics_.clear();
@@ -502,6 +557,7 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
 
     if (!result.errorMessage.isEmpty()) {
         clearValidationRailIndicator();
+        updateOpenEditorProjectValidationDiagnostics();
         if (validationStatusLabel_ != nullptr) {
             validationStatusLabel_->setText(result.errorMessage);
         }
@@ -511,6 +567,7 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
 
     if (result.findings.isEmpty()) {
         clearValidationRailIndicator();
+        updateOpenEditorProjectValidationDiagnostics();
         if (validationStatusLabel_ != nullptr) {
             validationStatusLabel_->setText(tr("No validation problems found in %1 searched file(s).")
                                                 .arg(result.searchedFileCount));
@@ -531,6 +588,7 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
 
     bool hasAnySafeFix = false;
     QHash<QString, QStandardItem *> fileItemsByPath;
+    QModelIndex restoredFinding;
     for (const TherionStudio::ProjectValidationScanner::Finding &finding : result.findings) {
         QStandardItem *fileItem = fileItemsByPath.value(finding.filePath, nullptr);
         if (fileItem == nullptr) {
@@ -564,7 +622,16 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
         findingItem->setData(true, ValidationIsFindingRole);
         findingItem->setData(diagnosticIndex, ValidationDiagnosticIndexRole);
         fileItem->appendRow(findingItem);
+        if (!restoredFinding.isValid()
+            && normalizedValidationPath(finding.filePath) == selectedFilePath
+            && qMax(1, finding.diagnostic.lineNumber) == selectedLineNumber
+            && qMax(1, finding.diagnostic.columnNumber) == selectedColumnNumber
+            && finding.diagnostic.code == selectedDiagnosticCode) {
+            restoredFinding = findingItem->index();
+        }
     }
+
+    updateOpenEditorProjectValidationDiagnostics();
 
     if (validationStatusLabel_ != nullptr) {
         QString status = tr("%1 validation problem(s) found in %2 searched file(s).")
@@ -579,10 +646,12 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
     if (validationResultsTree_ != nullptr) {
         validationResultsTree_->expandAll();
         validationResultsTree_->resizeColumnToContents(0);
-        const QModelIndex firstFinding = validationResultsModel_->index(0, 0, validationResultsModel_->index(0, 0));
-        if (firstFinding.isValid()) {
-            validationResultsTree_->setCurrentIndex(firstFinding);
-            handleValidationSelectionChanged(firstFinding, {});
+        const QModelIndex firstFinding =
+            validationResultsModel_->index(0, 0, validationResultsModel_->index(0, 0));
+        const QModelIndex nextFinding = restoredFinding.isValid() ? restoredFinding : firstFinding;
+        if (nextFinding.isValid()) {
+            validationResultsTree_->setCurrentIndex(nextFinding);
+            handleValidationSelectionChanged(nextFinding, {});
         }
     }
     if (validationApplyAllFixesButton_ != nullptr) {

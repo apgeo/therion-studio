@@ -148,6 +148,7 @@ public:
     InteractiveDrawMode interactiveDrawMode() const;
     bool canCompleteDraftAction() const;
     TherionSourceValidationResult validateDocument() const;
+    void setProjectValidationDiagnostics(const QVector<TherionSourceDiagnostic> &diagnostics);
     bool applyValidationFixes(const QVector<TherionSourceDiagnosticFix> &fixes);
     void triggerUndo();
     void triggerRedo();

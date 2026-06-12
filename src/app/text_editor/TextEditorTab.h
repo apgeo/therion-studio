@@ -153,6 +153,7 @@ public:
     const TextEditorCommandMetadata &commandMetadata() const { return commandMetadata_; }
     void triggerConvertToUtf8();
     TherionSourceValidationResult validateDocument() const;
+    void setProjectValidationDiagnostics(const QVector<TherionSourceDiagnostic> &diagnostics);
     bool applyValidationFixes(const QVector<TherionSourceDiagnosticFix> &fixes);
     bool canUndo() const;
     bool canRedo() const;
@@ -411,6 +412,7 @@ private:
     int currentColumnNumber_ = 1;
     int highlightedLineNumber_ = 0;
     TextEditorCommandMetadata commandMetadata_;
+    QVector<TherionSourceDiagnostic> projectValidationDiagnostics_;
     QCompleter *completionCompleter_ = nullptr;
     QStringListModel *completionModel_ = nullptr;
     QString lastValidationTooltipKey_;

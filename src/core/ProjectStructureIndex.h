@@ -51,6 +51,8 @@ struct ProjectIndexDiagnostic
     QString sourceObjectId;
     QString sourceFile;
     int lineNumber = 0;
+    int columnNumber = 1;
+    int columnLength = 0;
     QString referencedName;
     int candidateCount = 0;
 };

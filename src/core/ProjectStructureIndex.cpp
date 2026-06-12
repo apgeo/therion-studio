@@ -318,6 +318,8 @@ void appendMapReferenceDiagnostic(QVector<ProjectIndexDiagnostic> *diagnostics,
                                   const ProjectStructureEntry &mapEntry,
                                   const QString &sourceFile,
                                   int lineNumber,
+                                  int columnNumber,
+                                  int columnLength,
                                   const QString &referencedName,
                                   int candidateCount = 0)
 {
@@ -330,9 +332,25 @@ void appendMapReferenceDiagnostic(QVector<ProjectIndexDiagnostic> *diagnostics,
     diagnostic.sourceObjectId = mapEntry.objectId;
     diagnostic.sourceFile = sourceFile;
     diagnostic.lineNumber = lineNumber;
+    diagnostic.columnNumber = qMax(1, columnNumber);
+    diagnostic.columnLength = qMax(0, columnLength);
     diagnostic.referencedName = referencedName;
     diagnostic.candidateCount = candidateCount;
     diagnostics->append(diagnostic);
+}
+
+TherionSourcePhysicalRange parsedLineTokenPhysicalRange(const TherionParsedLine &parsedLine, int tokenIndex)
+{
+    TherionSourcePhysicalRange range;
+    range.lineNumber = parsedLine.lineNumber;
+    range.columnNumber = 1;
+    range.columnLength = parsedLine.rawText.size();
+    if (tokenIndex >= 0 && tokenIndex < parsedLine.tokenSpans.size()) {
+        const TherionParsedToken &token = parsedLine.tokenSpans.at(tokenIndex);
+        range.columnNumber = token.start + 1;
+        range.columnLength = token.length;
+    }
+    return range;
 }
 
 QString escapedIdentityToken(QString value)
@@ -898,11 +916,15 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
                     (contentKind == MapCompositionContentKind::Map && sawScrapContent)
                     || (contentKind == MapCompositionContentKind::Scrap && sawMapContent);
                 if (mixedWithPreviousContent && !mixedContentDiagnosticAdded) {
+                    const TherionSourcePhysicalRange referenceRange =
+                        parsedLineTokenPhysicalRange(sourceLine, 0);
                     appendMapReferenceDiagnostic(&result.diagnostics,
                                                  ProjectIndexDiagnosticKind::MixedMapAndScrapReferences,
                                                  mapEntry,
                                                  fileIt.key(),
                                                  sourceLine.lineNumber,
+                                                 referenceRange.columnNumber,
+                                                 referenceRange.columnLength,
                                                  referenceName);
                     mixedContentDiagnosticAdded = true;
                 }
@@ -953,6 +975,7 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
                 if (candidate.isEmpty()) {
                     continue;
                 }
+                const TherionSourcePhysicalRange candidateRange = parsedLineTokenPhysicalRange(parsedLine, 0);
 
                 const ReferenceResolution childMapResolution = resolveReferenceKey(mapKeysByName, candidate, mapEntry.namespacePath);
                 if (childMapResolution.state == ReferenceResolutionState::Unique) {
@@ -970,6 +993,8 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
                                                  mapEntry,
                                                  fileIt.key(),
                                                  parsedLine.lineNumber,
+                                                 candidateRange.columnNumber,
+                                                 candidateRange.columnLength,
                                                  candidate,
                                                  childMapResolution.candidateCount);
                     continue;
@@ -988,6 +1013,8 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
                                                  mapEntry,
                                                  fileIt.key(),
                                                  parsedLine.lineNumber,
+                                                 candidateRange.columnNumber,
+                                                 candidateRange.columnLength,
                                                  candidate,
                                                  scrapResolution.candidateCount);
                     continue;
@@ -1006,6 +1033,8 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
                                              mapEntry,
                                              fileIt.key(),
                                              parsedLine.lineNumber,
+                                             candidateRange.columnNumber,
+                                             candidateRange.columnLength,
                                              candidate);
             }
 

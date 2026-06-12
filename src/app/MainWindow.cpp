@@ -1556,6 +1556,7 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath,
     if (recordRecentFile) {
         recordRecentFilePath(tab->filePath());
     }
+    updateOpenEditorProjectValidationDiagnostics();
     return tab;
 }
 
@@ -1779,6 +1780,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
     if (recordRecentFile) {
         recordRecentFilePath(tab->filePath());
     }
+    updateOpenEditorProjectValidationDiagnostics();
     return tab;
 }
 

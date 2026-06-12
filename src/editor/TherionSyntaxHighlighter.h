@@ -22,6 +22,7 @@ public:
     explicit TherionSyntaxHighlighter(CommandCatalogStore catalogStore, QTextDocument *parent = nullptr);
     void reloadPaletteForApplicationAppearance();
     void setSourceDocumentType(TherionSourceDocumentType sourceType);
+    void setExternalDiagnostics(const QVector<TherionSourceDiagnostic> &diagnostics);
 
 protected:
     void highlightBlock(const QString &text) override;
@@ -53,6 +54,7 @@ private:
     QSet<QString> closingDirectiveIdTokens_;
     TherionSourceValidationCatalog validationCatalog_;
     TherionSourceValidationResult cachedValidationResult_;
+    QVector<TherionSourceDiagnostic> externalDiagnostics_;
     int cachedValidationRevision_ = -1;
     TherionSourceDocumentType sourceDocumentType_ = TherionSourceDocumentType::Unknown;
     CommandCatalogStore catalogStore_;

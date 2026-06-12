@@ -715,6 +715,35 @@ int main(int argc, char *argv[])
     }
 
     {
+        editor->setPlainText(QStringLiteral("input missing/path.th222\n"));
+        TherionSourceDiagnostic diagnostic;
+        diagnostic.severity = TherionSourceDiagnosticSeverity::Error;
+        diagnostic.code = QStringLiteral("missing-source-reference");
+        diagnostic.title = QStringLiteral("Missing referenced source file");
+        diagnostic.message = QStringLiteral("Command `input` references `missing/path.th222`, but no matching project file was found.");
+        diagnostic.lineNumber = 1;
+        diagnostic.columnNumber = 7;
+        diagnostic.columnLength = QStringLiteral("missing/path.th222").size();
+        diagnostic.currentText = QStringLiteral("input missing/path.th222");
+        tab.setProjectValidationDiagnostics({diagnostic});
+        pumpEvents();
+
+        const QTextBlock firstLine = editor->document()->findBlockByLineNumber(0);
+        QTextCursor cursor(firstLine);
+        cursor.setPosition(firstLine.position() + diagnostic.columnNumber);
+        editor->setTextCursor(cursor);
+        pumpEvents();
+
+        const QString tooltipText = QToolTip::text();
+        if (!expect(tooltipText.contains(QStringLiteral("Missing referenced source file"), Qt::CaseInsensitive),
+                    "Project validation diagnostics should surface in the inline tooltip.")) {
+            return 1;
+        }
+
+        tab.setProjectValidationDiagnostics({});
+    }
+
+    {
         editor->setPlainText(QStringLiteral("export map -o map.pdf -layout moj\n"));
         pumpEvents();
 

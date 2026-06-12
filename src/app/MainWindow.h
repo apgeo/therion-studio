@@ -166,6 +166,7 @@ private:
                                         const QString &projectRootPath);
     void handleProjectValidationFinished(TherionStudio::ProjectValidationController::Trigger trigger,
                                          const TherionStudio::ProjectValidationScanner::Result &result);
+    void updateOpenEditorProjectValidationDiagnostics();
     void openProjectSearchResult(const QModelIndex &index);
     void handleValidationSelectionChanged(const QModelIndex &current, const QModelIndex &previous);
     void openValidationResult(const QModelIndex &index);
@@ -453,6 +454,7 @@ private:
     TherionStudio::TherionSourceDiagnosticSeverity validationHighestSeverity_ =
         TherionStudio::TherionSourceDiagnosticSeverity::Warning;
     QString projectRootPath_;
+    QHash<QString, QString> projectFileWatcherSignatures_;
     QString projectStructureSummary_;
     QString lastAppliedStructureSidebarSignature_;
     QString structureExpansionProjectRootPath_;

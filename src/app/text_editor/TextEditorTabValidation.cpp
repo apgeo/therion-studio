@@ -1,7 +1,9 @@
 #include "TextEditorTab.h"
 
+#include "TextEditorContextHelpController.h"
 #include "TextEditorSourceRewriteController.h"
 #include "TextEditorValidationCatalog.h"
+#include "../../editor/TherionSyntaxHighlighter.h"
 #include "../../core/TherionDocumentEditor.h"
 #include "../../core/TherionFileTypes.h"
 #include "../../core/TherionSourceValidator.h"
@@ -39,6 +41,17 @@ TherionSourceValidationResult TextEditorTab::validateDocument() const
     }
     result.diagnostics = filteredDiagnostics;
     return result;
+}
+
+void TextEditorTab::setProjectValidationDiagnostics(const QVector<TherionSourceDiagnostic> &diagnostics)
+{
+    projectValidationDiagnostics_ = diagnostics;
+    if (highlighter_ != nullptr) {
+        highlighter_->setExternalDiagnostics(projectValidationDiagnostics_);
+    }
+    if (contextHelpController_ != nullptr) {
+        contextHelpController_->invalidateValidationCache();
+    }
 }
 
 bool TextEditorTab::applyValidationFixes(const QVector<TherionSourceDiagnosticFix> &fixes)

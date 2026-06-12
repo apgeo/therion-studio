@@ -50,7 +50,9 @@ void TextEditorTab::buildContextHelpController()
         populateBlockToolboxScopeCombo();
     };
     contextHelpContext.validateDocument = [this]() {
-        return validateDocument();
+        TherionSourceValidationResult validation = validateDocument();
+        validation.diagnostics += projectValidationDiagnostics_;
+        return validation;
     };
     contextHelpContext.createInspectorPanel = [](QWidget *parent) {
         return new DocumentInspectorPanel(parent);

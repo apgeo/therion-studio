@@ -91,8 +91,10 @@ TherionSourceDiagnostic diagnosticForProjectIndexDiagnostic(const ProjectIndexDi
     TherionSourceDiagnostic diagnostic;
     diagnostic.severity = TherionSourceDiagnosticSeverity::Error;
     diagnostic.lineNumber = indexDiagnostic.lineNumber;
-    diagnostic.columnNumber = 1;
-    diagnostic.columnLength = indexDiagnostic.referencedName.size();
+    diagnostic.columnNumber = qMax(1, indexDiagnostic.columnNumber);
+    diagnostic.columnLength = indexDiagnostic.columnLength > 0
+        ? indexDiagnostic.columnLength
+        : indexDiagnostic.referencedName.size();
     diagnostic.currentText = indexDiagnostic.referencedName;
 
     switch (indexDiagnostic.kind) {
@@ -339,7 +341,9 @@ void ProjectValidationScanner::requestScan(const QString &projectRootPath,
     pendingRequest_.validationCatalog = validationCatalog;
     pendingRequest_.inMemoryProjectContentsByPath = inMemoryProjectContentsByPath;
     hasPendingRequest_ = true;
-    debounceTimer_->start();
+    if (!debounceTimer_->isActive()) {
+        debounceTimer_->start();
+    }
 }
 
 void ProjectValidationScanner::setDebounceIntervalMs(int intervalMs)
@@ -376,12 +380,11 @@ void ProjectValidationScanner::handleScanFinished()
 {
     const Result result = scanWatcher_->result();
     const bool hasSupersedingRequest = queuedScan_ || hasPendingRequest_;
-    if (!hasSupersedingRequest) {
-        emit validationFinished(result);
-    }
+    emit validationFinished(result);
 
-    if (queuedScan_) {
+    if (hasSupersedingRequest) {
         queuedScan_ = false;
+        debounceTimer_->stop();
         startScan();
     }
 }

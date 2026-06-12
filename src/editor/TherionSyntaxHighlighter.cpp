@@ -572,15 +572,29 @@ void TherionSyntaxHighlighter::applyValidatorInvalidTokenFormats(const QString &
     }
 
     const int lineNumber = block.blockNumber() + 1;
-    const TherionSourceValidationResult &validation = cachedValidationResult();
-    for (const TherionSourceDiagnostic &diagnostic : validation.diagnostics) {
+    auto applyDiagnostic = [this, &text, lineNumber](const TherionSourceDiagnostic &diagnostic) {
         if (diagnostic.lineNumber != lineNumber) {
-            continue;
+            return;
         }
         if (diagnostic.columnLength <= 0) {
-            continue;
+            return;
         }
 
+        const int start = qMax(0, diagnostic.columnNumber - 1);
+        if (start >= text.size()) {
+            return;
+        }
+
+        const int length = qMin(diagnostic.columnLength, text.size() - start);
+        if (length <= 0) {
+            return;
+        }
+
+        setFormat(start, length, validationFormatForSeverity(diagnostic.severity));
+    };
+
+    const TherionSourceValidationResult &validation = cachedValidationResult();
+    for (const TherionSourceDiagnostic &diagnostic : validation.diagnostics) {
         const QString code = diagnostic.code;
         if (code != QStringLiteral("malformed-option-token")
             && code != QStringLiteral("unknown-option")
@@ -593,18 +607,18 @@ void TherionSyntaxHighlighter::applyValidatorInvalidTokenFormats(const QString &
             continue;
         }
 
-        const int start = qMax(0, diagnostic.columnNumber - 1);
-        if (start >= text.size()) {
-            continue;
-        }
-
-        const int length = qMin(diagnostic.columnLength, text.size() - start);
-        if (length <= 0) {
-            continue;
-        }
-
-        setFormat(start, length, validationFormatForSeverity(diagnostic.severity));
+        applyDiagnostic(diagnostic);
     }
+
+    for (const TherionSourceDiagnostic &diagnostic : externalDiagnostics_) {
+        applyDiagnostic(diagnostic);
+    }
+}
+
+void TherionSyntaxHighlighter::setExternalDiagnostics(const QVector<TherionSourceDiagnostic> &diagnostics)
+{
+    externalDiagnostics_ = diagnostics;
+    rehighlight();
 }
 
 const QTextCharFormat &TherionSyntaxHighlighter::validationFormatForSeverity(

@@ -17,6 +17,7 @@ public:
     {
         ManualRefresh,
         ProjectOpened,
+        DocumentSaved,
         DocumentChanged,
         ProjectFilesChanged,
         FixApplied

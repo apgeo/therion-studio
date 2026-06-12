@@ -49,6 +49,17 @@ QString saveFilterForDocumentName(const QString &displayName)
     return QObject::tr("Therion Source (*.th);;All Files (*)");
 }
 
+bool isPathInsideProject(const QString &projectRootPath, const QString &filePath)
+{
+    if (projectRootPath.trimmed().isEmpty() || filePath.trimmed().isEmpty()) {
+        return false;
+    }
+
+    const QString relativePath = QDir(projectRootPath).relativeFilePath(filePath);
+    return !relativePath.startsWith(QStringLiteral(".."))
+        && !QDir::isAbsolutePath(relativePath);
+}
+
 void removeWelcomeTabIfPresent(QTabWidget *tabs)
 {
     const int welcomeTabIndex = findWelcomeTabIndex(tabs);
@@ -270,6 +281,10 @@ bool MainWindow::saveDocumentWidget(QWidget *documentWidget, QString *errorMessa
     if (!savedPath.isEmpty()) {
         registerDocumentFileWatcher(savedPath);
         recordRecentFilePath(savedPath);
+        if (isPathInsideProject(projectRootPath_, savedPath)) {
+            requestProjectValidation(TherionStudio::ProjectValidationController::Trigger::DocumentSaved,
+                                     false);
+        }
         if (previousPath.isEmpty() || previousPath != savedPath) {
             persistOpenDocuments();
             if (!projectRootPath_.isEmpty()) {

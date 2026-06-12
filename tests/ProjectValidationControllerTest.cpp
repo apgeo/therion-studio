@@ -89,6 +89,7 @@ int runControllerForwardsTriggerAndSnapshotTest()
 
     bool started = false;
     ProjectValidationController::Trigger startedTrigger = ProjectValidationController::Trigger::ManualRefresh;
+    ProjectValidationController::Trigger finishedTrigger = ProjectValidationController::Trigger::ManualRefresh;
     ProjectValidationScanner::Result finishedResult;
     bool finished = false;
     QEventLoop loop;
@@ -106,7 +107,8 @@ int runControllerForwardsTriggerAndSnapshotTest()
     QObject::connect(&controller,
                      &ProjectValidationController::validationFinished,
                      &loop,
-                     [&](const ProjectValidationScanner::Result &result) {
+                     [&](ProjectValidationController::Trigger trigger, const ProjectValidationScanner::Result &result) {
+                         finishedTrigger = trigger;
                          finished = true;
                          finishedResult = result;
                          loop.quit();
@@ -138,6 +140,10 @@ int runControllerForwardsTriggerAndSnapshotTest()
         return 1;
     }
     if (!expect(finished, "ProjectValidationController should emit validationFinished.")) {
+        return 1;
+    }
+    if (!expect(finishedTrigger == ProjectValidationController::Trigger::DocumentChanged,
+                "ProjectValidationController should preserve the trigger for validationFinished.")) {
         return 1;
     }
     if (!expect(finishedResult.errorMessage.isEmpty(), "Project validation controller should not report an error.")) {

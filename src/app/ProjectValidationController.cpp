@@ -37,7 +37,7 @@ void ProjectValidationController::handleScannerStarted(quint64 generation, const
 
 void ProjectValidationController::handleScannerFinished(const ProjectValidationScanner::Result &result)
 {
-    triggersByGeneration_.remove(result.generation);
-    emit validationFinished(result);
+    const Trigger trigger = triggersByGeneration_.take(result.generation);
+    emit validationFinished(trigger, result);
 }
 }

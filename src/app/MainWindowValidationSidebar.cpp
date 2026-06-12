@@ -126,7 +126,9 @@ void MainWindow::buildValidationSidebar()
     validationLayout->addWidget(validationStatusLabel_);
 
     validationScanProjectButton_ = new QPushButton(tr("Validate Project"), validationPage);
-    connect(validationScanProjectButton_, &QPushButton::clicked, this, &MainWindow::requestProjectValidation);
+    connect(validationScanProjectButton_, &QPushButton::clicked, this, [this]() {
+        requestProjectValidation();
+    });
     validationLayout->addWidget(validationScanProjectButton_);
 
     validationResultsModel_->clear();
@@ -282,15 +284,24 @@ void MainWindow::triggerValidateDocumentForActiveDocument()
 
 void MainWindow::requestProjectValidation()
 {
+    requestProjectValidation(TherionStudio::ProjectValidationController::Trigger::ManualRefresh,
+                             true);
+}
+
+void MainWindow::requestProjectValidation(TherionStudio::ProjectValidationController::Trigger trigger,
+                                          bool revealPanel)
+{
     if (projectValidationController_ == nullptr) {
         return;
     }
 
     if (projectRootPath_.isEmpty() || !QDir(projectRootPath_).exists()) {
-        if (validationStatusLabel_ != nullptr) {
+        if (revealPanel && validationStatusLabel_ != nullptr) {
             validationStatusLabel_->setText(tr("Open a project before validating."));
         }
-        showSidebarPane(SidebarPane::Validation);
+        if (revealPanel) {
+            showSidebarPane(SidebarPane::Validation);
+        }
         return;
     }
 
@@ -328,6 +339,27 @@ void MainWindow::requestProjectValidation()
         captureInMemorySource(detachedTab);
     }
 
+    TherionStudio::ProjectValidationController::Request request;
+    request.trigger = trigger;
+    request.projectRootPath = projectRootPath_;
+    request.validationCatalog = TherionStudio::validationCatalogFromCommandCatalog(commandCatalogStore_.catalogObject());
+    request.inMemoryProjectContentsByPath = inMemoryProjectContentsByPath;
+    pendingProjectValidationRevealPanel_ = revealPanel;
+    projectValidationController_->requestValidation(request);
+}
+
+void MainWindow::handleProjectValidationStarted(TherionStudio::ProjectValidationController::Trigger trigger,
+                                                quint64 generation,
+                                                const QString &projectRootPath)
+{
+    Q_UNUSED(trigger)
+
+    if (projectRootPath != projectRootPath_) {
+        return;
+    }
+
+    const bool revealPanel = pendingProjectValidationRevealPanel_;
+    validationRevealByGeneration_.insert(generation, revealPanel);
     validationDiagnostics_.clear();
     validationDiagnosticFilePaths_.clear();
     validationDocumentPath_.clear();
@@ -346,18 +378,17 @@ void MainWindow::requestProjectValidation()
     if (validationApplyAllFixesButton_ != nullptr) {
         validationApplyAllFixesButton_->setEnabled(false);
     }
-    showSidebarPane(SidebarPane::Validation);
-
-    TherionStudio::ProjectValidationController::Request request;
-    request.trigger = TherionStudio::ProjectValidationController::Trigger::ManualRefresh;
-    request.projectRootPath = projectRootPath_;
-    request.validationCatalog = TherionStudio::validationCatalogFromCommandCatalog(commandCatalogStore_.catalogObject());
-    request.inMemoryProjectContentsByPath = inMemoryProjectContentsByPath;
-    projectValidationController_->requestValidation(request);
+    if (revealPanel) {
+        showSidebarPane(SidebarPane::Validation);
+    }
 }
 
-void MainWindow::handleProjectValidationFinished(const TherionStudio::ProjectValidationScanner::Result &result)
+void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidationController::Trigger trigger,
+                                                 const TherionStudio::ProjectValidationScanner::Result &result)
 {
+    Q_UNUSED(trigger)
+
+    const bool revealPanel = validationRevealByGeneration_.take(result.generation);
     if (validationScanProjectButton_ != nullptr) {
         validationScanProjectButton_->setEnabled(true);
     }
@@ -452,7 +483,9 @@ void MainWindow::handleProjectValidationFinished(const TherionStudio::ProjectVal
     if (validationApplyAllFixesButton_ != nullptr) {
         validationApplyAllFixesButton_->setEnabled(hasAnySafeFix);
     }
-    showSidebarPane(SidebarPane::Validation);
+    if (revealPanel) {
+        showSidebarPane(SidebarPane::Validation);
+    }
 }
 
 void MainWindow::handleValidationSelectionChanged(const QModelIndex &current, const QModelIndex &previous)

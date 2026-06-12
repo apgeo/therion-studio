@@ -157,7 +157,12 @@ private:
     void requestProjectSearch();
     void handleProjectSearchFinished(const TherionStudio::ProjectSearchScanner::Result &result);
     void requestProjectValidation();
-    void handleProjectValidationFinished(const TherionStudio::ProjectValidationScanner::Result &result);
+    void requestProjectValidation(TherionStudio::ProjectValidationController::Trigger trigger, bool revealPanel);
+    void handleProjectValidationStarted(TherionStudio::ProjectValidationController::Trigger trigger,
+                                        quint64 generation,
+                                        const QString &projectRootPath);
+    void handleProjectValidationFinished(TherionStudio::ProjectValidationController::Trigger trigger,
+                                         const TherionStudio::ProjectValidationScanner::Result &result);
     void openProjectSearchResult(const QModelIndex &index);
     void handleValidationSelectionChanged(const QModelIndex &current, const QModelIndex &previous);
     void openValidationResult(const QModelIndex &index);
@@ -430,6 +435,8 @@ private:
     QVector<TherionStudio::TherionSourceDiagnostic> validationDiagnostics_;
     QVector<QString> validationDiagnosticFilePaths_;
     QString validationDocumentPath_;
+    QHash<quint64, bool> validationRevealByGeneration_;
+    bool pendingProjectValidationRevealPanel_ = false;
     bool validationProjectMode_ = false;
     QString projectRootPath_;
     QString projectStructureSummary_;

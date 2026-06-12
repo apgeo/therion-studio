@@ -394,6 +394,8 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
 
     connect(projectSearchScanner_, &TherionStudio::ProjectSearchScanner::searchFinished,
             this, &MainWindow::handleProjectSearchFinished);
+    connect(projectValidationController_, &TherionStudio::ProjectValidationController::validationStarted,
+            this, &MainWindow::handleProjectValidationStarted);
     connect(projectValidationController_, &TherionStudio::ProjectValidationController::validationFinished,
             this, &MainWindow::handleProjectValidationFinished);
     connect(structureSidebarScanner_, &TherionStudio::ProjectStructureScanner::scanFinished,
@@ -922,6 +924,8 @@ void MainWindow::openProject()
 
 void MainWindow::openProjectPath(const QString &selectedProjectPath)
 {
+    const QString previousProjectRootPath = projectRootPath_;
+
     TherionStudio::MainWindowProjectController::Actions actions;
     actions.showWarningDialog = [this](const QString &title, const QString &message) {
         QMessageBox::warning(this, title, message);
@@ -950,6 +954,12 @@ void MainWindow::openProjectPath(const QString &selectedProjectPath)
                                                             findWelcomeTabIndex(editorTabs_) >= 0,
                                                             *sessionStore_,
                                                             actions);
+    if (projectRootPath_ != previousProjectRootPath
+        && !projectRootPath_.trimmed().isEmpty()
+        && QDir(projectRootPath_).exists()) {
+        requestProjectValidation(TherionStudio::ProjectValidationController::Trigger::ProjectOpened,
+                                 false);
+    }
 }
 
 void MainWindow::closeProject()

@@ -39,7 +39,8 @@ signals:
     void validationStarted(TherionStudio::ProjectValidationController::Trigger trigger,
                            quint64 generation,
                            const QString &projectRootPath);
-    void validationFinished(const TherionStudio::ProjectValidationScanner::Result &result);
+    void validationFinished(TherionStudio::ProjectValidationController::Trigger trigger,
+                            const TherionStudio::ProjectValidationScanner::Result &result);
 
 private:
     void handleScannerStarted(quint64 generation, const QString &projectRootPath);

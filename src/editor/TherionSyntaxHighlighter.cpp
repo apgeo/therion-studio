@@ -81,6 +81,43 @@ QSet<QString> lowerSetFromArray(const QJsonArray &values)
     return lowered;
 }
 
+QSet<QString> catalogTokenSetFromCommandObject(const QJsonObject &commandObject, const QString &fieldName)
+{
+    QSet<QString> tokens = lowerSetFromArray(commandObject.value(fieldName).toArray());
+    if (tokens.contains(QStringLiteral("source"))) {
+        tokens.remove(QStringLiteral("source"));
+        tokens.insert(QStringLiteral("th"));
+    }
+    if (tokens.contains(QStringLiteral("map"))) {
+        tokens.remove(QStringLiteral("map"));
+        tokens.insert(QStringLiteral("th2"));
+    }
+    if (tokens.contains(QStringLiteral("config"))) {
+        tokens.remove(QStringLiteral("config"));
+        tokens.insert(QStringLiteral("thconfig"));
+    }
+    return tokens;
+}
+
+QSet<QString> documentTypesFromCommandObject(const QJsonObject &commandObject)
+{
+    QSet<QString> documentTypes = catalogTokenSetFromCommandObject(commandObject, QStringLiteral("document_types"));
+    documentTypes.unite(catalogTokenSetFromCommandObject(commandObject, QStringLiteral("source_types")));
+    return documentTypes;
+}
+
+QStringList contextsFromCommandObject(const QJsonObject &commandObject)
+{
+    QStringList contexts;
+    const QSet<QString> values = lowerSetFromArray(commandObject.value(QStringLiteral("contexts")).toArray());
+    contexts.reserve(values.size());
+    for (const QString &value : values) {
+        contexts.append(value);
+    }
+    contexts.sort(Qt::CaseInsensitive);
+    return contexts;
+}
+
 QStringList sortedStringListFromSet(const QSet<QString> &values)
 {
     QStringList sorted;
@@ -150,6 +187,18 @@ TherionSyntaxHighlighter::TherionSyntaxHighlighter(CommandCatalogStore catalogSt
 void TherionSyntaxHighlighter::reloadPaletteForApplicationAppearance()
 {
     loadPalette();
+    rehighlight();
+}
+
+void TherionSyntaxHighlighter::setSourceDocumentType(TherionSourceDocumentType sourceType)
+{
+    if (sourceDocumentType_ == sourceType) {
+        return;
+    }
+
+    sourceDocumentType_ = sourceType;
+    cachedValidationResult_ = {};
+    cachedValidationRevision_ = -1;
     rehighlight();
 }
 
@@ -351,10 +400,18 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
         const QJsonObject commandObject = commandValue.toObject();
         const QString commandName = commandObject.value(QStringLiteral("name")).toString().trimmed().toLower();
         const QSet<QString> commandAllowedValues = lowerSetFromArray(commandObject.value(QStringLiteral("allowed_values")).toArray());
+        const QSet<QString> commandDocumentTypes = documentTypesFromCommandObject(commandObject);
+        const QStringList commandContexts = contextsFromCommandObject(commandObject);
         if (!commandName.isEmpty()) {
             commandTokens_.insert(commandName);
             keywordTokens_.insert(commandName);
             validationCatalog_.commandNames.insert(commandName);
+            if (!commandDocumentTypes.isEmpty()) {
+                validationCatalog_.commandDocumentTypes.insert(commandName, commandDocumentTypes);
+            }
+            if (!commandContexts.isEmpty()) {
+                validationCatalog_.commandContexts.insert(commandName, commandContexts);
+            }
             if (!commandAllowedValues.isEmpty()) {
                 commandAllowedValues_.insert(commandName, commandAllowedValues);
                 validationCatalog_.commandArgumentAllowedValuesByKey.insert(commandArgumentValueKey(commandName, 0),
@@ -447,6 +504,12 @@ void TherionSyntaxHighlighter::loadCommandCatalogKeywords()
                 commandTokens_.insert(alias);
                 keywordTokens_.insert(alias);
                 validationCatalog_.commandNames.insert(alias);
+                if (!commandDocumentTypes.isEmpty()) {
+                    validationCatalog_.commandDocumentTypes.insert(alias, commandDocumentTypes);
+                }
+                if (!commandContexts.isEmpty()) {
+                    validationCatalog_.commandContexts.insert(alias, commandContexts);
+                }
                 for (const QString &closingToken : closingDirectiveTokens) {
                     keywordTokens_.insert(closingToken);
                     if (!commandName.isEmpty()) {
@@ -518,7 +581,9 @@ void TherionSyntaxHighlighter::applyValidatorInvalidTokenFormats(const QString &
             && code != QStringLiteral("missing-option-value")
             && code != QStringLiteral("wrong-option-value-count")
             && code != QStringLiteral("unknown-option-value")
-            && code != QStringLiteral("unknown-argument-value")) {
+            && code != QStringLiteral("unknown-argument-value")
+            && code != QStringLiteral("invalid-command-context")
+            && code != QStringLiteral("invalid-document-type")) {
             continue;
         }
 
@@ -545,8 +610,11 @@ const TherionSourceValidationResult &TherionSyntaxHighlighter::cachedValidationR
 
     const int revision = document()->revision();
     if (revision != cachedValidationRevision_) {
+        TherionSourceDocumentMetadata metadata;
+        metadata.sourceType = sourceDocumentType_;
+        metadata.revisionId = revision;
         cachedValidationResult_ =
-            TherionSourceValidator::validate(document()->toPlainText(), validationCatalog_);
+            TherionSourceValidator::validate(document()->toPlainText(), validationCatalog_, metadata);
         cachedValidationRevision_ = revision;
     }
     return cachedValidationResult_;

@@ -218,6 +218,7 @@ private:
     void refreshCurrentLineHighlight();
     void refreshTitle();
     void refreshStatus();
+    void refreshHighlighterSourceDocumentType();
     bool isCurrentStateDirty() const;
     void applyDirtyStateFromCurrentState();
     bool replaceTextForSystemNormalization(const QString &contents);

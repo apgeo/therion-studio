@@ -31,6 +31,20 @@ TherionSourceValidationCatalog validationCatalogFromCommandMetadata(const TextEd
     }
 
     catalog.commandContexts = metadata.blockCommandContextsByKind;
+    for (auto iterator = metadata.commandDocumentTypeTokens.cbegin();
+         iterator != metadata.commandDocumentTypeTokens.cend();
+         ++iterator) {
+        QSet<QString> documentTypes;
+        for (const QString &documentType : iterator.value()) {
+            const QString normalizedDocumentType = documentType.trimmed().toLower();
+            if (!normalizedDocumentType.isEmpty()) {
+                documentTypes.insert(normalizedDocumentType);
+            }
+        }
+        if (!documentTypes.isEmpty()) {
+            catalog.commandDocumentTypes.insert(iterator.key().trimmed().toLower(), documentTypes);
+        }
+    }
     catalog.commandRequiredPositionalCount = metadata.commandRequiredPositionalCount;
     catalog.commandArgumentAllowedValuesByKey = metadata.commandArgumentValueTokens;
     catalog.commandTypeValues = metadata.commandTypeValueTokens;

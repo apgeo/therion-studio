@@ -473,6 +473,32 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
         return;
     }
 
+    if (!command.metadata.catalogContexts.isEmpty()
+        && !command.metadata.catalogContextAllowed) {
+        result->diagnostics.append(diagnosticForToken(command,
+                                                      0,
+                                                      QStringLiteral("invalid-command-context"),
+                                                      QStringLiteral("Unexpected command context"),
+                                                      QStringLiteral("Command `%1` is not listed for context `%2`. Expected context: %3.")
+                                                          .arg(commandName,
+                                                               command.metadata.catalogCurrentContext,
+                                                               command.metadata.catalogContexts.join(QStringLiteral(", ")))));
+    }
+
+    if (!command.metadata.catalogDocumentTypes.isEmpty()
+        && !command.metadata.catalogDocumentTypeAllowed) {
+        QStringList expectedDocumentTypes = command.metadata.catalogDocumentTypes.values();
+        std::sort(expectedDocumentTypes.begin(), expectedDocumentTypes.end());
+        result->diagnostics.append(diagnosticForToken(command,
+                                                      0,
+                                                      QStringLiteral("invalid-document-type"),
+                                                      QStringLiteral("Unexpected document type"),
+                                                      QStringLiteral("Command `%1` is not listed for document type `%2`. Expected document type: %3.")
+                                                          .arg(commandName,
+                                                               command.metadata.catalogCurrentDocumentType,
+                                                               expectedDocumentTypes.join(QStringLiteral(", ")))));
+    }
+
     const int requiredPositionalCount = command.metadata.catalogRequiredPositionalCount;
     const int providedPositionalCount = command.metadata.positionalArgumentCount;
     if (requiredPositionalCount > 0 && providedPositionalCount < requiredPositionalCount) {
@@ -601,8 +627,15 @@ TherionSourceValidationResult TherionSourceValidator::validate(const QString &co
 TherionSourceValidationResult TherionSourceValidator::validate(const QString &contents,
                                                                const TherionSourceValidationCatalog &catalog)
 {
+    return validate(contents, catalog, {});
+}
+
+TherionSourceValidationResult TherionSourceValidator::validate(const QString &contents,
+                                                               const TherionSourceValidationCatalog &catalog,
+                                                               const TherionSourceDocumentMetadata &metadata)
+{
     TherionSourceValidationResult result;
-    const TherionSourceDocument sourceDocument = TherionSourceDocument::fromText(contents);
+    const TherionSourceDocument sourceDocument = TherionSourceDocument::fromText(contents, metadata);
     const TherionSourceLogicalDocument logicalDocument =
         catalog.commandNames.isEmpty()
             ? TherionSourceLogicalDocument::fromSourceDocument(sourceDocument)

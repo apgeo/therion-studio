@@ -2,6 +2,7 @@
 
 #include "TherionCommandLineModel.h"
 #include "TherionCommandSyntax.h"
+#include "TherionFileTypes.h"
 
 #include <utility>
 
@@ -172,6 +173,7 @@ void populateArgumentAndOptionRanges(TherionSourceLogicalCommand *command)
 }
 
 void populateCommandMetadata(TherionSourceLogicalCommand *command,
+                             TherionSourceDocumentType sourceType,
                              const TherionSourceValidationCatalog *catalog)
 {
     if (command == nullptr) {
@@ -183,6 +185,7 @@ void populateCommandMetadata(TherionSourceLogicalCommand *command,
     command->metadata.catalogCurrentContext = command->blockStackBefore.isEmpty()
         ? QStringLiteral("none")
         : command->blockStackBefore.constLast().directive;
+    command->metadata.catalogCurrentDocumentType = therionSourceDocumentTypeCatalogToken(sourceType);
     command->metadata.normalizedOptionNames.clear();
     command->metadata.optionEntryIndexesByNormalizedName.clear();
 
@@ -209,6 +212,13 @@ void populateCommandMetadata(TherionSourceLogicalCommand *command,
         command->metadata.catalogContexts.contains(QStringLiteral("all"), Qt::CaseInsensitive)
         || command->metadata.catalogContexts.contains(command->metadata.catalogCurrentContext,
                                                       Qt::CaseInsensitive);
+    command->metadata.catalogDocumentTypes =
+        catalog->commandDocumentTypes.value(command->metadata.commandName);
+    command->metadata.catalogDocumentTypeAllowed =
+        command->metadata.catalogDocumentTypes.isEmpty()
+        || command->metadata.catalogDocumentTypes.contains(QStringLiteral("all"))
+        || command->metadata.catalogCurrentDocumentType.isEmpty()
+        || command->metadata.catalogDocumentTypes.contains(command->metadata.catalogCurrentDocumentType);
     command->metadata.catalogRequiredPositionalCount =
         qMax(0, catalog->commandRequiredPositionalCount.value(command->metadata.commandName, 0));
     command->metadata.catalogArgumentAllowedValuesByIndex.clear();
@@ -437,7 +447,7 @@ TherionSourceLogicalDocument TherionSourceLogicalDocument::fromSourceDocument(
                 physicalRange});
         }
         populateArgumentAndOptionRanges(&command);
-        populateCommandMetadata(&command, catalog);
+        populateCommandMetadata(&command, sourceDocument.sourceType(), catalog);
         logicalDocument.commands_.append(command);
         lineIndex = currentIndex;
     }

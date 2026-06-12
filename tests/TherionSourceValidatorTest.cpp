@@ -12,6 +12,8 @@ using TherionStudio::TherionSourceValidationCatalog;
 using TherionStudio::TherionSourceValidator;
 using TherionStudio::TherionSourceDiagnosticSeverity;
 using TherionStudio::TherionSourceDiagnostic;
+using TherionStudio::TherionSourceDocumentMetadata;
+using TherionStudio::TherionSourceDocumentType;
 using TherionStudio::TherionSourceTextEdit;
 
 namespace
@@ -404,6 +406,92 @@ void reportsUnknownSubtypeValueForCurrentSymbolType()
             "Subtype compatibility diagnostics should point at the subtype value token.");
 }
 
+void reportsInvalidCommandContextWhenCatalogListsContexts()
+{
+    TherionSourceValidationCatalog catalog = basicCatalog();
+    catalog.commandContexts.insert(QStringLiteral("line"), {QStringLiteral("scrap")});
+
+    const QString contents = QStringLiteral("survey cave\n"
+                                            "line wall\n"
+                                            "endline\n"
+                                            "endsurvey\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents, catalog);
+
+    require(containsDiagnostic(result, QStringLiteral("invalid-command-context")),
+            "Known commands should produce a context diagnostic when the catalog excludes the current block.");
+    const TherionSourceDiagnostic *invalidContext =
+        diagnosticForCode(result, QStringLiteral("invalid-command-context"));
+    require(invalidContext != nullptr && diagnosticSourceRange(*invalidContext) == QStringLiteral("line"),
+            "Invalid context diagnostics should point at the command token.");
+    require(severityForDiagnostic(result, QStringLiteral("invalid-command-context")) == TherionSourceDiagnosticSeverity::Warning,
+            "Invalid context should remain a warning because catalog context metadata may be incomplete.");
+
+    const TherionSourceValidationResult validResult = TherionSourceValidator::validate(
+        QStringLiteral("scrap s1\n"
+                       "line wall\n"
+                       "endline\n"
+                       "endscrap\n"),
+        catalog);
+    require(!containsDiagnostic(validResult, QStringLiteral("invalid-command-context")),
+            "Commands in a catalog-listed context should not produce context diagnostics.");
+}
+
+void skipsContextValidationWhenCatalogOmitsContexts()
+{
+    const TherionSourceValidationResult result =
+        TherionSourceValidator::validate(QStringLiteral("line wall\n"
+                                                        "endline\n"),
+                                         basicCatalog());
+
+    require(!containsDiagnostic(result, QStringLiteral("invalid-command-context")),
+            "Catalogs without command context metadata should not produce context diagnostics.");
+}
+
+void reportsInvalidDocumentTypeWhenCatalogListsTypes()
+{
+    TherionSourceValidationCatalog catalog = basicCatalog();
+    catalog.commandDocumentTypes.insert(QStringLiteral("source"), {QStringLiteral("thconfig")});
+    catalog.commandNames.insert(QStringLiteral("source"));
+
+    TherionSourceDocumentMetadata mapMetadata;
+    mapMetadata.sourceType = TherionSourceDocumentType::TherionMap;
+    const TherionSourceValidationResult invalidResult =
+        TherionSourceValidator::validate(QStringLiteral("source index.th\n"),
+                                         catalog,
+                                         mapMetadata);
+
+    require(containsDiagnostic(invalidResult, QStringLiteral("invalid-document-type")),
+            "Known commands should produce a document-type diagnostic when the catalog excludes the current document type.");
+    const TherionSourceDiagnostic *invalidDocumentType =
+        diagnosticForCode(invalidResult, QStringLiteral("invalid-document-type"));
+    require(invalidDocumentType != nullptr && diagnosticSourceRange(*invalidDocumentType) == QStringLiteral("source"),
+            "Invalid document-type diagnostics should point at the command token.");
+    require(severityForDiagnostic(invalidResult, QStringLiteral("invalid-document-type")) == TherionSourceDiagnosticSeverity::Warning,
+            "Invalid document type should remain a warning because catalog document-type metadata may be incomplete.");
+
+    TherionSourceDocumentMetadata configMetadata;
+    configMetadata.sourceType = TherionSourceDocumentType::TherionConfig;
+    const TherionSourceValidationResult validResult =
+        TherionSourceValidator::validate(QStringLiteral("source index.th\n"),
+                                         catalog,
+                                         configMetadata);
+    require(!containsDiagnostic(validResult, QStringLiteral("invalid-document-type")),
+            "Commands in a catalog-listed document type should not produce document-type diagnostics.");
+}
+
+void skipsDocumentTypeValidationWithoutKnownSourceType()
+{
+    TherionSourceValidationCatalog catalog = basicCatalog();
+    catalog.commandDocumentTypes.insert(QStringLiteral("source"), {QStringLiteral("thconfig")});
+    catalog.commandNames.insert(QStringLiteral("source"));
+
+    const TherionSourceValidationResult result =
+        TherionSourceValidator::validate(QStringLiteral("source index.th\n"), catalog);
+
+    require(!containsDiagnostic(result, QStringLiteral("invalid-document-type")),
+            "Document-type diagnostics should not be reported when validation has no known source type.");
+}
+
 void reportsBlockPairProblems()
 {
     const TherionSourceValidationResult unclosed =
@@ -496,6 +584,10 @@ int main(int argc, char **argv)
     reportsUnknownArgumentValue();
     reportsUnknownOptionValue();
     reportsUnknownSubtypeValueForCurrentSymbolType();
+    reportsInvalidCommandContextWhenCatalogListsContexts();
+    skipsContextValidationWhenCatalogOmitsContexts();
+    reportsInvalidDocumentTypeWhenCatalogListsTypes();
+    skipsDocumentTypeValidationWithoutKnownSourceType();
     reportsBlockPairProblems();
     keepsInputAsStandaloneCommandAndMapReferencesAsMapContent();
     keepsCenterlineDataRowsOutOfCommandCatalogValidation();

@@ -78,6 +78,16 @@ bool modelContainsToken(QCompleter *completer, const QString &token)
     return false;
 }
 
+bool validationContainsDiagnosticCode(const TherionSourceValidationResult &result, const QString &code)
+{
+    for (const TherionSourceDiagnostic &diagnostic : result.diagnostics) {
+        if (diagnostic.code == code) {
+            return true;
+        }
+    }
+    return false;
+}
+
 QStringList completionTokens(QCompleter *completer)
 {
     QStringList tokens;
@@ -255,6 +265,195 @@ int main(int argc, char *argv[])
     }
     if (!expect(completer->popup() != nullptr, "Failed to find completion popup.")) {
         return 1;
+    }
+
+    {
+        editor->setPlainText(QStringLiteral("\n"));
+        QTextBlock firstLine = editor->document()->findBlockByLineNumber(0);
+        QTextCursor cursor(firstLine);
+        cursor.movePosition(QTextCursor::EndOfBlock);
+        editor->setTextCursor(cursor);
+        editor->setFocus(Qt::OtherFocusReason);
+        pumpEvents();
+
+        triggerManualCompletion(editor);
+
+        if (!expect(completer->popup()->isVisible(),
+                    ".th command-position completion should appear on a blank top-level line.")) {
+            return 1;
+        }
+        if (!expect(modelContainsToken(completer, QStringLiteral("survey")),
+                    ".th command-position completion should include source commands.")) {
+            return 1;
+        }
+        if (!expect(!modelContainsToken(completer, QStringLiteral("source"))
+                    && !modelContainsToken(completer, QStringLiteral("export"))
+                    && !modelContainsToken(completer, QStringLiteral("select")),
+                    ".th command-position completion should not include thconfig-only commands.")) {
+            return 1;
+        }
+        if (!expect(!modelContainsToken(completer, QStringLiteral("scrap"))
+                    && !modelContainsToken(completer, QStringLiteral("line"))
+                    && !modelContainsToken(completer, QStringLiteral("point")),
+                    ".th command-position completion should not include TH2 map-object commands.")) {
+            return 1;
+        }
+
+        editor->setPlainText(QStringLiteral("source index.th\n"));
+        pumpEvents();
+
+        const QTextBlock sourceLine = editor->document()->findBlockByLineNumber(0);
+        if (!expect(tokenHasWaveUnderline(sourceLine, QStringLiteral("source")),
+                    ".th inline validation should mark thconfig-only commands as invalid for the current document type.")) {
+            return 1;
+        }
+
+        editor->setPlainText(QStringLiteral("survey cave\n"
+                                            "  centerline\n"
+                                            "    cs long-lat\n"
+                                            "    data normal from to compass clino tape\n"
+                                            "    1 2 0 0 1\n"
+                                            "  endcenterline\n"
+                                            "  map cave.m\n"
+                                            "    scrap1\n"
+                                            "    break\n"
+                                            "    scrap2\n"
+                                            "  endmap\n"
+                                            "  join scrap1 scrap2\n"
+                                            "endsurvey\n"));
+        pumpEvents();
+
+        const TherionSourceValidationResult sourceValidation = tab.validateDocument();
+        if (!expect(!validationContainsDiagnosticCode(sourceValidation, QStringLiteral("invalid-command-context")),
+                    ".th validation should accept real source contexts such as centerline cs, map break, and survey join.")) {
+            return 1;
+        }
+        if (!expect(!validationContainsDiagnosticCode(sourceValidation, QStringLiteral("invalid-document-type")),
+                    ".th validation should accept source commands from the generated document-type catalog.")) {
+            return 1;
+        }
+    }
+
+    {
+        const QString configPath = tempDir.path() + QStringLiteral("/thconfig");
+        QFile configFile(configPath);
+        if (!expect(configFile.open(QIODevice::WriteOnly | QIODevice::Text), "Failed to create thconfig completion fixture.")) {
+            return 1;
+        }
+        configFile.write("\n");
+        configFile.close();
+
+        TextEditorTab configTab{fileSystem, CommandCatalogStore()};
+        QString configErrorMessage;
+        if (!expect(configTab.loadFile(configPath, &configErrorMessage),
+                    "Failed to load thconfig completion fixture.")) {
+            std::cerr << configErrorMessage.toStdString() << '\n';
+            return 1;
+        }
+        configTab.setProjectRootPath(tempDir.path());
+        configTab.resize(640, 480);
+        configTab.show();
+        pumpEvents();
+
+        auto *configEditor = configTab.findChild<QPlainTextEdit *>();
+        auto *configCompleter = configTab.findChild<QCompleter *>();
+        if (!expect(configEditor != nullptr && configCompleter != nullptr,
+                    "Failed to find thconfig editor completion widgets.")) {
+            return 1;
+        }
+
+        QTextBlock firstLine = configEditor->document()->findBlockByLineNumber(0);
+        QTextCursor cursor(firstLine);
+        cursor.movePosition(QTextCursor::EndOfBlock);
+        configEditor->setTextCursor(cursor);
+        configEditor->setFocus(Qt::OtherFocusReason);
+        pumpEvents();
+
+        triggerManualCompletion(configEditor);
+
+        if (!expect(configCompleter->popup()->isVisible(),
+                    "thconfig command-position completion should appear on a blank top-level line.")) {
+            return 1;
+        }
+        if (!expect(modelContainsToken(configCompleter, QStringLiteral("source"))
+                    && modelContainsToken(configCompleter, QStringLiteral("export"))
+                    && modelContainsToken(configCompleter, QStringLiteral("select")),
+                    "thconfig command-position completion should include processing commands.")) {
+            return 1;
+        }
+        if (!expect(!modelContainsToken(configCompleter, QStringLiteral("survey"))
+                    && !modelContainsToken(configCompleter, QStringLiteral("scrap"))
+                    && !modelContainsToken(configCompleter, QStringLiteral("line")),
+                    "thconfig command-position completion should not include .th or TH2-only commands.")) {
+            return 1;
+        }
+
+        configEditor->setPlainText(QStringLiteral("survey demo\nendsurvey\n"));
+        pumpEvents();
+
+        const QTextBlock surveyLine = configEditor->document()->findBlockByLineNumber(0);
+        if (!expect(tokenHasWaveUnderline(surveyLine, QStringLiteral("survey")),
+                    "thconfig inline validation should mark .th-only commands as invalid for the current document type.")) {
+            return 1;
+        }
+
+        configEditor->setPlainText(QStringLiteral("source cave.th\n"
+                                                  "input ../layouts\n"
+                                                  "cs iJTSK\n"
+                                                  "select cave.m@cave\n"
+                                                  "layout l_plan\n"
+                                                  "endlayout\n"
+                                                  "export map -output out.pdf -layout l_plan\n"));
+        pumpEvents();
+
+        const TherionSourceValidationResult configValidation = configTab.validateDocument();
+        if (!expect(!validationContainsDiagnosticCode(configValidation, QStringLiteral("invalid-command-context")),
+                    "thconfig validation should accept real processing-file contexts such as source, input, cs, layout, select, and export.")) {
+            return 1;
+        }
+        if (!expect(!validationContainsDiagnosticCode(configValidation, QStringLiteral("invalid-document-type")),
+                    "thconfig validation should accept processing commands from the generated document-type catalog.")) {
+            return 1;
+        }
+    }
+
+    {
+        const QString mapPath = tempDir.path() + QStringLiteral("/completion-highlight-map.th2");
+        QFile mapFile(mapPath);
+        if (!expect(mapFile.open(QIODevice::WriteOnly | QIODevice::Text), "Failed to create TH2 validation fixture.")) {
+            return 1;
+        }
+        mapFile.write("scrap s1 -projection plan\n"
+                      "point 0 0 station -name 1@survey\n"
+                      "line wall\n"
+                      "  0 0\n"
+                      "  1 1\n"
+                      "endline\n"
+                      "area water\n"
+                      "  border1\n"
+                      "endarea\n"
+                      "endscrap\n");
+        mapFile.close();
+
+        TextEditorTab mapTab{fileSystem, CommandCatalogStore()};
+        QString mapErrorMessage;
+        if (!expect(mapTab.loadFile(mapPath, &mapErrorMessage),
+                    "Failed to load TH2 validation fixture.")) {
+            std::cerr << mapErrorMessage.toStdString() << '\n';
+            return 1;
+        }
+        mapTab.setProjectRootPath(tempDir.path());
+        pumpEvents();
+
+        const TherionSourceValidationResult mapValidation = mapTab.validateDocument();
+        if (!expect(!validationContainsDiagnosticCode(mapValidation, QStringLiteral("invalid-command-context")),
+                    ".th2 validation should accept real map-object contexts such as scrap, point, line, and area.")) {
+            return 1;
+        }
+        if (!expect(!validationContainsDiagnosticCode(mapValidation, QStringLiteral("invalid-document-type")),
+                    ".th2 validation should accept map-object commands from the generated document-type catalog.")) {
+            return 1;
+        }
     }
 
     editor->setPlainText(QStringLiteral("survey \nendsurvey\n"));

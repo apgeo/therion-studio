@@ -83,6 +83,9 @@ struct TherionSourceLogicalCommandMetadata
     QStringList catalogContexts;
     QString catalogCurrentContext;
     bool catalogContextAllowed = false;
+    QSet<QString> catalogDocumentTypes;
+    QString catalogCurrentDocumentType;
+    bool catalogDocumentTypeAllowed = false;
     int catalogRequiredPositionalCount = 0;
     QHash<int, QStringList> catalogArgumentAllowedValuesByIndex;
     QSet<QString> catalogOptionNames;

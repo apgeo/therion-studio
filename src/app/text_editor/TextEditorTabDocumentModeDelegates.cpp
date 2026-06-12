@@ -4,6 +4,9 @@
 #include "TextEditorModeController.h"
 #include "TextEditorTabInteractionController.h"
 
+#include "../../core/TherionFileTypes.h"
+#include "../../editor/TherionSyntaxHighlighter.h"
+
 #include <QLayout>
 #include <QPlainTextEdit>
 #include <QSplitter>
@@ -14,14 +17,19 @@ namespace TherionStudio
 bool TextEditorTab::loadFile(const QString &filePath, QString *errorMessage)
 {
     untitledDisplayName_.clear();
-    return documentController_ != nullptr
+    const bool loaded = documentController_ != nullptr
         && documentController_->loadFile(filePath, errorMessage);
+    if (loaded) {
+        refreshHighlighterSourceDocumentType();
+    }
+    return loaded;
 }
 
 void TextEditorTab::initializeNewDocument(const QString &suggestedFileName, const QString &contents)
 {
     filePath_.clear();
     untitledDisplayName_ = suggestedFileName.trimmed().isEmpty() ? tr("Untitled.th") : suggestedFileName.trimmed();
+    refreshHighlighterSourceDocumentType();
     fileEncodingName_ = QStringLiteral("UTF-8");
     fileEncodingLabel_ = QStringLiteral("UTF-8");
     cleanEncodingNameSnapshot_ = fileEncodingName_;
@@ -81,12 +89,14 @@ bool TextEditorTab::saveAs(const QString &filePath, QString *errorMessage)
     const bool saved = save(errorMessage);
     if (!saved) {
         filePath_ = previousPath;
+        refreshHighlighterSourceDocumentType();
         refreshTitle();
         refreshStatus();
         return false;
     }
 
     untitledDisplayName_.clear();
+    refreshHighlighterSourceDocumentType();
     refreshBlocksModeAvailability();
     refreshEditorModeUi();
     refreshTitle();
@@ -192,6 +202,16 @@ void TextEditorTab::refreshBlocksModeAvailability()
 {
     if (editorModeController_ != nullptr) {
         editorModeController_->refreshBlocksModeAvailability();
+    }
+}
+
+void TextEditorTab::refreshHighlighterSourceDocumentType()
+{
+    if (highlighter_ != nullptr) {
+        const TherionSourceDocumentType sourceType = filePath_.isEmpty()
+            ? therionSourceDocumentTypeForFileName(untitledDisplayName_)
+            : therionSourceDocumentTypeForFilePath(filePath_);
+        highlighter_->setSourceDocumentType(sourceType);
     }
 }
 

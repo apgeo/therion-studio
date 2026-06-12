@@ -11,6 +11,7 @@ struct TherionSourceValidationCatalog
 {
     QSet<QString> commandNames;
     QHash<QString, QStringList> commandContexts;
+    QHash<QString, QSet<QString>> commandDocumentTypes;
     QHash<QString, QSet<QString>> commandOptionNames;
     QHash<QString, int> commandRequiredPositionalCount;
     QHash<QString, QStringList> commandArgumentAllowedValuesByKey;

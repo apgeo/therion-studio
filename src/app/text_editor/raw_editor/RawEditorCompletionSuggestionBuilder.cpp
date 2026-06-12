@@ -13,6 +13,7 @@
 #include <QTextCursor>
 
 #include "../../../core/TherionCommandSyntax.h"
+#include "../../../core/TherionFileTypes.h"
 #include "../../../core/TherionSourceLogicalDocument.h"
 
 #include <algorithm>
@@ -58,6 +59,12 @@ QString normalizeInputSuggestionPath(QString path)
     return path;
 }
 
+QString catalogDocumentTypeTokenForFilePath(const QString &filePath)
+{
+    return TherionStudio::therionSourceDocumentTypeCatalogToken(
+        TherionStudio::therionSourceDocumentTypeForFilePath(filePath));
+}
+
 TherionStudio::RawEditorCompletionTokenContext cursorTokenContextForEditor(const QPlainTextEdit *editor)
 {
     TherionStudio::RawEditorCompletionTokenContext context;
@@ -76,6 +83,38 @@ TherionStudio::RawEditorCompletionTokenContext cursorTokenContextForEditor(const
     const TherionStudio::TherionSourceLogicalDocument logicalDocument =
         TherionStudio::TherionSourceLogicalDocument::fromText(editor->toPlainText());
     return TherionStudio::rawEditorCompletionTokenContextAtPosition(logicalDocument, lineNumber, columnNumber);
+}
+
+bool commandAllowedForDocumentType(const TherionStudio::TextEditorCommandMetadata &metadata,
+                                   const QString &commandToken,
+                                   const QString &documentTypeToken)
+{
+    const QString normalizedCommand = commandToken.trimmed().toLower();
+    if (normalizedCommand.isEmpty() || documentTypeToken.isEmpty()) {
+        return true;
+    }
+
+    const QStringList documentTypes = metadata.commandDocumentTypeTokens.value(normalizedCommand);
+    return documentTypes.isEmpty()
+        || documentTypes.contains(QStringLiteral("all"), Qt::CaseInsensitive)
+        || documentTypes.contains(documentTypeToken, Qt::CaseInsensitive);
+}
+
+QStringList filterCommandsForDocumentType(const QStringList &candidates,
+                                          const TherionStudio::TextEditorCommandMetadata &metadata,
+                                          const QString &documentTypeToken)
+{
+    if (documentTypeToken.isEmpty()) {
+        return candidates;
+    }
+
+    QStringList filtered;
+    for (const QString &candidate : candidates) {
+        if (commandAllowedForDocumentType(metadata, candidate, documentTypeToken)) {
+            appendUnique(filtered, candidate);
+        }
+    }
+    return filtered;
 }
 }
 
@@ -238,6 +277,7 @@ QStringList RawEditorCompletionSuggestionBuilder::buildCompletionSuggestionsForC
     QStringList candidates;
     bool allowGlobalFallback = true;
     bool inputFileContext = false;
+    const QString documentTypeToken = catalogDocumentTypeTokenForFilePath(context_.filePath);
     struct ActiveValueContext
     {
         bool active = false;
@@ -264,6 +304,7 @@ QStringList RawEditorCompletionSuggestionBuilder::buildCompletionSuggestionsForC
         if (candidates.isEmpty() && !strictScopedCommandContext) {
             candidates = metadata().commandCompletionTokens;
         }
+        candidates = filterCommandsForDocumentType(candidates, metadata(), documentTypeToken);
     } else if (!command.isEmpty()) {
         const bool optionContext = currentToken.startsWith(QLatin1Char('-'))
             || effectivePrefix.startsWith(QLatin1Char('-'))
@@ -420,6 +461,9 @@ QStringList RawEditorCompletionSuggestionBuilder::buildCompletionSuggestionsForC
 
     if (candidates.isEmpty() && allowGlobalFallback) {
         candidates = metadata().completionTokens;
+        if (tokenIndexAtCursor <= 0 && !effectivePrefix.startsWith(QLatin1Char('-'))) {
+            candidates = filterCommandsForDocumentType(candidates, metadata(), documentTypeToken);
+        }
     }
 
     QStringList filtered;

@@ -18,8 +18,14 @@ TherionSourceValidationResult TextEditorTab::validateDocument() const
         return {};
     }
 
+    TherionSourceDocumentMetadata metadata;
+    metadata.sourceType = therionSourceDocumentTypeForFilePath(filePath_);
+    metadata.revisionId = documentRevision();
+
     TherionSourceValidationResult result =
-        TherionSourceValidator::validate(editor_->toPlainText(), validationCatalogFromCommandMetadata(commandMetadata_));
+        TherionSourceValidator::validate(editor_->toPlainText(),
+                                         validationCatalogFromCommandMetadata(commandMetadata_),
+                                         metadata);
     if (!isTherionConfigFilePath(filePath_)) {
         return result;
     }

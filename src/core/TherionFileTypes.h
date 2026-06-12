@@ -1,5 +1,7 @@
 #pragma once
 
+#include "TherionSourceDocument.h"
+
 #include <QByteArray>
 #include <QFileInfo>
 #include <QString>
@@ -34,6 +36,44 @@ inline bool isTherionProjectFileName(const QString &fileName)
 inline bool isTherionProjectFilePath(const QString &filePath)
 {
     return isTherionProjectFileName(QFileInfo(filePath).fileName());
+}
+
+inline TherionSourceDocumentType therionSourceDocumentTypeForFileName(const QString &fileName)
+{
+    if (isTherionConfigFileName(fileName)) {
+        return TherionSourceDocumentType::TherionConfig;
+    }
+
+    const QString suffix = QFileInfo(fileName).suffix().toLower();
+    if (suffix == QStringLiteral("th")) {
+        return TherionSourceDocumentType::TherionSource;
+    }
+    if (suffix == QStringLiteral("th2")) {
+        return TherionSourceDocumentType::TherionMap;
+    }
+
+    return TherionSourceDocumentType::Unknown;
+}
+
+inline QString therionSourceDocumentTypeCatalogToken(TherionSourceDocumentType sourceType)
+{
+    switch (sourceType) {
+    case TherionSourceDocumentType::TherionSource:
+        return QStringLiteral("th");
+    case TherionSourceDocumentType::TherionMap:
+        return QStringLiteral("th2");
+    case TherionSourceDocumentType::TherionConfig:
+        return QStringLiteral("thconfig");
+    case TherionSourceDocumentType::Unknown:
+        return QString();
+    }
+
+    return QString();
+}
+
+inline TherionSourceDocumentType therionSourceDocumentTypeForFilePath(const QString &filePath)
+{
+    return therionSourceDocumentTypeForFileName(QFileInfo(filePath).fileName());
 }
 
 inline QByteArray initialTherionProjectFileContents(const QString &fileName)

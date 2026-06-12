@@ -60,6 +60,61 @@ TherionSourceValidationCatalog testCatalog()
     return catalog;
 }
 
+TherionSourceValidationCatalog contextualDocumentTypeCatalog()
+{
+    TherionSourceValidationCatalog catalog = testCatalog();
+    catalog.commandNames.unite({
+        QStringLiteral("survey"),
+        QStringLiteral("centerline"),
+        QStringLiteral("data"),
+        QStringLiteral("cs"),
+        QStringLiteral("map"),
+        QStringLiteral("break"),
+        QStringLiteral("join"),
+        QStringLiteral("source"),
+        QStringLiteral("input"),
+        QStringLiteral("select"),
+        QStringLiteral("layout"),
+        QStringLiteral("export"),
+        QStringLiteral("area"),
+    });
+
+    catalog.commandContexts.insert(QStringLiteral("survey"), {QStringLiteral("none"), QStringLiteral("survey")});
+    catalog.commandContexts.insert(QStringLiteral("centerline"), {QStringLiteral("none"), QStringLiteral("survey")});
+    catalog.commandContexts.insert(QStringLiteral("data"), {QStringLiteral("centerline")});
+    catalog.commandContexts.insert(QStringLiteral("cs"), {QStringLiteral("centerline"), QStringLiteral("none")});
+    catalog.commandContexts.insert(QStringLiteral("map"), {QStringLiteral("none"), QStringLiteral("survey")});
+    catalog.commandContexts.insert(QStringLiteral("break"), {QStringLiteral("centerline"), QStringLiteral("map")});
+    catalog.commandContexts.insert(QStringLiteral("join"), {QStringLiteral("none"), QStringLiteral("survey"), QStringLiteral("scrap")});
+    catalog.commandContexts.insert(QStringLiteral("source"), {QStringLiteral("none")});
+    catalog.commandContexts.insert(QStringLiteral("input"), {QStringLiteral("all")});
+    catalog.commandContexts.insert(QStringLiteral("select"), {QStringLiteral("none")});
+    catalog.commandContexts.insert(QStringLiteral("layout"), {QStringLiteral("none")});
+    catalog.commandContexts.insert(QStringLiteral("export"), {QStringLiteral("none")});
+    catalog.commandContexts.insert(QStringLiteral("scrap"), {QStringLiteral("none"), QStringLiteral("survey")});
+    catalog.commandContexts.insert(QStringLiteral("point"), {QStringLiteral("scrap")});
+    catalog.commandContexts.insert(QStringLiteral("line"), {QStringLiteral("scrap")});
+    catalog.commandContexts.insert(QStringLiteral("area"), {QStringLiteral("scrap")});
+
+    catalog.commandDocumentTypes.insert(QStringLiteral("survey"), {QStringLiteral("th")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("centerline"), {QStringLiteral("th")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("data"), {QStringLiteral("th")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("cs"), {QStringLiteral("th"), QStringLiteral("thconfig")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("map"), {QStringLiteral("th")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("break"), {QStringLiteral("th")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("join"), {QStringLiteral("th")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("source"), {QStringLiteral("thconfig")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("input"), {QStringLiteral("th"), QStringLiteral("thconfig")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("select"), {QStringLiteral("thconfig")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("layout"), {QStringLiteral("thconfig")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("export"), {QStringLiteral("thconfig")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("scrap"), {QStringLiteral("th2")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("point"), {QStringLiteral("th2")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("line"), {QStringLiteral("th2")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("area"), {QStringLiteral("th2")});
+    return catalog;
+}
+
 struct ValidationWaitResult
 {
     bool received = false;
@@ -240,6 +295,101 @@ int runInMemoryValidationTest()
     return 0;
 }
 
+int runDocumentTypeContextProjectionTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary project directory creation failed.")) {
+        return 1;
+    }
+
+    const QString sourceFile = QDir(tempDir.path()).filePath(QStringLiteral("index.th"));
+    const QString configFile = QDir(tempDir.path()).filePath(QStringLiteral("thconfig"));
+    const QString mapFile = QDir(tempDir.path()).filePath(QStringLiteral("scraps.th2"));
+
+    if (!expect(writeTextFile(sourceFile,
+                              QStringLiteral("survey cave\n"
+                                             "  centerline\n"
+                                             "    cs long-lat\n"
+                                             "    data normal from to compass clino tape\n"
+                                             "    1 2 0 0 1\n"
+                                             "  endcenterline\n"
+                                             "  map cave.m\n"
+                                             "    scrap1\n"
+                                             "    break\n"
+                                             "    scrap2\n"
+                                             "  endmap\n"
+                                             "  join scrap1 scrap2\n"
+                                             "endsurvey\n")),
+                "Temporary .th context fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(configFile,
+                              QStringLiteral("source index.th\n"
+                                             "input ../layouts\n"
+                                             "cs iJTSK\n"
+                                             "select cave.m@cave\n"
+                                             "layout l_plan\n"
+                                             "endlayout\n"
+                                             "export map -output out.pdf -layout l_plan\n")),
+                "Temporary thconfig context fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(mapFile,
+                              QStringLiteral("scrap s1 -projection plan\n"
+                                             "point 0 0 station -name 1@survey\n"
+                                             "line wall\n"
+                                             "  0 0\n"
+                                             "  1 1\n"
+                                             "endline\n"
+                                             "area water\n"
+                                             "  border1\n"
+                                             "endarea\n"
+                                             "endscrap\n")),
+                "Temporary .th2 context fixture could not be written.")) {
+        return 1;
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+    scanner.requestScan(tempDir.path(), contextualDocumentTypeCatalog(), {});
+
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    if (!expect(waitResult.received, "Context/document-type validation did not emit validationFinished before timeout.")) {
+        return 1;
+    }
+    if (!expect(waitResult.result.errorMessage.isEmpty(), "Context/document-type validation should not report an error.")) {
+        return 1;
+    }
+    if (!expect(!containsFinding(waitResult.result, sourceFile, QStringLiteral("invalid-command-context"))
+                && !containsFinding(waitResult.result, configFile, QStringLiteral("invalid-command-context"))
+                && !containsFinding(waitResult.result, mapFile, QStringLiteral("invalid-command-context")),
+                "Project validation should not report invalid contexts for representative .th, thconfig, and .th2 commands.")) {
+        return 1;
+    }
+    if (!expect(!containsFinding(waitResult.result, sourceFile, QStringLiteral("invalid-document-type"))
+                && !containsFinding(waitResult.result, configFile, QStringLiteral("invalid-document-type"))
+                && !containsFinding(waitResult.result, mapFile, QStringLiteral("invalid-document-type")),
+                "Project validation should not report invalid document types for representative .th, thconfig, and .th2 commands.")) {
+        return 1;
+    }
+
+    QHash<QString, QString> inMemoryContents;
+    inMemoryContents.insert(canonicalOrAbsolutePath(configFile),
+                            QStringLiteral("survey wrong\n"
+                                           "endsurvey\n"));
+    scanner.requestScan(tempDir.path(), contextualDocumentTypeCatalog(), inMemoryContents);
+    const ValidationWaitResult invalidWaitResult = waitForValidation(scanner);
+    if (!expect(invalidWaitResult.received, "In-memory document-type validation did not emit validationFinished before timeout.")) {
+        return 1;
+    }
+    if (!expect(containsFinding(invalidWaitResult.result, configFile, QStringLiteral("invalid-document-type")),
+                "Project validation should apply document-type diagnostics to unsaved in-memory thconfig text.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 }
 
 int main(int argc, char **argv)
@@ -253,6 +403,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runDashPrefixedTextValidationTest() != 0) {
+        return 1;
+    }
+    if (runDocumentTypeContextProjectionTest() != 0) {
         return 1;
     }
     return 0;

@@ -93,6 +93,36 @@ QStringList optionArgumentLabelsFromSignature(const QString &signature)
     return labels;
 }
 
+QString normalizedDocumentTypeToken(const QString &token)
+{
+    QString normalized = token.trimmed().toLower();
+    if (normalized.startsWith(QLatin1Char('.'))) {
+        normalized.remove(0, 1);
+    }
+    if (normalized == QStringLiteral("therion-source")
+        || normalized == QStringLiteral("therion source")
+        || normalized == QStringLiteral("source")) {
+        return QStringLiteral("th");
+    }
+    if (normalized == QStringLiteral("therion-map")
+        || normalized == QStringLiteral("therion map")
+        || normalized == QStringLiteral("map")) {
+        return QStringLiteral("th2");
+    }
+    if (normalized == QStringLiteral("therion-config")
+        || normalized == QStringLiteral("therion config")
+        || normalized == QStringLiteral("config")) {
+        return QStringLiteral("thconfig");
+    }
+    if (normalized == QStringLiteral("th")
+        || normalized == QStringLiteral("th2")
+        || normalized == QStringLiteral("thconfig")
+        || normalized == QStringLiteral("all")) {
+        return normalized;
+    }
+    return QString();
+}
+
 }
 
 namespace TherionStudio
@@ -201,6 +231,26 @@ void RawEditorCommandMetadataLoader::applyCommandContextMetadata(const QString &
         }
         registerCompletionToken(inlineCommand);
     }
+}
+
+void RawEditorCommandMetadataLoader::applyCommandDocumentTypeMetadata(const QString &commandName,
+                                                                      const QJsonObject &commandObject) const
+{
+    if (context_.metadata == nullptr) {
+        return;
+    }
+
+    auto appendDocumentTypeArray = [&](const QJsonArray &documentTypesArray) {
+        for (const QJsonValue &documentTypeValue : documentTypesArray) {
+            const QString documentTypeToken = normalizedDocumentTypeToken(documentTypeValue.toString());
+            if (!documentTypeToken.isEmpty()) {
+                appendUnique(metadata().commandDocumentTypeTokens[commandName], documentTypeToken);
+            }
+        }
+    };
+
+    appendDocumentTypeArray(commandObject.value(QStringLiteral("document_types")).toArray());
+    appendDocumentTypeArray(commandObject.value(QStringLiteral("source_types")).toArray());
 }
 
 void RawEditorCommandMetadataLoader::applyCommandOptionCatalogMetadata(const QString &commandName,
@@ -366,6 +416,8 @@ void RawEditorCommandMetadataLoader::applyCommandAliasMetadata(const QString &co
         if (metadata().commandSourceFileByToken.contains(commandName)) {
             metadata().commandSourceFileByToken.insert(alias, metadata().commandSourceFileByToken.value(commandName));
         }
+        appendUniqueList(metadata().commandDocumentTypeTokens[alias],
+                         metadata().commandDocumentTypeTokens.value(commandName));
         registerCompletionToken(alias);
         TherionHelpEntry aliasEntry = entry;
         appendUnique(aliasEntry.relatedKeywords, commandName);
@@ -470,6 +522,7 @@ void RawEditorCommandMetadataLoader::applyCatalogCommandsMetadata(const QJsonObj
 
         QStringList normalizedCommandContexts;
         applyCommandContextMetadata(commandName, commandObject, &normalizedCommandContexts);
+        applyCommandDocumentTypeMetadata(commandName, commandObject);
         applyCommandRegistrationMetadata(commandName,
                                          entry,
                                          requiredPositionalCount,

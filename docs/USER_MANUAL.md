@@ -1,6 +1,6 @@
 # Therion Studio User Manual
 
-Last updated: 2026-06-11
+Last updated: 2026-06-12
 
 This guide covers everyday workflows in Therion Studio. It intentionally focuses on using the application, not on the full Therion language reference. Therion source syntax, command names, options, and serialized document content stay in canonical Therion form.
 
@@ -147,10 +147,10 @@ For `.th2` files:
 ### 4.2 Text Editing Features
 
 - line numbers and active-line highlight
-- command, option, value, and path autocomplete while typing
+- command, option, value, and path autocomplete while typing; command suggestions are filtered for the current document type (`.th`, `.th2`, or Therion config)
 - `Ctrl+Space` to open autocomplete manually
 - contextual help for the current command or option; Raw and Blocks show the same complete command help, and the help panel is titled with the current command, validation context, or selected help target
-- `Validate Document` in the main toolbar scans the current source, opens the left `Validation` panel, and lists issues such as malformed option tokens, unknown commands or options, missing arguments, and unclosed blocks; use `Validate Project` in the same panel to scan all `.th`, `.th2`, and `thconfig` files in the open project; project validation avoids uncertain `unknown command` warnings for `thconfig` files until a dedicated thconfig catalog is available; activate a finding to jump to the affected raw source line, or use `Apply Fix` / `Apply All Safe Fixes` when the panel shows an explicit safe source edit
+- `Validate Document` in the main toolbar scans the current source, opens the left `Validation` panel, and lists issues such as malformed option tokens, unknown commands or options, commands used in the wrong document type or block context, missing arguments, and unclosed blocks; use `Validate Project` in the same panel to scan all `.th`, `.th2`, and `thconfig` files in the open project; inline wave underlines in Raw mode use the same catalog-backed command and document-type checks; activate a finding to jump to the affected raw source line, or use `Apply Fix` / `Apply All Safe Fixes` when the panel shows an explicit safe source edit
 - a `Selection` inspector tab in Blocks mode for editing the selected block header and supported inline options; the first panel is titled with the selected Therion command and shows its source line
 - when no block is selected, the Blocks `Selection` tab shows `No block selected.`; when the fixed root `encoding` card is selected, it shows the command and encoding value as read-only text
 - find and replace from the `Edit` menu

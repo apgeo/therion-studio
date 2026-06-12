@@ -40,6 +40,8 @@ private:
     void applyCommandContextMetadata(const QString &commandName,
                                      const QJsonObject &commandObject,
                                      QStringList *normalizedCommandContexts) const;
+    void applyCommandDocumentTypeMetadata(const QString &commandName,
+                                          const QJsonObject &commandObject) const;
     void applyCommandOptionCatalogMetadata(const QString &commandName,
                                            const QJsonObject &commandObject,
                                            TherionHelpEntry *entry) const;

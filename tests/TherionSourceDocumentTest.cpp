@@ -1,4 +1,5 @@
 #include "../src/core/TherionSourceDocument.h"
+#include "../src/core/TherionFileTypes.h"
 
 #include <cstdlib>
 #include <cstdio>
@@ -158,6 +159,39 @@ void preservesSourceSnapshotMetadata()
             "source snapshot metadata accessors should mirror the stored metadata");
 }
 
+void infersSourceDocumentTypeFromTherionFileName()
+{
+    require(therionSourceDocumentTypeForFileName(QStringLiteral("survey.th"))
+                == TherionSourceDocumentType::TherionSource,
+            ".th files should infer Therion source document type");
+    require(therionSourceDocumentTypeForFileName(QStringLiteral("map.th2"))
+                == TherionSourceDocumentType::TherionMap,
+            ".th2 files should infer Therion map document type");
+    require(therionSourceDocumentTypeForFileName(QStringLiteral("thconfig"))
+                == TherionSourceDocumentType::TherionConfig,
+            "thconfig should infer Therion config document type");
+    require(therionSourceDocumentTypeForFileName(QStringLiteral("survey.thconfig"))
+                == TherionSourceDocumentType::TherionConfig,
+            "*.thconfig should infer Therion config document type");
+    require(therionSourceDocumentTypeForFileName(QStringLiteral("thconfig.debug"))
+                == TherionSourceDocumentType::TherionConfig,
+            "thconfig.* should infer Therion config document type");
+    require(therionSourceDocumentTypeForFileName(QStringLiteral("notes.txt"))
+                == TherionSourceDocumentType::Unknown,
+            "non-Therion files should keep unknown source document type");
+    require(therionSourceDocumentTypeCatalogToken(TherionSourceDocumentType::TherionSource)
+                == QStringLiteral("th"),
+            "Therion source document type should map to the shared catalog token");
+    require(therionSourceDocumentTypeCatalogToken(TherionSourceDocumentType::TherionMap)
+                == QStringLiteral("th2"),
+            "Therion map document type should map to the shared catalog token");
+    require(therionSourceDocumentTypeCatalogToken(TherionSourceDocumentType::TherionConfig)
+                == QStringLiteral("thconfig"),
+            "Therion config document type should map to the shared catalog token");
+    require(therionSourceDocumentTypeCatalogToken(TherionSourceDocumentType::Unknown).isEmpty(),
+            "Unknown source document type should not map to a catalog token");
+}
+
 void normalizesCentrelineAliases()
 {
     require(normalizedTherionDirectiveToken(QStringLiteral("centreline")) == QStringLiteral("centerline"),
@@ -183,6 +217,7 @@ int main()
     recordsNestedBlockRanges();
     keepsUnclosedBlockRangesOpen();
     preservesSourceSnapshotMetadata();
+    infersSourceDocumentTypeFromTherionFileName();
     normalizesCentrelineAliases();
     return 0;
 }

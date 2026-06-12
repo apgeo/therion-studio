@@ -97,7 +97,11 @@ void appendFindingsForText(ProjectValidationScanner::Result *result,
         return;
     }
 
-    const TherionSourceValidationResult validation = TherionSourceValidator::validate(text, validationCatalog);
+    TherionSourceDocumentMetadata metadata;
+    metadata.sourceType = therionSourceDocumentTypeForFilePath(filePath);
+
+    const TherionSourceValidationResult validation =
+        TherionSourceValidator::validate(text, validationCatalog, metadata);
     const bool suppressUnknownCommandWarnings = isTherionConfigFilePath(filePath);
     for (const TherionSourceDiagnostic &diagnostic : validation.diagnostics) {
         if (suppressUnknownCommandWarnings && diagnostic.code == QStringLiteral("unknown-command")) {

@@ -378,6 +378,37 @@ void carriesSourceSnapshotMetadata()
     require(document.metadata().revisionId == 7,
             "logical source projection should preserve source revision metadata");
 }
+
+void attachesDocumentTypeMetadataToLogicalCommands()
+{
+    TherionSourceValidationCatalog catalog;
+    catalog.commandNames = {QStringLiteral("source"), QStringLiteral("line")};
+    catalog.commandDocumentTypes.insert(QStringLiteral("source"), {QStringLiteral("thconfig")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("line"), {QStringLiteral("th2")});
+
+    TherionSourceDocumentMetadata metadata;
+    metadata.sourceType = TherionSourceDocumentType::TherionConfig;
+
+    const TherionSourceLogicalDocument document = TherionSourceLogicalDocument::fromText(
+        QStringLiteral("source index.th\n"
+                       "line wall\n"),
+        catalog,
+        metadata);
+
+    const TherionSourceLogicalCommand &source = commandAt(document, 0);
+    require(source.metadata.catalogCurrentDocumentType == QStringLiteral("thconfig"),
+            "catalog-enriched logical command metadata should expose the current document type token");
+    require(source.metadata.catalogDocumentTypes.contains(QStringLiteral("thconfig")),
+            "catalog-enriched logical command metadata should expose command document-type applicability");
+    require(source.metadata.catalogDocumentTypeAllowed,
+            "catalog-enriched logical command metadata should mark matching document types as allowed");
+
+    const TherionSourceLogicalCommand &line = commandAt(document, 1);
+    require(line.metadata.catalogDocumentTypes.contains(QStringLiteral("th2")),
+            "catalog-enriched logical command metadata should expose nonmatching document-type applicability");
+    require(!line.metadata.catalogDocumentTypeAllowed,
+            "catalog-enriched logical command metadata should mark nonmatching document types as disallowed");
+}
 }
 
 int main()
@@ -391,5 +422,6 @@ int main()
     keepsBlockContentRowsAsNonCommandLogicalEntries();
     normalizesCentrelineAliasOnLogicalCommands();
     carriesSourceSnapshotMetadata();
+    attachesDocumentTypeMetadataToLogicalCommands();
     return 0;
 }

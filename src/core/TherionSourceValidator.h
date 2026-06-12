@@ -1,5 +1,6 @@
 #pragma once
 
+#include "TherionSourceDocument.h"
 #include "TherionSourceValidationCatalog.h"
 
 #include <QString>
@@ -49,6 +50,9 @@ public:
     [[nodiscard]] static TherionSourceValidationResult validate(const QString &contents);
     [[nodiscard]] static TherionSourceValidationResult validate(const QString &contents,
                                                                 const TherionSourceValidationCatalog &catalog);
+    [[nodiscard]] static TherionSourceValidationResult validate(const QString &contents,
+                                                                const TherionSourceValidationCatalog &catalog,
+                                                                const TherionSourceDocumentMetadata &metadata);
     [[nodiscard]] static QVector<TherionSourceTextEdit> validationFixEdits(const QString &contents,
                                                                            const QVector<TherionSourceDiagnosticFix> &fixes);
     [[nodiscard]] static QString applyFixes(const QString &contents,

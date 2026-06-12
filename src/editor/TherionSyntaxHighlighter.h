@@ -7,6 +7,7 @@
 #include <QJsonObject>
 
 #include "../core/CommandCatalogStore.h"
+#include "../core/TherionSourceDocument.h"
 #include "../core/TherionSourceValidator.h"
 
 class QTextDocument;
@@ -20,6 +21,7 @@ class TherionSyntaxHighlighter final : public QSyntaxHighlighter
 public:
     explicit TherionSyntaxHighlighter(CommandCatalogStore catalogStore, QTextDocument *parent = nullptr);
     void reloadPaletteForApplicationAppearance();
+    void setSourceDocumentType(TherionSourceDocumentType sourceType);
 
 protected:
     void highlightBlock(const QString &text) override;
@@ -50,6 +52,7 @@ private:
     TherionSourceValidationCatalog validationCatalog_;
     TherionSourceValidationResult cachedValidationResult_;
     int cachedValidationRevision_ = -1;
+    TherionSourceDocumentType sourceDocumentType_ = TherionSourceDocumentType::Unknown;
     CommandCatalogStore catalogStore_;
 };
 }

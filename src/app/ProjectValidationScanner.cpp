@@ -207,6 +207,7 @@ void ProjectValidationScanner::startScan()
     const Request request = pendingRequest_;
     hasPendingRequest_ = false;
     const quint64 generation = ++generation_;
+    emit validationStarted(generation, request.projectRootPath);
 
     auto future = QtConcurrent::run([request, generation]() {
         return performProjectValidation(request.projectRootPath,
@@ -220,7 +221,10 @@ void ProjectValidationScanner::startScan()
 void ProjectValidationScanner::handleScanFinished()
 {
     const Result result = scanWatcher_->result();
-    emit validationFinished(result);
+    const bool hasSupersedingRequest = queuedScan_ || hasPendingRequest_;
+    if (!hasSupersedingRequest) {
+        emit validationFinished(result);
+    }
 
     if (queuedScan_) {
         queuedScan_ = false;

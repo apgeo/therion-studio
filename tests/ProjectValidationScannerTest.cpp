@@ -390,6 +390,62 @@ int runDocumentTypeContextProjectionTest()
     return 0;
 }
 
+int runSupersededScanSuppressesStaleResultTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary project directory creation failed.")) {
+        return 1;
+    }
+
+    const QString filePath = QDir(tempDir.path()).filePath(QStringLiteral("live.th2"));
+    if (!expect(writeTextFile(filePath,
+                              QStringLiteral("scrap stale\n"
+                                             "endscrap\n")),
+                "Temporary superseded-scan file could not be written.")) {
+        return 1;
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+
+    bool requestedSupersedingScan = false;
+    QObject::connect(&scanner,
+                     &ProjectValidationScanner::validationStarted,
+                     &scanner,
+                     [&](quint64 generation, const QString &) {
+                         if (generation != 1 || requestedSupersedingScan) {
+                             return;
+                         }
+                         requestedSupersedingScan = true;
+                         QHash<QString, QString> inMemoryContents;
+                         inMemoryContents.insert(canonicalOrAbsolutePath(filePath),
+                                                 QStringLiteral("scrap live\n"
+                                                                "line wall -clip off \"-clip off\"\n"
+                                                                "endline\n"
+                                                                "endscrap\n"));
+                         scanner.requestScan(tempDir.path(), testCatalog(), inMemoryContents);
+                     });
+
+    scanner.requestScan(tempDir.path(), testCatalog(), {});
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    if (!expect(waitResult.received, "Superseded validation did not emit the latest result before timeout.")) {
+        return 1;
+    }
+    if (!expect(requestedSupersedingScan, "Superseded validation test did not queue a newer scan.")) {
+        return 1;
+    }
+    if (!expect(waitResult.result.generation == 2,
+                "ProjectValidationScanner should suppress stale results when a newer scan is queued.")) {
+        return 1;
+    }
+    if (!expect(containsFinding(waitResult.result, filePath, QStringLiteral("malformed-option-token")),
+                "Latest project validation result should use the superseding in-memory document text.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 }
 
 int main(int argc, char **argv)
@@ -406,6 +462,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runDocumentTypeContextProjectionTest() != 0) {
+        return 1;
+    }
+    if (runSupersededScanSuppressesStaleResultTest() != 0) {
         return 1;
     }
     return 0;

@@ -43,6 +43,7 @@ public:
     void setDebounceIntervalMs(int intervalMs);
 
 signals:
+    void validationStarted(quint64 generation, const QString &projectRootPath);
     void validationFinished(const TherionStudio::ProjectValidationScanner::Result &result);
 
 private slots:

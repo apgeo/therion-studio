@@ -172,6 +172,22 @@ int findingCount(const ProjectValidationScanner::Result &result,
     return count;
 }
 
+bool findingHasSeverity(const ProjectValidationScanner::Result &result,
+                        const QString &filePath,
+                        const QString &code,
+                        TherionSourceDiagnosticSeverity severity)
+{
+    const QString normalizedPath = canonicalOrAbsolutePath(filePath);
+    for (const ProjectValidationScanner::Finding &finding : result.findings) {
+        if (canonicalOrAbsolutePath(finding.filePath) == normalizedPath
+            && finding.diagnostic.code == code
+            && finding.diagnostic.severity == severity) {
+            return true;
+        }
+    }
+    return false;
+}
+
 int runFilesystemValidationTest()
 {
     QTemporaryDir tempDir;
@@ -386,6 +402,97 @@ int runMissingSourceReferenceValidationTest()
     return 0;
 }
 
+int runProjectIndexDiagnosticProjectionTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary project directory creation failed.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    if (!expect(projectDir.mkpath(QStringLiteral("maps/a"))
+                    && projectDir.mkpath(QStringLiteral("maps/b")),
+                "Temporary map directories could not be created.")) {
+        return 1;
+    }
+
+    const QString rootFile = projectDir.filePath(QStringLiteral("root.th"));
+    const QString mapAFile = projectDir.filePath(QStringLiteral("maps/a/map.th2"));
+    const QString mapBFile = projectDir.filePath(QStringLiteral("maps/b/map.th2"));
+
+    if (!expect(writeTextFile(rootFile,
+                              QStringLiteral("survey cave\n"
+                                             "  input maps/a/map.th2\n"
+                                             "  input maps/b/map.th2\n"
+                                             "  map branch-map.m\n"
+                                             "  endmap\n"
+                                             "  map branch-map.m\n"
+                                             "  endmap\n"
+                                             "  map root-map.m\n"
+                                             "    target.s\n"
+                                             "    branch-map.m\n"
+                                             "    missing-map.m\n"
+                                             "  endmap\n"
+                                             "endsurvey cave\n")),
+                "Project-index diagnostic root fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(mapAFile,
+                              QStringLiteral("scrap target.s\n"
+                                             "endscrap\n")),
+                "Project-index diagnostic first map fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(mapBFile,
+                              QStringLiteral("scrap target.s\n"
+                                             "endscrap\n")),
+                "Project-index diagnostic second map fixture could not be written.")) {
+        return 1;
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+    scanner.requestScan(tempDir.path(), contextualDocumentTypeCatalog(), {});
+
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    if (!expect(waitResult.received, "Project-index diagnostic projection did not emit validationFinished before timeout.")) {
+        return 1;
+    }
+    if (!expect(waitResult.result.errorMessage.isEmpty(), "Project-index diagnostic projection should not report an error.")) {
+        return 1;
+    }
+    if (!expect(findingHasSeverity(waitResult.result,
+                                   rootFile,
+                                   QStringLiteral("ambiguous-map-scrap-reference"),
+                                   TherionSourceDiagnosticSeverity::Error),
+                "Project validation should expose ambiguous map scrap references from the project index.")) {
+        return 1;
+    }
+    if (!expect(findingHasSeverity(waitResult.result,
+                                   rootFile,
+                                   QStringLiteral("ambiguous-map-reference"),
+                                   TherionSourceDiagnosticSeverity::Error),
+                "Project validation should expose ambiguous map references from the project index.")) {
+        return 1;
+    }
+    if (!expect(findingHasSeverity(waitResult.result,
+                                   rootFile,
+                                   QStringLiteral("unknown-map-reference"),
+                                   TherionSourceDiagnosticSeverity::Error),
+                "Project validation should expose unresolved map references from the project index.")) {
+        return 1;
+    }
+    if (!expect(findingHasSeverity(waitResult.result,
+                                   rootFile,
+                                   QStringLiteral("mixed-map-and-scrap-references"),
+                                   TherionSourceDiagnosticSeverity::Warning),
+                "Project validation should expose mixed map/scrap composition as a warning.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runDocumentTypeContextProjectionTest()
 {
     QTemporaryDir tempDir;
@@ -554,6 +661,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runMissingSourceReferenceValidationTest() != 0) {
+        return 1;
+    }
+    if (runProjectIndexDiagnosticProjectionTest() != 0) {
         return 1;
     }
     if (runDocumentTypeContextProjectionTest() != 0) {

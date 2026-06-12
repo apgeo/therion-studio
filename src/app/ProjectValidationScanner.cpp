@@ -1,6 +1,7 @@
 #include "ProjectValidationScanner.h"
 
 #include "../core/DocumentFile.h"
+#include "../core/ProjectStructureIndex.h"
 #include "../core/TherionFileTypes.h"
 #include "../core/TherionSourceLogicalDocument.h"
 #include "../core/TherionSourceReferenceResolver.h"
@@ -83,6 +84,83 @@ QString readValidatableFileText(const QString &filePath)
         return QString();
     }
     return contents;
+}
+
+TherionSourceDiagnostic diagnosticForProjectIndexDiagnostic(const ProjectIndexDiagnostic &indexDiagnostic)
+{
+    TherionSourceDiagnostic diagnostic;
+    diagnostic.severity = TherionSourceDiagnosticSeverity::Error;
+    diagnostic.lineNumber = indexDiagnostic.lineNumber;
+    diagnostic.columnNumber = 1;
+    diagnostic.columnLength = indexDiagnostic.referencedName.size();
+    diagnostic.currentText = indexDiagnostic.referencedName;
+
+    switch (indexDiagnostic.kind) {
+    case ProjectIndexDiagnosticKind::UnknownMapScrapReference:
+        diagnostic.code = QStringLiteral("unknown-map-scrap-reference");
+        diagnostic.title = QObject::tr("Unknown map scrap reference");
+        diagnostic.message = QObject::tr("Map references scrap `%1`, but no matching scrap was found in the project index.")
+                                 .arg(indexDiagnostic.referencedName);
+        break;
+    case ProjectIndexDiagnosticKind::UnknownMapReference:
+        diagnostic.code = QStringLiteral("unknown-map-reference");
+        diagnostic.title = QObject::tr("Unknown map reference");
+        diagnostic.message = QObject::tr("Map references child map `%1`, but no matching map was found in the project index.")
+                                 .arg(indexDiagnostic.referencedName);
+        break;
+    case ProjectIndexDiagnosticKind::AmbiguousMapScrapReference:
+        diagnostic.code = QStringLiteral("ambiguous-map-scrap-reference");
+        diagnostic.title = QObject::tr("Ambiguous map scrap reference");
+        diagnostic.message = QObject::tr("Map scrap reference `%1` matches %2 scraps in the project index.")
+                                 .arg(indexDiagnostic.referencedName)
+                                 .arg(indexDiagnostic.candidateCount);
+        break;
+    case ProjectIndexDiagnosticKind::AmbiguousMapReference:
+        diagnostic.code = QStringLiteral("ambiguous-map-reference");
+        diagnostic.title = QObject::tr("Ambiguous map reference");
+        diagnostic.message = QObject::tr("Map reference `%1` matches %2 maps in the project index.")
+                                 .arg(indexDiagnostic.referencedName)
+                                 .arg(indexDiagnostic.candidateCount);
+        break;
+    case ProjectIndexDiagnosticKind::MixedMapAndScrapReferences:
+        diagnostic.code = QStringLiteral("mixed-map-and-scrap-references");
+        diagnostic.severity = TherionSourceDiagnosticSeverity::Warning;
+        diagnostic.title = QObject::tr("Mixed map and scrap references");
+        diagnostic.message = QObject::tr("Map composition mixes child map and scrap references; `%1` changes the content kind.")
+                                 .arg(indexDiagnostic.referencedName);
+        break;
+    }
+
+    return diagnostic;
+}
+
+void appendProjectIndexFindings(ProjectValidationScanner::Result *result,
+                                const QString &projectRootPath,
+                                const QHash<QString, QString> &inMemoryProjectContentsByPath)
+{
+    if (result == nullptr || result->limitReached) {
+        return;
+    }
+
+    QString indexErrorMessage;
+    const ProjectIndexSnapshot snapshot = ProjectStructureIndex::scanProjectIndex(projectRootPath,
+                                                                                  inMemoryProjectContentsByPath,
+                                                                                  &indexErrorMessage);
+    if (!indexErrorMessage.isEmpty()) {
+        return;
+    }
+
+    for (const ProjectIndexDiagnostic &indexDiagnostic : snapshot.diagnostics) {
+        if (indexDiagnostic.sourceFile.trimmed().isEmpty()) {
+            continue;
+        }
+
+        result->findings.append({indexDiagnostic.sourceFile, diagnosticForProjectIndexDiagnostic(indexDiagnostic)});
+        if (result->findings.size() >= kMaximumProjectValidationFindings) {
+            result->limitReached = true;
+            return;
+        }
+    }
 }
 
 void appendFindingsForText(ProjectValidationScanner::Result *result,
@@ -212,6 +290,8 @@ ProjectValidationScanner::Result performProjectValidation(const QString &project
             return result;
         }
     }
+
+    appendProjectIndexFindings(&result, result.projectRootPath, inMemoryProjectContentsByPath);
 
     return result;
 }

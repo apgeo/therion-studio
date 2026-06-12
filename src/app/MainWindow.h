@@ -13,7 +13,7 @@
 
 #include "MainWindowTherionConsoleController.h"
 #include "ProjectSearchScanner.h"
-#include "ProjectValidationScanner.h"
+#include "ProjectValidationController.h"
 #include "ProjectStructureScanner.h"
 #include "../core/CommandCatalogStore.h"
 #include "../core/ISessionStore.h"
@@ -459,6 +459,6 @@ private:
     TherionStudio::ISessionStore *sessionStore_ = nullptr;
     TherionStudio::CommandCatalogStore commandCatalogStore_;
     TherionStudio::ProjectSearchScanner *projectSearchScanner_ = nullptr;
-    TherionStudio::ProjectValidationScanner *projectValidationScanner_ = nullptr;
+    TherionStudio::ProjectValidationController *projectValidationController_ = nullptr;
     TherionStudio::ProjectStructureScanner *structureSidebarScanner_ = nullptr;
 };

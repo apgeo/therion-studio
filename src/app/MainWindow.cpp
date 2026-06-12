@@ -386,7 +386,7 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
     , sessionStore_(&sessionStore)
     , commandCatalogStore_(std::move(commandCatalogStore))
     , projectSearchScanner_(new TherionStudio::ProjectSearchScanner(this))
-    , projectValidationScanner_(new TherionStudio::ProjectValidationScanner(this))
+    , projectValidationController_(new TherionStudio::ProjectValidationController(this))
     , structureSidebarScanner_(new TherionStudio::ProjectStructureScanner(this))
 {
     setWindowTitle(tr("Therion Studio"));
@@ -394,7 +394,7 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
 
     connect(projectSearchScanner_, &TherionStudio::ProjectSearchScanner::searchFinished,
             this, &MainWindow::handleProjectSearchFinished);
-    connect(projectValidationScanner_, &TherionStudio::ProjectValidationScanner::validationFinished,
+    connect(projectValidationController_, &TherionStudio::ProjectValidationController::validationFinished,
             this, &MainWindow::handleProjectValidationFinished);
     connect(structureSidebarScanner_, &TherionStudio::ProjectStructureScanner::scanFinished,
             this, &MainWindow::handleStructureSidebarScanFinished);

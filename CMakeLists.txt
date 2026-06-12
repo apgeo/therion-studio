@@ -204,6 +204,8 @@ set(THERION_APP_SOURCES
     src/app/MainWindowValidationFixApplyService.h
     src/app/ProjectSearchScanner.cpp
     src/app/ProjectSearchScanner.h
+    src/app/ProjectValidationController.cpp
+    src/app/ProjectValidationController.h
     src/app/ProjectValidationScanner.cpp
     src/app/ProjectValidationScanner.h
     src/app/ProjectStructureScanner.cpp
@@ -1067,6 +1069,9 @@ therion_add_app_unit_test(ProjectSearchScannerTest
 therion_add_app_unit_test(ProjectValidationScannerTest
     tests/ProjectValidationScannerTest.cpp)
 
+therion_add_app_unit_test(ProjectValidationControllerTest
+    tests/ProjectValidationControllerTest.cpp)
+
 therion_add_app_unit_test(TherionRunnerConfigResolverTest
     tests/TherionRunnerConfigResolverTest.cpp)
 
@@ -1421,6 +1426,7 @@ set(THERION_UNIT_TEST_TARGETS
     ProjectStructureScannerTest
     ProjectSearchScannerTest
     ProjectValidationScannerTest
+    ProjectValidationControllerTest
     SessionStoreTest
     MainWindowSessionDocumentControllerTest
     MainWindowSessionControllerTest

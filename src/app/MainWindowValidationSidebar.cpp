@@ -282,7 +282,7 @@ void MainWindow::triggerValidateDocumentForActiveDocument()
 
 void MainWindow::requestProjectValidation()
 {
-    if (projectValidationScanner_ == nullptr) {
+    if (projectValidationController_ == nullptr) {
         return;
     }
 
@@ -348,9 +348,12 @@ void MainWindow::requestProjectValidation()
     }
     showSidebarPane(SidebarPane::Validation);
 
-    projectValidationScanner_->requestScan(projectRootPath_,
-                                           TherionStudio::validationCatalogFromCommandCatalog(commandCatalogStore_.catalogObject()),
-                                           inMemoryProjectContentsByPath);
+    TherionStudio::ProjectValidationController::Request request;
+    request.trigger = TherionStudio::ProjectValidationController::Trigger::ManualRefresh;
+    request.projectRootPath = projectRootPath_;
+    request.validationCatalog = TherionStudio::validationCatalogFromCommandCatalog(commandCatalogStore_.catalogObject());
+    request.inMemoryProjectContentsByPath = inMemoryProjectContentsByPath;
+    projectValidationController_->requestValidation(request);
 }
 
 void MainWindow::handleProjectValidationFinished(const TherionStudio::ProjectValidationScanner::Result &result)

@@ -4,6 +4,7 @@
 #include "TherionCommandLineModel.h"
 #include "TherionFileTypes.h"
 #include "TherionSourceLogicalDocument.h"
+#include "TherionSourceReferenceResolver.h"
 #include "TherionTokenRules.h"
 
 #include <QCoreApplication>
@@ -470,44 +471,6 @@ ProjectStructureEntryKind objectKindFromLine(const TherionParsedLine &parsedLine
     return ProjectStructureEntryKind::Unknown;
 }
 
-QString resolveInputPath(const QString &currentFilePath, const QString &inputPath)
-{
-    if (inputPath.trimmed().isEmpty()) {
-        return QString();
-    }
-
-    const QFileInfo currentFileInfo(currentFilePath);
-    const QDir currentDirectory = currentFileInfo.dir();
-
-    const auto normalizeCandidate = [](const QFileInfo &fileInfo) {
-        return fileInfo.exists() ? fileInfo.absoluteFilePath() : QString();
-    };
-
-    const QFileInfo relativeCandidate(currentDirectory.filePath(inputPath));
-    QString resolvedPath = normalizeCandidate(relativeCandidate);
-    if (!resolvedPath.isEmpty()) {
-        return resolvedPath;
-    }
-
-    const QFileInfo absoluteCandidate(inputPath);
-    if (absoluteCandidate.isAbsolute()) {
-        resolvedPath = normalizeCandidate(absoluteCandidate);
-        if (!resolvedPath.isEmpty()) {
-            return resolvedPath;
-        }
-    }
-
-    if (QFileInfo(inputPath).suffix().isEmpty()) {
-        const QFileInfo defaultExtensionCandidate(currentDirectory.filePath(inputPath + QStringLiteral(".th")));
-        resolvedPath = normalizeCandidate(defaultExtensionCandidate);
-        if (!resolvedPath.isEmpty()) {
-            return resolvedPath;
-        }
-    }
-
-    return QString();
-}
-
 const TherionSourceLogicalDocument &logicalDocumentForFile(const QString &filePath,
                                                           ParsedFileCache *cache,
                                                           const QHash<QString, QString> &inMemoryFileContentsByPath)
@@ -632,7 +595,7 @@ void appendProjectStructureFromFile(const QString &filePath,
 
         if (directive == QStringLiteral("input") || directive == QStringLiteral("source")) {
             const QString inputTarget = parsedLine.tokens.value(1);
-            const QString resolvedInputPath = resolveInputPath(normalizedPath, inputTarget);
+            const QString resolvedInputPath = resolveTherionSourceReferencePath(normalizedPath, inputTarget);
             if (!resolvedInputPath.isEmpty()) {
                 appendProjectStructureFromFile(resolvedInputPath,
                                                cache,
@@ -703,7 +666,7 @@ QVector<QString> rootProjectFiles(const QVector<QString> &filePaths,
             }
 
             const QString inputTarget = parsedLine.tokens.value(1);
-            const QString resolvedInputPath = resolveInputPath(filePath, inputTarget);
+            const QString resolvedInputPath = resolveTherionSourceReferencePath(filePath, inputTarget);
             if (!resolvedInputPath.isEmpty()) {
                 includedFiles.insert(normalizedFilePathKey(resolvedInputPath));
             }

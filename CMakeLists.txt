@@ -94,6 +94,8 @@ set(THERION_CORE_SOURCES
     src/core/TherionSourceDocument.h
     src/core/TherionSourceLogicalDocument.cpp
     src/core/TherionSourceLogicalDocument.h
+    src/core/TherionSourceReferenceResolver.cpp
+    src/core/TherionSourceReferenceResolver.h
     src/core/TherionSourceValidationCatalog.h
     src/core/TherionSourceValidator.cpp
     src/core/TherionSourceValidator.h

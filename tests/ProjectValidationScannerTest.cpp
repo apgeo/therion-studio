@@ -1,5 +1,6 @@
 #include "../src/app/ProjectValidationScanner.h"
 #include "../src/core/TherionCommandSyntax.h"
+#include "../src/core/TherionSourceReferenceResolver.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -35,9 +36,7 @@ bool writeTextFile(const QString &filePath, const QString &contents)
 
 QString canonicalOrAbsolutePath(const QString &path)
 {
-    const QFileInfo info(path);
-    const QString canonicalPath = info.canonicalFilePath();
-    return canonicalPath.isEmpty() ? info.absoluteFilePath() : canonicalPath;
+    return canonicalOrAbsoluteFilePath(path);
 }
 
 TherionSourceValidationCatalog testCatalog()
@@ -156,6 +155,21 @@ bool containsFinding(const ProjectValidationScanner::Result &result,
         }
     }
     return false;
+}
+
+int findingCount(const ProjectValidationScanner::Result &result,
+                 const QString &filePath,
+                 const QString &code)
+{
+    const QString normalizedPath = canonicalOrAbsolutePath(filePath);
+    int count = 0;
+    for (const ProjectValidationScanner::Finding &finding : result.findings) {
+        if (canonicalOrAbsolutePath(finding.filePath) == normalizedPath
+            && finding.diagnostic.code == code) {
+            ++count;
+        }
+    }
+    return count;
 }
 
 int runFilesystemValidationTest()
@@ -289,6 +303,83 @@ int runInMemoryValidationTest()
     }
     if (!expect(containsFinding(waitResult.result, filePath, QStringLiteral("malformed-option-token")),
                 "Project validation should use unsaved in-memory document text.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runMissingSourceReferenceValidationTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary project directory creation failed.")) {
+        return 1;
+    }
+
+    const QString sourceFile = QDir(tempDir.path()).filePath(QStringLiteral("index.th"));
+    const QString existingInputFile = QDir(tempDir.path()).filePath(QStringLiteral("existing.th"));
+    const QString configFile = QDir(tempDir.path()).filePath(QStringLiteral("thconfig"));
+    const QString inMemoryOnlyFile = QDir(tempDir.path()).filePath(QStringLiteral("generated.th"));
+    if (!expect(writeTextFile(sourceFile,
+                              QStringLiteral("input existing\n"
+                                             "input missing\n"
+                                             "input generated\n")),
+                "Temporary source reference fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(existingInputFile,
+                              QStringLiteral("survey existing\n"
+                                             "endsurvey\n")),
+                "Temporary existing input fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(configFile,
+                              QStringLiteral("source index.th\n"
+                                             "source absent.th\n")),
+                "Temporary config reference fixture could not be written.")) {
+        return 1;
+    }
+
+    QHash<QString, QString> inMemoryContents;
+    inMemoryContents.insert(canonicalOrAbsolutePath(inMemoryOnlyFile),
+                            QStringLiteral("survey generated\n"
+                                           "endsurvey\n"));
+    QSet<QString> knownReferencePaths;
+    knownReferencePaths.insert(canonicalOrAbsolutePath(inMemoryOnlyFile));
+    if (!expect(!resolveTherionSourceReferencePath(sourceFile,
+                                                  QStringLiteral("generated"),
+                                                  knownReferencePaths).isEmpty(),
+                "Source-reference resolver should resolve implicit .th paths from in-memory project files.")) {
+        return 1;
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+    scanner.requestScan(tempDir.path(), contextualDocumentTypeCatalog(), inMemoryContents);
+
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    if (!expect(waitResult.received, "Missing source reference validation did not emit validationFinished before timeout.")) {
+        return 1;
+    }
+    if (!expect(waitResult.result.errorMessage.isEmpty(), "Missing source reference validation should not report an error.")) {
+        return 1;
+    }
+    const int sourceMissingReferenceCount =
+        findingCount(waitResult.result, sourceFile, QStringLiteral("missing-source-reference"));
+    if (!expect(sourceMissingReferenceCount == 1,
+                "Project validation should report only unresolved input/source references in .th files.")) {
+        std::cerr << "Actual missing-source-reference count for .th file: "
+                  << sourceMissingReferenceCount << '\n';
+        for (const ProjectValidationScanner::Finding &finding : waitResult.result.findings) {
+            if (canonicalOrAbsolutePath(finding.filePath) == canonicalOrAbsolutePath(sourceFile)
+                && finding.diagnostic.code == QStringLiteral("missing-source-reference")) {
+                std::cerr << "  " << finding.diagnostic.message.toStdString() << '\n';
+            }
+        }
+        return 1;
+    }
+    if (!expect(findingCount(waitResult.result, configFile, QStringLiteral("missing-source-reference")) == 1,
+                "Project validation should report unresolved source references in thconfig files.")) {
         return 1;
     }
 
@@ -460,6 +551,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runDashPrefixedTextValidationTest() != 0) {
+        return 1;
+    }
+    if (runMissingSourceReferenceValidationTest() != 0) {
         return 1;
     }
     if (runDocumentTypeContextProjectionTest() != 0) {

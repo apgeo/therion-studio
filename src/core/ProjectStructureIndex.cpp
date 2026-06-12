@@ -47,6 +47,7 @@ struct MapReferenceScanResult
 {
     QHash<QString, QSet<QString>> scrapReferencesByMapKey;
     QHash<QString, QSet<QString>> childMapReferencesByMapKey;
+    QHash<QString, QSet<QString>> previewReferencesByMapKey;
     QVector<ProjectIndexDiagnostic> diagnostics;
 };
 
@@ -280,6 +281,22 @@ QString mapCompositionReferenceToken(const TherionParsedLine &parsedLine)
     }
 
     return token;
+}
+
+QString mapPreviewReferenceToken(const TherionParsedLine &parsedLine)
+{
+    if (parsedLine.directive != QStringLiteral("preview")) {
+        return QString();
+    }
+
+    const QString previewMode = parsedLine.tokens.value(1).trimmed().toLower();
+    if (previewMode != QStringLiteral("above")
+        && previewMode != QStringLiteral("below")
+        && previewMode != QStringLiteral("none")) {
+        return QString();
+    }
+
+    return parsedLine.tokens.value(2).trimmed();
 }
 
 MapCompositionContentKind mapCompositionContentKind(const QString &referenceName)
@@ -903,6 +920,7 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
 
             QSet<QString> scrapReferences;
             QSet<QString> childMapReferences;
+            QSet<QString> previewReferences;
             bool sawMapContent = false;
             bool sawScrapContent = false;
             bool mixedContentDiagnosticAdded = false;
@@ -951,6 +969,20 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
                     continue;
                 }
                 if (mapDepth != 1) {
+                    continue;
+                }
+
+                const QString previewReference = mapPreviewReferenceToken(parsedLine);
+                if (!previewReference.isEmpty()) {
+                    const ReferenceResolution previewResolution = resolveReferenceKey(mapKeysByName,
+                                                                                      previewReference,
+                                                                                      mapEntry.namespacePath);
+                    if (previewResolution.state == ReferenceResolutionState::Unique) {
+                        const QString owningMapKey = ProjectStructureIndex::structureEntryNodeKey(mapEntry);
+                        if (previewResolution.key != owningMapKey) {
+                            previewReferences.insert(previewResolution.key);
+                        }
+                    }
                     continue;
                 }
 
@@ -1019,6 +1051,9 @@ MapReferenceScanResult scanMapReferences(const QVector<ProjectStructureEntry> &e
             }
             if (!childMapReferences.isEmpty()) {
                 result.childMapReferencesByMapKey.insert(ProjectStructureIndex::structureEntryNodeKey(mapEntry), childMapReferences);
+            }
+            if (!previewReferences.isEmpty()) {
+                result.previewReferencesByMapKey.insert(ProjectStructureIndex::structureEntryNodeKey(mapEntry), previewReferences);
             }
         }
     }
@@ -1206,6 +1241,7 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
                                                                       inMemoryFileContentsByPath);
     snapshot.mapScrapReferencesByMapKey = mapReferenceScan.scrapReferencesByMapKey;
     snapshot.mapChildReferencesByMapKey = mapReferenceScan.childMapReferencesByMapKey;
+    snapshot.mapPreviewReferencesByMapKey = mapReferenceScan.previewReferencesByMapKey;
     snapshot.diagnostics = mapReferenceScan.diagnostics;
     return snapshot;
 }

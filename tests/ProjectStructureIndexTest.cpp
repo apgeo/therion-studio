@@ -343,6 +343,11 @@ int runProjectIndexMapScrapReferenceTest()
                 "Preview references should not be treated as map composition hierarchy.")) {
         return 1;
     }
+    const QSet<QString> childMapPreviewReferences = snapshot.mapPreviewReferencesByMapKey.value(childMapKey);
+    if (!expect(childMapPreviewReferences.contains(mapKey),
+                "Preview references should be exposed as non-hierarchical map relationships.")) {
+        return 1;
+    }
 
     const QString scrapKey = ProjectStructureIndex::structureEntryNodeKey(scrapEntry);
     const QSet<QString> scrapReferences = snapshot.mapScrapReferencesByMapKey.value(mapKey);
@@ -437,6 +442,20 @@ int runProjectIndexMapScrapReferenceTest()
     if (!expect(shiftedSnapshot.diagnostics.size() == 3
                     && shiftedSnapshot.diagnostics.first().sourceObjectId == shiftedMapEntry.objectId,
                 "The shifted project index diagnostic should stay attached to the map object ID.")) {
+        return 1;
+    }
+    ProjectStructureEntry shiftedChildMapEntry;
+    if (!expect(findEntry(shiftedSnapshot.entries,
+                          ProjectStructureEntryKind::Map,
+                          QStringLiteral("child-map.m"),
+                          &shiftedChildMapEntry),
+                "The shifted project index did not find the child map entry.")) {
+        return 1;
+    }
+    const QSet<QString> shiftedPreviewReferences = shiftedSnapshot.mapPreviewReferencesByMapKey.value(
+        ProjectStructureIndex::structureEntryNodeKey(shiftedChildMapEntry));
+    if (!expect(shiftedPreviewReferences.contains(ProjectStructureIndex::structureEntryNodeKey(shiftedMapEntry)),
+                "The shifted project index preview reference should stay attached to stable map object IDs.")) {
         return 1;
     }
 

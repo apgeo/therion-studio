@@ -63,6 +63,7 @@ struct ProjectIndexSnapshot
     QVector<ProjectStructureEntry> entries;
     QHash<QString, QSet<QString>> mapScrapReferencesByMapKey;
     QHash<QString, QSet<QString>> mapChildReferencesByMapKey;
+    QHash<QString, QSet<QString>> mapPreviewReferencesByMapKey;
     QVector<ProjectIndexDiagnostic> diagnostics;
 };
 

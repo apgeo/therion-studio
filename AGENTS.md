@@ -186,3 +186,23 @@ These instructions apply to the whole repository.
 - Document progress in the repository itself, not only in chat. Update [WORKLOG.md](WORKLOG.md) after every change so the current implementation state stays visible in the repo.
 - Keep [WORKLOG.md](WORKLOG.md) focused on planned/open/in-progress work (for example: `In progress`, `Next up`, `Risks / blockers`, `Phase plan`, `Backlog`) when practical.
 - Do not keep completed-task items in [WORKLOG.md](WORKLOG.md); move completed history to archive files when needed.
+
+## Commit Message Discipline
+
+- Use short English commit subjects in the Conventional Commits style: `<type>: <imperative summary>`.
+- Prefer these types:
+  - `feat` for user-visible behavior or capability
+  - `fix` for correctness, regression, or stale-state fixes
+  - `docs` for documentation-only changes
+  - `test` for test-only changes
+  - `refactor` for behavior-preserving code structure changes
+  - `perf` for performance-only improvements
+  - `build` for build system, dependency, or generated-resource wiring
+  - `chore` only for repository maintenance that does not fit a clearer type
+- Keep the subject focused on what the commit actually changes, not the whole roadmap. Avoid vague subjects such as `update stuff`, `misc`, `cleanup`, `WIP`, or `next`.
+- Use an optional scope only when it adds useful precision, for example `feat(validation): ...` or `docs(architecture): ...`.
+- Keep the subject preferably under 72 characters and do not end it with a period.
+- Use the imperative mood: `add`, `fix`, `document`, `suppress`, `extract`, not `added`, `fixes`, or `documented`.
+- Split unrelated work into separate commits. In particular, keep generated catalog/resource updates separate from runtime logic unless they are inseparable.
+- For non-trivial commits, include a body that briefly explains why the change was needed, important behavior or architecture consequences, and the verification that was run.
+- If a commit intentionally leaves follow-up work, mention the follow-up in `WORKLOG.md` rather than burying it only in the commit body.

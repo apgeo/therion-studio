@@ -49,17 +49,6 @@ QString saveFilterForDocumentName(const QString &displayName)
     return QObject::tr("Therion Source (*.th);;All Files (*)");
 }
 
-bool isPathInsideProject(const QString &projectRootPath, const QString &filePath)
-{
-    if (projectRootPath.trimmed().isEmpty() || filePath.trimmed().isEmpty()) {
-        return false;
-    }
-
-    const QString relativePath = QDir(projectRootPath).relativeFilePath(filePath);
-    return !relativePath.startsWith(QStringLiteral(".."))
-        && !QDir::isAbsolutePath(relativePath);
-}
-
 void removeWelcomeTabIfPresent(QTabWidget *tabs)
 {
     const int welcomeTabIndex = findWelcomeTabIndex(tabs);
@@ -73,6 +62,32 @@ void removeWelcomeTabIfPresent(QTabWidget *tabs)
         welcomeWidget->deleteLater();
     }
 }
+}
+
+bool MainWindow::isDocumentPathInsideOpenProject(const QString &filePath) const
+{
+    if (projectRootPath_.trimmed().isEmpty() || filePath.trimmed().isEmpty()) {
+        return false;
+    }
+
+    const QString relativePath = QDir(projectRootPath_).relativeFilePath(filePath);
+    return !relativePath.startsWith(QStringLiteral(".."))
+        && !QDir::isAbsolutePath(relativePath);
+}
+
+void MainWindow::handleDocumentTextChanged(QWidget *documentWidget)
+{
+    if (!projectRootPath_.isEmpty()) {
+        requestStructureSidebarRebuild();
+    }
+    if (isDocumentPathInsideOpenProject(documentPathForWidget(documentWidget))) {
+        requestProjectValidation(TherionStudio::ProjectValidationController::Trigger::DocumentChanged,
+                                 false);
+    }
+    if (currentDocumentWidget() == documentWidget) {
+        rebuildMapObjectsTree();
+        refreshWorkspaceModeSwitcher();
+    }
 }
 
 TherionStudio::TextEditorTab *MainWindow::createUntitledTextTab(const QString &suggestedFileName, const QString &contents)
@@ -102,13 +117,7 @@ TherionStudio::TextEditorTab *MainWindow::createUntitledTextTab(const QString &s
         handleTextEditorCurrentLineChanged(tab->filePath(), lineNumber);
     });
     connect(tab, &TherionStudio::TextEditorTab::documentTextChanged, this, [this, tab]() {
-        if (!projectRootPath_.isEmpty()) {
-            requestStructureSidebarRebuild();
-        }
-        if (currentDocumentWidget() == tab) {
-            rebuildMapObjectsTree();
-            refreshWorkspaceModeSwitcher();
-        }
+        handleDocumentTextChanged(tab);
     });
     connect(tab, &TherionStudio::TextEditorTab::editorModeChanged, this, [this, tab](TherionStudio::TextEditorTab::EditorMode) {
         if (currentDocumentWidget() == tab) {
@@ -170,13 +179,7 @@ TherionStudio::MapEditorTab *MainWindow::createUntitledMapEditorTab(const QStrin
         handleTextEditorCurrentLineChanged(tab->filePath(), lineNumber);
     });
     connect(tab, &TherionStudio::MapEditorTab::documentTextChanged, this, [this, tab]() {
-        if (!projectRootPath_.isEmpty()) {
-            requestStructureSidebarRebuild();
-        }
-        if (currentDocumentWidget() == tab) {
-            rebuildMapObjectsTree();
-            refreshWorkspaceModeSwitcher();
-        }
+        handleDocumentTextChanged(tab);
     });
     connect(tab, &TherionStudio::MapEditorTab::backgroundLayersChanged, this, [this, tab]() {
         if (currentDocumentWidget() == tab) {
@@ -281,7 +284,7 @@ bool MainWindow::saveDocumentWidget(QWidget *documentWidget, QString *errorMessa
     if (!savedPath.isEmpty()) {
         registerDocumentFileWatcher(savedPath);
         recordRecentFilePath(savedPath);
-        if (isPathInsideProject(projectRootPath_, savedPath)) {
+        if (isDocumentPathInsideOpenProject(savedPath)) {
             requestProjectValidation(TherionStudio::ProjectValidationController::Trigger::DocumentSaved,
                                      false);
         }

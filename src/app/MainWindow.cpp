@@ -1503,13 +1503,7 @@ TherionStudio::TextEditorTab *MainWindow::openTextTab(const QString &filePath,
         handleTextEditorCurrentLineChanged(tab->filePath(), lineNumber);
     });
     connect(tab, &TherionStudio::TextEditorTab::documentTextChanged, this, [this, tab]() {
-        if (!projectRootPath_.isEmpty()) {
-            requestStructureSidebarRebuild();
-        }
-        if (currentDocumentWidget() == tab) {
-            rebuildMapObjectsTree();
-            refreshWorkspaceModeSwitcher();
-        }
+        handleDocumentTextChanged(tab);
     });
     connect(tab, &TherionStudio::TextEditorTab::editorModeChanged, this, [this, tab](TherionStudio::TextEditorTab::EditorMode) {
         if (currentDocumentWidget() == tab) {
@@ -1717,13 +1711,7 @@ TherionStudio::MapEditorTab *MainWindow::openMapEditorTab(const QString &filePat
         handleTextEditorCurrentLineChanged(tab->filePath(), lineNumber);
     });
     connect(tab, &TherionStudio::MapEditorTab::documentTextChanged, this, [this, tab]() {
-        if (!projectRootPath_.isEmpty()) {
-            requestStructureSidebarRebuild();
-        }
-        if (currentDocumentWidget() == tab) {
-            rebuildMapObjectsTree();
-            refreshWorkspaceModeSwitcher();
-        }
+        handleDocumentTextChanged(tab);
     });
     connect(tab, &TherionStudio::MapEditorTab::backgroundLayersChanged, this, [this, tab]() {
         if (currentDocumentWidget() == tab) {

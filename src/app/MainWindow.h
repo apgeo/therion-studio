@@ -159,6 +159,8 @@ private:
     void requestProjectValidation();
     void requestProjectValidation(TherionStudio::ProjectValidationController::Trigger trigger, bool revealPanel);
     void requestRestoredProjectValidation();
+    bool isDocumentPathInsideOpenProject(const QString &filePath) const;
+    void handleDocumentTextChanged(QWidget *documentWidget);
     void handleProjectValidationStarted(TherionStudio::ProjectValidationController::Trigger trigger,
                                         quint64 generation,
                                         const QString &projectRootPath);

@@ -158,6 +158,7 @@ private:
     void handleProjectSearchFinished(const TherionStudio::ProjectSearchScanner::Result &result);
     void requestProjectValidation();
     void requestProjectValidation(TherionStudio::ProjectValidationController::Trigger trigger, bool revealPanel);
+    void requestRestoredProjectValidation();
     void handleProjectValidationStarted(TherionStudio::ProjectValidationController::Trigger trigger,
                                         quint64 generation,
                                         const QString &projectRootPath);
@@ -255,6 +256,8 @@ private:
     void refreshWorkspaceIconTheme();
     void refreshWorkspaceModeSwitcherGeometry();
     void refreshViewMenuActions();
+    void clearValidationRailIndicator();
+    void updateValidationRailIndicator();
     void refreshFullScreenAction();
     void setMapMagnifierEnabledForOpenTabs(bool enabled);
     bool currentDocumentHasRightPanel() const;
@@ -438,6 +441,7 @@ private:
     QHash<quint64, bool> validationRevealByGeneration_;
     bool pendingProjectValidationRevealPanel_ = false;
     bool validationProjectMode_ = false;
+    int validationProblemCount_ = 0;
     QString projectRootPath_;
     QString projectStructureSummary_;
     QString lastAppliedStructureSidebarSignature_;

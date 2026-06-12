@@ -223,6 +223,7 @@ void MainWindow::triggerValidateDocumentForActiveDocument()
 
     const QString documentLabel = validationDocumentLabel(displayName, filePath);
     if (validation.diagnostics.isEmpty()) {
+        clearValidationRailIndicator();
         if (validationStatusLabel_ != nullptr) {
             validationStatusLabel_->setText(tr("No validation problems found in %1.").arg(documentLabel));
         }
@@ -233,6 +234,9 @@ void MainWindow::triggerValidateDocumentForActiveDocument()
         showSidebarPane(SidebarPane::Validation);
         return;
     }
+
+    validationProblemCount_ = validation.diagnostics.size();
+    updateValidationRailIndicator();
 
     auto *fileItem = new QStandardItem(tr("%1 (%2)").arg(documentLabel).arg(validation.diagnostics.size()));
     fileItem->setEditable(false);
@@ -286,6 +290,13 @@ void MainWindow::requestProjectValidation()
 {
     requestProjectValidation(TherionStudio::ProjectValidationController::Trigger::ManualRefresh,
                              true);
+}
+
+void MainWindow::requestRestoredProjectValidation()
+{
+    if (!projectRootPath_.trimmed().isEmpty() && QDir(projectRootPath_).exists()) {
+        requestProjectValidation(TherionStudio::ProjectValidationController::Trigger::ProjectOpened, false);
+    }
 }
 
 void MainWindow::requestProjectValidation(TherionStudio::ProjectValidationController::Trigger trigger,
@@ -363,6 +374,7 @@ void MainWindow::handleProjectValidationStarted(TherionStudio::ProjectValidation
     validationDiagnostics_.clear();
     validationDiagnosticFilePaths_.clear();
     validationDocumentPath_.clear();
+    clearValidationRailIndicator();
     validationProjectMode_ = true;
     if (validationResultsModel_ != nullptr) {
         validationResultsModel_->clear();
@@ -407,6 +419,7 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
     validationProjectMode_ = true;
 
     if (!result.errorMessage.isEmpty()) {
+        clearValidationRailIndicator();
         if (validationStatusLabel_ != nullptr) {
             validationStatusLabel_->setText(result.errorMessage);
         }
@@ -415,6 +428,7 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
     }
 
     if (result.findings.isEmpty()) {
+        clearValidationRailIndicator();
         if (validationStatusLabel_ != nullptr) {
             validationStatusLabel_->setText(tr("No validation problems found in %1 searched file(s).")
                                                 .arg(result.searchedFileCount));
@@ -425,6 +439,9 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
         }
         return;
     }
+
+    validationProblemCount_ = result.findings.size();
+    updateValidationRailIndicator();
 
     bool hasAnySafeFix = false;
     QHash<QString, QStandardItem *> fileItemsByPath;

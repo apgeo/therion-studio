@@ -409,6 +409,7 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
     resize(defaultMainWindowSize());
     if (restoreMode == SessionRestoreMode::RestoreSession) {
         restoreSessionState();
+        requestRestoredProjectValidation();
     }
 
     if (editorTabs_->count() == 0) {
@@ -938,6 +939,9 @@ void MainWindow::openProjectPath(const QString &selectedProjectPath)
     };
     actions.setProjectRootPath = [this](const QString &projectRootPath) {
         projectRootPath_ = projectRootPath;
+        if (projectRootPath_.isEmpty()) {
+            clearValidationRailIndicator();
+        }
     };
     actions.applyProjectRootToBrowser = [this](const QString &projectRootPath) {
         Q_UNUSED(projectRootPath);
@@ -957,8 +961,7 @@ void MainWindow::openProjectPath(const QString &selectedProjectPath)
     if (projectRootPath_ != previousProjectRootPath
         && !projectRootPath_.trimmed().isEmpty()
         && QDir(projectRootPath_).exists()) {
-        requestProjectValidation(TherionStudio::ProjectValidationController::Trigger::ProjectOpened,
-                                 false);
+        requestProjectValidation(TherionStudio::ProjectValidationController::Trigger::ProjectOpened, false);
     }
 }
 
@@ -973,6 +976,9 @@ void MainWindow::closeProject()
     };
     actions.setProjectRootPath = [this](const QString &projectRootPath) {
         projectRootPath_ = projectRootPath;
+        if (projectRootPath_.isEmpty()) {
+            clearValidationRailIndicator();
+        }
     };
     actions.clearDocumentTabs = [this]() { clearDocumentTabs(); };
     actions.resetProjectBrowser = [this]() { resetProjectBrowser(); };

@@ -1188,6 +1188,28 @@ void MainWindow::setSidebarPane(SidebarPane pane)
     }
 }
 
+void MainWindow::updateValidationRailIndicator()
+{
+    if (sidebarValidationButton_ == nullptr) {
+        return;
+    }
+
+    const bool hasProblems = validationProblemCount_ > 0;
+    sidebarValidationButton_->setProperty("validationProblems", hasProblems);
+    sidebarValidationButton_->setToolTip(hasProblems
+        ? tr("Validation: %1 problem(s)").arg(validationProblemCount_)
+        : tr("Validation"));
+    sidebarValidationButton_->style()->unpolish(sidebarValidationButton_);
+    sidebarValidationButton_->style()->polish(sidebarValidationButton_);
+    sidebarValidationButton_->update();
+}
+
+void MainWindow::clearValidationRailIndicator()
+{
+    validationProblemCount_ = 0;
+    updateValidationRailIndicator();
+}
+
 void MainWindow::requestProjectSearch()
 {
     if (projectSearchScanner_ == nullptr) {

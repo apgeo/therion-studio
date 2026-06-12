@@ -100,6 +100,7 @@ inline QString sidebarActivityRailStyleSheet(const QPalette &palette)
     const QColor railBase = palette.color(QPalette::Window);
     const QColor railHover = palette.color(QPalette::Highlight);
     const QColor railChecked = palette.color(QPalette::Highlight);
+    const QColor railWarning = QColor(217, 119, 6);
     return QStringLiteral(
                "#SidebarActivityRail {"
                "background-color: %1;"
@@ -116,13 +117,23 @@ inline QString sidebarActivityRailStyleSheet(const QPalette &palette)
                "#SidebarActivityRail QToolButton:checked {"
                "background-color: %3;"
                "}"
+               "#SidebarActivityRail QToolButton[validationProblems=\"true\"] {"
+               "background-color: %5;"
+               "border: 1px solid %6;"
+               "}"
+               "#SidebarActivityRail QToolButton[validationProblems=\"true\"]:checked {"
+               "background-color: %7;"
+               "}"
                "#SidebarActivityRail QFrame#SidebarActivitySeparator {"
                "background-color: %4;"
                "}")
         .arg(rgbaColorCss(railBase, 0.78))
         .arg(rgbaColorCss(railHover, 0.24))
         .arg(rgbaColorCss(railChecked, 0.34))
-        .arg(rgbaColorCss(palette.color(QPalette::Mid), 0.7));
+        .arg(rgbaColorCss(palette.color(QPalette::Mid), 0.7))
+        .arg(rgbaColorCss(railWarning, 0.24))
+        .arg(rgbaColorCss(railWarning, 0.92))
+        .arg(rgbaColorCss(railWarning, 0.38));
 }
 
 inline QString sidebarContentPaneStyleSheet()

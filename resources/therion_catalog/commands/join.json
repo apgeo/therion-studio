@@ -3,7 +3,7 @@
   "directive": "join",
   "source": {
     "file": "therion/thbook/ch02.tex",
-    "line": 1260
+    "line": 1333
   },
   "summary": "Join works in two modes: it joins either two scraps or two or more points or lines in a map together. When joining more than two points or lines, use one join command for all of them, not a sequence of join commands for pairs. (E.g. use join a b c, not join a b followed by join b c.) When joining scraps, only passage walls are joined. It's a good idea to place a scrap join in the passage which is as simple as possible, otherwise you have to specify join for each pair of objects which should be joined. (If you want some object which is clipped by a scrap boundary to continue to a neighbouring scrap, use -clip off option for that object.) When joining more than two scraps at the same scrap border, a manual join must be performed where the connection points must be entered in one join statement. (Like join origScrapLineWest:end upperScrapLineWest:0 lowerScrapLineWest:0 and another similar join command for the three east wall lines.)",
   "syntax": [
@@ -13,6 +13,9 @@
     "none",
     "survey",
     "scrap"
+  ],
+  "document_types": [
+    "th"
   ],
   "arguments": [
     {

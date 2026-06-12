@@ -12,6 +12,10 @@
   "contexts": [
     "all"
   ],
+  "document_types": [
+    "th",
+    "thconfig"
+  ],
   "arguments": [
     {
       "raw": "<file-name>",

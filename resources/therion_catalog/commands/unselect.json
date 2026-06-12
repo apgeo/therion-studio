@@ -3,7 +3,7 @@
   "directive": "unselect",
   "source": {
     "file": "therion/thbook/ch03.tex",
-    "line": 152
+    "line": 163
   },
   "summary": "Unselects objects from export.",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "none"
+  ],
+  "document_types": [
+    "thconfig"
   ],
   "arguments": [],
   "options": [],

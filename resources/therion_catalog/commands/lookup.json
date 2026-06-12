@@ -3,7 +3,7 @@
   "directive": "lookup",
   "source": {
     "file": "therion/thbook/ch03.tex",
-    "line": 597
+    "line": 608
   },
   "summary": "Allows to define lookup maps. They are used for defining custom coloring of maps. (see colour command.)",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "none"
+  ],
+  "document_types": [
+    "thconfig"
   ],
   "arguments": [
     {

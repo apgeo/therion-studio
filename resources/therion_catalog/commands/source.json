@@ -3,7 +3,7 @@
   "directive": "source",
   "source": {
     "file": "therion/thbook/ch03.tex",
-    "line": 82
+    "line": 93
   },
   "summary": "Specifies which source (data) files Therion should read. You can specify several files here; one per line. You can also specify them using the -s command line option (see below). It is also possible to type (some small snippets of) code directly in configuration file using the multi-line syntax.",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "none"
+  ],
+  "document_types": [
+    "thconfig"
   ],
   "arguments": [
     {

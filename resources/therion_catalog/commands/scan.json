@@ -1,0 +1,74 @@
+{
+  "name": "scan",
+  "directive": "scan",
+  "source": {
+    "file": "therion/thbook/ch02.tex",
+    "line": 1526
+  },
+  "summary": "The scan command is used to enter external 3D mesh data into the cave 3D model. This is particularly useful for integrating high-resolution LiDAR scans or photogrammetry models directly with other surveyed data.",
+  "syntax": [
+    "scan file <filename> units <units> axes <x-spec> <y-spec> <z-spec> [calibration data] endscan"
+  ],
+  "contexts": [
+    "none",
+    "survey"
+  ],
+  "document_types": [
+    "th"
+  ],
+  "arguments": [],
+  "options": [
+    {
+      "raw": "file <filename> = filename in STL format containing 3D mesh data.",
+      "name": "file <filename>",
+      "signature": "file <filename>",
+      "option_key": "-file",
+      "value_arity": "1",
+      "value_domain": "path",
+      "description": "filename in STL format containing 3D mesh data.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "units <units> = units of the STL file. Metres by default.",
+      "name": "units <units>",
+      "signature": "units <units>",
+      "option_key": "-units",
+      "value_arity": "1",
+      "value_domain": "unknown",
+      "description": "units of the STL file. Metres by default.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "axes <x-spec> <y-spec> <z-spec> = order of axes in the STL file. Axes can be in any order, you can use x, -x, y, -y, z or -z. A minus prefix means the axis is reversed.",
+      "name": "axes <x-spec> <y-spec> <z-spec>",
+      "signature": "axes <x-spec> <y-spec> <z-spec>",
+      "option_key": "-axes",
+      "value_arity": "N",
+      "value_domain": "unknown",
+      "description": "order of axes in the STL file. Axes can be in any order, you can use x, -x, y, -y, z or -z. A minus prefix means the axis is reversed.",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "[calibration data] = multiple lines of coordinates mapping known survey stations to the 3D mesh. Each line contains position of specifin survey station in STL file coordinates in <station-name> <x> <y> <z> order.",
+      "name": "[calibration data]",
+      "signature": "[calibration data]",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "unknown",
+      "description": "multiple lines of coordinates mapping known survey stations to the 3D mesh. Each line contains position of specifin survey station in STL file coordinates in <station-name> <x> <y> <z> order.",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "dependencies": [
+    "context: none, survey"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "container_open",
+    "close_directive": "endscan"
+  }
+}

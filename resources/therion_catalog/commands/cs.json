@@ -13,6 +13,10 @@
     "centerline",
     "none"
   ],
+  "document_types": [
+    "th",
+    "thconfig"
+  ],
   "arguments": [
     {
       "raw": "<coordinate system>",

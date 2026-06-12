@@ -3,7 +3,7 @@
   "directive": "log",
   "source": {
     "file": "therion/thbook/ch03.tex",
-    "line": 195
+    "line": 206
   },
   "summary": "Turn on logging of various info. Currently only extended elevation processing log is supported.",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "none"
+  ],
+  "document_types": [
+    "thconfig"
   ],
   "arguments": [],
   "options": [],

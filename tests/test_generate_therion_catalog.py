@@ -100,6 +100,26 @@ class TherionCatalogGenerationTest(unittest.TestCase):
                     invalid_contexts.append((command_name, context))
         self.assertFalse(invalid_contexts, f"Unexpected context enums: {invalid_contexts}")
 
+    def test_document_type_values_use_known_enums(self) -> None:
+        allowed = {"all", "th", "th2", "thconfig"}
+        invalid_document_types = []
+        for command_name, command in self.commands_by_name.items():
+            for document_type in command.get("document_types", []):
+                if document_type not in allowed:
+                    invalid_document_types.append((command_name, document_type))
+        self.assertFalse(invalid_document_types, f"Unexpected document type enums: {invalid_document_types}")
+
+    def test_known_document_type_examples(self) -> None:
+        self.assertEqual(self.commands_by_name["encoding"].get("document_types", []), ["all"])
+        self.assertEqual(self.commands_by_name["survey"].get("document_types", []), ["th"])
+        self.assertEqual(self.commands_by_name["map"].get("document_types", []), ["th"])
+        self.assertEqual(self.commands_by_name["source"].get("document_types", []), ["thconfig"])
+        self.assertEqual(self.commands_by_name["export"].get("document_types", []), ["thconfig"])
+        self.assertEqual(self.commands_by_name["scrap"].get("document_types", []), ["th2"])
+        self.assertEqual(self.commands_by_name["point"].get("document_types", []), ["th2"])
+        self.assertEqual(self.commands_by_name["line"].get("document_types", []), ["th2"])
+        self.assertEqual(self.commands_by_name["area"].get("document_types", []), ["th2"])
+
     def test_source_files_are_recorded(self) -> None:
         metadata = self.catalog.get("metadata", {})
         source_files = metadata.get("source_files", [])

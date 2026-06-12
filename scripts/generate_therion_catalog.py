@@ -91,6 +91,16 @@ MAP_BODY_INLINE_COMMAND_NAMES = {
     "break",
     "preview",
 }
+TH2_MAP_OBJECT_DIRECTIVES = {
+    "area",
+    "line",
+    "point",
+    "scrap",
+}
+ALL_DOCUMENT_TYPES = ["all"]
+THERION_SOURCE_DOCUMENT_TYPES = ["th"]
+THERION_MAP_DOCUMENT_TYPES = ["th2"]
+THERION_CONFIG_DOCUMENT_TYPES = ["thconfig"]
 
 
 def normalize_whitespace(value: str) -> str:
@@ -493,6 +503,20 @@ def extract_contexts(section_text: str) -> list[str]:
     return deduped
 
 
+def infer_document_types(source_file: str, command_directive: str) -> list[str]:
+    if command_directive == "encoding":
+        return ALL_DOCUMENT_TYPES.copy()
+
+    source_name = Path(source_file).name.lower()
+    if source_name == "ch03.tex":
+        return THERION_CONFIG_DOCUMENT_TYPES.copy()
+    if command_directive in TH2_MAP_OBJECT_DIRECTIVES:
+        return THERION_MAP_DOCUMENT_TYPES.copy()
+    if source_name == "ch02.tex":
+        return THERION_SOURCE_DOCUMENT_TYPES.copy()
+    return []
+
+
 def extract_section_description(section_text: str) -> str:
     description_blocks = extract_block(section_text, "description")
     if description_blocks:
@@ -876,6 +900,7 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
         contexts = extract_contexts(section_text)
         if not contexts and command_directive in PROCESSING_DATA_TOP_LEVEL_DIRECTIVES:
             contexts = ["none"]
+        document_types = infer_document_types(source_file, command_directive)
         description = extract_section_description(section_text)
 
         arguments = []
@@ -925,6 +950,7 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
             "summary": description,
             "syntax": syntax_blocks,
             "contexts": contexts,
+            "document_types": document_types,
             "arguments": arguments,
             "options": options,
             "dependencies": dependencies,
@@ -986,6 +1012,7 @@ def parse_sections(tex_text: str, source_file: str, known_command_names: set[str
                         "summary": description_for_command,
                         "syntax": [signature] if signature else [],
                         "contexts": ["centerline"],
+                        "document_types": THERION_SOURCE_DOCUMENT_TYPES.copy(),
                         "arguments": arguments_for_command,
                         "options": [],
                         "dependencies": ["context: centerline"],
@@ -1231,6 +1258,7 @@ def merge_command_entries(target: dict[str, Any], source: dict[str, Any]) -> Non
     list_union_fields = (
         "aliases",
         "contexts",
+        "document_types",
         "dependencies",
         "inline_commands",
         "allowed_values",

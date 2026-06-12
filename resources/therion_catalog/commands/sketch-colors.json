@@ -3,7 +3,7 @@
   "directive": "sketch-colors",
   "source": {
     "file": "therion/thbook/ch03.tex",
-    "line": 660
+    "line": 671
   },
   "summary": "",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "none"
+  ],
+  "document_types": [
+    "thconfig"
   ],
   "arguments": [],
   "options": [],

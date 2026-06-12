@@ -7,11 +7,14 @@
   },
   "summary": "Survey data (centreline) specification. The syntax is borrowed from Survex with minor modifications; the Survex manual may be useful as an additional reference for the user. A synonym term \"centerline\" may be used.",
   "syntax": [
-    "centreline [OPTIONS] date <date> team <person> [<roles>] explo-date <date> explo-team <person> instrument <quantity list> <description> calibrate <quantity list> <zero error> [<scale>] units <quantity list> [<factor>] <units> sd <quantity list> <value> <units> grade <grade list> declination <value> <units> grid-angle <value> <units> infer <what> <on/off> mark <type> flags <shot flags> station <station> <comment> [<flags>] cs <coordinate system> fix <station> [<x> <y> <z> [<std x> <std y> <std z>]] equate <station list> data <style> <readings order> break group endgroup walls <auto/on/off> vthreshold <number> <units> extend <spec> [<station> [<station>]] station-names <prefix> <suffix> ... [SURVEY DATA] ... endcentreline"
+    "centreline [OPTIONS] date <date> team <person> [<roles>] explo-date <date> explo-team <person> instrument <quantity list> <description> calibrate <quantity list> <zero error> [<scale>] units <quantity list> [<factor>] <units> sd <quantity list> <value> <units> grade <grade list> declination <value> <units> grid-angle <value> <units> infer <what> <on/off> mark <type> flags <shot flags> station <station> <comment> [<flags>] cs <coordinate system> fix <station> [<x> <y> <z> [<std x> <std y> <std z>]] equate <station list> data <style> <readings order> break group endgroup walls <auto/on/off> vthreshold <number> <units> extend <spec> [<station> [<station> [<station>]]] station-names <prefix> <suffix> ... [SURVEY DATA] ... endcentreline"
   ],
   "contexts": [
     "none",
     "survey"
+  ],
+  "document_types": [
+    "th"
   ],
   "arguments": [],
   "options": [

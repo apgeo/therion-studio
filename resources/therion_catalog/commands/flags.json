@@ -12,6 +12,9 @@
   "contexts": [
     "centerline"
   ],
+  "document_types": [
+    "th"
+  ],
   "arguments": [
     {
       "raw": "<shot flags>",

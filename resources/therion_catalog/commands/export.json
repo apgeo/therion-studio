@@ -3,7 +3,7 @@
   "directive": "export",
   "source": {
     "file": "therion/thbook/ch03.tex",
-    "line": 672
+    "line": 683
   },
   "summary": "Exports selected surveys or maps.",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "none"
+  ],
+  "document_types": [
+    "thconfig"
   ],
   "arguments": [
     {

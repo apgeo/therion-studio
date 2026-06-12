@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generated_at_utc": "2026-06-01T09:04:09.187459+00:00",
+    "generated_at_utc": "2026-06-12T08:31:49.624959+00:00",
     "generator_version": "4",
     "source_repository": "https://github.com/therion/therion",
     "source_reference": "snapshot",
@@ -39,6 +39,10 @@
       "close_directive": "endrevise"
     },
     {
+      "open_directive": "scan",
+      "close_directive": "endscan"
+    },
+    {
       "open_directive": "scrap",
       "close_directive": "endscrap"
     },
@@ -61,7 +65,7 @@
       "directive": "area",
       "source": {
         "file": "therion/thbook/ch02.tex",
-        "line": 1201
+        "line": 1274
       },
       "summary": "Area is specified by surrounding border lines. They may be of any type, but must be listed in order and each pair of consecutive lines must intersect. In order to be sure that lines intersect even after scrap transformation you may e.g. continue a lake border 1 cm behind a passage wall - these overlaps will be automatically clipped by scrap border. You may use invisible border to achieve this inside of the passage. When defined by more than one line, the actual area will be the intersection of the areas defined by each separate line.",
       "syntax": [
@@ -69,6 +73,9 @@
       ],
       "contexts": [
         "scrap"
+      ],
+      "document_types": [
+        "th2"
       ],
       "arguments": [
         {
@@ -96,13 +103,13 @@
           "dependencies": []
         },
         {
-          "raw": "place <bottom/default/top> = changes displaying order in the map.",
+          "raw": "place <bottom/default/top> = changes displaying order in the map .",
           "name": "place <bottom/default/top>",
           "signature": "place <bottom/default/top>",
           "option_key": "-place",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "changes displaying order in the map.",
+          "description": "changes displaying order in the map .",
           "allowed_values": [
             "bottom",
             "default",
@@ -111,13 +118,13 @@
           "dependencies": []
         },
         {
-          "raw": "clip <on/off> = specify whether a symbol is clipped by the scrap border.",
+          "raw": "clip <on/off> = specify whether a symbol is clipped by the scrap border .",
           "name": "clip <on/off>",
           "signature": "clip <on/off>",
           "option_key": "-clip",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "specify whether a symbol is clipped by the scrap border.",
+          "description": "specify whether a symbol is clipped by the scrap border .",
           "allowed_values": [
             "on",
             "off"
@@ -125,13 +132,13 @@
           "dependencies": []
         },
         {
-          "raw": "visibility <on/off> = displays/hides the symbol.",
+          "raw": "visibility <on/off> = displays/hides the symbol .",
           "name": "visibility <on/off>",
           "signature": "visibility <on/off>",
           "option_key": "-visibility",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "displays/hides the symbol.",
+          "description": "displays/hides the symbol .",
           "allowed_values": [
             "on",
             "off"
@@ -206,6 +213,9 @@
         "centerline",
         "map"
       ],
+      "document_types": [
+        "th"
+      ],
       "arguments": [],
       "options": [],
       "dependencies": [
@@ -230,6 +240,9 @@
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -284,11 +297,14 @@
       },
       "summary": "Survey data (centreline) specification. The syntax is borrowed from Survex with minor modifications; the Survex manual may be useful as an additional reference for the user. A synonym term \"centerline\" may be used.",
       "syntax": [
-        "centreline [OPTIONS] date <date> team <person> [<roles>] explo-date <date> explo-team <person> instrument <quantity list> <description> calibrate <quantity list> <zero error> [<scale>] units <quantity list> [<factor>] <units> sd <quantity list> <value> <units> grade <grade list> declination <value> <units> grid-angle <value> <units> infer <what> <on/off> mark <type> flags <shot flags> station <station> <comment> [<flags>] cs <coordinate system> fix <station> [<x> <y> <z> [<std x> <std y> <std z>]] equate <station list> data <style> <readings order> break group endgroup walls <auto/on/off> vthreshold <number> <units> extend <spec> [<station> [<station>]] station-names <prefix> <suffix> ... [SURVEY DATA] ... endcentreline"
+        "centreline [OPTIONS] date <date> team <person> [<roles>] explo-date <date> explo-team <person> instrument <quantity list> <description> calibrate <quantity list> <zero error> [<scale>] units <quantity list> [<factor>] <units> sd <quantity list> <value> <units> grade <grade list> declination <value> <units> grid-angle <value> <units> infer <what> <on/off> mark <type> flags <shot flags> station <station> <comment> [<flags>] cs <coordinate system> fix <station> [<x> <y> <z> [<std x> <std y> <std z>]] equate <station list> data <style> <readings order> break group endgroup walls <auto/on/off> vthreshold <number> <units> extend <spec> [<station> [<station> [<station>]]] station-names <prefix> <suffix> ... [SURVEY DATA] ... endcentreline"
       ],
       "contexts": [
         "none",
         "survey"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [],
       "options": [
@@ -392,6 +408,10 @@
         "centerline",
         "none"
       ],
+      "document_types": [
+        "th",
+        "thconfig"
+      ],
       "arguments": [
         {
           "raw": "<coordinate system>",
@@ -428,6 +448,9 @@
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -557,6 +580,9 @@
       "contexts": [
         "centerline"
       ],
+      "document_types": [
+        "th"
+      ],
       "arguments": [
         {
           "raw": "<date>",
@@ -592,6 +618,9 @@
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -640,6 +669,9 @@
       "contexts": [
         "none"
       ],
+      "document_types": [
+        "all"
+      ],
       "arguments": [
         {
           "raw": "<encoding-name> = to see a list of all the supported encoding names, run Therion with --print-encodings option. \"UTF-8\" (Unicode) and \"ASCII\" (7 bit) encodings are always supported.",
@@ -676,6 +708,9 @@
       "contexts": [
         "centerline"
       ],
+      "document_types": [
+        "th"
+      ],
       "arguments": [],
       "options": [],
       "dependencies": [
@@ -701,6 +736,9 @@
         "centerline",
         "none",
         "survey"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -739,6 +777,9 @@
       "contexts": [
         "centerline"
       ],
+      "document_types": [
+        "th"
+      ],
       "arguments": [
         {
           "raw": "<date>",
@@ -775,6 +816,9 @@
       "contexts": [
         "centerline"
       ],
+      "document_types": [
+        "th"
+      ],
       "arguments": [
         {
           "raw": "<person>",
@@ -802,7 +846,7 @@
       "directive": "export",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 672
+        "line": 683
       },
       "summary": "Exports selected surveys or maps.",
       "syntax": [
@@ -810,6 +854,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [
         {
@@ -1208,12 +1255,15 @@
         "file": "therion/thbook/ch02.tex",
         "line": 376
       },
-      "summary": "control how the centerline is extended. <spec> is one of the following normal/reverse = extend given and following stations to the same/reverse direction as previous station. If two stations are given - direction is applied only to given shot. left/right = same as above, but direction is specified explicitly. vertical = do not move station (shot) in X direction, use only Z component of the shot start = specify starting station (shot) ignore = ignore specified station (shot), continue extended elevation with other station (shot) if possible hide = do not show specified station (shot) in extended elevation If no stations are specified, <spec> is valid for following shots specified.",
+      "summary": "control how the centerline is extended. <spec> may be one of the following keywords normal/reverse = extend given and following stations to the same/reverse direction as previous station. If station names are given, direction is applied only to the specified station or shot. left/right = same as above, but direction is specified explicitly. vertical = do not move station (shot) in X direction, use only Z component of the shot start = specify starting station (shot) ignore = ignore specified station (shot), continue extended elevation with other station (shot) if possible hide = do not show specified station (shot) in extended elevation or a percentage in the range 0 to 200. This sets the extend ratio, i.e.\\ the factor used for the horizontal component of a leg in extended elevation. Therion keeps the vertical component unchanged and multiplies only the horizontal displacement by the ratio. Thus 100 means the normal width of the extended leg, 50 compresses it to one half, 200 stretches it to double width, and 0 suppresses any horizontal displacement (effectively the same result as vertical for that leg). The optional station arguments are interpreted as follows: extend <spec> = set the default extend behaviour for subsequent shots in the current centreline. extend <spec> <from> = apply the extend setting to a station. extend <spec> <from> <to> = apply the extend setting to a specific shot. extend <spec> <before> <from> <to> = apply the extend setting to a specific shot, with an additional before station condition. This form is primarily useful with ignore, where the shot is ignored only if the extended-elevation traversal reaches <from> from <before>. Station names use the normal Therion object reference syntax, so station@survey may be used.",
       "syntax": [
-        "extend <spec> [<station> [<station>]]"
+        "extend <spec> [<station> [<station> [<station>]]]"
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -1228,9 +1278,9 @@
           "dependencies": []
         },
         {
-          "raw": "[<station> [<station>]",
-          "name": "[<station> [<station>]",
-          "signature": "[<station> [<station>]",
+          "raw": "[<station> [<station> [<station>]",
+          "name": "[<station> [<station> [<station>]",
+          "signature": "[<station> [<station> [<station>]",
           "option_key": "",
           "value_arity": "N",
           "value_domain": "keyword",
@@ -1261,6 +1311,9 @@
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -1309,6 +1362,9 @@
       "contexts": [
         "centerline"
       ],
+      "document_types": [
+        "th"
+      ],
       "arguments": [
         {
           "raw": "<shot flags>",
@@ -1350,6 +1406,9 @@
         "centerline",
         "all"
       ],
+      "document_types": [
+        "th"
+      ],
       "arguments": [
         {
           "raw": "<grade list>",
@@ -1386,6 +1445,9 @@
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -1434,6 +1496,9 @@
       "contexts": [
         "centerline"
       ],
+      "document_types": [
+        "th"
+      ],
       "arguments": [],
       "options": [],
       "dependencies": [
@@ -1449,7 +1514,7 @@
       "directive": "import",
       "source": {
         "file": "therion/thbook/ch02.tex",
-        "line": 1453
+        "line": 1556
       },
       "summary": "Reads survey data in different formats (currently processed centreline in *.3d, *.plt, *.xyz formats). Survey stations may be referenced in scraps etc. When importing a Survex 3D file, stations are inserted in the survey hierarchy if there exists an identical hierarchy to that in 3D file.",
       "syntax": [
@@ -1458,6 +1523,9 @@
       "contexts": [
         "all",
         "survey"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [],
       "options": [
@@ -1532,6 +1600,9 @@
       "contexts": [
         "centerline"
       ],
+      "document_types": [
+        "th"
+      ],
       "arguments": [
         {
           "raw": "<what>",
@@ -1582,6 +1653,10 @@
       "contexts": [
         "all"
       ],
+      "document_types": [
+        "th",
+        "thconfig"
+      ],
       "arguments": [
         {
           "raw": "<file-name>",
@@ -1617,6 +1692,9 @@
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -1656,7 +1734,7 @@
       "directive": "join",
       "source": {
         "file": "therion/thbook/ch02.tex",
-        "line": 1260
+        "line": 1333
       },
       "summary": "Join works in two modes: it joins either two scraps or two or more points or lines in a map together. When joining more than two points or lines, use one join command for all of them, not a sequence of join commands for pairs. (E.g. use join a b c, not join a b followed by join b c.) When joining scraps, only passage walls are joined. It's a good idea to place a scrap join in the passage which is as simple as possible, otherwise you have to specify join for each pair of objects which should be joined. (If you want some object which is clipped by a scrap boundary to continue to a neighbouring scrap, use -clip off option for that object.) When joining more than two scraps at the same scrap border, a manual join must be performed where the connection points must be entered in one join statement. (Like join origScrapLineWest:end upperScrapLineWest:0 lowerScrapLineWest:0 and another similar join command for the three east wall lines.)",
       "syntax": [
@@ -1666,6 +1744,9 @@
         "none",
         "survey",
         "scrap"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -1729,6 +1810,9 @@
       "contexts": [
         "none"
       ],
+      "document_types": [
+        "thconfig"
+      ],
       "arguments": [],
       "options": [],
       "dependencies": [
@@ -1744,7 +1828,7 @@
       "directive": "layout",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 224
+        "line": 235
       },
       "summary": "Specifies layout for 2D maps. Settings which apply to atlas mode are marked \"A\"; map mode \"M\".",
       "syntax": [
@@ -1752,6 +1836,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [],
       "options": [
@@ -2591,7 +2678,7 @@
       "directive": "line",
       "source": {
         "file": "therion/thbook/ch02.tex",
-        "line": 1002
+        "line": 1056
       },
       "summary": "Line is a command for drawing a line symbol on the map. Each line symbol is oriented and its visualization may depend on its orientation (e.g. pitch edge ticks). The general rule is that the free space is on the left, rock on the right. Examples: the lower side of a pitch, higher side of a chimney and interior of a passage are on the left side of pitch, chimney or wall symbols, respectively.",
       "syntax": [
@@ -2599,6 +2686,9 @@
       ],
       "contexts": [
         "scrap"
+      ],
+      "document_types": [
+        "th2"
       ],
       "arguments": [
         {
@@ -2626,15 +2716,17 @@
           "dependencies": []
         },
         {
-          "raw": "subtype <restr_keyword> = determines line subtype. The following subtypes are supported for given types: wall: invisible, bedrock (default), sand, clay, pebbles, debris, blocks, ice, underlying, overlying, unsurveyed, presumed, pit (Usually open to surface.) , flowstone, moonmilk; border: visible (default), invisible, temporary, presumed; water-flow: permanent (default), conjectural, intermittent; survey: cave (default), surface (default if centreline has surface flag). The subtype may be specified also directly in <type> specification using \":\" as a separator. (E.g. border:invisible) Any subtype specification can be used with user defined type (u). In this case you need also to define corresponding metapost symbol (see the chapter New map symbols ).",
+          "raw": "subtype <restr_keyword> = determines line subtype. The following subtypes are supported for given types: wall: invisible, bedrock (default), sand, clay, pebbles, debris, blocks, ice, underlying, overlying, unsurveyed, presumed, pit (Usually open to surface.) , flowstone, moonmilk; border: visible (default), invisible, temporary, presumed; water-flow: permanent (default), conjectural, intermittent; survey: cave (default), surface (default if centreline has surface flag). The subtype may be specified also directly in <type> specification using \":\" as a separator. (E.g. border:invisible) Any subtype specification can be used with user defined type (u). In this case you need also to define corresponding metapost symbol (see the chapter New map symbols ). subtype can be set either as a line option or as a line-point option (inside [LINE DATA]). When used as a line option (either as TYPE:SUBTYPE or -subtype SUBTYPE), it defines the subtype starting at the beginning of the line and stays in effect until it is overridden by another subtype specified at a line point or until the end of the line, whichever comes first. As a line point option (inside [LINE DATA]) it can be used multiple times.",
           "name": "subtype <restr_keyword>",
           "signature": "subtype <restr_keyword>",
           "option_key": "-subtype",
           "value_arity": "1",
           "value_domain": "keyword",
-          "description": "determines line subtype. The following subtypes are supported for given types: wall: invisible, bedrock (default), sand, clay, pebbles, debris, blocks, ice, underlying, overlying, unsurveyed, presumed, pit (Usually open to surface.) , flowstone, moonmilk; border: visible (default), invisible, temporary, presumed; water-flow: permanent (default), conjectural, intermittent; survey: cave (default), surface (default if centreline has surface flag). The subtype may be specified also directly in <type> specification using \":\" as a separator. (E.g. border:invisible) Any subtype specification can be used with user defined type (u). In this case you need also to define corresponding metapost symbol (see the chapter New map symbols ).",
+          "description": "determines line subtype. The following subtypes are supported for given types: wall: invisible, bedrock (default), sand, clay, pebbles, debris, blocks, ice, underlying, overlying, unsurveyed, presumed, pit (Usually open to surface.) , flowstone, moonmilk; border: visible (default), invisible, temporary, presumed; water-flow: permanent (default), conjectural, intermittent; survey: cave (default), surface (default if centreline has surface flag). The subtype may be specified also directly in <type> specification using \":\" as a separator. (E.g. border:invisible) Any subtype specification can be used with user defined type (u). In this case you need also to define corresponding metapost symbol (see the chapter New map symbols ). subtype can be set either as a line option or as a line-point option (inside [LINE DATA]). When used as a line option (either as TYPE:SUBTYPE or -subtype SUBTYPE), it defines the subtype starting at the beginning of the line and stays in effect until it is overridden by another subtype specified at a line point or until the end of the line, whichever comes first. As a line point option (inside [LINE DATA]) it can be used multiple times.",
           "allowed_values": [],
-          "dependencies": []
+          "dependencies": [
+            "determines line subtype. The following subtypes are supported for given types: wall: invisible, bedrock (default), sand, clay, pebbles, debris, blocks, ice, underlying, overlying, unsurveyed, presumed, pit (Usually open to surface.) , flowstone, moonmilk; border: visible (default), invisible, temporary, presumed; water-flow: permanent (default), conjectural, intermittent; survey: cave (default), surface (default if centreline has surface flag). The subtype may be specified also directly in <type> specification using \":\" as a separator. (E.g. border:invisible) Any subtype specification can be used with user defined type (u). In this case you need also to define corresponding metapost symbol (see the chapter New map symbols ). subtype can be set either as a line option or as a line-point option (inside [LINE DATA]). When used as a line option (either as TYPE:SUBTYPE or -subtype SUBTYPE), it defines the subtype starting at the beginning of the line and stays in effect until it is overridden by another subtype specified at a line point or until the end of the line, whichever comes first. As a line point option (inside [LINE DATA]) it can be used multiple times."
+          ]
         },
         {
           "raw": "[LINE DATA] specify either the coordinates of a line segment <x> <y>, or coordinates of a B\\'ezier curve arc <c1x> <c1y> <c2x> <c2y> <x> <y>, where c indicates the control point.",
@@ -2648,13 +2740,13 @@
           "dependencies": []
         },
         {
-          "raw": "close <on/off/auto> = determines whether a line is closed or not",
+          "raw": "close <on/off/auto> = determines whether a line is closed or not .",
           "name": "close <on/off/auto>",
           "signature": "close <on/off/auto>",
           "option_key": "-close",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "determines whether a line is closed or not",
+          "description": "determines whether a line is closed or not .",
           "allowed_values": [
             "on",
             "off",
@@ -2689,13 +2781,13 @@
           "dependencies": []
         },
         {
-          "raw": "reverse <on/off> = whether points are given in reverse order.",
+          "raw": "reverse <on/off> = whether points are given in reverse order .",
           "name": "reverse <on/off>",
           "signature": "reverse <on/off>",
           "option_key": "-reverse",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "whether points are given in reverse order.",
+          "description": "whether points are given in reverse order .",
           "allowed_values": [
             "on",
             "off"
@@ -2703,13 +2795,13 @@
           "dependencies": []
         },
         {
-          "raw": "smooth <on/off/auto> = whether the line is smooth at the given point. Auto is default.",
+          "raw": "smooth <on/off/auto> = whether the line is smooth at the given point. Deafult is auto. This setting only has any effect if both segments that passes through the point affected by the smooth setting are Bezier Curves (the one arriving at it and the one leaving it). On means that the line connection at this point will be smoothed, both by therion and by xTherion. Off means that smoothness at the point is not guaranteded. Auto means that, if both segments that passes through the point are Bezier Curves, Therion will automatically detected if they are smooth and, if they are detected as smooth, Therion will keep them smooth in it's transformations. xTherion always creates Bezier Curves as smooth, even if the previous segment was a straight one.",
           "name": "smooth <on/off/auto>",
           "signature": "smooth <on/off/auto>",
           "option_key": "-smooth",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "whether the line is smooth at the given point. Auto is default.",
+          "description": "whether the line is smooth at the given point. Deafult is auto. This setting only has any effect if both segments that passes through the point affected by the smooth setting are Bezier Curves (the one arriving at it and the one leaving it). On means that the line connection at this point will be smoothed, both by therion and by xTherion. Off means that smoothness at the point is not guaranteded. Auto means that, if both segments that passes through the point are Bezier Curves, Therion will automatically detected if they are smooth and, if they are detected as smooth, Therion will keep them smooth in it's transformations. xTherion always creates Bezier Curves as smooth, even if the previous segment was a straight one.",
           "allowed_values": [
             "on",
             "off",
@@ -2718,13 +2810,13 @@
           "dependencies": []
         },
         {
-          "raw": "adjust <horizontal/vertical> = shifts the line point to be aligned horizontally/ver\\-ti\\-cally with the previous point. It can't be set on the first point. The result is a horizontal/vertical line segment. This option is not allowed in the plan projection.",
+          "raw": "adjust <horizontal/vertical> = shifts the line point to be aligned horizontally/ver\\-ti\\-cally with the previous point. It can't be set on the first point. The result is a horizontal/vertical line segment. When unset (the default situation) the line point isn't automatically aligned with the previous line point. This option is not allowed in the plan projection.",
           "name": "adjust <horizontal/vertical>",
           "signature": "adjust <horizontal/vertical>",
           "option_key": "-adjust",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "shifts the line point to be aligned horizontally/ver\\-ti\\-cally with the previous point. It can't be set on the first point. The result is a horizontal/vertical line segment. This option is not allowed in the plan projection.",
+          "description": "shifts the line point to be aligned horizontally/ver\\-ti\\-cally with the previous point. It can't be set on the first point. The result is a horizontal/vertical line segment. When unset (the default situation) the line point isn't automatically aligned with the previous line point. This option is not allowed in the plan projection.",
           "allowed_values": [
             "horizontal",
             "vertical"
@@ -2732,13 +2824,13 @@
           "dependencies": []
         },
         {
-          "raw": "place <bottom/default/top> = changes displaying order in the map.",
+          "raw": "place <bottom/default/top> = changes displaying order in the map. Default is top for ceiling-step and chimney, default for all other types.",
           "name": "place <bottom/default/top>",
           "signature": "place <bottom/default/top>",
           "option_key": "-place",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "changes displaying order in the map.",
+          "description": "changes displaying order in the map. Default is top for ceiling-step and chimney, default for all other types.",
           "allowed_values": [
             "bottom",
             "default",
@@ -2747,13 +2839,13 @@
           "dependencies": []
         },
         {
-          "raw": "clip <on/off> = specify whether a symbol is clipped by the scrap border.",
+          "raw": "clip <on/off> = specify whether a symbol is clipped by the scrap border .",
           "name": "clip <on/off>",
           "signature": "clip <on/off>",
           "option_key": "-clip",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "specify whether a symbol is clipped by the scrap border.",
+          "description": "specify whether a symbol is clipped by the scrap border .",
           "allowed_values": [
             "on",
             "off"
@@ -2761,13 +2853,13 @@
           "dependencies": []
         },
         {
-          "raw": "visibility <on/off> = displays/hides the symbol.",
+          "raw": "visibility <on/off> = displays/hides the symbol .",
           "name": "visibility <on/off>",
           "signature": "visibility <on/off>",
           "option_key": "-visibility",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "displays/hides the symbol.",
+          "description": "displays/hides the symbol .",
           "allowed_values": [
             "on",
             "off"
@@ -2801,13 +2893,13 @@
           "dependencies": []
         },
         {
-          "raw": "anchors <on/off> = this option can be specified only with the \"rope\" line type. Default is on.",
+          "raw": "anchors <on/off> = this option can be specified only with the \"rope\" line type .",
           "name": "anchors <on/off>",
           "signature": "anchors <on/off>",
           "option_key": "-anchors",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "this option can be specified only with the \"rope\" line type. Default is on.",
+          "description": "this option can be specified only with the \"rope\" line type .",
           "allowed_values": [
             "on",
             "off"
@@ -2815,13 +2907,13 @@
           "dependencies": []
         },
         {
-          "raw": "border <on/off> = this option can be specified only with the \"slope\" symbol type. It switches on/off the border line of the slope.",
+          "raw": "border <on/off> = this option can be specified only with the \"slope\" symbol type. It switches on/off the border line of the slope .",
           "name": "border <on/off>",
           "signature": "border <on/off>",
           "option_key": "-border",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "this option can be specified only with the \"slope\" symbol type. It switches on/off the border line of the slope.",
+          "description": "this option can be specified only with the \"slope\" symbol type. It switches on/off the border line of the slope .",
           "allowed_values": [
             "on",
             "off"
@@ -2829,13 +2921,13 @@
           "dependencies": []
         },
         {
-          "raw": "direction <begin/end/both/none/point> = can be used only with the section type. It indicates where to put a direction arrow on the section line. None is default. The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+          "raw": "direction <begin/end/both/none/point> = can be used only with the section type. It indicates where to put a direction arrow on the section line . The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
           "name": "direction <begin/end/both/none/point>",
           "signature": "direction <begin/end/both/none/point>",
           "option_key": "-direction",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "can be used only with the section type. It indicates where to put a direction arrow on the section line. None is default. The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+          "description": "can be used only with the section type. It indicates where to put a direction arrow on the section line . The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
           "allowed_values": [
             "begin",
             "end",
@@ -2844,34 +2936,34 @@
             "point"
           ],
           "dependencies": [
-            "can be used only with the section type. It indicates where to put a direction arrow on the section line. None is default. The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option."
+            "can be used only with the section type. It indicates where to put a direction arrow on the section line . The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option."
           ]
         },
         {
-          "raw": "gradient <none/center/point> = can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+          "raw": "gradient <none/center/point> = can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option .",
           "name": "gradient <none/center/point>",
           "signature": "gradient <none/center/point>",
           "option_key": "-gradient",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+          "description": "can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option .",
           "allowed_values": [
             "none",
             "center",
             "point"
           ],
           "dependencies": [
-            "can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option."
+            "can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option ."
           ]
         },
         {
-          "raw": "head <begin/end/both/none> = can be used only with the arrow type and indicates where to put an arrow head. End is default.",
+          "raw": "head <begin/end/both/none> = can be used only with the arrow type and indicates where to put an arrow head .",
           "name": "head <begin/end/both/none>",
           "signature": "head <begin/end/both/none>",
           "option_key": "-head",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "can be used only with the arrow type and indicates where to put an arrow head. End is default.",
+          "description": "can be used only with the arrow type and indicates where to put an arrow head .",
           "allowed_values": [
             "begin",
             "end",
@@ -2903,13 +2995,13 @@
           "dependencies": []
         },
         {
-          "raw": "rebelays <on/off> = this option can be specified only with the \"rope\" line type. Default is on.",
+          "raw": "rebelays <on/off> = this option can be specified only with the \"rope\" line type .",
           "name": "rebelays <on/off>",
           "signature": "rebelays <on/off>",
           "option_key": "-rebelays",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "this option can be specified only with the \"rope\" line type. Default is on.",
+          "description": "this option can be specified only with the \"rope\" line type .",
           "allowed_values": [
             "on",
             "off"
@@ -2917,13 +3009,13 @@
           "dependencies": []
         },
         {
-          "raw": "scale = scale affects only the text on label lines, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value. Normal is default. Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 . Absolute font sizes (in points) can be assigned to named sizes using fonts-setup in the layout configuration section.",
+          "raw": "scale = scale affects only the text on label lines, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value . Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 . Absolute font sizes (in points) can be assigned to named sizes using fonts-setup in the layout configuration section.",
           "name": "scale",
           "signature": "scale",
           "option_key": "-scale",
           "value_arity": "0",
           "value_domain": "none",
-          "description": "scale affects only the text on label lines, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value. Normal is default. Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 . Absolute font sizes (in points) can be assigned to named sizes using fonts-setup in the layout configuration section.",
+          "description": "scale affects only the text on label lines, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value . Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 . Absolute font sizes (in points) can be assigned to named sizes using fonts-setup in the layout configuration section.",
           "allowed_values": [],
           "dependencies": []
         },
@@ -2965,8 +3057,9 @@
       ],
       "dependencies": [
         "context: scrap",
-        "can be used only with the section type. It indicates where to put a direction arrow on the section line. None is default. The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
-        "can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+        "determines line subtype. The following subtypes are supported for given types: wall: invisible, bedrock (default), sand, clay, pebbles, debris, blocks, ice, underlying, overlying, unsurveyed, presumed, pit (Usually open to surface.) , flowstone, moonmilk; border: visible (default), invisible, temporary, presumed; water-flow: permanent (default), conjectural, intermittent; survey: cave (default), surface (default if centreline has surface flag). The subtype may be specified also directly in <type> specification using \":\" as a separator. (E.g. border:invisible) Any subtype specification can be used with user defined type (u). In this case you need also to define corresponding metapost symbol (see the chapter New map symbols ). subtype can be set either as a line option or as a line-point option (inside [LINE DATA]). When used as a line option (either as TYPE:SUBTYPE or -subtype SUBTYPE), it defines the subtype starting at the beginning of the line and stays in effect until it is overridden by another subtype specified at a line point or until the end of the line, whichever comes first. As a line point option (inside [LINE DATA]) it can be used multiple times.",
+        "can be used only with the section type. It indicates where to put a direction arrow on the section line . The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+        "can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option .",
         "valid only for label lines."
       ],
       "allowed_values": [],
@@ -3044,11 +3137,17 @@
           "cave",
           "surface",
           "u",
+          "subtype",
           "c",
           "join",
           "out",
           "none",
+          "auto",
           "plan",
+          "top",
+          "ceiling-step",
+          "chimney",
+          "default",
           "symbol-hide",
           "symbol-show",
           "fix"
@@ -3064,7 +3163,7 @@
       "directive": "log",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 195
+        "line": 206
       },
       "summary": "Turn on logging of various info. Currently only extended elevation processing log is supported.",
       "syntax": [
@@ -3072,6 +3171,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [],
       "options": [],
@@ -3088,7 +3190,7 @@
       "directive": "lookup",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 597
+        "line": 608
       },
       "summary": "Allows to define lookup maps. They are used for defining custom coloring of maps. (see colour command.)",
       "syntax": [
@@ -3096,6 +3198,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [
         {
@@ -3169,7 +3274,7 @@
       "directive": "map",
       "source": {
         "file": "therion/thbook/ch02.tex",
-        "line": 1327
+        "line": 1400
       },
       "summary": "A map is a collection of either scraps or other maps of the same projection type. It's possible to include survey in the map - this will display centreline in the map. Map object simplifies the data management when selecting data for output. See the chapter How the map is put together for more thorough explanation. (Note: break only changes level of maps of scraps and has no function when used with maps of maps, as they will cause a break implicitly)",
       "syntax": [
@@ -3178,6 +3283,9 @@
       "contexts": [
         "none",
         "survey"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -3271,7 +3379,7 @@
       "directive": "maps",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 170
+        "line": 181
       },
       "summary": "Turns processing of maps on (default) or off. If you turn if off, all scraps from selected surveys will be used in the output, no map definitions are taken into account. Useful for debugging map definitions.",
       "syntax": [
@@ -3279,6 +3387,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [],
       "options": [],
@@ -3295,7 +3406,7 @@
       "directive": "maps-offset",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 182
+        "line": 193
       },
       "summary": "Turns drawing maps in offset on (default) or off. If you turn if off, all cave passages will be displayed in detail in their actual position. All offset specifications will be completely ignored.",
       "syntax": [
@@ -3303,6 +3414,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [],
       "options": [],
@@ -3319,7 +3433,7 @@
       "directive": "mark",
       "source": {
         "file": "therion/thbook/ch02.tex",
-        "line": 460
+        "line": 478
       },
       "summary": "set the type of named stations. <type> is one of: fixed, painted and temporary (default). If there is no station list, all subsequent stations are marked.",
       "syntax": [
@@ -3327,6 +3441,9 @@
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -3370,7 +3487,7 @@
       "directive": "point",
       "source": {
         "file": "therion/thbook/ch02.tex",
-        "line": 708
+        "line": 748
       },
       "summary": "Point is a command for drawing a point map symbol.",
       "syntax": [
@@ -3378,6 +3495,9 @@
       ],
       "contexts": [
         "scrap"
+      ],
+      "document_types": [
+        "th2"
       ],
       "arguments": [
         {
@@ -3392,13 +3512,13 @@
           "dependencies": []
         },
         {
-          "raw": "<type> determines the type of an object. The following types are supported: special objects: dimensions (Use -value option to specify passage dimensions above/below centerline plane used while creating 3D model.) , section (section is an anchor for placing the cross-section at this point. This symbol has no visual representation. The cross section must be in the separate scrap with \"none\" projection specified. You can specify it through the -scrap option.) , station (Survey station. For each scrap (with the exception of scraps in \"none\" projection) at least one station with station reference (-name option) has to be specified.) ; labels: altitude (General altitude label. All altitudes are exported as a difference against grid Z origin (which is 0 by default). To display altitude on the passage wall, use altitude option for any line point of the passage wall) , date (Set date's value with the -value option) , height (Height of formations inside of the passage (like pit etc.); see below for details.) , label, passage-height (Height of the passage; see below for details.) , remark, station-name (If no text is specified, the name of the nearest station is used.) ; -100 symbolic passage fills: (Unlike other point symbols, these are clipped by the scrap border. See the chapter How the map is put together .) bedrock, blocks, clay, debris, guano, ice, mudcrack, mud, pebbles, raft, sand, snow, water; speleothems: anastomosis, aragonite, cave-pearl, clay-tree, crystal, curtains, curtain, disc-pillar, disc-stalactite, disc-stalagmite, disc-pillars, disc-stalactites, disc-stalagmites, disk, flowstone, flute, gypsum-flower, gypsum, helictites, helictite, karren, moonmilk, pendant, pillar-with-curtains, pillars-with-curtains, pillar, popcorn, raft-cone, rimstone-dam, rimstone-pool, scallop, soda-straw, stalactite-stalagmite, stalactites-stalagmites, stalactite, stalactites, stalagmite, stalagmites, volcano, wall-calcite; equipment: anchor, bridge, camp, fixed-ladder, gate, handrail, masonry, nameplate, no-equipment, no-wheelchair, rope-ladder, rope, steps, traverse, via-ferrata, walkway, wheelchair; passage ends: breakdown-choke, clay-choke, continuation, entrance, flowstone-choke, low-end, narrow-end; others: air-draught (Number of ticks is set according to -scale option) , altar, archeo-excavation, archeo-material, audio, bat, bones, danger, dig, electric-light, ex-voto, extra (Additional morphing point. See -dist and -value options.) , gradient, human-bones, ice-pillar, ice-stalactite, ice-stalagmite, map-connection (Virtual point, used to indicate connection between shifted maps (extended elevation, map offset).) ,",
+          "raw": "<type> determines the type of an object. The following types are supported: special objects: dimensions (Use -value option to specify passage dimensions above/below centerline plane used while creating 3D model.) , section (section is an anchor for placing the cross-section at this point. This symbol has no visual representation. The cross section must be in the separate scrap. You can specify it through the -scrap option.) , station (Survey station. For each scrap (with the exception of scraps in \"none\" projection) at least one station with station reference (-name option) has to be specified.) ; labels: altitude (General altitude label. All altitudes are exported as a difference against grid Z origin (which is 0 by default). To display altitude on the passage wall, use altitude option for any line point of the passage wall) , date (Set date's value with the -value option) , height (Height of formations inside of the passage (like pit etc.); see below for details.) , label, passage-height (Height of the passage; see below for details.) , remark, station-name (If no text is specified, the name of the nearest station is used.) ; -100 symbolic passage fills: (Unlike other point symbols, these are clipped by the scrap border. See the chapter How the map is put together .) bedrock, blocks, clay, debris, guano, ice, mudcrack, mud, pebbles, raft, sand, snow, water; speleothems: anastomosis, aragonite, cave-pearl, clay-tree, crystal, curtains, curtain, disc-pillar, disc-stalactite, disc-stalagmite, disc-pillars, disc-stalactites, disc-stalagmites, disk, flowstone, flute, gypsum-flower, gypsum, helictites, helictite, karren, moonmilk, pendant, pillar-with-curtains, pillars-with-curtains, pillar, popcorn, raft-cone, rimstone-dam, rimstone-pool, scallop, soda-straw, stalactite-stalagmite, stalactites-stalagmites, stalactite, stalactites, stalagmite, stalagmites, volcano, wall-calcite; equipment: anchor, bridge, camp, fixed-ladder, gate, handrail, masonry, nameplate, no-equipment, no-wheelchair, rope-ladder, rope, steps, traverse, via-ferrata, walkway, wheelchair; passage ends: breakdown-choke, clay-choke, continuation, entrance, flowstone-choke, low-end, narrow-end; others: air-draught (Number of ticks is set according to -scale option) , altar, archeo-excavation, archeo-material, audio, bat, bones, borehole, danger, dig, electric-light, ex-voto, extra (Additional morphing point. See -dist and -value options.) , gradient, human-bones, ice-pillar, ice-stalactite, ice-stalagmite, map-connection (Virtual point, used to indicate connection between shifted maps (extended elevation, map offset).) ,",
           "name": "<type>",
           "signature": "<type>",
           "option_key": "",
           "value_arity": "1",
           "value_domain": "unknown",
-          "description": "determines the type of an object. The following types are supported: special objects: dimensions (Use -value option to specify passage dimensions above/below centerline plane used while creating 3D model.) , section (section is an anchor for placing the cross-section at this point. This symbol has no visual representation. The cross section must be in the separate scrap with \"none\" projection specified. You can specify it through the -scrap option.) , station (Survey station. For each scrap (with the exception of scraps in \"none\" projection) at least one station with station reference (-name option) has to be specified.) ; labels: altitude (General altitude label. All altitudes are exported as a difference against grid Z origin (which is 0 by default). To display altitude on the passage wall, use altitude option for any line point of the passage wall) , date (Set date's value with the -value option) , height (Height of formations inside of the passage (like pit etc.); see below for details.) , label, passage-height (Height of the passage; see below for details.) , remark, station-name (If no text is specified, the name of the nearest station is used.) ; -100 symbolic passage fills: (Unlike other point symbols, these are clipped by the scrap border. See the chapter How the map is put together .) bedrock, blocks, clay, debris, guano, ice, mudcrack, mud, pebbles, raft, sand, snow, water; speleothems: anastomosis, aragonite, cave-pearl, clay-tree, crystal, curtains, curtain, disc-pillar, disc-stalactite, disc-stalagmite, disc-pillars, disc-stalactites, disc-stalagmites, disk, flowstone, flute, gypsum-flower, gypsum, helictites, helictite, karren, moonmilk, pendant, pillar-with-curtains, pillars-with-curtains, pillar, popcorn, raft-cone, rimstone-dam, rimstone-pool, scallop, soda-straw, stalactite-stalagmite, stalactites-stalagmites, stalactite, stalactites, stalagmite, stalagmites, volcano, wall-calcite; equipment: anchor, bridge, camp, fixed-ladder, gate, handrail, masonry, nameplate, no-equipment, no-wheelchair, rope-ladder, rope, steps, traverse, via-ferrata, walkway, wheelchair; passage ends: breakdown-choke, clay-choke, continuation, entrance, flowstone-choke, low-end, narrow-end; others: air-draught (Number of ticks is set according to -scale option) , altar, archeo-excavation, archeo-material, audio, bat, bones, danger, dig, electric-light, ex-voto, extra (Additional morphing point. See -dist and -value options.) , gradient, human-bones, ice-pillar, ice-stalactite, ice-stalagmite, map-connection (Virtual point, used to indicate connection between shifted maps (extended elevation, map offset).) ,",
+          "description": "determines the type of an object. The following types are supported: special objects: dimensions (Use -value option to specify passage dimensions above/below centerline plane used while creating 3D model.) , section (section is an anchor for placing the cross-section at this point. This symbol has no visual representation. The cross section must be in the separate scrap. You can specify it through the -scrap option.) , station (Survey station. For each scrap (with the exception of scraps in \"none\" projection) at least one station with station reference (-name option) has to be specified.) ; labels: altitude (General altitude label. All altitudes are exported as a difference against grid Z origin (which is 0 by default). To display altitude on the passage wall, use altitude option for any line point of the passage wall) , date (Set date's value with the -value option) , height (Height of formations inside of the passage (like pit etc.); see below for details.) , label, passage-height (Height of the passage; see below for details.) , remark, station-name (If no text is specified, the name of the nearest station is used.) ; -100 symbolic passage fills: (Unlike other point symbols, these are clipped by the scrap border. See the chapter How the map is put together .) bedrock, blocks, clay, debris, guano, ice, mudcrack, mud, pebbles, raft, sand, snow, water; speleothems: anastomosis, aragonite, cave-pearl, clay-tree, crystal, curtains, curtain, disc-pillar, disc-stalactite, disc-stalagmite, disc-pillars, disc-stalactites, disc-stalagmites, disk, flowstone, flute, gypsum-flower, gypsum, helictites, helictite, karren, moonmilk, pendant, pillar-with-curtains, pillars-with-curtains, pillar, popcorn, raft-cone, rimstone-dam, rimstone-pool, scallop, soda-straw, stalactite-stalagmite, stalactites-stalagmites, stalactite, stalactites, stalagmite, stalagmites, volcano, wall-calcite; equipment: anchor, bridge, camp, fixed-ladder, gate, handrail, masonry, nameplate, no-equipment, no-wheelchair, rope-ladder, rope, steps, traverse, via-ferrata, walkway, wheelchair; passage ends: breakdown-choke, clay-choke, continuation, entrance, flowstone-choke, low-end, narrow-end; others: air-draught (Number of ticks is set according to -scale option) , altar, archeo-excavation, archeo-material, audio, bat, bones, borehole, danger, dig, electric-light, ex-voto, extra (Additional morphing point. See -dist and -value options.) , gradient, human-bones, ice-pillar, ice-stalactite, ice-stalagmite, map-connection (Virtual point, used to indicate connection between shifted maps (extended elevation, map offset).) ,",
           "allowed_values": [],
           "dependencies": []
         }
@@ -3424,41 +3544,38 @@
           "value_domain": "number",
           "description": "defines the orientation of the symbol. If not specified, it's oriented to north. 0 number < 360.",
           "allowed_values": [],
-          "dependencies": [],
-          "excluded_types": [
-            "station"
-          ]
+          "dependencies": []
         },
         {
-          "raw": "align = alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br.",
+          "raw": "align = alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br .",
           "name": "align",
           "signature": "align",
           "option_key": "-align",
           "value_arity": "0",
           "value_domain": "none",
-          "description": "alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br.",
+          "description": "alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br .",
           "allowed_values": [],
           "dependencies": []
         },
         {
-          "raw": "scale = symbol scale, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value. Normal is default. Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 .",
+          "raw": "scale = symbol scale, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value . Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 .",
           "name": "scale",
           "signature": "scale",
           "option_key": "-scale",
           "value_arity": "0",
           "value_domain": "none",
-          "description": "symbol scale, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value. Normal is default. Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 .",
+          "description": "symbol scale, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value . Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 .",
           "allowed_values": [],
           "dependencies": []
         },
         {
-          "raw": "place <bottom/default/top> = changes displaying order in the map.",
+          "raw": "place <bottom/default/top> = changes displaying order in the map .",
           "name": "place <bottom/default/top>",
           "signature": "place <bottom/default/top>",
           "option_key": "-place",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "changes displaying order in the map.",
+          "description": "changes displaying order in the map .",
           "allowed_values": [
             "bottom",
             "default",
@@ -3467,13 +3584,13 @@
           "dependencies": []
         },
         {
-          "raw": "clip <on/off> = specify whether a symbol is clipped by the scrap border. You cannot specify this option for the following symbols: station, station-name, label, remark, date, altitude, height, passage-height.",
+          "raw": "clip <on/off> = specify whether a symbol is clipped by the scrap border. You cannot specify this option for the following symbols: station, station-name, label, remark, date, altitude, height, passage-height .",
           "name": "clip <on/off>",
           "signature": "clip <on/off>",
           "option_key": "-clip",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "specify whether a symbol is clipped by the scrap border. You cannot specify this option for the following symbols: station, station-name, label, remark, date, altitude, height, passage-height.",
+          "description": "specify whether a symbol is clipped by the scrap border. You cannot specify this option for the following symbols: station, station-name, label, remark, date, altitude, height, passage-height .",
           "allowed_values": [
             "on",
             "off"
@@ -3481,13 +3598,13 @@
           "dependencies": []
         },
         {
-          "raw": "visibility <on/off> = displays/hides the symbol.",
+          "raw": "visibility <on/off> = displays/hides the symbol .",
           "name": "visibility <on/off>",
           "signature": "visibility <on/off>",
           "option_key": "-visibility",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "displays/hides the symbol.",
+          "description": "displays/hides the symbol .",
           "allowed_values": [
             "on",
             "off"
@@ -3532,13 +3649,13 @@
           "dependencies": []
         },
         {
-          "raw": "from <station> = if the point type is extra, specifies reference station.",
+          "raw": "from <station> = specifies a reference station. This option is primarily intended for points of type extra. If omitted, Therion uses the nearest station, and if -dist is not specified, an appropriate value from LRUD data is used. If the point type is station and the scrap projection is extended elevation, this option specifies the neighbouring survey station that should be used as origin (from station) when placing the station point on the extended centreline. This is useful at junctions, where the same survey station may be reached by more than one shot and the cartographer needs to choose which branch the point should follow. If -from is not given, Therion falls back to the nearest matching branch in the scrap. Therion accepts this option also for other point types, but it has no defined effect there.",
           "name": "from <station>",
           "signature": "from <station>",
           "option_key": "-from",
           "value_arity": "1",
           "value_domain": "station",
-          "description": "if the point type is extra, specifies reference station.",
+          "description": "specifies a reference station. This option is primarily intended for points of type extra. If omitted, Therion uses the nearest station, and if -dist is not specified, an appropriate value from LRUD data is used. If the point type is station and the scrap projection is extended elevation, this option specifies the neighbouring survey station that should be used as origin (from station) when placing the station point on the extended centreline. This is useful at junctions, where the same survey station may be reached by more than one shot and the cartographer needs to choose which branch the point should follow. If -from is not given, Therion falls back to the nearest matching branch in the scrap. Therion accepts this option also for other point types, but it has no defined effect there.",
           "allowed_values": [],
           "dependencies": []
         },
@@ -3550,17 +3667,6 @@
           "value_arity": "1",
           "value_domain": "unknown",
           "description": "if the point type is station, this option gives the reference to the real survey station.",
-          "allowed_values": [],
-          "dependencies": []
-        },
-        {
-          "raw": "extend [prev[ious] <station>] = if the point type is station and scrap projection is extended elevation, you can adjust the extension of the centreline using this option.",
-          "name": "extend [prev[ious] <station>]",
-          "signature": "extend [prev[ious] <station>]",
-          "option_key": "-extend",
-          "value_arity": "N",
-          "value_domain": "station",
-          "description": "if the point type is station and scrap projection is extended elevation, you can adjust the extension of the centreline using this option.",
           "allowed_values": [],
           "dependencies": []
         },
@@ -3598,13 +3704,13 @@
           "dependencies": []
         },
         {
-          "raw": "value = value of height, passage-height, altitude, dimensions or date height: according to the sign of the value (positive, negative or unsigned), this type of symbol represents chimney height, pit depth or step height in general. The numeric value can be optionally followed by \"?\", if the value is presumed and units can be added (e.g. -value [40? ft]). passage-height: the following four forms of value are supported: +<number> (the height of the ceiling), -<number> (the depth of the floor or water depth), <number> (the distance between floor and ceiling) and [+<number> -<number>] (the distance to ceiling and distance to floor). All four forms can be optionally followed by a unit. If there is more than one piece of information - two numbers, number and unit or else - the value must be enclosed in square brackets. altitude: the value specified is the altitude difference from the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". If the altitude value is prefixed by \"fix\" (e.g. -value [fix 1300]), this value is used as an absolute altitude. The value can optionally be followed by length units. dimensions: -value [<above> <below> [<units>]] specifies passage dimensions a\\-bo\\-ve/below centerline plane used in 3D model. date: -value <date> sets the date for the date point.",
+          "raw": "value = value of height, passage-height, altitude, dimensions or date height: according to the sign of the value (positive, negative or unsigned), this type of symbol represents chimney height, pit depth or step height in general. The numeric value can be optionally followed by \"?\", if the value is presumed and units can be added (e.g. -value [40? ft]). Values \"+?\" and \"-?\" are also accepted, meaning unknown height or depth. passage-height: the following four forms of value are supported: +<number> (the height of the ceiling), -<number> (the depth of the floor or water depth), <number> (the distance between floor and ceiling) and [+<number> -<number>] (the distance to ceiling and distance to floor). All four forms can be optionally followed by a unit. If there is more than one piece of information - two numbers, number and unit or else - the value must be enclosed in square brackets. altitude: the value specified is the altitude difference from the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". If the altitude value is prefixed by \"fix\" (e.g. -value [fix 1300]), this value is used as an absolute altitude. The value can optionally be followed by length units. dimensions: -value [<above> <below> [<units>]] specifies passage dimensions a\\-bo\\-ve/below centerline plane used in 3D model. date: -value <date> sets the date for the date point.",
           "name": "value",
           "signature": "value",
           "option_key": "-value",
           "value_arity": "0",
           "value_domain": "none",
-          "description": "value of height, passage-height, altitude, dimensions or date height: according to the sign of the value (positive, negative or unsigned), this type of symbol represents chimney height, pit depth or step height in general. The numeric value can be optionally followed by \"?\", if the value is presumed and units can be added (e.g. -value [40? ft]). passage-height: the following four forms of value are supported: +<number> (the height of the ceiling), -<number> (the depth of the floor or water depth), <number> (the distance between floor and ceiling) and [+<number> -<number>] (the distance to ceiling and distance to floor). All four forms can be optionally followed by a unit. If there is more than one piece of information - two numbers, number and unit or else - the value must be enclosed in square brackets. altitude: the value specified is the altitude difference from the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". If the altitude value is prefixed by \"fix\" (e.g. -value [fix 1300]), this value is used as an absolute altitude. The value can optionally be followed by length units. dimensions: -value [<above> <below> [<units>]] specifies passage dimensions a\\-bo\\-ve/below centerline plane used in 3D model. date: -value <date> sets the date for the date point.",
+          "description": "value of height, passage-height, altitude, dimensions or date height: according to the sign of the value (positive, negative or unsigned), this type of symbol represents chimney height, pit depth or step height in general. The numeric value can be optionally followed by \"?\", if the value is presumed and units can be added (e.g. -value [40? ft]). Values \"+?\" and \"-?\" are also accepted, meaning unknown height or depth. passage-height: the following four forms of value are supported: +<number> (the height of the ceiling), -<number> (the depth of the floor or water depth), <number> (the distance between floor and ceiling) and [+<number> -<number>] (the distance to ceiling and distance to floor). All four forms can be optionally followed by a unit. If there is more than one piece of information - two numbers, number and unit or else - the value must be enclosed in square brackets. altitude: the value specified is the altitude difference from the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". If the altitude value is prefixed by \"fix\" (e.g. -value [fix 1300]), this value is used as an absolute altitude. The value can optionally be followed by length units. dimensions: -value [<above> <below> [<units>]] specifies passage dimensions a\\-bo\\-ve/below centerline plane used in 3D model. date: -value <date> sets the date for the date point.",
           "allowed_values": [],
           "dependencies": []
         }
@@ -3708,6 +3814,7 @@
         "audio",
         "bat",
         "bones",
+        "borehole",
         "danger",
         "dig",
         "electric-light",
@@ -3743,6 +3850,8 @@
           "scale",
           "symbol-hide",
           "symbol-show",
+          "extra",
+          "station",
           "text"
         ]
       },
@@ -3755,7 +3864,7 @@
       "directive": "require",
       "source": {
         "file": "therion/thbook/ch02.tex",
-        "line": 1552
+        "line": 1655
       },
       "summary": "Checks that the version of Therion in use is at least <version> and stops with an error if not.",
       "syntax": [
@@ -3763,6 +3872,9 @@
       ],
       "contexts": [
         "all"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -3791,7 +3903,7 @@
       "directive": "revise",
       "source": {
         "file": "therion/thbook/ch02.tex",
-        "line": 1517
+        "line": 1620
       },
       "summary": "This command is used to set or change properties of an already existing object.",
       "syntax": [
@@ -3799,6 +3911,9 @@
       ],
       "contexts": [
         "all"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -3815,13 +3930,13 @@
       ],
       "options": [
         {
-          "raw": "adjust <horizontal/vertical> = shifts the line point to be aligned horizontally/ver\\-ti\\-cally with the previous point. It can't be set on the first point. The result is a horizontal/vertical line segment. This option is not allowed in the plan projection.",
+          "raw": "adjust <horizontal/vertical> = shifts the line point to be aligned horizontally/ver\\-ti\\-cally with the previous point. It can't be set on the first point. The result is a horizontal/vertical line segment. When unset (the default situation) the line point isn't automatically aligned with the previous line point. This option is not allowed in the plan projection.",
           "name": "adjust <horizontal/vertical>",
           "signature": "adjust <horizontal/vertical>",
           "option_key": "-adjust",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "shifts the line point to be aligned horizontally/ver\\-ti\\-cally with the previous point. It can't be set on the first point. The result is a horizontal/vertical line segment. This option is not allowed in the plan projection.",
+          "description": "shifts the line point to be aligned horizontally/ver\\-ti\\-cally with the previous point. It can't be set on the first point. The result is a horizontal/vertical line segment. When unset (the default situation) the line point isn't automatically aligned with the previous line point. This option is not allowed in the plan projection.",
           "allowed_values": [
             "horizontal",
             "vertical"
@@ -3829,13 +3944,13 @@
           "dependencies": []
         },
         {
-          "raw": "align = alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br.",
+          "raw": "align = alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br .",
           "name": "align",
           "signature": "align",
           "option_key": "-align",
           "value_arity": "0",
           "value_domain": "none",
-          "description": "alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br.",
+          "description": "alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br .",
           "allowed_values": [],
           "dependencies": []
         },
@@ -3851,13 +3966,13 @@
           "dependencies": []
         },
         {
-          "raw": "anchors <on/off> = this option can be specified only with the \"rope\" line type. Default is on.",
+          "raw": "anchors <on/off> = this option can be specified only with the \"rope\" line type .",
           "name": "anchors <on/off>",
           "signature": "anchors <on/off>",
           "option_key": "-anchors",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "this option can be specified only with the \"rope\" line type. Default is on.",
+          "description": "this option can be specified only with the \"rope\" line type .",
           "allowed_values": [
             "off",
             "on"
@@ -3890,6 +4005,17 @@
           "dependencies": []
         },
         {
+          "raw": "axes <x-spec> <y-spec> <z-spec> = order of axes in the STL file. Axes can be in any order, you can use x, -x, y, -y, z or -z. A minus prefix means the axis is reversed.",
+          "name": "axes <x-spec> <y-spec> <z-spec>",
+          "signature": "axes <x-spec> <y-spec> <z-spec>",
+          "option_key": "-axes",
+          "value_arity": "N",
+          "value_domain": "unknown",
+          "description": "order of axes in the STL file. Axes can be in any order, you can use x, -x, y, -y, z or -z. A minus prefix means the axis is reversed.",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
           "raw": "base-scale <picture length> <real length> = if set, Therion will optically scale the map by a (scale/base-scale) factor. This has the same effect as if the map printed in base-scale would be photo-reduced to the scale. (M, A)",
           "name": "base-scale <picture length> <real length>",
           "signature": "base-scale <picture length> <real length>",
@@ -3912,13 +4038,13 @@
           "dependencies": []
         },
         {
-          "raw": "border <on/off> = this option can be specified only with the \"slope\" symbol type. It switches on/off the border line of the slope.",
+          "raw": "border <on/off> = this option can be specified only with the \"slope\" symbol type. It switches on/off the border line of the slope .",
           "name": "border <on/off>",
           "signature": "border <on/off>",
           "option_key": "-border",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "this option can be specified only with the \"slope\" symbol type. It switches on/off the border line of the slope.",
+          "description": "this option can be specified only with the \"slope\" symbol type. It switches on/off the border line of the slope .",
           "allowed_values": [
             "off",
             "on"
@@ -3948,13 +4074,13 @@
           "dependencies": []
         },
         {
-          "raw": "clip <on/off> = specify whether a symbol is clipped by the scrap border.",
+          "raw": "clip <on/off> = specify whether a symbol is clipped by the scrap border .",
           "name": "clip <on/off>",
           "signature": "clip <on/off>",
           "option_key": "-clip",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "specify whether a symbol is clipped by the scrap border.",
+          "description": "specify whether a symbol is clipped by the scrap border .",
           "allowed_values": [
             "off",
             "on"
@@ -3962,13 +4088,13 @@
           "dependencies": []
         },
         {
-          "raw": "close <on/off/auto> = determines whether a line is closed or not",
+          "raw": "close <on/off/auto> = determines whether a line is closed or not .",
           "name": "close <on/off/auto>",
           "signature": "close <on/off/auto>",
           "option_key": "-close",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "determines whether a line is closed or not",
+          "description": "determines whether a line is closed or not .",
           "allowed_values": [
             "auto",
             "off",
@@ -4149,13 +4275,13 @@
           "dependencies": []
         },
         {
-          "raw": "direction <begin/end/both/none/point> = can be used only with the section type. It indicates where to put a direction arrow on the section line. None is default. The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+          "raw": "direction <begin/end/both/none/point> = can be used only with the section type. It indicates where to put a direction arrow on the section line . The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
           "name": "direction <begin/end/both/none/point>",
           "signature": "direction <begin/end/both/none/point>",
           "option_key": "-direction",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "can be used only with the section type. It indicates where to put a direction arrow on the section line. None is default. The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+          "description": "can be used only with the section type. It indicates where to put a direction arrow on the section line . The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
           "allowed_values": [
             "begin",
             "both",
@@ -4311,13 +4437,13 @@
           "dependencies": []
         },
         {
-          "raw": "extend [prev[ious] <station>] = if the point type is station and scrap projection is extended elevation, you can adjust the extension of the centreline using this option.",
-          "name": "extend [prev[ious] <station>]",
-          "signature": "extend [prev[ious] <station>]",
-          "option_key": "-extend",
-          "value_arity": "N",
-          "value_domain": "station",
-          "description": "if the point type is station and scrap projection is extended elevation, you can adjust the extension of the centreline using this option.",
+          "raw": "file <filename> = filename in STL format containing 3D mesh data.",
+          "name": "file <filename>",
+          "signature": "file <filename>",
+          "option_key": "-file",
+          "value_arity": "1",
+          "value_domain": "path",
+          "description": "filename in STL format containing 3D mesh data.",
           "allowed_values": [],
           "dependencies": []
         },
@@ -4336,18 +4462,14 @@
           "dependencies": []
         },
         {
-          "raw": "flip (none)/horizontal/vertical = flips the scrap after scale transformation",
-          "name": "flip (none)/horizontal/vertical",
-          "signature": "flip (none)/horizontal/vertical",
+          "raw": "flip none/horizontal/vertical = flips the scrap after scale transformation .",
+          "name": "flip none/horizontal/vertical",
+          "signature": "flip none/horizontal/vertical",
           "option_key": "-flip",
           "value_arity": "1",
-          "value_domain": "enum",
-          "description": "flips the scrap after scale transformation",
-          "allowed_values": [
-            "horizontal",
-            "none",
-            "vertical"
-          ],
+          "value_domain": "unknown",
+          "description": "flips the scrap after scale transformation .",
+          "allowed_values": [],
           "dependencies": []
         },
         {
@@ -4373,13 +4495,13 @@
           "dependencies": []
         },
         {
-          "raw": "from <station> = if the point type is extra, specifies reference station.",
+          "raw": "from <station> = specifies a reference station. This option is primarily intended for points of type extra. If omitted, Therion uses the nearest station, and if -dist is not specified, an appropriate value from LRUD data is used. If the point type is station and the scrap projection is extended elevation, this option specifies the neighbouring survey station that should be used as origin (from station) when placing the station point on the extended centreline. This is useful at junctions, where the same survey station may be reached by more than one shot and the cartographer needs to choose which branch the point should follow. If -from is not given, Therion falls back to the nearest matching branch in the scrap. Therion accepts this option also for other point types, but it has no defined effect there.",
           "name": "from <station>",
           "signature": "from <station>",
           "option_key": "-from",
           "value_arity": "1",
           "value_domain": "station",
-          "description": "if the point type is extra, specifies reference station.",
+          "description": "specifies a reference station. This option is primarily intended for points of type extra. If omitted, Therion uses the nearest station, and if -dist is not specified, an appropriate value from LRUD data is used. If the point type is station and the scrap projection is extended elevation, this option specifies the neighbouring survey station that should be used as origin (from station) when placing the station point on the extended centreline. This is useful at junctions, where the same survey station may be reached by more than one shot and the cartographer needs to choose which branch the point should follow. If -from is not given, Therion falls back to the nearest matching branch in the scrap. Therion accepts this option also for other point types, but it has no defined effect there.",
           "allowed_values": [],
           "dependencies": []
         },
@@ -4409,13 +4531,13 @@
           "dependencies": []
         },
         {
-          "raw": "gradient <none/center/point> = can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+          "raw": "gradient <none/center/point> = can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option .",
           "name": "gradient <none/center/point>",
           "signature": "gradient <none/center/point>",
           "option_key": "-gradient",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option.",
+          "description": "can be used only with the contour type and indicates where to put a gradient mark on the contour line. If there is no gradient specification, behaviour is symbol-set dependent (e.g. no tick in UIS, tick in the middle in SKBB). The point option must be used inside [LINE DATA]. The others can (and should) be used as a line option .",
           "allowed_values": [
             "center",
             "none",
@@ -4513,13 +4635,13 @@
           "dependencies": []
         },
         {
-          "raw": "head <begin/end/both/none> = can be used only with the arrow type and indicates where to put an arrow head. End is default.",
+          "raw": "head <begin/end/both/none> = can be used only with the arrow type and indicates where to put an arrow head .",
           "name": "head <begin/end/both/none>",
           "signature": "head <begin/end/both/none>",
           "option_key": "-head",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "can be used only with the arrow type and indicates where to put an arrow head. End is default.",
+          "description": "can be used only with the arrow type and indicates where to put an arrow head .",
           "allowed_values": [
             "begin",
             "both",
@@ -4782,13 +4904,13 @@
           "dependencies": []
         },
         {
-          "raw": "namespace <on/off> = specify whether survey creates namespace (on by default)",
+          "raw": "namespace <on/off> = specify whether survey creates namespace",
           "name": "namespace <on/off>",
           "signature": "namespace <on/off>",
           "option_key": "-namespace",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "specify whether survey creates namespace (on by default)",
+          "description": "specify whether survey creates namespace",
           "allowed_values": [
             "off",
             "on"
@@ -4985,13 +5107,13 @@
           "dependencies": []
         },
         {
-          "raw": "place <bottom/default/top> = changes displaying order in the map.",
+          "raw": "place <bottom/default/top> = changes displaying order in the map .",
           "name": "place <bottom/default/top>",
           "signature": "place <bottom/default/top>",
           "option_key": "-place",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "changes displaying order in the map.",
+          "description": "changes displaying order in the map .",
           "allowed_values": [
             "bottom",
             "default",
@@ -5096,13 +5218,13 @@
           "dependencies": []
         },
         {
-          "raw": "rebelays <on/off> = this option can be specified only with the \"rope\" line type. Default is on.",
+          "raw": "rebelays <on/off> = this option can be specified only with the \"rope\" line type .",
           "name": "rebelays <on/off>",
           "signature": "rebelays <on/off>",
           "option_key": "-rebelays",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "this option can be specified only with the \"rope\" line type. Default is on.",
+          "description": "this option can be specified only with the \"rope\" line type .",
           "allowed_values": [
             "off",
             "on"
@@ -5135,13 +5257,13 @@
           "dependencies": []
         },
         {
-          "raw": "reverse <on/off> = whether points are given in reverse order.",
+          "raw": "reverse <on/off> = whether points are given in reverse order .",
           "name": "reverse <on/off>",
           "signature": "reverse <on/off>",
           "option_key": "-reverse",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "whether points are given in reverse order.",
+          "description": "whether points are given in reverse order .",
           "allowed_values": [
             "off",
             "on"
@@ -5309,13 +5431,13 @@
           "dependencies": []
         },
         {
-          "raw": "subtype <restr_keyword> = determines line subtype. The following subtypes are supported for given types: wall: invisible, bedrock (default), sand, clay, pebbles, debris, blocks, ice, underlying, overlying, unsurveyed, presumed, pit (Usually open to surface.) , flowstone, moonmilk; border: visible (default), invisible, temporary, presumed; water-flow: permanent (default), conjectural, intermittent; survey: cave (default), surface (default if centreline has surface flag). The subtype may be specified also directly in <type> specification using \":\" as a separator. (E.g. border:invisible) Any subtype specification can be used with user defined type (u). In this case you need also to define corresponding metapost symbol (see the chapter New map symbols ).",
+          "raw": "subtype <restr_keyword> = determines line subtype. The following subtypes are supported for given types: wall: invisible, bedrock (default), sand, clay, pebbles, debris, blocks, ice, underlying, overlying, unsurveyed, presumed, pit (Usually open to surface.) , flowstone, moonmilk; border: visible (default), invisible, temporary, presumed; water-flow: permanent (default), conjectural, intermittent; survey: cave (default), surface (default if centreline has surface flag). The subtype may be specified also directly in <type> specification using \":\" as a separator. (E.g. border:invisible) Any subtype specification can be used with user defined type (u). In this case you need also to define corresponding metapost symbol (see the chapter New map symbols ). subtype can be set either as a line option or as a line-point option (inside [LINE DATA]). When used as a line option (either as TYPE:SUBTYPE or -subtype SUBTYPE), it defines the subtype starting at the beginning of the line and stays in effect until it is overridden by another subtype specified at a line point or until the end of the line, whichever comes first. As a line point option (inside [LINE DATA]) it can be used multiple times.",
           "name": "subtype <restr_keyword>",
           "signature": "subtype <restr_keyword>",
           "option_key": "-subtype",
           "value_arity": "1",
           "value_domain": "keyword",
-          "description": "determines line subtype. The following subtypes are supported for given types: wall: invisible, bedrock (default), sand, clay, pebbles, debris, blocks, ice, underlying, overlying, unsurveyed, presumed, pit (Usually open to surface.) , flowstone, moonmilk; border: visible (default), invisible, temporary, presumed; water-flow: permanent (default), conjectural, intermittent; survey: cave (default), surface (default if centreline has surface flag). The subtype may be specified also directly in <type> specification using \":\" as a separator. (E.g. border:invisible) Any subtype specification can be used with user defined type (u). In this case you need also to define corresponding metapost symbol (see the chapter New map symbols ).",
+          "description": "determines line subtype. The following subtypes are supported for given types: wall: invisible, bedrock (default), sand, clay, pebbles, debris, blocks, ice, underlying, overlying, unsurveyed, presumed, pit (Usually open to surface.) , flowstone, moonmilk; border: visible (default), invisible, temporary, presumed; water-flow: permanent (default), conjectural, intermittent; survey: cave (default), surface (default if centreline has surface flag). The subtype may be specified also directly in <type> specification using \":\" as a separator. (E.g. border:invisible) Any subtype specification can be used with user defined type (u). In this case you need also to define corresponding metapost symbol (see the chapter New map symbols ). subtype can be set either as a line option or as a line-point option (inside [LINE DATA]). When used as a line option (either as TYPE:SUBTYPE or -subtype SUBTYPE), it defines the subtype starting at the beginning of the line and stays in effect until it is overridden by another subtype specified at a line point or until the end of the line, whichever comes first. As a line point option (inside [LINE DATA]) it can be used multiple times.",
           "allowed_values": [],
           "dependencies": []
         },
@@ -5536,13 +5658,13 @@
           "dependencies": []
         },
         {
-          "raw": "value = value of height, passage-height, altitude, dimensions or date height: according to the sign of the value (positive, negative or unsigned), this type of symbol represents chimney height, pit depth or step height in general. The numeric value can be optionally followed by \"?\", if the value is presumed and units can be added (e.g. -value [40? ft]). passage-height: the following four forms of value are supported: +<number> (the height of the ceiling), -<number> (the depth of the floor or water depth), <number> (the distance between floor and ceiling) and [+<number> -<number>] (the distance to ceiling and distance to floor). All four forms can be optionally followed by a unit. If there is more than one piece of information - two numbers, number and unit or else - the value must be enclosed in square brackets. altitude: the value specified is the altitude difference from the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". If the altitude value is prefixed by \"fix\" (e.g. -value [fix 1300]), this value is used as an absolute altitude. The value can optionally be followed by length units. dimensions: -value [<above> <below> [<units>]] specifies passage dimensions a\\-bo\\-ve/below centerline plane used in 3D model. date: -value <date> sets the date for the date point.",
+          "raw": "value = value of height, passage-height, altitude, dimensions or date height: according to the sign of the value (positive, negative or unsigned), this type of symbol represents chimney height, pit depth or step height in general. The numeric value can be optionally followed by \"?\", if the value is presumed and units can be added (e.g. -value [40? ft]). Values \"+?\" and \"-?\" are also accepted, meaning unknown height or depth. passage-height: the following four forms of value are supported: +<number> (the height of the ceiling), -<number> (the depth of the floor or water depth), <number> (the distance between floor and ceiling) and [+<number> -<number>] (the distance to ceiling and distance to floor). All four forms can be optionally followed by a unit. If there is more than one piece of information - two numbers, number and unit or else - the value must be enclosed in square brackets. altitude: the value specified is the altitude difference from the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". If the altitude value is prefixed by \"fix\" (e.g. -value [fix 1300]), this value is used as an absolute altitude. The value can optionally be followed by length units. dimensions: -value [<above> <below> [<units>]] specifies passage dimensions a\\-bo\\-ve/below centerline plane used in 3D model. date: -value <date> sets the date for the date point.",
           "name": "value",
           "signature": "value",
           "option_key": "-value",
           "value_arity": "0",
           "value_domain": "none",
-          "description": "value of height, passage-height, altitude, dimensions or date height: according to the sign of the value (positive, negative or unsigned), this type of symbol represents chimney height, pit depth or step height in general. The numeric value can be optionally followed by \"?\", if the value is presumed and units can be added (e.g. -value [40? ft]). passage-height: the following four forms of value are supported: +<number> (the height of the ceiling), -<number> (the depth of the floor or water depth), <number> (the distance between floor and ceiling) and [+<number> -<number>] (the distance to ceiling and distance to floor). All four forms can be optionally followed by a unit. If there is more than one piece of information - two numbers, number and unit or else - the value must be enclosed in square brackets. altitude: the value specified is the altitude difference from the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". If the altitude value is prefixed by \"fix\" (e.g. -value [fix 1300]), this value is used as an absolute altitude. The value can optionally be followed by length units. dimensions: -value [<above> <below> [<units>]] specifies passage dimensions a\\-bo\\-ve/below centerline plane used in 3D model. date: -value <date> sets the date for the date point.",
+          "description": "value of height, passage-height, altitude, dimensions or date height: according to the sign of the value (positive, negative or unsigned), this type of symbol represents chimney height, pit depth or step height in general. The numeric value can be optionally followed by \"?\", if the value is presumed and units can be added (e.g. -value [40? ft]). Values \"+?\" and \"-?\" are also accepted, meaning unknown height or depth. passage-height: the following four forms of value are supported: +<number> (the height of the ceiling), -<number> (the depth of the floor or water depth), <number> (the distance between floor and ceiling) and [+<number> -<number>] (the distance to ceiling and distance to floor). All four forms can be optionally followed by a unit. If there is more than one piece of information - two numbers, number and unit or else - the value must be enclosed in square brackets. altitude: the value specified is the altitude difference from the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". If the altitude value is prefixed by \"fix\" (e.g. -value [fix 1300]), this value is used as an absolute altitude. The value can optionally be followed by length units. dimensions: -value [<above> <below> [<units>]] specifies passage dimensions a\\-bo\\-ve/below centerline plane used in 3D model. date: -value <date> sets the date for the date point.",
           "allowed_values": [],
           "dependencies": []
         },
@@ -5558,13 +5680,13 @@
           "dependencies": []
         },
         {
-          "raw": "visibility <on/off> = displays/hides the symbol.",
+          "raw": "visibility <on/off> = displays/hides the symbol .",
           "name": "visibility <on/off>",
           "signature": "visibility <on/off>",
           "option_key": "-visibility",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "displays/hides the symbol.",
+          "description": "displays/hides the symbol .",
           "allowed_values": [
             "off",
             "on"
@@ -5624,11 +5746,85 @@
       }
     },
     {
+      "name": "scan",
+      "directive": "scan",
+      "source": {
+        "file": "therion/thbook/ch02.tex",
+        "line": 1526
+      },
+      "summary": "The scan command is used to enter external 3D mesh data into the cave 3D model. This is particularly useful for integrating high-resolution LiDAR scans or photogrammetry models directly with other surveyed data.",
+      "syntax": [
+        "scan file <filename> units <units> axes <x-spec> <y-spec> <z-spec> [calibration data] endscan"
+      ],
+      "contexts": [
+        "none",
+        "survey"
+      ],
+      "document_types": [
+        "th"
+      ],
+      "arguments": [],
+      "options": [
+        {
+          "raw": "file <filename> = filename in STL format containing 3D mesh data.",
+          "name": "file <filename>",
+          "signature": "file <filename>",
+          "option_key": "-file",
+          "value_arity": "1",
+          "value_domain": "path",
+          "description": "filename in STL format containing 3D mesh data.",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "units <units> = units of the STL file. Metres by default.",
+          "name": "units <units>",
+          "signature": "units <units>",
+          "option_key": "-units",
+          "value_arity": "1",
+          "value_domain": "unknown",
+          "description": "units of the STL file. Metres by default.",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "axes <x-spec> <y-spec> <z-spec> = order of axes in the STL file. Axes can be in any order, you can use x, -x, y, -y, z or -z. A minus prefix means the axis is reversed.",
+          "name": "axes <x-spec> <y-spec> <z-spec>",
+          "signature": "axes <x-spec> <y-spec> <z-spec>",
+          "option_key": "-axes",
+          "value_arity": "N",
+          "value_domain": "unknown",
+          "description": "order of axes in the STL file. Axes can be in any order, you can use x, -x, y, -y, z or -z. A minus prefix means the axis is reversed.",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "[calibration data] = multiple lines of coordinates mapping known survey stations to the 3D mesh. Each line contains position of specifin survey station in STL file coordinates in <station-name> <x> <y> <z> order.",
+          "name": "[calibration data]",
+          "signature": "[calibration data]",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "unknown",
+          "description": "multiple lines of coordinates mapping known survey stations to the 3D mesh. Each line contains position of specifin survey station in STL file coordinates in <station-name> <x> <y> <z> order.",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "dependencies": [
+        "context: none, survey"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "container_open",
+        "close_directive": "endscan"
+      }
+    },
+    {
       "name": "scrap",
       "directive": "scrap",
       "source": {
         "file": "therion/thbook/ch02.tex",
-        "line": 576
+        "line": 616
       },
       "summary": "Scrap is a piece of 2D map, which doesn't contain overlapping passages (i.e. all the passages may be drawn on the paper without overlapping). For small and simple caves, the whole cave may belong to one scrap. In complicated systems, a scrap is usually one chamber or one passage. Ideally, a scrap contains about 100 m of the cave. (If necessary, scraps may be much smaller - just to display a few meters of the cave. When deciding about scrap size please take into account the following: Using small scraps may take more time for cartographer to optimize scrap joins. On the other hand smaller scraps will probably be less distorted by map warping algorithms than larger scraps. Using too large scraps may exhaust 's memory if passage fills are frequently used and the map editor in XTherion is much less responsive when editing huge scraps.) Each scrap is processed separately by ; scraps which are too large may exceed 's memory and cause errors. Scrap consists of point, line and area map symbols. See chapter How the map is put together for explanation how and in which order are they displayed. Scrap border consists of lines with the -outline out or -outline in options (passage walls have -outline out by default). These lines shouldn't intersect - otherwise Therion ( ) can't determine the interior of the scrap and \\ issues a warning message \"scrap outline intersects itself\". Each scrap has its own local cartesian coordinate system, which usually corresponds with the millimeter paper (if you measure the coordinates of map symbols by hand) or pixels of the scanned image (if you use XTherion). Therion does the transformation from this local coordinate system to the real coordinates using the positions of survey stations, which are specified both in the scrap as point map symbols and in centreline data. If the scrap doesn't contain at least two survey stations with the -name reference, you have to use the -scale option for calibrating the scrap. (This is usual for cross sections.) The transformation consists of the following steps: * Linear transformation (shifting, scaling and rotation) which \"best\" fits stations drawn in the scrap to real ones. \"Best\" means that the sum of squared distances between corresponding stations before and after transformation is minimal. The result is displayed red if debug option of the layout command is set on. * Non-linear transformation of the scrap which (1) moves survey stations to their correct position, (2) is continuous. Displayed blue in the debug mode. * Non-linear transformation of the scrap which (1) moves joined points together, (2) doesn't move survey stations, (3) is continuous. Finally the position of curves' control points is adjusted to preserve smoothness. The result is final map.",
       "syntax": [
@@ -5637,6 +5833,9 @@
       "contexts": [
         "none",
         "survey"
+      ],
+      "document_types": [
+        "th2"
       ],
       "arguments": [
         {
@@ -5723,18 +5922,14 @@
           "dependencies": []
         },
         {
-          "raw": "flip (none)/horizontal/vertical = flips the scrap after scale transformation",
-          "name": "flip (none)/horizontal/vertical",
-          "signature": "flip (none)/horizontal/vertical",
+          "raw": "flip none/horizontal/vertical = flips the scrap after scale transformation .",
+          "name": "flip none/horizontal/vertical",
+          "signature": "flip none/horizontal/vertical",
           "option_key": "-flip",
           "value_arity": "1",
-          "value_domain": "enum",
-          "description": "flips the scrap after scale transformation",
-          "allowed_values": [
-            "none",
-            "horizontal",
-            "vertical"
-          ],
+          "value_domain": "unknown",
+          "description": "flips the scrap after scale transformation .",
+          "allowed_values": [],
           "dependencies": []
         },
         {
@@ -5792,6 +5987,29 @@
       }
     },
     {
+      "name": "scrap-sort",
+      "directive": "scrap-sort",
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 66
+      },
+      "summary": "Sort scraps by altitude midpoint (default). If turned off, scraps keep their input order. Only applies if no maps are defined.",
+      "syntax": [
+        "scrap-sort <on/off>"
+      ],
+      "contexts": [],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [],
+      "options": [],
+      "dependencies": [],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
       "name": "sd",
       "directive": "sd",
       "source": {
@@ -5804,6 +6022,9 @@
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -5854,7 +6075,7 @@
       "directive": "select",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 106
+        "line": 117
       },
       "summary": "selects objects (surveys and maps) for export. By default, all survey objects are selected. If there is no map selected, all scraps belonging to selected surveys are selected by default for map export. If there are no scraps or maps in the data, centerline from all surveys is exported in the map. When exporting maps in different projections, you need to select them for each projection separately. select does not only affect subsequent <export> commands but instead also <export> commands preceding the select command in the configuration file.",
       "syntax": [
@@ -5862,6 +6083,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [
         {
@@ -5936,7 +6160,7 @@
       "directive": "setup3d",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 648
+        "line": 659
       },
       "summary": "",
       "syntax": [
@@ -5944,6 +6168,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [],
       "options": [],
@@ -5960,7 +6187,7 @@
       "directive": "sketch-colors",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 660
+        "line": 671
       },
       "summary": "",
       "syntax": [
@@ -5968,6 +6195,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [],
       "options": [],
@@ -5984,7 +6214,7 @@
       "directive": "sketch-warp",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 66
+        "line": 77
       },
       "summary": "",
       "syntax": [
@@ -5992,6 +6222,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [],
       "options": [],
@@ -6008,7 +6241,7 @@
       "directive": "source",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 82
+        "line": 93
       },
       "summary": "Specifies which source (data) files Therion should read. You can specify several files here; one per line. You can also specify them using the -s command line option (see below). It is also possible to type (some small snippets of) code directly in configuration file using the multi-line syntax.",
       "syntax": [
@@ -6016,6 +6249,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [
         {
@@ -6053,6 +6289,9 @@
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -6121,6 +6360,9 @@
       "contexts": [
         "centerline"
       ],
+      "document_types": [
+        "th"
+      ],
       "arguments": [
         {
           "raw": "<prefix>",
@@ -6159,7 +6401,7 @@
       "directive": "surface",
       "source": {
         "file": "therion/thbook/ch02.tex",
-        "line": 1389
+        "line": 1462
       },
       "summary": "Surface (terrain) specification. It is possible to display it in two ways: as a scanned topographical map (both in 2D map and 3D model (You need to enter elevation data in order to display the topographical map in 3D model. Currently only JPEG maps are supported in 3D.) ) or surface grid -- digital elevation model (in 3D model only).",
       "syntax": [
@@ -6168,6 +6410,9 @@
       "contexts": [
         "none",
         "survey"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [],
       "options": [
@@ -6266,6 +6511,9 @@
         "none",
         "survey"
       ],
+      "document_types": [
+        "th"
+      ],
       "arguments": [
         {
           "raw": "<id> = survey identifier",
@@ -6281,13 +6529,13 @@
       ],
       "options": [
         {
-          "raw": "namespace <on/off> = specify whether survey creates namespace (on by default)",
+          "raw": "namespace <on/off> = specify whether survey creates namespace",
           "name": "namespace <on/off>",
           "signature": "namespace <on/off>",
           "option_key": "-namespace",
           "value_arity": "1",
           "value_domain": "enum",
-          "description": "specify whether survey creates namespace (on by default)",
+          "description": "specify whether survey creates namespace",
           "allowed_values": [
             "on",
             "off"
@@ -6360,6 +6608,9 @@
       "contexts": [
         "none"
       ],
+      "document_types": [
+        "thconfig"
+      ],
       "arguments": [],
       "options": [],
       "dependencies": [
@@ -6377,12 +6628,15 @@
         "file": "therion/thbook/ch02.tex",
         "line": 353
       },
-      "summary": "a survey team member. The first argument is his/her name, the others describe the roles of the person in the team (optional - currently not used). The following role keywords are supported: [back]tape ([back]length), [back]compass ([back]bearing), [back]clino ([back]gradient), counter (count), depth, station, position, notes (notebook), pictures (pics), instruments (insts), assistant (dog), altitude (dz), dimensions, left, right, up (ceiling), down (floor).",
+      "summary": "a survey team member. The first argument is his/her name, the others describe the roles of the person in the team (optional - currently not used). The following role keywords are supported: & & role & alias & intended meaning tape & length & Measured leg lengths compass & bearing & Measured bearings clino & gradient & Measured vertical angles backtape & backlength & Like tape but for backsights backcompass & backbearing & Like compass but for backsights backclino & backgradient & Like clino but for backsights instruments & insts & All instruments: both compass and clino; use for all-in-one instruments such as DistoX. counter & count & Topofil length measurements depth & & Measured differences in height between stations, e.g.\\ underwater with a diver's depth gauge, or above water with a manometer station & & Added markers at stations position & 3.215 & Recorded absolute positions of stations (e.g.\\ fixed surface stations with a GPS) notes & notebook & Recorded instrument readings pictures & pics & Drew sketches assistant & dog & General helper (e.g.\\ held the end of the tape on stations) altitude & dz & Recorded the altitudes of stations (e.g.\\ with an altimeter) dimensions & & Measured all passage dimensions left & & Measured left passage dimension right & & Measured right passage dimension up & ceiling & Measured up passage dimension down & floor & Measured down passage dimension explorer & & Explored the area of cave being surveyed",
       "syntax": [
         "team <person> [<roles>]"
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -6422,7 +6676,7 @@
       "directive": "text",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 207
+        "line": 218
       },
       "summary": "Specifies translation of any default Therion text in output.",
       "syntax": [
@@ -6430,6 +6684,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [
         {
@@ -6477,6 +6734,9 @@
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -6527,7 +6787,7 @@
       "directive": "unselect",
       "source": {
         "file": "therion/thbook/ch03.tex",
-        "line": 152
+        "line": 163
       },
       "summary": "Unselects objects from export.",
       "syntax": [
@@ -6535,6 +6795,9 @@
       ],
       "contexts": [
         "none"
+      ],
+      "document_types": [
+        "thconfig"
       ],
       "arguments": [],
       "options": [],
@@ -6559,6 +6822,9 @@
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {
@@ -6606,6 +6872,9 @@
       ],
       "contexts": [
         "centerline"
+      ],
+      "document_types": [
+        "th"
       ],
       "arguments": [
         {

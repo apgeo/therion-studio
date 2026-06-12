@@ -3,7 +3,7 @@
   "directive": "surface",
   "source": {
     "file": "therion/thbook/ch02.tex",
-    "line": 1389
+    "line": 1462
   },
   "summary": "Surface (terrain) specification. It is possible to display it in two ways: as a scanned topographical map (both in 2D map and 3D model (You need to enter elevation data in order to display the topographical map in 3D model. Currently only JPEG maps are supported in 3D.) ) or surface grid -- digital elevation model (in 3D model only).",
   "syntax": [
@@ -12,6 +12,9 @@
   "contexts": [
     "none",
     "survey"
+  ],
+  "document_types": [
+    "th"
   ],
   "arguments": [],
   "options": [

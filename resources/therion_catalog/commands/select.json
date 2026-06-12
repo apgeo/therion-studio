@@ -3,7 +3,7 @@
   "directive": "select",
   "source": {
     "file": "therion/thbook/ch03.tex",
-    "line": 106
+    "line": 117
   },
   "summary": "selects objects (surveys and maps) for export. By default, all survey objects are selected. If there is no map selected, all scraps belonging to selected surveys are selected by default for map export. If there are no scraps or maps in the data, centerline from all surveys is exported in the map. When exporting maps in different projections, you need to select them for each projection separately. select does not only affect subsequent <export> commands but instead also <export> commands preceding the select command in the configuration file.",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "none"
+  ],
+  "document_types": [
+    "thconfig"
   ],
   "arguments": [
     {

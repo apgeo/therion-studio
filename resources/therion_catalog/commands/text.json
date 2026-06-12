@@ -3,7 +3,7 @@
   "directive": "text",
   "source": {
     "file": "therion/thbook/ch03.tex",
-    "line": 207
+    "line": 218
   },
   "summary": "Specifies translation of any default Therion text in output.",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "none"
+  ],
+  "document_types": [
+    "thconfig"
   ],
   "arguments": [
     {

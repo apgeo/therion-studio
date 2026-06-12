@@ -3,7 +3,7 @@
   "directive": "require",
   "source": {
     "file": "therion/thbook/ch02.tex",
-    "line": 1552
+    "line": 1655
   },
   "summary": "Checks that the version of Therion in use is at least <version> and stops with an error if not.",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "all"
+  ],
+  "document_types": [
+    "th"
   ],
   "arguments": [
     {

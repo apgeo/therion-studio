@@ -3,7 +3,7 @@
   "directive": "setup3d",
   "source": {
     "file": "therion/thbook/ch03.tex",
-    "line": 648
+    "line": 659
   },
   "summary": "",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "none"
+  ],
+  "document_types": [
+    "thconfig"
   ],
   "arguments": [],
   "options": [],

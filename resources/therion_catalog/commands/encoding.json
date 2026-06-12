@@ -12,6 +12,9 @@
   "contexts": [
     "none"
   ],
+  "document_types": [
+    "all"
+  ],
   "arguments": [
     {
       "raw": "<encoding-name> = to see a list of all the supported encoding names, run Therion with --print-encodings option. \"UTF-8\" (Unicode) and \"ASCII\" (7 bit) encodings are always supported.",

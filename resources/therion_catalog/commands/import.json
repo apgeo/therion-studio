@@ -3,7 +3,7 @@
   "directive": "import",
   "source": {
     "file": "therion/thbook/ch02.tex",
-    "line": 1453
+    "line": 1556
   },
   "summary": "Reads survey data in different formats (currently processed centreline in *.3d, *.plt, *.xyz formats). Survey stations may be referenced in scraps etc. When importing a Survex 3D file, stations are inserted in the survey hierarchy if there exists an identical hierarchy to that in 3D file.",
   "syntax": [
@@ -12,6 +12,9 @@
   "contexts": [
     "all",
     "survey"
+  ],
+  "document_types": [
+    "th"
   ],
   "arguments": [],
   "options": [

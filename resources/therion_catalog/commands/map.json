@@ -3,7 +3,7 @@
   "directive": "map",
   "source": {
     "file": "therion/thbook/ch02.tex",
-    "line": 1327
+    "line": 1400
   },
   "summary": "A map is a collection of either scraps or other maps of the same projection type. It's possible to include survey in the map - this will display centreline in the map. Map object simplifies the data management when selecting data for output. See the chapter How the map is put together for more thorough explanation. (Note: break only changes level of maps of scraps and has no function when used with maps of maps, as they will cause a break implicitly)",
   "syntax": [
@@ -12,6 +12,9 @@
   "contexts": [
     "none",
     "survey"
+  ],
+  "document_types": [
+    "th"
   ],
   "arguments": [
     {

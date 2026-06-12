@@ -3,7 +3,7 @@
   "directive": "mark",
   "source": {
     "file": "therion/thbook/ch02.tex",
-    "line": 460
+    "line": 478
   },
   "summary": "set the type of named stations. <type> is one of: fixed, painted and temporary (default). If there is no station list, all subsequent stations are marked.",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "centerline"
+  ],
+  "document_types": [
+    "th"
   ],
   "arguments": [
     {

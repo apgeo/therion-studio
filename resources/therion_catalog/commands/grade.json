@@ -13,6 +13,9 @@
     "centerline",
     "all"
   ],
+  "document_types": [
+    "th"
+  ],
   "arguments": [
     {
       "raw": "<grade list>",

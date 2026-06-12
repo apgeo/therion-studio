@@ -12,6 +12,9 @@
   "contexts": [
     "none"
   ],
+  "document_types": [
+    "thconfig"
+  ],
   "arguments": [],
   "options": [],
   "dependencies": [

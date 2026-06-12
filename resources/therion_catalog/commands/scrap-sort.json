@@ -1,0 +1,23 @@
+{
+  "name": "scrap-sort",
+  "directive": "scrap-sort",
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 66
+  },
+  "summary": "Sort scraps by altitude midpoint (default). If turned off, scraps keep their input order. Only applies if no maps are defined.",
+  "syntax": [
+    "scrap-sort <on/off>"
+  ],
+  "contexts": [],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [],
+  "options": [],
+  "dependencies": [],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

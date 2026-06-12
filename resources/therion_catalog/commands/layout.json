@@ -3,7 +3,7 @@
   "directive": "layout",
   "source": {
     "file": "therion/thbook/ch03.tex",
-    "line": 224
+    "line": 235
   },
   "summary": "Specifies layout for 2D maps. Settings which apply to atlas mode are marked \"A\"; map mode \"M\".",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "none"
+  ],
+  "document_types": [
+    "thconfig"
   ],
   "arguments": [],
   "options": [

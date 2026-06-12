@@ -13,6 +13,9 @@
     "centerline",
     "map"
   ],
+  "document_types": [
+    "th"
+  ],
   "arguments": [],
   "options": [],
   "dependencies": [

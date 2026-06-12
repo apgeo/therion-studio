@@ -3,7 +3,7 @@
   "directive": "point",
   "source": {
     "file": "therion/thbook/ch02.tex",
-    "line": 708
+    "line": 748
   },
   "summary": "Point is a command for drawing a point map symbol.",
   "syntax": [
@@ -11,6 +11,9 @@
   ],
   "contexts": [
     "scrap"
+  ],
+  "document_types": [
+    "th2"
   ],
   "arguments": [
     {
@@ -25,13 +28,13 @@
       "dependencies": []
     },
     {
-      "raw": "<type> determines the type of an object. The following types are supported: special objects: dimensions (Use -value option to specify passage dimensions above/below centerline plane used while creating 3D model.) , section (section is an anchor for placing the cross-section at this point. This symbol has no visual representation. The cross section must be in the separate scrap with \"none\" projection specified. You can specify it through the -scrap option.) , station (Survey station. For each scrap (with the exception of scraps in \"none\" projection) at least one station with station reference (-name option) has to be specified.) ; labels: altitude (General altitude label. All altitudes are exported as a difference against grid Z origin (which is 0 by default). To display altitude on the passage wall, use altitude option for any line point of the passage wall) , date (Set date's value with the -value option) , height (Height of formations inside of the passage (like pit etc.); see below for details.) , label, passage-height (Height of the passage; see below for details.) , remark, station-name (If no text is specified, the name of the nearest station is used.) ; -100 symbolic passage fills: (Unlike other point symbols, these are clipped by the scrap border. See the chapter How the map is put together .) bedrock, blocks, clay, debris, guano, ice, mudcrack, mud, pebbles, raft, sand, snow, water; speleothems: anastomosis, aragonite, cave-pearl, clay-tree, crystal, curtains, curtain, disc-pillar, disc-stalactite, disc-stalagmite, disc-pillars, disc-stalactites, disc-stalagmites, disk, flowstone, flute, gypsum-flower, gypsum, helictites, helictite, karren, moonmilk, pendant, pillar-with-curtains, pillars-with-curtains, pillar, popcorn, raft-cone, rimstone-dam, rimstone-pool, scallop, soda-straw, stalactite-stalagmite, stalactites-stalagmites, stalactite, stalactites, stalagmite, stalagmites, volcano, wall-calcite; equipment: anchor, bridge, camp, fixed-ladder, gate, handrail, masonry, nameplate, no-equipment, no-wheelchair, rope-ladder, rope, steps, traverse, via-ferrata, walkway, wheelchair; passage ends: breakdown-choke, clay-choke, continuation, entrance, flowstone-choke, low-end, narrow-end; others: air-draught (Number of ticks is set according to -scale option) , altar, archeo-excavation, archeo-material, audio, bat, bones, danger, dig, electric-light, ex-voto, extra (Additional morphing point. See -dist and -value options.) , gradient, human-bones, ice-pillar, ice-stalactite, ice-stalagmite, map-connection (Virtual point, used to indicate connection between shifted maps (extended elevation, map offset).) ,",
+      "raw": "<type> determines the type of an object. The following types are supported: special objects: dimensions (Use -value option to specify passage dimensions above/below centerline plane used while creating 3D model.) , section (section is an anchor for placing the cross-section at this point. This symbol has no visual representation. The cross section must be in the separate scrap. You can specify it through the -scrap option.) , station (Survey station. For each scrap (with the exception of scraps in \"none\" projection) at least one station with station reference (-name option) has to be specified.) ; labels: altitude (General altitude label. All altitudes are exported as a difference against grid Z origin (which is 0 by default). To display altitude on the passage wall, use altitude option for any line point of the passage wall) , date (Set date's value with the -value option) , height (Height of formations inside of the passage (like pit etc.); see below for details.) , label, passage-height (Height of the passage; see below for details.) , remark, station-name (If no text is specified, the name of the nearest station is used.) ; -100 symbolic passage fills: (Unlike other point symbols, these are clipped by the scrap border. See the chapter How the map is put together .) bedrock, blocks, clay, debris, guano, ice, mudcrack, mud, pebbles, raft, sand, snow, water; speleothems: anastomosis, aragonite, cave-pearl, clay-tree, crystal, curtains, curtain, disc-pillar, disc-stalactite, disc-stalagmite, disc-pillars, disc-stalactites, disc-stalagmites, disk, flowstone, flute, gypsum-flower, gypsum, helictites, helictite, karren, moonmilk, pendant, pillar-with-curtains, pillars-with-curtains, pillar, popcorn, raft-cone, rimstone-dam, rimstone-pool, scallop, soda-straw, stalactite-stalagmite, stalactites-stalagmites, stalactite, stalactites, stalagmite, stalagmites, volcano, wall-calcite; equipment: anchor, bridge, camp, fixed-ladder, gate, handrail, masonry, nameplate, no-equipment, no-wheelchair, rope-ladder, rope, steps, traverse, via-ferrata, walkway, wheelchair; passage ends: breakdown-choke, clay-choke, continuation, entrance, flowstone-choke, low-end, narrow-end; others: air-draught (Number of ticks is set according to -scale option) , altar, archeo-excavation, archeo-material, audio, bat, bones, borehole, danger, dig, electric-light, ex-voto, extra (Additional morphing point. See -dist and -value options.) , gradient, human-bones, ice-pillar, ice-stalactite, ice-stalagmite, map-connection (Virtual point, used to indicate connection between shifted maps (extended elevation, map offset).) ,",
       "name": "<type>",
       "signature": "<type>",
       "option_key": "",
       "value_arity": "1",
       "value_domain": "unknown",
-      "description": "determines the type of an object. The following types are supported: special objects: dimensions (Use -value option to specify passage dimensions above/below centerline plane used while creating 3D model.) , section (section is an anchor for placing the cross-section at this point. This symbol has no visual representation. The cross section must be in the separate scrap with \"none\" projection specified. You can specify it through the -scrap option.) , station (Survey station. For each scrap (with the exception of scraps in \"none\" projection) at least one station with station reference (-name option) has to be specified.) ; labels: altitude (General altitude label. All altitudes are exported as a difference against grid Z origin (which is 0 by default). To display altitude on the passage wall, use altitude option for any line point of the passage wall) , date (Set date's value with the -value option) , height (Height of formations inside of the passage (like pit etc.); see below for details.) , label, passage-height (Height of the passage; see below for details.) , remark, station-name (If no text is specified, the name of the nearest station is used.) ; -100 symbolic passage fills: (Unlike other point symbols, these are clipped by the scrap border. See the chapter How the map is put together .) bedrock, blocks, clay, debris, guano, ice, mudcrack, mud, pebbles, raft, sand, snow, water; speleothems: anastomosis, aragonite, cave-pearl, clay-tree, crystal, curtains, curtain, disc-pillar, disc-stalactite, disc-stalagmite, disc-pillars, disc-stalactites, disc-stalagmites, disk, flowstone, flute, gypsum-flower, gypsum, helictites, helictite, karren, moonmilk, pendant, pillar-with-curtains, pillars-with-curtains, pillar, popcorn, raft-cone, rimstone-dam, rimstone-pool, scallop, soda-straw, stalactite-stalagmite, stalactites-stalagmites, stalactite, stalactites, stalagmite, stalagmites, volcano, wall-calcite; equipment: anchor, bridge, camp, fixed-ladder, gate, handrail, masonry, nameplate, no-equipment, no-wheelchair, rope-ladder, rope, steps, traverse, via-ferrata, walkway, wheelchair; passage ends: breakdown-choke, clay-choke, continuation, entrance, flowstone-choke, low-end, narrow-end; others: air-draught (Number of ticks is set according to -scale option) , altar, archeo-excavation, archeo-material, audio, bat, bones, danger, dig, electric-light, ex-voto, extra (Additional morphing point. See -dist and -value options.) , gradient, human-bones, ice-pillar, ice-stalactite, ice-stalagmite, map-connection (Virtual point, used to indicate connection between shifted maps (extended elevation, map offset).) ,",
+      "description": "determines the type of an object. The following types are supported: special objects: dimensions (Use -value option to specify passage dimensions above/below centerline plane used while creating 3D model.) , section (section is an anchor for placing the cross-section at this point. This symbol has no visual representation. The cross section must be in the separate scrap. You can specify it through the -scrap option.) , station (Survey station. For each scrap (with the exception of scraps in \"none\" projection) at least one station with station reference (-name option) has to be specified.) ; labels: altitude (General altitude label. All altitudes are exported as a difference against grid Z origin (which is 0 by default). To display altitude on the passage wall, use altitude option for any line point of the passage wall) , date (Set date's value with the -value option) , height (Height of formations inside of the passage (like pit etc.); see below for details.) , label, passage-height (Height of the passage; see below for details.) , remark, station-name (If no text is specified, the name of the nearest station is used.) ; -100 symbolic passage fills: (Unlike other point symbols, these are clipped by the scrap border. See the chapter How the map is put together .) bedrock, blocks, clay, debris, guano, ice, mudcrack, mud, pebbles, raft, sand, snow, water; speleothems: anastomosis, aragonite, cave-pearl, clay-tree, crystal, curtains, curtain, disc-pillar, disc-stalactite, disc-stalagmite, disc-pillars, disc-stalactites, disc-stalagmites, disk, flowstone, flute, gypsum-flower, gypsum, helictites, helictite, karren, moonmilk, pendant, pillar-with-curtains, pillars-with-curtains, pillar, popcorn, raft-cone, rimstone-dam, rimstone-pool, scallop, soda-straw, stalactite-stalagmite, stalactites-stalagmites, stalactite, stalactites, stalagmite, stalagmites, volcano, wall-calcite; equipment: anchor, bridge, camp, fixed-ladder, gate, handrail, masonry, nameplate, no-equipment, no-wheelchair, rope-ladder, rope, steps, traverse, via-ferrata, walkway, wheelchair; passage ends: breakdown-choke, clay-choke, continuation, entrance, flowstone-choke, low-end, narrow-end; others: air-draught (Number of ticks is set according to -scale option) , altar, archeo-excavation, archeo-material, audio, bat, bones, borehole, danger, dig, electric-light, ex-voto, extra (Additional morphing point. See -dist and -value options.) , gradient, human-bones, ice-pillar, ice-stalactite, ice-stalagmite, map-connection (Virtual point, used to indicate connection between shifted maps (extended elevation, map offset).) ,",
       "allowed_values": [],
       "dependencies": []
     }
@@ -57,41 +60,38 @@
       "value_domain": "number",
       "description": "defines the orientation of the symbol. If not specified, it's oriented to north. 0 number < 360.",
       "allowed_values": [],
-      "dependencies": [],
-      "excluded_types": [
-        "station"
-      ]
+      "dependencies": []
     },
     {
-      "raw": "align = alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br.",
+      "raw": "align = alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br .",
       "name": "align",
       "signature": "align",
       "option_key": "-align",
       "value_arity": "0",
       "value_domain": "none",
-      "description": "alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br.",
+      "description": "alignment of the symbol or text. The following values are accepted: center, c, top, t, bottom, b, left, l, right, r, top-left, tl, top-right, tr, bottom-left, bl, bottom-right, br .",
       "allowed_values": [],
       "dependencies": []
     },
     {
-      "raw": "scale = symbol scale, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value. Normal is default. Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 .",
+      "raw": "scale = symbol scale, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value . Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 .",
       "name": "scale",
       "signature": "scale",
       "option_key": "-scale",
       "value_arity": "0",
       "value_domain": "none",
-      "description": "symbol scale, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value. Normal is default. Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 .",
+      "description": "symbol scale, can be: tiny (xs), small (s), normal (m), large (l), huge (xl) or a numeric value . Named sizes scale by 2 , so that xs 0.5 , s 0.707 , m 1.0 , l 1.414 and xl 2.0 .",
       "allowed_values": [],
       "dependencies": []
     },
     {
-      "raw": "place <bottom/default/top> = changes displaying order in the map.",
+      "raw": "place <bottom/default/top> = changes displaying order in the map .",
       "name": "place <bottom/default/top>",
       "signature": "place <bottom/default/top>",
       "option_key": "-place",
       "value_arity": "1",
       "value_domain": "enum",
-      "description": "changes displaying order in the map.",
+      "description": "changes displaying order in the map .",
       "allowed_values": [
         "bottom",
         "default",
@@ -100,13 +100,13 @@
       "dependencies": []
     },
     {
-      "raw": "clip <on/off> = specify whether a symbol is clipped by the scrap border. You cannot specify this option for the following symbols: station, station-name, label, remark, date, altitude, height, passage-height.",
+      "raw": "clip <on/off> = specify whether a symbol is clipped by the scrap border. You cannot specify this option for the following symbols: station, station-name, label, remark, date, altitude, height, passage-height .",
       "name": "clip <on/off>",
       "signature": "clip <on/off>",
       "option_key": "-clip",
       "value_arity": "1",
       "value_domain": "enum",
-      "description": "specify whether a symbol is clipped by the scrap border. You cannot specify this option for the following symbols: station, station-name, label, remark, date, altitude, height, passage-height.",
+      "description": "specify whether a symbol is clipped by the scrap border. You cannot specify this option for the following symbols: station, station-name, label, remark, date, altitude, height, passage-height .",
       "allowed_values": [
         "on",
         "off"
@@ -114,13 +114,13 @@
       "dependencies": []
     },
     {
-      "raw": "visibility <on/off> = displays/hides the symbol.",
+      "raw": "visibility <on/off> = displays/hides the symbol .",
       "name": "visibility <on/off>",
       "signature": "visibility <on/off>",
       "option_key": "-visibility",
       "value_arity": "1",
       "value_domain": "enum",
-      "description": "displays/hides the symbol.",
+      "description": "displays/hides the symbol .",
       "allowed_values": [
         "on",
         "off"
@@ -165,13 +165,13 @@
       "dependencies": []
     },
     {
-      "raw": "from <station> = if the point type is extra, specifies reference station.",
+      "raw": "from <station> = specifies a reference station. This option is primarily intended for points of type extra. If omitted, Therion uses the nearest station, and if -dist is not specified, an appropriate value from LRUD data is used. If the point type is station and the scrap projection is extended elevation, this option specifies the neighbouring survey station that should be used as origin (from station) when placing the station point on the extended centreline. This is useful at junctions, where the same survey station may be reached by more than one shot and the cartographer needs to choose which branch the point should follow. If -from is not given, Therion falls back to the nearest matching branch in the scrap. Therion accepts this option also for other point types, but it has no defined effect there.",
       "name": "from <station>",
       "signature": "from <station>",
       "option_key": "-from",
       "value_arity": "1",
       "value_domain": "station",
-      "description": "if the point type is extra, specifies reference station.",
+      "description": "specifies a reference station. This option is primarily intended for points of type extra. If omitted, Therion uses the nearest station, and if -dist is not specified, an appropriate value from LRUD data is used. If the point type is station and the scrap projection is extended elevation, this option specifies the neighbouring survey station that should be used as origin (from station) when placing the station point on the extended centreline. This is useful at junctions, where the same survey station may be reached by more than one shot and the cartographer needs to choose which branch the point should follow. If -from is not given, Therion falls back to the nearest matching branch in the scrap. Therion accepts this option also for other point types, but it has no defined effect there.",
       "allowed_values": [],
       "dependencies": []
     },
@@ -183,17 +183,6 @@
       "value_arity": "1",
       "value_domain": "unknown",
       "description": "if the point type is station, this option gives the reference to the real survey station.",
-      "allowed_values": [],
-      "dependencies": []
-    },
-    {
-      "raw": "extend [prev[ious] <station>] = if the point type is station and scrap projection is extended elevation, you can adjust the extension of the centreline using this option.",
-      "name": "extend [prev[ious] <station>]",
-      "signature": "extend [prev[ious] <station>]",
-      "option_key": "-extend",
-      "value_arity": "N",
-      "value_domain": "station",
-      "description": "if the point type is station and scrap projection is extended elevation, you can adjust the extension of the centreline using this option.",
       "allowed_values": [],
       "dependencies": []
     },
@@ -231,13 +220,13 @@
       "dependencies": []
     },
     {
-      "raw": "value = value of height, passage-height, altitude, dimensions or date height: according to the sign of the value (positive, negative or unsigned), this type of symbol represents chimney height, pit depth or step height in general. The numeric value can be optionally followed by \"?\", if the value is presumed and units can be added (e.g. -value [40? ft]). passage-height: the following four forms of value are supported: +<number> (the height of the ceiling), -<number> (the depth of the floor or water depth), <number> (the distance between floor and ceiling) and [+<number> -<number>] (the distance to ceiling and distance to floor). All four forms can be optionally followed by a unit. If there is more than one piece of information - two numbers, number and unit or else - the value must be enclosed in square brackets. altitude: the value specified is the altitude difference from the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". If the altitude value is prefixed by \"fix\" (e.g. -value [fix 1300]), this value is used as an absolute altitude. The value can optionally be followed by length units. dimensions: -value [<above> <below> [<units>]] specifies passage dimensions a\\-bo\\-ve/below centerline plane used in 3D model. date: -value <date> sets the date for the date point.",
+      "raw": "value = value of height, passage-height, altitude, dimensions or date height: according to the sign of the value (positive, negative or unsigned), this type of symbol represents chimney height, pit depth or step height in general. The numeric value can be optionally followed by \"?\", if the value is presumed and units can be added (e.g. -value [40? ft]). Values \"+?\" and \"-?\" are also accepted, meaning unknown height or depth. passage-height: the following four forms of value are supported: +<number> (the height of the ceiling), -<number> (the depth of the floor or water depth), <number> (the distance between floor and ceiling) and [+<number> -<number>] (the distance to ceiling and distance to floor). All four forms can be optionally followed by a unit. If there is more than one piece of information - two numbers, number and unit or else - the value must be enclosed in square brackets. altitude: the value specified is the altitude difference from the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". If the altitude value is prefixed by \"fix\" (e.g. -value [fix 1300]), this value is used as an absolute altitude. The value can optionally be followed by length units. dimensions: -value [<above> <below> [<units>]] specifies passage dimensions a\\-bo\\-ve/below centerline plane used in 3D model. date: -value <date> sets the date for the date point.",
       "name": "value",
       "signature": "value",
       "option_key": "-value",
       "value_arity": "0",
       "value_domain": "none",
-      "description": "value of height, passage-height, altitude, dimensions or date height: according to the sign of the value (positive, negative or unsigned), this type of symbol represents chimney height, pit depth or step height in general. The numeric value can be optionally followed by \"?\", if the value is presumed and units can be added (e.g. -value [40? ft]). passage-height: the following four forms of value are supported: +<number> (the height of the ceiling), -<number> (the depth of the floor or water depth), <number> (the distance between floor and ceiling) and [+<number> -<number>] (the distance to ceiling and distance to floor). All four forms can be optionally followed by a unit. If there is more than one piece of information - two numbers, number and unit or else - the value must be enclosed in square brackets. altitude: the value specified is the altitude difference from the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". If the altitude value is prefixed by \"fix\" (e.g. -value [fix 1300]), this value is used as an absolute altitude. The value can optionally be followed by length units. dimensions: -value [<above> <below> [<units>]] specifies passage dimensions a\\-bo\\-ve/below centerline plane used in 3D model. date: -value <date> sets the date for the date point.",
+      "description": "value of height, passage-height, altitude, dimensions or date height: according to the sign of the value (positive, negative or unsigned), this type of symbol represents chimney height, pit depth or step height in general. The numeric value can be optionally followed by \"?\", if the value is presumed and units can be added (e.g. -value [40? ft]). Values \"+?\" and \"-?\" are also accepted, meaning unknown height or depth. passage-height: the following four forms of value are supported: +<number> (the height of the ceiling), -<number> (the depth of the floor or water depth), <number> (the distance between floor and ceiling) and [+<number> -<number>] (the distance to ceiling and distance to floor). All four forms can be optionally followed by a unit. If there is more than one piece of information - two numbers, number and unit or else - the value must be enclosed in square brackets. altitude: the value specified is the altitude difference from the nearest station. The value will be set to 0 if defined as \"-\", \".\", \"nan\", \"NAN\" or \"NaN\". If the altitude value is prefixed by \"fix\" (e.g. -value [fix 1300]), this value is used as an absolute altitude. The value can optionally be followed by length units. dimensions: -value [<above> <below> [<units>]] specifies passage dimensions a\\-bo\\-ve/below centerline plane used in 3D model. date: -value <date> sets the date for the date point.",
       "allowed_values": [],
       "dependencies": []
     }
@@ -341,6 +330,7 @@
     "audio",
     "bat",
     "bones",
+    "borehole",
     "danger",
     "dig",
     "electric-light",
@@ -376,6 +366,8 @@
       "scale",
       "symbol-hide",
       "symbol-show",
+      "extra",
+      "station",
       "text"
     ]
   },

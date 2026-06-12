@@ -35,7 +35,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1: Continue Unified Source DOM Phase 2 by migrating remaining completion edge cases and future catalog-aware metadata onto `TherionSourceLogicalDocument`; raw completion command/scope/token-index resolution, validator catalog diagnostics, and context-help token/directive lookup now use logical source ranges, and block ranges, token ranges, argument-group ranges, option-entry ranges, source type, encoding, and revision metadata are available from the shared source model.
 - P1: Continue Phase 9 ownership unification by replacing `MapEditorTab`'s preferred-owner state with durable transaction ownership metadata attached to each source mutation; point/line geometry moves and draft-completion source snapshots now use the shared source transaction controller.
 - P1: Audit remaining map source mutation flows for ad hoc undo ownership, especially inspector-applied edits and background/metadata source updates, before moving to one document-level undo timeline.
-- P1: Expand focused map/text undo regression coverage to include save/dirty-state transitions, detached map panes, and inspector-applied source transactions.
+- P1: Expand focused map/text undo regression coverage to include save/dirty-state transitions, detached map panes, and inspector-applied source transactions; stale map source transaction coverage now verifies revision mismatch skip behavior, no undo snapshot, no projection flush, and user-facing stale status.
 
 ## Risks / Blockers
 

@@ -327,6 +327,68 @@ int runLineVertexMoveUsesSourceEditSnapshotTest()
     return 0;
 }
 
+int runStaleSourceChangeIsSkippedTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Failed to create temporary directory.")) {
+        return 1;
+    }
+
+    const QString filePath = createTestFile(tempDir, "scrap s1\nendscrap\n");
+    if (!expect(!filePath.isEmpty(), "Failed to create stale map source transaction test file.")) {
+        return 1;
+    }
+
+    QtFileSystem fileSystem;
+    TextEditorTab tab{fileSystem, CommandCatalogStore()};
+    if (!expect(loadTestTab(&tab, filePath), "Failed to load stale map source transaction test tab.")) {
+        return 1;
+    }
+
+    QUndoStack undoStack;
+    QString toolbarStatus;
+    bool commandApplyInProgress = false;
+    int refreshCount = 0;
+    int flushCount = 0;
+    MapEditorCanvasEditController controller =
+        makeController(&tab, &undoStack, &toolbarStatus, &commandApplyInProgress, &refreshCount, &flushCount);
+
+    const QString beforeText = tab.text();
+    const QString plannedAfterText = beforeText + QStringLiteral("point 1 2 station\n");
+    const QString concurrentText = beforeText + QStringLiteral("# concurrent edit\n");
+    tab.applySourceSnapshotForTransaction(concurrentText);
+    pumpEvents();
+
+    controller.applySourceTextChangeWithSnapshot(QStringLiteral("Insert Map Point"),
+                                                 beforeText,
+                                                 plannedAfterText,
+                                                 3);
+    pumpEvents();
+
+    if (!expect(tab.text() == concurrentText,
+                "Stale map source change should not overwrite newer document text.")) {
+        return 1;
+    }
+    if (!expect(undoStack.count() == 0,
+                "Stale map source change should not push an undo snapshot.")) {
+        return 1;
+    }
+    if (!expect(flushCount == 0,
+                "Stale map source change should not flush map projections.")) {
+        return 1;
+    }
+    if (!expect(toolbarStatus == QStringLiteral("Map source change skipped: document changed."),
+                "Stale map source change should surface the map-specific stale status.")) {
+        return 1;
+    }
+    if (!expect(refreshCount == 1,
+                "Stale map source status should refresh toolbar summary once.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runDraftCompletionUsesCentralSnapshotReplayTest()
 {
     QTemporaryDir tempDir;
@@ -419,6 +481,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runLineVertexMoveUsesSourceEditSnapshotTest() != 0) {
+        return 1;
+    }
+    if (runStaleSourceChangeIsSkippedTest() != 0) {
         return 1;
     }
     if (runDraftCompletionUsesCentralSnapshotReplayTest() != 0) {

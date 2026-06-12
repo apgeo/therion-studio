@@ -1,9 +1,9 @@
 {
   "metadata": {
-    "generated_at_utc": "2026-06-12T08:31:49.624959+00:00",
+    "generated_at_utc": "2026-06-12T10:49:34.984434+00:00",
     "generator_version": "4",
-    "source_repository": "https://github.com/therion/therion",
-    "source_reference": "snapshot",
+    "source_repository": "snapshot-copy",
+    "source_reference": "snapshot-copy",
     "source_files": [
       "therion/thbook/ch02.tex",
       "therion/thbook/ch03.tex"
@@ -406,7 +406,8 @@
       ],
       "contexts": [
         "centerline",
-        "none"
+        "none",
+        "layout"
       ],
       "document_types": [
         "th",
@@ -428,7 +429,8 @@
       "options": [],
       "dependencies": [
         "context: centerline",
-        "context: none"
+        "context: none",
+        "context: layout"
       ],
       "allowed_values": [],
       "block": {
@@ -1746,7 +1748,8 @@
         "scrap"
       ],
       "document_types": [
-        "th"
+        "th",
+        "th2"
       ],
       "arguments": [
         {

@@ -21,6 +21,7 @@
 #include <QTextBlock>
 #include <QTextBrowser>
 #include <QTextLayout>
+#include <QToolTip>
 
 #include <iostream>
 
@@ -202,6 +203,32 @@ int main(int argc, char *argv[])
                         && helpHtml.contains(QStringLiteral("&lt;id&gt;"))
                         && helpHtml.contains(QStringLiteral("-title &lt;text&gt;")),
                     "Contextual help should render argument and option signatures as compact bold monospace bullet items.")) {
+            return 1;
+        }
+    }
+
+    {
+        const QString helpHtml = ContextHelpController::renderHelpHtml(QStringLiteral("sample"),
+                                                                       QStringLiteral("Sample summary"),
+                                                                       QStringLiteral("sample [OPTIONS]"),
+                                                                       {QStringLiteral("<argument-second> = positional second"),
+                                                                        QStringLiteral("<argument-first> = positional first")},
+                                                                       {},
+                                                                       {QStringLiteral("-zeta <value> = zeta option"),
+                                                                        QStringLiteral("-alpha <value> = alpha option"),
+                                                                        QStringLiteral("-middle = middle option")},
+                                                                       true);
+        const int secondArgumentIndex = helpHtml.indexOf(QStringLiteral("&lt;argument-second&gt;"));
+        const int firstArgumentIndex = helpHtml.indexOf(QStringLiteral("&lt;argument-first&gt;"));
+        const int alphaOptionIndex = helpHtml.indexOf(QStringLiteral("-alpha"));
+        const int middleOptionIndex = helpHtml.indexOf(QStringLiteral("-middle"));
+        const int zetaOptionIndex = helpHtml.indexOf(QStringLiteral("-zeta"));
+        if (!expect(secondArgumentIndex >= 0
+                        && firstArgumentIndex > secondArgumentIndex
+                        && alphaOptionIndex >= 0
+                        && middleOptionIndex > alphaOptionIndex
+                        && zetaOptionIndex > middleOptionIndex,
+                    "Contextual help should preserve positional argument order and sort options alphabetically.")) {
             return 1;
         }
     }
@@ -402,6 +429,7 @@ int main(int argc, char *argv[])
                                                   "cs iJTSK\n"
                                                   "select cave.m@cave\n"
                                                   "layout l_plan\n"
+                                                  "  cs iJTSK\n"
                                                   "endlayout\n"
                                                   "export map -output out.pdf -layout l_plan\n"));
         pumpEvents();
@@ -432,7 +460,8 @@ int main(int argc, char *argv[])
                       "area water\n"
                       "  border1\n"
                       "endarea\n"
-                      "endscrap\n");
+                      "endscrap\n"
+                      "join o12p1 o12p2\n");
         mapFile.close();
 
         TextEditorTab mapTab{fileSystem, CommandCatalogStore()};
@@ -447,11 +476,11 @@ int main(int argc, char *argv[])
 
         const TherionSourceValidationResult mapValidation = mapTab.validateDocument();
         if (!expect(!validationContainsDiagnosticCode(mapValidation, QStringLiteral("invalid-command-context")),
-                    ".th2 validation should accept real map-object contexts such as scrap, point, line, and area.")) {
+                    ".th2 validation should accept real map-object contexts such as scrap, point, line, area, and join.")) {
             return 1;
         }
         if (!expect(!validationContainsDiagnosticCode(mapValidation, QStringLiteral("invalid-document-type")),
-                    ".th2 validation should accept map-object commands from the generated document-type catalog.")) {
+                    ".th2 validation should accept map-object commands and cross-document join from the generated document-type catalog.")) {
             return 1;
         }
     }
@@ -641,20 +670,20 @@ int main(int argc, char *argv[])
         pumpEvents();
 
         const QString helpText = helpBrowser->toPlainText();
-        const QString tooltipText = editor->toolTip();
-        if (!expect(helpText.contains(QStringLiteral("Unknown option value"), Qt::CaseInsensitive)
-                        || tooltipText.contains(QStringLiteral("Unknown option value"), Qt::CaseInsensitive),
-                    "Validation guidance should surface the validator finding in either contextual help or inline tooltip.")) {
+        const QString tooltipText = QToolTip::text();
+        if (!expect(!helpText.contains(QStringLiteral("Unknown option value"), Qt::CaseInsensitive),
+                    "Context Help should remain command documentation instead of duplicating validation findings.")) {
             return 1;
         }
-        const bool allowedValuesInHelp = helpText.contains(QStringLiteral("on"), Qt::CaseInsensitive)
-            && helpText.contains(QStringLiteral("off"), Qt::CaseInsensitive)
-            && helpText.contains(QStringLiteral("auto"), Qt::CaseInsensitive);
+        if (!expect(tooltipText.contains(QStringLiteral("Unknown option value"), Qt::CaseInsensitive),
+                    "Validation guidance should surface the validator finding in the inline tooltip.")) {
+            return 1;
+        }
         const bool allowedValuesInTooltip = tooltipText.contains(QStringLiteral("on"), Qt::CaseInsensitive)
             && tooltipText.contains(QStringLiteral("off"), Qt::CaseInsensitive)
             && tooltipText.contains(QStringLiteral("auto"), Qt::CaseInsensitive);
-        if (!expect(allowedValuesInHelp || allowedValuesInTooltip,
-                    "Known enum values from the validator should surface in either contextual help or inline tooltip for invalid option value.")) {
+        if (!expect(allowedValuesInTooltip,
+                    "Known enum values from the validator should surface in the inline tooltip for invalid option value.")) {
             return 1;
         }
     }
@@ -674,10 +703,13 @@ int main(int argc, char *argv[])
         pumpEvents();
 
         const QString helpText = helpBrowser->toPlainText();
-        const QString tooltipText = editor->toolTip();
-        if (!expect(helpText.contains(QStringLiteral("Unknown option value"), Qt::CaseInsensitive)
-                        || tooltipText.contains(QStringLiteral("Unknown option value"), Qt::CaseInsensitive),
-                    "Validation help should select the diagnostic for the token under the cursor when a line has multiple findings.")) {
+        const QString tooltipText = QToolTip::text();
+        if (!expect(!helpText.contains(QStringLiteral("Unknown option value"), Qt::CaseInsensitive),
+                    "Context Help should not be replaced by token validation details on mixed-problem lines.")) {
+            return 1;
+        }
+        if (!expect(tooltipText.contains(QStringLiteral("Unknown option value"), Qt::CaseInsensitive),
+                    "Validation tooltip should select the diagnostic for the token under the cursor when a line has multiple findings.")) {
             return 1;
         }
     }

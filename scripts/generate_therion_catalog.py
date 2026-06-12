@@ -101,6 +101,12 @@ ALL_DOCUMENT_TYPES = ["all"]
 THERION_SOURCE_DOCUMENT_TYPES = ["th"]
 THERION_MAP_DOCUMENT_TYPES = ["th2"]
 THERION_CONFIG_DOCUMENT_TYPES = ["thconfig"]
+COMMAND_DOCUMENT_TYPE_OVERRIDES = {
+    "join": ["th", "th2"],
+}
+COMMAND_CONTEXT_OVERRIDES = {
+    "cs": ["layout"],
+}
 
 
 def normalize_whitespace(value: str) -> str:
@@ -506,6 +512,8 @@ def extract_contexts(section_text: str) -> list[str]:
 def infer_document_types(source_file: str, command_directive: str) -> list[str]:
     if command_directive == "encoding":
         return ALL_DOCUMENT_TYPES.copy()
+    if command_directive in COMMAND_DOCUMENT_TYPE_OVERRIDES:
+        return COMMAND_DOCUMENT_TYPE_OVERRIDES[command_directive].copy()
 
     source_name = Path(source_file).name.lower()
     if source_name == "ch03.tex":
@@ -1120,6 +1128,24 @@ def apply_map_body_command_contexts(catalog: dict[str, Any]) -> None:
         append_unique(dependencies, "context: map")
 
 
+def apply_command_context_overrides(catalog: dict[str, Any]) -> None:
+    commands = catalog.get("commands", [])
+    commands_by_name = {
+        normalize_directive_token(command.get("name", "")): command
+        for command in commands
+        if isinstance(command, dict)
+    }
+    for command_name, context_names in COMMAND_CONTEXT_OVERRIDES.items():
+        target_command = commands_by_name.get(command_name)
+        if target_command is None:
+            continue
+        contexts = target_command.setdefault("contexts", [])
+        dependencies = target_command.setdefault("dependencies", [])
+        for context_name in context_names:
+            append_unique(contexts, context_name)
+            append_unique(dependencies, f"context: {context_name}")
+
+
 def choose_revise_option_arity(arity_tokens: set[str]) -> str:
     normalized: set[str] = set()
     for token in arity_tokens:
@@ -1499,6 +1525,7 @@ def build_catalog(inputs: list[Path], source_repo: str, source_ref: str) -> dict
         "commands": sorted_commands,
     }
     apply_map_body_command_contexts(catalog)
+    apply_command_context_overrides(catalog)
     apply_revise_command_option_union(catalog)
     return catalog
 

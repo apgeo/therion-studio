@@ -82,7 +82,7 @@ TherionSourceValidationCatalog contextualDocumentTypeCatalog()
     catalog.commandContexts.insert(QStringLiteral("survey"), {QStringLiteral("none"), QStringLiteral("survey")});
     catalog.commandContexts.insert(QStringLiteral("centerline"), {QStringLiteral("none"), QStringLiteral("survey")});
     catalog.commandContexts.insert(QStringLiteral("data"), {QStringLiteral("centerline")});
-    catalog.commandContexts.insert(QStringLiteral("cs"), {QStringLiteral("centerline"), QStringLiteral("none")});
+    catalog.commandContexts.insert(QStringLiteral("cs"), {QStringLiteral("centerline"), QStringLiteral("layout"), QStringLiteral("none")});
     catalog.commandContexts.insert(QStringLiteral("map"), {QStringLiteral("none"), QStringLiteral("survey")});
     catalog.commandContexts.insert(QStringLiteral("break"), {QStringLiteral("centerline"), QStringLiteral("map")});
     catalog.commandContexts.insert(QStringLiteral("join"), {QStringLiteral("none"), QStringLiteral("survey"), QStringLiteral("scrap")});
@@ -102,7 +102,7 @@ TherionSourceValidationCatalog contextualDocumentTypeCatalog()
     catalog.commandDocumentTypes.insert(QStringLiteral("cs"), {QStringLiteral("th"), QStringLiteral("thconfig")});
     catalog.commandDocumentTypes.insert(QStringLiteral("map"), {QStringLiteral("th")});
     catalog.commandDocumentTypes.insert(QStringLiteral("break"), {QStringLiteral("th")});
-    catalog.commandDocumentTypes.insert(QStringLiteral("join"), {QStringLiteral("th")});
+    catalog.commandDocumentTypes.insert(QStringLiteral("join"), {QStringLiteral("th"), QStringLiteral("th2")});
     catalog.commandDocumentTypes.insert(QStringLiteral("source"), {QStringLiteral("thconfig")});
     catalog.commandDocumentTypes.insert(QStringLiteral("input"), {QStringLiteral("th"), QStringLiteral("thconfig")});
     catalog.commandDocumentTypes.insert(QStringLiteral("select"), {QStringLiteral("thconfig")});
@@ -329,6 +329,7 @@ int runDocumentTypeContextProjectionTest()
                                              "cs iJTSK\n"
                                              "select cave.m@cave\n"
                                              "layout l_plan\n"
+                                             "  cs iJTSK\n"
                                              "endlayout\n"
                                              "export map -output out.pdf -layout l_plan\n")),
                 "Temporary thconfig context fixture could not be written.")) {

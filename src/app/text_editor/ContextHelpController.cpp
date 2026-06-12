@@ -2,10 +2,27 @@
 
 #include <QCoreApplication>
 
+#include <algorithm>
+
 namespace TherionStudio
 {
 namespace
 {
+QString signaturePart(const QString &item)
+{
+    const QString trimmed = item.trimmed();
+    const int separatorIndex = trimmed.indexOf(QStringLiteral(" = "));
+    return separatorIndex >= 0 ? trimmed.left(separatorIndex).trimmed() : trimmed;
+}
+
+QStringList sortedOptionSignatures(QStringList options)
+{
+    std::stable_sort(options.begin(), options.end(), [](const QString &left, const QString &right) {
+        return QString::compare(signaturePart(left), signaturePart(right), Qt::CaseInsensitive) < 0;
+    });
+    return options;
+}
+
 QString renderSignatureList(const QStringList &items)
 {
     if (items.isEmpty()) {
@@ -15,8 +32,8 @@ QString renderSignatureList(const QStringList &items)
     QString html = QStringLiteral("<ul style=\"margin-top:0; margin-bottom:8px; margin-left:12px; padding-left:12px; -qt-list-indent:0;\">");
     for (const QString &item : items) {
         const QString trimmed = item.trimmed();
+        const QString signature = signaturePart(trimmed);
         const int separatorIndex = trimmed.indexOf(QStringLiteral(" = "));
-        const QString signature = separatorIndex >= 0 ? trimmed.left(separatorIndex).trimmed() : trimmed;
         const QString description = separatorIndex >= 0 ? trimmed.mid(separatorIndex + 3).trimmed() : QString();
         if (signature.isEmpty()) {
             html += QStringLiteral("<li style=\"margin-bottom:4px;\">%1</li>").arg(item.toHtmlEscaped());
@@ -86,7 +103,7 @@ QString ContextHelpController::renderHelpHtml(const QString &token,
     if (!options.isEmpty()) {
         html += QStringLiteral("<h4>%1</h4>")
                     .arg(QCoreApplication::translate("TherionStudio::ContextHelpController", "Options"));
-        html += renderSignatureList(options);
+        html += renderSignatureList(sortedOptionSignatures(options));
     }
 
     return html;

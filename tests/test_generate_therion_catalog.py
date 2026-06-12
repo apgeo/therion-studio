@@ -78,6 +78,7 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         import_contexts = self.commands_by_name["import"].get("contexts", [])
         self.assertIn("all", import_contexts)
         self.assertIn("survey", import_contexts)
+        self.assertIn("layout", self.commands_by_name["cs"].get("contexts", []))
         self.assertEqual(self.commands_by_name["select"].get("contexts", []), ["none"])
         self.assertEqual(self.commands_by_name["export"].get("contexts", []), ["none"])
 
@@ -119,6 +120,7 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         self.assertEqual(self.commands_by_name["point"].get("document_types", []), ["th2"])
         self.assertEqual(self.commands_by_name["line"].get("document_types", []), ["th2"])
         self.assertEqual(self.commands_by_name["area"].get("document_types", []), ["th2"])
+        self.assertEqual(self.commands_by_name["join"].get("document_types", []), ["th", "th2"])
 
     def test_source_files_are_recorded(self) -> None:
         metadata = self.catalog.get("metadata", {})

@@ -11,7 +11,8 @@
   ],
   "contexts": [
     "centerline",
-    "none"
+    "none",
+    "layout"
   ],
   "document_types": [
     "th",
@@ -33,7 +34,8 @@
   "options": [],
   "dependencies": [
     "context: centerline",
-    "context: none"
+    "context: none",
+    "context: layout"
   ],
   "allowed_values": [],
   "block": {

@@ -193,13 +193,6 @@ void TextEditorContextHelpController::updateContextHelp()
         return;
     }
 
-    const QString validationHtml = validationHelpHtmlForCursor();
-    if (!validationHtml.isEmpty()) {
-        setHelpTitle(tr("Validation"));
-        helpBrowser()->setHtml(validationHtml);
-        return;
-    }
-
     const QStringList candidates = helpCandidateTokens();
     for (const QString &candidate : candidates) {
         const auto entryIt = (*context_.metadata).helpEntries.constFind(candidate.toLower());

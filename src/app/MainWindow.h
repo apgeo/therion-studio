@@ -180,6 +180,11 @@ private:
     void setSidebarPane(SidebarPane pane);
     void syncOpenDocumentsToProjectRoot();
     QWidget *documentWidgetForFilePath(const QString &filePath) const;
+    void rebuildProjectFileWatcher();
+    void clearProjectFileWatcher();
+    void handleProjectDirectoryChanged(const QString &directoryPath);
+    void handleProjectFileChanged(const QString &filePath);
+    void requestProjectValidationForFileSystemChange(const QString &changedPath);
     void registerDocumentFileWatcher(const QString &filePath);
     void unregisterDocumentFileWatcherIfUnused(const QString &filePath);
     void handleWatchedDocumentFileChanged(const QString &filePath);
@@ -386,6 +391,7 @@ private:
     QPushButton *therionClearOutputButton_ = nullptr;
     QPushButton *therionCopyOutputButton_ = nullptr;
     QFileSystemWatcher *documentFileWatcher_ = nullptr;
+    QFileSystemWatcher *projectFileWatcher_ = nullptr;
     QHash<QString, QByteArray> watchedDocumentFingerprints_;
     QSet<QString> pendingWatchedDocumentChanges_;
     TherionStudio::TherionRunnerService *therionRunnerService_ = nullptr;

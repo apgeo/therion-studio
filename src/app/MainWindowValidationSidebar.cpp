@@ -426,24 +426,27 @@ void MainWindow::handleProjectValidationStarted(TherionStudio::ProjectValidation
                                                 quint64 generation,
                                                 const QString &projectRootPath)
 {
-    Q_UNUSED(trigger)
-
     if (projectRootPath != projectRootPath_) {
         return;
     }
 
     const bool revealPanel = pendingProjectValidationRevealPanel_;
     validationRevealByGeneration_.insert(generation, revealPanel);
-    validationDiagnostics_.clear();
-    validationDiagnosticFilePaths_.clear();
-    validationDocumentPath_.clear();
-    clearValidationRailIndicator();
-    validationProjectMode_ = true;
-    if (validationResultsModel_ != nullptr) {
-        validationResultsModel_->clear();
-        validationResultsModel_->setHorizontalHeaderLabels({tr("Problems")});
+    const bool replaceVisibleResults = revealPanel
+        || trigger == TherionStudio::ProjectValidationController::Trigger::ManualRefresh
+        || trigger == TherionStudio::ProjectValidationController::Trigger::ProjectOpened;
+    if (replaceVisibleResults) {
+        validationDiagnostics_.clear();
+        validationDiagnosticFilePaths_.clear();
+        validationDocumentPath_.clear();
+        clearValidationRailIndicator();
+        validationProjectMode_ = true;
+        if (validationResultsModel_ != nullptr) {
+            validationResultsModel_->clear();
+            validationResultsModel_->setHorizontalHeaderLabels({tr("Problems")});
+        }
+        handleValidationSelectionChanged({}, {});
     }
-    handleValidationSelectionChanged({}, {});
     if (validationStatusLabel_ != nullptr) {
         validationStatusLabel_->setText(tr("Validating project..."));
     }

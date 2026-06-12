@@ -383,6 +383,7 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
     , validationResultsModel_(new QStandardItemModel(this))
     , mapObjectsModel_(new QStandardItemModel(this))
     , documentFileWatcher_(new QFileSystemWatcher(this))
+    , projectFileWatcher_(new QFileSystemWatcher(this))
     , sessionStore_(&sessionStore)
     , commandCatalogStore_(std::move(commandCatalogStore))
     , projectSearchScanner_(new TherionStudio::ProjectSearchScanner(this))
@@ -402,6 +403,10 @@ MainWindow::MainWindow(TherionStudio::ISessionStore &sessionStore,
             this, &MainWindow::handleStructureSidebarScanFinished);
     connect(documentFileWatcher_, &QFileSystemWatcher::fileChanged,
             this, &MainWindow::handleWatchedDocumentFileChanged);
+    connect(projectFileWatcher_, &QFileSystemWatcher::directoryChanged,
+            this, &MainWindow::handleProjectDirectoryChanged);
+    connect(projectFileWatcher_, &QFileSystemWatcher::fileChanged,
+            this, &MainWindow::handleProjectFileChanged);
 
     buildUi();
     qApp->installEventFilter(this);
@@ -697,6 +702,7 @@ void MainWindow::restoreSessionState()
     };
     actions.applyProjectRootToBrowser = [this](const QString &projectPath) {
         projectRootPath_ = projectPath;
+        rebuildProjectFileWatcher();
         refreshProjectBrowserView();
     };
     actions.appendConsoleLine = [this](const QString &line) {
@@ -939,6 +945,7 @@ void MainWindow::openProjectPath(const QString &selectedProjectPath)
     };
     actions.setProjectRootPath = [this](const QString &projectRootPath) {
         projectRootPath_ = projectRootPath;
+        rebuildProjectFileWatcher();
         if (projectRootPath_.isEmpty()) {
             clearValidationRailIndicator();
         }
@@ -976,6 +983,7 @@ void MainWindow::closeProject()
     };
     actions.setProjectRootPath = [this](const QString &projectRootPath) {
         projectRootPath_ = projectRootPath;
+        rebuildProjectFileWatcher();
         if (projectRootPath_.isEmpty()) {
             clearValidationRailIndicator();
         }

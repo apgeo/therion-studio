@@ -1196,9 +1196,19 @@ void MainWindow::updateValidationRailIndicator()
 
     const bool hasProblems = validationProblemCount_ > 0;
     sidebarValidationButton_->setProperty("validationProblems", hasProblems);
-    sidebarValidationButton_->setToolTip(hasProblems
-        ? tr("Validation: %1 problem(s)").arg(validationProblemCount_)
-        : tr("Validation"));
+    const bool hasErrors = hasProblems &&
+        validationHighestSeverity_ == TherionStudio::TherionSourceDiagnosticSeverity::Error;
+    sidebarValidationButton_->setProperty(
+        "validationSeverity",
+        hasErrors ? QStringLiteral("error") : (hasProblems ? QStringLiteral("warning") : QStringLiteral("none")));
+    if (hasErrors) {
+        sidebarValidationButton_->setToolTip(tr("Validation: %1 problem(s), errors present")
+                                                 .arg(validationProblemCount_));
+    } else if (hasProblems) {
+        sidebarValidationButton_->setToolTip(tr("Validation: %1 warning(s)").arg(validationProblemCount_));
+    } else {
+        sidebarValidationButton_->setToolTip(tr("Validation"));
+    }
     sidebarValidationButton_->style()->unpolish(sidebarValidationButton_);
     sidebarValidationButton_->style()->polish(sidebarValidationButton_);
     sidebarValidationButton_->update();
@@ -1207,6 +1217,7 @@ void MainWindow::updateValidationRailIndicator()
 void MainWindow::clearValidationRailIndicator()
 {
     validationProblemCount_ = 0;
+    validationHighestSeverity_ = TherionStudio::TherionSourceDiagnosticSeverity::Warning;
     updateValidationRailIndicator();
 }
 

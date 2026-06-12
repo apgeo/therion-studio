@@ -1345,6 +1345,16 @@
         <source>Failed to load `%1`.</source>
         <translation>Nepodařilo se načíst `%1`.</translation>
     </message>
+    <message>
+        <location filename="../src/app/MainWindowSidebar.cpp" line="1205"/>
+        <source>Validation: %1 problem(s), errors present</source>
+        <translation>Validace: %1 problém(ů), obsahuje chyby</translation>
+    </message>
+    <message>
+        <location filename="../src/app/MainWindowSidebar.cpp" line="1208"/>
+        <source>Validation: %1 warning(s)</source>
+        <translation>Validace: %1 varování</translation>
+    </message>
 </context>
 <context>
     <name>MainWindowHelpDialog</name>

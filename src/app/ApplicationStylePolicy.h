@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../editor/ValidationSeverityStyle.h"
+
 #include <QColor>
 #include <QPalette>
 #include <QString>
@@ -100,7 +102,8 @@ inline QString sidebarActivityRailStyleSheet(const QPalette &palette)
     const QColor railBase = palette.color(QPalette::Window);
     const QColor railHover = palette.color(QPalette::Highlight);
     const QColor railChecked = palette.color(QPalette::Highlight);
-    const QColor railWarning = QColor(217, 119, 6);
+    const QColor railWarning = validationSeverityAccent(TherionSourceDiagnosticSeverity::Warning, palette);
+    const QColor railError = validationSeverityAccent(TherionSourceDiagnosticSeverity::Error, palette);
     return QStringLiteral(
                "#SidebarActivityRail {"
                "background-color: %1;"
@@ -117,12 +120,19 @@ inline QString sidebarActivityRailStyleSheet(const QPalette &palette)
                "#SidebarActivityRail QToolButton:checked {"
                "background-color: %3;"
                "}"
-               "#SidebarActivityRail QToolButton[validationProblems=\"true\"] {"
+               "#SidebarActivityRail QToolButton[validationSeverity=\"warning\"] {"
                "background-color: %5;"
                "border: 1px solid %6;"
                "}"
-               "#SidebarActivityRail QToolButton[validationProblems=\"true\"]:checked {"
+               "#SidebarActivityRail QToolButton[validationSeverity=\"warning\"]:checked {"
                "background-color: %7;"
+               "}"
+               "#SidebarActivityRail QToolButton[validationSeverity=\"error\"] {"
+               "background-color: %8;"
+               "border: 1px solid %9;"
+               "}"
+               "#SidebarActivityRail QToolButton[validationSeverity=\"error\"]:checked {"
+               "background-color: %10;"
                "}"
                "#SidebarActivityRail QFrame#SidebarActivitySeparator {"
                "background-color: %4;"
@@ -133,7 +143,10 @@ inline QString sidebarActivityRailStyleSheet(const QPalette &palette)
         .arg(rgbaColorCss(palette.color(QPalette::Mid), 0.7))
         .arg(rgbaColorCss(railWarning, 0.24))
         .arg(rgbaColorCss(railWarning, 0.92))
-        .arg(rgbaColorCss(railWarning, 0.38));
+        .arg(rgbaColorCss(railWarning, 0.38))
+        .arg(rgbaColorCss(railError, 0.24))
+        .arg(rgbaColorCss(railError, 0.92))
+        .arg(rgbaColorCss(railError, 0.38));
 }
 
 inline QString sidebarContentPaneStyleSheet()

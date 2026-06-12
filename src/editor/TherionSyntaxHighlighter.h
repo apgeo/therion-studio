@@ -32,12 +32,14 @@ private:
     void loadCommandCatalogKeywords();
     void applyValidatorInvalidTokenFormats(const QString &text);
     const TherionSourceValidationResult &cachedValidationResult();
+    const QTextCharFormat &validationFormatForSeverity(TherionSourceDiagnosticSeverity severity) const;
 
     QTextCharFormat baseTextFormat_;
     QTextCharFormat keywordFormat_;
     QTextCharFormat optionFormat_;
     QTextCharFormat identifierFormat_;
-    QTextCharFormat invalidTokenFormat_;
+    QTextCharFormat validationWarningFormat_;
+    QTextCharFormat validationErrorFormat_;
     QTextCharFormat stringFormat_;
     QTextCharFormat numberFormat_;
     QTextCharFormat commentFormat_;

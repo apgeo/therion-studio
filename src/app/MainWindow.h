@@ -442,6 +442,8 @@ private:
     bool pendingProjectValidationRevealPanel_ = false;
     bool validationProjectMode_ = false;
     int validationProblemCount_ = 0;
+    TherionStudio::TherionSourceDiagnosticSeverity validationHighestSeverity_ =
+        TherionStudio::TherionSourceDiagnosticSeverity::Warning;
     QString projectRootPath_;
     QString projectStructureSummary_;
     QString lastAppliedStructureSidebarSignature_;

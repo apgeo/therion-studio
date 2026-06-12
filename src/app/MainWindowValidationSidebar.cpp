@@ -1,11 +1,15 @@
 #include "MainWindow.h"
 
 #include "MainWindowValidationFixApplyService.h"
+#include "../editor/ValidationSeverityStyle.h"
 #include "text_editor/TextEditorValidationCatalog.h"
 #include "text_editor/TextEditorTab.h"
 #include "text_editor/map_editor/MapEditorTab.h"
 
 #include <QAbstractItemView>
+#include <QApplication>
+#include <QBrush>
+#include <QColor>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
@@ -32,7 +36,63 @@ enum ValidationResultRole
     ValidationColumnNumberRole,
     ValidationIsFindingRole,
     ValidationDiagnosticIndexRole,
+    ValidationSeverityRankRole,
 };
+
+int severityRank(TherionStudio::TherionSourceDiagnosticSeverity severity)
+{
+    switch (severity) {
+    case TherionStudio::TherionSourceDiagnosticSeverity::Error:
+        return 2;
+    case TherionStudio::TherionSourceDiagnosticSeverity::Warning:
+        return 1;
+    }
+    return 1;
+}
+
+TherionStudio::TherionSourceDiagnosticSeverity higherSeverity(
+    TherionStudio::TherionSourceDiagnosticSeverity left,
+    TherionStudio::TherionSourceDiagnosticSeverity right)
+{
+    return severityRank(left) >= severityRank(right) ? left : right;
+}
+
+QColor validationSeverityColor(TherionStudio::TherionSourceDiagnosticSeverity severity, const QPalette &palette)
+{
+    return TherionStudio::validationSeverityForeground(severity, palette);
+}
+
+void applyValidationSeverityStyle(QStandardItem *item, TherionStudio::TherionSourceDiagnosticSeverity severity)
+{
+    if (item == nullptr) {
+        return;
+    }
+    const QPalette palette = qApp != nullptr ? qApp->palette() : QPalette();
+    item->setForeground(QBrush(validationSeverityColor(severity, palette)));
+    item->setData(severityRank(severity), ValidationSeverityRankRole);
+}
+
+void updateValidationFileSeverityStyle(QStandardItem *fileItem, TherionStudio::TherionSourceDiagnosticSeverity severity)
+{
+    if (fileItem == nullptr) {
+        return;
+    }
+    const int currentRank = fileItem->data(ValidationSeverityRankRole).toInt();
+    if (severityRank(severity) > currentRank) {
+        applyValidationSeverityStyle(fileItem, severity);
+    }
+}
+
+TherionStudio::TherionSourceDiagnosticSeverity highestDiagnosticSeverity(
+    const QVector<TherionStudio::TherionSourceDiagnostic> &diagnostics)
+{
+    TherionStudio::TherionSourceDiagnosticSeverity highest =
+        TherionStudio::TherionSourceDiagnosticSeverity::Warning;
+    for (const TherionStudio::TherionSourceDiagnostic &diagnostic : diagnostics) {
+        highest = higherSeverity(highest, diagnostic.severity);
+    }
+    return highest;
+}
 
 QString severityLabel(TherionStudio::TherionSourceDiagnosticSeverity severity)
 {
@@ -236,12 +296,14 @@ void MainWindow::triggerValidateDocumentForActiveDocument()
     }
 
     validationProblemCount_ = validation.diagnostics.size();
+    validationHighestSeverity_ = highestDiagnosticSeverity(validation.diagnostics);
     updateValidationRailIndicator();
 
     auto *fileItem = new QStandardItem(tr("%1 (%2)").arg(documentLabel).arg(validation.diagnostics.size()));
     fileItem->setEditable(false);
     fileItem->setData(filePath, ValidationFilePathRole);
     fileItem->setData(false, ValidationIsFindingRole);
+    applyValidationSeverityStyle(fileItem, validationHighestSeverity_);
 
     bool hasAnySafeFix = false;
     for (int diagnosticIndex = 0; diagnosticIndex < validation.diagnostics.size(); ++diagnosticIndex) {
@@ -255,6 +317,7 @@ void MainWindow::triggerValidateDocumentForActiveDocument()
                                   .arg(fixSuffix);
         auto *findingItem = new QStandardItem(label);
         findingItem->setEditable(false);
+        applyValidationSeverityStyle(findingItem, diagnostic.severity);
         findingItem->setToolTip(diagnostic.message);
         findingItem->setData(filePath, ValidationFilePathRole);
         findingItem->setData(qMax(1, diagnostic.lineNumber), ValidationLineNumberRole);
@@ -441,6 +504,10 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
     }
 
     validationProblemCount_ = result.findings.size();
+    validationHighestSeverity_ = TherionStudio::TherionSourceDiagnosticSeverity::Warning;
+    for (const TherionStudio::ProjectValidationScanner::Finding &finding : result.findings) {
+        validationHighestSeverity_ = higherSeverity(validationHighestSeverity_, finding.diagnostic.severity);
+    }
     updateValidationRailIndicator();
 
     bool hasAnySafeFix = false;
@@ -469,6 +536,8 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
                                   .arg(fixSuffix);
         auto *findingItem = new QStandardItem(label);
         findingItem->setEditable(false);
+        applyValidationSeverityStyle(findingItem, finding.diagnostic.severity);
+        updateValidationFileSeverityStyle(fileItem, finding.diagnostic.severity);
         findingItem->setToolTip(finding.diagnostic.message);
         findingItem->setData(finding.filePath, ValidationFilePathRole);
         findingItem->setData(qMax(1, finding.diagnostic.lineNumber), ValidationLineNumberRole);

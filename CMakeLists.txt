@@ -557,6 +557,7 @@ set(THERION_TEXT_EDITOR_TAB_SOURCES
     src/app/text_editor/TextEditorTab.h
     src/editor/TherionSyntaxHighlighter.cpp
     src/editor/TherionSyntaxHighlighter.h
+    src/editor/ValidationSeverityStyle.h
 )
 
 set(THERION_APPLICATION_BOOTSTRAP_SOURCES

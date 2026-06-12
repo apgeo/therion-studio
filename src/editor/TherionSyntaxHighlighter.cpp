@@ -1,5 +1,6 @@
 #include "TherionSyntaxHighlighter.h"
 
+#include "ValidationSeverityStyle.h"
 #include "../core/TherionCommandLineModel.h"
 #include "../core/TherionCommandSyntax.h"
 #include "../core/TherionDocumentParser.h"
@@ -29,6 +30,15 @@ QTextCharFormat makeFormat(const QColor &foreground, bool bold = false, bool ita
     format.setForeground(foreground);
     format.setFontWeight(bold ? QFont::Bold : QFont::Normal);
     format.setFontItalic(italic);
+    return format;
+}
+
+QTextCharFormat makeValidationFormat(TherionSourceDiagnosticSeverity severity, const QPalette &palette)
+{
+    QTextCharFormat format = makeFormat(validationSeverityForeground(severity, palette), true);
+    format.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+    format.setUnderlineColor(validationSeverityAccent(severity, palette));
+    format.setBackground(validationSeverityBackground(severity, palette, 0.18));
     return format;
 }
 
@@ -221,9 +231,10 @@ void TherionSyntaxHighlighter::loadPalette()
     keywordFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#569CD6")) : QColor(QStringLiteral("#0550ae")), true);
     optionFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#9CDCFE")) : QColor(QStringLiteral("#0969da")));
     identifierFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#DCDCAA")) : QColor(QStringLiteral("#8250df")));
-    invalidTokenFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#F44747")) : QColor(QStringLiteral("#cf222e")));
-    invalidTokenFormat_.setUnderlineStyle(QTextCharFormat::WaveUnderline);
-    invalidTokenFormat_.setUnderlineColor(invalidTokenFormat_.foreground().color());
+    validationWarningFormat_ =
+        makeValidationFormat(TherionSourceDiagnosticSeverity::Warning, QGuiApplication::palette());
+    validationErrorFormat_ =
+        makeValidationFormat(TherionSourceDiagnosticSeverity::Error, QGuiApplication::palette());
     stringFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#CE9178")) : QColor(QStringLiteral("#0a3069")));
     numberFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#B5CEA8")) : QColor(QStringLiteral("#116329")));
     commentFormat_ = makeFormat(darkPalette ? QColor(QStringLiteral("#6A9955")) : QColor(QStringLiteral("#6e7781")), false, true);
@@ -248,7 +259,6 @@ void TherionSyntaxHighlighter::loadPalette()
     applyStyle(QStringLiteral("keyword"), stylesObject.value(QStringLiteral("keyword")).toObject());
     applyStyle(QStringLiteral("option"), stylesObject.value(QStringLiteral("option")).toObject());
     applyStyle(QStringLiteral("identifier"), stylesObject.value(QStringLiteral("identifier")).toObject());
-    applyStyle(QStringLiteral("invalidToken"), stylesObject.value(QStringLiteral("invalidToken")).toObject());
     applyStyle(QStringLiteral("string"), stylesObject.value(QStringLiteral("string")).toObject());
     applyStyle(QStringLiteral("number"), stylesObject.value(QStringLiteral("number")).toObject());
     applyStyle(QStringLiteral("comment"), stylesObject.value(QStringLiteral("comment")).toObject());
@@ -281,10 +291,6 @@ void TherionSyntaxHighlighter::applyStyle(const QString &styleName, const QJsonO
         optionFormat_ = format;
     } else if (styleName == QStringLiteral("identifier")) {
         identifierFormat_ = format;
-    } else if (styleName == QStringLiteral("invalidToken")) {
-        invalidTokenFormat_ = format;
-        invalidTokenFormat_.setUnderlineStyle(QTextCharFormat::WaveUnderline);
-        invalidTokenFormat_.setUnderlineColor(format.foreground().color());
     } else if (styleName == QStringLiteral("string")) {
         stringFormat_ = format;
     } else if (styleName == QStringLiteral("number")) {
@@ -597,8 +603,20 @@ void TherionSyntaxHighlighter::applyValidatorInvalidTokenFormats(const QString &
             continue;
         }
 
-        setFormat(start, length, invalidTokenFormat_);
+        setFormat(start, length, validationFormatForSeverity(diagnostic.severity));
     }
+}
+
+const QTextCharFormat &TherionSyntaxHighlighter::validationFormatForSeverity(
+    TherionSourceDiagnosticSeverity severity) const
+{
+    switch (severity) {
+    case TherionSourceDiagnosticSeverity::Error:
+        return validationErrorFormat_;
+    case TherionSourceDiagnosticSeverity::Warning:
+        return validationWarningFormat_;
+    }
+    return validationWarningFormat_;
 }
 
 const TherionSourceValidationResult &TherionSyntaxHighlighter::cachedValidationResult()

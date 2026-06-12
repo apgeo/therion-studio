@@ -147,6 +147,19 @@ void appendProjectIndexFindings(ProjectValidationScanner::Result *result,
                                                                                   inMemoryProjectContentsByPath,
                                                                                   &indexErrorMessage);
     if (!indexErrorMessage.isEmpty()) {
+        TherionSourceDiagnostic diagnostic;
+        diagnostic.code = QStringLiteral("project-index-unavailable");
+        diagnostic.severity = TherionSourceDiagnosticSeverity::Warning;
+        diagnostic.lineNumber = 1;
+        diagnostic.columnNumber = 1;
+        diagnostic.columnLength = 1;
+        diagnostic.title = QObject::tr("Project index unavailable");
+        diagnostic.message = indexErrorMessage;
+        diagnostic.currentText = projectRootPath;
+        result->findings.append({projectRootPath, diagnostic});
+        if (result->findings.size() >= kMaximumProjectValidationFindings) {
+            result->limitReached = true;
+        }
         return;
     }
 

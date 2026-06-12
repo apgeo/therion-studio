@@ -540,6 +540,122 @@ int runProjectIndexDiagnosticProjectionTest()
     return 0;
 }
 
+int runRootConfigSourceGraphValidationTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary project directory creation failed.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    if (!expect(projectDir.mkpath(QStringLiteral("01_zadni_pole")),
+                "Root-config source graph directory could not be created.")) {
+        return 1;
+    }
+
+    const QString configFile = projectDir.filePath(QStringLiteral("babice.thconfig"));
+    const QString rootFile = projectDir.filePath(QStringLiteral("babice.th"));
+    const QString branchFile = projectDir.filePath(QStringLiteral("01_zadni_pole/zadni_pole.th"));
+    if (!expect(writeTextFile(configFile,
+                              QStringLiteral("source babice.th\n")),
+                "Root-config source graph config fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(rootFile,
+                              QStringLiteral("survey babicka_plosina\n"
+                                             "  input povrchova_mereni/totalka.th222\n"
+                                             "  input 01_zadni_pole/zadni_pole.th\n"
+                                             "  map babicka_plosina.m\n"
+                                             "    zadni_pole.m@zadni_polesss\n"
+                                             "  endmap\n"
+                                             "endsurvey\n")),
+                "Root-config source graph root fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(branchFile,
+                              QStringLiteral("survey zadni_pole\n"
+                                             "  map zadni_pole.m\n"
+                                             "  endmap\n"
+                                             "endsurvey\n")),
+                "Root-config source graph branch fixture could not be written.")) {
+        return 1;
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+    scanner.requestScan(tempDir.path(), contextualDocumentTypeCatalog(), {});
+
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    if (!expect(waitResult.received, "Root-config source graph validation did not emit validationFinished before timeout.")) {
+        return 1;
+    }
+    if (!expect(waitResult.result.errorMessage.isEmpty(), "Root-config source graph validation should not report an error.")) {
+        return 1;
+    }
+    if (!expect(containsFinding(waitResult.result, rootFile, QStringLiteral("missing-source-reference")),
+                "Project validation should report missing input references in the root config source graph.")) {
+        return 1;
+    }
+    if (!expect(containsFinding(waitResult.result, rootFile, QStringLiteral("unknown-map-reference")),
+                "Project validation should report unresolved map references in the root config source graph.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int runProjectIndexUnavailableDiagnosticTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary project directory creation failed.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("alpha.thconfig")),
+                              QStringLiteral("source alpha.th\n")),
+                "First ambiguous thconfig fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("beta.thconfig")),
+                              QStringLiteral("source beta.th\n")),
+                "Second ambiguous thconfig fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("alpha.th")),
+                              QStringLiteral("survey alpha\n"
+                                             "endsurvey\n")),
+                "First ambiguous source fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("beta.th")),
+                              QStringLiteral("survey beta\n"
+                                             "endsurvey\n")),
+                "Second ambiguous source fixture could not be written.")) {
+        return 1;
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+    scanner.requestScan(tempDir.path(), contextualDocumentTypeCatalog(), {});
+
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    if (!expect(waitResult.received, "Project-index unavailable validation did not emit validationFinished before timeout.")) {
+        return 1;
+    }
+    if (!expect(waitResult.result.errorMessage.isEmpty(), "Project-index unavailable validation should not report a scanner error.")) {
+        return 1;
+    }
+    if (!expect(containsFinding(waitResult.result,
+                                tempDir.path(),
+                                QStringLiteral("project-index-unavailable")),
+                "Project validation should expose project-index root graph errors instead of silently dropping them.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runDocumentTypeContextProjectionTest()
 {
     QTemporaryDir tempDir;
@@ -714,6 +830,12 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runProjectIndexDiagnosticProjectionTest() != 0) {
+        return 1;
+    }
+    if (runRootConfigSourceGraphValidationTest() != 0) {
+        return 1;
+    }
+    if (runProjectIndexUnavailableDiagnosticTest() != 0) {
         return 1;
     }
     if (runDocumentTypeContextProjectionTest() != 0) {

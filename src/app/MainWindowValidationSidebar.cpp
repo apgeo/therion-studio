@@ -426,6 +426,15 @@ void MainWindow::requestProjectValidation(TherionStudio::ProjectValidationContro
     request.validationCatalog = TherionStudio::validationCatalogFromCommandCatalog(commandCatalogStore_.catalogObject());
     request.inMemoryProjectContentsByPath = inMemoryProjectContentsByPath;
     pendingProjectValidationRevealPanel_ = revealPanel;
+    if (validationStatusLabel_ != nullptr) {
+        validationStatusLabel_->setText(tr("Validating project..."));
+    }
+    if (validationScanProjectButton_ != nullptr) {
+        validationScanProjectButton_->setEnabled(false);
+    }
+    if (revealPanel) {
+        showSidebarPane(SidebarPane::Validation);
+    }
     projectValidationController_->requestValidation(request);
 }
 

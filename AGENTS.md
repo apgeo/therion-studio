@@ -8,8 +8,9 @@ These instructions apply to the whole repository.
 
 - This repository is currently specification-first. The primary source of truth is [QtReimplementationSpecification.md](/Users/ladislav.blazek/Local/Code/personal/therion-studio/Therion%20Studio/QtReimplementationSpecification.md).
 - Treat the specification as implementation-grade requirements for a Qt reimplementation of Therion Studio.
+- Treat [ARCHITECTURE.md](ARCHITECTURE.md) as the current architecture direction and boundary contract. It does not override product requirements in the specification, but implementation choices should align with it unless the divergence is explicit and documented.
 - Do not invent product behavior that conflicts with the specification. If a requested change requires behavior not covered by the specification, update the specification as part of the same change or clearly flag the gap.
-- If implementation, tests, and the specification diverge, prefer bringing them back into alignment explicitly rather than silently choosing one source of truth.
+- If implementation, tests, architecture, and the specification diverge, prefer bringing them back into alignment explicitly rather than silently choosing one source of truth.
 - Treat [REVIEW_CODEX.md](REVIEW_CODEX.md) as the current architecture review record. It is not a product specification, but actionable findings from it should be reflected in `AGENTS.md`, `WORKLOG.md`, focused tests, or the specification before being treated as resolved.
 
 ## Specification Editing Rules
@@ -29,7 +30,7 @@ These instructions apply to the whole repository.
 
 - Default technology assumptions should match the specification: Qt 6, cross-platform desktop, shared core logic across macOS, Windows, and Linux.
 - Follow established best practices and relevant platform standards for modern Qt and C++ desktop application development unless the specification explicitly requires a different approach.
-- Treat [WORKLOG.md](WORKLOG.md) as the active implementation roadmap and backlog. Keep architectural optimization principles in this file rather than in a separate optimization-plan document.
+- Treat [WORKLOG.md](WORKLOG.md) as the active implementation roadmap and backlog. Keep stable architectural principles in [ARCHITECTURE.md](ARCHITECTURE.md), and keep `WORKLOG.md` focused on current/open work.
 - Preserve separation of concerns:
   - domain model, parsing, serialization, and editing rules stay outside UI classes
   - widgets, views, and scene items should not own file I/O or document parsing
@@ -62,6 +63,7 @@ These instructions apply to the whole repository.
 - Cross-platform behavior shall be centralized behind platform or infrastructure services when practical. New `Q_OS_*` checks should be limited to `src/platform/**`, startup/bootstrap code, packaging code, or a clearly justified platform adapter.
 - Build/resource wiring should not duplicate source-of-truth lists unnecessarily. If resource catalogs are split into many files, prefer scoped CMake globs or generated lists with guardrails over manually duplicated file lists in multiple targets.
 - Keep command catalog and map-style catalog loading at composition, startup, or explicit test setup boundaries. Do not reintroduce UI-side static catalog access or long-lived resource overrides when parser/generator support is the correct fix.
+- For architecture-sensitive changes, check [ARCHITECTURE.md](ARCHITECTURE.md) before editing and update it in the same change when ownership boundaries, dependency direction, UI surface ownership, source model direction, or transaction rules change.
 
 ## Unified Source Architecture Direction
 
@@ -71,6 +73,8 @@ These instructions apply to the whole repository.
 - Parser and projection work should preserve every physical source line, comments, blank lines, indentation where practical, original newline style, token spans, block ranges, source file type, and encoding metadata.
 - Map, Structure, Background, Block, and syntax/help projections should consume shared parsed command/option data where available. Do not fix projection drift by copying parser logic into renderers, inspectors, scene items, or sidebar widgets.
 - Cache parsed source snapshots and derived projections by document revision or file identity where practical. Avoid full document reparsing or scene rebuilding for UI-only events, cursor movement, appearance changes, or unrelated inspector updates.
+- Treat project validation as a target live diagnostic projection over the open project and open in-memory documents. New validation plumbing should be debounced, cancellable, revision/generation-keyed, and surfaced through the Validation panel rather than depending on a manual `Validate Project` button as the primary workflow.
+- Keep problem reporting centralized in the Validation surface. Structure is an orientation/navigation projection and should not become a second general validator.
 
 ## Proposal Review Discipline
 
@@ -168,6 +172,7 @@ These instructions apply to the whole repository.
 
 - Keep changes tightly scoped to the request.
 - Maintain a living [QtReimplementationSpecification.md](QtReimplementationSpecification.md): whenever important behavior, workflow, constraints, acceptance criteria, or architecture assumptions change, update the specification in the same change.
+- Maintain a living [ARCHITECTURE.md](ARCHITECTURE.md): whenever architectural direction, ownership boundaries, source model strategy, transaction policy, or UI surface ownership changes, update it in the same change.
 - Prefer specification wording that is framework-agnostic where practical so future reimplementations can reuse it as product/source-of-truth guidance.
 - Update documentation when behavior, architecture, packaging, or verification expectations change.
 - Maintain a living [docs/USER_MANUAL.md](docs/USER_MANUAL.md) as an end-user guide: keep only user-facing workflows, UI behavior, shortcuts, settings, and troubleshooting; do not include implementation internals, architecture plans, QA-only checklists, or packaging/developer instructions.

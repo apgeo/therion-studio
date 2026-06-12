@@ -1,11 +1,11 @@
 # Worklog
 
-Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.md` and `WORKLOG_ARCHIVE_2026-05-23.md`.
+Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.md` and `WORKLOG_ARCHIVE_2026-05-23.md`. Stable architecture direction is maintained in `ARCHITECTURE.md`.
 
 ## In Progress
 
 - P1 - Localization hygiene: keep Czech/Slovak UI catalogs, canonical Therion syntax, and Qt/platform language selection current.
-- P1 - Validation and catalog metadata: keep validation conservative while moving command/option interpretation into catalog-backed logical-command metadata.
+- P1 - Validation and catalog metadata: keep validation conservative while moving command/option interpretation into catalog-backed logical-command metadata and toward live project diagnostics.
 - P1 - Blocks editor: preserve document-domain filtering, data-block ownership, no-open source mutations, and single-transaction block-detail edits.
 - P1 - Map editor parity: continue XTherion-aligned selection, context menus, panning, Bezier input, Smart Area, TH2 source sync, and robust standalone slope line-point metadata parsing (`l-size`/`orientation`).
 - P1 - Inspector consistency: keep Raw, Blocks, and Map inspectors on the shared panel foundation with aligned tabs, help, file metadata, and option editing.
@@ -15,6 +15,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 - P1 - Architecture maintenance: keep reducing `MainWindow`, `TextEditorTab`, and `MapEditorTab` shell responsibilities without behavior changes.
 - P1 - Structure constraints hygiene: keep ratcheted translation-unit limits green by extracting oversized delegates, running `python3 scripts/check_structure_constraints.py` before commits/PRs, and keeping CMake source lists aligned with `src/`.
 - P1 - Unified source parser and transaction model: migrate Raw, Blocks, Map, inspector, validation, highlighting, help, completion, and undo ownership onto shared source snapshots and source-range transactions.
+- P1 - Project index relationships: extend the DOM-backed project snapshot with non-hierarchical graph links such as map preview, revise, join, and equate for validator and graph/detail views without mixing them into the Structure sidebar ownership tree.
 
 ## Unified Source DOM Implementation Plan
 
@@ -32,7 +33,7 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 
 ## Next Up
 
-- P1: Continue Unified Source DOM Phase 3/8 by deciding whether `catalogContextAllowed` should become a conservative validator diagnostic, and add generator-backed document-type applicability once the command catalog exposes reliable `.th`/`.th2`/`thconfig` scope; logical commands now expose shared command metadata for normalized command names, positional argument counts, normalized option indexes, catalog-known commands, current/catalog contexts, required positional arity, allowed argument values, catalog option names, option value arity, fixed arity, and allowed option/subtype values, while validator and ProjectStructureIndex consume the logical DOM for catalog checks and project structure traversal.
+- P1: Continue Unified Source DOM Phase 3/8 by keeping validation and problem identification centralized in the Validation panel while Structure remains an orientation/navigation view; logical commands now expose shared command metadata for normalized command names, positional argument counts, normalized option indexes, catalog-known commands, current/catalog contexts, current/catalog document types, required positional arity, allowed argument values, catalog option names, option value arity, fixed arity, and allowed option/subtype values, while validator, project validation, command completion, raw-editor inline highlighting, and ProjectStructureIndex consume the logical DOM/catalog metadata for scoped suggestions, catalog checks, conservative command-context/document-type diagnostics, and project structure traversal, with Babice-derived `.th`, `.th2`, and `thconfig` context/document-type regression coverage guarding obvious false positives across active document and project scans. Treat the current `Validate Project` action as transitional and design new project-validation plumbing as debounce/cancellation/revision-keyed live diagnostics feeding the Validation panel.
 - P1: Continue Phase 9 ownership unification by replacing `MapEditorTab`'s preferred-owner state with durable transaction ownership metadata attached to each source mutation; point/line geometry moves and draft-completion source snapshots now use the shared source transaction controller.
 - P1: Audit remaining map source mutation flows for ad hoc undo ownership, especially inspector-applied edits and background/metadata source updates, before moving to one document-level undo timeline.
 - P1: Expand focused map/text undo regression coverage to include save/dirty-state transitions, detached map panes, and inspector-applied source transactions; stale map source transaction coverage now verifies revision mismatch skip behavior, no undo snapshot, no projection flush, and user-facing stale status.
@@ -46,8 +47,9 @@ Active work only. Completed history is archived in `WORKLOG_ARCHIVE_2026-05-13.m
 ## Backlog
 
 - Replace fixed-delay map selection-restore retry timers with explicit scene-refresh completion/generation callbacks.
-- Optional Structure graph view for relationships such as `preview`, `revise`, `join`, `equate`, diagnostics, and station-network edges.
+- Optional Structure graph view for relationships such as `preview`, `revise`, `join`, `equate`, relationship status, and station-network edges.
 - Compiler-confirmed project-index comparison once lightweight indexing is no longer sufficient.
+- Retire or demote the manual `Validate Project` action after live project diagnostics are reliable for edits, saves, file operations, project-open, and catalog/source-model refresh events.
 - Broader Therion corpus regression tests for parsing, serialization, source rewrites, indexing, and map/text synchronization.
 - Bounded `.xvi` cache policy for very large projects.
 - Station-label declutter: add overlap suppression/priority ranking and optional user-facing `Auto/All/None` label mode.

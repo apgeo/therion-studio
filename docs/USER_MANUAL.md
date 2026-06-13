@@ -245,6 +245,8 @@ Existing Therion `area ... endarea` blocks that reference `line -id ...` borders
 
 `Smart Area` creates that referenced-area form instead of drawing new border geometry. Confirmation may add missing IDs to the referenced boundary lines so the new `area ... endarea` block can refer to them, but it does not change their geometry. After confirmation the map returns to Select mode. Press `Esc` to cancel the preview.
 
+While placing points or drafting lines and areas, nearby object vertices are highlighted as snap candidates. The active snap target is highlighted more strongly; Bezier control handles remain free-form.
+
 While drafting a line or area:
 
 - click to add a straight vertex

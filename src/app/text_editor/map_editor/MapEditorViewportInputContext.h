@@ -62,6 +62,7 @@ struct MapEditorViewportInputContext
     QPointF *interactiveDrawHoverScenePoint = nullptr;
     bool *interactiveDrawHoverSnapActive = nullptr;
     QPointF *interactiveDrawHoverSnapScenePoint = nullptr;
+    QVector<QPointF> *interactiveDrawHoverSnapGuideScenePoints = nullptr;
 
     std::function<MapEditorInteractiveDrawMode()> drawMode;
     std::function<QString(const char *)> translate;

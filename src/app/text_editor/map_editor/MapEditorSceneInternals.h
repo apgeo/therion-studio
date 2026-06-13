@@ -726,22 +726,24 @@ private:
             }
 
             QPointF candidatePoint;
-            int candidateLineNumber = 0;
+            bool validCandidate = false;
+            bool ownGeometryVertex = false;
             if (auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item)) {
                 if (vertexItem->geometryKind() != QStringLiteral("line")
                     && vertexItem->geometryKind() != QStringLiteral("area")) {
                     continue;
                 }
-                candidateLineNumber = vertexItem->lineNumber();
+                validCandidate = vertexItem->lineNumber() > 0;
+                ownGeometryVertex = vertexItem->lineNumber() == lineNumber_;
                 candidatePoint = vertexItem->pos();
             } else if (auto *pointItem = dynamic_cast<MapEditablePointItem *>(item)) {
-                candidateLineNumber = pointItem->lineNumber();
+                validCandidate = true;
                 candidatePoint = pointItem->pos();
             } else {
                 continue;
             }
 
-            if (candidateLineNumber <= 0 || candidateLineNumber == lineNumber_) {
+            if (!validCandidate || ownGeometryVertex) {
                 continue;
             }
 
@@ -824,10 +826,12 @@ private:
     void updateSnapGuideMarkers(const QPointF &candidate)
     {
         const int guideLineNumber = nearestNeighborGeometryLineNumberForSnapGuides(candidate);
-        if (guideLineNumber <= 0) {
+        const qreal guideRadius = sceneRadiusForViewportPixels(candidate, 28);
+        if (guideLineNumber <= 0 && guideRadius <= 0.0) {
             clearSnapGuideMarkers();
             return;
         }
+        const qreal maxPointDistanceSquared = guideRadius * guideRadius;
 
         QVector<QPointF> guidePoints;
         const QList<QGraphicsItem *> items = scene()->items();
@@ -835,13 +839,26 @@ private:
             if (item == nullptr || item == this) {
                 continue;
             }
-            if (item->data(kMapSceneLineNumberRole).toInt() != guideLineNumber) {
-                continue;
-            }
             if (auto *vertexItem = dynamic_cast<MapEditableGeometryVertexItem *>(item)) {
+                if (guideLineNumber <= 0 || vertexItem->lineNumber() != guideLineNumber) {
+                    continue;
+                }
                 if (vertexItem->geometryKind() == QStringLiteral("line")
                     || vertexItem->geometryKind() == QStringLiteral("area")) {
                     guidePoints.append(vertexItem->pos());
+                }
+                continue;
+            }
+            if (auto *pointItem = dynamic_cast<MapEditablePointItem *>(item)) {
+                if (guideRadius <= 0.0) {
+                    continue;
+                }
+                const QPointF candidatePoint = pointItem->pos();
+                const qreal deltaX = candidatePoint.x() - candidate.x();
+                const qreal deltaY = candidatePoint.y() - candidate.y();
+                const qreal distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
+                if (distanceSquared <= maxPointDistanceSquared) {
+                    guidePoints.append(candidatePoint);
                 }
             }
         }
@@ -852,7 +869,7 @@ private:
         }
 
         while (snapGuideMarkers_.size() < guidePoints.size()) {
-            auto *marker = new QGraphicsEllipseItem(QRectF(-6.5, -6.5, 13.0, 13.0));
+            auto *marker = new QGraphicsEllipseItem(QRectF(-8.0, -8.0, 16.0, 16.0));
             marker->setFlag(QGraphicsItem::ItemIgnoresTransformations, true);
             marker->setAcceptedMouseButtons(Qt::NoButton);
             QColor guideFill(QStringLiteral("#00e5ff"));

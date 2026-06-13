@@ -431,6 +431,9 @@ void MapEditorInteractiveDrawController::clearInteractiveDrawSession(bool clearM
     if (context_.hoverSnapActive != nullptr) {
         (*context_.hoverSnapActive) = false;
     }
+    if (context_.hoverSnapGuideScenePoints != nullptr) {
+        context_.hoverSnapGuideScenePoints->clear();
+    }
     if (context_.view != nullptr && context_.view->viewport() != nullptr && !(*context_.panActive)) {
         context_.view->viewport()->unsetCursor();
     }
@@ -550,6 +553,7 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
     };
 
     if (mode() != MapEditorInteractiveDrawMode::Line
+        && mode() != MapEditorInteractiveDrawMode::Point
         && mode() != MapEditorInteractiveDrawMode::Area
         && mode() != MapEditorInteractiveDrawMode::Freehand
         && mode() != MapEditorInteractiveDrawMode::SmartArea) {
@@ -596,6 +600,9 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
 
     QPainterPath path;
     QVector<QPointF> anchorMarkers;
+    QVector<QPointF> snapGuideMarkers = context_.hoverSnapGuideScenePoints != nullptr
+        ? (*context_.hoverSnapGuideScenePoints)
+        : QVector<QPointF>();
     QVector<QPointF> controlMarkers;
     QVector<QLineF> controlConnectors;
     std::optional<QPointF> hoverSnapTargetMarker;
@@ -710,6 +717,16 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
                 path.lineTo(first.anchorScene);
             }
         }
+    } else if (mode() == MapEditorInteractiveDrawMode::Point) {
+        if ((*context_.hoverActive)) {
+            anchorMarkers.append((*context_.hoverScenePoint));
+            if (context_.hoverSnapActive != nullptr && (*context_.hoverSnapActive)) {
+                const QPointF snapPoint = (context_.hoverSnapScenePoint != nullptr)
+                    ? (*context_.hoverSnapScenePoint)
+                    : (*context_.hoverScenePoint);
+                hoverSnapTargetMarker = snapPoint;
+            }
+        }
     } else {
         if ((*context_.sceneVertices).isEmpty()) {
             clearPreviewMarkers();
@@ -730,26 +747,45 @@ void MapEditorInteractiveDrawController::updateInteractiveDrawPreview()
         }
     }
 
-    if ((*context_.previewPath) == nullptr) {
+    const bool usesPathPreview = mode() != MapEditorInteractiveDrawMode::Point;
+    if (usesPathPreview && (*context_.previewPath) == nullptr) {
         (*context_.previewPath) = new QGraphicsPathItem();
         (*context_.previewPath)->setBrush(Qt::NoBrush);
         (*context_.previewPath)->setZValue(28.0);
         (*context_.previewPath)->setAcceptedMouseButtons(Qt::NoButton);
         context_.scene->addItem((*context_.previewPath));
-    } else if ((*context_.previewPath)->scene() != context_.scene) {
+    } else if (usesPathPreview && (*context_.previewPath)->scene() != context_.scene) {
         context_.scene->addItem((*context_.previewPath));
     }
 
-    const Qt::PenStyle previewPenStyle = mode() == MapEditorInteractiveDrawMode::Freehand
-        ? Qt::SolidLine
-        : Qt::DashLine;
-    QPen previewPen(accent, 3.2, previewPenStyle, Qt::RoundCap, Qt::RoundJoin);
-    previewPen.setCosmetic(true);
-    (*context_.previewPath)->setPen(previewPen);
-    (*context_.previewPath)->setPath(path);
-    (*context_.previewPath)->setVisible(true);
+    if (usesPathPreview) {
+        const Qt::PenStyle previewPenStyle = mode() == MapEditorInteractiveDrawMode::Freehand
+            ? Qt::SolidLine
+            : Qt::DashLine;
+        QPen previewPen(accent, 3.2, previewPenStyle, Qt::RoundCap, Qt::RoundJoin);
+        previewPen.setCosmetic(true);
+        (*context_.previewPath)->setPen(previewPen);
+        (*context_.previewPath)->setPath(path);
+        (*context_.previewPath)->setVisible(true);
+    } else {
+        hidePreviewPath();
+    }
 
     int previewMarkerIndex = 0;
+    for (const QPointF &guidePoint : std::as_const(snapGuideMarkers)) {
+        QGraphicsEllipseItem *marker = ensurePreviewEllipseMarker(previewMarkerIndex++, QRectF(-8.0, -8.0, 16.0, 16.0));
+        marker->setPos(guidePoint);
+        QColor guideColor(QStringLiteral("#00e5ff"));
+        guideColor.setAlpha(235);
+        QPen guidePen(guideColor, 2.0);
+        guidePen.setCosmetic(true);
+        QColor guideFill(QStringLiteral("#00e5ff"));
+        guideFill.setAlpha(45);
+        marker->setPen(guidePen);
+        marker->setBrush(QBrush(guideFill));
+        marker->setZValue(28.7);
+    }
+
     for (const QPointF &vertex : std::as_const(anchorMarkers)) {
         QGraphicsEllipseItem *marker = ensurePreviewEllipseMarker(previewMarkerIndex++, QRectF(-5.0, -5.0, 10.0, 10.0));
         marker->setPos(vertex);

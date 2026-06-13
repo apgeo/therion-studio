@@ -286,6 +286,7 @@ private:
         QPointF hoverScenePoint_;
         bool hoverSnapActive_ = false;
         QPointF hoverSnapScenePoint_;
+        QVector<QPointF> hoverSnapGuideScenePoints_;
         QGraphicsPathItem *previewPath_ = nullptr;
         QVector<QGraphicsItem *> previewMarkers_;
         bool smartAreaPreviewActive_ = false;

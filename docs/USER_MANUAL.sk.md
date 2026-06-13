@@ -233,6 +233,8 @@ Existujúce Therion bloky `area ... endarea`, ktoré odkazujú na hranice `line 
 
 `Smart Area` vytvára práve túto referenčnú formu plochy namiesto kreslenia novej hraničnej geometrie. Pri potvrdení môže doplniť chýbajúce ID referencovaným hraničným čiaram, aby na ne nový blok `area ... endarea` mohol odkazovať, ale nemení ich geometriu. Po potvrdení sa mapa vráti do režimu výberu. `Esc` náhľad zruší.
 
+Počas vkladania bodov alebo kreslenia čiar a plôch sa vertexy blízkeho objektu zvýraznia ako kandidáti snapu. Aktívny snap cieľ sa zvýrazní výraznejšie; Bezier kontrolné body zostávajú bez snapu.
+
 Počas kreslenia čiary alebo plochy:
 
 - kliknutím pridáte rovný vrchol,

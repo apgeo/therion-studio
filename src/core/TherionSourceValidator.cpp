@@ -311,7 +311,6 @@ std::optional<QString> commandDuplicateIdentityKey(const TherionSourceLogicalCom
 }
 
 TherionSourceDiagnostic diagnosticForDuplicateObjectId(
-    const TherionSourceLogicalCommand &command,
     const TherionSourceLogicalArgumentRange &idRange)
 {
     TherionSourceDiagnostic diagnostic;
@@ -854,7 +853,7 @@ TherionSourceValidationResult TherionSourceValidator::validate(const QString &co
             const std::optional<QString> key = commandDuplicateIdentityKey(command, idRange->text);
             if (key.has_value()) {
                 if (firstExplicitObjectIdByKey.contains(*key)) {
-                    result.diagnostics.append(diagnosticForDuplicateObjectId(command, *idRange));
+                    result.diagnostics.append(diagnosticForDuplicateObjectId(*idRange));
                 } else {
                     firstExplicitObjectIdByKey.insert(*key, *idRange);
                 }

@@ -402,11 +402,6 @@ JoinReferenceParts parseJoinReference(QString referenceName)
     return parts;
 }
 
-QString joinReferenceLookupToken(QString referenceName)
-{
-    return parseJoinReference(referenceName).lookupName;
-}
-
 bool joinReferenceShouldReportMissing(const QString &referenceName)
 {
     const JoinReferenceParts referenceParts = parseJoinReference(referenceName);

@@ -496,6 +496,11 @@ int runProjectIndexDiagnosticProjectionTest()
                                              "  input maps/a/map.th2\n"
                                              "  input maps/b/map.th2\n"
                                              "  join missing-line.s\n"
+                                             "  centerline\n"
+                                             "    data normal from to compass clino tape\n"
+                                             "    known other 0 0 1\n"
+                                             "    equate known@cave missing@cave\n"
+                                             "  endcenterline\n"
                                              "  map branch-map.m\n"
                                              "  endmap\n"
                                              "  map branch-map.m\n"
@@ -559,6 +564,13 @@ int runProjectIndexDiagnosticProjectionTest()
                                    QStringLiteral("unknown-join-reference"),
                                    TherionSourceDiagnosticSeverity::Error),
                 "Project validation should expose unresolved join references from the project index.")) {
+        return 1;
+    }
+    if (!expect(findingHasSeverity(waitResult.result,
+                                   rootFile,
+                                   QStringLiteral("unknown-station-reference"),
+                                   TherionSourceDiagnosticSeverity::Error),
+                "Project validation should expose unresolved station references from the project index.")) {
         return 1;
     }
     const TherionSourceDiagnostic *unknownMapDiagnostic =

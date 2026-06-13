@@ -780,6 +780,84 @@ int runProjectIndexJoinReferenceDiagnosticsTest()
     return 0;
 }
 
+int runProjectIndexStationReferenceDiagnosticsTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "The temporary station-reference project directory could not be created.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    if (!expect(projectDir.mkpath(QStringLiteral("maps")),
+                "The temporary station-reference map directory could not be created.")) {
+        return 1;
+    }
+
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("root.th")),
+                              QStringLiteral(
+                                  "survey cave\n"
+                                  "  input maps/map.th2\n"
+                                  "  centerline\n"
+                                  "    data normal from to compass clino tape\n"
+                                  "    a1 a2 0 0 1\n"
+                                  "    dup@cave a2 0 0 1\n"
+                                  "    equate a1@cave missing@cave dup@cave plainMissing\n"
+                                  "  endcenterline\n"
+                                  "endsurvey cave\n")),
+                "The station-reference root Therion file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("maps/map.th2")),
+                              QStringLiteral(
+                                  "scrap s1\n"
+                                  "point 0 0 station -name dup@cave\n"
+                                  "endscrap\n")),
+                "The station-reference map file could not be written.")) {
+        return 1;
+    }
+
+    QString errorMessage;
+    const ProjectIndexSnapshot snapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(), &errorMessage);
+    if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
+    bool foundMissingStation = false;
+    bool foundAmbiguousStation = false;
+    for (const ProjectIndexDiagnostic &diagnostic : snapshot.diagnostics) {
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::UnknownStationReference
+            && diagnostic.referencedName == QStringLiteral("missing@cave")
+            && diagnostic.lineNumber == 7) {
+            foundMissingStation = true;
+        }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::AmbiguousStationReference
+            && diagnostic.referencedName == QStringLiteral("dup@cave")
+            && diagnostic.candidateCount == 2
+            && diagnostic.lineNumber == 7) {
+            foundAmbiguousStation = true;
+        }
+        if (!expect(diagnostic.referencedName != QStringLiteral("a1@cave"),
+                    "Resolved equate station references should not produce diagnostics.")) {
+            return 1;
+        }
+        if (!expect(diagnostic.referencedName != QStringLiteral("plainMissing"),
+                    "Plain unresolved equate station tokens should not produce conservative diagnostics.")) {
+            return 1;
+        }
+    }
+
+    if (!expect(foundMissingStation,
+                "The project index should report explicit unknown equate station references.")) {
+        return 1;
+    }
+    if (!expect(foundAmbiguousStation,
+                "The project index should report ambiguous equate station references.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runProjectIndexThconfigSourceGraphTest()
 {
     QTemporaryDir tempDir;
@@ -1101,6 +1179,9 @@ int main()
         return 1;
     }
     if (runProjectIndexJoinReferenceDiagnosticsTest() != 0) {
+        return 1;
+    }
+    if (runProjectIndexStationReferenceDiagnosticsTest() != 0) {
         return 1;
     }
     if (runProjectIndexThconfigSourceGraphTest() != 0) {

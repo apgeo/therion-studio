@@ -144,6 +144,19 @@ TherionSourceDiagnostic diagnosticForProjectIndexDiagnostic(const ProjectIndexDi
                                  .arg(indexDiagnostic.referencedName)
                                  .arg(indexDiagnostic.candidateCount);
         break;
+    case ProjectIndexDiagnosticKind::UnknownStationReference:
+        diagnostic.code = QStringLiteral("unknown-station-reference");
+        diagnostic.title = QObject::tr("Unknown station reference");
+        diagnostic.message = QObject::tr("Station reference `%1` has no matching station in the project index.")
+                                 .arg(indexDiagnostic.referencedName);
+        break;
+    case ProjectIndexDiagnosticKind::AmbiguousStationReference:
+        diagnostic.code = QStringLiteral("ambiguous-station-reference");
+        diagnostic.title = QObject::tr("Ambiguous station reference");
+        diagnostic.message = QObject::tr("Station reference `%1` matches %2 stations in the project index.")
+                                 .arg(indexDiagnostic.referencedName)
+                                 .arg(indexDiagnostic.candidateCount);
+        break;
     }
 
     return diagnostic;

@@ -178,6 +178,12 @@ struct ReferenceKeyIndex
     QHash<QString, QVector<QString>> keysByNameAndNamespace;
 };
 
+struct StationReferenceIndex
+{
+    QHash<QString, QVector<QString>> keysByExactReference;
+    ReferenceKeyIndex keysByNameAndNamespace;
+};
+
 enum class ReferenceResolutionState
 {
     Missing,
@@ -281,6 +287,57 @@ bool joinReferenceShouldReportMissing(const QString &referenceName)
         || lookupName.contains(QLatin1Char(':'))
         || nameOnly.endsWith(QStringLiteral(".s"))
         || nameOnly.endsWith(QStringLiteral(".m"));
+}
+
+QString normalizedStationReferenceToken(QString token)
+{
+    token = token.trimmed().toLower();
+    token.replace(QRegularExpression(QStringLiteral(R"(\s+)")), QString());
+    return token;
+}
+
+void addStationReferenceKey(StationReferenceIndex *index,
+                            const QString &referenceName,
+                            const QString &ownerNamespacePath,
+                            const QString &entryKey)
+{
+    if (index == nullptr || referenceName.trimmed().isEmpty()) {
+        return;
+    }
+
+    index->keysByExactReference[normalizedStationReferenceToken(referenceName)].append(entryKey);
+
+    const MapReferenceParts reference = parseMapReference(referenceName);
+    if (reference.name.isEmpty()) {
+        return;
+    }
+    if (!reference.hasNamespace && !ownerNamespacePath.trimmed().isEmpty()) {
+        index->keysByExactReference[
+            normalizedStationReferenceToken(QStringLiteral("%1@%2").arg(reference.name, ownerNamespacePath))]
+            .append(entryKey);
+    }
+    const QString targetNamespacePath = reference.hasNamespace
+        ? namespacePathWithChild(ownerNamespacePath, reference.namespacePath)
+        : ownerNamespacePath;
+    index->keysByNameAndNamespace.keysByNameAndNamespace[
+        namespacedReferenceLookupKey(reference.name, targetNamespacePath)].append(entryKey);
+}
+
+ReferenceResolution resolveStationReference(const StationReferenceIndex &index,
+                                            const QString &referenceName,
+                                            const QString &ownerNamespacePath)
+{
+    const ReferenceResolution exactResolution =
+        resolveCandidates(index.keysByExactReference.value(normalizedStationReferenceToken(referenceName)));
+    if (exactResolution.state != ReferenceResolutionState::Missing) {
+        return exactResolution;
+    }
+    return resolveReferenceKey(index.keysByNameAndNamespace, referenceName, ownerNamespacePath);
+}
+
+bool stationReferenceShouldReportMissing(const QString &referenceName)
+{
+    return referenceName.contains(QLatin1Char('@'));
 }
 
 QString mapCompositionReferenceToken(const TherionParsedLine &parsedLine)
@@ -1218,6 +1275,162 @@ QVector<ProjectIndexDiagnostic> scanJoinReferences(const QVector<ProjectStructur
     return diagnostics;
 }
 
+bool commandIsInCenterline(const TherionSourceLogicalCommand &command)
+{
+    const QString currentBlock = normalizedStructureDirective(command.currentBlockDirective);
+    return currentBlock == QStringLiteral("centerline")
+        || currentBlock == QStringLiteral("centreline");
+}
+
+StationReferenceIndex stationReferencesFromProject(const QVector<ProjectStructureEntry> &entries,
+                                                   const QSet<QString> &sourceFiles,
+                                                   ParsedFileCache *cache,
+                                                   const QHash<QString, QString> &inMemoryFileContentsByPath)
+{
+    StationReferenceIndex index;
+    for (const ProjectStructureEntry &entry : entries) {
+        if (entry.kind != ProjectStructureEntryKind::Station || entry.name.trimmed().isEmpty()) {
+            continue;
+        }
+        addStationReferenceKey(&index,
+                               entry.name,
+                               entry.namespacePath,
+                               ProjectStructureIndex::structureEntryNodeKey(entry));
+    }
+
+    for (const QString &sourceFile : sourceFiles) {
+        const TherionSourceLogicalDocument &logicalDocument =
+            logicalDocumentForFile(sourceFile, cache, inMemoryFileContentsByPath);
+        int fromColumn = -1;
+        int toColumn = -1;
+        QString dataNamespacePath;
+        for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
+            if (!commandIsInCenterline(command)) {
+                fromColumn = -1;
+                toColumn = -1;
+                dataNamespacePath.clear();
+                continue;
+            }
+
+            if (command.metadata.commandName == QStringLiteral("data")) {
+                fromColumn = -1;
+                toColumn = -1;
+                for (int tokenIndex = 2; tokenIndex < command.parsed.tokens.size(); ++tokenIndex) {
+                    const QString columnName = command.parsed.tokens.at(tokenIndex).toLower();
+                    if (columnName == QStringLiteral("from")) {
+                        fromColumn = tokenIndex - 2;
+                    } else if (columnName == QStringLiteral("to")) {
+                        toColumn = tokenIndex - 2;
+                    }
+                }
+                const ProjectStructureEntry ownerEntry =
+                    nearestNamespaceEntryForLine(entries, sourceFile, command.startLineNumber);
+                dataNamespacePath = ownerEntry.namespacePath;
+                continue;
+            }
+
+            if (fromColumn < 0 && toColumn < 0) {
+                continue;
+            }
+            if (command.metadata.commandName == QStringLiteral("station")
+                || command.metadata.commandName == QStringLiteral("fix")
+                || command.metadata.commandName == QStringLiteral("equate")) {
+                continue;
+            }
+
+            const QVector<int> stationColumns = {fromColumn, toColumn};
+            for (const int stationColumn : stationColumns) {
+                if (stationColumn < 0 || stationColumn >= command.parsed.tokens.size()) {
+                    continue;
+                }
+                const QString stationName = command.parsed.tokens.at(stationColumn);
+                if (stationName.trimmed().isEmpty() || stationName == QStringLiteral("-")) {
+                    continue;
+                }
+                addStationReferenceKey(&index,
+                                       stationName,
+                                       dataNamespacePath,
+                                       QStringLiteral("centerline-station:%1:%2:%3")
+                                           .arg(sourceFile,
+                                                QString::number(command.startLineNumber),
+                                                QString::number(stationColumn)));
+            }
+        }
+    }
+
+    return index;
+}
+
+QVector<ProjectIndexDiagnostic> scanStationReferences(const QVector<ProjectStructureEntry> &entries,
+                                                      ParsedFileCache *cache,
+                                                      const QHash<QString, QString> &inMemoryFileContentsByPath)
+{
+    QVector<ProjectIndexDiagnostic> diagnostics;
+    QSet<QString> sourceFiles;
+    for (const ProjectStructureEntry &entry : entries) {
+        if (!entry.sourceFile.trimmed().isEmpty()) {
+            sourceFiles.insert(normalizedFilePathKey(entry.sourceFile));
+        }
+    }
+
+    const StationReferenceIndex stationIndex =
+        stationReferencesFromProject(entries, sourceFiles, cache, inMemoryFileContentsByPath);
+
+    for (const QString &sourceFile : std::as_const(sourceFiles)) {
+        const TherionSourceLogicalDocument &logicalDocument =
+            logicalDocumentForFile(sourceFile, cache, inMemoryFileContentsByPath);
+        for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
+            if (command.metadata.commandName != QStringLiteral("equate")) {
+                continue;
+            }
+
+            const ProjectStructureEntry ownerEntry =
+                nearestNamespaceEntryForLine(entries, sourceFile, command.startLineNumber);
+            for (int tokenIndex = 1; tokenIndex < command.parsed.tokens.size(); ++tokenIndex) {
+                const QString referenceName = command.parsed.tokens.value(tokenIndex).trimmed();
+                if (referenceName.isEmpty() || referenceName.startsWith(QLatin1Char('-'))) {
+                    break;
+                }
+
+                const ReferenceResolution resolution =
+                    resolveStationReference(stationIndex, referenceName, ownerEntry.namespacePath);
+                if (resolution.state == ReferenceResolutionState::Unique) {
+                    continue;
+                }
+
+                const TherionSourcePhysicalRange referenceRange =
+                    parsedLineTokenPhysicalRange(command.parsed, tokenIndex);
+                if (resolution.state == ReferenceResolutionState::Ambiguous) {
+                    appendProjectIndexDiagnostic(&diagnostics,
+                                                 ProjectIndexDiagnosticKind::AmbiguousStationReference,
+                                                 ownerEntry.objectId,
+                                                 sourceFile,
+                                                 referenceRange.lineNumber,
+                                                 referenceRange.columnNumber,
+                                                 referenceRange.columnLength,
+                                                 referenceName,
+                                                 resolution.candidateCount);
+                    continue;
+                }
+
+                if (!stationReferenceShouldReportMissing(referenceName)) {
+                    continue;
+                }
+                appendProjectIndexDiagnostic(&diagnostics,
+                                             ProjectIndexDiagnosticKind::UnknownStationReference,
+                                             ownerEntry.objectId,
+                                             sourceFile,
+                                             referenceRange.lineNumber,
+                                             referenceRange.columnNumber,
+                                             referenceRange.columnLength,
+                                             referenceName);
+            }
+        }
+    }
+
+    return diagnostics;
+}
+
 QVector<ProjectStructureEntry> scanTh2ObjectsFromLogicalCommands(
     const QString &sourceFile,
     const QVector<TherionSourceLogicalCommand> &commands)
@@ -1403,6 +1616,9 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
     snapshot.diagnostics += scanJoinReferences(snapshot.entries,
                                                &cache,
                                                inMemoryFileContentsByPath);
+    snapshot.diagnostics += scanStationReferences(snapshot.entries,
+                                                  &cache,
+                                                  inMemoryFileContentsByPath);
     return snapshot;
 }
 

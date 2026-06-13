@@ -104,6 +104,16 @@ public:
                                                            qreal orientationDegrees,
                                                            QVector<TherionSourceTextEdit> *edits,
                                                            QString *errorMessage = nullptr);
+    [[nodiscard]] static bool mapObjectClipDisabledRewriteEdits(const QString &contents,
+                                                                int lineNumber,
+                                                                bool disabled,
+                                                                QVector<TherionSourceTextEdit> *edits,
+                                                                QString *errorMessage = nullptr);
+    [[nodiscard]] static bool pointAlignRewriteEdits(const QString &contents,
+                                                     int lineNumber,
+                                                     const QString &align,
+                                                     QVector<TherionSourceTextEdit> *edits,
+                                                     QString *errorMessage = nullptr);
     [[nodiscard]] static bool linePointOrientationRewriteEdits(const QString &contents,
                                                                int lineNumber,
                                                                int sourceVertexIndex,

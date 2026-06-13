@@ -425,30 +425,51 @@ void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
         }
     }
 
-    const bool geometryAvailable = lineSelected
+    const bool objectClipAvailable =
+        objectDetailsUiState_.objectClipDisabledCheck_ != nullptr
+        && objectDetailsUiState_.objectClipDisabledCheck_->isVisible()
+        && objectDetailsUiState_.objectClipDisabledCheck_->isEnabled();
+    const bool geometryAvailable = (lineSelected || objectClipAvailable)
         && objectDetailsUiState_.lineClosedCheck_ != nullptr
         && objectDetailsUiState_.lineReversedCheck_ != nullptr
-        && objectDetailsUiState_.lineClosedCheck_->isVisible()
-        && objectDetailsUiState_.lineReversedCheck_->isVisible();
+        && objectDetailsUiState_.objectClipDisabledCheck_ != nullptr
+        && (objectDetailsUiState_.lineClosedCheck_->isVisible()
+            || objectDetailsUiState_.lineReversedCheck_->isVisible()
+            || objectDetailsUiState_.objectClipDisabledCheck_->isVisible());
+    QMenu *objectGeometryMenu = nullptr;
     if (geometryAvailable) {
-        QMenu *geometryMenu = menu->addMenu(tr("Geometry"));
-        QAction *closedAction = geometryMenu->addAction(tr("Closed (-close)"));
-        closedAction->setCheckable(true);
-        closedAction->setChecked(objectDetailsUiState_.lineClosedCheck_ != nullptr
-                                 && objectDetailsUiState_.lineClosedCheck_->isChecked());
-        connect(closedAction, &QAction::triggered, this, [this](bool checked) {
-            handleLineClosedToggled(checked);
-            refreshObjectDetailsPanel();
-        });
+        objectGeometryMenu = menu->addMenu(tr("Geometry"));
+        if (objectDetailsUiState_.lineClosedCheck_ != nullptr
+            && objectDetailsUiState_.lineClosedCheck_->isVisible()) {
+            QAction *closedAction = objectGeometryMenu->addAction(tr("Closed (-close on)"));
+            closedAction->setCheckable(true);
+            closedAction->setChecked(objectDetailsUiState_.lineClosedCheck_->isChecked());
+            connect(closedAction, &QAction::triggered, this, [this](bool checked) {
+                handleLineClosedToggled(checked);
+                refreshObjectDetailsPanel();
+            });
+        }
 
-        QAction *reversedAction = geometryMenu->addAction(tr("Reversed (-reverse)"));
-        reversedAction->setCheckable(true);
-        reversedAction->setChecked(objectDetailsUiState_.lineReversedCheck_ != nullptr
-                                   && objectDetailsUiState_.lineReversedCheck_->isChecked());
-        connect(reversedAction, &QAction::triggered, this, [this](bool checked) {
-            handleLineReversedToggled(checked);
-            refreshObjectDetailsPanel();
-        });
+        if (objectDetailsUiState_.lineReversedCheck_ != nullptr
+            && objectDetailsUiState_.lineReversedCheck_->isVisible()) {
+            QAction *reversedAction = objectGeometryMenu->addAction(tr("Reversed (-reverse on)"));
+            reversedAction->setCheckable(true);
+            reversedAction->setChecked(objectDetailsUiState_.lineReversedCheck_->isChecked());
+            connect(reversedAction, &QAction::triggered, this, [this](bool checked) {
+                handleLineReversedToggled(checked);
+                refreshObjectDetailsPanel();
+            });
+        }
+
+        if (objectClipAvailable) {
+            QAction *clipAction = objectGeometryMenu->addAction(tr("Disable clipping (-clip off)"));
+            clipAction->setCheckable(true);
+            clipAction->setChecked(objectDetailsUiState_.objectClipDisabledCheck_->isChecked());
+            connect(clipAction, &QAction::triggered, this, [this](bool checked) {
+                handleObjectClipDisabledToggled(checked);
+                refreshObjectDetailsPanel();
+            });
+        }
     }
 
     const bool previousControlAvailable = lineVertexSelected
@@ -615,9 +636,44 @@ void MapEditorTab::showMapSelectionContextMenu(const QPoint &globalPosition)
         && objectDetailsUiState_.objectOrientationSpin_ != nullptr
         && objectDetailsUiState_.objectOrientationEnabledCheck_->isVisible()
         && objectDetailsUiState_.objectOrientationEnabledCheck_->isEnabled();
+    const bool pointAlignAvailable = pointSelected
+        && objectDetailsUiState_.pointAlignCombo_ != nullptr
+        && objectDetailsUiState_.pointAlignCombo_->isVisible()
+        && objectDetailsUiState_.pointAlignCombo_->isEnabled();
+    auto addPointAlignMenu = [this](QMenu *targetMenu) {
+        if (targetMenu == nullptr
+            || objectDetailsUiState_.pointAlignCombo_ == nullptr
+            || !objectDetailsUiState_.pointAlignCombo_->isVisible()
+            || !objectDetailsUiState_.pointAlignCombo_->isEnabled()) {
+            return;
+        }
+
+        QMenu *alignMenu = targetMenu->addMenu(tr("Align (-align)"));
+        const QString currentValue = objectDetailsUiState_.pointAlignCombo_->currentData().toString().trimmed().toLower();
+        for (int index = 0; index < objectDetailsUiState_.pointAlignCombo_->count(); ++index) {
+            const QString value = objectDetailsUiState_.pointAlignCombo_->itemData(index).toString();
+            const QString text = objectDetailsUiState_.pointAlignCombo_->itemText(index);
+            QAction *action = alignMenu->addAction(text);
+            action->setCheckable(true);
+            action->setChecked(value.trimmed().toLower() == currentValue);
+            connect(action, &QAction::triggered, this, [this, index]() {
+                if (objectDetailsUiState_.pointAlignCombo_ == nullptr) {
+                    return;
+                }
+                const QSignalBlocker blocker(objectDetailsUiState_.pointAlignCombo_);
+                objectDetailsUiState_.pointAlignCombo_->setCurrentIndex(index);
+                handlePointAlignChanged();
+                refreshObjectDetailsPanel();
+            });
+        }
+    };
     if (pointOrientationAvailable) {
-        QMenu *pointGeometryMenu = menu->addMenu(tr("Geometry"));
+        QMenu *pointGeometryMenu = objectGeometryMenu != nullptr ? objectGeometryMenu : menu->addMenu(tr("Geometry"));
         addOrientationMenu(pointGeometryMenu);
+        addPointAlignMenu(pointGeometryMenu);
+    } else if (pointAlignAvailable) {
+        QMenu *pointGeometryMenu = objectGeometryMenu != nullptr ? objectGeometryMenu : menu->addMenu(tr("Geometry"));
+        addPointAlignMenu(pointGeometryMenu);
     }
 
     const bool insertBeforeAvailable = lineVertexSelected
@@ -691,6 +747,16 @@ void MapEditorTab::handleLineClosedToggled(bool checked)
 void MapEditorTab::handleLineReversedToggled(bool checked)
 {
     MapEditorObjectDetailsEditController(objectDetailsContext()).handleLineReversedToggled(checked);
+}
+
+void MapEditorTab::handleObjectClipDisabledToggled(bool checked)
+{
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handleObjectClipDisabledToggled(checked);
+}
+
+void MapEditorTab::handlePointAlignChanged()
+{
+    MapEditorObjectDetailsEditController(objectDetailsContext()).handlePointAlignChanged();
 }
 
 } // namespace TherionStudio

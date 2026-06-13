@@ -93,6 +93,10 @@ struct MapEditorObjectDetailsContext
     QWidget *lineOptionsEditor = nullptr;
     QCheckBox *lineClosedCheck = nullptr;
     QCheckBox *lineReversedCheck = nullptr;
+    QCheckBox *objectClipDisabledCheck = nullptr;
+    QWidget *pointAlignEditor = nullptr;
+    QLabel *pointAlignLabel = nullptr;
+    QComboBox *pointAlignCombo = nullptr;
     QWidget *scrapScaleEditor = nullptr;
     QDoubleSpinBox *scrapScaleSourceX1Spin = nullptr;
     QDoubleSpinBox *scrapScaleSourceY1Spin = nullptr;

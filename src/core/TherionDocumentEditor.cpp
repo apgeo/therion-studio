@@ -2578,6 +2578,124 @@ bool TherionDocumentEditor::pointOrientationRewriteEdits(const QString &contents
     return true;
 }
 
+bool TherionDocumentEditor::mapObjectClipDisabledRewriteEdits(const QString &contents,
+                                                              int lineNumber,
+                                                              bool disabled,
+                                                              QVector<TherionSourceTextEdit> *edits,
+                                                              QString *errorMessage)
+{
+    if (edits == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No edit target is available.");
+        }
+        return false;
+    }
+
+    edits->clear();
+
+    if (lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
+        }
+        return false;
+    }
+
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(contents);
+    if (lineNumber > sourceDocument.lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
+        }
+        return false;
+    }
+
+    const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(lineNumber - 1);
+    QString lineText = sourceLine.text;
+    const TherionParsedLine &parsedLine = sourceLine.parsed;
+    if (parsedLine.directive != QStringLiteral("line")
+        && parsedLine.directive != QStringLiteral("area")
+        && parsedLine.directive != QStringLiteral("point")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Clip is available only for map point, line, and area commands.");
+        }
+        return false;
+    }
+
+    if (!upsertSingleValueOption(&lineText,
+                                 QStringLiteral("-clip"),
+                                 disabled ? QStringLiteral("off") : QString())) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected object clip option could not be rewritten.");
+        }
+        return false;
+    }
+
+    if (lineText != sourceLine.text) {
+        edits->append(TherionSourceTextEdit{
+            sourceLine.startOffset,
+            sourceLine.textLength,
+            lineText,
+        });
+    }
+    return true;
+}
+
+bool TherionDocumentEditor::pointAlignRewriteEdits(const QString &contents,
+                                                   int lineNumber,
+                                                   const QString &align,
+                                                   QVector<TherionSourceTextEdit> *edits,
+                                                   QString *errorMessage)
+{
+    if (edits == nullptr) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "No edit target is available.");
+        }
+        return false;
+    }
+
+    edits->clear();
+
+    if (lineNumber <= 0) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line number is invalid.");
+        }
+        return false;
+    }
+
+    const TherionParsedSourceDocument sourceDocument = TherionDocumentParser::parseSourceDocument(contents);
+    if (lineNumber > sourceDocument.lines.size()) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected line no longer exists.");
+        }
+        return false;
+    }
+
+    const TherionParsedSourceLine &sourceLine = sourceDocument.lines.at(lineNumber - 1);
+    QString lineText = sourceLine.text;
+    const TherionParsedLine &parsedLine = sourceLine.parsed;
+    if (parsedLine.directive != QStringLiteral("point")) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "Align is available only for point commands.");
+        }
+        return false;
+    }
+
+    if (!upsertSingleValueOption(&lineText, QStringLiteral("-align"), align.trimmed())) {
+        if (errorMessage != nullptr) {
+            *errorMessage = QCoreApplication::translate("TherionStudio::TherionDocumentEditor", "The selected point align option could not be rewritten.");
+        }
+        return false;
+    }
+
+    if (lineText != sourceLine.text) {
+        edits->append(TherionSourceTextEdit{
+            sourceLine.startOffset,
+            sourceLine.textLength,
+            lineText,
+        });
+    }
+    return true;
+}
+
 bool TherionDocumentEditor::linePointOrientationRewriteEdits(const QString &contents,
                                                              int lineNumber,
                                                              int sourceVertexIndex,

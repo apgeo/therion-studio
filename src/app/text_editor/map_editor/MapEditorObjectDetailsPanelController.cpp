@@ -129,6 +129,65 @@ void setTargetScrapComboValues(QComboBox *combo,
     }
     combo->setCurrentIndex(currentIndex);
 }
+
+bool tokenCanBeOptionValue(const QString &token)
+{
+    const QString trimmed = token.trimmed();
+    if (!trimmed.startsWith(QLatin1Char('-'))) {
+        return true;
+    }
+
+    bool numeric = false;
+    trimmed.toDouble(&numeric);
+    return numeric;
+}
+
+QString singleValueOptionValue(const TherionParsedLine &parsedLine, const QString &optionName)
+{
+    const QString normalizedOption = optionName.trimmed().toLower();
+    for (int index = 1; index < parsedLine.tokens.size(); ++index) {
+        if (parsedLine.tokens.at(index).trimmed().toLower() != normalizedOption) {
+            continue;
+        }
+        if (index + 1 < parsedLine.tokens.size()
+            && tokenCanBeOptionValue(parsedLine.tokens.at(index + 1))) {
+            return parsedLine.tokens.at(index + 1).trimmed();
+        }
+        return QString();
+    }
+
+    return QString();
+}
+
+bool pointTypeSupportsClip(const QString &pointType)
+{
+    const QString normalizedType = pointType.section(QLatin1Char(':'), 0, 0).trimmed().toLower();
+    static const QSet<QString> disallowedTypes = {
+        QStringLiteral("station"),
+        QStringLiteral("station-name"),
+        QStringLiteral("label"),
+        QStringLiteral("remark"),
+        QStringLiteral("date"),
+        QStringLiteral("altitude"),
+        QStringLiteral("height"),
+        QStringLiteral("passage-height"),
+    };
+    return !normalizedType.isEmpty() && !disallowedTypes.contains(normalizedType);
+}
+
+int indexForComboUserData(QComboBox *combo, const QString &value)
+{
+    if (combo == nullptr) {
+        return -1;
+    }
+    const QString normalized = value.trimmed().toLower();
+    for (int index = 0; index < combo->count(); ++index) {
+        if (combo->itemData(index).toString().trimmed().toLower() == normalized) {
+            return index;
+        }
+    }
+    return normalized.isEmpty() ? 0 : -1;
+}
 }
 
 MapEditorObjectDetailsPanelController::MapEditorObjectDetailsPanelController(MapEditorObjectDetailsContext context)
@@ -210,6 +269,10 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         || context_.lineOptionsEditor == nullptr
         || context_.lineClosedCheck == nullptr
         || context_.lineReversedCheck == nullptr
+        || context_.objectClipDisabledCheck == nullptr
+        || context_.pointAlignEditor == nullptr
+        || context_.pointAlignLabel == nullptr
+        || context_.pointAlignCombo == nullptr
         || context_.scrapScaleEditor == nullptr
         || context_.scrapScaleSourceX1Spin == nullptr
         || context_.scrapScaleSourceY1Spin == nullptr
@@ -331,6 +394,10 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
             context_.vertexActionsEditor->setVisible(false);
             context_.orientationEditor->setVisible(false);
             context_.lineOptionsEditor->setVisible(false);
+            context_.objectClipDisabledCheck->setChecked(false);
+            context_.objectClipDisabledCheck->setVisible(false);
+            context_.pointAlignEditor->setVisible(false);
+            context_.pointAlignCombo->setCurrentIndex(0);
             context_.scrapScaleEditor->setVisible(false);
             context_.configureButton->setVisible(false);
             context_.configureButton->setEnabled(false);
@@ -390,6 +457,10 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.linePointFlagsEditor->setVisible(false);
         context_.linePointFlagsEdit->setEnabled(false);
         context_.lineOptionsEditor->setVisible(false);
+        context_.objectClipDisabledCheck->setChecked(false);
+        context_.objectClipDisabledCheck->setVisible(false);
+        context_.pointAlignEditor->setVisible(false);
+        context_.pointAlignCombo->setCurrentIndex(0);
         context_.scrapScaleEditor->setVisible(false);
         context_.configureButton->setVisible(false);
         context_.configureButton->setEnabled(false);
@@ -552,25 +623,55 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.vertexSplitButton->setToolTip(QString());
     }
 
+    bool clipDisabledVisible = false;
+    bool clipDisabled = false;
+    QString pointAlign;
     const bool lineOptionsVisible = *context_.selectedObjectLineNumber > 0
-        && *context_.selectedObjectKind == QStringLiteral("line")
+        && (*context_.selectedObjectKind == QStringLiteral("line")
+            || *context_.selectedObjectKind == QStringLiteral("area")
+            || *context_.selectedObjectKind == QStringLiteral("point"))
         && context_.textEditor != nullptr;
     context_.lineOptionsEditor->setVisible(lineOptionsVisible);
     if (lineOptionsVisible) {
+        const QStringList lines = TherionSourceText::splitTextLines(context_.textEditor->text());
+        TherionParsedLine parsedLine;
+        if (*context_.selectedObjectLineNumber <= lines.size()) {
+            parsedLine = TherionDocumentParser::parseLine(lines.at(*context_.selectedObjectLineNumber - 1),
+                                                          *context_.selectedObjectLineNumber);
+            if (parsedLine.directive == QStringLiteral("line")
+                || parsedLine.directive == QStringLiteral("area")
+                || parsedLine.directive == QStringLiteral("point")) {
+                clipDisabledVisible = parsedLine.directive != QStringLiteral("point")
+                    || pointTypeSupportsClip(parsedLine.tokens.value(3));
+                clipDisabled = singleValueOptionValue(parsedLine, QStringLiteral("-clip")).compare(QStringLiteral("off"), Qt::CaseInsensitive) == 0;
+                pointAlign = singleValueOptionValue(parsedLine, QStringLiteral("-align"));
+            }
+        }
         if (const std::optional<MapGeometryFeature> lineFeature = lineFeatureForLineNumber(context_.textEditor->text(), *context_.selectedObjectLineNumber);
-            lineFeature.has_value() && lineFeature->kind == MapGeometryFeature::Kind::Line) {
+            *context_.selectedObjectKind == QStringLiteral("line")
+            && lineFeature.has_value()
+            && lineFeature->kind == MapGeometryFeature::Kind::Line) {
+            context_.lineClosedCheck->setVisible(true);
+            context_.lineReversedCheck->setVisible(true);
             context_.lineClosedCheck->setChecked(lineFeature->closed);
             context_.lineReversedCheck->setChecked(lineFeature->reversed);
         } else {
+            context_.lineClosedCheck->setVisible(false);
+            context_.lineReversedCheck->setVisible(false);
             context_.lineClosedCheck->setChecked(false);
             context_.lineReversedCheck->setChecked(false);
         }
     } else {
+        context_.lineClosedCheck->setVisible(false);
+        context_.lineReversedCheck->setVisible(false);
         context_.lineClosedCheck->setChecked(false);
         context_.lineReversedCheck->setChecked(false);
     }
+    context_.objectClipDisabledCheck->setVisible(clipDisabledVisible);
+    context_.objectClipDisabledCheck->setEnabled(clipDisabledVisible);
+    context_.objectClipDisabledCheck->setChecked(clipDisabledVisible && clipDisabled);
 
-    context_.geometrySection->setVisible(lineOptionsVisible);
+    context_.geometrySection->setVisible(lineOptionsVisible && (clipDisabledVisible || *context_.selectedObjectKind == QStringLiteral("line")));
 
     const bool scrapScaleVisible = effectiveLineNumber > 0
         && effectiveKind == QStringLiteral("scrap")
@@ -616,6 +717,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     }
 
     bool orientationApplicable = false;
+    bool pointAlignApplicable = false;
     bool linePointLeftSizeApplicable = false;
     bool linePointFlagsApplicable = false;
     bool linePointSegmentSubtypeApplicable = false;
@@ -639,6 +741,10 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
                     && isOrientationSupportedForParsedLine(parsedLine, orientationApplicabilityByCommand())) {
                     orientationApplicable = true;
                     orientationDegrees = pointOrientationFromParsedLine(parsedLine);
+                }
+                if (parsedLine.directive == QStringLiteral("point")) {
+                    pointAlignApplicable = true;
+                    pointAlign = singleValueOptionValue(parsedLine, QStringLiteral("-align"));
                 }
             }
         } else if (*context_.selectedObjectKind == QStringLiteral("line") && *context_.selectedObjectVertexIndex >= 0) {
@@ -686,6 +792,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
 
     context_.orientationEditor->setVisible(linePointSmoothApplicable
                                            || orientationApplicable
+                                           || pointAlignApplicable
                                            || linePointLeftSizeApplicable
                                            || linePointSegmentSubtypeApplicable
                                            || linePointAltitudeAutoApplicable
@@ -703,6 +810,10 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     context_.orientationSpin->setVisible(orientationApplicable);
     context_.linePointLeftSizeEnabledCheck->setVisible(linePointLeftSizeApplicable);
     context_.linePointLeftSizeSpin->setVisible(linePointLeftSizeApplicable);
+    context_.pointAlignEditor->setVisible(pointAlignApplicable);
+    context_.pointAlignLabel->setVisible(pointAlignApplicable);
+    context_.pointAlignCombo->setVisible(pointAlignApplicable);
+    context_.pointAlignCombo->setEnabled(pointAlignApplicable);
     if (orientationApplicable) {
         context_.orientationEnabledCheck->setChecked(orientationDegrees.has_value());
         context_.orientationSpin->setEnabled(context_.orientationEnabledCheck->isChecked());
@@ -720,6 +831,12 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
         context_.linePointLeftSizeEnabledCheck->setChecked(false);
         context_.linePointLeftSizeSpin->setEnabled(false);
         context_.linePointLeftSizeSpin->setValue(40.0);
+    }
+    if (pointAlignApplicable) {
+        const int alignIndex = indexForComboUserData(context_.pointAlignCombo, pointAlign);
+        context_.pointAlignCombo->setCurrentIndex(alignIndex >= 0 ? alignIndex : 0);
+    } else {
+        context_.pointAlignCombo->setCurrentIndex(0);
     }
     context_.linePointSegmentSubtypeLabel->setVisible(linePointSegmentSubtypeApplicable);
     context_.linePointSegmentSubtypeCombo->setVisible(linePointSegmentSubtypeApplicable);
@@ -749,6 +866,7 @@ void MapEditorObjectDetailsPanelController::refreshObjectDetailsPanel()
     context_.vertexSection->setVisible(lineVertexActionsAvailable
                                        || linePointSmoothApplicable
                                        || orientationApplicable
+                                       || pointAlignApplicable
                                        || linePointLeftSizeApplicable
                                        || linePointSegmentSubtypeApplicable
                                        || linePointAltitudeAutoApplicable

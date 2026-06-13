@@ -565,6 +565,116 @@ void MapEditorObjectDetailsEditController::handleLineReversedToggled(bool checke
                                            });
 }
 
+void MapEditorObjectDetailsEditController::handleObjectClipDisabledToggled(bool checked)
+{
+    if (*context_.updatingUi
+        || context_.textEditor == nullptr
+        || *context_.selectedObjectLineNumber <= 0) {
+        return;
+    }
+
+    const QString selectedObjectKind = context_.selectedObjectKind->trimmed().toLower();
+    if (selectedObjectKind != QStringLiteral("line")
+        && selectedObjectKind != QStringLiteral("area")
+        && selectedObjectKind != QStringLiteral("point")) {
+        return;
+    }
+
+    const int targetLineNumber = *context_.selectedObjectLineNumber;
+    const QString beforeText = context_.textEditor->text();
+    QString afterText = beforeText;
+    QString errorMessage;
+    QVector<TherionSourceTextEdit> sourceEdits;
+    if (!TherionDocumentEditor::mapObjectClipDisabledRewriteEdits(afterText,
+                                                                  targetLineNumber,
+                                                                  checked,
+                                                                  &sourceEdits,
+                                                                  &errorMessage)
+        || !applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
+        *context_.toolbarStatusNote = errorMessage.isEmpty()
+            ? tr("Failed to update object clipping.")
+            : tr("Failed to update object clipping: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        context_.refreshObjectDetailsPanel();
+        return;
+    }
+
+    if (afterText == beforeText) {
+        return;
+    }
+
+    if (!requireSourceTransaction(context_, tr("Cannot update object clipping without map source transaction support."))) {
+        return;
+    }
+    std::function<void()> selectionRestoreHook;
+    if (selectedObjectKind == QStringLiteral("point") && context_.restorePointSelectionLater) {
+        selectionRestoreHook = [context = context_, targetLineNumber]() {
+            context.restorePointSelectionLater(targetLineNumber);
+        };
+    } else if (selectedObjectKind == QStringLiteral("line") && context_.selectMapLine) {
+        selectionRestoreHook = [context = context_, targetLineNumber]() {
+            context.selectMapLine(targetLineNumber, false);
+        };
+    }
+    applySourceTransactionWithOptionalHook(context_,
+                                           tr("Edit Object Clipping"),
+                                           beforeText,
+                                           afterText,
+                                           targetLineNumber,
+                                           std::move(selectionRestoreHook));
+}
+
+void MapEditorObjectDetailsEditController::handlePointAlignChanged()
+{
+    if (*context_.updatingUi
+        || context_.textEditor == nullptr
+        || context_.pointAlignCombo == nullptr
+        || *context_.selectedObjectLineNumber <= 0
+        || *context_.selectedObjectKind != QStringLiteral("point")) {
+        return;
+    }
+
+    const int targetLineNumber = *context_.selectedObjectLineNumber;
+    const QString beforeText = context_.textEditor->text();
+    QString afterText = beforeText;
+    QString errorMessage;
+    QVector<TherionSourceTextEdit> sourceEdits;
+    const QString align = context_.pointAlignCombo->currentData().toString();
+    if (!TherionDocumentEditor::pointAlignRewriteEdits(afterText,
+                                                       targetLineNumber,
+                                                       align,
+                                                       &sourceEdits,
+                                                       &errorMessage)
+        || !applySourceTextEdits(&afterText, sourceEdits, &errorMessage)) {
+        *context_.toolbarStatusNote = errorMessage.isEmpty()
+            ? tr("Failed to update point align.")
+            : tr("Failed to update point align: %1").arg(errorMessage);
+        context_.refreshToolbarSummary();
+        context_.refreshObjectDetailsPanel();
+        return;
+    }
+
+    if (afterText == beforeText) {
+        return;
+    }
+
+    if (!requireSourceTransaction(context_, tr("Cannot update point align without map source transaction support."))) {
+        return;
+    }
+    std::function<void()> selectionRestoreHook;
+    if (context_.restorePointSelectionLater) {
+        selectionRestoreHook = [context = context_, targetLineNumber]() {
+            context.restorePointSelectionLater(targetLineNumber);
+        };
+    }
+    applySourceTransactionWithOptionalHook(context_,
+                                           tr("Edit Point Align"),
+                                           beforeText,
+                                           afterText,
+                                           targetLineNumber,
+                                           std::move(selectionRestoreHook));
+}
+
 void MapEditorObjectDetailsEditController::applyObjectOrientationEdits()
 {
     if (*context_.updatingUi || context_.textEditor == nullptr || *context_.selectedObjectLineNumber <= 0) {

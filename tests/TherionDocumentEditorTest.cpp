@@ -144,6 +144,20 @@ bool rewriteMapObjectValueOption(QString *contents, int lineNumber, const QStrin
     }, errorMessage);
 }
 
+bool rewriteMapObjectClipDisabled(QString *contents, int lineNumber, bool disabled, QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::mapObjectClipDisabledRewriteEdits(source, lineNumber, disabled, edits, plannerError);
+    }, errorMessage);
+}
+
+bool rewritePointAlign(QString *contents, int lineNumber, const QString &align, QString *errorMessage)
+{
+    return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
+        return TherionDocumentEditor::pointAlignRewriteEdits(source, lineNumber, align, edits, plannerError);
+    }, errorMessage);
+}
+
 bool rewriteLineCoordinateRows(QString *contents, int lineNumber, const QStringList &coordinateRows, QString *errorMessage)
 {
     return applyPlannerEdits(contents, [&](const QString &source, QVector<TherionSourceTextEdit> *edits, QString *plannerError) {
@@ -2426,6 +2440,70 @@ int runRewriteOrientationOptionsTest()
                                            "endline\r"
                                            "point station 1 2 station -name a1\n"),
                 "rewriteLinePointLeftSize should preserve physical line endings outside removed standalone option rows.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("line wall # keep\nendline\n");
+    errorMessage.clear();
+    if (!expect(rewriteMapObjectClipDisabled(&contents, 1, true, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall -clip off # keep\nendline\n"),
+                "rewriteMapObjectClipDisabled should insert explicit -clip off before comments.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(rewriteMapObjectClipDisabled(&contents, 1, false, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("line wall # keep\nendline\n"),
+                "rewriteMapObjectClipDisabled should remove -clip instead of writing -clip on.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("area water -clip on\nendarea\n");
+    errorMessage.clear();
+    if (!expect(rewriteMapObjectClipDisabled(&contents, 1, true, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("area water -clip off\nendarea\n"),
+                "rewriteMapObjectClipDisabled should rewrite area clip value to off.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("point 10 20 label -text hello\n");
+    errorMessage.clear();
+    if (!expect(rewriteMapObjectClipDisabled(&contents, 1, true, &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 10 20 label -text hello -clip off\n"),
+                "rewriteMapObjectClipDisabled should support point command source rewrites.")) {
+        return 1;
+    }
+
+    contents = QStringLiteral("point 10 20 label -text hello\n");
+    errorMessage.clear();
+    if (!expect(rewritePointAlign(&contents, 1, QStringLiteral("top-left"), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 10 20 label -text hello -align top-left\n"),
+                "rewritePointAlign should append point align values.")) {
+        return 1;
+    }
+
+    errorMessage.clear();
+    if (!expect(rewritePointAlign(&contents, 1, QString(), &errorMessage),
+                errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+    if (!expect(contents == QStringLiteral("point 10 20 label -text hello\n"),
+                "rewritePointAlign should remove point align for default alignment.")) {
         return 1;
     }
 

@@ -202,10 +202,13 @@ void MapEditorTab::buildInspectorPanelUi()
     lineOptionsLayout->setSpacing(6);
     objectDetailsUiState_.lineClosedCheck_ = new QCheckBox(tr("Closed (-close)"), objectDetailsUiState_.lineOptionsEditor_);
     objectDetailsUiState_.lineReversedCheck_ = new QCheckBox(tr("Reversed (-reverse)"), objectDetailsUiState_.lineOptionsEditor_);
+    objectDetailsUiState_.objectClipDisabledCheck_ = new QCheckBox(tr("Disable clipping (-clip off)"), objectDetailsUiState_.lineOptionsEditor_);
     connect(objectDetailsUiState_.lineClosedCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLineClosedToggled);
     connect(objectDetailsUiState_.lineReversedCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLineReversedToggled);
+    connect(objectDetailsUiState_.objectClipDisabledCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleObjectClipDisabledToggled);
     lineOptionsLayout->addWidget(objectDetailsUiState_.lineClosedCheck_);
     lineOptionsLayout->addWidget(objectDetailsUiState_.lineReversedCheck_);
+    lineOptionsLayout->addWidget(objectDetailsUiState_.objectClipDisabledCheck_);
     geometrySelectionLayout->addWidget(objectDetailsUiState_.lineOptionsEditor_);
     selectionLayout->addWidget(objectDetailsUiState_.geometrySelectionSection_);
 
@@ -243,6 +246,24 @@ void MapEditorTab::buildInspectorPanelUi()
     configureSelectionEditableCombo(objectDetailsUiState_.linePointSegmentSubtypeCombo_, QStringLiteral("linePointSegmentSubtypeCombo"));
     objectDetailsUiState_.linePointSegmentSubtypeCombo_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     objectDetailsUiState_.linePointAltitudeAutoCheck_ = new QCheckBox(tr("Altitude (auto)"), objectDetailsUiState_.objectOrientationEditor_);
+    objectDetailsUiState_.pointAlignEditor_ = new QWidget(objectDetailsUiState_.objectOrientationEditor_);
+    auto *pointAlignLayout = new QHBoxLayout(objectDetailsUiState_.pointAlignEditor_);
+    pointAlignLayout->setContentsMargins(0, 0, 0, 0);
+    pointAlignLayout->setSpacing(8);
+    objectDetailsUiState_.pointAlignLabel_ = new QLabel(tr("Align (-align)"), objectDetailsUiState_.pointAlignEditor_);
+    objectDetailsUiState_.pointAlignCombo_ = new QComboBox(objectDetailsUiState_.pointAlignEditor_);
+    objectDetailsUiState_.pointAlignCombo_->setObjectName(QStringLiteral("pointAlignCombo"));
+    objectDetailsUiState_.pointAlignCombo_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    objectDetailsUiState_.pointAlignCombo_->addItem(tr("Default"), QString());
+    objectDetailsUiState_.pointAlignCombo_->addItem(QStringLiteral("center"), QStringLiteral("center"));
+    objectDetailsUiState_.pointAlignCombo_->addItem(QStringLiteral("top"), QStringLiteral("top"));
+    objectDetailsUiState_.pointAlignCombo_->addItem(QStringLiteral("bottom"), QStringLiteral("bottom"));
+    objectDetailsUiState_.pointAlignCombo_->addItem(QStringLiteral("left"), QStringLiteral("left"));
+    objectDetailsUiState_.pointAlignCombo_->addItem(QStringLiteral("right"), QStringLiteral("right"));
+    objectDetailsUiState_.pointAlignCombo_->addItem(QStringLiteral("top-left"), QStringLiteral("top-left"));
+    objectDetailsUiState_.pointAlignCombo_->addItem(QStringLiteral("top-right"), QStringLiteral("top-right"));
+    objectDetailsUiState_.pointAlignCombo_->addItem(QStringLiteral("bottom-left"), QStringLiteral("bottom-left"));
+    objectDetailsUiState_.pointAlignCombo_->addItem(QStringLiteral("bottom-right"), QStringLiteral("bottom-right"));
     objectDetailsUiState_.linePointFlagsEditor_ = new QWidget(objectDetailsUiState_.objectOrientationEditor_);
     auto *linePointFlagsLayout = new QVBoxLayout(objectDetailsUiState_.linePointFlagsEditor_);
     linePointFlagsLayout->setContentsMargins(0, 0, 0, 0);
@@ -272,12 +293,15 @@ void MapEditorTab::buildInspectorPanelUi()
         connect(objectDetailsUiState_.linePointSegmentSubtypeCombo_->lineEdit(), &QLineEdit::editingFinished, this, &MapEditorTab::handleLinePointSegmentSubtypeChanged);
     }
     connect(objectDetailsUiState_.linePointAltitudeAutoCheck_, &QCheckBox::toggled, this, &MapEditorTab::handleLinePointAltitudeAutoToggled);
+    connect(objectDetailsUiState_.pointAlignCombo_, qOverload<int>(&QComboBox::activated), this, &MapEditorTab::handlePointAlignChanged);
     linePointControlLayout->addWidget(objectDetailsUiState_.linePointPreviousControlCheck_);
     linePointControlLayout->addWidget(objectDetailsUiState_.linePointSmoothCheck_);
     linePointControlLayout->addWidget(objectDetailsUiState_.linePointNextControlCheck_);
     linePointControlLayout->addStretch(1);
     linePointSubtypeLayout->addWidget(objectDetailsUiState_.linePointSegmentSubtypeLabel_);
     linePointSubtypeLayout->addWidget(objectDetailsUiState_.linePointSegmentSubtypeCombo_, 1);
+    pointAlignLayout->addWidget(objectDetailsUiState_.pointAlignLabel_);
+    pointAlignLayout->addWidget(objectDetailsUiState_.pointAlignCombo_, 1);
     orientationLayout->addWidget(linePointControlEditor);
     orientationLayout->addWidget(objectDetailsUiState_.objectOrientationEnabledCheck_);
     orientationLayout->addWidget(objectDetailsUiState_.objectOrientationSpin_);
@@ -285,6 +309,7 @@ void MapEditorTab::buildInspectorPanelUi()
     orientationLayout->addWidget(objectDetailsUiState_.linePointLeftSizeSpin_);
     orientationLayout->addWidget(linePointSubtypeEditor);
     orientationLayout->addWidget(objectDetailsUiState_.linePointAltitudeAutoCheck_);
+    orientationLayout->addWidget(objectDetailsUiState_.pointAlignEditor_);
     orientationLayout->addWidget(objectDetailsUiState_.linePointFlagsEditor_);
     vertexSelectionLayout->addWidget(objectDetailsUiState_.objectOrientationEditor_);
 

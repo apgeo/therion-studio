@@ -299,6 +299,8 @@ In `Inspector -> Selection`, you can edit properties for selected `Scrap`, `Poin
 - `point label` and `line label` expose `Text (-text)`. Point labels render near the point; line labels render along the label line path, so the line controls the text length and orientation.
 - supported point types such as `height`, `passage-height`, `altitude`, `dimensions`, and `date` expose `Value (-value)`. Bracketed Therion values such as `[fix 1300]` are preserved.
 - Point types that support `-orientation` show an orientation override and a draggable orientation handle. Station names stay screen-aligned for readability.
+- Point objects expose `Align (-align)` when selected. Choose `Default` to remove the explicit align option, or choose a Therion alignment such as `top-left`, `center`, or `bottom-right`.
+- Line, area, and point objects that support Therion clipping expose `Disable clipping (-clip off)`. Turning it off removes the explicit `-clip` option instead of writing `-clip on`.
 - selected line vertices expose dedicated `Line Point` controls for supported per-vertex options. `Subtype` is shown for line types with segment subtypes, and `Altitude (auto)` is shown for wall line points and writes `altitude .`.
 - selected line vertices also expose an `Additional line-point options` editor in `Selection` for remaining per-vertex standalone options such as `altitude`, `subtype`, `direction`, or `adjust`, so these can be edited without switching to Raw mode. Rows managed by visible dedicated controls are hidden from this editor.
 - `Additional line-point options` edits are applied automatically when the field loses focus (no separate Apply/Clear buttons).

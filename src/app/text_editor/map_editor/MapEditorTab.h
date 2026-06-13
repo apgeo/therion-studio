@@ -347,6 +347,10 @@ private:
         QWidget *lineOptionsEditor_ = nullptr;
         QCheckBox *lineClosedCheck_ = nullptr;
         QCheckBox *lineReversedCheck_ = nullptr;
+        QCheckBox *objectClipDisabledCheck_ = nullptr;
+        QWidget *pointAlignEditor_ = nullptr;
+        QLabel *pointAlignLabel_ = nullptr;
+        QComboBox *pointAlignCombo_ = nullptr;
         QWidget *scrapScaleEditor_ = nullptr;
         QDoubleSpinBox *scrapScaleSourceX1Spin_ = nullptr;
         QDoubleSpinBox *scrapScaleSourceY1Spin_ = nullptr;
@@ -585,6 +589,8 @@ private:
     void handleLinePointLeftSizeEnabledToggled(bool checked);
     void handleLineClosedToggled(bool checked);
     void handleLineReversedToggled(bool checked);
+    void handleObjectClipDisabledToggled(bool checked);
+    void handlePointAlignChanged();
     void showMapSelectionContextMenu(const QPoint &globalPosition);
 
     QWidget *workspaceModeRow_ = nullptr;

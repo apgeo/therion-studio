@@ -35,6 +35,8 @@ public:
     void handleConfigureObjectSettingsTriggered();
     void handleLineClosedToggled(bool checked);
     void handleLineReversedToggled(bool checked);
+    void handleObjectClipDisabledToggled(bool checked);
+    void handlePointAlignChanged();
 
 private:
     QString tr(const char *text) const;

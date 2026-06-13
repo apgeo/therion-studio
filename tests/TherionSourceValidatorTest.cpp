@@ -116,6 +116,91 @@ void keepsQuotedTextValuesStartingWithDash()
             "Quoted text values that start with '-' should not be reported as malformed option tokens.");
 }
 
+void reportsDuplicateObjectIdsInSameSourceScope()
+{
+    const QString contents = QStringLiteral("scrap test\n"
+                                            "line wall -id line-1\n"
+                                            "endline\n"
+                                            "line border -id line-1\n"
+                                            "endline\n"
+                                            "point 0 0 label -id line-1\n"
+                                            "endscrap\n"
+                                            "\n"
+                                            "scrap other\n"
+                                            "line wall -id line-1\n"
+                                            "endline\n"
+                                            "endscrap\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents);
+
+    require(result.diagnostics.size() == 2,
+            "Duplicate object ids should be reported for later objects in the same source scope, regardless of object type.");
+    const TherionSourceDiagnostic &diagnostic = result.diagnostics.at(0);
+    require(diagnostic.code == QStringLiteral("duplicate-object-id"),
+            "Duplicate explicit object ids should use the duplicate-object-id diagnostic code.");
+    require(diagnostic.lineNumber == 4,
+            "Duplicate explicit object id diagnostic should point at the second object declaration.");
+    require(diagnostic.severity == TherionSourceDiagnosticSeverity::Error,
+            "Duplicate explicit object ids in the same source scope should be reported as errors.");
+    require(diagnosticSourceRange(diagnostic) == QStringLiteral("line-1"),
+            "Duplicate explicit object id diagnostic should point at the repeated id value.");
+    require(result.diagnostics.at(1).lineNumber == 6
+                && diagnosticSourceRange(result.diagnostics.at(1)) == QStringLiteral("line-1"),
+            "Duplicate explicit IDs should share one namespace for point, line, and area objects in a scrap.");
+}
+
+void reportsDuplicateNamespaceObjectNamesInSameParentScope()
+{
+    const QString contents = QStringLiteral("survey root\n"
+                                            "map shared\n"
+                                            "endmap\n"
+                                            "scrap shared\n"
+                                            "endscrap\n"
+                                            "survey shared\n"
+                                            "endsurvey\n"
+                                            "endsurvey\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents);
+
+    require(result.diagnostics.size() == 2,
+            "Map, scrap, and survey names should share one namespace in the same parent scope.");
+    require(result.diagnostics.at(0).code == QStringLiteral("duplicate-object-id")
+                && result.diagnostics.at(0).lineNumber == 4
+                && diagnosticSourceRange(result.diagnostics.at(0)) == QStringLiteral("shared"),
+            "Duplicate scrap names should be reported against the repeated namespace token.");
+    require(result.diagnostics.at(1).code == QStringLiteral("duplicate-object-id")
+                && result.diagnostics.at(1).lineNumber == 6
+                && diagnosticSourceRange(result.diagnostics.at(1)) == QStringLiteral("shared"),
+            "Duplicate survey names should be reported against the repeated namespace token.");
+}
+
+void reportsUnknownAreaLineReferencesInCurrentScrap()
+{
+    const QString contents = QStringLiteral("scrap test\n"
+                                            "line wall -id line-2\n"
+                                            "endline\n"
+                                            "area water\n"
+                                            "  line-1\n"
+                                            "  line-2\n"
+                                            "endarea\n"
+                                            "endscrap\n"
+                                            "\n"
+                                            "scrap other\n"
+                                            "line wall -id line-1\n"
+                                            "endline\n"
+                                            "endscrap\n");
+    const TherionSourceValidationResult result = TherionSourceValidator::validate(contents);
+
+    bool foundExpectedDiagnostic = false;
+    for (const TherionSourceDiagnostic &diagnostic : result.diagnostics) {
+        foundExpectedDiagnostic = foundExpectedDiagnostic
+            || (diagnostic.code == QStringLiteral("unknown-area-line-reference")
+                && diagnostic.lineNumber == 5
+                && diagnostic.severity == TherionSourceDiagnosticSeverity::Error
+                && diagnosticSourceRange(diagnostic) == QStringLiteral("line-1"));
+    }
+    require(foundExpectedDiagnostic,
+            "Unknown area line reference diagnostic should point at the missing area boundary id.");
+}
+
 TherionSourceValidationCatalog basicCatalog()
 {
     TherionSourceValidationCatalog catalog;
@@ -571,6 +656,9 @@ int main(int argc, char **argv)
     reportsAndFixesDuplicateOptionRows();
     reportsAndFixesOptionLikeSubtype();
     keepsQuotedTextValuesStartingWithDash();
+    reportsDuplicateObjectIdsInSameSourceScope();
+    reportsDuplicateNamespaceObjectNamesInSameParentScope();
+    reportsUnknownAreaLineReferencesInCurrentScrap();
     reportsUnknownCommandWithoutSafeFix();
     reportsUnknownOptionAndMissingOptionValue();
     reportsMissingRequiredArgument();

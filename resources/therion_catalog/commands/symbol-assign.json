@@ -1,0 +1,62 @@
+{
+  "name": "symbol-assign",
+  "directive": "symbol-assign",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "display a particular symbol in the given symbol-set. This option overrides symbol-set option. If the symbol has a subtype, <symbol-type> argument may have one of the following forms: type:subtype or simply type, which assigns new symbol set to all subtypes of a given symbol. Following symbols may not be used with this option: point section (which isn't rendered at all) and all point and line labels ( label , remark , altitude , height , passage-height , station-name , date ). See the chapter Changing layout/Customizing text labels for details how to change labels' appearance. (M, A) Group may be one of the following: all, centerline, sections, water, speleothems, passage-fills, ice, sediments, equipment. There are two special symbols: north-arrow, scale-bar.",
+  "syntax": [
+    "0cm minus 4pt symbol-assign <point/line/area/group/special> <symbol-type> <symbol-set>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<point/line/area/group/special>",
+      "name": "<point/line/area/group/special>",
+      "signature": "<point/line/area/group/special>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<symbol-type>",
+      "name": "<symbol-type>",
+      "signature": "<symbol-type>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<symbol-set>",
+      "name": "<symbol-set>",
+      "signature": "<symbol-set>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

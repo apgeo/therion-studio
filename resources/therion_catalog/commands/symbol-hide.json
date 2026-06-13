@@ -1,0 +1,51 @@
+{
+  "name": "symbol-hide",
+  "directive": "symbol-hide",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "don't display particular symbol or group of symbols. You may use group cave-centerline, group surface-centerline, point cave-station, point surface-station and group text in symbol-hide and symbol-show commands. Use flag:<entrance/continuation/sink/spring/doline/dig> as a <symbol-type> to hide stations with particular flags (e.g. symbol-hide point flag:entrance). May be combined with symbol-show.(M, A)",
+  "syntax": [
+    "symbol-hide <point/line/area/group/special> <symbol-type>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<point/line/area/group/special>",
+      "name": "<point/line/area/group/special>",
+      "signature": "<point/line/area/group/special>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<symbol-type>",
+      "name": "<symbol-type>",
+      "signature": "<symbol-type>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

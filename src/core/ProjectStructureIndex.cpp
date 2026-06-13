@@ -15,6 +15,7 @@
 #include <QSet>
 
 #include <algorithm>
+#include <optional>
 
 namespace TherionStudio
 {
@@ -145,6 +146,75 @@ QString namespacePathWithChild(const QString &currentNamespacePath, const QStrin
     return QStringLiteral("%1.%2").arg(child, currentNamespacePath);
 }
 
+QStringList namespacePathComponents(const QString &namespacePath)
+{
+    QStringList components;
+    for (const QString &component : namespacePath.split(QLatin1Char('.'), Qt::SkipEmptyParts)) {
+        const QString trimmedComponent = component.trimmed();
+        if (!trimmedComponent.isEmpty()) {
+            components.append(trimmedComponent);
+        }
+    }
+    return components;
+}
+
+QString joinedNamespacePath(const QStringList &components)
+{
+    return components.join(QLatin1Char('.'));
+}
+
+bool namespaceComponentsEqual(const QString &left, const QString &right)
+{
+    return normalizedNamespaceToken(left) == normalizedNamespaceToken(right);
+}
+
+QString namespacePathForReference(const QString &ownerNamespacePath, const QString &referenceNamespacePath)
+{
+    const QStringList ownerComponents = namespacePathComponents(ownerNamespacePath);
+    const QStringList referenceComponents = namespacePathComponents(referenceNamespacePath);
+    if (referenceComponents.isEmpty()) {
+        return joinedNamespacePath(ownerComponents);
+    }
+    if (ownerComponents.isEmpty()) {
+        return joinedNamespacePath(referenceComponents);
+    }
+
+    const int directCount = std::min(ownerComponents.size(), referenceComponents.size());
+    bool ownerStartsWithReference = true;
+    for (int index = 0; index < directCount; ++index) {
+        if (!namespaceComponentsEqual(ownerComponents.at(index), referenceComponents.at(index))) {
+            ownerStartsWithReference = false;
+            break;
+        }
+    }
+    if (ownerStartsWithReference && directCount == referenceComponents.size()) {
+        return joinedNamespacePath(ownerComponents);
+    }
+
+    int overlap = std::min(ownerComponents.size(), referenceComponents.size());
+    while (overlap > 0) {
+        bool matches = true;
+        for (int index = 0; index < overlap; ++index) {
+            const QString &referenceComponent = referenceComponents.at(referenceComponents.size() - overlap + index);
+            const QString &ownerComponent = ownerComponents.at(index);
+            if (!namespaceComponentsEqual(referenceComponent, ownerComponent)) {
+                matches = false;
+                break;
+            }
+        }
+        if (matches) {
+            break;
+        }
+        --overlap;
+    }
+
+    QStringList combinedComponents = referenceComponents;
+    for (int index = overlap; index < ownerComponents.size(); ++index) {
+        combinedComponents.append(ownerComponents.at(index));
+    }
+    return joinedNamespacePath(combinedComponents);
+}
+
 struct MapReferenceParts
 {
     QString name;
@@ -238,11 +308,21 @@ ReferenceKeyIndex mergedReferenceKeysByReferenceName(const QVector<ProjectStruct
 
 ReferenceResolution resolveCandidates(const QVector<QString> &entryKeys)
 {
-    if (entryKeys.size() == 1) {
-        return ReferenceResolution{ReferenceResolutionState::Unique, entryKeys.first(), 1};
+    QSet<QString> uniqueKeys;
+    QVector<QString> orderedUniqueKeys;
+    for (const QString &entryKey : entryKeys) {
+        if (uniqueKeys.contains(entryKey)) {
+            continue;
+        }
+        uniqueKeys.insert(entryKey);
+        orderedUniqueKeys.append(entryKey);
     }
-    if (entryKeys.size() > 1) {
-        return ReferenceResolution{ReferenceResolutionState::Ambiguous, QString(), static_cast<int>(entryKeys.size())};
+
+    if (orderedUniqueKeys.size() == 1) {
+        return ReferenceResolution{ReferenceResolutionState::Unique, orderedUniqueKeys.first(), 1};
+    }
+    if (orderedUniqueKeys.size() > 1) {
+        return ReferenceResolution{ReferenceResolutionState::Ambiguous, QString(), static_cast<int>(orderedUniqueKeys.size())};
     }
 
     return {};
@@ -296,6 +376,37 @@ QString normalizedStationReferenceToken(QString token)
     return token;
 }
 
+QString stationReferenceCandidateKey(const QString &referenceName, const QString &ownerNamespacePath)
+{
+    const MapReferenceParts reference = parseMapReference(referenceName);
+    if (reference.name.isEmpty()) {
+        return QString();
+    }
+    const QString namespacePath = reference.hasNamespace
+        ? namespacePathForReference(ownerNamespacePath, reference.namespacePath)
+        : ownerNamespacePath;
+    return namespacePath.trimmed().isEmpty()
+        ? normalizedStationReferenceToken(reference.name)
+        : normalizedStationReferenceToken(QStringLiteral("%1@%2").arg(reference.name, namespacePath));
+}
+
+QString stationReferenceDefinitionKey(const QString &referenceName, const QString &ownerNamespacePath)
+{
+    return stationReferenceCandidateKey(referenceName, ownerNamespacePath);
+}
+
+QStringList stationReferenceLookupKeys(const QString &referenceName, const QString &ownerNamespacePath)
+{
+    QStringList keys;
+    const QString contextualKey = stationReferenceCandidateKey(referenceName, ownerNamespacePath);
+    if (!contextualKey.isEmpty()) {
+        keys.append(contextualKey);
+    }
+
+    keys.removeDuplicates();
+    return keys;
+}
+
 void addStationReferenceKey(StationReferenceIndex *index,
                             const QString &referenceName,
                             const QString &ownerNamespacePath,
@@ -305,34 +416,34 @@ void addStationReferenceKey(StationReferenceIndex *index,
         return;
     }
 
-    index->keysByExactReference[normalizedStationReferenceToken(referenceName)].append(entryKey);
+    const QString candidateKey = stationReferenceDefinitionKey(referenceName, ownerNamespacePath);
+    if (candidateKey.isEmpty()) {
+        return;
+    }
+
+    Q_UNUSED(entryKey)
+    index->keysByExactReference[candidateKey].append(candidateKey);
 
     const MapReferenceParts reference = parseMapReference(referenceName);
     if (reference.name.isEmpty()) {
         return;
     }
-    if (!reference.hasNamespace && !ownerNamespacePath.trimmed().isEmpty()) {
-        index->keysByExactReference[
-            normalizedStationReferenceToken(QStringLiteral("%1@%2").arg(reference.name, ownerNamespacePath))]
-            .append(entryKey);
-    }
     const QString targetNamespacePath = reference.hasNamespace
-        ? namespacePathWithChild(ownerNamespacePath, reference.namespacePath)
+        ? namespacePathForReference(ownerNamespacePath, reference.namespacePath)
         : ownerNamespacePath;
     index->keysByNameAndNamespace.keysByNameAndNamespace[
-        namespacedReferenceLookupKey(reference.name, targetNamespacePath)].append(entryKey);
+        namespacedReferenceLookupKey(reference.name, targetNamespacePath)].append(candidateKey);
 }
 
 ReferenceResolution resolveStationReference(const StationReferenceIndex &index,
                                             const QString &referenceName,
                                             const QString &ownerNamespacePath)
 {
-    const ReferenceResolution exactResolution =
-        resolveCandidates(index.keysByExactReference.value(normalizedStationReferenceToken(referenceName)));
-    if (exactResolution.state != ReferenceResolutionState::Missing) {
-        return exactResolution;
+    QVector<QString> candidates;
+    for (const QString &lookupKey : stationReferenceLookupKeys(referenceName, ownerNamespacePath)) {
+        candidates += index.keysByExactReference.value(lookupKey);
     }
-    return resolveReferenceKey(index.keysByNameAndNamespace, referenceName, ownerNamespacePath);
+    return resolveCandidates(candidates);
 }
 
 bool stationReferenceShouldReportMissing(const QString &referenceName)
@@ -907,6 +1018,86 @@ QString objectDisplayText(const ProjectStructureEntry &entry, const TherionParse
     return entry.name;
 }
 
+bool structureEntryKindParticipatesInDuplicateIdentity(ProjectStructureEntryKind kind)
+{
+    return kind == ProjectStructureEntryKind::Survey
+        || kind == ProjectStructureEntryKind::Map
+        || kind == ProjectStructureEntryKind::Scrap
+        || kind == ProjectStructureEntryKind::Point
+        || kind == ProjectStructureEntryKind::Line
+        || kind == ProjectStructureEntryKind::Area;
+}
+
+bool structureEntryUsesScrapObjectIdNamespace(ProjectStructureEntryKind kind)
+{
+    return kind == ProjectStructureEntryKind::Point
+        || kind == ProjectStructureEntryKind::Line
+        || kind == ProjectStructureEntryKind::Area;
+}
+
+bool structureEntryUsesParentNamespaceName(ProjectStructureEntryKind kind)
+{
+    return kind == ProjectStructureEntryKind::Survey
+        || kind == ProjectStructureEntryKind::Map
+        || kind == ProjectStructureEntryKind::Scrap;
+}
+
+QString parentNamespacePathForDuplicateIdentity(const ProjectStructureEntry &entry)
+{
+    if (entry.kind != ProjectStructureEntryKind::Survey || !entry.createsNamespace) {
+        return entry.namespacePath;
+    }
+
+    QStringList parts = namespacePathComponents(entry.namespacePath);
+    if (!parts.isEmpty()) {
+        parts.removeFirst();
+    }
+    return parts.join(QLatin1Char('.'));
+}
+
+QString duplicateIdentityLookupKey(const ProjectStructureEntry &entry,
+                                   const QString &identifier)
+{
+    if (structureEntryUsesScrapObjectIdNamespace(entry.kind)) {
+        return QStringLiteral("object@%1:%2")
+            .arg(entry.parentObjectId,
+                 normalizedIdentityToken(identifier));
+    }
+
+    if (structureEntryUsesParentNamespaceName(entry.kind)) {
+        return QStringLiteral("namespace@%1:%2")
+            .arg(normalizedNamespaceToken(parentNamespacePathForDuplicateIdentity(entry)),
+                 normalizedIdentityToken(identifier));
+    }
+
+    return QString();
+}
+
+std::optional<TherionSourceLogicalArgumentRange> commandDuplicateIdentityRange(
+    const TherionSourceLogicalCommand &command,
+    ProjectStructureEntryKind kind)
+{
+    if (structureEntryUsesParentNamespaceName(kind)) {
+        if (command.positionalArgumentRanges.isEmpty()) {
+            return std::nullopt;
+        }
+        return command.positionalArgumentRanges.constFirst();
+    }
+
+    if (!structureEntryUsesScrapObjectIdNamespace(kind)) {
+        return std::nullopt;
+    }
+
+    for (const TherionSourceLogicalOptionEntryRange &optionEntry : command.optionEntryRanges) {
+        if (normalizedCommandOptionName(optionEntry.key) != QStringLiteral("id")
+            || optionEntry.valueRanges.isEmpty()) {
+            continue;
+        }
+        return optionEntry.valueRanges.constFirst();
+    }
+    return std::nullopt;
+}
+
 QString sectionNameFromLine(const TherionParsedLine &parsedLine)
 {
     if (parsedLine.tokens.size() >= 2) {
@@ -1431,6 +1622,68 @@ QVector<ProjectIndexDiagnostic> scanStationReferences(const QVector<ProjectStruc
     return diagnostics;
 }
 
+QVector<ProjectIndexDiagnostic> scanDuplicateObjectIds(const QVector<ProjectStructureEntry> &entries,
+                                                       ParsedFileCache *cache,
+                                                       const QHash<QString, QString> &inMemoryFileContentsByPath)
+{
+    QVector<ProjectIndexDiagnostic> diagnostics;
+    QHash<QString, QVector<ProjectStructureEntry>> entriesByFile;
+    for (const ProjectStructureEntry &entry : entries) {
+        if (!structureEntryKindParticipatesInDuplicateIdentity(entry.kind)
+            || entry.name.trimmed().isEmpty()
+            || entry.sourceFile.trimmed().isEmpty()
+            || entry.lineNumber <= 0) {
+            continue;
+        }
+        entriesByFile[normalizedFilePathKey(entry.sourceFile)].append(entry);
+    }
+
+    QHash<QString, ProjectStructureEntry> firstEntryByIdKey;
+    for (auto fileIt = entriesByFile.constBegin(); fileIt != entriesByFile.constEnd(); ++fileIt) {
+        const TherionSourceLogicalDocument &logicalDocument =
+            logicalDocumentForFile(fileIt.key(), cache, inMemoryFileContentsByPath);
+        QHash<int, TherionSourceLogicalCommand> commandsByStartLine;
+        for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
+            commandsByStartLine.insert(command.startLineNumber, command);
+        }
+
+        for (const ProjectStructureEntry &entry : fileIt.value()) {
+            const auto commandIt = commandsByStartLine.constFind(entry.lineNumber);
+            if (commandIt == commandsByStartLine.constEnd()) {
+                continue;
+            }
+
+            const std::optional<TherionSourceLogicalArgumentRange> idRange =
+                commandDuplicateIdentityRange(commandIt.value(), entry.kind);
+            if (!idRange.has_value() || idRange->text.trimmed().isEmpty()) {
+                continue;
+            }
+
+            const QString idKey = duplicateIdentityLookupKey(entry, idRange->text);
+            if (idKey.isEmpty()) {
+                continue;
+            }
+            const auto firstIt = firstEntryByIdKey.constFind(idKey);
+            if (firstIt == firstEntryByIdKey.constEnd()) {
+                firstEntryByIdKey.insert(idKey, entry);
+                continue;
+            }
+
+            appendProjectIndexDiagnostic(&diagnostics,
+                                         ProjectIndexDiagnosticKind::DuplicateObjectId,
+                                         entry.objectId,
+                                         entry.sourceFile,
+                                         idRange->physicalRange.lineNumber,
+                                         idRange->physicalRange.columnNumber,
+                                         idRange->physicalRange.columnLength,
+                                         idRange->text,
+                                         2);
+        }
+    }
+
+    return diagnostics;
+}
+
 QVector<ProjectStructureEntry> scanTh2ObjectsFromLogicalCommands(
     const QString &sourceFile,
     const QVector<TherionSourceLogicalCommand> &commands)
@@ -1619,6 +1872,9 @@ ProjectIndexSnapshot ProjectStructureIndex::scanProjectIndex(const QString &proj
     snapshot.diagnostics += scanStationReferences(snapshot.entries,
                                                   &cache,
                                                   inMemoryFileContentsByPath);
+    snapshot.diagnostics += scanDuplicateObjectIds(snapshot.entries,
+                                                   &cache,
+                                                   inMemoryFileContentsByPath);
     return snapshot;
 }
 

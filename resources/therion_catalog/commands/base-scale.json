@@ -1,0 +1,51 @@
+{
+  "name": "base-scale",
+  "directive": "base-scale",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "if set, Therion will optically scale the map by a (scale/base-scale) factor. This has the same effect as if the map printed in base-scale would be photo-reduced to the scale. (M, A)",
+  "syntax": [
+    "base-scale <picture length> <real length>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<picture length>",
+      "name": "<picture length>",
+      "signature": "<picture length>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<real length>",
+      "name": "<real length>",
+      "signature": "<real length>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

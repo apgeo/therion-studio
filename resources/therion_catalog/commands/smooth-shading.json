@@ -1,0 +1,40 @@
+{
+  "name": "smooth-shading",
+  "directive": "smooth-shading",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "set the mode of smooth scrap background shading. By default, altitude and depth colour is interpolated across the scrap the quick way. Some issues are present if transparent symbol colours are used. (Coloured scrap background is visible underneath the semitransparent areas, although only lower-scrap-drawings should be visible.) More precise modes should be added in the future. If off, scrap is filled with single colour.",
+  "syntax": [
+    "smooth-shading <off/quick>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<off/quick>",
+      "name": "<off/quick>",
+      "signature": "<off/quick>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

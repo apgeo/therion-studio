@@ -1,0 +1,51 @@
+{
+  "name": "page-setup",
+  "directive": "page-setup",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "set page dimensions in this order: paper-width, paper-height, page-width, page-height, left-margin and top-margin. If not specified, it will be computed from size and overlap (A; default: 21 29.7 20 28.7 0.5 0.5 cm)",
+  "syntax": [
+    "page-setup <dimensions> <units>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<dimensions>",
+      "name": "<dimensions>",
+      "signature": "<dimensions>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<units>",
+      "name": "<units>",
+      "signature": "<units>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

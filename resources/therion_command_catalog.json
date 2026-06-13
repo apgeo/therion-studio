@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generated_at_utc": "2026-06-12T10:49:34.984434+00:00",
+    "generated_at_utc": "2026-06-13T12:12:29.897936+00:00",
     "generator_version": "4",
     "source_repository": "snapshot-copy",
     "source_reference": "snapshot-copy",
@@ -199,6 +199,57 @@
       }
     },
     {
+      "name": "base-scale",
+      "directive": "base-scale",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "if set, Therion will optically scale the map by a (scale/base-scale) factor. This has the same effect as if the map printed in base-scale would be photo-reduced to the scale. (M, A)",
+      "syntax": [
+        "base-scale <picture length> <real length>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<picture length>",
+          "name": "<picture length>",
+          "signature": "<picture length>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<real length>",
+          "name": "<real length>",
+          "signature": "<real length>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
       "name": "break",
       "directive": "break",
       "source": {
@@ -392,6 +443,276 @@
       "aliases": [
         "centerline"
       ]
+    },
+    {
+      "name": "code",
+      "directive": "code",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "Add/redefine \\ and \\ macros here. This allows user to configure various things (like user defined symbols, map and atlas layout at one place &c.) See the chapter Changing layout for details.",
+      "syntax": [
+        "code <metapost/tex-map/tex-atlas>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<metapost/tex-map/tex-atlas>",
+          "name": "<metapost/tex-map/tex-atlas>",
+          "signature": "<metapost/tex-map/tex-atlas>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "colour",
+      "directive": "colour",
+      "aliases": [
+        "color"
+      ],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "customize colour for special map items (map-fg, map-bg, preview-above, preview-below, labels). Colour range is 0--100 for grayscale, [0--100 0--100 0--100] triplet for RGB colours and [0--100 0--100 0--100 0--100] quadruplet for CMYK colours. (Note, that not all colour combinations are valid; e.g. no printer will print CMYK [100 100 100 100 93. The maximum ink coverage or limit ( C+M+Y+K ) may be around 240 or 300, depending on the printer.) RGB colours can be specified in hexadecimal format (e.g. ffeeaa). For map-fg, you can use altitude, scrap or map as colours. In this case the map is coloured according to altitude, scraps or maps. For map-bg, you can use transparent to omit page background completely. For labels, you can switch colour on/off. If on, labels are coloured using the colour of associated scrap.",
+      "syntax": [
+        "colo[u]r <item> <colour>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<item>",
+          "name": "<item>",
+          "signature": "<item>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<colour>",
+          "name": "<colour>",
+          "signature": "<colour>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "colour-legend",
+      "directive": "colour-legend",
+      "aliases": [
+        "color-legend"
+      ],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set type of map-fg colours legend when map-fg is set to altitude, scrap or map. For compatibility reasons, on is equivalent to smooth. (M, A; default: smooth if applicable)",
+      "syntax": [
+        "colo[u]r-legend <smooth/discrete/off/on>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<smooth/discrete/off/on>",
+          "name": "<smooth/discrete/off/on>",
+          "signature": "<smooth/discrete/off/on>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "colour-model",
+      "directive": "colour-model",
+      "aliases": [
+        "color-model"
+      ],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "select the output colour model (M, A; default: cmyk). The CMYK colour model is intended for printing. Black overprint is used for the best appearance of black lines and texts. The hue of other colours may vary depending on the type or settings of the RIP or printer driver. The RGB colour model is intended for screen or multimedia projector presentation. If used for printing, the result will depend on the colour management settings and also on particular colour, as not all RGB colours can be represented on printer. The grayscale colour model is meant for printing on B&W printers. If input colours (lookup, colour in the layout) do not match the output colour model (e.g. only RGB is defined in the lookup and CMYK selected as the colour-model), they will be converted to the output model.",
+      "syntax": [
+        "colo[u]r-model <cmyk/rgb/grayscale>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<cmyk/rgb/grayscale>",
+          "name": "<cmyk/rgb/grayscale>",
+          "signature": "<cmyk/rgb/grayscale>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "colour-profile",
+      "directive": "colour-profile",
+      "aliases": [
+        "color-profile"
+      ],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "assign an ICC profile to colours specified in the given colour model. ICC profiles are applied only to drawings, not to embedded raster images like sketches and surface bitmaps. (M, A)",
+      "syntax": [
+        "colo[u]r-profile <cmyk/rgb/grayscale> <filename>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<cmyk/rgb/grayscale>",
+          "name": "<cmyk/rgb/grayscale>",
+          "signature": "<cmyk/rgb/grayscale>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<filename>",
+          "name": "<filename>",
+          "signature": "<filename>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "copy",
+      "directive": "copy",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set properties here that are not modified based on the given source layout. map presentation-related:",
+      "syntax": [
+        "copy <source layout id>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<source layout id>",
+          "name": "<source layout id>",
+          "signature": "<source layout id>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
     },
     {
       "name": "cs",
@@ -608,6 +929,46 @@
       }
     },
     {
+      "name": "debug",
+      "directive": "debug",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "draw scrap in different stages of transformation in different colours to see how Therion distorts map data. See the description of scrap command for details. The points with distance changed most during transformation are displayed orange. If scrap-names is specified, scrap names are shown for each scrap, station-names displays name of each survey station.",
+      "syntax": [
+        "debug <on/all/first/second/scrap-names/station-names/off>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<on/all/first/second/scrap-names/station-names/off>",
+          "name": "<on/all/first/second/scrap-names/station-names/off>",
+          "signature": "<on/all/first/second/scrap-names/station-names/off>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
       "name": "declination",
       "directive": "declination",
       "source": {
@@ -658,6 +1019,166 @@
       }
     },
     {
+      "name": "doc-author",
+      "directive": "doc-author",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set document author (M, A)",
+      "syntax": [
+        "doc-author <string>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<string>",
+          "name": "<string>",
+          "signature": "<string>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "doc-keywords",
+      "directive": "doc-keywords",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set document keywords (M, A)",
+      "syntax": [
+        "doc-keywords <string>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<string>",
+          "name": "<string>",
+          "signature": "<string>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "doc-subject",
+      "directive": "doc-subject",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set document subject (M, A)",
+      "syntax": [
+        "doc-subject <string>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<string>",
+          "name": "<string>",
+          "signature": "<string>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "doc-title",
+      "directive": "doc-title",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set document title (M, A) customization:",
+      "syntax": [
+        "doc-title <string>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<string>",
+          "name": "<string>",
+          "signature": "<string>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
       "name": "encoding",
       "directive": "encoding",
       "source": {
@@ -690,6 +1211,34 @@
       "options": [],
       "dependencies": [
         "context: none"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "endcode",
+      "directive": "endcode",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "should end the TeX\\ and \\ sections",
+      "syntax": [
+        "endcode"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [],
+      "options": [],
+      "dependencies": [
+        "context: layout"
       ],
       "allowed_values": [],
       "block": {
@@ -759,6 +1308,57 @@
       "dependencies": [
         "context: centerline",
         "context: none, survey"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "exclude-pages",
+      "directive": "exclude-pages",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "exclude specified pages from cave atlas. The list may contain page numbers separated by a comma or dash (for intervals) e.g. 2,4-7,9,23 means, that pages 2, 4, 5, 6, 7, 9 and 23 should be omitted. Only the map pages should be counted. (Set own-pages 0 and title-pages off to get the correct page numbers to be excluded.) Changes of own-pages or title-pages options don't affect page excluding. (A)",
+      "syntax": [
+        "exclude-pages <on/off> <list>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<on/off>",
+          "name": "<on/off>",
+          "signature": "<on/off>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<list>",
+          "name": "<list>",
+          "signature": "<list>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
       ],
       "allowed_values": [],
       "block": {
@@ -1394,6 +1994,130 @@
       }
     },
     {
+      "name": "fonts-setup",
+      "directive": "fonts-setup",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "specify size of the text in points. <normalsize> applies to point label, <smallsize> applies to remark and all other point labels. Each of them may apply to line label according to its -scale option. The defaults are 8 10 12 16 24 for scales upto 1:100; 7 8 10 14 20 for scales upto 1:200; 6 7 8 10 14 for scales upto 1:500 and 5 6 7 8 10 for scales smaller than 1:500.",
+      "syntax": [
+        "fonts-setup <tinysize> <smallsize> <normalsize> <largesize> <hugesize>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<tinysize>",
+          "name": "<tinysize>",
+          "signature": "<tinysize>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<smallsize>",
+          "name": "<smallsize>",
+          "signature": "<smallsize>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<normalsize>",
+          "name": "<normalsize>",
+          "signature": "<normalsize>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<largesize>",
+          "name": "<largesize>",
+          "signature": "<largesize>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<hugesize>",
+          "name": "<hugesize>",
+          "signature": "<hugesize>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "geospatial",
+      "directive": "geospatial",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "enable/disable geospatial PDF features. When enabled, compatible applications can use this information (e.g.\\ Acrobat Reader for length measurements and finding coordinates; GIS applications like GDAL (Raster GDAL tools like gdal_translate work fine, while vector tools like ogr2ogr support Therion maps starting from version 3.10.0. Note that QGIS uses GDAL library to import PDF data.) and QGIS for importing and processing georeferenced data). This feature should be used with layers on setting. (M; default: on)",
+      "syntax": [
+        "geospatial <on/off>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<on/off>",
+          "name": "<on/off>",
+          "signature": "<on/off>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
       "name": "grade",
       "directive": "grade",
       "source": {
@@ -1428,6 +2152,46 @@
       "dependencies": [
         "context: centerline",
         "context: all"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "grid",
+      "directive": "grid",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "enable/disable grid (optionally coordinates' values may be also displayed) (M, A; default: off)",
+      "syntax": [
+        "grid <off/bottom/top>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<off/bottom/top>",
+          "name": "<off/bottom/top>",
+          "signature": "<off/bottom/top>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
       ],
       "allowed_values": [],
       "block": {
@@ -1478,6 +2242,192 @@
       "options": [],
       "dependencies": [
         "context: centerline"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "grid-coords",
+      "directive": "grid-coords",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "specify where to label grid with coordinates. (M, A; default: off)",
+      "syntax": [
+        "grid-coords <off/border/all>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<off/border/all>",
+          "name": "<off/border/all>",
+          "signature": "<off/border/all>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "grid-origin",
+      "directive": "grid-origin",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set coordinates of grid origin (M, A)",
+      "syntax": [
+        "grid-origin <x> <y> <z> <units>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<x>",
+          "name": "<x>",
+          "signature": "<x>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<y>",
+          "name": "<y>",
+          "signature": "<y>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<z>",
+          "name": "<z>",
+          "signature": "<z>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<units>",
+          "name": "<units>",
+          "signature": "<units>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "grid-size",
+      "directive": "grid-size",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set grid size in real units (M, A; default is equal to scalebar size)",
+      "syntax": [
+        "grid-size <x> <y> <z> <units>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<x>",
+          "name": "<x>",
+          "signature": "<x>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<y>",
+          "name": "<y>",
+          "signature": "<y>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<z>",
+          "name": "<z>",
+          "signature": "<z>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<units>",
+          "name": "<units>",
+          "signature": "<units>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
       ],
       "allowed_values": [],
       "block": {
@@ -1806,20 +2756,74 @@
         "file": "therion/thbook/ch03.tex",
         "line": 38
       },
-      "summary": "",
+      "summary": "set output language. Available languages are listed on the copyright page. See the Appendix if you want to add or customize translations. (M, A)",
       "syntax": [
         "* language <xx_[YY]>"
       ],
       "contexts": [
-        "none"
+        "none",
+        "layout"
       ],
       "document_types": [
         "thconfig"
       ],
-      "arguments": [],
+      "arguments": [
+        {
+          "raw": "<xx[_YY]>",
+          "name": "<xx[_YY]>",
+          "signature": "<xx[_YY]>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
       "options": [],
       "dependencies": [
-        "context: none"
+        "context: none",
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "layers",
+      "directive": "layers",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "enable/disable PDF 1.5 layers (M, A; default: on)",
+      "syntax": [
+        "layers <on/off>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<on/off>",
+          "name": "<on/off>",
+          "signature": "<on/off>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
       ],
       "allowed_values": [],
       "block": {
@@ -1918,7 +2922,7 @@
           "raw": "0cm minus 4pt symbol-assign <point/line/area/group/special> <symbol-type> <symbol-set> = display a particular symbol in the given symbol-set. This option overrides symbol-set option. If the symbol has a subtype, <symbol-type> argument may have one of the following forms: type:subtype or simply type, which assigns new symbol set to all subtypes of a given symbol. Following symbols may not be used with this option: point section (which isn't rendered at all) and all point and line labels ( label , remark , altitude , height , passage-height , station-name , date ). See the chapter Changing layout/Customizing text labels for details how to change labels' appearance. (M, A) Group may be one of the following: all, centerline, sections, water, speleothems, passage-fills, ice, sediments, equipment. There are two special symbols: north-arrow, scale-bar.",
           "name": "0cm minus 4pt symbol-assign <point/line/area/group/special> <symbol-type> <symbol-set>",
           "signature": "0cm minus 4pt symbol-assign <point/line/area/group/special> <symbol-type> <symbol-set>",
-          "option_key": "",
+          "option_key": "-symbol-assign",
           "value_arity": "N",
           "value_domain": "enum",
           "description": "display a particular symbol in the given symbol-set. This option overrides symbol-set option. If the symbol has a subtype, <symbol-type> argument may have one of the following forms: type:subtype or simply type, which assigns new symbol set to all subtypes of a given symbol. Following symbols may not be used with this option: point section (which isn't rendered at all) and all point and line labels ( label , remark , altitude , height , passage-height , station-name , date ). See the chapter Changing layout/Customizing text labels for details how to change labels' appearance. (M, A) Group may be one of the following: all, centerline, sections, water, speleothems, passage-fills, ice, sediments, equipment. There are two special symbols: north-arrow, scale-bar.",
@@ -2677,6 +3681,137 @@
       }
     },
     {
+      "name": "legend",
+      "directive": "legend",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "display list of used map symbols in the map header. If set to all, all symbols from the current symbol set are displayed. (M, A; default: off)",
+      "syntax": [
+        "legend <on/off/all>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<on/off/all>",
+          "name": "<on/off/all>",
+          "signature": "<on/off/all>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "legend-columns",
+      "directive": "legend-columns",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "adjusts the number of legend columns (M, A; default: 2)",
+      "syntax": [
+        "legend-columns <number>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<number>",
+          "name": "<number>",
+          "signature": "<number>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "legend-width",
+      "directive": "legend-width",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "legend width (M, A; default: 14 cm)",
+      "syntax": [
+        "legend-width <n> <units>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<n>",
+          "name": "<n>",
+          "signature": "<n>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<units>",
+          "name": "<units>",
+          "signature": "<units>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
       "name": "line",
       "directive": "line",
       "source": {
@@ -3378,6 +4513,221 @@
       }
     },
     {
+      "name": "map-comment",
+      "directive": "map-comment",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "optional comment displayed at the map header (M)",
+      "syntax": [
+        "map-comment <string>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<string>",
+          "name": "<string>",
+          "signature": "<string>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "map-header",
+      "directive": "map-header",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "print map header at location specified by <x> <y>. Predefined map header contains some basic information about cave: name, scale, north arrow, list of surveyors etc. It is fully customizable (see the chapter Changing layout for details). <x> is easting (left-right on page). <y> is northing (up/down page). Ranges for <x> and <y> are -100--200. Lower-left corner of the map is 0 0, upper-right corner is 100 100. The header is aligned with the specified corner or side to this anchor point. (M; default: 0 100 nw)",
+      "syntax": [
+        "map-header <x> <y> <off/n/s/e/w/ne/nw/se/sw/center>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<x>",
+          "name": "<x>",
+          "signature": "<x>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<y>",
+          "name": "<y>",
+          "signature": "<y>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<off/n/s/e/w/ne/nw/se/sw/center>",
+          "name": "<off/n/s/e/w/ne/nw/se/sw/center>",
+          "signature": "<off/n/s/e/w/ne/nw/se/sw/center>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "map-header-bg",
+      "directive": "map-header-bg",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "when on, background of map header is filled with background color (e.g. to hide map grid). (M; default: off)",
+      "syntax": [
+        "map-header-bg <on/off>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<on/off>",
+          "name": "<on/off>",
+          "signature": "<on/off>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "map-image",
+      "directive": "map-image",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "include image (Note that you can include PDF too, which may be used to combine plan and extended elevation into one nice looking PDF file.) specified by <filename> into map at location specified by <x> <y>. For coordinates and alignment details, see map-header specification.",
+      "syntax": [
+        "map-image <x> <y> <n/s/e/w/ne/nw/se/sw/center> <filename>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<x>",
+          "name": "<x>",
+          "signature": "<x>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<y>",
+          "name": "<y>",
+          "signature": "<y>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<n/s/e/w/ne/nw/se/sw/center>",
+          "name": "<n/s/e/w/ne/nw/se/sw/center>",
+          "signature": "<n/s/e/w/ne/nw/se/sw/center>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<filename>",
+          "name": "<filename>",
+          "signature": "<filename>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
       "name": "maps",
       "directive": "maps",
       "source": {
@@ -3481,6 +4831,563 @@
         "painted",
         "temporary"
       ],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "min-symbol-scale",
+      "directive": "min-symbol-scale",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "define minimal <scale>, from which points and lines are displayed on the map. E.g. for min-symbol-scale M, no points or lines scaled S and XS will be shown on the map. <scale> has the same format, as scale option for points and lines.",
+      "syntax": [
+        "min-symbol-scale <scale>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<scale>",
+          "name": "<scale>",
+          "signature": "<scale>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "nav-factor",
+      "directive": "nav-factor",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set atlas navigator zoom factor (A; default: 30)",
+      "syntax": [
+        "nav-factor <factor>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<factor>",
+          "name": "<factor>",
+          "signature": "<factor>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "nav-size",
+      "directive": "nav-size",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set number of atlas pages in both directions of navigator (A; default: 2 2)",
+      "syntax": [
+        "nav-size <x-size> <y-size>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<x-size>",
+          "name": "<x-size>",
+          "signature": "<x-size>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<y-size>",
+          "name": "<y-size>",
+          "signature": "<y-size>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "north",
+      "directive": "north",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "specify default orientation of the map. By default, true (astronomical) north is used. It is ignored when used with local coordinate system.",
+      "syntax": [
+        "north <true/grid>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<true/grid>",
+          "name": "<true/grid>",
+          "signature": "<true/grid>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "opacity",
+      "directive": "opacity",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set opacity value (used if transparency is on). Value range is 0--100. (M, A; default: 70)",
+      "syntax": [
+        "opacity <value>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<value>",
+          "name": "<value>",
+          "signature": "<value>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "origin",
+      "directive": "origin",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set origin of atlas pages (M, A)",
+      "syntax": [
+        "origin <x> <y> <z> <units>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<x>",
+          "name": "<x>",
+          "signature": "<x>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<y>",
+          "name": "<y>",
+          "signature": "<y>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<z>",
+          "name": "<z>",
+          "signature": "<z>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<units>",
+          "name": "<units>",
+          "signature": "<units>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "origin-label",
+      "directive": "origin-label",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set label for atlas page which has the lower left corner at the given origin coordinates. May be either a number or a string. (String labels form the following sequence, either in lower or upper case: A, B, ..., Z, AA, AB, ...) (M, A; default: 0 0)",
+      "syntax": [
+        "origin-label <x-label> <y-label>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<x-label>",
+          "name": "<x-label>",
+          "signature": "<x-label>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<y-label>",
+          "name": "<y-label>",
+          "signature": "<y-label>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "overlap",
+      "directive": "overlap",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set overlap size in paper units in the atlas mode or map margin in the map mode (M, A; default: 1 cm)",
+      "syntax": [
+        "overlap <value> <units>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<value>",
+          "name": "<value>",
+          "signature": "<value>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<units>",
+          "name": "<units>",
+          "signature": "<units>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "own-pages",
+      "directive": "own-pages",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set number of own pages added before the first page of automatically generated pages in atlas mode (currently required for correct page numbering) (A; default: 0)",
+      "syntax": [
+        "own-pages <number>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<number>",
+          "name": "<number>",
+          "signature": "<number>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "page-grid",
+      "directive": "page-grid",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "show pages key plan (M; default: off) map legend related:",
+      "syntax": [
+        "page-grid <on/off>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<on/off>",
+          "name": "<on/off>",
+          "signature": "<on/off>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "page-numbers",
+      "directive": "page-numbers",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "turn on/off page numbering (A; default: true)",
+      "syntax": [
+        "page-numbers <on/off>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<on/off>",
+          "name": "<on/off>",
+          "signature": "<on/off>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "page-setup",
+      "directive": "page-setup",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set page dimensions in this order: paper-width, paper-height, page-width, page-height, left-margin and top-margin. If not specified, it will be computed from size and overlap (A; default: 21 29.7 20 28.7 0.5 0.5 cm)",
+      "syntax": [
+        "page-setup <dimensions> <units>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<dimensions>",
+          "name": "<dimensions>",
+          "signature": "<dimensions>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<units>",
+          "name": "<units>",
+          "signature": "<units>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
       "block": {
         "role": "leaf"
       }
@@ -5513,6 +7420,23 @@
           "dependencies": []
         },
         {
+          "raw": "0cm minus 4pt symbol-assign <point/line/area/group/special> <symbol-type> <symbol-set> = display a particular symbol in the given symbol-set. This option overrides symbol-set option. If the symbol has a subtype, <symbol-type> argument may have one of the following forms: type:subtype or simply type, which assigns new symbol set to all subtypes of a given symbol. Following symbols may not be used with this option: point section (which isn't rendered at all) and all point and line labels ( label , remark , altitude , height , passage-height , station-name , date ). See the chapter Changing layout/Customizing text labels for details how to change labels' appearance. (M, A) Group may be one of the following: all, centerline, sections, water, speleothems, passage-fills, ice, sediments, equipment. There are two special symbols: north-arrow, scale-bar.",
+          "name": "0cm minus 4pt symbol-assign <point/line/area/group/special> <symbol-type> <symbol-set>",
+          "signature": "0cm minus 4pt symbol-assign <point/line/area/group/special> <symbol-type> <symbol-set>",
+          "option_key": "-symbol-assign",
+          "value_arity": "N",
+          "value_domain": "enum",
+          "description": "display a particular symbol in the given symbol-set. This option overrides symbol-set option. If the symbol has a subtype, <symbol-type> argument may have one of the following forms: type:subtype or simply type, which assigns new symbol set to all subtypes of a given symbol. Following symbols may not be used with this option: point section (which isn't rendered at all) and all point and line labels ( label , remark , altitude , height , passage-height , station-name , date ). See the chapter Changing layout/Customizing text labels for details how to change labels' appearance. (M, A) Group may be one of the following: all, centerline, sections, water, speleothems, passage-fills, ice, sediments, equipment. There are two special symbols: north-arrow, scale-bar.",
+          "allowed_values": [
+            "area",
+            "group",
+            "line",
+            "point",
+            "special"
+          ],
+          "dependencies": []
+        },
+        {
           "raw": "symbol-colo[u]r <point/line/area/group/special> <symbol-type> <colour> = change colour of particular symbol or group of symbols. (Note: colour change currently applies to pattern fills only if (1) output format is PDF and (2) \\ version is at least 1.000) (M, A)",
           "name": "symbol-colo[u]r <point/line/area/group/special> <symbol-type> <colour>",
           "signature": "symbol-colo[u]r <point/line/area/group/special> <symbol-type> <colour>",
@@ -5746,6 +7670,148 @@
       "block": {
         "role": "container_open",
         "close_directive": "endrevise"
+      }
+    },
+    {
+      "name": "rotate",
+      "directive": "rotate",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "rotates the map (M, A; default: 0)",
+      "syntax": [
+        "rotate <value>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<value>",
+          "name": "<value>",
+          "signature": "<value>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "scale",
+      "directive": "scale",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set scale of output map or map atlas (M, A; default: 1 200)",
+      "syntax": [
+        "scale <picture length> <real length>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<picture length>",
+          "name": "<picture length>",
+          "signature": "<picture length>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<real length>",
+          "name": "<real length>",
+          "signature": "<real length>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "scale-bar",
+      "directive": "scale-bar",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set the length of the scale-bar (M, A)",
+      "syntax": [
+        "scale-bar <length> <units>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<length>",
+          "name": "<length>",
+          "signature": "<length>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<units>",
+          "name": "<units>",
+          "signature": "<units>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
       }
     },
     {
@@ -6186,6 +8252,68 @@
       }
     },
     {
+      "name": "size",
+      "directive": "size",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set map size in the atlas mode. If not specified, it will be calculated from page-setup and overlap. In map mode applies iff page-grid is on (M, A; default: 18 22.2 cm)",
+      "syntax": [
+        "size <width> <height> <units>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<width>",
+          "name": "<width>",
+          "signature": "<width>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<height>",
+          "name": "<height>",
+          "signature": "<height>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<units>",
+          "name": "<units>",
+          "signature": "<units>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
       "name": "sketch-colors",
       "directive": "sketch-colors",
       "source": {
@@ -6233,6 +8361,86 @@
       "options": [],
       "dependencies": [
         "context: none"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "sketches",
+      "directive": "sketches",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "turn on/off displaying of morphed sketch bitmaps. (M, A; default: off)",
+      "syntax": [
+        "sketches <on/off>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<on/off>",
+          "name": "<on/off>",
+          "signature": "<on/off>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "smooth-shading",
+      "directive": "smooth-shading",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set the mode of smooth scrap background shading. By default, altitude and depth colour is interpolated across the scrap the quick way. Some issues are present if transparent symbol colours are used. (Coloured scrap background is visible underneath the semitransparent areas, although only lower-scrap-drawings should be visible.) More precise modes should be added in the future. If off, scrap is filled with single colour.",
+      "syntax": [
+        "smooth-shading <off/quick>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<off/quick>",
+          "name": "<off/quick>",
+          "signature": "<off/quick>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
       ],
       "allowed_values": [],
       "block": {
@@ -6400,6 +8608,46 @@
       }
     },
     {
+      "name": "statistics",
+      "directive": "statistics",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "display some basic statistics; if set to off, team members are sorted alphabetically; otherwise according to their contribution to exploration and surveying (M, A; default: hide)",
+      "syntax": [
+        "statistics <explo/topo/carto/copyright all/off/number>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<explo/topo/carto/copyright all/off/number>",
+          "name": "<explo/topo/carto/copyright all/off/number>",
+          "signature": "<explo/topo/carto/copyright all/off/number>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
       "name": "surface",
       "directive": "surface",
       "source": {
@@ -6412,12 +8660,26 @@
       ],
       "contexts": [
         "none",
-        "survey"
+        "survey",
+        "layout"
       ],
       "document_types": [
-        "th"
+        "th",
+        "thconfig"
       ],
-      "arguments": [],
+      "arguments": [
+        {
+          "raw": "<top/bottom/off>",
+          "name": "<top/bottom/off>",
+          "signature": "<top/bottom/off>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
       "options": [
         {
           "raw": "cs <coordinate system> = coordinate system for bitmap calibration and grid origin specification",
@@ -6491,12 +8753,53 @@
         }
       ],
       "dependencies": [
-        "context: none, survey"
+        "context: none, survey",
+        "context: layout"
       ],
       "allowed_values": [],
       "block": {
         "role": "container_open",
         "close_directive": "endsurface"
+      }
+    },
+    {
+      "name": "surface-opacity",
+      "directive": "surface-opacity",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set the surface bitmap opacity (used if transparency is on). Value range is 0--100. (M, A; default: 70)",
+      "syntax": [
+        "surface-opacity <value>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<value>",
+          "name": "<value>",
+          "signature": "<value>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
       }
     },
     {
@@ -6597,6 +8900,314 @@
       "block": {
         "role": "container_open",
         "close_directive": "endsurvey"
+      }
+    },
+    {
+      "name": "survey-level",
+      "directive": "survey-level",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "N is the number of survey levels displayed next to the station name (M, A; default: 0). PDF related:",
+      "syntax": [
+        "survey-level <N/all>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<N/all>",
+          "name": "<N/all>",
+          "signature": "<N/all>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "symbol-assign",
+      "directive": "symbol-assign",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "display a particular symbol in the given symbol-set. This option overrides symbol-set option. If the symbol has a subtype, <symbol-type> argument may have one of the following forms: type:subtype or simply type, which assigns new symbol set to all subtypes of a given symbol. Following symbols may not be used with this option: point section (which isn't rendered at all) and all point and line labels ( label , remark , altitude , height , passage-height , station-name , date ). See the chapter Changing layout/Customizing text labels for details how to change labels' appearance. (M, A) Group may be one of the following: all, centerline, sections, water, speleothems, passage-fills, ice, sediments, equipment. There are two special symbols: north-arrow, scale-bar.",
+      "syntax": [
+        "0cm minus 4pt symbol-assign <point/line/area/group/special> <symbol-type> <symbol-set>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<point/line/area/group/special>",
+          "name": "<point/line/area/group/special>",
+          "signature": "<point/line/area/group/special>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<symbol-type>",
+          "name": "<symbol-type>",
+          "signature": "<symbol-type>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<symbol-set>",
+          "name": "<symbol-set>",
+          "signature": "<symbol-set>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "symbol-colour",
+      "directive": "symbol-colour",
+      "aliases": [
+        "symbol-color"
+      ],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "change colour of particular symbol or group of symbols. (Note: colour change currently applies to pattern fills only if (1) output format is PDF and (2) \\ version is at least 1.000) (M, A)",
+      "syntax": [
+        "symbol-colo[u]r <point/line/area/group/special> <symbol-type> <colour>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<point/line/area/group/special>",
+          "name": "<point/line/area/group/special>",
+          "signature": "<point/line/area/group/special>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<symbol-type>",
+          "name": "<symbol-type>",
+          "signature": "<symbol-type>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<colour>",
+          "name": "<colour>",
+          "signature": "<colour>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "symbol-hide",
+      "directive": "symbol-hide",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "don't display particular symbol or group of symbols. You may use group cave-centerline, group surface-centerline, point cave-station, point surface-station and group text in symbol-hide and symbol-show commands. Use flag:<entrance/continuation/sink/spring/doline/dig> as a <symbol-type> to hide stations with particular flags (e.g. symbol-hide point flag:entrance). May be combined with symbol-show.(M, A)",
+      "syntax": [
+        "symbol-hide <point/line/area/group/special> <symbol-type>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<point/line/area/group/special>",
+          "name": "<point/line/area/group/special>",
+          "signature": "<point/line/area/group/special>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<symbol-type>",
+          "name": "<symbol-type>",
+          "signature": "<symbol-type>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "symbol-set",
+      "directive": "symbol-set",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "use symbol-set for all map symbols, if available. Be aware, that symbol set name is case sensitive. (M, A) Therion uses following predefined symbol sets: UIS (International Union of Speleology) ASF (Australian Speleological Federation) AUT (Austrian Speleological Association) BCRA (British Cave Research Association ) NSS (National Speleological Society/USA) NZSS (New Zealand Symbol Set) SBE (Brazilian Speleological Society - Sociedade Brasileira de Espeleologia ) SKBB (Speleoklub Bansk\\'a Bystrica)",
+      "syntax": [
+        "symbol-set <symbol-set>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<symbol-set>",
+          "name": "<symbol-set>",
+          "signature": "<symbol-set>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "symbol-show",
+      "directive": "symbol-show",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "display particular symbol or group of symbols. May be combined with symbol-hide. (M, A)",
+      "syntax": [
+        "symbol-show <point/line/area/group/special> <symbol-type>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<point/line/area/group/special>",
+          "name": "<point/line/area/group/special>",
+          "signature": "<point/line/area/group/special>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        },
+        {
+          "raw": "<symbol-type>",
+          "name": "<symbol-type>",
+          "signature": "<symbol-type>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
       }
     },
     {
@@ -6725,6 +9336,86 @@
       }
     },
     {
+      "name": "title-pages",
+      "directive": "title-pages",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "turn on/off title pages before each atlas chapter (A; default: off)",
+      "syntax": [
+        "title-pages <on/off>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<on/off>",
+          "name": "<on/off>",
+          "signature": "<on/off>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
+      "name": "transparency",
+      "directive": "transparency",
+      "aliases": [],
+      "source": {
+        "file": "therion/thbook/ch03.tex",
+        "line": 235
+      },
+      "summary": "set transparency for the passages (underlying passages are also visible) (M, A; default: on)",
+      "syntax": [
+        "transparency <on/off>"
+      ],
+      "contexts": [
+        "layout"
+      ],
+      "document_types": [
+        "thconfig"
+      ],
+      "arguments": [
+        {
+          "raw": "<on/off>",
+          "name": "<on/off>",
+          "signature": "<on/off>",
+          "option_key": "",
+          "value_arity": "1",
+          "value_domain": "keyword",
+          "description": "",
+          "allowed_values": [],
+          "dependencies": []
+        }
+      ],
+      "options": [],
+      "dependencies": [
+        "context: layout"
+      ],
+      "allowed_values": [],
+      "block": {
+        "role": "leaf"
+      }
+    },
+    {
       "name": "units",
       "directive": "units",
       "source": {
@@ -6736,10 +9427,12 @@
         "units <quantity list> [<factor>] <units>"
       ],
       "contexts": [
-        "centerline"
+        "centerline",
+        "layout"
       ],
       "document_types": [
-        "th"
+        "th",
+        "thconfig"
       ],
       "arguments": [
         {
@@ -6778,7 +9471,8 @@
       ],
       "options": [],
       "dependencies": [
-        "context: centerline"
+        "context: centerline",
+        "context: layout"
       ],
       "allowed_values": [],
       "block": {

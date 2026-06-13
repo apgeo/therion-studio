@@ -1,0 +1,42 @@
+{
+  "name": "colour-legend",
+  "directive": "colour-legend",
+  "aliases": [
+    "color-legend"
+  ],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "set type of map-fg colours legend when map-fg is set to altitude, scrap or map. For compatibility reasons, on is equivalent to smooth. (M, A; default: smooth if applicable)",
+  "syntax": [
+    "colo[u]r-legend <smooth/discrete/off/on>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<smooth/discrete/off/on>",
+      "name": "<smooth/discrete/off/on>",
+      "signature": "<smooth/discrete/off/on>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

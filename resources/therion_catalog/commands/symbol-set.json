@@ -1,0 +1,40 @@
+{
+  "name": "symbol-set",
+  "directive": "symbol-set",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "use symbol-set for all map symbols, if available. Be aware, that symbol set name is case sensitive. (M, A) Therion uses following predefined symbol sets: UIS (International Union of Speleology) ASF (Australian Speleological Federation) AUT (Austrian Speleological Association) BCRA (British Cave Research Association ) NSS (National Speleological Society/USA) NZSS (New Zealand Symbol Set) SBE (Brazilian Speleological Society - Sociedade Brasileira de Espeleologia ) SKBB (Speleoklub Bansk\\'a Bystrica)",
+  "syntax": [
+    "symbol-set <symbol-set>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<symbol-set>",
+      "name": "<symbol-set>",
+      "signature": "<symbol-set>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

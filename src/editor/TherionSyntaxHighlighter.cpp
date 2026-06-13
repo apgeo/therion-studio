@@ -603,7 +603,11 @@ void TherionSyntaxHighlighter::applyValidatorInvalidTokenFormats(const QString &
             && code != QStringLiteral("unknown-option-value")
             && code != QStringLiteral("unknown-argument-value")
             && code != QStringLiteral("invalid-command-context")
-            && code != QStringLiteral("invalid-document-type")) {
+            && code != QStringLiteral("invalid-document-type")
+            && code != QStringLiteral("duplicate-object-id")
+            && code != QStringLiteral("unclosed-block")
+            && code != QStringLiteral("unknown-command")
+            && code != QStringLiteral("unknown-area-line-reference")) {
             continue;
         }
 

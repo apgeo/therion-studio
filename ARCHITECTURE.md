@@ -4,6 +4,8 @@ This document records the intended architecture of Therion Studio. It is a desig
 
 The product source of truth remains `QtReimplementationSpecification.md`. The active implementation roadmap remains `WORKLOG.md`. When architecture, implementation, and specification diverge, resolve the divergence explicitly instead of silently choosing one.
 
+Therion language compatibility rules that affect parsing, namespaces, references, source preservation, validation, and project indexing are maintained in `docs/THERION_COMPATIBILITY.md`. Architecture and implementation changes that touch Therion semantics should align with that document or update it with focused verification.
+
 ## Architectural Goals
 
 - Preserve Therion source files losslessly unless a user explicitly applies a source edit.
@@ -58,6 +60,8 @@ Consumers should use shared source snapshots and logical command metadata where 
 
 Do not solve projection drift by copying parser logic into UI renderers, inspectors, sidebars, scene items, or completion code. Extend core parsing/token/range/catalog metadata instead.
 
+Therion namespace and reference semantics are compatibility-critical. In particular, qualified survey references use Therion's innermost-to-outermost order (`child.parent`), not filesystem-style `parent.child`; project-index and validation code should follow `docs/THERION_COMPATIBILITY.md` before adding or changing namespace logic.
+
 ## UI Surface Ownership
 
 The main project sidebars have distinct responsibilities:
@@ -89,7 +93,10 @@ New Raw, Blocks, Map, inspector, sidebar, and project workflows that mutate sour
 Validation should be conservative and catalog-backed.
 
 - Active-document and project validation should use the same source metadata and catalog rules where practical.
+- `TherionSourceValidator` and project validation scanners are the only owners of warning/error diagnostics. The raw syntax highlighter may color normal token categories and may render supplied diagnostic ranges, but it must not invent independent warnings/errors.
+- Any diagnostic underline/background in Raw mode should be traceable to a validator diagnostic surfaced through the Validation panel or validation tooltip.
 - Project validation should become a live, background diagnostic projection over the open project graph and open in-memory documents. It should react to source edits, saves, file additions/removals, project-open events, and catalog/source-model updates through debounce, cancellation, and revision or generation IDs.
+- Project validation should detect deterministic source/project consistency problems such as missing `input`/`source` files, catalog command/option/context/document-type issues, malformed option tokens, unclosed blocks, duplicate IDs in Therion namespaces, unresolved map/scrap/join/station references, and area references to missing line IDs.
 - A manual project validation button may remain during migration or as an explicit refresh/re-run action, but the target workflow is automatic problem discovery in the Validation panel when project problems appear or disappear.
 - Unknown commands, unknown options, document-type diagnostics, and context diagnostics should remain warnings unless the rule is fully deterministic.
 - Safe fixes must be explicit source edits with known ranges and must not silently skip undo snapshots or dirty-state handling.
@@ -111,6 +118,8 @@ Validation should be conservative and catalog-backed.
 The Structure sidebar displays the ownership/navigation projection. It should not list general validation diagnostics. Validation-owned diagnostics should be surfaced in the Validation panel and may reference project-index objects when that improves navigation.
 
 The Therion compiler remains authoritative for final export behavior. The project index is a lightweight navigation and early-feedback projection, not a compiler replacement.
+
+Project-index namespace, reference, and duplicate-identifier behavior shall follow `docs/THERION_COMPATIBILITY.md`. In particular, survey/map/scrap names share their parent survey namespace, drawing object IDs share their containing scrap namespace, and identical object names in different survey namespaces are valid.
 
 ## Catalog and Metadata
 
@@ -161,6 +170,7 @@ Architecture-sensitive changes should include focused verification:
 - validation/catalog changes: false-positive and document-type/context tests
 - source mutation changes: undo/redo, dirty-state, revision mismatch, and projection refresh tests
 - project index changes: root config/source inference, in-memory document state, namespace/reference resolution, and stable object IDs
+- Therion compatibility changes: nested namespace order, relative references, duplicate names/IDs in the same namespace, and same-name objects in different namespaces
 - UI workflow changes: relevant widget/controller tests or explicit manual verification when automation is not feasible
 
 Before committing or proposing a PR, run `python3 scripts/check_structure_constraints.py` and fix violations in the same change.

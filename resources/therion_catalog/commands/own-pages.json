@@ -1,0 +1,40 @@
+{
+  "name": "own-pages",
+  "directive": "own-pages",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "set number of own pages added before the first page of automatically generated pages in atlas mode (currently required for correct page numbering) (A; default: 0)",
+  "syntax": [
+    "own-pages <number>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<number>",
+      "name": "<number>",
+      "signature": "<number>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

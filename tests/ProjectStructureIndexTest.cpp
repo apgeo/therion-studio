@@ -645,14 +645,16 @@ int runProjectIndexAmbiguousMapReferenceDiagnosticsTest()
     if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
         return 1;
     }
-    if (!expect(snapshot.diagnostics.size() == 3,
-                "The project index should report ambiguous map/scrap references and mixed content.")) {
+    if (!expect(snapshot.diagnostics.size() == 5,
+                "The project index should report ambiguous map/scrap references, duplicate names, and mixed content.")) {
         return 1;
     }
 
     bool foundAmbiguousScrap = false;
     bool foundAmbiguousMap = false;
     bool foundMixedContent = false;
+    bool foundDuplicateMapName = false;
+    bool foundDuplicateScrapName = false;
     for (const ProjectIndexDiagnostic &diagnostic : snapshot.diagnostics) {
         if (diagnostic.kind == ProjectIndexDiagnosticKind::AmbiguousMapScrapReference
             && diagnostic.referencedName == QStringLiteral("target.s")
@@ -671,6 +673,16 @@ int runProjectIndexAmbiguousMapReferenceDiagnosticsTest()
             && diagnostic.lineNumber == 10) {
             foundMixedContent = true;
         }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::DuplicateObjectId
+            && diagnostic.referencedName == QStringLiteral("branch-map.m")
+            && diagnostic.lineNumber == 6) {
+            foundDuplicateMapName = true;
+        }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::DuplicateObjectId
+            && diagnostic.referencedName == QStringLiteral("target.s")
+            && diagnostic.lineNumber == 1) {
+            foundDuplicateScrapName = true;
+        }
     }
 
     if (!expect(foundAmbiguousScrap,
@@ -683,6 +695,14 @@ int runProjectIndexAmbiguousMapReferenceDiagnosticsTest()
     }
     if (!expect(foundMixedContent,
                 "The project index did not report the mixed map/scrap diagnostic.")) {
+        return 1;
+    }
+    if (!expect(foundDuplicateMapName,
+                "The project index did not report the duplicate map name diagnostic.")) {
+        return 1;
+    }
+    if (!expect(foundDuplicateScrapName,
+                "The project index did not report the duplicate scrap name diagnostic.")) {
         return 1;
     }
 
@@ -801,8 +821,53 @@ int runProjectIndexStationReferenceDiagnosticsTest()
                                   "    data normal from to compass clino tape\n"
                                   "    a1 a2 0 0 1\n"
                                   "    dup@cave a2 0 0 1\n"
+                                  "    dup@cave a1 0 0 1\n"
                                   "    equate a1@cave missing@cave dup@cave plainMissing\n"
                                   "  endcenterline\n"
+                                  "  survey 1303\n"
+                                  "    survey stara_dvanactka\n"
+                                  "      survey 20090809_1\n"
+                                  "        centerline\n"
+                                  "          data normal from to compass clino tape\n"
+                                  "          1.0 - 0 0 1\n"
+                                  "          1.0 - 0 0 1\n"
+                                  "          1.0 1.1 0 0 1\n"
+                                  "        endcenterline\n"
+                                  "      endsurvey 20090809_1\n"
+                                  "    endsurvey stara_dvanactka\n"
+                                  "  endsurvey 1303\n"
+                                  "  centerline\n"
+                                  "    equate 1.0@20090809_1.stara_dvanactka.1303\n"
+                                  "  endcenterline\n"
+                                  "  survey 1318\n"
+                                  "    survey stara_vetrna\n"
+                                  "      survey hp\n"
+                                  "        centerline\n"
+                                  "          data normal from to length compass clino\n"
+                                  "          3 4 1 0 0\n"
+                                  "          26 27 1 0 0\n"
+                                  "          27 28 1 0 0\n"
+                                  "        endcenterline\n"
+                                  "      endsurvey hp\n"
+                                  "      input maps/hp_1318.th2\n"
+                                  "    endsurvey stara_vetrna\n"
+                                  "    centerline\n"
+                                  "      equate 27@hp.stara_vetrna\n"
+                                  "    endcenterline\n"
+                                  "  endsurvey 1318\n"
+                                  "  survey 1319\n"
+                                  "    survey hp\n"
+                                  "      centerline\n"
+                                  "        data normal from to length compass clino\n"
+                                  "        3 4 1 0 0\n"
+                                  "        4 5 1 0 0\n"
+                                  "      endcenterline\n"
+                                  "    endsurvey hp\n"
+                                  "    input maps/hp_1319.th2\n"
+                                  "    centerline\n"
+                                  "      equate 4@hp\n"
+                                  "    endcenterline\n"
+                                  "  endsurvey 1319\n"
                                   "endsurvey cave\n")),
                 "The station-reference root Therion file could not be written.")) {
         return 1;
@@ -815,6 +880,22 @@ int runProjectIndexStationReferenceDiagnosticsTest()
                 "The station-reference map file could not be written.")) {
         return 1;
     }
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("maps/hp_1318.th2")),
+                              QStringLiteral(
+                                  "scrap s1\n"
+                                  "point 0 0 station -name 4@hp\n"
+                                  "endscrap\n")),
+                "The first namespaced station-reference map file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("maps/hp_1319.th2")),
+                              QStringLiteral(
+                                  "scrap s1\n"
+                                  "point 0 0 station -name 4@hp\n"
+                                  "endscrap\n")),
+                "The second namespaced station-reference map file could not be written.")) {
+        return 1;
+    }
 
     QString errorMessage;
     const ProjectIndexSnapshot snapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(), &errorMessage);
@@ -823,21 +904,30 @@ int runProjectIndexStationReferenceDiagnosticsTest()
     }
 
     bool foundMissingStation = false;
-    bool foundAmbiguousStation = false;
     for (const ProjectIndexDiagnostic &diagnostic : snapshot.diagnostics) {
         if (diagnostic.kind == ProjectIndexDiagnosticKind::UnknownStationReference
             && diagnostic.referencedName == QStringLiteral("missing@cave")
-            && diagnostic.lineNumber == 7) {
+            && diagnostic.lineNumber == 8) {
             foundMissingStation = true;
-        }
-        if (diagnostic.kind == ProjectIndexDiagnosticKind::AmbiguousStationReference
-            && diagnostic.referencedName == QStringLiteral("dup@cave")
-            && diagnostic.candidateCount == 2
-            && diagnostic.lineNumber == 7) {
-            foundAmbiguousStation = true;
         }
         if (!expect(diagnostic.referencedName != QStringLiteral("a1@cave"),
                     "Resolved equate station references should not produce diagnostics.")) {
+            return 1;
+        }
+        if (!expect(diagnostic.referencedName != QStringLiteral("dup@cave"),
+                    "Repeated occurrences of the same station reference should not produce ambiguous diagnostics.")) {
+            return 1;
+        }
+        if (!expect(diagnostic.referencedName != QStringLiteral("1.0@20090809_1.stara_dvanactka.1303"),
+                    "Repeated splay rows for a fully qualified nested station reference should not produce ambiguous diagnostics.")) {
+            return 1;
+        }
+        if (!expect(diagnostic.referencedName != QStringLiteral("27@hp.stara_vetrna"),
+                    "Nested station references should resolve relative to the current survey context without ambiguous diagnostics.")) {
+            return 1;
+        }
+        if (!expect(diagnostic.referencedName != QStringLiteral("4@hp"),
+                    "Station references should resolve namespace aliases relative to the current survey context, not globally.")) {
             return 1;
         }
         if (!expect(diagnostic.referencedName != QStringLiteral("plainMissing"),
@@ -850,8 +940,97 @@ int runProjectIndexStationReferenceDiagnosticsTest()
                 "The project index should report explicit unknown equate station references.")) {
         return 1;
     }
-    if (!expect(foundAmbiguousStation,
-                "The project index should report ambiguous equate station references.")) {
+
+    return 0;
+}
+
+int runProjectIndexDuplicateObjectIdDiagnosticsTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "The temporary duplicate-object-id project directory could not be created.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    if (!expect(projectDir.mkpath(QStringLiteral("maps")),
+                "The temporary duplicate-object-id map directory could not be created.")) {
+        return 1;
+    }
+
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("root.th")),
+                              QStringLiteral(
+                                  "survey cave\n"
+                                  "  map shared\n"
+                                  "  endmap\n"
+                                  "  scrap shared\n"
+                                  "  endscrap\n"
+                                  "  survey shared\n"
+                                  "  endsurvey shared\n"
+                                  "  input maps/map.th2\n"
+                                  "endsurvey cave\n")),
+                "The duplicate-object-id root Therion file could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(projectDir.filePath(QStringLiteral("maps/map.th2")),
+                              QStringLiteral(
+                                  "scrap s1\n"
+                                  "line wall -id line-1\n"
+                                  "endline\n"
+                                  "line border -id line-1\n"
+                                  "endline\n"
+                                  "point 0 0 label -id line-1\n"
+                                  "endscrap\n")),
+                "The duplicate-object-id TH2 file could not be written.")) {
+        return 1;
+    }
+
+    QString errorMessage;
+    const ProjectIndexSnapshot snapshot = ProjectStructureIndex::scanProjectIndex(projectDir.path(), &errorMessage);
+    if (!expect(errorMessage.isEmpty(), errorMessage.toUtf8().constData())) {
+        return 1;
+    }
+
+    bool foundDuplicateLineId = false;
+    bool foundDuplicatePointId = false;
+    bool foundDuplicateScrapName = false;
+    bool foundDuplicateSurveyName = false;
+    for (const ProjectIndexDiagnostic &diagnostic : snapshot.diagnostics) {
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::DuplicateObjectId
+            && diagnostic.referencedName == QStringLiteral("line-1")
+            && diagnostic.lineNumber == 4
+            && diagnostic.columnNumber == 17) {
+            foundDuplicateLineId = true;
+        }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::DuplicateObjectId
+            && diagnostic.referencedName == QStringLiteral("line-1")
+            && diagnostic.lineNumber == 6
+            && diagnostic.columnNumber == 21) {
+            foundDuplicatePointId = true;
+        }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::DuplicateObjectId
+            && diagnostic.referencedName == QStringLiteral("shared")
+            && diagnostic.lineNumber == 4
+            && diagnostic.columnNumber == 9) {
+            foundDuplicateScrapName = true;
+        }
+        if (diagnostic.kind == ProjectIndexDiagnosticKind::DuplicateObjectId
+            && diagnostic.referencedName == QStringLiteral("shared")
+            && diagnostic.lineNumber == 6
+            && diagnostic.columnNumber == 10) {
+            foundDuplicateSurveyName = true;
+        }
+    }
+
+    if (!expect(foundDuplicateLineId,
+                "The project index should report duplicate explicit line IDs in the same namespace.")) {
+        return 1;
+    }
+    if (!expect(foundDuplicatePointId,
+                "The project index should report duplicate explicit IDs across point, line, and area kinds in the same scrap.")) {
+        return 1;
+    }
+    if (!expect(foundDuplicateScrapName && foundDuplicateSurveyName,
+                "The project index should report duplicate map, scrap, and survey names in the same namespace.")) {
         return 1;
     }
 
@@ -1182,6 +1361,9 @@ int main()
         return 1;
     }
     if (runProjectIndexStationReferenceDiagnosticsTest() != 0) {
+        return 1;
+    }
+    if (runProjectIndexDuplicateObjectIdDiagnosticsTest() != 0) {
         return 1;
     }
     if (runProjectIndexThconfigSourceGraphTest() != 0) {

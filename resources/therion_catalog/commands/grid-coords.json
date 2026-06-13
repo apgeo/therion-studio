@@ -1,0 +1,40 @@
+{
+  "name": "grid-coords",
+  "directive": "grid-coords",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "specify where to label grid with coordinates. (M, A; default: off)",
+  "syntax": [
+    "grid-coords <off/border/all>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<off/border/all>",
+      "name": "<off/border/all>",
+      "signature": "<off/border/all>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

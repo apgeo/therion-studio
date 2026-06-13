@@ -429,18 +429,45 @@ int main(int argc, char *argv[])
                                                   "cs iJTSK\n"
                                                   "select cave.m@cave\n"
                                                   "layout l_plan\n"
+                                                  "  copy l_default\n"
                                                   "  cs iJTSK\n"
+                                                  "  debug on\n"
+                                                  "  map-header 70 100 nw\n"
+                                                  "  legend-columns 2\n"
+                                                  "  legend-width 25 cm\n"
+                                                  "  doc-author \"ZO CSS 6-28 Babicka speleologicka skupina\"\n"
+                                                  "  doc-keywords \"Skalky, Babicka plosina, Moravsky kras\"\n"
+                                                  "  doc-subject \"Skalky\"\n"
+                                                  "  doc-title \"Skalky\"\n"
+                                                  "  symbol-hide point label\n"
                                                   "endlayout\n"
                                                   "export map -output out.pdf -layout l_plan\n"));
         pumpEvents();
 
         const TherionSourceValidationResult configValidation = configTab.validateDocument();
+        if (!expect(!validationContainsDiagnosticCode(configValidation, QStringLiteral("unknown-command")),
+                    "thconfig validation should accept generated layout setting commands.")) {
+            return 1;
+        }
         if (!expect(!validationContainsDiagnosticCode(configValidation, QStringLiteral("invalid-command-context")),
-                    "thconfig validation should accept real processing-file contexts such as source, input, cs, layout, select, and export.")) {
+                    "thconfig validation should accept real processing-file and layout-setting contexts.")) {
             return 1;
         }
         if (!expect(!validationContainsDiagnosticCode(configValidation, QStringLiteral("invalid-document-type")),
                     "thconfig validation should accept processing commands from the generated document-type catalog.")) {
+            return 1;
+        }
+
+        const QTextBlock copyLine = configEditor->document()->findBlockByLineNumber(5);
+        const QTextBlock debugLine = configEditor->document()->findBlockByLineNumber(7);
+        const QTextBlock mapHeaderLine = configEditor->document()->findBlockByLineNumber(8);
+        const QTextBlock symbolHideLine = configEditor->document()->findBlockByLineNumber(15);
+        if (!expect(!tokenHasWaveUnderline(copyLine, QStringLiteral("copy"))
+                        && !tokenHasWaveUnderline(debugLine, QStringLiteral("debug"))
+                        && !tokenHasWaveUnderline(mapHeaderLine, QStringLiteral("map-header"))
+                        && !tokenHasWaveUnderline(mapHeaderLine, QStringLiteral("70"))
+                        && !tokenHasWaveUnderline(symbolHideLine, QStringLiteral("symbol-hide")),
+                    "Layout setting commands and free-form layout arguments should not receive inline validation underlines.")) {
             return 1;
         }
     }
@@ -481,6 +508,58 @@ int main(int argc, char *argv[])
         }
         if (!expect(!validationContainsDiagnosticCode(mapValidation, QStringLiteral("invalid-document-type")),
                     ".th2 validation should accept map-object commands and cross-document join from the generated document-type catalog.")) {
+            return 1;
+        }
+    }
+
+    {
+        const QString mapPath = tempDir.path() + QStringLiteral("/highlight-validation-ranges.th2");
+        QFile mapFile(mapPath);
+        if (!expect(mapFile.open(QIODevice::WriteOnly | QIODevice::Text), "Failed to create TH2 highlight validation fixture.")) {
+            return 1;
+        }
+        mapFile.write("scrap test\n"
+                      "line wall -id line-2\n"
+                      "  0 0\n"
+                      "endline\n"
+                      "area water\n"
+                      "  line-1\n"
+                      "  line-2\n"
+                      "endarea\n"
+                      "endscrapx\n");
+        mapFile.close();
+
+        TextEditorTab mapTab{fileSystem, CommandCatalogStore()};
+        QString mapErrorMessage;
+        if (!expect(mapTab.loadFile(mapPath, &mapErrorMessage),
+                    "Failed to load TH2 highlight validation fixture.")) {
+            std::cerr << mapErrorMessage.toStdString() << '\n';
+            return 1;
+        }
+        mapTab.setProjectRootPath(tempDir.path());
+        mapTab.show();
+        pumpEvents();
+
+        auto *mapEditor = mapTab.findChild<QPlainTextEdit *>();
+        if (!expect(mapEditor != nullptr, "Failed to find TH2 highlight validation editor.")) {
+            return 1;
+        }
+        mapEditor->document()->markContentsDirty(0, mapEditor->document()->characterCount());
+        pumpEvents();
+
+        const QTextBlock scrapLine = mapEditor->document()->findBlockByLineNumber(0);
+        const QTextBlock missingAreaLine = mapEditor->document()->findBlockByLineNumber(5);
+        const QTextBlock unknownLine = mapEditor->document()->findBlockByLineNumber(8);
+        if (!expect(tokenHasWaveUnderline(scrapLine, QStringLiteral("scrap")),
+                    "Unclosed block diagnostics should highlight the opening block directive.")) {
+            return 1;
+        }
+        if (!expect(tokenHasWaveUnderline(missingAreaLine, QStringLiteral("line-1")),
+                    "Unknown area line references should highlight the missing line id token.")) {
+            return 1;
+        }
+        if (!expect(tokenHasWaveUnderline(unknownLine, QStringLiteral("endscrapx")),
+                    "Unknown command diagnostics should highlight the unknown command token.")) {
             return 1;
         }
     }

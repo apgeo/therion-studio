@@ -10,10 +10,12 @@
     "units <quantity list> [<factor>] <units>"
   ],
   "contexts": [
-    "centerline"
+    "centerline",
+    "layout"
   ],
   "document_types": [
-    "th"
+    "th",
+    "thconfig"
   ],
   "arguments": [
     {
@@ -52,7 +54,8 @@
   ],
   "options": [],
   "dependencies": [
-    "context: centerline"
+    "context: centerline",
+    "context: layout"
   ],
   "allowed_values": [],
   "block": {

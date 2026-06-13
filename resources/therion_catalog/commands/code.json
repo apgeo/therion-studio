@@ -1,0 +1,40 @@
+{
+  "name": "code",
+  "directive": "code",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "Add/redefine \\ and \\ macros here. This allows user to configure various things (like user defined symbols, map and atlas layout at one place &c.) See the chapter Changing layout for details.",
+  "syntax": [
+    "code <metapost/tex-map/tex-atlas>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<metapost/tex-map/tex-atlas>",
+      "name": "<metapost/tex-map/tex-atlas>",
+      "signature": "<metapost/tex-map/tex-atlas>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

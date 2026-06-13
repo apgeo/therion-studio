@@ -20,13 +20,16 @@
 #include <QLabel>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QPointer>
 #include <QSizePolicy>
 #include <QStandardItem>
 #include <QStandardItemModel>
 #include <QStackedWidget>
 #include <QTabWidget>
+#include <QTimer>
 #include <QTreeView>
 #include <QVBoxLayout>
+#include <QScrollBar>
 
 namespace
 {
@@ -93,6 +96,34 @@ TherionStudio::TherionSourceDiagnosticSeverity highestDiagnosticSeverity(
         highest = higherSeverity(highest, diagnostic.severity);
     }
     return highest;
+}
+
+bool validationDiagnosticLess(const TherionStudio::TherionSourceDiagnostic &left,
+                              const TherionStudio::TherionSourceDiagnostic &right)
+{
+    const int leftLine = qMax(1, left.lineNumber);
+    const int rightLine = qMax(1, right.lineNumber);
+    if (leftLine != rightLine) {
+        return leftLine < rightLine;
+    }
+
+    const int leftColumn = qMax(1, left.columnNumber);
+    const int rightColumn = qMax(1, right.columnNumber);
+    if (leftColumn != rightColumn) {
+        return leftColumn < rightColumn;
+    }
+
+    const int leftSeverity = severityRank(left.severity);
+    const int rightSeverity = severityRank(right.severity);
+    if (leftSeverity != rightSeverity) {
+        return leftSeverity > rightSeverity;
+    }
+
+    const int codeCompare = left.code.compare(right.code, Qt::CaseInsensitive);
+    if (codeCompare != 0) {
+        return codeCompare < 0;
+    }
+    return left.title.compare(right.title, Qt::CaseInsensitive) < 0;
 }
 
 QString severityLabel(TherionStudio::TherionSourceDiagnosticSeverity severity)
@@ -170,6 +201,36 @@ int validationDiagnosticIndex(QStandardItemModel *model, const QModelIndex &inde
     }
     return findingIndex.data(ValidationDiagnosticIndexRole).toInt();
 }
+
+int validationScrollValue(QTreeView *tree)
+{
+    if (tree == nullptr || tree->verticalScrollBar() == nullptr) {
+        return 0;
+    }
+    return tree->verticalScrollBar()->value();
+}
+
+void setValidationScrollValue(QTreeView *tree, int value)
+{
+    if (tree == nullptr || tree->verticalScrollBar() == nullptr) {
+        return;
+    }
+    QScrollBar *scrollBar = tree->verticalScrollBar();
+    scrollBar->setValue(qBound(scrollBar->minimum(), value, scrollBar->maximum()));
+}
+
+void restoreValidationScrollValue(QTreeView *tree, int value)
+{
+    setValidationScrollValue(tree, value);
+
+    QPointer<QTreeView> guardedTree(tree);
+    QTimer::singleShot(0, tree, [guardedTree, value]() {
+        if (guardedTree == nullptr) {
+            return;
+        }
+        setValidationScrollValue(guardedTree, value);
+    });
+}
 }
 
 void MainWindow::buildValidationSidebar()
@@ -211,8 +272,11 @@ void MainWindow::buildValidationSidebar()
     validationResultsTree_->setSelectionMode(QAbstractItemView::SingleSelection);
     validationResultsTree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     validationResultsTree_->setAlternatingRowColors(true);
+    validationResultsTree_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     validationResultsTree_->header()->setStretchLastSection(true);
     connect(validationResultsTree_, &QTreeView::activated, this, &MainWindow::openValidationResult);
+    connect(validationResultsTree_, &QTreeView::clicked, this, &MainWindow::openValidationResult);
+    connect(validationResultsTree_, &QTreeView::doubleClicked, this, &MainWindow::openValidationResult);
     connect(validationResultsTree_->selectionModel(),
             &QItemSelectionModel::currentChanged,
             this,
@@ -278,6 +342,7 @@ void MainWindow::triggerValidateDocumentForActiveDocument()
         return;
     }
 
+    const int previousScrollValue = validationScrollValue(validationResultsTree_);
     validationResultsModel_->clear();
     validationResultsModel_->setHorizontalHeaderLabels({tr("Problems")});
     validationDiagnostics_ = validation.diagnostics;
@@ -313,8 +378,20 @@ void MainWindow::triggerValidateDocumentForActiveDocument()
     fileItem->setData(false, ValidationIsFindingRole);
     applyValidationSeverityStyle(fileItem, validationHighestSeverity_);
 
-    bool hasAnySafeFix = false;
+    QVector<int> sortedDiagnosticIndexes;
+    sortedDiagnosticIndexes.reserve(validation.diagnostics.size());
     for (int diagnosticIndex = 0; diagnosticIndex < validation.diagnostics.size(); ++diagnosticIndex) {
+        sortedDiagnosticIndexes.append(diagnosticIndex);
+    }
+    std::stable_sort(sortedDiagnosticIndexes.begin(),
+                     sortedDiagnosticIndexes.end(),
+                     [&validation](int leftIndex, int rightIndex) {
+                         return validationDiagnosticLess(validation.diagnostics.at(leftIndex),
+                                                         validation.diagnostics.at(rightIndex));
+                     });
+
+    bool hasAnySafeFix = false;
+    for (const int diagnosticIndex : std::as_const(sortedDiagnosticIndexes)) {
         const TherionStudio::TherionSourceDiagnostic &diagnostic = validation.diagnostics.at(diagnosticIndex);
         hasAnySafeFix = hasAnySafeFix || diagnostic.hasFix;
         const QString fixSuffix = diagnostic.hasFix ? tr(" (safe fix available)") : QString();
@@ -350,6 +427,7 @@ void MainWindow::triggerValidateDocumentForActiveDocument()
             validationResultsTree_->setCurrentIndex(firstFinding);
             handleValidationSelectionChanged(firstFinding, {});
         }
+        restoreValidationScrollValue(validationResultsTree_, previousScrollValue);
     }
     if (validationApplyAllFixesButton_ != nullptr) {
         validationApplyAllFixesButton_->setEnabled(hasAnySafeFix);
@@ -532,6 +610,7 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
         return;
     }
 
+    const int previousScrollValue = validationScrollValue(validationResultsTree_);
     QString selectedFilePath;
     int selectedLineNumber = 0;
     int selectedColumnNumber = 0;
@@ -586,48 +665,68 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
     }
     updateValidationRailIndicator();
 
-    bool hasAnySafeFix = false;
     QHash<QString, QStandardItem *> fileItemsByPath;
-    QModelIndex restoredFinding;
+    QHash<QString, QVector<TherionStudio::ProjectValidationScanner::Finding>> findingsByPath;
+    QVector<QString> orderedFilePaths;
     for (const TherionStudio::ProjectValidationScanner::Finding &finding : result.findings) {
-        QStandardItem *fileItem = fileItemsByPath.value(finding.filePath, nullptr);
-        if (fileItem == nullptr) {
-            fileItem = new QStandardItem(validationRelativeDisplayPath(projectRootPath_, finding.filePath));
-            fileItem->setEditable(false);
-            fileItem->setData(finding.filePath, ValidationFilePathRole);
-            fileItem->setData(false, ValidationIsFindingRole);
-            validationResultsModel_->appendRow(fileItem);
-            fileItemsByPath.insert(finding.filePath, fileItem);
+        if (!findingsByPath.contains(finding.filePath)) {
+            orderedFilePaths.append(finding.filePath);
         }
+        findingsByPath[finding.filePath].append(finding);
+    }
 
-        const int diagnosticIndex = validationDiagnostics_.size();
-        validationDiagnostics_.append(finding.diagnostic);
-        validationDiagnosticFilePaths_.append(finding.filePath);
-        hasAnySafeFix = hasAnySafeFix || finding.diagnostic.hasFix;
+    bool hasAnySafeFix = false;
+    QModelIndex restoredFinding;
+    for (const QString &filePath : std::as_const(orderedFilePaths)) {
+        QVector<TherionStudio::ProjectValidationScanner::Finding> fileFindings =
+            findingsByPath.value(filePath);
+        std::stable_sort(fileFindings.begin(),
+                         fileFindings.end(),
+                         [](const TherionStudio::ProjectValidationScanner::Finding &left,
+                            const TherionStudio::ProjectValidationScanner::Finding &right) {
+                             return validationDiagnosticLess(left.diagnostic, right.diagnostic);
+                         });
 
-        const QString fixSuffix = finding.diagnostic.hasFix ? tr(" (safe fix available)") : QString();
-        const QString label = tr("Line %1: %2: %3%4")
-                                  .arg(finding.diagnostic.lineNumber)
-                                  .arg(severityLabel(finding.diagnostic.severity))
-                                  .arg(finding.diagnostic.title)
-                                  .arg(fixSuffix);
-        auto *findingItem = new QStandardItem(label);
-        findingItem->setEditable(false);
-        applyValidationSeverityStyle(findingItem, finding.diagnostic.severity);
-        updateValidationFileSeverityStyle(fileItem, finding.diagnostic.severity);
-        findingItem->setToolTip(finding.diagnostic.message);
-        findingItem->setData(finding.filePath, ValidationFilePathRole);
-        findingItem->setData(qMax(1, finding.diagnostic.lineNumber), ValidationLineNumberRole);
-        findingItem->setData(qMax(1, finding.diagnostic.columnNumber), ValidationColumnNumberRole);
-        findingItem->setData(true, ValidationIsFindingRole);
-        findingItem->setData(diagnosticIndex, ValidationDiagnosticIndexRole);
-        fileItem->appendRow(findingItem);
-        if (!restoredFinding.isValid()
-            && normalizedValidationPath(finding.filePath) == selectedFilePath
-            && qMax(1, finding.diagnostic.lineNumber) == selectedLineNumber
-            && qMax(1, finding.diagnostic.columnNumber) == selectedColumnNumber
-            && finding.diagnostic.code == selectedDiagnosticCode) {
-            restoredFinding = findingItem->index();
+        for (const TherionStudio::ProjectValidationScanner::Finding &finding : std::as_const(fileFindings)) {
+            QStandardItem *fileItem = fileItemsByPath.value(finding.filePath, nullptr);
+            if (fileItem == nullptr) {
+                fileItem = new QStandardItem(validationRelativeDisplayPath(projectRootPath_, finding.filePath));
+                fileItem->setEditable(false);
+                fileItem->setData(finding.filePath, ValidationFilePathRole);
+                fileItem->setData(false, ValidationIsFindingRole);
+                validationResultsModel_->appendRow(fileItem);
+                fileItemsByPath.insert(finding.filePath, fileItem);
+            }
+
+            const int diagnosticIndex = validationDiagnostics_.size();
+            validationDiagnostics_.append(finding.diagnostic);
+            validationDiagnosticFilePaths_.append(finding.filePath);
+            hasAnySafeFix = hasAnySafeFix || finding.diagnostic.hasFix;
+
+            const QString fixSuffix = finding.diagnostic.hasFix ? tr(" (safe fix available)") : QString();
+            const QString label = tr("Line %1: %2: %3%4")
+                                      .arg(finding.diagnostic.lineNumber)
+                                      .arg(severityLabel(finding.diagnostic.severity))
+                                      .arg(finding.diagnostic.title)
+                                      .arg(fixSuffix);
+            auto *findingItem = new QStandardItem(label);
+            findingItem->setEditable(false);
+            applyValidationSeverityStyle(findingItem, finding.diagnostic.severity);
+            updateValidationFileSeverityStyle(fileItem, finding.diagnostic.severity);
+            findingItem->setToolTip(finding.diagnostic.message);
+            findingItem->setData(finding.filePath, ValidationFilePathRole);
+            findingItem->setData(qMax(1, finding.diagnostic.lineNumber), ValidationLineNumberRole);
+            findingItem->setData(qMax(1, finding.diagnostic.columnNumber), ValidationColumnNumberRole);
+            findingItem->setData(true, ValidationIsFindingRole);
+            findingItem->setData(diagnosticIndex, ValidationDiagnosticIndexRole);
+            fileItem->appendRow(findingItem);
+            if (!restoredFinding.isValid()
+                && normalizedValidationPath(finding.filePath) == selectedFilePath
+                && qMax(1, finding.diagnostic.lineNumber) == selectedLineNumber
+                && qMax(1, finding.diagnostic.columnNumber) == selectedColumnNumber
+                && finding.diagnostic.code == selectedDiagnosticCode) {
+                restoredFinding = findingItem->index();
+            }
         }
     }
 
@@ -648,11 +747,16 @@ void MainWindow::handleProjectValidationFinished(TherionStudio::ProjectValidatio
         validationResultsTree_->resizeColumnToContents(0);
         const QModelIndex firstFinding =
             validationResultsModel_->index(0, 0, validationResultsModel_->index(0, 0));
-        const QModelIndex nextFinding = restoredFinding.isValid() ? restoredFinding : firstFinding;
+        const QModelIndex nextFinding = restoredFinding.isValid()
+            ? restoredFinding
+            : (revealPanel ? firstFinding : QModelIndex());
         if (nextFinding.isValid()) {
             validationResultsTree_->setCurrentIndex(nextFinding);
             handleValidationSelectionChanged(nextFinding, {});
+        } else {
+            handleValidationSelectionChanged({}, {});
         }
+        restoreValidationScrollValue(validationResultsTree_, previousScrollValue);
     }
     if (validationApplyAllFixesButton_ != nullptr) {
         validationApplyAllFixesButton_->setEnabled(hasAnySafeFix);
@@ -720,39 +824,76 @@ void MainWindow::openValidationResult(const QModelIndex &index)
     const int lineNumber = qMax(1, findingIndex.data(ValidationLineNumberRole).toInt());
     const int columnNumber = qMax(1, findingIndex.data(ValidationColumnNumberRole).toInt());
     const QString filePath = findingIndex.data(ValidationFilePathRole).toString();
+    if (validationResultsTree_ != nullptr && validationResultsTree_->currentIndex() != findingIndex) {
+        validationResultsTree_->setCurrentIndex(findingIndex);
+    }
 
     if (!filePath.isEmpty()) {
-        const auto openPlan = TherionStudio::MainWindowDocumentOpenController::planOpenProjectSearchResult(filePath);
-        if (openPlan.action == TherionStudio::MainWindowDocumentOpenController::OpenProjectSearchResultAction::OpenMapDocument) {
-            auto *mapTab = openMapEditorTab(filePath);
-            if (mapTab == nullptr) {
-                return;
-            }
+        QWidget *targetWidget = documentWidgetForFilePath(filePath);
+        if (qobject_cast<TherionStudio::TextEditorTab *>(targetWidget) != nullptr) {
+            targetWidget = openTextTab(filePath);
+        } else if (qobject_cast<TherionStudio::MapEditorTab *>(targetWidget) != nullptr) {
+            targetWidget = openMapEditorTab(filePath);
+        } else {
+            const auto openPlan = TherionStudio::MainWindowDocumentOpenController::planOpenProjectSearchResult(filePath);
+            targetWidget = openPlan.action == TherionStudio::MainWindowDocumentOpenController::OpenProjectSearchResultAction::OpenMapDocument
+                ? static_cast<QWidget *>(openMapEditorTab(filePath))
+                : static_cast<QWidget *>(openTextTab(filePath));
+        }
+        if (targetWidget == nullptr) {
+            return;
+        }
 
+        if (auto *mapTab = qobject_cast<TherionStudio::MapEditorTab *>(targetWidget)) {
+            QPointer<TherionStudio::MapEditorTab> guardedTab(mapTab);
             mapTab->setWorkspaceMode(TherionStudio::MapEditorTab::WorkspaceMode::Raw);
-            mapTab->goToLine(lineNumber);
+            QTimer::singleShot(0, mapTab, [guardedTab, lineNumber]() {
+                if (guardedTab == nullptr) {
+                    return;
+                }
+                guardedTab->setWorkspaceMode(TherionStudio::MapEditorTab::WorkspaceMode::Raw);
+                guardedTab->goToLine(lineNumber);
+            });
             return;
         }
 
-        auto *textTab = openTextTab(filePath);
-        if (textTab == nullptr) {
-            return;
+        if (auto *textTab = qobject_cast<TherionStudio::TextEditorTab *>(targetWidget)) {
+            QPointer<TherionStudio::TextEditorTab> guardedTab(textTab);
+            textTab->setEditorMode(TherionStudio::TextEditorTab::EditorMode::Raw);
+            QTimer::singleShot(0, textTab, [guardedTab, lineNumber, columnNumber]() {
+                if (guardedTab == nullptr) {
+                    return;
+                }
+                guardedTab->setEditorMode(TherionStudio::TextEditorTab::EditorMode::Raw);
+                guardedTab->goToLineColumn(lineNumber, columnNumber);
+            });
         }
-
-        textTab->setEditorMode(TherionStudio::TextEditorTab::EditorMode::Raw);
-        textTab->goToLineColumn(lineNumber, columnNumber);
         return;
     }
 
     if (auto *mapTab = currentMapEditorTab(); mapTab != nullptr) {
         mapTab->setWorkspaceMode(TherionStudio::MapEditorTab::WorkspaceMode::Raw);
-        mapTab->goToLine(lineNumber);
+        QPointer<TherionStudio::MapEditorTab> guardedTab(mapTab);
+        QTimer::singleShot(0, mapTab, [guardedTab, lineNumber]() {
+            if (guardedTab == nullptr) {
+                return;
+            }
+            guardedTab->setWorkspaceMode(TherionStudio::MapEditorTab::WorkspaceMode::Raw);
+            guardedTab->goToLine(lineNumber);
+        });
         return;
     }
 
     if (auto *textTab = currentTextTab(); textTab != nullptr) {
         textTab->setEditorMode(TherionStudio::TextEditorTab::EditorMode::Raw);
-        textTab->goToLineColumn(lineNumber, columnNumber);
+        QPointer<TherionStudio::TextEditorTab> guardedTab(textTab);
+        QTimer::singleShot(0, textTab, [guardedTab, lineNumber, columnNumber]() {
+            if (guardedTab == nullptr) {
+                return;
+            }
+            guardedTab->setEditorMode(TherionStudio::TextEditorTab::EditorMode::Raw);
+            guardedTab->goToLineColumn(lineNumber, columnNumber);
+        });
     }
 }
 

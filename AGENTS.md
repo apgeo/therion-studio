@@ -9,6 +9,7 @@ These instructions apply to the whole repository.
 - This repository is currently specification-first. The primary source of truth is [QtReimplementationSpecification.md](/Users/ladislav.blazek/Local/Code/personal/therion-studio/Therion%20Studio/QtReimplementationSpecification.md).
 - Treat the specification as implementation-grade requirements for a Qt reimplementation of Therion Studio.
 - Treat [ARCHITECTURE.md](ARCHITECTURE.md) as the current architecture direction and boundary contract. It does not override product requirements in the specification, but implementation choices should align with it unless the divergence is explicit and documented.
+- Treat [docs/THERION_COMPATIBILITY.md](docs/THERION_COMPATIBILITY.md) as the current Therion language compatibility guardrail for parser, validator, project-index, source-range, namespace, reference-resolution, completion, highlighting, and map/source synchronization work.
 - Do not invent product behavior that conflicts with the specification. If a requested change requires behavior not covered by the specification, update the specification as part of the same change or clearly flag the gap.
 - If implementation, tests, architecture, and the specification diverge, prefer bringing them back into alignment explicitly rather than silently choosing one source of truth.
 - Treat [REVIEW_CODEX.md](REVIEW_CODEX.md) as the current architecture review record. It is not a product specification, but actionable findings from it should be reflected in `AGENTS.md`, `WORKLOG.md`, focused tests, or the specification before being treated as resolved.
@@ -64,6 +65,7 @@ These instructions apply to the whole repository.
 - Build/resource wiring should not duplicate source-of-truth lists unnecessarily. If resource catalogs are split into many files, prefer scoped CMake globs or generated lists with guardrails over manually duplicated file lists in multiple targets.
 - Keep command catalog and map-style catalog loading at composition, startup, or explicit test setup boundaries. Do not reintroduce UI-side static catalog access or long-lived resource overrides when parser/generator support is the correct fix.
 - For architecture-sensitive changes, check [ARCHITECTURE.md](ARCHITECTURE.md) before editing and update it in the same change when ownership boundaries, dependency direction, UI surface ownership, source model direction, or transaction rules change.
+- For Therion language-sensitive changes, check [docs/THERION_COMPATIBILITY.md](docs/THERION_COMPATIBILITY.md) before editing and update it in the same change when namespace, reference, identifier uniqueness, file-role, validation, highlighting, source-preservation, or catalog behavior changes.
 
 ## Unified Source Architecture Direction
 
@@ -75,6 +77,7 @@ These instructions apply to the whole repository.
 - Cache parsed source snapshots and derived projections by document revision or file identity where practical. Avoid full document reparsing or scene rebuilding for UI-only events, cursor movement, appearance changes, or unrelated inspector updates.
 - Treat project validation as a target live diagnostic projection over the open project and open in-memory documents. New validation plumbing should be debounced, cancellable, revision/generation-keyed, and surfaced through the Validation panel rather than depending on a manual `Validate Project` button as the primary workflow.
 - Keep problem reporting centralized in the Validation surface. Structure is an orientation/navigation projection and should not become a second general validator.
+- Preserve Therion namespace semantics exactly. Qualified references use innermost-to-outermost order such as `object@child.parent`; do not convert this to filesystem-style `parent.child`. Follow [docs/THERION_COMPATIBILITY.md](docs/THERION_COMPATIBILITY.md) for duplicate identifier and reference-resolution behavior.
 
 ## Proposal Review Discipline
 

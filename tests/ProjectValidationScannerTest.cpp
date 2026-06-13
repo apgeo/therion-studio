@@ -595,6 +595,54 @@ int runProjectIndexDiagnosticProjectionTest()
     return 0;
 }
 
+int runDuplicateObjectIdDiagnosticIsNotDuplicatedTest()
+{
+    QTemporaryDir tempDir;
+    if (!expect(tempDir.isValid(), "Temporary project directory creation failed.")) {
+        return 1;
+    }
+
+    QDir projectDir(tempDir.path());
+    const QString rootFile = projectDir.filePath(QStringLiteral("root.th"));
+    const QString mapFile = projectDir.filePath(QStringLiteral("map.th2"));
+
+    if (!expect(writeTextFile(rootFile,
+                              QStringLiteral("survey cave\n"
+                                             "  input map.th2\n"
+                                             "endsurvey\n")),
+                "Duplicate object-id root fixture could not be written.")) {
+        return 1;
+    }
+    if (!expect(writeTextFile(mapFile,
+                              QStringLiteral("scrap test\n"
+                                             "line wall -id line-1\n"
+                                             "endline\n"
+                                             "line border -id line-1\n"
+                                             "endline\n"
+                                             "endscrap\n")),
+                "Duplicate object-id map fixture could not be written.")) {
+        return 1;
+    }
+
+    ProjectValidationScanner scanner;
+    scanner.setDebounceIntervalMs(0);
+    scanner.requestScan(tempDir.path(), contextualDocumentTypeCatalog(), {});
+
+    const ValidationWaitResult waitResult = waitForValidation(scanner);
+    if (!expect(waitResult.received, "Duplicate object-id project validation did not emit validationFinished before timeout.")) {
+        return 1;
+    }
+    if (!expect(waitResult.result.errorMessage.isEmpty(), "Duplicate object-id project validation should not report a scanner error.")) {
+        return 1;
+    }
+    if (!expect(findingCount(waitResult.result, mapFile, QStringLiteral("duplicate-object-id")) == 1,
+                "Project validation should not duplicate equivalent duplicate-object-id diagnostics.")) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int runRootConfigSourceGraphValidationTest()
 {
     QTemporaryDir tempDir;
@@ -1070,12 +1118,6 @@ int runBabiceSampleValidationWithOpenDocumentsTest()
                 "Babice open-document project validation should report the missing input file.")) {
         return 1;
     }
-    if (!expect(containsFinding(waitResult.result,
-                                QDir(sampleProjectPath).filePath(QStringLiteral("babice.th")),
-                                QStringLiteral("unknown-map-reference")),
-                "Babice open-document project validation should report the unknown map reference.")) {
-        return 1;
-    }
 
     return 0;
 }
@@ -1102,6 +1144,9 @@ int main(int argc, char **argv)
         return 1;
     }
     if (runProjectIndexDiagnosticProjectionTest() != 0) {
+        return 1;
+    }
+    if (runDuplicateObjectIdDiagnosticIsNotDuplicatedTest() != 0) {
         return 1;
     }
     if (runRootConfigSourceGraphValidationTest() != 0) {

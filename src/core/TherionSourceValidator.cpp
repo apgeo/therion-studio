@@ -199,6 +199,173 @@ QString optionDeduplicationKey(const QString &optionToken, const QStringList &va
         + values.join(QLatin1Char('\n'));
 }
 
+QString objectIdScopeKey(const QVector<TherionSourceBlockFrame> &blockStack)
+{
+    QStringList parts;
+    parts.reserve(blockStack.size());
+    for (const TherionSourceBlockFrame &frame : blockStack) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(frame.lineText);
+        QString id;
+        if (parsedLine.tokens.size() > 1) {
+            id = parsedLine.tokens.at(1).trimmed();
+        }
+        parts.append(frame.directive + QLatin1Char(':') + id);
+    }
+    return parts.join(QLatin1Char('/'));
+}
+
+QString scrapObjectScopeKey(const QVector<TherionSourceBlockFrame> &blockStack)
+{
+    QStringList parts;
+    for (const TherionSourceBlockFrame &frame : blockStack) {
+        const TherionParsedLine parsedLine = TherionDocumentParser::parseLine(frame.lineText);
+        QString id;
+        if (parsedLine.tokens.size() > 1) {
+            id = parsedLine.tokens.at(1).trimmed();
+        }
+        parts.append(frame.directive + QLatin1Char(':') + id);
+        if (frame.directive == QStringLiteral("scrap")) {
+            break;
+        }
+    }
+    return parts.join(QLatin1Char('/'));
+}
+
+QString duplicateObjectIdKey(const TherionSourceLogicalCommand &command,
+                             const QString &objectId)
+{
+    return QStringLiteral("object\n")
+        + objectIdScopeKey(command.blockStackBefore)
+        + QLatin1Char('\n')
+        + objectId.trimmed();
+}
+
+QString duplicateNamespaceNameKey(const TherionSourceLogicalCommand &command,
+                                  const QString &name)
+{
+    return QStringLiteral("namespace\n")
+        + objectIdScopeKey(command.blockStackBefore)
+        + QLatin1Char('\n')
+        + name.trimmed();
+}
+
+bool commandUsesScrapObjectIdNamespace(const QString &commandName)
+{
+    return commandName == QStringLiteral("line")
+        || commandName == QStringLiteral("point")
+        || commandName == QStringLiteral("area");
+}
+
+bool commandUsesParentNamespaceName(const QString &commandName)
+{
+    return commandName == QStringLiteral("survey")
+        || commandName == QStringLiteral("map")
+        || commandName == QStringLiteral("scrap");
+}
+
+QString commandNameForDuplicateValidation(const TherionSourceLogicalCommand &command)
+{
+    return command.metadata.commandName.isEmpty()
+        ? command.normalizedDirective
+        : command.metadata.commandName;
+}
+
+std::optional<TherionSourceLogicalArgumentRange> commandObjectIdentityRange(
+    const TherionSourceLogicalCommand &command)
+{
+    const QString commandName = commandNameForDuplicateValidation(command);
+    if (commandUsesParentNamespaceName(commandName)) {
+        if (command.positionalArgumentRanges.isEmpty()) {
+            return std::nullopt;
+        }
+        return command.positionalArgumentRanges.constFirst();
+    }
+
+    if (!commandUsesScrapObjectIdNamespace(commandName)) {
+        return std::nullopt;
+    }
+
+    for (const TherionSourceLogicalOptionEntryRange &optionEntry : command.optionEntryRanges) {
+        if (normalizedCommandOptionName(optionEntry.key) != QStringLiteral("id")) {
+            continue;
+        }
+        if (optionEntry.valueRanges.isEmpty()) {
+            return std::nullopt;
+        }
+        return optionEntry.valueRanges.constFirst();
+    }
+    return std::nullopt;
+}
+
+std::optional<QString> commandDuplicateIdentityKey(const TherionSourceLogicalCommand &command,
+                                                   const QString &identity)
+{
+    const QString commandName = commandNameForDuplicateValidation(command);
+    if (commandUsesScrapObjectIdNamespace(commandName)) {
+        return duplicateObjectIdKey(command, identity);
+    }
+    if (commandUsesParentNamespaceName(commandName)) {
+        return duplicateNamespaceNameKey(command, identity);
+    }
+    return std::nullopt;
+}
+
+TherionSourceDiagnostic diagnosticForDuplicateObjectId(
+    const TherionSourceLogicalCommand &command,
+    const TherionSourceLogicalArgumentRange &idRange)
+{
+    TherionSourceDiagnostic diagnostic;
+    diagnostic.code = QStringLiteral("duplicate-object-id");
+    diagnostic.severity = TherionSourceDiagnosticSeverity::Error;
+    diagnostic.lineNumber = idRange.physicalRange.lineNumber;
+    diagnostic.columnNumber = idRange.physicalRange.columnNumber;
+    diagnostic.columnLength = idRange.physicalRange.columnLength;
+    diagnostic.title = QStringLiteral("Duplicate object id");
+    diagnostic.message = QStringLiteral("Object id `%1` is already used by another object in this namespace.")
+                             .arg(idRange.text);
+    diagnostic.currentText = idRange.physicalRange.lineText;
+    diagnostic.suggestedText = QString();
+    diagnostic.hasFix = false;
+    return diagnostic;
+}
+
+std::optional<TherionSourceLogicalArgumentRange> lineObjectIdRange(
+    const TherionSourceLogicalCommand &command)
+{
+    if (commandNameForDuplicateValidation(command) != QStringLiteral("line")) {
+        return std::nullopt;
+    }
+
+    for (const TherionSourceLogicalOptionEntryRange &optionEntry : command.optionEntryRanges) {
+        if (normalizedCommandOptionName(optionEntry.key) != QStringLiteral("id")) {
+            continue;
+        }
+        if (optionEntry.valueRanges.isEmpty()) {
+            return std::nullopt;
+        }
+        return optionEntry.valueRanges.constFirst();
+    }
+    return std::nullopt;
+}
+
+TherionSourceDiagnostic diagnosticForUnknownAreaLineReference(
+    const TherionSourceLogicalTokenRange &referenceRange)
+{
+    TherionSourceDiagnostic diagnostic;
+    diagnostic.code = QStringLiteral("unknown-area-line-reference");
+    diagnostic.severity = TherionSourceDiagnosticSeverity::Error;
+    diagnostic.lineNumber = referenceRange.physicalRange.lineNumber;
+    diagnostic.columnNumber = referenceRange.physicalRange.columnNumber;
+    diagnostic.columnLength = referenceRange.physicalRange.columnLength;
+    diagnostic.title = QStringLiteral("Unknown area line reference");
+    diagnostic.message = QStringLiteral("Area references line `%1`, but no line with this id exists in the current scrap.")
+                             .arg(referenceRange.text);
+    diagnostic.currentText = referenceRange.physicalRange.lineText;
+    diagnostic.suggestedText = QString();
+    diagnostic.hasFix = false;
+    return diagnostic;
+}
+
 QString cleanupInvalidSubtypeValues(const QString &lineText,
                                     bool *changed,
                                     int *firstChangedColumnNumber,
@@ -610,6 +777,7 @@ void appendBlockDiagnostics(TherionSourceValidationResult *result,
         diagnostic.severity = TherionSourceDiagnosticSeverity::Error;
         diagnostic.lineNumber = openBlock.lineNumber;
         diagnostic.columnNumber = 1;
+        diagnostic.columnLength = openBlock.directive.size();
         diagnostic.title = QStringLiteral("Unclosed block");
         diagnostic.message = QStringLiteral("Block `%1` is not closed before the end of the document. Expected `%2`.")
                                  .arg(openBlock.directive, openToClose.value(openBlock.directive));
@@ -640,11 +808,53 @@ TherionSourceValidationResult TherionSourceValidator::validate(const QString &co
         catalog.commandNames.isEmpty()
             ? TherionSourceLogicalDocument::fromSourceDocument(sourceDocument)
             : TherionSourceLogicalDocument::fromSourceDocument(sourceDocument, catalog);
+    QHash<QString, QSet<QString>> lineIdsByScrapScope;
+    for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
+        const std::optional<TherionSourceLogicalArgumentRange> idRange = lineObjectIdRange(command);
+        if (!idRange.has_value() || idRange->text.trimmed().isEmpty()) {
+            continue;
+        }
+        const QString scopeKey = scrapObjectScopeKey(command.blockStackBefore);
+        if (!scopeKey.isEmpty()) {
+            lineIdsByScrapScope[scopeKey].insert(idRange->text.trimmed());
+        }
+    }
+
+    QHash<QString, TherionSourceLogicalArgumentRange> firstExplicitObjectIdByKey;
     for (const TherionSourceLogicalCommand &command : logicalDocument.commands()) {
         if (command.startLineNumber == command.endLineNumber) {
             const LineCleanupResult cleanup = cleanupLine(command.text);
             if (cleanup.changed && cleanup.text != command.text) {
                 result.diagnostics.append(diagnosticForLineCleanup(command, cleanup));
+            }
+        }
+
+        const std::optional<TherionSourceLogicalArgumentRange> idRange =
+            commandObjectIdentityRange(command);
+        if (idRange.has_value() && !idRange->text.trimmed().isEmpty()) {
+            const std::optional<QString> key = commandDuplicateIdentityKey(command, idRange->text);
+            if (key.has_value()) {
+                if (firstExplicitObjectIdByKey.contains(*key)) {
+                    result.diagnostics.append(diagnosticForDuplicateObjectId(command, *idRange));
+                } else {
+                    firstExplicitObjectIdByKey.insert(*key, *idRange);
+                }
+            }
+        }
+
+        if (command.role == TherionSourceLineRole::BlockContent
+            && command.currentBlockDirective == QStringLiteral("area")) {
+            const QString scopeKey = scrapObjectScopeKey(command.blockStackBefore);
+            const QSet<QString> knownLineIds = lineIdsByScrapScope.value(scopeKey);
+            for (const TherionSourceLogicalTokenRange &tokenRange : command.tokenRanges) {
+                if (tokenRange.type == TherionTokenType::Comment) {
+                    continue;
+                }
+                const QString reference = tokenRange.text.trimmed();
+                if (reference.isEmpty() || knownLineIds.contains(reference)) {
+                    continue;
+                }
+                result.diagnostics.append(diagnosticForUnknownAreaLineReference(tokenRange));
             }
         }
 

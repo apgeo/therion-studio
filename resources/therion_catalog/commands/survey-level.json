@@ -1,0 +1,40 @@
+{
+  "name": "survey-level",
+  "directive": "survey-level",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "N is the number of survey levels displayed next to the station name (M, A; default: 0). PDF related:",
+  "syntax": [
+    "survey-level <N/all>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<N/all>",
+      "name": "<N/all>",
+      "signature": "<N/all>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

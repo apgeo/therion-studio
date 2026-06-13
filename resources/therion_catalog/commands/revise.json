@@ -1610,6 +1610,23 @@
       "dependencies": []
     },
     {
+      "raw": "0cm minus 4pt symbol-assign <point/line/area/group/special> <symbol-type> <symbol-set> = display a particular symbol in the given symbol-set. This option overrides symbol-set option. If the symbol has a subtype, <symbol-type> argument may have one of the following forms: type:subtype or simply type, which assigns new symbol set to all subtypes of a given symbol. Following symbols may not be used with this option: point section (which isn't rendered at all) and all point and line labels ( label , remark , altitude , height , passage-height , station-name , date ). See the chapter Changing layout/Customizing text labels for details how to change labels' appearance. (M, A) Group may be one of the following: all, centerline, sections, water, speleothems, passage-fills, ice, sediments, equipment. There are two special symbols: north-arrow, scale-bar.",
+      "name": "0cm minus 4pt symbol-assign <point/line/area/group/special> <symbol-type> <symbol-set>",
+      "signature": "0cm minus 4pt symbol-assign <point/line/area/group/special> <symbol-type> <symbol-set>",
+      "option_key": "-symbol-assign",
+      "value_arity": "N",
+      "value_domain": "enum",
+      "description": "display a particular symbol in the given symbol-set. This option overrides symbol-set option. If the symbol has a subtype, <symbol-type> argument may have one of the following forms: type:subtype or simply type, which assigns new symbol set to all subtypes of a given symbol. Following symbols may not be used with this option: point section (which isn't rendered at all) and all point and line labels ( label , remark , altitude , height , passage-height , station-name , date ). See the chapter Changing layout/Customizing text labels for details how to change labels' appearance. (M, A) Group may be one of the following: all, centerline, sections, water, speleothems, passage-fills, ice, sediments, equipment. There are two special symbols: north-arrow, scale-bar.",
+      "allowed_values": [
+        "area",
+        "group",
+        "line",
+        "point",
+        "special"
+      ],
+      "dependencies": []
+    },
+    {
       "raw": "symbol-colo[u]r <point/line/area/group/special> <symbol-type> <colour> = change colour of particular symbol or group of symbols. (Note: colour change currently applies to pattern fills only if (1) output format is PDF and (2) \\ version is at least 1.000) (M, A)",
       "name": "symbol-colo[u]r <point/line/area/group/special> <symbol-type> <colour>",
       "signature": "symbol-colo[u]r <point/line/area/group/special> <symbol-type> <colour>",

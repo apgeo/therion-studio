@@ -1,0 +1,40 @@
+{
+  "name": "surface-opacity",
+  "directive": "surface-opacity",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "set the surface bitmap opacity (used if transparency is on). Value range is 0--100. (M, A; default: 70)",
+  "syntax": [
+    "surface-opacity <value>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<value>",
+      "name": "<value>",
+      "signature": "<value>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

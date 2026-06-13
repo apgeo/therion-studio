@@ -175,7 +175,8 @@ def infer_block_closing_directive(command_directive: str, syntax_rows: list[str]
 def extract_option_key(signature_core: str) -> str:
     if not signature_core:
         return ""
-    first_token = signature_core.split()[0].strip().split(",")[0]
+    tokens = [token.strip().split(",")[0] for token in signature_core.split()]
+    first_token = tokens[0] if tokens else ""
     if not first_token:
         return ""
     first_alias = first_token.split("/")[0].strip()
@@ -188,6 +189,12 @@ def extract_option_key(signature_core: str) -> str:
         normalized = normalized.lstrip("-")
 
     if not re.fullmatch(r"[a-z][a-z0-9-]*", normalized):
+        for token in tokens[1:]:
+            candidate = token.split("/")[0].strip().lower().replace("[", "").replace("]", "")
+            if "-" not in candidate:
+                continue
+            if re.fullmatch(r"[a-z][a-z0-9-]*", candidate):
+                return f"-{candidate}"
         return ""
     return f"-{normalized}"
 
@@ -1128,6 +1135,56 @@ def apply_map_body_command_contexts(catalog: dict[str, Any]) -> None:
         append_unique(dependencies, "context: map")
 
 
+def synthesize_layout_setting_commands(commands: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    layout_command = next(
+        (
+            command
+            for command in commands
+            if isinstance(command, dict)
+            and normalize_directive_token(str(command.get("directive", command.get("name", "")))) == "layout"
+        ),
+        None,
+    )
+    if layout_command is None:
+        return []
+
+    synthesized: list[dict[str, Any]] = []
+    for option in layout_command.get("options", []):
+        if not isinstance(option, dict):
+            continue
+        option_key = normalize_whitespace(str(option.get("option_key", ""))).lower()
+        if not option_key.startswith("-"):
+            continue
+
+        command_name = option_key[1:]
+        if not command_name:
+            continue
+
+        signature = clean_tex_text(str(option.get("signature", "")))
+        signature_core = extract_signature_core(signature)
+        aliases: list[str] = []
+        if "colour" in command_name:
+            append_unique(aliases, command_name.replace("colour", "color"))
+
+        synthesized.append(
+            {
+                "name": command_name,
+                "directive": normalize_directive_token(command_name),
+                "aliases": aliases,
+                "source": layout_command.get("source", {}),
+                "summary": clean_tex_text(str(option.get("description", ""))),
+                "syntax": [signature] if signature else [],
+                "contexts": ["layout"],
+                "document_types": THERION_CONFIG_DOCUMENT_TYPES.copy(),
+                "arguments": build_argument_entries_from_signature(signature_core),
+                "options": [],
+                "dependencies": ["context: layout"],
+                "allowed_values": [],
+            }
+        )
+    return synthesized
+
+
 def apply_command_context_overrides(catalog: dict[str, Any]) -> None:
     commands = catalog.get("commands", [])
     commands_by_name = {
@@ -1498,6 +1555,8 @@ def build_catalog(inputs: list[Path], source_repo: str, source_ref: str) -> dict
 
     for input_path, text in source_texts:
         commands.extend(parse_sections(text, str(input_path), known_command_names))
+
+    commands.extend(synthesize_layout_setting_commands(commands))
 
     # Deduplicate by command name while preserving first occurrence precedence.
     # For duplicate command definitions (e.g. top-level plus centerline inline),

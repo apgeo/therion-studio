@@ -1,0 +1,51 @@
+{
+  "name": "symbol-show",
+  "directive": "symbol-show",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "display particular symbol or group of symbols. May be combined with symbol-hide. (M, A)",
+  "syntax": [
+    "symbol-show <point/line/area/group/special> <symbol-type>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<point/line/area/group/special>",
+      "name": "<point/line/area/group/special>",
+      "signature": "<point/line/area/group/special>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<symbol-type>",
+      "name": "<symbol-type>",
+      "signature": "<symbol-type>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

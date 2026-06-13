@@ -1,0 +1,40 @@
+{
+  "name": "grid",
+  "directive": "grid",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "enable/disable grid (optionally coordinates' values may be also displayed) (M, A; default: off)",
+  "syntax": [
+    "grid <off/bottom/top>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<off/bottom/top>",
+      "name": "<off/bottom/top>",
+      "signature": "<off/bottom/top>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

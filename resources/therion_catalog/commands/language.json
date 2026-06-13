@@ -5,20 +5,34 @@
     "file": "therion/thbook/ch03.tex",
     "line": 38
   },
-  "summary": "",
+  "summary": "set output language. Available languages are listed on the copyright page. See the Appendix if you want to add or customize translations. (M, A)",
   "syntax": [
     "* language <xx_[YY]>"
   ],
   "contexts": [
-    "none"
+    "none",
+    "layout"
   ],
   "document_types": [
     "thconfig"
   ],
-  "arguments": [],
+  "arguments": [
+    {
+      "raw": "<xx[_YY]>",
+      "name": "<xx[_YY]>",
+      "signature": "<xx[_YY]>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
   "options": [],
   "dependencies": [
-    "context: none"
+    "context: none",
+    "context: layout"
   ],
   "allowed_values": [],
   "block": {

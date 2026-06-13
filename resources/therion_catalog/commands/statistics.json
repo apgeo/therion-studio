@@ -1,0 +1,40 @@
+{
+  "name": "statistics",
+  "directive": "statistics",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "display some basic statistics; if set to off, team members are sorted alphabetically; otherwise according to their contribution to exploration and surveying (M, A; default: hide)",
+  "syntax": [
+    "statistics <explo/topo/carto/copyright all/off/number>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<explo/topo/carto/copyright all/off/number>",
+      "name": "<explo/topo/carto/copyright all/off/number>",
+      "signature": "<explo/topo/carto/copyright all/off/number>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

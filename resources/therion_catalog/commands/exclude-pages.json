@@ -1,0 +1,51 @@
+{
+  "name": "exclude-pages",
+  "directive": "exclude-pages",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "exclude specified pages from cave atlas. The list may contain page numbers separated by a comma or dash (for intervals) e.g. 2,4-7,9,23 means, that pages 2, 4, 5, 6, 7, 9 and 23 should be omitted. Only the map pages should be counted. (Set own-pages 0 and title-pages off to get the correct page numbers to be excluded.) Changes of own-pages or title-pages options don't affect page excluding. (A)",
+  "syntax": [
+    "exclude-pages <on/off> <list>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<on/off>",
+      "name": "<on/off>",
+      "signature": "<on/off>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<list>",
+      "name": "<list>",
+      "signature": "<list>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

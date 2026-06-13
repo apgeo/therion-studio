@@ -1,0 +1,84 @@
+{
+  "name": "fonts-setup",
+  "directive": "fonts-setup",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "specify size of the text in points. <normalsize> applies to point label, <smallsize> applies to remark and all other point labels. Each of them may apply to line label according to its -scale option. The defaults are 8 10 12 16 24 for scales upto 1:100; 7 8 10 14 20 for scales upto 1:200; 6 7 8 10 14 for scales upto 1:500 and 5 6 7 8 10 for scales smaller than 1:500.",
+  "syntax": [
+    "fonts-setup <tinysize> <smallsize> <normalsize> <largesize> <hugesize>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<tinysize>",
+      "name": "<tinysize>",
+      "signature": "<tinysize>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<smallsize>",
+      "name": "<smallsize>",
+      "signature": "<smallsize>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<normalsize>",
+      "name": "<normalsize>",
+      "signature": "<normalsize>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<largesize>",
+      "name": "<largesize>",
+      "signature": "<largesize>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<hugesize>",
+      "name": "<hugesize>",
+      "signature": "<hugesize>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

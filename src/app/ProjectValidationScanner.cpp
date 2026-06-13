@@ -157,9 +157,30 @@ TherionSourceDiagnostic diagnosticForProjectIndexDiagnostic(const ProjectIndexDi
                                  .arg(indexDiagnostic.referencedName)
                                  .arg(indexDiagnostic.candidateCount);
         break;
+    case ProjectIndexDiagnosticKind::DuplicateObjectId:
+        diagnostic.code = QStringLiteral("duplicate-object-id");
+        diagnostic.title = QObject::tr("Duplicate object id");
+        diagnostic.message = QObject::tr("Object id `%1` is already used by another object in this namespace.")
+                                 .arg(indexDiagnostic.referencedName);
+        break;
     }
 
     return diagnostic;
+}
+
+bool containsEquivalentFinding(const QVector<ProjectValidationScanner::Finding> &findings,
+                               const QString &filePath,
+                               const TherionSourceDiagnostic &diagnostic)
+{
+    for (const ProjectValidationScanner::Finding &finding : findings) {
+        if (finding.filePath == filePath
+            && finding.diagnostic.code == diagnostic.code
+            && finding.diagnostic.lineNumber == diagnostic.lineNumber
+            && finding.diagnostic.columnNumber == diagnostic.columnNumber) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void appendProjectIndexFindings(ProjectValidationScanner::Result *result,
@@ -196,7 +217,11 @@ void appendProjectIndexFindings(ProjectValidationScanner::Result *result,
             continue;
         }
 
-        result->findings.append({indexDiagnostic.sourceFile, diagnosticForProjectIndexDiagnostic(indexDiagnostic)});
+        const TherionSourceDiagnostic diagnostic = diagnosticForProjectIndexDiagnostic(indexDiagnostic);
+        if (containsEquivalentFinding(result->findings, indexDiagnostic.sourceFile, diagnostic)) {
+            continue;
+        }
+        result->findings.append({indexDiagnostic.sourceFile, diagnostic});
         if (result->findings.size() >= kMaximumProjectValidationFindings) {
             result->limitReached = true;
             return;

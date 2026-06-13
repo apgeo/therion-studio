@@ -1,0 +1,51 @@
+{
+  "name": "origin-label",
+  "directive": "origin-label",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "set label for atlas page which has the lower left corner at the given origin coordinates. May be either a number or a string. (String labels form the following sequence, either in lower or upper case: A, B, ..., Z, AA, AB, ...) (M, A; default: 0 0)",
+  "syntax": [
+    "origin-label <x-label> <y-label>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<x-label>",
+      "name": "<x-label>",
+      "signature": "<x-label>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<y-label>",
+      "name": "<y-label>",
+      "signature": "<y-label>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

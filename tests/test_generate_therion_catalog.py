@@ -310,6 +310,35 @@ class TherionCatalogGenerationTest(unittest.TestCase):
         self.assertIn("centerline", break_command.get("contexts", []))
         self.assertIn("map", break_command.get("contexts", []))
 
+    def test_layout_settings_have_layout_command_entries(self) -> None:
+        expected_settings = {
+            "copy",
+            "cs",
+            "debug",
+            "doc-author",
+            "doc-keywords",
+            "doc-subject",
+            "doc-title",
+            "legend-columns",
+            "legend-width",
+            "map-header",
+            "symbol-assign",
+            "symbol-hide",
+        }
+        missing = sorted(expected_settings - set(self.commands_by_name.keys()))
+        self.assertFalse(missing, f"Missing generated layout setting commands: {missing}")
+
+        for name in expected_settings:
+            command = self.commands_by_name[name]
+            self.assertIn("layout", command.get("contexts", []), name)
+            self.assertIn("thconfig", command.get("document_types", []), name)
+
+        map_header = self.commands_by_name["map-header"]
+        self.assertEqual(map_header.get("allowed_values", []), [])
+
+        colour_model = self.commands_by_name["colour-model"]
+        self.assertIn("color-model", colour_model.get("aliases", []))
+
     def test_symbol_type_subtype_matrix_presence(self) -> None:
         point = self.commands_by_name["point"]
         line = self.commands_by_name["line"]

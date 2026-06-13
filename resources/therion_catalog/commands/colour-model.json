@@ -1,0 +1,42 @@
+{
+  "name": "colour-model",
+  "directive": "colour-model",
+  "aliases": [
+    "color-model"
+  ],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "select the output colour model (M, A; default: cmyk). The CMYK colour model is intended for printing. Black overprint is used for the best appearance of black lines and texts. The hue of other colours may vary depending on the type or settings of the RIP or printer driver. The RGB colour model is intended for screen or multimedia projector presentation. If used for printing, the result will depend on the colour management settings and also on particular colour, as not all RGB colours can be represented on printer. The grayscale colour model is meant for printing on B&W printers. If input colours (lookup, colour in the layout) do not match the output colour model (e.g. only RGB is defined in the lookup and CMYK selected as the colour-model), they will be converted to the output model.",
+  "syntax": [
+    "colo[u]r-model <cmyk/rgb/grayscale>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<cmyk/rgb/grayscale>",
+      "name": "<cmyk/rgb/grayscale>",
+      "signature": "<cmyk/rgb/grayscale>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

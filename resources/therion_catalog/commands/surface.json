@@ -11,12 +11,26 @@
   ],
   "contexts": [
     "none",
-    "survey"
+    "survey",
+    "layout"
   ],
   "document_types": [
-    "th"
+    "th",
+    "thconfig"
   ],
-  "arguments": [],
+  "arguments": [
+    {
+      "raw": "<top/bottom/off>",
+      "name": "<top/bottom/off>",
+      "signature": "<top/bottom/off>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
   "options": [
     {
       "raw": "cs <coordinate system> = coordinate system for bitmap calibration and grid origin specification",
@@ -90,7 +104,8 @@
     }
   ],
   "dependencies": [
-    "context: none, survey"
+    "context: none, survey",
+    "context: layout"
   ],
   "allowed_values": [],
   "block": {

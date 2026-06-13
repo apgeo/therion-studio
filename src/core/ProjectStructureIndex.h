@@ -33,6 +33,7 @@ enum class ProjectIndexDiagnosticKind
     AmbiguousJoinReference,
     UnknownStationReference,
     AmbiguousStationReference,
+    DuplicateObjectId,
 };
 
 struct ProjectStructureEntry

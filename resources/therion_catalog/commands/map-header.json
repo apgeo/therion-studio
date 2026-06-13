@@ -1,0 +1,62 @@
+{
+  "name": "map-header",
+  "directive": "map-header",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "print map header at location specified by <x> <y>. Predefined map header contains some basic information about cave: name, scale, north arrow, list of surveyors etc. It is fully customizable (see the chapter Changing layout for details). <x> is easting (left-right on page). <y> is northing (up/down page). Ranges for <x> and <y> are -100--200. Lower-left corner of the map is 0 0, upper-right corner is 100 100. The header is aligned with the specified corner or side to this anchor point. (M; default: 0 100 nw)",
+  "syntax": [
+    "map-header <x> <y> <off/n/s/e/w/ne/nw/se/sw/center>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<x>",
+      "name": "<x>",
+      "signature": "<x>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<y>",
+      "name": "<y>",
+      "signature": "<y>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<off/n/s/e/w/ne/nw/se/sw/center>",
+      "name": "<off/n/s/e/w/ne/nw/se/sw/center>",
+      "signature": "<off/n/s/e/w/ne/nw/se/sw/center>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

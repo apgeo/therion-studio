@@ -1,0 +1,53 @@
+{
+  "name": "colour-profile",
+  "directive": "colour-profile",
+  "aliases": [
+    "color-profile"
+  ],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "assign an ICC profile to colours specified in the given colour model. ICC profiles are applied only to drawings, not to embedded raster images like sketches and surface bitmaps. (M, A)",
+  "syntax": [
+    "colo[u]r-profile <cmyk/rgb/grayscale> <filename>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<cmyk/rgb/grayscale>",
+      "name": "<cmyk/rgb/grayscale>",
+      "signature": "<cmyk/rgb/grayscale>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    },
+    {
+      "raw": "<filename>",
+      "name": "<filename>",
+      "signature": "<filename>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

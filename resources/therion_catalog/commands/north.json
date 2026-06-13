@@ -1,0 +1,40 @@
+{
+  "name": "north",
+  "directive": "north",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "specify default orientation of the map. By default, true (astronomical) north is used. It is ignored when used with local coordinate system.",
+  "syntax": [
+    "north <true/grid>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<true/grid>",
+      "name": "<true/grid>",
+      "signature": "<true/grid>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

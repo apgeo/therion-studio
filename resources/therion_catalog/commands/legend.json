@@ -1,0 +1,40 @@
+{
+  "name": "legend",
+  "directive": "legend",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "display list of used map symbols in the map header. If set to all, all symbols from the current symbol set are displayed. (M, A; default: off)",
+  "syntax": [
+    "legend <on/off/all>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<on/off/all>",
+      "name": "<on/off/all>",
+      "signature": "<on/off/all>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

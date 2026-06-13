@@ -1,0 +1,40 @@
+{
+  "name": "map-header-bg",
+  "directive": "map-header-bg",
+  "aliases": [],
+  "source": {
+    "file": "therion/thbook/ch03.tex",
+    "line": 235
+  },
+  "summary": "when on, background of map header is filled with background color (e.g. to hide map grid). (M; default: off)",
+  "syntax": [
+    "map-header-bg <on/off>"
+  ],
+  "contexts": [
+    "layout"
+  ],
+  "document_types": [
+    "thconfig"
+  ],
+  "arguments": [
+    {
+      "raw": "<on/off>",
+      "name": "<on/off>",
+      "signature": "<on/off>",
+      "option_key": "",
+      "value_arity": "1",
+      "value_domain": "keyword",
+      "description": "",
+      "allowed_values": [],
+      "dependencies": []
+    }
+  ],
+  "options": [],
+  "dependencies": [
+    "context: layout"
+  ],
+  "allowed_values": [],
+  "block": {
+    "role": "leaf"
+  }
+}

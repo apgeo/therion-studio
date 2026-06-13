@@ -1740,11 +1740,26 @@ StationReferenceIndex stationReferencesFromProject(const QVector<ProjectStructur
                 continue;
             }
 
+            if (command.metadata.commandName == QStringLiteral("fix")) {
+                if (command.parsed.tokens.size() > 1) {
+                    const QString stationName = command.parsed.tokens.at(1);
+                    if (!stationName.trimmed().isEmpty() && stationName != QStringLiteral("-")) {
+                        const ProjectStructureEntry ownerEntry =
+                            nearestNamespaceEntryForLine(namespaceEntries, sourceFile, command.startLineNumber);
+                        addStationReferenceKey(&index,
+                                               stationName,
+                                               ownerEntry.namespacePath,
+                                               QStringLiteral("centerline-fix:%1:%2")
+                                                   .arg(sourceFile, QString::number(command.startLineNumber)));
+                    }
+                }
+                continue;
+            }
+
             if (fromColumn < 0 && toColumn < 0) {
                 continue;
             }
             if (command.metadata.commandName == QStringLiteral("station")
-                || command.metadata.commandName == QStringLiteral("fix")
                 || command.metadata.commandName == QStringLiteral("equate")) {
                 continue;
             }

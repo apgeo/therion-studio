@@ -14,10 +14,14 @@ TherionSourceValidationResult MapEditorTab::validateDocument() const
 
 void MapEditorTab::setProjectValidationDiagnostics(const QVector<TherionSourceDiagnostic> &diagnostics)
 {
-    Q_UNUSED(diagnostics)
-    // Keep project diagnostics in the Validation panel for map-editor tabs.
-    // Injecting external diagnostics into the embedded text editor can re-enter
-    // syntax highlighting while the visual scene is handling drag/edit gestures.
+    projectValidationDiagnostics_ = diagnostics;
+    if (textEditor_ == nullptr) {
+        return;
+    }
+
+    textEditor_->setProjectValidationDiagnostics(workspaceMode_ == WorkspaceMode::Raw
+                                                     ? projectValidationDiagnostics_
+                                                     : QVector<TherionSourceDiagnostic>{});
 }
 
 bool MapEditorTab::applyValidationFixes(const QVector<TherionSourceDiagnosticFix> &fixes)

@@ -170,6 +170,11 @@ void MapEditorTab::setWorkspaceMode(WorkspaceMode mode)
     workspaceMode_ = mode;
     refreshWorkspaceModeUi();
     updateWorkspaceVisibility();
+    if (textEditor_ != nullptr) {
+        textEditor_->setProjectValidationDiagnostics(workspaceMode_ == WorkspaceMode::Raw
+                                                         ? projectValidationDiagnostics_
+                                                         : QVector<TherionSourceDiagnostic>{});
+    }
     emit workspaceModeChanged(workspaceMode_);
 }
 

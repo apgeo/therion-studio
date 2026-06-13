@@ -868,6 +868,14 @@ int runProjectIndexStationReferenceDiagnosticsTest()
                                   "  centerline\n"
                                   "    equate 1.0@20090809_1.stara_dvanactka.1303\n"
                                   "  endcenterline\n"
+                                  "  survey totalka\n"
+                                  "    centerline\n"
+                                  "      fix 7 1152039.23 589091.12 484.10\n"
+                                  "    endcenterline\n"
+                                  "  endsurvey totalka\n"
+                                  "  centerline\n"
+                                  "    equate 7@totalka\n"
+                                  "  endcenterline\n"
                                   "  survey 1318\n"
                                   "    survey stara_vetrna\n"
                                   "      survey hp\n"
@@ -965,6 +973,10 @@ int runProjectIndexStationReferenceDiagnosticsTest()
         }
         if (!expect(diagnostic.referencedName != QStringLiteral("1.0@20090809_1.stara_dvanactka.1303"),
                     "Repeated splay rows for a fully qualified nested station reference should not produce ambiguous diagnostics.")) {
+            return 1;
+        }
+        if (!expect(diagnostic.referencedName != QStringLiteral("7@totalka"),
+                    "Stations defined by fix commands should resolve as valid station references.")) {
             return 1;
         }
         if (!expect(diagnostic.referencedName != QStringLiteral("27@hp.stara_vetrna"),

@@ -651,6 +651,7 @@ private:
     QUndoStack *undoStack_ = nullptr;
     int nextDraftGeometryId_ = 1;
     WorkspaceMode workspaceMode_ = WorkspaceMode::Visual;
+    QVector<TherionSourceDiagnostic> projectValidationDiagnostics_;
     QString projectRootPath_;
     QString toolbarStatusNote_;
     bool updatingSelection_ = false;

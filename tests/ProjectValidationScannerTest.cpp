@@ -582,6 +582,16 @@ int runProjectIndexDiagnosticProjectionTest()
                 "Project validation should expose unresolved point station -name references from the project index.")) {
         return 1;
     }
+    const TherionSourceDiagnostic *unknownStationDiagnostic =
+        findingDiagnostic(waitResult.result, mapAFile, QStringLiteral("unknown-station-reference"));
+    if (!expect(unknownStationDiagnostic != nullptr,
+                "Unknown station reference diagnostic should be available for source-line checks.")) {
+        return 1;
+    }
+    if (!expect(unknownStationDiagnostic->currentText == QStringLiteral("point 1 1 station -name missing-map"),
+                "Project-index station diagnostics should preserve the full current source line.")) {
+        return 1;
+    }
     const TherionSourceDiagnostic *unknownMapDiagnostic =
         findingDiagnostic(waitResult.result, rootFile, QStringLiteral("unknown-map-reference"));
     if (!expect(unknownMapDiagnostic != nullptr,
@@ -662,8 +672,13 @@ int runUnindexedMapStationNameValidationTest()
     }
     if (!expect(diagnostic->lineNumber == 2
                     && diagnostic->columnLength == QStringLiteral("test").size()
-                    && diagnostic->currentText == QStringLiteral("test"),
-                "Unindexed-map station diagnostic should cover the station name token.")) {
+                    && diagnostic->currentText == QStringLiteral("point 0 0 station -name test"),
+                "Unindexed-map station diagnostic should cover the station name token and preserve the full source line.")) {
+        return 1;
+    }
+    if (!expect(diagnostic->message.contains(QStringLiteral("this file is not included in the project source graph"))
+                    && !diagnostic->message.contains(QStringLiteral("this map file")),
+                "Unindexed-map station diagnostic should describe the unindexed source file accurately.")) {
         return 1;
     }
     if (!expect(findingCount(waitResult.result,

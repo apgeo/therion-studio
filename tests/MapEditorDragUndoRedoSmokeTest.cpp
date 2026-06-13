@@ -250,6 +250,7 @@ int runProjectValidationDiagnosticsStayOutOfMapEditorSmoke()
     }
 
     file.write("scrap s1\n"
+               "point 0 0 station -name test\n"
                "line wall\n"
                "  0 0\n"
                "  10 10\n"
@@ -295,24 +296,35 @@ int runProjectValidationDiagnosticsStayOutOfMapEditorSmoke()
     const QString originalText = mapTab->text();
     TherionSourceDiagnostic diagnostic;
     diagnostic.severity = TherionSourceDiagnosticSeverity::Error;
-    diagnostic.code = QStringLiteral("project-validation-boundary-test");
-    diagnostic.title = QStringLiteral("Project diagnostic");
-    diagnostic.message = QStringLiteral("Project diagnostics must stay out of map-editor inline projection.");
-    diagnostic.lineNumber = 3;
-    diagnostic.columnNumber = 3;
-    diagnostic.columnLength = 3;
-    diagnostic.currentText = QStringLiteral("  0 0");
+    diagnostic.code = QStringLiteral("unknown-station-reference");
+    diagnostic.title = QStringLiteral("Unknown station reference");
+    diagnostic.message = QStringLiteral("Station reference `test` has no matching station in the project index.");
+    diagnostic.lineNumber = 2;
+    diagnostic.columnNumber = QStringLiteral("point 0 0 station -name ").size() + 1;
+    diagnostic.columnLength = QStringLiteral("test").size();
+    diagnostic.currentText = QStringLiteral("point 0 0 station -name test");
 
     mapTab->setProjectValidationDiagnostics({diagnostic});
     pumpEvents();
 
-    const QTextBlock coordinateLine = sourceEditor->document()->findBlockByLineNumber(2);
-    if (!expect(!tokenHasWaveUnderline(coordinateLine, QStringLiteral("0 0")),
-                "Project diagnostics should not be injected into the map editor embedded source highlighter.")) {
+    const QTextBlock stationLine = sourceEditor->document()->findBlockByLineNumber(1);
+    if (!expect(!tokenHasWaveUnderline(stationLine, QStringLiteral("test")),
+                "Project diagnostics should not be injected into visual map-editor highlighting.")) {
         return 1;
     }
     if (!expect(mapTab->text() == originalText,
                 "Project diagnostics should not mutate map editor source text.")) {
+        return 1;
+    }
+
+    mapTab->setWorkspaceMode(MapEditorTab::WorkspaceMode::Raw);
+    pumpEvents();
+    if (!expect(tokenHasWaveUnderline(stationLine, QStringLiteral("test")),
+                "Project diagnostics should be projected into the map editor Raw text highlighter.")) {
+        return 1;
+    }
+    if (!expect(mapTab->text() == originalText,
+                "Raw project diagnostic projection should not mutate map editor source text.")) {
         return 1;
     }
 

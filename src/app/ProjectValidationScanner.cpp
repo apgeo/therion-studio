@@ -86,6 +86,24 @@ QString readValidatableFileText(const QString &filePath)
     return contents;
 }
 
+QString sourceLineTextAt(const QString &text, int oneBasedLineNumber)
+{
+    if (oneBasedLineNumber <= 0) {
+        return QString();
+    }
+
+    const QStringList lines = text.split(QLatin1Char('\n'), Qt::KeepEmptyParts);
+    if (oneBasedLineNumber > lines.size()) {
+        return QString();
+    }
+
+    QString line = lines.at(oneBasedLineNumber - 1);
+    if (line.endsWith(QLatin1Char('\r'))) {
+        line.chop(1);
+    }
+    return line;
+}
+
 TherionSourceDiagnostic diagnosticForProjectIndexDiagnostic(const ProjectIndexDiagnostic &indexDiagnostic)
 {
     TherionSourceDiagnostic diagnostic;
@@ -266,9 +284,9 @@ void appendUnindexedTh2StationNameFindings(ProjectValidationScanner::Result *res
         diagnostic.columnNumber = qMax(1, nameRange->physicalRange.columnNumber);
         diagnostic.columnLength = qMax(1, nameRange->physicalRange.columnLength);
         diagnostic.title = QObject::tr("Unknown station reference");
-        diagnostic.message = QObject::tr("Station reference `%1` cannot be resolved because this map file is not included in the project source graph.")
+        diagnostic.message = QObject::tr("Station reference `%1` cannot be resolved because this file is not included in the project source graph.")
                                  .arg(referenceName);
-        diagnostic.currentText = referenceName;
+        diagnostic.currentText = nameRange->physicalRange.lineText;
 
         if (!containsEquivalentFinding(result->findings, filePath, diagnostic)) {
             result->findings.append({filePath, diagnostic});
@@ -315,7 +333,13 @@ void appendProjectIndexFindings(ProjectValidationScanner::Result *result,
             continue;
         }
 
-        const TherionSourceDiagnostic diagnostic = diagnosticForProjectIndexDiagnostic(indexDiagnostic);
+        TherionSourceDiagnostic diagnostic = diagnosticForProjectIndexDiagnostic(indexDiagnostic);
+        const QString normalizedSourceFile = canonicalOrAbsoluteFilePath(indexDiagnostic.sourceFile);
+        const QString sourceLine = sourceLineTextAt(searchedTextByPath.value(normalizedSourceFile),
+                                                    diagnostic.lineNumber);
+        if (!sourceLine.isEmpty()) {
+            diagnostic.currentText = sourceLine;
+        }
         if (containsEquivalentFinding(result->findings, indexDiagnostic.sourceFile, diagnostic)) {
             continue;
         }

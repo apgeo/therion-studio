@@ -7,6 +7,8 @@
 #include "TherionSourceDocument.h"
 #include "TherionSourceLogicalDocument.h"
 
+#include <QCoreApplication>
+
 #include <algorithm>
 #include <optional>
 
@@ -319,8 +321,8 @@ TherionSourceDiagnostic diagnosticForDuplicateObjectId(
     diagnostic.lineNumber = idRange.physicalRange.lineNumber;
     diagnostic.columnNumber = idRange.physicalRange.columnNumber;
     diagnostic.columnLength = idRange.physicalRange.columnLength;
-    diagnostic.title = QStringLiteral("Duplicate object id");
-    diagnostic.message = QStringLiteral("Object id `%1` is already used by another object in this namespace.")
+    diagnostic.title = QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Duplicate object id");
+    diagnostic.message = QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Object id `%1` is already used by another object in this namespace.")
                              .arg(idRange.text);
     diagnostic.currentText = idRange.physicalRange.lineText;
     diagnostic.suggestedText = QString();
@@ -356,8 +358,8 @@ TherionSourceDiagnostic diagnosticForUnknownAreaLineReference(
     diagnostic.lineNumber = referenceRange.physicalRange.lineNumber;
     diagnostic.columnNumber = referenceRange.physicalRange.columnNumber;
     diagnostic.columnLength = referenceRange.physicalRange.columnLength;
-    diagnostic.title = QStringLiteral("Unknown area line reference");
-    diagnostic.message = QStringLiteral("Area references line `%1`, but no line with this id exists in the current scrap.")
+    diagnostic.title = QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Unknown area line reference");
+    diagnostic.message = QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Area references line `%1`, but no line with this id exists in the current scrap.")
                              .arg(referenceRange.text);
     diagnostic.currentText = referenceRange.physicalRange.lineText;
     diagnostic.suggestedText = QString();
@@ -540,15 +542,15 @@ TherionSourceDiagnostic diagnosticForLineCleanup(const TherionSourceLogicalComma
     diagnostic.lineNumber = command.startLineNumber;
     diagnostic.columnNumber = cleanup.columnNumber;
     diagnostic.columnLength = cleanup.columnLength;
-    diagnostic.title = QStringLiteral("Malformed or duplicate option token");
-    diagnostic.message = QStringLiteral("This command contains an option-like token or duplicate option/value pair that Therion may reject.");
+    diagnostic.title = QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Malformed or duplicate option token");
+    diagnostic.message = QCoreApplication::translate("TherionStudio::TherionSourceValidator", "This command contains an option-like token or duplicate option/value pair that Therion may reject.");
     diagnostic.currentText = command.text;
     diagnostic.suggestedText = cleanup.text;
     diagnostic.hasFix = true;
     diagnostic.fix.startOffset = command.startOffset;
     diagnostic.fix.length = command.text.size();
     diagnostic.fix.replacementText = cleanup.text;
-    diagnostic.fix.description = QStringLiteral("Rewrite line %1").arg(command.startLineNumber);
+    diagnostic.fix.description = QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Rewrite line %1").arg(command.startLineNumber);
     return diagnostic;
 }
 
@@ -633,8 +635,8 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
             result->diagnostics.append(diagnosticForToken(command,
                                                           0,
                                                           QStringLiteral("unknown-command"),
-                                                          QStringLiteral("Unknown command"),
-                                                          QStringLiteral("Command `%1` is not present in the Therion command catalog.").arg(command.parsed.directive)));
+                                                          QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Unknown command"),
+                                                          QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Command `%1` is not present in the Therion command catalog.").arg(command.parsed.directive)));
         }
         return;
     }
@@ -644,8 +646,8 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
         result->diagnostics.append(diagnosticForToken(command,
                                                       0,
                                                       QStringLiteral("invalid-command-context"),
-                                                      QStringLiteral("Unexpected command context"),
-                                                      QStringLiteral("Command `%1` is not listed for context `%2`. Expected context: %3.")
+                                                      QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Unexpected command context"),
+                                                      QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Command `%1` is not listed for context `%2`. Expected context: %3.")
                                                           .arg(commandName,
                                                                command.metadata.catalogCurrentContext,
                                                                command.metadata.catalogContexts.join(QStringLiteral(", ")))));
@@ -658,8 +660,8 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
         result->diagnostics.append(diagnosticForToken(command,
                                                       0,
                                                       QStringLiteral("invalid-document-type"),
-                                                      QStringLiteral("Unexpected document type"),
-                                                      QStringLiteral("Command `%1` is not listed for document type `%2`. Expected document type: %3.")
+                                                      QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Unexpected document type"),
+                                                      QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Command `%1` is not listed for document type `%2`. Expected document type: %3.")
                                                           .arg(commandName,
                                                                command.metadata.catalogCurrentDocumentType,
                                                                expectedDocumentTypes.join(QStringLiteral(", ")))));
@@ -670,8 +672,8 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
     if (requiredPositionalCount > 0 && providedPositionalCount < requiredPositionalCount) {
         result->diagnostics.append(diagnosticForLine(command,
                                                      QStringLiteral("missing-argument"),
-                                                     QStringLiteral("Missing argument"),
-                                                     QStringLiteral("Command `%1` expects at least %2 positional argument(s), but %3 provided.")
+                                                     QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Missing argument"),
+                                                     QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Command `%1` expects at least %2 positional argument(s), but %3 provided.")
                                                          .arg(commandName)
                                                          .arg(requiredPositionalCount)
                                                          .arg(providedPositionalCount),
@@ -685,8 +687,8 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
         result->diagnostics.append(diagnosticForToken(command,
                                                      extraArgument.tokenIndex,
                                                      QStringLiteral("extra-argument"),
-                                                     QStringLiteral("Extra argument"),
-                                                     QStringLiteral("Command `%1` declares %2 positional argument(s), but %3 provided.")
+                                                     QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Extra argument"),
+                                                     QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Command `%1` declares %2 positional argument(s), but %3 provided.")
                                                          .arg(commandName)
                                                          .arg(maxPositionalCount)
                                                          .arg(providedPositionalCount)));
@@ -705,8 +707,8 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
             result->diagnostics.append(diagnosticForToken(command,
                                                           tokenIndex,
                                                           QStringLiteral("unknown-argument-value"),
-                                                          QStringLiteral("Unknown argument value"),
-                                                          QStringLiteral("Command `%1` does not list `%2` as a known value. Known values: %3.")
+                                                          QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Unknown argument value"),
+                                                          QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Command `%1` does not list `%2` as a known value. Known values: %3.")
                                                               .arg(commandName, value, allowedValues.join(QStringLiteral(", ")))));
         }
     }
@@ -719,8 +721,8 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
             result->diagnostics.append(diagnosticForToken(command,
                                                           optionEntry.optionTokenIndex,
                                                           QStringLiteral("unknown-option"),
-                                                          QStringLiteral("Unknown option"),
-                                                          QStringLiteral("Command `%1` does not list option `%2` in the Therion command catalog.")
+                                                          QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Unknown option"),
+                                                          QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Command `%1` does not list option `%2` in the Therion command catalog.")
                                                               .arg(commandName, optionToken)));
         }
 
@@ -731,16 +733,16 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
             result->diagnostics.append(diagnosticForToken(command,
                                                           optionEntry.optionTokenIndex,
                                                           QStringLiteral("missing-option-value"),
-                                                          QStringLiteral("Missing option value"),
-                                                          QStringLiteral("Option `%1` on command `%2` expects a value.")
+                                                          QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Missing option value"),
+                                                          QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Option `%1` on command `%2` expects a value.")
                                                               .arg(optionToken, commandName),
                                                           TherionSourceDiagnosticSeverity::Error));
         } else if (fixedArity > 0 && providedValueCount > 0 && providedValueCount != fixedArity) {
             result->diagnostics.append(diagnosticForToken(command,
                                                           optionEntry.optionTokenIndex,
                                                           QStringLiteral("wrong-option-value-count"),
-                                                          QStringLiteral("Unexpected option value count"),
-                                                          QStringLiteral("Option `%1` on command `%2` expects exactly %3 value(s), but %4 provided.")
+                                                          QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Unexpected option value count"),
+                                                          QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Option `%1` on command `%2` expects exactly %3 value(s), but %4 provided.")
                                                               .arg(optionToken)
                                                               .arg(commandName)
                                                               .arg(fixedArity)
@@ -762,8 +764,8 @@ void appendCommandCatalogDiagnostics(TherionSourceValidationResult *result,
                 result->diagnostics.append(diagnosticForToken(command,
                                                               diagnosticTokenIndex,
                                                               QStringLiteral("unknown-option-value"),
-                                                              QStringLiteral("Unknown option value"),
-                                                              QStringLiteral("Option `%1` on command `%2` does not list `%3` as a known value. Known values: %4.")
+                                                              QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Unknown option value"),
+                                                              QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Option `%1` on command `%2` does not list `%3` as a known value. Known values: %4.")
                                                                   .arg(normalizedOption, commandName, valueToken, allowedOptionValues.join(QStringLiteral(", ")))));
             }
         }
@@ -784,8 +786,8 @@ void appendBlockDiagnostics(TherionSourceValidationResult *result,
         }
         result->diagnostics.append(diagnosticForLine(line.sourceLine,
                                                      QStringLiteral("unmatched-block-close"),
-                                                     QStringLiteral("Unmatched block close"),
-                                                     QStringLiteral("Closing directive `%1` does not match the currently open block.").arg(line.sourceLine.parsed.directive),
+                                                     QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Unmatched block close"),
+                                                     QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Closing directive `%1` does not match the currently open block.").arg(line.sourceLine.parsed.directive),
                                                      TherionSourceDiagnosticSeverity::Error));
     }
 
@@ -796,8 +798,8 @@ void appendBlockDiagnostics(TherionSourceValidationResult *result,
         diagnostic.lineNumber = openBlock.lineNumber;
         diagnostic.columnNumber = 1;
         diagnostic.columnLength = openBlock.directive.size();
-        diagnostic.title = QStringLiteral("Unclosed block");
-        diagnostic.message = QStringLiteral("Block `%1` is not closed before the end of the document. Expected `%2`.")
+        diagnostic.title = QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Unclosed block");
+        diagnostic.message = QCoreApplication::translate("TherionStudio::TherionSourceValidator", "Block `%1` is not closed before the end of the document. Expected `%2`.")
                                  .arg(openBlock.directive, openToClose.value(openBlock.directive));
         diagnostic.currentText = openBlock.lineText;
         result->diagnostics.append(diagnostic);

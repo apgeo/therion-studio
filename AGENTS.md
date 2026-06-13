@@ -156,6 +156,7 @@ These instructions apply to the whole repository.
 ## UI and Behavior Rules
 
 - Preserve documented user workflows before pursuing architectural or visual cleanup.
+- All user-visible UI text shall be translatable through Qt translation APIs and kept current in the Czech and Slovak `.ts` catalogs in the same change. Do not introduce hardcoded visible English UI strings, status messages, dialog text, tooltips, placeholders, or validation/problem text. Therion syntax, command names, option tokens, file extensions, source snippets, and user-authored document text may remain untranslated when they are shown as syntax or data rather than UI copy.
 - Keep the UI responsive. Long-running work such as Therion execution, parsing, indexing, or asset loading must not block the UI thread.
 - Avoid fixed-delay retry loops for selection restoration, scene refresh, indexing, or background loading. Prefer explicit completion signals, generation IDs, cancellable requests, or debounced refresh controllers so work runs once when the relevant snapshot is ready.
 - Respect platform conventions for shortcuts, menus, dialogs, and file handling, but do not violate documented functional requirements.
